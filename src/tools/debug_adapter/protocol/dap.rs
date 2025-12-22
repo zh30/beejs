@@ -5,6 +5,8 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// DAP Message types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,7 +73,7 @@ impl DebugAdapterProtocol {
     }
 
     async fn handle_initialize(&self, seq: i32, _arguments: Option<serde_json::Value>) -> Result<Option<DapMessage>, String> {
-        let response = DapMessage::Response {
+        let response: _ = DapMessage::Response {
             seq: seq + 1,
             request_seq: seq,
             command: "initialize".to_string(),
@@ -88,7 +90,7 @@ impl DebugAdapterProtocol {
     }
 
     async fn handle_launch(&self, seq: i32, _arguments: Option<serde_json::Value>) -> Result<Option<DapMessage>, String> {
-        let response = DapMessage::Response {
+        let response: _ = DapMessage::Response {
             seq: seq + 1,
             request_seq: seq,
             command: "launch".to_string(),
@@ -101,7 +103,7 @@ impl DebugAdapterProtocol {
 
     async fn handle_set_breakpoints(&self, seq: i32, arguments: Option<serde_json::Value>) -> Result<Option<DapMessage>, String> {
         // TODO: Implement breakpoint setting
-        let response = DapMessage::Response {
+        let response: _ = DapMessage::Response {
             seq: seq + 1,
             request_seq: seq,
             command: "setBreakpoints".to_string(),
@@ -115,7 +117,7 @@ impl DebugAdapterProtocol {
     }
 
     async fn handle_threads(&self, seq: i32) -> Result<Option<DapMessage>, String> {
-        let response = DapMessage::Response {
+        let response: _ = DapMessage::Response {
             seq: seq + 1,
             request_seq: seq,
             command: "threads".to_string(),
@@ -131,7 +133,7 @@ impl DebugAdapterProtocol {
     }
 
     async fn handle_stack_trace(&self, seq: i32, _arguments: Option<serde_json::Value>) -> Result<Option<DapMessage>, String> {
-        let response = DapMessage::Response {
+        let response: _ = DapMessage::Response {
             seq: seq + 1,
             request_seq: seq,
             command: "stackTrace".to_string(),
@@ -145,7 +147,7 @@ impl DebugAdapterProtocol {
     }
 
     async fn handle_scopes(&self, seq: i32, _arguments: Option<serde_json::Value>) -> Result<Option<DapMessage>, String> {
-        let response = DapMessage::Response {
+        let response: _ = DapMessage::Response {
             seq: seq + 1,
             request_seq: seq,
             command: "scopes".to_string(),
@@ -159,7 +161,7 @@ impl DebugAdapterProtocol {
     }
 
     async fn handle_variables(&self, seq: i32, _arguments: Option<serde_json::Value>) -> Result<Option<DapMessage>, String> {
-        let response = DapMessage::Response {
+        let response: _ = DapMessage::Response {
             seq: seq + 1,
             request_seq: seq,
             command: "variables".to_string(),
@@ -173,7 +175,7 @@ impl DebugAdapterProtocol {
     }
 
     async fn handle_continue(&self, seq: i32, _arguments: Option<serde_json::Value>) -> Result<Option<DapMessage>, String> {
-        let response = DapMessage::Response {
+        let response: _ = DapMessage::Response {
             seq: seq + 1,
             request_seq: seq,
             command: "continue".to_string(),
@@ -187,7 +189,7 @@ impl DebugAdapterProtocol {
     }
 
     async fn handle_next(&self, seq: i32, _arguments: Option<serde_json::Value>) -> Result<Option<DapMessage>, String> {
-        let response = DapMessage::Response {
+        let response: _ = DapMessage::Response {
             seq: seq + 1,
             request_seq: seq,
             command: "next".to_string(),
@@ -199,7 +201,7 @@ impl DebugAdapterProtocol {
     }
 
     async fn handle_step_in(&self, seq: i32, _arguments: Option<serde_json::Value>) -> Result<Option<DapMessage>, String> {
-        let response = DapMessage::Response {
+        let response: _ = DapMessage::Response {
             seq: seq + 1,
             request_seq: seq,
             command: "stepIn".to_string(),
@@ -211,7 +213,7 @@ impl DebugAdapterProtocol {
     }
 
     async fn handle_step_out(&self, seq: i32, _arguments: Option<serde_json::Value>) -> Result<Option<DapMessage>, String> {
-        let response = DapMessage::Response {
+        let response: _ = DapMessage::Response {
             seq: seq + 1,
             request_seq: seq,
             command: "stepOut".to_string(),
@@ -224,7 +226,7 @@ impl DebugAdapterProtocol {
 
     async fn handle_evaluate(&self, seq: i32, arguments: Option<serde_json::Value>) -> Result<Option<DapMessage>, String> {
         // TODO: Evaluate expression in Beejs runtime
-        let response = DapMessage::Response {
+        let response: _ = DapMessage::Response {
             seq: seq + 1,
             request_seq: seq,
             command: "evaluate".to_string(),

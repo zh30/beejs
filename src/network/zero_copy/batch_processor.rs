@@ -113,14 +113,14 @@ impl<T> BatchProcessor<T> {
     /// # 返回值
     /// 返回创建结果
     pub fn new(config: Option<BatchProcessorConfig>) -> Self {
-        let config = config.unwrap_or_default();
-        let max_batch_size = config.max_batch_size;
+        let config: _ = config.clone();unwrap_or_default();
+        let max_batch_size: _ = config.max_batch_size;
 
         Self {
             config,
-            queue: Arc::new(Mutex::new(VecDeque::new())),
-            stats: Arc::new(Mutex::new(BatchProcessorStats::default())),
-            performance_history: Arc::new(Mutex::new(VecDeque::new())),
+            queue: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(BatchProcessorStats::default()))),
+            performance_history: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
             current_batch_size: max_batch_size / 2, // 从中等大小开始
         }
     }
@@ -130,7 +130,7 @@ impl<T> BatchProcessor<T> {
     /// # 参数
     /// - `item`: 要添加的项
     pub fn add_item(&self, item: T) {
-        let batch_item = BatchItem {
+        let batch_item: _ = BatchItem {
             data: item,
             priority: 1,
             created_at: Instant::now(),
@@ -146,7 +146,7 @@ impl<T> BatchProcessor<T> {
     /// - `item`: 要添加的项
     pub fn add_item_with_priority(&self, item: BatchItem<T>) {
         let mut queue = self.queue.lock().unwrap();
-        let item_priority = item.priority;
+        let item_priority: _ = item.priority;
 
         // 如果是优先级批处理，按优先级插入
         if self.config.strategy == BatchStrategy::PriorityBased
@@ -187,7 +187,7 @@ impl<T> BatchProcessor<T> {
         T: Clone,
         F: FnMut(&[T]) -> Result<(), Box<dyn std::error::Error>>,
     {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 获取当前队列
         let mut queue = self.queue.lock().unwrap();
@@ -198,7 +198,7 @@ impl<T> BatchProcessor<T> {
         }
 
         // 根据策略确定批处理大小
-        let batch_size = self.calculate_batch_size(&queue)?;
+        let batch_size: _ = self.calculate_batch_size(&queue)?;
 
         if batch_size == 0 {
             return Ok(());
@@ -228,10 +228,10 @@ impl<T> BatchProcessor<T> {
         }
 
         // 执行批处理
-        let batch_len = batch_data.len();
+        let batch_len: _ = batch_data.len();
         match processor(&batch_data) {
             Ok(()) => {
-                let elapsed = start_time.elapsed();
+                let elapsed: _ = start_time.elapsed();
 
                 // 更新统计信息
                 {
@@ -241,13 +241,13 @@ impl<T> BatchProcessor<T> {
 
                     // 计算系统调用减少量
                     // 假设每个项单独处理需要 1 次系统调用，批处理只需要 1 次
-                    let syscall_reduction = (batch_len as u64 - 1)
+                    let syscall_reduction: _ = (batch_len as u64 - 1)
                         * self.config.target_syscall_reduction as u64;
                     stats.syscalls_reduced += syscall_reduction;
 
                     // 计算性能提升
                     if elapsed.as_micros() > 0 {
-                        let throughput = batch_len as f64 / elapsed.as_micros() as f64 * 1_000_000.0;
+                        let throughput: _ = batch_len as f64 / elapsed.as_micros() as f64 * 1_000_000.0;
                         stats.performance_improvement = throughput / 1000.0; // 假设基线是 1000 ops/sec
                     }
                 }
@@ -255,7 +255,7 @@ impl<T> BatchProcessor<T> {
                 // 记录性能历史
                 {
                     let mut history = self.performance_history.lock().unwrap();
-                    let batch_size_f64 = batch_len as f64;
+                    let batch_size_f64: _ = batch_len as f64;
                     history.push_back(batch_size_f64);
                     if history.len() > 100 {
                         history.pop_front();
@@ -327,12 +327,12 @@ impl<T> BatchProcessor<T> {
             }
             BatchStrategy::Hybrid => {
                 // 混合策略：考虑大小、时间和优先级
-                let size_ok = queue.len() >= self.current_batch_size / 2;
-                let time_ok = queue
+                let size_ok: _ = queue.len() >= self.current_batch_size / 2;
+                let time_ok: _ = queue
                     .front()
                     .map_or(false, |item| item.created_at.elapsed() >= self.config.batch_timeout);
 
-                let priority_ok = queue
+                let priority_ok: _ = queue
                     .iter()
                     .take(self.current_batch_size)
                     .any(|item| item.priority >= 5);
@@ -348,8 +348,8 @@ impl<T> BatchProcessor<T> {
 
     /// 动态调整批处理大小
     fn adjust_batch_size(&mut self, processing_time: Duration, items_processed: usize) {
-        let processing_time_us = processing_time.as_micros() as u64;
-        let target_time_us = self.config.batch_timeout.as_micros() as u64;
+        let processing_time_us: _ = processing_time.as_micros() as u64;
+        let target_time_us: _ = self.config.batch_timeout.as_micros() as u64;
 
         // 如果处理时间过长，减少批处理大小
         if processing_time_us > target_time_us && self.current_batch_size > 10 {
@@ -387,7 +387,7 @@ impl<T> BatchProcessor<T> {
     /// # 返回值
     /// 返回性能报告字符串
     pub fn generate_report(&self) -> String {
-        let stats = self.stats.lock().unwrap();
+        let stats: _ = self.stats.lock().unwrap();
 
         format!(
             r#"
@@ -440,12 +440,14 @@ impl<T> Default for BatchProcessor<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试创建智能批处理器
     #[test]
     fn test_batch_processor_creation() {
         let processor: BatchProcessor<String> = BatchProcessor::new(None);
-        let stats = processor.get_stats();
+        let stats: _ = processor.get_stats();
 
         assert_eq!(stats.total_batches, 0);
         assert_eq!(stats.success_batches, 0);
@@ -477,7 +479,7 @@ mod tests {
         }
 
         // 执行批处理
-        let result = processor.process_batch(|batch| {
+        let result: _ = processor.process_batch(|batch| {
             println!("处理批次: {:?}", batch);
             assert_eq!(batch.len(), 5);
             Ok(())
@@ -485,7 +487,7 @@ mod tests {
 
         assert!(result.is_ok());
 
-        let stats = processor.get_stats();
+        let stats: _ = processor.get_stats();
         assert_eq!(stats.total_batches, 1);
         assert_eq!(stats.success_batches, 1);
 

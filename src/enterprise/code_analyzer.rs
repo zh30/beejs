@@ -6,6 +6,8 @@ use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 use tokio::sync::RwLock;
 use once_cell::sync::Lazy;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 仓库信息
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -161,9 +163,9 @@ impl EnterpriseCodeAnalyzer {
     /// 创建新的分析器实例
     pub fn new() -> Self {
         Self {
-            metrics_cache: Arc::new(RwLock::new(MetricsCache::new())),
-            pattern_detector: Arc::new(PatternDetector::new()),
-            debt_analyzer: Arc::new(DebtAnalyzer::new()),
+            metrics_cache: Arc::new(std::sync::Mutex::new(RwLock::new(MetricsCache::new()))),
+            pattern_detector: Arc::new(std::sync::Mutex::new(PatternDetector::new())),
+            debt_analyzer: Arc::new(std::sync::Mutex::new(DebtAnalyzer::new())),
         }
     }
 
@@ -173,16 +175,16 @@ impl EnterpriseCodeAnalyzer {
         repositories: &[RepositoryInfo],
     ) -> Result<EnterpriseAnalysisReport, Box<dyn std::error::Error + Send + Sync>> {
         // 1. 收集代码指标
-        let metrics = self.collect_enterprise_metrics(repositories).await?;
+        let metrics: _ = self.collect_enterprise_metrics(repositories).await?;
 
         // 2. 检测架构模式
-        let patterns = self.detect_architecture_patterns(repositories).await?;
+        let patterns: _ = self.detect_architecture_patterns(repositories).await?;
 
         // 3. 评估技术债务
-        let tech_debt = self.assess_technical_debt(&metrics).await?;
+        let tech_debt: _ = self.assess_technical_debt(&metrics).await?;
 
         // 4. 生成重构建议
-        let recommendations = self.generate_recommendations(&tech_debt, &patterns, &metrics)?;
+        let recommendations: _ = self.generate_recommendations(&tech_debt, &patterns, &metrics)?;
 
         Ok(EnterpriseAnalysisReport {
             repositories: repositories.to_vec(),
@@ -218,7 +220,7 @@ impl EnterpriseCodeAnalyzer {
         let mut suggestions = Vec::new();
 
         for item in debt_items {
-            let suggestion = match item.category.as_str() {
+            let suggestion: _ = match item.category.as_str() {
                 "Code Quality" => RefactoringSuggestion {
                     title: format!("重构: {}", item.description),
                     description: format!("建议重构 {} 以提高代码质量", item.description),
@@ -261,9 +263,9 @@ impl EnterpriseCodeAnalyzer {
         for repo in repositories {
             for dep in &repo.dependencies {
                 if dep.starts_with("@company/") {
-                    let target_repo = dep.strip_prefix("@company/").unwrap();
+                    let target_repo: _ = dep.strip_prefix("@company/").unwrap();
                     // 处理带 "-utils" 后缀的仓库名
-                    let normalized_name = if target_repo.ends_with("-utils") {
+                    let normalized_name: _ = if target_repo.ends_with("-utils") {
                         target_repo.strip_suffix("-utils").unwrap()
                     } else {
                         target_repo
@@ -312,10 +314,10 @@ impl EnterpriseCodeAnalyzer {
         &self,
         repositories: &[RepositoryInfo],
     ) -> Result<ComprehensiveReport, Box<dyn std::error::Error + Send + Sync>> {
-        let analysis = self.analyze_enterprise_codebase(repositories).await?;
+        let analysis: _ = self.analyze_enterprise_codebase(repositories).await?;
 
-        let recommendations = analysis.recommendations.clone();
-        let detailed_analysis = EnterpriseAnalysisReport {
+        let recommendations: _ = analysis.recommendations.clone();
+        let detailed_analysis: _ = EnterpriseAnalysisReport {
             repositories: analysis.repositories,
             metrics: analysis.metrics,
             architecture_patterns: analysis.architecture_patterns,
@@ -349,7 +351,7 @@ impl EnterpriseCodeAnalyzer {
         let mut suggestions = Vec::new();
 
         for item in &tech_debt.debt_items {
-            let suggestion = match item.category.as_str() {
+            let suggestion: _ = match item.category.as_str() {
                 "Code Quality" => RefactoringSuggestion {
                     title: format!("重构: {}", item.description),
                     description: format!("建议重构 {} 以提高代码质量", item.description),
@@ -400,8 +402,8 @@ impl EnterpriseCodeAnalyzer {
         repositories: &[RepositoryInfo],
     ) -> Result<CodebaseMetrics, Box<dyn std::error::Error + Send + Sync>> {
         // 模拟指标收集
-        let total_loc = repositories.len() * 10000; // 每个仓库平均 10k 行
-        let complexity = 5.0 + (repositories.len() as f64 * 0.1); // 基于仓库数量的复杂度
+        let total_loc: _ = repositories.len() * 10000; // 每个仓库平均 10k 行
+        let complexity: _ = 5.0 + (repositories.len() as f64 * 0.1); // 基于仓库数量的复杂度
 
         Ok(CodebaseMetrics {
             total_lines_of_code: total_loc,
@@ -435,13 +437,13 @@ impl EnterpriseCodeAnalyzer {
 
     fn calculate_health_score(&self, analysis: &EnterpriseAnalysisReport) -> f64 {
         // 基于技术债务比率和代码质量指标计算健康度
-        let debt_penalty = analysis.technical_debt.debt_ratio * 30.0;
-        let complexity_penalty = if analysis.metrics.complexity_score > 10.0 {
+        let debt_penalty: _ = analysis.technical_debt.debt_ratio * 30.0;
+        let complexity_penalty: _ = if analysis.metrics.complexity_score > 10.0 {
             20.0
         } else {
             0.0
         };
-        let coverage_bonus = analysis.metrics.test_coverage * 10.0;
+        let coverage_bonus: _ = analysis.metrics.test_coverage * 10.0;
 
         100.0 - debt_penalty - complexity_penalty + coverage_bonus
     }
@@ -450,7 +452,7 @@ impl EnterpriseCodeAnalyzer {
 // 内部辅助结构体
 
 struct MetricsCache {
-    cache: std::collections::HashMap<String, CodebaseMetrics>,
+    cache: std::collections::HashMap<String, CodebaseMetrics, std::collections::HashMap<String, CodebaseMetrics, String, CodebaseMetrics>>,
 }
 
 impl MetricsCache {
@@ -552,7 +554,7 @@ impl DebtAnalyzer {
             });
         }
 
-        let estimated_cost = debt_items.len() as f64 * 5000.0; // 每个债务项 5k 估算
+        let estimated_cost: _ = debt_items.len() as f64 * 5000.0; // 每个债务项 5k 估算
 
         Ok(TechnicalDebtReport {
             debt_ratio: metrics.technical_debt_ratio,

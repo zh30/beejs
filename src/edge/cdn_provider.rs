@@ -53,7 +53,7 @@ pub trait CdnProvider: Send + Sync {
     async fn health_check(&self) -> Result<ProviderHealth>;
 
     /// Update CDN configuration
-    async fn update_config(&self, config: &HashMap<String, String>) -> Result<()>;
+    async fn update_config(&self, config: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> Result<()>;
 }
 
 /// Deployment result
@@ -87,15 +87,15 @@ pub struct ProviderHealth {
 /// Smart Router for intelligent CDN selection
 pub struct SmartRouter {
     providers: Arc<RwLock<Vec<Arc<dyn CdnProvider>>>>,
-    routing_cache: Arc<RwLock<HashMap<String, CdnEndpoint>>>,
+    routing_cache: Arc<RwLock<HashMap<String, CdnEndpoint, std::collections::HashMap<String, CdnEndpoint, String, CdnEndpoint>>>>,
 }
 
 impl SmartRouter {
     /// Create a new smart router
     pub fn new() -> Self {
         SmartRouter {
-            providers: Arc::new(RwLock::new(Vec::new())),
-            routing_cache: Arc::new(RwLock::new(HashMap::new())),
+            providers: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            routing_cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -107,11 +107,11 @@ impl SmartRouter {
 
     /// Select the best CDN endpoint for a region
     pub async fn select_best_route(&self, region: &str) -> Result<CdnEndpoint> {
-        let cache_key = format!("route:{}", region);
+        let cache_key: _ = format!("route:{}", region);
 
         // Check cache first
         {
-            let cache = self.routing_cache.read().await;
+            let cache: _ = self.routing_cache.read().await;
             if let Some(endpoint) = cache.get(&cache_key) {
                 if endpoint.status == EndpointStatus::Healthy {
                     return Ok(endpoint.clone());
@@ -120,7 +120,7 @@ impl SmartRouter {
         }
 
         // Query all providers
-        let providers = self.providers.read().await;
+        let providers: _ = self.providers.read().await;
         let mut candidates = Vec::new();
 
         for provider in providers.iter() {
@@ -135,11 +135,11 @@ impl SmartRouter {
         }
 
         // Select best candidate based on latency and load
-        let best = candidates
+        let best: _ = candidates
             .into_iter()
             .min_by(|a, b| {
-                let score_a = a.latency + (a.current_load * 100.0);
-                let score_b = b.latency + (b.current_load * 100.0);
+                let score_a = a.clone();latency + (a.current_load * 100.0);
+                let score_b: _ = b.clone();latency + (b.current_load * 100.0);
                 score_a.partial_cmp(&score_b).unwrap_or(std::cmp::Ordering::Equal)
             })
             .context("No healthy endpoints available")?;
@@ -169,7 +169,7 @@ pub struct CdnOptimizer {
 #[derive(Debug, Clone)]
 struct OptimizationRecord {
     timestamp: std::time::SystemTime,
-    config: HashMap<String, String>,
+    config: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     performance_delta: f64,
 }
 
@@ -177,13 +177,13 @@ impl CdnOptimizer {
     /// Create a new CDN optimizer
     pub fn new() -> Self {
         CdnOptimizer {
-            optimization_history: Arc::new(RwLock::new(Vec::new())),
+            optimization_history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         }
     }
 
     /// Optimize CDN configuration based on historical data
-    pub async fn optimize(&self, mut config: HashMap<String, String>) -> Result<HashMap<String, String>> {
-        let history = self.optimization_history.read().await;
+    pub async fn optimize(&self, mut config: HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> Result<HashMap<String, String, std::collections::HashMap<String, String, String, String>>> {
+        let history: _ = self.optimization_history.read().await;
 
         // Apply optimization rules based on historical performance
         if let Some(tier) = config.get("tier") {
@@ -213,7 +213,7 @@ impl CdnOptimizer {
 
     /// Get optimization recommendations
     pub async fn get_recommendations(&self) -> Result<Vec<String>> {
-        let history = self.optimization_history.read().await;
+        let history: _ = self.optimization_history.read().await;
         let mut recommendations = Vec::new();
 
         if history.len() > 10 {
@@ -229,6 +229,8 @@ impl CdnOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     struct MockProvider {
         provider_type: CdnProviderType,
@@ -273,43 +275,43 @@ mod tests {
             })
         }
 
-        async fn update_config(&self, _config: &HashMap<String, String>) -> Result<()> {
+        async fn update_config(&self, _config: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> Result<()> {
             Ok(())
         }
     }
 
     #[tokio::test]
     async fn test_smart_router_registration() {
-        let router = SmartRouter::new();
-        let provider = Arc::new(MockProvider { provider_type: CdnProviderType::Cloudflare });
+        let router: _ = SmartRouter::new();
+        let provider: _ = Arc::new(std::sync::Mutex::new(MockProvider { provider_type: CdnProviderType::Cloudflare }));
         router.register_provider(provider).await;
 
-        let providers = router.providers.read().await;
+        let providers: _ = router.providers.read().await;
         assert_eq!(providers.len(), 1);
     }
 
     #[tokio::test]
     async fn test_smart_router_selection() {
-        let router = SmartRouter::new();
-        let cloudflare = Arc::new(MockProvider { provider_type: CdnProviderType::Cloudflare });
-        let vercel = Arc::new(MockProvider { provider_type: CdnProviderType::Vercel });
+        let router: _ = SmartRouter::new();
+        let cloudflare: _ = Arc::new(std::sync::Mutex::new(MockProvider { provider_type: CdnProviderType::Cloudflare }));
+        let vercel: _ = Arc::new(std::sync::Mutex::new(MockProvider { provider_type: CdnProviderType::Vercel }));
 
         router.register_provider(cloudflare).await;
         router.register_provider(vercel).await;
 
-        let route = router.select_best_route("us-west").await;
+        let route: _ = router.select_best_route("us-west").await;
         assert!(route.is_ok());
     }
 
     #[tokio::test]
     async fn test_cdn_optimizer() {
-        let optimizer = CdnOptimizer::new();
+        let optimizer: _ = CdnOptimizer::new();
         let mut config = HashMap::new();
         config.insert("tier".to_string(), "enterprise".to_string());
 
-        let optimized = optimizer.optimize(config).await;
+        let optimized: _ = optimizer.optimize(config).await;
         assert!(optimized.is_ok());
-        let result = optimized.unwrap();
+        let result: _ = optimized.unwrap();
 
         assert_eq!(result.get("cache_level"), Some(&"aggressive".to_string()));
         assert_eq!(result.get("enable_http3"), Some(&"true".to_string()));

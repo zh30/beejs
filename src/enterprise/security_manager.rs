@@ -48,7 +48,7 @@ pub enum SecurityPolicy {
     /// Block operations based on rules
     Restrictive,
     /// Custom policy with specific rules
-    Custom(HashMap<String, SecurityRule>),
+    Custom(HashMap<String, SecurityRule, std::collections::HashMap<String, SecurityRule, String, SecurityRule>>),
 }
 
 /// Security rule definition
@@ -65,10 +65,10 @@ pub struct SecurityRule {
 /// Enhanced security manager with RBAC support
 #[derive(Debug)]
 pub struct SecurityManager {
-    policies: HashMap<String, SecurityPolicy>,
+    policies: HashMap<String, SecurityPolicy, std::collections::HashMap<String, SecurityPolicy, String, SecurityPolicy>>,
     audit_log: Arc<RwLock<Vec<SecurityEvent>>>,
-    users: Arc<RwLock<HashMap<String, User>>>,
-    roles: Arc<RwLock<HashMap<String, UserPermissions>>>,
+    users: Arc<RwLock<HashMap<String, User, std::collections::HashMap<String, User, String, User>>>>,
+    roles: Arc<RwLock<HashMap<String, UserPermissions, std::collections::HashMap<String, UserPermissions, String, UserPermissions>>>>,
 }
 
 /// Security audit event
@@ -79,7 +79,7 @@ pub struct SecurityEvent {
     pub source: String,
     pub action: String,
     pub result: SecurityResult,
-    pub details: HashMap<String, String>,
+    pub details: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// Security result
@@ -94,9 +94,9 @@ impl SecurityManager {
     pub fn new() -> Self {
         let mut manager = Self {
             policies: HashMap::new(),
-            audit_log: Arc::new(RwLock::new(Vec::new())),
-            users: Arc::new(RwLock::new(HashMap::new())),
-            roles: Arc::new(RwLock::new(HashMap::new())),
+            audit_log: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            users: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            roles: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         };
 
         // Initialize default roles
@@ -185,7 +185,7 @@ impl SecurityManager {
 
     /// Authenticate user and get permissions
     pub async fn authenticate_user(&self, username: &str) -> Option<User> {
-        let users = self.users.read().await;
+        let users: _ = self.users.read().await;
         users.values().find(|u| u.username == username).cloned()
     }
 
@@ -195,10 +195,10 @@ impl SecurityManager {
         user_id: &str,
         operation: &str,
     ) -> Result<SecurityResult> {
-        let users = self.users.read().await;
+        let users: _ = self.users.read().await;
 
         if let Some(user) = users.get(user_id) {
-            let allowed = match operation {
+            let allowed: _ = match operation {
                 "execute" => user.permissions.can_execute,
                 "read" => user.permissions.can_read,
                 "write" => user.permissions.can_write,
@@ -209,7 +209,7 @@ impl SecurityManager {
                 _ => false,
             };
 
-            let result = if allowed {
+            let result: _ = if allowed {
                 SecurityResult::Allowed
             } else {
                 SecurityResult::Denied(format!("User '{}' not allowed to '{}'", user.username, operation))
@@ -235,12 +235,12 @@ impl SecurityManager {
         &self,
         policy_name: &str,
         operation: &str,
-        context: &HashMap<String, String>,
+        context: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     ) -> Result<SecurityResult> {
-        let policy = self.policies.get(policy_name)
+        let policy: _ = self.policies.get(policy_name)
             .ok_or_else(|| anyhow!("Policy not found: {}", policy_name))?;
 
-        let result = match policy {
+        let result: _ = match policy {
             SecurityPolicy::Permissive => SecurityResult::Allowed,
             SecurityPolicy::Restrictive => {
                 SecurityResult::Denied("Restrictive policy blocks operation".to_string())
@@ -259,8 +259,8 @@ impl SecurityManager {
         };
 
         // Log the security event (sync log for legacy compatibility)
-        let details = context.clone();
-        let event = SecurityEvent {
+        let details: _ = context.clone();
+        let event: _ = SecurityEvent {
             timestamp: std::time::SystemTime::now(),
             event_type: "permission_check".to_string(),
             source: "security_manager".to_string(),
@@ -282,9 +282,9 @@ impl SecurityManager {
         source: String,
         action: String,
         result: SecurityResult,
-        mut details: HashMap<String, String>,
+        mut details: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     ) {
-        let event = SecurityEvent {
+        let event: _ = SecurityEvent {
             timestamp: std::time::SystemTime::now(),
             event_type,
             source,
@@ -299,13 +299,13 @@ impl SecurityManager {
 
     /// Get audit log
     pub async fn get_audit_log(&self) -> Vec<SecurityEvent> {
-        let log = self.audit_log.read().await;
+        let log: _ = self.audit_log.read().await;
         log.clone()
     }
 
     /// Get user statistics
-    pub async fn get_user_stats(&self) -> HashMap<String, serde_json::Value> {
-        let users = self.users.read().await;
+    pub async fn get_user_stats(&self) -> HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>> {
+        let users: _ = self.users.read().await;
         let mut stats = HashMap::new();
 
         stats.insert("total_users".to_string(), serde_json::Value::from(users.len()));
@@ -313,7 +313,7 @@ impl SecurityManager {
         // Count users by role
         let mut role_counts = HashMap::new();
         for user in users.values() {
-            let role_name = match &user.role {
+            let role_name: _ = match &user.role {
                 UserRole::Admin => "Admin",
                 UserRole::Developer => "Developer",
                 UserRole::Operator => "Operator",
@@ -339,18 +339,20 @@ impl Default for SecurityManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_security_manager_creation() {
-        let manager = SecurityManager::new();
+        let manager: _ = SecurityManager::new();
         assert!(!manager.policies.is_empty());
     }
 
     #[tokio::test]
     async fn test_rbac_user_registration() {
-        let manager = SecurityManager::new();
+        let manager: _ = SecurityManager::new();
 
-        let user = User {
+        let user: _ = User {
             id: "user1".to_string(),
             username: "alice".to_string(),
             role: UserRole::Developer,
@@ -366,15 +368,15 @@ mod tests {
             tenant_id: None,
         };
 
-        let result = manager.register_user(user).await;
+        let result: _ = manager.register_user(user).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_user_permission_check() {
-        let manager = SecurityManager::new();
+        let manager: _ = SecurityManager::new();
 
-        let user = User {
+        let user: _ = User {
             id: "user1".to_string(),
             username: "alice".to_string(),
             role: UserRole::Developer,
@@ -393,24 +395,24 @@ mod tests {
         manager.register_user(user).await.unwrap();
 
         // Test allowed operation
-        let result = manager.check_user_permission("user1", "execute").await;
+        let result: _ = manager.check_user_permission("user1", "execute").await;
         assert!(matches!(result, Ok(SecurityResult::Allowed)));
 
         // Test denied operation
-        let result = manager.check_user_permission("user1", "delete").await;
+        let result: _ = manager.check_user_permission("user1", "delete").await;
         assert!(matches!(result, Ok(SecurityResult::Denied(_))));
     }
 
     #[test]
     fn test_permissive_policy() {
-        let manager = SecurityManager::new();
-        let result = manager.check_permission("default", "execute_script", &HashMap::new());
+        let manager: _ = SecurityManager::new();
+        let result: _ = manager.check_permission("default", "execute_script", &HashMap::new());
         assert!(matches!(result, Ok(SecurityResult::Allowed)));
     }
 
     #[tokio::test]
     async fn test_audit_log() {
-        let manager = SecurityManager::new();
+        let manager: _ = SecurityManager::new();
 
         manager.log_event(
             "test_event".to_string(),
@@ -420,16 +422,16 @@ mod tests {
             HashMap::new(),
         ).await;
 
-        let log = manager.get_audit_log().await;
+        let log: _ = manager.get_audit_log().await;
         assert_eq!(log.len(), 1);
         assert_eq!(log[0].event_type, "test_event");
     }
 
     #[tokio::test]
     async fn test_user_stats() {
-        let manager = SecurityManager::new();
+        let manager: _ = SecurityManager::new();
 
-        let admin_user = User {
+        let admin_user: _ = User {
             id: "admin1".to_string(),
             username: "admin".to_string(),
             role: UserRole::Admin,
@@ -447,7 +449,7 @@ mod tests {
 
         manager.register_user(admin_user).await.unwrap();
 
-        let stats = manager.get_user_stats().await;
+        let stats: _ = manager.get_user_stats().await;
         assert_eq!(stats["total_users"], serde_json::Value::from(1));
     }
 }

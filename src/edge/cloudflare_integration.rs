@@ -18,11 +18,11 @@ pub struct CloudflareIntegration {
 impl CloudflareIntegration {
     /// Create a new Cloudflare integration
     pub fn new() -> Result<Self> {
-        let account_id = std::env::var("CLOUDFLARE_ACCOUNT_ID")
+        let account_id: _ = std::env::var("CLOUDFLARE_ACCOUNT_ID")
             .unwrap_or_else(|_| "mock-account-id".to_string());
-        let api_token = std::env::var("CLOUDFLARE_API_TOKEN")
+        let api_token: _ = std::env::var("CLOUDFLARE_API_TOKEN")
             .unwrap_or_else(|_| "mock-api-token".to_string());
-        let zone_id = std::env::var("CLOUDFLARE_ZONE_ID")
+        let zone_id: _ = std::env::var("CLOUDFLARE_ZONE_ID")
             .unwrap_or_else(|_| "mock-zone-id".to_string());
 
         Ok(CloudflareIntegration {
@@ -65,10 +65,10 @@ impl CloudflareIntegration {
 impl CdnProvider for CloudflareIntegration {
     /// Deploy code to Cloudflare Workers
     async fn deploy(&self, code: &[u8], region: &str) -> Result<DeploymentResult> {
-        let worker_name = format!("beejs-worker-{}", region);
-        let deployment_id = self.create_worker(&worker_name, code).await?;
+        let worker_name: _ = format!("beejs-worker-{}", region);
+        let deployment_id: _ = self.create_worker(&worker_name, code).await?;
 
-        let route_pattern = format!("*.{}.beejs-edge.com/*", region);
+        let route_pattern: _ = format!("*.{}.beejs-edge.com/*", region);
         self.publish_worker(&worker_name, &route_pattern).await?;
 
         Ok(DeploymentResult {
@@ -82,7 +82,7 @@ impl CdnProvider for CloudflareIntegration {
 
     /// Get routing information for Cloudflare
     async fn route(&self, region: &str) -> Result<CdnEndpoint> {
-        let latency = match region {
+        let latency: _ = match region {
             "us-west" => 25.0,
             "us-east" => 30.0,
             "eu-west" => 35.0,
@@ -129,7 +129,7 @@ impl CdnProvider for CloudflareIntegration {
     }
 
     /// Update Cloudflare configuration
-    async fn update_config(&self, config: &HashMap<String, String>) -> Result<()> {
+    async fn update_config(&self, config: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> Result<()> {
         // Update Workers KV, environment variables, etc.
         if let Some(tier) = config.get("tier") {
             println!("Updated Cloudflare tier to: {}", tier);
@@ -201,8 +201,8 @@ pub struct RealtimeMetrics {
 /// Cloudflare Workers Environment Configuration
 #[derive(Debug)]
 pub struct WorkerEnvironment {
-    pub variables: HashMap<String, String>,
-    pub secrets: HashMap<String, String>,
+    pub variables: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub secrets: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub kv_namespaces: Vec<String>,
     pub durable_objects: Vec<String>,
 }
@@ -237,51 +237,53 @@ impl WorkerEnvironment {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_cloudflare_integration_creation() {
-        let cf = CloudflareIntegration::new();
+        let cf: _ = CloudflareIntegration::new();
         assert!(cf.is_ok());
     }
 
     #[tokio::test]
     async fn test_cloudflare_route() {
-        let cf = CloudflareIntegration::new().unwrap();
-        let route = cf.route("us-west").await;
+        let cf: _ = CloudflareIntegration::new().unwrap();
+        let route: _ = cf.route("us-west").await;
         assert!(route.is_ok());
 
-        let endpoint = route.unwrap();
+        let endpoint: _ = route.unwrap();
         assert_eq!(endpoint.provider, CdnProviderType::Cloudflare);
         assert!(endpoint.latency > 0.0);
     }
 
     #[tokio::test]
     async fn test_cloudflare_deployment() {
-        let cf = CloudflareIntegration::new().unwrap();
-        let code = b"addEventListener('fetch', event => { event.respondWith(new Response('Hello from Cloudflare!')) })";
-        let deployment = cf.deploy(code, "us-west").await;
+        let cf: _ = CloudflareIntegration::new().unwrap();
+        let code: _ = b"addEventListener('fetch', event => { event.respondWith(new Response('Hello from Cloudflare!')) })";
+        let deployment: _ = cf.deploy(code, "us-west").await;
         assert!(deployment.is_ok());
 
-        let result = deployment.unwrap();
+        let result: _ = deployment.unwrap();
         assert_eq!(result.status, DeploymentStatus::Complete);
         assert!(!result.deployment_id.is_empty());
     }
 
     #[tokio::test]
     async fn test_cache_invalidation() {
-        let cf = CloudflareIntegration::new().unwrap();
-        let paths = vec!["/api/users/*", "/static/*"];
-        let result = cf.invalidate_cache(&paths).await;
+        let cf: _ = CloudflareIntegration::new().unwrap();
+        let paths: _ = vec!["/api/users/*", "/static/*"];
+        let result: _ = cf.invalidate_cache(&paths).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_health_check() {
-        let cf = CloudflareIntegration::new().unwrap();
-        let health = cf.health_check().await;
+        let cf: _ = CloudflareIntegration::new().unwrap();
+        let health: _ = cf.health_check().await;
         assert!(health.is_ok());
 
-        let status = health.unwrap();
+        let status: _ = health.unwrap();
         assert_eq!(status.provider, CdnProviderType::Cloudflare);
         assert_eq!(status.status, EndpointStatus::Healthy);
     }

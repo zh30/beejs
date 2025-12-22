@@ -89,7 +89,7 @@ pub struct K8sPodInfo {
 #[derive(Debug)]
 pub struct PodManager {
     client: Arc<K8sClient>,
-    active_pods: Arc<RwLock<HashMap<String, K8sPodInfo>>>,
+    active_pods: Arc<RwLock<HashMap<String, K8sPodInfo, std::collections::HashMap<String, K8sPodInfo, String, K8sPodInfo>>>>,
 }
 
 /// Kubernetes runtime
@@ -144,15 +144,15 @@ impl PodManager {
     pub fn new(client: Arc<K8sClient>) -> Self {
         PodManager {
             client,
-            active_pods: Arc::new(RwLock::new(HashMap::new())),
+            active_pods: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
     /// Create a new pod
     pub async fn create_pod(&self, spec: K8sPodSpec) -> Result<String> {
-        let pod_name = self.client.create_pod(&spec)?;
+        let pod_name: _ = self.client.create_pod(&spec)?;
 
-        let pod_info = K8sPodInfo {
+        let pod_info: _ = K8sPodInfo {
             name: pod_name.clone(),
             namespace: self.client.config().namespace.clone(),
             status: K8sPodPhase::Pending,
@@ -183,7 +183,7 @@ impl PodManager {
 
     /// List all active pods
     pub async fn list_pods(&self) -> Result<Vec<K8sPodInfo>> {
-        let pods = self.client.list_pods()?;
+        let pods: _ = self.client.list_pods()?;
         let mut active_pods = self.active_pods.write().await;
 
         // Update local cache
@@ -201,11 +201,11 @@ impl PodManager {
 
     /// Wait for pod to be ready
     pub async fn wait_for_ready(&self, pod_name: &str, timeout_secs: u64) -> Result<()> {
-        let start = std::time::Instant::now();
-        let timeout = std::time::Duration::from_secs(timeout_secs);
+        let start: _ = std::time::Instant::now();
+        let timeout: _ = std::time::Duration::from_secs(timeout_secs);
 
         while start.elapsed() < timeout {
-            let status = self.get_pod_status(pod_name).await?;
+            let status: _ = self.get_pod_status(pod_name).await?;
 
             match status.phase {
                 K8sPodPhase::Running | K8sPodPhase::Succeeded => return Ok(()),
@@ -223,8 +223,8 @@ impl PodManager {
 impl K8sRuntime {
     /// Create a new Kubernetes runtime
     pub fn new(config: K8sConfig) -> Result<Self> {
-        let client = Arc::new(K8sClient::new(config.clone(), Arc::new(MockK8sClient::new(config.clone()))));
-        let pod_manager = Arc::new(PodManager::new(client.clone()));
+        let client: _ = Arc::new(std::sync::Mutex::new(K8sClient::new(config.clone()), Arc::new(std::sync::Mutex::new(MockK8sClient::new(config.clone())))));
+        let pod_manager: _ = Arc::new(std::sync::Mutex::new(PodManager::new(client.clone())));
 
         Ok(K8sRuntime {
             client,
@@ -235,9 +235,9 @@ impl K8sRuntime {
 
     /// Execute script in a Kubernetes pod
     pub async fn execute_in_pod(&self, script: &str, image: &str) -> Result<String> {
-        let pod_name = format!("beejs-pod-{}", uuid::Uuid::new_v4());
+        let pod_name: _ = format!("beejs-pod-{}", uuid::Uuid::new_v4());
 
-        let spec = K8sPodSpec {
+        let spec: _ = K8sPodSpec {
             name: pod_name.clone(),
             image: image.to_string(),
             command: vec!["node".to_string(), "-e".to_string(), script.to_string()],
@@ -260,7 +260,7 @@ impl K8sRuntime {
         self.pod_manager.wait_for_ready(&pod_name, 60).await?;
 
         // Execute command
-        let result = self.pod_manager.execute_in_pod(&pod_name, &["node", "-e", script]).await?;
+        let result: _ = self.pod_manager.execute_in_pod(&pod_name, &["node", "-e", script]).await?;
 
         // Clean up
         self.pod_manager.delete_pod(&pod_name).await?;
@@ -273,10 +273,10 @@ impl K8sRuntime {
         let mut results = Vec::new();
 
         for i in 0..replicas {
-            let pod_name = format!("beejs-pod-{}-{}", uuid::Uuid::new_v4(), i);
-            let image = "node:18-alpine".to_string();
+            let pod_name: _ = format!("beejs-pod-{}-{}", uuid::Uuid::new_v4(), i);
+            let image: _ = "node:18-alpine".to_string();
 
-            let spec = K8sPodSpec {
+            let spec: _ = K8sPodSpec {
                 name: pod_name.clone(),
                 image,
                 command: vec!["node".to_string(), "-e".to_string(), script.to_string()],
@@ -293,8 +293,8 @@ impl K8sRuntime {
 
         // Wait for all pods and collect results
         for i in 0..replicas {
-            let pod_name = format!("beejs-pod-{}-{}", i, uuid::Uuid::new_v4());
-            let result = self.pod_manager.execute_in_pod(&pod_name, &["node", "-e", script]).await;
+            let pod_name: _ = format!("beejs-pod-{}-{}", i, uuid::Uuid::new_v4());
+            let result: _ = self.pod_manager.execute_in_pod(&pod_name, &["node", "-e", script]).await;
             results.push(result.unwrap_or_else(|_| "Error".to_string()));
         }
 
@@ -303,7 +303,7 @@ impl K8sRuntime {
 
     /// Get runtime information
     pub async fn get_runtime_info(&self) -> Result<K8sRuntimeInfo> {
-        let pods = self.pod_manager.list_pods().await?;
+        let pods: _ = self.pod_manager.list_pods().await?;
 
         Ok(K8sRuntimeInfo {
             namespace: self.namespace.clone(),
@@ -340,7 +340,7 @@ impl MockK8sClient {
 
 impl K8sClientInterface for MockK8sClient {
     fn create_pod(&self, pod: &K8sPodSpec) -> Result<String> {
-        let pod_name = format!("mock-pod-{}", uuid::Uuid::new_v4());
+        let pod_name: _ = format!("mock-pod-{}", uuid::Uuid::new_v4());
         println!("Creating pod {} with image {}", pod_name, pod.image);
         Ok(pod_name)
     }
@@ -378,12 +378,14 @@ impl K8sClientInterface for MockK8sClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_k8s_client_creation() {
-        let config = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
-        let client = Arc::new(MockK8sClient::new(config.clone()));
-        let k8s_client = K8sClient::new(config, client);
+        let config: _ = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
+        let client: _ = Arc::new(std::sync::Mutex::new(MockK8sClient::new(config.clone())));
+        let k8s_client: _ = K8sClient::new(config, client);
 
         assert_eq!(k8s_client.config().cluster_url, "https://localhost:6443");
         assert_eq!(k8s_client.config().namespace, "default");
@@ -391,11 +393,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_pod_creation() {
-        let config = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
-        let client = Arc::new(K8sClient::new(config, Arc::new(MockK8sClient::new(config.clone()))));
-        let manager = PodManager::new(client);
+        let config: _ = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
+        let client: _ = Arc::new(std::sync::Mutex::new(K8sClient::new(config, Arc::new(MockK8sClient::new(config.clone())))));
+        let manager: _ = PodManager::new(client);
 
-        let spec = K8sPodSpec {
+        let spec: _ = K8sPodSpec {
             name: "test-pod".to_string(),
             image: "node:18".to_string(),
             command: vec!["node".to_string()],
@@ -407,49 +409,49 @@ mod tests {
             },
         };
 
-        let pod_name = manager.create_pod(spec).await.unwrap();
+        let pod_name: _ = manager.create_pod(spec).await.unwrap();
         assert!(!pod_name.is_empty());
     }
 
     #[tokio::test]
     async fn test_k8s_runtime_execution() {
-        let config = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
-        let runtime = K8sRuntime::new(config).unwrap();
+        let config: _ = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
+        let runtime: _ = K8sRuntime::new(config).unwrap();
 
-        let script = "console.log('Hello from K8s');";
-        let result = runtime.execute_in_pod(script, "node:18-alpine").await;
+        let script: _ = "console.log('Hello from K8s');";
+        let result: _ = runtime.execute_in_pod(script, "node:18-alpine").await;
 
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_autoscale_execution() {
-        let config = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
-        let runtime = K8sRuntime::new(config).unwrap();
+        let config: _ = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
+        let runtime: _ = K8sRuntime::new(config).unwrap();
 
-        let script = "console.log('Hello');";
-        let results = runtime.execute_with_autoscale(script, 3).await.unwrap();
+        let script: _ = "console.log('Hello');";
+        let results: _ = runtime.execute_with_autoscale(script, 3).await.unwrap();
 
         assert_eq!(results.len(), 3);
     }
 
     #[tokio::test]
     async fn test_runtime_info() {
-        let config = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
-        let runtime = K8sRuntime::new(config).unwrap();
+        let config: _ = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
+        let runtime: _ = K8sRuntime::new(config).unwrap();
 
-        let info = runtime.get_runtime_info().await.unwrap();
+        let info: _ = runtime.get_runtime_info().await.unwrap();
         assert_eq!(info.namespace, "default");
         assert!(info.active_pods >= 0);
     }
 
     #[tokio::test]
     async fn test_pod_scaling() {
-        let config = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
-        let runtime = K8sRuntime::new(config).unwrap();
+        let config: _ = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
+        let runtime: _ = K8sRuntime::new(config).unwrap();
 
-        let script = "console.log('Scaling test');";
-        let results = runtime.scale_pods(script, 5).await.unwrap();
+        let script: _ = "console.log('Scaling test');";
+        let results: _ = runtime.scale_pods(script, 5).await.unwrap();
 
         assert_eq!(results.len(), 5);
     }

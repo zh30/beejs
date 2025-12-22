@@ -9,13 +9,15 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::edge::{NodeId, EdgeNode, Task};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Distributed coordinator
 #[derive(Debug)]
 pub struct DistributedCoordinator {
     consensus: Arc<ConsensusAlgorithm>,
     node_manager: Arc<super::node_manager::EdgeNodeManager>,
-    active_proposals: Arc<RwLock<HashMap<String, Proposal>>>,
+    active_proposals: Arc<RwLock<HashMap<String, Proposal, std::collections::HashMap<String, Proposal, String, Proposal>>>>,
 }
 
 /// Consensus algorithm
@@ -166,10 +168,10 @@ pub struct NodeStatus {
 impl DistributedCoordinator {
     /// Create a new distributed coordinator
     pub async fn new(node_manager: Arc<super::node_manager::EdgeNodeManager>) -> Result<Self> {
-        let coordinator = DistributedCoordinator {
-            consensus: Arc::new(ConsensusAlgorithm::new(ConsensusType::SimpleMajority, 3, 5000)),
+        let coordinator: _ = DistributedCoordinator {
+            consensus: Arc::new(std::sync::Mutex::new(ConsensusAlgorithm::new(ConsensusType::SimpleMajority, 3, 5000))),
             node_manager,
-            active_proposals: Arc::new(RwLock::new(HashMap::new())),
+            active_proposals: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         };
 
         println!("Distributed coordinator initialized");
@@ -178,7 +180,7 @@ impl DistributedCoordinator {
 
     /// Reach consensus on a proposal
     pub async fn reach_consensus(&self, proposal: &Proposal) -> Result<ConsensusResult> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         println!("Starting consensus for proposal {}", proposal.id);
 
@@ -189,18 +191,18 @@ impl DistributedCoordinator {
         }
 
         // Get all healthy nodes
-        let healthy_nodes = self.get_healthy_nodes().await?;
+        let healthy_nodes: _ = self.get_healthy_nodes().await?;
 
         // Request votes from nodes
-        let votes = self.collect_votes(proposal, &healthy_nodes).await?;
+        let votes: _ = self.collect_votes(proposal, &healthy_nodes).await?;
 
         // Count votes
-        let votes_for = votes.iter().filter(|v| v.vote == VoteType::Accept).count();
-        let votes_against = votes.len() - votes_for;
+        let votes_for: _ = votes.iter().filter(|v| v.vote == VoteType::Accept).count();
+        let votes_against: _ = votes.len() - votes_for;
 
-        let consensus_reached = votes_for > votes_against;
+        let consensus_reached: _ = votes_for > votes_against;
 
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
         println!("Consensus {} for proposal {} in {}ms ({} for, {} against)",
                  if consensus_reached { "reached" } else { "failed" },
                  proposal.id, elapsed.as_millis(), votes_for, votes_against);
@@ -222,16 +224,16 @@ impl DistributedCoordinator {
 
     /// Coordinate task execution
     pub async fn coordinate_task(&self, task: &Task) -> Result<CoordinationResult> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         println!(" Coordinating task {}", task.id);
 
         // Get optimal nodes
-        let nodes = self.node_manager.discover_nodes().await?;
-        let selected_nodes = self.select_nodes_for_task(task, &nodes).await?;
+        let nodes: _ = self.node_manager.discover_nodes().await?;
+        let selected_nodes: _ = self.select_nodes_for_task(task, &nodes).await?;
 
         // Create proposal for task execution
-        let proposal = Proposal {
+        let proposal: _ = Proposal {
             id: format!("task-{}", task.id),
             proposer_id: NodeId("coordinator".to_string()),
             operation: Operation::TaskExecution(task.clone()),
@@ -240,11 +242,11 @@ impl DistributedCoordinator {
         };
 
         // Reach consensus
-        let consensus = self.reach_consensus(&proposal).await?;
+        let consensus: _ = self.reach_consensus(&proposal).await?;
 
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
 
-        let result = CoordinationResult {
+        let result: _ = CoordinationResult {
             task_id: task.id.clone(),
             coordinator_node: NodeId("coordinator".to_string()),
             assigned_nodes: selected_nodes,
@@ -257,7 +259,7 @@ impl DistributedCoordinator {
 
     /// Get all healthy nodes
     async fn get_healthy_nodes(&self) -> Result<Vec<NodeId>> {
-        let nodes = self.node_manager.discover_nodes().await?;
+        let nodes: _ = self.node_manager.discover_nodes().await?;
         let healthy_nodes: Vec<NodeId> = nodes.into_iter().map(|n| n.id).collect();
         Ok(healthy_nodes)
     }
@@ -271,7 +273,7 @@ impl DistributedCoordinator {
             tokio::time::sleep(Duration::from_millis(2)).await;
 
             // Simple voting logic: accept if load is low
-            let vote = if node_id.0.contains("low") {
+            let vote: _ = if node_id.0.contains("low") {
                 VoteType::Accept
             } else {
                 VoteType::Accept // Most nodes accept for demo
@@ -296,7 +298,7 @@ impl DistributedCoordinator {
 
     /// Get active proposals
     pub async fn get_active_proposals(&self) -> Vec<Proposal> {
-        let active = self.active_proposals.read().await;
+        let active: _ = self.active_proposals.read().await;
         active.values().cloned().collect()
     }
 }
@@ -329,7 +331,7 @@ impl ConsensusAlgorithm {
 impl FailureDetector {
     /// Create a new failure detector
     pub async fn new() -> Result<Self> {
-        let detector = FailureDetector {
+        let detector: _ = FailureDetector {
             check_interval: Duration::from_secs(30),
             failure_threshold: 3,
         };
@@ -359,7 +361,7 @@ impl FailureDetector {
 impl AutoRecoverer {
     /// Create a new auto recoverer
     pub async fn new() -> Result<Self> {
-        let strategies = vec![
+        let strategies: _ = vec![
             RecoveryStrategy {
                 name: "restart_node".to_string(),
                 applicable_failures: vec![FailureType::NodeDown],
@@ -372,7 +374,7 @@ impl AutoRecoverer {
             },
         ];
 
-        let recoverer = AutoRecoverer {
+        let recoverer: _ = AutoRecoverer {
             recovery_strategies: strategies,
         };
 
@@ -382,12 +384,12 @@ impl AutoRecoverer {
 
     /// Recover from failure
     pub async fn recover_from_failure(&self, failure: &Failure) -> Result<RecoveryResult> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         println!("Attempting to recover from failure: {:?}", failure.failure_type);
 
         // Find applicable strategy
-        let strategy = self.recovery_strategies
+        let strategy: _ = self.recovery_strategies
             .iter()
             .find(|s| s.applicable_failures.contains(&failure.failure_type))
             .cloned()
@@ -398,10 +400,10 @@ impl AutoRecoverer {
             });
 
         // Execute recovery action
-        let actions_taken = self.execute_recovery_action(&strategy, failure).await?;
+        let actions_taken: _ = self.execute_recovery_action(&strategy, failure).await?;
 
-        let elapsed = start.elapsed();
-        let result = RecoveryResult {
+        let elapsed: _ = start.elapsed();
+        let result: _ = RecoveryResult {
             failure_id: format!("{:?}-{}", failure.failure_type, failure.node_id.0),
             recovery_successful: !actions_taken.is_empty(),
             recovery_time_ms: elapsed.as_millis() as u64,

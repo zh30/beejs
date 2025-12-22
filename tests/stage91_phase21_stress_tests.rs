@@ -5,6 +5,8 @@ use beejs::RuntimeLite;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 高负载执行器
 struct StressTestRunner {
@@ -24,22 +26,22 @@ impl StressTestRunner {
     async fn run_concurrent_stress_test(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("开始并发压力测试: {} 任务，持续 {:?}", self.concurrent_tasks, self.duration);
 
-        let start = Instant::now();
+        let start: _ = Instant::now();
         let mut task_handles = Vec::new();
 
         for i in 0..self.concurrent_tasks {
-            let handle = tokio::spawn(async move {
+            let handle: _ = tokio::spawn(async move {
                 let mut operations = 0;
                 let mut errors = 0;
 
                 // 执行压力操作直到超时
                 while Instant::now().elapsed() < Duration::from_secs(60) {
                     // 模拟 CPU 密集型任务
-                    let code = format!(
+                    let code: _ = format!(
                         r#"
                         // 压力测试任务 {}
                         let sum = 0;
-                        for (let i = 0; i < 1000; i++) {{
+                        for (let i: _ = 0; i < 1000; i++) {{
                             sum += Math.sqrt(i) * Math.random();
                         }}
                         sum;
@@ -78,8 +80,8 @@ impl StressTestRunner {
             total_errors += errs;
         }
 
-        let elapsed = start.elapsed();
-        let ops_per_sec = total_operations as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start.elapsed();
+        let ops_per_sec: _ = total_operations as f64 / elapsed.as_secs_f64();
 
         println!("并发压力测试完成:");
         println!("  总操作数: {}", total_operations);
@@ -98,19 +100,19 @@ impl StressTestRunner {
     async fn run_memory_stress_test(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("开始内存压力测试");
 
-        let start = Instant::now();
+        let start: _ = Instant::now();
         let mut operations = 0;
         let mut memory_errors = 0;
 
         // 持续分配和释放内存
         while start.elapsed() < Duration::from_secs(30) {
             // 分配大量内存
-            let code = r#"
+            let code: _ = r#"
                 // 创建多个大对象
                 const arr1 = new Array(10000).fill(Math.random());
                 const arr2 = new Array(10000).fill(Math.random());
                 const obj1 = {};
-                for (let i = 0; i < 5000; i++) {
+                for (let i: _ = 0; i < 5000; i++) {
                     obj1['key' + i] = 'value' + i;
                 }
 
@@ -134,8 +136,8 @@ impl StressTestRunner {
             sleep(Duration::from_millis(10)).await;
         }
 
-        let elapsed = start.elapsed();
-        let ops_per_sec = operations as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start.elapsed();
+        let ops_per_sec: _ = operations as f64 / elapsed.as_secs_f64();
 
         println!("内存压力测试完成:");
         println!("  总操作数: {}", operations);
@@ -153,16 +155,16 @@ impl StressTestRunner {
     async fn run_io_stress_test(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("开始 I/O 压力测试");
 
-        let start = Instant::now();
+        let start: _ = Instant::now();
         let mut operations = 0;
         let mut io_errors = 0;
 
         // 模拟大量 I/O 操作
         while start.elapsed() < Duration::from_secs(30) {
-            let code = r#"
+            let code: _ = r#"
                 // 模拟 I/O 操作
                 const data = [];
-                for (let i = 0; i < 1000; i++) {
+                for (let i: _ = 0; i < 1000; i++) {
                     data.push({
                         id: i,
                         timestamp: Date.now(),
@@ -197,8 +199,8 @@ impl StressTestRunner {
             sleep(Duration::from_millis(5)).await;
         }
 
-        let elapsed = start.elapsed();
-        let ops_per_sec = operations as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start.elapsed();
+        let ops_per_sec: _ = operations as f64 / elapsed.as_secs_f64();
 
         println!("I/O 压力测试完成:");
         println!("  总操作数: {}", operations);
@@ -214,7 +216,7 @@ impl StressTestRunner {
 /// 测试：极限并发执行
 #[tokio::test]
 async fn test_extreme_concurrent_execution() -> Result<(), Box<dyn std::error::Error>> {
-    let runner = StressTestRunner::new(Duration::from_secs(60), 100);
+    let runner: _ = StressTestRunner::new(Duration::from_secs(60), 100);
 
     runner.run_concurrent_stress_test().await?;
 
@@ -224,7 +226,7 @@ async fn test_extreme_concurrent_execution() -> Result<(), Box<dyn std::error::E
 /// 测试：高内存压力
 #[tokio::test]
 async fn test_high_memory_pressure() -> Result<(), Box<dyn std::error::Error>> {
-    let runner = StressTestRunner::new(Duration::from_secs(30), 50);
+    let runner: _ = StressTestRunner::new(Duration::from_secs(30), 50);
 
     runner.run_memory_stress_test().await?;
 
@@ -234,7 +236,7 @@ async fn test_high_memory_pressure() -> Result<(), Box<dyn std::error::Error>> {
 /// 测试：大量 I/O 操作
 #[tokio::test]
 async fn test_high_io_operations() -> Result<(), Box<dyn std::error::Error>> {
-    let runner = StressTestRunner::new(Duration::from_secs(30), 50);
+    let runner: _ = StressTestRunner::new(Duration::from_secs(30), 50);
 
     runner.run_io_stress_test().await?;
 
@@ -246,19 +248,19 @@ async fn test_high_io_operations() -> Result<(), Box<dyn std::error::Error>> {
 async fn test_long_running_stability() -> Result<(), Box<dyn std::error::Error>> {
     println!("开始长时间运行稳定性测试（60秒）");
 
-    let start = Instant::now();
+    let start: _ = Instant::now();
     let mut total_operations = 0;
     let mut failures = 0;
 
     // 运行 60 秒，每 5 秒检查一次状态
     while start.elapsed() < Duration::from_secs(60) {
-        let code = r#"
+        let code: _ = r#"
             // 综合压力测试
             let result = 0;
-            for (let i = 0; i < 10000; i++) {
+            for (let i: _ = 0; i < 10000; i++) {
                 result += Math.sqrt(i) + Math.log(i + 1);
             }
-            for (let j = 0; j < 1000; j++) {
+            for (let j: _ = 0; j < 1000; j++) {
                 result += Math.sin(j) + Math.cos(j);
             }
             result;
@@ -283,8 +285,8 @@ async fn test_long_running_stability() -> Result<(), Box<dyn std::error::Error>>
         sleep(Duration::from_secs(5)).await;
     }
 
-    let elapsed = start.elapsed();
-    let success_rate = (total_operations as f64 / (total_operations + failures) as f64) * 100.0;
+    let elapsed: _ = start.elapsed();
+    let success_rate: _ = (total_operations as f64 / (total_operations + failures) as f64) * 100.0;
 
     println!("长时间运行稳定性测试完成:");
     println!("  总操作数: {}", total_operations);
@@ -303,7 +305,7 @@ async fn test_long_running_stability() -> Result<(), Box<dyn std::error::Error>>
 async fn test_peak_load_handling() -> Result<(), Box<dyn std::error::Error>> {
     println!("开始峰值负载处理测试");
 
-    let start = Instant::now();
+    let start: _ = Instant::now();
     let mut successful_bursts = 0;
     let mut failed_bursts = 0;
 
@@ -311,16 +313,16 @@ async fn test_peak_load_handling() -> Result<(), Box<dyn std::error::Error>> {
     for burst in 0..10 {
         println!("处理第 {} 次峰值负载突发", burst + 1);
 
-        let burst_start = Instant::now();
+        let burst_start: _ = Instant::now();
 
         // 创建大量并发任务
         let mut handles = Vec::new();
         for _ in 0..200 {
-            let handle = tokio::spawn(async {
+            let handle: _ = tokio::spawn(async {
                 let code = r#"
                     // 计算密集型任务
                     let sum = 0;
-                    for (let i = 0; i < 10000; i++) {
+                    for (let i: _ = 0; i < 10000; i++) {
                         sum += Math.sqrt(i) * Math.sin(i) * Math.cos(i);
                     }
                     sum;
@@ -345,16 +347,16 @@ async fn test_peak_load_handling() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        let burst_duration = burst_start.elapsed();
+        let burst_duration: _ = burst_start.elapsed();
         println!("第 {} 次突发完成，耗时 {:?}", burst + 1, burst_duration);
 
         // 短暂休息
         sleep(Duration::from_millis(100)).await;
     }
 
-    let elapsed = start.elapsed();
-    let total_operations = successful_bursts + failed_bursts;
-    let success_rate = (successful_bursts as f64 / total_operations as f64) * 100.0;
+    let elapsed: _ = start.elapsed();
+    let total_operations: _ = successful_bursts + failed_bursts;
+    let success_rate: _ = (successful_bursts as f64 / total_operations as f64) * 100.0;
 
     println!("峰值负载处理测试完成:");
     println!("  总操作数: {}", total_operations);
@@ -374,15 +376,15 @@ async fn test_peak_load_handling() -> Result<(), Box<dyn std::error::Error>> {
 async fn test_resource_leak_under_stress() -> Result<(), Box<dyn std::error::Error>> {
     println!("开始资源泄漏压力测试");
 
-    let start = Instant::now();
+    let start: _ = Instant::now();
 
     // 连续运行 60 秒，执行大量资源分配和释放操作
     while start.elapsed() < Duration::from_secs(60) {
         for _ in 0..100 {
-            let code = r#"
+            let code: _ = r#"
                 // 大量创建和销毁对象
                 const objects = [];
-                for (let i = 0; i < 1000; i++) {
+                for (let i: _ = 0; i < 1000; i++) {
                     objects.push({
                         data: new Array(100).fill(Math.random()),
                         nested: {
@@ -395,7 +397,7 @@ async fn test_resource_leak_under_stress() -> Result<(), Box<dyn std::error::Err
                 objects.length = 0;
             "#;
 
-            let _ = execute_script(code, Default::default()).await;
+            let _: _ = execute_script(code, Default::default()).await;
         }
 
         sleep(Duration::from_millis(100)).await;
@@ -411,16 +413,16 @@ async fn test_resource_leak_under_stress() -> Result<(), Box<dyn std::error::Err
 async fn test_error_recovery_under_stress() -> Result<(), Box<dyn std::error::Error>> {
     println!("开始错误恢复能力测试");
 
-    let start = Instant::now();
+    let start: _ = Instant::now();
     let mut recovery_attempts = 0;
     let mut successful_recoveries = 0;
 
     while start.elapsed() < Duration::from_secs(30) {
         // 执行可能出错的操作
-        let code = r#"
+        let code: _ = r#"
             // 故意触发一些错误
             let result = 0;
-            for (let i = 0; i < 100; i++) {
+            for (let i: _ = 0; i < 100; i++) {
                 try {
                     if (Math.random() > 0.9) {
                         throw new Error('Random error ' + i);
@@ -446,7 +448,7 @@ async fn test_error_recovery_under_stress() -> Result<(), Box<dyn std::error::Er
         sleep(Duration::from_millis(10)).await;
     }
 
-    let recovery_rate = (successful_recoveries as f64 / recovery_attempts as f64) * 100.0;
+    let recovery_rate: _ = (successful_recoveries as f64 / recovery_attempts as f64) * 100.0;
 
     println!("错误恢复能力测试完成:");
     println!("  恢复尝试次数: {}", recovery_attempts);

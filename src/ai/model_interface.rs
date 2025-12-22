@@ -3,6 +3,8 @@
 
 use std::sync::Arc;
 use std::time::Instant;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// AI 模型接口特征
 pub trait AIModelInterface: Send + Sync {
@@ -26,7 +28,7 @@ pub struct ModelInfo {
 
 /// 模型管理器
 pub struct ModelManager {
-    models: std::collections::HashMap<String, Arc<dyn AIModelInterface>>,
+    models: std::collections::HashMap<String, Arc<dyn AIModelInterface, std::collections::HashMap<String, Arc<dyn AIModelInterface, String, Arc<dyn AIModelInterface>>>,
 }
 
 impl ModelManager {

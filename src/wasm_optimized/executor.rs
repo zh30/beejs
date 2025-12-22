@@ -8,6 +8,8 @@ use tracing::{debug, info};
 
 use wasmtime::{Engine, Module, Instance, Store, Memory};
 use anyhow::{Result, Context};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// WASM 执行结果
 #[derive(Debug, Clone)]
@@ -31,9 +33,9 @@ pub struct WasmModuleMetadata {
 /// 极致性能 WASM 执行器
 pub struct WasmOptimizedExecutor {
     engine: Arc<Engine>,
-    compiled_modules: Arc<std::sync::Mutex<HashMap<String, Module>>>,
-    module_metadata: Arc<std::sync::Mutex<HashMap<String, WasmModuleMetadata>>>,
-    performance_stats: Arc<std::sync::Mutex<HashMap<String, WasmExecutionResult>>>,
+    compiled_modules: Arc<std::sync::Mutex<HashMap<String, Module, std::collections::HashMap<String, Module, String, Module>>>>,
+    module_metadata: Arc<std::sync::Mutex<HashMap<String, WasmModuleMetadata, std::collections::HashMap<String, WasmModuleMetadata, String, WasmModuleMetadata>>>>,
+    performance_stats: Arc<std::sync::Mutex<HashMap<String, WasmExecutionResult, std::collections::HashMap<String, WasmExecutionResult, String, WasmExecutionResult>>>>,
 }
 
 impl WasmOptimizedExecutor {
@@ -49,30 +51,30 @@ impl WasmOptimizedExecutor {
             .wasm_simd(true)
             .parallel_compilation(true);
 
-        let engine = Arc::new(Engine::new(&config)?);
+        let engine: _ = Arc::new(std::sync::Mutex::new(Engine::new(&config))?);
 
         Ok(Self {
             engine,
-            compiled_modules: Arc::new(std::sync::Mutex::new(HashMap::new())),
-            module_metadata: Arc::new(std::sync::Mutex::new(HashMap::new())),
-            performance_stats: Arc::new(std::sync::Mutex::new(HashMap::new())),
+            compiled_modules: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(HashMap::new()))),
+            module_metadata: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(HashMap::new()))),
+            performance_stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(HashMap::new()))),
         })
     }
 
     /// 编译并缓存 WASM 模块
     pub fn compile_module(&self, name: &str, wasm_bytes: &[u8]) -> Result<()> {
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
         info!("📦 编译 WASM 模块: {}", name);
 
         // 编译模块
-        let module = Module::from_binary(self.engine.as_ref(), wasm_bytes)
+        let module: _ = Module::from_binary(self.engine.as_ref(), wasm_bytes)
             .with_context(|| format!("编译模块失败: {}", name))?;
 
-        let compilation_time = start_time.elapsed().as_secs_f64() * 1000.0;
+        let compilation_time: _ = start_time.elapsed().as_secs_f64() * 1000.0;
 
         // 提取模块元数据
-        let metadata = WasmModuleMetadata {
+        let metadata: _ = WasmModuleMetadata {
             name: name.to_string(),
             size_bytes: wasm_bytes.len() as u64,
             functions: Vec::new(), // 简化版本
@@ -99,30 +101,30 @@ impl WasmOptimizedExecutor {
 
     /// 执行 WASM 模块 (极致性能版本)
     pub fn execute(&self, name: &str, _input: &[u8]) -> Result<WasmExecutionResult> {
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
         // 获取编译后的模块
-        let compiled_modules = self.compiled_modules.lock().unwrap();
-        let module = compiled_modules.get(name)
+        let compiled_modules: _ = self.compiled_modules.lock().unwrap();
+        let module: _ = compiled_modules.get(name)
             .ok_or_else(|| anyhow::anyhow!("模块未找到: {}", name))?;
 
         // 创建优化的 Store
         let mut store = Store::new(self.engine.as_ref(), ());
 
         // 创建内存
-        let memory = Memory::new(&mut store, wasmtime::MemoryType::new(10, None))
+        let memory: _ = Memory::new(&mut store, wasmtime::MemoryType::new(10, None))
             .context("创建内存失败")?;
 
         // 实例化模块
-        let instance = Instance::new(&mut store, module, &[memory.into()])
+        let instance: _ = Instance::new(&mut store, module, &[memory.into()])
             .context("实例化模块失败")?;
 
         // 查找主函数
-        let _main_func = instance.get_func(&mut store, "main")
+        let _main_func: _ = instance.get_func(&mut store, "main")
             .or_else(|| instance.get_func(&mut store, "_start"));
 
         // 执行函数 (简化版本)
-        let result = if _main_func.is_some() {
+        let result: _ = if _main_func.is_some() {
             // 获取执行时间
             let execution_time = start_time.elapsed().as_secs_f64() * 1000.0;
 
@@ -153,7 +155,7 @@ impl WasmOptimizedExecutor {
 
     /// 热路径优化 - 基于历史数据优化执行
     pub fn optimize_hot_path(&self, name: &str) -> Result<()> {
-        let stats = self.performance_stats.lock().unwrap();
+        let stats: _ = self.performance_stats.lock().unwrap();
 
         if let Some(result) = stats.get(name) {
             if result.execution_time_ms > 10.0 {
@@ -166,10 +168,10 @@ impl WasmOptimizedExecutor {
 
     /// 动态优化 - 根据运行时性能动态调整优化级别
     pub fn dynamic_optimization(&self, name: &str) -> Result<()> {
-        let stats = self.performance_stats.lock().unwrap();
+        let stats: _ = self.performance_stats.lock().unwrap();
 
         if let Some(result) = stats.get(name) {
-            let performance_ratio = result.execution_time_ms / 100.0;
+            let performance_ratio: _ = result.execution_time_ms / 100.0;
 
             match performance_ratio {
                 ratio if ratio < 1.05 => {
@@ -189,13 +191,13 @@ impl WasmOptimizedExecutor {
 
     /// 获取模块元数据
     pub fn get_module_metadata(&self, name: &str) -> Option<WasmModuleMetadata> {
-        let module_metadata = self.module_metadata.lock().unwrap();
+        let module_metadata: _ = self.module_metadata.lock().unwrap();
         module_metadata.get(name).cloned()
     }
 
     /// 获取性能统计
     pub fn get_performance_stats(&self, name: &str) -> Option<WasmExecutionResult> {
-        let stats = self.performance_stats.lock().unwrap();
+        let stats: _ = self.performance_stats.lock().unwrap();
         stats.get(name).cloned()
     }
 }

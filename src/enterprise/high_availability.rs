@@ -191,7 +191,7 @@ pub struct DisasterRecoveryPlan {
     /// Recovery steps
     pub steps: Vec<RecoveryStep>,
     /// Contact information
-    pub contacts: HashMap<String, String>,
+    pub contacts: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// Recovery step
@@ -212,7 +212,7 @@ pub struct RecoveryStep {
 impl HAManager {
     /// Create a new HA Manager
     pub fn new(config: HAConfig) -> Result<Self> {
-        let primary_region = config.regions
+        let primary_region: _ = config.regions
             .iter()
             .find(|r| r.is_primary)
             .map(|r| r.name.clone())
@@ -224,11 +224,11 @@ impl HAManager {
 
         Ok(Self {
             config,
-            nodes: Arc::new(Mutex::new(Vec::new())),
-            primary_region: Arc::new(Mutex::new(primary_region)),
-            failover_events: Arc::new(Mutex::new(Vec::new())),
-            backups: Arc::new(Mutex::new(Vec::new())),
-            last_backup: Arc::new(Mutex::new(None)),
+            nodes: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            primary_region: Arc::new(std::sync::Mutex::new(Mutex::new(primary_region))),
+            failover_events: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            backups: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            last_backup: Arc::new(std::sync::Mutex::new(Mutex::new(None))),
         })
     }
 
@@ -253,7 +253,7 @@ impl HAManager {
         let mut nodes = self.nodes.lock().unwrap();
 
         for node in nodes.iter_mut() {
-            let health = self.check_node_health(node).await;
+            let health: _ = self.check_node_health(node).await;
 
             match health {
                 NodeHealth::Healthy => {
@@ -284,7 +284,7 @@ impl HAManager {
     /// Check health of a specific node
     async fn check_node_health(&self, node: &ClusterNode) -> NodeHealth {
         // Simulate health check (in real implementation, would ping the endpoint)
-        let response = reqwest::get(&node.endpoint)
+        let response: _ = reqwest::get(&node.endpoint)
             .await
             .map_err(|e| {
                 warn!("Health check failed for node {}: {}", node.id, e);
@@ -308,10 +308,10 @@ impl HAManager {
         info!("Triggering failover for failed node: {}", failed_node.id);
 
         // Find best target region
-        let target_region = self.find_best_failover_region(failed_node.region.clone())?;
+        let target_region: _ = self.find_best_failover_region(failed_node.region.clone())?;
 
         if let Some(target) = target_region {
-            let event = FailoverEvent {
+            let event: _ = FailoverEvent {
                 id: format!("failover_{}", SystemTime::now().elapsed().unwrap().as_secs()),
                 source_region: failed_node.region.clone(),
                 target_region: target.name.clone(),
@@ -322,7 +322,7 @@ impl HAManager {
             };
 
             // Perform failover
-            let success = self.perform_failover(&failed_node.region, &target.name).await?;
+            let success: _ = self.perform_failover(&failed_node.region, &target.name).await?;
 
             let mut event = event;
             event.success = success;
@@ -346,7 +346,7 @@ impl HAManager {
 
     /// Find best region for failover
     fn find_best_failover_region(&self, source_region: String) -> Result<Option<RegionConfig>> {
-        let regions = &self.config.regions;
+        let regions: _ = &self.config.regions;
 
         // Find regions excluding the source region
         let candidates: Vec<_> = regions
@@ -382,12 +382,12 @@ impl HAManager {
         sleep(Duration::from_secs(2)).await;
 
         // Verify failover success
-        let target_region = self.config.regions
+        let target_region: _ = self.config.regions
             .iter()
             .find(|r| r.name == target)
             .unwrap();
 
-        let response = reqwest::get(&target_region.health_check_url)
+        let response: _ = reqwest::get(&target_region.health_check_url)
             .await
             .map_err(|e| {
                 error!("Failover verification failed: {}", e);
@@ -406,9 +406,9 @@ impl HAManager {
 
         info!("Starting backup process");
 
-        let backup_id = format!("backup_{}", SystemTime::now().elapsed().unwrap().as_secs());
+        let backup_id: _ = format!("backup_{}", SystemTime::now().elapsed().unwrap().as_secs());
 
-        let backup = BackupInfo {
+        let backup: _ = BackupInfo {
             id: backup_id.clone(),
             region: self.get_primary_region(),
             created_at: SystemTime::now(),
@@ -451,7 +451,7 @@ impl HAManager {
         info!("Starting restore from backup: {}", backup_id);
 
         // Find backup
-        let backup = {
+        let backup: _ = {
             let backups = self.backups.lock().unwrap();
             backups.iter().find(|b| b.id == backup_id).cloned()
         };
@@ -474,22 +474,22 @@ impl HAManager {
 
     /// Get primary region
     pub fn get_primary_region(&self) -> String {
-        let primary = self.primary_region.lock().unwrap();
+        let primary: _ = self.primary_region.lock().unwrap();
         primary.clone()
     }
 
     /// Get cluster statistics
-    pub fn get_stats(&self) -> HashMap<String, serde_json::Value> {
+    pub fn get_stats(&self) -> HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>> {
         let mut stats = HashMap::new();
 
-        let nodes = self.nodes.lock().unwrap();
-        let backups = self.backups.lock().unwrap();
-        let failover_events = self.failover_events.lock().unwrap();
-        let last_backup = self.last_backup.lock().unwrap();
+        let nodes: _ = self.nodes.lock().unwrap();
+        let backups: _ = self.backups.lock().unwrap();
+        let failover_events: _ = self.failover_events.lock().unwrap();
+        let last_backup: _ = self.last_backup.lock().unwrap();
 
         // Node statistics
-        let healthy_nodes = nodes.iter().filter(|n| matches!(n.health, NodeHealth::Healthy)).count();
-        let unhealthy_nodes = nodes.iter().filter(|n| matches!(n.health, NodeHealth::Unhealthy | NodeHealth::Offline)).count();
+        let healthy_nodes: _ = nodes.clone();iter().filter(|n| matches!(n.health, NodeHealth::Healthy)).count();
+        let unhealthy_nodes: _ = nodes.clone();iter().filter(|n| matches!(n.health, NodeHealth::Unhealthy | NodeHealth::Offline)).count();
 
         stats.insert("total_nodes".to_string(), serde_json::Value::from(nodes.len()));
         stats.insert("healthy_nodes".to_string(), serde_json::Value::from(healthy_nodes));
@@ -497,17 +497,17 @@ impl HAManager {
         stats.insert("primary_region".to_string(), serde_json::Value::from(self.get_primary_region()));
 
         // Backup statistics
-        let completed_backups = backups.iter().filter(|b| matches!(b.status, BackupStatus::Completed)).count();
+        let completed_backups: _ = backups.clone();iter().filter(|b| matches!(b.status, BackupStatus::Completed)).count();
         stats.insert("total_backups".to_string(), serde_json::Value::from(backups.len()));
         stats.insert("completed_backups".to_string(), serde_json::Value::from(completed_backups));
 
         if let Some(last) = *last_backup {
-            let age = SystemTime::now().duration_since(last).unwrap().as_secs();
+            let age: _ = SystemTime::now().duration_since(last).unwrap().as_secs();
             stats.insert("last_backup_age_seconds".to_string(), serde_json::Value::from(age));
         }
 
         // Failover statistics
-        let recent_failovers = failover_events
+        let recent_failovers: _ = failover_events
             .iter()
             .filter(|e| {
                 SystemTime::now()
@@ -570,10 +570,12 @@ impl HAManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_ha_manager_creation() {
-        let config = HAConfig {
+        let config: _ = HAConfig {
             enabled: true,
             replicas: 3,
             health_check_interval: Duration::from_secs(30),
@@ -609,13 +611,13 @@ mod tests {
             },
         };
 
-        let manager = HAManager::new(config);
+        let manager: _ = HAManager::new(config);
         assert!(manager.is_ok());
     }
 
     #[test]
     fn test_add_remove_node() {
-        let config = HAConfig {
+        let config: _ = HAConfig {
             enabled: true,
             replicas: 3,
             health_check_interval: Duration::from_secs(30),
@@ -626,9 +628,9 @@ mod tests {
             backup: BackupConfig::default(),
         };
 
-        let manager = HAManager::new(config).unwrap();
+        let manager: _ = HAManager::new(config).unwrap();
 
-        let node = ClusterNode {
+        let node: _ = ClusterNode {
             id: "node-1".to_string(),
             region: "us-east-1".to_string(),
             endpoint: "https://node-1.beejs.io".to_string(),
@@ -645,7 +647,7 @@ mod tests {
 
     #[test]
     fn test_dr_plan() {
-        let config = HAConfig {
+        let config: _ = HAConfig {
             enabled: true,
             replicas: 3,
             health_check_interval: Duration::from_secs(30),
@@ -656,8 +658,8 @@ mod tests {
             backup: BackupConfig::default(),
         };
 
-        let manager = HAManager::new(config).unwrap();
-        let plan = manager.create_dr_plan();
+        let manager: _ = HAManager::new(config).unwrap();
+        let plan: _ = manager.create_dr_plan();
 
         assert_eq!(plan.name, "Beejs DR Plan");
         assert_eq!(plan.rto_seconds, 300);

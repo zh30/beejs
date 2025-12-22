@@ -35,23 +35,23 @@ impl EdgeDeploymentOptimizer {
     /// Create a new deployment optimizer
     pub fn new() -> Self {
         EdgeDeploymentOptimizer {
-            deployment_history: Arc::new(RwLock::new(Vec::new())),
-            performance_metrics: Arc::new(RwLock::new(PerformanceMetrics {
+            deployment_history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            performance_metrics: Arc::new(std::sync::Mutex::new(RwLock::new(PerformanceMetrics {
                 average_cold_start: 0.0,
                 p95_cold_start: 0.0,
                 p99_cold_start: 0.0,
                 average_throughput: 0.0,
                 deployment_count: 0,
-            })),
+            }))),
         }
     }
 
     /// Optimize deployment configuration for a region
-    pub async fn optimize(&self, region: &str, base_config: &HashMap<String, String>) -> Result<OptimizedConfig> {
+    pub async fn optimize(&self, region: &str, base_config: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> Result<OptimizedConfig> {
         let mut optimized = base_config.clone();
 
         // Analyze historical performance
-        let history = self.deployment_history.read().await;
+        let history: _ = self.deployment_history.read().await;
         let region_history: Vec<_> = history.iter()
             .filter(|r| r.region == region)
             .collect();
@@ -83,7 +83,7 @@ impl EdgeDeploymentOptimizer {
         optimized.insert("code_splitting".to_string(), "true".to_string());
 
         // Calculate cold start before moving optimized
-        let estimated_cold_start = self.estimate_cold_start(&optimized).await;
+        let estimated_cold_start: _ = self.estimate_cold_start(&optimized).await;
 
         Ok(OptimizedConfig {
             region: region.to_string(),
@@ -100,7 +100,7 @@ impl EdgeDeploymentOptimizer {
         throughput: f64,
         success_rate: f64,
     ) -> Result<()> {
-        let record = DeploymentRecord {
+        let record: _ = DeploymentRecord {
             timestamp: std::time::SystemTime::now(),
             region: region.to_string(),
             cold_start_time,
@@ -113,7 +113,7 @@ impl EdgeDeploymentOptimizer {
             history.push(record);
 
             // Keep only last 1000 records
-            let to_remove = if history.len() > 1000 {
+            let to_remove: _ = if history.len() > 1000 {
                 history.len() - 1000
             } else {
                 0
@@ -130,7 +130,7 @@ impl EdgeDeploymentOptimizer {
     }
 
     /// Estimate cold start time based on configuration
-    async fn estimate_cold_start(&self, config: &HashMap<String, String>) -> u64 {
+    async fn estimate_cold_start(&self, config: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> u64 {
         let mut estimate = 45; // Base cold start
 
         if let Some(memory) = config.get("memory") {
@@ -151,7 +151,7 @@ impl EdgeDeploymentOptimizer {
 
     /// Update performance metrics
     async fn update_metrics(&self) -> Result<()> {
-        let history = self.deployment_history.read().await;
+        let history: _ = self.deployment_history.read().await;
 
         if history.is_empty() {
             return Ok(());
@@ -165,8 +165,8 @@ impl EdgeDeploymentOptimizer {
         cold_starts_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         let avg_cold_start: f64 = cold_starts.iter().sum::<f64>() / cold_starts.len() as f64;
-        let p95_index = (cold_starts_sorted.len() as f64 * 0.95) as usize;
-        let p99_index = (cold_starts_sorted.len() as f64 * 0.99) as usize;
+        let p95_index: _ = (cold_starts_sorted.len() as f64 * 0.95) as usize;
+        let p99_index: _ = (cold_starts_sorted.len() as f64 * 0.99) as usize;
 
         let avg_throughput: f64 = history.iter()
             .map(|r| r.throughput)
@@ -186,19 +186,19 @@ impl EdgeDeploymentOptimizer {
 
     /// Get performance metrics
     pub async fn get_metrics(&self) -> Result<PerformanceMetrics> {
-        let metrics = self.performance_metrics.read().await;
+        let metrics: _ = self.performance_metrics.read().await;
         Ok(metrics.clone())
     }
 
     /// Get best performing regions
     pub async fn get_best_regions(&self, count: usize) -> Result<Vec<String>> {
-        let history = self.deployment_history.read().await;
+        let history: _ = self.deployment_history.read().await;
 
-        let mut region_scores: HashMap<String, (f64, u64)> = HashMap::new();
+        let mut region_scores: HashMap<String, (f64, u64), std::collections::HashMap<String, (f64, u64), String, (f64, u64)>> = HashMap::new();
 
         for record in history.iter() {
-            let score = (100.0 - record.cold_start_time as f64) * record.success_rate;
-            let entry = region_scores.entry(record.region.clone())
+            let score: _ = (100.0 - record.cold_start_time as f64) * record.success_rate;
+            let entry: _ = region_scores.entry(record.region.clone())
                 .or_insert((0.0, 0));
             entry.0 += score;
             entry.1 += 1;
@@ -221,48 +221,50 @@ impl EdgeDeploymentOptimizer {
 #[derive(Debug, Clone)]
 pub struct OptimizedConfig {
     pub region: String,
-    pub config: HashMap<String, String>,
+    pub config: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub estimated_cold_start: u64,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_deployment_optimizer_creation() {
-        let optimizer = EdgeDeploymentOptimizer::new();
+        let optimizer: _ = EdgeDeploymentOptimizer::new();
         assert!(optimizer.deployment_history.read().await.is_empty());
     }
 
     #[tokio::test]
     async fn test_optimize_deployment() {
-        let optimizer = EdgeDeploymentOptimizer::new();
+        let optimizer: _ = EdgeDeploymentOptimizer::new();
         let mut base_config = HashMap::new();
         base_config.insert("framework".to_string(), "react".to_string());
 
-        let optimized = optimizer.optimize("us-west", &base_config).await;
+        let optimized: _ = optimizer.optimize("us-west", &base_config).await;
         assert!(optimized.is_ok());
 
-        let result = optimized.unwrap();
+        let result: _ = optimized.unwrap();
         assert!(result.config.contains_key("memory"));
         assert!(result.config.contains_key("prewarm"));
     }
 
     #[tokio::test]
     async fn test_record_deployment_performance() {
-        let optimizer = EdgeDeploymentOptimizer::new();
+        let optimizer: _ = EdgeDeploymentOptimizer::new();
 
         optimizer.record_deployment("us-west", 45, 1500.0, 0.99).await.unwrap();
         optimizer.record_deployment("us-west", 52, 1400.0, 0.98).await.unwrap();
 
-        let metrics = optimizer.get_metrics().await.unwrap();
+        let metrics: _ = optimizer.get_metrics().await.unwrap();
         assert!(metrics.deployment_count > 0);
     }
 
     #[tokio::test]
     async fn test_get_best_regions() {
-        let optimizer = EdgeDeploymentOptimizer::new();
+        let optimizer: _ = EdgeDeploymentOptimizer::new();
 
         // Record better performance for us-west
         optimizer.record_deployment("us-west", 35, 1800.0, 0.995).await.unwrap();
@@ -271,20 +273,20 @@ mod tests {
         // Record worse performance for eu-central
         optimizer.record_deployment("eu-central", 55, 1200.0, 0.98).await.unwrap();
 
-        let best_regions = optimizer.get_best_regions(1).await.unwrap();
+        let best_regions: _ = optimizer.get_best_regions(1).await.unwrap();
         assert_eq!(best_regions.len(), 1);
         assert_eq!(best_regions[0], "us-west");
     }
 
     #[tokio::test]
     async fn test_cold_start_estimation() {
-        let optimizer = EdgeDeploymentOptimizer::new();
+        let optimizer: _ = EdgeDeploymentOptimizer::new();
 
         let mut config = HashMap::new();
         config.insert("memory".to_string(), "512MB".to_string());
         config.insert("prewarm".to_string(), "true".to_string());
 
-        let estimate = optimizer.estimate_cold_start(&config).await;
+        let estimate: _ = optimizer.estimate_cold_start(&config).await;
         assert!(estimate > 0);
         assert!(estimate < 50); // Should be optimized
     }

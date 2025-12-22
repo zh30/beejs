@@ -2,10 +2,12 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use beejs::Runtime;
 use std::io::Write;
 use tempfile::{NamedTempFile, TempDir};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 #[test]
 fn test_parse_package_json() {
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
     // Create a temporary package.json
     let mut package_json = NamedTempFile::new().unwrap();
@@ -22,20 +24,20 @@ fn test_parse_package_json() {
     )
     .unwrap();
 
-    let result = runtime.execute_file(&package_json.path().to_path_buf());
+    let result: _ = runtime.execute_file(&package_json.path().to_path_buf());
     // Package.json is not executable JavaScript, should error
     assert!(result.is_err());
 }
 
 #[test]
 fn test_require_basic_module() {
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
     // Create a temp directory to ensure both files are in the same location
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir: _ = TempDir::new().unwrap();
 
     // Create module file in the temp directory
-    let module_file = temp_dir.path().join("math.js");
+    let module_file: _ = temp_dir.path().join("math.js");
     std::fs::write(
         &module_file,
         "
@@ -48,7 +50,7 @@ fn test_require_basic_module() {
     .unwrap();
 
     // Create main file in the same directory
-    let main_file = temp_dir.path().join("main.js");
+    let main_file: _ = temp_dir.path().join("main.js");
     std::fs::write(
         &main_file,
         "
@@ -60,12 +62,12 @@ fn test_require_basic_module() {
     )
     .unwrap();
 
-    let result = runtime.execute_file(&main_file);
+    let result: _ = runtime.execute_file(&main_file);
     if let Err(e) = &result {
         eprintln!("Error executing file: {:?}", e);
     }
     assert!(result.is_ok(), "Expected successful execution, got error: {:?}", result);
-    let output = result.unwrap();
+    let output: _ = result.unwrap();
     // Note: console.log output may not be captured in test environment
     // We check the return value instead
     assert!(output.contains("8") || output.contains("28"));
@@ -73,14 +75,14 @@ fn test_require_basic_module() {
 
 #[test]
 fn test_require_relative_path() {
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
     // Create a module in a subdirectory
-    let temp_dir = TempDir::new().unwrap();
-    let module_dir = temp_dir.path().join("lib");
+    let temp_dir: _ = TempDir::new().unwrap();
+    let module_dir: _ = temp_dir.path().join("lib");
     std::fs::create_dir_all(&module_dir).unwrap();
 
-    let module_file = module_dir.join("utils.js");
+    let module_file: _ = module_dir.join("utils.js");
     std::fs::write(
         &module_file,
         "
@@ -91,7 +93,7 @@ fn test_require_relative_path() {
     .unwrap();
 
     // Create main file - return the value directly instead of using console.log
-    let main_file = temp_dir.path().join("main.js");
+    let main_file: _ = temp_dir.path().join("main.js");
     std::fs::write(
         &main_file,
         "
@@ -102,20 +104,20 @@ fn test_require_relative_path() {
     )
     .unwrap();
 
-    let result = runtime.execute_file(&main_file);
+    let result: _ = runtime.execute_file(&main_file);
     assert!(result.is_ok());
-    let output = result.unwrap();
+    let output: _ = result.unwrap();
     // Check the return value (last expression)
     assert!(output.contains("3.14159"));
 }
 
 #[test]
 fn test_module_exports_object() {
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir: _ = TempDir::new().unwrap();
 
-    let module_file = temp_dir.path().join("config.js");
+    let module_file: _ = temp_dir.path().join("config.js");
     std::fs::write(
         &module_file,
         "
@@ -130,7 +132,7 @@ fn test_module_exports_object() {
     )
     .unwrap();
 
-    let main_file = temp_dir.path().join("main.js");
+    let main_file: _ = temp_dir.path().join("main.js");
     std::fs::write(
         &main_file,
         "
@@ -142,27 +144,27 @@ fn test_module_exports_object() {
     )
     .unwrap();
 
-    let result = runtime.execute_file(&main_file);
+    let result: _ = runtime.execute_file(&main_file);
     assert!(result.is_ok());
-    let output = result.unwrap();
+    let output: _ = result.unwrap();
     // Check that we get the config object back (object is represented as "[object Object]")
     assert!(output.contains("Object"));
 }
 
 #[test]
 fn test_multiple_requires() {
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir: _ = TempDir::new().unwrap();
 
     // Create multiple modules
-    let module1 = temp_dir.path().join("module1.js");
+    let module1: _ = temp_dir.path().join("module1.js");
     std::fs::write(&module1, "module.exports = 'module1';").unwrap();
 
-    let module2 = temp_dir.path().join("module2.js");
+    let module2: _ = temp_dir.path().join("module2.js");
     std::fs::write(&module2, "module.exports = 'module2';").unwrap();
 
-    let main_file = temp_dir.path().join("main.js");
+    let main_file: _ = temp_dir.path().join("main.js");
     std::fs::write(
         &main_file,
         "
@@ -175,26 +177,26 @@ fn test_multiple_requires() {
     )
     .unwrap();
 
-    let result = runtime.execute_file(&main_file);
+    let result: _ = runtime.execute_file(&main_file);
     assert!(result.is_ok());
-    let output = result.unwrap();
+    let output: _ = result.unwrap();
     assert!(output.contains("module2"));
 }
 
 #[test]
 fn test_nested_require() {
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
     // Create nested module structure
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir: _ = TempDir::new().unwrap();
 
     // Deep module
-    let deep_module = temp_dir.path().join("deep").join("nested.js");
+    let deep_module: _ = temp_dir.path().join("deep").join("nested.js");
     std::fs::create_dir_all(deep_module.parent().unwrap()).unwrap();
     std::fs::write(&deep_module, "module.exports = { value: 'nested' };").unwrap();
 
     // Main file that requires nested module
-    let main_file = temp_dir.path().join("main.js");
+    let main_file: _ = temp_dir.path().join("main.js");
     std::fs::write(
         &main_file,
         r#"
@@ -205,18 +207,18 @@ fn test_nested_require() {
     )
     .unwrap();
 
-    let result = runtime.execute_file(&main_file);
+    let result: _ = runtime.execute_file(&main_file);
     assert!(result.is_ok());
-    let output = result.unwrap();
+    let output: _ = result.unwrap();
     assert!(output.contains("nested"));
 }
 
 #[test]
 fn test_builtin_modules() {
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
     // Test require of built-in module (will fail for now, but structure is correct)
-    let code = r#"
+    let code: _ = r#"
         try {
             const path = require('path');
             console.log("Path module loaded");
@@ -226,18 +228,18 @@ fn test_builtin_modules() {
         "done";
     "#;
 
-    let result = runtime.execute_code(code);
+    let result: _ = runtime.execute_code(code);
     assert!(result.is_ok());
 }
 
 #[test]
 fn test_circular_dependency() {
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir: _ = TempDir::new().unwrap();
 
-    let module_a = temp_dir.path().join("moduleA.js");
-    let module_b = temp_dir.path().join("moduleB.js");
+    let module_a: _ = temp_dir.path().join("moduleA.js");
+    let module_b: _ = temp_dir.path().join("moduleB.js");
 
     std::fs::write(
         &module_a,
@@ -263,7 +265,7 @@ fn test_circular_dependency() {
     )
     .unwrap();
 
-    let main_file = temp_dir.path().join("main.js");
+    let main_file: _ = temp_dir.path().join("main.js");
     std::fs::write(
         &main_file,
         "
@@ -275,22 +277,22 @@ fn test_circular_dependency() {
     )
     .unwrap();
 
-    let result = runtime.execute_file(&main_file);
+    let result: _ = runtime.execute_file(&main_file);
     // Circular dependencies should work (module.exports is set before require executes)
     assert!(result.is_ok());
 }
 
 #[test]
 fn test_module_caching() {
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir: _ = TempDir::new().unwrap();
 
-    let module_file = temp_dir.path().join("counter.js");
+    let module_file: _ = temp_dir.path().join("counter.js");
     std::fs::write(
         &module_file,
         "
-        let count = 0;
+        let count: _ = 0;
         module.exports = {
             getCount: () => {
                 count++;
@@ -301,7 +303,7 @@ fn test_module_caching() {
     )
     .unwrap();
 
-    let main_file = temp_dir.path().join("main.js");
+    let main_file: _ = temp_dir.path().join("main.js");
     std::fs::write(
         &main_file,
         "
@@ -315,9 +317,9 @@ fn test_module_caching() {
     )
     .unwrap();
 
-    let result = runtime.execute_file(&main_file);
+    let result: _ = runtime.execute_file(&main_file);
     assert!(result.is_ok());
     // Module should be cached, so counter increments across calls
-    let output = result.unwrap();
+    let output: _ = result.unwrap();
     assert!(output.contains("3"));
 }

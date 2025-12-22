@@ -5,6 +5,8 @@ use kube::CustomResource;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// DestinationRule defines policies for traffic to a service
 #[derive(CustomResource, Clone, Debug, Deserialize, Serialize, JsonSchema)]
@@ -104,7 +106,7 @@ pub struct Subset {
     pub name: String,
     /// Labels
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub labels: Option<HashMap<String, String>>,
+    pub labels: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 /// VirtualService defines traffic routing rules
@@ -154,7 +156,7 @@ pub struct HttpMatchRequest {
     pub uri: Option<StringMatch>,
     /// Headers match
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub headers: Option<HashMap<String, StringMatch>>,
+    pub headers: Option<HashMap<String, StringMatch, std::collections::HashMap<String, StringMatch, String, StringMatch>>>,
 }
 
 /// String match
@@ -266,7 +268,7 @@ pub struct HttpRetry {
 )]
 pub struct GatewaySpec {
     /// Workload selector
-    pub selector: HashMap<String, String>,
+    pub selector: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     /// Servers
     pub servers: Vec<Server>,
 }
@@ -327,7 +329,7 @@ pub struct PeerAuthenticationSpec {
 pub struct WorkloadSelector {
     /// Match labels
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub match_labels: Option<HashMap<String, String>>,
+    pub match_labels: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 /// Mutual TLS settings

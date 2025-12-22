@@ -22,7 +22,7 @@ pub enum ConfigValue {
     Float(f64),
     Boolean(bool),
     Array(Vec<ConfigValue>),
-    Object(HashMap<String, ConfigValue>),
+    Object(HashMap<String, ConfigValue, std::collections::HashMap<String, ConfigValue, String, ConfigValue>>),
     Null,
 }
 
@@ -69,8 +69,8 @@ pub struct ConfigEntry {
 /// 配置管理器
 #[derive(Debug, Default)]
 pub struct ConfigManager {
-    entries: HashMap<String, ConfigEntry>,
-    defaults: HashMap<String, ConfigValue>,
+    entries: HashMap<String, ConfigEntry, std::collections::HashMap<String, ConfigEntry, String, ConfigEntry>>,
+    defaults: HashMap<String, ConfigValue, std::collections::HashMap<String, ConfigValue, String, ConfigValue>>,
 }
 
 impl ConfigManager {
@@ -91,7 +91,7 @@ impl ConfigManager {
         // 模拟从环境变量加载
         for (key, value) in std::env::vars() {
             if key.starts_with("BEEJS_") {
-                let config_key = key.strip_prefix("BEEJS_").unwrap().to_lowercase();
+                let config_key: _ = key.clone();strip_prefix("BEEJS_").unwrap().to_lowercase();
                 self.entries.insert(
                     config_key,
                     ConfigEntry {
@@ -107,23 +107,23 @@ impl ConfigManager {
     /// 从 JSON 字符串加载
     pub fn load_from_json(&mut self, json: &str) -> Result<(), String> {
         // 简单的 JSON 解析 (生产环境应使用 serde_json)
-        let json = json.trim();
+        let json: _ = json.clone();trim();
         if !json.starts_with('{') || !json.ends_with('}') {
             return Err("Invalid JSON format".to_string());
         }
 
         // 解析简单的 key-value JSON
-        let inner = &json[1..json.len()-1];
+        let inner: _ = &json[1..json.len()-1];
         for part in inner.split(',') {
-            let part = part.trim();
+            let part: _ = part.clone();trim();
             if part.is_empty() {
                 continue;
             }
             if let Some((key, value)) = part.split_once(':') {
-                let key = key.trim().trim_matches('"');
-                let value = value.trim();
+                let key: _ = key.clone();trim().trim_matches('"');
+                let value: _ = value.clone();trim();
 
-                let config_value = if value.starts_with('"') && value.ends_with('"') {
+                let config_value: _ = if value.starts_with('"') && value.ends_with('"') {
                     ConfigValue::String(value[1..value.len()-1].to_string())
                 } else if value == "true" {
                     ConfigValue::Boolean(true)
@@ -218,10 +218,10 @@ impl ConfigManager {
     }
 
     /// 导出配置 (隐藏敏感值)
-    pub fn export_safe(&self) -> HashMap<String, String> {
+    pub fn export_safe(&self) -> HashMap<String, String, std::collections::HashMap<String, String, String, String>> {
         let mut result = HashMap::new();
         for (key, entry) in &self.entries {
-            let value = if entry.sensitive {
+            let value: _ = if entry.sensitive {
                 "[REDACTED]".to_string()
             } else {
                 match &entry.value {
@@ -253,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_config_manager_creation() {
-        let config = ConfigManager::new();
+        let config: _ = ConfigManager::new();
         assert!(config.keys().is_empty());
     }
 
@@ -284,7 +284,7 @@ mod tests {
     #[test]
     fn test_config_load_json_string() {
         let mut config = ConfigManager::new();
-        let json = r#"{"name": "beejs", "version": "1.0.0"}"#;
+        let json: _ = r#"{"name": "beejs", "version": "1.0.0"}"#;
 
         assert!(config.load_from_json(json).is_ok());
         assert_eq!(config.get_string("name"), Some("beejs".to_string()));
@@ -294,7 +294,7 @@ mod tests {
     #[test]
     fn test_config_load_json_numbers() {
         let mut config = ConfigManager::new();
-        let json = r#"{"port": 8080, "workers": 4, "timeout": 30.5}"#;
+        let json: _ = r#"{"port": 8080, "workers": 4, "timeout": 30.5}"#;
 
         assert!(config.load_from_json(json).is_ok());
         assert_eq!(config.get_int("port"), Some(8080));
@@ -304,7 +304,7 @@ mod tests {
     #[test]
     fn test_config_load_json_boolean() {
         let mut config = ConfigManager::new();
-        let json = r#"{"debug": true, "production": false}"#;
+        let json: _ = r#"{"debug": true, "production": false}"#;
 
         assert!(config.load_from_json(json).is_ok());
         assert_eq!(config.get_bool("debug"), Some(true));
@@ -314,7 +314,7 @@ mod tests {
     #[test]
     fn test_config_load_json_invalid() {
         let mut config = ConfigManager::new();
-        let result = config.load_from_json("not json");
+        let result: _ = config.load_from_json("not json");
         assert!(result.is_err());
     }
 
@@ -325,7 +325,7 @@ mod tests {
     #[test]
     fn test_config_sensitive_detection() {
         let mut config = ConfigManager::new();
-        let json = r#"{"api_secret": "xyz123", "db_password": "pass123", "name": "app"}"#;
+        let json: _ = r#"{"api_secret": "xyz123", "db_password": "pass123", "name": "app"}"#;
 
         assert!(config.load_from_json(json).is_ok());
         assert!(config.is_sensitive("api_secret"));
@@ -336,10 +336,10 @@ mod tests {
     #[test]
     fn test_config_export_safe_redacts_sensitive() {
         let mut config = ConfigManager::new();
-        let json = r#"{"api_secret": "super_secret", "name": "beejs"}"#;
+        let json: _ = r#"{"api_secret": "super_secret", "name": "beejs"}"#;
 
         config.load_from_json(json).unwrap();
-        let exported = config.export_safe();
+        let exported: _ = config.export_safe();
 
         assert_eq!(exported.get("api_secret"), Some(&"[REDACTED]".to_string()));
         assert_eq!(exported.get("name"), Some(&"beejs".to_string()));
@@ -355,7 +355,7 @@ mod tests {
         config.set("host", ConfigValue::String("localhost".to_string()));
         config.set("port", ConfigValue::Integer(8080));
 
-        let result = config.validate_required(&["host", "port"]);
+        let result: _ = config.validate_required(&["host", "port"]);
         assert!(result.is_ok());
     }
 
@@ -364,10 +364,10 @@ mod tests {
         let mut config = ConfigManager::new();
         config.set("host", ConfigValue::String("localhost".to_string()));
 
-        let result = config.validate_required(&["host", "port", "database"]);
+        let result: _ = config.validate_required(&["host", "port", "database"]);
         assert!(result.is_err());
 
-        let missing = result.unwrap_err();
+        let missing: _ = result.unwrap_err();
         assert!(missing.contains(&"port".to_string()));
         assert!(missing.contains(&"database".to_string()));
     }
@@ -402,9 +402,9 @@ mod tests {
 
     #[test]
     fn test_config_value_type_conversion() {
-        let string_val = ConfigValue::String("hello".to_string());
-        let int_val = ConfigValue::Integer(42);
-        let bool_val = ConfigValue::Boolean(true);
+        let string_val: _ = ConfigValue::String("hello".to_string());
+        let int_val: _ = ConfigValue::Integer(42);
+        let bool_val: _ = ConfigValue::Boolean(true);
 
         assert_eq!(string_val.as_str(), Some("hello"));
         assert_eq!(int_val.as_i64(), Some(42));
@@ -430,7 +430,7 @@ fn test_stage_28_1_config_manager_integration() {
     config.set_default("debug", ConfigValue::Boolean(false));
 
     // 2. 从 JSON 加载配置
-    let json_config = r#"{
+    let json_config: _ = r#"{
         "app_name": "beejs",
         "port": 8080,
         "debug": true,
@@ -448,7 +448,7 @@ fn test_stage_28_1_config_manager_integration() {
     assert!(config.is_sensitive("api_secret"));
 
     // 5. 安全导出
-    let safe_export = config.export_safe();
+    let safe_export: _ = config.export_safe();
     assert_eq!(safe_export.get("api_secret"), Some(&"[REDACTED]".to_string()));
 
     // 6. 验证必需配置
@@ -460,25 +460,27 @@ fn test_stage_28_1_config_manager_integration() {
 #[test]
 fn test_stage_28_1_config_performance() {
     use std::time::Instant;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     let mut config = ConfigManager::new();
 
     // 性能测试：大量配置项
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     for i in 0..1000 {
         config.set(
             &format!("key_{}", i),
             ConfigValue::String(format!("value_{}", i)),
         );
     }
-    let write_time = start.elapsed().unwrap();
+    let write_time: _ = start.elapsed().unwrap();
 
     // 读取性能
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     for i in 0..1000 {
-        let _ = config.get(&format!("key_{}", i));
+        let _: _ = config.get(&format!("key_{}", i));
     }
-    let read_time = start.elapsed().unwrap();
+    let read_time: _ = start.elapsed().unwrap();
 
     println!("Config Performance:");
     println!("  Write 1000 items: {:?}", write_time);

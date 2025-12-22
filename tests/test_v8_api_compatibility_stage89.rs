@@ -4,13 +4,15 @@
 use beejs::v8_engine::compatibility::{V8CompatibilityChecker, V8APIStatus, DeprecatedAPI};
 use beejs::v8_engine::V8EngineFlags;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 #[tokio::test]
 async fn test_v8_api_compatibility_check() {
-    let checker = V8CompatibilityChecker::new();
+    let checker: _ = V8CompatibilityChecker::new();
 
     // 测试 API 兼容性检查
-    let report = checker.check_compatibility().await.unwrap();
+    let report: _ = checker.check_compatibility().await.unwrap();
 
     assert!(!report.api_map.is_empty(), "API map should not be empty");
     println!("Checked {} APIs", report.api_map.len());
@@ -18,10 +20,10 @@ async fn test_v8_api_compatibility_check() {
 
 #[tokio::test]
 async fn test_deprecated_api_migration() {
-    let checker = V8CompatibilityChecker::new();
+    let checker: _ = V8CompatibilityChecker::new();
 
     // 测试已弃用 API 迁移
-    let migration_plans = checker.migrate_deprecated_apis().await.unwrap();
+    let migration_plans: _ = checker.migrate_deprecated_apis().await.unwrap();
 
     // 验证迁移计划
     for plan in migration_plans {
@@ -33,10 +35,10 @@ async fn test_deprecated_api_migration() {
 
 #[tokio::test]
 async fn test_v8_version_compatibility() {
-    let checker = V8CompatibilityChecker::new();
+    let checker: _ = V8CompatibilityChecker::new();
 
     // 测试当前 V8 版本兼容性
-    let current_version = checker.get_current_v8_version().await.unwrap();
+    let current_version: _ = checker.get_current_v8_version().await.unwrap();
     println!("Current V8 version: {}", current_version);
 
     assert!(!current_version.is_empty(), "Should detect V8 version");
@@ -46,22 +48,22 @@ async fn test_v8_version_compatibility() {
 #[tokio::test]
 fn test_api_status_enum() {
     // 测试 API 状态枚举
-    let status = V8APIStatus::Stable;
+    let status: _ = V8APIStatus::Stable;
     assert_eq!(format!("{:?}", status), "Stable");
 
-    let status = V8APIStatus::Deprecated;
+    let status: _ = V8APIStatus::Deprecated;
     assert_eq!(format!("{:?}", status), "Deprecated");
 
-    let status = V8APIStatus::Experimental;
+    let status: _ = V8APIStatus::Experimental;
     assert_eq!(format!("{:?}", status), "Experimental");
 }
 
 #[tokio::test]
 async fn test_v8_flags_compatibility() {
-    let flags = V8EngineFlags::new();
+    let flags: _ = V8EngineFlags::new();
 
     // 测试 V8 标志兼容性
-    let compatible_flags = flags.get_compatible_flags().await.unwrap();
+    let compatible_flags: _ = flags.clone();get_compatible_flags().await.unwrap();
 
     assert!(!compatible_flags.is_empty(), "Should have compatible flags");
     println!("Found {} compatible flags", compatible_flags.len());
@@ -69,10 +71,10 @@ async fn test_v8_flags_compatibility() {
 
 #[tokio::test]
 async fn test_rusty_v8_version_check() {
-    let checker = V8CompatibilityChecker::new();
+    let checker: _ = V8CompatibilityChecker::new();
 
     // 检查 rusty_v8 版本兼容性
-    let is_compatible = checker.check_rusty_v8_version().await.unwrap();
+    let is_compatible: _ = checker.check_rusty_v8_version().await.unwrap();
 
     // 根据 Cargo.toml 中的版本 (0.22) 进行检查
     assert!(is_compatible, "rusty_v8 0.22 should be compatible");
@@ -80,10 +82,10 @@ async fn test_rusty_v8_version_check() {
 
 #[tokio::test]
 async fn test_v8_api_usage_scan() {
-    let checker = V8CompatibilityChecker::new();
+    let checker: _ = V8CompatibilityChecker::new();
 
     // 扫描源代码中的 V8 API 使用情况
-    let usage_report = checker.scan_api_usage_in_source().await.unwrap();
+    let usage_report: _ = checker.scan_api_usage_in_source().await.unwrap();
 
     assert!(!usage_report.deprecated_apis.is_empty() || !usage_report.experimental_apis.is_empty(),
             "Should scan API usage");
@@ -95,10 +97,10 @@ async fn test_v8_api_usage_scan() {
 
 #[tokio::test]
 async fn test_compatibility_report_generation() {
-    let checker = V8CompatibilityChecker::new();
+    let checker: _ = V8CompatibilityChecker::new();
 
     // 生成完整的兼容性报告
-    let report = checker.generate_full_report().await.unwrap();
+    let report: _ = checker.generate_full_report().await.unwrap();
 
     assert!(report.summary.total_apis > 0, "Should have total APIs count");
     assert!(report.summary.compatible_apis >= 0, "Should have compatible APIs count");

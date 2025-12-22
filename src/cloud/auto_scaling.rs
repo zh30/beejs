@@ -14,6 +14,8 @@ use tokio::sync::{RwLock, mpsc};
 use tokio::time::{interval, Duration};
 
 use crate::cloud::{CloudAdapter, CloudConfig, CloudManager};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 扩缩容策略
 #[derive(Debug, Clone)]
@@ -45,7 +47,7 @@ pub enum ScalingStrategy {
     /// 复合策略
     Composite {
         strategies: Vec<ScalingStrategy>,
-        weights: HashMap<String, f64>,
+        weights: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>,
     },
 }
 
@@ -63,7 +65,7 @@ pub struct ScalingDecision {
     pub action: ScalingAction,
     pub reason: String,
     pub confidence: f64,
-    pub metadata: HashMap<String, String>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 性能指标
@@ -100,8 +102,8 @@ impl AutoScaler {
         Self {
             config,
             strategy,
-            current_replicas: Arc::new(RwLock::new(config.min_replicas)),
-            metrics_history: Arc::new(RwLock::new(Vec::new())),
+            current_replicas: Arc::new(std::sync::Mutex::new(RwLock::new(config.min_replicas))),
+            metrics_history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
             cloud_manager,
             decision_callback: None,
         }
@@ -139,7 +141,7 @@ impl AutoScaler {
 
     /// 评估是否需要扩缩容
     pub async fn evaluate(&self) -> Result<ScalingDecision, Box<dyn std::error::Error>> {
-        let history = self.metrics_history.read().await;
+        let history: _ = self.metrics_history.read().await;
         if history.is_empty() {
             return Ok(ScalingDecision {
                 action: ScalingAction::NoOp,
@@ -149,8 +151,8 @@ impl AutoScaler {
             });
         }
 
-        let latest_metrics = history.last().unwrap();
-        let decision = self.evaluate_strategy(latest_metrics).await?;
+        let latest_metrics: _ = history.last().unwrap();
+        let decision: _ = self.evaluate_strategy(latest_metrics).await?;
 
         // 应用扩缩容
         if let Some(callback) = &self.decision_callback {
@@ -309,8 +311,8 @@ impl AutoScaler {
                 let mut reasons = Vec::new();
 
                 for strategy in strategies {
-                    let strategy_decision = self.evaluate_single_strategy(strategy, metrics).await?;
-                    let weight = weights
+                    let strategy_decision: _ = self.evaluate_single_strategy(strategy, metrics).await?;
+                    let weight: _ = weights
                         .get(&self.get_strategy_name(strategy))
                         .unwrap_or(&1.0);
                     total_score += strategy_decision.confidence * weight;
@@ -318,13 +320,13 @@ impl AutoScaler {
                     reasons.push(strategy_decision.reason);
                 }
 
-                let avg_score = if total_weight > 0.0 {
+                let avg_score: _ = if total_weight > 0.0 {
                     total_score / total_weight
                 } else {
                     0.0
                 };
 
-                let action = if avg_score > 0.5 {
+                let action: _ = if avg_score > 0.5 {
                     ScalingAction::ScaleUp(1)
                 } else if avg_score < -0.5 {
                     ScalingAction::ScaleDown(1)
@@ -374,21 +376,21 @@ impl AutoScaler {
 
     /// 执行扩缩容
     pub async fn execute_scaling(&self, decision: &ScalingDecision) -> Result<(), Box<dyn std::error::Error>> {
-        let adapter = match self.cloud_manager.get_adapter() {
+        let adapter: _ = match self.cloud_manager.get_adapter() {
             Some(adapter) => adapter,
             None => return Err("No cloud adapter configured".into()),
         };
 
-        let new_replicas = match decision.action {
+        let new_replicas: _ = match decision.action {
             ScalingAction::ScaleUp(inc) => {
                 let current = *self.current_replicas.read().await;
-                let new_replicas = (current + inc).min(self.config.max_replicas);
+                let new_replicas: _ = (current + inc).min(self.config.max_replicas);
                 *self.current_replicas.write().await = new_replicas;
                 new_replicas
             }
             ScalingAction::ScaleDown(dec) => {
-                let current = *self.current_replicas.read().await;
-                let new_replicas = (current.saturating_sub(dec)).max(self.config.min_replicas);
+                let current: _ = *self.current_replicas.read().await;
+                let new_replicas: _ = (current.saturating_sub(dec)).max(self.config.min_replicas);
                 *self.current_replicas.write().await = new_replicas;
                 new_replicas
             }
@@ -396,7 +398,7 @@ impl AutoScaler {
         };
 
         // 假设 deployment_id 是 "default"
-        let deployment_id = "default";
+        let deployment_id: _ = "default";
         adapter.scale(deployment_id, new_replicas).await?;
 
         tracing::info!(
@@ -435,27 +437,27 @@ pub struct LoadPredictor {
 impl LoadPredictor {
     pub fn new() -> Self {
         Self {
-            history: Arc::new(RwLock::new(Vec::new())),
+            history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         }
     }
 
     /// 预测未来负载
     pub async fn predict_load(&self, horizon_minutes: u32) -> Result<f64, Box<dyn std::error::Error>> {
-        let history = self.history.read().await;
+        let history: _ = self.history.read().await;
         if history.len() < 10 {
             return Ok(0.0);
         }
 
         // 简单的线性回归预测
-        let n = history.len() as f64;
+        let n: _ = history.len() as f64;
         let mut sum_x = 0.0;
         let mut sum_y = 0.0;
         let mut sum_xy = 0.0;
         let mut sum_x2 = 0.0;
 
         for (i, metrics) in history.iter().enumerate() {
-            let x = i as f64;
-            let y = metrics.request_rate;
+            let x: _ = i as f64;
+            let y: _ = metrics.request_rate;
 
             sum_x += x;
             sum_y += y;
@@ -463,11 +465,11 @@ impl LoadPredictor {
             sum_x2 += x * x;
         }
 
-        let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
-        let intercept = (sum_y - slope * sum_x) / n;
+        let slope: _ = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
+        let intercept: _ = (sum_y - slope * sum_x) / n;
 
-        let future_x = (history.len() + horizon_minutes as usize) as f64;
-        let prediction = intercept + slope * future_x;
+        let future_x: _ = (history.len() + horizon_minutes as usize) as f64;
+        let prediction: _ = intercept + slope * future_x;
 
         Ok(prediction.max(0.0))
     }

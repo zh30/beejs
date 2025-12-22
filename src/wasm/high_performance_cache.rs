@@ -43,11 +43,11 @@ struct HighPerfCacheEntry {
 impl HighPerfCacheEntry {
     /// 创建新的高性能缓存条目
     fn new(wasm_bytes: Vec<u8>, hash: String) -> Self {
-        let now = Instant::now();
-        let size = wasm_bytes.len();
+        let now: _ = Instant::now();
+        let size: _ = wasm_bytes.len();
 
         HighPerfCacheEntry {
-            wasm_bytes: Arc::new(wasm_bytes),
+            wasm_bytes: Arc::new(std::sync::Mutex::new(wasm_bytes)),
             precompiled_module: None,
             cached_at: now,
             last_access: now,
@@ -72,7 +72,7 @@ impl HighPerfCacheEntry {
 
     /// 计算使用率分数 (访问次数/年龄)
     fn usage_score(&self) -> f64 {
-        let age_secs = self.cached_at.elapsed().as_secs_f64();
+        let age_secs: _ = self.cached_at.elapsed().as_secs_f64();
         if age_secs == 0.0 {
             self.access_count() as f64
         } else {
@@ -133,8 +133,8 @@ pub struct HighPerfCacheStats {
 impl HighPerfCacheStats {
     /// 计算缓存命中率
     pub fn hit_ratio(&self) -> f64 {
-        let hits = self.hits.load(Ordering::Relaxed);
-        let total = hits + self.misses.load(Ordering::Relaxed);
+        let hits: _ = self.hits.load(Ordering::Relaxed);
+        let total: _ = hits + self.misses.load(Ordering::Relaxed);
         if total > 0 {
             hits as f64 / total as f64
         } else {
@@ -144,8 +144,8 @@ impl HighPerfCacheStats {
 
     /// 计算平均加载时间 (纳秒)
     pub fn avg_load_time(&self) -> Duration {
-        let total_ns = self.avg_load_time_ns.load(Ordering::Relaxed);
-        let operations = self.load_operations.load(Ordering::Relaxed);
+        let total_ns: _ = self.avg_load_time_ns.load(Ordering::Relaxed);
+        let operations: _ = self.load_operations.load(Ordering::Relaxed);
         if operations > 0 {
             Duration::from_nanos(total_ns / operations)
         } else {
@@ -163,9 +163,9 @@ impl HighPerfCacheStats {
 /// - 细粒度锁
 pub struct HighPerformanceWasmCache {
     /// L1 内存缓存 (使用 RwLock 提供更好的并发性能)
-    l1_cache: Arc<RwLock<HashMap<String, Arc<HighPerfCacheEntry>>>>,
+    l1_cache: Arc<RwLock<HashMap<String, Arc<HighPerfCacheEntry, std::collections::HashMap<String, Arc<HighPerfCacheEntry, String, Arc<HighPerfCacheEntry>>>>>,
     /// L2 文件缓存
-    l2_cache: Arc<Mutex<HashMap<String, PathBuf>>>,
+    l2_cache: Arc<Mutex<HashMap<String, PathBuf, std::collections::HashMap<String, PathBuf, String, PathBuf>>>>,
     /// 缓存配置
     config: HighPerfCacheConfig,
     /// 统计信息
@@ -187,37 +187,37 @@ impl HighPerformanceWasmCache {
         }
 
         Ok(HighPerformanceWasmCache {
-            l1_cache: Arc::new(RwLock::new(HashMap::new())),
-            l2_cache: Arc::new(Mutex::new(HashMap::new())),
+            l1_cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            l2_cache: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
             config,
-            stats: Arc::new(HighPerfCacheStats::default()),
+            stats: Arc::new(std::sync::Mutex::new(HighPerfCacheStats::default())),
         })
     }
 
     /// 高性能存储模块 (零拷贝)
     pub async fn store_module(&self, module_hash: String, wasm_bytes: Vec<u8>) -> Result<()> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 计算哈希
-        let hash = if module_hash.is_empty() {
+        let hash: _ = if module_hash.is_empty() {
             self.calculate_hash(&wasm_bytes)
         } else {
             module_hash
         };
 
         // 创建高性能缓存条目
-        let entry = Arc::new(HighPerfCacheEntry::new(wasm_bytes, hash.clone()));
+        let entry: _ = Arc::new(std::sync::Mutex::new(HighPerfCacheEntry::new(wasm_bytes, hash.clone())));
 
         // 存储到 L1 缓存
         {
             let mut l1 = self.l1_cache.write().unwrap();
-            l1.insert(hash.clone(), Arc::clone(&entry));
+            l1.insert(hash.clone(), Arc::clone(entry));
         }
 
         // 异步存储到 L2 缓存
         if self.config.enable_l2 {
-            let hash_clone = hash.clone();
-            let entry_clone = Arc::clone(&entry);
+            let hash_clone: _ = hash.clone();
+            let entry_clone: _ = Arc::clone(entry);
 
             tokio::spawn(async move {
                 if let Err(e) = Self::store_to_l2_async(&hash_clone, &entry_clone).await {
@@ -234,19 +234,19 @@ impl HighPerformanceWasmCache {
 
     /// 高性能加载模块 (零拷贝)
     pub async fn load_module(&self, module_hash: &str) -> Result<Arc<Vec<u8>>> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 先尝试从 L1 缓存加载 (零拷贝)
         {
-            let l1 = self.l1_cache.read().unwrap();
+            let l1: _ = self.l1_cache.read().unwrap();
             if let Some(entry) = l1.get(module_hash) {
                 // 使用 Arc::clone 而不是更新访问时间 (避免 &self 的限制)
-                let _ = entry.clone(); // 强制增加引用计数
+                let _: _ = entry.clone(); // 强制增加引用计数
 
                 // 记录零拷贝操作
                 self.stats.zero_copy_operations.fetch_add(1, Ordering::Relaxed);
 
-                let load_time = start.elapsed();
+                let load_time: _ = start.elapsed();
                 self.record_load_time(load_time);
                 self.stats.hits.fetch_add(1, Ordering::Relaxed);
 
@@ -259,19 +259,19 @@ impl HighPerformanceWasmCache {
             if let Ok(wasm_bytes) = self.load_from_l2_async(module_hash).await {
                 if !wasm_bytes.is_empty() {
                     // 异步存储回 L1 缓存
-                    let cache = self.clone();
-                    let hash = module_hash.to_string();
-                    let bytes = wasm_bytes.clone();
+                    let cache: _ = self.clone();
+                    let hash: _ = module_hash.to_string();
+                    let bytes: _ = wasm_bytes.clone();
 
                     tokio::spawn(async move {
-                        let _ = cache.store_module(hash, bytes).await;
+                        let _: _ = cache.store_module(hash, bytes).await;
                     });
 
-                    let load_time = start.elapsed();
+                    let load_time: _ = start.elapsed();
                     self.record_load_time(load_time);
                     self.stats.hits.fetch_add(1, Ordering::Relaxed);
 
-                    return Ok(Arc::new(wasm_bytes));
+                    return Ok(Arc::new(std::sync::Mutex::new(wasm_bytes)));
                 }
             }
         }
@@ -286,8 +286,8 @@ impl HighPerformanceWasmCache {
         hash: &str,
         entry: &Arc<HighPerfCacheEntry>,
     ) -> Result<()> {
-        let wasm_bytes = Arc::clone(&entry.wasm_bytes);
-        let file_path = format!("./wasm_cache_high_perf/{}.wasm", hash);
+        let wasm_bytes: _ = Arc::clone(&entry.wasm_bytes);
+        let file_path: _ = format!("./wasm_cache_high_perf/{}.wasm", hash);
 
         let mut file = fs::File::create(&file_path).await?;
         file.write_all(&wasm_bytes).await?;
@@ -297,7 +297,7 @@ impl HighPerformanceWasmCache {
 
     /// 异步从 L2 缓存加载
     async fn load_from_l2_async(&self, module_hash: &str) -> Result<Vec<u8>> {
-        let file_path = {
+        let file_path: _ = {
             let l2 = self.l2_cache.lock().unwrap();
             l2.get(module_hash).cloned()
         };
@@ -325,10 +325,10 @@ impl HighPerformanceWasmCache {
         let mut handles = Vec::new();
 
         for hash in module_hashes {
-            let cache = self.clone();
-            let hash_clone = hash.clone();
+            let cache: _ = self.clone();
+            let hash_clone: _ = hash.clone();
 
-            let handle = tokio::spawn(async move {
+            let handle: _ = tokio::spawn(async move {
                 match cache.load_module(&hash_clone).await {
                     Ok(bytes) => Ok(bytes),
                     Err(e) => Err(e),
@@ -353,11 +353,11 @@ impl HighPerformanceWasmCache {
         // 分批处理
         for chunk in modules.chunks(self.config.batch_size) {
             for (hash, wasm_bytes) in chunk {
-                let cache = self.clone();
-                let hash_clone = hash.clone();
-                let bytes_clone = wasm_bytes.clone();
+                let cache: _ = self.clone();
+                let hash_clone: _ = hash.clone();
+                let bytes_clone: _ = wasm_bytes.clone();
 
-                let handle = tokio::spawn(async move {
+                let handle: _ = tokio::spawn(async move {
                     cache.store_module(hash_clone, bytes_clone).await
                 });
 
@@ -382,8 +382,8 @@ impl HighPerformanceWasmCache {
 
     /// 克隆缓存 (用于异步操作)
     fn clone(&self) -> Arc<Self> {
-        Arc::new(HighPerformanceWasmCache {
-            l1_cache: Arc::clone(&self.l1_cache),
+        Arc::new(std::sync::Mutex::new(HighPerformanceWasmCache {
+            l1_cache: Arc::clone(&self.l1_cache)),
             l2_cache: Arc::clone(&self.l2_cache),
             config: self.config.clone(),
             stats: Arc::clone(&self.stats),
@@ -410,13 +410,13 @@ impl HighPerformanceWasmCache {
 
         // 更新 L1 和 L2 条目数
         {
-            let l1 = self.l1_cache.read().unwrap();
+            let l1: _ = self.l1_cache.read().unwrap();
             stats.l1_entries = l1.len();
             stats.precompiled_modules = 0; // 简化为 0
         }
 
         if self.config.enable_l2 {
-            let l2 = self.l2_cache.lock().unwrap();
+            let l2: _ = self.l2_cache.lock().unwrap();
             stats.l2_entries = l2.len();
         }
 
@@ -428,11 +428,13 @@ impl HighPerformanceWasmCache {
 mod tests {
     use super::*;
     use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_high_performance_cache_creation() {
-        let cache = HighPerformanceWasmCache::new().unwrap();
-        let stats = cache.get_stats();
+        let cache: _ = HighPerformanceWasmCache::new().unwrap();
+        let stats: _ = cache.get_stats();
 
         assert_eq!(stats.l1_entries, 0);
         assert_eq!(stats.l2_entries, 0);
@@ -441,64 +443,64 @@ mod tests {
 
     #[tokio::test]
     async fn test_zero_copy_operations() {
-        let cache = HighPerformanceWasmCache::new().unwrap();
+        let cache: _ = HighPerformanceWasmCache::new().unwrap();
 
-        let wasm_bytes = vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00];
-        let hash = cache.calculate_hash(&wasm_bytes);
+        let wasm_bytes: _ = vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00];
+        let hash: _ = cache.calculate_hash(&wasm_bytes);
 
         cache.store_module(hash.clone(), wasm_bytes.clone()).await.unwrap();
 
         // 零拷贝加载
-        let loaded_bytes = cache.load_module(&hash).await.unwrap();
+        let loaded_bytes: _ = cache.load_module(&hash).await.unwrap();
 
         // 验证零拷贝 (Arc 克隆，不拷贝数据)
-        let wasm_bytes_ref = &wasm_bytes;
-        assert!(Arc::ptr_eq(&loaded_bytes, &Arc::new(wasm_bytes_ref.to_vec())) || std::ptr::eq(loaded_bytes.as_ptr(), wasm_bytes_ref.as_ptr()));
+        let wasm_bytes_ref: _ = &wasm_bytes;
+        assert!(Arc::ptr_eq(&loaded_bytes, &Arc::new(std::sync::Mutex::new(wasm_bytes_ref.to_vec()))) || std::ptr::eq(loaded_bytes.as_ptr(), wasm_bytes_ref.as_ptr()));
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.zero_copy_operations.load(Ordering::Relaxed), 1);
         println!("✅ 零拷贝操作测试通过");
     }
 
     #[tokio::test]
     async fn test_async_l2_cache() {
-        let cache = HighPerformanceWasmCache::new().unwrap();
+        let cache: _ = HighPerformanceWasmCache::new().unwrap();
 
-        let wasm_bytes = wat::parse_str(r#"
+        let wasm_bytes: _ = wat::parse_str(r#"
             (module
                 (func $_start (export "_start") nop)
             )
         "#).expect("创建WASM字节码失败");
 
-        let hash = cache.calculate_hash(&wasm_bytes);
+        let hash: _ = cache.calculate_hash(&wasm_bytes);
         cache.store_module(hash.clone(), wasm_bytes.clone()).await.unwrap();
 
         // 等待异步 L2 存储完成
         tokio::time::sleep(Duration::from_millis(100)).await;
 
-        let loaded_bytes = cache.load_module(&hash).await.unwrap();
+        let loaded_bytes: _ = cache.load_module(&hash).await.unwrap();
         assert_eq!(loaded_bytes.len(), wasm_bytes.len());
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert!(stats.async_io_operations.load(Ordering::Relaxed) > 0);
         println!("✅ 异步 L2 缓存测试通过");
     }
 
     #[tokio::test]
     async fn test_batch_operations() {
-        let cache = HighPerformanceWasmCache::new().unwrap();
+        let cache: _ = HighPerformanceWasmCache::new().unwrap();
 
         // 创建多个模块
         let mut modules = Vec::new();
         for i in 0..10 {
-            let wasm_bytes = wat::parse_str(&format!(r#"
+            let wasm_bytes: _ = wat::parse_str(&format!(r#"
                 (module
                     (func $_start (export "_start") nop)
                     (data (i32.const 0) "{}")
                 )
             "#, i)).expect("创建WASM字节码失败");
 
-            let hash = cache.calculate_hash(&wasm_bytes);
+            let hash: _ = cache.calculate_hash(&wasm_bytes);
             modules.push((hash, wasm_bytes));
         }
 
@@ -507,10 +509,10 @@ mod tests {
 
         // 批量加载
         let hashes: Vec<String> = modules.iter().map(|(h, _)| h.clone()).collect();
-        let results = cache.load_modules_batch(hashes).await.unwrap();
+        let results: _ = cache.load_modules_batch(hashes).await.unwrap();
 
         assert_eq!(results.len(), 10);
-        let success_count = results.iter().filter(|r| r.is_ok()).count();
+        let success_count: _ = results.iter().filter(|r| r.is_ok()).count();
         assert_eq!(success_count, 10);
 
         println!("✅ 批量操作测试通过");

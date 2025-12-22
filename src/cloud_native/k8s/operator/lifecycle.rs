@@ -289,12 +289,14 @@ pub enum LifecycleError {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_cluster_lifecycle_initialization() {
         let mut lifecycle = ClusterLifecycle::new(3);
 
-        let result = lifecycle.handle_initialization();
+        let result: _ = lifecycle.handle_initialization();
         assert!(result.is_ok());
         assert_eq!(lifecycle.failure_count(), 0);
     }
@@ -304,13 +306,13 @@ mod tests {
         let mut lifecycle = ClusterLifecycle::new(3);
 
         // Simulate failure
-        let result = lifecycle.handle_failure("Test failure");
+        let result: _ = lifecycle.handle_failure("Test failure");
         assert!(result.is_ok());
         assert_eq!(lifecycle.failure_count(), 1);
         assert_eq!(result.unwrap(), ClusterPhase::Running);
 
         // Simulate recovery
-        let result = lifecycle.handle_recovery();
+        let result: _ = lifecycle.handle_recovery();
         assert!(result.is_ok());
         assert_eq!(lifecycle.failure_count(), 0);
     }
@@ -320,8 +322,8 @@ mod tests {
         let mut lifecycle = ClusterLifecycle::new(2);
 
         // Simulate two failures
-        let _ = lifecycle.handle_failure("Test failure 1");
-        let _ = lifecycle.handle_failure("Test failure 2");
+        let _: _ = lifecycle.handle_failure("Test failure 1");
+        let _: _ = lifecycle.handle_failure("Test failure 2");
 
         // Should be in failed state
         assert_eq!(lifecycle.failure_count(), 2);
@@ -331,21 +333,21 @@ mod tests {
     fn test_workload_lifecycle_execution() {
         let mut lifecycle = WorkloadLifecycle::new(3);
 
-        let result = lifecycle.handle_execution();
+        let result: _ = lifecycle.handle_execution();
         assert!(result.is_ok());
         assert_eq!(lifecycle.execution_count(), 1);
 
         // Execute again
-        let result = lifecycle.handle_execution();
+        let result: _ = lifecycle.handle_execution();
         assert!(result.is_ok());
         assert_eq!(lifecycle.execution_count(), 2);
     }
 
     #[test]
     fn test_generating_conditions() {
-        let lifecycle = ClusterLifecycle::new(3);
+        let lifecycle: _ = ClusterLifecycle::new(3);
 
-        let condition = lifecycle.generate_readiness_condition();
+        let condition: _ = lifecycle.generate_readiness_condition();
 
         assert_eq!(condition.condition_type, ConditionType::Ready);
         assert_eq!(condition.status, ConditionStatus::True);

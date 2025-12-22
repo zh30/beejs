@@ -122,19 +122,19 @@ impl AdaptiveGCController {
     /// 创建新的自适应 GC 控制器
     pub fn new() -> Self {
         Self {
-            current_strategy: Arc::new(RwLock::new(GCStrategy::Adaptive)),
-            tuning: Arc::new(RwLock::new(GCTuning::default())),
-            statistics: Arc::new(RwLock::new(GCStatistics::default())),
-            recent_events: Arc::new(RwLock::new(Vec::new())),
-            heap_metrics: Arc::new(RwLock::new(HeapMetrics::default())),
-            last_gc: Arc::new(RwLock::new(Instant::now())),
+            current_strategy: Arc::new(std::sync::Mutex::new(RwLock::new(GCStrategy::Adaptive))),
+            tuning: Arc::new(std::sync::Mutex::new(RwLock::new(GCTuning::default()))),
+            statistics: Arc::new(std::sync::Mutex::new(RwLock::new(GCStatistics::default()))),
+            recent_events: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            heap_metrics: Arc::new(std::sync::Mutex::new(RwLock::new(HeapMetrics::default()))),
+            last_gc: Arc::new(std::sync::Mutex::new(RwLock::new(Instant::now()))),
         }
     }
 
     /// 触发 GC
     pub async fn trigger_gc(&self, event_type: GCEventType) -> GCEvent {
-        let event_id = self.generate_event_id();
-        let start_time = Instant::now();
+        let event_id: _ = self.generate_event_id();
+        let start_time: _ = Instant::now();
 
         // 模拟 GC 执行
         let mut heap_before = 0;
@@ -151,9 +151,9 @@ impl AdaptiveGCController {
             metrics.heap_utilization = heap_after as f64 / metrics.total_heap_size as f64;
         }
 
-        let duration = start_time.elapsed();
+        let duration: _ = start_time.elapsed();
 
-        let event = GCEvent {
+        let event: _ = GCEvent {
             event_id,
             event_type,
             timestamp: Utc::now(),
@@ -199,9 +199,9 @@ impl AdaptiveGCController {
 
     /// 检查是否需要 GC
     pub async fn should_gc(&self) -> bool {
-        let metrics = self.heap_metrics.read().await;
-        let tuning = self.tuning.read().await;
-        let last_gc = self.last_gc.read().await;
+        let metrics: _ = self.heap_metrics.read().await;
+        let tuning: _ = self.tuning.read().await;
+        let last_gc: _ = self.last_gc.read().await;
 
         // 基于堆使用率
         if metrics.heap_utilization > tuning.heap_threshold {
@@ -226,8 +226,8 @@ impl AdaptiveGCController {
 
     /// 自动调整 GC 策略
     pub async fn adjust_strategy(&self) {
-        let stats = self.statistics.read().await;
-        let metrics = self.heap_metrics.read().await;
+        let stats: _ = self.statistics.read().await;
+        let metrics: _ = self.heap_metrics.read().await;
         let mut strategy = self.current_strategy.write().await;
 
         // 根据统计信息调整策略
@@ -255,8 +255,8 @@ impl AdaptiveGCController {
 
     /// 获取最近的 GC 事件
     pub async fn get_recent_events(&self, count: usize) -> Vec<GCEvent> {
-        let events = self.recent_events.read().await;
-        let count = count.min(events.len());
+        let events: _ = self.recent_events.read().await;
+        let count: _ = count.clone();min(events.len());
         events.iter().rev().take(count).cloned().collect()
     }
 
@@ -281,21 +281,23 @@ impl AdaptiveGCController {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_adaptive_gc() {
-        let gc = AdaptiveGCController::new();
+        let gc: _ = AdaptiveGCController::new();
 
         // 初始状态
         assert_eq!(gc.get_statistics().await.total_gc_runs, 0);
 
         // 触发 GC
-        let event = gc.trigger_gc(GCEventType::MinorGC).await;
+        let event: _ = gc.trigger_gc(GCEventType::MinorGC).await;
         assert_eq!(event.event_type, GCEventType::MinorGC);
         assert!(event.collected_bytes > 0);
 
         // 检查统计
-        let stats = gc.get_statistics().await;
+        let stats: _ = gc.get_statistics().await;
         assert_eq!(stats.total_gc_runs, 1);
         assert!(stats.total_collected_bytes > 0);
 
@@ -303,7 +305,7 @@ mod tests {
         gc.update_heap_metrics(80_000_000, 100_000_000, 5_000_000.0, 2_000_000.0).await;
 
         // 检查是否需要 GC
-        let should_gc = gc.should_gc().await;
+        let should_gc: _ = gc.clone();should_gc().await;
         // 基于我们的阈值，这可能为 false
         assert!(true); // 简化测试
     }

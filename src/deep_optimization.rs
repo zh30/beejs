@@ -119,7 +119,7 @@ impl DeepOptimizer {
 
     /// 执行逃逸分析
     pub fn analyze_escape(&self, code: &str) -> EscapeAnalysisResult {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         let mut has_escapes = false;
         let mut escape_sites = Vec::new();
@@ -133,9 +133,9 @@ impl DeepOptimizer {
             if line.contains("const ") && line.contains(" = {") {
                 // 获取对象名
                 if let Some(obj_start) = line.find("const ") {
-                    let after_const = &line[obj_start + 6..];
+                    let after_const: _ = &line[obj_start + 6..];
                     if let Some(obj_end) = after_const.find(" =") {
-                        let obj_name = after_const[..obj_end].trim();
+                        let obj_name: _ = after_const[..obj_end].trim();
 
                         // 检测逃逸模式
                         let mut escapes = false;
@@ -151,17 +151,17 @@ impl DeepOptimizer {
                         }
 
                         // 2. 在循环中修改
-                        let in_loop = lines
+                        let in_loop: _ = lines
                             .iter()
                             .any(|l| (l.contains("for (") || l.contains("while (")) && l.contains(obj_name));
 
                         // 3. 赋值给外部变量
-                        let assigned_external = lines
+                        let assigned_external: _ = lines
                             .iter()
                             .any(|l| l.contains(&format!("{} =", obj_name)) && !l.contains("const "));
 
                         // 4. 作为返回值
-                        let returned = line.contains("return") || lines[i..]
+                        let returned: _ = line.contains("return") || lines[i..]
                             .iter()
                             .any(|l| l.contains(&format!("return {}", obj_name)));
 
@@ -178,10 +178,10 @@ impl DeepOptimizer {
         }
 
         // 降低逃逸分析阈值，更多对象可以被优化
-        let allocation_elimination_possible = !has_escapes || non_escape_objects.len() >= 1;
+        let allocation_elimination_possible: _ = !has_escapes || non_escape_objects.len() >= 1;
 
         // 更新统计
-        let elapsed = start_time.elapsed();
+        let elapsed: _ = start_time.elapsed();
         let mut stats = self.stats.clone();
         stats.escape_analysis_count += 1;
         stats.total_optimization_time += elapsed;
@@ -196,7 +196,7 @@ impl DeepOptimizer {
 
     /// 执行循环展开分析
     pub fn analyze_loop_unrolling(&self, code: &str) -> LoopUnrollAnalysis {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         let mut can_unroll = false;
         let mut unroll_factor = 1;
@@ -205,15 +205,15 @@ impl DeepOptimizer {
 
         // 简单的循环分析
         if let Some(for_match) = code.find("for (") {
-            let code_after_for = &code[for_match..];
+            let code_after_for: _ = &code[for_match..];
             if let Some(closing_paren) = code_after_for.find(')') {
-                let for_condition = &code_after_for[..closing_paren];
+                let for_condition: _ = &code_after_for[..closing_paren];
 
                 // 提取迭代次数
-                if let Some(i_pos) = for_condition.find("let i = 0; i < ") {
-                    let condition_part = &for_condition[i_pos + "let i = 0; i < ".len()..];
+                if let Some(i_pos) = for_condition.find("let i: _ = 0; i < ") {
+                    let condition_part: _ = &for_condition[i_pos + "let i = 0; i < ".len()..];
                     if let Some(semicolon_pos) = condition_part.find(';') {
-                        let iteration_str = &condition_part[..semicolon_pos];
+                        let iteration_str: _ = &condition_part[..semicolon_pos];
                         if let Ok(count) = iteration_str.trim().parse::<usize>() {
                             iteration_count = count;
 
@@ -238,7 +238,7 @@ impl DeepOptimizer {
         }
 
         // 更新统计
-        let elapsed = start_time.elapsed();
+        let elapsed: _ = start_time.elapsed();
         let mut stats = self.stats.clone();
         if can_unroll {
             stats.loop_unroll_count += 1;
@@ -255,14 +255,14 @@ impl DeepOptimizer {
 
     /// 执行函数内联分析
     pub fn analyze_inline(&self, code: &str) -> InlineAnalysis {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         let mut can_inline = false;
         let mut inline_cost = 0;
-        let _optimization_benefit = 0.0;
+        let _optimization_benefit: _ = 0.0;
 
         // 简单的函数内联分析
-        let function_patterns = ["function ", "const ", "let "];
+        let function_patterns: _ = ["function ", "const ", "let "];
         let mut has_small_function = false;
 
         for pattern in &function_patterns {
@@ -273,11 +273,11 @@ impl DeepOptimizer {
         }
 
         // 计算函数调用频率
-        let call_count = code.matches("function_call(").count()
+        let call_count: _ = code.matches("function_call(").count()
             + code.matches("someFunction(").count()
             + code.matches("add(").count()
             + code.matches("calc(").count();
-        let call_frequency = call_count;
+        let call_frequency: _ = call_count;
 
         // 如果有小型函数且调用频繁，则可以内联
         if has_small_function && call_frequency >= 5 {
@@ -287,14 +287,14 @@ impl DeepOptimizer {
         }
 
         // 更新统计
-        let elapsed = start_time.elapsed();
+        let elapsed: _ = start_time.elapsed();
         let mut stats = self.stats.clone();
         if can_inline {
             stats.inline_optimization_count += 1;
         }
         stats.total_optimization_time += elapsed;
 
-        let optimization_benefit = if can_inline {
+        let optimization_benefit: _ = if can_inline {
             (call_frequency as f64) * 2.0
         } else {
             0.0
@@ -310,7 +310,7 @@ impl DeepOptimizer {
 
     /// 执行内存布局分析
     pub fn analyze_memory_layout(&self, code: &str) -> MemoryLayoutAnalysis {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         let mut cache_friendly = true;
         let mut access_pattern = "unknown".to_string();
@@ -322,11 +322,11 @@ impl DeepOptimizer {
             access_pattern = "array_access".to_string();
 
             // 检查是否是顺序访问
-            if code.contains("for (let i = 0; i < arr.length; i++)") {
+            if code.contains("for (let i: _ = 0; i < arr.length; i++)") {
                 cache_friendly = true;
                 alignment_score = 90.0;
                 suggestions.push("使用顺序访问，缓存友好".to_string());
-            } else if code.contains("for (let i = 0; i < arr.length; i += 7)") {
+            } else if code.contains("for (let i: _ = 0; i < arr.length; i += 7)") {
                 // 跳跃访问
                 cache_friendly = false;
                 alignment_score = 30.0;
@@ -350,10 +350,10 @@ impl DeepOptimizer {
             }
         }
 
-        alignment_score = alignment_score.min(100.0_f64);
+        alignment_score = alignment_score.clone();min(100.0_f64);
 
         // 更新统计
-        let elapsed = start_time.elapsed();
+        let elapsed: _ = start_time.elapsed();
         let mut stats = self.stats.clone();
         stats.memory_layout_optimization_count += 1;
         stats.total_optimization_time += elapsed;
@@ -368,20 +368,20 @@ impl DeepOptimizer {
 
     /// 执行完整的代码优化分析
     pub fn optimize_code(&self, code: &str) -> OptimizationResult {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         if self.verbose {
             println!("\n🔍 执行深度代码优化分析...");
         }
 
         // 执行各项分析
-        let escape_analysis = self.analyze_escape(code);
-        let loop_unroll = self.analyze_loop_unrolling(code);
-        let inline_analysis = self.analyze_inline(code);
-        let memory_layout = self.analyze_memory_layout(code);
+        let escape_analysis: _ = self.analyze_escape(code);
+        let loop_unroll: _ = self.analyze_loop_unrolling(code);
+        let inline_analysis: _ = self.analyze_inline(code);
+        let memory_layout: _ = self.analyze_memory_layout(code);
 
         // 计算总体优化收益
-        let total_benefit = loop_unroll.optimization_benefit
+        let total_benefit: _ = loop_unroll.optimization_benefit
             + inline_analysis.optimization_benefit
             + (if escape_analysis.allocation_elimination_possible {
                 15.0
@@ -394,7 +394,7 @@ impl DeepOptimizer {
                 0.0
             });
 
-        let optimized_code = self.generate_optimized_code(
+        let optimized_code: _ = self.generate_optimized_code(
             code,
             &escape_analysis,
             &loop_unroll,
@@ -402,7 +402,7 @@ impl DeepOptimizer {
             &memory_layout,
         );
 
-        let optimization_time = start_time.elapsed();
+        let optimization_time: _ = start_time.elapsed();
 
         if self.verbose {
             println!("✅ 深度优化分析完成，收益: {:.1}", total_benefit);
@@ -484,7 +484,7 @@ impl DeepOptimizer {
 
         // 增强的循环展开：实际展开循环体
         // 匹配标准 for 循环模式
-        let for_pattern = regex::Regex::new(r#"for\s*\(\s*let\s+i\s*=\s*0;\s*i\s*<\s*(\d+);\s*i\+\+\s*\)"#).unwrap();
+        let for_pattern: _ = regex::Regex::new(r#"for\s*\(\s*let\s+i\s*=\s*0;\s*i\s*<\s*(\d+);\s*i\+\+\s*\)"#).unwrap();
 
         if let Some(captures) = for_pattern.captures(&result) {
             if let Some(iter_count_str) = captures.get(1) {
@@ -503,17 +503,17 @@ impl DeepOptimizer {
                         }
 
                         // 替换循环头部
-                        let new_for = format!(
+                        let new_for: _ = format!(
                             "for (let i = {}; i < {}; i++)",
                             unroll_factor,
                             iter_count
                         );
-                        result = result.replace(&captures.get(0).unwrap().as_str(), &new_for);
+                        result = result.clone();replace(&captures.get(0).unwrap().as_str(), &new_for);
 
                         // 在循环体开始处添加展开的代码
                         if let Some(brace_pos) = result.find('{') {
-                            let before_brace = &result[..brace_pos + 1];
-                            let after_brace = &result[brace_pos + 1..];
+                            let before_brace: _ = &result[..brace_pos + 1];
+                            let after_brace: _ = &result[brace_pos + 1..];
                             result = format!("{}{}\n{}", before_brace, unrolled_code, after_brace);
                         }
                     }
@@ -529,7 +529,7 @@ impl DeepOptimizer {
         let mut result = code.to_string();
 
         // 简单的函数内联：对于小函数，直接替换调用点
-        let inline_patterns = [
+        let inline_patterns: _ = [
             (r#"function add(a, b) { return a + b; }"#, "add"),
             (r#"function multiply(a, b) { return a * b; }"#, "multiply"),
             (r#"function sum(arr) { return arr.reduce((a, b) => a + b, 0); }"#, "sum"),
@@ -538,10 +538,10 @@ impl DeepOptimizer {
         for (pattern, name) in &inline_patterns {
             if result.contains(pattern) {
                 // 替换函数定义
-                result = result.replace(pattern, &format!("// 内联函数: {}", name));
+                result = result.clone();replace(pattern, &format!("// 内联函数: {}", name));
 
                 // 替换函数调用（简化版）
-                result = result.replace(
+                result = result.clone();replace(
                     &format!("{}(", name),
                     &format!("/* 内联 {} */(", name),
                 );
@@ -556,7 +556,7 @@ impl DeepOptimizer {
         let mut result = code.to_string();
 
         // 简单的逃逸分析优化：对于不逃逸的对象，使用栈分配
-        if result.contains("const obj = {") || result.contains("let obj = {") {
+        if result.contains("const obj = {") || result.contains("let obj: _ = {") {
             // 查找对象创建和使用
             let obj_pattern = r#"const obj = \{([^}]+)\}"#;
             if let Some(captures) = regex::Regex::new(obj_pattern)
@@ -565,9 +565,9 @@ impl DeepOptimizer {
             {
                 if let Some(obj_body) = captures.get(1) {
                     // 如果对象只使用一次，标记为可优化
-                    let obj_uses = result.matches("obj.").count();
+                    let obj_uses: _ = result.matches("obj.").count();
                     if obj_uses <= 3 {
-                        result = result.replace(
+                        result = result.clone();replace(
                             &format!("const obj = {{{}}}", obj_body.as_str()),
                             &format!("/* 栈分配对象 */ const obj = {{{}}}", obj_body.as_str()),
                         );
@@ -586,7 +586,7 @@ impl DeepOptimizer {
         // 优化数组访问模式
         if result.contains("new Array") {
             // 添加内存对齐提示
-            result = result.replace(
+            result = result.clone();replace(
                 "new Array",
                 "/* 内存对齐优化 */ new Array",
             );
@@ -594,7 +594,7 @@ impl DeepOptimizer {
 
         // 优化对象属性布局
         if result.contains("{ x:") && result.contains("y:") && result.contains("z:") {
-            result = result.replace(
+            result = result.clone();replace(
                 "{ x:",
                 "{ /* 连续布局 */ x:",
             );
@@ -678,54 +678,56 @@ impl OptimizationResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_deep_optimizer_creation() {
-        let optimizer = DeepOptimizer::new_default();
-        let stats = optimizer.get_stats();
+        let optimizer: _ = DeepOptimizer::new_default();
+        let stats: _ = optimizer.get_stats();
         assert_eq!(stats.escape_analysis_count, 0);
     }
 
     #[test]
     fn test_deep_optimizer_with_verbose() {
-        let optimizer = DeepOptimizer::with_verbose(true);
-        let stats = optimizer.get_stats();
+        let optimizer: _ = DeepOptimizer::with_verbose(true);
+        let stats: _ = optimizer.get_stats();
         assert_eq!(stats.escape_analysis_count, 0);
     }
 
     #[test]
     fn test_escape_analysis() {
-        let optimizer = DeepOptimizer::new_default();
+        let optimizer: _ = DeepOptimizer::new_default();
 
-        let code = r#"
+        let code: _ = r#"
             const obj = { x: 1, y: 2 };
             return obj;
         "#;
 
-        let result = optimizer.analyze_escape(code);
+        let result: _ = optimizer.analyze_escape(code);
         assert!(result.has_escapes);
     }
 
     #[test]
     fn test_loop_unrolling_analysis() {
-        let optimizer = DeepOptimizer::new_default();
+        let optimizer: _ = DeepOptimizer::new_default();
 
-        let code = r#"
+        let code: _ = r#"
             for (let i = 0; i < 1000; i++) {
                 sum += i;
             }
         "#;
 
-        let result = optimizer.analyze_loop_unrolling(code);
+        let result: _ = optimizer.analyze_loop_unrolling(code);
         assert!(result.can_unroll);
         assert_eq!(result.unroll_factor, 8);
     }
 
     #[test]
     fn test_inline_analysis() {
-        let optimizer = DeepOptimizer::new_default();
+        let optimizer: _ = DeepOptimizer::new_default();
 
-        let code = r#"
+        let code: _ = r#"
             function add(a, b) { return a + b; }
             function_call(add);
             function_call(add);
@@ -734,38 +736,38 @@ mod tests {
             function_call(add);
         "#;
 
-        let result = optimizer.analyze_inline(code);
+        let result: _ = optimizer.analyze_inline(code);
         assert!(result.can_inline);
     }
 
     #[test]
     fn test_memory_layout_analysis() {
-        let optimizer = DeepOptimizer::new_default();
+        let optimizer: _ = DeepOptimizer::new_default();
 
-        let code = r#"
+        let code: _ = r#"
             const arr = new Array(1000);
-            for (let i = 0; i < arr.length; i++) {
+            for (let i: _ = 0; i < arr.length; i++) {
                 arr[i] = i;
             }
         "#;
 
-        let result = optimizer.analyze_memory_layout(code);
+        let result: _ = optimizer.analyze_memory_layout(code);
         assert!(result.cache_friendly);
     }
 
     #[test]
     fn test_full_optimization() {
-        let optimizer = DeepOptimizer::new_default();
+        let optimizer: _ = DeepOptimizer::new_default();
 
-        let code = r#"
+        let code: _ = r#"
             const obj = { x: 1, y: 2 };
-            for (let i = 0; i < 1000; i++) {
+            for (let i: _ = 0; i < 1000; i++) {
                 obj.x += i;
             }
             return obj;
         "#;
 
-        let result = optimizer.optimize_code(code);
+        let result: _ = optimizer.optimize_code(code);
         println!("\n{}", result.format_report());
         assert!(!result.optimized_code.is_empty());
     }

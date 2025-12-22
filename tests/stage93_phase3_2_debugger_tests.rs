@@ -4,6 +4,8 @@
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     // =========================================
     // Part 1: 高级断点功能测试
@@ -41,7 +43,7 @@ mod tests {
 
     #[test]
     fn test_conditional_breakpoint_creation() {
-        let bp = ConditionalBreakpoint {
+        let bp: _ = ConditionalBreakpoint {
             id: "bp_1".to_string(),
             file: "app.ts".to_string(),
             line: 42,
@@ -60,7 +62,7 @@ mod tests {
 
     #[test]
     fn test_hit_count_condition_equal() {
-        let condition = HitCountCondition::Equal(5);
+        let condition: _ = HitCountCondition::Equal(5);
 
         assert!(!condition.should_break(4));
         assert!(condition.should_break(5));
@@ -69,7 +71,7 @@ mod tests {
 
     #[test]
     fn test_hit_count_condition_greater_than() {
-        let condition = HitCountCondition::GreaterThan(3);
+        let condition: _ = HitCountCondition::GreaterThan(3);
 
         assert!(!condition.should_break(2));
         assert!(!condition.should_break(3));
@@ -79,7 +81,7 @@ mod tests {
 
     #[test]
     fn test_hit_count_condition_multiple() {
-        let condition = HitCountCondition::Multiple(3);
+        let condition: _ = HitCountCondition::Multiple(3);
 
         assert!(condition.should_break(3));
         assert!(!condition.should_break(4));
@@ -90,7 +92,7 @@ mod tests {
 
     #[test]
     fn test_log_point_breakpoint() {
-        let bp = ConditionalBreakpoint {
+        let bp: _ = ConditionalBreakpoint {
             id: "logpoint_1".to_string(),
             file: "debug.ts".to_string(),
             line: 10,
@@ -128,7 +130,7 @@ mod tests {
     pub struct ScopeInfo {
         pub scope_type: ScopeType,
         pub name: Option<String>,
-        pub variables: HashMap<String, VariableInfo>,
+        pub variables: HashMap<String, VariableInfo, std::collections::HashMap<String, VariableInfo, String, VariableInfo>>,
     }
 
     /// 作用域类型
@@ -154,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_enhanced_stack_frame_creation() {
-        let frame = EnhancedStackFrame {
+        let frame: _ = EnhancedStackFrame {
             index: 0,
             function_name: "processData".to_string(),
             file_path: "src/processor.ts".to_string(),
@@ -183,13 +185,13 @@ mod tests {
             is_readonly: false,
         });
 
-        let local_scope = ScopeInfo {
+        let local_scope: _ = ScopeInfo {
             scope_type: ScopeType::Local,
             name: Some("processData".to_string()),
             variables: local_vars,
         };
 
-        let frame = EnhancedStackFrame {
+        let frame: _ = EnhancedStackFrame {
             index: 0,
             function_name: "processData".to_string(),
             file_path: "src/processor.ts".to_string(),
@@ -217,7 +219,7 @@ mod tests {
 
     #[test]
     fn test_async_stack_trace() {
-        let sync_frame = EnhancedStackFrame {
+        let sync_frame: _ = EnhancedStackFrame {
             index: 0,
             function_name: "fetchData".to_string(),
             file_path: "src/api.ts".to_string(),
@@ -230,7 +232,7 @@ mod tests {
             return_value: None,
         };
 
-        let parent_frame = EnhancedStackFrame {
+        let parent_frame: _ = EnhancedStackFrame {
             index: 0,
             function_name: "main".to_string(),
             file_path: "src/app.ts".to_string(),
@@ -243,13 +245,13 @@ mod tests {
             return_value: None,
         };
 
-        let parent_stack = AsyncStackTrace {
+        let parent_stack: _ = AsyncStackTrace {
             sync_frames: vec![parent_frame],
             async_parent: None,
             description: "async call from main".to_string(),
         };
 
-        let async_stack = AsyncStackTrace {
+        let async_stack: _ = AsyncStackTrace {
             sync_frames: vec![sync_frame],
             async_parent: Some(Box::new(parent_stack)),
             description: "await in fetchData".to_string(),
@@ -318,12 +320,12 @@ mod tests {
         }
 
         pub fn analyze_hot_spots(&mut self) -> Vec<HotSpot> {
-            let mut function_times: HashMap<String, (u64, u64)> = HashMap::new();
+            let mut function_times: HashMap<String, (u64, u64), std::collections::HashMap<String, (u64, u64), String, (u64, u64)>> = HashMap::new();
             let total_time: u64 = self.samples.iter().map(|s| s.cpu_time_us).sum();
 
             for sample in &self.samples {
                 if let Some(top_frame) = sample.stack_frames.first() {
-                    let entry = function_times.entry(top_frame.clone()).or_insert((0, 0));
+                    let entry: _ = function_times.entry(top_frame.clone()).or_insert((0, 0));
                     entry.0 += 1;
                     entry.1 += sample.cpu_time_us;
                 }
@@ -346,14 +348,14 @@ mod tests {
                 .collect();
 
             hot_spots.sort_by(|a, b| b.total_time_us.cmp(&a.total_time_us));
-            self.hot_spots = hot_spots.clone();
+            self.hot_spots = hot_spots.clone();clone();
             hot_spots
         }
     }
 
     #[test]
     fn test_debugger_profiler_creation() {
-        let profiler = DebuggerProfiler::new(1000);
+        let profiler: _ = DebuggerProfiler::new(1000);
 
         assert!(!profiler.enabled);
         assert_eq!(profiler.sample_interval_us, 1000);
@@ -376,7 +378,7 @@ mod tests {
         let mut profiler = DebuggerProfiler::new(1000);
         profiler.start();
 
-        let sample = ProfileSample {
+        let sample: _ = ProfileSample {
             timestamp_us: 1000,
             stack_frames: vec!["processData".to_string(), "main".to_string()],
             cpu_time_us: 500,
@@ -411,7 +413,7 @@ mod tests {
             });
         }
 
-        let hot_spots = profiler.analyze_hot_spots();
+        let hot_spots: _ = profiler.analyze_hot_spots();
 
         assert_eq!(hot_spots.len(), 2);
         assert_eq!(hot_spots[0].function_name, "hotFunction");
@@ -494,7 +496,7 @@ mod tests {
             original_line: u32,
             original_column: u32,
         ) -> Option<GeneratedLocation> {
-            let source_index = self.sources.iter().position(|s| s == source)?;
+            let source_index: _ = self.sources.iter().position(|s| s == source)?;
 
             let mut best_match: Option<&MappingSegment> = None;
 
@@ -563,10 +565,10 @@ mod tests {
             name_index: Some(0),
         });
 
-        let result = source_map.find_original_location(15, 0);
+        let result: _ = source_map.find_original_location(15, 0);
         assert!(result.is_some());
 
-        let location = result.unwrap();
+        let location: _ = result.unwrap();
         assert_eq!(location.source, Some("app.ts".to_string()));
         assert_eq!(location.line, 10);
         assert_eq!(location.name, Some("processData".to_string()));
@@ -586,10 +588,10 @@ mod tests {
             name_index: None,
         });
 
-        let result = source_map.find_generated_location("app.ts", 12, 3);
+        let result: _ = source_map.find_generated_location("app.ts", 12, 3);
         assert!(result.is_some());
 
-        let location = result.unwrap();
+        let location: _ = result.unwrap();
         assert_eq!(location.line, 20);
         assert_eq!(location.column, 5);
     }
@@ -644,7 +646,7 @@ mod tests {
         }
 
         pub fn get_connection_url(&self) -> String {
-            let protocol = if self.config.tls_enabled { "wss" } else { "ws" };
+            let protocol: _ = if self.config.tls_enabled { "wss" } else { "ws" };
             format!(
                 "{}://{}:{}",
                 protocol, self.config.host, self.config.port
@@ -654,7 +656,7 @@ mod tests {
 
     #[test]
     fn test_remote_debug_config() {
-        let config = RemoteDebugConfig {
+        let config: _ = RemoteDebugConfig {
             host: "127.0.0.1".to_string(),
             port: 9229,
             protocol: DebugProtocol::ChromeDevTools,
@@ -669,7 +671,7 @@ mod tests {
 
     #[test]
     fn test_remote_debug_session() {
-        let config = RemoteDebugConfig {
+        let config: _ = RemoteDebugConfig {
             host: "localhost".to_string(),
             port: 9229,
             protocol: DebugProtocol::ChromeDevTools,
@@ -685,7 +687,7 @@ mod tests {
         session.connect().unwrap();
         assert!(session.connected);
 
-        let url = session.get_connection_url();
+        let url: _ = session.get_connection_url();
         assert!(url.starts_with("wss://"));
 
         session.disconnect();
@@ -694,7 +696,7 @@ mod tests {
 
     #[test]
     fn test_debug_adapter_protocol() {
-        let config = RemoteDebugConfig {
+        let config: _ = RemoteDebugConfig {
             host: "0.0.0.0".to_string(),
             port: 4711,
             protocol: DebugProtocol::DebugAdapterProtocol,
@@ -714,7 +716,7 @@ mod tests {
     pub struct EnhancedDebugger {
         pub breakpoints: Vec<ConditionalBreakpoint>,
         pub profiler: DebuggerProfiler,
-        pub source_maps: HashMap<String, SourceMap>,
+        pub source_maps: HashMap<String, SourceMap, std::collections::HashMap<String, SourceMap, String, SourceMap>>,
         pub remote_session: Option<RemoteDebugSession>,
     }
 
@@ -733,7 +735,7 @@ mod tests {
         }
 
         pub fn remove_breakpoint(&mut self, id: &str) -> bool {
-            let initial_len = self.breakpoints.len();
+            let initial_len: _ = self.breakpoints.len();
             self.breakpoints.retain(|bp| bp.id != id);
             self.breakpoints.len() < initial_len
         }
@@ -795,7 +797,7 @@ mod tests {
         debugger.load_source_map("app.js", source_map);
 
         // 3. 转换位置
-        let original = debugger.translate_location("app.js", 15, 0);
+        let original: _ = debugger.translate_location("app.js", 15, 0);
         assert!(original.is_some());
         assert_eq!(original.unwrap().line, 10);
 
@@ -813,7 +815,7 @@ mod tests {
         }
 
         // 5. 停止并分析
-        let hot_spots = debugger.stop_profiling();
+        let hot_spots: _ = debugger.stop_profiling();
         assert!(!hot_spots.is_empty());
 
         // 6. 移除断点
@@ -854,10 +856,10 @@ mod tests {
         assert_eq!(debugger.source_maps.len(), 2);
 
         // 验证各自的映射
-        let loc1 = debugger.translate_location("utils.js", 5, 0);
+        let loc1: _ = debugger.translate_location("utils.js", 5, 0);
         assert_eq!(loc1.unwrap().line, 3);
 
-        let loc2 = debugger.translate_location("api.js", 10, 0);
+        let loc2: _ = debugger.translate_location("api.js", 10, 0);
         assert_eq!(loc2.unwrap().line, 8);
     }
 
@@ -892,7 +894,7 @@ mod tests {
 
     #[test]
     fn test_exception_breakpoint_uncaught() {
-        let eb = ExceptionBreakpoint {
+        let eb: _ = ExceptionBreakpoint {
             break_on_caught: false,
             break_on_uncaught: true,
             exception_filters: vec![],
@@ -904,7 +906,7 @@ mod tests {
 
     #[test]
     fn test_exception_breakpoint_filtered() {
-        let eb = ExceptionBreakpoint {
+        let eb: _ = ExceptionBreakpoint {
             break_on_caught: true,
             break_on_uncaught: true,
             exception_filters: vec!["TypeError".to_string(), "ReferenceError".to_string()],

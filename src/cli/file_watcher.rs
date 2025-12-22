@@ -49,7 +49,7 @@ pub struct FileWatcher {
     /// Configuration
     config: FileWatcherConfig,
     /// Last modification times
-    last_modified: Arc<Mutex<HashMap<PathBuf, SystemTime>>>,
+    last_modified: Arc<Mutex<HashMap<PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime>>>>,
     /// Event sender
     event_sender: mpsc::UnboundedSender<FileEvent>,
     /// Running flag
@@ -66,22 +66,22 @@ impl FileWatcher {
         Self {
             paths,
             config,
-            last_modified: Arc::new(Mutex::new(HashMap::new())),
+            last_modified: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
             event_sender,
-            running: Arc::new(Mutex::new(false)),
+            running: Arc::new(std::sync::Mutex::new(Mutex::new(false))),
         }
     }
 
     /// Start watching files
     pub async fn start(&self) -> anyhow::Result<()> {
         let mut interval = interval(self.config.poll_interval);
-        let paths = self.paths.clone();
-        let last_modified = Arc::clone(&self.last_modified);
-        let event_sender = self.event_sender.clone();
-        let running = Arc::clone(&self.running);
+        let paths: _ = self.paths.clone();
+        let last_modified: _ = Arc::clone(&self.last_modified);
+        let event_sender: _ = self.event_sender.clone();
+        let running: _ = Arc::clone(&self.running);
 
         // Extract config early for initial scan
-        let config = self.config.clone();
+        let config: _ = self.config.clone();
 
         // Initialize file modification times
         {
@@ -93,10 +93,10 @@ impl FileWatcher {
 
                         // Send initial scan event for existing files
                         if metadata.is_file() {
-                            let _ = event_sender.send(FileEvent::Created(path.clone()));
+                            let _: _ = event_sender.send(FileEvent::Created(path.clone()));
                         } else if metadata.is_dir() {
                             // For directories, we'll scan and send events for files inside
-                            let _ = scan_path(path, &last_modified, &event_sender, &config).await;
+                            let _: _ = scan_path(path, &last_modified, &event_sender, &config).await;
                         }
                     }
                 }
@@ -144,11 +144,11 @@ impl FileWatcher {
 /// Scan a path for file changes
 async fn scan_path(
     path: &Path,
-    last_modified: &Arc<Mutex<HashMap<PathBuf, SystemTime>>>,
+    last_modified: &Arc<Mutex<HashMap<PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime>>>>,
     event_sender: &mpsc::UnboundedSender<FileEvent>,
     config: &FileWatcherConfig,
 ) -> anyhow::Result<()> {
-    let metadata = std::fs::metadata(path)?;
+    let metadata: _ = std::fs::metadata(path)?;
 
     if metadata.is_file() {
         scan_file(path, last_modified, event_sender).await?;
@@ -162,15 +162,15 @@ async fn scan_path(
 /// Scan a single file
 async fn scan_file(
     path: &Path,
-    last_modified: &Arc<Mutex<HashMap<PathBuf, SystemTime>>>,
+    last_modified: &Arc<Mutex<HashMap<PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime>>>>,
     event_sender: &mpsc::UnboundedSender<FileEvent>,
 ) -> anyhow::Result<()> {
     // Check file extension
-    let extension = path.extension()
+    let extension: _ = path.extension()
         .and_then(|ext| ext.to_str())
         .map(|ext| format!(".{}", ext));
 
-    let should_watch = extension.map(|ext| {
+    let should_watch: _ = extension.map(|ext| {
         config_file_extensions().contains(&ext.as_str())
     }).unwrap_or(false);
 
@@ -178,8 +178,8 @@ async fn scan_file(
         return Ok(());
     }
 
-    let metadata = std::fs::metadata(path)?;
-    let current_modified = metadata.modified()?;
+    let metadata: _ = std::fs::metadata(path)?;
+    let current_modified: _ = metadata.modified()?;
 
     let mut modified = last_modified.lock().unwrap();
 
@@ -206,12 +206,12 @@ async fn scan_file(
 /// Scan a directory recursively
 async fn scan_directory(
     dir: &Path,
-    last_modified: &Arc<Mutex<HashMap<PathBuf, SystemTime>>>,
+    last_modified: &Arc<Mutex<HashMap<PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime>>>>,
     event_sender: &mpsc::UnboundedSender<FileEvent>,
     config: &FileWatcherConfig,
 ) -> anyhow::Result<()> {
     // Check if directory should be ignored
-    let dir_name = dir.file_name()
+    let dir_name: _ = dir.file_name()
         .and_then(|name| name.to_str())
         .unwrap_or("");
 
@@ -220,15 +220,15 @@ async fn scan_directory(
     }
 
     // Read directory entries
-    let entries = std::fs::read_dir(dir)?;
+    let entries: _ = std::fs::read_dir(dir)?;
 
     for entry in entries {
-        let entry = entry?;
-        let path = entry.path();
+        let entry: _ = entry?;
+        let path: _ = entry.path();
 
         // Check max files
         {
-            let modified = last_modified.lock().unwrap();
+            let modified: _ = last_modified.lock().unwrap();
             if modified.len() >= config.max_files {
                 break;
             }
@@ -257,10 +257,10 @@ fn config_file_extensions() -> &'static [&'static str] {
 pub async fn create_file_watcher(
     paths: Vec<PathBuf>,
 ) -> anyhow::Result<(FileWatcher, mpsc::UnboundedReceiver<FileEvent>)> {
-    let config = FileWatcherConfig::default();
+    let config: _ = FileWatcherConfig::default();
     let (event_sender, event_receiver) = mpsc::unbounded_channel();
 
-    let watcher = FileWatcher::new(paths, config, event_sender);
+    let watcher: _ = FileWatcher::new(paths, config, event_sender);
     watcher.start().await?;
 
     Ok((watcher, event_receiver))
@@ -271,11 +271,13 @@ mod tests {
     use super::*;
     use tempfile::tempdir;
     use tokio::time::sleep;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_file_watcher_basic() {
-        let temp_dir = tempdir().expect("Failed to create temp dir");
-        let test_file = temp_dir.path().join("test.js");
+        let temp_dir: _ = tempdir().expect("Failed to create temp dir");
+        let test_file: _ = temp_dir.path().join("test.js");
 
         // Create test file
         std::fs::write(&test_file, "console.log('initial')")
@@ -309,9 +311,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_file_watcher_ignore_directories() {
-        let temp_dir = tempdir().expect("Failed to create temp dir");
-        let src_file = temp_dir.path().join("src").join("test.js");
-        let node_modules_file = temp_dir.path().join("node_modules").join("test.js");
+        let temp_dir: _ = tempdir().expect("Failed to create temp dir");
+        let src_file: _ = temp_dir.path().join("src").join("test.js");
+        let node_modules_file: _ = temp_dir.path().join("node_modules").join("test.js");
 
         // Create directories
         std::fs::create_dir_all(src_file.parent().unwrap())

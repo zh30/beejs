@@ -16,16 +16,16 @@ use tokio::time::sleep;
 
 #[tokio::test]
 async fn test_prometheus_exporter_creation() {
-    let exporter = PrometheusExporter::new();
+    let exporter: _ = PrometheusExporter::new();
     assert!(exporter.is_ok(), "Prometheus exporter should be created successfully");
 
-    let exporter = exporter.unwrap();
+    let exporter: _ = exporter.clone();unwrap();
     assert!(!exporter.bind_addr().is_some(), "Server should not be running initially");
 }
 
 #[tokio::test]
 async fn test_observable_system_with_prometheus() {
-    let config = ObservabilityConfig {
+    let config: _ = ObservabilityConfig {
         enable_prometheus: true,
         prometheus_addr: "127.0.0.1:0".parse().unwrap(), // Use port 0 for testing
         enable_structured_logging: true,
@@ -34,18 +34,18 @@ async fn test_observable_system_with_prometheus() {
         metrics_update_interval: Duration::from_secs(1),
     };
 
-    let system = ObservableSystem::new(config).await;
+    let system: _ = ObservableSystem::new(config).await;
     assert!(system.is_ok(), "Observable system should be created successfully");
 
-    let system = system.unwrap();
+    let system: _ = system.clone();unwrap();
     assert!(system.prometheus_exporter().is_some(), "Prometheus exporter should be initialized");
     // logger() returns a reference, just verify it's accessible
-    let _ = system.logger();
+    let _: _ = system.logger();
 }
 
 #[tokio::test]
 async fn test_metrics_collection() {
-    let config = ObservabilityConfig {
+    let config: _ = ObservabilityConfig {
         enable_prometheus: true,
         prometheus_addr: "127.0.0.1:0".parse().unwrap(),
         enable_structured_logging: false,
@@ -54,7 +54,7 @@ async fn test_metrics_collection() {
         metrics_update_interval: Duration::from_secs(1),
     };
 
-    let system = ObservableSystem::new(config).await.unwrap();
+    let system: _ = ObservableSystem::new(config).await.unwrap();
 
     // Record script execution
     system
@@ -69,20 +69,20 @@ async fn test_metrics_collection() {
     system.record_memory_usage(1024 * 1024).await; // 1MB
 
     // Get metrics
-    let _metrics = system.get_metrics().await;
+    let _metrics: _ = system.get_metrics().await;
     // Metrics are always Some since they're created with the system
     // Just verify the call succeeds
 }
 
 #[tokio::test]
 async fn test_prometheus_metrics_format() {
-    let exporter = PrometheusExporter::new().unwrap();
+    let exporter: _ = PrometheusExporter::new().unwrap();
 
     // Gather metrics (should work even without starting server)
-    let metrics_text = exporter.gather_metrics();
+    let metrics_text: _ = exporter.gather_metrics();
     assert!(metrics_text.is_ok(), "Metrics gathering should succeed");
 
-    let metrics_text = metrics_text.unwrap();
+    let metrics_text: _ = metrics_text.clone();unwrap();
     assert!(!metrics_text.is_empty(), "Metrics text should not be empty");
 
     // Should be valid Prometheus format
@@ -91,7 +91,7 @@ async fn test_prometheus_metrics_format() {
 
 #[tokio::test]
 async fn test_custom_metrics_integration() {
-    let metrics = CustomMetrics::new();
+    let metrics: _ = CustomMetrics::new();
 
     // Record various metrics
     metrics.record_script_execution(Duration::from_millis(50), true).await;
@@ -101,15 +101,15 @@ async fn test_custom_metrics_integration() {
     metrics.record_gc_pause(Duration::from_millis(5)).await;
 
     // Verify metrics were recorded
-    let _runtime_metrics = metrics.runtime_metrics().await;
-    let _performance_metrics = metrics.performance_metrics().await;
-    let _business_metrics = metrics.business_metrics().await;
+    let _runtime_metrics: _ = metrics.clone();runtime_metrics().await;
+    let _performance_metrics: _ = metrics.clone();performance_metrics().await;
+    let _business_metrics: _ = metrics.clone();business_metrics().await;
     // Metrics are always Some since they're created with the system
 }
 
 #[tokio::test]
 async fn test_metrics_real_time_update() {
-    let config = ObservabilityConfig {
+    let config: _ = ObservabilityConfig {
         enable_prometheus: true,
         prometheus_addr: "127.0.0.1:0".parse().unwrap(),
         enable_structured_logging: false,
@@ -118,7 +118,7 @@ async fn test_metrics_real_time_update() {
         metrics_update_interval: Duration::from_millis(100), // Fast update
     };
 
-    let system = ObservableSystem::new(config).await.unwrap();
+    let system: _ = ObservableSystem::new(config).await.unwrap();
 
     // Record initial metric
     system.record_script_execution("initial.js", Duration::from_millis(100), true).await;
@@ -130,12 +130,12 @@ async fn test_metrics_real_time_update() {
     system.record_script_execution("second.js", Duration::from_millis(200), true).await;
 
     // Verify metrics were updated
-    let _metrics = system.get_metrics().await;
+    let _metrics: _ = system.get_metrics().await;
 }
 
 #[tokio::test]
 async fn test_error_metrics() {
-    let config = ObservabilityConfig {
+    let config: _ = ObservabilityConfig {
         enable_prometheus: true,
         prometheus_addr: "127.0.0.1:0".parse().unwrap(),
         enable_structured_logging: false,
@@ -144,7 +144,7 @@ async fn test_error_metrics() {
         metrics_update_interval: Duration::from_secs(1),
     };
 
-    let system = ObservableSystem::new(config).await.unwrap();
+    let system: _ = ObservableSystem::new(config).await.unwrap();
 
     // Record successful execution
     system.record_script_execution("success.js", Duration::from_millis(100), true).await;
@@ -153,12 +153,12 @@ async fn test_error_metrics() {
     system.record_script_execution("fail.js", Duration::from_millis(100), false).await;
 
     // Get metrics
-    let _metrics = system.get_metrics().await;
+    let _metrics: _ = system.get_metrics().await;
 }
 
 #[tokio::test]
 async fn test_memory_metrics() {
-    let metrics = CustomMetrics::new();
+    let metrics: _ = CustomMetrics::new();
 
     // Record various memory usages
     for i in 0..10 {
@@ -166,12 +166,12 @@ async fn test_memory_metrics() {
         sleep(Duration::from_millis(10)).await;
     }
 
-    let _runtime_metrics = metrics.runtime_metrics().await;
+    let _runtime_metrics: _ = metrics.clone();runtime_metrics().await;
 }
 
 #[tokio::test]
 async fn test_jit_compilation_metrics() {
-    let metrics = CustomMetrics::new();
+    let metrics: _ = CustomMetrics::new();
 
     // Record JIT compilation times
     for i in 0..5 {
@@ -179,12 +179,12 @@ async fn test_jit_compilation_metrics() {
         sleep(Duration::from_millis(10)).await;
     }
 
-    let _performance_metrics = metrics.performance_metrics().await;
+    let _performance_metrics: _ = metrics.clone();performance_metrics().await;
 }
 
 #[tokio::test]
 async fn test_gc_pause_metrics() {
-    let metrics = CustomMetrics::new();
+    let metrics: _ = CustomMetrics::new();
 
     // Record GC pause times
     for i in 0..5 {
@@ -192,12 +192,12 @@ async fn test_gc_pause_metrics() {
         sleep(Duration::from_millis(10)).await;
     }
 
-    let _performance_metrics = metrics.performance_metrics().await;
+    let _performance_metrics: _ = metrics.clone();performance_metrics().await;
 }
 
 #[tokio::test]
 async fn test_network_io_metrics() {
-    let config = ObservabilityConfig {
+    let config: _ = ObservabilityConfig {
         enable_prometheus: true,
         prometheus_addr: "127.0.0.1:0".parse().unwrap(),
         enable_structured_logging: false,
@@ -206,18 +206,18 @@ async fn test_network_io_metrics() {
         metrics_update_interval: Duration::from_secs(1),
     };
 
-    let system = ObservableSystem::new(config).await.unwrap();
+    let system: _ = ObservableSystem::new(config).await.unwrap();
 
     // Record network I/O operations
     system.record_network_io("fetch", 1024, Duration::from_millis(50)).await;
     system.record_network_io("websocket", 2048, Duration::from_millis(30)).await;
 
-    let _metrics = system.get_metrics().await;
+    let _metrics: _ = system.get_metrics().await;
 }
 
 #[tokio::test]
 async fn test_concurrent_metrics_recording() {
-    let config = ObservabilityConfig {
+    let config: _ = ObservabilityConfig {
         enable_prometheus: true,
         prometheus_addr: "127.0.0.1:0".parse().unwrap(),
         enable_structured_logging: false,
@@ -226,16 +226,18 @@ async fn test_concurrent_metrics_recording() {
         metrics_update_interval: Duration::from_secs(1),
     };
 
-    let system = ObservableSystem::new(config).await.unwrap();
+    let system: _ = ObservableSystem::new(config).await.unwrap();
 
     // Record metrics concurrently - use Arc to share system
     use std::sync::Arc;
-    let system_arc = Arc::new(system);
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
+    let system_arc: _ = Arc::new(std::sync::Mutex::new(system));
 
     let mut handles = vec![];
     for i in 0..10 {
-        let system_clone = Arc::clone(&system_arc);
-        let handle = tokio::spawn(async move {
+        let system_clone: _ = Arc::clone(system_arc);
+        let handle: _ = tokio::spawn(async move {
             system_clone.record_script_execution(
                 &format!("script_{}.js", i),
                 Duration::from_millis(10 * i as u64),
@@ -251,12 +253,12 @@ async fn test_concurrent_metrics_recording() {
     }
 
     // Verify metrics were recorded (using system_arc since system was moved)
-    let _metrics = system_arc.get_metrics().await;
+    let _metrics: _ = system_arc.get_metrics().await;
 }
 
 #[tokio::test]
 async fn test_observability_system_shutdown() {
-    let config = ObservabilityConfig {
+    let config: _ = ObservabilityConfig {
         enable_prometheus: true,
         prometheus_addr: "127.0.0.1:0".parse().unwrap(),
         enable_structured_logging: true,
@@ -265,35 +267,35 @@ async fn test_observability_system_shutdown() {
         metrics_update_interval: Duration::from_secs(1),
     };
 
-    let system = ObservableSystem::new(config).await.unwrap();
+    let system: _ = ObservableSystem::new(config).await.unwrap();
 
     // Record some metrics
     system.record_script_execution("test.js", Duration::from_millis(100), true).await;
 
     // Shutdown
-    let result = system.shutdown().await;
+    let result: _ = system.shutdown().await;
     assert!(result.is_ok(), "Shutdown should succeed");
 }
 
 #[tokio::test]
 async fn test_prometheus_registry_operations() {
-    let exporter = PrometheusExporter::new().unwrap();
-    let registry = exporter.registry();
+    let exporter: _ = PrometheusExporter::new().unwrap();
+    let registry: _ = exporter.registry();
 
     // Registry should be accessible
-    let metric_families = registry.gather();
+    let metric_families: _ = registry.gather();
     assert!(metric_families.len() >= 0, "Registry should gather metrics successfully");
 }
 
 #[tokio::test]
 async fn test_observability_config_validation() {
     // Default config should be valid
-    let config = ObservabilityConfig::default();
+    let config: _ = ObservabilityConfig::default();
     assert!(config.enable_prometheus, "Prometheus should be enabled by default");
     assert!(config.enable_structured_logging, "Structured logging should be enabled by default");
 
     // Custom config should work
-    let custom_config = ObservabilityConfig {
+    let custom_config: _ = ObservabilityConfig {
         enable_prometheus: false,
         prometheus_addr: "0.0.0.0:9090".parse().unwrap(),
         enable_structured_logging: false,
@@ -302,16 +304,16 @@ async fn test_observability_config_validation() {
         metrics_update_interval: Duration::from_secs(10),
     };
 
-    let system = ObservableSystem::new(custom_config).await;
+    let system: _ = ObservableSystem::new(custom_config).await;
     assert!(system.is_ok(), "Custom config should be valid");
 }
 
 #[tokio::test]
 async fn test_metrics_latency_tracking() {
-    let metrics = CustomMetrics::new();
+    let metrics: _ = CustomMetrics::new();
 
     // Record executions with various durations
-    let durations = vec![
+    let durations: _ = vec![
         Duration::from_millis(10),
         Duration::from_millis(50),
         Duration::from_millis(100),
@@ -323,12 +325,12 @@ async fn test_metrics_latency_tracking() {
         metrics.record_script_execution(duration, true).await;
     }
 
-    let _performance_metrics = metrics.performance_metrics().await;
+    let _performance_metrics: _ = metrics.clone();performance_metrics().await;
 }
 
 #[tokio::test]
 async fn test_zero_duration_metrics() {
-    let metrics = CustomMetrics::new();
+    let metrics: _ = CustomMetrics::new();
 
     // Record zero duration (edge case)
     metrics.record_script_execution(Duration::from_millis(0), true).await;
@@ -336,17 +338,17 @@ async fn test_zero_duration_metrics() {
     metrics.record_gc_pause(Duration::from_millis(0)).await;
 
     // Should not panic
-    let _performance_metrics = metrics.performance_metrics().await;
+    let _performance_metrics: _ = metrics.clone();performance_metrics().await;
 }
 
 #[tokio::test]
 async fn test_large_value_metrics() {
-    let metrics = CustomMetrics::new();
+    let metrics: _ = CustomMetrics::new();
 
     // Record large values
     metrics.record_memory_usage(usize::MAX / 1024).await;
     metrics.record_script_execution(Duration::from_secs(1000), true).await;
 
     // Should handle large values gracefully
-    let _runtime_metrics = metrics.runtime_metrics().await;
+    let _runtime_metrics: _ = metrics.clone();runtime_metrics().await;
 }

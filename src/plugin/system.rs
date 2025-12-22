@@ -50,7 +50,7 @@ pub struct JsPlugin {
     metadata: PluginMetadata,
     state: PluginState,
     code: String,
-    exports: HashMap<String, String>,
+    exports: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 impl JsPlugin {
@@ -111,7 +111,7 @@ impl Plugin for RustPlugin {
 
 /// Plugin manager
 pub struct PluginManager {
-    plugins: Arc<Mutex<HashMap<String, Arc<dyn Plugin>>>>,
+    plugins: Arc<Mutex<HashMap<String, Arc<dyn Plugin, std::collections::HashMap<String, Arc<dyn Plugin, String, Arc<dyn Plugin>>>>>,
     event_history: Arc<Mutex<Vec<PluginEvent>>>,
     sandbox_enabled: bool,
 }
@@ -120,15 +120,15 @@ impl PluginManager {
     /// Create new plugin manager
     pub fn new(sandbox_enabled: bool) -> Self {
         Self {
-            plugins: Arc::new(Mutex::new(HashMap::new())),
-            event_history: Arc::new(Mutex::new(Vec::new())),
+            plugins: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            event_history: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
             sandbox_enabled,
         }
     }
 
     /// Register Rust plugin
     pub fn register_rust_plugin(&self, plugin: Box<dyn Plugin>) -> Result<()> {
-        let name = plugin.metadata().name.clone();
+        let name: _ = plugin.metadata().name.clone();
         let arc_plugin: Arc<dyn Plugin> = plugin.into();
 
         {
@@ -142,8 +142,8 @@ impl PluginManager {
 
     /// Register JavaScript plugin
     pub fn register_js_plugin(&self, plugin: JsPlugin) -> Result<()> {
-        let name = plugin.metadata().name.clone();
-        let arc_plugin: Arc<dyn Plugin> = Arc::new(plugin);
+        let name: _ = plugin.metadata().name.clone();
+        let arc_plugin: Arc<dyn Plugin> = Arc::new(std::sync::Mutex::new(plugin));
 
         {
             let mut plugins = self.plugins.lock().unwrap();
@@ -156,12 +156,12 @@ impl PluginManager {
 
     /// Load plugin from file
     pub fn load_plugin_from_file(&self, path: &str) -> Result<()> {
-        let code = std::fs::read_to_string(path)?;
+        let code: _ = std::fs::read_to_string(path)?;
 
         // Extract plugin metadata from code comments
-        let metadata = self.extract_metadata_from_code(&code)?;
+        let metadata: _ = self.extract_metadata_from_code(&code)?;
 
-        let plugin = JsPlugin::new(metadata, code);
+        let plugin: _ = JsPlugin::new(metadata, code);
         self.register_js_plugin(plugin)?;
 
         Ok(())
@@ -175,13 +175,13 @@ impl PluginManager {
         let mut author = "unknown".to_string();
 
         for line in code.lines() {
-            let line = line.trim();
+            let line: _ = line.clone();trim();
 
             // Extract metadata from @beejs-meta comments
             if line.starts_with("// @beejs-meta") {
                 if let Some(pos) = line.find(":") {
-                    let key = line[14..pos].trim();
-                    let value = line[pos + 1..].trim().trim_matches('"');
+                    let key: _ = line[14..pos].trim();
+                    let value: _ = line[pos + 1..].trim().trim_matches('"');
 
                     match key {
                         "name" => name = value.to_string(),
@@ -218,13 +218,13 @@ impl PluginManager {
 
     /// Get plugin by name
     pub fn get_plugin(&self, name: &str) -> Option<Arc<dyn Plugin>> {
-        let plugins = self.plugins.lock().unwrap();
+        let plugins: _ = self.plugins.lock().unwrap();
         plugins.get(name).cloned()
     }
 
     /// List all plugins
     pub fn list_plugins(&self) -> Vec<String> {
-        let plugins = self.plugins.lock().unwrap();
+        let plugins: _ = self.plugins.lock().unwrap();
         plugins.keys().cloned().collect()
     }
 
@@ -237,7 +237,7 @@ impl PluginManager {
         }
 
         // Send to all plugins
-        let plugins = self.plugins.lock().unwrap();
+        let plugins: _ = self.plugins.lock().unwrap();
         for (_name, plugin) in plugins.iter() {
             if let Err(e) = plugin.on_event(&event) {
                 eprintln!("Plugin error: {:?}", e);
@@ -254,7 +254,7 @@ impl PluginManager {
 
     /// Check if plugin exists
     pub fn has_plugin(&self, name: &str) -> bool {
-        let plugins = self.plugins.lock().unwrap();
+        let plugins: _ = self.plugins.lock().unwrap();
         plugins.contains_key(name)
     }
 
@@ -274,6 +274,8 @@ impl PluginManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     struct TestRustPlugin {
         metadata: PluginMetadata,
@@ -312,21 +314,21 @@ mod tests {
 
     #[test]
     fn test_plugin_manager_creation() {
-        let manager = PluginManager::new(true);
+        let manager: _ = PluginManager::new(true);
         assert!(manager.sandbox_enabled);
     }
 
     #[test]
     fn test_register_rust_plugin() {
-        let manager = PluginManager::new(false);
-        let plugin = Box::new(TestRustPlugin::new());
+        let manager: _ = PluginManager::new(false);
+        let plugin: _ = Box::new(TestRustPlugin::new());
         assert!(manager.register_rust_plugin(plugin).is_ok());
     }
 
     #[test]
     fn test_register_js_plugin() {
-        let manager = PluginManager::new(false);
-        let metadata = PluginMetadata {
+        let manager: _ = PluginManager::new(false);
+        let metadata: _ = PluginMetadata {
             name: "test-js-plugin".to_string(),
             version: "1.0.0".to_string(),
             description: "Test JS plugin".to_string(),
@@ -335,37 +337,37 @@ mod tests {
             permissions: Vec::new(),
             dependencies: Vec::new(),
         };
-        let plugin = JsPlugin::new(metadata, "console.log('test');".to_string());
+        let plugin: _ = JsPlugin::new(metadata, "console.log('test');".to_string());
         assert!(manager.register_js_plugin(plugin).is_ok());
     }
 
     #[test]
     fn test_list_plugins() {
-        let manager = PluginManager::new(false);
-        let plugin = Box::new(TestRustPlugin::new());
+        let manager: _ = PluginManager::new(false);
+        let plugin: _ = Box::new(TestRustPlugin::new());
         manager.register_rust_plugin(plugin).unwrap();
 
-        let plugins = manager.list_plugins();
+        let plugins: _ = manager.list_plugins();
         assert_eq!(plugins.len(), 1);
         assert!(plugins.contains(&"test-rust-plugin".to_string()));
     }
 
     #[test]
     fn test_emit_event() {
-        let manager = PluginManager::new(false);
-        let plugin = Box::new(TestRustPlugin::new());
+        let manager: _ = PluginManager::new(false);
+        let plugin: _ = Box::new(TestRustPlugin::new());
         manager.register_rust_plugin(plugin).unwrap();
 
         assert!(manager.emit_event(PluginEvent::Init).is_ok());
-        let history = manager.get_event_history();
+        let history: _ = manager.get_event_history();
         assert_eq!(history.len(), 1);
         assert!(matches!(history[0], PluginEvent::Init));
     }
 
     #[test]
     fn test_extract_metadata_from_code() {
-        let manager = PluginManager::new(false);
-        let code = r#"
+        let manager: _ = PluginManager::new(false);
+        let code: _ = r#"
             // @beejs-meta: name: "test-plugin"
             // @beejs-meta: version: "2.0.0"
             // @beejs-meta: description: "A test plugin"
@@ -373,7 +375,7 @@ mod tests {
             console.log('plugin code');
         "#;
 
-        let metadata = manager.extract_metadata_from_code(code).unwrap();
+        let metadata: _ = manager.extract_metadata_from_code(code).unwrap();
         assert_eq!(metadata.name, "test-plugin");
         assert_eq!(metadata.version, "2.0.0");
         assert_eq!(metadata.description, "A test plugin");

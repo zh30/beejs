@@ -10,6 +10,8 @@
 use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
 use std::time::{Duration, Instant};
 use rusty_v8::Isolate;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 启动时间基准测试套件
 pub struct StartupBenchmark;
@@ -22,7 +24,7 @@ impl StartupBenchmark {
 
     /// 冷启动时间测试
     pub fn cold_start_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 100,
             warmup_iterations: 5,
             timeout: Some(Duration::from_secs(30)),
@@ -30,20 +32,20 @@ impl StartupBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "cold_start",
             MetricType::StartupTime,
             || {
                 // 模拟冷启动 - 创建新的 Runtime
-                let _runtime = crate::Runtime::new(1024, 1024, false, false);
+                let _runtime: _ = crate::Runtime::new(1024, 1024, false, false);
             },
         )
     }
 
     /// 热启动时间测试
     pub fn warm_start_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 1000,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(30)),
@@ -51,21 +53,21 @@ impl StartupBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "warm_start",
             MetricType::StartupTime,
             || {
                 // 模拟热启动 - 使用现有 Runtime
-                let runtime = crate::Runtime::new(1024, 1024, false, false);
-                let _ = runtime;
+                let runtime: _ = crate::Runtime::new(1024, 1024, false, false);
+                let _: _ = runtime;
             },
         )
     }
 
     /// V8 初始化时间测试
     pub fn v8_init_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 500,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(30)),
@@ -73,20 +75,20 @@ impl StartupBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "v8_init",
             MetricType::StartupTime,
             || {
                 // 模拟 V8 初始化
-                let _isolate = Isolate::new(Default::default());
+                let _isolate: _ = Isolate::new(Default::default());
             },
         )
     }
 
     /// CLI 解析时间测试
     pub fn cli_parsing_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 1000,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(30)),
@@ -94,18 +96,18 @@ impl StartupBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "cli_parsing",
             MetricType::StartupTime,
             || {
                 // 模拟 CLI 参数解析
-                let args = vec![
+                let args: _ = vec![
                     "beejs".to_string(),
                     "--eval".to_string(),
                     "console.log('test')".to_string(),
                 ];
-                let _len = args.len();
+                let _len: _ = args.len();
                 _len
             },
         )
@@ -113,7 +115,7 @@ impl StartupBenchmark {
 
     /// 模块加载时间测试
     pub fn module_loading_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 100,
             warmup_iterations: 5,
             timeout: Some(Duration::from_secs(30)),
@@ -121,7 +123,7 @@ impl StartupBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "module_loading",
             MetricType::StartupTime,
@@ -136,7 +138,7 @@ impl StartupBenchmark {
 
     /// 完整启动流程测试
     pub fn full_startup_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 50,
             warmup_iterations: 5,
             timeout: Some(Duration::from_secs(60)),
@@ -144,21 +146,21 @@ impl StartupBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "full_startup",
             MetricType::StartupTime,
             || {
                 // 模拟完整启动流程
-                let start = Instant::now();
+                let start: _ = Instant::now();
 
                 // 1. 初始化 V8
-                let _isolate = Isolate::new(Default::default());
+                let _isolate: _ = Isolate::new(Default::default());
 
                 // 2. 创建 Runtime
-                let _runtime = crate::Runtime::new(1024, 1024, false, false);
+                let _runtime: _ = crate::Runtime::new(1024, 1024, false, false);
 
-                let _elapsed = start.elapsed();
+                let _elapsed: _ = start.elapsed();
                 _elapsed
             },
         )
@@ -187,7 +189,7 @@ impl StartupBenchmark {
         }
 
         // 统计分析
-        let avg_startup_time = results
+        let avg_startup_time: _ = results
             .iter()
             .filter(|r| r.metric_type == MetricType::StartupTime)
             .map(|r| r.avg_duration.as_secs_f64() * 1_000_000.0) // 转换为微秒

@@ -134,15 +134,15 @@ impl V8HeapPreset {
 
     /// 根据代码复杂度推荐预设
     pub fn from_code_complexity(code: &str) -> Self {
-        let len = code.len();
-        let func_count = code.matches("function").count() + code.matches("=>").count();
-        let loop_count = code.matches("for").count()
+        let len: _ = code.len();
+        let func_count: _ = code.matches("function").count() + code.matches("=>").count();
+        let loop_count: _ = code.matches("for").count()
             + code.matches("while").count()
             + code.matches(".map").count()
             + code.matches(".forEach").count();
 
         // 复杂度评分
-        let complexity_score = len / 100 + func_count * 10 + loop_count * 5;
+        let complexity_score: _ = len / 100 + func_count * 10 + loop_count * 5;
 
         match complexity_score {
             0..=10 => V8HeapPreset::Minimal,
@@ -259,13 +259,13 @@ impl V8ConfigManager {
 
     /// 获取内存使用估算（MB）
     pub fn estimated_memory_usage(&self) -> usize {
-        let config = self.current_config();
+        let config: _ = self.current_config();
         config.initial_heap_size_mb + config.code_range_size_mb
     }
 
     /// 获取最大内存使用估算（MB）
     pub fn max_memory_usage(&self) -> usize {
-        let config = self.current_config();
+        let config: _ = self.current_config();
         config.max_heap_size_mb + config.code_range_size_mb
     }
 }
@@ -279,41 +279,43 @@ impl Default for V8ConfigManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_heap_presets() {
-        let minimal = V8HeapPreset::Minimal.config();
+        let minimal: _ = V8HeapPreset::Minimal.config();
         assert_eq!(minimal.max_heap_size_mb, 16);
 
-        let small = V8HeapPreset::Small.config();
+        let small: _ = V8HeapPreset::Small.config();
         assert_eq!(small.max_heap_size_mb, 64);
 
-        let default = V8HeapPreset::Default.config();
+        let default: _ = V8HeapPreset::Default.config();
         assert_eq!(default.max_heap_size_mb, 256);
 
-        let large = V8HeapPreset::Large.config();
+        let large: _ = V8HeapPreset::Large.config();
         assert_eq!(large.max_heap_size_mb, 512);
 
-        let maximum = V8HeapPreset::Maximum.config();
+        let maximum: _ = V8HeapPreset::Maximum.config();
         assert_eq!(maximum.max_heap_size_mb, 1024);
     }
 
     #[test]
     fn test_code_complexity_detection() {
         // 简单代码
-        let simple = "1 + 1";
+        let simple: _ = "1 + 1";
         assert_eq!(
             V8HeapPreset::from_code_complexity(simple),
             V8HeapPreset::Minimal
         );
 
         // 中等复杂度
-        let medium = r#"
+        let medium: _ = r#"
             function add(a, b) { return a + b; }
             function multiply(a, b) { return a * b; }
-            for (let i = 0; i < 10; i++) { add(i, i); }
+            for (let i: _ = 0; i < 10; i++) { add(i, i); }
         "#;
-        let preset = V8HeapPreset::from_code_complexity(medium);
+        let preset: _ = V8HeapPreset::from_code_complexity(medium);
         assert!(
             preset == V8HeapPreset::Small
                 || preset == V8HeapPreset::Default
@@ -321,7 +323,7 @@ mod tests {
         );
 
         // 复杂代码
-        let complex = r#"
+        let complex: _ = r#"
             class Calculator {
                 constructor() { this.history = []; }
                 add(a, b) { return a + b; }
@@ -329,10 +331,10 @@ mod tests {
             }
             const calc = new Calculator();
             const results = [1,2,3,4,5].map(x => calc.add(x, x)).filter(x => x > 5);
-            for (let i = 0; i < 100; i++) { calc.multiply(i, 2); }
+            for (let i: _ = 0; i < 100; i++) { calc.multiply(i, 2); }
             while (calc.history.length > 0) { calc.history.pop(); }
         "#;
-        let preset = V8HeapPreset::from_code_complexity(complex);
+        let preset: _ = V8HeapPreset::from_code_complexity(complex);
         // 复杂代码应该使用较大的堆配置
         assert!(
             preset == V8HeapPreset::Small
@@ -355,21 +357,21 @@ mod tests {
         assert!(manager.is_applied());
 
         // 测试内存估算
-        let memory = manager.estimated_memory_usage();
+        let memory: _ = manager.estimated_memory_usage();
         assert!(memory > 0);
     }
 
     #[test]
     fn test_create_params_builder() {
-        let builder = V8CreateParamsBuilder::with_preset(V8HeapPreset::Small);
-        let flags = builder.recommended_flags();
+        let builder: _ = V8CreateParamsBuilder::with_preset(V8HeapPreset::Small);
+        let flags: _ = builder.recommended_flags();
 
         assert!(flags.iter().any(|f| f.contains("max-old-space-size")));
     }
 
     #[test]
     fn test_custom_config() {
-        let custom_config = V8HeapConfig {
+        let custom_config: _ = V8HeapConfig {
             initial_heap_size_mb: 100,
             max_heap_size_mb: 400,
             initial_old_space_size_mb: 50,
@@ -380,8 +382,8 @@ mod tests {
             concurrent_sweeping: true,
         };
 
-        let preset = V8HeapPreset::Custom(custom_config);
-        let config = preset.config();
+        let preset: _ = V8HeapPreset::Custom(custom_config);
+        let config: _ = preset.config();
 
         assert_eq!(config.max_heap_size_mb, 400);
         assert_eq!(config.initial_heap_size_mb, 100);

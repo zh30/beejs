@@ -2,12 +2,14 @@
 //! Comprehensive test suite for enhanced testing framework
 
 use beejs::testing::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Test enhanced runner basic functionality
 #[test]
 fn test_enhanced_runner_basic() {
-    let config = EnhancedRunnerConfig::default();
-    let runner = EnhancedRunner::new(config);
+    let config: _ = EnhancedRunnerConfig::default();
+    let runner: _ = EnhancedRunner::new(config);
 
     let mut test_case = TestCase::new(
         "test_basic".to_string(),
@@ -24,20 +26,20 @@ fn test_enhanced_runner_basic() {
 
     test_case.skip = true;
 
-    let result = runner.run_test_with_retry("suite", &test_case);
+    let result: _ = runner.run_test_with_retry("suite", &test_case);
     assert!(result.passed);
 }
 
 /// Test parallel executor
 #[test]
 fn test_parallel_executor() {
-    let config = ParallelConfig::default();
-    let executor = ParallelExecutor::new(config);
+    let config: _ = ParallelConfig::default();
+    let executor: _ = ParallelExecutor::new(config);
 
     let mut test_cases = Vec::new();
 
     for i in 0..5 {
-        let test_case = TestCase::new(
+        let test_case: _ = TestCase::new(
             format!("test_{}", i),
             rusty_v8::Global::new(
                 &mut rusty_v8::HandleScope::new(&mut rusty_v8::Isolate::new(rusty_v8::CreateParams::default())),
@@ -52,7 +54,7 @@ fn test_parallel_executor() {
         test_cases.push(test_case);
     }
 
-    let results = executor.run_tests_parallel("suite", &test_cases, Duration::from_secs(5));
+    let results: _ = executor.run_tests_parallel("suite", &test_cases, Duration::from_secs(5));
 
     assert_eq!(results.len(), 5);
     for result in results {
@@ -63,10 +65,10 @@ fn test_parallel_executor() {
 /// Test timeout handler
 #[test]
 fn test_timeout_handler() {
-    let config = TimeoutConfig::default();
-    let timeout_handler = TestTimeout::new(config);
+    let config: _ = TimeoutConfig::default();
+    let timeout_handler: _ = TestTimeout::new(config);
 
-    let result = timeout_handler.run_with_timeout(Duration::from_millis(100), || {
+    let result: _ = timeout_handler.run_with_timeout(Duration::from_millis(100), || {
         std::thread::sleep(Duration::from_millis(50));
         42
     });
@@ -75,7 +77,7 @@ fn test_timeout_handler() {
     assert_eq!(result.unwrap(), 42);
 
     // Test timeout
-    let result = timeout_handler.run_with_timeout(Duration::from_millis(50), || {
+    let result: _ = timeout_handler.run_with_timeout(Duration::from_millis(50), || {
         std::thread::sleep(Duration::from_millis(100));
     });
 
@@ -128,7 +130,7 @@ fn test_test_sorter() {
         ),
     ];
 
-    let sorter = TestSorter::ByName;
+    let sorter: _ = TestSorter::ByName;
     sorter.sort(&mut test_cases, "suite");
 
     assert_eq!(test_cases[0].name, "a_test");
@@ -138,26 +140,26 @@ fn test_test_sorter() {
 /// Test extended matcher
 #[test]
 fn test_extended_matcher_equal() {
-    let matcher = ExtendedMatcher::Equal(42);
+    let matcher: _ = ExtendedMatcher::Equal(42);
     assert!(matcher.matches(&42));
     assert!(matcher.message(&42).contains("equal"));
 }
 
 #[test]
 fn test_extended_matcher_contains() {
-    let matcher = ExtendedMatcher::Contains("test".to_string());
+    let matcher: _ = ExtendedMatcher::Contains("test".to_string());
     assert!(matcher.matches(&"this is a test string"));
 }
 
 #[test]
 fn test_extended_matcher_length() {
-    let matcher = ExtendedMatcher::Length(5);
+    let matcher: _ = ExtendedMatcher::Length(5);
     assert!(matcher.matches(&vec![1, 2, 3, 4, 5]));
 }
 
 #[test]
 fn test_extended_matcher_truthy() {
-    let matcher = ExtendedMatcher::Truthy;
+    let matcher: _ = ExtendedMatcher::Truthy;
     assert!(matcher.matches(&"true"));
     assert!(matcher.matches(&"non-empty"));
     assert!(!matcher.matches(&""));
@@ -166,7 +168,7 @@ fn test_extended_matcher_truthy() {
 
 #[test]
 fn test_extended_matcher_falsy() {
-    let matcher = ExtendedMatcher::Falsy;
+    let matcher: _ = ExtendedMatcher::Falsy;
     assert!(matcher.matches(&""));
     assert!(matcher.matches(&"false"));
     assert!(matcher.matches(&"0"));
@@ -176,27 +178,27 @@ fn test_extended_matcher_falsy() {
 /// Test snapshot manager
 #[test]
 fn test_snapshot_manager_basic() {
-    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_dir: _ = tempfile::tempdir().unwrap();
     let mut config = SnapshotConfig::default();
     config.update_snapshots = true;
 
     let mut manager = SnapshotManager::new(temp_dir.path(), config);
 
-    let result = manager.match_snapshot("test_snapshot", &"hello world");
+    let result: _ = manager.match_snapshot("test_snapshot", &"hello world");
     assert!(result.is_ok());
 
-    let comparison = result.unwrap();
+    let comparison: _ = result.unwrap();
     assert!(comparison.matches);
 }
 
 /// Test snapshot comparison
 #[test]
 fn test_snapshot_comparison() {
-    let comparison = SnapshotComparison::new_match("test".to_string(), "value".to_string());
+    let comparison: _ = SnapshotComparison::new_match("test".to_string(), "value".to_string());
     assert!(comparison.matches);
     assert_eq!(comparison.name, "test");
 
-    let comparison = SnapshotComparison::new_mismatch("test".to_string(), "new".to_string(), "old".to_string());
+    let comparison: _ = SnapshotComparison::new_mismatch("test".to_string(), "new".to_string(), "old".to_string());
     assert!(!comparison.matches);
     assert_eq!(comparison.received, "new");
     assert_eq!(comparison.expected, Some("old".to_string()));
@@ -205,11 +207,11 @@ fn test_snapshot_comparison() {
 /// Test snapshot pretty printer
 #[test]
 fn test_snapshot_pretty_printer() {
-    let config = SnapshotConfig::default();
-    let printer = SnapshotPrettyPrinter::new(config);
+    let config: _ = SnapshotConfig::default();
+    let printer: _ = SnapshotPrettyPrinter::new(config);
 
-    let value = r#"{"name":"test","value":42}"#;
-    let rendered = printer.render(&value);
+    let value: _ = r#"{"name":"test","value":42}"#;
+    let rendered: _ = printer.render(&value);
 
     assert!(rendered.contains("\"name\": \"test\""));
     assert!(rendered.contains("\"value\": 42"));
@@ -218,11 +220,11 @@ fn test_snapshot_pretty_printer() {
 /// Test performance test runner
 #[test]
 fn test_performance_test_runner() {
-    let config = PerfTestConfig::default();
-    let reporter = Box::new(ConsolePerfTestReporter::new(false));
-    let runner = PerfTestRunner::new(config, reporter);
+    let config: _ = PerfTestConfig::default();
+    let reporter: _ = Box::new(ConsolePerfTestReporter::new(false));
+    let runner: _ = PerfTestRunner::new(config, reporter);
 
-    let result = runner.run_test("test_perf", || {
+    let result: _ = runner.run_test("test_perf", || {
         std::thread::sleep(Duration::from_millis(1));
     });
 
@@ -234,7 +236,7 @@ fn test_performance_test_runner() {
 /// Test performance statistics
 #[test]
 fn test_performance_statistics() {
-    let runs = vec![
+    let runs: _ = vec![
         PerfRun {
             duration: Duration::from_millis(10),
             memory_usage: None,
@@ -255,7 +257,7 @@ fn test_performance_statistics() {
         },
     ];
 
-    let stats = PerfStatistics::from_runs(&runs);
+    let stats: _ = PerfStatistics::from_runs(&runs);
 
     assert_eq!(stats.count, 3);
     assert!(stats.mean > Duration::from_millis(10));
@@ -266,11 +268,11 @@ fn test_performance_statistics() {
 /// Test benchmark runner
 #[test]
 fn test_benchmark_runner() {
-    let config = BenchmarkConfig::default();
-    let reporter = Box::new(ConsolePerfTestReporter::new(false));
-    let runner = BenchmarkRunner::new(config, reporter);
+    let config: _ = BenchmarkConfig::default();
+    let reporter: _ = Box::new(ConsolePerfTestReporter::new(false));
+    let runner: _ = BenchmarkRunner::new(config, reporter);
 
-    let result = runner.benchmark("test_benchmark", || {
+    let result: _ = runner.benchmark("test_benchmark", || {
         std::thread::sleep(Duration::from_millis(1));
     });
 
@@ -281,10 +283,10 @@ fn test_benchmark_runner() {
 /// Test regression detector
 #[test]
 fn test_regression_detector() {
-    let config = RegressionConfig::default();
+    let config: _ = RegressionConfig::default();
     let mut detector = RegressionDetector::new(config);
 
-    let stats = PerfStatistics {
+    let stats: _ = PerfStatistics {
         count: 100,
         min: Duration::from_millis(10),
         max: Duration::from_millis(20),
@@ -298,15 +300,15 @@ fn test_regression_detector() {
     };
 
     // First run - no historical data
-    let detection = detector.detect_regression("test_benchmark", &stats);
+    let detection: _ = detector.detect_regression("test_benchmark", &stats);
     assert!(!detection.has_regression);
     assert!(detection.message.contains("No historical data"));
 
     // Record performance
-    let _ = detector.record_performance("test_benchmark", &stats);
+    let _: _ = detector.record_performance("test_benchmark", &stats);
 
     // Second run with same stats - no regression
-    let detection = detector.detect_regression("test_benchmark", &stats);
+    let detection: _ = detector.detect_regression("test_benchmark", &stats);
     assert!(!detection.has_regression);
     assert!(detection.message.contains("acceptable"));
 }
@@ -314,15 +316,15 @@ fn test_regression_detector() {
 /// Test coverage tracker
 #[test]
 fn test_coverage_tracker() {
-    let config = CoverageTrackingConfig::default();
-    let tracker = CoverageTracker::new(config);
+    let config: _ = CoverageTrackingConfig::default();
+    let tracker: _ = CoverageTracker::new(config);
 
     tracker.register_file("test.rs".to_string());
     tracker.mark_line_covered("test.rs", 1);
     tracker.mark_line_covered("test.rs", 2);
     tracker.mark_line_covered("test.rs", 3);
 
-    let stats = tracker.get_overall_stats();
+    let stats: _ = tracker.get_overall_stats();
     assert_eq!(stats.total_files, 1);
     assert!(stats.covered_lines >= 3);
 }
@@ -366,11 +368,11 @@ fn test_function_coverage() {
 /// Test HTML coverage writer
 #[test]
 fn test_html_coverage_writer() {
-    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_dir: _ = tempfile::tempdir().unwrap();
     let mut config = CoverageConfig::default();
     config.output_directory = temp_dir.path().to_string_lossy().to_string();
 
-    let report = CoverageReport {
+    let report: _ = CoverageReport {
         stats: CoverageStats {
             total_lines: 100,
             covered_lines: 80,
@@ -402,82 +404,82 @@ fn test_html_coverage_writer() {
         format: CoverageFormat::Html,
     };
 
-    let writer = HtmlCoverageWriter::new(config);
-    let result = writer.write(&report);
+    let writer: _ = HtmlCoverageWriter::new(config);
+    let result: _ = writer.write(&report);
     assert!(result.is_ok());
 
-    let index_path = temp_dir.path().join("index.html");
+    let index_path: _ = temp_dir.path().join("index.html");
     assert!(index_path.exists());
 }
 
 /// Test JSON coverage writer
 #[test]
 fn test_json_coverage_writer() {
-    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_dir: _ = tempfile::tempdir().unwrap();
     let mut config = CoverageConfig::default();
     config.output_directory = temp_dir.path().to_string_lossy().to_string();
 
-    let report = CoverageReport {
+    let report: _ = CoverageReport {
         stats: CoverageStats::default(),
         files: vec![],
         generated_at: "2023-01-01".to_string(),
         format: CoverageFormat::Json,
     };
 
-    let writer = JsonCoverageWriter::new(config);
-    let result = writer.write(&report);
+    let writer: _ = JsonCoverageWriter::new(config);
+    let result: _ = writer.write(&report);
     assert!(result.is_ok());
 
-    let json_path = temp_dir.path().join("coverage.json");
+    let json_path: _ = temp_dir.path().join("coverage.json");
     assert!(json_path.exists());
 }
 
 /// Test text coverage writer
 #[test]
 fn test_text_coverage_writer() {
-    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_dir: _ = tempfile::tempdir().unwrap();
     let mut config = CoverageConfig::default();
     config.output_directory = temp_dir.path().to_string_lossy().to_string();
 
-    let report = CoverageReport {
+    let report: _ = CoverageReport {
         stats: CoverageStats::default(),
         files: vec![],
         generated_at: "2023-01-01".to_string(),
         format: CoverageFormat::Text,
     };
 
-    let writer = TextCoverageWriter::new(config);
-    let result = writer.write(&report);
+    let writer: _ = TextCoverageWriter::new(config);
+    let result: _ = writer.write(&report);
     assert!(result.is_ok());
 
-    let text_path = temp_dir.path().join("coverage.txt");
+    let text_path: _ = temp_dir.path().join("coverage.txt");
     assert!(text_path.exists());
 }
 
 /// Test global coverage tracker
 #[test]
 fn test_global_coverage_tracker() {
-    let config = CoverageTrackingConfig::default();
-    let tracker = init_global_tracker(config);
+    let config: _ = CoverageTrackingConfig::default();
+    let tracker: _ = init_global_tracker(config);
 
     tracker.register_file("global_test.rs".to_string());
     tracker.mark_line_covered("global_test.rs", 1);
 
-    let global = get_global_tracker();
+    let global: _ = get_global_tracker();
     assert!(global.is_some());
 
-    let stats = global.unwrap().get_overall_stats();
+    let stats: _ = global.unwrap().get_overall_stats();
     assert!(stats.covered_lines >= 1);
 }
 
 /// Test benchmark macros
 #[test]
 fn test_benchmark_macros() {
-    let config = BenchmarkConfig::default();
-    let reporter = Box::new(ConsolePerfTestReporter::new(false));
-    let runner = BenchmarkRunner::new(config, reporter);
+    let config: _ = BenchmarkConfig::default();
+    let reporter: _ = Box::new(ConsolePerfTestReporter::new(false));
+    let runner: _ = BenchmarkRunner::new(config, reporter);
 
-    let result = benchmark!(runner, "macro_test", {
+    let result: _ = benchmark!(runner, "macro_test", {
         std::thread::sleep(Duration::from_millis(1));
     });
 
@@ -490,7 +492,7 @@ fn test_enhanced_runner_stats() {
     let mut stats = EnhancedRunnerStats::new();
     assert_eq!(stats.success_rate(), 0.0);
 
-    let result = TestResult::new("suite".to_string(), "test".to_string());
+    let result: _ = TestResult::new("suite".to_string(), "test".to_string());
     stats.add_result(&result, false);
     assert_eq!(stats.total_tests, 1);
     assert_eq!(stats.passed_tests, 1);
@@ -501,13 +503,13 @@ fn test_enhanced_runner_stats() {
 #[test]
 fn test_integration_full_flow() {
     // Create enhanced runner
-    let config = EnhancedRunnerConfig::default();
-    let runner = EnhancedRunner::new(config);
+    let config: _ = EnhancedRunnerConfig::default();
+    let runner: _ = EnhancedRunner::new(config);
 
     // Create test suite
     let mut suite = TestSuite::new("integration_suite".to_string(), None);
 
-    let test_case = TestCase::new(
+    let test_case: _ = TestCase::new(
         "integration_test".to_string(),
         rusty_v8::Global::new(
             &mut rusty_v8::HandleScope::new(&mut rusty_v8::Isolate::new(rusty_v8::CreateParams::default())),
@@ -523,13 +525,13 @@ fn test_integration_full_flow() {
     suite.add_test(test_case);
 
     // Run suite
-    let stats = Arc::new(Mutex::new(EnhancedRunnerStats::new()));
-    let results = runner.run_suite(&suite, Arc::clone(&stats));
+    let stats: _ = Arc::new(std::sync::Mutex::new(Mutex::new(EnhancedRunnerStats::new())));
+    let results: _ = runner.run_suite(&suite, Arc::clone(stats));
 
     assert_eq!(results.len(), 1);
     assert!(results[0].passed);
 
-    let final_stats = Arc::try_unwrap(stats).ok().map(|m| m.into_inner().unwrap()).unwrap_or_default();
+    let final_stats: _ = Arc::try_unwrap(stats).ok().map(|m| m.into_inner().unwrap()).unwrap_or_default();
     assert_eq!(final_stats.total_tests, 1);
     assert_eq!(final_stats.passed_tests, 1);
 }

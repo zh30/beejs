@@ -11,6 +11,8 @@ use std::collections::HashMap;
 use chrono::Utc;
 use serde::{Serialize, Deserialize};
 use crate::ecosystem::types::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 模块 ID
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -58,7 +60,7 @@ pub struct ModuleIndexer {
 #[derive(Debug, Clone)]
 pub struct SearchQuery {
     pub query: String,
-    pub filters: HashMap<String, String>,
+    pub filters: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 搜索结果

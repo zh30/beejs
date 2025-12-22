@@ -81,7 +81,7 @@ pub struct OptimizedProcessPoolConfig {
 
 impl Default for OptimizedProcessPoolConfig {
     fn default() -> Self {
-        let cpu_count = num_cpus::get();
+        let cpu_count: _ = num_cpus::get();
         Self {
             max_workers: std::cmp::min(MAX_WORKER_PROCESSES, cpu_count * 2),
             initial_workers: std::cmp::min(DEFAULT_POOL_SIZE, cpu_count),
@@ -112,7 +112,7 @@ struct SmartWorker {
     avg_execution_time: Arc<Mutex<Vec<f64>>>,
     last_used: Arc<Mutex<Instant>>,
     pre_warmed: bool,
-    jit_cache: Arc<Mutex<HashMap<String, Vec<u8>>>>,
+    jit_cache: Arc<Mutex<HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>>>,
     memory_pool: Arc<Mutex<Vec<Vec<u8>>>>,
 }
 
@@ -121,7 +121,7 @@ pub struct OptimizedProcessPool {
     config: OptimizedProcessPoolConfig,
     workers: Arc<RwLock<Vec<Arc<SmartWorker>>>>,
     task_queue: Arc<Mutex<Vec<Task>>>,
-    results: Arc<RwLock<HashMap<usize, TaskResult>>>,
+    results: Arc<RwLock<HashMap<usize, TaskResult, std::collections::HashMap<usize, TaskResult, usize, TaskResult>>>>,
     worker_semaphore: Arc<Semaphore>,
     next_task_id: Arc<AtomicUsize>,
     stats: Arc<ProcessPoolStats>,
@@ -144,16 +144,16 @@ pub struct ProcessPoolStats {
 impl OptimizedProcessPool {
     /// 创建新的优化进程池
     pub async fn new(config: OptimizedProcessPoolConfig) -> Result<Self> {
-        let pool = Self {
+        let pool: _ = Self {
             config: config.clone(),
-            workers: Arc::new(RwLock::new(Vec::new())),
-            task_queue: Arc::new(Mutex::new(Vec::with_capacity(config.task_queue_size))),
-            results: Arc::new(RwLock::new(HashMap::new())),
-            worker_semaphore: Arc::new(Semaphore::new(config.max_workers)),
-            next_task_id: Arc::new(AtomicUsize::new(1)),
-            stats: Arc::new(ProcessPoolStats::default()),
-            last_scale_up: Arc::new(Mutex::new(Instant::now())),
-            last_scale_down: Arc::new(Mutex::new(Instant::now())),
+            workers: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            task_queue: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(config.task_queue_size)))),
+            results: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            worker_semaphore: Arc::new(std::sync::Mutex::new(Semaphore::new(config.max_workers))),
+            next_task_id: Arc::new(std::sync::Mutex::new(AtomicUsize::new(1))),
+            stats: Arc::new(std::sync::Mutex::new(ProcessPoolStats::default())),
+            last_scale_up: Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now()))),
+            last_scale_down: Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now()))),
         };
 
         // 预热工作进程
@@ -166,8 +166,8 @@ impl OptimizedProcessPool {
 
     /// 预热工作进程
     async fn pre_warm_workers(&self) -> Result<()> {
-        let start_time = Instant::now();
-        let warmup_count = std::cmp::min(self.config.warmup_workers, self.config.max_workers);
+        let start_time: _ = Instant::now();
+        let warmup_count: _ = std::cmp::min(self.config.warmup_workers, self.config.max_workers);
 
         // 并行创建预热进程
         let futures: Vec<_> = (0..warmup_count)
@@ -185,7 +185,7 @@ impl OptimizedProcessPool {
         let mut workers_guard = self.workers.write().await;
         workers_guard.extend(workers);
 
-        let warmup_time = start_time.elapsed();
+        let warmup_time: _ = start_time.elapsed();
         *self.stats.pre_warm_time_ms.lock().unwrap() += warmup_time.as_secs_f64() * 1000.0;
 
         eprintln!("🔥 Pre-warmed {} workers in {:.2}ms", warmup_count, warmup_time.as_secs_f64() * 1000.0);
@@ -195,18 +195,18 @@ impl OptimizedProcessPool {
     /// 创建预热的工作进程
     async fn create_pre_warmed_worker(&self, id: usize) -> Result<Arc<SmartWorker>> {
         // 模拟 V8 运行时预热
-        let workload_types = self.assign_workload_types(id);
+        let workload_types: _ = self.assign_workload_types(id);
 
-        let worker = Arc::new(SmartWorker {
+        let worker: _ = Arc::new(std::sync::Mutex::new(SmartWorker {
             id,
             workload_types,
-            current_load: Arc::new(AtomicUsize::new(0)),
-            total_tasks: Arc::new(AtomicUsize::new(0)),
-            avg_execution_time: Arc::new(Mutex::new(Vec::with_capacity(100))),
-            last_used: Arc::new(Mutex::new(Instant::now())),
+            current_load: Arc::new(AtomicUsize::new(0))),
+            total_tasks: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
+            avg_execution_time: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(100)))),
+            last_used: Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now()))),
             pre_warmed: true,
-            jit_cache: Arc::new(Mutex::new(HashMap::new())),
-            memory_pool: Arc::new(Mutex::new(Vec::new())),
+            jit_cache: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            memory_pool: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
         });
 
         // 在后台预编译常用代码
@@ -233,7 +233,7 @@ impl OptimizedProcessPool {
 
     /// 预编译常用代码
     async fn pre_compile_common_code(&self, worker: &Arc<SmartWorker>) -> Result<()> {
-        let common_codes = vec![
+        let common_codes: _ = vec![
             "console.log('Hello from Beejs')",
             "Math.random()",
             "Date.now()",
@@ -242,7 +242,7 @@ impl OptimizedProcessPool {
         ];
 
         for code in common_codes {
-            let cache_key = self.hash_code(code);
+            let cache_key: _ = self.hash_code(code);
             let mut cache = worker.jit_cache.lock().unwrap();
             cache.insert(cache_key, vec![0; 1024]); // 模拟编译后的字节码
         }
@@ -278,10 +278,10 @@ impl OptimizedProcessPool {
         }
 
         // 获取可用工作进程
-        let _permit = self.worker_semaphore.acquire().await?;
+        let _permit: _ = self.worker_semaphore.acquire().await?;
 
         // 选择最优工作进程
-        let worker = self.select_best_worker().await?;
+        let worker: _ = self.select_best_worker().await?;
         if let Some(worker) = worker {
             self.execute_task_on_worker(worker).await?;
         }
@@ -291,29 +291,29 @@ impl OptimizedProcessPool {
 
     /// 选择最优工作进程
     async fn select_best_worker(&self) -> Result<Option<Arc<SmartWorker>>> {
-        let workers = self.workers.read().await;
+        let workers: _ = self.workers.read().await;
 
         // 根据工作负载类型选择最优进程
         // 优先选择空闲、预热、缓存命中率高的进程
 
         let mut best_worker: Option<(Arc<SmartWorker>, f64)> = None;
-        let now = Instant::now();
+        let now: _ = Instant::now();
 
         for worker in workers.iter() {
-            let load = worker.current_load.load(Ordering::Relaxed);
-            let total_tasks = worker.total_tasks.load(Ordering::Relaxed);
+            let load: _ = worker.current_load.load(Ordering::Relaxed);
+            let total_tasks: _ = worker.total_tasks.load(Ordering::Relaxed);
 
             // 计算负载分数（越低越好）
-            let load_score = load as f64 / (total_tasks as f64 + 1.0);
+            let load_score: _ = load as f64 / (total_tasks as f64 + 1.0);
 
             // 检查是否预热
-            let warmup_bonus = if worker.pre_warmed { 0.5 } else { 1.0 };
+            let warmup_bonus: _ = if worker.pre_warmed { 0.5 } else { 1.0 };
 
             // 检查最后使用时间
-            let last_used = *worker.last_used.lock().unwrap();
-            let idle_bonus = if now.duration_since(last_used).as_secs() > 5 { 0.8 } else { 1.0 };
+            let last_used: _ = *worker.last_used.lock().unwrap();
+            let idle_bonus: _ = if now.duration_since(last_used).as_secs() > 5 { 0.8 } else { 1.0 };
 
-            let total_score = load_score * warmup_bonus * idle_bonus;
+            let total_score: _ = load_score * warmup_bonus * idle_bonus;
 
             if best_worker.is_none() || total_score < best_worker.unwrap().1 {
                 best_worker = Some((worker.clone(), total_score));
@@ -328,9 +328,9 @@ impl OptimizedProcessPool {
         worker.current_load.fetch_add(1, Ordering::Relaxed);
 
         // 在后台异步执行
-        let task_queue = self.task_queue.clone();
-        let results = self.results.clone();
-        let stats = self.stats.clone();
+        let task_queue: _ = self.task_queue.clone();
+        let results: _ = self.results.clone();
+        let stats: _ = self.stats.clone();
 
         tokio::spawn(async move {
             let mut task_opt = None;
@@ -342,11 +342,11 @@ impl OptimizedProcessPool {
             }
 
             if let Some(task) = task_opt {
-                let start_time = Instant::now();
-                let result = execute_task(&worker, &task).await;
+                let start_time: _ = Instant::now();
+                let result: _ = execute_task(&worker, &task).await;
 
-                let execution_time = start_time.elapsed();
-                let task_result = TaskResult {
+                let execution_time: _ = start_time.elapsed();
+                let task_result: _ = TaskResult {
                     task_id: task.id,
                     result: result.clone(),
                     execution_time_ms: execution_time.as_secs_f64() * 1000.0,
@@ -356,7 +356,7 @@ impl OptimizedProcessPool {
                 };
 
                 {
-                    let mut results = results.write().await;
+                    let mut results = results.clone();write().await;
                     results.insert(task.id, task_result);
                 }
 
@@ -373,22 +373,22 @@ impl OptimizedProcessPool {
 
     /// 尝试扩缩容
     async fn maybe_scale_pool(&self) -> Result<()> {
-        let workers = self.workers.read().await;
-        let current_size = workers.len();
+        let workers: _ = self.workers.read().await;
+        let current_size: _ = workers.len();
 
         // 检查队列长度
-        let queue_length = {
+        let queue_length: _ = {
             let queue = self.task_queue.lock().unwrap();
             queue.len()
         };
 
         // 扩容检查
-        let should_scale_up = queue_length as f64 > current_size as f64 * self.config.scale_up_threshold;
-        let last_scale_up = *self.last_scale_up.lock().unwrap();
-        let can_scale_up = last_scale_up.elapsed() > self.config.scale_up_cooldown;
+        let should_scale_up: _ = queue_length as f64 > current_size as f64 * self.config.scale_up_threshold;
+        let last_scale_up: _ = *self.last_scale_up.lock().unwrap();
+        let can_scale_up: _ = last_scale_up.elapsed() > self.config.scale_up_cooldown;
 
         if should_scale_up && can_scale_up && current_size < self.config.max_workers {
-            let new_worker_id = current_size;
+            let new_worker_id: _ = current_size;
             drop(workers); // 释放锁
 
             if let Ok(new_worker) = self.create_pre_warmed_worker(new_worker_id).await {
@@ -400,9 +400,9 @@ impl OptimizedProcessPool {
         }
 
         // 缩容检查
-        let should_scale_down = queue_length as f64 < current_size as f64 * self.config.scale_down_threshold;
-        let last_scale_down = *self.last_scale_down.lock().unwrap();
-        let can_scale_down = last_scale_down.elapsed() > self.config.scale_down_cooldown;
+        let should_scale_down: _ = queue_length as f64 < current_size as f64 * self.config.scale_down_threshold;
+        let last_scale_down: _ = *self.last_scale_down.lock().unwrap();
+        let can_scale_down: _ = last_scale_down.elapsed() > self.config.scale_down_cooldown;
 
         if should_scale_down && can_scale_down && current_size > self.config.min_workers {
             drop(workers); // 释放锁
@@ -420,7 +420,7 @@ impl OptimizedProcessPool {
 
     /// 获取任务结果
     pub async fn get_result(&self, task_id: usize) -> Option<TaskResult> {
-        let results = self.results.read().await;
+        let results: _ = self.results.read().await;
         results.get(&task_id).cloned()
     }
 
@@ -464,21 +464,23 @@ async fn execute_task(worker: &Arc<SmartWorker>, task: &Task) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_optimized_process_pool_creation() {
-        let config = OptimizedProcessPoolConfig::default();
-        let pool = OptimizedProcessPool::new(config).await.unwrap();
+        let config: _ = OptimizedProcessPoolConfig::default();
+        let pool: _ = OptimizedProcessPool::new(config).await.unwrap();
 
         assert!(pool.workers.read().await.len() >= 2);
     }
 
     #[tokio::test]
     async fn test_submit_and_execute_task() {
-        let config = OptimizedProcessPoolConfig::default();
-        let pool = OptimizedProcessPool::new(config).await.unwrap();
+        let config: _ = OptimizedProcessPoolConfig::default();
+        let pool: _ = OptimizedProcessPool::new(config).await.unwrap();
 
-        let task = Task {
+        let task: _ = Task {
             id: 0,
             code: "console.log('test')".to_string(),
             workload_type: WorkloadType::ShortTask,
@@ -487,24 +489,24 @@ mod tests {
             created_at: Instant::now(),
         };
 
-        let task_id = pool.submit_task(task).await.unwrap();
+        let task_id: _ = pool.submit_task(task).await.unwrap();
         assert!(task_id > 0);
 
         // 等待任务执行
         tokio::time::sleep(Duration::from_millis(100)).await;
 
-        let result = pool.get_result(task_id).await;
+        let result: _ = pool.get_result(task_id).await;
         assert!(result.is_some());
         assert!(result.unwrap().success);
     }
 
     #[tokio::test]
     async fn test_workload_type_assignment() {
-        let config = OptimizedProcessPoolConfig::default();
-        let pool = OptimizedProcessPool::new(config).await.unwrap();
+        let config: _ = OptimizedProcessPoolConfig::default();
+        let pool: _ = OptimizedProcessPool::new(config).await.unwrap();
 
         // 验证不同工作进程被分配了不同的工作负载类型
-        let workers = pool.workers.read().await;
+        let workers: _ = pool.workers.read().await;
         let mut unique_types = std::collections::HashSet::new();
 
         for worker in workers.iter().take(6) {

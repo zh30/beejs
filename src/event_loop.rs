@@ -76,10 +76,10 @@ impl V8EventLoop {
     /// 创建新的事件循环
     pub fn new(config: EventLoopConfig) -> Self {
         Self {
-            state: Arc::new(Mutex::new(EventLoopState::Stopped)),
+            state: Arc::new(std::sync::Mutex::new(Mutex::new(EventLoopState::Stopped))),
             config,
-            task_queue: Arc::new(Mutex::new(Vec::new())),
-            completed_tasks: Arc::new(Mutex::new(Vec::new())),
+            task_queue: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            completed_tasks: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
         }
     }
 
@@ -148,14 +148,14 @@ impl V8EventLoop {
     /// 处理待处理的任务
     pub async fn process_tasks(&self) -> Result<usize, String> {
         // 检查事件循环状态
-        let state = self.get_state();
+        let state: _ = self.get_state();
         if !matches!(state, EventLoopState::Running) {
             return Err("Event loop is not running".to_string());
         }
 
         // 获取待处理任务
         let mut tasks = self.task_queue.lock().map_err(|e| e.to_string())?;
-        let task_count = tasks.len();
+        let task_count: _ = tasks.len();
 
         if tasks.is_empty() {
             return Ok(0);
@@ -165,10 +165,10 @@ impl V8EventLoop {
         let mut completed = Vec::new();
         for task in tasks.drain(..) {
             // 模拟任务执行
-            let execution_time = task.estimated_duration.min(Duration::from_millis(100));
+            let execution_time: _ = task.estimated_duration.min(Duration::from_millis(100));
 
             // 使用超时确保不会无限等待
-            let result = timeout(execution_time, sleep(execution_time)).await;
+            let result: _ = timeout(execution_time, sleep(execution_time)).await;
 
             match result {
                 Ok(_) => {
@@ -193,13 +193,13 @@ impl V8EventLoop {
 
     /// 等待所有任务完成
     pub async fn wait_for_completion(&self, timeout_duration: Duration) -> Result<usize, String> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         while start.elapsed() < timeout_duration {
-            let processed = self.process_tasks().await?;
+            let processed: _ = self.process_tasks().await?;
 
             // 检查是否还有待处理的任务
-            let remaining = self.task_queue.lock().unwrap().len();
+            let remaining: _ = self.task_queue.lock().unwrap().len();
 
             if remaining == 0 && processed == 0 {
                 break;
@@ -209,7 +209,7 @@ impl V8EventLoop {
             sleep(Duration::from_millis(10)).await;
         }
 
-        let completed_count = self.completed_tasks.lock().unwrap().len();
+        let completed_count: _ = self.completed_tasks.lock().unwrap().len();
         Ok(completed_count)
     }
 
@@ -244,10 +244,10 @@ impl V8EventLoop {
         context: &v8::Local<v8::Context>,
     ) -> Result<v8::Local<'a, v8::Object>, String> {
         // 创建一个对象来模拟 Promise 行为
-        let promise_handler = v8::Object::new(scope);
+        let promise_handler: _ = v8::Object::new(scope);
 
         // 添加 resolve 方法
-        let resolve_func = v8::FunctionTemplate::new(
+        let resolve_func: _ = v8::FunctionTemplate::new(
             scope,
             |_scope: &mut v8::HandleScope,
              _args: v8::FunctionCallbackArguments,
@@ -258,15 +258,15 @@ impl V8EventLoop {
             },
         );
 
-        let resolve_instance = resolve_func
+        let resolve_instance: _ = resolve_func
             .get_function(scope)
             .ok_or("Failed to create resolve function")?;
 
-        let resolve_key = v8::String::new(scope, "resolve").unwrap();
+        let resolve_key: _ = v8::String::new(scope, "resolve").unwrap();
         promise_handler.set(scope, resolve_key.into(), resolve_instance.into());
 
         // 添加 reject 方法
-        let reject_func = v8::FunctionTemplate::new(
+        let reject_func: _ = v8::FunctionTemplate::new(
             scope,
             |_scope: &mut v8::HandleScope,
              _args: v8::FunctionCallbackArguments,
@@ -277,21 +277,21 @@ impl V8EventLoop {
             },
         );
 
-        let reject_instance = reject_func
+        let reject_instance: _ = reject_func
             .get_function(scope)
             .ok_or("Failed to create reject function")?;
 
-        let reject_key = v8::String::new(scope, "reject").unwrap();
+        let reject_key: _ = v8::String::new(scope, "reject").unwrap();
         promise_handler.set(scope, reject_key.into(), reject_instance.into());
 
         // 将事件循环对象添加到全局作用域
-        let global = context.global(scope);
-        let event_loop_key = v8::String::new(scope, "__beejs_event_loop").unwrap();
-        let event_loop_obj = v8::Object::new(scope);
+        let global: _ = context.global(scope);
+        let event_loop_key: _ = v8::String::new(scope, "__beejs_event_loop").unwrap();
+        let event_loop_obj: _ = v8::Object::new(scope);
 
         // 添加状态信息
-        let state_str = v8::String::new(scope, &format!("{:?}", self.get_state())).unwrap();
-        let state_key = v8::String::new(scope, "state").unwrap();
+        let state_str: _ = v8::String::new(scope, &format!("{:?}", self.get_state())).unwrap();
+        let state_key: _ = v8::String::new(scope, "state").unwrap();
         event_loop_obj.set(scope, state_key.into(), state_str.into());
 
         global.set(scope, event_loop_key.into(), event_loop_obj.into());
@@ -303,18 +303,20 @@ impl V8EventLoop {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试事件循环创建
     #[test]
     fn test_event_loop_creation() {
-        let loop_obj = V8EventLoop::new_with_default_config();
+        let loop_obj: _ = V8EventLoop::new_with_default_config();
         assert_eq!(loop_obj.get_state(), EventLoopState::Stopped);
     }
 
     /// 测试事件循环启动和停止
     #[tokio::test]
     async fn test_event_loop_start_stop() {
-        let loop_obj = V8EventLoop::new_with_default_config();
+        let loop_obj: _ = V8EventLoop::new_with_default_config();
 
         // 启动事件循环
         assert!(loop_obj.start().is_ok());
@@ -328,11 +330,11 @@ mod tests {
     /// 测试任务添加和处理
     #[tokio::test]
     async fn test_task_processing() {
-        let loop_obj = V8EventLoop::new_with_default_config();
+        let loop_obj: _ = V8EventLoop::new_with_default_config();
         loop_obj.start().unwrap();
 
         // 添加任务
-        let task = EventLoopTask {
+        let task: _ = EventLoopTask {
             id: 1,
             task_type: "test".to_string(),
             description: "Test task".to_string(),
@@ -344,7 +346,7 @@ mod tests {
         assert_eq!(loop_obj.get_queue_size(), 1);
 
         // 处理任务
-        let processed = loop_obj.process_tasks().await.unwrap();
+        let processed: _ = loop_obj.process_tasks().await.unwrap();
         assert_eq!(processed, 1);
         assert_eq!(loop_obj.get_completed_count(), 1);
     }
@@ -355,12 +357,12 @@ mod tests {
         let mut config = EventLoopConfig::default();
         config.max_queue_size = 2;
 
-        let loop_obj = V8EventLoop::new(config);
+        let loop_obj: _ = V8EventLoop::new(config);
         loop_obj.start().unwrap();
 
         // 添加两个任务（达到上限）
         for i in 1..=2 {
-            let task = EventLoopTask {
+            let task: _ = EventLoopTask {
                 id: i,
                 task_type: "test".to_string(),
                 description: format!("Task {}", i),
@@ -371,7 +373,7 @@ mod tests {
         }
 
         // 尝试添加第三个任务（应该失败）
-        let task = EventLoopTask {
+        let task: _ = EventLoopTask {
             id: 3,
             task_type: "test".to_string(),
             description: "Task 3".to_string(),
@@ -384,7 +386,7 @@ mod tests {
     /// 测试事件循环暂停和恢复
     #[tokio::test]
     async fn test_pause_resume() {
-        let loop_obj = V8EventLoop::new_with_default_config();
+        let loop_obj: _ = V8EventLoop::new_with_default_config();
         loop_obj.start().unwrap();
 
         // 暂停事件循环
@@ -399,12 +401,12 @@ mod tests {
     /// 测试等待任务完成
     #[tokio::test]
     async fn test_wait_for_completion() {
-        let loop_obj = V8EventLoop::new_with_default_config();
+        let loop_obj: _ = V8EventLoop::new_with_default_config();
         loop_obj.start().unwrap();
 
         // 添加多个任务
         for i in 1..=5 {
-            let task = EventLoopTask {
+            let task: _ = EventLoopTask {
                 id: i,
                 task_type: "test".to_string(),
                 description: format!("Task {}", i),
@@ -415,7 +417,7 @@ mod tests {
         }
 
         // 等待所有任务完成
-        let completed = loop_obj
+        let completed: _ = loop_obj
             .wait_for_completion(Duration::from_secs(5))
             .await
             .unwrap();

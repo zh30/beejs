@@ -22,7 +22,7 @@ impl ExecutionBenchmark {
 
     /// 简单表达式执行测试
     pub fn simple_expression_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 10000,
             warmup_iterations: 100,
             timeout: Some(Duration::from_secs(60)),
@@ -30,7 +30,7 @@ impl ExecutionBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "simple_expression",
             MetricType::ExecutionTime,
@@ -47,7 +47,7 @@ impl ExecutionBenchmark {
 
     /// 复杂计算性能测试
     pub fn complex_calculation_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 1000,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(60)),
@@ -55,7 +55,7 @@ impl ExecutionBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "complex_calculation",
             MetricType::ExecutionTime,
@@ -72,7 +72,7 @@ impl ExecutionBenchmark {
 
     /// 函数调用性能测试
     pub fn function_call_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 10000,
             warmup_iterations: 100,
             timeout: Some(Duration::from_secs(60)),
@@ -80,7 +80,7 @@ impl ExecutionBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "function_call",
             MetricType::ExecutionTime,
@@ -93,7 +93,7 @@ impl ExecutionBenchmark {
 
     /// 递归函数性能测试
     pub fn recursive_function_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 1000,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(60)),
@@ -101,7 +101,7 @@ impl ExecutionBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "recursive_function",
             MetricType::ExecutionTime,
@@ -114,7 +114,7 @@ impl ExecutionBenchmark {
 
     /// 对象操作性能测试
     pub fn object_operations_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 5000,
             warmup_iterations: 50,
             timeout: Some(Duration::from_secs(60)),
@@ -122,7 +122,7 @@ impl ExecutionBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "object_operations",
             MetricType::ExecutionTime,
@@ -143,7 +143,7 @@ impl ExecutionBenchmark {
 
     /// 数组操作性能测试
     pub fn array_operations_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 5000,
             warmup_iterations: 50,
             timeout: Some(Duration::from_secs(60)),
@@ -151,7 +151,7 @@ impl ExecutionBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "array_operations",
             MetricType::ExecutionTime,
@@ -169,7 +169,7 @@ impl ExecutionBenchmark {
 
     /// 字符串操作性能测试
     pub fn string_operations_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 5000,
             warmup_iterations: 50,
             timeout: Some(Duration::from_secs(60)),
@@ -177,7 +177,7 @@ impl ExecutionBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "string_operations",
             MetricType::ExecutionTime,
@@ -194,7 +194,7 @@ impl ExecutionBenchmark {
 
     /// 循环性能测试
     pub fn loop_performance_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 1000,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(60)),
@@ -202,7 +202,7 @@ impl ExecutionBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "loop_performance",
             MetricType::ExecutionTime,
@@ -223,7 +223,7 @@ impl ExecutionBenchmark {
 
     /// JSON 解析性能测试
     pub fn json_parsing_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 1000,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(60)),
@@ -231,22 +231,22 @@ impl ExecutionBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "json_parsing",
             MetricType::ExecutionTime,
             || {
                 // 模拟 JSON 解析
-                let json_str = r#"{"name":"test","value":123,"items":[1,2,3,4,5]}"#;
+                let json_str: _ = r#"{"name":"test","value":123,"items":[1,2,3,4,5]}"#;
                 let parsed: Result<serde_json::Value, _> = serde_json::from_str(json_str);
-                let _ = parsed.is_ok();
+                let _: _ = parsed.is_ok();
             },
         )
     }
 
     /// 正则表达式性能测试
     pub fn regex_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 1000,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(60)),
@@ -254,14 +254,14 @@ impl ExecutionBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "regex",
             MetricType::ExecutionTime,
             || {
                 // 模拟正则表达式
-                let text = "The quick brown fox jumps over the lazy dog 12345";
-                let re = regex::Regex::new(r"\d+").unwrap();
+                let text: _ = "The quick brown fox jumps over the lazy dog 12345";
+                let re: _ = regex::Regex::new(r"\d+").unwrap();
                 let _matches: Vec<_> = re.find_iter(text).collect();
                 _matches.len()
             },
@@ -300,7 +300,7 @@ impl ExecutionBenchmark {
             .map(|r| r.operations_per_second)
             .sum();
 
-        let avg_ops_per_second = total_ops_per_second / results.len() as f64;
+        let avg_ops_per_second: _ = total_ops_per_second / results.len() as f64;
 
         report.push_str(&format!(
             "Total Operations/Second: {:.0}\n",
@@ -338,6 +338,8 @@ fn factorial(n: u64) -> u64 {
 }
 
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 执行速度优化建议
 pub struct ExecutionOptimizationSuggestions {
@@ -350,7 +352,7 @@ impl ExecutionOptimizationSuggestions {
         let mut suggestions = Vec::new();
 
         for result in results {
-            let ops_per_sec = result.operations_per_second;
+            let ops_per_sec: _ = result.operations_per_second;
 
             match result.name.as_str() {
                 "simple_expression" => {
@@ -386,7 +388,7 @@ impl ExecutionOptimizationSuggestions {
         }
 
         // 通用建议
-        let avg_ops = results.iter().map(|r| r.operations_per_second).sum::<f64>()
+        let avg_ops: _ = results.iter().map(|r| r.operations_per_second).sum::<f64>()
             / results.len() as f64;
 
         if avg_ops < 50000.0 {

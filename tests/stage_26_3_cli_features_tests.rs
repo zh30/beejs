@@ -17,16 +17,18 @@ use std::time::{Duration, Instant};
 #[cfg(test)]
 mod stage_26_3_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// Test 1: Package Manager - Install Dependencies
     /// Verifies `beejs install` command installs dependencies correctly
     #[test]
     fn test_package_manager_install_dependencies() {
-        let package_manager = PackageManager::new();
+        let package_manager: _ = PackageManager::new();
 
         // Create a temporary package.json
-        let temp_dir = tempfile::tempdir().unwrap();
-        let package_json = temp_dir.path().join("package.json");
+        let temp_dir: _ = tempfile::tempdir().unwrap();
+        let package_json: _ = temp_dir.path().join("package.json");
         fs::write(&package_json, r#"{
             "name": "test-package",
             "dependencies": {
@@ -35,16 +37,16 @@ mod stage_26_3_tests {
         }"#).unwrap();
 
         // Install dependencies
-        let result = package_manager.install(&temp_dir.path(), None);
+        let result: _ = package_manager.install(&temp_dir.path(), None);
 
         assert!(result.is_ok(), "Should install dependencies successfully");
 
         // Check if node_modules was created
-        let node_modules = temp_dir.path().join("node_modules");
+        let node_modules: _ = temp_dir.path().join("node_modules");
         assert!(node_modules.exists(), "node_modules directory should exist");
 
         // Check if package-lock was created
-        let package_lock = temp_dir.path().join("package-lock.json");
+        let package_lock: _ = temp_dir.path().join("package-lock.json");
         assert!(package_lock.exists(), "package-lock.json should be created");
 
         println!("✓ Package Install: Dependencies installed successfully");
@@ -54,10 +56,10 @@ mod stage_26_3_tests {
     /// Verifies npm, yarn, pnpm lock file parsing
     #[test]
     fn test_package_manager_lock_file_parsing() {
-        let package_manager = PackageManager::new();
+        let package_manager: _ = PackageManager::new();
 
         // Test npm lock file
-        let npm_lock = r#"{
+        let npm_lock: _ = r#"{
             "packages": {
                 "lodash": {
                     "version": "4.17.21",
@@ -67,16 +69,16 @@ mod stage_26_3_tests {
             }
         }"#;
 
-        let dependencies = package_manager.parse_lock_file("npm", npm_lock);
+        let dependencies: _ = package_manager.parse_lock_file("npm", npm_lock);
         assert!(dependencies.contains_key("lodash"), "Should parse npm lock file");
 
         // Test yarn lock file
-        let yarn_lock = r#"lodash@^4.17.0:
+        let yarn_lock: _ = r#"lodash@^4.17.0:
   version "4.17.21"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz"
   integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg=="#;
 
-        let dependencies = package_manager.parse_lock_file("yarn", yarn_lock);
+        let dependencies: _ = package_manager.parse_lock_file("yarn", yarn_lock);
         assert!(dependencies.contains_key("lodash"), "Should parse yarn lock file");
 
         println!("✓ Lock File Parsing: npm and yarn lock files parsed successfully");
@@ -86,25 +88,25 @@ mod stage_26_3_tests {
     /// Verifies dependency tree analysis and conflict detection
     #[test]
     fn test_package_manager_dependency_tree_analysis() {
-        let package_manager = PackageManager::new();
+        let package_manager: _ = PackageManager::new();
 
-        let dependencies = vec![
+        let dependencies: _ = vec![
             ("lodash".to_string(), "4.17.21".to_string()),
             ("express".to_string(), "4.18.0".to_string()),
         ];
 
-        let tree = package_manager.analyze_dependency_tree(&dependencies);
+        let tree: _ = package_manager.analyze_dependency_tree(&dependencies);
 
         assert!(tree.nodes.len() >= 2, "Should have nodes for all dependencies");
         assert!(tree.conflicts.is_empty(), "Should detect no conflicts in valid tree");
 
         // Add conflicting dependencies
-        let conflicting_deps = vec![
+        let conflicting_deps: _ = vec![
             ("lodash".to_string(), "4.17.0".to_string()),
             ("lodash".to_string(), "4.17.21".to_string()),
         ];
 
-        let tree = package_manager.analyze_dependency_tree(&conflicting_deps);
+        let tree: _ = package_manager.analyze_dependency_tree(&conflicting_deps);
         assert!(!tree.conflicts.is_empty(), "Should detect version conflicts");
 
         println!("✓ Dependency Tree: Analyzed {} nodes, detected {} conflicts",
@@ -118,7 +120,7 @@ mod stage_26_3_tests {
         let mut test_runner = TestRunner::new();
 
         // Create test file
-        let test_code = r#"
+        let test_code: _ = r#"
             test('should add numbers', () => {
                 expect(2 + 2).toBe(4);
             });
@@ -130,7 +132,7 @@ mod stage_26_3_tests {
             });
         "#;
 
-        let result = test_runner.run_test_code(test_code);
+        let result: _ = test_runner.run_test_code(test_code);
 
         assert!(result.total_tests >= 2, "Should run at least 2 tests");
         assert!(result.passed_tests >= 2, "All tests should pass");
@@ -144,9 +146,9 @@ mod stage_26_3_tests {
     /// Verifies test filtering by name and pattern
     #[test]
     fn test_test_runner_test_filtering() {
-        let test_runner = TestRunner::new();
+        let test_runner: _ = TestRunner::new();
 
-        let tests = vec![
+        let tests: _ = vec![
             "test_math_addition".to_string(),
             "test_math_subtraction".to_string(),
             "test_string_manipulation".to_string(),
@@ -154,11 +156,11 @@ mod stage_26_3_tests {
         ];
 
         // Filter by pattern
-        let filtered = test_runner.filter_tests(&tests, "math");
+        let filtered: _ = test_runner.filter_tests(&tests, "math");
         assert_eq!(filtered.len(), 2, "Should filter to 2 math tests");
 
         // Filter by exact name
-        let filtered = test_runner.filter_tests(&tests, "test_math_addition");
+        let filtered: _ = test_runner.filter_tests(&tests, "test_math_addition");
         assert_eq!(filtered.len(), 1, "Should filter to 1 exact test");
 
         println!("✓ Test Filtering: Filtered {} tests", filtered.len());
@@ -168,9 +170,9 @@ mod stage_26_3_tests {
     /// Verifies code coverage reporting
     #[test]
     fn test_test_runner_coverage_report() {
-        let test_runner = TestRunner::new();
+        let test_runner: _ = TestRunner::new();
 
-        let source_code = r#"
+        let source_code: _ = r#"
             function add(a, b) {
                 return a + b;
             }
@@ -180,7 +182,7 @@ mod stage_26_3_tests {
             }
         "#;
 
-        let result = test_runner.generate_coverage_report(source_code);
+        let result: _ = test_runner.generate_coverage_report(source_code);
 
         assert!(result.line_coverage >= 0.0, "Should have line coverage");
         assert!(result.branch_coverage >= 0.0, "Should have branch coverage");
@@ -199,15 +201,15 @@ mod stage_26_3_tests {
         let mut dev_server = DevServer::new();
 
         // Start server
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         dev_server.start("127.0.0.1", 3000).await;
-        let startup_time = start.elapsed().unwrap();
+        let startup_time: _ = start.elapsed().unwrap();
 
         assert!(startup_time < Duration::from_secs(2),
             "Server should start in < 2s, took {:?}", startup_time);
 
         // Simulate file change
-        let temp_file = tempfile::NamedTempFile::new().unwrap();
+        let temp_file: _ = tempfile::NamedTempFile::new().unwrap();
         dev_server.watch_file(temp_file.path().to_path_buf());
 
         // Wait for hot reload
@@ -227,17 +229,17 @@ mod stage_26_3_tests {
     fn test_dev_server_file_watching() {
         let mut dev_server = DevServer::new();
 
-        let watch_dir = tempfile::tempdir().unwrap();
+        let watch_dir: _ = tempfile::tempdir().unwrap();
 
         // Create file first
-        let test_file = watch_dir.path().join("test.js");
+        let test_file: _ = watch_dir.path().join("test.js");
         fs::write(&test_file, "console.log('test');").unwrap();
 
         // Watch directory
         dev_server.watch_directory(watch_dir.path().to_path_buf());
 
         // Check if file is being watched
-        let watched_files = dev_server.get_watched_files();
+        let watched_files: _ = dev_server.get_watched_files();
         assert!(!watched_files.is_empty(), "Should have watched files");
         assert!(watched_files.iter().any(|p| p.file_name().unwrap() == "test.js"), "Should watch test.js");
 
@@ -254,7 +256,7 @@ mod stage_26_3_tests {
         dev_server.add_proxy("/api", "http://localhost:8000");
         dev_server.add_proxy("/static", "http://localhost:8001");
 
-        let proxies = dev_server.get_proxies();
+        let proxies: _ = dev_server.get_proxies();
         assert_eq!(proxies.len(), 2, "Should have 2 proxies");
         assert!(proxies.contains_key("/api"), "Should proxy /api");
         assert!(proxies.contains_key("/static"), "Should proxy /static");
@@ -273,7 +275,7 @@ mod stage_26_3_tests {
         dev_server.add_middleware("auth".to_string(), MiddlewareType::AuthMiddleware);
         dev_server.add_middleware("logger".to_string(), MiddlewareType::LoggerMiddleware);
 
-        let middlewares = dev_server.get_middlewares();
+        let middlewares: _ = dev_server.get_middlewares();
         assert_eq!(middlewares.len(), 3, "Should have 3 middlewares");
         assert!(middlewares.contains(&"cors".to_string()), "Should have CORS middleware");
         assert!(middlewares.contains(&"auth".to_string()), "Should have Auth middleware");
@@ -296,8 +298,8 @@ impl PackageManager {
     }
 
     pub fn install(&self, project_dir: &Path, _registry: Option<&str>) -> Result<(), String> {
-        let node_modules = project_dir.join("node_modules");
-        let package_lock = project_dir.join("package-lock.json");
+        let node_modules: _ = project_dir.join("node_modules");
+        let package_lock: _ = project_dir.join("package-lock.json");
 
         // Simulate installation
         fs::create_dir_all(&node_modules).map_err(|e| e.to_string())?;
@@ -308,7 +310,7 @@ impl PackageManager {
         Ok(())
     }
 
-    pub fn parse_lock_file(&self, lock_type: &str, content: &str) -> std::collections::HashMap<String, String> {
+    pub fn parse_lock_file(&self, lock_type: &str, content: &str) -> std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>> {
         let mut deps = std::collections::HashMap::new();
 
         match lock_type {
@@ -345,7 +347,7 @@ impl PackageManager {
         }
 
         // Check for conflicts
-        let mut versions: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+        let mut versions: std::collections::HashMap<String, Vec<String, std::collections::HashMap<String, Vec<String, String, Vec<String>>> = std::collections::HashMap::new();
         for (name, version) in dependencies {
             versions
                 .entry(name.clone())
@@ -406,8 +408,8 @@ impl TestRunner {
 
     pub fn run_test_code(&mut self, code: &str) -> TestSummary {
         // Parse and run tests
-        let test_count = code.matches("test(").count();
-        let describe_count = code.matches("describe(").count();
+        let test_count: _ = code.matches("test(").count();
+        let describe_count: _ = code.matches("describe(").count();
 
         self.test_results.clear();
 
@@ -464,7 +466,7 @@ pub struct DevServer {
     is_running: bool,
     port: u16,
     watched_files: Vec<std::path::PathBuf>,
-    proxies: std::collections::HashMap<String, String>,
+    proxies: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     middlewares: Vec<String>,
     reloaded: bool,
 }
@@ -502,7 +504,7 @@ impl DevServer {
         // Watch all files in directory
         if let Ok(entries) = fs::read_dir(dir) {
             for entry in entries.flatten() {
-                let path = entry.path();
+                let path: _ = entry.path();
                 if path.is_file() {
                     self.watched_files.push(path);
                 }
@@ -522,7 +524,7 @@ impl DevServer {
         self.proxies.insert(path.to_string(), target.to_string());
     }
 
-    pub fn get_proxies(&self) -> &std::collections::HashMap<String, String> {
+    pub fn get_proxies(&self) -> &std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>> {
         &self.proxies
     }
 

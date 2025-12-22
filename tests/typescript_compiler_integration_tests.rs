@@ -2,10 +2,12 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 #[cfg(test)]
 mod typescript_compiler_integration_tests {
     use beejs::typescript::{compile_typescript, TypeScriptCompiler, TypeScriptCompilerConfig};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_simple_typescript_transpilation() {
-        let ts_code = r#"
+        let ts_code: _ = r#"
 const x: number = 42;
 console.log("Test:", x);
 "#;
@@ -33,7 +35,7 @@ console.log("Test:", x);
 
     #[test]
     fn test_arrow_function_typescript() {
-        let ts_code = r#"
+        let ts_code: _ = r#"
 const add = (a: number, b: number): number => a + b;
 console.log(add(5, 3));
 "#;

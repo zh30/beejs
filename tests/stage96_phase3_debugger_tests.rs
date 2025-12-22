@@ -34,7 +34,7 @@ async fn test_breakpoint_manager_creation() {
         condition: Some(BreakpointCondition::Equals("count".to_string(), "10".to_string())),
     };
 
-    let id = manager.add_breakpoint(breakpoint.clone()).await.unwrap();
+    let id: _ = manager.add_breakpoint(breakpoint.clone()).await.unwrap();
     assert!(id > 0);
 
     // Verify breakpoint exists
@@ -48,7 +48,7 @@ async fn test_breakpoint_manager_creation() {
 /// Test variable inspection
 #[tokio::test]
 async fn test_variable_inspector() {
-    let inspector = VariableInspector::new();
+    let inspector: _ = VariableInspector::new();
 
     // Create test variables
     let mut variables = HashMap::new();
@@ -57,7 +57,7 @@ async fn test_variable_inspector() {
     variables.insert("items".to_string(), "[1,2,3]".to_string());
 
     // Inspect variables
-    let inspected = inspector.inspect_variables(&variables).await.unwrap();
+    let inspected: _ = inspector.inspect_variables(&variables).await.unwrap();
 
     // Verify inspection
     assert_eq!(inspected.len(), 3);
@@ -68,7 +68,7 @@ async fn test_variable_inspector() {
     // Test nested object inspection
     let mut nested = HashMap::new();
     nested.insert("user".to_string(), "{}".to_string());
-    let result = inspector.inspect_variables(&nested).await.unwrap();
+    let result: _ = inspector.inspect_variables(&nested).await.unwrap();
     assert_eq!(result.len(), 1);
 }
 
@@ -86,7 +86,7 @@ async fn test_call_stack_view() {
     assert_eq!(call_stack.depth().await, 3);
 
     // Get top frame
-    let top_frame = call_stack.top_frame().await;
+    let top_frame: _ = call_stack.top_frame().await;
     assert!(top_frame.is_some());
     if let Some(frame) = top_frame {
         assert_eq!(frame.function, "callback");
@@ -100,18 +100,18 @@ async fn test_call_stack_view() {
 /// Test interactive REPL
 #[tokio::test]
 async fn test_repl_evaluation() {
-    let repl = Repl::new();
+    let repl: _ = Repl::new();
 
     // Test simple expression
-    let result = repl.evaluate("1 + 1").await.unwrap();
+    let result: _ = repl.evaluate("1 + 1").await.unwrap();
     assert_eq!(result, "2".to_string());
 
     // Test variable access
-    let result = repl.evaluate("let x = 5; x * 2").await.unwrap();
+    let result: _ = repl.evaluate("let x = 5; x * 2").await.unwrap();
     assert_eq!(result, "10".to_string());
 
     // Test function call
-    let result = repl.evaluate("Math.max(3, 7)").await.unwrap();
+    let result: _ = repl.evaluate("Math.max(3, 7)").await.unwrap();
     assert_eq!(result, "7".to_string());
 }
 
@@ -130,7 +130,7 @@ async fn test_heap_snapshot() {
     assert_eq!(snapshot.total_size(), 3584);
 
     // Get statistics
-    let stats = snapshot.get_statistics();
+    let stats: _ = snapshot.get_statistics();
     assert_eq!(stats.total_objects, 3);
     assert!(stats.total_size > 0);
 }
@@ -141,7 +141,7 @@ async fn test_object_tracer() {
     let mut tracer = ObjectTracer::new();
 
     // Track object creation
-    let object_id = tracer.track_creation("obj_123", "Object", "test.js:10").await.unwrap();
+    let object_id: _ = tracer.track_creation("obj_123", "Object", "test.js:10").await.unwrap();
     assert_eq!(object_id, "obj_123");
 
     // Track property access
@@ -149,7 +149,7 @@ async fn test_object_tracer() {
     assert!(tracer.track_access("obj_123", "property2", "write").await.is_ok());
 
     // Get access history
-    let history = tracer.get_access_history("obj_123").await.unwrap();
+    let history: _ = tracer.get_access_history("obj_123").await.unwrap();
     assert_eq!(history.len(), 2);
 
     // Track object deletion
@@ -174,12 +174,12 @@ async fn test_memory_analyzer() {
     analyzer.add_snapshot(snapshot2).await;
 
     // Compare snapshots
-    let diff = analyzer.compare_snapshots(0, 1).await.unwrap();
+    let diff: _ = analyzer.compare_snapshots(0, 1).await.unwrap();
     assert!(diff.created.len() > 0);
     assert!(diff.deleted.len() == 0);
 
     // Detect memory leaks
-    let leaks = analyzer.detect_memory_leaks().await.unwrap();
+    let leaks: _ = analyzer.detect_memory_leaks().await.unwrap();
     assert!(leaks.len() >= 0);
 }
 
@@ -189,8 +189,8 @@ async fn test_debug_server_lifecycle() {
     use std::net::TcpListener;
 
     // Bind to ephemeral port
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = listener.local_addr().unwrap();
+    let listener: _ = TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr: _ = listener.local_addr().unwrap();
 
     // Create server
     let mut server = DebugServer::new(addr).await.unwrap();
@@ -214,7 +214,7 @@ async fn test_session_manager() {
     let mut manager = SessionManager::new();
 
     // Create session
-    let session_id = manager.create_session("test-client".to_string()).await.unwrap();
+    let session_id: _ = manager.create_session("test-client".to_string()).await.unwrap();
     assert!(session_id.len() > 0);
 
     // Verify session exists
@@ -230,17 +230,17 @@ async fn test_session_manager() {
 /// Test connection manager
 #[tokio::test]
 async fn test_connection_manager() {
-    let manager = Arc::new(RwLock::new(ConnectionManager::new()));
+    let manager: _ = Arc::new(std::sync::Mutex::new(RwLock::new(ConnectionManager::new())));
 
     // Create connection
-    let conn_id = {
+    let conn_id: _ = {
         let mut mgr = manager.write().await;
         mgr.create_connection("test-connection".to_string()).await.unwrap()
     };
 
     // Verify connection exists
     {
-        let mgr = manager.read().await;
+        let mgr: _ = manager.read().await;
         assert!(mgr.get_connection(conn_id).await.is_some());
     }
 
@@ -252,7 +252,7 @@ async fn test_connection_manager() {
 
     // Verify connection is closed
     {
-        let mgr = manager.read().await;
+        let mgr: _ = manager.read().await;
         assert!(mgr.get_connection(conn_id).await.is_none());
     }
 }
@@ -260,19 +260,19 @@ async fn test_connection_manager() {
 /// Test WebSocket handler
 #[tokio::test]
 async fn test_websocket_handler() {
-    let handler = WebSocketHandler::new();
+    let handler: _ = WebSocketHandler::new();
 
     // Test message serialization/deserialization
-    let debug_msg = DebugProtocol::SetBreakpoint {
+    let debug_msg: _ = DebugProtocol::SetBreakpoint {
         file: "test.js".to_string(),
         line: 42,
         condition: None,
     };
 
-    let serialized = handler.serialize_message(&debug_msg).await.unwrap();
+    let serialized: _ = handler.serialize_message(&debug_msg).await.unwrap();
     assert!(!serialized.is_empty());
 
-    let deserialized = handler.deserialize_message(&serialized).await.unwrap();
+    let deserialized: _ = handler.deserialize_message(&serialized).await.unwrap();
     assert!(matches!(deserialized, DebugProtocol::SetBreakpoint { .. }));
 }
 
@@ -280,21 +280,21 @@ async fn test_websocket_handler() {
 #[tokio::test]
 async fn test_debug_protocol_messages() {
     // Test various protocol message types
-    let msg = DebugProtocol::Continue;
+    let msg: _ = DebugProtocol::Continue;
 
-    let serialized = serde_json::to_string(&msg).unwrap();
+    let serialized: _ = serde_json::to_string(&msg).unwrap();
     let deserialized: DebugProtocol = serde_json::from_str(&serialized).unwrap();
 
     assert!(matches!(deserialized, DebugProtocol::Continue));
 
     // Test breakpoint message
-    let msg = DebugProtocol::SetBreakpoint {
+    let msg: _ = DebugProtocol::SetBreakpoint {
         file: "test.js".to_string(),
         line: 100,
         condition: Some("count > 5".to_string()),
     };
 
-    let serialized = serde_json::to_string(&msg).unwrap();
+    let serialized: _ = serde_json::to_string(&msg).unwrap();
     let deserialized: DebugProtocol = serde_json::from_str(&serialized).unwrap();
 
     assert!(matches!(deserialized, DebugProtocol::SetBreakpoint { .. }));
@@ -312,7 +312,7 @@ async fn test_performance_profiling() {
     sleep(Duration::from_millis(10)).await;
 
     // Stop profiling
-    let report = profiler.stop_profiling().await.unwrap();
+    let report: _ = profiler.stop_profiling().await.unwrap();
 
     // Verify report contains data
     assert!(report.total_duration > 0);
@@ -322,7 +322,7 @@ async fn test_performance_profiling() {
 /// Test memory leak detection
 #[tokio::test]
 async fn test_memory_leak_detection() {
-    let analyzer = MemoryAnalyzer::new();
+    let analyzer: _ = MemoryAnalyzer::new();
 
     // Create multiple snapshots showing growth
     for i in 0..5 {
@@ -332,7 +332,7 @@ async fn test_memory_leak_detection() {
     }
 
     // Detect leaks
-    let leaks = analyzer.detect_memory_leaks().await.unwrap();
+    let leaks: _ = analyzer.detect_memory_leaks().await.unwrap();
 
     // Should detect at least one leak pattern
     assert!(leaks.len() > 0);
@@ -351,18 +351,18 @@ async fn test_conditional_breakpoints() {
         condition: Some(BreakpointCondition::Equals("count".to_string(), "10".to_string())),
     };
 
-    let id = manager.add_breakpoint(breakpoint).await.unwrap();
+    let id: _ = manager.add_breakpoint(breakpoint).await.unwrap();
 
     // Test condition evaluation
     let mut variables = HashMap::new();
     variables.insert("count".to_string(), "10".to_string());
 
-    let should_break = manager.should_break(id, &variables).await.unwrap();
+    let should_break: _ = manager.should_break(id, &variables).await.unwrap();
     assert!(should_break);
 
     // Test condition that doesn't match
     variables.insert("count".to_string(), "5".to_string());
-    let should_break = manager.should_break(id, &variables).await.unwrap();
+    let should_break: _ = manager.should_break(id, &variables).await.unwrap();
     assert!(!should_break);
 }
 
@@ -384,22 +384,22 @@ async fn test_async_call_stack() {
     assert_eq!(call_stack.depth().await, 3);
 
     // Get frames with async info
-    let frames = call_stack.get_frames().await;
+    let frames: _ = call_stack.get_frames().await;
     assert_eq!(frames.len(), 3);
 }
 
 /// Test remote debugging multi-instance support
 #[tokio::test]
 async fn test_remote_debug_multi_instance() {
-    let manager = Arc::new(RwLock::new(SessionManager::new()));
+    let manager: _ = Arc::new(std::sync::Mutex::new(RwLock::new(SessionManager::new())));
 
     // Create multiple sessions
-    let session1 = {
+    let session1: _ = {
         let mut mgr = manager.write().await;
         mgr.create_session("client1".to_string()).await.unwrap()
     };
 
-    let session2 = {
+    let session2: _ = {
         let mut mgr = manager.write().await;
         mgr.create_session("client2".to_string()).await.unwrap()
     };
@@ -408,7 +408,7 @@ async fn test_remote_debug_multi_instance() {
     assert_ne!(session1, session2);
 
     {
-        let mgr = manager.read().await;
+        let mgr: _ = manager.read().await;
         assert!(mgr.get_session(session1).await.is_some());
         assert!(mgr.get_session(session2).await.is_some());
     }
@@ -421,7 +421,7 @@ async fn test_remote_debug_multi_instance() {
 
     // Verify only session2 remains
     {
-        let mgr = manager.read().await;
+        let mgr: _ = manager.read().await;
         assert!(mgr.get_session(session1).await.is_none());
         assert!(mgr.get_session(session2).await.is_some());
     }
@@ -430,24 +430,24 @@ async fn test_remote_debug_multi_instance() {
 /// Test breakpoint synchronization
 #[tokio::test]
 async fn test_breakpoint_synchronization() {
-    let manager = Arc::new(RwLock::new(BreakpointManager::new()));
+    let manager: _ = Arc::new(std::sync::Mutex::new(RwLock::new(BreakpointManager::new())));
 
     // Add breakpoint
-    let breakpoint = Breakpoint {
+    let breakpoint: _ = Breakpoint {
         id: 0,
         file: "test.js".to_string(),
         line: 42,
         condition: None,
     };
-    let id = {
+    let id: _ = {
         let mut mgr = manager.write().await;
         mgr.add_breakpoint(breakpoint).await.unwrap()
     };
 
     // Sync breakpoints to remote instance
     {
-        let mgr = manager.read().await;
-        let breakpoints = mgr.get_all_breakpoints().await;
+        let mgr: _ = manager.read().await;
+        let breakpoints: _ = mgr.get_all_breakpoints().await;
         assert_eq!(breakpoints.len(), 1);
     }
 
@@ -459,8 +459,8 @@ async fn test_breakpoint_synchronization() {
 
     // Verify removal synced
     {
-        let mgr = manager.read().await;
-        let breakpoints = mgr.get_all_breakpoints().await;
+        let mgr: _ = manager.read().await;
+        let breakpoints: _ = mgr.get_all_breakpoints().await;
         assert_eq!(breakpoints.len(), 0);
     }
 }
@@ -499,7 +499,7 @@ async fn test_performance_metrics() {
     metrics.record_gc_event(Duration::from_millis(2), 512 * 1024).await; // 2ms, 512KB
 
     // Get collected metrics
-    let collected = metrics.get_collected_metrics().await;
+    let collected: _ = metrics.get_collected_metrics().await;
 
     assert!(collected.function_timings.contains_key("test_func"));
     assert!(collected.memory_peak > 0);
@@ -509,10 +509,10 @@ async fn test_performance_metrics() {
 /// Test error handling in debugging
 #[tokio::test]
 async fn test_debugger_error_handling() {
-    let inspector = VariableInspector::new();
+    let inspector: _ = VariableInspector::new();
 
     // Test inspection of invalid value
-    let result = inspector.inspect_value("undefined").await;
+    let result: _ = inspector.inspect_value("undefined").await;
     assert!(result.is_ok());
 
     // Test inspection of circular reference
@@ -520,7 +520,7 @@ async fn test_debugger_error_handling() {
     circular.insert("self".to_string(), "{}".to_string());
 
     // This should not panic
-    let result = inspector.inspect_variables(&circular).await;
+    let result: _ = inspector.inspect_variables(&circular).await;
     assert!(result.is_ok());
 }
 
@@ -528,11 +528,13 @@ async fn test_debugger_error_handling() {
 #[tokio::test]
 async fn test_debug_adapter_protocol() {
     use beejs::tools::debug_adapter::protocol::dap::DebugAdapterProtocol;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
-    let dap = DebugAdapterProtocol::new();
+    let dap: _ = DebugAdapterProtocol::new();
 
     // Test Initialize request
-    let init_request = serde_json::json!({
+    let init_request: _ = serde_json::json!({
         "type": "request",
         "seq": 1,
         "command": "initialize",
@@ -557,18 +559,18 @@ async fn test_full_debugging_workflow() {
     // This test simulates a complete debugging session
 
     // 1. Create debugging components
-    let breakpoint_manager = Arc::new(RwLock::new(BreakpointManager::new()));
-    let variable_inspector = Arc::new(RwLock::new(VariableInspector::new()));
-    let call_stack = Arc::new(RwLock::new(CallStackView::new()));
+    let breakpoint_manager: _ = Arc::new(std::sync::Mutex::new(RwLock::new(BreakpointManager::new())));
+    let variable_inspector: _ = Arc::new(std::sync::Mutex::new(RwLock::new(VariableInspector::new())));
+    let call_stack: _ = Arc::new(std::sync::Mutex::new(RwLock::new(CallStackView::new())));
 
     // 2. Set a breakpoint
-    let breakpoint = Breakpoint {
+    let breakpoint: _ = Breakpoint {
         id: 0,
         file: "app.js".to_string(),
         line: 42,
         condition: None,
     };
-    let breakpoint_id = {
+    let breakpoint_id: _ = {
         let mut mgr = breakpoint_manager.write().await;
         mgr.add_breakpoint(breakpoint).await.unwrap()
     };
@@ -583,7 +585,7 @@ async fn test_full_debugging_workflow() {
     let mut vars = HashMap::new();
     vars.insert("result".to_string(), "42".to_string());
 
-    let inspected = {
+    let inspected: _ = {
         let inspector = variable_inspector.read().await;
         inspector.inspect_variables(&vars).await.unwrap()
     };
@@ -597,7 +599,7 @@ async fn test_full_debugging_workflow() {
     }
 
     // 6. Continue execution
-    let should_continue = {
+    let should_continue: _ = {
         let mgr = breakpoint_manager.read().await;
         !mgr.should_break(breakpoint_id, &vars).await.unwrap()
     };

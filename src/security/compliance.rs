@@ -5,6 +5,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 合规性错误
 #[derive(Error, Debug)]
@@ -45,7 +47,7 @@ pub struct GdprComplianceChecker {
 
 impl GdprComplianceChecker {
     pub fn new() -> Self {
-        let checks = vec![
+        let checks: _ = vec![
             GdprCheck {
                 requirement: "Art. 5".to_string(),
                 description: "数据处理合法性".to_string(),
@@ -87,9 +89,9 @@ impl GdprComplianceChecker {
     }
 
     pub fn check(&self) -> GdprComplianceResult {
-        let total_checks = self.checks.len();
-        let passed_checks = self.checks.iter().filter(|c| c.passed).count();
-        let score = (passed_checks as f64 / total_checks as f64) * 100.0;
+        let total_checks: _ = self.checks.len();
+        let passed_checks: _ = self.checks.iter().filter(|c| c.passed).count();
+        let score: _ = (passed_checks as f64 / total_checks as f64) * 100.0;
 
         GdprComplianceResult {
             is_compliant: score >= 80.0,
@@ -125,7 +127,7 @@ pub struct Soc2ComplianceChecker {
 
 impl Soc2ComplianceChecker {
     pub fn new() -> Self {
-        let criteria = vec![
+        let criteria: _ = vec![
             Soc2Criterion {
                 name: "CC1.1".to_string(),
                 description: "控制环境".to_string(),
@@ -167,9 +169,9 @@ impl Soc2ComplianceChecker {
     }
 
     pub fn check(&self) -> Soc2ComplianceResult {
-        let total_criteria = self.criteria.len();
-        let passed_criteria = self.criteria.iter().filter(|c| c.passed).count();
-        let score = (passed_criteria as f64 / total_criteria as f64) * 100.0;
+        let total_criteria: _ = self.criteria.len();
+        let passed_criteria: _ = self.criteria.iter().filter(|c| c.passed).count();
+        let score: _ = (passed_criteria as f64 / total_criteria as f64) * 100.0;
 
         Soc2ComplianceResult {
             is_compliant: score >= 80.0,
@@ -183,14 +185,14 @@ impl Soc2ComplianceChecker {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompliancePolicy {
     pub name: String,
-    pub rules: HashMap<String, bool>,
+    pub rules: HashMap<String, bool, std::collections::HashMap<String, bool, String, bool>>,
     pub threshold: f64,
 }
 
 /// 自定义策略检查器
 #[derive(Debug)]
 pub struct CustomPolicyChecker {
-    policies: HashMap<String, CompliancePolicy>,
+    policies: HashMap<String, CompliancePolicy, std::collections::HashMap<String, CompliancePolicy, String, CompliancePolicy>>,
 }
 
 impl CustomPolicyChecker {
@@ -216,12 +218,12 @@ impl CustomPolicyChecker {
     }
 
     pub fn check_policy(&self, name: &str) -> Result<bool, ComplianceError> {
-        let policy = self.policies.get(name)
+        let policy: _ = self.policies.get(name)
             .ok_or_else(|| ComplianceError::InvalidPolicy(name.to_string()))?;
 
-        let total_rules = policy.rules.len();
-        let passed_rules = policy.rules.values().filter(|&&v| v).count();
-        let score = (passed_rules as f64 / total_rules as f64) * 100.0;
+        let total_rules: _ = policy.rules.len();
+        let passed_rules: _ = policy.rules.values().filter(|&&v| v).count();
+        let score: _ = (passed_rules as f64 / total_rules as f64) * 100.0;
 
         Ok(score >= policy.threshold)
     }

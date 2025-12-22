@@ -7,6 +7,8 @@ use tokio::sync::RwLock;
 use tokio::time::{Duration, Instant};
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Unique identifier for an edge node
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -92,7 +94,7 @@ pub struct NodeMetrics {
 /// Edge Node Manager
 #[derive(Debug)]
 pub struct EdgeNodeManager {
-    nodes: Arc<RwLock<HashMap<NodeId, EdgeNode>>>,
+    nodes: Arc<RwLock<HashMap<NodeId, EdgeNode, std::collections::HashMap<NodeId, EdgeNode, NodeId, EdgeNode>>>>,
     load_balancer: Arc<EdgeLoadBalancer>,
     health_checker: Arc<HealthChecker>,
 }
@@ -101,7 +103,7 @@ pub struct EdgeNodeManager {
 #[derive(Debug)]
 pub struct EdgeLoadBalancer {
     strategy: LoadBalancingStrategy,
-    metrics: Arc<RwLock<HashMap<NodeId, NodeMetrics>>>,
+    metrics: Arc<RwLock<HashMap<NodeId, NodeMetrics, std::collections::HashMap<NodeId, NodeMetrics, NodeId, NodeMetrics>>>>,
 }
 
 /// Health Checker
@@ -124,9 +126,9 @@ impl EdgeNodeManager {
     /// Create a new edge node manager
     pub fn new() -> Self {
         EdgeNodeManager {
-            nodes: Arc::new(RwLock::new(HashMap::new())),
-            load_balancer: Arc::new(EdgeLoadBalancer::new(LoadBalancingStrategy::ResourceBased)),
-            health_checker: Arc::new(HealthChecker::new(Duration::from_secs(30))),
+            nodes: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            load_balancer: Arc::new(std::sync::Mutex::new(EdgeLoadBalancer::new(LoadBalancingStrategy::ResourceBased))),
+            health_checker: Arc::new(std::sync::Mutex::new(HealthChecker::new(Duration::from_secs(30)))),
         }
     }
 
@@ -166,7 +168,7 @@ impl EdgeNodeManager {
 
     /// Discover available nodes
     pub async fn discover_nodes(&self) -> Result<Vec<EdgeNode>> {
-        let nodes = self.nodes.read().await;
+        let nodes: _ = self.nodes.read().await;
 
         let available_nodes: Vec<EdgeNode> = nodes
             .values()
@@ -180,19 +182,19 @@ impl EdgeNodeManager {
 
     /// Perform health check on a specific node
     pub async fn health_check(&self, node_id: &NodeId) -> Result<NodeHealth> {
-        let nodes = self.nodes.read().await;
+        let nodes: _ = self.nodes.read().await;
 
-        let node = nodes.get(node_id)
+        let node: _ = nodes.get(node_id)
             .ok_or_else(|| anyhow!("Node not found: {}", node_id.0))?;
 
         // Simulate health check
-        let start = Instant::now();
+        let start: _ = Instant::now();
         tokio::time::sleep(Duration::from_millis(10)).await;
 
-        let metrics = self.load_balancer.metrics.read().await;
-        let node_metrics = metrics.get(node_id);
+        let metrics: _ = self.load_balancer.metrics.read().await;
+        let node_metrics: _ = metrics.clone();get(node_id);
 
-        let health = NodeHealth {
+        let health: _ = NodeHealth {
             node_id: node_id.clone(),
             is_healthy: node.status == NodeStatus::Online,
             cpu_usage: node_metrics.map(|m| m.cpu_usage).unwrap_or(0.0),
@@ -207,16 +209,16 @@ impl EdgeNodeManager {
     /// Execute a task on an edge node
     pub async fn execute_task(&self, task: Task) -> Result<ExecutionResult> {
         // Select optimal node
-        let node_id = self.load_balancer.select_node(&task).await?;
+        let node_id: _ = self.load_balancer.select_node(&task).await?;
 
         println!("Executing task {} on node {}", task.id, node_id.0);
 
         // Simulate task execution
-        let start = Instant::now();
+        let start: _ = Instant::now();
         tokio::time::sleep(Duration::from_millis(task.timeout_ms.min(100))).await;
-        let execution_time = start.elapsed().as_millis() as u64;
+        let execution_time: _ = start.elapsed().as_millis() as u64;
 
-        let result = ExecutionResult {
+        let result: _ = ExecutionResult {
             task_id: task.id,
             success: true,
             output: Some("Task completed successfully".to_string()),
@@ -241,13 +243,13 @@ impl EdgeNodeManager {
 
     /// Get the total number of registered nodes
     pub async fn node_count(&self) -> usize {
-        let nodes = self.nodes.read().await;
+        let nodes: _ = self.nodes.read().await;
         nodes.len()
     }
 
     /// Get online node count
     pub async fn online_node_count(&self) -> usize {
-        let nodes = self.nodes.read().await;
+        let nodes: _ = self.nodes.read().await;
         nodes.values().filter(|n| n.status == NodeStatus::Online).count()
     }
 }
@@ -257,13 +259,13 @@ impl EdgeLoadBalancer {
     pub fn new(strategy: LoadBalancingStrategy) -> Self {
         EdgeLoadBalancer {
             strategy,
-            metrics: Arc::new(RwLock::new(HashMap::new())),
+            metrics: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
     /// Select the optimal node for a task
     pub async fn select_node(&self, task: &Task) -> Result<NodeId> {
-        let metrics = self.metrics.read().await;
+        let metrics: _ = self.metrics.read().await;
 
         match self.strategy {
             LoadBalancingStrategy::RoundRobin => {
@@ -287,8 +289,8 @@ impl EdgeLoadBalancer {
                 metrics
                     .iter()
                     .max_by(|a, b| {
-                        let score_a = (100.0 - a.1.cpu_usage) * 0.5 + (100.0 - a.1.memory_usage) * 0.5;
-                        let score_b = (100.0 - b.1.cpu_usage) * 0.5 + (100.0 - b.1.memory_usage) * 0.5;
+                        let score_a: _ = (100.0 - a.1.cpu_usage) * 0.5 + (100.0 - a.1.memory_usage) * 0.5;
+                        let score_b: _ = (100.0 - b.1.cpu_usage) * 0.5 + (100.0 - b.1.memory_usage) * 0.5;
                         score_a.partial_cmp(&score_b).unwrap_or(std::cmp::Ordering::Equal)
                     })
                     .map(|(node_id, _)| node_id.clone())

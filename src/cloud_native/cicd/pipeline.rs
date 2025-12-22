@@ -234,7 +234,7 @@ impl GitHubActionsWorkflow {
 
     /// Enable cache
     pub fn enable_cache(&mut self, path: String, key: String) {
-        let cache = PipelineCache {
+        let cache: _ = PipelineCache {
             paths: vec![path],
             key,
             restore_keys: Vec::new(),
@@ -279,10 +279,10 @@ pub struct GitLabCIPipeline {
     pub stages: Vec<String>,
 
     /// Pipeline jobs
-    pub jobs: std::collections::HashMap<String, PipelineJob>,
+    pub jobs: std::collections::HashMap<String, PipelineJob, std::collections::HashMap<String, PipelineJob, String, PipelineJob>>,
 
     /// Variables
-    pub variables: std::collections::HashMap<String, String>,
+    pub variables: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 
     /// Cache configuration
     pub cache: Option<PipelineCache>,
@@ -351,7 +351,7 @@ impl GitLabCIPipeline {
 
     /// Add job
     pub fn add_job(&mut self, name: String, stage: String, steps: Vec<String>) {
-        let job = PipelineJob {
+        let job: _ = PipelineJob {
             name: name.clone(),
             stage,
             steps,
@@ -406,10 +406,10 @@ pub struct JenkinsPipeline {
     pub post: Vec<String>,
 
     /// Environment variables
-    pub environment: std::collections::HashMap<String, String>,
+    pub environment: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 
     /// Tools configuration
-    pub tools: std::collections::HashMap<String, String>,
+    pub tools: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 
     /// Pipeline status
     pub status: PipelineStatus,
@@ -448,7 +448,7 @@ impl JenkinsPipeline {
 
     /// Add stage
     pub fn add_stage(&mut self, name: String, steps: Vec<String>) {
-        let stage = JenkinsStage { name, steps };
+        let stage: _ = JenkinsStage { name, steps };
         self.stages.push(stage);
     }
 
@@ -587,6 +587,8 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_github_actions_workflow() {
@@ -637,7 +639,7 @@ mod tests {
     fn test_pipeline_manager() {
         let mut manager = PipelineManager::new("github".to_string());
 
-        let workflow = GitHubActionsWorkflow::new(
+        let workflow: _ = GitHubActionsWorkflow::new(
             "ci.yml".to_string(),
             "Build and Test".to_string(),
         );
@@ -649,7 +651,7 @@ mod tests {
 
     #[test]
     fn test_pipeline_status() {
-        let workflow = GitHubActionsWorkflow::new(
+        let workflow: _ = GitHubActionsWorkflow::new(
             "ci.yml".to_string(),
             "Build and Test".to_string(),
         );

@@ -53,14 +53,14 @@ impl DistributedTracer {
     pub fn start_span_with_context(
         &self,
         operation: &str,
-        context: &HashMap<String, String>,
+        context: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     ) -> Span {
-        let trace_id = context
+        let trace_id: _ = context
             .get("trace-id")
             .cloned()
             .unwrap_or_else(|| generate_trace_id());
 
-        let parent_span_id = context.get("span-id").cloned();
+        let parent_span_id: _ = context.get("span-id").cloned();
 
         Span::new_with_context(operation, trace_id, parent_span_id)
     }
@@ -72,7 +72,7 @@ impl DistributedTracer {
     /// * `span` - 要注入的 Span
     /// * `headers` - 目标 headers
     ///
-    pub fn inject_context(&self, span: &Span, headers: &mut HashMap<String, String>) {
+    pub fn inject_context(&self, span: &Span, headers: &mut HashMap<String, String, std::collections::HashMap<String, String, String, String>>) {
         headers.insert("trace-id".to_string(), span.trace_id.clone());
         headers.insert("span-id".to_string(), span.span_id.clone());
         if let Some(ref parent_id) = span.parent_span_id {
@@ -89,10 +89,10 @@ impl DistributedTracer {
     /// # Returns
     ///
     /// 返回追踪上下文
-    pub fn extract_context(&self, headers: &HashMap<String, String>) -> Option<TraceContext> {
-        let trace_id = headers.get("trace-id")?.clone();
-        let span_id = headers.get("span-id")?.clone();
-        let baggage = HashMap::new();
+    pub fn extract_context(&self, headers: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> Option<TraceContext> {
+        let trace_id: _ = headers.get("trace-id")?.clone();
+        let span_id: _ = headers.get("span-id")?.clone();
+        let baggage: _ = HashMap::new();
 
         Some(TraceContext {
             trace_id,
@@ -116,7 +116,7 @@ pub struct Span {
     /// 开始时间
     pub start_time: SystemTime,
     /// 标签
-    pub tags: HashMap<String, String>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     /// 日志
     pub logs: Vec<String>,
 }
@@ -210,7 +210,7 @@ pub struct TraceContext {
     /// Span ID
     pub span_id: String,
     /// 附加信息
-    pub baggage: HashMap<String, String>,
+    pub baggage: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 impl TraceContext {
@@ -271,17 +271,19 @@ fn generate_span_id() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_tracer_creation() {
-        let tracer = DistributedTracer::new("beejs-service".to_string());
+        let tracer: _ = DistributedTracer::new("beejs-service".to_string());
         assert_eq!(tracer.service_name, "beejs-service");
     }
 
     #[test]
     fn test_start_span() {
-        let tracer = DistributedTracer::new("beejs-service".to_string());
-        let span = tracer.start_span("api_request");
+        let tracer: _ = DistributedTracer::new("beejs-service".to_string());
+        let span: _ = tracer.start_span("api_request");
 
         assert!(!span.trace_id.is_empty());
         assert!(!span.span_id.is_empty());
@@ -293,8 +295,8 @@ mod tests {
 
     #[test]
     fn test_inject_context() {
-        let tracer = DistributedTracer::new("beejs-service".to_string());
-        let span = tracer.start_span("database_query");
+        let tracer: _ = DistributedTracer::new("beejs-service".to_string());
+        let span: _ = tracer.start_span("database_query");
 
         let mut headers = HashMap::new();
         tracer.inject_context(&span, &mut headers);
@@ -306,13 +308,13 @@ mod tests {
 
     #[test]
     fn test_extract_context() {
-        let tracer = DistributedTracer::new("beejs-service".to_string());
+        let tracer: _ = DistributedTracer::new("beejs-service".to_string());
 
         let mut headers = HashMap::new();
         headers.insert("trace-id".to_string(), "test-trace-id".to_string());
         headers.insert("span-id".to_string(), "test-span-id".to_string());
 
-        let context = tracer.extract_context(&headers).unwrap();
+        let context: _ = tracer.extract_context(&headers).unwrap();
 
         assert_eq!(context.trace_id, "test-trace-id");
         assert_eq!(context.span_id, "test-span-id");
@@ -320,13 +322,13 @@ mod tests {
 
     #[test]
     fn test_span_with_context() {
-        let tracer = DistributedTracer::new("beejs-service".to_string());
+        let tracer: _ = DistributedTracer::new("beejs-service".to_string());
 
         let mut headers = HashMap::new();
         headers.insert("trace-id".to_string(), "parent-trace".to_string());
         headers.insert("span-id".to_string(), "parent-span".to_string());
 
-        let child_span = tracer.start_span_with_context("child_operation", &headers);
+        let child_span: _ = tracer.start_span_with_context("child_operation", &headers);
 
         assert_eq!(child_span.trace_id, "parent-trace");
         assert_eq!(child_span.parent_span_id, Some("parent-span".to_string()));
@@ -335,7 +337,7 @@ mod tests {
 
     #[test]
     fn test_span_tags() {
-        let tracer = DistributedTracer::new("beejs-service".to_string());
+        let tracer: _ = DistributedTracer::new("beejs-service".to_string());
         let mut span = tracer.start_span("api_request");
 
         span.add_tag("user_id", "12345");
@@ -347,7 +349,7 @@ mod tests {
 
     #[test]
     fn test_span_logs() {
-        let tracer = DistributedTracer::new("beejs-service".to_string());
+        let tracer: _ = DistributedTracer::new("beejs-service".to_string());
         let mut span = tracer.start_span("api_request");
 
         span.log_event("request_received");
@@ -371,20 +373,20 @@ mod tests {
 
     #[test]
     fn test_span_duration() {
-        let tracer = DistributedTracer::new("beejs-service".to_string());
-        let span = tracer.start_span("api_request");
+        let tracer: _ = DistributedTracer::new("beejs-service".to_string());
+        let span: _ = tracer.start_span("api_request");
 
         std::thread::sleep(Duration::from_millis(10));
 
-        let duration = span.get_duration();
+        let duration: _ = span.get_duration();
         assert!(duration.as_millis() >= 10);
     }
 
     #[test]
     fn test_trace_id_generation() {
-        let tracer = DistributedTracer::new("beejs-service".to_string());
-        let span1 = tracer.start_span("op1");
-        let span2 = tracer.start_span("op2");
+        let tracer: _ = DistributedTracer::new("beejs-service".to_string());
+        let span1: _ = tracer.start_span("op1");
+        let span2: _ = tracer.start_span("op2");
 
         // 每个 Span 应该有唯一的 ID
         assert_ne!(span1.span_id, span2.span_id);
@@ -395,9 +397,9 @@ mod tests {
 
     #[test]
     fn test_span_id_generation() {
-        let tracer = DistributedTracer::new("beejs-service".to_string());
-        let span1 = tracer.start_span("op1");
-        let span2 = tracer.start_span("op2");
+        let tracer: _ = DistributedTracer::new("beejs-service".to_string());
+        let span1: _ = tracer.start_span("op1");
+        let span2: _ = tracer.start_span("op2");
 
         // 每个 Span 应该有唯一的 Span ID
         assert_ne!(span1.span_id, span2.span_id);

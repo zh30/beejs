@@ -5,11 +5,13 @@ use crate::network::{NetworkConfig, NetworkError};
 use std::collections::HashMap;
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// epoll 事件管理器
 pub struct EpollManager {
     config: NetworkConfig,
-    connections: Arc<Mutex<HashMap<usize, TcpStream>>>,
+    connections: Arc<Mutex<HashMap<usize, TcpStream, std::collections::HashMap<usize, TcpStream, usize, TcpStream>>>>,
     connection_count: Arc<Mutex<usize>>,
 }
 
@@ -18,8 +20,8 @@ impl EpollManager {
     pub fn new(config: NetworkConfig) -> Result<Self, NetworkError> {
         Ok(Self {
             config,
-            connections: Arc::new(Mutex::new(HashMap::new())),
-            connection_count: Arc::new(Mutex::new(0)),
+            connections: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            connection_count: Arc::new(std::sync::Mutex::new(Mutex::new(0))),
         })
     }
 
@@ -34,8 +36,8 @@ impl EpollManager {
     pub fn add_connection(&mut self, conn: TcpStream) -> Result<(), NetworkError> {
         conn.set_nonblocking(true)?;
 
-        let addr = conn.peer_addr()?;
-        let conn_id = addr.port() as usize;
+        let addr: _ = conn.peer_addr()?;
+        let conn_id: _ = addr.port() as usize;
 
         let mut connections = self.connections.lock().unwrap();
         let mut count = self.connection_count.lock().unwrap();

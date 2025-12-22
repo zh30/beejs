@@ -82,7 +82,7 @@ impl<T> RingBuffer<T> {
             return None;
         }
 
-        let index = self.tail;
+        let index: _ = self.tail;
         self.tail = (self.tail + 1) % self.capacity;
         self.size -= 1;
 
@@ -152,6 +152,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_ring_buffer_creation() {
@@ -199,7 +201,7 @@ mod tests {
     #[test]
     fn test_batch_push() {
         let mut buffer = RingBuffer::with_capacity(5);
-        let items = vec![1, 2, 3, 4, 5];
+        let items: _ = vec![1, 2, 3, 4, 5];
 
         buffer.push_batch(&items);
 
@@ -227,14 +229,14 @@ mod tests {
         buffer.push(2);
         buffer.push(3);
 
-        let all = buffer.get_all();
+        let all: _ = buffer.get_all();
         assert_eq!(all.len(), 3);
     }
 
     #[test]
     fn test_display() {
         let buffer: RingBuffer<i32> = RingBuffer::with_capacity(10);
-        let display = format!("{}", buffer);
+        let display: _ = format!("{}", buffer);
         assert!(display.contains("RingBuffer"));
         assert!(display.contains("size: 0/10"));
     }

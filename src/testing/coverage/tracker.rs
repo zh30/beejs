@@ -31,7 +31,7 @@ impl Default for CoverageTrackingConfig {
 #[derive(Debug, Clone, Default)]
 pub struct LineCoverage {
     pub total_lines: usize,
-    pub covered_lines: HashMap<usize, u32>, // line_number -> hit_count
+    pub covered_lines: HashMap<usize, u32, std::collections::HashMap<usize, u32, usize, u32>>, // line_number -> hit_count
 }
 
 impl LineCoverage {
@@ -72,8 +72,8 @@ impl LineCoverage {
 /// Branch coverage tracking
 #[derive(Debug, Clone, Default)]
 pub struct BranchCoverage {
-    pub total_branches: HashMap<usize, usize>, // line_number -> branch_count
-    pub covered_branches: HashMap<(usize, usize), u32>, // (line_number, branch_index) -> hit_count
+    pub total_branches: HashMap<usize, usize, std::collections::HashMap<usize, usize, usize, usize>>, // line_number -> branch_count
+    pub covered_branches: HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32>>, // (line_number, branch_index) -> hit_count
 }
 
 impl BranchCoverage {
@@ -120,8 +120,8 @@ impl BranchCoverage {
 /// Function coverage tracking
 #[derive(Debug, Clone, Default)]
 pub struct FunctionCoverage {
-    pub total_functions: HashMap<String, usize>, // function_name -> line_number
-    pub covered_functions: HashMap<String, u32>, // function_name -> hit_count
+    pub total_functions: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>, // function_name -> line_number
+    pub covered_functions: HashMap<String, u32, std::collections::HashMap<String, u32, String, u32>>, // function_name -> hit_count
 }
 
 impl FunctionCoverage {
@@ -183,12 +183,12 @@ impl PerFileCoverage {
 
     /// Get combined coverage statistics
     pub fn get_stats(&self) -> (usize, usize, usize, usize, usize, usize, usize, usize) {
-        let total_lines = self.line_coverage.total_lines;
-        let covered_lines = self.line_coverage.covered_lines.len();
+        let total_lines: _ = self.line_coverage.total_lines;
+        let covered_lines: _ = self.line_coverage.covered_lines.len();
         let total_branches: usize = self.branch_coverage.total_branches.values().sum();
-        let covered_branches = self.branch_coverage.covered_branches.len();
-        let total_functions = self.function_coverage.total_functions.len();
-        let covered_functions = self.function_coverage.covered_functions.len();
+        let covered_branches: _ = self.branch_coverage.covered_branches.len();
+        let total_functions: _ = self.function_coverage.total_functions.len();
+        let covered_functions: _ = self.function_coverage.covered_functions.len();
 
         (
             total_lines,
@@ -206,14 +206,14 @@ impl PerFileCoverage {
 /// Global coverage tracker
 pub struct CoverageTracker {
     config: CoverageTrackingConfig,
-    files: Arc<Mutex<HashMap<String, PerFileCoverage>>>,
+    files: Arc<Mutex<HashMap<String, PerFileCoverage, std::collections::HashMap<String, PerFileCoverage, String, PerFileCoverage>>>>,
 }
 
 impl CoverageTracker {
     pub fn new(config: CoverageTrackingConfig) -> Self {
         CoverageTracker {
             config,
-            files: Arc::new(Mutex::new(HashMap::new())),
+            files: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
         }
     }
 
@@ -292,19 +292,19 @@ impl CoverageTracker {
 
     /// Get coverage for a specific file
     pub fn get_file_coverage(&self, file_path: &str) -> Option<PerFileCoverage> {
-        let files = self.files.lock().unwrap();
+        let files: _ = self.files.lock().unwrap();
         files.get(file_path).cloned()
     }
 
     /// Get all coverage data
-    pub fn get_all_coverage(&self) -> HashMap<String, PerFileCoverage> {
-        let files = self.files.lock().unwrap();
+    pub fn get_all_coverage(&self) -> HashMap<String, PerFileCoverage, std::collections::HashMap<String, PerFileCoverage, String, PerFileCoverage>> {
+        let files: _ = self.files.lock().unwrap();
         files.clone()
     }
 
     /// Get overall coverage statistics
     pub fn get_overall_stats(&self) -> CoverageStats {
-        let files = self.files.lock().unwrap();
+        let files: _ = self.files.lock().unwrap();
 
         let mut total_lines = 0;
         let mut covered_lines = 0;
@@ -376,7 +376,7 @@ static GLOBAL_TRACKER: once_cell::sync::OnceCell<Arc<CoverageTracker>> =
 
 /// Initialize global coverage tracker
 pub fn init_global_tracker(config: CoverageTrackingConfig) -> Arc<CoverageTracker> {
-    let tracker = Arc::new(CoverageTracker::new(config));
+    let tracker: _ = Arc::new(std::sync::Mutex::new(CoverageTracker::new(config)));
     GLOBAL_TRACKER.set(tracker.clone()).ok();
     tracker
 }
@@ -389,6 +389,8 @@ pub fn get_global_tracker() -> Option<Arc<CoverageTracker>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_line_coverage() {
@@ -425,29 +427,29 @@ mod tests {
 
     #[test]
     fn test_coverage_tracker() {
-        let tracker = CoverageTracker::default();
+        let tracker: _ = CoverageTracker::default();
 
         tracker.register_file("test.rs".to_string());
         tracker.mark_line_covered("test.rs", 1);
         tracker.mark_line_covered("test.rs", 2);
 
-        let stats = tracker.get_overall_stats();
+        let stats: _ = tracker.get_overall_stats();
         assert_eq!(stats.total_files, 1);
         assert_eq!(stats.covered_lines, 2);
     }
 
     #[test]
     fn test_global_tracker() {
-        let config = CoverageTrackingConfig::default();
-        let tracker = init_global_tracker(config);
+        let config: _ = CoverageTrackingConfig::default();
+        let tracker: _ = init_global_tracker(config);
 
         tracker.register_file("global_test.rs".to_string());
         tracker.mark_line_covered("global_test.rs", 1);
 
-        let global = get_global_tracker();
+        let global: _ = get_global_tracker();
         assert!(global.is_some());
 
-        let stats = global.unwrap().get_overall_stats();
+        let stats: _ = global.unwrap().get_overall_stats();
         assert_eq!(stats.covered_lines, 1);
     }
 }

@@ -1,6 +1,8 @@
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicUsize, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 内存压缩优化器 - 自动压缩冷数据以减少内存占用
 /// 通过智能压缩算法和访问模式分析，实现 30%+ 的内存使用降低
@@ -178,8 +180,8 @@ pub enum CompressionAlgorithm {
 impl MemoryCompression {
     /// 创建新的内存压缩器
     pub fn new(config: CompressionConfig) -> Self {
-        let stats = Arc::new(CompressionStats {
-            total_compressions: AtomicU64::new(0),
+        let stats: _ = Arc::new(std::sync::Mutex::new(CompressionStats {
+            total_compressions: AtomicU64::new(0)),
             total_decompressions: AtomicU64::new(0),
             original_bytes: AtomicU64::new(0),
             compressed_bytes: AtomicU64::new(0),
@@ -192,7 +194,7 @@ impl MemoryCompression {
             decompression_time_ns: AtomicU64::new(0),
         });
 
-        let algorithms = Arc::new(RwLock::new(CompressionAlgorithms {
+        let algorithms: _ = Arc::new(std::sync::Mutex::new(RwLock::new(CompressionAlgorithms {
             lz4_compressor: LZ4Compressor {
                 threshold: 1024,  // 1KB
                 min_ratio: 1.2,   // 20%
@@ -209,15 +211,15 @@ impl MemoryCompression {
             algorithm_selector: AlgorithmSelector {
                 strategy: SelectionStrategy::SizeBased,
             },
-        }));
+        })));
 
-        let stop_flag = Arc::new(AtomicUsize::new(0));
+        let stop_flag: _ = Arc::new(std::sync::Mutex::new(AtomicUsize::new(0)));
 
         // 启动压缩线程
-        let compression_thread = Some(Self::start_compression_thread(
-            Arc::clone(&algorithms),
-            Arc::clone(&stats),
-            Arc::clone(&stop_flag),
+        let compression_thread: _ = Some(Self::start_compression_thread(
+            Arc::clone(algorithms),
+            Arc::clone(stats),
+            Arc::clone(stop_flag),
             config.clone(),
         ));
 
@@ -232,29 +234,29 @@ impl MemoryCompression {
 
     /// 压缩数据
     pub fn compress(&self, data: &[u8], address: usize) -> Result<CompressedBlock, CompressionError> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 选择最佳压缩算法
-        let algorithm = self.select_algorithm(data);
+        let algorithm: _ = self.select_algorithm(data);
 
         // 执行压缩
         let (compressed_data, compression_ratio, algorithm_used) = match algorithm {
             CompressionAlgorithm::LZ4 => {
-                let compressed = self.compress_lz4(data)?;
+                let compressed: _ = self.compress_lz4(data)?;
                 self.stats.lz4_usage.fetch_add(1, Ordering::Relaxed);
-                let ratio = self.calculate_compression_ratio(data, &compressed);
+                let ratio: _ = self.calculate_compression_ratio(data, &compressed);
                 (compressed, ratio, algorithm)
             }
             CompressionAlgorithm::Snappy => {
-                let compressed = self.compress_snappy(data)?;
+                let compressed: _ = self.compress_snappy(data)?;
                 self.stats.snappy_usage.fetch_add(1, Ordering::Relaxed);
-                let ratio = self.calculate_compression_ratio(data, &compressed);
+                let ratio: _ = self.calculate_compression_ratio(data, &compressed);
                 (compressed, ratio, algorithm)
             }
             CompressionAlgorithm::Zstd => {
-                let compressed = self.compress_zstd(data)?;
+                let compressed: _ = self.compress_zstd(data)?;
                 self.stats.zstd_usage.fetch_add(1, Ordering::Relaxed);
-                let ratio = self.calculate_compression_ratio(data, &compressed);
+                let ratio: _ = self.calculate_compression_ratio(data, &compressed);
                 (compressed, ratio, algorithm)
             }
             CompressionAlgorithm::None => {
@@ -263,7 +265,7 @@ impl MemoryCompression {
         };
 
         // 更新统计
-        let compression_time = start_time.elapsed();
+        let compression_time: _ = start_time.elapsed();
         self.stats.compression_time_ns.fetch_add(
             compression_time.as_nanos() as u64,
             Ordering::Relaxed
@@ -278,12 +280,12 @@ impl MemoryCompression {
         );
 
         // 更新平均压缩比
-        let total_compressions = self.stats.total_compressions.load(Ordering::Relaxed);
-        let current_avg = self.stats.avg_compression_ratio.load(Ordering::Relaxed);
-        let new_avg = (current_avg * (total_compressions - 1) + (compression_ratio * 1000.0) as u64) / total_compressions;
+        let total_compressions: _ = self.stats.total_compressions.load(Ordering::Relaxed);
+        let current_avg: _ = self.stats.avg_compression_ratio.load(Ordering::Relaxed);
+        let new_avg: _ = (current_avg * (total_compressions - 1) + (compression_ratio * 1000.0) as u64) / total_compressions;
         self.stats.avg_compression_ratio.store(new_avg, Ordering::Relaxed);
 
-        let compressed_size = compressed_data.len();
+        let compressed_size: _ = compressed_data.len();
 
         Ok(CompressedBlock {
             original_address: address,
@@ -300,9 +302,9 @@ impl MemoryCompression {
 
     /// 解压数据
     pub fn decompress(&self, mut block: CompressedBlock) -> Result<Vec<u8>, CompressionError> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
-        let decompressed_data = match block.algorithm {
+        let decompressed_data: _ = match block.algorithm {
             CompressionAlgorithm::LZ4 => self.decompress_lz4(&block.compressed_data)?,
             CompressionAlgorithm::Snappy => self.decompress_snappy(&block.compressed_data)?,
             CompressionAlgorithm::Zstd => self.decompress_zstd(&block.compressed_data)?,
@@ -312,7 +314,7 @@ impl MemoryCompression {
         };
 
         // 更新统计
-        let decompression_time = start_time.elapsed();
+        let decompression_time: _ = start_time.elapsed();
         self.stats.decompression_time_ns.fetch_add(
             decompression_time.as_nanos() as u64,
             Ordering::Relaxed
@@ -329,7 +331,7 @@ impl MemoryCompression {
 
     /// 选择最佳压缩算法
     fn select_algorithm(&self, data: &[u8]) -> CompressionAlgorithm {
-        let algorithms = self.algorithms.read().unwrap();
+        let algorithms: _ = self.algorithms.read().unwrap();
 
         // 基于数据大小选择算法
         if data.len() < algorithms.lz4_compressor.threshold {
@@ -429,9 +431,9 @@ impl MemoryCompression {
 
     /// 获取压缩统计信息
     pub fn get_stats(&self) -> CompressionStatsSnapshot {
-        let total_compressions = self.stats.total_compressions.load(Ordering::Relaxed);
-        let original_bytes = self.stats.original_bytes.load(Ordering::Relaxed);
-        let compressed_bytes = self.stats.compressed_bytes.load(Ordering::Relaxed);
+        let total_compressions: _ = self.stats.total_compressions.load(Ordering::Relaxed);
+        let original_bytes: _ = self.stats.original_bytes.load(Ordering::Relaxed);
+        let compressed_bytes: _ = self.stats.compressed_bytes.load(Ordering::Relaxed);
 
         CompressionStatsSnapshot {
             total_compressions: self.stats.total_compressions.load(Ordering::Relaxed),

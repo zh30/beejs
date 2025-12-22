@@ -12,7 +12,7 @@ use wasmtime_wasi::WasiCtx;
 #[derive(Debug)]
 pub struct WASMRuntime {
     engine: Arc<Engine>,
-    modules: Arc<RwLock<HashMap<String, WASMModule>>>,
+    modules: Arc<RwLock<HashMap<String, WASMModule, std::collections::HashMap<String, WASMModule, String, WASMModule>>>>,
     host_functions: Arc<HostFunctions>,
 }
 
@@ -67,9 +67,9 @@ use std::collections::HashMap;
 impl WASMRuntime {
     /// Create a new WASM runtime
     pub fn new(bee_api: Arc<dyn BeeWasmAPI>) -> Result<Self> {
-        let engine = Arc::new(Engine::default());
-        let modules = Arc::new(RwLock::new(HashMap::new()));
-        let host_functions = Arc::new(HostFunctions { bee_api });
+        let engine: _ = Arc::new(std::sync::Mutex::new(Engine::default()));
+        let modules: _ = Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new())));
+        let host_functions: _ = Arc::new(std::sync::Mutex::new(HostFunctions { bee_api }));
 
         Ok(WASMRuntime {
             engine,
@@ -80,7 +80,7 @@ impl WASMRuntime {
 
     /// Load a WASM module
     pub async fn load_module(&self, name: String, binary: Vec<u8>) -> Result<WASMModule> {
-        let module = Module::new(&self.engine, &binary)?;
+        let module: _ = Module::new(&self.engine, &binary)?;
         let mut modules = self.modules.write().await;
 
         // Get exports and imports
@@ -94,7 +94,7 @@ impl WASMRuntime {
             .map(|i| format!("{}/{}", i.module(), i.name()))
             .collect();
 
-        let wasm_module = WASMModule {
+        let wasm_module: _ = WASMModule {
             name: name.clone(),
             binary: binary.clone(),
             exports,
@@ -108,20 +108,20 @@ impl WASMRuntime {
 
     /// Execute WASM module
     pub async fn execute_wasm(&self, module_name: &str, function: &str, args: &[i32]) -> Result<String> {
-        let modules = self.modules.read().await;
-        let module = modules.get(module_name)
+        let modules: _ = self.modules.read().await;
+        let module: _ = modules.get(module_name)
             .ok_or_else(|| anyhow!("Module '{}' not found", module_name))?;
 
         let mut store = Store::default();
-        let wasi = WasiCtx::default();
+        let wasi: _ = WasiCtx::default();
         store.set_wasi(Some(wasi));
 
-        let instance = Instance::new(&mut store, &Module::new(&self.engine, &module.binary)?, &[])?;
+        let instance: _ = Instance::new(&mut store, &Module::new(&self.engine, &module.binary)?, &[])?;
 
         // Try to find and call the function
         if let Some(func) = instance.get_func(&mut store, function) {
             let typed_func: TypedFunc<i32, i32> = func.typed(&mut store)?;
-            let result = typed_func.call(&mut store, args[0]).map_err(|e| anyhow!("WASM execution error: {}", e))?;
+            let result: _ = typed_func.call(&mut store, args[0]).map_err(|e| anyhow!("WASM execution error: {}", e))?;
             Ok(format!("WASM result: {}", result))
         } else {
             // If function not found, try _start (entry point)
@@ -137,18 +137,18 @@ impl WASMRuntime {
 
     /// Execute WASM with host functions
     pub async fn execute_with_host(&self, module_name: &str, function: &str) -> Result<String> {
-        let modules = self.modules.read().await;
-        let module = modules.get(module_name)
+        let modules: _ = self.modules.read().await;
+        let module: _ = modules.get(module_name)
             .ok_or_else(|| anyhow!("Module '{}' not found", module_name))?;
 
         let mut store = Store::default();
-        let wasi = WasiCtx::default();
+        let wasi: _ = WasiCtx::default();
         store.set_wasi(Some(wasi));
 
         // Create host function linkage
-        let host_funcs = self.host_functions.clone();
+        let host_funcs: _ = self.host_functions.clone();
 
-        let instance = Instance::new(&mut store, &Module::new(&self.engine, &module.binary)?, &[])?;
+        let instance: _ = Instance::new(&mut store, &Module::new(&self.engine, &module.binary)?, &[])?;
 
         if let Some(func) = instance.get_func(&mut store, function) {
             let typed_func: TypedFunc<(), ()> = func.typed(&mut store)?;
@@ -161,13 +161,13 @@ impl WASMRuntime {
 
     /// List loaded modules
     pub async fn list_modules(&self) -> Result<Vec<String>> {
-        let modules = self.modules.read().await;
+        let modules: _ = self.modules.read().await;
         Ok(modules.keys().cloned().collect())
     }
 
     /// Get module info
     pub async fn get_module_info(&self, name: &str) -> Result<WASMModule> {
-        let modules = self.modules.read().await;
+        let modules: _ = self.modules.read().await;
         modules.get(name)
             .cloned()
             .ok_or_else(|| anyhow!("Module '{}' not found", name))
@@ -178,7 +178,7 @@ impl JS2WASMCompiler {
     /// Create a new JavaScript to WASM compiler
     pub fn new() -> Result<Self> {
         Ok(JS2WASMCompiler {
-            engine: Arc::new(Engine::default()),
+            engine: Arc::new(std::sync::Mutex::new(Engine::default())),
         })
     }
 
@@ -201,16 +201,16 @@ impl JS2WASMCompiler {
 
         // Generate a minimal WASM module
         // This is a placeholder - real implementation would use proper compilation
-        let wasm_binary = generate_minimal_wasm();
+        let wasm_binary: _ = generate_minimal_wasm();
 
-        let module = WASMModule {
+        let module: _ = WASMModule {
             name: "compiled_module".to_string(),
             binary: wasm_binary,
             exports: vec!["main".to_string()],
             imports: vec![],
         };
 
-        let success = errors.is_empty();
+        let success: _ = errors.is_empty();
 
         Ok(WASMCompilationResult {
             module,
@@ -246,6 +246,8 @@ fn generate_minimal_wasm() -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     struct MockBeeWasmAPI;
 
@@ -270,72 +272,72 @@ mod tests {
 
     #[tokio::test]
     async fn test_wasm_runtime_creation() {
-        let bee_api = Arc::new(MockBeeWasmAPI);
-        let runtime = WASMRuntime::new(bee_api).unwrap();
+        let bee_api: _ = Arc::new(std::sync::Mutex::new(MockBeeWasmAPI));
+        let runtime: _ = WASMRuntime::new(bee_api).unwrap();
 
-        let modules = runtime.list_modules().await;
+        let modules: _ = runtime.list_modules().await;
         assert!(modules.is_ok());
         assert_eq!(modules.unwrap().len(), 0);
     }
 
     #[tokio::test]
     async fn test_wasm_module_loading() {
-        let bee_api = Arc::new(MockBeeWasmAPI);
-        let runtime = WASMRuntime::new(bee_api).unwrap();
+        let bee_api: _ = Arc::new(std::sync::Mutex::new(MockBeeWasmAPI));
+        let runtime: _ = WASMRuntime::new(bee_api).unwrap();
 
-        let wasm_binary = generate_minimal_wasm();
-        let result = runtime.load_module("test".to_string(), wasm_binary).await;
+        let wasm_binary: _ = generate_minimal_wasm();
+        let result: _ = runtime.load_module("test".to_string(), wasm_binary).await;
 
         assert!(result.is_ok());
 
-        let modules = runtime.list_modules().await.unwrap();
+        let modules: _ = runtime.list_modules().await.unwrap();
         assert_eq!(modules.len(), 1);
         assert_eq!(modules[0], "test");
     }
 
     #[tokio::test]
     async fn test_js_to_wasm_compilation() {
-        let compiler = JS2WASMCompiler::new().unwrap();
+        let compiler: _ = JS2WASMCompiler::new().unwrap();
 
-        let js_code = r#"
+        let js_code: _ = r#"
 function hello() {
     return "Hello from WASM!";
 }
 "#;
 
-        let result = compiler.compile_to_wasm(js_code).await;
+        let result: _ = compiler.compile_to_wasm(js_code).await;
         assert!(result.is_ok());
 
-        let compilation = result.unwrap();
+        let compilation: _ = result.unwrap();
         assert!(compilation.success);
         assert!(!compilation.module.binary.is_empty());
     }
 
     #[tokio::test]
     async fn test_wasm_optimization() {
-        let compiler = JS2WASMCompiler::new().unwrap();
+        let compiler: _ = JS2WASMCompiler::new().unwrap();
 
-        let module = WASMModule {
+        let module: _ = WASMModule {
             name: "test".to_string(),
             binary: generate_minimal_wasm(),
             exports: vec!["main".to_string()],
             imports: vec![],
         };
 
-        let optimized = compiler.optimize_wasm(&module).await;
+        let optimized: _ = compiler.optimize_wasm(&module).await;
         assert!(optimized.is_ok());
         assert_eq!(optimized.unwrap().name, "test");
     }
 
     #[tokio::test]
     async fn test_wasm_module_info() {
-        let bee_api = Arc::new(MockBeeWasmAPI);
-        let runtime = WASMRuntime::new(bee_api).unwrap();
+        let bee_api: _ = Arc::new(std::sync::Mutex::new(MockBeeWasmAPI));
+        let runtime: _ = WASMRuntime::new(bee_api).unwrap();
 
-        let wasm_binary = generate_minimal_wasm();
+        let wasm_binary: _ = generate_minimal_wasm();
         runtime.load_module("test".to_string(), wasm_binary).await.unwrap();
 
-        let info = runtime.get_module_info("test").await;
+        let info: _ = runtime.get_module_info("test").await;
         assert!(info.is_ok());
         assert_eq!(info.unwrap().name, "test");
     }

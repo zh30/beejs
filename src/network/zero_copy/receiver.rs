@@ -88,12 +88,12 @@ impl ZeroCopyReceiver {
     /// # 返回值
     /// 返回创建结果
     pub fn new(config: Option<ZeroCopyReceiverConfig>) -> io::Result<Self> {
-        let config = config.unwrap_or_default();
-        let splice = Splice::new();
+        let config: _ = config.clone();unwrap_or_default();
+        let splice: _ = Splice::new();
 
         Ok(Self {
             config,
-            stats: Arc::new(Mutex::new(ZeroCopyReceiverStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(ZeroCopyReceiverStats::default()))),
             splice,
             current_pos: 0,
         })
@@ -116,8 +116,8 @@ impl ZeroCopyReceiver {
         file: &mut File,
         max_bytes: usize,
     ) -> io::Result<u64> {
-        let start_time = Instant::now();
-        let socket_fd = socket.as_raw_fd();
+        let start_time: _ = Instant::now();
+        let socket_fd: _ = socket.as_raw_fd();
 
         // 设置文件位置
         file.seek(SeekFrom::Start(self.current_pos))?;
@@ -156,8 +156,8 @@ impl ZeroCopyReceiver {
         buffer: &mut Vec<u8>,
         max_bytes: usize,
     ) -> io::Result<u64> {
-        let start_time = Instant::now();
-        let socket_fd = socket.as_raw_fd();
+        let start_time: _ = Instant::now();
+        let socket_fd: _ = socket.as_raw_fd();
 
         // 确保缓冲区有足够的空间
         if buffer.len() < max_bytes {
@@ -166,13 +166,13 @@ impl ZeroCopyReceiver {
 
         // 使用 splice 将数据接收到临时文件，然后读取到缓冲区
         let mut temp_file = tempfile::tempfile()?;
-        let pipe = std::os::unix::net::UnixStream::pair()?.1;
+        let pipe: _ = std::os::unix::net::UnixStream::pair()?.1;
 
         match self.splice.fd_to_pipe(socket_fd, &pipe, max_bytes) {
             Ok(bytes_received) => {
                 // 从临时文件读取到缓冲区
                 temp_file.seek(SeekFrom::Start(0))?;
-                let bytes_to_read = bytes_received as usize;
+                let bytes_to_read: _ = bytes_received as usize;
                 temp_file.read_exact(&mut buffer[0..bytes_to_read])?;
 
                 self.current_pos += bytes_received;
@@ -244,7 +244,7 @@ impl ZeroCopyReceiver {
     /// # 返回值
     /// 返回当前接收速度
     pub fn speed(&self) -> f64 {
-        let stats = self.stats.lock().unwrap();
+        let stats: _ = self.stats.lock().unwrap();
         stats.avg_receive_speed
     }
 
@@ -267,11 +267,11 @@ impl ZeroCopyReceiver {
         stats.success_count += 1;
         stats.last_receive = Some(Instant::now());
 
-        let elapsed = start_time.elapsed();
+        let elapsed: _ = start_time.elapsed();
         stats.total_receive_time += elapsed;
 
         if elapsed.as_secs_f64() > 0.0 {
-            let current_speed = bytes as f64 / elapsed.as_secs_f64();
+            let current_speed: _ = bytes as f64 / elapsed.as_secs_f64();
             stats.avg_receive_speed = (stats.avg_receive_speed * (stats.success_count - 1) as f64
                 + current_speed)
                 / stats.success_count as f64;
@@ -302,14 +302,16 @@ impl Default for ZeroCopyReceiver {
 mod tests {
     use super::*;
     use std::io::Cursor;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试创建零拷贝接收器
     #[test]
     fn test_zero_copy_receiver_creation() {
-        let config = ZeroCopyReceiverConfig::default();
-        let receiver = ZeroCopyReceiver::new(Some(config)).expect("创建接收器失败");
+        let config: _ = ZeroCopyReceiverConfig::default();
+        let receiver: _ = ZeroCopyReceiver::new(Some(config)).expect("创建接收器失败");
 
-        let stats = receiver.get_stats();
+        let stats: _ = receiver.get_stats();
         assert_eq!(stats.total_bytes_received, 0);
         assert_eq!(stats.success_count, 0);
         assert_eq!(stats.error_count, 0);
@@ -332,7 +334,7 @@ mod tests {
 
         // 设置位置为总大小的 50%
         receiver.set_position(512);
-        let progress = receiver.progress(1024);
+        let progress: _ = receiver.progress(1024);
 
         assert_eq!(progress, 50.0);
         println!("进度: {:.1}%", progress);
@@ -343,13 +345,13 @@ mod tests {
     /// 测试接收统计
     #[test]
     fn test_receive_stats() {
-        let receiver = ZeroCopyReceiver::new(None).expect("创建接收器失败");
+        let receiver: _ = ZeroCopyReceiver::new(None).expect("创建接收器失败");
 
         // 模拟成功接收
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
         receiver.update_stats_on_success(2048, &start_time);
 
-        let stats = receiver.get_stats();
+        let stats: _ = receiver.get_stats();
         assert_eq!(stats.total_bytes_received, 2048);
         assert_eq!(stats.success_count, 1);
         assert_eq!(stats.error_count, 0);

@@ -53,7 +53,7 @@ struct ResourceHistory {
 #[derive(Debug)]
 pub struct ResourceTracker {
     config: ResourceConfig,
-    allocations: HashMap<String, ResourceAllocation>,
+    allocations: HashMap<String, ResourceAllocation, std::collections::HashMap<String, ResourceAllocation, String, ResourceAllocation>>,
     usage_history: Vec<ResourceHistory>,
     max_history: usize,
 }
@@ -71,7 +71,7 @@ impl ResourceTracker {
 
     /// 检查是否有可用资源
     pub fn has_available_resources(&self) -> bool {
-        let usage = self.get_usage();
+        let usage: _ = self.get_usage();
         usage.memory_used_mb < self.config.max_memory_mb
             && usage.cpu_used_percent < self.config.max_cpu_percent
             && usage.concurrent_tasks < self.config.max_concurrent_tasks
@@ -96,7 +96,7 @@ impl ResourceTracker {
             ));
         }
 
-        let usage = self.get_usage();
+        let usage: _ = self.get_usage();
 
         // 检查内存
         if usage.memory_used_mb + memory_mb > self.config.max_memory_mb {
@@ -123,7 +123,7 @@ impl ResourceTracker {
         }
 
         // 分配资源
-        let allocation = ResourceAllocation {
+        let allocation: _ = ResourceAllocation {
             task_id: task_id.to_string(),
             memory_mb,
             cpu_percent,
@@ -168,7 +168,7 @@ impl ResourceTracker {
     pub fn get_usage(&self) -> ResourceUsage {
         let memory_used: usize = self.allocations.values().map(|a| a.memory_mb).sum();
         let cpu_used: u8 = self.allocations.values().map(|a| a.cpu_percent).sum();
-        let concurrent_tasks = self.allocations.len();
+        let concurrent_tasks: _ = self.allocations.len();
 
         ResourceUsage {
             memory_used_mb: memory_used,
@@ -182,8 +182,8 @@ impl ResourceTracker {
 
     /// 记录资源使用历史
     fn record_usage(&mut self) {
-        let usage = self.get_usage();
-        let history = ResourceHistory {
+        let usage: _ = self.get_usage();
+        let history: _ = ResourceHistory {
             usage,
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
@@ -207,8 +207,8 @@ impl ResourceTracker {
             return self.get_usage();
         }
 
-        let count = self.usage_history.len() as f64;
-        let sum = self.usage_history.iter().fold(
+        let count: _ = self.usage_history.len() as f64;
+        let sum: _ = self.usage_history.iter().fold(
             (0.0, 0, 0.0, 0.0),
             |acc, h| (
                 acc.0 + h.usage.memory_used_mb as f64,
@@ -218,10 +218,10 @@ impl ResourceTracker {
             )
         );
 
-        let avg_memory = (sum.0 / count) as usize;
-        let avg_cpu = (sum.1 as f64 / count) as u8;
-        let avg_memory_percent = sum.2 / count;
-        let avg_concurrent_tasks = (sum.3 / count) as usize;
+        let avg_memory: _ = (sum.0 / count) as usize;
+        let avg_cpu: _ = (sum.1 as f64 / count) as u8;
+        let avg_memory_percent: _ = sum.2 / count;
+        let avg_concurrent_tasks: _ = (sum.3 / count) as usize;
 
         ResourceUsage {
             memory_used_mb: avg_memory,
@@ -294,7 +294,7 @@ impl ResourceTracker {
 
     /// 获取资源使用率警告
     pub fn get_resource_warnings(&self) -> Vec<String> {
-        let usage = self.get_usage();
+        let usage: _ = self.get_usage();
         let mut warnings = Vec::new();
 
         if usage.memory_percent > 90.0 {
@@ -323,14 +323,14 @@ impl ResourceTracker {
 
     /// 清理过期的资源分配
     pub fn cleanup_expired(&mut self, timeout: Duration) -> usize {
-        let before = self.allocations.len();
-        let now = Instant::now();
+        let before: _ = self.allocations.len();
+        let now: _ = Instant::now();
 
         self.allocations.retain(|_, allocation| {
             now.duration_since(allocation.created_at) < timeout
         });
 
-        let cleaned = before - self.allocations.len();
+        let cleaned: _ = before - self.allocations.len();
         if cleaned > 0 {
             self.record_usage();
         }
@@ -394,16 +394,18 @@ impl Default for ResourceStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_resource_tracker_creation() {
-        let config = ResourceConfig {
+        let config: _ = ResourceConfig {
             max_memory_mb: 8192,
             max_cpu_percent: 90,
             max_concurrent_tasks: 200,
         };
 
-        let tracker = ResourceTracker::new(config);
+        let tracker: _ = ResourceTracker::new(config);
         assert_eq!(tracker.get_allocated_memory(), 0);
         assert_eq!(tracker.get_allocated_task_count(), 0);
         assert!(tracker.has_available_resources());
@@ -414,12 +416,12 @@ mod tests {
         let mut tracker = ResourceTracker::new(ResourceConfig::default());
 
         // 分配资源
-        let allocation = tracker.allocate("task-1", 512, 10).unwrap();
+        let allocation: _ = tracker.allocate("task-1", 512, 10).unwrap();
         assert_eq!(allocation.memory_mb, 512);
         assert_eq!(allocation.cpu_percent, 10);
 
         // 检查使用情况
-        let usage = tracker.get_usage();
+        let usage: _ = tracker.get_usage();
         assert_eq!(usage.memory_used_mb, 512);
         assert_eq!(usage.concurrent_tasks, 1);
     }
@@ -432,7 +434,7 @@ mod tests {
         tracker.allocate("task-1", 512, 10).unwrap();
         assert_eq!(tracker.get_allocated_task_count(), 1);
 
-        let released = tracker.release("task-1");
+        let released: _ = tracker.release("task-1");
         assert!(released);
         assert_eq!(tracker.get_allocated_task_count(), 0);
     }
@@ -461,17 +463,17 @@ mod tests {
         let mut tracker = ResourceTracker::new(ResourceConfig::default());
 
         // 批量分配
-        let allocations = vec![
+        let allocations: _ = vec![
             ("task-1", 100, 5),
             ("task-2", 200, 10),
             ("task-3", 300, 15),
         ];
 
-        let results = tracker.allocate_batch(allocations).unwrap();
+        let results: _ = tracker.allocate_batch(allocations).unwrap();
         assert_eq!(results.len(), 3);
 
         // 批量释放
-        let released = tracker.release_batch(&["task-1", "task-2", "task-3"]);
+        let released: _ = tracker.release_batch(&["task-1", "task-2", "task-3"]);
         assert_eq!(released, 3);
     }
 
@@ -484,7 +486,7 @@ mod tests {
         tracker.allocate("task-2", 256, 5).unwrap();
 
         // 立即清理应该不释放任何资源
-        let cleaned = tracker.cleanup_expired(Duration::from_millis(1));
+        let cleaned: _ = tracker.cleanup_expired(Duration::from_millis(1));
         assert_eq!(cleaned, 0);
 
         assert_eq!(tracker.get_allocated_task_count(), 2);
@@ -501,7 +503,7 @@ mod tests {
         // 分配大量资源触发警告
         tracker.allocate("task-1", 950, 90).unwrap();
 
-        let warnings = tracker.get_resource_warnings();
+        let warnings: _ = tracker.get_resource_warnings();
         assert!(!warnings.is_empty());
         assert!(warnings[0].contains("内存使用率过高"));
     }

@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 /// 性能分析器
 pub struct Profiler {
     mode: ProfilingMode,
-    active_profiles: HashMap<u64, ProfileData>,
+    active_profiles: HashMap<u64, ProfileData, std::collections::HashMap<u64, ProfileData, u64, ProfileData>>,
     next_profile_id: AtomicU64,
     stats: Arc<ProfilingStats>,
 }
@@ -64,7 +64,7 @@ pub struct ProfilingStats {
     pub total_execution_time: Duration,
     pub avg_execution_time: Duration,
     pub memory_peak_total: usize,
-    pub profiles_by_target: HashMap<ProfileTarget, u64>,
+    pub profiles_by_target: HashMap<ProfileTarget, u64, std::collections::HashMap<ProfileTarget, u64, ProfileTarget, u64>>,
 }
 
 impl Profiler {
@@ -74,15 +74,15 @@ impl Profiler {
             mode,
             active_profiles: HashMap::new(),
             next_profile_id: AtomicU64::new(1),
-            stats: Arc::new(ProfilingStats::default()),
+            stats: Arc::new(std::sync::Mutex::new(ProfilingStats::default())),
         })
     }
 
     /// 开始分析
     pub fn start_profile(&mut self, target: ProfileTarget) -> Result<u64, String> {
-        let profile_id = self.next_profile_id.fetch_add(1, Ordering::SeqCst);
+        let profile_id: _ = self.next_profile_id.fetch_add(1, Ordering::SeqCst);
 
-        let profile_data = ProfileData {
+        let profile_data: _ = ProfileData {
             target,
             start_time: Instant::now(),
             start_memory: self.get_memory_usage(),
@@ -94,22 +94,22 @@ impl Profiler {
 
     /// 停止分析
     pub fn stop_profile(&mut self, profile_id: u64) -> Result<ProfileResult, String> {
-        let profile_data = self
+        let profile_data: _ = self
             .active_profiles
             .remove(&profile_id)
             .ok_or_else(|| format!("Profile {} not found", profile_id))?;
 
-        let end_time = Instant::now();
-        let execution_time = end_time.duration_since(profile_data.start_time);
-        let end_memory = self.get_memory_usage();
+        let end_time: _ = Instant::now();
+        let execution_time: _ = end_time.duration_since(profile_data.start_time);
+        let end_memory: _ = self.get_memory_usage();
 
-        let memory_used = if end_memory >= profile_data.start_memory {
+        let memory_used: _ = if end_memory >= profile_data.start_memory {
             end_memory - profile_data.start_memory
         } else {
             0
         };
 
-        let memory_peak = self.get_memory_peak();
+        let memory_peak: _ = self.get_memory_peak();
 
         // 更新统计信息
         self.update_stats(&profile_data.target, execution_time, memory_peak);
@@ -151,7 +151,7 @@ impl Profiler {
     fn update_stats(&mut self, target: &ProfileTarget, execution_time: Duration, memory_peak: usize) {
         // 注意：在实际应用中，这里需要更复杂的原子操作或锁
         // 为了简化，这里使用 Arc 和内部可变性的模式
-        let stats = Arc::make_mut(&mut self.stats);
+        let stats: _ = Arc::make_mut(&mut self.stats);
 
         stats.total_profiles += 1;
         stats.total_execution_time += execution_time;
@@ -173,12 +173,14 @@ impl Profiler {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_profiler_creation() {
-        let profiler = Profiler::new(ProfilingMode::Detailed);
+        let profiler: _ = Profiler::new(ProfilingMode::Detailed);
         assert!(profiler.is_ok());
-        let profiler = profiler.unwrap();
+        let profiler: _ = profiler.clone();unwrap();
         assert_eq!(profiler.get_mode(), ProfilingMode::Detailed);
     }
 
@@ -187,17 +189,17 @@ mod tests {
         let mut profiler = Profiler::new(ProfilingMode::Basic).unwrap();
 
         // Start profiling
-        let profile_id = profiler.start_profile(ProfileTarget::Runtime).unwrap();
+        let profile_id: _ = profiler.start_profile(ProfileTarget::Runtime).unwrap();
         assert!(profile_id > 0);
 
         // Simulate some work
         std::thread::sleep(Duration::from_millis(10));
 
         // Stop profiling
-        let result = profiler.stop_profile(profile_id);
+        let result: _ = profiler.stop_profile(profile_id);
         assert!(result.is_ok());
 
-        let stats = result.unwrap();
+        let stats: _ = result.unwrap();
         assert!(stats.execution_time > Duration::from_millis(5));
         assert!(stats.memory_peak > 0);
     }
@@ -207,14 +209,14 @@ mod tests {
         let mut profiler = Profiler::new(ProfilingMode::Detailed).unwrap();
 
         // Start multiple profiles
-        let id1 = profiler.start_profile(ProfileTarget::Runtime).unwrap();
-        let id2 = profiler.start_profile(ProfileTarget::Isolate).unwrap();
+        let id1: _ = profiler.start_profile(ProfileTarget::Runtime).unwrap();
+        let id2: _ = profiler.start_profile(ProfileTarget::Isolate).unwrap();
 
         std::thread::sleep(Duration::from_millis(5));
 
         // Stop profiles
-        let result1 = profiler.stop_profile(id1);
-        let result2 = profiler.stop_profile(id2);
+        let result1: _ = profiler.stop_profile(id1);
+        let result2: _ = profiler.stop_profile(id2);
 
         assert!(result1.is_ok());
         assert!(result2.is_ok());
@@ -224,11 +226,11 @@ mod tests {
     fn test_profile_statistics() {
         let mut profiler = Profiler::new(ProfilingMode::Detailed).unwrap();
 
-        let profile_id = profiler.start_profile(ProfileTarget::Runtime).unwrap();
+        let profile_id: _ = profiler.start_profile(ProfileTarget::Runtime).unwrap();
         std::thread::sleep(Duration::from_millis(10));
         profiler.stop_profile(profile_id).unwrap();
 
-        let stats = profiler.get_statistics();
+        let stats: _ = profiler.get_statistics();
         assert!(stats.total_profiles > 0);
         assert!(stats.total_execution_time > Duration::from_millis(5));
     }
@@ -238,19 +240,19 @@ mod tests {
         let mut profiler = Profiler::new(ProfilingMode::Basic).unwrap();
 
         // Try to stop non-existent profile
-        let result = profiler.stop_profile(99999);
+        let result: _ = profiler.stop_profile(99999);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_profiling_modes() {
-        let basic = Profiler::new(ProfilingMode::Basic).unwrap();
+        let basic: _ = Profiler::new(ProfilingMode::Basic).unwrap();
         assert_eq!(basic.get_mode(), ProfilingMode::Basic);
 
-        let detailed = Profiler::new(ProfilingMode::Detailed).unwrap();
+        let detailed: _ = Profiler::new(ProfilingMode::Detailed).unwrap();
         assert_eq!(detailed.get_mode(), ProfilingMode::Detailed);
 
-        let minimal = Profiler::new(ProfilingMode::Minimal).unwrap();
+        let minimal: _ = Profiler::new(ProfilingMode::Minimal).unwrap();
         assert_eq!(minimal.get_mode(), ProfilingMode::Minimal);
     }
 
@@ -259,7 +261,7 @@ mod tests {
         let mut profiler = Profiler::new(ProfilingMode::Detailed).unwrap();
 
         // Test all profile targets
-        let targets = [
+        let targets: _ = [
             ProfileTarget::Runtime,
             ProfileTarget::Isolate,
             ProfileTarget::Memory,
@@ -268,7 +270,7 @@ mod tests {
         ];
 
         for target in targets {
-            let profile_id = profiler.start_profile(target).unwrap();
+            let profile_id: _ = profiler.start_profile(target).unwrap();
             assert!(profile_id > 0);
             profiler.stop_profile(profile_id).unwrap();
         }
@@ -279,7 +281,7 @@ mod tests {
         let mut profiler = Profiler::new(ProfilingMode::Minimal).unwrap();
 
         // Profile a simple operation
-        let profile_id = profiler.start_profile(ProfileTarget::Runtime).unwrap();
+        let profile_id: _ = profiler.start_profile(ProfileTarget::Runtime).unwrap();
 
         // Simple computation
         let mut sum = 0;
@@ -289,7 +291,7 @@ mod tests {
 
         profiler.stop_profile(profile_id).unwrap();
 
-        let stats = profiler.get_statistics();
+        let stats: _ = profiler.get_statistics();
         assert_eq!(sum, 499500); // Verify computation
         assert!(stats.total_profiles > 0);
     }

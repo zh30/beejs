@@ -3,108 +3,110 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! 验证新实现的Node.js API兼容性
 
 use beejs::Runtime;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 #[test]
 fn test_nodejs_crypto_basic() {
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
-    let code = r#"
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let code: _ = r#"
         const crypto = require('crypto');
         const hash = crypto.createHash('sha256');
         hash.update('test data');
         const result = hash.digest('hex');
         result.length === 64;
     "#;
-    let result = runtime.execute_code(code);
+    let result: _ = runtime.execute_code(code);
     assert!(result.is_ok());
-    let result_str = result.unwrap();
+    let result_str: _ = result.unwrap();
     assert!(result_str.contains("true"));
 }
 
 #[test]
 fn test_nodejs_buffer_basic() {
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
-    let code = r#"
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let code: _ = r#"
         const buf = Buffer.from('Hello, World!', 'utf8');
         buf.toString('utf8') === 'Hello, World!';
     "#;
-    let result = runtime.execute_code(code);
+    let result: _ = runtime.execute_code(code);
     assert!(result.is_ok());
-    let result_str = result.unwrap();
+    let result_str: _ = result.unwrap();
     assert!(result_str.contains("true"));
 }
 
 #[test]
 fn test_nodejs_events_basic() {
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
-    let code = r#"
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let code: _ = r#"
         const EventEmitter = require('events');
         const emitter = new EventEmitter();
-        let called = false;
+        let called: _ = false;
         emitter.on('test', () => {
             called = true;
         });
         emitter.emit('test');
         called;
     "#;
-    let result = runtime.execute_code(code);
+    let result: _ = runtime.execute_code(code);
     assert!(result.is_ok());
-    let result_str = result.unwrap();
+    let result_str: _ = result.unwrap();
     assert!(result_str.contains("true"));
 }
 
 #[test]
 fn test_nodejs_util_basic() {
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
-    let code = r#"
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let code: _ = r#"
         const util = require('util');
         const obj = { name: 'test', value: 42 };
         const inspected = util.inspect(obj);
         inspected.includes('name');
     "#;
-    let result = runtime.execute_code(code);
+    let result: _ = runtime.execute_code(code);
     assert!(result.is_ok());
-    let result_str = result.unwrap();
+    let result_str: _ = result.unwrap();
     assert!(result_str.contains("true"));
 }
 
 #[test]
 fn test_nodejs_os_basic() {
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
-    let code = r#"
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let code: _ = r#"
         const os = require('os');
         const platform = os.platform();
         typeof platform === 'string' && platform.length > 0;
     "#;
-    let result = runtime.execute_code(code);
+    let result: _ = runtime.execute_code(code);
     assert!(result.is_ok());
-    let result_str = result.unwrap();
+    let result_str: _ = result.unwrap();
     assert!(result_str.contains("true"));
 }
 
 #[test]
 fn test_nodejs_path_basic() {
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
-    let code = r#"
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let code: _ = r#"
         const path = require('path');
         const result = path.join('foo', 'bar', 'baz');
         result.length > 0;
     "#;
-    let result = runtime.execute_code(code);
+    let result: _ = runtime.execute_code(code);
     assert!(result.is_ok());
-    let result_str = result.unwrap();
+    let result_str: _ = result.unwrap();
     assert!(result_str.contains("true"));
 }
 
 #[test]
 fn test_nodejs_url_basic() {
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
-    let code = r#"
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let code: _ = r#"
         const { URL } = require('url');
         const url = new URL('https://example.com:8080/path?query=value#hash');
         url.hostname === 'example.com';
     "#;
-    let result = runtime.execute_code(code);
+    let result: _ = runtime.execute_code(code);
     assert!(result.is_ok());
-    let result_str = result.unwrap();
+    let result_str: _ = result.unwrap();
     assert!(result_str.contains("true"));
 }

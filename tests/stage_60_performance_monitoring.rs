@@ -65,11 +65,13 @@ impl PerformanceMonitor {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_performance_monitor_creation() {
-        let monitor = PerformanceMonitor::new();
-        let metrics = monitor.get_metrics();
+        let monitor: _ = PerformanceMonitor::new();
+        let metrics: _ = monitor.get_metrics();
 
         assert_eq!(metrics.script_count, 0);
         assert_eq!(metrics.execution_time, Duration::from_millis(0));
@@ -85,7 +87,7 @@ mod tests {
         std::thread::sleep(Duration::from_millis(10));
         monitor.record_script_execution(Duration::from_millis(10), 1024);
 
-        let metrics = monitor.get_metrics();
+        let metrics: _ = monitor.get_metrics();
         assert_eq!(metrics.script_count, 1);
         assert!(metrics.execution_time >= Duration::from_millis(10));
         assert_eq!(metrics.memory_usage, 1024);
@@ -100,7 +102,7 @@ mod tests {
         monitor.record_script_execution(Duration::from_millis(10), 1024);
         monitor.record_script_execution(Duration::from_millis(15), 2048);
 
-        let metrics = monitor.get_metrics();
+        let metrics: _ = monitor.get_metrics();
         assert_eq!(metrics.script_count, 3);
         assert_eq!(metrics.execution_time, Duration::from_millis(30));
         assert_eq!(metrics.memory_usage, 2048); // 最后一次的值
@@ -114,7 +116,7 @@ mod tests {
         assert_eq!(monitor.get_metrics().script_count, 1);
 
         monitor.reset();
-        let metrics = monitor.get_metrics();
+        let metrics: _ = monitor.get_metrics();
 
         assert_eq!(metrics.script_count, 0);
         assert_eq!(metrics.execution_time, Duration::from_millis(0));
@@ -123,8 +125,8 @@ mod tests {
 
     #[test]
     fn test_performance_metrics_clone() {
-        let monitor = PerformanceMonitor::new();
-        let metrics = monitor.get_metrics().clone();
+        let monitor: _ = PerformanceMonitor::new();
+        let metrics: _ = monitor.get_metrics().clone();
 
         // 确保可以克隆指标
         assert_eq!(metrics.script_count, 0);

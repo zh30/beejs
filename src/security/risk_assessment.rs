@@ -5,6 +5,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 风险评估错误
 #[derive(Error, Debug)]
@@ -59,7 +61,7 @@ impl RiskLevel {
 /// 风险评估器
 #[derive(Debug)]
 pub struct RiskAssessor {
-    factors: HashMap<String, RiskFactor>,
+    factors: HashMap<String, RiskFactor, std::collections::HashMap<String, RiskFactor, String, RiskFactor>>,
 }
 
 impl RiskAssessor {
@@ -128,7 +130,7 @@ impl RiskAssessor {
             total_weight += factor.weight;
         }
 
-        let overall_score = if total_weight > 0.0 {
+        let overall_score: _ = if total_weight > 0.0 {
             total_weighted_score / total_weight
         } else {
             0.0

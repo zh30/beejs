@@ -25,48 +25,50 @@ pub use batch_optimizer::BatchProcessor;
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_ai_inference_engine_creation() {
-        let engine = AIInferenceEngine::new().await;
+        let engine: _ = AIInferenceEngine::new().await;
         assert!(engine.is_ok());
     }
 
     #[tokio::test]
     async fn test_model_loading() {
-        let loader = ModelLoader::new();
-        let model = loader.load_simple_model("test_model").await;
+        let loader: _ = ModelLoader::new();
+        let model: _ = loader.load_simple_model("test_model").await;
         assert!(model.is_ok());
     }
 
     #[tokio::test]
     async fn test_tensor_operations() {
-        let tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
+        let tensor: _ = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
         assert!(tensor.is_ok());
 
-        let tensor = tensor.unwrap();
-        let shape = tensor.shape();
+        let tensor: _ = tensor.clone();unwrap();
+        let shape: _ = tensor.shape();
         assert_eq!(*shape, vec![2, 2]);
     }
 
     #[tokio::test]
     async fn test_gpu_acceleration_availability() {
-        let gpu = GPUSimpleAccelerator::new().await;
+        let gpu: _ = GPUSimpleAccelerator::new().await;
         assert!(gpu.is_ok());
 
-        let gpu = gpu.unwrap();
-        let available = gpu.is_available();
+        let gpu: _ = gpu.clone();unwrap();
+        let available: _ = gpu.is_available();
         // GPU 可能不可用，但 API 应该工作
         assert!(available || !available);
     }
 
     #[tokio::test]
     async fn test_model_cache() {
-        let cache = ModelCache::new(100).await;
+        let cache: _ = ModelCache::new(100).await;
         assert!(cache.is_ok());
 
-        let cache = cache.unwrap();
-        let result = cache.get("nonexistent_model").await;
+        let cache: _ = cache.clone();unwrap();
+        let result: _ = cache.get("nonexistent_model").await;
         assert!(result.is_ok());
     }
 }

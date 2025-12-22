@@ -23,7 +23,7 @@ impl LazyLoader {
     /// Create a new lazy loader
     pub fn new() -> Self {
         Self {
-            stats: Arc::new(Mutex::new(LazyLoaderStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(LazyLoaderStats::default()))),
         }
     }
 
@@ -76,7 +76,7 @@ impl ModuleInit {
 
     /// Mark initialization as complete and record time
     pub fn done(self) {
-        let loader = get_lazy_loader();
+        let loader: _ = get_lazy_loader();
         loader.record_init(self.name, self.init_time_ms);
     }
 }
@@ -89,8 +89,8 @@ macro_rules! lazy_init {
     ($name:ident, $init:expr) => {
         static $name: once_cell::sync::Lazy<Result<(), String>> =
             once_cell::sync::Lazy::new(|| {
-                let init_tracker = $crate::lazy_loader::ModuleInit::new(stringify!($name));
-                let result = $init.map_err(|e: anyhow::Error| e.to_string());
+                let init_tracker: _ = $crate::lazy_loader::ModuleInit::new(stringify!($name));
+                let result: _ = $init.map_err(|e: anyhow::Error| e.to_string());
                 init_tracker.done();
                 result
             });
@@ -105,8 +105,8 @@ macro_rules! lazy_module {
     ($name:ident, $init:expr) => {
         static $name: once_cell::sync::Lazy<Result<Box<dyn std::any::Any + Send + Sync>>, anyhow::Error>> =
             once_cell::sync::Lazy::new(|| {
-                let init_tracker = $crate::lazy_loader::ModuleInit::new(stringify!($name));
-                let result = $init.map(|r| Box::new(r) as Box<dyn std::any::Any + Send + Sync>);
+                let init_tracker: _ = $crate::lazy_loader::ModuleInit::new(stringify!($name));
+                let result: _ = $init.map(|r| Box::new(r) as Box<dyn std::any::Any + Send + Sync>);
                 init_tracker.done();
                 result
             });
@@ -115,7 +115,7 @@ macro_rules! lazy_module {
 
 /// Print lazy loading statistics
 pub fn print_stats() {
-    let stats = get_lazy_loader().get_stats();
+    let stats: _ = get_lazy_loader().get_stats();
     eprintln!("\n📊 LazyLoader Statistics:");
     eprintln!("   Total modules: {}", stats.total_modules);
     eprintln!("   Initialized: {}", stats.initialized_modules);
@@ -123,14 +123,14 @@ pub fn print_stats() {
     eprintln!("   Total initialization time: {}ms", stats.initialization_time_ms);
 
     if stats.initialized_modules > 0 {
-        let avg_time = stats.initialization_time_ms / stats.initialized_modules as u64;
+        let avg_time: _ = stats.initialization_time_ms / stats.initialized_modules as u64;
         eprintln!("   Average init time: {}ms", avg_time);
     }
 }
 
 /// Reset lazy loader statistics (for testing)
 pub fn reset_stats() {
-    let loader = get_lazy_loader();
+    let loader: _ = get_lazy_loader();
     let mut stats = loader.stats.lock().unwrap();
     *stats = LazyLoaderStats::default();
 }
@@ -138,18 +138,20 @@ pub fn reset_stats() {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_lazy_loader_creation() {
-        let loader = LazyLoader::new();
-        let stats = loader.get_stats();
+        let loader: _ = LazyLoader::new();
+        let stats: _ = loader.get_stats();
         assert_eq!(stats.total_modules, 0);
         assert_eq!(stats.initialized_modules, 0);
     }
 
     #[test]
     fn test_module_init_tracker() {
-        let tracker = ModuleInit::new("test_module");
+        let tracker: _ = ModuleInit::new("test_module");
         // In a real test, we'd call tracker.done()
         // but for now we just verify it can be created
         assert_eq!(tracker.name, "test_module");

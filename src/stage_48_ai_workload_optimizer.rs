@@ -153,7 +153,7 @@ struct MatrixOptimizer {
 /// 矩阵缓存
 #[derive(Debug, Default)]
 struct HashMatrixCache {
-    cache: HashMap<String, CachedMatrix>,
+    cache: HashMap<String, CachedMatrix, std::collections::HashMap<String, CachedMatrix, String, CachedMatrix>>,
     max_size_mb: usize,
     current_size_mb: usize,
 }
@@ -169,7 +169,7 @@ struct CachedMatrix {
 /// 张量运算优化器
 #[derive(Debug)]
 struct TensorOptimizer {
-    cache: Arc<Mutex<HashMap<String, CachedTensor>>>,
+    cache: Arc<Mutex<HashMap<String, CachedTensor, std::collections::HashMap<String, CachedTensor, String, CachedTensor>>>>,
     batch_processor: Arc<Mutex<BatchProcessor>>,
 }
 
@@ -222,26 +222,26 @@ impl AIWorkloadOptimizer {
     pub fn new(config: AIWorkloadOptimizerConfig) -> Self {
         Self {
             config: config.clone(),
-            matrix_optimizer: Arc::new(MatrixOptimizer {
-                cache: Arc::new(Mutex::new(HashMatrixCache::default())),
-                memory_pool: Arc::new(Mutex::new(Vec::new())),
+            matrix_optimizer: Arc::new(std::sync::Mutex::new(MatrixOptimizer {
+                cache: Arc::new(Mutex::new(HashMatrixCache::default()))),
+                memory_pool: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
             }),
-            tensor_optimizer: Arc::new(TensorOptimizer {
-                cache: Arc::new(Mutex::new(HashMap::new())),
-                batch_processor: Arc::new(Mutex::new(BatchProcessor {
-                    pending_tasks: Vec::new(),
+            tensor_optimizer: Arc::new(std::sync::Mutex::new(TensorOptimizer {
+                cache: Arc::new(Mutex::new(HashMap::new()))),
+                batch_processor: Arc::new(std::sync::Mutex::new(Mutex::new(BatchProcessor {
+                    pending_tasks: Vec::new()),
                     max_batch_size: config.max_batch_size,
                     batch_timeout_ms: 10, // 10ms 批处理超时
                 })),
             }),
-            cache_stats: Arc::new(Mutex::new(CacheStats::default())),
-            execution_stats: Arc::new(Mutex::new(ExecutionStats::default())),
+            cache_stats: Arc::new(std::sync::Mutex::new(Mutex::new(CacheStats::default()))),
+            execution_stats: Arc::new(std::sync::Mutex::new(Mutex::new(ExecutionStats::default()))),
         }
     }
 
     /// 优化并执行 AI 工作负载任务
     pub async fn optimize_and_execute(&self, task: AIWorkloadTask) -> Result<AIWorkloadResult> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 1. 检查缓存
         if self.config.enable_caching {
@@ -252,7 +252,7 @@ impl AIWorkloadOptimizer {
         }
 
         // 2. 根据工作负载类型优化执行
-        let result = match task.workload_type {
+        let result: _ = match task.workload_type {
             AIWorkloadType::MatrixMultiplication => {
                 self.execute_matrix_optimization(task).await?
             }
@@ -282,7 +282,7 @@ impl AIWorkloadOptimizer {
         }
 
         // 4. 更新统计信息
-        let execution_time = start_time.elapsed();
+        let execution_time: _ = start_time.elapsed();
         self.update_execution_stats(execution_time, &result);
 
         Ok(result)
@@ -292,7 +292,7 @@ impl AIWorkloadOptimizer {
     async fn execute_matrix_optimization(&self, task: AIWorkloadTask) -> Result<AIWorkloadResult> {
         if let AIWorkloadData::Matrix { rows, cols, data } = task.data {
             // 使用 SIMD 优化的矩阵乘法
-            let result = self.optimized_matrix_multiply(rows, cols, &data)?;
+            let result: _ = self.optimized_matrix_multiply(rows, cols, &data)?;
 
             Ok(AIWorkloadResult {
                 task_id: task.id,
@@ -335,10 +335,10 @@ impl AIWorkloadOptimizer {
     async fn execute_vector_optimization(&self, task: AIWorkloadTask) -> Result<AIWorkloadResult> {
         if let AIWorkloadData::Vector { size, data } = task.data {
             // 优化的向量运算（点积、范数等）
-            let dot_product = self.compute_dot_product(&data, &data)?;
-            let norm = self.compute_norm(&data)?;
+            let dot_product: _ = self.compute_dot_product(&data, &data)?;
+            let norm: _ = self.compute_norm(&data)?;
 
-            let result_data = vec![dot_product, norm];
+            let result_data: _ = vec![dot_product, norm];
 
             Ok(AIWorkloadResult {
                 task_id: task.id,
@@ -400,7 +400,7 @@ impl AIWorkloadOptimizer {
     async fn execute_image_processing(&self, task: AIWorkloadTask) -> Result<AIWorkloadResult> {
         if let AIWorkloadData::Image { width, height, channels, data } = task.data {
             // 简化的图像处理（模糊、锐化等）
-            let processed_data = self.apply_image_filter(&data)?;
+            let processed_data: _ = self.apply_image_filter(&data)?;
 
             Ok(AIWorkloadResult {
                 task_id: task.id,
@@ -429,7 +429,7 @@ impl AIWorkloadOptimizer {
     async fn execute_data_preprocessing(&self, task: AIWorkloadTask) -> Result<AIWorkloadResult> {
         // 归一化、标准化等预处理
         if let AIWorkloadData::Tensor { shape, data } = task.data {
-            let normalized_data = self.normalize_data(&data)?;
+            let normalized_data: _ = self.normalize_data(&data)?;
 
             Ok(AIWorkloadResult {
                 task_id: task.id,
@@ -448,10 +448,10 @@ impl AIWorkloadOptimizer {
 
     /// 数据归一化
     fn normalize_data(&self, data: &[f32]) -> Result<Vec<f32>> {
-        let min = data.iter().fold(f32::INFINITY, |a, &b| a.min(b));
-        let max = data.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
+        let min: _ = data.iter().fold(f32::INFINITY, |a, &b| a.min(b));
+        let max: _ = data.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
 
-        let range = max - min;
+        let range: _ = max - min;
         if range == 0.0 {
             return Ok(data.to_vec());
         }
@@ -463,7 +463,7 @@ impl AIWorkloadOptimizer {
     async fn execute_model_loading(&self, task: AIWorkloadTask) -> Result<AIWorkloadResult> {
         if let AIWorkloadData::Model { name, size_mb } = task.data {
             // 模拟模型加载时间
-            let load_time_ms = size_mb as f64 * 0.5; // 假设 0.5ms per MB
+            let load_time_ms: _ = size_mb as f64 * 0.5; // 假设 0.5ms per MB
             tokio::time::sleep(Duration::from_millis(load_time_ms as u64)).await;
 
             Ok(AIWorkloadResult {
@@ -528,7 +528,7 @@ impl AIWorkloadOptimizer {
         }
 
         // 更新平均执行时间
-        let alpha = 0.1;
+        let alpha: _ = 0.1;
         stats.avg_execution_time_ms = stats.avg_execution_time_ms * (1.0 - alpha) +
                                       execution_time.as_secs_f64() * 1000.0 * alpha;
 
@@ -539,8 +539,8 @@ impl AIWorkloadOptimizer {
 
     /// 获取统计信息
     pub async fn get_stats(&self) -> (CacheStats, ExecutionStats) {
-        let cache_stats = self.cache_stats.lock().unwrap().clone();
-        let execution_stats = self.execution_stats.lock().unwrap().clone();
+        let cache_stats: _ = self.cache_stats.lock().unwrap().clone();
+        let execution_stats: _ = self.execution_stats.lock().unwrap().clone();
         (cache_stats, execution_stats)
     }
 }
@@ -548,12 +548,14 @@ impl AIWorkloadOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_matrix_multiplication() {
-        let optimizer = AIWorkloadOptimizer::new(AIWorkloadOptimizerConfig::default());
+        let optimizer: _ = AIWorkloadOptimizer::new(AIWorkloadOptimizerConfig::default());
 
-        let task = AIWorkloadTask {
+        let task: _ = AIWorkloadTask {
             id: 1,
             workload_type: AIWorkloadType::MatrixMultiplication,
             data: AIWorkloadData::Matrix {
@@ -566,7 +568,7 @@ mod tests {
             batch_id: None,
         };
 
-        let result = optimizer.optimize_and_execute(task).await.unwrap();
+        let result: _ = optimizer.optimize_and_execute(task).await.unwrap();
 
         match result.result {
             AIWorkloadResultData::Matrix { rows, cols, data } => {
@@ -580,9 +582,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_vector_operations() {
-        let optimizer = AIWorkloadOptimizer::new(AIWorkloadOptimizerConfig::default());
+        let optimizer: _ = AIWorkloadOptimizer::new(AIWorkloadOptimizerConfig::default());
 
-        let task = AIWorkloadTask {
+        let task: _ = AIWorkloadTask {
             id: 2,
             workload_type: AIWorkloadType::VectorOperations,
             data: AIWorkloadData::Vector {
@@ -594,7 +596,7 @@ mod tests {
             batch_id: None,
         };
 
-        let result = optimizer.optimize_and_execute(task).await.unwrap();
+        let result: _ = optimizer.optimize_and_execute(task).await.unwrap();
 
         match result.result {
             AIWorkloadResultData::Vector { size, data } => {
@@ -607,9 +609,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_model_loading() {
-        let optimizer = AIWorkloadOptimizer::new(AIWorkloadOptimizerConfig::default());
+        let optimizer: _ = AIWorkloadOptimizer::new(AIWorkloadOptimizerConfig::default());
 
-        let task = AIWorkloadTask {
+        let task: _ = AIWorkloadTask {
             id: 3,
             workload_type: AIWorkloadType::ModelLoading,
             data: AIWorkloadData::Model {
@@ -621,7 +623,7 @@ mod tests {
             batch_id: None,
         };
 
-        let result = optimizer.optimize_and_execute(task).await.unwrap();
+        let result: _ = optimizer.optimize_and_execute(task).await.unwrap();
 
         match result.result {
             AIWorkloadResultData::ModelLoaded { name, load_time_ms } => {

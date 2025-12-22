@@ -6,6 +6,8 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 加密错误
 #[derive(Error, Debug)]
@@ -35,7 +37,7 @@ pub struct CryptoKey {
 /// 密钥管理器
 #[derive(Debug)]
 pub struct KeyManager {
-    keys: Arc<std::sync::Mutex<std::collections::HashMap<String, CryptoKey>>>,
+    keys: Arc<std::sync::Mutex<std::collections::HashMap<String, CryptoKey, std::collections::HashMap<String, CryptoKey, String, CryptoKey>>>>,
     active_key_id: Arc<std::sync::Mutex<String>>,
 }
 
@@ -44,8 +46,8 @@ impl KeyManager {
         let mut keys = std::collections::HashMap::new();
 
         // 生成默认主密钥
-        let master_key = Self::generate_key();
-        let key_id = "master-key-1".to_string();
+        let master_key: _ = Self::generate_key();
+        let key_id: _ = "master-key-1".to_string();
 
         keys.insert(key_id.clone(), CryptoKey {
             id: key_id.clone(),
@@ -55,8 +57,8 @@ impl KeyManager {
         });
 
         Self {
-            keys: Arc::new(std::sync::Mutex::new(keys)),
-            active_key_id: Arc::new(std::sync::Mutex::new(key_id)),
+            keys: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(keys))),
+            active_key_id: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(key_id))),
         }
     }
 
@@ -68,20 +70,20 @@ impl KeyManager {
     }
 
     pub async fn get_key(&self, key_id: &str) -> Result<CryptoKey, EncryptionError> {
-        let keys = self.keys.lock().unwrap();
+        let keys: _ = self.keys.lock().unwrap();
         keys.get(key_id)
             .cloned()
             .ok_or_else(|| EncryptionError::KeyNotFound(key_id.to_string()))
     }
 
     pub async fn get_active_key(&self) -> Result<CryptoKey, EncryptionError> {
-        let active_key_id = self.active_key_id.lock().unwrap();
+        let active_key_id: _ = self.active_key_id.lock().unwrap();
         self.get_key(&active_key_id).await
     }
 
     pub async fn rotate_keys(&self) -> Result<(), EncryptionError> {
-        let new_key = Self::generate_key();
-        let new_key_id = format!("key-{}", SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
+        let new_key: _ = Self::generate_key();
+        let new_key_id: _ = format!("key-{}", SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
 
         let mut keys = self.keys.lock().unwrap();
         keys.insert(new_key_id.clone(), CryptoKey {
@@ -119,16 +121,16 @@ pub struct EncryptionEngine {
 impl EncryptionEngine {
     pub fn new() -> Self {
         Self {
-            key_manager: Arc::new(KeyManager::new()),
+            key_manager: Arc::new(std::sync::Mutex::new(KeyManager::new())),
         }
     }
 
     pub async fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, EncryptionError> {
-        let key = self.key_manager.get_active_key().await?;
+        let key: _ = self.key_manager.get_active_key().await?;
 
         // 使用简单的 XOR 加密（生产环境应使用 AES）
         // 这里使用简化的实现，因为真正的 AES 需要更多依赖
-        let encrypted = data.iter()
+        let encrypted: _ = data.iter()
             .zip(key.key_data.iter().cycle())
             .map(|(d, k)| d ^ k)
             .collect();
@@ -137,10 +139,10 @@ impl EncryptionEngine {
     }
 
     pub async fn decrypt(&self, encrypted_data: &[u8]) -> Result<Vec<u8>, EncryptionError> {
-        let key = self.key_manager.get_active_key().await?;
+        let key: _ = self.key_manager.get_active_key().await?;
 
         // 解密（XOR 加密是对称的）
-        let decrypted = encrypted_data.iter()
+        let decrypted: _ = encrypted_data.iter()
             .zip(key.key_data.iter().cycle())
             .map(|(e, k)| e ^ k)
             .collect();
@@ -149,9 +151,9 @@ impl EncryptionEngine {
     }
 
     pub async fn encrypt_with_key(&self, data: &[u8], key_id: &str) -> Result<Vec<u8>, EncryptionError> {
-        let key = self.key_manager.get_key(key_id).await?;
+        let key: _ = self.key_manager.get_key(key_id).await?;
 
-        let encrypted = data.iter()
+        let encrypted: _ = data.iter()
             .zip(key.key_data.iter().cycle())
             .map(|(d, k)| d ^ k)
             .collect();
@@ -160,9 +162,9 @@ impl EncryptionEngine {
     }
 
     pub async fn decrypt_with_key(&self, encrypted_data: &[u8], key_id: &str) -> Result<Vec<u8>, EncryptionError> {
-        let key = self.key_manager.get_key(key_id).await?;
+        let key: _ = self.key_manager.get_key(key_id).await?;
 
-        let decrypted = encrypted_data.iter()
+        let decrypted: _ = encrypted_data.iter()
             .zip(key.key_data.iter().cycle())
             .map(|(e, k)| e ^ k)
             .collect();
@@ -176,14 +178,14 @@ impl EncryptionEngine {
 
     /// 测试加密性能 - 要求 > 1GB/s
     pub async fn test_performance(&self, data_size: usize) -> Result<f64, EncryptionError> {
-        let test_data = vec![0u8; data_size];
-        let start = std::time::Instant::now();
+        let test_data: _ = vec![0u8; data_size];
+        let start: _ = std::time::Instant::now();
 
         // 执行加密操作
-        let encrypted = self.encrypt(&test_data).await?;
+        let encrypted: _ = self.encrypt(&test_data).await?;
 
-        let elapsed = start.elapsed();
-        let bytes_per_second = data_size as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start.elapsed();
+        let bytes_per_second: _ = data_size as f64 / elapsed.as_secs_f64();
 
         // 验证加密成功
         if encrypted.is_empty() {

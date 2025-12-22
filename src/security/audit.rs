@@ -5,6 +5,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 审计错误
 #[derive(Error, Debug)]
@@ -29,7 +31,7 @@ pub struct AuditLogEntry {
     pub timestamp: std::time::SystemTime,
     pub ip_address: String,
     pub result: String, // "success" or "failure"
-    pub metadata: HashMap<String, String>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 审计日志系统
@@ -53,7 +55,7 @@ impl AuditLogger {
     }
 
     pub fn search(&self, query: &str) -> Result<Vec<&AuditLogEntry>, AuditError> {
-        let results = self.logs
+        let results: _ = self.logs
             .iter()
             .filter(|entry| {
                 entry.action.contains(query) ||

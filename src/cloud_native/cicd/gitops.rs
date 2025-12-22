@@ -127,7 +127,7 @@ pub struct FluxHelmRelease {
     pub chart_version: Option<String>,
 
     /// Values
-    pub values: std::collections::HashMap<String, String>,
+    pub values: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 
     /// Wait for jobs
     pub wait_for_jobs: bool,
@@ -368,10 +368,12 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_argocd_application_creation() {
-        let app = ArgoCDApplication::new(
+        let app: _ = ArgoCDApplication::new(
             "beejs-app".to_string(),
             "production".to_string(),
             "https://github.com/example/beejs-manifests.git".to_string(),
@@ -389,7 +391,7 @@ mod tests {
 
     #[test]
     fn test_flux_helm_release_creation() {
-        let release = FluxHelmRelease::new(
+        let release: _ = FluxHelmRelease::new(
             "beejs".to_string(),
             "production".to_string(),
             "beejs".to_string(),
@@ -407,7 +409,7 @@ mod tests {
     fn test_gitops_manager() {
         let mut manager = GitOpsManager::new("argocd".to_string());
 
-        let app = ArgoCDApplication::new(
+        let app: _ = ArgoCDApplication::new(
             "test-app".to_string(),
             "production".to_string(),
             "https://github.com/test/repo.git".to_string(),
@@ -418,7 +420,7 @@ mod tests {
         manager.add_application(app);
         assert_eq!(manager.applications.len(), 1);
 
-        let status = manager.sync_application("test-app");
+        let status: _ = manager.sync_application("test-app");
         assert!(status.is_ok());
         if let Ok(status) = status {
             assert!(status.success);
@@ -430,7 +432,7 @@ mod tests {
     fn test_gitops_manager_flux() {
         let mut manager = GitOpsManager::new("flux".to_string());
 
-        let release = FluxHelmRelease::new(
+        let release: _ = FluxHelmRelease::new(
             "beejs".to_string(),
             "production".to_string(),
             "beejs".to_string(),
@@ -440,7 +442,7 @@ mod tests {
         manager.add_helm_release(release);
         assert_eq!(manager.helm_releases.len(), 1);
 
-        let status = manager.sync_helm_release("beejs");
+        let status: _ = manager.sync_helm_release("beejs");
         assert!(status.is_ok());
         if let Ok(status) = status {
             assert!(status.success);
@@ -450,9 +452,9 @@ mod tests {
 
     #[test]
     fn test_sync_status() {
-        let manager = GitOpsManager::new("argocd".to_string());
+        let manager: _ = GitOpsManager::new("argocd".to_string());
 
-        let app = ArgoCDApplication::new(
+        let app: _ = ArgoCDApplication::new(
             "test-app".to_string(),
             "production".to_string(),
             "https://github.com/test/repo.git".to_string(),
@@ -461,7 +463,7 @@ mod tests {
         );
 
         // Note: This test is just checking compilation and structure
-        let _ = app;
-        let _ = manager;
+        let _: _ = app;
+        let _: _ = manager;
     }
 }

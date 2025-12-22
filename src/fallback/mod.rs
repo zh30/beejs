@@ -136,7 +136,7 @@ impl FallbackUtils {
 #[macro_export]
 macro_rules! with_fallback {
     ($manager:expr, $feature:expr, $operation:block) => {{
-        let result = $operation;
+        let result: _ = $operation;
         if let Err(error) = result {
             if $crate::fallback::FallbackUtils::should_fallback(&error) {
                 match $manager.handle_feature_failure($feature).await {
@@ -162,10 +162,12 @@ macro_rules! with_fallback {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_fallback_manager_creation() {
-        let manager = create_fallback_manager();
+        let manager: _ = create_fallback_manager();
         assert!(manager.is_feature_active(&Feature::V8Optimization).await);
     }
 
@@ -178,15 +180,15 @@ mod tests {
             FallbackStrategy::UseAlternative("Test alternative".to_string()),
         ).await;
 
-        let strategies = manager.get_strategies(&Feature::PythonRuntime).await;
+        let strategies: _ = manager.get_strategies(&Feature::PythonRuntime).await;
         assert!(strategies.is_some());
         assert!(!strategies.unwrap().is_empty());
     }
 
     #[test]
     fn test_should_fallback() {
-        let v8_error = crate::error::BeejsError::V8Error("Test".to_string());
-        let config_error = crate::error::BeejsError::ConfigurationError("Test".to_string());
+        let v8_error: _ = crate::error::BeejsError::V8Error("Test".to_string());
+        let config_error: _ = crate::error::BeejsError::ConfigurationError("Test".to_string());
 
         assert!(FallbackUtils::should_fallback(&v8_error));
         assert!(!FallbackUtils::should_fallback(&config_error));
@@ -194,16 +196,16 @@ mod tests {
 
     #[test]
     fn test_default_strategy() {
-        let v8_strategy = FallbackUtils::get_default_strategy(&Feature::V8Optimization);
+        let v8_strategy: _ = FallbackUtils::get_default_strategy(&Feature::V8Optimization);
         assert!(matches!(v8_strategy, FallbackStrategy::DegradeToBasic));
 
-        let python_strategy = FallbackUtils::get_default_strategy(&Feature::PythonRuntime);
+        let python_strategy: _ = FallbackUtils::get_default_strategy(&Feature::PythonRuntime);
         assert!(matches!(python_strategy, FallbackStrategy::UseAlternative(_)));
     }
 
     #[test]
     fn test_fallback_suggestions() {
-        let suggestions = FallbackUtils::create_fallback_suggestions(&Feature::V8Optimization);
+        let suggestions: _ = FallbackUtils::create_fallback_suggestions(&Feature::V8Optimization);
         assert!(!suggestions.is_empty());
         assert!(suggestions.iter().any(|s| s.contains("V8")));
     }

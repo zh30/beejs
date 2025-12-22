@@ -23,7 +23,7 @@ impl JavaScriptCoreBenchmark {
 
     /// V8 引擎启动时间基准测试
     pub fn v8_startup_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 100,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(30)),
@@ -31,13 +31,13 @@ impl JavaScriptCoreBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "v8_startup_time",
             MetricType::StartupTime,
             || {
                 // 创建新的 V8 Isolate
-                let isolate = v8::Isolate::new(v8::CreateParams::default());
+                let isolate: _ = v8::Isolate::new(v8::CreateParams::default());
                 drop(isolate); // 立即释放
             },
         )
@@ -45,7 +45,7 @@ impl JavaScriptCoreBenchmark {
 
     /// V8 引擎执行性能基准测试
     pub fn v8_execution_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 1000,
             warmup_iterations: 100,
             timeout: Some(Duration::from_secs(60)),
@@ -53,7 +53,7 @@ impl JavaScriptCoreBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "v8_execution_performance",
             MetricType::ExecutionTime,
@@ -62,14 +62,14 @@ impl JavaScriptCoreBenchmark {
                 let mut isolate = v8::Isolate::new(v8::CreateParams::default());
                 {
                     let mut scope = v8::HandleScope::new(&mut isolate);
-                    let context = v8::Context::new(&mut scope);
+                    let context: _ = v8::Context::new(&mut scope);
                     let mut scope = v8::ContextScope::new(&mut scope, context);
 
                     // 执行简单的 JavaScript 代码
-                    let code = v8::String::new(&mut scope, "1 + 1").unwrap();
-                    let script = v8::Script::compile(&mut scope, code, None).unwrap();
-                    let result = script.run(&mut scope).unwrap();
-                    let _ = result.to_string(&mut scope);
+                    let code: _ = v8::String::new(&mut scope, "1 + 1").unwrap();
+                    let script: _ = v8::Script::compile(&mut scope, code, None).unwrap();
+                    let result: _ = script.run(&mut scope).unwrap();
+                    let _: _ = result.to_string(&mut scope);
                 }
                 // scope 在这里自动 drop，然后 isolate 可以安全 drop
             },
@@ -78,7 +78,7 @@ impl JavaScriptCoreBenchmark {
 
     /// Web API fetch 性能测试
     pub fn web_api_fetch_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 100,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(60)),
@@ -86,17 +86,17 @@ impl JavaScriptCoreBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "web_api_fetch_performance",
             MetricType::ExecutionTime,
             || {
                 // 模拟 fetch API 调用
                 // 注意：这里使用模拟，实际实现会使用真实的 fetch
-                let start = Instant::now();
-                let _ = reqwest::blocking::get("http://localhost:3000/health")
+                let start: _ = Instant::now();
+                let _: _ = reqwest::blocking::get("http://localhost:3000/health")
                     .and_then(|resp| resp.text());
-                let elapsed = start.elapsed();
+                let elapsed: _ = start.elapsed();
 
                 // 返回经过的时间（纳秒）
                 elapsed.as_nanos() as u64
@@ -106,7 +106,7 @@ impl JavaScriptCoreBenchmark {
 
     /// WebSocket 连接性能测试
     pub fn websocket_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 50,
             warmup_iterations: 5,
             timeout: Some(Duration::from_secs(60)),
@@ -114,7 +114,7 @@ impl JavaScriptCoreBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "websocket_connection_performance",
             MetricType::ExecutionTime,
@@ -129,7 +129,7 @@ impl JavaScriptCoreBenchmark {
 
     /// TypeScript 编译性能测试
     pub fn typescript_compilation_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 50,
             warmup_iterations: 5,
             timeout: Some(Duration::from_secs(120)),
@@ -137,13 +137,13 @@ impl JavaScriptCoreBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "typescript_compilation_performance",
             MetricType::ExecutionTime,
             || {
                 // 模拟 TypeScript 编译
-                let ts_code = r#"
+                let ts_code: _ = r#"
                     interface User {
                         id: number;
                         name: string;
@@ -173,7 +173,7 @@ impl JavaScriptCoreBenchmark {
 
     /// 模块加载性能测试
     pub fn module_loading_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 100,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(60)),
@@ -181,7 +181,7 @@ impl JavaScriptCoreBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "module_loading_performance",
             MetricType::ExecutionTime,
@@ -197,7 +197,7 @@ impl JavaScriptCoreBenchmark {
 
                 // 如果文件存在，尝试读取
                 if path.exists() {
-                    let _ = fs::read_to_string(path);
+                    let _: _ = fs::read_to_string(path);
                 } else {
                     // 模拟模块加载延迟
                     std::thread::sleep(Duration::from_millis(1));
@@ -210,7 +210,7 @@ impl JavaScriptCoreBenchmark {
 
     /// 并发执行性能测试
     pub fn concurrent_execution_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 100,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(60)),
@@ -218,7 +218,7 @@ impl JavaScriptCoreBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "concurrent_execution_performance",
             MetricType::ExecutionTime,
@@ -226,28 +226,28 @@ impl JavaScriptCoreBenchmark {
                 use std::sync::{Arc, Mutex};
                 use std::thread;
 
-                let num_threads = 10;
-                let results = Arc::new(Mutex::new(Vec::new()));
+                let num_threads: _ = 10;
+                let results: _ = Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new())));
 
                 let mut handles = vec![];
 
                 for _ in 0..num_threads {
-                    let results_clone = Arc::clone(&results);
-                    let handle = thread::spawn(move || {
+                    let results_clone: _ = Arc::clone(results);
+                    let handle: _ = thread::spawn(move || {
                         // 在每个线程中执行 JavaScript 代码
                         let mut isolate = v8::Isolate::new(v8::CreateParams::default());
                         {
                             let mut scope = v8::HandleScope::new(&mut isolate);
-                            let context = v8::Context::new(&mut scope);
+                            let context: _ = v8::Context::new(&mut scope);
                             let mut scope = v8::ContextScope::new(&mut scope, context);
 
-                            let code = v8::String::new(&mut scope, "for(let i=0;i<1000;i++){}").unwrap();
-                            let script = v8::Script::compile(&mut scope, code, None).unwrap();
-                            let _ = script.run(&mut scope);
+                            let code: _ = v8::String::new(&mut scope, "for(let i=0;i<1000;i++){}").unwrap();
+                            let script: _ = v8::Script::compile(&mut scope, code, None).unwrap();
+                            let _: _ = script.run(&mut scope);
                         }
                         // scope 在这里自动 drop，然后 isolate 可以安全 drop
 
-                        let result = format!("thread_complete_{:?}", std::thread::current().id());
+                        let result: _ = format!("thread_complete_{:?}", std::thread::current().id());
                         {
                             let mut vec = results_clone.lock().unwrap();
                             vec.push(result);
@@ -260,7 +260,7 @@ impl JavaScriptCoreBenchmark {
                     handle.join().unwrap();
                 }
 
-                let results = results.lock().unwrap();
+                let results: _ = results.clone();lock().unwrap();
                 results.len()
             },
         )
@@ -283,13 +283,15 @@ impl JavaScriptCoreBenchmark {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_javascript_core_benchmark_creation() {
         // Ensure V8 is initialized before running the benchmark
         crate::initialize_v8().expect("Failed to initialize V8");
 
-        let benchmark = JavaScriptCoreBenchmark::new();
+        let benchmark: _ = JavaScriptCoreBenchmark::new();
         assert!(!benchmark.run_all_benchmarks().is_empty());
     }
 
@@ -298,8 +300,8 @@ mod tests {
         // Ensure V8 is initialized before running the benchmark
         crate::initialize_v8().expect("Failed to initialize V8");
 
-        let benchmark = JavaScriptCoreBenchmark::new();
-        let result = benchmark.v8_startup_benchmark();
+        let benchmark: _ = JavaScriptCoreBenchmark::new();
+        let result: _ = benchmark.v8_startup_benchmark();
 
         assert_eq!(result.name, "v8_startup_time");
         assert_eq!(result.metric_type, MetricType::StartupTime);
@@ -312,8 +314,8 @@ mod tests {
         // Ensure V8 is initialized before running the benchmark
         crate::initialize_v8().expect("Failed to initialize V8");
 
-        let benchmark = JavaScriptCoreBenchmark::new();
-        let result = benchmark.typescript_compilation_benchmark();
+        let benchmark: _ = JavaScriptCoreBenchmark::new();
+        let result: _ = benchmark.typescript_compilation_benchmark();
 
         assert_eq!(result.name, "typescript_compilation_performance");
         assert_eq!(result.metric_type, MetricType::ExecutionTime);

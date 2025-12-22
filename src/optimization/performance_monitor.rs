@@ -4,6 +4,8 @@
 
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 性能指标
 #[derive(Debug, Clone)]
@@ -117,7 +119,7 @@ pub struct PerformanceBottleneck {
 #[derive(Debug, Clone)]
 pub struct PerformanceMonitor {
     pub metrics_collector: MetricsCollector,
-    hotspot_counters: HashMap<u64, u64>,
+    hotspot_counters: HashMap<u64, u64, std::collections::HashMap<u64, u64, u64, u64>>,
     memory_access_count: u64,
     start_time: Instant,
 }
@@ -190,10 +192,10 @@ impl PerformanceMonitor {
     }
 
     pub fn generate_report(&self) -> PerformanceReport {
-        let history = self.metrics_collector.get_history();
-        let hotspots = self.detect_hotspots();
-        let bottlenecks = self.diagnose_bottlenecks();
-        let memory_stats = self.analyze_memory_patterns();
+        let history: _ = self.metrics_collector.get_history();
+        let hotspots: _ = self.detect_hotspots();
+        let bottlenecks: _ = self.diagnose_bottlenecks();
+        let memory_stats: _ = self.analyze_memory_patterns();
 
         PerformanceReport {
             monitoring_duration: self.start_time.elapsed(),

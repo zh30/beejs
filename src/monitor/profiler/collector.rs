@@ -53,9 +53,9 @@ pub struct FunctionStats {
 #[derive(Debug)]
 pub struct FunctionTracker {
     /// 活跃的函数跟踪
-    active_traces: HashMap<String, FunctionTraceHandle>,
+    active_traces: HashMap<String, FunctionTraceHandle, std::collections::HashMap<String, FunctionTraceHandle, String, FunctionTraceHandle>>,
     /// 函数统计
-    function_stats: HashMap<String, FunctionStats>,
+    function_stats: HashMap<String, FunctionStats, std::collections::HashMap<String, FunctionStats, String, FunctionStats>>,
     /// 性能事件缓冲区
     event_buffer: RingBuffer<PerformanceEvent>,
     /// 采样策略
@@ -103,7 +103,7 @@ impl FunctionTracker {
         start_memory: usize,
         call_depth: usize,
     ) -> FunctionTraceHandle {
-        let trace = FunctionTraceHandle {
+        let trace: _ = FunctionTraceHandle {
             id: Uuid::new_v4().to_string(),
             function_name: function_name.to_string(),
             start_time: Instant::now(),
@@ -116,7 +116,7 @@ impl FunctionTracker {
         self.stats.active_traces += 1;
 
         // 记录函数调用事件
-        let decision = self.sampler.should_sample_event(&PerformanceEvent {
+        let decision: _ = self.sampler.should_sample_event(&PerformanceEvent {
             event_type: PerformanceEventType::FunctionCall,
             importance: 0.8,
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
@@ -140,9 +140,9 @@ impl FunctionTracker {
         mut handle: FunctionTraceHandle,
         end_memory: usize,
     ) -> Option<FunctionStats> {
-        let end_time = Instant::now();
-        let execution_time = end_time.duration_since(handle.start_time);
-        let memory_used = if end_memory >= handle.start_memory {
+        let end_time: _ = Instant::now();
+        let execution_time: _ = end_time.duration_since(handle.start_time);
+        let memory_used: _ = if end_memory >= handle.start_memory {
             end_memory - handle.start_memory
         } else {
             0
@@ -155,14 +155,14 @@ impl FunctionTracker {
         }
 
         // 更新函数统计
-        let stats = self.update_function_stats(
+        let stats: _ = self.update_function_stats(
             &handle.function_name,
             execution_time,
             memory_used,
         );
 
         // 记录函数返回事件
-        let event = PerformanceEvent {
+        let event: _ = PerformanceEvent {
             event_type: PerformanceEventType::FunctionCall,
             importance: 0.8,
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
@@ -172,7 +172,7 @@ impl FunctionTracker {
             )),
         };
 
-        let decision = self.sampler.should_sample_event(&event);
+        let decision: _ = self.sampler.should_sample_event(&event);
         if decision.should_sample {
             self.event_buffer.push(event);
         }
@@ -188,7 +188,7 @@ impl FunctionTracker {
         memory_used: usize,
     ) -> Option<FunctionStats> {
         // 创建或获取现有统计
-        let stats = self.function_stats.entry(function_name.to_string()).or_insert_with(|| {
+        let stats: _ = self.function_stats.entry(function_name.to_string()).or_insert_with(|| {
             FunctionStats {
                 function_name: function_name.to_string(),
                 total_time: Duration::from_nanos(0),
@@ -248,7 +248,7 @@ impl FunctionTracker {
     }
 
     /// 获取所有函数统计
-    pub fn get_all_function_stats(&self) -> HashMap<String, FunctionStats> {
+    pub fn get_all_function_stats(&self) -> HashMap<String, FunctionStats, std::collections::HashMap<String, FunctionStats, String, FunctionStats>> {
         self.function_stats.clone()
     }
 
@@ -293,7 +293,7 @@ impl FunctionTracker {
 
     /// 强制采样一个事件（忽略采样策略）
     pub fn force_sample_event(&mut self, event: PerformanceEvent) {
-        let decision = self.sampler.force_sample();
+        let decision: _ = self.sampler.force_sample();
         if decision.should_sample {
             self.event_buffer.push(event);
         }
@@ -303,10 +303,12 @@ impl FunctionTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_function_tracker_creation() {
-        let tracker = FunctionTracker::with_default_config();
+        let tracker: _ = FunctionTracker::with_default_config();
         assert_eq!(tracker.get_active_trace_count(), 0);
     }
 
@@ -314,7 +316,7 @@ mod tests {
     fn test_track_function() {
         let mut tracker = FunctionTracker::with_default_config();
 
-        let handle = tracker.track_function("test_function", 1024, 0);
+        let handle: _ = tracker.track_function("test_function", 1024, 0);
 
         assert_eq!(tracker.get_active_trace_count(), 1);
         assert_eq!(handle.function_name, "test_function");
@@ -324,15 +326,15 @@ mod tests {
     fn test_record_return() {
         let mut tracker = FunctionTracker::with_default_config();
 
-        let handle = tracker.track_function("test_function", 1024, 0);
+        let handle: _ = tracker.track_function("test_function", 1024, 0);
         std::thread::sleep(Duration::from_millis(10));
 
-        let stats = tracker.record_return(handle, 2048);
+        let stats: _ = tracker.record_return(handle, 2048);
 
         assert!(stats.is_some());
         assert_eq!(tracker.get_active_trace_count(), 0);
 
-        let stats = stats.unwrap();
+        let stats: _ = stats.clone();unwrap();
         assert_eq!(stats.function_name, "test_function");
         assert!(stats.call_count >= 1);
     }
@@ -343,15 +345,15 @@ mod tests {
 
         // 执行几次函数调用
         for _ in 0..5 {
-            let handle = tracker.track_function("test_function", 1024, 0);
+            let handle: _ = tracker.track_function("test_function", 1024, 0);
             std::thread::sleep(Duration::from_millis(1));
             tracker.record_return(handle, 2048);
         }
 
-        let stats = tracker.get_function_stats("test_function");
+        let stats: _ = tracker.get_function_stats("test_function");
         assert!(stats.is_some());
 
-        let stats = stats.unwrap();
+        let stats: _ = stats.clone();unwrap();
         assert_eq!(stats.function_name, "test_function");
         assert_eq!(stats.call_count, 5);
     }
@@ -362,15 +364,15 @@ mod tests {
 
         // 创建不同执行时间的函数
         for i in 0..3 {
-            let func_name = format!("function_{}", i);
+            let func_name: _ = format!("function_{}", i);
             for _ in 0..(i + 1) * 10 {
-                let handle = tracker.track_function(&func_name, 1024, 0);
+                let handle: _ = tracker.track_function(&func_name, 1024, 0);
                 std::thread::sleep(Duration::from_millis(i as u64));
                 tracker.record_return(handle, 2048);
             }
         }
 
-        let hotspots = tracker.get_hotspot_functions(3);
+        let hotspots: _ = tracker.get_hotspot_functions(3);
         assert_eq!(hotspots.len(), 3);
 
         // function_2 应该排在最前面（执行时间最长）
@@ -392,8 +394,8 @@ mod tests {
     fn test_memory_tracking() {
         let mut tracker = FunctionTracker::with_default_config();
 
-        let handle = tracker.track_function("test_function", 1024, 0);
-        let stats = tracker.record_return(handle, 3072);
+        let handle: _ = tracker.track_function("test_function", 1024, 0);
+        let stats: _ = tracker.record_return(handle, 3072);
 
         assert!(stats.is_some());
         assert!(stats.unwrap().total_memory > 0);

@@ -14,7 +14,7 @@ use serde::{Serialize, Deserialize};
 /// 快照管理器
 pub struct SnapshotManager {
     /// 快照缓存
-    pub snapshot_cache: Arc<Mutex<std::collections::BTreeMap<String, V8Snapshot>>>,
+    pub snapshot_cache: Arc<Mutex<std::collections::BTreeMap<String, V8Snapshot, String, V8Snapshot>>>,
     /// 快照配置
     pub config: SnapshotConfig,
     /// 快照统计
@@ -26,12 +26,12 @@ pub struct SnapshotManager {
 impl SnapshotManager {
     /// 创建新的快照管理器
     pub fn new(config: SnapshotConfig) -> Self {
-        let cache = std::collections::BTreeMap::new();
+        let cache: _ = std::collections::BTreeMap::new();
 
         Self {
-            snapshot_cache: Arc::new(Mutex::new(cache)),
+            snapshot_cache: Arc::new(std::sync::Mutex::new(Mutex::new(cache))),
             config,
-            stats: Arc::new(Mutex::new(SnapshotStats::new())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(SnapshotStats::new()))),
             created_at: SystemTime::now(),
         }
     }
@@ -42,9 +42,9 @@ impl SnapshotManager {
         // For now, we'll create a placeholder snapshot that can be enhanced later
 
         // 创建基本的快照数据（临时实现）
-        let snapshot_data = Vec::new(); // TODO: 实现真正的快照生成
+        let snapshot_data: _ = Vec::new(); // TODO: 实现真正的快照生成
 
-        let snapshot = V8Snapshot::new(
+        let snapshot: _ = V8Snapshot::new(
             snapshot_data,
             self.config.version.clone(),
             self.config.enable_compression,
@@ -64,12 +64,12 @@ impl SnapshotManager {
     /// 加载快照
     pub fn load_snapshot(&self, _runtime: &mut RuntimeLite, snapshot_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // 从缓存获取快照
-        let snapshot = {
+        let snapshot: _ = {
             let cache = self.snapshot_cache.lock().unwrap();
             cache.get(snapshot_id).cloned()
         };
 
-        let snapshot = match snapshot {
+        let snapshot: _ = match snapshot {
             Some(s) => s,
             None => {
                 return Err(format!("Snapshot '{}' not found", snapshot_id).into());
@@ -143,7 +143,7 @@ impl SnapshotManager {
         runtime: &mut RuntimeLite,
         snapshot_id: &str,
     ) -> Result<V8Snapshot, Box<dyn std::error::Error + Send + Sync>> {
-        let snapshot = self.generate_snapshot(runtime)?;
+        let snapshot: _ = self.generate_snapshot(runtime)?;
 
         // 缓存快照
         {
@@ -170,17 +170,17 @@ impl SnapshotManager {
         snapshot: &V8Snapshot,
         base_dir: &Path,
     ) -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
-        let snapshot_dir = base_dir.join("snapshots");
+        let snapshot_dir: _ = base_dir.join("snapshots");
         fs::create_dir_all(&snapshot_dir)?;
 
-        let snapshot_file = snapshot_dir.join(format!("{}.bin", snapshot.version));
+        let snapshot_file: _ = snapshot_dir.join(format!("{}.bin", snapshot.version));
 
         // 写入快照数据
         let mut file = fs::File::create(&snapshot_file)?;
         file.write_all(&snapshot.snapshot_data)?;
 
         // 写入快照元数据
-        let metadata = SnapshotMetadata {
+        let metadata: _ = SnapshotMetadata {
             version: snapshot.version.clone(),
             created_at: snapshot.created_at,
             size_bytes: snapshot.size_bytes,
@@ -188,8 +188,8 @@ impl SnapshotManager {
             builtin_warmup: snapshot.builtin_warmup,
         };
 
-        let metadata_file = snapshot_dir.join(format!("{}.meta", snapshot.version));
-        let metadata_json = serde_json::to_string(&metadata)?;
+        let metadata_file: _ = snapshot_dir.join(format!("{}.meta", snapshot.version));
+        let metadata_json: _ = serde_json::to_string(&metadata)?;
         fs::write(&metadata_file, metadata_json)?;
 
         // 更新统计
@@ -207,8 +207,8 @@ impl SnapshotManager {
         version: &str,
         base_dir: &Path,
     ) -> Result<V8Snapshot, Box<dyn std::error::Error + Send + Sync>> {
-        let snapshot_dir = base_dir.join("snapshots");
-        let metadata_file = snapshot_dir.join(format!("{}.meta", version));
+        let snapshot_dir: _ = base_dir.join("snapshots");
+        let metadata_file: _ = snapshot_dir.join(format!("{}.meta", version));
 
         // 检查元数据文件是否存在
         if !metadata_file.exists() {
@@ -216,14 +216,14 @@ impl SnapshotManager {
         }
 
         // 读取元数据
-        let metadata_json = fs::read_to_string(&metadata_file)?;
+        let metadata_json: _ = fs::read_to_string(&metadata_file)?;
         let metadata: SnapshotMetadata = serde_json::from_str(&metadata_json)?;
 
         // 读取快照数据
-        let snapshot_file = snapshot_dir.join(format!("{}.bin", version));
-        let snapshot_data = fs::read(&snapshot_file)?;
+        let snapshot_file: _ = snapshot_dir.join(format!("{}.bin", version));
+        let snapshot_data: _ = fs::read(&snapshot_file)?;
 
-        let snapshot = V8Snapshot::new(
+        let snapshot: _ = V8Snapshot::new(
             snapshot_data,
             metadata.version,
             metadata.is_compressed,
@@ -245,21 +245,21 @@ impl SnapshotManager {
         &self,
         base_dir: &Path,
     ) -> Result<Vec<SnapshotMetadata>, Box<dyn std::error::Error + Send + Sync>> {
-        let snapshot_dir = base_dir.join("snapshots");
+        let snapshot_dir: _ = base_dir.join("snapshots");
 
         if !snapshot_dir.exists() {
             return Ok(Vec::new());
         }
 
-        let entries = fs::read_dir(&snapshot_dir)?;
+        let entries: _ = fs::read_dir(&snapshot_dir)?;
         let mut snapshots = Vec::new();
 
         for entry in entries {
-            let entry = entry?;
-            let path = entry.path();
+            let entry: _ = entry?;
+            let path: _ = entry.path();
 
             if path.extension().and_then(|s| s.to_str()) == Some("meta") {
-                let metadata_json = fs::read_to_string(&path)?;
+                let metadata_json: _ = fs::read_to_string(&path)?;
                 let metadata: SnapshotMetadata = serde_json::from_str(&metadata_json)?;
                 snapshots.push(metadata);
             }
@@ -274,9 +274,9 @@ impl SnapshotManager {
         version: &str,
         base_dir: &Path,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let snapshot_dir = base_dir.join("snapshots");
-        let metadata_file = snapshot_dir.join(format!("{}.meta", version));
-        let snapshot_file = snapshot_dir.join(format!("{}.bin", version));
+        let snapshot_dir: _ = base_dir.join("snapshots");
+        let metadata_file: _ = snapshot_dir.join(format!("{}.meta", version));
+        let snapshot_file: _ = snapshot_dir.join(format!("{}.bin", version));
 
         // 删除文件（如果存在）
         if metadata_file.exists() {
@@ -328,7 +328,7 @@ impl SnapshotStats {
     }
 
     pub fn hit_rate(&self) -> f64 {
-        let total = self.cache_hits + self.cache_misses;
+        let total: _ = self.cache_hits + self.cache_misses;
         if total > 0 {
             self.cache_hits as f64 / total as f64
         } else {
@@ -350,8 +350,8 @@ mod tests {
 
     #[test]
     fn test_snapshot_manager_creation() {
-        let config = SnapshotConfig::default();
-        let manager = SnapshotManager::new(config);
+        let config: _ = SnapshotConfig::default();
+        let manager: _ = SnapshotManager::new(config);
 
         assert_eq!(manager.config.max_snapshots, 3);
         assert!(manager.config.builtin_warmup);
@@ -359,7 +359,7 @@ mod tests {
 
     #[test]
     fn test_snapshot_stats() {
-        let stats = SnapshotStats::new();
+        let stats: _ = SnapshotStats::new();
         assert_eq!(stats.snapshots_generated, 0);
         assert_eq!(stats.hit_rate(), 0.0);
     }
@@ -369,25 +369,25 @@ mod tests {
     fn test_save_and_load_snapshot() {
         use tempfile::tempdir;
 
-        let dir = tempdir().unwrap();
-        let base_dir = dir.path();
+        let dir: _ = tempdir().unwrap();
+        let base_dir: _ = dir.clone();path();
 
         let mut runtime = RuntimeLite::new(false).unwrap();
-        let manager = SnapshotManager::new(SnapshotConfig::default());
+        let manager: _ = SnapshotManager::new(SnapshotConfig::default());
 
         // 生成快照
-        let snapshot = manager.generate_snapshot(&mut runtime).unwrap();
+        let snapshot: _ = manager.generate_snapshot(&mut runtime).unwrap();
 
         // 保存快照
-        let result = manager.save_snapshot_to_disk(&snapshot, base_dir);
+        let result: _ = manager.save_snapshot_to_disk(&snapshot, base_dir);
         assert!(result.is_ok());
 
         // 列出快照
-        let list = manager.list_persistent_snapshots(base_dir).unwrap();
+        let list: _ = manager.list_persistent_snapshots(base_dir).unwrap();
         assert_eq!(list.len(), 1);
 
         // 加载快照
-        let loaded = manager.load_snapshot_from_disk(&snapshot.version, base_dir).unwrap();
+        let loaded: _ = manager.load_snapshot_from_disk(&snapshot.version, base_dir).unwrap();
         assert_eq!(loaded.version, snapshot.version);
         assert_eq!(loaded.size_bytes, snapshot.size_bytes);
     }
@@ -397,26 +397,26 @@ mod tests {
     fn test_delete_persistent_snapshot() {
         use tempfile::tempdir;
 
-        let dir = tempdir().unwrap();
-        let base_dir = dir.path();
+        let dir: _ = tempdir().unwrap();
+        let base_dir: _ = dir.clone();path();
 
         let mut runtime = RuntimeLite::new(false).unwrap();
-        let manager = SnapshotManager::new(SnapshotConfig::default());
+        let manager: _ = SnapshotManager::new(SnapshotConfig::default());
 
         // 生成并保存快照
-        let snapshot = manager.generate_snapshot(&mut runtime).unwrap();
+        let snapshot: _ = manager.generate_snapshot(&mut runtime).unwrap();
         manager.save_snapshot_to_disk(&snapshot, base_dir).unwrap();
 
         // 验证快照存在
-        let list = manager.list_persistent_snapshots(base_dir).unwrap();
+        let list: _ = manager.list_persistent_snapshots(base_dir).unwrap();
         assert_eq!(list.len(), 1);
 
         // 删除快照
-        let result = manager.delete_persistent_snapshot(&snapshot.version, base_dir);
+        let result: _ = manager.delete_persistent_snapshot(&snapshot.version, base_dir);
         assert!(result.is_ok());
 
         // 验证快照已删除
-        let list = manager.list_persistent_snapshots(base_dir).unwrap();
+        let list: _ = manager.list_persistent_snapshots(base_dir).unwrap();
         assert_eq!(list.len(), 0);
     }
 
@@ -424,27 +424,29 @@ mod tests {
     fn test_list_nonexistent_snapshots() {
         use tempfile::tempdir;
 
-        let dir = tempdir().unwrap();
-        let base_dir = dir.path();
+        let dir: _ = tempdir().unwrap();
+        let base_dir: _ = dir.clone();path();
 
-        let manager = SnapshotManager::new(SnapshotConfig::default());
+        let manager: _ = SnapshotManager::new(SnapshotConfig::default());
 
         // 列出不存在的快照
-        let list = manager.list_persistent_snapshots(base_dir).unwrap();
+        let list: _ = manager.list_persistent_snapshots(base_dir).unwrap();
         assert_eq!(list.len(), 0);
     }
 
     #[test]
     fn test_load_nonexistent_snapshot() {
         use tempfile::tempdir;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
-        let dir = tempdir().unwrap();
-        let base_dir = dir.path();
+        let dir: _ = tempdir().unwrap();
+        let base_dir: _ = dir.clone();path();
 
-        let manager = SnapshotManager::new(SnapshotConfig::default());
+        let manager: _ = SnapshotManager::new(SnapshotConfig::default());
 
         // 尝试加载不存在的快照
-        let result = manager.load_snapshot_from_disk("nonexistent", base_dir);
+        let result: _ = manager.load_snapshot_from_disk("nonexistent", base_dir);
         assert!(result.is_err());
     }
 }

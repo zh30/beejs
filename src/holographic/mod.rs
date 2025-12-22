@@ -12,6 +12,8 @@ pub use wavefront_propagator::{WavefrontPropagator, PropagationMethod};
 pub use hologram_generator::{HologramGenerator, GeneratorConfig, HologramType, HologramEncoding};
 pub use volume_capture::{VolumeCapture, CaptureConfig, ColorFormat};
 pub use holographic_storage::{HolographicStorage, StorageConfig, CompressionMode};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 复数类型
 #[derive(Debug, Clone, Copy, Default)]

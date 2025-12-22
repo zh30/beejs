@@ -169,6 +169,8 @@ pub use distributed_tracer::{
 };
 
 pub use cluster_console::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
     ClusterConsole,
     ConsoleConfig,
     ClusterOverview,
@@ -195,7 +197,7 @@ pub struct DistributedConfig {
 impl DistributedConfig {
     /// 创建默认配置
     pub fn default(cluster_name: String, node_id: String) -> Self {
-        let cluster_name_clone = cluster_name.clone();
+        let cluster_name_clone: _ = cluster_name.clone();
         Self {
             cluster_name,
             node_id,
@@ -226,13 +228,13 @@ impl DistributedSystem {
     /// 创建新的分布式系统
     pub async fn new(config: DistributedConfig) -> Result<Self, String> {
         // 创建服务发现
-        let service_discovery = ServiceDiscovery::new(config.discovery_config);
+        let service_discovery: _ = ServiceDiscovery::new(config.discovery_config);
 
         // 创建节点管理器
-        let node_manager = Arc::new(NodeManager::new(service_discovery.clone()));
+        let node_manager: _ = Arc::new(std::sync::Mutex::new(NodeManager::new(service_discovery.clone())));
 
         // 创建健康监控器
-        let health_monitor = Arc::new(HealthMonitor::new(node_manager.clone()));
+        let health_monitor: _ = Arc::new(std::sync::Mutex::new(HealthMonitor::new(node_manager.clone())));
 
         Ok(Self {
             service_discovery,
@@ -261,7 +263,7 @@ impl DistributedSystem {
         info!("Starting distributed system...");
 
         // 注册当前节点
-        let node_info = NodeInfo {
+        let node_info: _ = NodeInfo {
             id: "current-node".to_string(),
             address: "0.0.0.0:8080".to_string(),
             cpu_cores: num_cpus::get(),
@@ -285,7 +287,7 @@ impl DistributedSystem {
         info!("Stopping distributed system...");
 
         // 清理离线节点
-        let cleaned_count = self.node_manager.cleanup_offline_nodes().await;
+        let cleaned_count: _ = self.node_manager.cleanup_offline_nodes().await;
         info!("Cleaned up {} offline nodes", cleaned_count);
 
         info!("Distributed system stopped");
@@ -294,9 +296,9 @@ impl DistributedSystem {
 
     /// 获取集群状态摘要
     pub async fn get_cluster_summary(&self) -> ClusterSummary {
-        let topology = self.node_manager.get_cluster_topology().await;
-        let health_stats = self.health_monitor.get_health_statistics().await;
-        let cluster_health = self.health_monitor.check_cluster_health().await;
+        let topology: _ = self.node_manager.get_cluster_topology().await;
+        let health_stats: _ = self.health_monitor.get_health_statistics().await;
+        let cluster_health: _ = self.health_monitor.check_cluster_health().await;
 
         ClusterSummary {
             topology,

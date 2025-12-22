@@ -17,6 +17,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use super::{BenchmarkResult, BenchmarkError, BenchmarkResult as Result};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 工作负载类型
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -41,7 +43,7 @@ pub struct WorkloadExecutor {
     /// 工作负载类型
     pub workload_type: WorkloadType,
     /// 参数配置
-    pub parameters: HashMap<String, serde_json::Value>,
+    pub parameters: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>,
     /// 并发级别
     pub concurrency: u32,
     /// 持续时间
@@ -63,7 +65,7 @@ impl WorkloadExecutor {
     }
 
     /// 设置参数
-    pub fn parameters(mut self, parameters: HashMap<String, serde_json::Value>) -> Self {
+    pub fn parameters(mut self, parameters: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>) -> Self {
         self.parameters = parameters;
         self
     }
@@ -118,31 +120,31 @@ impl WorkloadExecutor {
 
     /// 执行计算密集型工作负载
     async fn execute_compute_intensive(&self) -> Result<WorkloadResult> {
-        let compute_workload = compute_intensive::ComputeWorkload::new();
+        let compute_workload: _ = compute_intensive::ComputeWorkload::new();
         compute_workload.execute(self.parameters.clone(), self.concurrency).await
     }
 
     /// 执行 I/O 密集型工作负载
     async fn execute_io_intensive(&self) -> Result<WorkloadResult> {
-        let io_workload = io_intensive::IOWorkload::new();
+        let io_workload: _ = io_intensive::IOWorkload::new();
         io_workload.execute(self.parameters.clone(), self.concurrency).await
     }
 
     /// 执行内存密集型工作负载
     async fn execute_memory_intensive(&self) -> Result<WorkloadResult> {
-        let memory_workload = memory_intensive::MemoryWorkload::new();
+        let memory_workload: _ = memory_intensive::MemoryWorkload::new();
         memory_workload.execute(self.parameters.clone(), self.concurrency).await
     }
 
     /// 执行并发型工作负载
     async fn execute_concurrent(&self) -> Result<WorkloadResult> {
-        let concurrent_workload = concurrent::ConcurrentWorkload::new();
+        let concurrent_workload: _ = concurrent::ConcurrentWorkload::new();
         concurrent_workload.execute(self.parameters.clone(), self.concurrency).await
     }
 
     /// 执行 AI 工作负载
     async fn execute_ai_workload(&self) -> Result<WorkloadResult> {
-        let ai_workload = ai_workload::AIWorkload::new();
+        let ai_workload: _ = ai_workload::AIWorkload::new();
         ai_workload.execute(self.parameters.clone(), self.concurrency).await
     }
 
@@ -151,17 +153,17 @@ impl WorkloadExecutor {
         let mut results = Vec::new();
 
         // 执行多种工作负载
-        let workloads = vec![
+        let workloads: _ = vec![
             WorkloadType::ComputeIntensive,
             WorkloadType::IoIntensive,
             WorkloadType::MemoryIntensive,
         ];
 
         for workload_type in workloads {
-            let executor = WorkloadExecutor::new(workload_type)
+            let executor: _ = WorkloadExecutor::new(workload_type)
                 .parameters(self.parameters.clone())
                 .concurrency(self.concurrency);
-            let result = executor.execute().await?;
+            let result: _ = executor.execute().await?;
             results.push(result);
         }
 
@@ -188,7 +190,7 @@ pub struct WorkloadResult {
     /// 资源使用
     pub resource_usage: ResourceUsage,
     /// 自定义指标
-    pub custom_metrics: HashMap<String, serde_json::Value>,
+    pub custom_metrics: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>,
     /// 错误信息
     pub error: Option<String>,
     /// 成功标志
@@ -252,10 +254,10 @@ impl WorkloadResult {
             panic!("Cannot merge empty results");
         }
 
-        let workload_type = results[0].workload_type;
-        let start_time = results.iter().map(|r| r.start_time).min().unwrap();
-        let end_time = results.iter().map(|r| r.end_time).max().unwrap();
-        let total_duration = end_time.duration_since(start_time);
+        let workload_type: _ = results[0].workload_type;
+        let start_time: _ = results.iter().map(|r| r.start_time).min().unwrap();
+        let end_time: _ = results.iter().map(|r| r.end_time).max().unwrap();
+        let total_duration: _ = end_time.duration_since(start_time);
         let total_iterations: u32 = results.iter().map(|r| r.iterations).sum();
         let total_throughput: f64 = results.iter().map(|r| r.throughput).sum();
 

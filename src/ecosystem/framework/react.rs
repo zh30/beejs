@@ -7,6 +7,8 @@ use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// React 运行时
 #[derive(Debug)]
@@ -40,21 +42,21 @@ impl ReactRuntime {
         container: &str,
     ) -> Result<RenderResult, Box<dyn std::error::Error>> {
         // 1. 转换 JSX
-        let jsx_code = self.jsx_transformer.transform_jsx(&component.source_code)?;
+        let jsx_code: _ = self.jsx_transformer.transform_jsx(&component.source_code)?;
 
         // 2. 编译组件
-        let compiled_component = self.compile_component(&jsx_code, component)?;
+        let compiled_component: _ = self.compile_component(&jsx_code, component)?;
 
         // 3. 创建 Fiber 节点
-        let fiber_root = self.fiber_reconciler.create_fiber_root(&compiled_component, props)?;
+        let fiber_root: _ = self.fiber_reconciler.create_fiber_root(&compiled_component, props)?;
 
         // 4. 渲染到虚拟 DOM
-        let vdom = self.fiber_reconciler.render_fiber_tree(fiber_root)?;
+        let vdom: _ = self.fiber_reconciler.render_fiber_tree(fiber_root)?;
 
         // 5. 生成 HTML
-        let html = self.generate_html(&vdom, container)?;
+        let html: _ = self.generate_html(&vdom, container)?;
 
-        let render_result = RenderResult {
+        let render_result: _ = RenderResult {
             html,
             head: self.generate_head(&compiled_component),
             styles: self.generate_styles(&vdom)?,
@@ -72,7 +74,7 @@ impl ReactRuntime {
         initial_data: &serde_json::Value,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // 1. 从服务器获取 HTML
-        let server_html = self.get_server_rendered_html(app_id)?;
+        let server_html: _ = self.get_server_rendered_html(app_id)?;
 
         // 2. 绑定事件监听器
         self.hydration_engine.bind_event_listeners(app_id, &server_html)?;
@@ -93,7 +95,7 @@ impl ReactRuntime {
         props: Option<&serde_json::Value>,
     ) -> Result<String, Box<dyn std::error::Error>> {
         // 在服务器端渲染组件
-        let render_result = self.render_component(component, props, "root")?;
+        let render_result: _ = self.render_component(component, props, "root")?;
         Ok(render_result.html)
     }
 
@@ -106,7 +108,7 @@ impl ReactRuntime {
         // 简化的编译过程
         // 实际实现需要完整的 Babel/TypeScript 编译
 
-        let compiled = CompiledComponent {
+        let compiled: _ = CompiledComponent {
             name: component.name.clone(),
             code: jsx_code.to_string(),
             ast: None, // 简化实现
@@ -287,7 +289,7 @@ pub struct CompiledComponent {
     pub code: String,
     pub ast: Option<serde_json::Value>,
     pub dependencies: Vec<String>,
-    pub exports: HashMap<String, String>,
+    pub exports: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 虚拟 DOM
@@ -317,7 +319,7 @@ pub enum VNodeType {
 #[derive(Debug, Clone)]
 pub struct VElement {
     pub tag_name: String,
-    pub props: HashMap<String, String>,
+    pub props: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub children: Vec<VNode>,
 }
 
@@ -338,7 +340,7 @@ impl JsxTransformer {
         // 简化的 JSX 转换
         // 实际实现需要完整的 JSX 解析和转换
 
-        let transformed = source
+        let transformed: _ = source
             .replace("React.createElement", "h")
             .replace("__jsx", "h");
 
@@ -436,7 +438,7 @@ impl FiberReconciler {
         fiber_root: &serde_json::Value,
     ) -> Result<VirtualDom, Box<dyn std::error::Error>> {
         // 渲染 Fiber 树到虚拟 DOM
-        let vdom = VirtualDom {
+        let vdom: _ = VirtualDom {
             root: VNode {
                 node_type: VNodeType::Element(VElement {
                     tag_name: "div".to_string(),

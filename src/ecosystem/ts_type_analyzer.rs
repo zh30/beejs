@@ -5,6 +5,8 @@
 
 use super::*;
 use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// TypeScript 类型分析器
 #[derive(Debug)]
@@ -42,7 +44,7 @@ impl TypeAnalyzer {
     }
 
     /// 分析类型
-    pub fn analyze_types(&self, source_file: &SourceFile) -> Result<HashMap<String, TypeDefinition>, Box<dyn std::error::Error>> {
+    pub fn analyze_types(&self, source_file: &SourceFile) -> Result<HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>, Box<dyn std::error::Error>> {
         let mut types = HashMap::new();
 
         // 分析 AST
@@ -55,14 +57,14 @@ impl TypeAnalyzer {
     }
 
     /// 从 AST 提取类型
-    pub fn extract_types_from_ast(&self, ast: &AstNode, filename: &str) -> Result<HashMap<String, TypeDefinition>, Box<dyn std::error::Error>> {
+    pub fn extract_types_from_ast(&self, ast: &AstNode, filename: &str) -> Result<HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>, Box<dyn std::error::Error>> {
         let mut types = HashMap::new();
         self.analyze_ast(ast, &mut types)?;
         Ok(types)
     }
 
     /// 分析 AST 节点
-    fn analyze_ast(&self, node: &AstNode, types: &mut HashMap<String, TypeDefinition>) -> Result<(), Box<dyn std::error::Error>> {
+    fn analyze_ast(&self, node: &AstNode, types: &mut HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>) -> Result<(), Box<dyn std::error::Error>> {
         match node {
             AstNode::Program(statements) => {
                 for stmt in statements {
@@ -75,7 +77,7 @@ impl TypeAnalyzer {
                 return_type,
                 ..
             } => {
-                let type_def = TypeDefinition {
+                let type_def: _ = TypeDefinition {
                     name: name.clone(),
                     kind: TypeKind::Function,
                     exported: true,
@@ -127,7 +129,7 @@ impl TypeAnalyzer {
                     }
                 }
 
-                let type_def = TypeDefinition {
+                let type_def: _ = TypeDefinition {
                     name: name.clone(),
                     kind: TypeKind::Class,
                     exported: true,
@@ -159,7 +161,7 @@ impl TypeAnalyzer {
                     );
                 }
 
-                let type_def = TypeDefinition {
+                let type_def: _ = TypeDefinition {
                     name: name.clone(),
                     kind: TypeKind::Interface,
                     exported: true,
@@ -177,7 +179,7 @@ impl TypeAnalyzer {
                 alias_type,
                 ..
             } => {
-                let type_def = TypeDefinition {
+                let type_def: _ = TypeDefinition {
                     name: name.clone(),
                     kind: TypeKind::TypeAlias,
                     exported: true,
@@ -201,12 +203,12 @@ impl TypeAnalyzer {
         let lines: Vec<&str> = source.lines().collect();
 
         for (i, line) in lines.iter().enumerate() {
-            let trimmed = line.trim();
+            let trimmed: _ = line.trim();
 
             // 函数声明
             if trimmed.starts_with("function ") {
                 if let Some(name) = self.extract_function_name(trimmed) {
-                    let ast_node = AstNode::FunctionDeclaration {
+                    let ast_node: _ = AstNode::FunctionDeclaration {
                         name,
                         params: Vec::new(),
                         return_type: Type::Unknown,
@@ -220,7 +222,7 @@ impl TypeAnalyzer {
             // 类声明
             if trimmed.starts_with("class ") {
                 if let Some(name) = self.extract_class_name(trimmed) {
-                    let ast_node = AstNode::ClassDeclaration {
+                    let ast_node: _ = AstNode::ClassDeclaration {
                         name,
                         members: Vec::new(),
                         type_params: Vec::new(),
@@ -234,7 +236,7 @@ impl TypeAnalyzer {
             // 接口声明
             if trimmed.starts_with("interface ") {
                 if let Some(name) = self.extract_interface_name(trimmed) {
-                    let ast_node = AstNode::InterfaceDeclaration {
+                    let ast_node: _ = AstNode::InterfaceDeclaration {
                         name,
                         members: Vec::new(),
                         type_params: Vec::new(),
@@ -247,7 +249,7 @@ impl TypeAnalyzer {
             // 类型别名
             if trimmed.starts_with("type ") {
                 if let Some(name) = self.extract_type_alias_name(trimmed) {
-                    let ast_node = AstNode::TypeAliasDeclaration {
+                    let ast_node: _ = AstNode::TypeAliasDeclaration {
                         name,
                         type_params: Vec::new(),
                         alias_type: Type::Unknown,
@@ -266,7 +268,7 @@ impl TypeAnalyzer {
         let mut current_comment = String::new();
 
         while let Some(line) = lines.next() {
-            let trimmed = line.trim();
+            let trimmed: _ = line.trim();
 
             if trimmed.starts_with("/**") {
                 // JSDoc 开始
@@ -298,7 +300,7 @@ impl TypeAnalyzer {
         let lines: Vec<&str> = comment.lines().collect();
 
         for line in &lines[1..lines.len() - 1] {
-            let trimmed = line.trim();
+            let trimmed: _ = line.trim();
 
             if trimmed.starts_with("@param") {
                 if let Some(param_info) = self.parse_jsdoc_param(trimmed) {
@@ -358,10 +360,10 @@ impl TypeAnalyzer {
     }
 
     /// 合并 JSDoc 类型
-    fn merge_jsdoc_types(&self, js_doc: &HashMap<String, String>, types: &mut HashMap<String, TypeDefinition>) {
+    fn merge_jsdoc_types(&self, js_doc: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>, types: &mut HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>) {
         for (key, doc) in js_doc {
             if key.starts_with("param:") {
-                let param_name = key.strip_prefix("param:").unwrap();
+                let param_name: _ = key.strip_prefix("param:").unwrap();
                 // 为参数添加 JSDoc
                 // 简化实现
             } else if key.starts_with("returns:") {
@@ -375,12 +377,12 @@ impl TypeAnalyzer {
     }
 
     /// 从 JSDoc 提取类型
-    pub fn extract_jsdoc_types(&self, source: &str) -> Result<HashMap<String, TypeDefinition>, Box<dyn std::error::Error>> {
+    pub fn extract_jsdoc_types(&self, source: &str) -> Result<HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>, Box<dyn std::error::Error>> {
         let mut types = HashMap::new();
         let mut lines = source.lines().peekable();
 
         while let Some(line) = lines.next() {
-            let trimmed = line.trim();
+            let trimmed: _ = line.trim();
 
             if trimmed.starts_with("/**") {
                 let mut comment = String::new();
@@ -405,11 +407,11 @@ impl TypeAnalyzer {
     }
 
     /// 从 JSDoc 提取类型
-    fn extract_type_from_jsdoc(&self, comment: &str, types: &mut HashMap<String, TypeDefinition>) -> Result<(), Box<dyn std::error::Error>> {
+    fn extract_type_from_jsdoc(&self, comment: &str, types: &mut HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>) -> Result<(), Box<dyn std::error::Error>> {
         let lines: Vec<&str> = comment.lines().collect();
 
         for line in &lines {
-            let trimmed = line.trim();
+            let trimmed: _ = line.trim();
 
             if trimmed.starts_with("@typedef") {
                 if let Some(typedef) = self.parse_typedef(trimmed) {
@@ -429,7 +431,7 @@ impl TypeAnalyzer {
     fn parse_typedef(&self, line: &str) -> Option<TypeDefinition> {
         let parts: Vec<&str> = line.split_whitespace().collect();
         if parts.len() >= 3 {
-            let name = parts[2].trim_end_matches('{').to_string();
+            let name: _ = parts[2].trim_end_matches('{').to_string();
             Some(TypeDefinition {
                 name,
                 kind: TypeKind::TypeAlias,
@@ -449,7 +451,7 @@ impl TypeAnalyzer {
     fn parse_interface(&self, line: &str) -> Option<TypeDefinition> {
         let parts: Vec<&str> = line.split_whitespace().collect();
         if parts.len() >= 2 {
-            let name = parts[1].to_string();
+            let name: _ = parts[1].to_string();
             Some(TypeDefinition {
                 name,
                 kind: TypeKind::Interface,
@@ -469,7 +471,7 @@ impl TypeAnalyzer {
     fn extract_function_name(&self, line: &str) -> Option<String> {
         let parts: Vec<&str> = line.split_whitespace().collect();
         if parts.len() >= 2 {
-            let name_part = parts[1];
+            let name_part: _ = parts[1];
             if let Some(name) = name_part.split('(').next() {
                 Some(name.to_string())
             } else {
@@ -504,7 +506,7 @@ impl TypeAnalyzer {
     fn extract_type_alias_name(&self, line: &str) -> Option<String> {
         let parts: Vec<&str> = line.split('=').collect();
         if !parts.is_empty() {
-            let left = parts[0].trim();
+            let left: _ = parts[0].trim();
             let name_part: Vec<&str> = left.split_whitespace().collect();
             if name_part.len() >= 2 {
                 Some(name_part[1].to_string())
@@ -551,7 +553,7 @@ pub struct SourceFile {
     pub filename: String,
     pub ast: AstNode,
     pub comments: Vec<Comment>,
-    pub js_doc: HashMap<String, String>,
+    pub js_doc: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// AST 节点

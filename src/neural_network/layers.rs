@@ -1,6 +1,8 @@
 //! 神经网络层 (Layers) 实现
 
 use super::tensor::Tensor;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 激活函数类型
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -32,13 +34,13 @@ impl DenseLayer {
     /// 创建新的全连接层
     pub fn new(in_features: usize, out_features: usize) -> Self {
         // Xavier 初始化
-        let scale = (2.0 / (in_features + out_features) as f32).sqrt();
+        let scale: _ = (2.0 / (in_features + out_features) as f32).sqrt();
         let mut weights = Tensor::randn(&[in_features, out_features]);
         for val in weights.data_mut() {
             *val *= scale;
         }
 
-        let bias = Tensor::zeros(&[out_features]);
+        let bias: _ = Tensor::zeros(&[out_features]);
 
         Self {
             weights,
@@ -63,7 +65,7 @@ impl Layer for DenseLayer {
     fn forward(&self, input: &Tensor) -> Tensor {
         // input: [batch, in_features]
         // output: [batch, out_features]
-        let output = input.matmul(&self.weights);
+        let output: _ = input.matmul(&self.weights);
         output.add_broadcast(&self.bias)
     }
 
@@ -97,15 +99,15 @@ impl ConvLayer {
         padding: usize,
     ) -> Self {
         // Kaiming 初始化
-        let fan_in = in_channels * kernel_size * kernel_size;
-        let scale = (2.0 / fan_in as f32).sqrt();
+        let fan_in: _ = in_channels * kernel_size * kernel_size;
+        let scale: _ = (2.0 / fan_in as f32).sqrt();
 
         let mut weights = Tensor::randn(&[out_channels, in_channels, kernel_size, kernel_size]);
         for val in weights.data_mut() {
             *val *= scale;
         }
 
-        let bias = Tensor::zeros(&[out_channels]);
+        let bias: _ = Tensor::zeros(&[out_channels]);
 
         Self {
             weights,
@@ -122,16 +124,16 @@ impl ConvLayer {
 impl Layer for ConvLayer {
     fn forward(&self, input: &Tensor) -> Tensor {
         // 简化的卷积实现
-        let shape = input.shape();
+        let shape: _ = input.shape();
         assert_eq!(shape.len(), 4, "Expected 4D input [N, C, H, W]");
 
-        let batch = shape[0];
-        let _in_c = shape[1];
-        let in_h = shape[2];
-        let in_w = shape[3];
+        let batch: _ = shape[0];
+        let _in_c: _ = shape[1];
+        let in_h: _ = shape[2];
+        let in_w: _ = shape[3];
 
-        let out_h = (in_h + 2 * self.padding - self.kernel_size) / self.stride + 1;
-        let out_w = (in_w + 2 * self.padding - self.kernel_size) / self.stride + 1;
+        let out_h: _ = (in_h + 2 * self.padding - self.kernel_size) / self.stride + 1;
+        let out_w: _ = (in_w + 2 * self.padding - self.kernel_size) / self.stride + 1;
 
         // 简化：直接返回正确形状的零张量
         // 实际实现需要完整的卷积运算
@@ -203,19 +205,19 @@ impl Layer for ActivationLayer {
             ActivationType::GELU => input.data().iter().map(|&x| Self::gelu(x)).collect(),
             ActivationType::Softmax => {
                 // Softmax 在最后一个维度上
-                let shape = input.shape();
+                let shape: _ = input.shape();
                 let batch_size: usize = shape[..shape.len()-1].iter().product();
-                let num_classes = *shape.last().unwrap();
+                let num_classes: _ = *shape.last().unwrap();
 
                 let mut result = input.clone_data();
 
                 for b in 0..batch_size {
-                    let start = b * num_classes;
-                    let end = start + num_classes;
-                    let slice = &mut result[start..end];
+                    let start: _ = b * num_classes;
+                    let end: _ = start + num_classes;
+                    let slice: _ = &mut result[start..end];
 
                     // 数值稳定的 softmax
-                    let max_val = slice.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+                    let max_val: _ = slice.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
                     let exp_sum: f32 = slice.iter().map(|&x| (x - max_val).exp()).sum();
 
                     for val in slice.iter_mut() {

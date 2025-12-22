@@ -12,7 +12,7 @@ use super::{Runtime, BenchmarkResult, BenchmarkError, BenchmarkResult as Result}
 #[derive(Debug)]
 pub struct RuntimeDetector {
     /// 检测到的运行时
-    detected_runtimes: HashMap<Runtime, bool>,
+    detected_runtimes: HashMap<Runtime, bool, std::collections::HashMap<Runtime, bool, Runtime, bool>>,
 }
 
 impl RuntimeDetector {
@@ -101,7 +101,7 @@ impl ProcessLauncher {
 
     /// 启动进程
     pub async fn launch(&self, code: &str, runtime: Runtime) -> Result<ProcessOutput> {
-        let start_time = tokio::time::Instant::now();
+        let start_time: _ = tokio::time::Instant::now();
 
         match runtime {
             Runtime::Beejs => {
@@ -129,21 +129,21 @@ impl ProcessLauncher {
 
     /// 启动 Beejs 进程
     async fn launch_beejs(&self, code: &str) -> Result<ProcessOutput> {
-        let temp_file = super::super::utils::create_temp_dir("beejs_bench")?;
-        let file_path = temp_file.path().join("test.js");
+        let temp_file: _ = super::super::utils::create_temp_dir("beejs_bench")?;
+        let file_path: _ = temp_file.path().join("test.js");
 
         // 写入临时文件
         tokio::fs::write(&file_path, code).await?;
 
         // 启动进程
-        let output = tokio::process::Command::new("beejs")
+        let output: _ = tokio::process::Command::new("beejs")
             .arg(&file_path)
             .output()
             .await?;
 
-        let exit_code = output.status.code().unwrap_or(-1);
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let exit_code: _ = output.status.code().unwrap_or(-1);
+        let stdout: _ = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr: _ = String::from_utf8_lossy(&output.stderr).to_string();
 
         Ok(ProcessOutput {
             runtime: Runtime::Beejs,
@@ -156,19 +156,19 @@ impl ProcessLauncher {
 
     /// 启动 Node.js 进程
     async fn launch_nodejs(&self, code: &str) -> Result<ProcessOutput> {
-        let temp_file = super::super::utils::create_temp_dir("nodejs_bench")?;
-        let file_path = temp_file.path().join("test.js");
+        let temp_file: _ = super::super::utils::create_temp_dir("nodejs_bench")?;
+        let file_path: _ = temp_file.path().join("test.js");
 
         tokio::fs::write(&file_path, code).await?;
 
-        let output = tokio::process::Command::new("node")
+        let output: _ = tokio::process::Command::new("node")
             .arg(&file_path)
             .output()
             .await?;
 
-        let exit_code = output.status.code().unwrap_or(-1);
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let exit_code: _ = output.status.code().unwrap_or(-1);
+        let stdout: _ = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr: _ = String::from_utf8_lossy(&output.stderr).to_string();
 
         Ok(ProcessOutput {
             runtime: Runtime::NodeJs,
@@ -181,19 +181,19 @@ impl ProcessLauncher {
 
     /// 启动 Bun 进程
     async fn launch_bun(&self, code: &str) -> Result<ProcessOutput> {
-        let temp_file = super::super::utils::create_temp_dir("bun_bench")?;
-        let file_path = temp_file.path().join("test.js");
+        let temp_file: _ = super::super::utils::create_temp_dir("bun_bench")?;
+        let file_path: _ = temp_file.path().join("test.js");
 
         tokio::fs::write(&file_path, code).await?;
 
-        let output = tokio::process::Command::new("bun")
+        let output: _ = tokio::process::Command::new("bun")
             .arg(&file_path)
             .output()
             .await?;
 
-        let exit_code = output.status.code().unwrap_or(-1);
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let exit_code: _ = output.status.code().unwrap_or(-1);
+        let stdout: _ = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr: _ = String::from_utf8_lossy(&output.stderr).to_string();
 
         Ok(ProcessOutput {
             runtime: Runtime::Bun,
@@ -206,20 +206,20 @@ impl ProcessLauncher {
 
     /// 启动 Deno 进程
     async fn launch_deno(&self, code: &str) -> Result<ProcessOutput> {
-        let temp_file = super::super::utils::create_temp_dir("deno_bench")?;
-        let file_path = temp_file.path().join("test.js");
+        let temp_file: _ = super::super::utils::create_temp_dir("deno_bench")?;
+        let file_path: _ = temp_file.path().join("test.js");
 
         tokio::fs::write(&file_path, code).await?;
 
-        let output = tokio::process::Command::new("deno")
+        let output: _ = tokio::process::Command::new("deno")
             .arg("run")
             .arg(&file_path)
             .output()
             .await?;
 
-        let exit_code = output.status.code().unwrap_or(-1);
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let exit_code: _ = output.status.code().unwrap_or(-1);
+        let stdout: _ = String::from_utf8_lossy(&output.stdout).to_string();
+        let stderr: _ = String::from_utf8_lossy(&output.stderr).to_string();
 
         Ok(ProcessOutput {
             runtime: Runtime::Deno,
@@ -237,7 +237,7 @@ pub struct ProcessConfig {
     /// 超时时间
     pub timeout: tokio::time::Duration,
     /// 环境变量
-    pub environment: HashMap<String, String>,
+    pub environment: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     /// 工作目录
     pub working_directory: Option<PathBuf>,
 }
@@ -359,9 +359,9 @@ pub struct PerformanceComparison {
     /// 性能提升百分比
     pub improvements: Vec<PerformanceImprovement>,
     /// 吞吐量对比
-    pub throughput_comparison: HashMap<Runtime, f64>,
+    pub throughput_comparison: HashMap<Runtime, f64, std::collections::HashMap<Runtime, f64, Runtime, f64>>,
     /// 延迟对比
-    pub latency_comparison: HashMap<Runtime, f64>,
+    pub latency_comparison: HashMap<Runtime, f64, std::collections::HashMap<Runtime, f64, Runtime, f64>>,
 }
 
 impl PerformanceComparison {
@@ -375,18 +375,18 @@ impl PerformanceComparison {
         let mut latency_comparison = HashMap::new();
 
         // 计算基准性能
-        let baseline_throughput = baseline.throughput();
-        let baseline_latency = baseline.average_duration().as_secs_f64() * 1000.0;
+        let baseline_throughput: _ = baseline.throughput();
+        let baseline_latency: _ = baseline.average_duration().as_secs_f64() * 1000.0;
 
         for result in comparisons {
             // 计算性能提升
-            let throughput_improvement = if baseline_throughput > 0.0 {
+            let throughput_improvement: _ = if baseline_throughput > 0.0 {
                 ((result.throughput() - baseline_throughput) / baseline_throughput) * 100.0
             } else {
                 0.0
             };
 
-            let latency_improvement = if baseline_latency > 0.0 {
+            let latency_improvement: _ = if baseline_latency > 0.0 {
                 ((baseline_latency - result.average_duration().as_secs_f64() * 1000.0) / baseline_latency) * 100.0
             } else {
                 0.0
@@ -427,7 +427,7 @@ pub struct StatisticalSignificance {
     /// 显著性测试结果
     pub significance_tests: Vec<SignificanceTest>,
     /// 置信区间
-    pub confidence_intervals: HashMap<Runtime, (f64, f64)>,
+    pub confidence_intervals: HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64)>>,
 }
 
 impl StatisticalSignificance {
@@ -440,7 +440,7 @@ impl StatisticalSignificance {
         let mut confidence_intervals = HashMap::new();
 
         for result in comparisons {
-            let is_significant = baseline.is_statistically_significant(result, 0.05);
+            let is_significant: _ = baseline.is_statistically_significant(result, 0.05);
             significance_tests.push(SignificanceTest {
                 runtime: result.runtime,
                 is_significant,
@@ -485,7 +485,7 @@ fn check_command_available(command: &str) -> bool {
 
 /// 获取命令版本
 fn get_command_version(command: &str) -> Option<String> {
-    let output = Command::new(command)
+    let output: _ = Command::new(command)
         .arg("--version")
         .output()
         .ok()?;
@@ -500,32 +500,34 @@ fn get_command_version(command: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_runtime_detection() {
-        let detector = RuntimeDetector::new();
-        let available = detector.get_available_runtimes();
+        let detector: _ = RuntimeDetector::new();
+        let available: _ = detector.get_available_runtimes();
         println!("Available runtimes: {:?}", available);
     }
 
     #[tokio::test]
     async fn test_process_launcher() {
-        let config = ProcessConfig::new();
-        let launcher = ProcessLauncher::new(config);
+        let config: _ = ProcessConfig::new();
+        let launcher: _ = ProcessLauncher::new(config);
 
-        let code = r#"
+        let code: _ = r#"
             console.log('Hello, World!');
             const start = Date.now();
             // 模拟一些计算
-            let sum = 0;
-            for (let i = 0; i < 1000000; i++) {
+            let sum: _ = 0;
+            for (let i: _ = 0; i < 1000000; i++) {
                 sum += i;
             }
             const end = Date.now();
             console.log('Time:', end - start, 'ms');
         "#;
 
-        let output = launcher.launch(code, Runtime::NodeJs).await.unwrap();
+        let output: _ = launcher.launch(code, Runtime::NodeJs).await.unwrap();
         println!("Output: {}", output.stdout);
         println!("Time: {} ms", output.execution_time_ms());
     }

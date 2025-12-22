@@ -2,6 +2,8 @@
 //! 使用 RAII 模式确保 V8 Isolate 的正确清理
 
 use rusty_v8 as v8;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Isolate 生命周期守卫
 /// 确保 Isolate 在正确的作用域结束时被清理

@@ -144,11 +144,11 @@ impl CoverageWriter for HtmlCoverageWriter {
         use std::fs;
         use std::io::Write;
 
-        let output_dir = &self.config.output_directory;
+        let output_dir: _ = &self.config.output_directory;
         fs::create_dir_all(output_dir)?;
 
         // Write index.html
-        let index_path = format!("{}/index.html", output_dir);
+        let index_path: _ = format!("{}/index.html", output_dir);
         let mut file = fs::File::create(&index_path)?;
 
         writeln!(file, "<!DOCTYPE html>")?;
@@ -192,7 +192,7 @@ impl CoverageWriter for HtmlCoverageWriter {
         writeln!(file, "        <tr><th>File</th><th>Line Coverage</th><th>Branches</th><th>Functions</th></tr>")?;
 
         for file_coverage in &report.files {
-            let line_class = if file_coverage.line_coverage >= 80.0 {
+            let line_class: _ = if file_coverage.line_coverage >= 80.0 {
                 "high"
             } else if file_coverage.line_coverage >= 60.0 {
                 "medium"
@@ -233,8 +233,8 @@ impl CoverageWriter for JsonCoverageWriter {
     fn write(&self, report: &CoverageReport) -> Result<(), CoverageError> {
         use std::fs;
 
-        let output_path = format!("{}/coverage.json", self.config.output_directory);
-        let content = serde_json::to_string_pretty(report)?;
+        let output_path: _ = format!("{}/coverage.json", self.config.output_directory);
+        let content: _ = serde_json::to_string_pretty(report)?;
         fs::write(output_path, content)?;
         Ok(())
     }
@@ -256,7 +256,7 @@ impl CoverageWriter for TextCoverageWriter {
         use std::fs;
         use std::io::Write;
 
-        let output_path = format!("{}/coverage.txt", self.config.output_directory);
+        let output_path: _ = format!("{}/coverage.txt", self.config.output_directory);
         let mut file = fs::File::create(&output_path)?;
 
         writeln!(file, "Code Coverage Report")?;
@@ -329,10 +329,12 @@ impl From<serde_json::Error> for CoverageError {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_coverage_stats_default() {
-        let stats = CoverageStats::default();
+        let stats: _ = CoverageStats::default();
         assert_eq!(stats.total_lines, 0);
         assert_eq!(stats.covered_lines, 0);
         assert_eq!(stats.line_coverage, 0.0);
@@ -340,7 +342,7 @@ mod tests {
 
     #[test]
     fn test_file_coverage() {
-        let file_coverage = FileCoverage {
+        let file_coverage: _ = FileCoverage {
             file_path: "test.rs".to_string(),
             total_lines: 100,
             covered_lines: 80,
@@ -363,7 +365,7 @@ mod tests {
 
     #[test]
     fn test_coverage_config() {
-        let config = CoverageConfig::new()
+        let config: _ = CoverageConfig::new()
             .with_enabled(false)
             .with_thresholds(90.0, 80.0, 95.0);
 
@@ -375,11 +377,11 @@ mod tests {
 
     #[test]
     fn test_html_coverage_writer() {
-        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_dir: _ = tempfile::tempdir().unwrap();
         let mut config = CoverageConfig::default();
         config.output_directory = temp_dir.path().to_string_lossy().to_string();
 
-        let report = CoverageReport {
+        let report: _ = CoverageReport {
             stats: CoverageStats {
                 total_lines: 100,
                 covered_lines: 80,
@@ -411,11 +413,11 @@ mod tests {
             format: CoverageFormat::Html,
         };
 
-        let writer = HtmlCoverageWriter::new(config);
-        let result = writer.write(&report);
+        let writer: _ = HtmlCoverageWriter::new(config);
+        let result: _ = writer.write(&report);
         assert!(result.is_ok());
 
-        let index_path = temp_dir.path().join("index.html");
+        let index_path: _ = temp_dir.path().join("index.html");
         assert!(index_path.exists());
     }
 }

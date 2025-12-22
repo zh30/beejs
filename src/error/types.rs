@@ -4,6 +4,8 @@
 use std::collections::HashMap;
 use std::fmt;
 use thiserror::Error;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 错误类型枚举 - 统一所有可能的错误
 #[derive(Debug, Error, Clone, PartialEq)]
@@ -116,7 +118,7 @@ pub struct ErrorContext {
     pub severity: ErrorSeverity,
     pub timestamp: std::time::Instant,
     pub recovery_suggestions: Vec<String>,
-    pub metadata: HashMap<String, String>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 impl ErrorContext {
@@ -127,8 +129,8 @@ impl ErrorContext {
         line: u32,
         function: String,
     ) -> Self {
-        let source_location = Some(SourceLocation::new(file, line, function));
-        let recovery_suggestions = Self::generate_recovery_suggestions(&error_type);
+        let source_location: _ = Some(SourceLocation::new(file, line, function));
+        let recovery_suggestions: _ = Self::generate_recovery_suggestions(&error_type);
 
         Self {
             error_type,
@@ -143,7 +145,7 @@ impl ErrorContext {
 
     /// 创建无源位置的错误上下文
     pub fn new_without_location(error_type: BeejsError) -> Self {
-        let recovery_suggestions = Self::generate_recovery_suggestions(&error_type);
+        let recovery_suggestions: _ = Self::generate_recovery_suggestions(&error_type);
 
         Self {
             error_type,

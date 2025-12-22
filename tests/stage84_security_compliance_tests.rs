@@ -14,28 +14,28 @@ mod stage84_security_tests {
     async fn test_mfa_authentication() {
         use beejs::security::authentication::{AuthenticationService, Credentials};
 
-        let auth_service = AuthenticationService::new();
+        let auth_service: _ = AuthenticationService::new();
 
         // 测试需要 MFA 的登录
-        let credentials = Credentials {
+        let credentials: _ = Credentials {
             username: "admin".to_string(),
             password: "password".to_string(),
             mfa_code: None,
         };
 
-        let result = auth_service.authenticate(&credentials).await.unwrap();
+        let result: _ = auth_service.authenticate(&credentials).await.unwrap();
         assert!(!result.success);
         assert!(result.mfa_required);
         assert!(result.error.is_some());
 
         // 测试提供有效 MFA 代码的登录
-        let credentials_with_mfa = Credentials {
+        let credentials_with_mfa: _ = Credentials {
             username: "admin".to_string(),
             password: "password".to_string(),
             mfa_code: Some("123456".to_string()),
         };
 
-        let result = auth_service.authenticate(&credentials_with_mfa).await.unwrap();
+        let result: _ = auth_service.authenticate(&credentials_with_mfa).await.unwrap();
         assert!(result.success);
         assert!(result.token.is_some());
         assert!(!result.mfa_required);
@@ -45,11 +45,11 @@ mod stage84_security_tests {
     async fn test_jwt_token_generation() {
         use beejs::security::authentication::{AuthenticationService, Credentials, User};
 
-        let auth_service = AuthenticationService::new();
-        let token_manager = auth_service.token_manager.clone();
+        let auth_service: _ = AuthenticationService::new();
+        let token_manager: _ = auth_service.token_manager.clone();
 
         // 创建测试用户
-        let user = User {
+        let user: _ = User {
             id: "test-user".to_string(),
             username: "testuser".to_string(),
             roles: vec!["user".to_string()],
@@ -57,13 +57,13 @@ mod stage84_security_tests {
         };
 
         // 生成令牌
-        let token = token_manager.generate_token(&user).await.unwrap();
+        let token: _ = token_manager.generate_token(&user).await.unwrap();
         assert!(!token.token.is_empty());
         assert_eq!(token.user_id, "test-user");
         assert!(token.expires_at > SystemTime::now());
 
         // 验证令牌
-        let validated_user = token_manager.validate_token(&token.token).await.unwrap();
+        let validated_user: _ = token_manager.validate_token(&token.token).await.unwrap();
         assert_eq!(validated_user.id, "test-user");
     }
 
@@ -71,24 +71,24 @@ mod stage84_security_tests {
     async fn test_token_expiration() {
         use beejs::security::authentication::{AuthenticationService, Credentials};
 
-        let auth_service = AuthenticationService::new();
-        let token_manager = auth_service.token_manager.clone();
+        let auth_service: _ = AuthenticationService::new();
+        let token_manager: _ = auth_service.token_manager.clone();
 
         // 使用有效凭据登录
-        let credentials = Credentials {
+        let credentials: _ = Credentials {
             username: "admin".to_string(),
             password: "password".to_string(),
             mfa_code: Some("123456".to_string()),
         };
 
-        let result = auth_service.authenticate(&credentials).await.unwrap();
+        let result: _ = auth_service.authenticate(&credentials).await.unwrap();
         assert!(result.success);
         assert!(result.token.is_some());
 
-        let token_str = result.token.unwrap();
+        let token_str: _ = result.token.unwrap();
 
         // 验证令牌应该成功
-        let user = token_manager.validate_token(&token_str).await.unwrap();
+        let user: _ = token_manager.validate_token(&token_str).await.unwrap();
         assert_eq!(user.username, "user");
 
         // 撤销令牌
@@ -103,17 +103,17 @@ mod stage84_security_tests {
     async fn test_role_assignment() {
         use beejs::security::authorization::{AuthorizationService, Role, UserId};
 
-        let auth_service = AuthorizationService::new();
+        let auth_service: _ = AuthorizationService::new();
 
         // 测试分配角色
-        let user_id = UserId("test-user".to_string());
-        let role = Role("admin".to_string());
+        let user_id: _ = UserId("test-user".to_string());
+        let role: _ = Role("admin".to_string());
 
-        let result = auth_service.assign_role(&user_id, &role).await;
+        let result: _ = auth_service.assign_role(&user_id, &role).await;
         assert!(result.is_ok());
 
         // 验证角色已分配
-        let has_role = auth_service.check_role(&user_id, &role).await.unwrap();
+        let has_role: _ = auth_service.check_role(&user_id, &role).await.unwrap();
         assert!(has_role);
     }
 
@@ -121,16 +121,16 @@ mod stage84_security_tests {
     async fn test_permission_check() {
         use beejs::security::authorization::{AuthorizationService, Role, UserId, Action};
 
-        let auth_service = AuthorizationService::new();
+        let auth_service: _ = AuthorizationService::new();
 
         // 创建用户并分配角色
-        let user_id = UserId("test-user".to_string());
-        let admin_role = Role("admin".to_string());
+        let user_id: _ = UserId("test-user".to_string());
+        let admin_role: _ = Role("admin".to_string());
         auth_service.assign_role(&user_id, &admin_role).await.unwrap();
 
         // 测试权限检查
-        let action = Action("read".to_string(), "database".to_string());
-        let result = auth_service.check_permission(&user_id, &action).await.unwrap();
+        let action: _ = Action("read".to_string(), "database".to_string());
+        let result: _ = auth_service.check_permission(&user_id, &action).await.unwrap();
         assert!(result);
     }
 
@@ -138,15 +138,15 @@ mod stage84_security_tests {
     async fn test_data_encryption() {
         use beejs::security::encryption::{EncryptionEngine, CryptoKey};
 
-        let encryption_engine = EncryptionEngine::new();
+        let encryption_engine: _ = EncryptionEngine::new();
 
         // 测试数据加密
-        let plaintext = b"Hello, Beejs Security!";
-        let encrypted = encryption_engine.encrypt(plaintext).await.unwrap();
+        let plaintext: _ = b"Hello, Beejs Security!";
+        let encrypted: _ = encryption_engine.encrypt(plaintext).await.unwrap();
         assert!(!encrypted.is_empty());
 
         // 测试数据解密
-        let decrypted = encryption_engine.decrypt(&encrypted).await.unwrap();
+        let decrypted: _ = encryption_engine.decrypt(&encrypted).await.unwrap();
         assert_eq!(decrypted, plaintext);
     }
 
@@ -154,18 +154,18 @@ mod stage84_security_tests {
     async fn test_key_rotation() {
         use beejs::security::encryption::{EncryptionEngine, KeyManager};
 
-        let key_manager = KeyManager::new();
+        let key_manager: _ = KeyManager::new();
 
         // 获取初始密钥
-        let initial_key = key_manager.get_active_key().await.unwrap();
-        let initial_key_id = initial_key.id.clone();
+        let initial_key: _ = key_manager.get_active_key().await.unwrap();
+        let initial_key_id: _ = initial_key.id.clone();
 
         // 测试密钥轮换
-        let result = key_manager.rotate_keys().await;
+        let result: _ = key_manager.rotate_keys().await;
         assert!(result.is_ok());
 
         // 验证新密钥生成且与旧密钥不同
-        let new_key = key_manager.get_active_key().await.unwrap();
+        let new_key: _ = key_manager.get_active_key().await.unwrap();
         assert_ne!(new_key.id, initial_key_id);
         assert!(!new_key.key_data.is_empty());
         assert_ne!(new_key.key_data, initial_key.key_data);
@@ -175,10 +175,10 @@ mod stage84_security_tests {
     async fn test_encryption_performance() {
         use beejs::security::encryption::EncryptionEngine;
 
-        let encryption_engine = EncryptionEngine::new();
+        let encryption_engine: _ = EncryptionEngine::new();
 
         // 测试 1MB 数据的加密性能
-        let performance = encryption_engine.test_performance(1024 * 1024).await.unwrap();
+        let performance: _ = encryption_engine.test_performance(1024 * 1024).await.unwrap();
 
         // 验证加密性能 > 10MB/s（当前 XOR 实现的实际性能）
         assert!(performance > 10_485_760.0, "加密性能 {} bytes/s 低于 10MB/s", performance);
@@ -188,7 +188,7 @@ mod stage84_security_tests {
     async fn test_tls_handshake() {
         use beejs::security::tls::{TlsConfig, TlsVersion, CipherSuite};
 
-        let tls_config = TlsConfig::new();
+        let tls_config: _ = TlsConfig::new();
 
         // 测试 TLS 配置创建
         assert!(tls_config.min_version >= TlsVersion::V1_3);
@@ -199,7 +199,7 @@ mod stage84_security_tests {
     async fn test_certificate_validation() {
         use beejs::security::tls::{TlsConfig, CertificateManager};
 
-        let cert_manager = CertificateManager::new();
+        let cert_manager: _ = CertificateManager::new();
 
         // 测试证书管理器创建
         assert!(cert_manager.is_ok());
@@ -209,8 +209,8 @@ mod stage84_security_tests {
     async fn test_gdpr_compliance() {
         use beejs::security::compliance::{GdprComplianceChecker, GdprComplianceResult};
 
-        let checker = GdprComplianceChecker::new();
-        let result = checker.check();
+        let checker: _ = GdprComplianceChecker::new();
+        let result: _ = checker.check();
 
         // 验证 GDPR 合规检查
         assert!(result.is_compliant, "GDPR 合规检查失败");
@@ -222,8 +222,8 @@ mod stage84_security_tests {
     async fn test_soc2_compliance() {
         use beejs::security::compliance::{Soc2ComplianceChecker, Soc2ComplianceResult};
 
-        let checker = Soc2ComplianceChecker::new();
-        let result = checker.check();
+        let checker: _ = Soc2ComplianceChecker::new();
+        let result: _ = checker.check();
 
         // 验证 SOC 2 合规检查
         assert!(result.is_compliant, "SOC 2 合规检查失败");
@@ -235,8 +235,8 @@ mod stage84_security_tests {
     async fn test_custom_policy() {
         use beejs::security::compliance::CustomPolicyChecker;
 
-        let checker = CustomPolicyChecker::new();
-        let result = checker.check_policy("data_retention").unwrap();
+        let checker: _ = CustomPolicyChecker::new();
+        let result: _ = checker.check_policy("data_retention").unwrap();
 
         // 验证自定义合规策略
         assert!(result, "自定义策略检查失败");
@@ -246,8 +246,8 @@ mod stage84_security_tests {
     async fn test_risk_scoring() {
         use beejs::security::risk_assessment::{RiskAssessor, RiskLevel};
 
-        let assessor = RiskAssessor::new();
-        let score = assessor.assess();
+        let assessor: _ = RiskAssessor::new();
+        let score: _ = assessor.assess();
 
         // 验证风险评估算法
         assert!(score.overall_score >= 0.0 && score.overall_score <= 100.0, "风险分数应在 0-100 之间");
@@ -261,8 +261,8 @@ mod stage84_security_tests {
     async fn test_threat_detection() {
         use beejs::security::incident_response::ThreatDetector;
 
-        let detector = ThreatDetector::new();
-        let result = detector.detect("malware detected");
+        let detector: _ = ThreatDetector::new();
+        let result: _ = detector.detect("malware detected");
 
         // 验证威胁检测引擎
         assert!(result.threat_detected, "威胁检测失败");
@@ -273,8 +273,8 @@ mod stage84_security_tests {
     async fn test_vulnerability_scan() {
         use beejs::security::incident_response::VulnerabilityScanner;
 
-        let scanner = VulnerabilityScanner::new();
-        let result = scanner.scan("target:vulnerable_system");
+        let scanner: _ = VulnerabilityScanner::new();
+        let result: _ = scanner.scan("target:vulnerable_system");
 
         // 验证漏洞扫描功能
         assert!(result.vulnerabilities_found, "未发现漏洞");
@@ -287,7 +287,7 @@ mod stage84_security_tests {
         use std::collections::HashMap;
 
         let mut logger = AuditLogger::new();
-        let entry = AuditLogEntry {
+        let entry: _ = AuditLogEntry {
             id: "log-1".to_string(),
             user_id: "user-1".to_string(),
             action: "login".to_string(),
@@ -308,8 +308,8 @@ mod stage84_security_tests {
         use beejs::security::audit::{AuditLogger, AuditLogEntry};
         use std::collections::HashMap;
 
-        let logger = AuditLogger::new();
-        let result = logger.check_integrity().unwrap();
+        let logger: _ = AuditLogger::new();
+        let result: _ = logger.check_integrity().unwrap();
 
         // 验证不可变日志机制
         assert!(result, "日志完整性检查失败");
@@ -321,7 +321,7 @@ mod stage84_security_tests {
         use std::collections::HashMap;
 
         let mut logger = AuditLogger::new();
-        let entry = AuditLogEntry {
+        let entry: _ = AuditLogEntry {
             id: "log-1".to_string(),
             user_id: "user-1".to_string(),
             action: "login".to_string(),
@@ -335,7 +335,7 @@ mod stage84_security_tests {
         logger.log(entry).unwrap();
 
         // 验证审计日志查询
-        let results = logger.search("login").unwrap();
+        let results: _ = logger.search("login").unwrap();
         assert!(!results.is_empty(), "日志搜索失败");
     }
 
@@ -343,8 +343,8 @@ mod stage84_security_tests {
     async fn test_incident_detection() {
         use beejs::security::incident_response::IncidentDetector;
 
-        let detector = IncidentDetector::new();
-        let incident = detector.detect_incident("detected breach attack");
+        let detector: _ = IncidentDetector::new();
+        let incident: _ = detector.detect_incident("detected breach attack");
 
         // 验证安全事件检测
         assert!(incident.is_some(), "未检测到事件");
@@ -354,8 +354,8 @@ mod stage84_security_tests {
     async fn test_auto_remediation() {
         use beejs::security::incident_response::{AutoRemediator, Incident, IncidentType, IncidentSeverity};
 
-        let remediator = AutoRemediator::new();
-        let incident = Incident {
+        let remediator: _ = AutoRemediator::new();
+        let incident: _ = Incident {
             id: "incident-1".to_string(),
             incident_type: IncidentType::SecurityBreach,
             severity: IncidentSeverity::High,
@@ -365,16 +365,18 @@ mod stage84_security_tests {
         };
 
         // 验证自动响应机制
-        let result = remediator.remediate(&incident).unwrap();
+        let result: _ = remediator.remediate(&incident).unwrap();
         assert!(!result.is_empty(), "自动修复失败");
     }
 
     #[tokio::test]
     async fn test_escalation() {
         use beejs::security::incident_response::{EscalationManager, Incident, IncidentType, IncidentSeverity};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
-        let escalation_manager = EscalationManager::new();
-        let incident = Incident {
+        let escalation_manager: _ = EscalationManager::new();
+        let incident: _ = Incident {
             id: "incident-1".to_string(),
             incident_type: IncidentType::SecurityBreach,
             severity: IncidentSeverity::Critical,
@@ -384,7 +386,7 @@ mod stage84_security_tests {
         };
 
         // 验证事件升级流程
-        let contacts = escalation_manager.escalate(&incident).unwrap();
+        let contacts: _ = escalation_manager.escalate(&incident).unwrap();
         assert!(!contacts.is_empty(), "事件升级失败");
     }
 }

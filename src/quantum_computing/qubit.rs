@@ -40,14 +40,14 @@ impl Qubit {
                 beta: Complex64::new(1.0, 0.0),
             },
             QubitState::Plus => {
-                let s = 1.0 / 2.0_f64.sqrt();
+                let s: _ = 1.0 / 2.0_f64.sqrt();
                 Self {
                     alpha: Complex64::new(s, 0.0),
                     beta: Complex64::new(s, 0.0),
                 }
             }
             QubitState::Minus => {
-                let s = 1.0 / 2.0_f64.sqrt();
+                let s: _ = 1.0 / 2.0_f64.sqrt();
                 Self {
                     alpha: Complex64::new(s, 0.0),
                     beta: Complex64::new(-s, 0.0),
@@ -58,7 +58,7 @@ impl Qubit {
 
     /// 从振幅创建量子比特（自动归一化）
     pub fn from_amplitudes(alpha: Complex64, beta: Complex64) -> Self {
-        let norm = (alpha.norm_sqr() + beta.norm_sqr()).sqrt();
+        let norm: _ = (alpha.norm_sqr() + beta.norm_sqr()).sqrt();
         Self {
             alpha: alpha / norm,
             beta: beta / norm,
@@ -83,7 +83,7 @@ impl Qubit {
 
     /// 执行测量，返回 0 或 1
     pub fn measure(&mut self) -> u8 {
-        let p0 = self.alpha.norm_sqr();
+        let p0: _ = self.alpha.norm_sqr();
         let random: f64 = rand::random();
 
         if random < p0 {
@@ -101,8 +101,8 @@ impl Qubit {
 
     /// 获取 Bloch 球坐标 (θ, φ)
     pub fn bloch_coordinates(&self) -> (f64, f64) {
-        let theta = 2.0 * self.alpha.norm().acos();
-        let phi = (self.beta / self.alpha).arg();
+        let theta: _ = 2.0 * self.alpha.norm().acos();
+        let phi: _ = (self.beta / self.alpha).arg();
         (theta, if phi.is_nan() { 0.0 } else { phi })
     }
 }
@@ -116,10 +116,12 @@ impl Default for Qubit {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_qubit_default_is_zero() {
-        let q = Qubit::default();
+        let q: _ = Qubit::default();
         let (alpha, beta) = q.amplitudes();
         assert!((alpha.re - 1.0).abs() < 1e-10);
         assert!(beta.norm() < 1e-10);

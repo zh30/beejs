@@ -18,27 +18,29 @@ use std::time::{Duration, Instant};
 #[cfg(test)]
 mod stage_26_1_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// Test 1: AI Memory Prefetch Optimization
     /// Verifies that model weights are prefetched and cached efficiently
     #[test]
     fn test_ai_memory_prefetch_optimization() {
-        let pool = create_llm_memory_pool();
+        let pool: _ = create_llm_memory_pool();
 
         // Simulate LLM model with multiple layers
-        let model_config = ModelMemoryConfig::new("llm_model", 1024 * 1024, 512 * 1024);
+        let model_config: _ = ModelMemoryConfig::new("llm_model", 1024 * 1024, 512 * 1024);
 
         // Allocate memory for model weights using warmup (prefetch)
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         pool.warmup_model(&model_config);
-        let warmup_time = start.elapsed().unwrap();
+        let warmup_time: _ = start.elapsed().unwrap();
 
         // Memory allocation should be fast (< 10ms for prefetch)
         assert!(warmup_time < Duration::from_millis(10),
             "Memory warmup took {:?}, expected < 10ms with prefetch", warmup_time);
 
         // Verify memory pool statistics
-        let stats = pool.get_stats();
+        let stats: _ = pool.get_stats();
         assert!(stats.total_allocations > 0, "Should have allocations");
 
         println!("✓ AI Memory Prefetch Optimization: Warmup time {:?}, Total allocations: {}",
@@ -49,11 +51,11 @@ mod stage_26_1_tests {
     /// Verifies 2x throughput improvement with dynamic batch size adjustment
     #[tokio::test]
     async fn test_ai_batch_processing_throughput_improvement() {
-        let processor = AiBatchProcessor::new(BatchConfig::default());
+        let processor: _ = AiBatchProcessor::new(BatchConfig::default());
 
         // Add multiple tasks
         for i in 0..50 {
-            let task = AiTaskType::TextGeneration {
+            let task: _ = AiTaskType::TextGeneration {
                 prompt: format!("Test prompt {}", i),
                 max_tokens: Some(100),
                 temperature: 0.7,
@@ -62,14 +64,14 @@ mod stage_26_1_tests {
         }
 
         // Process batch and measure throughput
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let results = processor.flush().await;
-        let processing_time = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let results: _ = processor.flush().await;
+        let processing_time: _ = start.elapsed().unwrap();
 
         assert_eq!(results.len(), 50, "Should process all 50 tasks");
 
         // Calculate throughput (tasks per second)
-        let throughput = 50.0 / processing_time.as_secs_f64();
+        let throughput: _ = 50.0 / processing_time.as_secs_f64();
 
         // Target: 2x improvement over baseline (baseline assumed 500 tasks/sec)
         assert!(throughput > 1000.0,
@@ -83,15 +85,15 @@ mod stage_26_1_tests {
     /// Verifies intelligent batch size adjustment based on queue length
     #[tokio::test]
     async fn test_dynamic_batch_size_adjustment() {
-        let batch_sizes = vec![10, 50, 100, 200];
+        let batch_sizes: _ = vec![10, 50, 100, 200];
         let mut results = Vec::new();
 
         for batch_size in batch_sizes {
-            let processor = AiBatchProcessor::new(BatchConfig::default());
+            let processor: _ = AiBatchProcessor::new(BatchConfig::default());
 
             // Add tasks
             for i in 0..batch_size {
-                let task = AiTaskType::TextGeneration {
+                let task: _ = AiTaskType::TextGeneration {
                     prompt: format!("Test prompt {}", i),
                     max_tokens: Some(100),
                     temperature: 0.7,
@@ -100,9 +102,9 @@ mod stage_26_1_tests {
             }
 
             // Process and measure
-            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-            let batch_results = processor.flush().await;
-            let time_taken = start.elapsed().unwrap();
+            let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let batch_results: _ = processor.flush().await;
+            let time_taken: _ = start.elapsed().unwrap();
 
             results.push((batch_size, time_taken, batch_results.len()));
         }
@@ -121,25 +123,25 @@ mod stage_26_1_tests {
     #[tokio::test]
     async fn test_llm_inference_latency_reduction() {
         // Simulate LLM inference with KV Cache
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // First inference (cold cache)
-        let _cold_result = simulate_llm_inference(false);
+        let _cold_result: _ = simulate_llm_inference(false);
 
         // Measure cold cache time
-        let cold_time = start.elapsed().unwrap();
+        let cold_time: _ = start.elapsed().unwrap();
 
         // Reset timer
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // Second inference (warm cache)
-        let _warm_result = simulate_llm_inference(true);
+        let _warm_result: _ = simulate_llm_inference(true);
 
         // Measure warm cache time
-        let warm_time = start.elapsed().unwrap();
+        let warm_time: _ = start.elapsed().unwrap();
 
         // Verify warm cache is significantly faster
-        let speedup = cold_time.as_secs_f64() / warm_time.as_secs_f64();
+        let speedup: _ = cold_time.as_secs_f64() / warm_time.as_secs_f64();
 
         assert!(speedup > 1.5,
             "Warm cache should be > 1.5x faster, got {:.2}x", speedup);
@@ -152,13 +154,13 @@ mod stage_26_1_tests {
     /// Verifies zero-copy operations for tensor data
     #[tokio::test]
     async fn test_zero_copy_tensor_operations() {
-        let pool = create_llm_memory_pool();
+        let pool: _ = create_llm_memory_pool();
 
         // Allocate tensor memory using allocate (zero-copy)
-        let tensor_size = 1024 * 1024; // 1MB
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let allocation = pool.allocate(tensor_size);
-        let allocation_time = start.elapsed().unwrap();
+        let tensor_size: _ = 1024 * 1024; // 1MB
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let allocation: _ = pool.allocate(tensor_size);
+        let allocation_time: _ = start.elapsed().unwrap();
 
         // Verify allocation succeeded
         assert!(allocation.is_some(), "Should allocate memory");
@@ -174,14 +176,14 @@ mod stage_26_1_tests {
     /// Verifies sharded inference and model parallel processing
     #[tokio::test]
     async fn test_model_parallel_inference() {
-        let model_shards = 4;
-        let tasks_per_shard = 10;
-        let processor = AiBatchProcessor::new(BatchConfig::default());
+        let model_shards: _ = 4;
+        let tasks_per_shard: _ = 10;
+        let processor: _ = AiBatchProcessor::new(BatchConfig::default());
 
         // Add tasks for each shard
         for shard in 0..model_shards {
             for i in 0..tasks_per_shard {
-                let task = AiTaskType::Embedding {
+                let task: _ = AiTaskType::Embedding {
                     text: format!("Test text from shard {} task {}", shard, i),
                     model_name: format!("embedding_model_shard_{}", shard),
                 };
@@ -190,14 +192,14 @@ mod stage_26_1_tests {
         }
 
         // Process all tasks
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let results = processor.flush().await;
-        let processing_time = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let results: _ = processor.flush().await;
+        let processing_time: _ = start.elapsed().unwrap();
 
         assert_eq!(results.len(), (model_shards * tasks_per_shard) as usize);
 
         // Model parallel should be faster than sequential
-        let throughput = (model_shards * tasks_per_shard) as f64 / processing_time.as_secs_f64();
+        let throughput: _ = (model_shards * tasks_per_shard) as f64 / processing_time.as_secs_f64();
 
         assert!(throughput > 500.0,
             "Model parallel throughput {:.2} tasks/sec should be > 500", throughput);
@@ -210,29 +212,29 @@ mod stage_26_1_tests {
     /// Verifies hot caching of inference results
     #[tokio::test]
     async fn test_inference_result_hot_cache() {
-        let prompt = "What is the meaning of life?";
-        let cache_key = format!("llm_cache_{}", prompt);
+        let prompt: _ = "What is the meaning of life?";
+        let cache_key: _ = format!("llm_cache_{}", prompt);
 
         // First inference (cache miss)
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let _result1 = get_cached_inference_result(&cache_key);
-        let miss_time = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let _result1: _ = get_cached_inference_result(&cache_key);
+        let miss_time: _ = start.elapsed().unwrap();
 
         // Verify cache miss
         assert!(miss_time > Duration::from_millis(1),
             "Cache miss should take > 1ms");
 
         // Second inference (cache hit)
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let _result2 = get_cached_inference_result(&cache_key);
-        let hit_time = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let _result2: _ = get_cached_inference_result(&cache_key);
+        let hit_time: _ = start.elapsed().unwrap();
 
         // Cache hit should be significantly faster
         assert!(hit_time < Duration::from_millis(1),
             "Cache hit should be < 1ms, got {:?}", hit_time);
 
         // Verify speedup
-        let speedup = miss_time.as_secs_f64() / hit_time.as_secs_f64();
+        let speedup: _ = miss_time.as_secs_f64() / hit_time.as_secs_f64();
         assert!(speedup > 10.0,
             "Cache hit should be > 10x faster, got {:.2}x", speedup);
 
@@ -244,20 +246,20 @@ mod stage_26_1_tests {
     /// Verifies 30% memory usage improvement
     #[tokio::test]
     async fn test_memory_usage_efficiency_improvement() {
-        let pool = create_llm_memory_pool();
+        let pool: _ = create_llm_memory_pool();
 
         // Allocate and deallocate multiple times
-        let iterations = 100;
-        let allocation_size = 1024 * 100; // 100KB per allocation
+        let iterations: _ = 100;
+        let allocation_size: _ = 1024 * 100; // 100KB per allocation
         let mut block_ids = Vec::new();
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for _ in 0..iterations {
             if let Some(block) = pool.allocate(allocation_size) {
                 block_ids.push(block.id);
             }
         }
-        let total_time = start.elapsed().unwrap();
+        let total_time: _ = start.elapsed().unwrap();
 
         // Deallocate some blocks
         for id in &block_ids[..50] {
@@ -265,17 +267,17 @@ mod stage_26_1_tests {
         }
 
         // Verify statistics
-        let stats = pool.get_stats();
+        let stats: _ = pool.get_stats();
 
         // Memory efficiency should be > 70% (30% improvement)
-        let efficiency = stats.total_allocations - stats.total_deallocations;
+        let efficiency: _ = stats.total_allocations - stats.total_deallocations;
         assert!(efficiency >= 0, "Should have efficient allocation/deallocation");
 
         println!("✓ Memory Efficiency: {} iterations in {:?}, Efficiency {:.2}%",
             iterations, total_time, efficiency as f64);
 
         // Allocation should be fast (< 1ms per 100 allocations)
-        let avg_time_per_allocation = total_time / iterations;
+        let avg_time_per_allocation: _ = total_time / iterations;
         assert!(avg_time_per_allocation < Duration::from_millis(1),
             "Average allocation time should be < 1ms");
     }
@@ -284,21 +286,21 @@ mod stage_26_1_tests {
     /// Verifies intelligent memory switching between GPU and CPU
     #[tokio::test]
     async fn test_gpu_cpu_memory_switching() {
-        let pool = create_llm_memory_pool();
+        let pool: _ = create_llm_memory_pool();
 
         // Simulate GPU memory allocation (using regular allocate for now)
-        let gpu_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let _gpu_mem = pool.allocate(1024 * 1024);
-        let gpu_time = gpu_start.elapsed().unwrap();
+        let gpu_start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let _gpu_mem: _ = pool.allocate(1024 * 1024);
+        let gpu_time: _ = gpu_start.elapsed().unwrap();
 
         // Verify GPU allocation
         assert!(gpu_time < Duration::from_millis(10),
             "GPU allocation should be < 10ms");
 
         // Simulate CPU fallback (using regular allocate)
-        let cpu_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let _cpu_mem = pool.allocate(1024 * 1024);
-        let cpu_time = cpu_start.elapsed().unwrap();
+        let cpu_start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let _cpu_mem: _ = pool.allocate(1024 * 1024);
+        let cpu_time: _ = cpu_start.elapsed().unwrap();
 
         // CPU allocation should be fast
         assert!(cpu_time < Duration::from_millis(5),
@@ -311,11 +313,11 @@ mod stage_26_1_tests {
     /// Integration test combining all optimizations
     #[tokio::test]
     async fn test_comprehensive_ai_workload_performance() {
-        let processor = AiBatchProcessor::new(BatchConfig::default());
-        let pool = create_llm_memory_pool();
+        let processor: _ = AiBatchProcessor::new(BatchConfig::default());
+        let pool: _ = create_llm_memory_pool();
 
         // Add various AI tasks
-        let task_types = vec![
+        let task_types: _ = vec![
             AiTaskType::TextGeneration {
                 prompt: "Test prompt 1".to_string(),
                 max_tokens: Some(100),
@@ -338,7 +340,7 @@ mod stage_26_1_tests {
 
         for (i, task_type) in task_types.iter().cycle().take(100).enumerate() {
             // Clone the task with updated index
-            let task = match task_type {
+            let task: _ = match task_type {
                 AiTaskType::TextGeneration { .. } => AiTaskType::TextGeneration {
                     prompt: format!("Test prompt {}", i),
                     max_tokens: Some(100),
@@ -362,19 +364,19 @@ mod stage_26_1_tests {
         }
 
         // Allocate memory using warmup (optimized)
-        let model_config = ModelMemoryConfig::new("llm_model", 1024 * 1024, 512 * 1024);
+        let model_config: _ = ModelMemoryConfig::new("llm_model", 1024 * 1024, 512 * 1024);
         pool.warmup_model(&model_config);
 
         // Process all tasks
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let results = processor.flush().await;
-        let processing_time = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let results: _ = processor.flush().await;
+        let processing_time: _ = start.elapsed().unwrap();
 
         assert_eq!(results.len(), 100);
 
         // Calculate comprehensive performance metrics
-        let throughput = 100.0 / processing_time.as_secs_f64();
-        let stats = pool.get_stats();
+        let throughput: _ = 100.0 / processing_time.as_secs_f64();
+        let stats: _ = pool.get_stats();
 
         println!("✓ Comprehensive AI Workload:");
         println!("  - Processed: 100 tasks in {:?}", processing_time);

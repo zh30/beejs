@@ -18,10 +18,12 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::time::Duration;
 use tokio::time::{sleep, Instant};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 #[tokio::test]
 async fn test_full_observability_pipeline() {
-    let config = ObservabilityConfig {
+    let config: _ = ObservabilityConfig {
         enable_prometheus: true,
         prometheus_addr: "127.0.0.1:0".parse().unwrap(),
         enable_structured_logging: true,
@@ -30,11 +32,11 @@ async fn test_full_observability_pipeline() {
         metrics_update_interval: Duration::from_millis(100),
     };
 
-    let system = ObservableSystem::new(config).await.unwrap();
+    let system: _ = ObservableSystem::new(config).await.unwrap();
 
     // Simulate a script execution with full observability
-    let script_name = "test_script.js";
-    let execution_duration = Duration::from_millis(50);
+    let script_name: _ = "test_script.js";
+    let execution_duration: _ = Duration::from_millis(50);
 
     // Record execution with metrics
     system.record_script_execution(script_name, execution_duration, true).await;
@@ -42,7 +44,7 @@ async fn test_full_observability_pipeline() {
     system.record_network_io("fetch", 2048, Duration::from_millis(30)).await;
 
     // Get metrics
-    let metrics = system.get_metrics().await;
+    let metrics: _ = system.get_metrics().await;
 
     // Verify metrics were recorded
     assert!(metrics.runtime.is_some());
@@ -66,10 +68,10 @@ async fn test_prometheus_with_performance_analyzer() {
         });
     }
 
-    let report = analyzer.generate_report();
+    let report: _ = analyzer.generate_report();
 
     // Add metrics to exporter
-    let prometheus_counter = prometheus::Counter::new(
+    let prometheus_counter: _ = prometheus::Counter::new(
         "beejs_script_executions_total",
         "Total number of script executions"
     ).unwrap();
@@ -78,23 +80,23 @@ async fn test_prometheus_with_performance_analyzer() {
     exporter.registry().register(Box::new(prometheus_counter)).unwrap();
 
     // Gather metrics
-    let metrics_text = exporter.gather_metrics().unwrap();
+    let metrics_text: _ = exporter.gather_metrics().unwrap();
     assert!(metrics_text.contains("beejs_script_executions_total"));
 }
 
 #[tokio::test]
 async fn test_structured_logging_with_tracing() {
-    let logger = StructuredLogger::new(tracing::Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(tracing::Level::INFO, "beejs-test".to_string());
     let tracer_addr: SocketAddr = "127.0.0.1:6831".parse().unwrap();
-    let tracer = JaegerTracer::new(tracer_addr).unwrap();
+    let tracer: _ = JaegerTracer::new(tracer_addr).unwrap();
 
     // Set correlation ID for tracing
     logger.set_correlation_id("trace-123".to_string()).await;
 
     // Create span with same correlation ID
-    let span = tracer.create_span("test_operation");
+    let span: _ = tracer.create_span("test_operation");
 
-    let context = HashMap::from([
+    let context: _ = HashMap::from([
         ("trace_id".to_string(), json!("trace-123")),
         ("span_operation".to_string(), json!("test_operation")),
         ("status".to_string(), json!("success")),
@@ -105,20 +107,20 @@ async fn test_structured_logging_with_tracing() {
     span.success();
 
     // Verify correlation ID persists
-    let final_context = logger.get_context().await;
+    let final_context: _ = logger.get_context().await;
     assert!(final_context.contains_key("correlation_id"));
 }
 
 #[tokio::test]
 async fn test_performance_analysis_with_tracing() {
     let tracer_addr: SocketAddr = "127.0.0.1:6831".parse().unwrap();
-    let tracer = JaegerTracer::new(tracer_addr).unwrap();
+    let tracer: _ = JaegerTracer::new(tracer_addr).unwrap();
     let mut analyzer = PerformanceAnalyzer::new();
 
     // Measure performance with tracing
-    let span = tracer.create_span("performance_test");
+    let span: _ = tracer.create_span("performance_test");
 
-    let result = analyzer.measure_execution("test_code", || {
+    let result: _ = analyzer.measure_execution("test_code", || {
         std::thread::sleep(Duration::from_millis(20));
         42
     });
@@ -133,9 +135,9 @@ async fn test_performance_analysis_with_tracing() {
 
 #[tokio::test]
 async fn test_observability_performance_overhead() {
-    let start = Instant::now();
+    let start: _ = Instant::now();
 
-    let config = ObservabilityConfig {
+    let config: _ = ObservabilityConfig {
         enable_prometheus: true,
         prometheus_addr: "127.0.0.1:0".parse().unwrap(),
         enable_structured_logging: true,
@@ -144,7 +146,7 @@ async fn test_observability_performance_overhead() {
         metrics_update_interval: Duration::from_millis(10),
     };
 
-    let system = ObservableSystem::new(config).await.unwrap();
+    let system: _ = ObservableSystem::new(config).await.unwrap();
 
     // Perform many operations
     for i in 0..100 {
@@ -159,7 +161,7 @@ async fn test_observability_performance_overhead() {
         }
     }
 
-    let overhead = start.elapsed();
+    let overhead: _ = start.elapsed();
 
     // Overhead should be reasonable (< 5 seconds for 100 operations)
     assert!(overhead < Duration::from_secs(5),
@@ -170,7 +172,7 @@ async fn test_observability_performance_overhead() {
 
 #[tokio::test]
 async fn test_end_to_end_monitoring() {
-    let config = ObservabilityConfig {
+    let config: _ = ObservabilityConfig {
         enable_prometheus: true,
         prometheus_addr: "127.0.0.1:0".parse().unwrap(),
         enable_structured_logging: true,
@@ -179,33 +181,33 @@ async fn test_end_to_end_monitoring() {
         metrics_update_interval: Duration::from_millis(50),
     };
 
-    let system = ObservableSystem::new(config).await.unwrap();
+    let system: _ = ObservableSystem::new(config).await.unwrap();
     let tracer_addr: SocketAddr = "127.0.0.1:6831".parse().unwrap();
-    let tracer = JaegerTracer::new(tracer_addr).unwrap();
+    let tracer: _ = JaegerTracer::new(tracer_addr).unwrap();
     let mut analyzer = PerformanceAnalyzer::new();
 
     // Simulate a web request handling
-    let root_span = tracer.create_span("handle_request");
+    let root_span: _ = tracer.create_span("handle_request");
 
     // 1. Parse request
-    let parse_span = tracer.create_child_span("parse_request", &root_span);
-    let parse_result = analyzer.measure_execution("parse_code", || {
+    let parse_span: _ = tracer.create_child_span("parse_request", &root_span);
+    let parse_result: _ = analyzer.measure_execution("parse_code", || {
         sleep(Duration::from_millis(5));
         "parsed"
     });
     parse_span.set_attribute("result", parse_result).success();
 
     // 2. Process request
-    let process_span = tracer.create_child_span("process_request", &root_span);
-    let process_result = analyzer.measure_execution("process_code", || {
+    let process_span: _ = tracer.create_child_span("process_request", &root_span);
+    let process_result: _ = analyzer.measure_execution("process_code", || {
         sleep(Duration::from_millis(10));
         "processed"
     });
     process_span.set_attribute("result", process_result).success();
 
     // 3. Generate response
-    let response_span = tracer.create_child_span("generate_response", &root_span);
-    let response_result = analyzer.measure_execution("response_code", || {
+    let response_span: _ = tracer.create_child_span("generate_response", &root_span);
+    let response_result: _ = analyzer.measure_execution("response_code", || {
         sleep(Duration::from_millis(5));
         "response"
     });
@@ -219,7 +221,7 @@ async fn test_end_to_end_monitoring() {
 
     // Verify everything was recorded
     assert_eq!(analyzer.metrics_count(), 3);
-    let metrics = system.get_metrics().await;
+    let metrics: _ = system.get_metrics().await;
     assert!(metrics.business.is_some());
 
     system.shutdown().await.unwrap();
@@ -227,7 +229,7 @@ async fn test_end_to_end_monitoring() {
 
 #[tokio::test]
 async fn test_error_scenario_monitoring() {
-    let config = ObservabilityConfig {
+    let config: _ = ObservabilityConfig {
         enable_prometheus: true,
         prometheus_addr: "127.0.0.1:0".parse().unwrap(),
         enable_structured_logging: true,
@@ -236,7 +238,7 @@ async fn test_error_scenario_monitoring() {
         metrics_update_interval: Duration::from_millis(100),
     };
 
-    let system = ObservableSystem::new(config).await.unwrap();
+    let system: _ = ObservableSystem::new(config).await.unwrap();
 
     // Record successful execution
     system.record_script_execution("success.js", Duration::from_millis(10), true).await;
@@ -248,7 +250,7 @@ async fn test_error_scenario_monitoring() {
     system.record_script_execution("success2.js", Duration::from_millis(5), true).await;
 
     // Get metrics
-    let _metrics = system.get_metrics().await;
+    let _metrics: _ = system.get_metrics().await;
 
     // In a real scenario, we would check error rates, etc.
     // For now, just verify the system works
@@ -259,7 +261,7 @@ async fn test_error_scenario_monitoring() {
 
 #[tokio::test]
 async fn test_high_load_observability() {
-    let config = ObservabilityConfig {
+    let config: _ = ObservabilityConfig {
         enable_prometheus: true,
         prometheus_addr: "127.0.0.1:0".parse().unwrap(),
         enable_structured_logging: true,
@@ -268,13 +270,13 @@ async fn test_high_load_observability() {
         metrics_update_interval: Duration::from_millis(200), // Slower updates
     };
 
-    let system = ObservableSystem::new(config).await.unwrap();
+    let system: _ = ObservableSystem::new(config).await.unwrap();
 
     // Simulate high load
     let mut handles = vec![];
     for batch in 0..5 {
-        let system_clone = &system;
-        let handle = tokio::spawn(async move {
+        let system_clone: _ = &system;
+        let handle: _ = tokio::spawn(async move {
             for i in 0..20 {
                 system_clone.record_script_execution(
                     &format!("batch_{}_script_{}.js", batch, i),
@@ -300,7 +302,7 @@ async fn test_high_load_observability() {
 
 #[tokio::test]
 async fn test_concurrent_observability_operations() {
-    let config = ObservabilityConfig {
+    let config: _ = ObservabilityConfig {
         enable_prometheus: true,
         prometheus_addr: "127.0.0.1:0".parse().unwrap(),
         enable_structured_logging: true,
@@ -309,14 +311,14 @@ async fn test_concurrent_observability_operations() {
         metrics_update_interval: Duration::from_millis(50),
     };
 
-    let system = Arc::new(ObservableSystem::new(config).await.unwrap());
+    let system: _ = Arc::new(std::sync::Mutex::new(ObservableSystem::new(config)).await.unwrap());
 
     let mut handles = vec![];
 
     // Mix of different operations
     for i in 0..20 {
-        let system_clone = Arc::clone(&system);
-        let handle = tokio::spawn(async move {
+        let system_clone: _ = Arc::clone(system);
+        let handle: _ = tokio::spawn(async move {
             match i % 4 {
                 0 => {
                     system_clone.record_script_execution(
@@ -336,7 +338,7 @@ async fn test_concurrent_observability_operations() {
                     ).await;
                 }
                 _ => {
-                    let _metrics = system_clone.get_metrics().await;
+                    let _metrics: _ = system_clone.get_metrics().await;
                 }
             }
         });
@@ -348,14 +350,14 @@ async fn test_concurrent_observability_operations() {
     }
 
     // Final verification
-    let _final_metrics = system.get_metrics().await;
+    let _final_metrics: _ = system.get_metrics().await;
     system.shutdown().await.unwrap();
     assert!(true);
 }
 
 #[tokio::test]
 async fn test_observability_resource_cleanup() {
-    let config = ObservabilityConfig {
+    let config: _ = ObservabilityConfig {
         enable_prometheus: true,
         prometheus_addr: "127.0.0.1:0".parse().unwrap(),
         enable_structured_logging: true,
@@ -364,16 +366,16 @@ async fn test_observability_resource_cleanup() {
         metrics_update_interval: Duration::from_secs(1),
     };
 
-    let system = ObservableSystem::new(config).await.unwrap();
+    let system: _ = ObservableSystem::new(config).await.unwrap();
 
     // Use system
     system.record_script_execution("test.js", Duration::from_millis(10), true).await;
     system.record_memory_usage(1024 * 1024).await;
 
     // Get references before shutdown
-    let _prometheus = system.prometheus_exporter();
-    let _logger = system.logger();
-    let _metrics = system.custom_metrics();
+    let _prometheus: _ = system.prometheus_exporter();
+    let _logger: _ = system.logger();
+    let _metrics: _ = system.custom_metrics();
 
     // Shutdown should clean up all resources
     system.shutdown().await.unwrap();
@@ -385,10 +387,10 @@ async fn test_observability_resource_cleanup() {
 async fn test_performance_bottleneck_detection() {
     let mut analyzer = PerformanceAnalyzer::new();
     let tracer_addr: SocketAddr = "127.0.0.1:6831".parse().unwrap();
-    let tracer = JaegerTracer::new(tracer_addr).unwrap();
+    let tracer: _ = JaegerTracer::new(tracer_addr).unwrap();
 
     // Simulate slow operations
-    let slow_span = tracer.create_span("slow_operation");
+    let slow_span: _ = tracer.create_span("slow_operation");
     analyzer.measure_execution("slow_code", || {
         std::thread::sleep(Duration::from_millis(100));
     });
@@ -398,7 +400,7 @@ async fn test_performance_bottleneck_detection() {
 
     // Simulate fast operations
     for _ in 0..10 {
-        let fast_span = tracer.create_span("fast_operation");
+        let fast_span: _ = tracer.create_span("fast_operation");
         analyzer.measure_execution("fast_code", || {
             std::thread::sleep(Duration::from_millis(1));
         });
@@ -406,7 +408,7 @@ async fn test_performance_bottleneck_detection() {
             .success();
     }
 
-    let report = analyzer.generate_report();
+    let report: _ = analyzer.generate_report();
 
     // Should detect performance difference
     assert!(report.max_time_ms > report.average_time_ms);
@@ -416,7 +418,7 @@ async fn test_performance_bottleneck_detection() {
 #[tokio::test]
 async fn test_observability_in_different_environments() {
     // Test with minimal observability
-    let minimal_config = ObservabilityConfig {
+    let minimal_config: _ = ObservabilityConfig {
         enable_prometheus: false,
         prometheus_addr: "127.0.0.1:0".parse().unwrap(),
         enable_structured_logging: false,
@@ -425,12 +427,12 @@ async fn test_observability_in_different_environments() {
         metrics_update_interval: Duration::from_secs(10),
     };
 
-    let minimal_system = ObservableSystem::new(minimal_config).await.unwrap();
+    let minimal_system: _ = ObservableSystem::new(minimal_config).await.unwrap();
     minimal_system.record_script_execution("test.js", Duration::from_millis(1), true).await;
     minimal_system.shutdown().await.unwrap();
 
     // Test with full observability
-    let full_config = ObservabilityConfig {
+    let full_config: _ = ObservabilityConfig {
         enable_prometheus: true,
         prometheus_addr: "127.0.0.1:0".parse().unwrap(),
         enable_structured_logging: true,
@@ -439,7 +441,7 @@ async fn test_observability_in_different_environments() {
         metrics_update_interval: Duration::from_millis(10),
     };
 
-    let full_system = ObservableSystem::new(full_config).await.unwrap();
+    let full_system: _ = ObservableSystem::new(full_config).await.unwrap();
     full_system.record_script_execution("test.js", Duration::from_millis(1), true).await;
     full_system.shutdown().await.unwrap();
 

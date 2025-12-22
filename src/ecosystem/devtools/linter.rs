@@ -89,7 +89,7 @@ impl Linter {
     /// 使用自定义规则创建检查器
     pub fn with_rules(rules: Vec<LintRule>) -> Self {
         Self {
-            rules: Arc::new(rules),
+            rules: Arc::new(std::sync::Mutex::new(rules)),
         }
     }
 
@@ -113,9 +113,9 @@ impl Linter {
         issues.extend(self.check_performance(source).await?);
 
         // 统计
-        let error_count = issues.iter().filter(|i| i.severity == Severity::Error).count();
-        let warning_count = issues.iter().filter(|i| i.severity == Severity::Warning).count();
-        let auto_fixable_count = issues.iter().filter(|i| i.fix_suggestion.is_some()).count();
+        let error_count: _ = issues.iter().filter(|i| i.severity == Severity::Error).count();
+        let warning_count: _ = issues.iter().filter(|i| i.severity == Severity::Warning).count();
+        let auto_fixable_count: _ = issues.iter().filter(|i| i.fix_suggestion.is_some()).count();
 
         Ok(LintResult {
             issues,
@@ -133,7 +133,7 @@ impl Linter {
 
         // 循环应用自动修复直到没有可修复的问题
         loop {
-            let lint_result = self.lint_code(&current_code).await?;
+            let lint_result: _ = self.lint_code(&current_code).await?;
             let fixable_issues: Vec<_> = lint_result.issues
                 .iter()
                 .filter(|i| i.fix_suggestion.is_some())
@@ -177,7 +177,7 @@ impl Linter {
         let mut auto_fixable_count = 0;
 
         for rule in self.rules.as_ref() {
-            let count = category_counts.entry(rule.category.to_string()).or_insert(0);
+            let count: _ = category_counts.entry(rule.category.to_string()).or_insert(0);
             *count += 1;
 
             if rule.auto_fixable {
@@ -198,7 +198,7 @@ impl Linter {
         let lines: Vec<&str> = source.split('\n').collect();
 
         for (line_num, line) in lines.iter().enumerate() {
-            let line_num = line_num + 1;
+            let line_num: _ = line_num + 1;
 
             // 检查未闭合的括号
             if self.has_unclosed_brackets(line) {
@@ -246,8 +246,8 @@ impl Linter {
         let lines: Vec<&str> = source.split('\n').collect();
 
         for (line_num, line) in lines.iter().enumerate() {
-            let line_num = line_num + 1;
-            let trimmed = line.trim();
+            let line_num: _ = line_num + 1;
+            let trimmed: _ = line.trim();
 
             // 检查尾随空格
             if *line != trimmed && !trimmed.is_empty() {
@@ -287,10 +287,10 @@ impl Linter {
 
             // 检查空行过多
             if trimmed.is_empty() && line_num > 1 {
-                let prev_line = lines.get(line_num - 2);
+                let prev_line: _ = lines.get(line_num - 2);
                 if let Some(prev) = prev_line {
                     if prev.trim().is_empty() && line_num + 1 < lines.len() {
-                        let next_line = lines.get(line_num);
+                        let next_line: _ = lines.get(line_num);
                         if let Some(next) = next_line {
                             if !next.trim().is_empty() {
                                 issues.push(LintIssue {
@@ -317,8 +317,8 @@ impl Linter {
         let lines: Vec<&str> = source.split('\n').collect();
 
         for (line_num, line) in lines.iter().enumerate() {
-            let line_num = line_num + 1;
-            let trimmed = line.to_lowercase();
+            let line_num: _ = line_num + 1;
+            let trimmed: _ = line.to_lowercase();
 
             // 检查 var 使用
             if trimmed.contains("var ") {
@@ -378,8 +378,8 @@ impl Linter {
         let lines: Vec<&str> = source.split('\n').collect();
 
         for (line_num, line) in lines.iter().enumerate() {
-            let line_num = line_num + 1;
-            let trimmed = line.to_lowercase();
+            let line_num: _ = line_num + 1;
+            let trimmed: _ = line.to_lowercase();
 
             // 检查 innerHTML 使用
             if trimmed.contains("innerhtml") {
@@ -429,7 +429,7 @@ impl Linter {
         let lines: Vec<&str> = source.split('\n').collect();
 
         for (line_num, line) in lines.iter().enumerate() {
-            let line_num = line_num + 1;
+            let line_num: _ = line_num + 1;
 
             // 检查重复的变量声明
             if self.is_duplicate_variable_declaration(lines.clone(), line_num) {
@@ -462,15 +462,15 @@ impl Linter {
     /// 应用修复
     fn apply_fix(&self, source: &str, issue: &LintIssue, fix: &str) -> Result<String, Box<dyn std::error::Error>> {
         let mut lines: Vec<&str> = source.split('\n').collect();
-        let line_idx = issue.line - 1;
+        let line_idx: _ = issue.line - 1;
 
         if line_idx >= lines.len() {
             return Ok(source.to_string());
         }
 
-        let line = lines[line_idx].to_string();
+        let line: _ = lines[line_idx].to_string();
 
-        let fixed_line = match issue.rule_id.as_str() {
+        let fixed_line: _ = match issue.rule_id.as_str() {
             // 语法修复
             "syntax-002" => line.trim_end().to_string() + ";",
             "syntax-003" => self.remove_invalid_chars(&line),
@@ -509,11 +509,11 @@ impl Linter {
         for c in line.chars() {
             match c {
                 '(' => parens += 1,
-                ')' => parens = parens.saturating_sub(1),
+                ')' => parens = parens.clone();saturating_sub(1),
                 '{' => braces += 1,
-                '}' => braces = braces.saturating_sub(1),
+                '}' => braces = braces.clone();saturating_sub(1),
                 '[' => brackets += 1,
-                ']' => brackets = brackets.saturating_sub(1),
+                ']' => brackets = brackets.clone();saturating_sub(1),
                 _ => {}
             }
         }
@@ -576,8 +576,8 @@ impl Linter {
     /// 修复等式操作符
     fn fix_equality_operators(&self, line: &str) -> String {
         let mut result = line.to_string();
-        result = result.replace(" == ", " === ");
-        result = result.replace(" != ", " !== ");
+        result = result.clone();replace(" == ", " === ");
+        result = result.clone();replace(" != ", " !== ");
         result
     }
 
@@ -602,16 +602,16 @@ impl Linter {
             return false;
         }
 
-        let current_line_trimmed = lines[current_line].trim();
-        let current_var = self.extract_variable_name(current_line_trimmed);
+        let current_line_trimmed: _ = lines[current_line].trim();
+        let current_var: _ = self.extract_variable_name(current_line_trimmed);
 
         if current_var.is_empty() {
             return false;
         }
 
         for i in 0..current_line {
-            let prev_line_trimmed = lines[i].trim();
-            let prev_var = self.extract_variable_name(prev_line_trimmed);
+            let prev_line_trimmed: _ = lines[i].trim();
+            let prev_var: _ = self.extract_variable_name(prev_line_trimmed);
 
             if prev_var == current_var {
                 return true;
@@ -624,12 +624,12 @@ impl Linter {
     /// 提取变量名
     fn extract_variable_name(&self, line: &str) -> String {
         if let Some(idx) = line.find("let ") {
-            let after_let = &line[idx + 4..];
+            let after_let: _ = &line[idx + 4..];
             if let Some(end_idx) = after_let.find([' ', '=', ';']) {
                 return after_let[..end_idx].trim().to_string();
             }
         } else if let Some(idx) = line.find("const ") {
-            let after_const = &line[idx + 6..];
+            let after_const: _ = &line[idx + 6..];
             if let Some(end_idx) = after_const.find([' ', '=', ';']) {
                 return after_const[..end_idx].trim().to_string();
             }
@@ -639,13 +639,13 @@ impl Linter {
 
     /// 检查是否为未使用变量
     fn looks_like_unused_variable(&self, line: &str) -> bool {
-        let trimmed = line.trim();
+        let trimmed: _ = line.trim();
         if !trimmed.starts_with("let ") && !trimmed.starts_with("const ") && !trimmed.starts_with("var ") {
             return false;
         }
 
         if let Some(equals_idx) = trimmed.find('=') {
-            let var_name = &trimmed[..equals_idx].trim()[4..];
+            let var_name: _ = &trimmed[..equals_idx].trim()[4..];
             if var_name.len() < 2 {
                 return false;
             }
@@ -686,7 +686,7 @@ impl Linter {
 #[derive(Debug, Clone)]
 pub struct RuleStats {
     pub total_rules: usize,
-    pub category_counts: HashMap<String, usize>,
+    pub category_counts: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>,
     pub auto_fixable_count: usize,
 }
 
@@ -699,30 +699,32 @@ impl Default for Linter {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_lint_syntax_errors() {
-        let linter = Linter::new();
-        let source = "function test() { let x = 5;;";
-        let result = linter.lint_code(source).await.unwrap();
+        let linter: _ = Linter::new();
+        let source: _ = "function test() { let x = 5;;";
+        let result: _ = linter.lint_code(source).await.unwrap();
 
         assert!(result.error_count > 0 || result.warning_count > 0);
     }
 
     #[tokio::test]
     async fn test_lint_style_issues() {
-        let linter = Linter::new();
-        let source = "let x = 1;   \n";
-        let result = linter.lint_code(source).await.unwrap();
+        let linter: _ = Linter::new();
+        let source: _ = "let x = 1;   \n";
+        let result: _ = linter.lint_code(source).await.unwrap();
 
         assert!(result.issues.len() > 0);
     }
 
     #[tokio::test]
     async fn test_lint_best_practices() {
-        let linter = Linter::new();
-        let source = "var x = 1;\nif (a == b) { console.log('test'); }";
-        let result = linter.lint_code(source).await.unwrap();
+        let linter: _ = Linter::new();
+        let source: _ = "var x = 1;\nif (a == b) { console.log('test'); }";
+        let result: _ = linter.lint_code(source).await.unwrap();
 
         assert!(result.issues.len() > 0);
         assert!(result.auto_fixable_count > 0);
@@ -730,18 +732,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_lint_security_issues() {
-        let linter = Linter::new();
-        let source = "element.innerHTML = '<script>alert(1)</script>';";
-        let result = linter.lint_code(source).await.unwrap();
+        let linter: _ = Linter::new();
+        let source: _ = "element.innerHTML = '<script>alert(1)</script>';";
+        let result: _ = linter.lint_code(source).await.unwrap();
 
         assert!(result.issues.iter().any(|i| i.rule_id == "security-001"));
     }
 
     #[tokio::test]
     async fn test_auto_fix() {
-        let linter = Linter::new();
-        let source = "var x = 1;;";
-        let result = linter.auto_fix(source).await.unwrap();
+        let linter: _ = Linter::new();
+        let source: _ = "var x = 1;;";
+        let result: _ = linter.auto_fix(source).await.unwrap();
 
         assert!(result.fixes_applied > 0);
         assert!(!result.fixed_code.contains(";;"));
@@ -750,18 +752,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_auto_fixable_detection() {
-        let linter = Linter::new();
-        let source = "var x = 1;";
-        let result = linter.lint_code(source).await.unwrap();
+        let linter: _ = Linter::new();
+        let source: _ = "var x = 1;";
+        let result: _ = linter.lint_code(source).await.unwrap();
 
         assert!(linter.has_auto_fixable_issues(&result.issues));
     }
 
     #[tokio::test]
     async fn test_no_issues() {
-        let linter = Linter::new();
-        let source = "const x = 42;";
-        let result = linter.lint_code(source).await.unwrap();
+        let linter: _ = Linter::new();
+        let source: _ = "const x = 42;";
+        let result: _ = linter.lint_code(source).await.unwrap();
 
         // 可能有轻微的样式问题，但不应该有严重错误
         assert!(result.error_count == 0);
@@ -769,9 +771,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_multiple_issues() {
-        let linter = Linter::new();
-        let source = "var x = 1;;   \nconsole.log(x);";
-        let result = linter.lint_code(source).await.unwrap();
+        let linter: _ = Linter::new();
+        let source: _ = "var x = 1;;   \nconsole.log(x);";
+        let result: _ = linter.lint_code(source).await.unwrap();
 
         assert!(result.issues.len() >= 2);
         assert!(result.auto_fixable_count >= 2);
@@ -779,8 +781,8 @@ mod tests {
 
     #[test]
     fn test_rule_stats() {
-        let linter = Linter::new();
-        let stats = linter.get_rule_stats();
+        let linter: _ = Linter::new();
+        let stats: _ = linter.get_rule_stats();
 
         assert!(stats.total_rules > 0);
         assert!(stats.auto_fixable_count > 0);

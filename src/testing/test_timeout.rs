@@ -52,11 +52,11 @@ impl TestTimeout {
         F: Send + 'static,
         T: Send + 'static,
     {
-        let timeout = self.validate_timeout(timeout)?;
+        let timeout: _ = self.validate_timeout(timeout)?;
         let (sender, receiver) = unbounded::<Result<T, TimeoutError>>();
 
         // Spawn a thread to execute the function
-        let handle = std::thread::spawn(move || {
+        let handle: _ = std::thread::spawn(move || {
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(func));
             match result {
                 Ok(value) => sender.send(Ok(value)).unwrap(),
@@ -70,7 +70,7 @@ impl TestTimeout {
         match receiver.recv_timeout(timeout) {
             Ok(result) => {
                 // Ensure thread completes
-                let _ = handle.join();
+                let _: _ = handle.join();
                 result
             }
             Err(_) => {
@@ -91,12 +91,12 @@ impl TestTimeout {
         F: std::panic::UnwindSafe,
         T: Send,
     {
-        let timeout = self.validate_timeout(timeout)?;
-        let start = Instant::now();
+        let timeout: _ = self.validate_timeout(timeout)?;
+        let start: _ = Instant::now();
 
-        let result = std::panic::catch_unwind(func);
+        let result: _ = std::panic::catch_unwind(func);
 
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
 
         if elapsed > timeout {
             Err(TimeoutError::Exceeded(timeout))
@@ -167,13 +167,13 @@ impl TimeoutContext {
         TimeoutContext {
             start_time: Instant::now(),
             timeout,
-            active_tests: Arc::new(Mutex::new(Vec::new())),
+            active_tests: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
         }
     }
 
     /// Register a test start
     pub fn start_test(&self, test_name: &str) -> TestTimeoutGuard {
-        let handle = TestTimeoutHandle {
+        let handle: _ = TestTimeoutHandle {
             test_name: test_name.to_string(),
             start_time: Instant::now(),
             timeout: self.timeout,
@@ -217,24 +217,26 @@ impl Drop for TestTimeoutGuard {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_timeout_creation() {
-        let timeout = TestTimeout::default();
+        let timeout: _ = TestTimeout::default();
         assert!(timeout.config.default_timeout > Duration::from_secs(0));
     }
 
     #[test]
     fn test_run_with_timeout_success() {
-        let timeout = TestTimeout::default();
-        let result = timeout.run_with_timeout(Duration::from_secs(1), || 42);
+        let timeout: _ = TestTimeout::default();
+        let result: _ = timeout.run_with_timeout(Duration::from_secs(1), || 42);
         assert_eq!(result.unwrap(), 42);
     }
 
     #[test]
     fn test_run_with_timeout_failure() {
-        let timeout = TestTimeout::default();
-        let result = timeout.run_with_timeout(Duration::from_millis(10), || {
+        let timeout: _ = TestTimeout::default();
+        let result: _ = timeout.run_with_timeout(Duration::from_millis(10), || {
             std::thread::sleep(Duration::from_millis(100));
             42
         });
@@ -243,18 +245,18 @@ mod tests {
 
     #[test]
     fn test_timeout_context() {
-        let context = TimeoutContext::new(Duration::from_secs(5));
+        let context: _ = TimeoutContext::new(Duration::from_secs(5));
         assert!(!context.check_elapsed());
 
-        let _guard = context.start_test("test1");
+        let _guard: _ = context.start_test("test1");
         assert!(!context.check_elapsed());
     }
 
     #[test]
     fn test_timeout_guard_drop() {
-        let context = TimeoutContext::new(Duration::from_secs(5));
+        let context: _ = TimeoutContext::new(Duration::from_secs(5));
         {
-            let _guard = context.start_test("test1");
+            let _guard: _ = context.start_test("test1");
             assert_eq!(context.active_tests.lock().unwrap().len(), 1);
         }
         assert_eq!(context.active_tests.lock().unwrap().len(), 0);

@@ -13,6 +13,8 @@ pub use load_balancer::{
     LoadBalancer, BalancingStrategy, WorkerLoad, BalancingDecision,
 };
 pub use resource_predictor::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
     ResourcePredictor, ResourceMetrics, PredictionResult,
     UtilizationForecast,
 };

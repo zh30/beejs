@@ -7,6 +7,8 @@
 use rusty_v8 as v8;
 
 use crate::debugger::{SourceLocation, DebugResult, v8_stubs::DebugExecutionState};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Stack frame information
 #[derive(Debug, Clone)]
@@ -194,7 +196,7 @@ impl StackFrameBuilder {
         // This would integrate with V8's DebugExecutionState API
         // For now, return a placeholder implementation
 
-        let frame = StackFrame {
+        let frame: _ = StackFrame {
             index: self.frame_index,
             function_name: "Unknown".to_string(),
             script_id: "Unknown".to_string(),
@@ -223,13 +225,13 @@ impl StackFrameBuilder {
         // Note: V8 DebugExecutionState API has changed in rusty_v8 0.22
         // This is a placeholder implementation
         // TODO: Implement proper frame counting with V8
-        let total_frames = 0;
+        let total_frames: _ = 0;
 
         // Build frames up to max_frames
         for i in 0..std::cmp::min(max_frames, total_frames) {
             // This would use V8's DebugExecutionState API
             // For now, use placeholder
-            let frame = StackFrame {
+            let frame: _ = StackFrame {
                 index: i as u32,
                 function_name: format!("frame_{}", i),
                 script_id: "script_0".to_string(),
@@ -280,7 +282,7 @@ impl StackTraverser {
     /// Move to next frame
     pub fn next_frame<'a>(&mut self, stack: &'a StackTrace) -> Option<&'a StackFrame> {
         if self.current_index < stack.frames.len() {
-            let frame = &stack.frames[self.current_index];
+            let frame: _ = &stack.frames[self.current_index];
             self.current_index += 1;
             Some(frame)
         } else {

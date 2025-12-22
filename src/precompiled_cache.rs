@@ -36,7 +36,7 @@ pub struct PrecompiledModuleCache {
     /// 缓存目录
     cache_dir: PathBuf,
     /// 内存缓存的模块
-    modules: Arc<Mutex<HashMap<String, PrecompiledModuleEntry>>>,
+    modules: Arc<Mutex<HashMap<String, PrecompiledModuleEntry, std::collections::HashMap<String, PrecompiledModuleEntry, String, PrecompiledModuleEntry>>>>,
     /// 统计信息
     stats: Arc<Mutex<PrecompiledCacheStats>>,
     /// V8 字节码缓存
@@ -47,7 +47,7 @@ pub struct PrecompiledModuleCache {
 impl PrecompiledModuleCache {
     /// 创建新的预编译模块缓存
     pub fn new() -> Result<Self> {
-        let cache_dir = std::env::temp_dir().join("beejs_precompiled_cache");
+        let cache_dir: _ = std::env::temp_dir().join("beejs_precompiled_cache");
 
         Self::new_with_path(cache_dir)
     }
@@ -58,13 +58,13 @@ impl PrecompiledModuleCache {
         fs::create_dir_all(&cache_dir)
             .context(format!("Failed to create cache directory: {:?}", cache_dir))?;
 
-        let cache_config = CacheConfig::default();
+        let cache_config: _ = CacheConfig::default();
 
         Ok(Self {
             cache_dir,
-            modules: Arc::new(Mutex::new(HashMap::new())),
-            stats: Arc::new(Mutex::new(PrecompiledCacheStats::default())),
-            bytecode_cache: Arc::new(BytecodeCache::new(cache_config)),
+            modules: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(PrecompiledCacheStats::default()))),
+            bytecode_cache: Arc::new(std::sync::Mutex::new(BytecodeCache::new(cache_config))),
         })
     }
 
@@ -80,11 +80,11 @@ impl PrecompiledModuleCache {
 
     /// 预编译所有内置模块
     pub fn precompile_builtin_modules(&self) -> Result<()> {
-        let builtin_modules = Self::get_builtin_modules_list();
+        let builtin_modules: _ = Self::get_builtin_modules_list();
 
         for module in &builtin_modules {
             if !self.is_module_cached(module) {
-                let source = self.get_builtin_module_source(module)?;
+                let source: _ = self.get_builtin_module_source(module)?;
                 self.cache_module(module, &source)?;
             }
         }
@@ -127,17 +127,17 @@ impl PrecompiledModuleCache {
 
     /// 缓存模块
     pub fn cache_module(&self, module_name: &str, source_code: &str) -> Result<()> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 计算源码哈希
-        let source_hash = self.calculate_source_hash(source_code);
+        let source_hash: _ = self.calculate_source_hash(source_code);
 
         // 编译源码
-        let bytecode = self.compile_to_bytecode(source_code)?;
+        let bytecode: _ = self.compile_to_bytecode(source_code)?;
 
-        let compile_time = start_time.elapsed();
+        let compile_time: _ = start_time.elapsed();
 
-        let entry = PrecompiledModuleEntry {
+        let entry: _ = PrecompiledModuleEntry {
             module_name: module_name.to_string(),
             bytecode,
             source_hash,
@@ -162,13 +162,13 @@ impl PrecompiledModuleCache {
 
     /// 检查模块是否已缓存
     pub fn is_module_cached(&self, module_name: &str) -> bool {
-        let modules = self.modules.lock().unwrap();
+        let modules: _ = self.modules.lock().unwrap();
         modules.contains_key(module_name)
     }
 
     /// 获取预编译字节码
     pub fn get_precompiled_bytecode(&self, module_name: &str) -> Option<Vec<u8>> {
-        let modules = self.modules.lock().unwrap();
+        let modules: _ = self.modules.lock().unwrap();
 
         if let Some(entry) = modules.get(module_name) {
             // 更新命中统计
@@ -196,7 +196,7 @@ impl PrecompiledModuleCache {
         }
 
         // 从磁盘移除
-        let module_file = self.cache_dir.join(format!("{}.bin", module_name));
+        let module_file: _ = self.cache_dir.join(format!("{}.bin", module_name));
         if module_file.exists() {
             fs::remove_file(&module_file)
                 .context(format!("Failed to remove cached module: {}", module_name))?;
@@ -207,8 +207,8 @@ impl PrecompiledModuleCache {
 
     /// 获取缓存统计
     pub fn get_stats(&self) -> PrecompiledCacheStats {
-        let modules = self.modules.lock().unwrap();
-        let stats = self.stats.lock().unwrap();
+        let modules: _ = self.modules.lock().unwrap();
+        let stats: _ = self.stats.lock().unwrap();
 
         PrecompiledCacheStats {
             total_modules: modules.len(),
@@ -238,7 +238,7 @@ impl PrecompiledModuleCache {
     fn compile_to_bytecode(&self, source: &str) -> Result<Vec<u8>> {
         // 这里我们需要集成 V8 编译逻辑
         // 暂时返回模拟字节码
-        let bytecode = source.as_bytes().to_vec();
+        let bytecode: _ = source.as_bytes().to_vec();
         Ok(bytecode)
     }
 
@@ -250,9 +250,9 @@ impl PrecompiledModuleCache {
 
     /// 持久化模块到磁盘
     fn persist_module(&self, module_name: &str, entry: &PrecompiledModuleEntry) -> Result<()> {
-        let module_file = self.cache_dir.join(format!("{}.bin", module_name));
+        let module_file: _ = self.cache_dir.join(format!("{}.bin", module_name));
 
-        let serialized = bincode::serialize(entry)
+        let serialized: _ = bincode::serialize(entry)
             .context(format!("Failed to serialize module: {}", module_name))?;
 
         fs::write(&module_file, serialized)
@@ -267,21 +267,21 @@ impl PrecompiledModuleCache {
             return Ok(());
         }
 
-        let entries = fs::read_dir(&self.cache_dir)
+        let entries: _ = fs::read_dir(&self.cache_dir)
             .context(format!("Failed to read cache directory: {:?}", self.cache_dir))?;
 
         for entry in entries {
-            let entry = entry?;
-            let path = entry.path();
+            let entry: _ = entry?;
+            let path: _ = entry.path();
 
             if path.extension().map_or(false, |ext| ext == "bin") {
-                let serialized = fs::read(&path)
+                let serialized: _ = fs::read(&path)
                     .context(format!("Failed to read cached file: {:?}", path))?;
 
                 let module_entry: PrecompiledModuleEntry = bincode::deserialize(&serialized)
                     .context(format!("Failed to deserialize module: {:?}", path))?;
 
-                let module_name = module_entry.module_name.clone();
+                let module_name: _ = module_entry.module_name.clone();
                 let mut modules = self.modules.lock().unwrap();
                 modules.insert(module_name, module_entry);
             }
@@ -475,16 +475,18 @@ impl PrecompiledModuleCache {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_cache_creation() {
-        let cache = PrecompiledModuleCache::new();
+        let cache: _ = PrecompiledModuleCache::new();
         assert!(cache.is_ok());
     }
 
     #[test]
     fn test_builtin_modules_list() {
-        let modules = PrecompiledModuleCache::get_builtin_modules_list();
+        let modules: _ = PrecompiledModuleCache::get_builtin_modules_list();
         assert!(modules.len() > 0);
         assert!(modules.contains(&"console"));
         assert!(modules.contains(&"process"));
@@ -492,10 +494,10 @@ mod tests {
 
     #[test]
     fn test_module_caching() {
-        let cache = PrecompiledModuleCache::new().unwrap();
+        let cache: _ = PrecompiledModuleCache::new().unwrap();
 
-        let source = "module.exports = { test: true };";
-        let result = cache.cache_module("test_module", source);
+        let source: _ = "module.exports = { test: true };";
+        let result: _ = cache.cache_module("test_module", source);
 
         assert!(result.is_ok());
         assert!(cache.is_module_cached("test_module"));
@@ -503,10 +505,10 @@ mod tests {
 
     #[test]
     fn test_cache_stats() {
-        let cache = PrecompiledModuleCache::new().unwrap();
+        let cache: _ = PrecompiledModuleCache::new().unwrap();
         cache.precompile_builtin_modules().unwrap();
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert!(stats.cached_modules > 0);
     }
 }

@@ -52,7 +52,7 @@ impl Default for SmartWarmupStrategy {
 #[derive(Debug, Clone)]
 pub struct TaskPattern {
     /// 任务复杂度分布
-    pub complexity_distribution: HashMap<TaskComplexity, f64>,
+    pub complexity_distribution: HashMap<TaskComplexity, f64, std::collections::HashMap<TaskComplexity, f64, TaskComplexity, f64>>,
     /// 平均任务大小
     pub avg_task_size: usize,
     /// 任务间隔模式
@@ -60,7 +60,7 @@ pub struct TaskPattern {
     /// 峰值时段
     pub peak_hours: Vec<u8>,
     /// 任务类型频率
-    pub task_type_frequency: HashMap<String, usize>,
+    pub task_type_frequency: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>,
 }
 
 impl TaskPattern {
@@ -94,12 +94,12 @@ impl TaskPattern {
                 intervals.push(record.timestamp.duration_since(prev_time).unwrap_or_default());
             }
 
-            let hour = record.timestamp.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as u8 % 24;
+            let hour: _ = record.timestamp.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as u8 % 24;
             hours.push(hour);
         }
 
         // 计算分布
-        let total_count = history.len() as f64;
+        let total_count: _ = history.len() as f64;
         for (complexity, count) in complexity_counts {
             self.complexity_distribution.insert(complexity, count as f64 / total_count);
         }
@@ -112,7 +112,7 @@ impl TaskPattern {
             *hour_counts.entry(hour).or_insert(0) += 1;
         }
 
-        let threshold = total_count * 0.1; // 超过10%认为是峰值
+        let threshold: _ = total_count * 0.1; // 超过10%认为是峰值
         self.peak_hours = hour_counts.into_iter()
             .filter(|(_, count)| *count as f64 > threshold)
             .map(|(hour, _)| hour)
@@ -123,13 +123,13 @@ impl TaskPattern {
 
     /// 预测下一个任务的特征
     pub fn predict_next_task(&self) -> TaskPrediction {
-        let complexity = self.complexity_distribution.iter()
+        let complexity: _ = self.complexity_distribution.iter()
             .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
             .map(|(complexity, _)| *complexity)
             .unwrap_or(TaskComplexity::Simple);
 
-        let expected_size = self.avg_task_size;
-        let is_peak_time = self.peak_hours.contains(&(SystemTime::now()
+        let expected_size: _ = self.avg_task_size;
+        let is_peak_time: _ = self.peak_hours.contains(&(SystemTime::now()
             .duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as u8 % 24));
 
         TaskPrediction {
@@ -141,7 +141,7 @@ impl TaskPattern {
     }
 
     fn calculate_confidence(&self) -> f64 {
-        let complexity_entropy = if self.complexity_distribution.is_empty() {
+        let complexity_entropy: _ = if self.complexity_distribution.is_empty() {
             0.0
         } else {
             -self.complexity_distribution.values()
@@ -182,7 +182,7 @@ pub struct SmartLoadBalancer {
     /// 负载均衡策略
     pub strategy: LoadBalancingStrategy,
     /// 工作进程性能历史
-    pub worker_performance_history: HashMap<u32, Vec<WorkerPerformanceRecord>>,
+    pub worker_performance_history: HashMap<u32, Vec<WorkerPerformanceRecord, std::collections::HashMap<u32, Vec<WorkerPerformanceRecord, u32, Vec<WorkerPerformanceRecord>>>,
     /// 全局性能统计
     pub global_stats: Arc<Mutex<GlobalPerformanceStats>>,
 }
@@ -235,7 +235,7 @@ pub struct GlobalPerformanceStats {
 #[derive(Debug)]
 pub struct MemorySharingManager {
     /// 共享内存区域
-    pub shared_regions: HashMap<String, SharedMemoryRegion>,
+    pub shared_regions: HashMap<String, SharedMemoryRegion, std::collections::HashMap<String, SharedMemoryRegion, String, SharedMemoryRegion>>,
     /// 内存池配置
     pub memory_pool_config: MemoryPoolConfig,
 }
@@ -312,8 +312,8 @@ impl LinearRegressionModel {
 
     /// 训练模型
     pub fn train(&mut self, features: &[f64], target: f64) {
-        let prediction = self.predict(features);
-        let error = target - prediction;
+        let prediction: _ = self.predict(features);
+        let error: _ = target - prediction;
 
         // 更新权重
         self.bias += self.learning_rate * error;
@@ -385,13 +385,13 @@ impl SmartProcessPool {
         Ok(Self {
             base_config: base_config.clone(),
             warmup_strategy: SmartWarmupStrategy::default(),
-            load_balancer: Arc::new(RwLock::new(SmartLoadBalancer {
+            load_balancer: Arc::new(std::sync::Mutex::new(RwLock::new(SmartLoadBalancer {
                 strategy: LoadBalancingStrategy::PerformanceBased,
-                worker_performance_history: HashMap::new(),
-                global_stats: Arc::new(Mutex::new(GlobalPerformanceStats::default())),
+                worker_performance_history: HashMap::new()),
+                global_stats: Arc::new(std::sync::Mutex::new(Mutex::new(GlobalPerformanceStats::default()))),
             })),
-            memory_manager: Arc::new(RwLock::new(MemorySharingManager {
-                shared_regions: HashMap::new(),
+            memory_manager: Arc::new(std::sync::Mutex::new(RwLock::new(MemorySharingManager {
+                shared_regions: HashMap::new()),
                 memory_pool_config: MemoryPoolConfig {
                     shared_memory_enabled: true,
                     max_shared_regions: 100,
@@ -399,13 +399,13 @@ impl SmartProcessPool {
                     compression_enabled: true,
                 },
             })),
-            predictor: Arc::new(RwLock::new(PerformancePredictor {
-                performance_history: VecDeque::new(),
+            predictor: Arc::new(std::sync::Mutex::new(RwLock::new(PerformancePredictor {
+                performance_history: VecDeque::new()),
                 prediction_model: LinearRegressionModel::new(5), // 5个特征
                 prediction_window: 100,
             })),
-            pattern_analyzer: Arc::new(RwLock::new(TaskPattern::new())),
-            monitoring_active: Arc::new(AtomicBool::new(false)),
+            pattern_analyzer: Arc::new(std::sync::Mutex::new(RwLock::new(TaskPattern::new()))),
+            monitoring_active: Arc::new(std::sync::Mutex::new(AtomicBool::new(false))),
             perf_channel: perf_tx,
         })
     }
@@ -415,15 +415,15 @@ impl SmartProcessPool {
         self.monitoring_active.store(true, Ordering::Relaxed);
 
         // 启动性能监控任务
-        let monitoring_active = self.monitoring_active.clone();
-        let _perf_channel = self.perf_channel.clone();
-        let predictor = self.predictor.clone();
-        let _pattern_analyzer = self.pattern_analyzer.clone();
+        let monitoring_active: _ = self.monitoring_active.clone();
+        let _perf_channel: _ = self.perf_channel.clone();
+        let predictor: _ = self.predictor.clone();
+        let _pattern_analyzer: _ = self.pattern_analyzer.clone();
 
         tokio::spawn(async move {
             while monitoring_active.load(Ordering::Relaxed) {
                 // 收集性能数据
-                let data_point = PerformanceDataPoint {
+                let data_point: _ = PerformanceDataPoint {
                     timestamp: SystemTime::now(),
                     queue_length: 0, // TODO: 从实际队列获取
                     avg_wait_time: Duration::from_millis(10),
@@ -444,7 +444,7 @@ impl SmartProcessPool {
 
                     // 简单的线性回归训练
                     if predictor_guard.performance_history.len() > 10 {
-                        let features = vec![
+                        let features: _ = vec![
                             data_point.queue_length as f64,
                             data_point.throughput,
                             data_point.cpu_usage,
@@ -476,11 +476,11 @@ impl SmartProcessPool {
         }
 
         // 分析任务特征
-        let complexity = TaskComplexity::from_script(task);
-        let _task_size = task.len();
+        let complexity: _ = TaskComplexity::from_script(task);
+        let _task_size: _ = task.len();
 
         // 获取任务预测
-        let prediction = {
+        let prediction: _ = {
             let pattern = self.pattern_analyzer.read().await;
             pattern.predict_next_task()
         };
@@ -497,7 +497,7 @@ impl SmartProcessPool {
             TaskComplexity::Complex => warmup_count = 4,
         }
 
-        warmup_count = warmup_count.min(self.warmup_strategy.max_warmup_workers);
+        warmup_count = warmup_count.clone();min(self.warmup_strategy.max_warmup_workers);
 
         println!("智能预热: 预测任务复杂度 {:?}, 预热 {} 个进程", complexity, warmup_count);
 
@@ -512,17 +512,17 @@ impl SmartProcessPool {
 
     /// 智能负载均衡：选择最佳工作进程
     pub async fn select_optimal_worker(&self, task: &str) -> Result<u32> {
-        let complexity = TaskComplexity::from_script(task);
-        let _task_size = task.len();
+        let complexity: _ = TaskComplexity::from_script(task);
+        let _task_size: _ = task.len();
 
         // 获取所有可用工作进程
-        let available_workers = self.get_available_workers().await;
+        let available_workers: _ = self.get_available_workers().await;
 
         if available_workers.is_empty() {
             return Err(anyhow::anyhow!("没有可用的工作进程"));
         }
 
-        let load_balancer = self.load_balancer.write().await;
+        let load_balancer: _ = self.load_balancer.write().await;
 
         match load_balancer.strategy {
             LoadBalancingStrategy::RoundRobin => {
@@ -535,7 +535,7 @@ impl SmartProcessPool {
                 let mut min_connections = u32::MAX;
 
                 for worker_id in available_workers {
-                    let connections = self.get_worker_connections(worker_id).await;
+                    let connections: _ = self.get_worker_connections(worker_id).await;
                     if connections < min_connections {
                         min_connections = connections;
                         best_worker = worker_id;
@@ -549,7 +549,7 @@ impl SmartProcessPool {
                 let mut best_score = f64::MAX;
 
                 for worker_id in available_workers {
-                    let performance_score = self.calculate_worker_performance_score(worker_id, complexity).await;
+                    let performance_score: _ = self.calculate_worker_performance_score(worker_id, complexity).await;
                     if performance_score < best_score {
                         best_score = performance_score;
                         best_worker = worker_id;
@@ -559,14 +559,14 @@ impl SmartProcessPool {
             }
             LoadBalancingStrategy::MachineLearning => {
                 // 使用机器学习模型预测最佳工作进程
-                let _features = self.extract_worker_features(available_workers[0]).await;
+                let _features: _ = self.extract_worker_features(available_workers[0]).await;
                 let mut best_worker = available_workers[0];
                 let mut best_prediction = f64::MAX;
-                let predictor = self.predictor.read().await;
+                let predictor: _ = self.predictor.read().await;
 
                 for worker_id in available_workers {
-                    let features = self.extract_worker_features(worker_id).await;
-                    let prediction = predictor.prediction_model.predict(&features);
+                    let features: _ = self.extract_worker_features(worker_id).await;
+                    let prediction: _ = predictor.prediction_model.predict(&features);
                     if prediction < best_prediction {
                         best_prediction = prediction;
                         best_worker = worker_id;
@@ -579,7 +579,7 @@ impl SmartProcessPool {
 
     /// 计算工作进程性能分数
     async fn calculate_worker_performance_score(&self, worker_id: u32, task_complexity: TaskComplexity) -> f64 {
-        let history = self.load_balancer.read().await.worker_performance_history
+        let history: _ = self.load_balancer.read().await.worker_performance_history
             .get(&worker_id)
             .cloned()
             .unwrap_or_default();
@@ -593,15 +593,15 @@ impl SmartProcessPool {
             .take(10)
             .collect();
 
-        let avg_execution_time = recent_records.iter()
+        let avg_execution_time: _ = recent_records.iter()
             .map(|r| r.execution_time.as_millis() as f64)
             .sum::<f64>() / recent_records.len() as f64;
 
-        let success_rate = recent_records.iter()
+        let success_rate: _ = recent_records.iter()
             .filter(|r| r.success)
             .count() as f64 / recent_records.len() as f64;
 
-        let complexity_match_score = recent_records.iter()
+        let complexity_match_score: _ = recent_records.iter()
             .filter(|r| r.task_complexity == task_complexity)
             .count() as f64 / recent_records.len() as f64;
 
@@ -611,7 +611,7 @@ impl SmartProcessPool {
 
     /// 提取工作进程特征（用于机器学习）
     async fn extract_worker_features(&self, worker_id: u32) -> Vec<f64> {
-        let history = self.load_balancer.read().await.worker_performance_history
+        let history: _ = self.load_balancer.read().await.worker_performance_history
             .get(&worker_id)
             .cloned()
             .unwrap_or_default();
@@ -620,7 +620,7 @@ impl SmartProcessPool {
             return vec![0.0, 0.0, 1.0, 0.0, 0.0];
         }
 
-        let recent_records = &history[history.len().saturating_sub(10)..];
+        let recent_records: _ = &history[history.len().saturating_sub(10)..];
 
         vec![
             recent_records.len() as f64, // 历史任务数
@@ -650,7 +650,7 @@ impl SmartProcessPool {
             return Err(anyhow::anyhow!("共享内存区域数量已达上限"));
         }
 
-        let region = SharedMemoryRegion {
+        let region: _ = SharedMemoryRegion {
             id: region_id.clone(),
             size: data.len(),
             access_count: AtomicUsize::new(0),
@@ -681,9 +681,9 @@ impl SmartProcessPool {
     pub async fn cleanup_unused_regions(&self) -> Result<usize> {
         let mut manager = self.memory_manager.write().await;
         let mut cleaned_count = 0;
-        let cleanup_threshold = Duration::from_secs(300); // 5分钟未使用
+        let cleanup_threshold: _ = Duration::from_secs(300); // 5分钟未使用
 
-        let current_time = Instant::now();
+        let current_time: _ = Instant::now();
         let regions_to_remove: Vec<String> = manager.shared_regions.iter()
             .filter(|(_, region)| {
                 current_time.duration_since(region.last_accessed) > cleanup_threshold &&
@@ -706,16 +706,16 @@ impl SmartProcessPool {
 
     /// 预测性能瓶颈
     pub async fn predict_performance_bottleneck(&self) -> Result<PerformanceBottleneckPrediction> {
-        let predictor = self.predictor.read().await;
+        let predictor: _ = self.predictor.read().await;
 
         if predictor.performance_history.len() < 10 {
             return Err(anyhow::anyhow!("历史数据不足，无法进行预测"));
         }
 
-        let latest_data = predictor.performance_history.back().unwrap();
+        let latest_data: _ = predictor.performance_history.back().unwrap();
 
         // 使用模型预测下一个时间点的性能
-        let features = vec![
+        let features: _ = vec![
             latest_data.queue_length as f64,
             latest_data.throughput,
             latest_data.cpu_usage,
@@ -723,7 +723,7 @@ impl SmartProcessPool {
             latest_data.avg_wait_time.as_millis() as f64,
         ];
 
-        let predicted_throughput = predictor.prediction_model.predict(&features);
+        let predicted_throughput: _ = predictor.prediction_model.predict(&features);
 
         // 分析趋势
         let recent_throughput: Vec<f64> = predictor.performance_history.iter()
@@ -732,13 +732,13 @@ impl SmartProcessPool {
             .map(|d| d.throughput)
             .collect();
 
-        let _trend = if recent_throughput.len() >= 2 {
+        let _trend: _ = if recent_throughput.len() >= 2 {
             recent_throughput[0] - recent_throughput[recent_throughput.len() - 1]
         } else {
             0.0
         };
 
-        let bottleneck_type = if predicted_throughput < latest_data.throughput * 0.8 {
+        let bottleneck_type: _ = if predicted_throughput < latest_data.throughput * 0.8 {
             BottleneckType::Throughput
         } else if latest_data.cpu_usage > 80.0 {
             BottleneckType::CPU
@@ -748,7 +748,7 @@ impl SmartProcessPool {
             BottleneckType::None
         };
 
-        let severity = match bottleneck_type {
+        let severity: _ = match bottleneck_type {
             BottleneckType::Throughput => (1.0 - predicted_throughput / latest_data.throughput).min(1.0),
             BottleneckType::CPU => (latest_data.cpu_usage - 80.0) / 20.0,
             BottleneckType::Memory => (latest_data.memory_usage as f64 / (1024.0 * 1024.0 * 500.0) - 1.0).min(1.0),
@@ -813,14 +813,16 @@ pub struct PerformanceBottleneckPrediction {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_smart_prewarm() {
-        let config = ProcessPoolConfig::default();
-        let pool = SmartProcessPool::new(config).unwrap();
+        let config: _ = ProcessPoolConfig::default();
+        let pool: _ = SmartProcessPool::new(config).unwrap();
 
-        let task = "console.log('Hello World');";
-        let result = pool.smart_prewarm(task).await;
+        let task: _ = "console.log('Hello World');";
+        let result: _ = pool.smart_prewarm(task).await;
         assert!(result.is_ok());
     }
 
@@ -828,7 +830,7 @@ mod tests {
     async fn test_task_pattern_learning() {
         let mut pattern = TaskPattern::new();
 
-        let history = vec![
+        let history: _ = vec![
             TaskExecutionRecord {
                 timestamp: SystemTime::now(),
                 complexity: TaskComplexity::Simple,
@@ -850,7 +852,7 @@ mod tests {
         ];
 
         pattern.learn_from_history(&history);
-        let prediction = pattern.predict_next_task();
+        let prediction: _ = pattern.predict_next_task();
 
         assert!(prediction.confidence >= 0.0);
         assert!(prediction.confidence <= 1.0);
@@ -862,14 +864,14 @@ mod tests {
 
         // 训练模型
         for i in 0..10 {
-            let features = vec![i as f64, (i * 2) as f64, (i * 3) as f64];
-            let target = (i * 6) as f64; // 线性关系
+            let features: _ = vec![i as f64, (i * 2) as f64, (i * 3) as f64];
+            let target: _ = (i * 6) as f64; // 线性关系
             model.train(&features, target);
         }
 
         // 预测
-        let features = vec![5.0, 10.0, 15.0];
-        let prediction = model.predict(&features);
+        let features: _ = vec![5.0, 10.0, 15.0];
+        let prediction: _ = model.predict(&features);
 
         assert!(prediction >= 0.0);
     }

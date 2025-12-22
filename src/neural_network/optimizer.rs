@@ -2,6 +2,8 @@
 
 use super::model::Model;
 use super::tensor::Tensor;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 优化级别
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -29,9 +31,9 @@ impl GraphOptimizer {
 
     /// 优化模型
     pub fn optimize(&self, model: &Model) -> OptimizedModel {
-        let num_layers = model.num_layers();
+        let num_layers: _ = model.num_layers();
 
-        let optimized_layers = match self.level {
+        let optimized_layers: _ = match self.level {
             OptimizationLevel::O0 => num_layers,
             OptimizationLevel::O1 => num_layers.saturating_sub(0), // 死代码消除
             OptimizationLevel::O2 => {

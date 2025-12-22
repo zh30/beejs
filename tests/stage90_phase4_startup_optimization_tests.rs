@@ -10,20 +10,22 @@ use tokio::time::sleep;
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试延迟初始化系统
     #[tokio::test]
     async fn test_lazy_initialization() {
-        let lazy_api = LazyWebAPI::new();
+        let lazy_api: _ = LazyWebAPI::new();
 
         // 测试未初始化的 API
         assert!(!lazy_api.is_initialized("fetch").await);
         assert!(!lazy_api.is_initialized("fs").await);
 
         // 延迟初始化 fetch API
-        let start = Instant::now();
+        let start: _ = Instant::now();
         lazy_api.init_on_demand("fetch").await.unwrap();
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
 
         // 验证初始化成功
         assert!(lazy_api.is_initialized("fetch").await);
@@ -36,12 +38,12 @@ mod tests {
     /// 测试按需加载模块
     #[tokio::test]
     async fn test_on_demand_loading() {
-        let loader = OnDemandLoader::new();
+        let loader: _ = OnDemandLoader::new();
 
         // 测试延迟加载模块
-        let start = Instant::now();
-        let module = loader.load_module("console").await.unwrap();
-        let elapsed = start.elapsed();
+        let start: _ = Instant::now();
+        let module: _ = loader.load_module("console").await.unwrap();
+        let elapsed: _ = start.elapsed();
 
         // 验证模块加载成功
         assert!(module.is_some());
@@ -54,15 +56,15 @@ mod tests {
     /// 测试启动时间优化效果
     #[tokio::test]
     async fn test_startup_time_optimization() {
-        let lazy_api = Arc::new(LazyWebAPI::new());
-        let loader = Arc::new(OnDemandLoader::new());
+        let lazy_api: _ = Arc::new(std::sync::Mutex::new(LazyWebAPI::new()));
+        let loader: _ = Arc::new(std::sync::Mutex::new(OnDemandLoader::new()));
 
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 并行初始化多个 API
-        let api1 = lazy_api.clone();
-        let api2 = lazy_api.clone();
-        let loader1 = loader.clone();
+        let api1: _ = lazy_api.clone();
+        let api2: _ = lazy_api.clone();
+        let loader1: _ = loader.clone();
 
         let (_, _, _) = tokio::join!(
             async {
@@ -79,7 +81,7 @@ mod tests {
             }
         );
 
-        let total_elapsed = start.elapsed();
+        let total_elapsed: _ = start.elapsed();
 
         // 总启动时间应该在 20ms 内
         assert!(total_elapsed < Duration::from_millis(20));
@@ -93,15 +95,15 @@ mod tests {
     /// 测试优化快照加载
     #[tokio::test]
     async fn test_snapshot_loading() {
-        let snapshot = OptimizedSnapshot::new(CacheStrategy::Lru {
+        let snapshot: _ = OptimizedSnapshot::new(CacheStrategy::Lru {
             max_size: 100,
             ttl: Duration::from_secs(3600),
         });
 
         // 测试加载基础快照
-        let start = Instant::now();
-        let base_ptr = snapshot.load_snapshot("base").await.unwrap();
-        let elapsed = start.elapsed();
+        let start: _ = Instant::now();
+        let base_ptr: _ = snapshot.load_snapshot("base").await.unwrap();
+        let elapsed: _ = start.elapsed();
 
         assert!(!base_ptr.is_null());
         // 快照加载应该在合理时间内完成
@@ -123,10 +125,10 @@ mod tests {
         cache.cache_data("test2", vec![6, 7, 8, 9, 10]).await.unwrap();
 
         // 验证缓存命中
-        let start = Instant::now();
-        let data1 = cache.get_cached_data("test1").await.unwrap();
-        let data2 = cache.get_cached_data("test2").await.unwrap();
-        let elapsed = start.elapsed();
+        let start: _ = Instant::now();
+        let data1: _ = cache.get_cached_data("test1").await.unwrap();
+        let data2: _ = cache.get_cached_data("test2").await.unwrap();
+        let elapsed: _ = start.elapsed();
 
         assert_eq!(data1, Some(vec![1, 2, 3, 4, 5]));
         assert_eq!(data2, Some(vec![6, 7, 8, 9, 10]));
@@ -145,13 +147,13 @@ mod tests {
         });
 
         // 缓存大量数据
-        let large_data = vec![42u8; 10000];
+        let large_data: _ = vec![42u8; 10000];
         cache.cache_data("large", large_data.clone()).await.unwrap();
 
         // 执行压缩
-        let start = Instant::now();
-        let compressed_size = cache.compress_cache().await.unwrap();
-        let elapsed = start.elapsed();
+        let start: _ = Instant::now();
+        let compressed_size: _ = cache.compress_cache().await.unwrap();
+        let elapsed: _ = start.elapsed();
 
         // 验证压缩效果
         assert!(compressed_size < 10000);
@@ -177,7 +179,7 @@ mod tests {
         cache.cache_data("item3", vec![3]).await.unwrap();
 
         // 验证 item1 被清理（因为最先放入且容量已满）
-        let data1 = cache.get_cached_data("item1").await.unwrap();
+        let data1: _ = cache.get_cached_data("item1").await.unwrap();
         assert_eq!(data1, None);
 
         // 验证 item2 和 item3 仍然存在
@@ -190,12 +192,12 @@ mod tests {
     /// 测试并发场景下的延迟初始化
     #[tokio::test]
     async fn test_concurrent_lazy_initialization() {
-        let lazy_api = Arc::new(LazyWebAPI::new());
+        let lazy_api: _ = Arc::new(std::sync::Mutex::new(LazyWebAPI::new()));
         let mut handles = vec![];
 
         // 并发初始化同一个 API
         for _ in 0..10 {
-            let api = lazy_api.clone();
+            let api: _ = lazy_api.clone();
             handles.push(tokio::spawn(async move {
                 api.init_on_demand("fetch").await.unwrap();
             }));
@@ -215,22 +217,22 @@ mod tests {
     /// 测试启动时间性能基准
     #[tokio::test]
     async fn test_startup_performance_benchmark() {
-        let iterations = 100;
+        let iterations: _ = 100;
         let mut total_time = Duration::from_nanos(0);
 
         for _ in 0..iterations {
-            let lazy_api = LazyWebAPI::new();
-            let loader = OnDemandLoader::new();
+            let lazy_api: _ = LazyWebAPI::new();
+            let loader: _ = OnDemandLoader::new();
 
-            let start = Instant::now();
+            let start: _ = Instant::now();
             lazy_api.init_on_demand("console").await.unwrap();
-            let _module = loader.load_module("util").await.unwrap();
-            let elapsed = start.elapsed();
+            let _module: _ = loader.load_module("util").await.unwrap();
+            let elapsed: _ = start.elapsed();
 
             total_time += elapsed;
         }
 
-        let average_time = total_time / iterations;
+        let average_time: _ = total_time / iterations;
 
         // 平均启动时间应该小于 2ms
         assert!(average_time < Duration::from_millis(2));

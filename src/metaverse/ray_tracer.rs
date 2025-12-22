@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 //! 实时光线追踪渲染器
 
 /// 弹射次数限制
@@ -102,7 +104,7 @@ impl RayTracer {
         height: u32,
     ) -> Result<Vec<[f32; 4]>, RayTracerError> {
         self.accumulated_frames += 1;
-        let pixel_count = (width * height) as usize;
+        let pixel_count: _ = (width * height) as usize;
         Ok(vec![[0.5, 0.5, 0.5, 1.0]; pixel_count])
     }
 

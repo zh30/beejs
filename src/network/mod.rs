@@ -73,6 +73,8 @@ pub use stage93_network_topology::{
 };
 
 use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 网络配置
 #[derive(Debug, Clone)]
@@ -177,7 +179,7 @@ pub struct NetworkMonitor {
 impl NetworkMonitor {
     pub fn new() -> Self {
         Self {
-            stats: std::sync::Arc::new(std::sync::Mutex::new(NetworkStats {
+            stats: std::sync::Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(NetworkStats {
                 total_connections: 0,
                 active_connections: 0,
                 zero_copy_operations: 0,
@@ -186,7 +188,7 @@ impl NetworkMonitor {
                 batch_operations: 0,
                 average_latency_us: 0,
                 memory_usage: 0,
-            })),
+            }))),
         }
     }
 

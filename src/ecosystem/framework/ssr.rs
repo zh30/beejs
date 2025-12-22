@@ -7,6 +7,8 @@ use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// SSR 渲染引擎
 #[derive(Debug)]
@@ -43,16 +45,16 @@ impl SsrRenderer {
         }
 
         // 2. 渲染内容
-        let render_result = self.render_content(framework_type, component, request).await?;
+        let render_result: _ = self.render_content(framework_type, component, request).await?;
 
         // 3. 流式渲染
-        let stream = self.stream_renderer.create_stream(&render_result)?;
+        let stream: _ = self.stream_renderer.create_stream(&render_result)?;
 
         // 4. 优化边缘性能
-        let optimized_stream = self.edge_optimizer.optimize(stream, request)?;
+        let optimized_stream: _ = self.edge_optimizer.optimize(stream, request)?;
 
         // 5. 添加水合脚本
-        let hydrated_response = self.hydration_manager.add_hydration_data(
+        let hydrated_response: _ = self.hydration_manager.add_hydration_data(
             optimized_stream,
             &render_result,
             request,
@@ -163,11 +165,11 @@ impl SsrRenderer {
         routes: &[String],
         framework_type: FrameworkType,
         components: &[serde_json::Value],
-    ) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
+    ) -> Result<HashMap<String, String, std::collections::HashMap<String, String, String, String>>, Box<dyn std::error::Error>> {
         let mut prerendered_pages = HashMap::new();
 
         for (route, component) in routes.iter().zip(components.iter()) {
-            let request = SsrRequest {
+            let request: _ = SsrRequest {
                 url: route.clone(),
                 method: "GET".to_string(),
                 headers: HashMap::new(),
@@ -176,7 +178,7 @@ impl SsrRenderer {
                 ip: None,
             };
 
-            let response = self.render_page(&request, framework_type, component).await?;
+            let response: _ = self.render_page(&request, framework_type, component).await?;
             prerendered_pages.insert(route.clone(), response.body);
         }
 
@@ -219,8 +221,8 @@ impl Default for SsrConfig {
 pub struct SsrRequest {
     pub url: String,
     pub method: String,
-    pub headers: HashMap<String, String>,
-    pub query_params: HashMap<String, String>,
+    pub headers: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub query_params: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub user_agent: Option<String>,
     pub ip: Option<String>,
 }
@@ -229,7 +231,7 @@ pub struct SsrRequest {
 #[derive(Debug, Clone)]
 pub struct SsrResponse {
     pub status: u16,
-    pub headers: HashMap<String, String>,
+    pub headers: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub body: String,
     pub stream: Option<StreamResponse>,
 }
@@ -311,7 +313,7 @@ impl HydrationManager {
         let mut body = stream.chunks.join("");
 
         if let Some(ref data) = render_result.data {
-            let hydration_script = format!(
+            let hydration_script: _ = format!(
                 "<script>window.__INITIAL_STATE__ = {};</script>",
                 data
             );
@@ -335,7 +337,7 @@ impl HydrationManager {
 /// 缓存管理器
 #[derive(Debug)]
 pub struct CacheManager {
-    cache: Arc<tokio::sync::Mutex<HashMap<String, (SsrResponse, std::time::Instant)>>>,
+    cache: Arc<tokio::sync::Mutex<HashMap<String, (SsrResponse, std::time::Instant), std::collections::HashMap<String, (SsrResponse, std::time::Instant), String, (SsrResponse, std::time::Instant)>>>>,
     config: CacheConfig,
 }
 
@@ -343,17 +345,17 @@ impl CacheManager {
     /// 创建新的缓存管理器
     pub fn new() -> Self {
         Self {
-            cache: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
+            cache: Arc::new(std::sync::Mutex::new(tokio::sync::Mutex::new(HashMap::new()))),
             config: CacheConfig::default(),
         }
     }
 
     /// 获取缓存
     pub async fn get(&self, key: &str) -> Result<Option<SsrResponse>, Box<dyn std::error::Error>> {
-        let cache = self.cache.lock().await;
+        let cache: _ = self.cache.lock().await;
 
         if let Some((response, timestamp)) = cache.get(key) {
-            let age = std::time::Instant::now().duration_since(*timestamp);
+            let age: _ = std::time::Instant::now().duration_since(*timestamp);
             if age < std::time::Duration::from_secs(3600) {
                 return Ok(Some(response.clone()));
             } else {
@@ -379,7 +381,7 @@ impl CacheManager {
         // 检查缓存大小
         if cache.len() >= self.config.max_size {
             // 删除最旧的条目
-            let oldest_key = cache
+            let oldest_key: _ = cache
                 .iter()
                 .min_by_key(|(_, (_, timestamp))| *timestamp)
                 .map(|(k, _)| k.clone());

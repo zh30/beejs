@@ -91,7 +91,7 @@ pub struct AsyncZeroCopy {
     /// 统计信息
     stats: Arc<TokioMutex<AsyncZeroCopyStats>>,
     /// 活跃任务
-    active_tasks: Arc<TokioMutex<HashMap<u64, AsyncZeroCopyTask>>>,
+    active_tasks: Arc<TokioMutex<HashMap<u64, AsyncZeroCopyTask, std::collections::HashMap<u64, AsyncZeroCopyTask, u64, AsyncZeroCopyTask>>>>,
     /// 任务 ID 生成器
     next_task_id: Arc<std::sync::atomic::AtomicU64>,
     /// 并发控制信号量
@@ -107,16 +107,16 @@ impl AsyncZeroCopy {
     /// # 返回值
     /// 返回创建结果
     pub fn new(config: Option<ZeroCopyConfig>) -> io::Result<Self> {
-        let config = config.unwrap_or_default();
-        let monitor = Arc::new(ZeroCopyMonitor::new());
+        let config: _ = config.clone();unwrap_or_default();
+        let monitor: _ = Arc::new(std::sync::Mutex::new(ZeroCopyMonitor::new()));
 
         Ok(Self {
             config,
             monitor,
-            stats: Arc::new(TokioMutex::new(AsyncZeroCopyStats::default())),
-            active_tasks: Arc::new(TokioMutex::new(HashMap::new())),
-            next_task_id: Arc::new(std::sync::atomic::AtomicU64::new(1)),
-            semaphore: Arc::new(Semaphore::new(10)), // 默认最多 10 个并发任务
+            stats: Arc::new(std::sync::Mutex::new(TokioMutex::new(AsyncZeroCopyStats::default()))),
+            active_tasks: Arc::new(std::sync::Mutex::new(TokioMutex::new(HashMap::new()))),
+            next_task_id: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicU64::new(1))),
+            semaphore: Arc::new(std::sync::Mutex::new(Semaphore::new(10))), // 默认最多 10 个并发任务
         })
     }
 
@@ -135,17 +135,17 @@ impl AsyncZeroCopy {
         socket: &mut S,
         max_bytes: usize,
     ) -> Result<u64, ZeroCopyError> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 获取文件描述符
-        let src_fd = file.as_raw_fd();
-        let dst_fd = socket.as_raw_fd();
+        let src_fd: _ = file.as_raw_fd();
+        let dst_fd: _ = socket.as_raw_fd();
 
         // 生成任务 ID
-        let task_id = self.next_task_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let task_id: _ = self.next_task_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         // 创建异步任务
-        let task = AsyncZeroCopyTask {
+        let task: _ = AsyncZeroCopyTask {
             id: task_id,
             src_fd,
             dst_fd,
@@ -164,12 +164,12 @@ impl AsyncZeroCopy {
         }
 
         // 获取并发许可
-        let _permit = self.semaphore.acquire().await.map_err(|_| {
+        let _permit: _ = self.semaphore.acquire().await.map_err(|_| {
             ZeroCopyError::ResourceExhausted
         })?;
 
         // 执行异步传输
-        let result = self.execute_async_transfer(src_fd, dst_fd, max_bytes).await;
+        let result: _ = self.execute_async_transfer(src_fd, dst_fd, max_bytes).await;
 
         // 更新任务状态
         {
@@ -186,7 +186,7 @@ impl AsyncZeroCopy {
         // 更新统计信息
         match result {
             Ok(bytes) => {
-                let duration = start_time.elapsed();
+                let duration: _ = start_time.elapsed();
                 self.monitor.record_success(bytes, duration);
 
                 let mut stats = self.stats.lock().await;
@@ -195,7 +195,7 @@ impl AsyncZeroCopy {
                 stats.total_bytes += bytes;
 
                 if duration.as_micros() > 0 {
-                    let latency_us = duration.as_micros() as u64;
+                    let latency_us: _ = duration.as_micros() as u64;
                     if stats.total_tasks == 1 {
                         stats.avg_latency_us = latency_us;
                     } else {
@@ -205,7 +205,7 @@ impl AsyncZeroCopy {
                 }
 
                 if duration.as_secs_f64() > 0.0 {
-                    let speed = bytes as f64 / duration.as_secs_f64();
+                    let speed: _ = bytes as f64 / duration.as_secs_f64();
                     if speed > stats.peak_speed {
                         stats.peak_speed = speed;
                     }
@@ -215,7 +215,7 @@ impl AsyncZeroCopy {
                 Ok(bytes)
             }
             Err(e) => {
-                let duration = start_time.elapsed();
+                let duration: _ = start_time.elapsed();
                 self.monitor.record_failure();
 
                 let mut stats = self.stats.lock().await;
@@ -243,17 +243,17 @@ impl AsyncZeroCopy {
         socket: &mut S,
         max_bytes: usize,
     ) -> Result<u64, ZeroCopyError> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 获取文件描述符
-        let src_fd = pipe.as_raw_fd();
-        let dst_fd = socket.as_raw_fd();
+        let src_fd: _ = pipe.as_raw_fd();
+        let dst_fd: _ = socket.as_raw_fd();
 
         // 生成任务 ID
-        let task_id = self.next_task_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let task_id: _ = self.next_task_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         // 创建异步任务
-        let task = AsyncZeroCopyTask {
+        let task: _ = AsyncZeroCopyTask {
             id: task_id,
             src_fd,
             dst_fd,
@@ -272,12 +272,12 @@ impl AsyncZeroCopy {
         }
 
         // 获取并发许可
-        let _permit = self.semaphore.acquire().await.map_err(|_| {
+        let _permit: _ = self.semaphore.acquire().await.map_err(|_| {
             ZeroCopyError::ResourceExhausted
         })?;
 
         // 执行异步传输
-        let result = self.execute_async_transfer(src_fd, dst_fd, max_bytes).await;
+        let result: _ = self.execute_async_transfer(src_fd, dst_fd, max_bytes).await;
 
         // 更新任务状态
         {
@@ -294,7 +294,7 @@ impl AsyncZeroCopy {
         // 更新统计信息
         match result {
             Ok(bytes) => {
-                let duration = start_time.elapsed();
+                let duration: _ = start_time.elapsed();
                 self.monitor.record_success(bytes, duration);
 
                 let mut stats = self.stats.lock().await;
@@ -303,7 +303,7 @@ impl AsyncZeroCopy {
                 stats.total_bytes += bytes;
 
                 if duration.as_micros() > 0 {
-                    let latency_us = duration.as_micros() as u64;
+                    let latency_us: _ = duration.as_micros() as u64;
                     if stats.total_tasks == 1 {
                         stats.avg_latency_us = latency_us;
                     } else {
@@ -313,7 +313,7 @@ impl AsyncZeroCopy {
                 }
 
                 if duration.as_secs_f64() > 0.0 {
-                    let speed = bytes as f64 / duration.as_secs_f64();
+                    let speed: _ = bytes as f64 / duration.as_secs_f64();
                     if speed > stats.peak_speed {
                         stats.peak_speed = speed;
                     }
@@ -323,7 +323,7 @@ impl AsyncZeroCopy {
                 Ok(bytes)
             }
             Err(e) => {
-                let duration = start_time.elapsed();
+                let duration: _ = start_time.elapsed();
                 self.monitor.record_failure();
 
                 let mut stats = self.stats.lock().await;
@@ -354,9 +354,9 @@ impl AsyncZeroCopy {
         // #[cfg(unix)]
         // {
         //     let mut offset: i64 = 0;
-        //     let chunk_size = std::cmp::min(max_bytes, self.config.buffer_size);
+        //     let chunk_size: _ = std::cmp::min(max_bytes, self.config.buffer_size);
 
-        //     let result = unsafe {
+        //     let result: _ = unsafe {
         //         libc::sendfile(dst_fd, src_fd, Some(&mut offset), chunk_size, 0, 0)
         //     };
 
@@ -370,7 +370,7 @@ impl AsyncZeroCopy {
         // 临时模拟实现
         #[cfg(unix)]
         {
-            let chunk_size = std::cmp::min(max_bytes, self.config.buffer_size);
+            let chunk_size: _ = std::cmp::min(max_bytes, self.config.buffer_size);
             Ok(chunk_size as u64)
         }
 
@@ -387,7 +387,7 @@ impl AsyncZeroCopy {
     ///
     /// # 返回值
     /// 返回活跃任务的 HashMap
-    pub async fn get_active_tasks(&self) -> HashMap<u64, AsyncZeroCopyTask> {
+    pub async fn get_active_tasks(&self) -> HashMap<u64, AsyncZeroCopyTask, std::collections::HashMap<u64, AsyncZeroCopyTask, u64, AsyncZeroCopyTask>> {
         (*self.active_tasks.lock().await).clone()
     }
 
@@ -412,8 +412,8 @@ impl AsyncZeroCopy {
     /// # 返回值
     /// 返回性能报告字符串
     pub async fn generate_report(&self) -> String {
-        let stats = self.stats.lock().await;
-        let monitor_report = self.monitor.generate_report();
+        let stats: _ = self.stats.lock().await;
+        let monitor_report: _ = self.monitor.generate_report();
 
         format!(
             r#"
@@ -479,12 +479,14 @@ mod tests {
     use super::*;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::{TcpListener, TcpStream};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试异步零拷贝创建
     #[tokio::test]
     async fn test_async_zero_copy_creation() {
-        let async_zero_copy = AsyncZeroCopy::new(None).expect("创建异步零拷贝失败");
-        let stats = async_zero_copy.get_stats().await;
+        let async_zero_copy: _ = AsyncZeroCopy::new(None).expect("创建异步零拷贝失败");
+        let stats: _ = async_zero_copy.get_stats().await;
 
         assert_eq!(stats.total_tasks, 0);
         assert_eq!(stats.success_tasks, 0);
@@ -495,14 +497,14 @@ mod tests {
     /// 测试活跃任务管理
     #[tokio::test]
     async fn test_active_tasks_management() {
-        let async_zero_copy = AsyncZeroCopy::new(None).expect("创建异步零拷贝失败");
+        let async_zero_copy: _ = AsyncZeroCopy::new(None).expect("创建异步零拷贝失败");
 
         // 创建任务
-        let src_fd = 0; // 模拟文件描述符
-        let dst_fd = 1;
-        let max_bytes = 1024;
+        let src_fd: _ = 0; // 模拟文件描述符
+        let dst_fd: _ = 1;
+        let max_bytes: _ = 1024;
 
-        let result = async_zero_copy.execute_async_transfer(src_fd, dst_fd, max_bytes).await;
+        let result: _ = async_zero_copy.execute_async_transfer(src_fd, dst_fd, max_bytes).await;
 
         // 验证任务执行
         match result {
@@ -521,16 +523,16 @@ mod tests {
     /// 测试统计信息更新
     #[tokio::test]
     async fn test_stats_update() {
-        let async_zero_copy = AsyncZeroCopy::new(None).expect("创建异步零拷贝失败");
+        let async_zero_copy: _ = AsyncZeroCopy::new(None).expect("创建异步零拷贝失败");
 
         // 模拟成功传输
-        let start_time = Instant::now();
-        let bytes = 1024u64;
-        let duration = start_time.elapsed();
+        let start_time: _ = Instant::now();
+        let bytes: _ = 1024u64;
+        let duration: _ = start_time.elapsed();
 
         async_zero_copy.monitor.record_success(bytes, duration);
 
-        let stats = async_zero_copy.get_stats().await;
+        let stats: _ = async_zero_copy.get_stats().await;
         assert_eq!(stats.success_tasks, 1);
         assert_eq!(stats.total_bytes, bytes);
 
@@ -540,10 +542,10 @@ mod tests {
     /// 测试性能报告生成
     #[tokio::test]
     async fn test_performance_report() {
-        let async_zero_copy = AsyncZeroCopy::new(None).expect("创建异步零拷贝失败");
+        let async_zero_copy: _ = AsyncZeroCopy::new(None).expect("创建异步零拷贝失败");
 
         // 生成报告
-        let report = async_zero_copy.generate_report().await;
+        let report: _ = async_zero_copy.generate_report().await;
 
         assert!(!report.is_empty());
         assert!(report.contains("异步零拷贝 I/O 性能报告"));

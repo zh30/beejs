@@ -28,18 +28,18 @@ impl SecurityScanner {
         info!("Scanning image: {}", image.name);
 
         // Scan for vulnerabilities
-        let vulnerabilities = self.scan_vulnerabilities(image).await?;
+        let vulnerabilities: _ = self.scan_vulnerabilities(image).await?;
 
         // Scan for compliance issues
-        let compliance_issues = self.scan_compliance(image).await?;
+        let compliance_issues: _ = self.scan_compliance(image).await?;
 
         // Scan for secrets
-        let secrets = self.scan_secrets(image).await?;
+        let secrets: _ = self.scan_secrets(image).await?;
 
         // Calculate overall risk score
-        let risk_score = self.calculate_risk_score(&vulnerabilities, &compliance_issues, &secrets);
+        let risk_score: _ = self.calculate_risk_score(&vulnerabilities, &compliance_issues, &secrets);
 
-        let report = ScanReport {
+        let report: _ = ScanReport {
             image_name: image.name.clone(),
             image_digest: image.digest.clone(),
             scan_timestamp: std::time::SystemTime::now(),
@@ -61,7 +61,7 @@ impl SecurityScanner {
 
         // Scan each layer for vulnerabilities
         for layer in &image.layers {
-            let layer_vulns = self.scan_layer_vulnerabilities(layer).await?;
+            let layer_vulns: _ = self.scan_layer_vulnerabilities(layer).await?;
             vulnerabilities.extend(layer_vulns);
         }
 
@@ -155,7 +155,7 @@ impl SecurityScanner {
 
         // Scan each layer for secrets
         for layer in &image.layers {
-            let layer_secrets = self.scan_layer_secrets(layer).await?;
+            let layer_secrets: _ = self.scan_layer_secrets(layer).await?;
             secrets.extend(layer_secrets);
         }
 
@@ -167,7 +167,7 @@ impl SecurityScanner {
         let mut secrets = Vec::new();
 
         // Define secret patterns
-        let secret_patterns = vec![
+        let secret_patterns: _ = vec![
             ("AWS_ACCESS_KEY_ID", r#"(?i)aws_access_key_id\s*[=:]\s*['\"]?[A-Z0-9]{16,}['\"]?"#),
             ("AWS_SECRET_ACCESS_KEY", r#"(?i)aws_secret_access_key\s*[=:]\s*['\"]?[A-Z0-9/+=]{40,}['\"]?"#),
             ("PRIVATE_KEY", r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
@@ -469,11 +469,11 @@ impl ScanReport {
 
     /// Get high severity issue count
     pub fn high_severity_issue_count(&self) -> usize {
-        let vuln_count = self.vulnerabilities
+        let vuln_count: _ = self.vulnerabilities
             .iter()
             .filter(|v| v.severity == VulnerabilitySeverity::High)
             .count();
-        let compliance_count = self.compliance_issues
+        let compliance_count: _ = self.compliance_issues
             .iter()
             .filter(|i| i.severity == ComplianceSeverity::High)
             .count();
@@ -497,7 +497,7 @@ struct VulnerabilityDatabase {
 impl VulnerabilityDatabase {
     /// Create a new vulnerability database
     fn new() -> Self {
-        let vulnerabilities = Self::load_vulnerabilities();
+        let vulnerabilities: _ = Self::load_vulnerabilities();
         Self { vulnerabilities }
     }
 
@@ -583,6 +583,8 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_vulnerability_severity_ordering() {
@@ -600,7 +602,7 @@ mod tests {
 
     #[test]
     fn test_scan_report_passing() {
-        let report = ScanReport {
+        let report: _ = ScanReport {
             image_name: "test-image".to_string(),
             image_digest: "sha256:123".to_string(),
             scan_timestamp: std::time::SystemTime::now(),
@@ -625,7 +627,7 @@ mod tests {
 
     #[test]
     fn test_scan_report_failing() {
-        let report = ScanReport {
+        let report: _ = ScanReport {
             image_name: "test-image".to_string(),
             image_digest: "sha256:123".to_string(),
             scan_timestamp: std::time::SystemTime::now(),

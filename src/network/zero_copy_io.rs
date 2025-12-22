@@ -3,6 +3,8 @@
 
 use crate::network::{NetworkConfig, NetworkError};
 use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 零拷贝 I/O 统计信息
 #[derive(Debug, Clone)]
@@ -28,12 +30,12 @@ impl ZeroCopyIO {
     pub fn new(config: NetworkConfig) -> Result<Self, NetworkError> {
         Ok(Self {
             config,
-            stats: Arc::new(Mutex::new(ZeroCopyIOStats {
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(ZeroCopyIOStats {
                 total_bytes_sent: 0,
                 zero_copy_operations: 0,
                 memory_usage: 0,
                 failed_operations: 0,
-            })),
+            }))),
         })
     }
 
@@ -56,7 +58,7 @@ impl ZeroCopyIO {
 
         // TODO: 实现真正的零拷贝接收
         // 当前为模拟实现
-        let bytes_read = buffer.len().min(1024); // 模拟读取
+        let bytes_read: _ = buffer.len().min(1024); // 模拟读取
         stats.total_bytes_sent += bytes_read as u64;
         stats.zero_copy_operations += 1;
 
@@ -69,7 +71,7 @@ impl ZeroCopyIO {
 
         // TODO: 使用 sendfile 系统调用实现真正的零拷贝文件传输
         // 当前为模拟实现
-        let file_size = 4096; // 模拟文件大小
+        let file_size: _ = 4096; // 模拟文件大小
         stats.total_bytes_sent += file_size;
         stats.zero_copy_operations += 1;
 

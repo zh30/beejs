@@ -7,18 +7,20 @@ use beejs::ecosystem_lite::*;
 use std::fs;
 use std::path::PathBuf;
 use tempfile::{TempDir};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Test 1: Package Manager Configuration
 #[test]
 fn test_package_manager_config() {
-    let config = PackageManagerConfig::default();
+    let config: _ = PackageManagerConfig::default();
 
     assert_eq!(config.manager_type, PackageManagerType::Npm);
     assert_eq!(config.registry_url, "https://registry.npmjs.org/");
     assert_eq!(config.cache_dir, PathBuf::from(".beejs_cache"));
 
     // Test custom config
-    let custom_config = PackageManagerConfig {
+    let custom_config: _ = PackageManagerConfig {
         manager_type: PackageManagerType::Pnpm,
         registry_url: "https://custom.registry.com/".to_string(),
         cache_dir: PathBuf::from("/custom/cache"),
@@ -33,14 +35,14 @@ fn test_package_manager_config() {
 #[test]
 fn test_package_spec_parsing() {
     // Test name only
-    let spec = PackageSpec::Name("lodash".to_string());
+    let spec: _ = PackageSpec::Name("lodash".to_string());
     match spec {
         PackageSpec::Name(name) => assert_eq!(name, "lodash"),
         _ => panic!("Expected Name variant"),
     }
 
     // Test name with version
-    let spec = PackageSpec::NameVersion("react".to_string(), "18.2.0".to_string());
+    let spec: _ = PackageSpec::NameVersion("react".to_string(), "18.2.0".to_string());
     match spec {
         PackageSpec::NameVersion(name, version) => {
             assert_eq!(name, "react");
@@ -50,7 +52,7 @@ fn test_package_spec_parsing() {
     }
 
     // Test name with range
-    let spec = PackageSpec::NameRange("typescript".to_string(), "^5.0.0".to_string());
+    let spec: _ = PackageSpec::NameRange("typescript".to_string(), "^5.0.0".to_string());
     match spec {
         PackageSpec::NameRange(name, range) => {
             assert_eq!(name, "typescript");
@@ -60,7 +62,7 @@ fn test_package_spec_parsing() {
     }
 
     // Test Git URL
-    let spec = PackageSpec::Git("https://github.com/user/repo.git".to_string());
+    let spec: _ = PackageSpec::Git("https://github.com/user/repo.git".to_string());
     match spec {
         PackageSpec::Git(url) => {
             assert_eq!(url, "https://github.com/user/repo.git");
@@ -69,7 +71,7 @@ fn test_package_spec_parsing() {
     }
 
     // Test local path
-    let spec = PackageSpec::Local(PathBuf::from("./local-package"));
+    let spec: _ = PackageSpec::Local(PathBuf::from("./local-package"));
     match spec {
         PackageSpec::Local(path) => {
             assert_eq!(path, PathBuf::from("./local-package"));
@@ -81,7 +83,7 @@ fn test_package_spec_parsing() {
 /// Test 3: Package Information Structure
 #[test]
 fn test_package_info() {
-    let package = PackageInfo {
+    let package: _ = PackageInfo {
         name: "test-package".to_string(),
         version: "1.0.0".to_string(),
         dependencies: {
@@ -112,7 +114,7 @@ fn test_package_info() {
 /// Test 4: Build Result Structure
 #[test]
 fn test_build_result() {
-    let result = BuildResult {
+    let result: _ = BuildResult {
         success: true,
         output_dir: PathBuf::from("./dist"),
         build_time_ms: 1250,
@@ -127,7 +129,7 @@ fn test_build_result() {
     assert_eq!(result.errors.len(), 0);
 
     // Test failed build
-    let failed_result = BuildResult {
+    let failed_result: _ = BuildResult {
         success: false,
         output_dir: PathBuf::from("./dist"),
         build_time_ms: 500,
@@ -142,7 +144,7 @@ fn test_build_result() {
 /// Test 5: Package Manager Type Support
 #[test]
 fn test_package_manager_types() {
-    let managers = vec![
+    let managers: _ = vec![
         (PackageManagerType::Npm, "npm"),
         (PackageManagerType::Yarn, "yarn"),
         (PackageManagerType::Pnpm, "pnpm"),
@@ -161,14 +163,14 @@ fn test_package_manager_types() {
 /// Test 6: Type Generator Configuration
 #[test]
 fn test_type_generator_config() {
-    let config = TypeGeneratorConfig::default();
+    let config: _ = TypeGeneratorConfig::default();
 
     assert_eq!(config.output_dir, PathBuf::from("./types"));
     assert!(config.include_comments);
     assert!(!config.strict_mode);
 
     // Test custom config
-    let custom_config = TypeGeneratorConfig {
+    let custom_config: _ = TypeGeneratorConfig {
         output_dir: PathBuf::from("/custom/types"),
         include_comments: false,
         strict_mode: true,
@@ -182,17 +184,17 @@ fn test_type_generator_config() {
 /// Test 7: Type Definition Generator
 #[test]
 fn test_type_definition_generator() {
-    let config = TypeGeneratorConfig::default();
-    let generator = TypeDefinitionGenerator::new(config);
+    let config: _ = TypeGeneratorConfig::default();
+    let generator: _ = TypeDefinitionGenerator::new(config);
 
     // Test basic type generation
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    let result = runtime.block_on(async {
+    let runtime: _ = tokio::runtime::Runtime::new().unwrap();
+    let result: _ = runtime.block_on(async {
         generator.generate_types("const x = 5;").await
     });
 
     assert!(result.is_ok());
-    let dts_content = result.unwrap();
+    let dts_content: _ = result.unwrap();
     assert!(dts_content.contains("declare module 'beejs-runtime'"));
     assert!(dts_content.contains("export function run"));
     assert!(dts_content.contains("export function evaluate"));
@@ -201,29 +203,29 @@ fn test_type_definition_generator() {
 /// Test 8: Package Manager Integrator
 #[test]
 fn test_package_manager_integrator() {
-    let config = PackageManagerConfig::default();
-    let integrator = PackageManagerIntegrator::new(config);
+    let config: _ = PackageManagerConfig::default();
+    let integrator: _ = PackageManagerIntegrator::new(config);
 
     // Test installing package by name
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    let result = runtime.block_on(async {
+    let runtime: _ = tokio::runtime::Runtime::new().unwrap();
+    let result: _ = runtime.block_on(async {
         let spec = PackageSpec::Name("lodash".to_string());
         integrator.install_package(&spec).await
     });
 
     assert!(result.is_ok());
-    let package_info = result.unwrap();
+    let package_info: _ = result.unwrap();
     assert_eq!(package_info.name, "lodash");
     assert_eq!(package_info.version, "1.0.0");
 
     // Test installing package with specific version
-    let result = runtime.block_on(async {
+    let result: _ = runtime.block_on(async {
         let spec = PackageSpec::NameVersion("react".to_string(), "18.2.0".to_string());
         integrator.install_package(&spec).await
     });
 
     assert!(result.is_ok());
-    let package_info = result.unwrap();
+    let package_info: _ = result.unwrap();
     assert_eq!(package_info.name, "react");
     assert_eq!(package_info.version, "18.2.0");
 }
@@ -231,10 +233,10 @@ fn test_package_manager_integrator() {
 /// Test 9: Package JSON Parsing
 #[test]
 fn test_package_json_parsing() {
-    let temp_dir = TempDir::new().unwrap();
-    let package_json_path = temp_dir.path().join("package.json");
+    let temp_dir: _ = TempDir::new().unwrap();
+    let package_json_path: _ = temp_dir.path().join("package.json");
 
-    let package_json_content = r#"{
+    let package_json_content: _ = r#"{
         "name": "test-package",
         "version": "1.0.0",
         "main": "index.js",
@@ -249,16 +251,16 @@ fn test_package_json_parsing() {
 
     fs::write(&package_json_path, package_json_content).unwrap();
 
-    let config = PackageManagerConfig::default();
-    let integrator = PackageManagerIntegrator::new(config);
+    let config: _ = PackageManagerConfig::default();
+    let integrator: _ = PackageManagerIntegrator::new(config);
 
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    let result = runtime.block_on(async {
+    let runtime: _ = tokio::runtime::Runtime::new().unwrap();
+    let result: _ = runtime.block_on(async {
         integrator.parse_package_json(&package_json_path).await
     });
 
     assert!(result.is_ok());
-    let package_info = result.unwrap();
+    let package_info: _ = result.unwrap();
     assert_eq!(package_info.name, "test-package");
     assert_eq!(package_info.version, "1.0.0");
     assert_eq!(package_info.main, Some("index.js".to_string()));
@@ -270,14 +272,14 @@ fn test_package_json_parsing() {
 /// Test 10: React Runtime Configuration
 #[test]
 fn test_react_runtime_config() {
-    let config = ReactConfig::default();
+    let config: _ = ReactConfig::default();
 
     assert_eq!(config.version, "18.0.0");
     assert!(config.jsx_transform);
     assert!(!config.ssr_enabled);
 
     // Test custom config
-    let custom_config = ReactConfig {
+    let custom_config: _ = ReactConfig {
         version: "17.0.0".to_string(),
         jsx_transform: false,
         ssr_enabled: true,
@@ -291,17 +293,17 @@ fn test_react_runtime_config() {
 /// Test 11: React Runtime Component Rendering
 #[test]
 fn test_react_runtime_render() {
-    let config = ReactConfig::default();
-    let react_runtime = ReactRuntime::new(config);
+    let config: _ = ReactConfig::default();
+    let react_runtime: _ = ReactRuntime::new(config);
 
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    let result = runtime.block_on(async {
+    let runtime: _ = tokio::runtime::Runtime::new().unwrap();
+    let result: _ = runtime.block_on(async {
         let component_code = r#"<div><h1>Hello World</h1></div>"#;
         react_runtime.render_component(component_code).await
     });
 
     assert!(result.is_ok());
-    let output = result.unwrap();
+    let output: _ = result.unwrap();
     assert!(output.contains("data-beejs-react"));
     assert!(output.contains("React Component Rendered"));
 }
@@ -309,17 +311,17 @@ fn test_react_runtime_render() {
 /// Test 12: React Runtime JSX Transformation
 #[test]
 fn test_react_runtime_jsx_transform() {
-    let config = ReactConfig::default();
-    let react_runtime = ReactRuntime::new(config);
+    let config: _ = ReactConfig::default();
+    let react_runtime: _ = ReactRuntime::new(config);
 
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    let result = runtime.block_on(async {
+    let runtime: _ = tokio::runtime::Runtime::new().unwrap();
+    let result: _ = runtime.block_on(async {
         let jsx_code = r#"<div className="container"><span>Test</span></div>"#;
         react_runtime.transform_jsx(jsx_code).await
     });
 
     assert!(result.is_ok());
-    let transformed = result.unwrap();
+    let transformed: _ = result.unwrap();
     assert!(transformed.contains("data-jsx"));
     assert!(transformed.contains("container"));
 }
@@ -327,7 +329,7 @@ fn test_react_runtime_jsx_transform() {
 /// Test 13: Build Tool Plugin
 #[test]
 fn test_build_tool_plugin() {
-    let plugin = BuildToolPlugin::new(
+    let plugin: _ = BuildToolPlugin::new(
         "test-plugin".to_string(),
         "1.0.0".to_string(),
         BuildPluginType::Webpack,
@@ -338,22 +340,22 @@ fn test_build_tool_plugin() {
     assert!(matches!(plugin.plugin_type, BuildPluginType::Webpack));
 
     // Test applying plugin
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    let result = runtime.block_on(async {
+    let runtime: _ = tokio::runtime::Runtime::new().unwrap();
+    let result: _ = runtime.block_on(async {
         plugin.apply().await
     });
 
     assert!(result.is_ok());
 
     // Test different plugin types
-    let vite_plugin = BuildToolPlugin::new(
+    let vite_plugin: _ = BuildToolPlugin::new(
         "vite-plugin".to_string(),
         "2.0.0".to_string(),
         BuildPluginType::Vite,
     );
     assert!(matches!(vite_plugin.plugin_type, BuildPluginType::Vite));
 
-    let rollup_plugin = BuildToolPlugin::new(
+    let rollup_plugin: _ = BuildToolPlugin::new(
         "rollup-plugin".to_string(),
         "3.0.0".to_string(),
         BuildPluginType::Rollup,
@@ -364,7 +366,7 @@ fn test_build_tool_plugin() {
 /// Test 14: VS Code Extension Configuration
 #[test]
 fn test_vscode_extension_config() {
-    let config = VsCodeExtensionConfig::default();
+    let config: _ = VsCodeExtensionConfig::default();
 
     assert_eq!(config.name, "beejs-language-support");
     assert_eq!(config.version, "0.1.0");
@@ -377,7 +379,7 @@ fn test_vscode_extension_config() {
     let mut custom_engines = std::collections::HashMap::new();
     custom_engines.insert("vscode".to_string(), "^1.80.0".to_string());
 
-    let custom_config = VsCodeExtensionConfig {
+    let custom_config: _ = VsCodeExtensionConfig {
         name: "custom-extension".to_string(),
         version: "2.0.0".to_string(),
         publisher: "custom-publisher".to_string(),
@@ -397,8 +399,8 @@ fn test_ecosystem_integrator() {
     let mut integrator = EcosystemIntegrator::new();
 
     // Test initialization
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    let result = runtime.block_on(async {
+    let runtime: _ = tokio::runtime::Runtime::new().unwrap();
+    let result: _ = runtime.block_on(async {
         integrator.initialize().await
     });
 
@@ -429,12 +431,12 @@ fn test_ecosystem_integrator() {
 /// Test 16: Full Package Manager Workflow
 #[test]
 fn test_full_package_manager_workflow() {
-    let temp_dir = TempDir::new().unwrap();
-    let project_dir = temp_dir.path();
+    let temp_dir: _ = TempDir::new().unwrap();
+    let project_dir: _ = temp_dir.path();
 
     // Create package.json
-    let package_json_path = project_dir.join("package.json");
-    let package_json = r#"{
+    let package_json_path: _ = project_dir.join("package.json");
+    let package_json: _ = r#"{
         "name": "test-project",
         "version": "1.0.0",
         "description": "Test project for package manager",
@@ -457,21 +459,21 @@ fn test_full_package_manager_workflow() {
     assert!(package_json_path.exists());
 
     // Initialize package manager integrator
-    let config = PackageManagerConfig {
+    let config: _ = PackageManagerConfig {
         manager_type: PackageManagerType::Pnpm,
         registry_url: "https://registry.npmjs.org/".to_string(),
         cache_dir: project_dir.join(".cache"),
     };
-    let integrator = PackageManagerIntegrator::new(config);
+    let integrator: _ = PackageManagerIntegrator::new(config);
 
     // Parse package.json
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    let result = runtime.block_on(async {
+    let runtime: _ = tokio::runtime::Runtime::new().unwrap();
+    let result: _ = runtime.block_on(async {
         integrator.parse_package_json(&package_json_path).await
     });
 
     assert!(result.is_ok());
-    let package_info = result.unwrap();
+    let package_info: _ = result.unwrap();
     assert_eq!(package_info.name, "test-project");
     assert_eq!(package_info.version, "1.0.0");
     assert_eq!(package_info.main, Some("index.js".to_string()));
@@ -481,13 +483,13 @@ fn test_full_package_manager_workflow() {
     assert!(package_info.peer_dependencies.contains_key("react"));
 
     // Test installing a package
-    let result = runtime.block_on(async {
+    let result: _ = runtime.block_on(async {
         let spec = PackageSpec::Name("axios".to_string());
         integrator.install_package(&spec).await
     });
 
     assert!(result.is_ok());
-    let installed_package = result.unwrap();
+    let installed_package: _ = result.unwrap();
     assert_eq!(installed_package.name, "axios");
     assert!(installed_package.main.is_some());
 
@@ -497,12 +499,12 @@ fn test_full_package_manager_workflow() {
 /// Test 17: Lockfile Compatibility Test
 #[test]
 fn test_lockfile_compatibility() {
-    let temp_dir = TempDir::new().unwrap();
-    let project_dir = temp_dir.path();
+    let temp_dir: _ = TempDir::new().unwrap();
+    let project_dir: _ = temp_dir.path();
 
     // Test npm lockfile (package-lock.json)
-    let npm_lockfile = project_dir.join("package-lock.json");
-    let npm_lockfile_content = r#"{
+    let npm_lockfile: _ = project_dir.join("package-lock.json");
+    let npm_lockfile_content: _ = r#"{
         "name": "test-project",
         "version": "1.0.0",
         "lockfileVersion": 3,
@@ -534,8 +536,8 @@ fn test_lockfile_compatibility() {
     assert!(npm_lockfile.exists());
 
     // Test yarn lockfile (yarn.lock)
-    let yarn_lockfile = project_dir.join("yarn.lock");
-    let yarn_lockfile_content = r#"# THIS IS AN AUTOGENERATED FILE. DO NOT EDIT THIS FILE DIRECTLY.
+    let yarn_lockfile: _ = project_dir.join("yarn.lock");
+    let yarn_lockfile_content: _ = r#"# THIS IS AN AUTOGENERATED FILE. DO NOT EDIT THIS FILE DIRECTLY.
 # yarn lockfile v1
 
 
@@ -549,8 +551,8 @@ lodash@^4.17.0:
     assert!(yarn_lockfile.exists());
 
     // Test pnpm lockfile (pnpm-lock.yaml)
-    let pnpm_lockfile = project_dir.join("pnpm-lock.yaml");
-    let pnpm_lockfile_content = r#"lockfileVersion: '6.0'
+    let pnpm_lockfile: _ = project_dir.join("pnpm-lock.yaml");
+    let pnpm_lockfile_content: _ = r#"lockfileVersion: '6.0'
 
 settings:
   autoInstallPeers: true

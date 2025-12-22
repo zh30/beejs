@@ -31,16 +31,18 @@ pub fn tree_shake(code: &str, exports: &[String]) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_tree_shake() {
-        let code = r#"
+        let code: _ = r#"
             export function used() { return 1; }
             export function unused() { return 2; }
         "#;
         
-        let exports = vec!["used".to_string()];
-        let result = tree_shake(code, &exports).unwrap();
+        let exports: _ = vec!["used".to_string()];
+        let result: _ = tree_shake(code, &exports).unwrap();
         assert!(result.contains("used"));
         assert!(!result.contains("unused"));
     }

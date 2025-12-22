@@ -67,7 +67,7 @@ pub struct ScalingManager {
     config: ScalingConfig,
     autoscaler: Autoscaler,
     resource_tracker: ResourceTracker,
-    nodes: HashMap<String, ScalingNode>,
+    nodes: HashMap<String, ScalingNode, std::collections::HashMap<String, ScalingNode, String, ScalingNode>>,
     scaling_history: Vec<ScalingEvent>,
     stats: Arc<Mutex<ScalingStats>>,
     is_running: bool,
@@ -77,16 +77,16 @@ pub struct ScalingManager {
 impl ScalingManager {
     /// 创建新的扩缩容管理器
     pub fn new(config: ScalingConfig) -> Self {
-        let autoscaler = Autoscaler::new(config.autoscaler_config.clone());
+        let autoscaler: _ = Autoscaler::new(config.autoscaler_config.clone());
 
         Self {
             resource_tracker: ResourceTracker::new(config.resource_config.clone()),
             autoscaler,
             nodes: HashMap::new(),
             scaling_history: Vec::new(),
-            stats: Arc::new(Mutex::new(ScalingStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(ScalingStats::default()))),
             is_running: true,
-            current_load: Arc::new(Mutex::new(0.0)),
+            current_load: Arc::new(std::sync::Mutex::new(Mutex::new(0.0))),
             config,
         }
     }
@@ -130,11 +130,11 @@ impl ScalingManager {
 
     /// 扩容
     fn scale_up(&mut self, mut count: usize) -> Result<(), String> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 应用最大节点限制
-        let current_count = self.get_current_node_count();
-        let max_additional = self.config.autoscaler_config.max_nodes.saturating_sub(current_count);
+        let current_count: _ = self.get_current_node_count();
+        let max_additional: _ = self.config.autoscaler_config.max_nodes.saturating_sub(current_count);
         if count > max_additional {
             count = max_additional;
             warn!("扩容数量超过最大节点数限制，调整为 {}", max_additional);
@@ -143,8 +143,8 @@ impl ScalingManager {
         let mut actual_count = 0;
 
         for i in 0..count {
-            let node_id = format!("node-{:04}", self.nodes.len() + i);
-            let node = ScalingNode {
+            let node_id: _ = format!("node-{:04}", self.nodes.len() + i);
+            let node: _ = ScalingNode {
                 node_id: node_id.clone(),
                 created_at: Instant::now(),
                 status: ScalingNodeStatus::Provisioning,
@@ -168,7 +168,7 @@ impl ScalingManager {
         }
 
         // 计算扩容时间
-        let scale_up_time = start_time.elapsed();
+        let scale_up_time: _ = start_time.elapsed();
 
         // 更新统计
         {
@@ -177,7 +177,7 @@ impl ScalingManager {
             stats.total_nodes_created += actual_count as u64;
             stats.current_node_count = self.get_current_node_count();
             stats.total_scale_up_time += scale_up_time;
-            let avg_nanos = stats.total_scale_up_time.as_nanos() / stats.total_scale_up_events.max(1) as u128;
+            let avg_nanos: _ = stats.total_scale_up_time.as_nanos() / stats.total_scale_up_events.max(1) as u128;
             stats.average_scale_up_time = Duration::from_nanos(avg_nanos as u64);
             stats.last_scaling_event = Some(ScalingEvent {
                 action: ScalingAction::ScaleUp(actual_count),
@@ -201,11 +201,11 @@ impl ScalingManager {
 
     /// 缩容
     fn scale_down(&mut self, mut count: usize) -> Result<(), String> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 应用最小节点限制
-        let current_count = self.get_current_node_count();
-        let max_remove = current_count.saturating_sub(self.config.autoscaler_config.min_nodes);
+        let current_count: _ = self.get_current_node_count();
+        let max_remove: _ = current_count.saturating_sub(self.config.autoscaler_config.min_nodes);
         if count > max_remove {
             count = max_remove;
             warn!("缩容数量超过最小节点数限制，调整为 {}", max_remove);
@@ -247,7 +247,7 @@ impl ScalingManager {
         }
 
         // 计算缩容时间
-        let scale_down_time = start_time.elapsed();
+        let scale_down_time: _ = start_time.elapsed();
 
         // 更新统计
         {
@@ -256,7 +256,7 @@ impl ScalingManager {
             stats.total_nodes_terminated += actual_count as u64;
             stats.current_node_count = self.get_current_node_count();
             stats.total_scale_down_time += scale_down_time;
-            let avg_nanos = stats.total_scale_down_time.as_nanos() / stats.total_scale_down_events.max(1) as u128;
+            let avg_nanos: _ = stats.total_scale_down_time.as_nanos() / stats.total_scale_down_events.max(1) as u128;
             stats.average_scale_down_time = Duration::from_nanos(avg_nanos as u64);
             stats.last_scaling_event = Some(ScalingEvent {
                 action: ScalingAction::ScaleDown(actual_count),
@@ -285,13 +285,13 @@ impl ScalingManager {
         }
 
         // 收集当前指标
-        let metrics = self.collect_cluster_metrics();
+        let metrics: _ = self.collect_cluster_metrics();
 
         debug!("检查扩缩容需求，指标: CPU {:.2}, 内存 {:.2}, 任务 {}, 队列 {}",
             metrics.cpu_utilization, metrics.memory_utilization, metrics.active_tasks, metrics.queue_depth);
 
         // 让自动扩缩容器评估
-        let action = self.autoscaler.evaluate_scaling(&metrics);
+        let action: _ = self.autoscaler.evaluate_scaling(&metrics);
 
         debug!("扩缩容评估结果: {:?}", action);
 
@@ -313,18 +313,18 @@ impl ScalingManager {
 
     /// 收集集群指标
     fn collect_cluster_metrics(&self) -> ClusterMetrics {
-        let _node_count = self.get_current_node_count();
+        let _node_count: _ = self.get_current_node_count();
 
         // 计算资源使用率
-        let usage = self.resource_tracker.get_usage();
-        let active_tasks = usage.concurrent_tasks;
+        let usage: _ = self.resource_tracker.get_usage();
+        let active_tasks: _ = usage.concurrent_tasks;
 
         // 模拟响应时间（基于负载）
-        let cpu_utilization = usage.cpu_used_percent as f64 / 100.0;
-        let memory_utilization = usage.memory_percent / 100.0;
-        let network_utilization = cpu_utilization * 0.5; // 简化计算
+        let cpu_utilization: _ = usage.cpu_used_percent as f64 / 100.0;
+        let memory_utilization: _ = usage.memory_percent / 100.0;
+        let network_utilization: _ = cpu_utilization * 0.5; // 简化计算
 
-        let response_time_ms = if active_tasks > 100 {
+        let response_time_ms: _ = if active_tasks > 100 {
             500
         } else if active_tasks > 50 {
             200
@@ -333,7 +333,7 @@ impl ScalingManager {
         };
 
         // 模拟错误率
-        let error_rate = if cpu_utilization > 0.9 {
+        let error_rate: _ = if cpu_utilization > 0.9 {
             0.05
         } else if cpu_utilization > 0.8 {
             0.02
@@ -358,20 +358,20 @@ impl ScalingManager {
         *self.current_load.lock().unwrap() = load;
 
         // 分配更多资源来模拟负载 - 支持超过 100% 的负载
-        let task_count = (load * 100.0) as usize;
+        let task_count: _ = (load * 100.0) as usize;
         for i in 0..task_count {
-            let task_id = format!("load-task-{}", i);
+            let task_id: _ = format!("load-task-{}", i);
             // 增加内存分配到 50MB 以提高内存使用率
-            let _ = self.resource_tracker.allocate(&task_id, 50, 1);
+            let _: _ = self.resource_tracker.allocate(&task_id, 50, 1);
         }
 
         // 如果负载超过 100%，分配额外的高内存任务
         if load > 1.0 {
-            let extra_tasks = ((load - 1.0) * 100.0) as usize;
+            let extra_tasks: _ = ((load - 1.0) * 100.0) as usize;
             for i in 0..extra_tasks {
-                let task_id = format!("extra-load-task-{}", i);
+                let task_id: _ = format!("extra-load-task-{}", i);
                 // 分配更多内存
-                let _ = self.resource_tracker.allocate(&task_id, 100, 2);
+                let _: _ = self.resource_tracker.allocate(&task_id, 100, 2);
             }
         }
     }
@@ -381,11 +381,11 @@ impl ScalingManager {
         *self.current_load.lock().unwrap() = load;
 
         // 释放部分资源来模拟负载减少
-        let usage = self.resource_tracker.get_usage();
-        let tasks_to_release = usage.concurrent_tasks / 2;
+        let usage: _ = self.resource_tracker.get_usage();
+        let tasks_to_release: _ = usage.concurrent_tasks / 2;
 
         for i in 0..tasks_to_release {
-            let task_id = format!("load-task-{}", i);
+            let task_id: _ = format!("load-task-{}", i);
             self.resource_tracker.release(&task_id);
         }
     }
@@ -449,10 +449,12 @@ impl ScalingManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_scaling_manager_creation() {
-        let config = ScalingConfig {
+        let config: _ = ScalingConfig {
             autoscaler_config: AutoscalerConfig {
                 scale_up_threshold: 0.80,
                 scale_down_threshold: 0.30,
@@ -464,7 +466,7 @@ mod tests {
             monitoring_interval: Duration::from_secs(10),
         };
 
-        let manager = ScalingManager::new(config);
+        let manager: _ = ScalingManager::new(config);
         assert!(manager.is_running());
         assert_eq!(manager.get_current_node_count(), 0);
     }
@@ -483,7 +485,7 @@ mod tests {
             monitoring_interval: Duration::from_secs(10),
         });
 
-        let result = manager.execute_scaling_action(ScalingAction::ScaleUp(3));
+        let result: _ = manager.execute_scaling_action(ScalingAction::ScaleUp(3));
         assert!(result.is_ok());
         assert_eq!(manager.get_current_node_count(), 3);
     }
@@ -506,7 +508,7 @@ mod tests {
         manager.execute_scaling_action(ScalingAction::ScaleUp(3)).unwrap();
 
         // 再缩容
-        let result = manager.execute_scaling_action(ScalingAction::ScaleDown(1));
+        let result: _ = manager.execute_scaling_action(ScalingAction::ScaleDown(1));
         assert!(result.is_ok());
         assert_eq!(manager.get_current_node_count(), 2);
     }

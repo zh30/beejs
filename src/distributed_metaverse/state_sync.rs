@@ -2,6 +2,8 @@
 
 use std::collections::HashMap;
 use std::time::SystemTime;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 同步模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -81,7 +83,7 @@ pub struct StateSync {
     /// 配置
     config: SyncConfig,
     /// 本地状态
-    state: HashMap<String, StateChange>,
+    state: HashMap<String, StateChange, std::collections::HashMap<String, StateChange, String, StateChange>>,
     /// 版本计数器
     version_counter: u64,
 }

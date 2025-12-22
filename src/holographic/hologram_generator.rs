@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 //! 全息图像生成器
 
 /// 全息图类型
@@ -74,7 +76,7 @@ impl HologramGenerator {
     /// 从点云生成全息图
     pub fn from_point_cloud(&self, points: &[[f32; 3]], resolution: (u32, u32)) -> Result<Hologram, GeneratorError> {
         let (width, height) = resolution;
-        let data = vec![0u8; (width * height) as usize];
+        let data: _ = vec![0u8; (width * height) as usize];
 
         Ok(Hologram {
             width,
@@ -87,7 +89,7 @@ impl HologramGenerator {
 
     /// 从深度图生成全息图
     pub fn from_depth_map(&self, depth: &[f32], width: u32, height: u32) -> Result<Hologram, GeneratorError> {
-        let data = vec![0u8; (width * height) as usize];
+        let data: _ = vec![0u8; (width * height) as usize];
 
         Ok(Hologram {
             width,
@@ -101,7 +103,7 @@ impl HologramGenerator {
     /// 从 3D 模型生成全息图
     pub fn from_mesh(&self, vertices: &[[f32; 3]], indices: &[u32], resolution: (u32, u32)) -> Result<Hologram, GeneratorError> {
         let (width, height) = resolution;
-        let data = vec![0u8; (width * height) as usize];
+        let data: _ = vec![0u8; (width * height) as usize];
 
         Ok(Hologram {
             width,

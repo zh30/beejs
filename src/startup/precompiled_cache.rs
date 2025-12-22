@@ -69,11 +69,11 @@ pub struct OptimizedSnapshot {
     /// 基础快照指针
     base_snapshot: Option<*const u8>,
     /// 增量快照映射
-    incremental_snapshots: Arc<RwLock<HashMap<String, *const u8>>>,
+    incremental_snapshots: Arc<RwLock<HashMap<String, *const u8, std::collections::HashMap<String, *const u8, String, *const u8>>>>,
     /// 缓存策略
     cache_strategy: CacheStrategy,
     /// 缓存数据
-    cache: Arc<AsyncRwLock<HashMap<String, CacheEntry>>>,
+    cache: Arc<AsyncRwLock<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>,
     /// 统计信息
     stats: Arc<Mutex<OptimizedCacheStats>>,
 }
@@ -83,25 +83,25 @@ impl OptimizedSnapshot {
     pub fn new(cache_strategy: CacheStrategy) -> Self {
         Self {
             base_snapshot: None,
-            incremental_snapshots: Arc::new(RwLock::new(HashMap::new())),
+            incremental_snapshots: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
             cache_strategy,
-            cache: Arc::new(AsyncRwLock::new(HashMap::new())),
-            stats: Arc::new(Mutex::new(OptimizedCacheStats::default())),
+            cache: Arc::new(std::sync::Mutex::new(AsyncRwLock::new(HashMap::new()))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(OptimizedCacheStats::default()))),
         }
     }
 
     /// 加载快照
     pub async fn load_snapshot(&self, key: &str) -> Result<*const u8> {
-        let cache = self.cache.read().await;
+        let cache: _ = self.cache.read().await;
 
         // 检查缓存
         if let Some(entry) = cache.get(key) {
-            let start = Instant::now();
+            let start: _ = Instant::now();
 
             // 模拟快照恢复
-            let snapshot_ptr = self.restore_snapshot_from_cache(entry)?;
+            let snapshot_ptr: _ = self.restore_snapshot_from_cache(entry)?;
 
-            let access_time = start.elapsed();
+            let access_time: _ = start.elapsed();
 
             // 更新统计
             {
@@ -124,7 +124,7 @@ impl OptimizedSnapshot {
         }
 
         // 创建新快照
-        let snapshot_ptr = self.create_new_snapshot(key)?;
+        let snapshot_ptr: _ = self.create_new_snapshot(key)?;
         Ok(snapshot_ptr)
     }
 
@@ -132,7 +132,7 @@ impl OptimizedSnapshot {
     fn restore_snapshot_from_cache(&self, entry: &CacheEntry) -> Result<*const u8> {
         // 模拟从缓存数据恢复快照
         // 实际实现中会调用 V8 API
-        let dummy_ptr = 0x12345678 as *const u8;
+        let dummy_ptr: _ = 0x12345678 as *const u8;
         Ok(dummy_ptr)
     }
 
@@ -140,10 +140,10 @@ impl OptimizedSnapshot {
     fn create_new_snapshot(&self, key: &str) -> Result<*const u8> {
         // 模拟创建新快照
         // 实际实现中会调用 V8 API
-        let snapshot_ptr = 0x12345678 as *const u8;
+        let snapshot_ptr: _ = 0x12345678 as *const u8;
 
         // 缓存快照数据
-        let cache_entry = CacheEntry {
+        let cache_entry: _ = CacheEntry {
             data: vec![1, 2, 3, 4, 5],
             access_count: 1,
             last_accessed: Instant::now(),
@@ -166,7 +166,7 @@ impl OptimizedSnapshot {
         let (data_to_cache, compressed, original_size) = match &self.cache_strategy {
             CacheStrategy::Smart { compression_threshold, .. } if data.len() > *compression_threshold => {
                 // 执行压缩
-                let compressed_data = self.compress_data(&data)?;
+                let compressed_data: _ = self.compress_data(&data)?;
                 (
                     compressed_data,
                     true,
@@ -176,7 +176,7 @@ impl OptimizedSnapshot {
             _ => (data, false, 0),
         };
 
-        let entry = CacheEntry {
+        let entry: _ = CacheEntry {
             data: data_to_cache.clone(),
             access_count: 0,
             last_accessed: Instant::now(),
@@ -193,7 +193,7 @@ impl OptimizedSnapshot {
         cache.insert(key.to_string(), entry);
 
         // 更新统计
-        let compressed_size = data_to_cache.len();
+        let compressed_size: _ = data_to_cache.len();
         {
             let mut stats = self.stats.lock().unwrap();
             stats.total_cached_items = cache.len();
@@ -216,7 +216,7 @@ impl OptimizedSnapshot {
             entry.access_count += 1;
             entry.last_accessed = Instant::now();
 
-            let data = if entry.compressed {
+            let data: _ = if entry.compressed {
                 // 解压缩
                 let decompressed = self.decompress_data(&entry.data)?;
                 {
@@ -250,7 +250,7 @@ impl OptimizedSnapshot {
     fn compress_data(&self, data: &[u8]) -> Result<Vec<u8>> {
         // 简单的压缩实现（实际中应使用更高效的压缩算法）
         // 这里只是模拟压缩
-        let compressed = data.to_vec();
+        let compressed: _ = data.to_vec();
         Ok(compressed)
     }
 
@@ -258,7 +258,7 @@ impl OptimizedSnapshot {
     fn decompress_data(&self, data: &[u8]) -> Result<Vec<u8>> {
         // 简单的解压缩实现
         // 这里只是模拟解压缩
-        let decompressed = data.to_vec();
+        let decompressed: _ = data.to_vec();
         Ok(decompressed)
     }
 
@@ -269,7 +269,7 @@ impl OptimizedSnapshot {
 
         for entry in cache.values_mut() {
             if !entry.compressed {
-                let compressed = self.compress_data(&entry.data)?;
+                let compressed: _ = self.compress_data(&entry.data)?;
                 entry.data = compressed;
                 entry.compressed = true;
                 entry.original_size = entry.original_size.max(entry.data.len());
@@ -298,7 +298,7 @@ impl OptimizedSnapshot {
     }
 
     /// 驱逐 LRU 条目
-    async fn evict_lru(&self, cache: &mut HashMap<String, CacheEntry>) {
+    async fn evict_lru(&self, cache: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>) {
         if cache.is_empty() {
             return;
         }
@@ -333,7 +333,7 @@ pub struct OptimizedPrecompiledCache {
     /// 缓存策略
     strategy: CacheStrategy,
     /// 缓存数据
-    cache: Arc<AsyncRwLock<HashMap<String, CacheEntry>>>,
+    cache: Arc<AsyncRwLock<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>,
     /// 统计信息
     stats: Arc<Mutex<OptimizedCacheStats>>,
     /// 压缩线程池
@@ -344,12 +344,12 @@ pub struct OptimizedPrecompiledCache {
 impl OptimizedPrecompiledCache {
     /// 创建新的优化预编译缓存
     pub fn new(strategy: CacheStrategy) -> Self {
-        let cache = Arc::new(AsyncRwLock::new(HashMap::new()));
-        let stats = Arc::new(Mutex::new(OptimizedCacheStats::default()));
+        let cache: _ = Arc::new(std::sync::Mutex::new(AsyncRwLock::new(HashMap::new())));
+        let stats: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OptimizedCacheStats::default())));
 
         // 启动后台压缩任务
-        let compression_pool = Some(Arc::new(tokio::spawn(Self::background_compression(
-            cache.clone(),
+        let compression_pool: _ = Some(Arc::new(std::sync::Mutex::new(tokio::spawn(Self::background_compression(
+            cache.clone()),
             stats.clone(),
         ))));
 
@@ -363,7 +363,7 @@ impl OptimizedPrecompiledCache {
 
     /// 后台压缩任务
     async fn background_compression(
-        cache: Arc<AsyncRwLock<HashMap<String, CacheEntry>>>,
+        cache: Arc<AsyncRwLock<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>,
         stats: Arc<Mutex<OptimizedCacheStats>>,
     ) {
         let mut interval = tokio::time::interval(Duration::from_secs(60)); // 每分钟执行一次
@@ -371,7 +371,7 @@ impl OptimizedPrecompiledCache {
         loop {
             interval.tick().await;
 
-            let mut cache = cache.write().await;
+            let mut cache = cache.clone();write().await;
             let mut compressed_count = 0;
 
             for entry in cache.values_mut() {
@@ -384,7 +384,7 @@ impl OptimizedPrecompiledCache {
             }
 
             if compressed_count > 0 {
-                let mut stats = stats.lock().unwrap();
+                let mut stats = stats.clone();lock().unwrap();
                 stats.compressions += compressed_count as u64;
             }
         }
@@ -392,14 +392,14 @@ impl OptimizedPrecompiledCache {
 
     /// 缓存数据
     pub async fn cache_data(&self, key: &str, data: Vec<u8>) -> Result<()> {
-        let data_to_cache = data.clone();
-        let original_size = data.len();
-        let compressed = false;
+        let data_to_cache: _ = data.clone();
+        let original_size: _ = data.len();
+        let compressed: _ = false;
 
         let mut cache = self.cache.write().await;
 
         // 检查缓存大小限制
-        let max_size = match &self.strategy {
+        let max_size: _ = match &self.strategy {
             CacheStrategy::Lru { max_size, .. } => *max_size,
             CacheStrategy::Lfu { max_size, .. } => *max_size,
             CacheStrategy::Fifo { max_size, .. } => *max_size,
@@ -410,7 +410,7 @@ impl OptimizedPrecompiledCache {
             self.evict_entry(&mut cache).await;
         }
 
-        let entry = CacheEntry {
+        let entry: _ = CacheEntry {
             data: data_to_cache,
             access_count: 0,
             last_accessed: Instant::now(),
@@ -439,7 +439,7 @@ impl OptimizedPrecompiledCache {
             entry.access_count += 1;
             entry.last_accessed = Instant::now();
 
-            let data = entry.data.clone();
+            let data: _ = entry.data.clone();
 
             // 更新统计
             {
@@ -483,12 +483,12 @@ impl OptimizedPrecompiledCache {
     }
 
     /// 驱逐条目
-    async fn evict_entry(&self, cache: &mut HashMap<String, CacheEntry>) {
+    async fn evict_entry(&self, cache: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>) {
         if cache.is_empty() {
             return;
         }
 
-        let eviction_key = match &self.strategy {
+        let eviction_key: _ = match &self.strategy {
             CacheStrategy::Lru { .. } => {
                 // LRU: 找到最久未使用的
                 cache.iter()
@@ -512,7 +512,7 @@ impl OptimizedPrecompiledCache {
                 cache.iter()
                     .min_by_key(|(_, entry)| {
                         let recency_score = entry.last_accessed.elapsed().as_secs();
-                        let frequency_score = entry.access_count;
+                        let frequency_score: _ = entry.access_count;
                         (recency_score, frequency_score)
                     })
                     .map(|(key, _)| key.clone())
@@ -535,21 +535,21 @@ impl OptimizedPrecompiledCache {
 
     /// 获取缓存命中率
     pub fn get_hit_rate(&self) -> f64 {
-        let stats = self.stats.lock().unwrap();
+        let stats: _ = self.stats.lock().unwrap();
         stats.hit_rate
     }
 
     /// 清理过期条目
     pub async fn cleanup_expired(&self) -> usize {
         let mut cache = self.cache.write().await;
-        let ttl = match &self.strategy {
+        let ttl: _ = match &self.strategy {
             CacheStrategy::Lru { ttl, .. } => *ttl,
             CacheStrategy::Lfu { ttl, .. } => *ttl,
             CacheStrategy::Fifo { ttl, .. } => *ttl,
             CacheStrategy::Smart { ttl, .. } => *ttl,
         };
 
-        let now = Instant::now();
+        let now: _ = Instant::now();
         let mut removed = 0;
 
         cache.retain(|_, entry| {
@@ -575,21 +575,22 @@ impl Drop for OptimizedPrecompiledCache {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_optimized_cache_creation() {
-        let cache = OptimizedPrecompiledCache::new(CacheStrategy::Lru {
+        let cache: _ = OptimizedPrecompiledCache::new(CacheStrategy::Lru {
             max_size: 100,
             ttl: Duration::from_secs(3600),
         });
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.total_cached_items, 0);
     }
 
     #[tokio::test]
     async fn test_cache_data_operations() {
-        let cache = OptimizedPrecompiledCache::new(CacheStrategy::Lru {
+        let cache: _ = OptimizedPrecompiledCache::new(CacheStrategy::Lru {
             max_size: 100,
             ttl: Duration::from_secs(3600),
         });
@@ -598,17 +599,17 @@ mod tests {
         cache.cache_data("test", vec![1, 2, 3, 4, 5]).await.unwrap();
 
         // 测试获取数据
-        let data = cache.get_cached_data("test").await.unwrap();
+        let data: _ = cache.get_cached_data("test").await.unwrap();
         assert_eq!(data, Some(vec![1, 2, 3, 4, 5]));
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.total_cached_items, 1);
         assert_eq!(stats.cache_hits, 1);
     }
 
     #[tokio::test]
     async fn test_cache_eviction() {
-        let cache = OptimizedPrecompiledCache::new(CacheStrategy::Lru {
+        let cache: _ = OptimizedPrecompiledCache::new(CacheStrategy::Lru {
             max_size: 2,
             ttl: Duration::from_secs(3600),
         });
@@ -621,10 +622,10 @@ mod tests {
         cache.cache_data("item3", vec![3]).await.unwrap();
 
         // 验证 item1 被驱逐
-        let data = cache.get_cached_data("item1").await.unwrap();
+        let data: _ = cache.get_cached_data("item1").await.unwrap();
         assert_eq!(data, None);
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.evictions, 1);
     }
 }

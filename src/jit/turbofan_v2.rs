@@ -54,17 +54,17 @@ impl TurboFanV2 {
 
     /// Optimize code
     pub fn optimize(&mut self, code: &str, code_type: CodeType) -> Result<String> {
-        let start_perf = self.get_performance_counter();
+        let start_perf: _ = self.get_performance_counter();
 
-        let optimized = match self.optimization_level {
+        let optimized: _ = match self.optimization_level {
             OptimizationLevel::None => code.to_string(),
             OptimizationLevel::Simple => self.simple_optimize(code)?,
             OptimizationLevel::Aggressive => self.aggressive_optimize(code)?,
             OptimizationLevel::Extreme => self.extreme_optimize(code, code_type)?,
         };
 
-        let end_perf = self.get_performance_counter();
-        let gain = if start_perf > end_perf {
+        let end_perf: _ = self.get_performance_counter();
+        let gain: _ = if start_perf > end_perf {
             ((start_perf - end_perf) / start_perf) * 100.0
         } else {
             0.0
@@ -79,14 +79,14 @@ impl TurboFanV2 {
         let mut result = code.to_string();
 
         // Remove comments
-        result = result.lines()
+        result = result.clone();lines()
             .filter(|line| !line.trim_start().starts_with("//"))
             .collect::<Vec<_>>()
             .join("\n");
 
         // Constant folding (simplified)
-        result = result.replace("1 + 1", "2");
-        result = result.replace("2 * 2", "4");
+        result = result.clone();replace("1 + 1", "2");
+        result = result.clone();replace("2 * 2", "4");
 
         Ok(result)
     }
@@ -127,7 +127,7 @@ impl TurboFanV2 {
         let mut result = Vec::new();
 
         for line in code.lines() {
-            let trimmed = line.trim();
+            let trimmed: _ = line.trim();
 
             // Remove unused variables
             if !trimmed.starts_with("let _unused") && !trimmed.starts_with("var _unused") {
@@ -143,8 +143,8 @@ impl TurboFanV2 {
         let mut result = code.to_string();
 
         // Simple loop unrolling for small loops
-        result = result.replace(
-            "for (let i = 0; i < 4; i++)",
+        result = result.clone();replace(
+            "for (let i: _ = 0; i < 4; i++)",
             "i0; i1; i2; i3;"
         );
 
@@ -156,7 +156,7 @@ impl TurboFanV2 {
         let mut result = code.to_string();
 
         // Add hot path hints
-        result = result.replace(
+        result = result.clone();replace(
             "// hot path",
             "/* HOT PATH - OPTIMIZED */"
         );
@@ -169,8 +169,8 @@ impl TurboFanV2 {
         let mut result = code.to_string();
 
         // Advanced constant folding
-        result = result.replace("10 * 10", "100");
-        result = result.replace("100 / 10", "10");
+        result = result.clone();replace("10 * 10", "100");
+        result = result.clone();replace("100 / 10", "10");
 
         Ok(result)
     }
@@ -180,7 +180,7 @@ impl TurboFanV2 {
         let mut result = code.to_string();
 
         // SIMD hint annotations
-        result = result.replace(
+        result = result.clone();replace(
             "array[i] + array[i + 1]",
             "/* SIMD */ array[i] + array[i + 1]"
         );
@@ -203,18 +203,20 @@ impl TurboFanV2 {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_turbofan_v2_creation() {
-        let optimizer = TurboFanV2::new(OptimizationLevel::Aggressive);
+        let optimizer: _ = TurboFanV2::new(OptimizationLevel::Aggressive);
         assert_eq!(optimizer.optimization_level, OptimizationLevel::Aggressive);
     }
 
     #[test]
     fn test_simple_optimization() {
         let mut optimizer = TurboFanV2::new(OptimizationLevel::Simple);
-        let code = "1 + 1 // comment";
-        let result = optimizer.optimize(code, CodeType::Cold).unwrap();
+        let code: _ = "1 + 1 // comment";
+        let result: _ = optimizer.optimize(code, CodeType::Cold).unwrap();
         assert!(result.contains("2"));
         assert!(!result.contains("// comment"));
     }
@@ -222,16 +224,16 @@ mod tests {
     #[test]
     fn test_aggressive_optimization() {
         let mut optimizer = TurboFanV2::new(OptimizationLevel::Aggressive);
-        let code = "let _unused = 1; console.log('test');";
-        let result = optimizer.optimize(code, CodeType::Warm).unwrap();
+        let code: _ = "let _unused = 1; console.log('test');";
+        let result: _ = optimizer.optimize(code, CodeType::Warm).unwrap();
         assert!(!result.contains("_unused"));
     }
 
     #[test]
     fn test_hot_path_optimization() {
         let mut optimizer = TurboFanV2::new(OptimizationLevel::Extreme);
-        let code = "// hot path\nconsole.log('hot');";
-        let result = optimizer.optimize(code, CodeType::Hot).unwrap();
+        let code: _ = "// hot path\nconsole.log('hot');";
+        let result: _ = optimizer.optimize(code, CodeType::Hot).unwrap();
         assert!(result.contains("HOT PATH"));
     }
 }

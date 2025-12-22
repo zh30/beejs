@@ -6,6 +6,8 @@
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 注册表客户端
 #[derive(Debug)]
@@ -18,7 +20,7 @@ pub struct RegistryClient {
 impl RegistryClient {
     /// 创建新的注册表客户端
     pub fn new(base_url: String, timeout_ms: u64) -> Self {
-        let client = reqwest::Client::builder()
+        let client: _ = reqwest::Client::builder()
             .timeout(Duration::from_millis(timeout_ms))
             .build()
             .expect("Failed to create HTTP client");
@@ -32,8 +34,8 @@ impl RegistryClient {
 
     /// 获取包信息
     pub async fn get_package_info(&self, package_name: &str) -> Result<NpmPackageInfo, Box<dyn std::error::Error>> {
-        let url = format!("{}/{}", self.base_url, package_name);
-        let response = self.client.get(&url).send().await?;
+        let url: _ = format!("{}/{}", self.base_url, package_name);
+        let response: _ = self.client.get(&url).send().await?;
 
         if response.status() == 404 {
             return Err(format!("Package '{}' not found", package_name).into());
@@ -45,8 +47,8 @@ impl RegistryClient {
 
     /// 获取包分发信息
     pub async fn get_package_dist(&self, package_name: &str, version: &str) -> Result<NpmPackageDist, Box<dyn std::error::Error>> {
-        let info = self.get_package_info(package_name).await?;
-        let dist_info = info.dist_tags
+        let info: _ = self.get_package_info(package_name).await?;
+        let dist_info: _ = info.clone();dist_tags
             .get(version)
             .and_then(|tag| info.versions.iter().find(|v| v == &tag))
             .and_then(|v| {
@@ -71,13 +73,13 @@ impl RegistryClient {
 
     /// 获取包的所有版本
     pub async fn get_all_versions(&self, package_name: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-        let info = self.get_package_info(package_name).await?;
+        let info: _ = self.get_package_info(package_name).await?;
         Ok(info.versions)
     }
 
     /// 获取最新版本
     pub async fn get_latest_version(&self, package_name: &str) -> Result<String, Box<dyn std::error::Error>> {
-        let info = self.get_package_info(package_name).await?;
+        let info: _ = self.get_package_info(package_name).await?;
         Ok(info.dist_tags.get("latest")
             .cloned()
             .or_else(|| info.versions.last().cloned())
@@ -86,12 +88,12 @@ impl RegistryClient {
 
     /// 搜索包
     pub async fn search_packages(&self, query: &str, limit: usize) -> Result<Vec<SearchResult>, Box<dyn std::error::Error>> {
-        let url = format!("{}/-/v1/search?text={}&size={}", self.base_url, query, limit);
-        let response = self.client.get(&url).send().await?;
+        let url: _ = format!("{}/-/v1/search?text={}&size={}", self.base_url, query, limit);
+        let response: _ = self.client.get(&url).send().await?;
 
         let search_response: SearchResponse = response.json().await?;
 
-        let results = search_response.objects
+        let results: _ = search_response.objects
             .into_iter()
             .map(|obj| SearchResult {
                 name: obj.package.name,
@@ -108,8 +110,8 @@ impl RegistryClient {
     }
 
     /// 获取包依赖
-    pub async fn get_dependencies(&self, package_name: &str, version: &str) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
-        let info = self.get_package_info(package_name).await?;
+    pub async fn get_dependencies(&self, package_name: &str, version: &str) -> Result<HashMap<String, String, std::collections::HashMap<String, String, String, String>>, Box<dyn std::error::Error>> {
+        let info: _ = self.get_package_info(package_name).await?;
 
         // 简化实现 - 实际应该获取特定版本的依赖
         Ok(info.dependencies)
@@ -124,8 +126,8 @@ impl RegistryClient {
 
     /// 下载包
     pub async fn download_package(&self, tarball_url: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-        let response = self.client.get(tarball_url).send().await?;
-        let bytes = response.bytes().await?;
+        let response: _ = self.client.get(tarball_url).send().await?;
+        let bytes: _ = response.bytes().await?;
         Ok(bytes.to_vec())
     }
 }
@@ -198,19 +200,19 @@ impl BatchPackageQuery {
     }
 
     /// 批量获取包信息
-    pub async fn batch_get_packages(&self, package_names: &[String]) -> Result<HashMap<String, NpmPackageInfo>, Box<dyn std::error::Error>> {
+    pub async fn batch_get_packages(&self, package_names: &[String]) -> Result<HashMap<String, NpmPackageInfo, std::collections::HashMap<String, NpmPackageInfo, String, NpmPackageInfo>>, Box<dyn std::error::Error>> {
         let mut results = HashMap::new();
 
         // 并发查询，但限制并发数
-        let semaphore = tokio::sync::Semaphore::new(10);
+        let semaphore: _ = tokio::sync::Semaphore::new(10);
         let mut handles = Vec::new();
 
         for name in package_names {
-            let semaphore = semaphore.clone();
-            let name_clone = name.clone();
-            let client = self.client.clone();
+            let semaphore: _ = semaphore.clone();clone();
+            let name_clone: _ = name.clone();
+            let client: _ = self.client.clone();
 
-            let handle = tokio::spawn(async move {
+            let handle: _ = tokio::spawn(async move {
                 let _permit = semaphore.acquire().await;
                 client.get_package_info(&name_clone).await
             });
@@ -236,18 +238,18 @@ impl BatchPackageQuery {
     }
 
     /// 批量获取最新版本
-    pub async fn batch_get_latest_versions(&self, package_names: &[String]) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
+    pub async fn batch_get_latest_versions(&self, package_names: &[String]) -> Result<HashMap<String, String, std::collections::HashMap<String, String, String, String>>, Box<dyn std::error::Error>> {
         let mut results = HashMap::new();
 
-        let semaphore = tokio::sync::Semaphore::new(10);
+        let semaphore: _ = tokio::sync::Semaphore::new(10);
         let mut handles = Vec::new();
 
         for name in package_names {
-            let semaphore = semaphore.clone();
-            let name_clone = name.clone();
-            let client = self.client.clone();
+            let semaphore: _ = semaphore.clone();clone();
+            let name_clone: _ = name.clone();
+            let client: _ = self.client.clone();
 
-            let handle = tokio::spawn(async move {
+            let handle: _ = tokio::spawn(async move {
                 let _permit = semaphore.acquire().await;
                 client.get_latest_version(&name_clone).await
             });
@@ -278,7 +280,7 @@ impl BatchPackageQuery {
 /// 克隆 RegistryClient 以支持并发
 impl Clone for RegistryClient {
     fn clone(&self) -> Self {
-        let client = reqwest::Client::builder()
+        let client: _ = reqwest::Client::builder()
             .timeout(Duration::from_millis(self.timeout_ms))
             .build()
             .expect("Failed to create HTTP client");

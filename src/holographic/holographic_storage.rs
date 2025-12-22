@@ -1,6 +1,8 @@
 //! 全息存储系统
 
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 压缩模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -47,7 +49,7 @@ pub struct HolographicStorage {
     /// 配置
     config: StorageConfig,
     /// 存储的数据
-    data: HashMap<String, StoredHologram>,
+    data: HashMap<String, StoredHologram, std::collections::HashMap<String, StoredHologram, String, StoredHologram>>,
     /// 总存储大小
     total_size: usize,
     /// 压缩后大小
@@ -67,9 +69,9 @@ impl HolographicStorage {
 
     /// 存储全息数据
     pub fn store(&mut self, name: &str, data: &[u8]) -> Result<(), StorageError> {
-        let original_size = data.len();
-        let compressed_data = self.compress(data)?;
-        let compressed_size = compressed_data.len();
+        let original_size: _ = data.len();
+        let compressed_data: _ = self.compress(data)?;
+        let compressed_size: _ = compressed_data.len();
 
         self.data.insert(
             name.to_string(),
@@ -89,7 +91,7 @@ impl HolographicStorage {
 
     /// 读取全息数据
     pub fn retrieve(&self, name: &str) -> Result<Vec<u8>, StorageError> {
-        let stored = self.data.get(name).ok_or(StorageError::NotFound(name.to_string()))?;
+        let stored: _ = self.data.get(name).ok_or(StorageError::NotFound(name.to_string()))?;
         self.decompress(&stored.data)
     }
 

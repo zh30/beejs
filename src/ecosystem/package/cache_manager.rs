@@ -18,9 +18,9 @@ impl CacheManager {
     /// 创建新的缓存管理器
     pub fn new() -> Self {
         Self {
-            l1: Arc::new(Mutex::new(L1MemoryCache::new())),
-            l2: Arc::new(RwLock::new(L2DiskCache::new())),
-            l3: Arc::new(RwLock::new(L3DistributedCache::new())),
+            l1: Arc::new(std::sync::Mutex::new(Mutex::new(L1MemoryCache::new()))),
+            l2: Arc::new(std::sync::Mutex::new(RwLock::new(L2DiskCache::new()))),
+            l3: Arc::new(std::sync::Mutex::new(RwLock::new(L3DistributedCache::new()))),
         }
     }
 
@@ -57,7 +57,7 @@ impl CacheManager {
         &self,
         package: &Package,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let data = serialize_package(package)?;
+        let data: _ = serialize_package(package)?;
 
         // 存储到所有级别
         self.store_in_l1(&package.id, data.clone()).await?;
@@ -83,7 +83,7 @@ impl CacheManager {
         &self,
         id: &PackageId,
     ) -> Result<Option<Vec<u8>>, Box<dyn std::error::Error>> {
-        let cache = self.l1.lock().unwrap();
+        let cache: _ = self.l1.lock().unwrap();
         Ok(cache.get(id))
     }
 
@@ -103,7 +103,7 @@ impl CacheManager {
         &self,
         id: &PackageId,
     ) -> Result<Option<Vec<u8>>, Box<dyn std::error::Error>> {
-        let cache = self.l2.read().await;
+        let cache: _ = self.l2.read().await;
         Ok(cache.get(id))
     }
 
@@ -123,7 +123,7 @@ impl CacheManager {
         &self,
         id: &PackageId,
     ) -> Result<Option<Vec<u8>>, Box<dyn std::error::Error>> {
-        let cache = self.l3.read().await;
+        let cache: _ = self.l3.read().await;
         Ok(cache.get(id))
     }
 
@@ -171,7 +171,7 @@ impl CacheManager {
         id: &PackageId,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // 简化实现：直接存储到 L1
-        let data = serialize_package_id(id)?;
+        let data: _ = serialize_package_id(id)?;
         self.store_in_l1(id, data).await?;
         Ok(())
     }
@@ -186,7 +186,7 @@ impl CacheManager {
         for package_id in packages {
             if self.get_package(package_id).await?.is_none() {
                 // 模拟下载（实际实现中会从远程下载）
-                let mock_package = create_mock_package(package_id);
+                let mock_package: _ = create_mock_package(package_id);
                 self.store_package(&mock_package).await?;
                 prefetched_count += 1;
             }
@@ -206,7 +206,7 @@ impl CacheManager {
         let mut cached = Vec::new();
 
         for (name, version) in &dependencies.nodes {
-            let package_id = PackageId {
+            let package_id: _ = PackageId {
                 name: name.clone(),
                 version: version.clone(),
             };
@@ -263,7 +263,7 @@ impl CacheManager {
 /// L1 内存缓存
 #[derive(Debug, Clone)]
 struct L1MemoryCache {
-    cache: HashMap<String, Vec<u8>>,
+    cache: HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>,
 }
 
 impl L1MemoryCache {
@@ -274,17 +274,17 @@ impl L1MemoryCache {
     }
 
     fn store(&mut self, id: &PackageId, data: Vec<u8>) {
-        let key = format!("{}@{}", id.name, id.version);
+        let key: _ = format!("{}@{}", id.name, id.version);
         self.cache.insert(key, data);
     }
 
     fn get(&self, id: &PackageId) -> Option<Vec<u8>> {
-        let key = format!("{}@{}", id.name, id.version);
+        let key: _ = format!("{}@{}", id.name, id.version);
         self.cache.get(&key).cloned()
     }
 
     fn invalidate(&mut self, id: &PackageId) {
-        let key = format!("{}@{}", id.name, id.version);
+        let key: _ = format!("{}@{}", id.name, id.version);
         self.cache.remove(&key);
     }
 }
@@ -292,7 +292,7 @@ impl L1MemoryCache {
 /// L2 磁盘缓存
 #[derive(Debug, Clone)]
 struct L2DiskCache {
-    cache: HashMap<String, Vec<u8>>,
+    cache: HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>,
 }
 
 impl L2DiskCache {
@@ -303,17 +303,17 @@ impl L2DiskCache {
     }
 
     fn store(&mut self, id: &PackageId, data: Vec<u8>) {
-        let key = format!("{}@{}", id.name, id.version);
+        let key: _ = format!("{}@{}", id.name, id.version);
         self.cache.insert(key, data);
     }
 
     fn get(&self, id: &PackageId) -> Option<Vec<u8>> {
-        let key = format!("{}@{}", id.name, id.version);
+        let key: _ = format!("{}@{}", id.name, id.version);
         self.cache.get(&key).cloned()
     }
 
     fn invalidate(&mut self, id: &PackageId) {
-        let key = format!("{}@{}", id.name, id.version);
+        let key: _ = format!("{}@{}", id.name, id.version);
         self.cache.remove(&key);
     }
 }
@@ -321,7 +321,7 @@ impl L2DiskCache {
 /// L3 分布式缓存
 #[derive(Debug, Clone)]
 struct L3DistributedCache {
-    cache: HashMap<String, Vec<u8>>,
+    cache: HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>,
 }
 
 impl L3DistributedCache {
@@ -332,17 +332,17 @@ impl L3DistributedCache {
     }
 
     fn store(&mut self, id: &PackageId, data: Vec<u8>) {
-        let key = format!("{}@{}", id.name, id.version);
+        let key: _ = format!("{}@{}", id.name, id.version);
         self.cache.insert(key, data);
     }
 
     fn get(&self, id: &PackageId) -> Option<Vec<u8>> {
-        let key = format!("{}@{}", id.name, id.version);
+        let key: _ = format!("{}@{}", id.name, id.version);
         self.cache.get(&key).cloned()
     }
 
     fn invalidate(&mut self, id: &PackageId) {
-        let key = format!("{}@{}", id.name, id.version);
+        let key: _ = format!("{}@{}", id.name, id.version);
         self.cache.remove(&key);
     }
 }
@@ -362,6 +362,8 @@ fn deserialize_package(data: &[u8]) -> Result<Package, Box<dyn std::error::Error
 /// 序列化包 ID
 fn serialize_package_id(id: &PackageId) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     use bincode;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
     Ok(bincode::serialize(id)?)
 }
 

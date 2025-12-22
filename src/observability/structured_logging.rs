@@ -29,13 +29,13 @@ pub struct StructuredLogger {
     /// Log file path (optional)
     log_file: Option<Arc<Mutex<File>>>,
     /// Context data (correlation IDs, etc.)
-    context: Arc<RwLock<HashMap<String, Value>>>,
+    context: Arc<RwLock<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>>,
 }
 
 impl StructuredLogger {
     /// Create a new structured logger
     pub fn new(level: Level, service_name: String) -> Self {
-        let environment = std::env::var("BEEJS_ENV")
+        let environment: _ = std::env::var("BEEJS_ENV")
             .unwrap_or_else(|_| "development".to_string());
 
         Self {
@@ -43,18 +43,18 @@ impl StructuredLogger {
             service_name,
             environment,
             log_file: None,
-            context: Arc::new(RwLock::new(HashMap::new())),
+            context: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
     /// Create a new structured logger with file output
     pub fn new_with_file(level: Level, service_name: String, log_file_path: &str) -> Result<Self> {
-        let path = Path::new(log_file_path);
-        let file = File::create(path)
+        let path: _ = Path::new(log_file_path);
+        let file: _ = File::create(path)
             .map_err(|e| anyhow::anyhow!("Failed to create log file: {}", e))?;
 
         let mut logger = Self::new(level, service_name);
-        logger.log_file = Some(Arc::new(Mutex::new(file)));
+        logger.log_file = Some(Arc::new(std::sync::Mutex::new(Mutex::new(file))));
 
         Ok(logger)
     }
@@ -72,39 +72,39 @@ impl StructuredLogger {
     }
 
     /// Get a clone of current context
-    pub async fn get_context(&self) -> HashMap<String, Value> {
+    pub async fn get_context(&self) -> HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>> {
         self.context.read().await.clone()
     }
 
     /// Log at INFO level
-    pub async fn info(&self, message: &str, context: HashMap<String, Value>) {
+    pub async fn info(&self, message: &str, context: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>) {
         self.log_with_level(Level::INFO, message, context).await;
     }
 
     /// Log at WARN level
-    pub async fn warn(&self, message: &str, context: HashMap<String, Value>) {
+    pub async fn warn(&self, message: &str, context: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>) {
         self.log_with_level(Level::WARN, message, context).await;
     }
 
     /// Log at ERROR level
-    pub async fn error(&self, message: &str, context: HashMap<String, Value>) {
+    pub async fn error(&self, message: &str, context: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>) {
         self.log_with_level(Level::ERROR, message, context).await;
     }
 
     /// Log at DEBUG level
-    pub async fn debug(&self, message: &str, context: HashMap<String, Value>) {
+    pub async fn debug(&self, message: &str, context: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>) {
         self.log_with_level(Level::DEBUG, message, context).await;
     }
 
     /// Log at TRACE level
-    pub async fn trace(&self, message: &str, context: HashMap<String, Value>) {
+    pub async fn trace(&self, message: &str, context: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>) {
         self.log_with_level(Level::TRACE, message, context).await;
     }
 
     /// Internal logging function
-    async fn log_with_level(&self, level: Level, message: &str, mut context: HashMap<String, Value>) {
+    async fn log_with_level(&self, level: Level, message: &str, mut context: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>) {
         // Merge with global context
-        let global_context = self.context.read().await;
+        let global_context: _ = self.context.read().await;
         for (key, value) in global_context.iter() {
             if !context.contains_key(key) {
                 context.insert(key.clone(), value.clone());
@@ -112,17 +112,17 @@ impl StructuredLogger {
         }
 
         // Clone context for tracing before moving it
-        let context_clone = context.clone();
+        let context_clone: _ = context.clone();
 
         // Create log entry
-        let log_entry = self.create_log_entry(level, message, context);
+        let log_entry: _ = self.create_log_entry(level, message, context);
 
         // Output to file if configured
         if let Some(file) = &self.log_file {
             if let Ok(mut file) = file.lock() {
-                let log_line = format!("{}\n", log_entry.to_string());
-                let _ = file.write_all(log_line.as_bytes());
-                let _ = file.flush();
+                let log_line: _ = format!("{}\n", log_entry.to_string());
+                let _: _ = file.write_all(log_line.as_bytes());
+                let _: _ = file.flush();
             }
         }
 
@@ -137,8 +137,8 @@ impl StructuredLogger {
     }
 
     /// Create a JSON log entry
-    fn create_log_entry(&self, level: Level, message: &str, context: HashMap<String, Value>) -> Value {
-        let timestamp = chrono::Utc::now();
+    fn create_log_entry(&self, level: Level, message: &str, context: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>) -> Value {
+        let timestamp: _ = chrono::Utc::now();
 
         let mut log_entry = json!({
             "timestamp": timestamp.to_rfc3339(),
@@ -191,15 +191,15 @@ where
         mut writer: Writer,
         event: &Event<'_>,
     ) -> std::fmt::Result {
-        let timestamp = chrono::Utc::now();
+        let timestamp: _ = chrono::Utc::now();
 
         // Extract fields
-        let fields = HashMap::new();
+        let fields: _ = HashMap::new();
         let mut message = String::new();
 
         // Use simplified approach for field extraction
-        let level_str = "info";
-        let target_str = "beejs";
+        let level_str: _ = "info";
+        let target_str: _ = "beejs";
 
         // Simplified field extraction
         message = "event".to_string();
@@ -230,12 +230,12 @@ pub fn init_structured_logging(
     level: Level,
     service_name: &str,
 ) -> Result<Box<dyn Subscriber + Send + Sync>> {
-    let env_filter = EnvFilter::try_from_default_env()
+    let env_filter: _ = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new(level.as_str()));
 
-    let json_formatter = JsonFormatter::new(service_name.to_string());
+    let json_formatter: _ = JsonFormatter::new(service_name.to_string());
 
-    let subscriber = Registry::default()
+    let subscriber: _ = Registry::default()
         .with(env_filter)
         .with(tracing_subscriber::fmt::layer()
             .event_format(json_formatter));
@@ -253,7 +253,7 @@ pub struct ScriptLogger<'a> {
 impl<'a> ScriptLogger<'a> {
     /// Create a new script logger
     pub fn new(logger: &'a StructuredLogger, script_name: &str) -> Self {
-        let correlation_id = uuid::Uuid::new_v4().to_string();
+        let correlation_id: _ = uuid::Uuid::new_v4().to_string();
 
         Self {
             logger,
@@ -264,7 +264,7 @@ impl<'a> ScriptLogger<'a> {
 
     /// Log script start
     pub async fn log_start(&self) {
-        let context = HashMap::from([
+        let context: _ = HashMap::from([
             ("script_name".to_string(), json!(self.script_name)),
             ("event_type".to_string(), json!("script_start")),
             ("correlation_id".to_string(), json!(self.correlation_id)),
@@ -275,7 +275,7 @@ impl<'a> ScriptLogger<'a> {
 
     /// Log script end
     pub async fn log_end(&self, duration_ms: u64, success: bool) {
-        let context = HashMap::from([
+        let context: _ = HashMap::from([
             ("script_name".to_string(), json!(self.script_name)),
             ("event_type".to_string(), json!("script_end")),
             ("duration_ms".to_string(), json!(duration_ms)),
@@ -292,7 +292,7 @@ impl<'a> ScriptLogger<'a> {
 
     /// Log script error
     pub async fn log_error(&self, error: &str) {
-        let context = HashMap::from([
+        let context: _ = HashMap::from([
             ("script_name".to_string(), json!(self.script_name)),
             ("event_type".to_string(), json!("script_error")),
             ("error".to_string(), json!(error)),
@@ -313,7 +313,7 @@ pub struct PerformanceLogger<'a> {
 impl<'a> PerformanceLogger<'a> {
     /// Create a new performance logger
     pub fn new(logger: &'a StructuredLogger, operation_name: &str) -> Self {
-        let correlation_id = uuid::Uuid::new_v4().to_string();
+        let correlation_id: _ = uuid::Uuid::new_v4().to_string();
 
         Self {
             logger,
@@ -324,7 +324,7 @@ impl<'a> PerformanceLogger<'a> {
 
     /// Log operation start
     pub async fn log_start(&self) {
-        let context = HashMap::from([
+        let context: _ = HashMap::from([
             ("operation".to_string(), json!(self.operation_name)),
             ("event_type".to_string(), json!("operation_start")),
             ("correlation_id".to_string(), json!(self.correlation_id)),
@@ -335,7 +335,7 @@ impl<'a> PerformanceLogger<'a> {
 
     /// Log operation completion
     pub async fn log_completion(&self, duration_ms: u64, success: bool) {
-        let context = HashMap::from([
+        let context: _ = HashMap::from([
             ("operation".to_string(), json!(self.operation_name)),
             ("event_type".to_string(), json!("operation_end")),
             ("duration_ms".to_string(), json!(duration_ms)),
@@ -354,19 +354,21 @@ impl<'a> PerformanceLogger<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_structured_logger_creation() {
-        let logger = StructuredLogger::new(Level::INFO, "beejs".to_string());
+        let logger: _ = StructuredLogger::new(Level::INFO, "beejs".to_string());
         assert_eq!(logger.service_name(), "beejs");
         assert_eq!(logger.level(), Level::INFO);
     }
 
     #[tokio::test]
     async fn test_log_with_context() {
-        let logger = StructuredLogger::new(Level::INFO, "beejs".to_string());
+        let logger: _ = StructuredLogger::new(Level::INFO, "beejs".to_string());
 
-        let context = HashMap::from([
+        let context: _ = HashMap::from([
             ("key1".to_string(), json!("value1")),
             ("key2".to_string(), json!(42)),
         ]);
@@ -376,18 +378,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_correlation_id() {
-        let logger = StructuredLogger::new(Level::INFO, "beejs".to_string());
+        let logger: _ = StructuredLogger::new(Level::INFO, "beejs".to_string());
 
         logger.set_correlation_id("test-correlation-id".to_string()).await;
 
-        let context = HashMap::new();
+        let context: _ = HashMap::new();
         logger.info("Test message with correlation", context).await;
     }
 
     #[tokio::test]
     async fn test_script_logger() {
-        let logger = StructuredLogger::new(Level::INFO, "beejs".to_string());
-        let script_logger = ScriptLogger::new(&logger, "test.js");
+        let logger: _ = StructuredLogger::new(Level::INFO, "beejs".to_string());
+        let script_logger: _ = ScriptLogger::new(&logger, "test.js");
 
         script_logger.log_start().await;
         script_logger.log_end(100, true).await;
@@ -395,8 +397,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_performance_logger() {
-        let logger = StructuredLogger::new(Level::DEBUG, "beejs".to_string());
-        let perf_logger = PerformanceLogger::new(&logger, "test_operation");
+        let logger: _ = StructuredLogger::new(Level::DEBUG, "beejs".to_string());
+        let perf_logger: _ = PerformanceLogger::new(&logger, "test_operation");
 
         perf_logger.log_start().await;
         perf_logger.log_completion(50, true).await;

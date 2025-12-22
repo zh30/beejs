@@ -85,7 +85,7 @@ pub struct PluginMetadata {
     /// 所需权限
     pub permissions: Vec<String>,
     /// 依赖项
-    pub dependencies: HashMap<String, String>,
+    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 impl PluginMetadata {
@@ -114,7 +114,7 @@ pub struct PluginConfig {
     /// 最大内存 (MB)
     pub max_memory_mb: u64,
     /// 自定义选项
-    pub options: HashMap<String, Value>,
+    pub options: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>,
 }
 
 impl Default for PluginConfig {
@@ -291,7 +291,7 @@ impl PluginSandbox {
     /// 创建新沙箱
     pub fn new(permissions: PermissionSet) -> Self {
         Self {
-            permissions: Arc::new(permissions),
+            permissions: Arc::new(std::sync::Mutex::new(permissions)),
             limits: ResourceLimits::default(),
         }
     }
@@ -299,7 +299,7 @@ impl PluginSandbox {
     /// 创建带资源限制的沙箱
     pub fn with_limits(permissions: PermissionSet, limits: ResourceLimits) -> Self {
         Self {
-            permissions: Arc::new(permissions),
+            permissions: Arc::new(std::sync::Mutex::new(permissions)),
             limits,
         }
     }
@@ -331,7 +331,7 @@ impl PluginSandbox {
     where
         F: FnOnce(&SandboxContext) -> Result<T, PluginError>,
     {
-        let ctx = SandboxContext {
+        let ctx: _ = SandboxContext {
             permissions: (*self.permissions).clone(),
         };
         f(&ctx)
@@ -342,7 +342,7 @@ impl PluginSandbox {
     where
         F: Future<Output = Result<T, PluginError>> + Send,
     {
-        let timeout = tokio::time::Duration::from_millis(self.limits.max_cpu_time_ms);
+        let timeout: _ = tokio::time::Duration::from_millis(self.limits.max_cpu_time_ms);
 
         match tokio::time::timeout(timeout, f).await {
             Ok(result) => result,
@@ -357,20 +357,20 @@ impl PluginSandbox {
 
 /// 插件注册表
 pub struct PluginRegistry {
-    plugins: Arc<RwLock<HashMap<PluginId, PluginMetadata>>>,
+    plugins: Arc<RwLock<HashMap<PluginId, PluginMetadata, std::collections::HashMap<PluginId, PluginMetadata, PluginId, PluginMetadata>>>>,
 }
 
 impl PluginRegistry {
     /// 创建新注册表
     pub fn new() -> Self {
         Self {
-            plugins: Arc::new(RwLock::new(HashMap::new())),
+            plugins: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
     /// 注册插件
     pub async fn register(&self, metadata: &PluginMetadata) -> Result<PluginId, PluginError> {
-        let id = metadata.id.clone();
+        let id: _ = metadata.id.clone();
         let mut plugins = self.plugins.write().await;
         plugins.insert(id.clone(), metadata.clone());
         Ok(id)
@@ -385,7 +385,7 @@ impl PluginRegistry {
 
     /// 检查是否已注册 (异步版本)
     pub async fn is_registered_async(&self, id: &PluginId) -> bool {
-        let plugins = self.plugins.read().await;
+        let plugins: _ = self.plugins.read().await;
         plugins.contains_key(id)
     }
 
@@ -401,19 +401,19 @@ impl PluginRegistry {
 
     /// 获取插件元数据
     pub async fn get(&self, id: &str) -> Option<PluginMetadata> {
-        let plugins = self.plugins.read().await;
+        let plugins: _ = self.plugins.read().await;
         plugins.get(id).cloned()
     }
 
     /// 发现所有插件
     pub async fn discover_all(&self) -> Vec<PluginMetadata> {
-        let plugins = self.plugins.read().await;
+        let plugins: _ = self.plugins.read().await;
         plugins.values().cloned().collect()
     }
 
     /// 搜索插件
     pub async fn search(&self, query: &str) -> Vec<PluginMetadata> {
-        let plugins = self.plugins.read().await;
+        let plugins: _ = self.plugins.read().await;
         plugins
             .values()
             .filter(|p| {
@@ -480,8 +480,8 @@ impl PluginLoader {
     /// 解析依赖
     pub async fn resolve_dependencies(
         &self,
-        deps: &HashMap<String, String>,
-    ) -> Result<HashMap<String, String>, PluginError> {
+        deps: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    ) -> Result<HashMap<String, String, std::collections::HashMap<String, String, String, String>>, PluginError> {
         // 模拟依赖解析
         let mut resolved = HashMap::new();
         for (name, version) in deps {
@@ -520,8 +520,8 @@ impl PluginAPI {
     pub async fn call(&self, method: &str, params: &Value) -> Result<Value, PluginError> {
         match method {
             "log" => {
-                let level = params.get("level").and_then(|v| v.as_str()).unwrap_or("info");
-                let message = params.get("message").and_then(|v| v.as_str()).unwrap_or("");
+                let level: _ = params.get("level").and_then(|v| v.as_str()).unwrap_or("info");
+                let message: _ = params.get("message").and_then(|v| v.as_str()).unwrap_or("");
                 println!("[Plugin {}] {}", level.to_uppercase(), message);
                 Ok(serde_json::json!({"success": true}))
             }
@@ -584,7 +584,7 @@ pub struct PluginEngine {
     /// API
     api: Arc<PluginAPI>,
     /// 插件实例
-    instances: Arc<RwLock<HashMap<PluginId, PluginInstance>>>,
+    instances: Arc<RwLock<HashMap<PluginId, PluginInstance, std::collections::HashMap<PluginId, PluginInstance, PluginId, PluginInstance>>>>,
 }
 
 impl PluginEngine {
@@ -592,10 +592,10 @@ impl PluginEngine {
     pub fn new() -> Self {
         Self {
             initialized: AtomicBool::new(false),
-            registry: Arc::new(PluginRegistry::new()),
-            loader: Arc::new(PluginLoader::new()),
-            api: Arc::new(PluginAPI::new()),
-            instances: Arc::new(RwLock::new(HashMap::new())),
+            registry: Arc::new(std::sync::Mutex::new(PluginRegistry::new())),
+            loader: Arc::new(std::sync::Mutex::new(PluginLoader::new())),
+            api: Arc::new(std::sync::Mutex::new(PluginAPI::new())),
+            instances: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -620,11 +620,11 @@ impl PluginEngine {
         for perm in &metadata.permissions {
             permissions.grant(perm);
         }
-        let sandbox = PluginSandbox::new(permissions);
+        let sandbox: _ = PluginSandbox::new(permissions);
 
         // 创建实例
-        let status = Arc::new(std::sync::RwLock::new(PluginStatus::Loaded));
-        let instance = PluginInstance {
+        let status: _ = Arc::new(std::sync::Mutex::new(std::sync::RwLock::new(PluginStatus::Loaded)));
+        let instance: _ = PluginInstance {
             metadata: metadata.clone(),
             status: status.clone(),
             sandbox,
@@ -652,7 +652,7 @@ impl PluginEngine {
 
     /// 检查插件是否存在 (异步版本)
     pub async fn has_plugin_async(&self, id: &str) -> bool {
-        let instances = self.instances.read().await;
+        let instances: _ = self.instances.read().await;
         instances.contains_key(id)
     }
 
@@ -672,7 +672,7 @@ impl PluginEngine {
 
     /// 激活插件
     pub async fn activate_plugin(&self, handle: &PluginHandle) -> Result<(), PluginError> {
-        let instances = self.instances.read().await;
+        let instances: _ = self.instances.read().await;
         if instances.contains_key(&handle.id) {
             handle.set_status(PluginStatus::Active);
             Ok(())
@@ -683,7 +683,7 @@ impl PluginEngine {
 
     /// 停用插件
     pub async fn deactivate_plugin(&self, handle: &PluginHandle) -> Result<(), PluginError> {
-        let instances = self.instances.read().await;
+        let instances: _ = self.instances.read().await;
         if instances.contains_key(&handle.id) {
             handle.set_status(PluginStatus::Inactive);
             Ok(())
@@ -698,17 +698,17 @@ impl PluginEngine {
         handle: &PluginHandle,
         input: &Value,
     ) -> Result<PluginResult, PluginError> {
-        let start = std::time::Instant::now();
+        let start: _ = std::time::Instant::now();
 
-        let instances = self.instances.read().await;
-        let _instance = instances
+        let instances: _ = self.instances.read().await;
+        let _instance: _ = instances
             .get(&handle.id)
             .ok_or_else(|| PluginError::NotFound(handle.id.clone()))?;
 
         // 模拟插件执行
-        let action = input.get("action").and_then(|v| v.as_str()).unwrap_or("default");
+        let action: _ = input.get("action").and_then(|v| v.as_str()).unwrap_or("default");
 
-        let result = match action {
+        let result: _ = match action {
             "throw_error" => PluginResult::failure("Simulated error"),
             _ => PluginResult::success(serde_json::json!({
                 "input": input,
@@ -745,7 +745,7 @@ impl PluginEngine {
 
     /// 获取插件连接
     pub async fn get_plugin_connections(&self, handle: &PluginHandle) -> Vec<String> {
-        let instances = self.instances.read().await;
+        let instances: _ = self.instances.read().await;
         instances
             .get(&handle.id)
             .map(|i| i.connections.clone())
@@ -766,16 +766,18 @@ impl Default for PluginEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_plugin_engine_new() {
-        let engine = PluginEngine::new();
+        let engine: _ = PluginEngine::new();
         assert!(!engine.is_initialized());
     }
 
     #[tokio::test]
     async fn test_plugin_metadata_simple() {
-        let meta = PluginMetadata::simple("test", "1.0.0");
+        let meta: _ = PluginMetadata::simple("test", "1.0.0");
         assert_eq!(meta.id, "test");
         assert_eq!(meta.version, "1.0.0");
     }
@@ -794,10 +796,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_plugin_result() {
-        let success = PluginResult::success(serde_json::json!({"test": true}));
+        let success: _ = PluginResult::success(serde_json::json!({"test": true}));
         assert!(success.success);
 
-        let failure = PluginResult::failure("error");
+        let failure: _ = PluginResult::failure("error");
         assert!(!failure.success);
     }
 }

@@ -16,20 +16,22 @@ use std::time::{Duration, Instant};
 #[cfg(test)]
 mod stage_26_4_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// Test 1: V8 Snapshot Preheat
     /// Verifies V8 snapshot preheat reduces startup time
     #[test]
     fn test_v8_snapshot_preheat() {
-        let preheater = V8SnapshotPreheater::new();
+        let preheater: _ = V8SnapshotPreheater::new();
 
         // Pre-generate snapshot
-        let snapshot = preheater.generate_snapshot();
+        let snapshot: _ = preheater.generate_snapshot();
 
         // Load with snapshot
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let isolate = preheater.create_isolate_with_snapshot(&snapshot);
-        let load_time = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let isolate: _ = preheater.create_isolate_with_snapshot(&snapshot);
+        let load_time: _ = start.elapsed().unwrap();
 
         assert!(load_time < Duration::from_millis(5),
             "Startup with snapshot should be < 5ms, took {:?}", load_time);
@@ -48,21 +50,21 @@ mod stage_26_4_tests {
         // Enable lazy loading
         cli.enable_lazy_loading(true);
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         cli.initialize();
-        let init_time = start.elapsed().unwrap();
+        let init_time: _ = start.elapsed().unwrap();
 
         assert!(init_time < Duration::from_millis(3),
             "CLI initialization should be < 3ms, took {:?}", init_time);
 
         // Check modules loaded on demand
-        let loaded_modules = cli.get_loaded_modules();
+        let loaded_modules: _ = cli.get_loaded_modules();
         assert!(loaded_modules.is_empty(), "Should load modules on demand");
 
         // Access module to trigger lazy load
         cli.access_module("package_manager");
 
-        let loaded_modules = cli.get_loaded_modules();
+        let loaded_modules: _ = cli.get_loaded_modules();
         assert!(loaded_modules.contains(&"package_manager".to_string()),
             "Should load module on first access");
 
@@ -73,11 +75,11 @@ mod stage_26_4_tests {
     /// Verifies expensive modules are initialized on first use
     #[test]
     fn test_delayed_initialization() {
-        let initializer = DelayedInitializer::new();
+        let initializer: _ = DelayedInitializer::new();
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         initializer.initialize_core();
-        let core_init_time = start.elapsed().unwrap();
+        let core_init_time: _ = start.elapsed().unwrap();
 
         assert!(core_init_time < Duration::from_millis(1),
             "Core initialization should be instant");
@@ -87,9 +89,9 @@ mod stage_26_4_tests {
             "AI optimizer should not be loaded yet");
 
         // Access heavy module
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         initializer.initialize_module("ai_optimizer");
-        let heavy_init_time = start.elapsed().unwrap();
+        let heavy_init_time: _ = start.elapsed().unwrap();
 
         assert!(heavy_init_time >= Duration::from_millis(10),
             "Heavy module initialization should be noticeable");
@@ -116,10 +118,10 @@ mod stage_26_4_tests {
         }
 
         // Check compilation
-        let is_compiled = jit_optimizer.is_compiled("function_loop");
+        let is_compiled: _ = jit_optimizer.is_compiled("function_loop");
         assert!(is_compiled, "Function should be aggressively compiled");
 
-        let stats = jit_optimizer.get_stats();
+        let stats: _ = jit_optimizer.get_stats();
         assert!(stats.compilation_threshold <= 1, "Threshold should be aggressive (≤ 1)");
 
         println!("✓ Aggressive JIT: Compiled after {} executions, threshold {}",
@@ -130,7 +132,7 @@ mod stage_26_4_tests {
     /// Verifies hot path code detection and optimization
     #[test]
     fn test_hot_path_detection() {
-        let hot_path_detector = HotPathDetector::new();
+        let hot_path_detector: _ = HotPathDetector::new();
 
         // Simulate hot path execution
         for _i in 0..1000 {
@@ -138,14 +140,14 @@ mod stage_26_4_tests {
         }
 
         // Check if hot path is detected
-        let hot_paths = hot_path_detector.get_hot_paths();
+        let hot_paths: _ = hot_path_detector.get_hot_paths();
         assert!(hot_paths.contains(&"critical_loop".to_string()),
             "Should detect critical_loop as hot path");
 
-        let hot_path_info = hot_path_detector.get_hot_path_info("critical_loop");
+        let hot_path_info: _ = hot_path_detector.get_hot_path_info("critical_loop");
         assert!(hot_path_info.is_some(), "Should have hot path info");
 
-        let info = hot_path_info.unwrap();
+        let info: _ = hot_path_info.unwrap();
         assert!(info.frequency > 500, "Should have high execution frequency");
 
         println!("✓ Hot Path Detection: Found {} hot paths, top frequency {}",
@@ -156,17 +158,17 @@ mod stage_26_4_tests {
     /// Verifies adaptive threshold adjustment based on code patterns
     #[test]
     fn test_adaptive_compilation_thresholds() {
-        let adaptive_optimizer = AdaptiveOptimizer::new();
+        let adaptive_optimizer: _ = AdaptiveOptimizer::new();
 
         // Simple function - should compile quickly
         adaptive_optimizer.record_execution("simple_add", 1);
-        let threshold_simple = adaptive_optimizer.get_threshold("simple_add");
+        let threshold_simple: _ = adaptive_optimizer.get_threshold("simple_add");
 
         // Complex function - may need more executions
         for i in 0..50 {
             adaptive_optimizer.record_execution("complex_algorithm", i);
         }
-        let threshold_complex = adaptive_optimizer.get_threshold("complex_algorithm");
+        let threshold_complex: _ = adaptive_optimizer.get_threshold("complex_algorithm");
 
         assert!(threshold_simple <= threshold_complex,
             "Simple function should have lower threshold");
@@ -179,28 +181,28 @@ mod stage_26_4_tests {
     /// Verifies zero-copy memory allocation and operations
     #[test]
     fn test_zero_copy_memory_management() {
-        let memory_manager = ZeroCopyMemoryManager::new();
+        let memory_manager: _ = ZeroCopyMemoryManager::new();
 
         // Allocate memory
-        let data = vec![42u8; 1024];
-        let handle = memory_manager.allocate_zero_copy(&data);
+        let data: _ = vec![42u8; 1024];
+        let handle: _ = memory_manager.allocate_zero_copy(&data);
 
         assert!(handle.is_some(), "Should allocate zero-copy memory");
 
         // Read without copying
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let read_data = memory_manager.read_zero_copy(&handle.as_ref().unwrap());
-        let read_time = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let read_data: _ = memory_manager.read_zero_copy(&handle.as_ref().unwrap());
+        let read_time: _ = start.elapsed().unwrap();
 
         assert_eq!(read_data, data, "Data should match");
         assert!(read_time < Duration::from_millis(1),
             "Zero-copy read should be instant");
 
         // Write without copying
-        let new_data = vec![99u8; 1024];
+        let new_data: _ = vec![99u8; 1024];
         memory_manager.write_zero_copy(&handle.as_ref().unwrap(), &new_data);
 
-        let final_data = memory_manager.read_zero_copy(&handle.as_ref().unwrap());
+        let final_data: _ = memory_manager.read_zero_copy(&handle.as_ref().unwrap());
         assert_eq!(final_data, new_data, "Written data should match");
 
         println!("✓ Zero-Copy Memory: Allocation and I/O in {:?}", read_time);
@@ -210,18 +212,18 @@ mod stage_26_4_tests {
     /// Verifies object pool allocation efficiency
     #[test]
     fn test_object_pool_allocation() {
-        let pool = ObjectPool::new(100);
+        let pool: _ = ObjectPool::new(100);
 
         // Allocate many objects
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let mut handles = Vec::new();
 
         for _i in 0..1000 {
-            let handle = pool.allocate();
+            let handle: _ = pool.allocate();
             handles.push(handle);
         }
 
-        let alloc_time = start.elapsed().unwrap();
+        let alloc_time: _ = start.elapsed().unwrap();
 
         // Should be fast with pool
         assert!(alloc_time < Duration::from_millis(10),
@@ -233,11 +235,11 @@ mod stage_26_4_tests {
         }
 
         // Reallocate - should be even faster
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for _i in 0..1000 {
             pool.allocate();
         }
-        let realloc_time = start.elapsed().unwrap();
+        let realloc_time: _ = start.elapsed().unwrap();
 
         assert!(realloc_time < Duration::from_millis(5),
             "Reallocation from pool should be faster");
@@ -249,24 +251,24 @@ mod stage_26_4_tests {
     /// Verifies memory compression for efficient storage
     #[test]
     fn test_memory_compression() {
-        let compressor = MemoryCompressor::new();
+        let compressor: _ = MemoryCompressor::new();
 
         // Large repetitive data
-        let original_data = vec![42u8; 10000];
+        let original_data: _ = vec![42u8; 10000];
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let compressed = compressor.compress(&original_data);
-        let compress_time = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let compressed: _ = compressor.compress(&original_data);
+        let compress_time: _ = start.elapsed().unwrap();
 
         assert!(compressed.is_some(), "Should compress data");
-        let compressed_len = compressed.as_ref().unwrap().len();
+        let compressed_len: _ = compressed.as_ref().unwrap().len();
         assert!(compressed_len < original_data.len(),
             "Compressed data should be smaller");
 
         // Decompress
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let decompressed = compressor.decompress(compressed.as_ref().unwrap());
-        let decompress_time = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let decompressed: _ = compressor.decompress(compressed.as_ref().unwrap());
+        let decompress_time: _ = start.elapsed().unwrap();
 
         assert_eq!(decompressed, original_data, "Decompressed data should match");
         assert!(decompress_time < Duration::from_millis(5),
@@ -289,7 +291,7 @@ mod stage_26_4_tests {
         benchmark.run_execution_optimization();
         benchmark.run_memory_optimization();
 
-        let results = benchmark.get_results();
+        let results: _ = benchmark.get_results();
 
         // Check startup time
         assert!(results.startup_time < Duration::from_millis(5),
@@ -326,7 +328,7 @@ pub struct V8SnapshotPreheater {
 impl V8SnapshotPreheater {
     pub fn new() -> Self {
         Self {
-            snapshots: Arc::new(std::sync::Mutex::new(Vec::new())),
+            snapshots: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new()))),
         }
     }
 
@@ -355,7 +357,7 @@ impl CLIStartupOptimizer {
     pub fn new() -> Self {
         Self {
             lazy_loading: false,
-            loaded_modules: Arc::new(std::sync::Mutex::new(Vec::new())),
+            loaded_modules: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new()))),
         }
     }
 
@@ -386,7 +388,7 @@ pub struct DelayedInitializer {
 impl DelayedInitializer {
     pub fn new() -> Self {
         Self {
-            initialized_modules: Arc::new(std::sync::Mutex::new(std::collections::HashSet::new())),
+            initialized_modules: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashSet::new()))),
         }
     }
 
@@ -407,14 +409,14 @@ impl DelayedInitializer {
 #[derive(Debug, Clone)]
 pub struct JITOptimizer {
     aggressive_mode: bool,
-    executions: Arc<std::sync::Mutex<std::collections::HashMap<String, usize>>>,
+    executions: Arc<std::sync::Mutex<std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>>,
 }
 
 impl JITOptimizer {
     pub fn new() -> Self {
         Self {
             aggressive_mode: false,
-            executions: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
+            executions: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashMap::new()))),
         }
     }
 
@@ -428,8 +430,8 @@ impl JITOptimizer {
     }
 
     pub fn is_compiled(&self, function: &str) -> bool {
-        let executions = self.executions.lock().unwrap();
-        let count = executions.get(function).unwrap_or(&0);
+        let executions: _ = self.executions.lock().unwrap();
+        let count: _ = executions.get(function).unwrap_or(&0);
 
         if self.aggressive_mode {
             *count >= 1
@@ -439,7 +441,7 @@ impl JITOptimizer {
     }
 
     pub fn get_stats(&self) -> JITStats {
-        let executions = self.executions.lock().unwrap();
+        let executions: _ = self.executions.lock().unwrap();
         let total: usize = executions.values().sum();
 
         JITStats {
@@ -457,13 +459,13 @@ pub struct JITStats {
 
 #[derive(Debug, Clone)]
 pub struct HotPathDetector {
-    execution_times: Arc<std::sync::Mutex<std::collections::HashMap<String, Vec<Duration>>>>,
+    execution_times: Arc<std::sync::Mutex<std::collections::HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration>>>>>,
 }
 
 impl HotPathDetector {
     pub fn new() -> Self {
         Self {
-            execution_times: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
+            execution_times: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashMap::new()))),
         }
     }
 
@@ -473,7 +475,7 @@ impl HotPathDetector {
     }
 
     pub fn get_hot_paths(&self) -> Vec<String> {
-        let times = self.execution_times.lock().unwrap();
+        let times: _ = self.execution_times.lock().unwrap();
         times
             .iter()
             .filter(|(_, durations)| durations.len() > 500)
@@ -482,8 +484,8 @@ impl HotPathDetector {
     }
 
     pub fn get_hot_path_info(&self, path: &str) -> Option<HotPathInfo> {
-        let times = self.execution_times.lock().unwrap();
-        let durations = times.get(path)?;
+        let times: _ = self.execution_times.lock().unwrap();
+        let durations: _ = times.get(path)?;
 
         Some(HotPathInfo {
             frequency: durations.len(),
@@ -500,13 +502,13 @@ pub struct HotPathInfo {
 
 #[derive(Debug, Clone)]
 pub struct AdaptiveOptimizer {
-    execution_counts: Arc<std::sync::Mutex<std::collections::HashMap<String, usize>>>,
+    execution_counts: Arc<std::sync::Mutex<std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>>,
 }
 
 impl AdaptiveOptimizer {
     pub fn new() -> Self {
         Self {
-            execution_counts: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
+            execution_counts: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashMap::new()))),
         }
     }
 
@@ -516,8 +518,8 @@ impl AdaptiveOptimizer {
     }
 
     pub fn get_threshold(&self, function: &str) -> usize {
-        let counts = self.execution_counts.lock().unwrap();
-        let count = counts.get(function).unwrap_or(&0);
+        let counts: _ = self.execution_counts.lock().unwrap();
+        let count: _ = counts.get(function).unwrap_or(&0);
 
         // Adaptive threshold based on complexity
         if count < &10 {
@@ -532,20 +534,20 @@ impl AdaptiveOptimizer {
 
 #[derive(Debug, Clone)]
 pub struct ZeroCopyMemoryManager {
-    memory_blocks: Arc<std::sync::Mutex<std::collections::HashMap<usize, Vec<u8>>>>,
+    memory_blocks: Arc<std::sync::Mutex<std::collections::HashMap<usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, usize, Vec<u8>>>>>,
     next_id: Arc<std::sync::Mutex<usize>>,
 }
 
 impl ZeroCopyMemoryManager {
     pub fn new() -> Self {
         Self {
-            memory_blocks: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
-            next_id: Arc::new(std::sync::Mutex::new(1)),
+            memory_blocks: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashMap::new()))),
+            next_id: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(1))),
         }
     }
 
     pub fn allocate_zero_copy(&self, data: &[u8]) -> Option<MemoryHandle> {
-        let id = *self.next_id.lock().unwrap();
+        let id: _ = *self.next_id.lock().unwrap();
         *self.next_id.lock().unwrap() += 1;
 
         self.memory_blocks.lock().unwrap().insert(id, data.to_vec());
@@ -576,18 +578,18 @@ pub struct ObjectPool {
 
 impl ObjectPool {
     pub fn new(pool_size: usize) -> Self {
-        let available = (1..=pool_size).collect();
+        let available: _ = (1..=pool_size).collect();
 
         Self {
             pool_size,
-            available: Arc::new(std::sync::Mutex::new(available)),
-            allocated: Arc::new(std::sync::Mutex::new(std::collections::HashSet::new())),
+            available: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(available))),
+            allocated: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashSet::new()))),
         }
     }
 
     pub fn allocate(&self) -> usize {
         let mut available = self.available.lock().unwrap();
-        let id = available.pop().unwrap_or(0);
+        let id: _ = available.pop().unwrap_or(0);
 
         if id > 0 {
             self.allocated.lock().unwrap().insert(id);

@@ -1,6 +1,8 @@
 //! 语音识别系统
 
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 语音配置
 #[derive(Debug, Clone)]
@@ -51,7 +53,7 @@ pub struct VoiceRecognition {
     /// 配置
     config: VoiceConfig,
     /// 注册的命令
-    commands: HashMap<String, VoiceCommand>,
+    commands: HashMap<String, VoiceCommand, std::collections::HashMap<String, VoiceCommand, String, VoiceCommand>>,
     /// 是否正在监听
     listening: bool,
 }

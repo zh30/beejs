@@ -7,6 +7,8 @@ use std::collections::HashMap;
 
 use super::gates::GateType;
 use super::simulator::QuantumSimulator;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 量子电路
 #[derive(Debug, Clone)]
@@ -39,13 +41,13 @@ impl QuantumCircuit {
         let mut qubit_depths: Vec<usize> = vec![0; self.num_qubits];
 
         for gate in &self.gates {
-            let qubits = gate.qubits();
+            let qubits: _ = gate.qubits();
             if qubits.is_empty() {
                 continue;
             }
 
             // 找到涉及量子比特的最大深度
-            let max_depth = qubits.iter().map(|&q| qubit_depths[q]).max().unwrap_or(0);
+            let max_depth: _ = qubits.iter().map(|&q| qubit_depths[q]).max().unwrap_or(0);
 
             // 更新所有涉及的量子比特深度
             for &q in &qubits {
@@ -153,8 +155,8 @@ impl QuantumCircuit {
             self.add_hadamard(i);
 
             for j in (i + 1)..self.num_qubits {
-                let k = j - i + 1;
-                let theta = std::f64::consts::PI / (1 << k) as f64;
+                let k: _ = j - i + 1;
+                let theta: _ = std::f64::consts::PI / (1 << k) as f64;
                 self.gates.push(GateType::Phase(j, theta));
                 self.add_cnot(j, i);
             }
@@ -194,7 +196,7 @@ impl QuantumCircuit {
         }
 
         // 消除 oracle 未使用警告
-        let _ = oracle;
+        let _: _ = oracle;
     }
 
     /// 相位估计
@@ -236,7 +238,7 @@ impl QuantumCircuit {
 
     /// 测量电路
     pub fn measure(&self) -> Vec<u8> {
-        let result = self.execute();
+        let result: _ = self.execute();
         result.sample()
     }
 }
@@ -253,7 +255,7 @@ impl CircuitResult {
     pub fn probability(&self, basis_state: &[u8]) -> f64 {
         assert_eq!(basis_state.len(), self.num_qubits);
 
-        let index = basis_state
+        let index: _ = basis_state
             .iter()
             .enumerate()
             .fold(0usize, |acc, (i, &b)| acc | ((b as usize) << i));
@@ -267,11 +269,11 @@ impl CircuitResult {
     }
 
     /// 获取所有概率分布
-    pub fn probability_distribution(&self) -> HashMap<Vec<u8>, f64> {
+    pub fn probability_distribution(&self) -> HashMap<Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8>>, f64> {
         let mut dist = HashMap::new();
 
         for (i, amp) in self.state_vector.iter().enumerate() {
-            let prob = amp.norm_sqr();
+            let prob: _ = amp.norm_sqr();
             if prob > 1e-10 {
                 let basis: Vec<u8> = (0..self.num_qubits)
                     .map(|j| ((i >> j) & 1) as u8)

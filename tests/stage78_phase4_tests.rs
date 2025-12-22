@@ -5,17 +5,19 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 mod tests {
     use beejs::optimization::adaptive_optimizer::{AdaptiveOptimizer, CodeFeatures, WasmCode};
     use beejs::optimization::performance_monitor::{PerformanceMonitor, AccessType, PerformanceMetrics};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_adaptive_optimizer_creation() {
-        let optimizer = AdaptiveOptimizer::new();
+        let optimizer: _ = AdaptiveOptimizer::new();
         assert!(optimizer.stats.total_optimizations == 0);
     }
 
     #[test]
     fn test_auto_tuning() {
-        let optimizer = AdaptiveOptimizer::new();
-        let code = WasmCode {
+        let optimizer: _ = AdaptiveOptimizer::new();
+        let code: _ = WasmCode {
             features: CodeFeatures {
                 instruction_count: 1000,
                 loop_density: 0.8,
@@ -26,15 +28,15 @@ mod tests {
             size_bytes: 1024,
         };
 
-        let result = optimizer.auto_tune(&code);
+        let result: _ = optimizer.auto_tune(&code);
         assert!(result.optimization_applied.len() > 0);
         assert!(result.performance_improvement > 0.0);
     }
 
     #[test]
     fn test_ml_optimization() {
-        let optimizer = AdaptiveOptimizer::new();
-        let features = CodeFeatures {
+        let optimizer: _ = AdaptiveOptimizer::new();
+        let features: _ = CodeFeatures {
             instruction_count: 2000,
             loop_density: 0.7,
             memory_access_pattern: "sequential".to_string(),
@@ -42,7 +44,7 @@ mod tests {
             vectorization_potential: 0.8,
         };
 
-        let hints = optimizer.ml_optimize(&features);
+        let hints: _ = optimizer.ml_optimize(&features);
         assert!(hints.simd_optimization);
         assert!(hints.vectorization_suggested);
         assert!(hints.confidence > 0.0);
@@ -50,7 +52,7 @@ mod tests {
 
     #[test]
     fn test_performance_monitor_creation() {
-        let monitor = PerformanceMonitor::new(100);
+        let monitor: _ = PerformanceMonitor::new(100);
         assert!(monitor.get_current_metrics().is_none());
     }
 
@@ -66,7 +68,7 @@ mod tests {
             monitor.record_instruction(0x2000);
         }
 
-        let hotspots = monitor.detect_hotspots();
+        let hotspots: _ = monitor.detect_hotspots();
         assert!(!hotspots.is_empty());
         assert_eq!(hotspots[0].address, 0x1000);
     }
@@ -78,7 +80,7 @@ mod tests {
         monitor.record_memory_access(0x1000, AccessType::Sequential, 10);
         monitor.record_memory_access(0x1000, AccessType::Sequential, 15);
 
-        let stats = monitor.analyze_memory_patterns();
+        let stats: _ = monitor.analyze_memory_patterns();
         assert_eq!(stats.total_accesses, 2);
         assert!(stats.avg_access_time_ns > 0);
     }
@@ -87,7 +89,7 @@ mod tests {
     fn test_bottleneck_diagnosis() {
         let mut monitor = PerformanceMonitor::new(100);
 
-        let metrics = PerformanceMetrics {
+        let metrics: _ = PerformanceMetrics {
             cpu_usage: 90.0,
             memory_usage: 1000,
             execution_time_ms: 100,
@@ -98,16 +100,16 @@ mod tests {
 
         monitor.record_metrics(metrics);
 
-        let bottlenecks = monitor.diagnose_bottlenecks();
+        let bottlenecks: _ = monitor.diagnose_bottlenecks();
         assert!(!bottlenecks.is_empty());
         assert_eq!(bottlenecks[0].location, "CPU");
     }
 
     #[test]
     fn test_performance_report() {
-        let monitor = PerformanceMonitor::new(100);
+        let monitor: _ = PerformanceMonitor::new(100);
 
-        let report = monitor.generate_report();
+        let report: _ = monitor.generate_report();
         assert!(report.total_samples == 0);
         assert!(report.monitoring_duration.as_secs() >= 0);
     }
@@ -115,7 +117,7 @@ mod tests {
     #[test]
     fn test_optimize_code() {
         let mut optimizer = AdaptiveOptimizer::new();
-        let code = WasmCode {
+        let code: _ = WasmCode {
             features: CodeFeatures {
                 instruction_count: 1000,
                 loop_density: 0.5,
@@ -126,9 +128,9 @@ mod tests {
             size_bytes: 1024,
         };
 
-        let result = optimizer.optimize_code(&code);
+        let result: _ = optimizer.optimize_code(&code);
         assert!(result.is_ok());
-        let optimized = result.unwrap();
+        let optimized: _ = result.unwrap();
         assert!(optimized.optimization_applied.len() > 0);
     }
 }

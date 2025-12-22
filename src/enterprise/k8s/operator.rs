@@ -21,7 +21,7 @@ pub struct BeejsCluster {
 pub struct ObjectMeta {
     pub name: String,
     pub namespace: String,
-    pub labels: Option<std::collections::HashMap<String, String>>,
+    pub labels: Option<std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 /// Specification for BeejsCluster
@@ -109,7 +109,7 @@ pub struct Operator {
     config: OperatorConfig,
 
     /// Active clusters
-    clusters: Arc<RwLock<std::collections::HashMap<String, BeejsCluster>>>,
+    clusters: Arc<RwLock<std::collections::HashMap<String, BeejsCluster, std::collections::HashMap<String, BeejsCluster, String, BeejsCluster>>>>,
 
     /// Event sender for broadcasting cluster events
     event_sender: Arc<tokio::sync::mpsc::UnboundedSender<OperatorEvent>>,
@@ -137,10 +137,10 @@ impl Operator {
     pub fn new(config: OperatorConfig) -> (Self, tokio::sync::mpsc::UnboundedReceiver<OperatorEvent>) {
         let (event_sender, event_receiver) = tokio::sync::mpsc::unbounded_channel();
 
-        let operator = Operator {
+        let operator: _ = Operator {
             config,
-            clusters: Arc::new(RwLock::new(std::collections::HashMap::new())),
-            event_sender: Arc::new(event_sender),
+            clusters: Arc::new(std::sync::Mutex::new(RwLock::new(std::collections::HashMap::new()))),
+            event_sender: Arc::new(std::sync::Mutex::new(event_sender)),
         };
 
         (operator, event_receiver)
@@ -151,9 +151,9 @@ impl Operator {
         info!("Starting Beejs Kubernetes Operator");
 
         // Start the main reconciliation loop
-        let clusters = self.clusters.clone();
-        let event_sender = self.event_sender.clone();
-        let interval = self.config.reconcile_interval;
+        let clusters: _ = self.clusters.clone();
+        let event_sender: _ = self.event_sender.clone();
+        let interval: _ = self.config.reconcile_interval;
 
         tokio::spawn(async move {
             let mut interval_timer = tokio::time::interval(interval);
@@ -167,7 +167,7 @@ impl Operator {
                 // 3. Perform reconciliation actions
                 // 4. Update status
 
-                let clusters_read = clusters.read().await;
+                let clusters_read: _ = clusters.read().await;
                 for (name, cluster) in clusters_read.iter() {
                     debug!("Reconciling cluster: {}", name);
 
@@ -186,8 +186,8 @@ impl Operator {
         &self,
         cluster: BeejsCluster,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let name = cluster.metadata.name.clone();
-        let namespace = cluster.metadata.namespace.clone();
+        let name: _ = cluster.metadata.name.clone();
+        let namespace: _ = cluster.metadata.namespace.clone();
 
         info!("Creating BeejsCluster: {} in {}", name, namespace);
 
@@ -201,7 +201,7 @@ impl Operator {
         clusters.insert(name.clone(), cluster);
 
         // Send event
-        let event = OperatorEvent::ClusterCreated {
+        let event: _ = OperatorEvent::ClusterCreated {
             name: name.clone(),
             namespace: namespace.clone(),
         };
@@ -228,7 +228,7 @@ impl Operator {
             cluster.spec = spec;
 
             // Send event
-            let event = OperatorEvent::ClusterUpdated {
+            let event: _ = OperatorEvent::ClusterUpdated {
                 name: name.clone(),
                 namespace: namespace.clone(),
             };
@@ -256,7 +256,7 @@ impl Operator {
         clusters.remove(&name);
 
         // Send event
-        let event = OperatorEvent::ClusterDeleted {
+        let event: _ = OperatorEvent::ClusterDeleted {
             name: name.clone(),
             namespace: namespace.clone(),
         };
@@ -274,13 +274,13 @@ impl Operator {
         &self,
         name: String,
     ) -> Result<Option<BeejsClusterStatus>, Box<dyn std::error::Error>> {
-        let clusters = self.clusters.read().await;
+        let clusters: _ = self.clusters.read().await;
         Ok(clusters.get(&name).and_then(|c| c.status.clone()))
     }
 
     /// List all BeejsCluster resources
     pub async fn list_clusters(&self) -> Result<Vec<BeejsCluster>, Box<dyn std::error::Error>> {
-        let clusters = self.clusters.read().await;
+        let clusters: _ = self.clusters.read().await;
         Ok(clusters.values().cloned().collect())
     }
 }
@@ -288,10 +288,12 @@ impl Operator {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_operator_creation() {
-        let config = OperatorConfig {
+        let config: _ = OperatorConfig {
             namespace: "default".to_string(),
             reconcile_interval: std::time::Duration::from_secs(30),
             max_retries: 3,
@@ -303,7 +305,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_cluster() {
-        let config = OperatorConfig {
+        let config: _ = OperatorConfig {
             namespace: "default".to_string(),
             reconcile_interval: std::time::Duration::from_secs(30),
             max_retries: 3,
@@ -311,7 +313,7 @@ mod tests {
 
         let (operator, _receiver) = Operator::new(config);
 
-        let cluster = BeejsCluster {
+        let cluster: _ = BeejsCluster {
             api_version: "v1".to_string(),
             kind: "BeejsCluster".to_string(),
             metadata: ObjectMeta {
@@ -337,13 +339,13 @@ mod tests {
             status: None,
         };
 
-        let result = operator.create_cluster(cluster).await;
+        let result: _ = operator.create_cluster(cluster).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_list_clusters() {
-        let config = OperatorConfig {
+        let config: _ = OperatorConfig {
             namespace: "default".to_string(),
             reconcile_interval: std::time::Duration::from_secs(30),
             max_retries: 3,
@@ -351,11 +353,11 @@ mod tests {
 
         let (operator, _receiver) = Operator::new(config);
 
-        let clusters = operator.list_clusters().await.unwrap();
+        let clusters: _ = operator.list_clusters().await.unwrap();
         assert_eq!(clusters.len(), 0);
 
         // Create a cluster and verify it's listed
-        let cluster = BeejsCluster {
+        let cluster: _ = BeejsCluster {
             api_version: "v1".to_string(),
             kind: "BeejsCluster".to_string(),
             metadata: ObjectMeta {
@@ -382,7 +384,7 @@ mod tests {
         };
 
         operator.create_cluster(cluster).await.unwrap();
-        let clusters = operator.list_clusters().await.unwrap();
+        let clusters: _ = operator.list_clusters().await.unwrap();
         assert_eq!(clusters.len(), 1);
         assert_eq!(clusters[0].metadata.name, "test-cluster");
     }

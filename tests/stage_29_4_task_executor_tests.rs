@@ -10,6 +10,8 @@ use beejs::distributed::{
 };
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 // ============================================================================
 // 任务执行器 (TaskExecutor) 测试
@@ -17,9 +19,9 @@ use std::collections::HashMap;
 
 #[test]
 fn test_task_executor_creation() {
-    let config = ExecutorConfig::default();
-    let worker_count = config.worker_count;
-    let executor = TaskExecutor::new(config).unwrap();
+    let config: _ = ExecutorConfig::default();
+    let worker_count: _ = config.worker_count;
+    let executor: _ = TaskExecutor::new(config).unwrap();
 
     assert_eq!(executor.get_worker_count(), worker_count);
     assert!(executor.is_running());
@@ -27,7 +29,7 @@ fn test_task_executor_creation() {
 
 #[test]
 fn test_task_executor_with_custom_config() {
-    let config = ExecutorConfig {
+    let config: _ = ExecutorConfig {
         worker_count: 8,
         max_queue_size: 1000,
         execution_timeout: Duration::from_secs(60),
@@ -35,17 +37,17 @@ fn test_task_executor_with_custom_config() {
         checkpoint_interval: Duration::from_secs(30),
     };
 
-    let executor = TaskExecutor::new(config).unwrap();
+    let executor: _ = TaskExecutor::new(config).unwrap();
     assert_eq!(executor.get_worker_count(), 8);
     assert!(executor.is_checkpointing_enabled());
 }
 
 #[test]
 fn test_task_executor_execute_single_task() {
-    let config = ExecutorConfig::default();
+    let config: _ = ExecutorConfig::default();
     let mut executor = TaskExecutor::new(config).unwrap();
 
-    let task = Task {
+    let task: _ = Task {
         id: "task-1".to_string(),
         task_type: TaskType::JavaScriptExecution,
         payload: b"console.log('hello')".to_vec(),
@@ -55,7 +57,7 @@ fn test_task_executor_execute_single_task() {
         metadata: HashMap::new(),
     };
 
-    let result = executor.execute_task(task).unwrap();
+    let result: _ = executor.execute_task(task).unwrap();
 
     assert_eq!(result.task_id, "task-1");
     assert_eq!(result.status, TaskStatus::Completed);
@@ -64,7 +66,7 @@ fn test_task_executor_execute_single_task() {
 
 #[test]
 fn test_task_executor_batch_execution() {
-    let config = ExecutorConfig::default();
+    let config: _ = ExecutorConfig::default();
     let mut executor = TaskExecutor::new(config).unwrap();
 
     let tasks: Vec<Task> = (0..10).map(|i| Task {
@@ -77,7 +79,7 @@ fn test_task_executor_batch_execution() {
         metadata: HashMap::new(),
     }).collect();
 
-    let results = executor.execute_batch(tasks).unwrap();
+    let results: _ = executor.execute_batch(tasks).unwrap();
 
     assert_eq!(results.len(), 10);
     assert!(results.iter().all(|r| r.status == TaskStatus::Completed));
@@ -85,11 +87,11 @@ fn test_task_executor_batch_execution() {
 
 #[test]
 fn test_task_executor_priority_ordering() {
-    let config = ExecutorConfig::default();
+    let config: _ = ExecutorConfig::default();
     let mut executor = TaskExecutor::new(config).unwrap();
 
     // 提交不同优先级的任务
-    let tasks = vec![
+    let tasks: _ = vec![
         Task {
             id: "low-priority".to_string(),
             task_type: TaskType::DataProcessing,
@@ -117,7 +119,7 @@ fn test_task_executor_priority_ordering() {
     }
 
     // 恢复执行，检查执行顺序
-    let execution_order = executor.resume_and_get_execution_order();
+    let execution_order: _ = executor.resume_and_get_execution_order();
     assert_eq!(execution_order[0], "high-priority");
     assert_eq!(execution_order[1], "low-priority");
 }
@@ -128,7 +130,7 @@ fn test_task_executor_priority_ordering() {
 
 #[test]
 fn test_executor_worker_creation() {
-    let worker = ExecutorWorker::new(0, WorkerConfig::default());
+    let worker: _ = ExecutorWorker::new(0, WorkerConfig::default());
 
     assert_eq!(worker.id(), 0);
     assert_eq!(worker.status(), WorkerStatus::Idle);
@@ -138,7 +140,7 @@ fn test_executor_worker_creation() {
 fn test_executor_worker_execute_task() {
     let mut worker = ExecutorWorker::new(0, WorkerConfig::default());
 
-    let task = Task {
+    let task: _ = Task {
         id: "worker-task".to_string(),
         task_type: TaskType::JavaScriptExecution,
         payload: b"1 + 1".to_vec(),
@@ -148,7 +150,7 @@ fn test_executor_worker_execute_task() {
         metadata: HashMap::new(),
     };
 
-    let result = worker.execute(task).unwrap();
+    let result: _ = worker.execute(task).unwrap();
 
     assert_eq!(result.task_id, "worker-task");
     assert_eq!(result.status, TaskStatus::Completed);
@@ -177,7 +179,7 @@ fn test_executor_worker_stats() {
 
     // 执行几个任务
     for i in 0..5 {
-        let task = Task {
+        let task: _ = Task {
             id: format!("stats-task-{}", i),
             task_type: TaskType::DataProcessing,
             payload: vec![],
@@ -189,7 +191,7 @@ fn test_executor_worker_stats() {
         worker.execute(task).unwrap();
     }
 
-    let stats = worker.get_stats();
+    let stats: _ = worker.get_stats();
     assert_eq!(stats.tasks_executed, 5);
     assert_eq!(stats.tasks_failed, 0);
     assert!(stats.average_execution_time.as_nanos() > 0);
@@ -201,15 +203,15 @@ fn test_executor_worker_stats() {
 
 #[test]
 fn test_fault_handler_creation() {
-    let config = FaultConfig::default();
-    let handler = FaultHandler::new(config);
+    let config: _ = FaultConfig::default();
+    let handler: _ = FaultHandler::new(config);
 
     assert!(handler.is_enabled());
 }
 
 #[test]
 fn test_fault_handler_retry_policy() {
-    let config = FaultConfig {
+    let config: _ = FaultConfig {
         retry_policy: RetryPolicy::ExponentialBackoff {
             initial_delay: Duration::from_millis(100),
             max_delay: Duration::from_secs(10),
@@ -219,7 +221,7 @@ fn test_fault_handler_retry_policy() {
         enable_circuit_breaker: false,
     };
 
-    let handler = FaultHandler::new(config);
+    let handler: _ = FaultHandler::new(config);
 
     // 第一次重试延迟
     assert_eq!(handler.get_retry_delay(1), Duration::from_millis(100));
@@ -231,7 +233,7 @@ fn test_fault_handler_retry_policy() {
 
 #[test]
 fn test_fault_handler_handle_failure() {
-    let config = FaultConfig {
+    let config: _ = FaultConfig {
         retry_policy: RetryPolicy::Fixed(Duration::from_millis(50)),
         max_retries: 3,
         enable_circuit_breaker: false,
@@ -239,20 +241,20 @@ fn test_fault_handler_handle_failure() {
 
     let mut handler = FaultHandler::new(config);
 
-    let error = ExecutionError::Timeout("Task timed out".to_string());
+    let error: _ = ExecutionError::Timeout("Task timed out".to_string());
 
     // 应该允许重试
-    let action = handler.handle_failure("task-1", &error, 1);
+    let action: _ = handler.handle_failure("task-1", &error, 1);
     assert!(matches!(action, FaultAction::Retry { .. }));
 
     // 达到最大重试次数后应该失败
-    let action = handler.handle_failure("task-1", &error, 3);
+    let action: _ = handler.handle_failure("task-1", &error, 3);
     assert!(matches!(action, FaultAction::Fail));
 }
 
 #[test]
 fn test_fault_handler_circuit_breaker_integration() {
-    let config = FaultConfig {
+    let config: _ = FaultConfig {
         retry_policy: RetryPolicy::None,
         max_retries: 0,
         enable_circuit_breaker: true,
@@ -262,7 +264,7 @@ fn test_fault_handler_circuit_breaker_integration() {
 
     // 连续失败应该触发熔断
     for _ in 0..10 {
-        let error = ExecutionError::NodeFailure("Node down".to_string());
+        let error: _ = ExecutionError::NodeFailure("Node down".to_string());
         handler.record_failure("node-1", &error);
     }
 
@@ -271,7 +273,7 @@ fn test_fault_handler_circuit_breaker_integration() {
 
 #[test]
 fn test_fault_handler_recoverable_errors() {
-    let handler = FaultHandler::new(FaultConfig::default());
+    let handler: _ = FaultHandler::new(FaultConfig::default());
 
     // 超时是可恢复的
     assert!(handler.is_recoverable(&ExecutionError::Timeout("timeout".to_string())));
@@ -289,8 +291,8 @@ fn test_fault_handler_recoverable_errors() {
 
 #[test]
 fn test_execution_monitor_creation() {
-    let config = MonitorConfig::default();
-    let monitor = ExecutionMonitor::new(config);
+    let config: _ = MonitorConfig::default();
+    let monitor: _ = ExecutionMonitor::new(config);
 
     assert!(monitor.is_running());
 }
@@ -304,7 +306,7 @@ fn test_execution_monitor_record_metrics() {
     monitor.record_execution("task-2", Duration::from_millis(200), true);
     monitor.record_execution("task-3", Duration::from_millis(50), false);
 
-    let metrics = monitor.get_metrics();
+    let metrics: _ = monitor.get_metrics();
 
     assert_eq!(metrics.total_executions, 3);
     assert_eq!(metrics.successful_executions, 2);
@@ -320,7 +322,7 @@ fn test_execution_monitor_throughput() {
         monitor.record_execution(&format!("task-{}", i), Duration::from_millis(10), true);
     }
 
-    let throughput = monitor.get_throughput();
+    let throughput: _ = monitor.get_throughput();
     assert!(throughput > 0.0);
 }
 
@@ -330,12 +332,12 @@ fn test_execution_monitor_latency_percentiles() {
 
     // 记录不同延迟的执行
     for i in 0..100 {
-        let latency = Duration::from_millis(i as u64 * 10);
+        let latency: _ = Duration::from_millis(i as u64 * 10);
         monitor.record_execution(&format!("task-{}", i), latency, true);
     }
 
-    let p50 = monitor.get_latency_percentile(50);
-    let p99 = monitor.get_latency_percentile(99);
+    let p50: _ = monitor.get_latency_percentile(50);
+    let p99: _ = monitor.get_latency_percentile(99);
 
     assert!(p50 < p99);
     assert!(p50.as_millis() > 0);
@@ -343,7 +345,7 @@ fn test_execution_monitor_latency_percentiles() {
 
 #[test]
 fn test_execution_monitor_alerts() {
-    let config = MonitorConfig {
+    let config: _ = MonitorConfig {
         latency_threshold: Duration::from_millis(100),
         error_rate_threshold: 0.1,
         enable_alerts: true,
@@ -354,7 +356,7 @@ fn test_execution_monitor_alerts() {
     // 记录高延迟执行
     monitor.record_execution("slow-task", Duration::from_millis(500), true);
 
-    let alerts = monitor.get_active_alerts();
+    let alerts: _ = monitor.get_active_alerts();
     assert!(alerts.iter().any(|a| a.alert_type == AlertType::HighLatency));
 }
 
@@ -364,20 +366,20 @@ fn test_execution_monitor_alerts() {
 
 #[test]
 fn test_resource_tracker_creation() {
-    let config = ResourceConfig {
+    let config: _ = ResourceConfig {
         max_memory_mb: 1024,
         max_cpu_percent: 80,
         max_concurrent_tasks: 100,
     };
 
-    let tracker = ResourceTracker::new(config);
+    let tracker: _ = ResourceTracker::new(config);
 
     assert!(tracker.has_available_resources());
 }
 
 #[test]
 fn test_resource_tracker_allocation() {
-    let config = ResourceConfig {
+    let config: _ = ResourceConfig {
         max_memory_mb: 1024,
         max_cpu_percent: 80,
         max_concurrent_tasks: 10,
@@ -386,7 +388,7 @@ fn test_resource_tracker_allocation() {
     let mut tracker = ResourceTracker::new(config);
 
     // 分配资源
-    let allocation = tracker.allocate("task-1", 100, 10).unwrap();
+    let allocation: _ = tracker.allocate("task-1", 100, 10).unwrap();
 
     assert_eq!(allocation.memory_mb, 100);
     assert_eq!(allocation.cpu_percent, 10);
@@ -395,7 +397,7 @@ fn test_resource_tracker_allocation() {
 
 #[test]
 fn test_resource_tracker_release() {
-    let config = ResourceConfig::default();
+    let config: _ = ResourceConfig::default();
     let mut tracker = ResourceTracker::new(config);
 
     // 分配并释放
@@ -407,7 +409,7 @@ fn test_resource_tracker_release() {
 
 #[test]
 fn test_resource_tracker_limits() {
-    let config = ResourceConfig {
+    let config: _ = ResourceConfig {
         max_memory_mb: 100,
         max_cpu_percent: 50,
         max_concurrent_tasks: 2,
@@ -420,13 +422,13 @@ fn test_resource_tracker_limits() {
     tracker.allocate("task-2", 50, 25).unwrap();
 
     // 超出限制应该失败
-    let result = tracker.allocate("task-3", 10, 5);
+    let result: _ = tracker.allocate("task-3", 10, 5);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_resource_tracker_usage_report() {
-    let config = ResourceConfig {
+    let config: _ = ResourceConfig {
         max_memory_mb: 1000,
         max_cpu_percent: 100,
         max_concurrent_tasks: 100,
@@ -437,7 +439,7 @@ fn test_resource_tracker_usage_report() {
     tracker.allocate("task-1", 250, 25).unwrap();
     tracker.allocate("task-2", 250, 25).unwrap();
 
-    let usage = tracker.get_usage();
+    let usage: _ = tracker.get_usage();
 
     assert_eq!(usage.memory_used_mb, 500);
     assert_eq!(usage.memory_percent, 50.0);
@@ -451,7 +453,7 @@ fn test_resource_tracker_usage_report() {
 
 #[test]
 fn test_checkpoint_manager_creation() {
-    let manager = CheckpointManager::new(Duration::from_secs(30));
+    let manager: _ = CheckpointManager::new(Duration::from_secs(30));
 
     assert!(manager.is_enabled());
 }
@@ -460,7 +462,7 @@ fn test_checkpoint_manager_creation() {
 fn test_checkpoint_creation() {
     let mut manager = CheckpointManager::new(Duration::from_secs(30));
 
-    let checkpoint = manager.create_checkpoint("task-1", b"state data".to_vec());
+    let checkpoint: _ = manager.create_checkpoint("task-1", b"state data".to_vec());
 
     assert_eq!(checkpoint.task_id, "task-1");
     assert_eq!(checkpoint.state_data, b"state data".to_vec());
@@ -472,11 +474,11 @@ fn test_checkpoint_restore() {
     let mut manager = CheckpointManager::new(Duration::from_secs(30));
 
     // 创建检查点
-    let checkpoint = manager.create_checkpoint("task-1", b"important state".to_vec());
-    let checkpoint_id = checkpoint.checkpoint_id.clone();
+    let checkpoint: _ = manager.create_checkpoint("task-1", b"important state".to_vec());
+    let checkpoint_id: _ = checkpoint.checkpoint_id.clone();
 
     // 恢复检查点
-    let restored = manager.restore_checkpoint(&checkpoint_id).unwrap();
+    let restored: _ = manager.restore_checkpoint(&checkpoint_id).unwrap();
 
     assert_eq!(restored.task_id, "task-1");
     assert_eq!(restored.state_data, b"important state".to_vec());
@@ -493,7 +495,7 @@ fn test_checkpoint_cleanup() {
     std::thread::sleep(Duration::from_millis(20));
 
     // 清理过期检查点
-    let cleaned = manager.cleanup_expired();
+    let cleaned: _ = manager.cleanup_expired();
 
     assert_eq!(cleaned, 1);
 }
@@ -504,7 +506,7 @@ fn test_checkpoint_cleanup() {
 
 #[test]
 fn test_recovery_manager_creation() {
-    let manager = RecoveryManager::new(RecoveryConfig::default());
+    let manager: _ = RecoveryManager::new(RecoveryConfig::default());
 
     assert!(manager.is_ready());
 }
@@ -515,10 +517,10 @@ fn test_recovery_from_checkpoint() {
     let mut recovery_manager = RecoveryManager::new(RecoveryConfig::default());
 
     // 创建检查点
-    let checkpoint = checkpoint_manager.create_checkpoint("task-1", b"state".to_vec());
+    let checkpoint: _ = checkpoint_manager.create_checkpoint("task-1", b"state".to_vec());
 
     // 从检查点恢复
-    let task = recovery_manager.recover_from_checkpoint(&checkpoint).unwrap();
+    let task: _ = recovery_manager.recover_from_checkpoint(&checkpoint).unwrap();
 
     assert_eq!(task.id, "task-1");
     assert!(task.metadata.contains_key("recovered_from"));
@@ -532,7 +534,7 @@ fn test_recovery_manager_failure_tracking() {
     manager.record_failure("task-1", "Node crashed");
     manager.record_failure("task-1", "Retry failed");
 
-    let failures = manager.get_failure_history("task-1");
+    let failures: _ = manager.get_failure_history("task-1");
 
     assert_eq!(failures.len(), 2);
 }
@@ -544,19 +546,19 @@ fn test_recovery_manager_failure_tracking() {
 #[test]
 fn test_executor_end_to_end_workflow() {
     // 创建执行器
-    let config = ExecutorConfig::default();
+    let config: _ = ExecutorConfig::default();
     let mut executor = TaskExecutor::new(config).unwrap();
 
     // 创建监控器
-    let monitor = ExecutionMonitor::new(MonitorConfig::default());
+    let monitor: _ = ExecutionMonitor::new(MonitorConfig::default());
     executor.set_monitor(monitor);
 
     // 创建容错处理器
-    let fault_handler = FaultHandler::new(FaultConfig::default());
+    let fault_handler: _ = FaultHandler::new(FaultConfig::default());
     executor.set_fault_handler(fault_handler);
 
     // 提交任务
-    let task = Task {
+    let task: _ = Task {
         id: "e2e-task".to_string(),
         task_type: TaskType::JavaScriptExecution,
         payload: b"console.log('hello')".to_vec(),
@@ -566,19 +568,19 @@ fn test_executor_end_to_end_workflow() {
         metadata: HashMap::new(),
     };
 
-    let result = executor.execute_task(task).unwrap();
+    let result: _ = executor.execute_task(task).unwrap();
 
     assert_eq!(result.status, TaskStatus::Completed);
 
     // 检查监控指标
-    let stats = executor.get_stats();
+    let stats: _ = executor.get_stats();
     assert_eq!(stats.total_tasks_executed, 1);
     assert_eq!(stats.successful_tasks, 1);
 }
 
 #[test]
 fn test_executor_with_checkpointing() {
-    let config = ExecutorConfig {
+    let config: _ = ExecutorConfig {
         enable_checkpointing: true,
         checkpoint_interval: Duration::from_millis(100),
         ..ExecutorConfig::default()
@@ -587,7 +589,7 @@ fn test_executor_with_checkpointing() {
     let mut executor = TaskExecutor::new(config).unwrap();
 
     // 执行任务
-    let task = Task {
+    let task: _ = Task {
         id: "checkpoint-task".to_string(),
         task_type: TaskType::DataProcessing,
         payload: vec![0; 1000],
@@ -597,22 +599,22 @@ fn test_executor_with_checkpointing() {
         metadata: HashMap::new(),
     };
 
-    let result = executor.execute_task(task).unwrap();
+    let result: _ = executor.execute_task(task).unwrap();
 
     assert_eq!(result.status, TaskStatus::Completed);
 
     // 检查是否创建了检查点
-    let checkpoints = executor.get_checkpoints("checkpoint-task");
+    let checkpoints: _ = executor.get_checkpoints("checkpoint-task");
     assert!(checkpoints.len() >= 1);
 }
 
 #[test]
 fn test_executor_failure_with_retry() {
-    let config = ExecutorConfig::default();
+    let config: _ = ExecutorConfig::default();
     let mut executor = TaskExecutor::new(config).unwrap();
 
     // 配置容错
-    let fault_config = FaultConfig {
+    let fault_config: _ = FaultConfig {
         retry_policy: RetryPolicy::Fixed(Duration::from_millis(10)),
         max_retries: 2,
         enable_circuit_breaker: false,
@@ -620,7 +622,7 @@ fn test_executor_failure_with_retry() {
     executor.set_fault_handler(FaultHandler::new(fault_config));
 
     // 提交会失败的任务（模拟）
-    let task = Task {
+    let task: _ = Task {
         id: "failing-task".to_string(),
         task_type: TaskType::JavaScriptExecution,
         payload: b"throw new Error('test')".to_vec(),
@@ -634,19 +636,19 @@ fn test_executor_failure_with_retry() {
         },
     };
 
-    let result = executor.execute_task(task).unwrap();
+    let result: _ = executor.execute_task(task).unwrap();
 
     // 应该在重试后最终失败
     assert_eq!(result.status, TaskStatus::Failed);
 
     // 检查重试次数
-    let stats = executor.get_stats();
+    let stats: _ = executor.get_stats();
     assert!(stats.total_retries >= 2);
 }
 
 #[test]
 fn test_concurrent_task_execution_50_tasks() {
-    let config = ExecutorConfig {
+    let config: _ = ExecutorConfig {
         worker_count: 4,
         max_queue_size: 200,
         ..ExecutorConfig::default()
@@ -665,16 +667,16 @@ fn test_concurrent_task_execution_50_tasks() {
         metadata: HashMap::new(),
     }).collect();
 
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-    let results = executor.execute_batch(tasks).unwrap();
-    let elapsed = start.elapsed().unwrap();
+    let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let results: _ = executor.execute_batch(tasks).unwrap();
+    let elapsed: _ = start.elapsed().unwrap();
 
     assert_eq!(results.len(), 50);
-    let successful = results.iter().filter(|r| r.status == TaskStatus::Completed).count();
+    let successful: _ = results.iter().filter(|r| r.status == TaskStatus::Completed).count();
     assert!(successful >= 45); // 90% 成功率
 
     // 检查执行效率
-    let stats = executor.get_stats();
+    let stats: _ = executor.get_stats();
     assert!(stats.throughput_per_second > 10.0); // 至少 10 任务/秒
 
     println!("Executed 50 tasks in {:?}, throughput: {:.2}/s", elapsed, stats.throughput_per_second);

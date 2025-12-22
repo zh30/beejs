@@ -94,7 +94,7 @@ impl AccessPatternAnalyzer {
 
     /// 分析访问模式
     pub fn analyze_pattern(&mut self, address: usize) -> AccessPattern {
-        let now = Instant::now();
+        let now: _ = Instant::now();
         self.access_history.push((address, now));
 
         // 保持窗口大小
@@ -119,8 +119,8 @@ impl AccessPatternAnalyzer {
         let mut random_variance = 0.0;
 
         for i in 1..self.access_history.len() {
-            let prev_addr = self.access_history[i-1].0;
-            let curr_addr = self.access_history[i].0;
+            let prev_addr: _ = self.access_history[i-1].0;
+            let curr_addr: _ = self.access_history[i].0;
 
             if curr_addr > prev_addr {
                 sequential_count += 1;
@@ -129,7 +129,7 @@ impl AccessPatternAnalyzer {
             random_variance += ((curr_addr as f64) - (prev_addr as f64)).powi(2);
         }
 
-        let sequential_ratio = sequential_count as f64 / (self.access_history.len() - 1) as f64;
+        let sequential_ratio: _ = sequential_count as f64 / (self.access_history.len() - 1) as f64;
         random_variance /= self.access_history.len() as f64;
 
         if sequential_ratio > 0.8 {
@@ -171,21 +171,21 @@ impl AiAccessPredictor {
 
         // 简单的线性预测算法
         // 在实际实现中，这里可以使用更复杂的 AI 模型
-        let len = recent_addresses.len();
-        let addr1 = recent_addresses[len - 3];
-        let addr2 = recent_addresses[len - 2];
-        let addr3 = recent_addresses[len - 1];
+        let len: _ = recent_addresses.len();
+        let addr1: _ = recent_addresses[len - 3];
+        let addr2: _ = recent_addresses[len - 2];
+        let addr3: _ = recent_addresses[len - 1];
 
-        let delta1 = addr2 as isize - addr1 as isize;
-        let delta2 = addr3 as isize - addr2 as isize;
+        let delta1: _ = addr2 as isize - addr1 as isize;
+        let delta2: _ = addr3 as isize - addr2 as isize;
 
-        let predicted_delta = (delta1 + delta2) / 2;
+        let predicted_delta: _ = (delta1 + delta2) / 2;
         Some((addr3 as isize + predicted_delta) as usize)
     }
 
     /// 记录预测结果
     pub fn record_prediction(&mut self, predicted: usize, actual: usize) {
-        let correct = (predicted as isize - actual as isize).abs() < 100;
+        let correct: _ = (predicted as isize - actual as isize).abs() < 100;
         self.predictions.push((predicted, correct));
 
         // 保持历史记录在合理范围内
@@ -194,7 +194,7 @@ impl AiAccessPredictor {
         }
 
         // 更新准确率
-        let correct_count = self.predictions.iter().filter(|(_, c)| *c).count();
+        let correct_count: _ = self.predictions.iter().filter(|(_, c)| *c).count();
         self.accuracy = correct_count as f64 / self.predictions.len() as f64;
     }
 }
@@ -271,29 +271,29 @@ impl Stage93ZeroCopyOptimizer {
         base: EnhancedZeroCopy,
         config: Stage93OptimizerConfig,
     ) -> Self {
-        let window_size = config.pattern_analysis_window;
+        let window_size: _ = config.pattern_analysis_window;
 
         Self {
             base,
             config,
-            pattern_analyzer: Arc::new(RwLock::new(AccessPatternAnalyzer::new(window_size))),
-            ai_predictor: Arc::new(RwLock::new(AiAccessPredictor::new())),
-            dynamic_pool_manager: Arc::new(RwLock::new(DynamicPoolManager::new(1024))),
-            performance_metrics: Arc::new(Stage93PerformanceMetrics::default()),
+            pattern_analyzer: Arc::new(std::sync::Mutex::new(RwLock::new(AccessPatternAnalyzer::new(window_size)))),
+            ai_predictor: Arc::new(std::sync::Mutex::new(RwLock::new(AiAccessPredictor::new()))),
+            dynamic_pool_manager: Arc::new(std::sync::Mutex::new(RwLock::new(DynamicPoolManager::new(1024)))),
+            performance_metrics: Arc::new(std::sync::Mutex::new(Stage93PerformanceMetrics::default())),
         }
     }
 
     /// 优化的内存访问
     pub async fn optimized_access(&self, address: usize, size: usize) -> Result<()> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 1. 分析访问模式
         let mut analyzer = self.pattern_analyzer.write().await;
-        let pattern = analyzer.analyze_pattern(address);
+        let pattern: _ = analyzer.analyze_pattern(address);
 
         // 2. AI 预测下一个访问
         if self.config.enable_ai_prediction {
-            let recent_addresses = analyzer.access_history
+            let recent_addresses: _ = analyzer.access_history
                 .iter()
                 .rev()
                 .take(10)
@@ -308,7 +308,7 @@ impl Stage93ZeroCopyOptimizer {
         }
 
         // 3. 根据模式调整池大小
-        let utilization = self.calculate_utilization();
+        let utilization: _ = self.calculate_utilization();
         self.dynamic_pool_manager.write().await.adjust_pool_size(&pattern, utilization);
         self.performance_metrics.pool_adjustments.fetch_add(1, Ordering::Relaxed);
 
@@ -316,11 +316,11 @@ impl Stage93ZeroCopyOptimizer {
         self.base.allocate_zero_copy(size).await?;
 
         // 5. 记录性能指标
-        let duration = start.elapsed();
+        let duration: _ = start.elapsed();
         self.performance_metrics.total_zero_copy_ops.fetch_add(1, Ordering::Relaxed);
 
         // 计算性能提升
-        let improvement = self.calculate_performance_improvement(duration);
+        let improvement: _ = self.calculate_performance_improvement(duration);
         self.performance_metrics.performance_improvement.store(improvement as usize, Ordering::Relaxed);
 
         Ok(())
@@ -342,8 +342,8 @@ impl Stage93ZeroCopyOptimizer {
     /// 计算性能提升
     fn calculate_performance_improvement(&self, duration: Duration) -> f64 {
         // 基准时间 (假设 1ms)
-        let baseline = Duration::from_millis(1);
-        let improvement = if duration < baseline {
+        let baseline: _ = Duration::from_millis(1);
+        let improvement: _ = if duration < baseline {
             ((baseline - duration).as_nanos() as f64 / baseline.as_nanos() as f64) * 100.0
         } else {
             0.0
@@ -353,13 +353,13 @@ impl Stage93ZeroCopyOptimizer {
 
     /// 获取性能报告
     pub async fn get_performance_report(&self) -> Stage93PerformanceReport {
-        let metrics = &*self.performance_metrics;
+        let metrics: _ = &*self.performance_metrics;
 
         Stage93PerformanceReport {
             total_zero_copy_ops: metrics.total_zero_copy_ops.load(Ordering::Relaxed),
             ai_prediction_hits: metrics.ai_prediction_hits.load(Ordering::Relaxed),
             ai_prediction_accuracy: {
-                let predictor = self.ai_predictor.read().await;
+                let predictor: _ = self.ai_predictor.read().await;
                 (predictor.accuracy * 100.0) as u32
             },
             pool_adjustments: metrics.pool_adjustments.load(Ordering::Relaxed),
@@ -383,50 +383,52 @@ pub struct Stage93PerformanceReport {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_stage93_optimizer_creation() {
-        let base = EnhancedZeroCopy::new(
+        let base: _ = EnhancedZeroCopy::new(
             DmaConfig::default(),
             MmapConfig::default(),
             PrefetchConfig::default(),
         );
-        let config = Stage93OptimizerConfig::default();
-        let optimizer = Stage93ZeroCopyOptimizer::new(base, config);
+        let config: _ = Stage93OptimizerConfig::default();
+        let optimizer: _ = Stage93ZeroCopyOptimizer::new(base, config);
 
         assert!(optimizer.config.enable_ai_prediction);
     }
 
     #[tokio::test]
     async fn test_pattern_analysis() {
-        let base = EnhancedZeroCopy::new(
+        let base: _ = EnhancedZeroCopy::new(
             DmaConfig::default(),
             MmapConfig::default(),
             PrefetchConfig::default(),
         );
-        let optimizer = Stage93ZeroCopyOptimizer::new(base, Stage93OptimizerConfig::default());
+        let optimizer: _ = Stage93ZeroCopyOptimizer::new(base, Stage93OptimizerConfig::default());
 
         // 测试顺序访问模式
         for i in 0..20 {
             optimizer.optimized_access(i * 100, 64).await.unwrap();
         }
 
-        let report = optimizer.get_performance_report().await;
+        let report: _ = optimizer.get_performance_report().await;
         assert!(report.total_zero_copy_ops > 0);
     }
 
     #[tokio::test]
     async fn test_performance_improvement() {
-        let base = EnhancedZeroCopy::new(
+        let base: _ = EnhancedZeroCopy::new(
             DmaConfig::default(),
             MmapConfig::default(),
             PrefetchConfig::default(),
         );
-        let optimizer = Stage93ZeroCopyOptimizer::new(base, Stage93OptimizerConfig::default());
+        let optimizer: _ = Stage93ZeroCopyOptimizer::new(base, Stage93OptimizerConfig::default());
 
         optimizer.optimized_access(0x1000, 64).await.unwrap();
 
-        let report = optimizer.get_performance_report().await;
+        let report: _ = optimizer.get_performance_report().await;
         // 验证性能报告生成
         assert!(report.total_zero_copy_ops >= 1);
     }

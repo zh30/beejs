@@ -75,14 +75,14 @@ impl PerfStatistics {
         let mut durations: Vec<_> = runs.iter().map(|r| r.duration).collect();
         durations.sort();
 
-        let count = durations.len();
+        let count: _ = durations.len();
         let total: std::time::Duration = durations.iter().sum();
-        let mean = std::time::Duration::from_nanos(total.as_nanos() as u64 / count as u64);
+        let mean: _ = std::time::Duration::from_nanos(total.as_nanos() as u64 / count as u64);
 
-        let min = durations[0];
-        let max = durations[count - 1];
+        let min: _ = durations[0];
+        let max: _ = durations[count - 1];
 
-        let median = if count % 2 == 0 {
+        let median: _ = if count % 2 == 0 {
             let mid = count / 2;
             std::time::Duration::from_nanos(
                 (durations[mid - 1].as_nanos() + durations[mid].as_nanos()) as u64 / 2
@@ -95,22 +95,22 @@ impl PerfStatistics {
         let variance: f64 = durations
             .iter()
             .map(|d| {
-                let diff = d.as_nanos() as f64 - mean.as_nanos() as f64;
+                let diff: _ = d.as_nanos() as f64 - mean.as_nanos() as f64;
                 diff * diff
             })
             .sum::<f64>() / count as f64;
 
-        let std_dev = std::time::Duration::from_nanos(variance.sqrt() as u64);
+        let std_dev: _ = std::time::Duration::from_nanos(variance.sqrt() as u64);
 
         // Calculate percentiles
-        let percentile_95_index = (count as f64 * 0.95) as usize;
-        let percentile_99_index = (count as f64 * 0.99) as usize;
+        let percentile_95_index: _ = (count as f64 * 0.95) as usize;
+        let percentile_99_index: _ = (count as f64 * 0.99) as usize;
 
-        let percentile_95 = durations[percentile_95_index.min(count - 1)];
-        let percentile_99 = durations[percentile_99_index.min(count - 1)];
+        let percentile_95: _ = durations[percentile_95_index.min(count - 1)];
+        let percentile_99: _ = durations[percentile_99_index.min(count - 1)];
 
         // Calculate ops per second
-        let ops_per_second = if mean.as_nanos() > 0 {
+        let ops_per_second: _ = if mean.as_nanos() > 0 {
             1_000_000_000.0 / mean.as_nanos() as f64
         } else {
             0.0
@@ -314,7 +314,7 @@ impl PerfTestRunner {
 
         // Warmup runs
         for _ in 0..self.config.warmup_runs {
-            let _ = self.measure_execution(&test_fn);
+            let _: _ = self.measure_execution(&test_fn);
         }
 
         // Actual runs
@@ -325,20 +325,20 @@ impl PerfTestRunner {
             }
         }
 
-        let statistics = PerfStatistics::from_runs(&runs);
+        let statistics: _ = PerfStatistics::from_runs(&runs);
 
         // Check threshold
         let (passed, threshold) = if let Some(ref thr) = self.config.threshold {
-            let passes_threshold = self.check_threshold(&statistics, thr);
+            let passes_threshold: _ = self.check_threshold(&statistics, thr);
             (passes_threshold, Some(thr.clone()))
         } else {
             (true, None)
         };
 
         // Check for regression (simplified)
-        let regression_detected = !passed;
+        let regression_detected: _ = !passed;
 
-        let result = PerfTestResult {
+        let result: _ = PerfTestResult {
             name: name.to_string(),
             runs,
             statistics,
@@ -356,22 +356,22 @@ impl PerfTestRunner {
     where
         F: FnOnce() + Send,
     {
-        let start = std::time::Instant::now();
+        let start: _ = std::time::Instant::now();
 
         // Execute test
         test_fn();
 
-        let duration = start.elapsed();
+        let duration: _ = start.elapsed();
 
         // Measure memory if requested
-        let memory_usage = if self.config.measure_memory {
+        let memory_usage: _ = if self.config.measure_memory {
             Some(self.measure_memory_usage())
         } else {
             None
         };
 
         // Measure CPU if requested
-        let cpu_usage = if self.config.measure_cpu {
+        let cpu_usage: _ = if self.config.measure_cpu {
             Some(self.measure_cpu_usage())
         } else {
             None
@@ -401,11 +401,11 @@ impl PerfTestRunner {
 
     /// Check if statistics meet threshold
     fn check_threshold(&self, stats: &PerfStatistics, threshold: &PerfThreshold) -> bool {
-        let tolerance = threshold.tolerance;
+        let tolerance: _ = threshold.tolerance;
 
         // Check max duration
         if let Some(max_duration) = threshold.max_duration {
-            let adjusted_max = std::time::Duration::from_nanos(
+            let adjusted_max: _ = std::time::Duration::from_nanos(
                 (max_duration.as_nanos() as f64 * (1.0 + tolerance)) as u64
             );
             if stats.mean > adjusted_max {
@@ -415,7 +415,7 @@ impl PerfTestRunner {
 
         // Check min ops/sec
         if let Some(min_ops) = threshold.min_ops_per_second {
-            let adjusted_min = min_ops * (1.0 - tolerance);
+            let adjusted_min: _ = min_ops * (1.0 - tolerance);
             if stats.ops_per_second < adjusted_min {
                 return false;
             }
@@ -428,10 +428,12 @@ impl PerfTestRunner {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_perf_statistics_from_runs() {
-        let runs = vec![
+        let runs: _ = vec![
             PerfRun {
                 duration: std::time::Duration::from_millis(10),
                 memory_usage: None,
@@ -452,7 +454,7 @@ mod tests {
             },
         ];
 
-        let stats = PerfStatistics::from_runs(&runs);
+        let stats: _ = PerfStatistics::from_runs(&runs);
 
         assert_eq!(stats.count, 3);
         assert!(stats.mean > std::time::Duration::from_millis(10));
@@ -462,7 +464,7 @@ mod tests {
 
     #[test]
     fn test_perf_threshold() {
-        let threshold = PerfThreshold::new()
+        let threshold: _ = PerfThreshold::new()
             .max_duration(std::time::Duration::from_millis(100))
             .min_ops_per_second(1000.0)
             .tolerance(0.2);
@@ -474,11 +476,11 @@ mod tests {
 
     #[test]
     fn test_perf_test_runner() {
-        let config = PerfTestConfig::default();
-        let reporter = Box::new(ConsolePerfTestReporter::new(false));
-        let runner = PerfTestRunner::new(config, reporter);
+        let config: _ = PerfTestConfig::default();
+        let reporter: _ = Box::new(ConsolePerfTestReporter::new(false));
+        let runner: _ = PerfTestRunner::new(config, reporter);
 
-        let result = runner.run_test("test", || {
+        let result: _ = runner.run_test("test", || {
             std::thread::sleep(std::time::Duration::from_millis(1));
         });
 

@@ -120,6 +120,8 @@ pub struct Condition {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_cluster_phases() {
@@ -156,7 +158,7 @@ mod tests {
 
     #[test]
     fn test_condition_structure() {
-        let condition = Condition {
+        let condition: _ = Condition {
             condition_type: ConditionType::Ready,
             status: ConditionStatus::True,
             last_probe_time: Some("2024-01-01T00:00:00Z".to_string()),

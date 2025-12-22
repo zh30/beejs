@@ -14,13 +14,15 @@ mod cicd_integration_tests {
         PipelineCache, PipelineArtifact, PipelineSecret, Error as PipelineError,
     };
     use beejs::cloud_native::cicd::deployment::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
         DeploymentStrategy, BlueGreenDeployment, CanaryDeployment, RollingDeployment,
         DeploymentConfig, DeploymentStatus, Error as DeploymentError,
     };
 
     #[test]
     fn test_argocd_application_creation() {
-        let app = ArgoCDApplication::new(
+        let app: _ = ArgoCDApplication::new(
             "beejs-app".to_string(),
             "production".to_string(),
             "https://github.com/example/beejs-manifests.git".to_string(),
@@ -59,7 +61,7 @@ mod cicd_integration_tests {
 
     #[test]
     fn test_flux_helm_release() {
-        let release = FluxHelmRelease::new(
+        let release: _ = FluxHelmRelease::new(
             "beejs".to_string(),
             "production".to_string(),
             "beejs".to_string(),
@@ -97,7 +99,7 @@ mod cicd_integration_tests {
     fn test_gitops_manager_argocd() {
         let mut manager = GitOpsManager::new("argocd".to_string());
 
-        let app = ArgoCDApplication::new(
+        let app: _ = ArgoCDApplication::new(
             "beejs-app".to_string(),
             "production".to_string(),
             "https://github.com/example/beejs-manifests.git".to_string(),
@@ -114,7 +116,7 @@ mod cicd_integration_tests {
     fn test_gitops_manager_flux() {
         let mut manager = GitOpsManager::new("flux".to_string());
 
-        let release = FluxHelmRelease::new(
+        let release: _ = FluxHelmRelease::new(
             "beejs".to_string(),
             "production".to_string(),
             "beejs".to_string(),
@@ -130,7 +132,7 @@ mod cicd_integration_tests {
     fn test_gitops_sync() {
         let mut manager = GitOpsManager::new("argocd".to_string());
 
-        let app = ArgoCDApplication::new(
+        let app: _ = ArgoCDApplication::new(
             "test-app".to_string(),
             "production".to_string(),
             "https://github.com/test/repo.git".to_string(),
@@ -139,7 +141,7 @@ mod cicd_integration_tests {
         );
 
         manager.add_application(app);
-        let result = manager.sync_application("test-app");
+        let result: _ = manager.sync_application("test-app");
 
         assert!(result.is_ok());
         if let Ok(status) = result {
@@ -160,7 +162,7 @@ mod cicd_integration_tests {
         workflow.on.push("schedule".to_string());
 
         // Add build stage
-        let build_stage = PipelineStage::Build {
+        let build_stage: _ = PipelineStage::Build {
             name: "build".to_string(),
             runs_on: "ubuntu-latest".to_string(),
             steps: vec![
@@ -174,7 +176,7 @@ mod cicd_integration_tests {
         workflow.add_stage(build_stage);
 
         // Add test stage
-        let test_stage = PipelineStage::Test {
+        let test_stage: _ = PipelineStage::Test {
             name: "test".to_string(),
             runs_on: "ubuntu-latest".to_string(),
             steps: vec![
@@ -186,7 +188,7 @@ mod cicd_integration_tests {
         workflow.add_stage(test_stage);
 
         // Add deploy stage
-        let deploy_stage = PipelineStage::Deploy {
+        let deploy_stage: _ = PipelineStage::Deploy {
             name: "deploy".to_string(),
             environment: "production".to_string(),
             runs_on: "ubuntu-latest".to_string(),
@@ -321,20 +323,20 @@ mod cicd_integration_tests {
 
     #[test]
     fn test_pipeline_status_tracking() {
-        let pipeline = GitHubActionsWorkflow::new(
+        let pipeline: _ = GitHubActionsWorkflow::new(
             "ci.yml".to_string(),
             "Build and Test".to_string(),
         );
 
         assert_eq!(pipeline.status, PipelineStatus::Pending);
 
-        let status = PipelineStatus::Running;
+        let status: _ = PipelineStatus::Running;
         assert!(matches!(status, PipelineStatus::Running));
 
-        let status = PipelineStatus::Success;
+        let status: _ = PipelineStatus::Success;
         assert!(matches!(status, PipelineStatus::Success));
 
-        let status = PipelineStatus::Failed;
+        let status: _ = PipelineStatus::Failed;
         assert!(matches!(status, PipelineStatus::Failed));
     }
 
@@ -371,7 +373,7 @@ mod cicd_integration_tests {
             "echo 'Starting blue-green deployment'".to_string(),
         ]);
 
-        let result = deployment.execute();
+        let result: _ = deployment.execute();
 
         assert!(result.is_ok());
         if let Ok(status) = result {
@@ -401,7 +403,7 @@ mod cicd_integration_tests {
         deployment.auto_promote = true;
         deployment.promotion_threshold = 95;
 
-        let result = deployment.execute();
+        let result: _ = deployment.execute();
 
         assert!(result.is_ok());
         if let Ok(status) = result {
@@ -424,7 +426,7 @@ mod cicd_integration_tests {
         deployment.auto_promote = true;
         deployment.promotion_threshold = 95;
 
-        let result = deployment.promote_canary();
+        let result: _ = deployment.promote_canary();
 
         assert!(result.is_ok());
         if let Ok(status) = result {
@@ -444,7 +446,7 @@ mod cicd_integration_tests {
             10,
         );
 
-        let result = deployment.rollback_canary();
+        let result: _ = deployment.rollback_canary();
 
         assert!(result.is_ok());
         if let Ok(status) = result {
@@ -470,7 +472,7 @@ mod cicd_integration_tests {
         assert_eq!(deployment.max_unavailable, 1);
         assert_eq!(deployment.max_surge, 1);
 
-        let result = deployment.execute();
+        let result: _ = deployment.execute();
 
         assert!(result.is_ok());
         if let Ok(status) = result {
@@ -505,7 +507,7 @@ mod cicd_integration_tests {
         let mut manager = DeploymentStrategy::new();
 
         // Test blue-green selection
-        let config = DeploymentConfig {
+        let config: _ = DeploymentConfig {
             strategy: "blue-green".to_string(),
             service_name: "beejs-service".to_string(),
             environment: "production".to_string(),
@@ -514,7 +516,7 @@ mod cicd_integration_tests {
             parameters: std::collections::HashMap::new(),
         };
 
-        let result = manager.select_strategy(&config);
+        let result: _ = manager.select_strategy(&config);
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), DeploymentStrategy::BlueGreen(_)));
 
@@ -522,7 +524,7 @@ mod cicd_integration_tests {
         let mut params = std::collections::HashMap::new();
         params.insert("traffic_split".to_string(), "10".to_string());
 
-        let config = DeploymentConfig {
+        let config: _ = DeploymentConfig {
             strategy: "canary".to_string(),
             service_name: "beejs-service".to_string(),
             environment: "production".to_string(),
@@ -531,12 +533,12 @@ mod cicd_integration_tests {
             parameters: params,
         };
 
-        let result = manager.select_strategy(&config);
+        let result: _ = manager.select_strategy(&config);
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), DeploymentStrategy::Canary(_)));
 
         // Test rolling selection
-        let config = DeploymentConfig {
+        let config: _ = DeploymentConfig {
             strategy: "rolling".to_string(),
             service_name: "beejs-service".to_string(),
             environment: "production".to_string(),
@@ -545,14 +547,14 @@ mod cicd_integration_tests {
             parameters: std::collections::HashMap::new(),
         };
 
-        let result = manager.select_strategy(&config);
+        let result: _ = manager.select_strategy(&config);
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), DeploymentStrategy::Rolling(_)));
     }
 
     #[test]
     fn test_gitops_config() {
-        let config = GitOpsConfig {
+        let config: _ = GitOpsConfig {
             tool: "argocd".to_string(),
             namespace: "argocd".to_string(),
             auto_sync: true,
@@ -571,7 +573,7 @@ mod cicd_integration_tests {
 
     #[test]
     fn test_pipeline_config() {
-        let config = PipelineConfig {
+        let config: _ = PipelineConfig {
             platform: "github".to_string(),
             trigger: "push".to_string(),
             branches: vec!["main".to_string(), "develop".to_string()],
@@ -592,7 +594,7 @@ mod cicd_integration_tests {
         parameters.insert("traffic_split".to_string(), "10".to_string());
         parameters.insert("max_unavailable".to_string(), "1".to_string());
 
-        let config = DeploymentConfig {
+        let config: _ = DeploymentConfig {
             strategy: "canary".to_string(),
             service_name: "beejs-service".to_string(),
             environment: "production".to_string(),
@@ -611,16 +613,16 @@ mod cicd_integration_tests {
 
     #[test]
     fn test_cicd_error_handling() {
-        let error = CICDError::GitOpsError("Failed to sync application".to_string());
+        let error: _ = CICDError::GitOpsError("Failed to sync application".to_string());
         assert!(matches!(error, CICDError::GitOpsError(_)));
 
-        let error = CICDError::PipelineError("Pipeline execution failed".to_string());
+        let error: _ = CICDError::PipelineError("Pipeline execution failed".to_string());
         assert!(matches!(error, CICDError::PipelineError(_)));
 
-        let error = CICDError::DeploymentError("Deployment timeout".to_string());
+        let error: _ = CICDError::DeploymentError("Deployment timeout".to_string());
         assert!(matches!(error, CICDError::DeploymentError(_)));
 
-        let error = CICDError::ConfigurationError("Invalid config".to_string());
+        let error: _ = CICDError::ConfigurationError("Invalid config".to_string());
         assert!(matches!(error, CICDError::ConfigurationError(_)));
     }
 
@@ -628,7 +630,7 @@ mod cicd_integration_tests {
     fn test_full_cicd_workflow() {
         // Setup GitOps manager
         let mut gitops = GitOpsManager::new("argocd".to_string());
-        let app = ArgoCDApplication::new(
+        let app: _ = ArgoCDApplication::new(
             "beejs-app".to_string(),
             "production".to_string(),
             "https://github.com/example/beejs-manifests.git".to_string(),
@@ -658,7 +660,7 @@ mod cicd_integration_tests {
 
         // Setup Deployment manager
         let mut deployment = DeploymentStrategy::new();
-        let config = DeploymentConfig {
+        let config: _ = DeploymentConfig {
             strategy: "rolling".to_string(),
             service_name: "beejs-service".to_string(),
             environment: "production".to_string(),
@@ -666,7 +668,7 @@ mod cicd_integration_tests {
             next_version: "v1.1.0".to_string(),
             parameters: std::collections::HashMap::new(),
         };
-        let strategy = deployment.select_strategy(&config).unwrap();
+        let strategy: _ = deployment.select_strategy(&config).unwrap();
 
         assert!(matches!(strategy, DeploymentStrategy::Rolling(_)));
         assert_eq!(gitops.applications.len(), 1);
@@ -675,12 +677,12 @@ mod cicd_integration_tests {
 
     #[test]
     fn test_multi_environment_deployment() {
-        let environments = vec!["dev".to_string(), "staging".to_string(), "production".to_string()];
+        let environments: _ = vec!["dev".to_string(), "staging".to_string(), "production".to_string()];
 
         for env in environments {
             let mut gitops = GitOpsManager::new("flux".to_string());
 
-            let release = FluxHelmRelease::new(
+            let release: _ = FluxHelmRelease::new(
                 "beejs".to_string(),
                 env.clone(),
                 "beejs".to_string(),

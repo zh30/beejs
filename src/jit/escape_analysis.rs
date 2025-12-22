@@ -61,7 +61,7 @@ pub struct EscapePath {
 /// 逃逸分析优化器
 pub struct EscapeAnalysisOptimizer {
     /// 分析历史统计
-    analysis_history: HashMap<String, EscapeStats>,
+    analysis_history: HashMap<String, EscapeStats, std::collections::HashMap<String, EscapeStats, String, EscapeStats>>,
 }
 
 /// 逃逸分析统计信息
@@ -106,7 +106,7 @@ impl EscapeAnalysisOptimizer {
     pub fn make_escape_decision(&self, obj_info: &ObjectInfo) -> EscapeAnalysisDecision {
         match obj_info.escape_level {
             EscapeLevel::NoEscape => {
-                let savings = self.calculate_stack_allocation_savings(obj_info);
+                let savings: _ = self.calculate_stack_allocation_savings(obj_info);
                 EscapeAnalysisDecision {
                     can_stack_allocate: true,
                     escape_level: obj_info.escape_level.clone(),
@@ -118,7 +118,7 @@ impl EscapeAnalysisOptimizer {
                 }
             }
             EscapeLevel::ArgEscape => {
-                let savings = self.calculate_stack_allocation_savings(obj_info) * 0.5;
+                let savings: _ = self.calculate_stack_allocation_savings(obj_info) * 0.5;
                 EscapeAnalysisDecision {
                     can_stack_allocate: true,
                     escape_level: obj_info.escape_level.clone(),
@@ -145,9 +145,9 @@ impl EscapeAnalysisOptimizer {
 
     /// 提取对象定义
     fn extract_object_definition(&self, line: &str, line_num: usize) -> Option<ObjectInfo> {
-        let trimmed = line.trim();
+        let trimmed: _ = line.trim();
 
-        // 检查对象字面量: let obj = { ... }
+        // 检查对象字面量: let obj: _ = { ... }
         if trimmed.starts_with("let ") || trimmed.starts_with("const ") || trimmed.starts_with("var ") {
             let after_keyword = if trimmed.starts_with("let ") {
                 &trimmed[4..]
@@ -158,11 +158,11 @@ impl EscapeAnalysisOptimizer {
             };
 
             if let Some(eq_pos) = after_keyword.find('=') {
-                let var_name = after_keyword[..eq_pos].trim();
-                let value_part = &after_keyword[eq_pos + 1..].trim();
+                let var_name: _ = after_keyword[..eq_pos].trim();
+                let value_part: _ = &after_keyword[eq_pos + 1..].trim();
 
                 if self.is_valid_identifier(var_name) {
-                    let obj_type = self.determine_object_type(value_part);
+                    let obj_type: _ = self.determine_object_type(value_part);
                     return Some(ObjectInfo {
                         name: var_name.to_string(),
                         object_type: obj_type,
@@ -185,7 +185,7 @@ impl EscapeAnalysisOptimizer {
         if trimmed.starts_with("function ") {
             if let Some(params_start) = trimmed.find('(') {
                 if let Some(params_end) = trimmed[params_start..].find(')') {
-                    let params = &trimmed[params_start + 1..params_start + params_end];
+                    let params: _ = &trimmed[params_start + 1..params_start + params_end];
                     let param_names: Vec<&str> = params.split(',').map(|p| p.trim()).collect();
 
                     return Some(ObjectInfo {
@@ -228,7 +228,7 @@ impl EscapeAnalysisOptimizer {
 
     /// 分析单行代码的逃逸情况
     fn analyze_line_for_escape(&self, obj: &mut ObjectInfo, line: &str) {
-        let trimmed = line.trim();
+        let trimmed: _ = line.trim();
 
         // 检查返回语句
         if trimmed.contains("return ") && line.contains(&obj.name) {
@@ -251,7 +251,7 @@ impl EscapeAnalysisOptimizer {
         if trimmed.contains('.') && line.contains(&obj.name) {
             // 检查是否是 obj.prop = value 的形式
             if let Some(eq_pos) = trimmed.find('=') {
-                let left = &trimmed[..eq_pos];
+                let left: _ = &trimmed[..eq_pos];
                 if left.contains('.') && !left.contains(&obj.name) {
                     obj.escape_path.escapes_to_property = true;
                 }
@@ -281,7 +281,7 @@ impl EscapeAnalysisOptimizer {
 
     /// 确定对象类型
     fn determine_object_type(&self, value: &str) -> ObjectType {
-        let trimmed = value.trim();
+        let trimmed: _ = value.trim();
 
         if trimmed.starts_with('{') {
             ObjectType::PlainObject
@@ -303,7 +303,7 @@ impl EscapeAnalysisOptimizer {
         }
 
         let mut chars = name.chars();
-        let first = chars.next().unwrap();
+        let first: _ = chars.next().unwrap();
 
         if !first.is_alphabetic() && first != '_' && first != '$' {
             return false;
@@ -333,8 +333,8 @@ impl EscapeAnalysisOptimizer {
     /// 提取被调用的函数名
     fn extract_called_function(&self, line: &str) -> Option<String> {
         // 匹配 functionName(
-        let paren_pos = line.find('(')?;
-        let before_paren = &line[..paren_pos];
+        let paren_pos: _ = line.find('(')?;
+        let before_paren: _ = &line[..paren_pos];
 
         // 找到函数名的开始
         let mut func_start = before_paren.len();
@@ -351,7 +351,7 @@ impl EscapeAnalysisOptimizer {
     /// 检查是否是逃逸函数
     fn is_escaping_function(&self, func_name: &str) -> bool {
         // 常见会导致逃逸的函数
-        let escaping_functions = [
+        let escaping_functions: _ = [
             "JSON.stringify",
             "JSON.parse",
             "console.log",
@@ -371,7 +371,7 @@ impl EscapeAnalysisOptimizer {
 
     /// 计算栈分配节省
     fn calculate_stack_allocation_savings(&self, obj_info: &ObjectInfo) -> f64 {
-        let base_savings = 50.0; // 基础节省分数
+        let base_savings: _ = 50.0; // 基础节省分数
 
         match obj_info.object_type {
             ObjectType::PlainObject => base_savings * 1.0,
@@ -384,7 +384,7 @@ impl EscapeAnalysisOptimizer {
 
     /// 记录逃逸分析事件
     pub fn record_escape_analysis(&mut self, code_hash: &str, can_stack: bool, savings: f64) {
-        let stats = self.analysis_history.entry(code_hash.to_string()).or_insert(EscapeStats {
+        let stats: _ = self.analysis_history.entry(code_hash.to_string()).or_insert(EscapeStats {
             total_analyzed: 0,
             stack_allocated: 0,
             heap_allocated: 0,
@@ -422,16 +422,18 @@ impl Default for EscapeAnalysisOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_plain_object_escape_analysis() {
-        let optimizer = EscapeAnalysisOptimizer::new();
-        let code = r#"
+        let optimizer: _ = EscapeAnalysisOptimizer::new();
+        let code: _ = r#"
             let obj = { value: 42 };
             console.log(obj.value);
         "#;
 
-        let objects = optimizer.analyze_escape(code);
+        let objects: _ = optimizer.analyze_escape(code);
 
         assert_eq!(objects.len(), 1);
         assert_eq!(objects[0].name, "obj");
@@ -442,13 +444,13 @@ mod tests {
 
     #[test]
     fn test_global_escape_detection() {
-        let optimizer = EscapeAnalysisOptimizer::new();
-        let code = r#"
+        let optimizer: _ = EscapeAnalysisOptimizer::new();
+        let code: _ = r#"
             let obj = { value: 42 };
             global.obj = obj;
         "#;
 
-        let objects = optimizer.analyze_escape(code);
+        let objects: _ = optimizer.analyze_escape(code);
 
         assert_eq!(objects.len(), 1);
         assert!(objects[0].escape_path.escapes_to_global);
@@ -457,13 +459,13 @@ mod tests {
 
     #[test]
     fn test_argument_escape_detection() {
-        let optimizer = EscapeAnalysisOptimizer::new();
-        let code = r#"
+        let optimizer: _ = EscapeAnalysisOptimizer::new();
+        let code: _ = r#"
             let obj = { value: 42 };
             console.log(obj);
         "#;
 
-        let objects = optimizer.analyze_escape(code);
+        let objects: _ = optimizer.analyze_escape(code);
 
         assert_eq!(objects.len(), 1);
         // console.log 是逃逸函数
@@ -472,18 +474,18 @@ mod tests {
 
     #[test]
     fn test_return_escape_detection() {
-        let optimizer = EscapeAnalysisOptimizer::new();
-        let code = r#"
+        let optimizer: _ = EscapeAnalysisOptimizer::new();
+        let code: _ = r#"
             function createObj() {
                 let obj = { value: 42 };
                 return obj;
             }
         "#;
 
-        let objects = optimizer.analyze_escape(code);
+        let objects: _ = optimizer.analyze_escape(code);
 
         // 应该检测到函数内和函数外的对象
-        let obj_count = objects.iter().filter(|o| o.name == "obj").count();
+        let obj_count: _ = objects.iter().filter(|o| o.name == "obj").count();
         assert!(obj_count >= 1);
 
         // 查找返回的对象
@@ -496,14 +498,14 @@ mod tests {
 
     #[test]
     fn test_no_escape_object() {
-        let optimizer = EscapeAnalysisOptimizer::new();
-        let code = r#"
+        let optimizer: _ = EscapeAnalysisOptimizer::new();
+        let code: _ = r#"
             let obj = { value: 42 };
-            let _x = obj.value;
-            let _y = obj.value * 2;
+            let _x: _ = obj.value;
+            let _y: _ = obj.value * 2;
         "#;
 
-        let objects = optimizer.analyze_escape(code);
+        let objects: _ = optimizer.analyze_escape(code);
 
         assert_eq!(objects.len(), 1);
         assert_eq!(objects[0].escape_level, EscapeLevel::NoEscape);
@@ -511,13 +513,13 @@ mod tests {
 
     #[test]
     fn test_array_escape_analysis() {
-        let optimizer = EscapeAnalysisOptimizer::new();
-        let code = r#"
+        let optimizer: _ = EscapeAnalysisOptimizer::new();
+        let code: _ = r#"
             let arr = [1, 2, 3];
             arr.push(4);
         "#;
 
-        let objects = optimizer.analyze_escape(code);
+        let objects: _ = optimizer.analyze_escape(code);
 
         assert_eq!(objects.len(), 1);
         assert_eq!(objects[0].object_type, ObjectType::Array);
@@ -525,14 +527,14 @@ mod tests {
 
     #[test]
     fn test_function_parameter_escape() {
-        let optimizer = EscapeAnalysisOptimizer::new();
-        let code = r#"
+        let optimizer: _ = EscapeAnalysisOptimizer::new();
+        let code: _ = r#"
             function process(obj) {
                 console.log(obj);
             }
         "#;
 
-        let objects = optimizer.analyze_escape(code);
+        let objects: _ = optimizer.analyze_escape(code);
 
         // 应该检测到函数参数
         assert!(objects.iter().any(|o| o.escape_path.escapes_to_argument));
@@ -540,9 +542,9 @@ mod tests {
 
     #[test]
     fn test_escape_decision_no_escape() {
-        let optimizer = EscapeAnalysisOptimizer::new();
+        let optimizer: _ = EscapeAnalysisOptimizer::new();
 
-        let obj_info = ObjectInfo {
+        let obj_info: _ = ObjectInfo {
             name: "localObj".to_string(),
             object_type: ObjectType::PlainObject,
             definition_line: 0,
@@ -557,7 +559,7 @@ mod tests {
             },
         };
 
-        let decision = optimizer.make_escape_decision(&obj_info);
+        let decision: _ = optimizer.make_escape_decision(&obj_info);
 
         assert!(decision.can_stack_allocate);
         assert_eq!(decision.escape_level, EscapeLevel::NoEscape);
@@ -566,9 +568,9 @@ mod tests {
 
     #[test]
     fn test_escape_decision_global_escape() {
-        let optimizer = EscapeAnalysisOptimizer::new();
+        let optimizer: _ = EscapeAnalysisOptimizer::new();
 
-        let obj_info = ObjectInfo {
+        let obj_info: _ = ObjectInfo {
             name: "globalObj".to_string(),
             object_type: ObjectType::PlainObject,
             definition_line: 0,
@@ -583,7 +585,7 @@ mod tests {
             },
         };
 
-        let decision = optimizer.make_escape_decision(&obj_info);
+        let decision: _ = optimizer.make_escape_decision(&obj_info);
 
         assert!(!decision.can_stack_allocate);
         assert_eq!(decision.escape_level, EscapeLevel::GlobalEscape);
@@ -592,7 +594,7 @@ mod tests {
 
     #[test]
     fn test_object_type_detection() {
-        let optimizer = EscapeAnalysisOptimizer::new();
+        let optimizer: _ = EscapeAnalysisOptimizer::new();
 
         assert_eq!(
             optimizer.determine_object_type("{ value: 42 }"),
@@ -614,7 +616,7 @@ mod tests {
 
     #[test]
     fn test_escaping_function_detection() {
-        let optimizer = EscapeAnalysisOptimizer::new();
+        let optimizer: _ = EscapeAnalysisOptimizer::new();
 
         assert!(optimizer.is_escaping_function("console.log"));
         assert!(optimizer.is_escaping_function("JSON.stringify"));
@@ -624,7 +626,7 @@ mod tests {
 
     #[test]
     fn test_called_function_extraction() {
-        let optimizer = EscapeAnalysisOptimizer::new();
+        let optimizer: _ = EscapeAnalysisOptimizer::new();
 
         assert_eq!(
             optimizer.extract_called_function("console.log(obj)"),
@@ -643,12 +645,12 @@ mod tests {
     #[test]
     fn test_escape_analysis_history() {
         let mut optimizer = EscapeAnalysisOptimizer::new();
-        let code_hash = "test_code";
+        let code_hash: _ = "test_code";
 
         optimizer.record_escape_analysis(code_hash, true, 50.0);
         optimizer.record_escape_analysis(code_hash, false, 0.0);
 
-        let stats = optimizer.get_escape_stats(code_hash).unwrap();
+        let stats: _ = optimizer.get_escape_stats(code_hash).unwrap();
         assert_eq!(stats.total_analyzed, 2);
         assert_eq!(stats.stack_allocated, 1);
         assert_eq!(stats.heap_allocated, 1);
@@ -660,7 +662,7 @@ mod tests {
 
     #[test]
     fn test_identifier_validation() {
-        let optimizer = EscapeAnalysisOptimizer::new();
+        let optimizer: _ = EscapeAnalysisOptimizer::new();
 
         assert!(optimizer.is_valid_identifier("validName"));
         assert!(optimizer.is_valid_identifier("_private"));
@@ -673,16 +675,16 @@ mod tests {
 
     #[test]
     fn test_complex_escape_scenario() {
-        let optimizer = EscapeAnalysisOptimizer::new();
-        let code = r#"
+        let optimizer: _ = EscapeAnalysisOptimizer::new();
+        let code: _ = r#"
             let obj1 = { value: 1 };
-            let obj2 = { value: 2 };
+            let obj2: _ = { value: 2 };
             obj1.prop = obj2;
             global.shared = obj1;
             return obj2;
         "#;
 
-        let objects = optimizer.analyze_escape(code);
+        let objects: _ = optimizer.analyze_escape(code);
 
         // 应该找到两个对象
         assert_eq!(objects.len(), 2);

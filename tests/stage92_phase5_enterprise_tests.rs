@@ -18,12 +18,14 @@ use super::super::enterprise::high_availability::*;
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// Test Kubernetes Operator functionality
     #[tokio::test]
     async fn test_k8s_operator_lifecycle() -> Result<()> {
         // Create test cluster
-        let cluster = BeejsCluster::new(
+        let cluster: _ = BeejsCluster::new(
             "test-enterprise-cluster",
             BeejsClusterSpec {
                 version: "v0.2.0".to_string(),
@@ -46,7 +48,7 @@ mod tests {
         );
 
         // Test operator configuration
-        let config = BeejsOperator::default_config();
+        let config: _ = BeejsOperator::default_config();
         assert_eq!(config.reconcile_interval, Duration::from_secs(30));
         assert_eq!(config.max_concurrent, 10);
         assert!(config.leader_election);
@@ -54,7 +56,7 @@ mod tests {
         assert!(config.auto_healing);
 
         // Test upgrade detection
-        let old_status = BeejsClusterStatus {
+        let old_status: _ = BeejsClusterStatus {
             phase: ClusterPhase::Running,
             ready_nodes: 3,
             total_nodes: 3,
@@ -69,7 +71,7 @@ mod tests {
 
         assert!(BeejsOperator::check_upgrade_needed(&cluster, &old_status));
 
-        let current_status = BeejsClusterStatus {
+        let current_status: _ = BeejsClusterStatus {
             current_version: Some("v0.2.0".to_string()),
             ..old_status
         };
@@ -77,7 +79,7 @@ mod tests {
         assert!(!BeejsOperator::check_upgrade_needed(&cluster, &current_status));
 
         // Test labels generation
-        let labels = BeejsOperator::labels_for_cluster("test-enterprise-cluster");
+        let labels: _ = BeejsOperator::labels_for_cluster("test-enterprise-cluster");
         assert_eq!(
             labels.get("beejs.io/cluster"),
             Some(&"test-enterprise-cluster".to_string())
@@ -93,7 +95,7 @@ mod tests {
     /// Test Prometheus metrics collection
     #[tokio::test]
     async fn test_prometheus_metrics() -> Result<()> {
-        let config = PrometheusConfig {
+        let config: _ = PrometheusConfig {
             port: 9090,
             path: "/metrics".to_string(),
             namespace: "beejs_test".to_string(),
@@ -101,7 +103,7 @@ mod tests {
             histogram_buckets: vec![0.1, 0.5, 1.0],
         };
 
-        let manager = PrometheusManager::new(config)?;
+        let manager: _ = PrometheusManager::new(config)?;
 
         // Record some test executions
         manager.record_execution(10.0, true);
@@ -139,7 +141,7 @@ mod tests {
         manager.update_upgrade_progress("test-cluster", 50.0);
 
         // Collect and export metrics
-        let metrics_output = manager.collect_and_export().await?;
+        let metrics_output: _ = manager.collect_and_export().await?;
 
         // Verify metrics are present
         assert!(metrics_output.contains("beejs_test_executions_total"));
@@ -159,7 +161,7 @@ mod tests {
     /// Test Jaeger distributed tracing
     #[tokio::test]
     async fn test_jaeger_tracing() -> Result<()> {
-        let config = JaegerConfig {
+        let config: _ = JaegerConfig {
             collector_endpoint: "http://localhost:14268/api/traces".to_string(),
             service_name: "beejs-enterprise-test".to_string(),
             agent_host: "localhost".to_string(),
@@ -169,7 +171,7 @@ mod tests {
             debug: false,
         };
 
-        let tracer = JaegerTracer::new(config)?;
+        let tracer: _ = JaegerTracer::new(config)?;
 
         // Start a root span
         let mut root_span = tracer.start_span("api_request");
@@ -198,7 +200,7 @@ mod tests {
         tracer.finish_span(root_span)?;
 
         // Get tracer statistics
-        let stats = tracer.get_stats();
+        let stats: _ = tracer.get_stats();
         assert!(stats.contains_key("buffered_spans"));
         assert!(stats.contains_key("time_since_last_flush_ms"));
 
@@ -213,7 +215,7 @@ mod tests {
     /// Test log aggregation
     #[tokio::test]
     async fn test_log_aggregation() -> Result<()> {
-        let config = LogAggregatorConfig {
+        let config: _ = LogAggregatorConfig {
             service_name: "beejs-enterprise-test".to_string(),
             log_dir: "/tmp/beejs-enterprise-logs".to_string(),
             max_file_size: 10 * 1024 * 1024, // 10MB
@@ -228,7 +230,7 @@ mod tests {
             logstash_endpoint: None,
         };
 
-        let aggregator = Arc::new(LogAggregator::new(config)?);
+        let aggregator: _ = Arc::new(std::sync::Mutex::new(LogAggregator::new(config))?);
 
         // Write some log entries
         let mut log_entry = aggregator.info("Test log message");
@@ -251,7 +253,7 @@ mod tests {
         aggregator.write(error_entry).await?;
 
         // Get statistics
-        let stats = aggregator.get_stats();
+        let stats: _ = aggregator.get_stats();
         assert!(stats.contains_key("buffered_logs"));
         assert_eq!(stats["buffered_logs"], 2);
 
@@ -266,7 +268,7 @@ mod tests {
     /// Test security sandbox
     #[tokio::test]
     async fn test_security_sandbox() -> Result<()> {
-        let config = SandboxConfig {
+        let config: _ = SandboxConfig {
             enabled: true,
             base_dir: PathBuf::from("/tmp/beejs-enterprise-sandbox"),
             max_memory: 512 * 1024 * 1024, // 512MB
@@ -282,7 +284,7 @@ mod tests {
             blocked_env_vars: vec!["PATH".to_string(), "HOME".to_string()],
         };
 
-        let sandbox = SecuritySandbox::new(config)?;
+        let sandbox: _ = SecuritySandbox::new(config)?;
 
         // Test path access control
         assert!(sandbox.is_path_allowed(&PathBuf::from("/tmp/beejs-enterprise-sandbox/test")));
@@ -290,7 +292,7 @@ mod tests {
         assert!(!sandbox.is_path_allowed(&PathBuf::from("/root/.bashrc")));
 
         // Get sandbox statistics
-        let stats = sandbox.get_stats();
+        let stats: _ = sandbox.get_stats();
         assert!(stats.contains_key("active_sandboxes"));
         assert!(stats.contains_key("total_memory_bytes"));
 
@@ -302,7 +304,7 @@ mod tests {
     /// Test high availability manager
     #[tokio::test]
     async fn test_high_availability() -> Result<()> {
-        let config = HAConfig {
+        let config: _ = HAConfig {
             enabled: true,
             replicas: 3,
             health_check_interval: Duration::from_secs(30),
@@ -338,10 +340,10 @@ mod tests {
             },
         };
 
-        let manager = HAManager::new(config)?;
+        let manager: _ = HAManager::new(config)?;
 
         // Add cluster nodes
-        let node1 = ClusterNode {
+        let node1: _ = ClusterNode {
             id: "node-us-east-1-1".to_string(),
             region: "us-east-1".to_string(),
             endpoint: "https://node-us-east-1-1.beejs.io".to_string(),
@@ -352,7 +354,7 @@ mod tests {
             active_connections: 100,
         };
 
-        let node2 = ClusterNode {
+        let node2: _ = ClusterNode {
             id: "node-us-west-2-1".to_string(),
             region: "us-west-2".to_string(),
             endpoint: "https://node-us-west-2-1.beejs.io".to_string(),
@@ -367,30 +369,30 @@ mod tests {
         manager.add_node(node2)?;
 
         // Get primary region
-        let primary = manager.get_primary_region();
+        let primary: _ = manager.get_primary_region();
         assert_eq!(primary, "us-east-1");
 
         // Perform health checks (with timeout)
-        let health_check = timeout(Duration::from_secs(5), manager.perform_health_checks());
+        let health_check: _ = timeout(Duration::from_secs(5), manager.perform_health_checks());
         assert!(health_check.await.is_ok());
 
         // Get cluster statistics
-        let stats = manager.get_stats();
+        let stats: _ = manager.get_stats();
         assert!(stats.contains_key("total_nodes"));
         assert!(stats.contains_key("healthy_nodes"));
         assert!(stats.contains_key("primary_region"));
         assert_eq!(stats["primary_region"], "us-east-1");
 
         // Create disaster recovery plan
-        let dr_plan = manager.create_dr_plan();
+        let dr_plan: _ = manager.create_dr_plan();
         assert_eq!(dr_plan.name, "Beejs DR Plan");
         assert_eq!(dr_plan.rto_seconds, 300);
         assert_eq!(dr_plan.rpo_seconds, 60);
         assert_eq!(dr_plan.steps.len(), 4);
 
         // Perform backup (with timeout)
-        let backup = timeout(Duration::from_secs(10), manager.perform_backup());
-        let backup_result = backup.await??;
+        let backup: _ = timeout(Duration::from_secs(10), manager.perform_backup());
+        let backup_result: _ = backup.await??;
         assert_eq!(backup_result.status, BackupStatus::Completed);
 
         println!("HA Manager stats: {:?}", stats);
@@ -405,18 +407,18 @@ mod tests {
         println!("Starting enterprise integration workflow test...");
 
         // 1. Initialize Prometheus metrics
-        let metrics_config = PrometheusConfig {
+        let metrics_config: _ = PrometheusConfig {
             port: 9090,
             path: "/metrics".to_string(),
             namespace: "beejs_integration".to_string(),
             custom_metrics: true,
             histogram_buckets: vec![0.1, 0.5, 1.0, 2.0, 5.0],
         };
-        let metrics_manager = PrometheusManager::new(metrics_config)?;
+        let metrics_manager: _ = PrometheusManager::new(metrics_config)?;
         println!("✓ Prometheus metrics initialized");
 
         // 2. Initialize Jaeger tracing
-        let jaeger_config = JaegerConfig {
+        let jaeger_config: _ = JaegerConfig {
             collector_endpoint: "http://localhost:14268/api/traces".to_string(),
             service_name: "beejs-integration-test".to_string(),
             agent_host: "localhost".to_string(),
@@ -425,11 +427,11 @@ mod tests {
             flush_interval: Duration::from_secs(5),
             debug: false,
         };
-        let tracer = JaegerTracer::new(jaeger_config)?;
+        let tracer: _ = JaegerTracer::new(jaeger_config)?;
         println!("✓ Jaeger tracing initialized");
 
         // 3. Initialize log aggregator
-        let log_config = LogAggregatorConfig {
+        let log_config: _ = LogAggregatorConfig {
             service_name: "beejs-integration-test".to_string(),
             log_dir: "/tmp/beejs-integration-logs".to_string(),
             max_file_size: 10 * 1024 * 1024,
@@ -443,11 +445,11 @@ mod tests {
             elasticsearch_endpoint: None,
             logstash_endpoint: None,
         };
-        let log_aggregator = Arc::new(LogAggregator::new(log_config)?);
+        let log_aggregator: _ = Arc::new(std::sync::Mutex::new(LogAggregator::new(log_config))?);
         println!("✓ Log aggregator initialized");
 
         // 4. Initialize security sandbox
-        let sandbox_config = SandboxConfig {
+        let sandbox_config: _ = SandboxConfig {
             enabled: true,
             base_dir: PathBuf::from("/tmp/beejs-integration-sandbox"),
             max_memory: 256 * 1024 * 1024, // 256MB
@@ -460,7 +462,7 @@ mod tests {
             env_vars: HashMap::new(),
             blocked_env_vars: vec![],
         };
-        let sandbox = SecuritySandbox::new(sandbox_config)?;
+        let sandbox: _ = SecuritySandbox::new(sandbox_config)?;
         println!("✓ Security sandbox initialized");
 
         // 5. Simulate a complete request workflow with instrumentation
@@ -537,7 +539,7 @@ mod tests {
         );
 
         // 7. Collect all metrics
-        let metrics_output = metrics_manager.collect_and_export().await?;
+        let metrics_output: _ = metrics_manager.collect_and_export().await?;
         assert!(metrics_output.contains("beejs_integration_executions_total"));
         assert!(metrics_output.contains("beejs_integration_network_requests_total"));
         assert!(metrics_output.contains("beejs_integration_requests_per_second"));
@@ -547,10 +549,10 @@ mod tests {
         log_aggregator.flush().await?;
 
         // 9. Get final statistics
-        let metrics_stats = metrics_manager.get_stats();
-        let tracer_stats = tracer.get_stats();
-        let log_stats = log_aggregator.get_stats();
-        let sandbox_stats = sandbox.get_stats();
+        let metrics_stats: _ = metrics_manager.get_stats();
+        let tracer_stats: _ = tracer.get_stats();
+        let log_stats: _ = log_aggregator.get_stats();
+        let sandbox_stats: _ = sandbox.get_stats();
 
         println!("\n📈 Enterprise Integration Statistics:");
         println!("  Metrics: {:?}", metrics_stats);
@@ -573,7 +575,7 @@ mod tests {
     async fn test_enterprise_performance() -> Result<()> {
         println!("\n🚀 Running enterprise performance test...");
 
-        let config = PrometheusConfig {
+        let config: _ = PrometheusConfig {
             port: 9090,
             path: "/metrics".to_string(),
             namespace: "beejs_perf".to_string(),
@@ -581,17 +583,17 @@ mod tests {
             histogram_buckets: vec![0.01, 0.1, 0.5, 1.0, 2.0, 5.0],
         };
 
-        let manager = PrometheusManager::new(config)?;
+        let manager: _ = PrometheusManager::new(config)?;
 
         // Simulate high load
-        let num_requests = 1000;
+        let num_requests: _ = 1000;
         println!("Simulating {} requests...", num_requests);
 
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
         for i in 0..num_requests {
-            let duration = 10.0 + (i as f64 % 100.0); // Variable duration
-            let success = i % 95 != 0; // 5% error rate
+            let duration: _ = 10.0 + (i as f64 % 100.0); // Variable duration
+            let success: _ = i % 95 != 0; // 5% error rate
 
             manager.record_execution(duration, success);
 
@@ -614,14 +616,14 @@ mod tests {
             }
         }
 
-        let elapsed = start_time.elapsed();
-        let throughput = num_requests as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start_time.elapsed();
+        let throughput: _ = num_requests as f64 / elapsed.as_secs_f64();
 
         println!("Processed {} requests in {:.2}s", num_requests, elapsed.as_secs_f64());
         println!("Throughput: {:.2} req/s", throughput);
 
         // Collect final metrics
-        let metrics = manager.collect_and_export().await?;
+        let metrics: _ = manager.collect_and_export().await?;
 
         // Verify performance metrics
         assert!(metrics.contains("beejs_perf_executions_total"));
@@ -641,7 +643,7 @@ mod tests {
         println!("\n🔒 Running security and compliance test...");
 
         // Test security sandbox isolation
-        let sandbox_config = SandboxConfig {
+        let sandbox_config: _ = SandboxConfig {
             enabled: true,
             base_dir: PathBuf::from("/tmp/beejs-compliance-sandbox"),
             max_memory: 128 * 1024 * 1024, // 128MB
@@ -661,10 +663,10 @@ mod tests {
             blocked_env_vars: vec!["SECRET".to_string(), "API_KEY".to_string()],
         };
 
-        let sandbox = SecuritySandbox::new(sandbox_config)?;
+        let sandbox: _ = SecuritySandbox::new(sandbox_config)?;
 
         // Verify path isolation
-        let test_paths = vec![
+        let test_paths: _ = vec![
             ("/tmp/beejs-compliance-sandbox/test", true),
             ("/etc/passwd", false),
             ("/root/.bashrc", false),
@@ -672,12 +674,12 @@ mod tests {
         ];
 
         for (path, expected) in test_paths {
-            let result = sandbox.is_path_allowed(&PathBuf::from(path));
+            let result: _ = sandbox.is_path_allowed(&PathBuf::from(path));
             assert_eq!(result, expected, "Path access control failed for: {}", path);
         }
 
         // Get sandbox statistics
-        let stats = sandbox.get_stats();
+        let stats: _ = sandbox.get_stats();
         assert!(stats.contains_key("active_sandboxes"));
 
         println!("✅ Security sandbox isolation verified");
@@ -691,7 +693,7 @@ mod tests {
     async fn test_disaster_recovery() -> Result<()> {
         println!("\n🔄 Testing disaster recovery procedures...");
 
-        let config = HAConfig {
+        let config: _ = HAConfig {
             enabled: true,
             replicas: 5,
             health_check_interval: Duration::from_secs(10),
@@ -735,10 +737,10 @@ mod tests {
             },
         };
 
-        let manager = HAManager::new(config)?;
+        let manager: _ = HAManager::new(config)?;
 
         // Create disaster recovery plan
-        let dr_plan = manager.create_dr_plan();
+        let dr_plan: _ = manager.create_dr_plan();
         println!("DR Plan: {}", dr_plan.name);
         println!("RTO: {} seconds", dr_plan.rto_seconds);
         println!("RPO: {} seconds", dr_plan.rpo_seconds);
@@ -755,7 +757,7 @@ mod tests {
 
         // Add cluster nodes
         for i in 0..5 {
-            let node = ClusterNode {
+            let node: _ = ClusterNode {
                 id: format!("node-{}", i),
                 region: if i < 3 { "primary".to_string() } else { "secondary-1".to_string() },
                 endpoint: format!("https://node-{}.beejs.io", i),
@@ -769,12 +771,12 @@ mod tests {
         }
 
         // Perform backup
-        let backup = manager.perform_backup().await?;
+        let backup: _ = manager.perform_backup().await?;
         assert_eq!(backup.status, BackupStatus::Completed);
         println!("✅ Backup completed: {}", backup.id);
 
         // Get cluster statistics
-        let stats = manager.get_stats();
+        let stats: _ = manager.get_stats();
         println!("Cluster Stats: {:?}", stats);
 
         println!("✅ Disaster recovery test completed");

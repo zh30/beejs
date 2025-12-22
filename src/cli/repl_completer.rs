@@ -40,7 +40,7 @@ pub struct ReplCompleter {
     /// Built-in keywords
     keywords: Vec<&'static str>,
     /// Built-in objects and functions
-    builtins: HashMap<&'static str, Vec<&'static str>>,
+    builtins: HashMap<&'static str, Vec<&'static str, std::collections::HashMap<&'static str, Vec<&'static str, &'static str, Vec<&'static str>>>,
     /// REPL commands
     commands: Vec<&'static str>,
     /// V8 isolate for runtime inspection
@@ -97,16 +97,16 @@ impl ReplCompleter {
 
     /// Complete the input at cursor position
     pub fn complete(&self, line: &str, cursor: usize) -> Result<(usize, Vec<CompletionCandidate>)> {
-        let context = self.extract_context(line, cursor);
-        let candidates = self.find_completions(&context);
+        let context: _ = self.extract_context(line, cursor);
+        let candidates: _ = self.find_completions(&context);
 
         Ok((context.before_cursor.len(), candidates))
     }
 
     /// Extract completion context from line and cursor
     fn extract_context(&self, line: &str, cursor: usize) -> CompletionContext {
-        let before_cursor = &line[..cursor];
-        let after_cursor = &line[cursor..];
+        let before_cursor: _ = &line[..cursor];
+        let after_cursor: _ = &line[cursor..];
 
         CompletionContext {
             line: line.to_string(),
@@ -118,7 +118,7 @@ impl ReplCompleter {
 
     /// Find completion candidates
     fn find_completions(&self, context: &CompletionContext) -> Vec<CompletionCandidate> {
-        let input = context.before_cursor.trim_end();
+        let input: _ = context.before_cursor.trim_end();
 
         // Check if it's a REPL command
         if input.starts_with('.') {
@@ -127,8 +127,8 @@ impl ReplCompleter {
 
         // Check for property access (obj.)
         if let Some(dot_pos) = input.rfind('.') {
-            let obj_part = &input[..dot_pos];
-            let prop_part = &input[dot_pos + 1..];
+            let obj_part: _ = &input[..dot_pos];
+            let prop_part: _ = &input[dot_pos + 1..];
 
             // Check if it's a built-in object
             if let Some(props) = self.builtins.get(obj_part) {
@@ -264,7 +264,7 @@ impl ReplCompleter {
             return String::new();
         }
 
-        let first = &candidates[0].text;
+        let first: _ = &candidates[0].text;
         let mut common = first.to_string();
 
         for candidate in &candidates[1..] {
@@ -292,10 +292,12 @@ impl Default for ReplCompleter {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_completer_creation() {
-        let completer = ReplCompleter::new();
+        let completer: _ = ReplCompleter::new();
         assert!(!completer.keywords.is_empty());
         assert!(!completer.builtins.is_empty());
         assert!(!completer.commands.is_empty());
@@ -303,7 +305,7 @@ mod tests {
 
     #[test]
     fn test_complete_keywords() {
-        let completer = ReplCompleter::new();
+        let completer: _ = ReplCompleter::new();
         let (_, candidates) = completer.complete("fun", 3).unwrap();
 
         // Should find "function" and possibly others
@@ -313,7 +315,7 @@ mod tests {
 
     #[test]
     fn test_complete_builtins() {
-        let completer = ReplCompleter::new();
+        let completer: _ = ReplCompleter::new();
         let (_, candidates) = completer.complete("console", 7).unwrap();
 
         assert!(!candidates.is_empty());
@@ -322,7 +324,7 @@ mod tests {
 
     #[test]
     fn test_complete_commands() {
-        let completer = ReplCompleter::new();
+        let completer: _ = ReplCompleter::new();
         let (_, candidates) = completer.complete(".h", 2).unwrap();
 
         assert!(!candidates.is_empty());
@@ -331,7 +333,7 @@ mod tests {
 
     #[test]
     fn test_complete_properties() {
-        let completer = ReplCompleter::new();
+        let completer: _ = ReplCompleter::new();
         let (_, candidates) = completer.complete("console.l", 8).unwrap();
 
         assert!(!candidates.is_empty());
@@ -340,7 +342,7 @@ mod tests {
 
     #[test]
     fn test_common_prefix() {
-        let candidates = vec![
+        let candidates: _ = vec![
             CompletionCandidate { text: "function".to_string(), display: None, kind: CompletionKind::Keyword },
             CompletionCandidate { text: "for".to_string(), display: None, kind: CompletionKind::Keyword },
         ];
@@ -348,7 +350,7 @@ mod tests {
         // No common prefix
         assert_eq!(ReplCompleter::get_common_prefix(&candidates), "");
 
-        let candidates = vec![
+        let candidates: _ = vec![
             CompletionCandidate { text: "console.log".to_string(), display: None, kind: CompletionKind::Property },
             CompletionCandidate { text: "console.length".to_string(), display: None, kind: CompletionKind::Property },
         ];

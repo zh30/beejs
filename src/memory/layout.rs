@@ -55,8 +55,8 @@ impl MemoryLayoutOptimizer {
         };
 
         for field in optimized {
-            let padding = self.calculate_padding(layout.size, field.alignment);
-            let offset = layout.size + padding;
+            let padding: _ = self.calculate_padding(layout.size, field.alignment);
+            let offset: _ = layout.size + padding;
 
             layout.size = offset + field.size;
             layout.alignment = layout.alignment.max(field.alignment);
@@ -73,7 +73,7 @@ impl MemoryLayoutOptimizer {
 
     /// Calculate padding
     fn calculate_padding(&self, current_offset: usize, required_alignment: usize) -> usize {
-        let misalignment = current_offset % required_alignment;
+        let misalignment: _ = current_offset % required_alignment;
         if misalignment == 0 {
             0
         } else {
@@ -95,23 +95,25 @@ impl MemoryLayoutOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_memory_layout_optimizer() {
-        let optimizer = MemoryLayoutOptimizer::new();
+        let optimizer: _ = MemoryLayoutOptimizer::new();
         assert_eq!(optimizer.cache_line_size, 64);
     }
 
     #[test]
     fn test_optimize_structure() {
-        let optimizer = MemoryLayoutOptimizer::new();
-        let fields = vec![
+        let optimizer: _ = MemoryLayoutOptimizer::new();
+        let fields: _ = vec![
             FieldLayout { offset: 0, size: 8, alignment: 8 },
             FieldLayout { offset: 0, size: 4, alignment: 4 },
             FieldLayout { offset: 0, size: 1, alignment: 1 },
         ];
 
-        let layout = optimizer.optimize_structure(&fields).unwrap();
+        let layout: _ = optimizer.optimize_structure(&fields).unwrap();
         assert!(layout.size > 0);
         assert!(layout.alignment > 0);
     }

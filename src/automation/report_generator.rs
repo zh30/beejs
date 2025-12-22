@@ -17,6 +17,8 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 报告生成错误
 #[derive(Error, Debug)]
@@ -130,15 +132,15 @@ pub struct ReportData {
 /// 报告生成器
 pub struct ReportGenerator {
     output_dir: PathBuf,
-    template_cache: HashMap<String, String>,
+    template_cache: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 报告统计信息
 #[derive(Debug, Clone)]
 pub struct ReportStats {
     pub total_reports_generated: usize,
-    pub reports_by_format: HashMap<ReportFormat, usize>,
-    pub reports_by_type: HashMap<ReportType, usize>,
+    pub reports_by_format: HashMap<ReportFormat, usize, std::collections::HashMap<ReportFormat, usize, ReportFormat, usize>>,
+    pub reports_by_type: HashMap<ReportType, usize, std::collections::HashMap<ReportType, usize, ReportType, usize>>,
     pub total_size_bytes: u64,
     pub average_generation_time_ms: u64,
 }
@@ -161,7 +163,7 @@ impl ReportGenerator {
 
     /// 创建默认配置的生成器
     pub fn new_default() -> Self {
-        let output_dir = PathBuf::from("performance_reports");
+        let output_dir: _ = PathBuf::from("performance_reports");
         Self::new(output_dir)
     }
 
@@ -171,12 +173,12 @@ impl ReportGenerator {
         results: &[BenchmarkResult],
         config: &ReportOutput,
     ) -> Result<PathBuf, ReportError> {
-        let timestamp = SystemTime::now()
+        let timestamp: _ = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
 
-        let metadata = ReportMetadata {
+        let metadata: _ = ReportMetadata {
             title: "Performance Benchmark Report".to_string(),
             report_type: ReportType::Benchmark,
             generated_at: timestamp,
@@ -185,7 +187,7 @@ impl ReportGenerator {
             environment: "Automated Testing".to_string(),
         };
 
-        let report_data = ReportData {
+        let report_data: _ = ReportData {
             metadata,
             benchmark_results: Some(results.to_vec()),
             regression_results: None,
@@ -205,12 +207,12 @@ impl ReportGenerator {
         regression_results: &RegressionTestSuite,
         config: &ReportOutput,
     ) -> Result<PathBuf, ReportError> {
-        let timestamp = SystemTime::now()
+        let timestamp: _ = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
 
-        let metadata = ReportMetadata {
+        let metadata: _ = ReportMetadata {
             title: "Performance Regression Detection Report".to_string(),
             report_type: ReportType::Regression,
             generated_at: timestamp,
@@ -219,9 +221,9 @@ impl ReportGenerator {
             environment: "Automated Testing".to_string(),
         };
 
-        let recommendations = self.generate_recommendations_from_regression(regression_results);
+        let recommendations: _ = self.generate_recommendations_from_regression(regression_results);
 
-        let report_data = ReportData {
+        let report_data: _ = ReportData {
             metadata,
             benchmark_results: None,
             regression_results: Some(regression_results.clone()),
@@ -241,12 +243,12 @@ impl ReportGenerator {
         test_results: &TestSuiteResults,
         config: &ReportOutput,
     ) -> Result<PathBuf, ReportError> {
-        let timestamp = SystemTime::now()
+        let timestamp: _ = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
 
-        let metadata = ReportMetadata {
+        let metadata: _ = ReportMetadata {
             title: "Automated Test Suite Report".to_string(),
             report_type: ReportType::Summary,
             generated_at: timestamp,
@@ -255,7 +257,7 @@ impl ReportGenerator {
             environment: "Automated Testing".to_string(),
         };
 
-        let report_data = ReportData {
+        let report_data: _ = ReportData {
             metadata,
             benchmark_results: None,
             regression_results: None,
@@ -277,12 +279,12 @@ impl ReportGenerator {
         test_results: &TestSuiteResults,
         config: &ReportOutput,
     ) -> Result<PathBuf, ReportError> {
-        let timestamp = SystemTime::now()
+        let timestamp: _ = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
 
-        let metadata = ReportMetadata {
+        let metadata: _ = ReportMetadata {
             title: "Comprehensive Performance Report".to_string(),
             report_type: ReportType::Summary,
             generated_at: timestamp,
@@ -295,7 +297,7 @@ impl ReportGenerator {
         recommendations.extend(self.generate_recommendations_from_benchmarks(benchmark_results));
         recommendations.extend(self.generate_recommendations_from_regression(regression_results));
 
-        let report_data = ReportData {
+        let report_data: _ = ReportData {
             metadata,
             benchmark_results: Some(benchmark_results.to_vec()),
             regression_results: Some(regression_results.clone()),
@@ -315,17 +317,17 @@ impl ReportGenerator {
         data: &ReportData,
         config: &ReportOutput,
     ) -> Result<PathBuf, ReportError> {
-        let timestamp = data.metadata.generated_at;
-        let filename = format!(
+        let timestamp: _ = data.metadata.generated_at;
+        let filename: _ = format!(
             "{}_{}_{}",
             data.metadata.report_type.as_str().to_lowercase(),
             timestamp,
             config.format.as_ext()
         );
 
-        let output_path = config.output_dir.join(&filename);
+        let output_path: _ = config.output_dir.join(&filename);
 
-        let content = match config.format {
+        let content: _ = match config.format {
             ReportFormat::Json => self.generate_json_report(data, config)?,
             ReportFormat::Html => self.generate_html_report(data, config)?,
             ReportFormat::Markdown => self.generate_markdown_report(data, config)?,
@@ -375,7 +377,7 @@ impl ReportGenerator {
         // 报告标题和元数据
         html.push_str(&format!("<h1>{}</h1>\n", data.metadata.title));
         html.push_str("<div class='metadata'>\n");
-        let generated_time = UNIX_EPOCH + std::time::Duration::from_secs(data.metadata.generated_at);
+        let generated_time: _ = UNIX_EPOCH + std::time::Duration::from_secs(data.metadata.generated_at);
         html.push_str(&format!("<p><strong>Generated:</strong> {}</p>\n",
             generated_time.duration_since(UNIX_EPOCH).unwrap().as_secs()));
         html.push_str(&format!("<p><strong>Environment:</strong> {}</p>\n", data.metadata.environment));
@@ -461,7 +463,7 @@ impl ReportGenerator {
 
         // 元数据
         md.push_str("## Metadata\n\n");
-        let generated_time = UNIX_EPOCH + std::time::Duration::from_secs(data.metadata.generated_at);
+        let generated_time: _ = UNIX_EPOCH + std::time::Duration::from_secs(data.metadata.generated_at);
         md.push_str(&format!("- **Generated:** {}\n",
             generated_time.duration_since(UNIX_EPOCH).unwrap().as_secs()));
         md.push_str(&format!("- **Environment:** {}\n", data.metadata.environment));

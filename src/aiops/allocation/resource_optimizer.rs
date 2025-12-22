@@ -47,9 +47,9 @@ pub struct Workload {
     /// 资源需求
     pub resource_requirements: Vec<ResourceRequest>,
     /// 当前分配的资源
-    pub allocated_resources: HashMap<ResourceType, f64>,
+    pub allocated_resources: HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>,
     /// 性能要求 (QPS, 延迟等)
-    pub performance_requirements: HashMap<String, f64>,
+    pub performance_requirements: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>,
     /// 重要性等级
     pub importance: u8,
 }
@@ -77,9 +77,9 @@ pub struct Cluster {
     /// 集群名称
     pub name: String,
     /// 总资源容量
-    pub total_resources: HashMap<ResourceType, f64>,
+    pub total_resources: HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>,
     /// 当前资源使用情况
-    pub current_usage: HashMap<ResourceType, f64>,
+    pub current_usage: HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>,
     /// 工作负载列表
     pub workloads: Vec<Workload>,
     /// 集群健康状态
@@ -105,7 +105,7 @@ pub struct AllocationPlan {
     /// 工作负载 ID
     pub workload_id: String,
     /// 资源分配详情
-    pub allocations: HashMap<ResourceType, f64>,
+    pub allocations: HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>,
     /// 预期性能提升
     pub expected_improvement: f64,
     /// 置信度 (0.0-1.0)
@@ -135,7 +135,7 @@ pub struct RebalanceResult {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ResourceForecast {
     /// 预测的资源需求
-    pub predicted_demand: HashMap<ResourceType, f64>,
+    pub predicted_demand: HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>,
     /// 预测时间范围 (分钟)
     pub forecast_horizon_minutes: u64,
     /// 置信区间
@@ -203,7 +203,7 @@ impl ResourceOptimizer {
 
         // 基于工作负载需求和当前资源使用情况进行智能分配
         for req in &workload.resource_requirements {
-            let optimal_amount = self.calculate_optimal_allocation(
+            let optimal_amount: _ = self.calculate_optimal_allocation(
                 req,
                 workload,
             );
@@ -211,13 +211,13 @@ impl ResourceOptimizer {
         }
 
         // 计算预期改进
-        let expected_improvement = self.calculate_expected_improvement(
+        let expected_improvement: _ = self.calculate_expected_improvement(
             workload,
             &allocations,
         );
 
         // 计算置信度
-        let confidence = self.calculate_confidence(&allocations);
+        let confidence: _ = self.calculate_confidence(&allocations);
 
         AllocationPlan {
             workload_id: workload.id.clone(),
@@ -242,20 +242,20 @@ impl ResourceOptimizer {
         let mut total_improvement = 0.0;
 
         // 分析当前资源使用情况
-        let utilization = self.calculate_cluster_utilization(cluster);
+        let utilization: _ = self.calculate_cluster_utilization(cluster);
 
         // 识别需要调整的工作负载
-        let workloads_to_rebalance = self.identify_workloads_to_rebalance(cluster, &utilization);
+        let workloads_to_rebalance: _ = self.identify_workloads_to_rebalance(cluster, &utilization);
 
         // 为每个需要调整的工作负载生成新的分配计划
         for workload in &workloads_to_rebalance {
-            let plan = self.allocate_resources(workload).await;
+            let plan: _ = self.allocate_resources(workload).await;
             rebalanced_allocations.push(plan.clone());
             workloads_adjusted += 1;
             total_improvement += plan.expected_improvement;
         }
 
-        let avg_improvement = if workloads_adjusted > 0 {
+        let avg_improvement: _ = if workloads_adjusted > 0 {
             total_improvement / workloads_adjusted as f64
         } else {
             0.0
@@ -285,7 +285,7 @@ impl ResourceOptimizer {
         let mut predicted_demand = HashMap::new();
 
         // 按资源类型分组
-        let mut usage_by_type: HashMap<ResourceType, Vec<&ResourceUsage>> = HashMap::new();
+        let mut usage_by_type: HashMap<ResourceType, Vec<&ResourceUsage, std::collections::HashMap<ResourceType, Vec<&ResourceUsage, ResourceType, Vec<&ResourceUsage>>> = HashMap::new();
         for usage in history {
             usage_by_type
                 .entry(usage.resource_type.clone())
@@ -295,7 +295,7 @@ impl ResourceOptimizer {
 
         // 为每种资源类型进行预测
         for (resource_type, usage_list) in usage_by_type {
-            let predicted = self.predict_single_resource_demand(&usage_list);
+            let predicted: _ = self.predict_single_resource_demand(&usage_list);
             predicted_demand.insert(resource_type, predicted);
         }
 
@@ -314,11 +314,11 @@ impl ResourceOptimizer {
         workload: &Workload,
     ) -> f64 {
         // 基于请求量和当前利用率计算最优分配
-        let current_utilization = self.get_current_utilization(&req.resource_type);
+        let current_utilization: _ = self.get_current_utilization(&req.resource_type);
 
         // 如果当前利用率较低，使用较小的分配
         // 如果当前利用率较高，使用较大的分配以避免争抢
-        let adjustment_factor = if current_utilization > 80.0 {
+        let adjustment_factor: _ = if current_utilization > 80.0 {
             1.1
         } else if current_utilization < 50.0 {
             0.9
@@ -326,8 +326,8 @@ impl ResourceOptimizer {
             1.0
         };
 
-        let base_allocation = req.amount;
-        let priority_factor = 1.0 + (req.priority as f64 / 100.0) * 0.5;
+        let base_allocation: _ = req.amount;
+        let priority_factor: _ = 1.0 + (req.priority as f64 / 100.0) * 0.5;
 
         (base_allocation * adjustment_factor * priority_factor).max(0.0)
     }
@@ -336,27 +336,27 @@ impl ResourceOptimizer {
     fn calculate_expected_improvement(
         &self,
         workload: &Workload,
-        allocations: &HashMap<ResourceType, f64>,
+        allocations: &HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>,
     ) -> f64 {
         // 基于资源分配和性能需求计算预期改进
         let mut total_score = 0.0;
 
         for (resource_type, allocated) in allocations {
-            let requirement = workload
+            let requirement: _ = workload
                 .resource_requirements
                 .iter()
                 .find(|r| r.resource_type == *resource_type);
 
             if let Some(req) = requirement {
                 // 分配比例越高，预期改进越大
-                let allocation_ratio = if req.amount > 0.0 {
+                let allocation_ratio: _ = if req.amount > 0.0 {
                     (allocated / req.amount).min(2.0)
                 } else {
                     1.0
                 };
 
                 // 考虑优先级影响
-                let priority_bonus = req.priority as f64 / 100.0 * 10.0;
+                let priority_bonus: _ = req.priority as f64 / 100.0 * 10.0;
 
                 total_score += allocation_ratio * 20.0 + priority_bonus;
             }
@@ -366,7 +366,7 @@ impl ResourceOptimizer {
     }
 
     /// 计算分配置信度
-    fn calculate_confidence(&self, allocations: &HashMap<ResourceType, f64>) -> f64 {
+    fn calculate_confidence(&self, allocations: &HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>) -> f64 {
         // 基于分配合理性计算置信度
         let mut confidence = 1.0;
 
@@ -382,17 +382,17 @@ impl ResourceOptimizer {
     }
 
     /// 计算集群利用率
-    fn calculate_cluster_utilization(&self, cluster: &Cluster) -> HashMap<ResourceType, f64> {
+    fn calculate_cluster_utilization(&self, cluster: &Cluster) -> HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>> {
         let mut utilization = HashMap::new();
 
         for (resource_type, &total) in &cluster.total_resources {
-            let used = cluster
+            let used: _ = cluster
                 .current_usage
                 .get(resource_type)
                 .copied()
                 .unwrap_or(0.0);
 
-            let utilization_rate = if total > 0.0 {
+            let utilization_rate: _ = if total > 0.0 {
                 (used / total) * 100.0
             } else {
                 0.0
@@ -408,7 +408,7 @@ impl ResourceOptimizer {
     fn identify_workloads_to_rebalance(
         &self,
         cluster: &Cluster,
-        utilization: &HashMap<ResourceType, f64>,
+        utilization: &HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>,
     ) -> Vec<Workload> {
         let mut workloads_to_rebalance = Vec::new();
 
@@ -417,7 +417,7 @@ impl ResourceOptimizer {
 
             // 检查是否有资源类型利用率过高或过低
             for req in &workload.resource_requirements {
-                let current_util = utilization.get(&req.resource_type);
+                let current_util: _ = utilization.get(&req.resource_type);
 
                 if let Some(&util_rate) = current_util {
                     if util_rate > 90.0 || util_rate < 30.0 {
@@ -457,7 +457,7 @@ impl ResourceOptimizer {
         }
 
         // 使用简单移动平均进行预测
-        let window_size = usage_list.len().min(10);
+        let window_size: _ = usage_list.len().min(10);
         let recent_usage: Vec<f64> = usage_list
             .iter()
             .rev()
@@ -518,12 +518,14 @@ pub struct OptimizationStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_allocate_resources_basic() {
-        let optimizer = ResourceOptimizer::new_with_defaults();
+        let optimizer: _ = ResourceOptimizer::new_with_defaults();
 
-        let workload = Workload {
+        let workload: _ = Workload {
             id: "test-1".to_string(),
             name: "Test Workload".to_string(),
             resource_requirements: vec![ResourceRequest {
@@ -538,7 +540,7 @@ mod tests {
             importance: 8,
         };
 
-        let plan = optimizer.allocate_resources(&workload).await;
+        let plan: _ = optimizer.allocate_resources(&workload).await;
 
         assert_eq!(plan.workload_id, "test-1");
         assert!(plan.expected_improvement > 0.0);
@@ -548,7 +550,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rebalance_resources() {
-        let optimizer = ResourceOptimizer::new_with_defaults();
+        let optimizer: _ = ResourceOptimizer::new_with_defaults();
 
         let mut cluster = Cluster {
             id: "cluster-1".to_string(),
@@ -569,16 +571,16 @@ mod tests {
             health_score: 80.0,
         };
 
-        let result = optimizer.rebalance_resources(&cluster).await;
+        let result: _ = optimizer.rebalance_resources(&cluster).await;
 
         assert!(result.workloads_adjusted >= 0);
     }
 
     #[tokio::test]
     async fn test_predict_resource_needs() {
-        let optimizer = ResourceOptimizer::new_with_defaults();
+        let optimizer: _ = ResourceOptimizer::new_with_defaults();
 
-        let history = vec![
+        let history: _ = vec![
             ResourceUsage {
                 resource_type: ResourceType::Cpu,
                 usage: 100.0,
@@ -595,7 +597,7 @@ mod tests {
             },
         ];
 
-        let forecast = optimizer.predict_resource_needs(&history).await;
+        let forecast: _ = optimizer.predict_resource_needs(&history).await;
 
         assert!(!forecast.predicted_demand.is_empty());
         assert!(forecast.predicted_demand.contains_key(&ResourceType::Cpu));

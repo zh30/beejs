@@ -7,6 +7,8 @@ use anyhow::{anyhow, Context, Result};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use wasmtime::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 #[derive(Debug, Clone)]
 pub struct WasmModule {
@@ -53,17 +55,17 @@ impl WasmExecutor {
         config.consume_fuel(true);
 
         // 创建引擎
-        let engine = Engine::new(&config)
+        let engine: _ = Engine::new(&config)
             .context("创建Wasmtime引擎失败")?;
 
         println!("✅ Wasmtime引擎初始化完成");
 
         Ok(Self {
             engine,
-            modules: Arc::new(std::sync::Mutex::new(Vec::new())),
-            stats: Arc::new(std::sync::Mutex::new(WasmStats {
+            modules: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new()))),
+            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(WasmStats {
                 total_executions: 0,
-                total_execution_time: Duration::default(),
+                total_execution_time: Duration::default()),
                 cache_hit_rate: 0.0,
                 avg_execution_time: Duration::default(),
                 wasmtime_config: Some(format!(
@@ -74,13 +76,13 @@ impl WasmExecutor {
     }
 
     pub fn load_module(&self, name: &str, bytecode: Vec<u8>) -> Result<()> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 验证WASM字节码
         self.validate_wasm_bytecode(&bytecode)?;
 
         // 编译WASM模块
-        let module = Module::new(&self.engine, &bytecode)
+        let module: _ = Module::new(&self.engine, &bytecode)
             .with_context(|| format!("编译WASM模块 '{}' 失败", name))?;
 
         // 创建存储
@@ -90,17 +92,17 @@ impl WasmExecutor {
         store.set_fuel(1_000_000)?;
 
         // 预热模块实例
-        let instance = Instance::new(&mut store, &module, &[])
+        let instance: _ = Instance::new(&mut store, &module, &[])
             .with_context(|| format!("实例化WASM模块 '{}' 失败", name))?;
 
         // 尝试调用start函数（如果存在）
         if let Ok(start_func) = instance.get_typed_func::<(), ()>(&mut store, "_start") {
-            let _ = start_func.call(&mut store, ());
+            let _: _ = start_func.call(&mut store, ());
         }
 
-        let load_time = start.elapsed();
+        let load_time: _ = start.elapsed();
 
-        let module_info = WasmModule {
+        let module_info: _ = WasmModule {
             name: name.to_string(),
             bytecode,
             load_time,
@@ -134,15 +136,15 @@ impl WasmExecutor {
     }
 
     pub fn execute_module(&self, name: &str) -> Result<Duration> {
-        let _start = Instant::now();
+        let _start: _ = Instant::now();
 
         // 获取模块字节码
-        let modules = self.modules.lock().unwrap();
-        let module_info = modules.iter().find(|m| m.name == name)
+        let modules: _ = self.modules.lock().unwrap();
+        let module_info: _ = modules.iter().find(|m| m.name == name)
             .ok_or_else(|| anyhow!("WASM模块 '{}' 未找到", name))?;
 
         // 编译模块
-        let module = Module::new(&self.engine, &module_info.bytecode)
+        let module: _ = Module::new(&self.engine, &module_info.bytecode)
             .with_context(|| format!("重新编译WASM模块 '{}' 失败", name))?;
 
         // 创建存储
@@ -152,14 +154,14 @@ impl WasmExecutor {
         store.set_fuel(1_000_000)?;
 
         // 实例化
-        let instance = Instance::new(&mut store, &module, &[])
+        let instance: _ = Instance::new(&mut store, &module, &[])
             .with_context(|| format!("实例化WASM模块 '{}' 失败", name))?;
 
         // 查找并调用函数
         let mut execution_time = Duration::default();
 
         if let Ok(start_func) = instance.get_typed_func::<(), ()>(&mut store, "_start") {
-            let func_start = Instant::now();
+            let func_start: _ = Instant::now();
             start_func.call(&mut store, ())?;
             execution_time = func_start.elapsed();
         }
@@ -189,7 +191,7 @@ impl WasmExecutor {
     }
 
     pub fn list_modules(&self) -> Vec<String> {
-        let modules = self.modules.lock().unwrap();
+        let modules: _ = self.modules.lock().unwrap();
         modules.iter().map(|m| m.name.clone()).collect()
     }
 
@@ -200,7 +202,7 @@ impl WasmExecutor {
     }
 
     pub fn get_module_info(&self, name: &str) -> Option<WasmModule> {
-        let modules = self.modules.lock().unwrap();
+        let modules: _ = self.modules.lock().unwrap();
         modules.iter().find(|m| m.name == name).cloned()
     }
 }
@@ -214,12 +216,12 @@ impl Default for WasmExecutor {
 pub fn initialize_wasm() -> Result<WasmExecutor> {
     println!("🚀 初始化WebAssembly集成 (Wasmtime)...");
 
-    let executor = WasmExecutor::new()?;
+    let executor: _ = WasmExecutor::new()?;
 
     // 预加载一些示例模块
     println!("📦 预加载示例WASM模块...");
 
-    let test_modules = vec![
+    let test_modules: _ = vec![
         ("test_simple", create_simple_wasm()),
         ("test_math", create_math_wasm()),
     ];

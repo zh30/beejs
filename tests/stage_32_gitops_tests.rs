@@ -1,4 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 // Stage 32.0: GitOps 测试套件
 // 测试范围：Git 集成、自动部署、声明式管理、版本控制
 

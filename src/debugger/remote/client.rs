@@ -6,10 +6,12 @@ use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Connection manager
 pub struct ConnectionManager {
-    connections: std::collections::HashMap<String, Connection>,
+    connections: std::collections::HashMap<String, Connection, std::collections::HashMap<String, Connection, String, Connection>>,
 }
 
 #[derive(Debug, Clone)]
@@ -27,8 +29,8 @@ impl ConnectionManager {
     }
 
     pub async fn create_connection(&mut self, name: String) -> Result<String> {
-        let conn_id = format!("conn_{}", self.connections.len());
-        let conn = Connection {
+        let conn_id: _ = format!("conn_{}", self.connections.len());
+        let conn: _ = Connection {
             id: conn_id.clone(),
             name,
             created_at: "now".to_string(),
@@ -101,7 +103,7 @@ pub struct DebugState {
     pub current_file: String,
     pub current_line: u32,
     pub call_stack: Vec<StackFrameInfo>,
-    pub variables: std::collections::HashMap<String, String>,
+    pub variables: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

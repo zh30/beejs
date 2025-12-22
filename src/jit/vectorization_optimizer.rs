@@ -77,7 +77,7 @@ impl Default for VectorizationConfig {
 pub struct VectorizationOptimizer {
     config: VectorizationConfig,
     optimization_history: Vec<VectorizationResult>,
-    alignment_cache: HashMap<u64, usize>,
+    alignment_cache: HashMap<u64, usize, std::collections::HashMap<u64, usize, u64, usize>>,
 }
 
 impl VectorizationOptimizer {
@@ -125,17 +125,17 @@ impl VectorizationOptimizer {
         }
 
         // 估计循环迭代次数（简化）
-        let estimated_iterations = self.estimate_loop_iterations(instruction);
+        let estimated_iterations: _ = self.estimate_loop_iterations(instruction);
 
         if estimated_iterations < self.config.min_loop_iterations {
             return None;
         }
 
         // 选择合适的 SIMD 指令类型
-        let simd_type = self.select_optimal_simd_type();
+        let simd_type: _ = self.select_optimal_simd_type();
 
         // 计算估计的性能提升
-        let speedup = self.estimate_speedup(simd_type, estimated_iterations);
+        let speedup: _ = self.estimate_speedup(simd_type, estimated_iterations);
 
         if speedup < self.config.min_speedup_threshold {
             return None;
@@ -171,19 +171,19 @@ impl VectorizationOptimizer {
         }
 
         // 生成向量化代码
-        let vectorized_instructions = self.generate_vectorized_code(opportunity, ir_code)?;
+        let vectorized_instructions: _ = self.generate_vectorized_code(opportunity, ir_code)?;
 
         // 执行内存对齐优化
-        let memory_operations = if self.config.enable_alignment_optimization {
+        let memory_operations: _ = if self.config.enable_alignment_optimization {
             self.optimize_memory_alignment(opportunity, ir_code)
         } else {
             vec![]
         };
 
         // 执行安全检查
-        let safety_checks = self.perform_safety_checks(opportunity);
+        let safety_checks: _ = self.perform_safety_checks(opportunity);
 
-        let result = VectorizationResult {
+        let result: _ = VectorizationResult {
             loop_id: opportunity.loop_id,
             original_instructions: ir_code[opportunity.start_index..opportunity.end_index].to_vec(),
             vectorized_instructions,
@@ -210,7 +210,7 @@ impl VectorizationOptimizer {
         // 实际实现需要更复杂的依赖分析
 
         // 检查是否有向量化友好的操作
-        let vectorizable_ops = ["add", "mul", "load", "store", "fadd", "fmul"];
+        let vectorizable_ops: _ = ["add", "mul", "load", "store", "fadd", "fmul"];
         vectorizable_ops.iter().any(|op| instruction.contains(op))
     }
 
@@ -240,7 +240,7 @@ impl VectorizationOptimizer {
 
     /// 计算估计的性能提升
     fn estimate_speedup(&self, simd_type: SimdInstructionType, iterations: usize) -> f64 {
-        let vector_width = self.get_vector_width(simd_type);
+        let vector_width: _ = self.get_vector_width(simd_type);
         // 简化计算：理论最大速度提升 = 向量宽度
         // 实际会有开销，所以取 80%
         (vector_width as f64) * 0.8
@@ -302,10 +302,10 @@ impl VectorizationOptimizer {
     ) -> Result<Vec<String>, String> {
         let mut vectorized = Vec::new();
 
-        let original_instructions = &ir_code[opportunity.start_index..opportunity.end_index];
+        let original_instructions: _ = &ir_code[opportunity.start_index..opportunity.end_index];
 
         for instr in original_instructions {
-            let vectorized_instr = self.vectorize_instruction(instr, opportunity)?;
+            let vectorized_instr: _ = self.vectorize_instruction(instr, opportunity)?;
             vectorized.push(vectorized_instr);
         }
 
@@ -417,20 +417,22 @@ impl VectorizationOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_vectorization_optimizer_creation() {
-        let config = VectorizationConfig::default();
-        let optimizer = VectorizationOptimizer::new(config);
+        let config: _ = VectorizationConfig::default();
+        let optimizer: _ = VectorizationOptimizer::new(config);
         assert!(optimizer.get_optimization_history().is_empty());
     }
 
     #[test]
     fn test_vectorization_opportunity_detection() {
-        let config = VectorizationConfig::default();
-        let optimizer = VectorizationOptimizer::new(config);
+        let config: _ = VectorizationConfig::default();
+        let optimizer: _ = VectorizationOptimizer::new(config);
 
-        let ir_code = vec![
+        let ir_code: _ = vec![
             "loop_start".to_string(),
             "load %0".to_string(),
             "load %1".to_string(),
@@ -439,17 +441,17 @@ mod tests {
             "loop_end".to_string(),
         ];
 
-        let opportunities = optimizer.analyze_vectorization_opportunities(&ir_code);
+        let opportunities: _ = optimizer.analyze_vectorization_opportunities(&ir_code);
         // 根据我们的简化检测，应该能找到一些机会
         assert!(!opportunities.is_empty());
     }
 
     #[test]
     fn test_vectorization_with_avx() {
-        let config = VectorizationConfig::default();
+        let config: _ = VectorizationConfig::default();
         let mut optimizer = VectorizationOptimizer::new(config);
 
-        let opportunity = VectorizationOpportunity {
+        let opportunity: _ = VectorizationOpportunity {
             loop_id: 1,
             instruction_type: SimdInstructionType::Avx256,
             start_index: 0,
@@ -460,12 +462,12 @@ mod tests {
             memory_alignment: 32,
         };
 
-        let ir_code = vec![
+        let ir_code: _ = vec![
             "fadd %0, %1, %2".to_string(),
             "fmul %2, %3, %4".to_string(),
         ];
 
-        let result = optimizer.vectorize(&opportunity, &ir_code).unwrap();
+        let result: _ = optimizer.vectorize(&opportunity, &ir_code).unwrap();
         assert!(result.simd_type == SimdInstructionType::Avx256);
         assert!(result.speedup_factor > 1.0);
     }
@@ -476,7 +478,7 @@ mod tests {
         config.enabled = false;
         let mut optimizer = VectorizationOptimizer::new(config);
 
-        let opportunity = VectorizationOpportunity {
+        let opportunity: _ = VectorizationOpportunity {
             loop_id: 1,
             instruction_type: SimdInstructionType::Sse128,
             start_index: 0,
@@ -487,9 +489,9 @@ mod tests {
             memory_alignment: 16,
         };
 
-        let ir_code = vec!["fadd %0, %1, %2".to_string()];
+        let ir_code: _ = vec!["fadd %0, %1, %2".to_string()];
 
-        let result = optimizer.vectorize(&opportunity, &ir_code);
+        let result: _ = optimizer.vectorize(&opportunity, &ir_code);
         assert!(result.is_err());
     }
 }

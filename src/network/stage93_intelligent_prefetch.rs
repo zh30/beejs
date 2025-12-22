@@ -5,6 +5,8 @@ use std::collections::{HashMap, VecDeque, BTreeMap};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 访问模式类型
 #[derive(Debug, Clone, PartialEq)]
@@ -42,23 +44,23 @@ pub struct PrefetchStats {
 /// AI 预测器
 pub struct AIPrefetchPredictor {
     history: Arc<RwLock<VecDeque<(Instant, AccessPattern, usize)>>>,
-    pattern_cache: Arc<RwLock<HashMap<String, AccessPattern>>>,
+    pattern_cache: Arc<RwLock<HashMap<String, AccessPattern, std::collections::HashMap<String, AccessPattern, String, AccessPattern>>>>,
     accuracy_tracker: Arc<RwLock<VecDeque<bool>>>,
 }
 
 impl AIPrefetchPredictor {
     pub fn new() -> Self {
         Self {
-            history: Arc::new(RwLock::new(VecDeque::with_capacity(10000))),
-            pattern_cache: Arc::new(RwLock::new(HashMap::new())),
-            accuracy_tracker: Arc::new(RwLock::new(VecDeque::with_capacity(1000))),
+            history: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::with_capacity(10000)))),
+            pattern_cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            accuracy_tracker: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::with_capacity(1000)))),
         }
     }
 
     /// 分析访问模式
     pub async fn analyze_pattern(&self, address: &str, size: usize) -> AccessPattern {
-        let history = self.history.read().await;
-        let pattern_cache = self.pattern_cache.read().await;
+        let history: _ = self.history.read().await;
+        let pattern_cache: _ = self.pattern_cache.read().await;
 
         // 检查缓存的模式
         if let Some(pattern) = pattern_cache.get(address) {
@@ -84,8 +86,8 @@ impl AIPrefetchPredictor {
         // 计算各种模式的分数
         for window in recent_accesses.windows(2) {
             if let [prev, curr] = window {
-                let time_diff = curr.0.duration_since(prev.0);
-                let size_diff = (curr.2 as isize - prev.2 as isize).abs() as usize;
+                let time_diff: _ = curr.0.duration_since(prev.0);
+                let size_diff: _ = (curr.2 as isize - prev.2 as isize).abs() as usize;
 
                 if time_diff < Duration::from_millis(100) && size_diff < 1024 {
                     sequential_score += 1;
@@ -106,7 +108,7 @@ impl AIPrefetchPredictor {
         }
 
         // 选择得分最高的模式
-        let pattern = if sequential_score > random_score
+        let pattern: _ = if sequential_score > random_score
             && sequential_score > strided_score
             && sequential_score > hotspot_score {
             AccessPattern::Sequential
@@ -131,7 +133,7 @@ impl AIPrefetchPredictor {
     /// 记录访问
     pub async fn record_access(&self, address: &str, size: usize) {
         let mut history = self.history.write().await;
-        let now = Instant::now();
+        let now: _ = Instant::now();
 
         history.push_back((now, AccessPattern::Random, size));
 
@@ -144,7 +146,7 @@ impl AIPrefetchPredictor {
     /// 验证预测准确性
     pub async fn verify_prediction(&self, predicted: &AccessPattern, actual: &AccessPattern) {
         let mut accuracy_tracker = self.accuracy_tracker.write().await;
-        let is_correct = predicted == actual;
+        let is_correct: _ = predicted == actual;
 
         accuracy_tracker.push_back(is_correct);
 
@@ -155,12 +157,12 @@ impl AIPrefetchPredictor {
 
     /// 获取预测准确率
     pub async fn get_accuracy(&self) -> f64 {
-        let accuracy_tracker = self.accuracy_tracker.read().await;
+        let accuracy_tracker: _ = self.accuracy_tracker.read().await;
         if accuracy_tracker.is_empty() {
             return 0.0;
         }
 
-        let correct_count = accuracy_tracker.iter().filter(|&&x| x).count();
+        let correct_count: _ = accuracy_tracker.iter().filter(|&&x| x).count();
         correct_count as f64 / accuracy_tracker.len() as f64
     }
 }
@@ -198,9 +200,9 @@ impl Default for PrefetchConfig {
 impl Stage93IntelligentPrefetcher {
     pub fn new(config: PrefetchConfig) -> Self {
         Self {
-            predictor: Arc::new(AIPrefetchPredictor::new()),
-            prefetch_queue: Arc::new(RwLock::new(VecDeque::new())),
-            stats: Arc::new(RwLock::new(PrefetchStats::default())),
+            predictor: Arc::new(std::sync::Mutex::new(AIPrefetchPredictor::new())),
+            prefetch_queue: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::new()))),
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(PrefetchStats::default()))),
             config,
         }
     }
@@ -215,10 +217,10 @@ impl Stage93IntelligentPrefetcher {
         self.predictor.record_access(address, size).await;
 
         // 分析访问模式
-        let pattern = self.predictor.analyze_pattern(address, size).await;
+        let pattern: _ = self.predictor.analyze_pattern(address, size).await;
 
         // 根据模式决定是否预取
-        let should_prefetch = match pattern {
+        let should_prefetch: _ = match pattern {
             AccessPattern::Sequential | AccessPattern::Hotspot | AccessPattern::Streaming => true,
             AccessPattern::Strided => size > 4096,
             AccessPattern::Random | AccessPattern::Cyclic => false,
@@ -229,7 +231,7 @@ impl Stage93IntelligentPrefetcher {
         }
 
         // 创建预取请求
-        let request = PrefetchRequest {
+        let request: _ = PrefetchRequest {
             id: rand::random(),
             address: address.to_string(),
             size,
@@ -267,10 +269,10 @@ impl Stage93IntelligentPrefetcher {
             }
 
             // 执行预取操作
-            let start = Instant::now();
+            let start: _ = Instant::now();
             // TODO: 实现实际的预取逻辑
-            let _ = self.execute_prefetch(&request).await;
-            let latency = start.elapsed();
+            let _: _ = self.execute_prefetch(&request).await;
+            let latency: _ = start.elapsed();
 
             // 更新统计
             let mut stats = self.stats.write().await;

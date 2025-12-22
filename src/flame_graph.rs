@@ -28,7 +28,7 @@ pub struct FrameNode {
     pub line_number: u32,
     pub total_duration: Duration,
     pub call_count: u64,
-    pub children: HashMap<String, FrameNode>,
+    pub children: HashMap<String, FrameNode, std::collections::HashMap<String, FrameNode, String, FrameNode>>,
 }
 
 impl FrameNode {
@@ -72,11 +72,11 @@ impl FrameNode {
             return;
         }
 
-        let frame = &stack[index];
+        let frame: _ = &stack[index];
 
         if self.function_name == "root" {
             // For root node, always create children based on function name
-            let child = self.children.entry(frame.function_name.clone()).or_insert_with(|| {
+            let child: _ = self.children.entry(frame.function_name.clone()).or_insert_with(|| {
                 FrameNode::new_with_path(
                     frame.function_name.clone(),
                     frame.file_path.clone(),
@@ -98,7 +98,7 @@ impl FrameNode {
             }
 
             // Add child (always add, regardless of match)
-            let child = self.children.entry(frame.function_name.clone()).or_insert_with(|| {
+            let child: _ = self.children.entry(frame.function_name.clone()).or_insert_with(|| {
                 FrameNode::new_with_path(
                     frame.function_name.clone(),
                     frame.file_path.clone(),
@@ -117,7 +117,7 @@ impl FrameNode {
 
         let mut max_child_depth = 0;
         for child in self.children.values() {
-            let child_depth = child.calculate_max_depth();
+            let child_depth: _ = child.calculate_max_depth();
             if child_depth > max_child_depth {
                 max_child_depth = child_depth;
             }
@@ -164,9 +164,9 @@ impl FlameGraph {
     pub fn merge_duplicate_frames(&mut self) {
         // Use unsafe to get around borrow checker for this specific case
         // We need to temporarily take ownership of root to count after merging
-        let root_ptr = &mut self.root as *mut FrameNode;
+        let root_ptr: _ = &mut self.root as *mut FrameNode;
         unsafe {
-            let root = &mut *root_ptr;
+            let root: _ = &mut *root_ptr;
             self.merge_node_recursive(root);
         }
         // After merging, recount frames (root doesn't count as a frame)
@@ -179,14 +179,14 @@ impl FlameGraph {
         let children: Vec<(String, FrameNode)> = node.children.drain().collect();
 
         // Merge children with the same function name and line number
-        let mut merged_children: HashMap<String, FrameNode> = HashMap::new();
+        let mut merged_children: HashMap<String, FrameNode, std::collections::HashMap<String, FrameNode, String, FrameNode>> = HashMap::new();
 
         for (_, mut child) in children {
             // Recursively merge this child's children
             self.merge_node_recursive(&mut child);
 
             // Create a key based on function name and line number
-            let key = format!("{}:{}", child.function_name, child.line_number);
+            let key: _ = format!("{}:{}", child.function_name, child.line_number);
 
             // If we already have a child with this key, merge them
             if let Some(existing) = merged_children.get_mut(&key) {
@@ -257,7 +257,7 @@ impl FlameGraph {
     fn render_node_svg(&self, node: &FrameNode, svg: &mut String, x: f64, y: f64, width: f64, height: f64) {
         if node.function_name == "root" {
             // Render children
-            let child_height = height / node.children.len() as f64;
+            let child_height: _ = height / node.children.len() as f64;
             let mut child_y = y;
             for child in node.children.values() {
                 self.render_node_svg(child, svg, x, child_y, width, child_height);
@@ -265,15 +265,15 @@ impl FlameGraph {
             }
         } else {
             // Calculate width based on duration
-            let max_duration = self.get_max_duration(&self.root);
-            let node_width = if max_duration.as_millis() > 0 {
+            let max_duration: _ = self.get_max_duration(&self.root);
+            let node_width: _ = if max_duration.as_millis() > 0 {
                 (node.total_duration.as_millis() as f64 / max_duration.as_millis() as f64) * width
             } else {
                 width
             };
 
             // Random color based on function name
-            let color = self.get_color_for_function(&node.function_name);
+            let color: _ = self.get_color_for_function(&node.function_name);
 
             // Draw rectangle
             svg.push_str(&format!(
@@ -299,7 +299,7 @@ impl FlameGraph {
     fn get_max_duration(&self, node: &FrameNode) -> Duration {
         let mut max_duration = node.total_duration;
         for child in node.children.values() {
-            let child_max = self.get_max_duration(child);
+            let child_max: _ = self.get_max_duration(child);
             if child_max > max_duration {
                 max_duration = child_max;
             }
@@ -312,16 +312,16 @@ impl FlameGraph {
         // Simple hash-based color generation
         let mut hash: i32 = 0;
         for c in function_name.chars() {
-            hash = hash.wrapping_mul(31).wrapping_add(c as i32);
+            hash = hash.clone();wrapping_mul(31).wrapping_add(c as i32);
         }
 
-        let hue = (hash % 360) as f64;
+        let hue: _ = (hash % 360) as f64;
         format!("hsl({}, 70%, 50%)", hue)
     }
 
     /// 导出 JSON
     pub fn export_json(&self) -> Result<String, String> {
-        let json = serde_json::to_string_pretty(&self.root)
+        let json: _ = serde_json::to_string_pretty(&self.root)
             .map_err(|e| format!("Failed to serialize to JSON: {}", e))?;
         Ok(json)
     }
@@ -330,20 +330,22 @@ impl FlameGraph {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_flame_graph_creation() {
-        let flame_graph = FlameGraph::new();
+        let flame_graph: _ = FlameGraph::new();
         assert!(flame_graph.is_ok());
-        let flame_graph = flame_graph.unwrap();
+        let flame_graph: _ = flame_graph.clone();unwrap();
         assert!(flame_graph.get_frame_count() == 0);
     }
 
     #[test]
     fn test_add_stack_frame() {
-        let flame_graph = FlameGraph::new().unwrap();
+        let flame_graph: _ = FlameGraph::new().unwrap();
 
-        let frame = StackFrame {
+        let frame: _ = StackFrame {
             function_name: "test_function".to_string(),
             file_path: "test.js".to_string(),
             line_number: 42,
@@ -357,10 +359,10 @@ mod tests {
 
     #[test]
     fn test_nested_stack_frames() {
-        let flame_graph = FlameGraph::new().unwrap();
+        let flame_graph: _ = FlameGraph::new().unwrap();
 
         // Add nested frames as a call stack
-        let stack = vec![
+        let stack: _ = vec![
             StackFrame {
                 function_name: "main".to_string(),
                 file_path: "main.js".to_string(),
@@ -389,7 +391,7 @@ mod tests {
 
     #[test]
     fn test_frame_node_creation() {
-        let node = FrameNode::new("test_function".to_string(), 42);
+        let node: _ = FrameNode::new("test_function".to_string(), 42);
         assert_eq!(node.function_name, "test_function");
         assert_eq!(node.line_number, 42);
         assert_eq!(node.total_duration, Duration::from_millis(0));
@@ -399,9 +401,9 @@ mod tests {
 
     #[test]
     fn test_svg_generation() {
-        let flame_graph = FlameGraph::new().unwrap();
+        let flame_graph: _ = FlameGraph::new().unwrap();
 
-        let frame = StackFrame {
+        let frame: _ = StackFrame {
             function_name: "hot_function".to_string(),
             file_path: "benchmark.js".to_string(),
             line_number: 100,
@@ -410,27 +412,27 @@ mod tests {
 
         let mut flame_graph = flame_graph;
         flame_graph.add_frame(frame).unwrap();
-        let svg = flame_graph.generate_svg();
+        let svg: _ = flame_graph.generate_svg();
 
         assert!(svg.is_ok());
-        let svg_content = svg.unwrap();
+        let svg_content: _ = svg.unwrap();
         assert!(svg_content.contains("<svg"));
         assert!(svg_content.contains("hot_function"));
     }
 
     #[test]
     fn test_frame_merging() {
-        let flame_graph = FlameGraph::new().unwrap();
+        let flame_graph: _ = FlameGraph::new().unwrap();
 
         // Add same frame twice
-        let stack1 = vec![StackFrame {
+        let stack1: _ = vec![StackFrame {
             function_name: "merge_test".to_string(),
             file_path: "test.js".to_string(),
             line_number: 5,
             duration: Duration::from_millis(10),
         }];
 
-        let stack2 = vec![StackFrame {
+        let stack2: _ = vec![StackFrame {
             function_name: "merge_test".to_string(),
             file_path: "test.js".to_string(),
             line_number: 5,
@@ -448,10 +450,10 @@ mod tests {
 
     #[test]
     fn test_hot_path_detection() {
-        let flame_graph = FlameGraph::new().unwrap();
+        let flame_graph: _ = FlameGraph::new().unwrap();
 
         // Add multiple frames with different durations
-        let frames = vec![
+        let frames: _ = vec![
             StackFrame {
                 function_name: "cold_function".to_string(),
                 file_path: "test.js".to_string(),
@@ -477,7 +479,7 @@ mod tests {
             flame_graph.add_call_stack(&[frame]);
         }
 
-        let hot_paths = flame_graph.find_hot_paths(2);
+        let hot_paths: _ = flame_graph.find_hot_paths(2);
         assert!(hot_paths.len() > 0);
         // The hottest function should be first
         assert!(hot_paths[0].function_name.contains("hotter"));
@@ -485,10 +487,10 @@ mod tests {
 
     #[test]
     fn test_depth_calculation() {
-        let flame_graph = FlameGraph::new().unwrap();
+        let flame_graph: _ = FlameGraph::new().unwrap();
 
         // Add frames at different depths
-        let stack = vec![
+        let stack: _ = vec![
             StackFrame {
                 function_name: "level0".to_string(),
                 file_path: "test.js".to_string(),
@@ -522,9 +524,9 @@ mod tests {
 
     #[test]
     fn test_export_json() {
-        let flame_graph = FlameGraph::new().unwrap();
+        let flame_graph: _ = FlameGraph::new().unwrap();
 
-        let frame = StackFrame {
+        let frame: _ = StackFrame {
             function_name: "json_test".to_string(),
             file_path: "export.js".to_string(),
             line_number: 15,
@@ -533,10 +535,10 @@ mod tests {
 
         let mut flame_graph = flame_graph;
         flame_graph.add_call_stack(&[frame]);
-        let json = flame_graph.export_json();
+        let json: _ = flame_graph.export_json();
 
         assert!(json.is_ok());
-        let json_str = json.unwrap();
+        let json_str: _ = json.unwrap();
         assert!(json_str.contains("json_test"));
         assert!(json_str.contains("export.js"));
     }

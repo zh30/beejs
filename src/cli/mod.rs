@@ -46,6 +46,8 @@ pub use repl_enhanced::{EnhancedRepl, EnhancedReplConfig, EnhancedReplResult, En
 
 // Stage 91 Phase 4.3: 导出模板系统
 pub use template_system::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
     TemplateEngine, TemplateRegistry, TemplateInstantiator, TemplateInstantiationConfig,
     DirectoryGenerator, DirectoryStructure, FileEntry, DependencyInstaller, PackageManager,
     ProjectTemplate as TemplateDefinition,

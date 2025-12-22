@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::edge::{NodeId, NodeStatus, TaskPriority, Task};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Request for routing
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,7 +37,7 @@ pub struct IntelligentRouter {
     predictor: Arc<LoadPredictor>,
     optimizer: Arc<RouteOptimizer>,
     model: Arc<MLModel>,
-    route_cache: Arc<RwLock<HashMap<String, NodeId>>>,
+    route_cache: Arc<RwLock<HashMap<String, NodeId, std::collections::HashMap<String, NodeId, String, NodeId>>>>,
 }
 
 /// Load prediction
@@ -107,7 +109,7 @@ pub struct LoadSample {
 /// Route optimizer
 #[derive(Debug)]
 pub struct RouteOptimizer {
-    routes: Arc<RwLock<HashMap<String, Route>>>,
+    routes: Arc<RwLock<HashMap<String, Route, std::collections::HashMap<String, Route, String, Route>>>>,
 }
 
 /// Machine learning model
@@ -120,7 +122,7 @@ pub struct MLModel {
 /// Task scheduler
 #[derive(Debug)]
 pub struct TaskScheduler {
-    nodes: Arc<RwLock<HashMap<NodeId, NodeStatus>>>,
+    nodes: Arc<RwLock<HashMap<NodeId, NodeStatus, std::collections::HashMap<NodeId, NodeStatus, NodeId, NodeStatus>>>>,
 }
 
 /// Learning engine
@@ -133,11 +135,11 @@ pub struct LearningEngine {
 impl IntelligentRouter {
     /// Create a new intelligent router
     pub async fn new() -> Result<Self> {
-        let router = IntelligentRouter {
-            predictor: Arc::new(LoadPredictor::new().await?),
-            optimizer: Arc::new(RouteOptimizer::new().await?),
-            model: Arc::new(MLModel::new("routing_model_v1".to_string()).await?),
-            route_cache: Arc::new(RwLock::new(HashMap::new())),
+        let router: _ = IntelligentRouter {
+            predictor: Arc::new(std::sync::Mutex::new(LoadPredictor::new()).await?),
+            optimizer: Arc::new(std::sync::Mutex::new(RouteOptimizer::new()).await?),
+            model: Arc::new(std::sync::Mutex::new(MLModel::new("routing_model_v1".to_string())).await?),
+            route_cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         };
 
         println!("Intelligent router initialized");
@@ -156,11 +158,11 @@ impl IntelligentRouter {
 
     /// Route a request to the optimal node
     pub async fn route_request(&self, request: &Request) -> Result<NodeId> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // Check cache first
         {
-            let cache = self.route_cache.read().await;
+            let cache: _ = self.route_cache.read().await;
             if let Some(cached_node) = cache.get(&request.id) {
                 println!("Using cached route for request {}", request.id);
                 return Ok(cached_node.clone());
@@ -168,10 +170,10 @@ impl IntelligentRouter {
         }
 
         // Get load predictions for all nodes
-        let predictions = self.predict_load_for_all_nodes().await?;
+        let predictions: _ = self.predict_load_for_all_nodes().await?;
 
         // Select optimal node based on prediction
-        let optimal_node = self.select_optimal_node(request, &predictions).await?;
+        let optimal_node: _ = self.select_optimal_node(request, &predictions).await?;
 
         // Cache the route
         {
@@ -179,7 +181,7 @@ impl IntelligentRouter {
             cache.insert(request.id.clone(), optimal_node.clone());
         }
 
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
         println!("Routed request {} to node {} in {}ms",
                  request.id, optimal_node.0, elapsed.as_millis());
 
@@ -188,23 +190,23 @@ impl IntelligentRouter {
 
     /// Predict load for a specific node
     pub async fn predict_load(&self, node_id: &NodeId) -> Result<LoadPrediction> {
-        let prediction = self.predictor.predict(node_id).await?;
+        let prediction: _ = self.predictor.predict(node_id).await?;
         Ok(prediction)
     }
 
     /// Predict load for all nodes
-    async fn predict_load_for_all_nodes(&self) -> Result<HashMap<NodeId, LoadPrediction>> {
+    async fn predict_load_for_all_nodes(&self) -> Result<HashMap<NodeId, LoadPrediction, std::collections::HashMap<NodeId, LoadPrediction, NodeId, LoadPrediction>>> {
         let mut predictions = HashMap::new();
 
         // In real implementation, would query all active nodes
-        let dummy_nodes = vec![
+        let dummy_nodes: _ = vec![
             NodeId("node-us-west-1".to_string()),
             NodeId("node-us-east-1".to_string()),
             NodeId("node-eu-west-1".to_string()),
         ];
 
         for node_id in dummy_nodes {
-            let pred = self.predict_load(&node_id).await?;
+            let pred: _ = self.predict_load(&node_id).await?;
             predictions.insert(node_id, pred);
         }
 
@@ -212,22 +214,22 @@ impl IntelligentRouter {
     }
 
     /// Select optimal node based on request and predictions
-    async fn select_optimal_node(&self, request: &Request, predictions: &HashMap<NodeId, LoadPrediction>) -> Result<NodeId> {
+    async fn select_optimal_node(&self, request: &Request, predictions: &HashMap<NodeId, LoadPrediction, std::collections::HashMap<NodeId, LoadPrediction, NodeId, LoadPrediction>>) -> Result<NodeId> {
         let mut best_node = None;
         let mut best_score = f64::MIN;
 
         for (node_id, prediction) in predictions {
             // Calculate score based on multiple factors
-            let load_score = 100.0 - prediction.cpu_usage;
-            let queue_score = 100.0 - (prediction.estimated_queue_time_ms as f64 / 100.0);
-            let priority_score = match request.priority {
+            let load_score: _ = 100.0 - prediction.cpu_usage;
+            let queue_score: _ = 100.0 - (prediction.estimated_queue_time_ms as f64 / 100.0);
+            let priority_score: _ = match request.priority {
                 RequestPriority::Critical => 100.0,
                 RequestPriority::High => 80.0,
                 RequestPriority::Normal => 60.0,
                 RequestPriority::Low => 40.0,
             };
 
-            let total_score = (load_score * 0.4) + (queue_score * 0.4) + (priority_score * 0.2);
+            let total_score: _ = (load_score * 0.4) + (queue_score * 0.4) + (priority_score * 0.2);
 
             if total_score > best_score {
                 best_score = total_score;
@@ -240,11 +242,11 @@ impl IntelligentRouter {
 
     /// Optimize routing strategy
     pub async fn optimize_routes(&self) -> Result<RouteOptimization> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
-        let optimization = self.optimizer.optimize().await?;
+        let optimization: _ = self.optimizer.optimize().await?;
 
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
         println!("Route optimization completed in {}ms", elapsed.as_millis());
 
         Ok(RouteOptimization {
@@ -265,9 +267,9 @@ impl IntelligentRouter {
 impl AdaptiveScheduler {
     /// Create a new adaptive scheduler
     pub async fn new() -> Result<Self> {
-        let scheduler = AdaptiveScheduler {
-            scheduler: Arc::new(TaskScheduler::new().await?),
-            learning_engine: Arc::new(LearningEngine::new().await?),
+        let scheduler: _ = AdaptiveScheduler {
+            scheduler: Arc::new(std::sync::Mutex::new(TaskScheduler::new()).await?),
+            learning_engine: Arc::new(std::sync::Mutex::new(LearningEngine::new()).await?),
         };
 
         println!("Adaptive scheduler initialized");
@@ -286,7 +288,7 @@ impl AdaptiveScheduler {
 
     /// Schedule a task
     pub async fn schedule_task(&self, task: &Task) -> Result<SchedulePlan> {
-        let plan = self.scheduler.schedule(task).await?;
+        let plan: _ = self.scheduler.schedule(task).await?;
 
         // Learn from the scheduling decision
         self.learning_engine.record_scheduling(&plan).await?;
@@ -304,8 +306,8 @@ impl AdaptiveScheduler {
 impl LoadPredictor {
     /// Create a new load predictor
     pub async fn new() -> Result<Self> {
-        let predictor = LoadPredictor {
-            history: Arc::new(RwLock::new(Vec::new())),
+        let predictor: _ = LoadPredictor {
+            history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         };
 
         println!("Load predictor initialized");
@@ -337,15 +339,15 @@ impl LoadPredictor {
         }
 
         // Simple linear prediction
-        let last = history.last().unwrap();
-        let cpu_trend = if history.len() > 1 {
+        let last: _ = history.last().unwrap();
+        let cpu_trend: _ = if history.len() > 1 {
             let prev = &history[history.len() - 2];
             last.cpu_usage - prev.cpu_usage
         } else {
             0.0
         };
 
-        let predicted_cpu = (last.cpu_usage + cpu_trend).clamp(0.0, 100.0);
+        let predicted_cpu: _ = (last.cpu_usage + cpu_trend).clamp(0.0, 100.0);
 
         Ok(LoadPrediction {
             cpu_usage: predicted_cpu,
@@ -359,8 +361,8 @@ impl LoadPredictor {
 impl RouteOptimizer {
     /// Create a new route optimizer
     pub async fn new() -> Result<Self> {
-        let optimizer = RouteOptimizer {
-            routes: Arc::new(RwLock::new(HashMap::new())),
+        let optimizer: _ = RouteOptimizer {
+            routes: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         };
 
         println!("Route optimizer initialized");
@@ -398,7 +400,7 @@ impl RouteOptimizer {
 impl MLModel {
     /// Create a new ML model
     pub async fn new(model_name: String) -> Result<Self> {
-        let model = MLModel {
+        let model: _ = MLModel {
             model_name,
             weights: vec![0.3, 0.25, 0.2, 0.15, 0.1],
         };
@@ -422,7 +424,7 @@ impl MLModel {
         }
 
         // Normalize to [0, 1]
-        prediction = prediction.clamp(0.0, 1.0);
+        prediction = prediction.clone();clamp(0.0, 1.0);
 
         Ok(vec![prediction])
     }
@@ -431,8 +433,8 @@ impl MLModel {
 impl TaskScheduler {
     /// Create a new task scheduler
     pub async fn new() -> Result<Self> {
-        let scheduler = TaskScheduler {
-            nodes: Arc::new(RwLock::new(HashMap::new())),
+        let scheduler: _ = TaskScheduler {
+            nodes: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         };
 
         println!("Task scheduler initialized");
@@ -444,9 +446,9 @@ impl TaskScheduler {
         // Simulate scheduling
         tokio::time::sleep(Duration::from_millis(5)).await;
 
-        let node_id = NodeId(format!("scheduled-node-{}", task.id));
-        let estimated_start = 50;
-        let confidence = 0.9;
+        let node_id: _ = NodeId(format!("scheduled-node-{}", task.id));
+        let estimated_start: _ = 50;
+        let confidence: _ = 0.9;
 
         Ok(SchedulePlan {
             node_id,
@@ -459,9 +461,9 @@ impl TaskScheduler {
 impl LearningEngine {
     /// Create a new learning engine
     pub async fn new() -> Result<Self> {
-        let engine = LearningEngine {
+        let engine: _ = LearningEngine {
             adaptation_rate: 0.1,
-            history: Arc::new(RwLock::new(Vec::new())),
+            history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         };
 
         println!("Learning engine initialized");

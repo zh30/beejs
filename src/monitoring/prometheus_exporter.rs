@@ -14,7 +14,7 @@ pub struct PrometheusExporter {
     /// 关联的性能监控器
     monitor: Arc<RealtimePerformanceMonitor>,
     /// 内存统计
-    memory_stats: Arc<tokio::sync::RwLock<HashMap<String, String>>>,
+    memory_stats: Arc<tokio::sync::RwLock<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>,
     /// HTTP 服务器句柄
     server_handle: Option<tokio::task::JoinHandle<()>>,
     /// 服务器地址
@@ -26,7 +26,7 @@ impl PrometheusExporter {
     pub fn new(monitor: Arc<RealtimePerformanceMonitor>, listen_addr: String) -> Self {
         Self {
             monitor,
-            memory_stats: Arc::new(RwLock::new(HashMap::new())),
+            memory_stats: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
             server_handle: None,
             listen_addr,
         }
@@ -37,8 +37,8 @@ impl PrometheusExporter {
         println!("启动 Prometheus 指标导出器，监听地址: {}", self.listen_addr);
 
         // 启动 HTTP 服务器提供 /metrics 端点
-        let listen_addr = self.listen_addr.clone();
-        let handle = tokio::spawn(async move {
+        let listen_addr: _ = self.listen_addr.clone();
+        let handle: _ = tokio::spawn(async move {
             // 简化的 HTTP 服务器实现
             // 在实际生产环境中，您可能希望使用 warp、axum 或其他 HTTP 框架
 
@@ -59,8 +59,8 @@ impl PrometheusExporter {
 
     /// 启动指标收集
     async fn start_metrics_collection(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let monitor = Arc::clone(&self.monitor);
-        let memory_stats = Arc::clone(&self.memory_stats);
+        let monitor: _ = Arc::clone(&self.monitor);
+        let memory_stats: _ = Arc::clone(&self.memory_stats);
 
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(1));
@@ -79,10 +79,10 @@ impl PrometheusExporter {
     /// 收集并更新指标
     async fn collect_and_update_metrics(
         monitor: &Arc<RealtimePerformanceMonitor>,
-        memory_stats: &Arc<tokio::sync::RwLock<HashMap<String, String>>>,
+        memory_stats: &Arc<tokio::sync::RwLock<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>,
     ) {
         // 收集内存指标
-        let mem_snapshot = GLOBAL_MEMORY_STATS.get_stats();
+        let mem_snapshot: _ = GLOBAL_MEMORY_STATS.get_stats();
         let mut stats = memory_stats.write().await;
 
         stats.insert("beejs_memory_total_allocated_bytes".to_string(), mem_snapshot.total_allocated.to_string());
@@ -94,7 +94,7 @@ impl PrometheusExporter {
 
         // 计算内存效率
         if mem_snapshot.total_allocated > 0 {
-            let efficiency = (mem_snapshot.total_freed as f64 / mem_snapshot.total_allocated as f64) * 100.0;
+            let efficiency: _ = (mem_snapshot.total_freed as f64 / mem_snapshot.total_allocated as f64) * 100.0;
             stats.insert("beejs_memory_efficiency_percent".to_string(), efficiency.to_string());
         }
     }
@@ -125,7 +125,7 @@ impl PrometheusExporter {
 
     /// 添加内存指标
     async fn add_memory_metrics(&self, output: &mut String) {
-        let stats = self.memory_stats.read().await;
+        let stats: _ = self.memory_stats.read().await;
 
         output.push_str("# HELP beejs_memory_total_allocated_bytes Total allocated memory in bytes\n");
         output.push_str("# TYPE beejs_memory_total_allocated_bytes gauge\n");
@@ -220,7 +220,7 @@ impl PrometheusExporter {
         name: String,
         value: f64,
         metric_type: PrometheusMetricType,
-        labels: HashMap<String, String>,
+        labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     ) {
         // 这里应该将自定义指标添加到内部存储中
         // 实际实现中，您可能希望将这些指标存储在数据库或缓存中
@@ -251,21 +251,23 @@ pub enum PrometheusMetricType {
 mod tests {
     use super::*;
     use crate::monitoring::ai_monitor::RealtimePerformanceMonitor;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_prometheus_exporter_creation() {
-        let monitor = Arc::new(RealtimePerformanceMonitor::new());
-        let exporter = PrometheusExporter::new(monitor, "127.0.0.1:9090".to_string());
+        let monitor: _ = Arc::new(std::sync::Mutex::new(RealtimePerformanceMonitor::new()));
+        let exporter: _ = PrometheusExporter::new(monitor, "127.0.0.1:9090".to_string());
 
         assert_eq!(exporter.listen_addr, "127.0.0.1:9090");
     }
 
     #[tokio::test]
     async fn test_generate_metrics() {
-        let monitor = Arc::new(RealtimePerformanceMonitor::new());
-        let exporter = PrometheusExporter::new(monitor, "127.0.0.1:9090".to_string());
+        let monitor: _ = Arc::new(std::sync::Mutex::new(RealtimePerformanceMonitor::new()));
+        let exporter: _ = PrometheusExporter::new(monitor, "127.0.0.1:9090".to_string());
 
-        let metrics = exporter.generate_metrics().await;
+        let metrics: _ = exporter.generate_metrics().await;
 
         assert!(metrics.contains("beejs_runtime_info"));
         assert!(metrics.contains("beejs_memory"));

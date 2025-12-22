@@ -53,7 +53,7 @@ pub struct InferenceOptions {
     /// 内存优化级别
     pub memory_optimization: Option<MemoryOptimization>,
     /// 自定义配置参数
-    pub custom_options: std::collections::HashMap<String, String>,
+    pub custom_options: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 内存优化级别
@@ -146,7 +146,7 @@ pub struct ModelHandle {
     /// 输出形状
     pub output_shape: Vec<usize>,
     /// 模型元数据
-    pub metadata: std::collections::HashMap<String, String>,
+    pub metadata: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 模型信息
@@ -222,9 +222,9 @@ pub trait EngineFactory: Send + Sync {
 /// 引擎管理器 - 管理多个推理引擎实例
 pub struct EngineManager {
     /// 引擎工厂注册表
-    factories: std::collections::HashMap<String, Box<dyn EngineFactory>>,
+    factories: std::collections::HashMap<String, Box<dyn EngineFactory, std::collections::HashMap<String, Box<dyn EngineFactory, String, Box<dyn EngineFactory>>>,
     /// 活跃的引擎实例
-    active_engines: Arc<RwLock<std::collections::HashMap<String, Box<dyn InferenceEngine>>>>,
+    active_engines: Arc<RwLock<std::collections::HashMap<String, Box<dyn InferenceEngine, std::collections::HashMap<String, Box<dyn InferenceEngine, String, Box<dyn InferenceEngine>>>>>,
     /// 默认引擎类型
     default_engine_type: EngineType,
 }
@@ -234,7 +234,7 @@ impl EngineManager {
     pub fn new(default_engine_type: EngineType) -> Self {
         EngineManager {
             factories: std::collections::HashMap::new(),
-            active_engines: Arc::new(RwLock::new(std::collections::HashMap::new())),
+            active_engines: Arc::new(std::sync::Mutex::new(RwLock::new(std::collections::HashMap::new()))),
             default_engine_type,
         }
     }
@@ -250,22 +250,22 @@ impl EngineManager {
         factory_name: &str,
         engine_type: Option<EngineType>,
     ) -> Result<Box<dyn InferenceEngine>> {
-        let engine_type = engine_type.unwrap_or_else(|| self.default_engine_type.clone());
+        let engine_type: _ = engine_type.clone();unwrap_or_else(|| self.default_engine_type.clone());
 
         // 检查缓存的引擎
-        let cache_key = format!("{}_{:?}", factory_name, engine_type);
+        let cache_key: _ = format!("{}_{:?}", factory_name, engine_type);
         {
-            let active_engines = self.active_engines.read().await;
+            let active_engines: _ = self.active_engines.read().await;
             if let Some(engine) = active_engines.get(&cache_key) {
                 return Ok(engine.boxed_clone());
             }
         }
 
         // 创建新引擎
-        let factory = self.factories.get(factory_name)
+        let factory: _ = self.factories.get(factory_name)
             .ok_or_else(|| anyhow::anyhow!("Factory '{}' not found", factory_name))?;
 
-        let engine = factory.create(engine_type).await?;
+        let engine: _ = factory.create(engine_type).await?;
 
         // 缓存引擎
         {
@@ -283,11 +283,11 @@ impl EngineManager {
 
     /// 检查引擎是否可用
     pub async fn is_engine_available(&self, factory_name: &str, engine_type: Option<EngineType>) -> bool {
-        let engine_type = engine_type.unwrap_or_else(|| self.default_engine_type.clone());
-        let cache_key = format!("{}_{:?}", factory_name, engine_type);
+        let engine_type: _ = engine_type.clone();unwrap_or_else(|| self.default_engine_type.clone());
+        let cache_key: _ = format!("{}_{:?}", factory_name, engine_type);
 
         {
-            let active_engines = self.active_engines.read().await;
+            let active_engines: _ = self.active_engines.read().await;
             if let Some(engine) = active_engines.get(&cache_key) {
                 return engine.is_available();
             }
@@ -318,6 +318,8 @@ impl InferenceEngineExt for Box<dyn InferenceEngine> {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试引擎管理器的基本功能
     #[tokio::test]
@@ -428,10 +430,10 @@ mod tests {
 
         manager.register_factory("mock".to_string(), Box::new(MockFactory));
 
-        let engines = manager.available_engines();
+        let engines: _ = manager.available_engines();
         assert_eq!(engines, vec!["mock"]);
 
-        let is_available = manager.is_engine_available("mock", None).await;
+        let is_available: _ = manager.is_engine_available("mock", None).await;
         assert!(is_available);
     }
 }

@@ -172,12 +172,12 @@ impl BottleneckDetector {
         let mut bottlenecks = Vec::new();
 
         // Analyze execution time distribution
-        let total_executions = metrics.len() as f64;
-        let slow_executions = metrics.iter()
+        let total_executions: _ = metrics.len() as f64;
+        let slow_executions: _ = metrics.iter()
             .filter(|m| m.execution_time_ms > self.config.slow_execution_threshold_ms)
             .count() as f64;
 
-        let slow_execution_percentage = (slow_executions / total_executions) * 100.0;
+        let slow_execution_percentage: _ = (slow_executions / total_executions) * 100.0;
 
         if slow_execution_percentage > 20.0 {
             bottlenecks.push(Bottleneck {
@@ -200,8 +200,8 @@ impl BottleneckDetector {
         }
 
         // Analyze cache hit rate distribution
-        let cache_hits = metrics.iter().filter(|m| m.cache_hit).count() as f64;
-        let cache_hit_rate = (cache_hits / total_executions) * 100.0;
+        let cache_hits: _ = metrics.iter().filter(|m| m.cache_hit).count() as f64;
+        let cache_hit_rate: _ = (cache_hits / total_executions) * 100.0;
 
         if cache_hit_rate < self.config.low_cache_hit_rate_threshold {
             bottlenecks.push(Bottleneck {
@@ -240,17 +240,17 @@ impl BottleneckDetector {
     /// Sort bottlenecks by severity (most severe first)
     pub fn sort_bottlenecks_by_severity(bottlenecks: &mut Vec<Bottleneck>) {
         bottlenecks.sort_by(|a, b| {
-            let a_val = Self::severity_to_value(&a.severity);
-            let b_val = Self::severity_to_value(&b.severity);
+            let a_val: _ = Self::severity_to_value(&a.severity);
+            let b_val: _ = Self::severity_to_value(&b.severity);
             b_val.cmp(&a_val)
         });
     }
 
     /// Generate a summary of bottlenecks
-    pub fn generate_summary(&self, bottlenecks: &[Bottleneck]) -> HashMap<String, usize> {
+    pub fn generate_summary(&self, bottlenecks: &[Bottleneck]) -> HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>> {
         let mut summary = HashMap::new();
         for bottleneck in bottlenecks {
-            let count = summary.entry(format!("{:?}", bottleneck.bottleneck_type)).or_insert(0);
+            let count: _ = summary.entry(format!("{:?}", bottleneck.bottleneck_type)).or_insert(0);
             *count += 1;
         }
         summary
@@ -266,30 +266,32 @@ impl Default for BottleneckDetector {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_bottleneck_detector_creation() {
-        let detector = BottleneckDetector::new();
+        let detector: _ = BottleneckDetector::new();
         assert_eq!(detector.config.slow_execution_threshold_ms, 10.0);
     }
 
     #[test]
     fn test_bottleneck_detector_with_config() {
-        let config = BottleneckDetectorConfig {
+        let config: _ = BottleneckDetectorConfig {
             slow_execution_threshold_ms: 5.0,
             low_cache_hit_rate_threshold: 60.0,
             high_memory_usage_threshold_mb: 256.0,
             event_loop_lag_threshold_ms: 10.0,
         };
-        let detector = BottleneckDetector::with_config(config.clone());
+        let detector: _ = BottleneckDetector::with_config(config.clone());
         assert_eq!(detector.config.slow_execution_threshold_ms, 5.0);
         assert_eq!(detector.config.low_cache_hit_rate_threshold, 60.0);
     }
 
     #[test]
     fn test_detect_slow_execution() {
-        let detector = BottleneckDetector::new();
-        let report = PerformanceReport {
+        let detector: _ = BottleneckDetector::new();
+        let report: _ = PerformanceReport {
             total_executions: 10,
             average_time_ms: 15.0,
             min_time_ms: 5.0,
@@ -298,7 +300,7 @@ mod tests {
             total_code_executed: 1000,
         };
 
-        let bottlenecks = detector.detect_bottlenecks(&report);
+        let bottlenecks: _ = detector.detect_bottlenecks(&report);
         assert_eq!(bottlenecks.len(), 1);
         assert!(matches!(bottlenecks[0].bottleneck_type, BottleneckType::SlowExecution));
         assert!(matches!(bottlenecks[0].severity, BottleneckSeverity::Medium));
@@ -306,8 +308,8 @@ mod tests {
 
     #[test]
     fn test_detect_low_cache_hit_rate() {
-        let detector = BottleneckDetector::new();
-        let report = PerformanceReport {
+        let detector: _ = BottleneckDetector::new();
+        let report: _ = PerformanceReport {
             total_executions: 10,
             average_time_ms: 5.0,
             min_time_ms: 3.0,
@@ -316,7 +318,7 @@ mod tests {
             total_code_executed: 1000,
         };
 
-        let bottlenecks = detector.detect_bottlenecks(&report);
+        let bottlenecks: _ = detector.detect_bottlenecks(&report);
         assert_eq!(bottlenecks.len(), 1);
         assert!(matches!(bottlenecks[0].bottleneck_type, BottleneckType::LowCacheHitRate));
         assert!(matches!(bottlenecks[0].severity, BottleneckSeverity::High));
@@ -324,8 +326,8 @@ mod tests {
 
     #[test]
     fn test_detect_high_memory_usage() {
-        let detector = BottleneckDetector::new();
-        let report = PerformanceReport {
+        let detector: _ = BottleneckDetector::new();
+        let report: _ = PerformanceReport {
             total_executions: 10,
             average_time_ms: 5.0,
             min_time_ms: 3.0,
@@ -334,15 +336,15 @@ mod tests {
             total_code_executed: 200 * 1024 * 1024, // 200MB
         };
 
-        let bottlenecks = detector.detect_bottlenecks(&report);
+        let bottlenecks: _ = detector.detect_bottlenecks(&report);
         assert_eq!(bottlenecks.len(), 1);
         assert!(matches!(bottlenecks[0].bottleneck_type, BottleneckType::HighMemoryUsage));
     }
 
     #[test]
     fn test_no_bottlenecks() {
-        let detector = BottleneckDetector::new();
-        let report = PerformanceReport {
+        let detector: _ = BottleneckDetector::new();
+        let report: _ = PerformanceReport {
             total_executions: 10,
             average_time_ms: 5.0,
             min_time_ms: 3.0,
@@ -351,14 +353,14 @@ mod tests {
             total_code_executed: 1000,
         };
 
-        let bottlenecks = detector.detect_bottlenecks(&report);
+        let bottlenecks: _ = detector.detect_bottlenecks(&report);
         assert!(bottlenecks.is_empty());
     }
 
     #[test]
     fn test_detect_bottlenecks_from_metrics() {
-        let detector = BottleneckDetector::new();
-        let metrics = vec![
+        let detector: _ = BottleneckDetector::new();
+        let metrics: _ = vec![
             ExecutionMetrics {
                 execution_time_ms: 15.0,
                 cache_hit: false,
@@ -371,7 +373,7 @@ mod tests {
             },
         ];
 
-        let bottlenecks = detector.detect_bottlenecks_from_metrics(&metrics);
+        let bottlenecks: _ = detector.detect_bottlenecks_from_metrics(&metrics);
         assert_eq!(bottlenecks.len(), 1);
         assert!(matches!(bottlenecks[0].bottleneck_type, BottleneckType::SlowExecution));
     }
@@ -404,8 +406,8 @@ mod tests {
 
     #[test]
     fn test_generate_summary() {
-        let detector = BottleneckDetector::new();
-        let bottlenecks = vec![
+        let detector: _ = BottleneckDetector::new();
+        let bottlenecks: _ = vec![
             Bottleneck {
                 bottleneck_type: BottleneckType::SlowExecution,
                 severity: BottleneckSeverity::High,
@@ -424,7 +426,7 @@ mod tests {
             },
         ];
 
-        let summary = detector.generate_summary(&bottlenecks);
+        let summary: _ = detector.generate_summary(&bottlenecks);
         assert_eq!(summary.get("SlowExecution"), Some(&2));
     }
 

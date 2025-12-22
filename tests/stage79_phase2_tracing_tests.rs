@@ -5,6 +5,8 @@
 mod tests {
     use std::collections::HashMap;
     use std::time::SystemTime;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     // 模拟 DistributedTracer 结构体（待实现）
     #[allow(dead_code)]
@@ -20,7 +22,7 @@ mod tests {
         pub parent_span_id: Option<String>,
         pub operation_name: String,
         pub start_time: SystemTime,
-        pub tags: HashMap<String, String>,
+        pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
         pub logs: Vec<String>,
     }
 
@@ -29,18 +31,18 @@ mod tests {
     struct TraceContext {
         pub trace_id: String,
         pub span_id: String,
-        pub baggage: HashMap<String, String>,
+        pub baggage: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     }
 
     #[test]
     fn test_distributed_tracing() {
         // 测试分布式追踪功能
-        let tracer = DistributedTracer {
+        let tracer: _ = DistributedTracer {
             service_name: "beejs-service".to_string(),
         };
 
         // 创建模拟 Span
-        let span = Span {
+        let span: _ = Span {
             trace_id: "abc1234567890ab".repeat(2), // 30 chars, we'll pad to 32
             span_id: "def4567890abcdef".to_string(), // 16 chars
             parent_span_id: None,
@@ -64,12 +66,12 @@ mod tests {
     #[test]
     fn test_context_propagation() {
         // 测试上下文传播功能
-        let tracer = DistributedTracer {
+        let tracer: _ = DistributedTracer {
             service_name: "beejs-service".to_string(),
         };
 
         // 创建模拟 Span
-        let span = Span {
+        let span: _ = Span {
             trace_id: "abc123".repeat(5),
             span_id: "def456".repeat(2),
             parent_span_id: Some("parent123".to_string()),
@@ -109,12 +111,12 @@ mod tests {
     #[test]
     fn test_span_parent_child_relationship() {
         // 测试父子 Span 关系
-        let tracer = DistributedTracer {
+        let tracer: _ = DistributedTracer {
             service_name: "beejs-service".to_string(),
         };
 
         // 创建父 Span
-        let parent_span = Span {
+        let parent_span: _ = Span {
             trace_id: "abc123".repeat(5),
             span_id: "def456".repeat(2),
             parent_span_id: None,
@@ -125,7 +127,7 @@ mod tests {
         };
 
         // 创建子 Span（模拟）
-        let child_span = Span {
+        let child_span: _ = Span {
             trace_id: parent_span.trace_id.clone(),
             span_id: "child789".to_string(),
             parent_span_id: Some(parent_span.span_id.clone()),
@@ -144,12 +146,12 @@ mod tests {
     #[test]
     fn test_multiple_spans() {
         // 测试多个 Span
-        let tracer = DistributedTracer {
+        let tracer: _ = DistributedTracer {
             service_name: "beejs-service".to_string(),
         };
 
         // 创建多个 Span
-        let span1 = Span {
+        let span1: _ = Span {
             trace_id: "abc123".repeat(5),
             span_id: "span1".to_string(),
             parent_span_id: None,
@@ -159,7 +161,7 @@ mod tests {
             logs: Vec::new(),
         };
 
-        let span2 = Span {
+        let span2: _ = Span {
             trace_id: span1.trace_id.clone(),
             span_id: "span2".to_string(),
             parent_span_id: None,
@@ -169,7 +171,7 @@ mod tests {
             logs: Vec::new(),
         };
 
-        let span3 = Span {
+        let span3: _ = Span {
             trace_id: span1.trace_id.clone(),
             span_id: "span3".to_string(),
             parent_span_id: None,
@@ -197,7 +199,7 @@ mod tests {
     #[test]
     fn test_span_with_metadata() {
         // 测试带元数据的 Span
-        let tracer = DistributedTracer {
+        let tracer: _ = DistributedTracer {
             service_name: "beejs-service".to_string(),
         };
 

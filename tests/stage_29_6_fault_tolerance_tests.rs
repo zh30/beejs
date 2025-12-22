@@ -15,20 +15,22 @@ use beejs::distributed::node_manager::NodeManager;
 use beejs::distributed::service_discovery::{ServiceDiscovery, DiscoveryConfig};
 use std::sync::Arc;
 use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 #[tokio::test]
 async fn test_fault_detector_creation() {
-    let config = DiscoveryConfig {
+    let config: _ = DiscoveryConfig {
         cluster_name: "test-cluster".to_string(),
         gossip_interval: Duration::from_millis(100),
         node_timeout: Duration::from_secs(5),
     };
 
-    let service_discovery = ServiceDiscovery::new(config);
-    let node_manager = Arc::new(NodeManager::new(service_discovery.clone()));
-    let _health_monitor = Arc::new(HealthMonitor::new(node_manager.clone()));
+    let service_discovery: _ = ServiceDiscovery::new(config);
+    let node_manager: _ = Arc::new(std::sync::Mutex::new(NodeManager::new(service_discovery.clone())));
+    let _health_monitor: _ = Arc::new(std::sync::Mutex::new(HealthMonitor::new(node_manager.clone())));
 
-    let _fault_config = FaultDetectionConfig {
+    let _fault_config: _ = FaultDetectionConfig {
         detection_interval: Duration::from_millis(100),
         failure_threshold: 3,
         recovery_threshold: 2,
@@ -43,7 +45,7 @@ async fn test_fault_detector_creation() {
 
 #[tokio::test]
 async fn test_fault_event_creation() {
-    let fault_event = FaultEvent {
+    let fault_event: _ = FaultEvent {
         event_id: "test-fault-1".to_string(),
         fault_type: FaultType::NodeFailure,
         severity: FaultSeverity::High,
@@ -61,7 +63,7 @@ async fn test_fault_event_creation() {
 
 #[tokio::test]
 async fn test_recovery_strategy_determination() {
-    let node_fault = FaultEvent {
+    let node_fault: _ = FaultEvent {
         event_id: "node-fault-1".to_string(),
         fault_type: FaultType::NodeFailure,
         severity: FaultSeverity::High,
@@ -71,7 +73,7 @@ async fn test_recovery_strategy_determination() {
         metadata: std::collections::HashMap::new(),
     };
 
-    let task_fault = FaultEvent {
+    let task_fault: _ = FaultEvent {
         event_id: "task-fault-1".to_string(),
         fault_type: FaultType::TaskExecutionFailure,
         severity: FaultSeverity::Medium,
@@ -88,7 +90,7 @@ async fn test_recovery_strategy_determination() {
 
 #[tokio::test]
 async fn test_fault_statistics() {
-    let stats = FaultStatistics {
+    let stats: _ = FaultStatistics {
         total_faults: 10,
         active_faults: 2,
         fault_type_counts: std::collections::HashMap::new(),
@@ -102,7 +104,7 @@ async fn test_fault_statistics() {
 
 #[tokio::test]
 async fn test_recovery_action_creation() {
-    let action = RecoveryAction {
+    let action: _ = RecoveryAction {
         action_id: "recovery-1".to_string(),
         strategy: RecoveryStrategy::RestartNode,
         target_id: "node-1".to_string(),
@@ -118,10 +120,10 @@ async fn test_recovery_action_creation() {
 
 #[tokio::test]
 async fn test_fault_severity_levels() {
-    let critical = FaultSeverity::Critical;
-    let high = FaultSeverity::High;
-    let medium = FaultSeverity::Medium;
-    let low = FaultSeverity::Low;
+    let critical: _ = FaultSeverity::Critical;
+    let high: _ = FaultSeverity::High;
+    let medium: _ = FaultSeverity::Medium;
+    let low: _ = FaultSeverity::Low;
 
     // 测试严重程度级别
     assert!(matches!(critical, FaultSeverity::Critical));
@@ -132,12 +134,12 @@ async fn test_fault_severity_levels() {
 
 #[tokio::test]
 async fn test_fault_type_variants() {
-    let node_failure = FaultType::NodeFailure;
-    let task_failure = FaultType::TaskExecutionFailure;
-    let network_partition = FaultType::NetworkPartition;
-    let resource_exhaustion = FaultType::ResourceExhaustion;
-    let health_check_failure = FaultType::HealthCheckFailure;
-    let timeout = FaultType::Timeout;
+    let node_failure: _ = FaultType::NodeFailure;
+    let task_failure: _ = FaultType::TaskExecutionFailure;
+    let network_partition: _ = FaultType::NetworkPartition;
+    let resource_exhaustion: _ = FaultType::ResourceExhaustion;
+    let health_check_failure: _ = FaultType::HealthCheckFailure;
+    let timeout: _ = FaultType::Timeout;
 
     assert!(matches!(node_failure, FaultType::NodeFailure));
     assert!(matches!(task_failure, FaultType::TaskExecutionFailure));
@@ -149,13 +151,13 @@ async fn test_fault_type_variants() {
 
 #[tokio::test]
 async fn test_recovery_strategy_variants() {
-    let restart_node = RecoveryStrategy::RestartNode;
-    let restart_task = RecoveryStrategy::RestartTask;
-    let migrate_task = RecoveryStrategy::MigrateTask;
-    let scale_up = RecoveryStrategy::ScaleUp;
-    let retry_with_backoff = RecoveryStrategy::RetryWithBackoff;
-    let circuit_breaker = RecoveryStrategy::CircuitBreaker;
-    let failover = RecoveryStrategy::Failover;
+    let restart_node: _ = RecoveryStrategy::RestartNode;
+    let restart_task: _ = RecoveryStrategy::RestartTask;
+    let migrate_task: _ = RecoveryStrategy::MigrateTask;
+    let scale_up: _ = RecoveryStrategy::ScaleUp;
+    let retry_with_backoff: _ = RecoveryStrategy::RetryWithBackoff;
+    let circuit_breaker: _ = RecoveryStrategy::CircuitBreaker;
+    let failover: _ = RecoveryStrategy::Failover;
 
     assert!(matches!(restart_node, RecoveryStrategy::RestartNode));
     assert!(matches!(restart_task, RecoveryStrategy::RestartTask));
@@ -168,7 +170,7 @@ async fn test_recovery_strategy_variants() {
 
 #[tokio::test]
 async fn test_fault_detection_config() {
-    let config = FaultDetectionConfig {
+    let config: _ = FaultDetectionConfig {
         detection_interval: Duration::from_secs(5),
         failure_threshold: 3,
         recovery_threshold: 2,
@@ -192,7 +194,7 @@ async fn test_fault_metadata() {
     metadata.insert("error_code".to_string(), "500".to_string());
     metadata.insert("region".to_string(), "us-west-1".to_string());
 
-    let fault_event = FaultEvent {
+    let fault_event: _ = FaultEvent {
         event_id: "metadata-test".to_string(),
         fault_type: FaultType::NodeFailure,
         severity: FaultSeverity::High,
@@ -209,7 +211,7 @@ async fn test_fault_metadata() {
 
 #[tokio::test]
 async fn test_multiple_fault_events() {
-    let faults = vec![
+    let faults: _ = vec![
         FaultEvent {
             event_id: "fault-1".to_string(),
             fault_type: FaultType::NodeFailure,
@@ -252,7 +254,7 @@ async fn test_recovery_action_parameters() {
     parameters.insert("restart_delay".to_string(), "5".to_string());
     parameters.insert("force".to_string(), "true".to_string());
 
-    let action = RecoveryAction {
+    let action: _ = RecoveryAction {
         action_id: "param-test".to_string(),
         strategy: RecoveryStrategy::RestartNode,
         target_id: "node-1".to_string(),
@@ -267,7 +269,7 @@ async fn test_recovery_action_parameters() {
 
 #[tokio::test]
 async fn test_fault_statistics_empty() {
-    let stats = FaultStatistics {
+    let stats: _ = FaultStatistics {
         total_faults: 0,
         active_faults: 0,
         fault_type_counts: std::collections::HashMap::new(),
@@ -282,7 +284,7 @@ async fn test_fault_statistics_empty() {
 #[tokio::test]
 async fn test_integration_fault_workflow() {
     // 模拟完整的故障处理流程
-    let fault_event = FaultEvent {
+    let fault_event: _ = FaultEvent {
         event_id: "integration-test".to_string(),
         fault_type: FaultType::NodeFailure,
         severity: FaultSeverity::High,

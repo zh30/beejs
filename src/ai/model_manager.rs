@@ -26,8 +26,8 @@ pub struct ModelInfo {
 /// 模型注册中心
 pub struct ModelRegistry {
     config: ModelRegistryConfig,
-    registered_models: Arc<RwLock<HashMap<String, ModelInfo>>>,
-    health_status: Arc<RwLock<HashMap<String, bool>>>,
+    registered_models: Arc<RwLock<HashMap<String, ModelInfo, std::collections::HashMap<String, ModelInfo, String, ModelInfo>>>>,
+    health_status: Arc<RwLock<HashMap<String, bool, std::collections::HashMap<String, bool, String, bool>>>>,
 }
 
 /// 模型注册配置
@@ -40,8 +40,8 @@ pub struct ModelRegistryConfig {
 /// 模型路由器
 pub struct ModelRouter {
     config: RouterConfig,
-    model_metrics: Arc<RwLock<HashMap<String, ModelMetrics>>>,
-    route_cache: Arc<RwLock<HashMap<String, (String, Instant)>>>,
+    model_metrics: Arc<RwLock<HashMap<String, ModelMetrics, std::collections::HashMap<String, ModelMetrics, String, ModelMetrics>>>>,
+    route_cache: Arc<RwLock<HashMap<String, (String, Instant), std::collections::HashMap<String, (String, Instant), String, (String, Instant)>>>>,
 }
 
 /// 路由器配置
@@ -76,7 +76,7 @@ pub struct ModelManager {
     config: ManagerConfig,
     registry: ModelRegistry,
     router: ModelRouter,
-    active_models: Arc<RwLock<HashMap<String, ModelHandle>>>,
+    active_models: Arc<RwLock<HashMap<String, ModelHandle, std::collections::HashMap<String, ModelHandle, String, ModelHandle>>>>,
     model_handles: Arc<Mutex<Vec<ModelHandle>>>,
 }
 
@@ -94,8 +94,8 @@ impl ModelRegistry {
     pub fn new(config: ModelRegistryConfig) -> Result<Self, String> {
         Ok(ModelRegistry {
             config: config.clone(),
-            registered_models: Arc::new(RwLock::new(HashMap::new())),
-            health_status: Arc::new(RwLock::new(HashMap::new())),
+            registered_models: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            health_status: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         })
     }
 
@@ -113,19 +113,19 @@ impl ModelRegistry {
 
     /// 发现模型
     pub fn discover_models(&self) -> Result<Vec<String>, String> {
-        let models = self.registered_models.read().unwrap();
+        let models: _ = self.registered_models.read().unwrap();
         Ok(models.keys().cloned().collect())
     }
 
     /// 获取模型信息
     pub fn get_model_info(&self, model_name: &str) -> Option<ModelInfo> {
-        let models = self.registered_models.read().unwrap();
+        let models: _ = self.registered_models.read().unwrap();
         models.get(model_name).cloned()
     }
 
     /// 检查模型健康状态
     pub fn is_healthy(&self, model_name: &str) -> bool {
-        let health = self.health_status.read().unwrap();
+        let health: _ = self.health_status.read().unwrap();
         health.get(model_name).copied().unwrap_or(false)
     }
 
@@ -147,8 +147,8 @@ impl ModelRouter {
     pub fn new(config: RouterConfig) -> Result<Self, String> {
         Ok(ModelRouter {
             config: config.clone(),
-            model_metrics: Arc::new(RwLock::new(HashMap::new())),
-            route_cache: Arc::new(RwLock::new(HashMap::new())),
+            model_metrics: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            route_cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         })
     }
 
@@ -161,7 +161,7 @@ impl ModelRouter {
     /// 路由请求
     pub fn route_request(&self, capability: String) -> Result<String, String> {
         // 检查缓存
-        let cache_key = format!("route:{}", capability);
+        let cache_key: _ = format!("route:{}", capability);
         if let Some((cached_model, cached_time)) = self.route_cache.read().unwrap().get(&cache_key) {
             if cached_time.elapsed() < self.config.route_cache_ttl {
                 return Ok(cached_model.clone());
@@ -169,7 +169,7 @@ impl ModelRouter {
         }
 
         // 获取可用模型
-        let model_metrics = self.model_metrics.read().unwrap();
+        let model_metrics: _ = self.model_metrics.read().unwrap();
         let available_models: Vec<_> = model_metrics
             .iter()
             .filter(|(_, metrics)| metrics.load < 0.9 && metrics.error_rate < 0.1)
@@ -180,7 +180,7 @@ impl ModelRouter {
         }
 
         // 根据负载均衡策略选择模型
-        let model_name = self.select_model(&available_models)?;
+        let model_name: _ = self.select_model(&available_models)?;
 
         // 更新缓存
         {
@@ -227,13 +227,13 @@ impl ModelRouter {
 
     /// 获取路由准确率
     pub fn get_route_accuracy(&self) -> f64 {
-        let cache = self.route_cache.read().unwrap();
+        let cache: _ = self.route_cache.read().unwrap();
         if cache.is_empty() {
             return 0.0;
         }
 
         // 简化实现：基于缓存命中率
-        let valid_entries = cache
+        let valid_entries: _ = cache
             .values()
             .filter(|(_, time)| time.elapsed() < self.config.route_cache_ttl)
             .count();
@@ -245,27 +245,27 @@ impl ModelRouter {
 impl ModelManager {
     /// 创建新的模型管理器
     pub fn new(runtime: &Arc<tokio::runtime::Runtime>, config: ManagerConfig) -> Result<Self, String> {
-        let registry_config = ModelRegistryConfig {
+        let registry_config: _ = ModelRegistryConfig {
             auto_discovery: true,
             health_check_interval: Duration::from_secs(30),
         };
 
-        let router_config = RouterConfig {
+        let router_config: _ = RouterConfig {
             load_balancing: LoadBalancingStrategy::RoundRobin,
             fallback_enabled: true,
             route_cache_ttl: Duration::from_secs(60),
         };
 
-        let registry = ModelRegistry::new(registry_config)?;
-        let router = ModelRouter::new(router_config)?;
+        let registry: _ = ModelRegistry::new(registry_config)?;
+        let router: _ = ModelRouter::new(router_config)?;
 
         Ok(ModelManager {
             runtime: runtime.clone(),
             config: config.clone(),
             registry,
             router,
-            active_models: Arc::new(RwLock::new(HashMap::new())),
-            model_handles: Arc::new(Mutex::new(Vec::new())),
+            active_models: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            model_handles: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
         })
     }
 
@@ -273,7 +273,7 @@ impl ModelManager {
     pub fn load_model(&mut self, model_name: String) -> Result<ModelHandle, String> {
         // 检查并发限制
         {
-            let handles = self.model_handles.lock().unwrap();
+            let handles: _ = self.model_handles.lock().unwrap();
             if handles.len() >= self.config.max_concurrent_models {
                 return Err("Max concurrent models reached".to_string());
             }
@@ -281,19 +281,19 @@ impl ModelManager {
 
         // 检查模型是否已加载
         {
-            let active_models = self.active_models.read().unwrap();
+            let active_models: _ = self.active_models.read().unwrap();
             if let Some(handle) = active_models.get(&model_name) {
                 return Ok(handle.clone());
             }
         }
 
         // 模拟模型加载
-        let load_start = Instant::now();
+        let load_start: _ = Instant::now();
         std::thread::sleep(Duration::from_millis(100)); // 模拟加载时间
-        let load_time = load_start.elapsed();
+        let load_time: _ = load_start.elapsed();
 
         // 创建模型句柄
-        let handle = ModelHandle {
+        let handle: _ = ModelHandle {
             model_name: model_name.clone(),
             handle_id: format!("{}-{}", model_name, load_time.as_nanos()),
             load_time: Instant::now(),
@@ -301,7 +301,7 @@ impl ModelManager {
         };
 
         // 注册模型指标
-        let metrics = ModelMetrics {
+        let metrics: _ = ModelMetrics {
             latency: Duration::from_millis(50),
             throughput: 100.0,
             error_rate: 0.01,
@@ -334,12 +334,12 @@ impl ModelManager {
         }
 
         // 模拟推理
-        let inference_start = Instant::now();
+        let inference_start: _ = Instant::now();
         std::thread::sleep(Duration::from_millis(10)); // 模拟推理时间
-        let inference_time = inference_start.elapsed();
+        let inference_time: _ = inference_start.elapsed();
 
         // 更新模型指标
-        let metrics = ModelMetrics {
+        let metrics: _ = ModelMetrics {
             latency: inference_time,
             throughput: 100.0,
             error_rate: 0.01,
@@ -352,7 +352,7 @@ impl ModelManager {
 
     /// 获取模型指标
     pub fn get_model_metrics(&self, model_name: &str) -> Result<ModelMetrics, String> {
-        let model_metrics = self.router.model_metrics.read().unwrap();
+        let model_metrics: _ = self.router.model_metrics.read().unwrap();
         if let Some(metrics) = model_metrics.get(model_name) {
             Ok(metrics.clone())
         } else {
@@ -362,13 +362,13 @@ impl ModelManager {
 
     /// 清理空闲模型
     pub fn cleanup_idle_models(&self) {
-        let now = Instant::now();
-        let timeout = self.config.model_timeout;
+        let now: _ = Instant::now();
+        let timeout: _ = self.config.model_timeout;
 
         let mut to_remove = Vec::new();
 
         {
-            let active_models = self.active_models.read().unwrap();
+            let active_models: _ = self.active_models.read().unwrap();
             for (model_name, handle) in active_models.iter() {
                 if now.duration_since(handle.last_used) > timeout {
                     to_remove.push(model_name.clone());
@@ -423,15 +423,16 @@ impl ModelManager {
 mod tests {
     use super::*;
     use crate::Runtime;
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_model_registry_creation() {
-        let config = ModelRegistryConfig {
+        let config: _ = ModelRegistryConfig {
             auto_discovery: true,
             health_check_interval: Duration::from_secs(30),
         };
 
-        let registry = ModelRegistry::new(config);
+        let registry: _ = ModelRegistry::new(config);
         assert!(registry.is_ok());
     }
 
@@ -442,7 +443,7 @@ mod tests {
             health_check_interval: Duration::from_secs(30),
         }).unwrap();
 
-        let model_info = ModelInfo {
+        let model_info: _ = ModelInfo {
             name: "test-model".to_string(),
             version: "1.0".to_string(),
             model_type: "LanguageModel".to_string(),  // 简化为字符串
@@ -450,25 +451,25 @@ mod tests {
             capabilities: vec!["text-generation".to_string()],
         };
 
-        let result = registry.register_model(model_info);
+        let result: _ = registry.register_model(model_info);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_model_router_creation() {
-        let config = RouterConfig {
+        let config: _ = RouterConfig {
             load_balancing: LoadBalancingStrategy::RoundRobin,
             fallback_enabled: true,
             route_cache_ttl: Duration::from_secs(60),
         };
 
-        let router = ModelRouter::new(config);
+        let router: _ = ModelRouter::new(config);
         assert!(router.is_ok());
     }
 
     #[test]
     fn test_intelligent_routing() {
-        let router = ModelRouter::new(RouterConfig {
+        let router: _ = ModelRouter::new(RouterConfig {
             load_balancing: LoadBalancingStrategy::LatencyBased,
             fallback_enabled: true,
             route_cache_ttl: Duration::from_secs(60),
@@ -488,60 +489,60 @@ mod tests {
             load: 0.5,
         });
 
-        let selected = router.route_request("text-generation".to_string());
+        let selected: _ = router.route_request("text-generation".to_string());
         assert!(selected.is_ok());
         assert_eq!(selected.unwrap(), "model-a".to_string());
     }
 
     #[test]
     fn test_model_manager_creation() {
-        let runtime = Arc::new(tokio::runtime::Runtime::new().unwrap());
-        let config = ManagerConfig {
+        let runtime: _ = Arc::new(std::sync::Mutex::new(tokio::runtime::Runtime::new()).unwrap());
+        let config: _ = ManagerConfig {
             max_concurrent_models: 10,
             model_timeout: Duration::from_secs(300),
             enable_auto_scaling: true,
         };
 
-        let manager = ModelManager::new(&runtime, config);
+        let manager: _ = ModelManager::new(&runtime, config);
         assert!(manager.is_ok());
     }
 
     #[test]
     fn test_model_loading() {
-        let runtime = Arc::new(tokio::runtime::Runtime::new().unwrap());
-        let config = ManagerConfig {
+        let runtime: _ = Arc::new(std::sync::Mutex::new(tokio::runtime::Runtime::new()).unwrap());
+        let config: _ = ManagerConfig {
             max_concurrent_models: 10,
             model_timeout: Duration::from_secs(300),
             enable_auto_scaling: true,
         };
 
         let mut manager = ModelManager::new(&runtime, config).unwrap();
-        let handle = manager.load_model("test-model".to_string());
+        let handle: _ = manager.load_model("test-model".to_string());
 
         assert!(handle.is_ok());
     }
 
     #[test]
     fn test_inference() {
-        let runtime = Arc::new(tokio::runtime::Runtime::new().unwrap());
-        let config = ManagerConfig {
+        let runtime: _ = Arc::new(std::sync::Mutex::new(tokio::runtime::Runtime::new()).unwrap());
+        let config: _ = ManagerConfig {
             max_concurrent_models: 10,
             model_timeout: Duration::from_secs(300),
             enable_auto_scaling: true,
         };
 
         let mut manager = ModelManager::new(&runtime, config).unwrap();
-        let handle = manager.load_model("test-model".to_string()).unwrap();
+        let handle: _ = manager.load_model("test-model".to_string()).unwrap();
 
-        let result = manager.inference(&handle, "Test input".to_string());
+        let result: _ = manager.inference(&handle, "Test input".to_string());
         assert!(result.is_ok());
         assert!(result.unwrap().contains("Test input"));
     }
 
     #[test]
     fn test_model_cleanup() {
-        let runtime = Arc::new(tokio::runtime::Runtime::new().unwrap());
-        let config = ManagerConfig {
+        let runtime: _ = Arc::new(std::sync::Mutex::new(tokio::runtime::Runtime::new()).unwrap());
+        let config: _ = ManagerConfig {
             max_concurrent_models: 10,
             model_timeout: Duration::from_millis(100), // 短超时
             enable_auto_scaling: true,
@@ -559,7 +560,7 @@ mod tests {
         manager.cleanup_idle_models();
 
         // 验证模型已清理
-        let active_models = manager.active_models.read().unwrap();
+        let active_models: _ = manager.active_models.read().unwrap();
         assert!(!active_models.contains_key("test-model"));
     }
 }

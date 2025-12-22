@@ -8,6 +8,8 @@
 use num_complex::Complex64;
 
 use super::circuit::QuantumCircuit;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 变分计算结果
 #[derive(Debug, Clone)]
@@ -74,13 +76,13 @@ impl HybridComputing {
         }
 
         // 执行电路
-        let result = circuit.execute();
+        let result: _ = circuit.execute();
 
         // 计算能量（简化的哈密顿量期望值）
-        let energy = self.compute_energy(&result.probability_distribution());
+        let energy: _ = self.compute_energy(&result.probability_distribution());
 
         // 计算梯度（参数位移规则）
-        let gradient = self.compute_gradient(params);
+        let gradient: _ = self.compute_gradient(params);
 
         VariationalResult {
             energy,
@@ -90,15 +92,15 @@ impl HybridComputing {
     }
 
     /// 计算能量期望值
-    fn compute_energy(&self, prob_dist: &std::collections::HashMap<Vec<u8>, f64>) -> f64 {
+    fn compute_energy(&self, prob_dist: &std::collections::HashMap<Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8>>, f64>) -> f64 {
         // 简化的 Z-Z 哈密顿量
         let mut energy = 0.0;
 
         for (bitstring, prob) in prob_dist {
             let mut term = 0.0;
             for i in 0..bitstring.len().saturating_sub(1) {
-                let z_i = if bitstring[i] == 0 { 1.0 } else { -1.0 };
-                let z_j = if bitstring[i + 1] == 0 { 1.0 } else { -1.0 };
+                let z_i: _ = if bitstring[i] == 0 { 1.0 } else { -1.0 };
+                let z_j: _ = if bitstring[i + 1] == 0 { 1.0 } else { -1.0 };
                 term += z_i * z_j;
             }
             energy += term * prob;
@@ -109,19 +111,19 @@ impl HybridComputing {
 
     /// 计算参数梯度
     fn compute_gradient(&self, params: &[f64]) -> Vec<f64> {
-        let shift = std::f64::consts::FRAC_PI_2;
+        let shift: _ = std::f64::consts::FRAC_PI_2;
         let mut gradient = vec![0.0; params.len()];
 
         for i in 0..params.len() {
             // 正向位移
             let mut params_plus = params.to_vec();
             params_plus[i] += shift;
-            let energy_plus = self.variational_circuit_energy(&params_plus);
+            let energy_plus: _ = self.variational_circuit_energy(&params_plus);
 
             // 负向位移
             let mut params_minus = params.to_vec();
             params_minus[i] -= shift;
-            let energy_minus = self.variational_circuit_energy(&params_minus);
+            let energy_minus: _ = self.variational_circuit_energy(&params_minus);
 
             // 参数位移规则
             gradient[i] = (energy_plus - energy_minus) / 2.0;
@@ -146,7 +148,7 @@ impl HybridComputing {
             circuit.add_cnot(q, q + 1);
         }
 
-        let result = circuit.execute();
+        let result: _ = circuit.execute();
         self.compute_energy(&result.probability_distribution())
     }
 
@@ -166,12 +168,12 @@ impl HybridComputing {
 
         for _ in 0..10 {
             // 执行 QAOA 电路
-            let result = self.qaoa_circuit(problem, &gamma, &beta);
+            let result: _ = self.qaoa_circuit(problem, &gamma, &beta);
 
             // 采样
             for _ in 0..100 {
-                let bitstring = result.sample();
-                let cut_value = self.compute_cut_value(&bitstring, problem);
+                let bitstring: _ = result.sample();
+                let cut_value: _ = self.compute_cut_value(&bitstring, problem);
 
                 if cut_value > best_cut {
                     best_cut = cut_value;
@@ -247,11 +249,11 @@ impl HybridComputing {
     /// 振幅编码：将经典数据编码为量子态振幅
     pub fn encode_amplitude(&self, data: &[f64]) -> QuantumStateWrapper {
         // 确定所需量子比特数
-        let required_qubits = (data.len() as f64).log2().ceil() as usize;
-        let padded_size = 1 << required_qubits;
+        let required_qubits: _ = (data.len() as f64).log2().ceil() as usize;
+        let padded_size: _ = 1 << required_qubits;
 
         // 填充数据
-        let mut padded_data = data.to_vec();
+        let mut padded_data = data.clone();to_vec();
         padded_data.resize(padded_size, 0.0);
 
         // 归一化
@@ -282,7 +284,7 @@ impl HybridComputing {
         let mut norm_orig = 0.0;
         let mut norm_dec = 0.0;
 
-        let min_len = original.len().min(decoded.len());
+        let min_len: _ = original.len().min(decoded.len());
 
         for i in 0..min_len {
             dot_product += original[i] * decoded[i];

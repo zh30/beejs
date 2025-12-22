@@ -48,7 +48,7 @@ impl ModelWeights {
 
     /// 预测执行时间
     fn predict_execution_time(&self, features: &FeatureVector) -> f64 {
-        let prediction = self.execution_time_weights[0] * features.cpu_usage
+        let prediction: _ = self.execution_time_weights[0] * features.cpu_usage
             + self.execution_time_weights[1] * features.memory_usage
             + self.execution_time_weights[2] * features.heap_size
             + self.execution_time_weights[3] * features.gc_time
@@ -60,7 +60,7 @@ impl ModelWeights {
 
     /// 预测内存使用
     fn predict_memory(&self, features: &FeatureVector) -> f64 {
-        let prediction = self.memory_weights[0] * features.cpu_usage
+        let prediction: _ = self.memory_weights[0] * features.cpu_usage
             + self.memory_weights[1] * features.memory_usage
             + self.memory_weights[2] * features.heap_size
             + self.memory_weights[3] * features.gc_time
@@ -72,7 +72,7 @@ impl ModelWeights {
 
     /// 预测吞吐量
     fn predict_throughput(&self, features: &FeatureVector) -> f64 {
-        let prediction = self.throughput_weights[0] * features.cpu_usage
+        let prediction: _ = self.throughput_weights[0] * features.cpu_usage
             + self.throughput_weights[1] * features.memory_usage
             + self.throughput_weights[2] * features.heap_size
             + self.throughput_weights[3] * features.gc_time
@@ -95,8 +95,8 @@ impl ModelWeights {
 
             for (features, actual_execution_time, actual_memory, actual_throughput) in training_data {
                 // 执行时间预测和梯度
-                let predicted_execution_time = self.predict_execution_time(features);
-                let error_execution_time = predicted_execution_time - actual_execution_time;
+                let predicted_execution_time: _ = self.predict_execution_time(features);
+                let error_execution_time: _ = predicted_execution_time - actual_execution_time;
 
                 execution_time_grad[0] += error_execution_time * features.cpu_usage;
                 execution_time_grad[1] += error_execution_time * features.memory_usage;
@@ -106,8 +106,8 @@ impl ModelWeights {
                 execution_time_bias_grad += error_execution_time;
 
                 // 内存预测和梯度
-                let predicted_memory = self.predict_memory(features);
-                let error_memory = predicted_memory - actual_memory;
+                let predicted_memory: _ = self.predict_memory(features);
+                let error_memory: _ = predicted_memory - actual_memory;
 
                 memory_grad[0] += error_memory * features.cpu_usage;
                 memory_grad[1] += error_memory * features.memory_usage;
@@ -117,8 +117,8 @@ impl ModelWeights {
                 memory_bias_grad += error_memory;
 
                 // 吞吐量预测和梯度
-                let predicted_throughput = self.predict_throughput(features);
-                let error_throughput = predicted_throughput - actual_throughput;
+                let predicted_throughput: _ = self.predict_throughput(features);
+                let error_throughput: _ = predicted_throughput - actual_throughput;
 
                 throughput_grad[0] += error_throughput * features.cpu_usage;
                 throughput_grad[1] += error_throughput * features.memory_usage;
@@ -129,7 +129,7 @@ impl ModelWeights {
             }
 
             // 更新权重
-            let n = training_data.len() as f64;
+            let n: _ = training_data.len() as f64;
             for i in 0..5 {
                 self.execution_time_weights[i] -= learning_rate * execution_time_grad[i] / n;
                 self.memory_weights[i] -= learning_rate * memory_grad[i] / n;
@@ -170,8 +170,8 @@ impl PerformancePredictor {
         }
 
         // 使用最新的指标进行预测
-        let latest_metrics = &metrics_history[metrics_history.len() - 1];
-        let features = FeatureVector {
+        let latest_metrics: _ = &metrics_history[metrics_history.len() - 1];
+        let features: _ = FeatureVector {
             cpu_usage: latest_metrics.cpu_usage,
             memory_usage: latest_metrics.memory_usage,
             heap_size: latest_metrics.heap_size,
@@ -180,15 +180,15 @@ impl PerformancePredictor {
         };
 
         // 预测各项指标
-        let predicted_execution_time = self.weights.predict_execution_time(&features);
-        let predicted_memory = self.weights.predict_memory(&features);
-        let predicted_throughput = self.weights.predict_throughput(&features);
+        let predicted_execution_time: _ = self.weights.predict_execution_time(&features);
+        let predicted_memory: _ = self.weights.predict_memory(&features);
+        let predicted_throughput: _ = self.weights.predict_throughput(&features);
 
         // 计算置信度（基于历史数据的方差）
-        let confidence = self.calculate_confidence(metrics_history);
+        let confidence: _ = self.calculate_confidence(metrics_history);
 
         // 生成优化建议
-        let optimization_suggestions = self.generate_optimization_suggestions(&features, &latest_metrics);
+        let optimization_suggestions: _ = self.generate_optimization_suggestions(&features, &latest_metrics);
 
         Ok(PerformancePrediction {
             predicted_execution_time,
@@ -206,7 +206,7 @@ impl PerformancePredictor {
 
         // 如果训练数据足够，进行训练
         if self.training_data.len() >= self.config.batch_size {
-            let learning_rate = self.config.learning_rate;
+            let learning_rate: _ = self.config.learning_rate;
             self.weights.train(&self.training_data, learning_rate);
         }
     }
@@ -217,7 +217,7 @@ impl PerformancePredictor {
 
         // 将性能指标转换为训练样本
         for metrics in metrics_history {
-            let features = FeatureVector {
+            let features: _ = FeatureVector {
                 cpu_usage: metrics.cpu_usage,
                 memory_usage: metrics.memory_usage,
                 heap_size: metrics.heap_size,
@@ -226,9 +226,9 @@ impl PerformancePredictor {
             };
 
             // 目标值：实际的执行时间、内存使用、吞吐量
-            let target_execution_time = metrics.execution_time as f64;
-            let target_memory = metrics.memory_usage;
-            let target_throughput = metrics.throughput;
+            let target_execution_time: _ = metrics.execution_time as f64;
+            let target_memory: _ = metrics.memory_usage;
+            let target_throughput: _ = metrics.throughput;
 
             self.training_data.push((
                 features,
@@ -246,15 +246,15 @@ impl PerformancePredictor {
         }
 
         // 计算最近 10 个样本的方差
-        let recent_metrics = &metrics_history[metrics_history.len().saturating_sub(10)..];
+        let recent_metrics: _ = &metrics_history[metrics_history.len().saturating_sub(10)..];
         let latencies: Vec<f64> = recent_metrics.iter().map(|m| m.latency).collect();
 
         let mean_latency: f64 = latencies.iter().sum::<f64>() / latencies.len() as f64;
-        let variance = latencies.iter().map(|l| (l - mean_latency).powi(2)).sum::<f64>() / latencies.len() as f64;
-        let std_dev = variance.sqrt();
+        let variance: _ = latencies.iter().map(|l| (l - mean_latency).powi(2)).sum::<f64>() / latencies.len() as f64;
+        let std_dev: _ = variance.sqrt();
 
         // 方差越小，置信度越高
-        let confidence = 1.0 / (1.0 + std_dev / mean_latency);
+        let confidence: _ = 1.0 / (1.0 + std_dev / mean_latency);
         confidence.clamp(0.0, 1.0)
     }
 
@@ -326,14 +326,16 @@ impl PerformancePredictor {
 mod tests {
     use super::*;
     use crate::ai::ai_performance_engine::AiPerformanceEngineConfig;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_model_prediction() {
-        let config = AiPerformanceEngineConfig::default();
+        let config: _ = AiPerformanceEngineConfig::default();
         let mut predictor = PerformancePredictor::new(config);
 
         // 创建测试数据
-        let features = FeatureVector {
+        let features: _ = FeatureVector {
             cpu_usage: 60.0,
             memory_usage: 500.0,
             heap_size: 256.0,
@@ -341,14 +343,14 @@ mod tests {
             concurrent_tasks: 100,
         };
 
-        let prediction = predictor.weights.predict_execution_time(&features);
+        let prediction: _ = predictor.weights.predict_execution_time(&features);
         println!("预测执行时间: {}", prediction);
         assert!(prediction > 0.0);
     }
 
     #[tokio::test]
     async fn test_predictor_train() {
-        let config = AiPerformanceEngineConfig::default();
+        let config: _ = AiPerformanceEngineConfig::default();
         let mut predictor = PerformancePredictor::new(config);
 
         // 创建训练数据
@@ -371,7 +373,7 @@ mod tests {
         predictor.train(&metrics_history).await;
 
         // 进行预测
-        let prediction = predictor.predict(&metrics_history).unwrap();
+        let prediction: _ = predictor.predict(&metrics_history).unwrap();
         println!("训练后预测: {:?}", prediction);
         assert!(prediction.confidence > 0.0);
     }

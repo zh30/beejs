@@ -10,6 +10,8 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{Read, Write};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Cached script information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,7 +36,7 @@ struct CacheMetadata {
 #[derive(Debug)]
 pub struct LocalCodeCache {
     cache_dir: PathBuf,
-    index: Arc<RwLock<HashMap<String, CacheMetadata>>>,
+    index: Arc<RwLock<HashMap<String, CacheMetadata, std::collections::HashMap<String, CacheMetadata, String, CacheMetadata>>>>,
     compressor: Arc<Compressor>,
 }
 
@@ -74,10 +76,10 @@ impl LocalCodeCache {
         // Create cache directory if it doesn't exist
         tokio::fs::create_dir_all(&cache_dir).await?;
 
-        let cache = LocalCodeCache {
+        let cache: _ = LocalCodeCache {
             cache_dir: cache_dir.clone(),
-            index: Arc::new(RwLock::new(HashMap::new())),
-            compressor: Arc::new(Compressor::new(true)),
+            index: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            compressor: Arc::new(std::sync::Mutex::new(Compressor::new(true))),
         };
 
         // Load existing index
@@ -93,19 +95,19 @@ impl LocalCodeCache {
 
     /// Store a script in the cache
     pub async fn store_script(&self, key: &str, script: &Script) -> Result<()> {
-        let index_path = self.cache_dir.join("index.json");
-        let script_path = self.cache_dir.join(format!("{}.json", key));
+        let index_path: _ = self.cache_dir.join("index.json");
+        let script_path: _ = self.cache_dir.join(format!("{}.json", key));
 
         // Serialize script
-        let script_json = serde_json::to_string(script)?;
-        let compressed = self.compressor.compress(script_json.as_bytes()).await?;
+        let script_json: _ = serde_json::to_string(script)?;
+        let compressed: _ = self.compressor.compress(script_json.as_bytes()).await?;
 
         // Write script file
         let mut file = File::create(&script_path)?;
         file.write_all(&compressed)?;
 
         // Update index
-        let metadata = CacheMetadata {
+        let metadata: _ = CacheMetadata {
             script: script.clone(),
             expiration: None,
             size_bytes: compressed.len() as u64,
@@ -125,7 +127,7 @@ impl LocalCodeCache {
 
     /// Load a script from the cache
     pub async fn load_script(&self, key: &str) -> Result<Option<Script>> {
-        let script_path = self.cache_dir.join(format!("{}.json", key));
+        let script_path: _ = self.cache_dir.join(format!("{}.json", key));
 
         if !script_path.exists() {
             return Ok(None);
@@ -137,7 +139,7 @@ impl LocalCodeCache {
         file.read_to_end(&mut compressed)?;
 
         // Decompress
-        let decompressed = self.compressor.decompress(&compressed).await?;
+        let decompressed: _ = self.compressor.decompress(&compressed).await?;
 
         // Deserialize
         let script: Script = serde_json::from_slice(&decompressed)?;
@@ -169,7 +171,7 @@ impl LocalCodeCache {
     pub async fn cleanup_expired(&self) -> Result<u64> {
         let mut index = self.index.write().await;
         let mut removed_count = 0;
-        let now = std::time::SystemTime::now();
+        let now: _ = std::time::SystemTime::now();
 
         let to_remove: Vec<String> = index
             .iter()
@@ -188,8 +190,8 @@ impl LocalCodeCache {
             .collect();
 
         for key in &to_remove {
-            let script_path = self.cache_dir.join(format!("{}.json", key));
-            let _ = tokio::fs::remove_file(&script_path).await;
+            let script_path: _ = self.cache_dir.join(format!("{}.json", key));
+            let _: _ = tokio::fs::remove_file(&script_path).await;
             index.remove(key);
             removed_count += 1;
         }
@@ -204,9 +206,9 @@ impl LocalCodeCache {
 
     /// Get cache statistics
     pub async fn get_stats(&self) -> Result<CacheStats> {
-        let index = self.index.read().await;
+        let index: _ = self.index.read().await;
 
-        let total_scripts = index.len();
+        let total_scripts: _ = index.len();
         let total_size: u64 = index.values().map(|m| m.size_bytes).sum();
         let total_access: u64 = index.values().map(|m| m.access_count).sum();
 
@@ -219,7 +221,7 @@ impl LocalCodeCache {
 
     /// Load index from disk
     async fn load_index(&self) -> Result<()> {
-        let index_path = self.cache_dir.join("index.json");
+        let index_path: _ = self.cache_dir.join("index.json");
 
         if !index_path.exists() {
             return Ok(());
@@ -229,7 +231,7 @@ impl LocalCodeCache {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
 
-        let loaded_index: HashMap<String, CacheMetadata> = serde_json::from_str(&contents)?;
+        let loaded_index: HashMap<String, CacheMetadata, std::collections::HashMap<String, CacheMetadata, String, CacheMetadata>> = serde_json::from_str(&contents)?;
         let mut index = self.index.write().await;
         index.extend(loaded_index);
 
@@ -239,10 +241,10 @@ impl LocalCodeCache {
 
     /// Save index to disk
     async fn save_index(&self) -> Result<()> {
-        let index_path = self.cache_dir.join("index.json");
-        let index = self.index.read().await;
+        let index_path: _ = self.cache_dir.join("index.json");
+        let index: _ = self.index.read().await;
 
-        let contents = serde_json::to_string(&*index)?;
+        let contents: _ = serde_json::to_string(&*index)?;
         let mut file = File::create(&index_path)?;
         file.write_all(contents.as_bytes())?;
 
@@ -262,7 +264,7 @@ pub struct CacheStats {
 #[derive(Debug)]
 pub struct OfflineDataStore {
     db_path: PathBuf,
-    data: Arc<RwLock<HashMap<String, Vec<u8>>>>,
+    data: Arc<RwLock<HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>>>,
 }
 
 /// Sync result
@@ -303,9 +305,9 @@ pub enum MergeStrategy {
 impl OfflineDataStore {
     /// Create a new offline data store
     pub async fn new(db_path: PathBuf) -> Result<Self> {
-        let store = OfflineDataStore {
+        let store: _ = OfflineDataStore {
             db_path: db_path.clone(),
-            data: Arc::new(RwLock::new(HashMap::new())),
+            data: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         };
 
         // Load existing data
@@ -329,8 +331,8 @@ impl OfflineDataStore {
 
     /// Load data
     pub async fn load_data(&self, key: &str) -> Result<Option<Vec<u8>>> {
-        let data_map = self.data.read().await;
-        let result = data_map.get(key).cloned();
+        let data_map: _ = self.data.read().await;
+        let result: _ = data_map.get(key).cloned();
 
         if result.is_some() {
             println!("Loaded data for key '{}'", key);
@@ -346,7 +348,7 @@ impl OfflineDataStore {
         // Simulate sync process
         tokio::time::sleep(Duration::from_millis(100)).await;
 
-        let result = SyncResult {
+        let result: _ = SyncResult {
             synced_items: 0,
             failed_items: 0,
             errors: Vec::new(),
@@ -365,7 +367,7 @@ impl OfflineDataStore {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
 
-        let loaded_data: HashMap<String, Vec<u8>> = serde_json::from_str(&contents)?;
+        let loaded_data: HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>> = serde_json::from_str(&contents)?;
         let mut data_map = self.data.write().await;
         data_map.extend(loaded_data);
 
@@ -375,8 +377,8 @@ impl OfflineDataStore {
 
     /// Save data to disk
     async fn save_data(&self) -> Result<()> {
-        let data_map = self.data.read().await;
-        let contents = serde_json::to_string(&*data_map)?;
+        let data_map: _ = self.data.read().await;
+        let contents: _ = serde_json::to_string(&*data_map)?;
 
         let mut file = File::create(&self.db_path)?;
         file.write_all(contents.as_bytes())?;
@@ -407,7 +409,7 @@ impl ConflictResolver {
         let mut resolutions = Vec::new();
 
         for conflict in conflicts {
-            let resolution = match self.strategy {
+            let resolution: _ = match self.strategy {
                 MergeStrategy::LocalWins => Resolution {
                     key: conflict.key.clone(),
                     resolved: true,
@@ -444,8 +446,8 @@ impl ConflictResolver {
 impl SyncManager {
     /// Create a new sync manager
     pub async fn new() -> Result<Self> {
-        let sync_manager = SyncManager {
-            conflict_resolver: Arc::new(ConflictResolver::new(MergeStrategy::LatestWins)),
+        let sync_manager: _ = SyncManager {
+            conflict_resolver: Arc::new(std::sync::Mutex::new(ConflictResolver::new(MergeStrategy::LatestWins))),
             merge_strategy: MergeStrategy::LatestWins,
         };
 
@@ -460,7 +462,7 @@ impl SyncManager {
         // Simulate sync process
         tokio::time::sleep(Duration::from_millis(50)).await;
 
-        let result = SyncResult {
+        let result: _ = SyncResult {
             synced_items: 0,
             failed_items: 0,
             errors: Vec::new(),

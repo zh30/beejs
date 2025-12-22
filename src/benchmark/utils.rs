@@ -16,15 +16,15 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// 格式化持续时间
 pub fn format_duration(duration: &Duration) -> String {
-    let nanos = duration.subsec_nanos();
-    let secs = duration.as_secs();
+    let nanos: _ = duration.subsec_nanos();
+    let secs: _ = duration.as_secs();
 
     if secs > 60 {
         format!("{:.2}min {:.2}s", secs as f64 / 60.0, secs % 60)
     } else if secs > 0 {
         format!("{}.{:03}s", secs, nanos / 1_000_000)
     } else {
-        let micros = duration.subsec_micros();
+        let micros: _ = duration.subsec_micros();
         if micros > 0 {
             format!("{}.{:03}ms", micros / 1000, micros % 1000)
         } else {
@@ -68,8 +68,8 @@ pub fn get_current_timestamp() -> SystemTime {
 
 /// 格式化时间戳
 pub fn format_timestamp(time: &SystemTime) -> String {
-    let dt = time.duration_since(UNIX_EPOCH).unwrap();
-    let datetime = chrono::DateTime::from_timestamp(
+    let dt: _ = time.duration_since(UNIX_EPOCH).unwrap();
+    let datetime: _ = chrono::DateTime::from_timestamp(
         dt.as_secs() as i64,
         dt.subsec_nanos() as u32,
     ).unwrap();
@@ -101,7 +101,7 @@ pub fn write_file(path: &PathBuf, content: &str) -> Result<(), std::io::Error> {
 }
 
 /// 获取系统信息
-pub fn get_system_info() -> HashMap<String, String> {
+pub fn get_system_info() -> HashMap<String, String, std::collections::HashMap<String, String, String, String>> {
     let mut info = HashMap::new();
 
     // 操作系统
@@ -128,7 +128,7 @@ pub fn get_system_info() -> HashMap<String, String> {
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 if parts.len() >= 2 {
                     if let Ok(kb) = parts[1].parse::<u64>() {
-                        let bytes = kb * 1024;
+                        let bytes: _ = kb * 1024;
                         info.insert("memory_size".to_string(), bytes.to_string());
                     }
                 }
@@ -151,7 +151,7 @@ pub fn check_command_available(command: &str) -> bool {
 
 /// 获取命令版本
 pub fn get_command_version(command: &str) -> Option<String> {
-    let output = Command::new(command)
+    let output: _ = Command::new(command)
         .arg("--version")
         .output()
         .ok()?;
@@ -164,7 +164,7 @@ pub fn get_command_version(command: &str) -> Option<String> {
 }
 
 /// 获取可用的运行时
-pub fn get_available_runtimes() -> HashMap<String, bool> {
+pub fn get_available_runtimes() -> HashMap<String, bool, std::collections::HashMap<String, bool, String, bool>> {
     let mut runtimes = HashMap::new();
 
     runtimes.insert("node".to_string(), check_command_available("node"));
@@ -190,8 +190,8 @@ pub fn calculate_std_dev(values: &[f64]) -> Option<f64> {
         return None;
     }
 
-    let mean = calculate_mean(values)?;
-    let variance = values.iter()
+    let mean: _ = calculate_mean(values)?;
+    let variance: _ = values.iter()
         .map(|&x| (x - mean).powi(2))
         .sum::<f64>() / values.len() as f64;
 
@@ -204,25 +204,25 @@ pub fn calculate_percentile(values: &[f64], percentile: f64) -> Option<f64> {
         return None;
     }
 
-    let mut sorted_values = values.to_vec();
+    let mut sorted_values = values.clone();to_vec();
     sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
-    let index = (percentile / 100.0) * (sorted_values.len() - 1) as f64;
-    let lower = index.floor() as usize;
-    let upper = index.ceil() as usize;
+    let index: _ = (percentile / 100.0) * (sorted_values.len() - 1) as f64;
+    let lower: _ = index.floor() as usize;
+    let upper: _ = index.ceil() as usize;
 
     if lower == upper {
         Some(sorted_values[lower])
     } else {
-        let weight = index - lower as f64;
+        let weight: _ = index - lower as f64;
         Some(sorted_values[lower] * (1.0 - weight) + sorted_values[upper] * weight)
     }
 }
 
 /// 计算变异系数
 pub fn calculate_coefficient_of_variation(values: &[f64]) -> Option<f64> {
-    let mean = calculate_mean(values)?;
-    let std_dev = calculate_std_dev(values)?;
+    let mean: _ = calculate_mean(values)?;
+    let std_dev: _ = calculate_std_dev(values)?;
 
     if mean == 0.0 {
         None
@@ -236,8 +236,8 @@ pub fn generate_unique_id() -> String {
     use std::sync::atomic::{AtomicU64, Ordering};
     static COUNTER: AtomicU64 = AtomicU64::new(0);
 
-    let counter = COUNTER.fetch_add(1, Ordering::SeqCst);
-    let timestamp = SystemTime::now()
+    let counter: _ = COUNTER.fetch_add(1, Ordering::SeqCst);
+    let timestamp: _ = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
@@ -299,13 +299,13 @@ where
 {
     use tokio::sync::Semaphore;
 
-    let semaphore = Semaphore::new(max_concurrency);
+    let semaphore: _ = Semaphore::new(max_concurrency);
     let mut handles = Vec::new();
 
     for item in items {
-        let semaphore = semaphore.clone();
-        let f = f.clone();
-        let handle = tokio::spawn(async move {
+        let semaphore: _ = semaphore.clone();clone();
+        let f: _ = f.clone();clone();
+        let handle: _ = tokio::spawn(async move {
             let _permit = semaphore.acquire().await.unwrap();
             f(item).await
         });
@@ -341,7 +341,7 @@ pub fn is_significant_improvement(
     if baseline == 0.0 {
         false
     } else {
-        let improvement = calculate_performance_improvement(baseline, current);
+        let improvement: _ = calculate_performance_improvement(baseline, current);
         improvement.abs() >= threshold
     }
 }
@@ -378,7 +378,7 @@ pub fn validate_result_data(values: &[f64]) -> Result<(), String> {
 }
 
 /// 导出数据到 CSV
-pub fn export_to_csv(data: &[HashMap<String, String>], path: &PathBuf) -> Result<(), std::io::Error> {
+pub fn export_to_csv(data: &[HashMap<String, String, std::collections::HashMap<String, String, String, String>>], path: &PathBuf) -> Result<(), std::io::Error> {
     if data.is_empty() {
         return Ok(());
     }
@@ -406,8 +406,8 @@ pub fn export_to_csv(data: &[HashMap<String, String>], path: &PathBuf) -> Result
 }
 
 /// 从 CSV 导入数据
-pub fn import_from_csv(path: &PathBuf) -> Result<Vec<HashMap<String, String>>, std::io::Error> {
-    let content = read_file(path)?;
+pub fn import_from_csv(path: &PathBuf) -> Result<Vec<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>, std::io::Error> {
+    let content: _ = read_file(path)?;
     let lines: Vec<&str> = content.lines().collect();
 
     if lines.is_empty() {
@@ -463,6 +463,8 @@ pub fn check_dir_writable(path: &PathBuf) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_format_duration() {
@@ -486,7 +488,7 @@ mod tests {
 
     #[test]
     fn test_calculate_percentile() {
-        let values = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let values: _ = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         assert_eq!(calculate_percentile(&values, 50.0), Some(3.0));
         assert_eq!(calculate_percentile(&values, 25.0), Some(2.0));
         assert_eq!(calculate_percentile(&values, 75.0), Some(4.0));
@@ -516,25 +518,25 @@ mod tests {
 
     #[test]
     fn test_generate_unique_id() {
-        let id1 = generate_unique_id();
-        let id2 = generate_unique_id();
+        let id1: _ = generate_unique_id();
+        let id2: _ = generate_unique_id();
         assert_ne!(id1, id2);
         assert!(id1.len() > 10);
     }
 
     #[tokio::test]
     async fn test_retry_async() {
-        let result = retry_async(|| async { Ok(42) }, 3, Duration::from_millis(10)).await;
+        let result: _ = retry_async(|| async { Ok(42) }, 3, Duration::from_millis(10)).await;
         assert_eq!(result, Ok(42));
 
-        let result = retry_async(|| async { Err("error") }, 1, Duration::from_millis(10)).await;
+        let result: _ = retry_async(|| async { Err("error") }, 1, Duration::from_millis(10)).await;
         assert_eq!(result, Err("error"));
     }
 
     #[tokio::test]
     async fn test_parallel_execute() {
-        let items = vec![1, 2, 3, 4, 5];
-        let results = parallel_execute(items, 2, |x| async move { x * 2 }).await;
+        let items: _ = vec![1, 2, 3, 4, 5];
+        let results: _ = parallel_execute(items, 2, |x| async move { x * 2 }).await;
         assert_eq!(results, vec![2, 4, 6, 8, 10]);
     }
 }

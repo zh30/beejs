@@ -82,30 +82,30 @@ impl AsyncIoManager {
     pub fn new(max_concurrent_tasks: usize) -> Self {
         Self {
             max_concurrent_tasks,
-            active_tasks: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
-            stats: Arc::new(tokio::sync::Mutex::new(IoStats::default())),
+            active_tasks: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicUsize::new(0))),
+            stats: Arc::new(std::sync::Mutex::new(tokio::sync::Mutex::new(IoStats::default()))),
         }
     }
 
     /// 异步读取多个文件
     pub async fn read_files_concurrent(&self, mut paths: Vec<String>) -> Vec<AsyncFileRead> {
-        let semaphore = Arc::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks));
-        let start = Instant::now();
-        let path_count = paths.len();
+        let semaphore: _ = Arc::new(std::sync::Mutex::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks)));
+        let start: _ = Instant::now();
+        let path_count: _ = paths.len();
 
         // 创建所有异步任务
         let mut handles: Vec<JoinHandle<AsyncFileRead>> = Vec::with_capacity(path_count);
 
         for path in paths.drain(..) {
-            let semaphore = semaphore.clone();
-            let path_clone = path.clone();
-            let stats = self.stats.clone();
+            let semaphore: _ = semaphore.clone();clone();
+            let path_clone: _ = path.clone();
+            let stats: _ = self.stats.clone();
 
-            let handle = tokio::spawn(async move {
+            let handle: _ = tokio::spawn(async move {
                 let _permit = semaphore.acquire().await.unwrap();
-                let task_start = Instant::now();
+                let task_start: _ = Instant::now();
 
-                let result = async_read_single_file(&path_clone).await;
+                let result: _ = async_read_single_file(&path_clone).await;
 
                 // 更新统计信息
                 {
@@ -138,7 +138,7 @@ impl AsyncIoManager {
             }
         }
 
-        let total_time = start.elapsed();
+        let total_time: _ = start.elapsed();
         println!("并发读取 {} 个文件，耗时: {:?}", path_count, total_time);
 
         results
@@ -149,26 +149,26 @@ impl AsyncIoManager {
         &self,
         mut scripts: Vec<String>,
     ) -> Vec<AsyncScriptExecution> {
-        let semaphore = Arc::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks));
-        let start = Instant::now();
-        let script_count = scripts.len();
+        let semaphore: _ = Arc::new(std::sync::Mutex::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks)));
+        let start: _ = Instant::now();
+        let script_count: _ = scripts.len();
 
         let mut handles: Vec<JoinHandle<AsyncScriptExecution>> = Vec::with_capacity(script_count);
 
         for code in scripts.drain(..) {
-            let semaphore = semaphore.clone();
-            let code_clone = code.clone();
+            let semaphore: _ = semaphore.clone();clone();
+            let code_clone: _ = code.clone();
 
-            let handle = tokio::spawn(async move {
+            let handle: _ = tokio::spawn(async move {
                 let _permit = semaphore.acquire().await.unwrap();
-                let task_start = Instant::now();
+                let task_start: _ = Instant::now();
 
                 // 创建新的运行时实例执行脚本
-                let rt = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)
+                let rt: _ = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)
                     .expect("Failed to create runtime");
 
-                let result = rt.execute_code(&code_clone);
-                let memory_used = 8 * 1024 * 1024; // 简化估算
+                let result: _ = rt.execute_code(&code_clone);
+                let memory_used: _ = 8 * 1024 * 1024; // 简化估算
 
                 AsyncScriptExecution {
                     code: code_clone,
@@ -192,7 +192,7 @@ impl AsyncIoManager {
             }
         }
 
-        let total_time = start.elapsed();
+        let total_time: _ = start.elapsed();
         println!("并发执行 {} 个脚本，耗时: {:?}", script_count, total_time);
 
         results
@@ -200,14 +200,14 @@ impl AsyncIoManager {
 
     /// 使用零拷贝方式读取文件（仅返回文件描述符）
     pub async fn read_file_zero_copy(&self, path: &str) -> Result<File, IoError> {
-        let path = Path::new(path);
+        let path: _ = Path::new(path);
         if !path.exists() {
             return Err(IoError::FileNotFound(path.to_string_lossy().to_string()));
         }
 
-        let start = Instant::now();
-        let file = File::open(path).await.map_err(IoError::ReadError)?;
-        let duration = start.elapsed();
+        let start: _ = Instant::now();
+        let file: _ = File::open(path).await.map_err(IoError::ReadError)?;
+        let duration: _ = start.elapsed();
 
         // 更新统计
         {
@@ -226,16 +226,16 @@ impl AsyncIoManager {
 
     /// 获取 I/O 统计信息
     pub async fn stats(&self) -> IoStats {
-        let stats = self.stats.lock().await;
+        let stats: _ = self.stats.lock().await;
         stats.clone()
     }
 
     /// 异步写入文件（使用缓冲）
     pub async fn write_file_buffered(&self, path: &str, content: &[u8]) -> Result<(), IoError> {
-        let path = Path::new(path);
-        let start = Instant::now();
+        let path: _ = Path::new(path);
+        let start: _ = Instant::now();
 
-        let file = File::create(path).await.map_err(IoError::ReadError)?;
+        let file: _ = File::create(path).await.map_err(IoError::ReadError)?;
         let mut writer = BufWriter::new(file);
 
         writer
@@ -244,7 +244,7 @@ impl AsyncIoManager {
             .map_err(IoError::ReadError)?;
         writer.flush().await.map_err(IoError::ReadError)?;
 
-        let duration = start.elapsed();
+        let duration: _ = start.elapsed();
 
         // 更新统计
         {
@@ -270,34 +270,34 @@ impl AsyncIoManager {
         output_dir: &str,
         processor: impl Fn(&str) -> String + Send + Sync + Clone + 'static,
     ) -> Result<Vec<String>, IoError> {
-        let semaphore = Arc::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks));
-        let start = Instant::now();
-        let path_count = input_paths.len();
+        let semaphore: _ = Arc::new(std::sync::Mutex::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks)));
+        let start: _ = Instant::now();
+        let path_count: _ = input_paths.len();
 
         let mut handles: Vec<JoinHandle<Result<String, IoError>>> = Vec::with_capacity(path_count);
 
         for path in input_paths.drain(..) {
-            let semaphore = semaphore.clone();
-            let path_clone = path.clone();
-            let output_dir = output_dir.to_string();
+            let semaphore: _ = semaphore.clone();clone();
+            let path_clone: _ = path.clone();
+            let output_dir: _ = output_dir.clone();to_string();
 
-            let handle = {
-                let processor = processor.clone();
+            let handle: _ = {
+                let processor = processor.clone();clone();
                 tokio::spawn(async move {
-                    let _permit = semaphore.acquire().await.unwrap();
+                    let _permit: _ = semaphore.acquire().await.unwrap();
 
                     // 读取文件
-                    let file_read = async_read_single_file(&path_clone).await;
-                    let content = match file_read.content {
+                    let file_read: _ = async_read_single_file(&path_clone).await;
+                    let content: _ = match file_read.content {
                         Ok(c) => c,
                         Err(e) => return Err(IoError::ReadError(std::io::Error::other(e))),
                     };
 
                     // 处理内容
-                    let processed = processor(&content);
+                    let processed: _ = processor(&content);
 
                     // 写入输出文件
-                    let output_path = format!(
+                    let output_path: _ = format!(
                         "{}/{}",
                         output_dir,
                         Path::new(&path_clone)
@@ -305,7 +305,7 @@ impl AsyncIoManager {
                             .unwrap()
                             .to_string_lossy()
                     );
-                    let file = File::create(&output_path)
+                    let file: _ = File::create(&output_path)
                         .await
                         .map_err(IoError::ReadError)?;
                     let mut writer = BufWriter::new(file);
@@ -325,11 +325,11 @@ impl AsyncIoManager {
         // 收集结果
         let mut results = Vec::with_capacity(handles.len());
         for handle in handles {
-            let result = handle.await.map_err(|_| IoError::Cancelled)??;
+            let result: _ = handle.await.map_err(|_| IoError::Cancelled)??;
             results.push(result);
         }
 
-        let total_time = start.elapsed();
+        let total_time: _ = start.elapsed();
         println!(
             "流水线处理 {} 个文件，耗时: {:?}",
             results.len(),
@@ -358,10 +358,10 @@ impl AsyncIoManager {
 
 /// 异步读取单个文件
 async fn async_read_single_file(path: &str) -> AsyncFileRead {
-    let path = Path::new(path);
-    let start = Instant::now();
+    let path: _ = Path::new(path);
+    let start: _ = Instant::now();
 
-    let result = if path.exists() {
+    let result: _ = if path.exists() {
         match tokio::fs::read_to_string(path).await {
             Ok(content) => Ok(content),
             Err(e) => Err(IoError::ReadError(e)),
@@ -382,18 +382,20 @@ mod tests {
     use super::*;
     use std::fs;
     use tempfile::TempDir;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_async_file_read() {
-        let manager = AsyncIoManager::new(10);
+        let manager: _ = AsyncIoManager::new(10);
 
         // 创建临时文件
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("test.txt");
+        let temp_dir: _ = TempDir::new().unwrap();
+        let file_path: _ = temp_dir.path().join("test.txt");
         fs::write(&file_path, "Hello, World!").unwrap();
 
         // 读取文件
-        let result = manager
+        let result: _ = manager
             .read_file_zero_copy(file_path.to_str().unwrap())
             .await;
         assert!(result.is_ok());
@@ -401,20 +403,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_concurrent_file_read() {
-        let manager = AsyncIoManager::new(5);
+        let manager: _ = AsyncIoManager::new(5);
 
         // 创建多个临时文件
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir: _ = TempDir::new().unwrap();
         let mut paths = Vec::new();
 
         for i in 0..10 {
-            let file_path = temp_dir.path().join(format!("test{}.txt", i));
+            let file_path: _ = temp_dir.path().join(format!("test{}.txt", i));
             fs::write(&file_path, format!("Content {}", i)).unwrap();
             paths.push(file_path.to_string_lossy().to_string());
         }
 
         // 并发读取
-        let results = manager.read_files_concurrent(paths).await;
+        let results: _ = manager.read_files_concurrent(paths).await;
         assert_eq!(results.len(), 10);
 
         // 验证所有读取成功
@@ -428,10 +430,10 @@ mod tests {
     #[tokio::test]
     #[ignore = "V8 Once实例毒化问题已修复，此测试已移至主测试套件"]
     async fn test_concurrent_script_execution() {
-        let manager = AsyncIoManager::new(5);
+        let manager: _ = AsyncIoManager::new(5);
 
         // 创建多个脚本
-        let scripts = vec![
+        let scripts: _ = vec![
             "1 + 1".to_string(),
             "2 * 3".to_string(),
             "Math.sqrt(16)".to_string(),
@@ -439,7 +441,7 @@ mod tests {
         ];
 
         // 并发执行
-        let results = manager.execute_scripts_concurrent(scripts).await;
+        let results: _ = manager.execute_scripts_concurrent(scripts).await;
         assert_eq!(results.len(), 4);
 
         // 验证所有执行成功
@@ -450,42 +452,42 @@ mod tests {
 
     #[tokio::test]
     async fn test_write_file_buffered() {
-        let manager = AsyncIoManager::new(10);
+        let manager: _ = AsyncIoManager::new(10);
 
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("output.txt");
-        let content = b"Hello, Buffered World!";
+        let temp_dir: _ = TempDir::new().unwrap();
+        let file_path: _ = temp_dir.path().join("output.txt");
+        let content: _ = b"Hello, Buffered World!";
 
         // 写入文件
-        let result = manager
+        let result: _ = manager
             .write_file_buffered(file_path.to_str().unwrap(), content)
             .await;
 
         assert!(result.is_ok());
 
         // 验证文件内容
-        let written = fs::read(&file_path).unwrap();
+        let written: _ = fs::read(&file_path).unwrap();
         assert_eq!(written, content);
     }
 
     #[tokio::test]
     async fn test_io_stats() {
-        let manager = AsyncIoManager::new(10);
+        let manager: _ = AsyncIoManager::new(10);
 
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("stats_test.txt");
+        let temp_dir: _ = TempDir::new().unwrap();
+        let file_path: _ = temp_dir.path().join("stats_test.txt");
         fs::write(&file_path, "Test content").unwrap();
 
         // 执行一些操作
-        let _ = manager
+        let _: _ = manager
             .read_file_zero_copy(file_path.to_str().unwrap())
             .await;
-        let _ = manager
+        let _: _ = manager
             .write_file_buffered(file_path.to_str().unwrap(), b"New content")
             .await;
 
         // 检查统计
-        let stats = manager.get_stats().await;
+        let stats: _ = manager.get_stats().await;
         assert!(stats.total_operations >= 2);
     }
 }

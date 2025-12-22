@@ -5,6 +5,8 @@
 use super::circuit::QuantumCircuit;
 use super::gates::GateType;
 use std::f64::consts::PI;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 量子优化器
 pub struct QuantumOptimizer {
@@ -73,7 +75,7 @@ impl QuantumOptimizer {
         let mut result: Vec<GateType> = Vec::new();
 
         for gate in gates {
-            let should_cancel = if let Some(last) = result.last() {
+            let should_cancel: _ = if let Some(last) = result.last() {
                 self.gates_cancel(last, &gate)
             } else {
                 false
@@ -119,7 +121,7 @@ impl QuantumOptimizer {
         let mut result: Vec<GateType> = Vec::new();
 
         for gate in gates {
-            let merged = if let Some(last) = result.last() {
+            let merged: _ = if let Some(last) = result.last() {
                 self.try_merge_rotations(last, &gate)
             } else {
                 None
@@ -164,14 +166,14 @@ impl QuantumOptimizer {
 
     /// 检查旋转门是否等价于恒等门
     fn is_identity_rotation(&self, gate: &GateType) -> bool {
-        let theta = match gate {
+        let theta: _ = match gate {
             GateType::RotationX(_, t) | GateType::RotationY(_, t) | GateType::RotationZ(_, t) => *t,
             GateType::Phase(_, t) => *t,
             _ => return false,
         };
 
         // 角度是 2π 的整数倍
-        let normalized = theta.rem_euclid(2.0 * PI);
+        let normalized: _ = theta.rem_euclid(2.0 * PI);
         normalized.abs() < 1e-10 || (2.0 * PI - normalized).abs() < 1e-10
     }
 
@@ -186,10 +188,10 @@ impl QuantumOptimizer {
         let mut qubit_last_layer: Vec<usize> = vec![0; num_qubits];
 
         for gate in gates {
-            let qubits = gate.qubits();
+            let qubits: _ = gate.qubits();
 
             // 找到这个门可以放置的最早层
-            let earliest_layer = qubits
+            let earliest_layer: _ = qubits
                 .iter()
                 .map(|&q| qubit_last_layer[q])
                 .max()

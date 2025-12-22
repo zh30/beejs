@@ -16,8 +16,8 @@ impl DependencyResolver {
     /// 创建新的依赖解析器
     pub fn new() -> Self {
         Self {
-            registry: Arc::new(ModuleRegistry::new()),
-            cache: Arc::new(DependencyCache::new()),
+            registry: Arc::new(std::sync::Mutex::new(ModuleRegistry::new())),
+            cache: Arc::new(std::sync::Mutex::new(DependencyCache::new())),
         }
     }
 
@@ -77,7 +77,7 @@ impl DependencyResolver {
             // 从注册表获取包信息
             if let Some(registry_package) = self.registry.get_package(dep_name).await? {
                 // 选择兼容的版本
-                let version = self.select_compatible_version(&registry_package, &constraint)?;
+                let version: _ = self.select_compatible_version(&registry_package, &constraint)?;
 
                 // 添加到图中
                 graph.add_node(dep_name.clone(), version.clone());
@@ -173,13 +173,15 @@ impl DependencyResolver {
         packages: &[PackageInfo],
     ) -> Result<Vec<DownloadResult>, Box<dyn std::error::Error>> {
         use tokio::task;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
         // 并发下载
         let mut handles = vec![];
 
         for package in packages {
-            let package_clone = package.clone();
-            let handle = task::spawn(async move {
+            let package_clone: _ = package.clone();
+            let handle: _ = task::spawn(async move {
                 DownloadResult {
                     package_name: package_clone.name,
                     success: true,
@@ -193,7 +195,7 @@ impl DependencyResolver {
         // 等待所有下载完成
         let mut results = Vec::new();
         for handle in handles {
-            let result = handle.await.unwrap();
+            let result: _ = handle.await.unwrap();
             results.push(result);
         }
 
@@ -215,7 +217,7 @@ impl DependencyResolver {
         updates: Vec<PackageInfo>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // 简化实现
-        let _ = updates;
+        let _: _ = updates;
         Ok(())
     }
 }
@@ -223,7 +225,7 @@ impl DependencyResolver {
 /// 模块注册表
 #[derive(Debug, Clone)]
 struct ModuleRegistry {
-    packages: HashMap<String, Vec<PackageInfo>>,
+    packages: HashMap<String, Vec<PackageInfo, std::collections::HashMap<String, Vec<PackageInfo, String, Vec<PackageInfo>>>,
 }
 
 impl ModuleRegistry {
@@ -324,7 +326,7 @@ impl ModuleRegistry {
 /// 依赖缓存
 #[derive(Debug, Clone)]
 struct DependencyCache {
-    cache: HashMap<String, DependencyGraph>,
+    cache: HashMap<String, DependencyGraph, std::collections::HashMap<String, DependencyGraph, String, DependencyGraph>>,
 }
 
 impl DependencyCache {

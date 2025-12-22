@@ -22,7 +22,7 @@ mod tests {
     fn test_watch_manager_creation() {
         use beejs::debugger::watch::WatchManager;
 
-        let manager = WatchManager::new();
+        let manager: _ = WatchManager::new();
         assert_eq!(manager.count(), 0, "Should start with no watches");
     }
 
@@ -32,12 +32,12 @@ mod tests {
         use beejs::debugger::watch::WatchManager;
 
         let mut manager = WatchManager::new();
-        let result = manager.add("x + y");
+        let result: _ = manager.add("x + y");
 
         assert!(result.is_ok(), "Should add watch successfully");
         assert_eq!(manager.count(), 1, "Should have 1 watch");
 
-        let watch = result.unwrap();
+        let watch: _ = result.unwrap();
         assert_eq!(watch.expression, "x + y");
         assert!(!watch.id.is_empty(), "Should have an ID");
     }
@@ -48,12 +48,12 @@ mod tests {
         use beejs::debugger::watch::WatchManager;
 
         let mut manager = WatchManager::new();
-        let watch = manager.add("counter").unwrap();
-        let watch_id = watch.id.clone();
+        let watch: _ = manager.add("counter").unwrap();
+        let watch_id: _ = watch.id.clone();
 
         assert_eq!(manager.count(), 1);
 
-        let result = manager.remove(&watch_id);
+        let result: _ = manager.remove(&watch_id);
         assert!(result.is_ok(), "Should remove watch successfully");
         assert_eq!(manager.count(), 0, "Should have no watches");
     }
@@ -64,7 +64,7 @@ mod tests {
         use beejs::debugger::watch::WatchManager;
 
         let mut manager = WatchManager::new();
-        let result = manager.remove("nonexistent");
+        let result: _ = manager.remove("nonexistent");
 
         assert!(result.is_err(), "Should fail to remove non-existent watch");
     }
@@ -79,7 +79,7 @@ mod tests {
         manager.add("y").unwrap();
         manager.add("z").unwrap();
 
-        let watches = manager.list();
+        let watches: _ = manager.list();
         assert_eq!(watches.len(), 3, "Should have 3 watches");
     }
 
@@ -89,10 +89,10 @@ mod tests {
         use beejs::debugger::watch::WatchManager;
 
         let mut manager = WatchManager::new();
-        let watch = manager.add("myVar").unwrap();
-        let watch_id = watch.id.clone();
+        let watch: _ = manager.add("myVar").unwrap();
+        let watch_id: _ = watch.id.clone();
 
-        let retrieved = manager.get(&watch_id);
+        let retrieved: _ = manager.get(&watch_id);
         assert!(retrieved.is_some(), "Should find watch by ID");
         assert_eq!(retrieved.unwrap().expression, "myVar");
     }
@@ -103,14 +103,14 @@ mod tests {
         use beejs::debugger::watch::WatchManager;
 
         let mut manager = WatchManager::new();
-        let watch = manager.add("counter").unwrap();
-        let watch_id = watch.id.clone();
+        let watch: _ = manager.add("counter").unwrap();
+        let watch_id: _ = watch.id.clone();
 
         // Update the value
-        let result = manager.update_value(&watch_id, "42", "number");
+        let result: _ = manager.update_value(&watch_id, "42", "number");
         assert!(result.is_ok(), "Should update value successfully");
 
-        let watch = manager.get(&watch_id).unwrap();
+        let watch: _ = manager.get(&watch_id).unwrap();
         assert_eq!(watch.last_value, Some("42".to_string()));
         assert_eq!(watch.value_type, Some("number".to_string()));
     }
@@ -137,14 +137,14 @@ mod tests {
         use beejs::debugger::watch::WatchManager;
 
         let mut manager = WatchManager::new();
-        let watch = manager.add("invalidExpr").unwrap();
-        let watch_id = watch.id.clone();
+        let watch: _ = manager.add("invalidExpr").unwrap();
+        let watch_id: _ = watch.id.clone();
 
         // Set an error on the watch
-        let result = manager.set_error(&watch_id, "ReferenceError: invalidExpr is not defined");
+        let result: _ = manager.set_error(&watch_id, "ReferenceError: invalidExpr is not defined");
         assert!(result.is_ok(), "Should set error successfully");
 
-        let watch = manager.get(&watch_id).unwrap();
+        let watch: _ = manager.get(&watch_id).unwrap();
         assert!(watch.has_error, "Should have error flag set");
         assert!(watch.error_message.is_some());
     }
@@ -156,7 +156,7 @@ mod tests {
 
         let mut manager = WatchManager::new();
         manager.add("x").unwrap();
-        let result = manager.add("x");
+        let result: _ = manager.add("x");
 
         // Should allow duplicate expressions (they might be in different contexts)
         assert!(result.is_ok(), "Should allow duplicate expressions");
@@ -172,10 +172,10 @@ mod tests {
     fn test_debugger_engine_add_watch() {
         let mut engine = DebuggerEngine::new_default();
 
-        let result = engine.add_watch("myVariable");
+        let result: _ = engine.add_watch("myVariable");
         assert!(result.success, "Should add watch through engine");
 
-        let watches = engine.get_all_watches();
+        let watches: _ = engine.get_all_watches();
         assert_eq!(watches.len(), 1);
     }
 
@@ -184,13 +184,13 @@ mod tests {
     fn test_debugger_engine_remove_watch() {
         let mut engine = DebuggerEngine::new_default();
 
-        let result = engine.add_watch("counter");
-        let watch_id = result.data.as_ref().unwrap().id.clone();
+        let result: _ = engine.add_watch("counter");
+        let watch_id: _ = result.data.as_ref().unwrap().id.clone();
 
-        let remove_result = engine.remove_watch(&watch_id);
+        let remove_result: _ = engine.remove_watch(&watch_id);
         assert!(remove_result.success, "Should remove watch through engine");
 
-        let watches = engine.get_all_watches();
+        let watches: _ = engine.get_all_watches();
         assert_eq!(watches.len(), 0);
     }
 
@@ -230,7 +230,7 @@ mod tests {
     fn test_watch_expression_structure() {
         use beejs::debugger::watch::WatchExpression;
 
-        let watch = WatchExpression::new("x + y");
+        let watch: _ = WatchExpression::new("x + y");
 
         assert_eq!(watch.expression, "x + y");
         assert!(watch.last_value.is_none());
@@ -248,7 +248,7 @@ mod tests {
         watch.last_value = Some("42".to_string());
         watch.value_type = Some("number".to_string());
 
-        let formatted = watch.format();
+        let formatted: _ = watch.format();
         assert!(formatted.contains("counter"));
         assert!(formatted.contains("42"));
     }
@@ -257,6 +257,8 @@ mod tests {
     #[test]
     fn test_watch_expression_complex_value() {
         use beejs::debugger::watch::WatchExpression;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
         let mut watch = WatchExpression::new("obj.property");
         watch.last_value = Some("{\"key\": \"value\"}".to_string());
@@ -274,7 +276,7 @@ mod tests {
         engine.add_watch("x");
         engine.add_watch("y");
 
-        let stats = engine.get_stats();
+        let stats: _ = engine.get_stats();
         assert_eq!(stats.watches_added, 2, "Should track watch additions");
     }
 }

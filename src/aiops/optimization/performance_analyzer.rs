@@ -43,7 +43,7 @@ pub struct PerformanceMetric {
     /// 时间戳
     pub timestamp: SystemTime,
     /// 标签
-    pub labels: HashMap<String, String>,
+    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 性能指标集合
@@ -184,7 +184,7 @@ impl PerformanceAnalyzer {
             self.calculate_average_metrics(metrics);
 
         // 计算当前性能分数
-        let current_score = self.calculate_performance_score(
+        let current_score: _ = self.calculate_performance_score(
             avg_cpu,
             avg_memory,
             avg_gc,
@@ -193,7 +193,7 @@ impl PerformanceAnalyzer {
         );
 
         // 生成优化建议
-        let suggestions = self.generate_optimization_suggestions(
+        let suggestions: _ = self.generate_optimization_suggestions(
             avg_cpu,
             avg_memory,
             avg_gc,
@@ -202,7 +202,7 @@ impl PerformanceAnalyzer {
         );
 
         // 计算预期改进
-        let estimated_improvement = if !suggestions.is_empty() {
+        let estimated_improvement: _ = if !suggestions.is_empty() {
             suggestions.iter()
                 .map(|s| s.expected_improvement * s.confidence)
                 .sum::<f64>() / suggestions.len() as f64
@@ -211,10 +211,10 @@ impl PerformanceAnalyzer {
         };
 
         // 计算目标分数
-        let target_score = current_score * (1.0 - estimated_improvement / 100.0);
+        let target_score: _ = current_score * (1.0 - estimated_improvement / 100.0);
 
         // 计算风险等级
-        let risk_level = self.calculate_risk_level(&suggestions);
+        let risk_level: _ = self.calculate_risk_level(&suggestions);
 
         OptimizationPlan {
             target: OptimizationTarget::Latency,
@@ -248,11 +248,11 @@ impl PerformanceAnalyzer {
             }
         }
 
-        let avg_cpu = self.safe_average(&cpu_values);
-        let avg_memory = self.safe_average(&memory_values);
-        let avg_gc = self.safe_average(&gc_values);
-        let avg_jit = self.safe_average(&jit_values);
-        let avg_cache = self.safe_average(&cache_values);
+        let avg_cpu: _ = self.safe_average(&cpu_values);
+        let avg_memory: _ = self.safe_average(&memory_values);
+        let avg_gc: _ = self.safe_average(&gc_values);
+        let avg_jit: _ = self.safe_average(&jit_values);
+        let avg_cache: _ = self.safe_average(&cache_values);
 
         (avg_cpu, avg_memory, avg_gc, avg_jit, avg_cache)
     }
@@ -276,19 +276,19 @@ impl PerformanceAnalyzer {
         avg_cache: f64,
     ) -> f64 {
         // CPU 使用率权重 0.3（越低越好）
-        let cpu_score = (100.0 - avg_cpu).max(0.0) / 100.0;
+        let cpu_score: _ = (100.0 - avg_cpu).max(0.0) / 100.0;
 
         // 内存使用率权重 0.3（越低越好）
-        let memory_score = (100.0 - avg_memory).max(0.0) / 100.0;
+        let memory_score: _ = (100.0 - avg_memory).max(0.0) / 100.0;
 
         // GC 时间权重 0.2（越低越好，基准 20ms）
-        let gc_score = (20.0 - avg_gc).max(0.0) / 20.0;
+        let gc_score: _ = (20.0 - avg_gc).max(0.0) / 20.0;
 
         // JIT 编译时间权重 0.1（越低越好，基准 100ms）
-        let jit_score = (100.0 - avg_jit).max(0.0) / 100.0;
+        let jit_score: _ = (100.0 - avg_jit).max(0.0) / 100.0;
 
         // 缓存命中率权重 0.1（越高越好）
-        let cache_score = avg_cache;
+        let cache_score: _ = avg_cache;
 
         // 加权平均
         (cpu_score * 0.3 + memory_score * 0.3 + gc_score * 0.2
@@ -448,24 +448,26 @@ impl Default for PerformanceAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_performance_analyzer_creation() {
-        let analyzer = PerformanceAnalyzer::new();
+        let analyzer: _ = PerformanceAnalyzer::new();
         assert_eq!(analyzer.window_size, 100);
         assert_eq!(analyzer.anomaly_threshold, 2.0);
     }
 
     #[test]
     fn test_performance_analyzer_with_config() {
-        let analyzer = PerformanceAnalyzer::with_config(200, 3.0);
+        let analyzer: _ = PerformanceAnalyzer::with_config(200, 3.0);
         assert_eq!(analyzer.window_size, 200);
         assert_eq!(analyzer.anomaly_threshold, 3.0);
     }
 
     #[test]
     fn test_safe_average() {
-        let analyzer = PerformanceAnalyzer::new();
+        let analyzer: _ = PerformanceAnalyzer::new();
         assert_eq!(analyzer.safe_average(&[1.0, 2.0, 3.0]), 2.0);
         assert_eq!(analyzer.safe_average(&[]), 0.0);
         assert_eq!(analyzer.safe_average(&[5.0]), 5.0);
@@ -473,13 +475,13 @@ mod tests {
 
     #[test]
     fn test_analyze_empty_metrics() {
-        let analyzer = PerformanceAnalyzer::new();
-        let empty_metrics = PerformanceMetrics {
+        let analyzer: _ = PerformanceAnalyzer::new();
+        let empty_metrics: _ = PerformanceMetrics {
             metrics: Vec::new(),
             time_range: (SystemTime::now(), SystemTime::now()),
         };
 
-        let plan = analyzer.analyze_performance(&empty_metrics);
+        let plan: _ = analyzer.analyze_performance(&empty_metrics);
         assert_eq!(plan.suggestions.len(), 0);
         assert_eq!(plan.current_score, 0.0);
         assert_eq!(plan.target_score, 0.0);

@@ -5,6 +5,8 @@
 
 use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 张量形状
 #[derive(Debug, Clone, PartialEq)]
@@ -164,7 +166,7 @@ impl Tensor {
 /// 梯度结构
 #[derive(Debug, Clone)]
 pub struct Gradients {
-    tensors: HashMap<String, Tensor>,
+    tensors: HashMap<String, Tensor, std::collections::HashMap<String, Tensor, String, Tensor>>,
 }
 
 impl Gradients {
@@ -277,10 +279,10 @@ impl TensorOptimizer {
         assert_eq!(a.shape().dim(1), b.shape().dim(0));
 
         let (rows, cols) = (a.shape().dim(0), b.shape().dim(1));
-        let k = a.shape().dim(1);
+        let k: _ = a.shape().dim(1);
 
-        let a_data = a.f32_data().expect("仅支持 f32 数据");
-        let b_data = b.f32_data().expect("仅支持 f32 数据");
+        let a_data: _ = a.clone();f32_data().expect("仅支持 f32 数据");
+        let b_data: _ = b.f32_data().expect("仅支持 f32 数据");
 
         let mut result_data = vec![0.0f32; rows * cols];
 
@@ -322,15 +324,15 @@ impl TensorOptimizer {
     pub fn distributed_matmul(&mut self, shards: &[TensorShard]) -> Tensor {
         assert!(!shards.is_empty());
 
-        let shard_0 = &shards[0];
-        let rows = shard_0.tensor().shape().dim(0);
-        let cols = shard_0.tensor().shape().dim(1);
+        let shard_0: _ = &shards[0];
+        let rows: _ = shard_0.tensor().shape().dim(0);
+        let cols: _ = shard_0.tensor().shape().dim(1);
 
         // 合并所有分片的结果
         let mut combined_data = vec![0.0f32; rows * cols];
 
         for shard in shards {
-            let tensor = shard.tensor();
+            let tensor: _ = shard.tensor();
             if let Some(data) = tensor.f32_data() {
                 for (i, &val) in data.iter().enumerate() {
                     combined_data[i] += val;
@@ -346,7 +348,7 @@ impl TensorOptimizer {
     pub fn tensor_add(&mut self, a: &Tensor, b: &Tensor) -> Tensor {
         assert_eq!(a.shape(), b.shape());
 
-        let result_data = match (&a.data, &b.data) {
+        let result_data: _ = match (&a.data, &b.data) {
             (TensorData::F32(a_data), TensorData::F32(b_data)) => {
                 TensorData::F32(a_data.iter().zip(b_data.iter()).map(|(x, y)| x + y).collect())
             }
@@ -370,7 +372,7 @@ impl TensorOptimizer {
     pub fn tensor_sub(&mut self, a: &Tensor, b: &Tensor) -> Tensor {
         assert_eq!(a.shape(), b.shape());
 
-        let result_data = match (&a.data, &b.data) {
+        let result_data: _ = match (&a.data, &b.data) {
             (TensorData::F32(a_data), TensorData::F32(b_data)) => {
                 TensorData::F32(a_data.iter().zip(b_data.iter()).map(|(x, y)| x - y).collect())
             }
@@ -392,7 +394,7 @@ impl TensorOptimizer {
 
     /// 张量标量乘法
     pub fn tensor_scalar_mul(&mut self, tensor: &Tensor, scalar: f32) -> Tensor {
-        let result_data = match &tensor.data {
+        let result_data: _ = match &tensor.data {
             TensorData::F32(data) => TensorData::F32(data.iter().map(|&x| x * scalar).collect()),
             TensorData::F64(data) => TensorData::F64(data.iter().map(|&x| (x as f32 * scalar) as f64).collect()),
             TensorData::I32(data) => TensorData::I32(data.iter().map(|&x| (x as f32 * scalar) as i32).collect()),
@@ -405,7 +407,7 @@ impl TensorOptimizer {
 
     /// ReLU 激活函数
     pub fn relu(&mut self, tensor: &Tensor) -> Tensor {
-        let result_data = match &tensor.data {
+        let result_data: _ = match &tensor.data {
             TensorData::F32(data) => TensorData::F32(data.iter().map(|&x| x.max(0.0)).collect()),
             TensorData::F64(data) => TensorData::F64(data.iter().map(|&x| x.max(0.0)).collect()),
             TensorData::I32(data) => TensorData::I32(data.iter().map(|&x| x.max(0)).collect()),
@@ -422,8 +424,8 @@ impl TensorOptimizer {
             panic!("Softmax 仅支持 2D 张量");
         }
 
-        let rows = tensor.shape().dim(0);
-        let cols = tensor.shape().dim(1);
+        let rows: _ = tensor.shape().dim(0);
+        let cols: _ = tensor.shape().dim(1);
         let mut result_data = vec![0.0f32; rows * cols];
 
         for i in 0..rows {
@@ -431,7 +433,7 @@ impl TensorOptimizer {
             let mut max_val = f32::NEG_INFINITY;
             for j in 0..cols {
                 if let Some(data) = tensor.f32_data() {
-                    max_val = max_val.max(data[i * cols + j]);
+                    max_val = max_val.clone();max(data[i * cols + j]);
                 }
             }
 
@@ -439,7 +441,7 @@ impl TensorOptimizer {
             let mut exp_sum = 0.0f32;
             for j in 0..cols {
                 if let Some(data) = tensor.f32_data() {
-                    let exp_val = (data[i * cols + j] - max_val).exp();
+                    let exp_val: _ = (data[i * cols + j] - max_val).exp();
                     exp_sum += exp_val;
                     result_data[i * cols + j] = exp_val;
                 }

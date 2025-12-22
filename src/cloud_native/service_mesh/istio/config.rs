@@ -64,7 +64,7 @@ impl IstioConfigManager {
         match namespaces.get(&self.config.namespace).await {
             Ok(_) => {
                 // Update namespace labels
-                let patch = serde_json::json!({
+                let patch: _ = serde_json::json!({
                     "metadata": {
                         "labels": {
                             "istio-injection": "enabled"
@@ -72,12 +72,12 @@ impl IstioConfigManager {
                     }
                 });
 
-                let params = kube::api::PatchParams::default();
+                let params: _ = kube::api::PatchParams::default();
                 namespaces.patch(&self.config.namespace, &params, &kube::api::Patch::Merge(&patch)).await?;
             }
             Err(kube::Error::Api(ref err)) if err.code == 404 => {
                 // Create namespace
-                let namespace = k8s_openapi::api::core::v1::Namespace {
+                let namespace: _ = k8s_openapi::api::core::v1::Namespace {
                     metadata: k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
                         name: Some(self.config.namespace.clone()),
                         labels: Some(std::collections::BTreeMap::from([
@@ -107,7 +107,7 @@ impl IstioConfigManager {
             Api::namespaced(self.client.clone(), &self.config.namespace);
 
         for service in &self.config.services {
-            let dr_spec = DestinationRuleSpec {
+            let dr_spec: _ = DestinationRuleSpec {
                 host: service.name.clone(),
                 traffic_policy: Some(TrafficPolicy {
                     load_balancer: Some(LoadBalancerSettings {
@@ -148,8 +148,8 @@ impl IstioConfigManager {
                 ]),
             };
 
-            let dr = DestinationRule::new(&format!("{}-dr", service.name), dr_spec);
-            let params = kube::api::PostParams::default();
+            let dr: _ = DestinationRule::new(&format!("{}-dr", service.name), dr_spec);
+            let params: _ = kube::api::PostParams::default();
             destination_rules.create(&params, &dr).await?;
 
             info!("Created DestinationRule: {}-dr", service.name);
@@ -164,7 +164,7 @@ impl IstioConfigManager {
             Api::namespaced(self.client.clone(), &self.config.namespace);
 
         for service in &self.config.services {
-            let vs_spec = VirtualServiceSpec {
+            let vs_spec: _ = VirtualServiceSpec {
                 hosts: vec![service.name.clone()],
                 gateways: Some(vec![format!("{}-gateway", service.name)]),
                 http: Some(vec![
@@ -189,8 +189,8 @@ impl IstioConfigManager {
                 ]),
             };
 
-            let vs = VirtualService::new(&format!("{}-vs", service.name), vs_spec);
-            let params = kube::api::PostParams::default();
+            let vs: _ = VirtualService::new(&format!("{}-vs", service.name), vs_spec);
+            let params: _ = kube::api::PostParams::default();
             virtual_services.create(&params, &vs).await?;
 
             info!("Created VirtualService: {}-vs", service.name);
@@ -205,7 +205,7 @@ impl IstioConfigManager {
             Api::namespaced(self.client.clone(), &self.config.namespace);
 
         for service in &self.config.services {
-            let gw_spec = GatewaySpec {
+            let gw_spec: _ = GatewaySpec {
                 selector: std::collections::HashMap::from([
                     ("istio".to_string(), "ingressgateway".to_string()),
                 ]),
@@ -222,8 +222,8 @@ impl IstioConfigManager {
                 ],
             };
 
-            let gw = Gateway::new(&format!("{}-gateway", service.name), gw_spec);
-            let params = kube::api::PostParams::default();
+            let gw: _ = Gateway::new(&format!("{}-gateway", service.name), gw_spec);
+            let params: _ = kube::api::PostParams::default();
             gateways.create(&params, &gw).await?;
 
             info!("Created Gateway: {}-gateway", service.name);
@@ -241,15 +241,15 @@ impl IstioConfigManager {
         let peer_authentications: Api<PeerAuthentication> =
             Api::namespaced(self.client.clone(), &self.config.namespace);
 
-        let pa_spec = PeerAuthenticationSpec {
+        let pa_spec: _ = PeerAuthenticationSpec {
             selector: None,
             mtls: Some(MutualTls {
                 mode: Some("STRICT".to_string()),
             }),
         };
 
-        let pa = PeerAuthentication::new("default", pa_spec);
-        let params = kube::api::PostParams::default();
+        let pa: _ = PeerAuthentication::new("default", pa_spec);
+        let params: _ = kube::api::PostParams::default();
         peer_authentications.create(&params, &pa).await?;
 
         info!("Configured PeerAuthentication with STRICT mTLS");
@@ -263,7 +263,7 @@ impl IstioConfigManager {
             Api::namespaced(self.client.clone(), &self.config.namespace);
 
         for service in &self.config.services {
-            let ap_spec = AuthorizationPolicySpec {
+            let ap_spec: _ = AuthorizationPolicySpec {
                 selector: Some(WorkloadSelector {
                     match_labels: Some(std::collections::HashMap::from([
                         ("app".to_string(), service.name.clone()),
@@ -284,8 +284,8 @@ impl IstioConfigManager {
                 ]),
             };
 
-            let ap = AuthorizationPolicy::new(&format!("{}-authz", service.name), ap_spec);
-            let params = kube::api::PostParams::default();
+            let ap: _ = AuthorizationPolicy::new(&format!("{}-authz", service.name), ap_spec);
+            let params: _ = kube::api::PostParams::default();
             authorization_policies.create(&params, &ap).await?;
 
             info!("Created AuthorizationPolicy: {}-authz", service.name);
@@ -385,10 +385,12 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_istio_config_creation() {
-        let config = IstioConfig {
+        let config: _ = IstioConfig {
             namespace: "beejs-system".to_string(),
             mtls_enabled: true,
             services: vec![

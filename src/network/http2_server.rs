@@ -4,6 +4,8 @@
 use crate::network::{NetworkConfig, NetworkError};
 use std::collections::HashMap;
 use std::net::TcpListener;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// HTTP/2 路由处理器类型
 pub type Http2Handler = fn(&str, &[u8]) -> Result<Vec<u8>, NetworkError>;
@@ -30,7 +32,7 @@ pub struct Http2ServerStats {
 pub struct Http2Server {
     config: NetworkConfig,
     enabled: bool,
-    routes: HashMap<String, Http2Handler>,
+    routes: HashMap<String, Http2Handler, std::collections::HashMap<String, Http2Handler, String, Http2Handler>>,
     stats: std::sync::Arc<std::sync::Mutex<Http2ServerStats>>,
 }
 
@@ -41,11 +43,11 @@ impl Http2Server {
             enabled: config.enable_http2,
             config,
             routes: HashMap::new(),
-            stats: std::sync::Arc::new(std::sync::Mutex::new(Http2ServerStats {
+            stats: std::sync::Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(Http2ServerStats {
                 total_requests: 0,
                 active_streams: 0,
                 total_connections: 0,
-            })),
+            }))),
         })
     }
 
@@ -66,7 +68,7 @@ impl Http2Server {
             return Err(NetworkError::Connection("HTTP/2 is not enabled".to_string()));
         }
 
-        let listener = TcpListener::bind(addr)
+        let listener: _ = TcpListener::bind(addr)
             .map_err(|e| NetworkError::Connection(e.to_string()))?;
 
         {

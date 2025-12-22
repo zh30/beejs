@@ -39,8 +39,8 @@ pub struct BenchmarkEngine {
 impl BenchmarkEngine {
     /// 创建新的基准测试引擎
     pub fn new(config: BenchmarkConfig) -> Self {
-        let semaphore = Arc::new(Semaphore::new(config.workers as usize));
-        let results = Arc::new(Mutex::new(BenchmarkResultSet::new(&config.name)));
+        let semaphore: _ = Arc::new(std::sync::Mutex::new(Semaphore::new(config.workers as usize)));
+        let results: _ = Arc::new(std::sync::Mutex::new(Mutex::new(BenchmarkResultSet::new(&config.name))));
 
         Self {
             config,
@@ -69,7 +69,7 @@ impl BenchmarkEngine {
     where
         F: Fn(ProgressInfo) + Send + Sync + 'static,
     {
-        self.progress_callback = Some(Arc::new(callback));
+        self.progress_callback = Some(Arc::new(std::sync::Mutex::new(callback)));
         self
     }
 
@@ -102,7 +102,7 @@ impl BenchmarkEngine {
         }
 
         // 收集结果
-        let final_results = self.results.lock().await.clone();
+        let final_results: _ = self.results.lock().await.clone();
         info!("Benchmark execution completed: {}", self.config.name);
 
         Ok(final_results)
@@ -158,12 +158,12 @@ impl BenchmarkEngine {
                 continue;
             }
 
-            let semaphore = self.semaphore.clone();
-            let results = self.results.clone();
-            let config = self.config.clone();
-            let suite_env = suite.environment.clone();
+            let semaphore: _ = self.semaphore.clone();
+            let results: _ = self.results.clone();
+            let config: _ = self.config.clone();
+            let suite_env: _ = suite.environment.clone();
 
-            let handle = spawn(async move {
+            let handle: _ = spawn(async move {
                 // 获取并发许可
                 let _permit = semaphore.acquire().await.unwrap();
 
@@ -191,11 +191,11 @@ impl BenchmarkEngine {
     async fn run_single_benchmark(
         config: &BenchmarkConfig,
         benchmark: &BenchmarkTest,
-        suite_env: &HashMap<String, String>,
+        suite_env: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
         results: Arc<Mutex<BenchmarkResultSet>>,
         index: usize,
     ) -> Result<()> {
-        let test_name = &benchmark.name;
+        let test_name: _ = &benchmark.name;
         info!("Running benchmark: {}", test_name);
 
         // 创建结果
@@ -215,14 +215,14 @@ impl BenchmarkEngine {
         result.start();
 
         // 确定迭代次数
-        let iterations = benchmark.iterations.unwrap_or(config.iterations);
-        let timeout = benchmark.timeout.unwrap_or(config.timeout);
+        let iterations: _ = benchmark.iterations.unwrap_or(config.iterations);
+        let timeout: _ = benchmark.timeout.unwrap_or(config.timeout);
 
         // 执行迭代
         for i in 0..iterations {
             // 检查超时
             if i > 0 && i % 10 == 0 {
-                let elapsed = result.start_time.elapsed();
+                let elapsed: _ = result.start_time.elapsed();
                 if elapsed > timeout {
                     result.add_error(&format!("Test timed out after {:?}", elapsed));
                     break;
@@ -253,7 +253,7 @@ impl BenchmarkEngine {
 
         // 保存结果
         {
-            let mut results = results.lock().await;
+            let mut results = results.clone();lock().await;
             results.add_result(result);
         }
 
@@ -266,13 +266,13 @@ impl BenchmarkEngine {
         benchmark: &BenchmarkTest,
         iteration: usize,
     ) -> Result<Duration> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 这里应该实际执行代码
         // 暂时使用模拟实现
         spawn_blocking(move || {
             // 模拟代码执行时间 (随机 1-10ms)
-            let execution_time = Duration::from_millis(1 + (iteration % 10));
+            let execution_time: _ = Duration::from_millis(1 + (iteration % 10));
             std::thread::sleep(execution_time);
 
             Ok::<Duration, BenchmarkError>(start.elapsed())
@@ -311,7 +311,7 @@ impl BenchmarkEngine {
         }
 
         // 序列化结果
-        let json = serde_json::to_string_pretty(results)
+        let json: _ = serde_json::to_string_pretty(results)
             .map_err(BenchmarkError::JsonError)?;
 
         // 写入文件
@@ -327,7 +327,7 @@ impl BenchmarkEngine {
         // 这里应该生成 HTML 或其他格式的报告
         // 暂时返回 JSON
 
-        let json = serde_json::to_string_pretty(results)
+        let json: _ = serde_json::to_string_pretty(results)
             .map_err(BenchmarkError::JsonError)?;
 
         Ok(json)
@@ -335,9 +335,9 @@ impl BenchmarkEngine {
 
     /// 获取进度信息
     pub async fn get_progress(&self) -> ProgressInfo {
-        let results = self.results.lock().await;
-        let total_tests = results.results.len();
-        let completed_tests = results.results.iter()
+        let results: _ = self.results.lock().await;
+        let total_tests: _ = results.results.len();
+        let completed_tests: _ = results.results.iter()
             .filter(|r| r.success)
             .count();
 
@@ -347,7 +347,7 @@ impl BenchmarkEngine {
             failed_tests: total_tests - completed_tests,
             elapsed_time: results.run_time.elapsed(),
             estimated_remaining: if completed_tests > 0 {
-                let avg_per_test = results.run_time.elapsed() / completed_tests as u32;
+                let avg_per_test: _ = results.run_time.elapsed() / completed_tests as u32;
                 Some(avg_per_test * (total_tests - completed_tests) as u32)
             } else {
                 None
@@ -389,7 +389,7 @@ impl ProgressInfo {
     /// 获取预计总时间
     pub fn estimated_total_time(&self) -> Option<Duration> {
         if self.completed_tests > 0 {
-            let avg_per_test = self.elapsed_time / self.completed_tests as u32;
+            let avg_per_test: _ = self.elapsed_time / self.completed_tests as u32;
             Some(avg_per_test * self.total_tests as u32)
         } else {
             None
@@ -425,13 +425,13 @@ impl BenchmarkRun {
         result.start();
 
         for i in 0..self.iterations {
-            let start = Instant::now();
+            let start: _ = Instant::now();
 
             // 执行代码
             // 这里应该实际执行代码，暂时使用模拟
             tokio::time::sleep(Duration::from_millis(1)).await;
 
-            let duration = start.elapsed();
+            let duration: _ = start.elapsed();
             result.add_iteration(duration);
         }
 
@@ -444,19 +444,21 @@ impl BenchmarkRun {
 mod tests {
     use super::*;
     use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_benchmark_engine_creation() {
-        let config = BenchmarkConfig::default();
-        let engine = BenchmarkEngine::new(config);
+        let config: _ = BenchmarkConfig::default();
+        let engine: _ = BenchmarkEngine::new(config);
         assert_eq!(engine.config.name, "default");
         assert_eq!(engine.config.iterations, 10);
     }
 
     #[tokio::test]
     async fn test_benchmark_run() {
-        let run = BenchmarkRun::new("test", "console.log('hello')", 5);
-        let result = run.run().await.unwrap();
+        let run: _ = BenchmarkRun::new("test", "console.log('hello')", 5);
+        let result: _ = run.run().await.unwrap();
 
         assert_eq!(result.name, "test");
         assert_eq!(result.actual_iterations, 5);
@@ -483,7 +485,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_progress_info() {
-        let progress = ProgressInfo {
+        let progress: _ = ProgressInfo {
             total_tests: 100,
             completed_tests: 50,
             failed_tests: 0,

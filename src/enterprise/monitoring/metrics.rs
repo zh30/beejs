@@ -13,7 +13,7 @@ pub enum Metric {
     Counter {
         name: String,
         value: u64,
-        labels: std::collections::HashMap<String, String>,
+        labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
         timestamp: DateTime<Utc>,
     },
 
@@ -21,7 +21,7 @@ pub enum Metric {
     Gauge {
         name: String,
         value: f64,
-        labels: std::collections::HashMap<String, String>,
+        labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
         timestamp: DateTime<Utc>,
     },
 
@@ -29,7 +29,7 @@ pub enum Metric {
     Histogram {
         name: String,
         values: Vec<f64>,
-        labels: std::collections::HashMap<String, String>,
+        labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
         timestamp: DateTime<Utc>,
     },
 }
@@ -96,8 +96,8 @@ pub struct Alert {
     pub description: String,
     pub severity: AlertSeverity,
     pub condition: AlertCondition,
-    pub labels: std::collections::HashMap<String, String>,
-    pub annotations: std::collections::HashMap<String, String>,
+    pub labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub annotations: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub enabled: bool,
 }
 
@@ -148,7 +148,7 @@ pub struct AlertEvent {
     pub severity: AlertSeverity,
     pub status: AlertStatus,
     pub description: String,
-    pub labels: std::collections::HashMap<String, String>,
+    pub labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub timestamp: DateTime<Utc>,
     pub resolved_at: Option<DateTime<Utc>>,
 }
@@ -176,22 +176,22 @@ pub struct MonitoringManager {
     config: MonitoringConfig,
 
     /// Metrics storage
-    metrics: Arc<RwLock<std::collections::HashMap<String, Vec<Metric>>>>,
+    metrics: Arc<RwLock<std::collections::HashMap<String, Vec<Metric, std::collections::HashMap<String, Vec<Metric, String, Vec<Metric>>>>>,
 
     /// Cluster metrics
-    cluster_metrics: Arc<RwLock<std::collections::HashMap<String, Vec<ClusterMetrics>>>>,
+    cluster_metrics: Arc<RwLock<std::collections::HashMap<String, Vec<ClusterMetrics, std::collections::HashMap<String, Vec<ClusterMetrics, String, Vec<ClusterMetrics>>>>>,
 
     /// Tenant metrics
-    tenant_metrics: Arc<RwLock<std::collections::HashMap<String, Vec<TenantMetrics>>>>,
+    tenant_metrics: Arc<RwLock<std::collections::HashMap<String, Vec<TenantMetrics, std::collections::HashMap<String, Vec<TenantMetrics, String, Vec<TenantMetrics>>>>>,
 
     /// System metrics
     system_metrics: Arc<RwLock<Vec<SystemMetrics>>>,
 
     /// Alert definitions
-    alerts: Arc<RwLock<std::collections::HashMap<String, Alert>>>,
+    alerts: Arc<RwLock<std::collections::HashMap<String, Alert, std::collections::HashMap<String, Alert, String, Alert>>>>,
 
     /// Active alert events
-    active_alerts: Arc<RwLock<std::collections::HashMap<String, AlertEvent>>>,
+    active_alerts: Arc<RwLock<std::collections::HashMap<String, AlertEvent, std::collections::HashMap<String, AlertEvent, String, AlertEvent>>>>,
 }
 
 impl MonitoringManager {
@@ -199,12 +199,12 @@ impl MonitoringManager {
     pub fn new(config: MonitoringConfig) -> Self {
         MonitoringManager {
             config,
-            metrics: Arc::new(RwLock::new(std::collections::HashMap::new())),
-            cluster_metrics: Arc::new(RwLock::new(std::collections::HashMap::new())),
-            tenant_metrics: Arc::new(RwLock::new(std::collections::HashMap::new())),
-            system_metrics: Arc::new(RwLock::new(Vec::new())),
-            alerts: Arc::new(RwLock::new(std::collections::HashMap::new())),
-            active_alerts: Arc::new(RwLock::new(std::collections::HashMap::new())),
+            metrics: Arc::new(std::sync::Mutex::new(RwLock::new(std::collections::HashMap::new()))),
+            cluster_metrics: Arc::new(std::sync::Mutex::new(RwLock::new(std::collections::HashMap::new()))),
+            tenant_metrics: Arc::new(std::sync::Mutex::new(RwLock::new(std::collections::HashMap::new()))),
+            system_metrics: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            alerts: Arc::new(std::sync::Mutex::new(RwLock::new(std::collections::HashMap::new()))),
+            active_alerts: Arc::new(std::sync::Mutex::new(RwLock::new(std::collections::HashMap::new()))),
         }
     }
 
@@ -213,9 +213,9 @@ impl MonitoringManager {
         info!("Starting Enterprise Monitoring Manager");
 
         // Start metrics collection
-        let cluster_metrics = self.cluster_metrics.clone();
-        let tenant_metrics = self.tenant_metrics.clone();
-        let system_metrics = self.system_metrics.clone();
+        let cluster_metrics: _ = self.cluster_metrics.clone();
+        let tenant_metrics: _ = self.tenant_metrics.clone();
+        let system_metrics: _ = self.system_metrics.clone();
 
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
@@ -230,8 +230,8 @@ impl MonitoringManager {
 
         // Start alert evaluation
         if self.config.alerts_enabled {
-            let alerts = self.alerts.clone();
-            let active_alerts = self.active_alerts.clone();
+            let alerts: _ = self.alerts.clone();
+            let active_alerts: _ = self.active_alerts.clone();
 
             tokio::spawn(async move {
                 let mut interval = tokio::time::interval(std::time::Duration::from_secs(10));
@@ -252,7 +252,7 @@ impl MonitoringManager {
     /// Record a metric
     #[instrument(skip(self))]
     pub async fn record_metric(&self, metric: Metric) {
-        let name = match &metric {
+        let name: _ = match &metric {
             Metric::Counter { name, .. } => name.clone(),
             Metric::Gauge { name, .. } => name.clone(),
             Metric::Histogram { name, .. } => name.clone(),
@@ -268,7 +268,7 @@ impl MonitoringManager {
     #[instrument(skip(self))]
     pub async fn record_cluster_metrics(&self, metrics: ClusterMetrics) {
         let mut cluster_metrics = self.cluster_metrics.write().await;
-        let key = format!("{}/{}", metrics.namespace, metrics.cluster_name);
+        let key: _ = format!("{}/{}", metrics.namespace, metrics.cluster_name);
 
         cluster_metrics.entry(key).or_insert_with(Vec::new).push(metrics);
         info!("Recorded cluster metrics for: {}", key);
@@ -292,12 +292,12 @@ impl MonitoringManager {
         namespace: &str,
         limit: Option<usize>,
     ) -> Result<Vec<ClusterMetrics>, Box<dyn std::error::Error>> {
-        let cluster_metrics = self.cluster_metrics.read().await;
-        let key = format!("{}/{}", namespace, cluster_name);
+        let cluster_metrics: _ = self.cluster_metrics.read().await;
+        let key: _ = format!("{}/{}", namespace, cluster_name);
 
         if let Some(metrics) = cluster_metrics.get(&key) {
-            let metrics = metrics.clone();
-            let metrics = if let Some(limit) = limit {
+            let metrics: _ = metrics.clone();clone();
+            let metrics: _ = if let Some(limit) = limit {
                 metrics.into_iter().rev().take(limit).collect()
             } else {
                 metrics
@@ -314,10 +314,10 @@ impl MonitoringManager {
         tenant_id: &str,
         limit: Option<usize>,
     ) -> Result<Vec<TenantMetrics>, Box<dyn std::error::Error>> {
-        let tenant_metrics = self.tenant_metrics.read().await;
+        let tenant_metrics: _ = self.tenant_metrics.read().await;
         if let Some(metrics) = tenant_metrics.get(tenant_id) {
-            let metrics = metrics.clone();
-            let metrics = if let Some(limit) = limit {
+            let metrics: _ = metrics.clone();clone();
+            let metrics: _ = if let Some(limit) = limit {
                 metrics.into_iter().rev().take(limit).collect()
             } else {
                 metrics
@@ -333,8 +333,8 @@ impl MonitoringManager {
         &self,
         limit: Option<usize>,
     ) -> Result<Vec<SystemMetrics>, Box<dyn std::error::Error>> {
-        let system_metrics = self.system_metrics.read().await;
-        let metrics = if let Some(limit) = limit {
+        let system_metrics: _ = self.system_metrics.read().await;
+        let metrics: _ = if let Some(limit) = limit {
             system_metrics.iter().rev().take(limit).cloned().collect()
         } else {
             system_metrics.iter().rev().cloned().collect()
@@ -352,13 +352,13 @@ impl MonitoringManager {
 
     /// Get all active alerts
     pub async fn get_active_alerts(&self) -> Vec<AlertEvent> {
-        let active_alerts = self.active_alerts.read().await;
+        let active_alerts: _ = self.active_alerts.read().await;
         active_alerts.values().cloned().collect()
     }
 
     /// Export metrics in Prometheus format
     pub async fn export_prometheus_metrics(&self) -> Result<String, Box<dyn std::error::Error>> {
-        let metrics = self.metrics.read().await;
+        let metrics: _ = self.metrics.read().await;
         let mut output = String::new();
 
         // Add timestamp comment
@@ -385,8 +385,8 @@ impl MonitoringManager {
                         // For histograms, output summary statistics
                         if !values.is_empty() {
                             let sum: f64 = values.iter().sum();
-                            let count = values.len() as f64;
-                            let avg = sum / count;
+                            let count: _ = values.len() as f64;
+                            let avg: _ = sum / count;
 
                             output.push_str(&format!("{} {{", name));
                             for (key, value) in labels {
@@ -416,7 +416,7 @@ impl MonitoringManager {
 
     async fn collect_system_metrics(system_metrics: &Arc<RwLock<Vec<SystemMetrics>>>) {
         // In a real implementation, this would collect actual system metrics
-        let metrics = SystemMetrics {
+        let metrics: _ = SystemMetrics {
             total_clusters: 10,
             active_clusters: 8,
             total_tenants: 5,
@@ -436,10 +436,10 @@ impl MonitoringManager {
     }
 
     async fn evaluate_alerts(
-        alerts: &Arc<RwLock<std::collections::HashMap<String, Alert>>>,
-        active_alerts: &Arc<RwLock<std::collections::HashMap<String, AlertEvent>>>,
+        alerts: &Arc<RwLock<std::collections::HashMap<String, Alert, std::collections::HashMap<String, Alert, String, Alert>>>>,
+        active_alerts: &Arc<RwLock<std::collections::HashMap<String, AlertEvent, std::collections::HashMap<String, AlertEvent, String, AlertEvent>>>>,
     ) {
-        let alerts_read = alerts.read().await;
+        let alerts_read: _ = alerts.read().await;
         let mut active_alerts_write = active_alerts.write().await;
 
         for alert in alerts_read.values() {
@@ -448,7 +448,7 @@ impl MonitoringManager {
             }
 
             // Evaluate alert condition (simplified)
-            let should_fire = match &alert.condition {
+            let should_fire: _ = match &alert.condition {
                 AlertCondition::Threshold { metric, operator, value, .. } => {
                     // In a real implementation, this would check actual metric values
                     false // Simplified for this example
@@ -462,7 +462,7 @@ impl MonitoringManager {
             if should_fire {
                 // Alert should fire
                 if !active_alerts_write.contains_key(&alert.id) {
-                    let event = AlertEvent {
+                    let event: _ = AlertEvent {
                         alert_id: alert.id.clone(),
                         alert_name: alert.name.clone(),
                         severity: alert.severity.clone(),
@@ -492,10 +492,12 @@ impl MonitoringManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_metric_recording() {
-        let config = MonitoringConfig {
+        let config: _ = MonitoringConfig {
             metrics_retention_hours: 24,
             metrics_collection_interval_seconds: 30,
             alerts_enabled: true,
@@ -503,9 +505,9 @@ mod tests {
             grafana_endpoint: None,
         };
 
-        let manager = MonitoringManager::new(config);
+        let manager: _ = MonitoringManager::new(config);
 
-        let metric = Metric::Counter {
+        let metric: _ = Metric::Counter {
             name: "beejs_requests_total".to_string(),
             value: 100,
             labels: {
@@ -519,14 +521,14 @@ mod tests {
 
         manager.record_metric(metric).await;
 
-        let prometheus_output = manager.export_prometheus_metrics().await.unwrap();
+        let prometheus_output: _ = manager.export_prometheus_metrics().await.unwrap();
         assert!(prometheus_output.contains("beejs_requests_total"));
         assert!(prometheus_output.contains("method=\"GET\""));
     }
 
     #[tokio::test]
     async fn test_cluster_metrics() {
-        let config = MonitoringConfig {
+        let config: _ = MonitoringConfig {
             metrics_retention_hours: 24,
             metrics_collection_interval_seconds: 30,
             alerts_enabled: false,
@@ -534,9 +536,9 @@ mod tests {
             grafana_endpoint: None,
         };
 
-        let manager = MonitoringManager::new(config);
+        let manager: _ = MonitoringManager::new(config);
 
-        let metrics = ClusterMetrics {
+        let metrics: _ = ClusterMetrics {
             cluster_name: "test-cluster".to_string(),
             namespace: "default".to_string(),
             tenant_id: Some("tenant-1".to_string()),
@@ -556,7 +558,7 @@ mod tests {
 
         manager.record_cluster_metrics(metrics.clone()).await;
 
-        let retrieved_metrics = manager
+        let retrieved_metrics: _ = manager
             .get_cluster_metrics("test-cluster", "default", Some(10))
             .await
             .unwrap();

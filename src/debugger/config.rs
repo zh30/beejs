@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 //! Debugger Configuration
 //!
 //! Configuration settings for the debugger engine.

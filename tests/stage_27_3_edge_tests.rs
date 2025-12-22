@@ -7,147 +7,149 @@ mod edge_computing_tests {
     use super::*;
     use std::collections::HashMap;
     use std::sync::Arc;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
     
 
     /// CDN Provider Integration Tests
     #[tokio::test]
     async fn test_cdn_provider_creation() {
-        let cdn = CdnProvider::new("cloudflare");
+        let cdn: _ = CdnProvider::new("cloudflare");
         assert!(cdn.is_ok());
     }
 
     #[tokio::test]
     async fn test_cloudflare_route_selection() {
-        let cloudflare = CloudflareIntegration::new();
-        let route = cloudflare.route("us-west-2").await;
+        let cloudflare: _ = CloudflareIntegration::new();
+        let route: _ = cloudflare.route("us-west-2").await;
         assert!(route.is_ok());
-        let endpoint = route.unwrap();
+        let endpoint: _ = route.unwrap();
         assert!(!endpoint.id.is_empty());
     }
 
     #[tokio::test]
     async fn test_vercel_integration() {
-        let vercel = VercelIntegration::new();
-        let result = vercel.deploy(&b"test code"[..]).await;
+        let vercel: _ = VercelIntegration::new();
+        let result: _ = vercel.deploy(&b"test code"[..]).await;
         assert!(result.is_ok());
-        let deployment_id = result.unwrap();
+        let deployment_id: _ = result.unwrap();
         assert!(!deployment_id.is_empty());
     }
 
     #[tokio::test]
     async fn test_smart_routing_algorithm() {
-        let router = SmartRouter::new();
-        let routes = vec![
+        let router: _ = SmartRouter::new();
+        let routes: _ = vec![
             CdnEndpoint { id: "cf-us".to_string(), latency: 45.0, region: "us-west".to_string() },
             CdnEndpoint { id: "vercel-us".to_string(), latency: 52.0, region: "us-west".to_string() },
         ];
-        let best = router.select_best_route(&routes, "us-west").await;
+        let best: _ = router.select_best_route(&routes, "us-west").await;
         assert!(best.is_some());
         assert_eq!(best.unwrap().id, "cf-us");
     }
 
     #[tokio::test]
     async fn test_cdn_configuration_optimization() {
-        let optimizer = CdnOptimizer::new();
-        let config = HashMap::from([
+        let optimizer: _ = CdnOptimizer::new();
+        let config: _ = HashMap::from([
             ("tier".to_string(), "enterprise".to_string()),
             ("cache_level".to_string(), "aggressive".to_string()),
         ]);
-        let optimized = optimizer.optimize(config).await;
+        let optimized: _ = optimizer.optimize(config).await;
         assert!(optimized.is_ok());
-        let result = optimized.unwrap();
+        let result: _ = optimized.unwrap();
         assert!(result.contains_key("optimized_tier"));
     }
 
     /// Edge Deployment Tests
     #[tokio::test]
     async fn test_edge_deployment_creation() {
-        let deployer = EdgeDeployer::new();
-        let deployment = deployer.create_deployment("test-app", "v1.0.0").await;
+        let deployer: _ = EdgeDeployer::new();
+        let deployment: _ = deployer.create_deployment("test-app", "v1.0.0").await;
         assert!(deployment.is_ok());
     }
 
     #[tokio::test]
     async fn test_cold_start_performance() {
-        let runtime = EdgeRuntime::new();
-        let start = SystemTime::now();
-        let result = runtime.initialize().await;
-        let elapsed = start.elapsed().unwrap();
+        let runtime: _ = EdgeRuntime::new();
+        let start: _ = SystemTime::now();
+        let result: _ = runtime.initialize().await;
+        let elapsed: _ = start.elapsed().unwrap();
         assert!(result.is_ok());
         assert!(elapsed.as_millis() < 50, "Cold start took {}ms", elapsed.as_millis());
     }
 
     #[tokio::test]
     async fn test_edge_function_prewarm() {
-        let prewarmer = EdgePrewarmer::new();
-        let regions = vec!["us-west".to_string(), "eu-central".to_string()];
-        let result = prewarmer.prewarm(&regions).await;
+        let prewarmer: _ = EdgePrewarmer::new();
+        let regions: _ = vec!["us-west".to_string(), "eu-central".to_string()];
+        let result: _ = prewarmer.prewarm(&regions).await;
         assert!(result.is_ok());
-        let warmed = prewarmer.get_warmed_regions().await;
+        let warmed: _ = prewarmer.get_warmed_regions().await;
         assert_eq!(warmed.len(), 2);
     }
 
     #[tokio::test]
     async fn test_cross_region_load_balancing() {
-        let balancer = CrossRegionBalancer::new();
-        let regions = vec!["us-west".to_string(), "eu-central".to_string(), "ap-southeast".to_string()];
-        let load = balancer.calculate_load(&regions).await;
+        let balancer: _ = CrossRegionBalancer::new();
+        let regions: _ = vec!["us-west".to_string(), "eu-central".to_string(), "ap-southeast".to_string()];
+        let load: _ = balancer.calculate_load(&regions).await;
         assert!(load.is_ok());
-        let loads = load.unwrap();
+        let loads: _ = load.unwrap();
         assert_eq!(loads.len(), 3);
     }
 
     #[tokio::test]
     async fn test_failover_mechanism() {
-        let failover = FailoverManager::new();
-        let primary = "us-west".to_string();
-        let result = failover.trigger_failover(&primary).await;
+        let failover: _ = FailoverManager::new();
+        let primary: _ = "us-west".to_string();
+        let result: _ = failover.trigger_failover(&primary).await;
         assert!(result.is_ok());
-        let secondary = result.unwrap();
+        let secondary: _ = result.unwrap();
         assert_ne!(secondary, primary);
     }
 
     /// Global Distribution Tests
     #[tokio::test]
     async fn test_global_router_initialization() {
-        let router = GlobalRouter::new();
+        let router: _ = GlobalRouter::new();
         assert!(router.is_initialized().await);
     }
 
     #[tokio::test]
     async fn test_anycast_dns_routing() {
-        let dns = AnycastDns::new();
-        let routes = dns.resolve("beejs-edge.com").await;
+        let dns: _ = AnycastDns::new();
+        let routes: _ = dns.resolve("beejs-edge.com").await;
         assert!(routes.is_ok());
-        let ips = routes.unwrap();
+        let ips: _ = routes.unwrap();
         assert!(!ips.is_empty());
     }
 
     #[tokio::test]
     async fn test_geo_dns_smart_resolution() {
-        let geo_dns = GeoDns::new();
-        let client_ip = "203.0.113.1"; // Example IP
-        let result = geo_dns.resolve_with_region("beejs-edge.com", client_ip).await;
+        let geo_dns: _ = GeoDns::new();
+        let client_ip: _ = "203.0.113.1"; // Example IP
+        let result: _ = geo_dns.resolve_with_region("beejs-edge.com", client_ip).await;
         assert!(result.is_ok());
-        let endpoint = result.unwrap();
+        let endpoint: _ = result.unwrap();
         assert!(!endpoint.region.is_empty());
     }
 
     #[tokio::test]
     async fn test_region_health_check() {
-        let health = RegionHealthChecker::new();
-        let region = "us-west-2";
-        let status = health.check_health(region).await;
+        let health: _ = RegionHealthChecker::new();
+        let region: _ = "us-west-2";
+        let status: _ = health.check_health(region).await;
         assert!(status.is_ok());
-        let health_status = status.unwrap();
+        let health_status: _ = status.clone();unwrap();
         assert!(health_status.healthy);
     }
 
     #[tokio::test]
     async fn test_automatic_failover() {
-        let auto_failover = AutomaticFailover::new();
-        let primary_region = "us-west";
-        let result = auto_failover.check_and_failover(primary_region).await;
+        let auto_failover: _ = AutomaticFailover::new();
+        let primary_region: _ = "us-west";
+        let result: _ = auto_failover.check_and_failover(primary_region).await;
         assert!(result.is_ok());
         // Should maintain availability even if primary fails
     }
@@ -155,69 +157,69 @@ mod edge_computing_tests {
     /// Edge Caching Tests
     #[tokio::test]
     async fn test_edge_cache_creation() {
-        let cache = EdgeCache::new("l1", 1000);
+        let cache: _ = EdgeCache::new("l1", 1000);
         assert!(cache.is_ok());
     }
 
     #[tokio::test]
     async fn test_l1_edge_cache_performance() {
-        let cache = EdgeCache::new("l1", 1000).unwrap();
-        let key = "test_key";
-        let value = b"test_value";
+        let cache: _ = EdgeCache::new("l1", 1000).unwrap();
+        let key: _ = "test_key";
+        let value: _ = b"test_value";
         cache.set(key, value).await.unwrap();
-        let retrieved = cache.get(key).await.unwrap();
+        let retrieved: _ = cache.get(key).await.unwrap();
         assert_eq!(retrieved, Some(value.to_vec()));
     }
 
     #[tokio::test]
     async fn test_l2_region_cache() {
-        let cache = RegionCache::new("us-west", 5000);
+        let cache: _ = RegionCache::new("us-west", 5000);
         assert!(cache.is_ok());
     }
 
     #[tokio::test]
     async fn test_cache_hit_ratio() {
-        let cache = EdgeCache::new("l1", 1000).unwrap();
+        let cache: _ = EdgeCache::new("l1", 1000).unwrap();
         // Fill cache
         for i in 0..100 {
-            let key = format!("key_{}", i);
-            let value = format!("value_{}", i);
+            let key: _ = format!("key_{}", i);
+            let value: _ = format!("value_{}", i);
             cache.set(&key, value.as_bytes()).await.unwrap();
         }
         // Test hit ratio
         for i in 0..100 {
-            let key = format!("key_{}", i);
+            let key: _ = format!("key_{}", i);
             cache.get(&key).await.unwrap();
         }
-        let stats = cache.get_stats().await;
+        let stats: _ = cache.get_stats().await;
         assert!(stats.hit_ratio > 0.95);
     }
 
     #[tokio::test]
     async fn test_smart_cache_prediction() {
-        let predictor = CachePredictor::new();
-        let access_pattern = vec!["user_1".to_string(), "user_2".to_string(), "user_1".to_string()];
-        let predictions = predictor.predict(&access_pattern).await;
+        let predictor: _ = CachePredictor::new();
+        let access_pattern: _ = vec!["user_1".to_string(), "user_2".to_string(), "user_1".to_string()];
+        let predictions: _ = predictor.predict(&access_pattern).await;
         assert!(predictions.is_ok());
-        let predicted = predictions.unwrap();
+        let predicted: _ = predictions.unwrap();
         assert!(predicted.contains(&"user_1".to_string()));
     }
 
     #[tokio::test]
     async fn test_cache_invalidation() {
-        let cache = EdgeCache::new("l1", 1000).unwrap();
-        let key = "test_key";
+        let cache: _ = EdgeCache::new("l1", 1000).unwrap();
+        let key: _ = "test_key";
         cache.set(key, b"value").await.unwrap();
         cache.invalidate(key).await.unwrap();
-        let retrieved = cache.get(key).await.unwrap();
+        let retrieved: _ = cache.get(key).await.unwrap();
         assert_eq!(retrieved, None);
     }
 
     #[tokio::test]
     async fn test_real_time_cache_invalidation() {
-        let cache = EdgeCache::new("l1", 1000).unwrap();
-        let broadcaster = CacheBroadcaster::new();
-        let key = "shared_key";
+        let cache: _ = EdgeCache::new("l1", 1000).unwrap();
+        let broadcaster: _ = CacheBroadcaster::new();
+        let key: _ = "shared_key";
         cache.set(key, b"value1").await.unwrap();
         // Simulate real-time update
         broadcaster.broadcast_invalidation(key).await.unwrap();
@@ -227,13 +229,13 @@ mod edge_computing_tests {
     /// Integration Tests
     #[tokio::test]
     async fn test_end_to_end_cdn_deployment() {
-        let cdn = CloudflareIntegration::new();
-        let deployer = EdgeDeployer::new();
-        let cache = EdgeCache::new("l1", 1000).unwrap();
+        let cdn: _ = CloudflareIntegration::new();
+        let deployer: _ = EdgeDeployer::new();
+        let cache: _ = EdgeCache::new("l1", 1000).unwrap();
 
         // Deploy to CDN
-        let deployment = deployer.create_deployment("e2e-test", "v1.0.0").await.unwrap();
-        let route = cdn.route("us-west-2").await.unwrap();
+        let deployment: _ = deployer.create_deployment("e2e-test", "v1.0.0").await.unwrap();
+        let route: _ = cdn.route("us-west-2").await.unwrap();
 
         // Verify deployment
         assert!(!deployment.id.is_empty());
@@ -246,51 +248,51 @@ mod edge_computing_tests {
 
     #[tokio::test]
     async fn test_global_distribution_integration() {
-        let router = GlobalRouter::new();
-        let cache = EdgeCache::new("l1", 1000).unwrap();
+        let router: _ = GlobalRouter::new();
+        let cache: _ = EdgeCache::new("l1", 1000).unwrap();
 
         // Simulate global request
-        let routes = router.get_available_routes().await.unwrap();
+        let routes: _ = router.get_available_routes().await.unwrap();
         assert!(!routes.is_empty());
 
         // Cache across regions
         for region in &routes {
-            let cache_key = format!("global_{}", region);
+            let cache_key: _ = format!("global_{}", region);
             cache.set(&cache_key, b"data").await.unwrap();
         }
     }
 
     #[tokio::test]
     async fn test_performance_benchmark() {
-        let start = SystemTime::now();
-        let cache = EdgeCache::new("l1", 1000).unwrap();
+        let start: _ = SystemTime::now();
+        let cache: _ = EdgeCache::new("l1", 1000).unwrap();
 
         // Benchmark cache operations
         for i in 0..1000 {
-            let key = format!("perf_key_{}", i);
+            let key: _ = format!("perf_key_{}", i);
             cache.set(&key, b"value").await.unwrap();
         }
 
-        let set_time = start.elapsed().unwrap();
+        let set_time: _ = start.elapsed().unwrap();
         assert!(set_time.as_millis() < 100, "Cache set took {}ms", set_time.as_millis());
 
-        let get_start = SystemTime::now();
+        let get_start: _ = SystemTime::now();
         for i in 0..1000 {
-            let key = format!("perf_key_{}", i);
+            let key: _ = format!("perf_key_{}", i);
             cache.get(&key).await.unwrap();
         }
-        let get_time = get_start.elapsed().unwrap();
+        let get_time: _ = get_start.elapsed().unwrap();
         assert!(get_time.as_millis() < 50, "Cache get took {}ms", get_time.as_millis());
     }
 
     #[tokio::test]
     async fn test_concurrent_cache_access() {
-        let cache = Arc::new(EdgeCache::new("l1", 1000).unwrap());
+        let cache: _ = Arc::new(std::sync::Mutex::new(EdgeCache::new("l1", 1000)).unwrap());
         let mut handles = vec![];
 
         for i in 0..10 {
-            let cache_clone = Arc::clone(&cache);
-            let handle = tokio::spawn(async move {
+            let cache_clone: _ = Arc::clone(cache);
+            let handle: _ = tokio::spawn(async move {
                 for j in 0..100 {
                     let key = format!("concurrent_key_{}_{}", i, j);
                     cache_clone.set(&key, b"value").await.unwrap();
@@ -304,17 +306,17 @@ mod edge_computing_tests {
             handle.await.unwrap();
         }
 
-        let stats = cache.get_stats().await;
+        let stats: _ = cache.get_stats().await;
         assert!(stats.total_operations > 1000);
     }
 
     /// Performance Target Validation
     #[tokio::test]
     async fn test_cold_start_target() {
-        let runtime = EdgeRuntime::new();
-        let start = SystemTime::now();
+        let runtime: _ = EdgeRuntime::new();
+        let start: _ = SystemTime::now();
         runtime.initialize().await.unwrap();
-        let elapsed = start.elapsed().unwrap();
+        let elapsed: _ = start.elapsed().unwrap();
         assert!(
             elapsed.as_millis() < 50,
             "Cold start {}ms exceeds 50ms target",
@@ -324,7 +326,7 @@ mod edge_computing_tests {
 
     #[tokio::test]
     async fn test_cache_hit_ratio_target() {
-        let cache = EdgeCache::new("l1", 1000).unwrap();
+        let cache: _ = EdgeCache::new("l1", 1000).unwrap();
 
         // Pre-populate cache
         for i in 0..100 {
@@ -336,7 +338,7 @@ mod edge_computing_tests {
             cache.get(&format!("key_{}", i)).await.unwrap();
         }
 
-        let stats = cache.get_stats().await;
+        let stats: _ = cache.get_stats().await;
         assert!(
             stats.hit_ratio > 0.95,
             "Cache hit ratio {}% below 95% target",
@@ -346,14 +348,14 @@ mod edge_computing_tests {
 
     #[tokio::test]
     async fn test_global_distribution_latency() {
-        let router = GlobalRouter::new();
-        let routes = router.get_available_routes().await.unwrap();
+        let router: _ = GlobalRouter::new();
+        let routes: _ = router.get_available_routes().await.unwrap();
 
         for region in routes {
-            let start = SystemTime::now();
+            let start: _ = SystemTime::now();
             // Simulate ping to region
-            let _ = router.ping_region(&region).await;
-            let latency = start.elapsed().unwrap();
+            let _: _ = router.ping_region(&region).await;
+            let latency: _ = start.elapsed().unwrap();
 
             assert!(
                 latency.as_millis() < 100,
@@ -419,7 +421,7 @@ impl CdnOptimizer {
     fn new() -> Self {
         CdnOptimizer
     }
-    async fn optimize(&self, _config: std::collections::HashMap<String, String>) -> Result<std::collections::HashMap<String, String>, String> {
+    async fn optimize(&self, _config: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> Result<std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>, String> {
         let mut optimized = std::collections::HashMap::new();
         optimized.insert("optimized_tier".to_string(), "enterprise".to_string());
         Ok(optimized)
@@ -468,7 +470,7 @@ impl CrossRegionBalancer {
     fn new() -> Self {
         CrossRegionBalancer
     }
-    async fn calculate_load(&self, _regions: &[String]) -> Result<std::collections::HashMap<String, f64>, String> {
+    async fn calculate_load(&self, _regions: &[String]) -> Result<std::collections::HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>, String> {
         let mut load = std::collections::HashMap::new();
         load.insert("us-west".to_string(), 0.5);
         load.insert("eu-central".to_string(), 0.3);

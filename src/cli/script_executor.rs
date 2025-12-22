@@ -72,7 +72,7 @@ pub enum ModuleSystem {
 
 /// Detect file type from path extension
 pub fn detect_file_type(path: &PathBuf) -> FileType {
-    let extension = path.extension().and_then(|ext| ext.to_str());
+    let extension: _ = path.extension().and_then(|ext| ext.to_str());
 
     match extension {
         Some("js") => FileType::JavaScript,
@@ -98,7 +98,7 @@ pub struct ExecutionContext {
     /// process.argv array
     pub argv: Vec<String>,
     /// Environment variables
-    pub env: HashMap<String, String>,
+    pub env: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     /// File type of the script
     pub file_type: FileType,
     /// Module system to use
@@ -108,33 +108,33 @@ pub struct ExecutionContext {
 impl ExecutionContext {
     /// Create a new execution context for a script
     pub fn new(script_path: PathBuf) -> Self {
-        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let cwd: _ = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
 
         // Resolve to absolute path
-        let absolute_path = if script_path.is_absolute() {
+        let absolute_path: _ = if script_path.is_absolute() {
             script_path.clone()
         } else {
             cwd.join(&script_path)
         };
 
         // Get directory containing the script
-        let dirname = absolute_path
+        let dirname: _ = absolute_path
             .parent()
             .map(|p| p.to_path_buf())
             .unwrap_or_else(|| PathBuf::from("."));
 
         // Detect file type
-        let file_type = detect_file_type(&absolute_path);
-        let module_system = file_type.module_system();
+        let file_type: _ = detect_file_type(&absolute_path);
+        let module_system: _ = file_type.module_system();
 
         // Build initial argv
-        let argv = vec![
+        let argv: _ = vec![
             "beejs".to_string(),
             script_path.to_string_lossy().to_string(),
         ];
 
         // Collect environment variables
-        let env: HashMap<String, String> = std::env::vars().collect();
+        let env: HashMap<String, String, std::collections::HashMap<String, String, String, String>> = std::env::vars().collect();
 
         Self {
             cwd,
@@ -168,9 +168,9 @@ impl ExecutionContext {
 
     /// Generate JavaScript code to set up the execution context globals
     pub fn to_setup_code(&self) -> String {
-        let dirname_escaped = self.dirname.to_string_lossy().replace('\\', "\\\\");
-        let filename_escaped = self.filename.to_string_lossy().replace('\\', "\\\\");
-        let cwd_escaped = self.cwd.to_string_lossy().replace('\\', "\\\\");
+        let dirname_escaped: _ = self.dirname.to_string_lossy().replace('\\', "\\\\");
+        let filename_escaped: _ = self.filename.to_string_lossy().replace('\\', "\\\\");
+        let cwd_escaped: _ = self.cwd.to_string_lossy().replace('\\', "\\\\");
 
         // Build argv JSON array
         let argv_json: Vec<String> = self
@@ -250,7 +250,7 @@ impl ScriptExecutor {
         }
 
         // Detect file type
-        let file_type = detect_file_type(path);
+        let file_type: _ = detect_file_type(path);
 
         match file_type {
             FileType::JavaScript | FileType::EsModule | FileType::CommonJs => Ok(file_type),
@@ -271,7 +271,7 @@ impl ScriptExecutor {
 
     /// Check if a file needs transpilation before execution
     pub fn needs_transpilation(&self, path: &PathBuf) -> bool {
-        let file_type = detect_file_type(path);
+        let file_type: _ = detect_file_type(path);
         file_type.needs_transpilation()
     }
 
@@ -290,7 +290,7 @@ impl ScriptExecutor {
 pub mod shebang {
     /// Detect shebang line from file content
     pub fn detect(content: &str) -> Option<String> {
-        let first_line = content.lines().next()?;
+        let first_line: _ = content.lines().next()?;
         if first_line.starts_with("#!") {
             Some(first_line[2..].trim().to_string())
         } else {
@@ -393,6 +393,8 @@ pub mod args {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_file_type_detection() {
@@ -414,14 +416,14 @@ mod tests {
 
     #[test]
     fn test_execution_context_creation() {
-        let ctx = ExecutionContext::new(PathBuf::from("test.js"));
+        let ctx: _ = ExecutionContext::new(PathBuf::from("test.js"));
         assert!(ctx.argv.len() >= 2);
         assert_eq!(ctx.argv[0], "beejs");
     }
 
     #[test]
     fn test_execution_context_with_args() {
-        let ctx = ExecutionContext::new(PathBuf::from("test.js"))
+        let ctx: _ = ExecutionContext::new(PathBuf::from("test.js"))
             .with_args(vec!["--port".to_string(), "3000".to_string()]);
         assert_eq!(ctx.argv.len(), 4);
     }
@@ -437,7 +439,7 @@ mod tests {
 
     #[test]
     fn test_shebang_strip() {
-        let content = "#!/usr/bin/env beejs\nconsole.log('hi')";
+        let content: _ = "#!/usr/bin/env beejs\nconsole.log('hi')";
         assert_eq!(shebang::strip(content), "console.log('hi')");
     }
 

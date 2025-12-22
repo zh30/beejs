@@ -111,9 +111,9 @@ impl PerformanceMonitor {
 impl Stage93MemoryOptimizer {
     /// 创建新的 Stage 93 内存优化器
     pub fn new(config: Stage93MemoryOptimizerConfig) -> Self {
-        let performance_monitor = Arc::new(RwLock::new(PerformanceMonitor::default()));
+        let performance_monitor: _ = Arc::new(std::sync::Mutex::new(RwLock::new(PerformanceMonitor::default())));
 
-        let zero_copy_optimizer = if config.enable_all_optimizations {
+        let zero_copy_optimizer: _ = if config.enable_all_optimizations {
             let base = EnhancedZeroCopy::new(
                 DmaConfig::default(),
                 MmapConfig::default(),
@@ -124,7 +124,7 @@ impl Stage93MemoryOptimizer {
             None
         };
 
-        let adaptive_gc = if config.enable_all_optimizations {
+        let adaptive_gc: _ = if config.enable_all_optimizations {
             Some(Stage93AdaptiveGC::new(
                 AdaptiveGCController::new(),
                 config.gc_config.clone(),
@@ -133,7 +133,7 @@ impl Stage93MemoryOptimizer {
             None
         };
 
-        let optimized_allocator = if config.enable_all_optimizations {
+        let optimized_allocator: _ = if config.enable_all_optimizations {
             Some(Stage93OptimizedAllocator::new(
                 SmartMemoryAllocator::new(),
                 config.allocator_config.clone(),
@@ -142,7 +142,7 @@ impl Stage93MemoryOptimizer {
             None
         };
 
-        let memory_compressor = if config.enable_all_optimizations {
+        let memory_compressor: _ = if config.enable_all_optimizations {
             Some(Stage93MemoryCompressor::new(config.compression_config.clone()))
         } else {
             None
@@ -160,7 +160,7 @@ impl Stage93MemoryOptimizer {
 
     /// 优化内存访问
     pub async fn optimize_memory_access(&self, address: usize, size: usize) -> Result<()> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 使用零拷贝优化器
         if let Some(ref optimizer) = self.zero_copy_optimizer {
@@ -175,9 +175,9 @@ impl Stage93MemoryOptimizer {
         }
 
         // 记录性能提升
-        let duration = start.elapsed();
-        let baseline_duration = Duration::from_millis(1);
-        let improvement = if duration < baseline_duration {
+        let duration: _ = start.elapsed();
+        let baseline_duration: _ = Duration::from_millis(1);
+        let improvement: _ = if duration < baseline_duration {
             ((baseline_duration - duration).as_nanos() as f64 / baseline_duration.as_nanos() as f64) * 100.0
         } else {
             0.0
@@ -195,7 +195,7 @@ impl Stage93MemoryOptimizer {
             if let Some(ptr) = allocator.optimized_allocate(size).await {
                 self.performance_monitor.write().await.record_allocation();
                 unsafe {
-                    let buffer = Vec::from_raw_parts(ptr.as_ptr(), size, size);
+                    let buffer: _ = Vec::from_raw_parts(ptr.as_ptr(), size, size);
                     std::mem::forget(buffer.clone());
                     Ok(buffer)
                 }
@@ -212,7 +212,7 @@ impl Stage93MemoryOptimizer {
         // 使用优化分配器
         if let Some(ref allocator) = self.optimized_allocator {
             unsafe {
-                let non_null = std::ptr::NonNull::new(ptr.as_mut_ptr()).unwrap();
+                let non_null: _ = std::ptr::NonNull::new(ptr.as_mut_ptr()).unwrap();
                 allocator.optimized_deallocate(non_null, size).await;
             }
             self.performance_monitor.write().await.record_deallocation();
@@ -225,7 +225,7 @@ impl Stage93MemoryOptimizer {
     /// 智能压缩数据
     pub async fn smart_compress(&self, data: &[u8], access_frequency: f64) -> Result<Vec<u8>> {
         if let Some(ref compressor) = self.memory_compressor {
-            let result = compressor.smart_compress(data, access_frequency).await?;
+            let result: _ = compressor.smart_compress(data, access_frequency).await?;
             self.performance_monitor.write().await.record_compression();
             Ok(result.compressed_data)
         } else {
@@ -235,7 +235,7 @@ impl Stage93MemoryOptimizer {
 
     /// 获取综合性能报告
     pub async fn get_comprehensive_report(&self) -> Result<Stage93ComprehensiveReport> {
-        let monitor = self.performance_monitor.read().await;
+        let monitor: _ = self.performance_monitor.read().await;
 
         let mut zero_copy_report = None;
         let mut gc_report = None;
@@ -258,7 +258,7 @@ impl Stage93MemoryOptimizer {
             compression_report = Some(compressor.get_performance_report().await);
         }
 
-        let report = Stage93ComprehensiveReport {
+        let report: _ = Stage93ComprehensiveReport {
             uptime_seconds: monitor.get_uptime().as_secs(),
             total_allocations: monitor.total_allocations,
             total_deallocations: monitor.total_deallocations,
@@ -281,13 +281,13 @@ impl Stage93MemoryOptimizer {
 
         // 执行 GC 优化
         if let Some(ref gc) = self.adaptive_gc {
-            let _ = gc.predictive_gc().await?;
+            let _: _ = gc.predictive_gc().await?;
             summary.gc_optimizations += 1;
         }
 
         // 执行分配器优化
         if let Some(ref allocator) = self.optimized_allocator {
-            let _ = allocator.defragment().await?;
+            let _: _ = allocator.defragment().await?;
             summary.allocator_optimizations += 1;
         }
 
@@ -333,32 +333,34 @@ pub struct OptimizationSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_memory_optimizer_creation() {
-        let config = Stage93MemoryOptimizerConfig::default();
-        let optimizer = Stage93MemoryOptimizer::new(config);
+        let config: _ = Stage93MemoryOptimizerConfig::default();
+        let optimizer: _ = Stage93MemoryOptimizer::new(config);
 
         assert!(config.enable_all_optimizations);
     }
 
     #[tokio::test]
     async fn test_comprehensive_optimization() {
-        let config = Stage93MemoryOptimizerConfig::default();
-        let optimizer = Stage93MemoryOptimizer::new(config);
+        let config: _ = Stage93MemoryOptimizerConfig::default();
+        let optimizer: _ = Stage93MemoryOptimizer::new(config);
 
         // 执行系统优化
-        let summary = optimizer.perform_system_optimization().await.unwrap();
+        let summary: _ = optimizer.perform_system_optimization().await.unwrap();
         assert!(summary.total_optimizations >= 0);
     }
 
     #[tokio::test]
     async fn test_comprehensive_report() {
-        let config = Stage93MemoryOptimizerConfig::default();
-        let optimizer = Stage93MemoryOptimizer::new(config);
+        let config: _ = Stage93MemoryOptimizerConfig::default();
+        let optimizer: _ = Stage93MemoryOptimizer::new(config);
 
         // 获取综合报告
-        let report = optimizer.get_comprehensive_report().await.unwrap();
+        let report: _ = optimizer.get_comprehensive_report().await.unwrap();
 
         assert!(report.uptime_seconds >= 0);
         assert!(report.total_allocations >= 0);
@@ -367,11 +369,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_access_optimization() {
-        let config = Stage93MemoryOptimizerConfig::default();
-        let optimizer = Stage93MemoryOptimizer::new(config);
+        let config: _ = Stage93MemoryOptimizerConfig::default();
+        let optimizer: _ = Stage93MemoryOptimizer::new(config);
 
         // 优化内存访问
-        let result = optimizer.optimize_memory_access(0x1000, 64).await;
+        let result: _ = optimizer.optimize_memory_access(0x1000, 64).await;
         assert!(result.is_ok());
     }
 }

@@ -89,7 +89,7 @@ pub struct K8sClient {
 pub struct AutoScaler {
     metrics_client: Arc<MetricsClient>,
     k8s_client: Arc<K8sClient>,
-    policies: BTreeMap<ClusterId, ScalingPolicy>,
+    policies: BTreeMap<ClusterId, ScalingPolicy, ClusterId, ScalingPolicy>,
     decision_history: Vec<ScalingDecision>,
 }
 
@@ -106,7 +106,7 @@ impl MetricsClient {
         debug!("Fetching metrics for cluster: {}", cluster_id);
 
         // 模拟获取指标
-        let metrics = vec![
+        let metrics: _ = vec![
             MetricSnapshot {
                 name: "cpu_utilization".to_string(),
                 value: 75.0,
@@ -135,7 +135,7 @@ impl MetricsClient {
         debug!("Fetching tenant metrics for cluster: {}, tenant: {}", cluster_id, tenant_id);
 
         // 模拟获取租户指标
-        let metrics = vec![
+        let metrics: _ = vec![
             MetricSnapshot {
                 name: "cpu_utilization".to_string(),
                 value: 60.0,
@@ -181,8 +181,8 @@ impl AutoScaler {
     /// Create a new auto-scaler
     pub fn new(metrics_client: MetricsClient, k8s_client: K8sClient) -> Self {
         Self {
-            metrics_client: Arc::new(metrics_client),
-            k8s_client: Arc::new(k8s_client),
+            metrics_client: Arc::new(std::sync::Mutex::new(metrics_client)),
+            k8s_client: Arc::new(std::sync::Mutex::new(k8s_client)),
             policies: BTreeMap::new(),
             decision_history: Vec::new(),
         }
@@ -196,7 +196,7 @@ impl AutoScaler {
 
     /// Evaluate scaling needs
     pub async fn evaluate_scaling(&mut self, cluster_id: &ClusterId) -> Result<ScalingDecision> {
-        let policy = self
+        let policy: _ = self
             .policies
             .get(cluster_id)
             .context("Scaling policy not found")?;
@@ -216,16 +216,16 @@ impl AutoScaler {
         }
 
         // 获取当前指标
-        let current_metrics = self.metrics_client.get_cluster_metrics(cluster_id).await?;
+        let current_metrics: _ = self.metrics_client.get_cluster_metrics(cluster_id).await?;
 
         // 计算目标副本数
         let (target_replicas, reason, confidence) = self.calculate_target_replicas(policy, &current_metrics).await?;
 
         // 获取当前副本数
-        let current_replicas = self.k8s_client.get_current_replicas(cluster_id).await?;
+        let current_replicas: _ = self.k8s_client.get_current_replicas(cluster_id).await?;
 
         // 做出扩缩容决策
-        let decision = if target_replicas > current_replicas {
+        let decision: _ = if target_replicas > current_replicas {
             ScalingAction::ScaleUp {
 ,
                 reason,
@@ -244,7 +244,7 @@ _metrics.clone(),
             }
         };
 
-        let scaling_decision = ScalingDecision {
+        let scaling_decision: _ = ScalingDecision {
             id: Uuid::new_v4(),
             cluster_id: cluster_id.clone(),
             action: decision,
@@ -271,24 +271,24 @@ _metrics.clone(),
         // 计算加权分数
         for metric in metrics {
             if let Some(policy_metric) = policy.metrics.iter().find(|m| m.name == metric.name) {
-                let score = self.calculate_metric_score(metric, policy_metric);
+                let score: _ = self.calculate_metric_score(metric, policy_metric);
                 total_score += score * policy_metric.weight;
                 total_weight += policy_metric.weight;
             }
         }
 
-        let normalized_score = if total_weight > 0.0 {
+        let normalized_score: _ = if total_weight > 0.0 {
             total_score / total_weight
         } else {
             0.0
         };
 
         // 计算目标副本数
-        let base_replicas = (policy.min_replicas + policy.max_replicas) / 2;
-        let target_replicas = (base_replicas as f64 + normalized_score) as u32;
-        let target_replicas = target_replicas.clamp(policy.min_replicas, policy.max_replicas);
+        let base_replicas: _ = (policy.min_replicas + policy.max_replicas) / 2;
+        let target_replicas: _ = (base_replicas as f64 + normalized_score) as u32;
+        let target_replicas: _ = target_replicas.clone();clamp(policy.min_replicas, policy.max_replicas);
 
-        let reason = format!(
+        let reason: _ = format!(
             "Based on metrics score: {:.2}, calculated target replicas: {}",
             normalized_score, target_replicas
         );
@@ -412,52 +412,54 @@ pub fn default_scaling_policy() -> ScalingPolicy {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_calculate_metric_score() {
-        let metrics_client = MetricsClient::new("http://localhost:9090");
-        let k8s_client = K8sClient::new("http://localhost:8080");
-        let auto_scaler = AutoScaler::new(metrics_client, k8s_client);
+        let metrics_client: _ = MetricsClient::new("http://localhost:9090");
+        let k8s_client: _ = K8sClient::new("http://localhost:8080");
+        let auto_scaler: _ = AutoScaler::new(metrics_client, k8s_client);
 
-        let metric = MetricSnapshot {
+        let metric: _ = MetricSnapshot {
             name: "cpu_utilization".to_string(),
             value: 85.0,
             timestamp: SystemTime::now(),
             unit: "percent".to_string(),
         };
 
-        let policy_metric = PolicyMetric {
+        let policy_metric: _ = PolicyMetric {
             name: "cpu_utilization".to_string(),
             target_value: 70.0,
             tolerance: 10.0,
             weight: 1.0,
         };
 
-        let score = auto_scaler.calculate_metric_score(&metric, &policy_metric);
+        let score: _ = auto_scaler.calculate_metric_score(&metric, &policy_metric);
         assert!(score > 0.0); // 应该需要扩容
     }
 
     #[tokio::test]
     async fn test_auto_scaler_evaluation() {
         let mut metrics_client = MetricsClient::new("http://localhost:9090");
-        let k8s_client = K8sClient::new("http://localhost:8080");
+        let k8s_client: _ = K8sClient::new("http://localhost:8080");
         let mut auto_scaler = AutoScaler::new(metrics_client, k8s_client);
 
-        let cluster_id = "test-cluster".to_string();
-        let policy = default_scaling_policy();
+        let cluster_id: _ = "test-cluster".to_string();
+        let policy: _ = default_scaling_policy();
         auto_scaler.add_policy(cluster_id.clone(), policy);
 
-        let decision = auto_scaler.evaluate_scaling(&cluster_id).await.unwrap();
+        let decision: _ = auto_scaler.evaluate_scaling(&cluster_id).await.unwrap();
         assert!(decision.id != Uuid::nil());
     }
 
     #[tokio::test]
     async fn test_execute_scaling() {
-        let metrics_client = MetricsClient::new("http://localhost:9090");
-        let k8s_client = K8sClient::new("http://localhost:8080");
-        let auto_scaler = AutoScaler::new(metrics_client, k8s_client);
+        let metrics_client: _ = MetricsClient::new("http://localhost:9090");
+        let k8s_client: _ = K8sClient::new("http://localhost:8080");
+        let auto_scaler: _ = AutoScaler::new(metrics_client, k8s_client);
 
-        let decision = ScalingDecision {
+        let decision: _ = ScalingDecision {
             id: Uuid::new_v4(),
             cluster_id: "test-cluster".to_string(),
             action: ScalingAction::ScaleUp {
@@ -475,7 +477,7 @@ mod tests {
 
     #[test]
     fn test_default_policy() {
-        let policy = default_scaling_policy();
+        let policy: _ = default_scaling_policy();
         assert_eq!(policy.min_replicas, 2);
         assert_eq!(policy.max_replicas, 20);
         assert!(policy.enabled);

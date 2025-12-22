@@ -5,6 +5,8 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 #[cfg(test)]
 mod wasm_optimization_tests {
     use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
     
     
 
@@ -14,11 +16,11 @@ mod wasm_optimization_tests {
         println!("🚀 开始测试: WASM 执行性能");
 
         // 模拟 WASM 模块执行
-        let _wasm_module_size = 1024 * 1024; // 1MB WASM 模块
-        let native_execution_time = 100.0; // 假设原生代码执行时间 100ms
-        let wasm_execution_time = 105.0; // WASM 执行时间 105ms
+        let _wasm_module_size: _ = 1024 * 1024; // 1MB WASM 模块
+        let native_execution_time: _ = 100.0; // 假设原生代码执行时间 100ms
+        let wasm_execution_time: _ = 105.0; // WASM 执行时间 105ms
 
-        let performance_ratio = native_execution_time / wasm_execution_time;
+        let performance_ratio: _ = native_execution_time / wasm_execution_time;
 
         println!("原生执行时间: {}ms, WASM 执行时间: {}ms, 性能比: {:.2}",
                  native_execution_time, wasm_execution_time, performance_ratio);
@@ -34,20 +36,20 @@ mod wasm_optimization_tests {
     fn test_wasm_multithreading() {
         println!("🚀 开始测试: WASM 多线程支持");
 
-        let thread_count = 8;
+        let thread_count: _ = 8;
         let mut performance_improvements = Vec::new();
 
         // 模拟不同线程数下的性能
         for threads in 1..=thread_count {
             // 模拟线性性能扩展 (理想情况下)
-            let speedup = threads as f64;
+            let speedup: _ = threads as f64;
             performance_improvements.push(speedup);
         }
 
         // 验证多线程扩展性
-        let single_thread_performance = performance_improvements[0];
-        let eight_thread_performance = performance_improvements[7];
-        let scaling_efficiency = eight_thread_performance / single_thread_performance / 8.0;
+        let single_thread_performance: _ = performance_improvements[0];
+        let eight_thread_performance: _ = performance_improvements[7];
+        let scaling_efficiency: _ = eight_thread_performance / single_thread_performance / 8.0;
 
         println!("单线程性能: {:.2}x, 8线程性能: {:.2}x, 扩展效率: {:.1}%",
                  single_thread_performance, eight_thread_performance,
@@ -64,8 +66,8 @@ mod wasm_optimization_tests {
     fn test_wasm_simd_optimization() {
         println!("🚀 开始测试: WASM SIMD 指令优化");
 
-        let vector_size = 128; // 128 位向量
-        let element_count = vector_size / 32; // 4 个 32 位整数
+        let vector_size: _ = 128; // 128 位向量
+        let element_count: _ = vector_size / 32; // 4 个 32 位整数
         let mut scalar_time = 0.0;
         let mut simd_time = 0.0;
 
@@ -77,7 +79,7 @@ mod wasm_optimization_tests {
         // 模拟 SIMD 操作时间 (理论上 4 倍快)
         simd_time = scalar_time / 4.0;
 
-        let speedup = scalar_time / simd_time;
+        let speedup: _ = scalar_time / simd_time;
 
         println!("标量操作时间: {:.2}ns, SIMD 操作时间: {:.2}ns, 加速比: {:.2}x",
                  scalar_time, simd_time, speedup);
@@ -93,14 +95,14 @@ mod wasm_optimization_tests {
     fn test_wasm_zero_copy_loading() {
         println!("🚀 开始测试: WASM 零拷贝加载");
 
-        let module_count = 1000;
+        let module_count: _ = 1000;
         let mut total_load_time = 0.0;
         let mut cache_hits = 0;
 
         // 模拟加载 1000 个 WASM 模块
         for i in 0..module_count {
-            let _module_id = format!("module_{}", i % 100); // 100 个唯一模块
-            let is_cached = i > 100; // 前 100 个模块加载后，后面的都命中缓存
+            let _module_id: _ = format!("module_{}", i % 100); // 100 个唯一模块
+            let is_cached: _ = i > 100; // 前 100 个模块加载后，后面的都命中缓存
 
             if is_cached {
                 cache_hits += 1;
@@ -110,8 +112,8 @@ mod wasm_optimization_tests {
             }
         }
 
-        let avg_load_time = total_load_time / module_count as f64;
-        let cache_hit_rate = (cache_hits as f64 / module_count as f64) * 100.0;
+        let avg_load_time: _ = total_load_time / module_count as f64;
+        let cache_hit_rate: _ = (cache_hits as f64 / module_count as f64) * 100.0;
 
         println!("平均加载时间: {:.2}ms, 缓存命中率: {:.1}%",
                  avg_load_time, cache_hit_rate);
@@ -127,10 +129,10 @@ mod wasm_optimization_tests {
     fn test_wasm_memory_efficiency() {
         println!("🚀 开始测试: WASM 内存效率优化");
 
-        let original_memory_usage = 1024 * 1024; // 1MB 原始内存占用
-        let optimized_memory_usage = original_memory_usage / 2; // 优化后 512KB
+        let original_memory_usage: _ = 1024 * 1024; // 1MB 原始内存占用
+        let optimized_memory_usage: _ = original_memory_usage / 2; // 优化后 512KB
 
-        let memory_saving = (original_memory_usage - optimized_memory_usage) as f64
+        let memory_saving: _ = (original_memory_usage - optimized_memory_usage) as f64
             / original_memory_usage as f64 * 100.0;
 
         println!("原始内存占用: {}KB, 优化后内存占用: {}KB, 节省: {:.1}%",
@@ -150,19 +152,19 @@ mod wasm_optimization_tests {
         println!("🚀 开始测试: WASM 热路径优化");
 
         let mut execution_times = Vec::new();
-        let iterations = 1000;
+        let iterations: _ = 1000;
 
         // 模拟热路径优化 (越跑越快)
         for i in 0..iterations {
-            let base_time = 100.0;
-            let optimization_factor = (i as f64 / iterations as f64).min(1.0);
-            let optimized_time = base_time * (1.0 - optimization_factor * 0.8);
+            let base_time: _ = 100.0;
+            let optimization_factor: _ = (i as f64 / iterations as f64).min(1.0);
+            let optimized_time: _ = base_time * (1.0 - optimization_factor * 0.8);
             execution_times.push(optimized_time);
         }
 
-        let first_execution = execution_times[0];
-        let last_execution = execution_times[iterations - 1];
-        let improvement = (first_execution - last_execution) / first_execution * 100.0;
+        let first_execution: _ = execution_times[0];
+        let last_execution: _ = execution_times[iterations - 1];
+        let improvement: _ = (first_execution - last_execution) / first_execution * 100.0;
 
         println!("首次执行时间: {:.2}ms, 最终执行时间: {:.2}ms, 优化幅度: {:.1}%",
                  first_execution, last_execution, improvement);
@@ -178,11 +180,11 @@ mod wasm_optimization_tests {
     fn test_wasm_parallel_compilation() {
         println!("🚀 开始测试: WASM 并行编译优化");
 
-        let module_count = 100;
-        let sequential_compile_time = module_count as f64 * 50.0; // 串行编译每个 50ms
-        let parallel_compile_time = sequential_compile_time / 8.0; // 8 核并行编译
+        let module_count: _ = 100;
+        let sequential_compile_time: _ = module_count as f64 * 50.0; // 串行编译每个 50ms
+        let parallel_compile_time: _ = sequential_compile_time / 8.0; // 8 核并行编译
 
-        let speedup = sequential_compile_time / parallel_compile_time;
+        let speedup: _ = sequential_compile_time / parallel_compile_time;
 
         println!("串行编译时间: {:.0}ms, 并行编译时间: {:.0}ms, 加速比: {:.1}x",
                  sequential_compile_time, parallel_compile_time, speedup);
@@ -198,7 +200,7 @@ mod wasm_optimization_tests {
     fn test_wasm_dynamic_optimization() {
         println!("🚀 开始测试: WASM 动态优化");
 
-        let optimization_levels = vec![
+        let optimization_levels: _ = vec![
             ("Level 0", 100.0), // 无优化
             ("Level 1", 85.0),  // 基础优化
             ("Level 2", 70.0),  // 中级优化
@@ -209,8 +211,8 @@ mod wasm_optimization_tests {
         let mut total_improvement = 0.0;
 
         for (level, execution_time) in &optimization_levels {
-            let baseline_time = 100.0;
-            let improvement = (baseline_time - *execution_time) / baseline_time * 100.0;
+            let baseline_time: _ = 100.0;
+            let improvement: _ = (baseline_time - *execution_time) / baseline_time * 100.0;
             total_improvement += improvement;
             optimizations_applied += 1;
 
@@ -218,7 +220,7 @@ mod wasm_optimization_tests {
                      level, execution_time, improvement);
         }
 
-        let avg_improvement = total_improvement / optimizations_applied as f64;
+        let avg_improvement: _ = total_improvement / optimizations_applied as f64;
 
         // 验证动态优化效果 (平均优化 22%+)
         assert!(avg_improvement >= 22.0);
@@ -231,7 +233,7 @@ mod wasm_optimization_tests {
     fn test_wasm_cache_warmup() {
         println!("🚀 开始测试: WASM 缓存预热");
 
-        let popular_modules = vec![
+        let popular_modules: _ = vec![
             "math_utils",
             "string_operations",
             "array_processing",
@@ -241,7 +243,7 @@ mod wasm_optimization_tests {
 
         let mut warmup_cache = HashMap::new();
         let mut cache_hit_count = 0;
-        let total_requests = 1000;
+        let total_requests: _ = 1000;
 
         // 预热常用模块
         for module in &popular_modules {
@@ -250,17 +252,17 @@ mod wasm_optimization_tests {
 
         // 模拟请求模式 (90% 请求热门模块)
         for _ in 0..total_requests {
-            let is_popular = rand::random::<f64>() < 0.9;
+            let is_popular: _ = rand::random::<f64>() < 0.9;
             if is_popular {
-                let module_idx = rand::random::<usize>() % popular_modules.len();
-                let module_name = popular_modules[module_idx];
+                let module_idx: _ = rand::random::<usize>() % popular_modules.len();
+                let module_name: _ = popular_modules[module_idx];
                 if warmup_cache.contains_key(module_name) {
                     cache_hit_count += 1;
                 }
             }
         }
 
-        let cache_hit_rate = (cache_hit_count as f64 / total_requests as f64) * 100.0;
+        let cache_hit_rate: _ = (cache_hit_count as f64 / total_requests as f64) * 100.0;
 
         println!("缓存预热后命中率: {:.1}%", cache_hit_rate);
 
@@ -276,15 +278,15 @@ mod wasm_optimization_tests {
         println!("🚀 开始测试: WASM 集成性能综合测试");
 
         // 模拟集成所有优化后的性能
-        let base_performance = 100.0;
-        let multithread_improvement = 8.0; // 8 核并行
-        let simd_improvement = 4.0; // SIMD 优化
-        let cache_improvement = 10.0; // 缓存优化
-        let hot_path_improvement = 5.0; // 热路径优化
+        let base_performance: _ = 100.0;
+        let multithread_improvement: _ = 8.0; // 8 核并行
+        let simd_improvement: _ = 4.0; // SIMD 优化
+        let cache_improvement: _ = 10.0; // 缓存优化
+        let hot_path_improvement: _ = 5.0; // 热路径优化
 
-        let total_improvement = multithread_improvement * simd_improvement
+        let total_improvement: _ = multithread_improvement * simd_improvement
             * cache_improvement * hot_path_improvement;
-        let optimized_performance = base_performance / total_improvement;
+        let optimized_performance: _ = base_performance / total_improvement;
 
         println!("基础性能: {:.1}ms, 优化后性能: {:.2}ms, 总提升: {:.1}x",
                  base_performance, optimized_performance, total_improvement);

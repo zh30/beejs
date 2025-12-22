@@ -7,6 +7,8 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 mod tests {
     use super::*;
     use beejs::ai::code_generator::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
         AICodeGenerator, CodeContext, Language, ProjectInfo,
     };
 
@@ -15,11 +17,11 @@ mod tests {
         println!("🚀 开始 AI 代码生成器集成测试...");
 
         // 1. 创建 AI 代码生成器实例
-        let generator = AICodeGenerator::new_with_defaults();
+        let generator: _ = AICodeGenerator::new_with_defaults();
         println!("✅ AI 代码生成器创建成功");
 
         // 2. 测试 JavaScript 代码生成
-        let context = CodeContext {
+        let context: _ = CodeContext {
             language: Language::JavaScript,
             file_path: Some("src/utils.js".to_string()),
             surrounding_code: Some("const config = { debug: true };".to_string()),
@@ -34,7 +36,7 @@ mod tests {
             classes: vec![],
         };
 
-        let result = generator
+        let result: _ = generator
             .generate_from_prompt(
                 "创建一个函数来处理用户数据验证",
                 Language::JavaScript,
@@ -52,7 +54,7 @@ mod tests {
         println!("生成的代码:\n{}", result.code);
 
         // 3. 测试 TypeScript 代码生成
-        let ts_context = CodeContext {
+        let ts_context: _ = CodeContext {
             language: Language::TypeScript,
             file_path: Some("src/types.ts".to_string()),
             surrounding_code: None,
@@ -67,7 +69,7 @@ mod tests {
             classes: vec![],
         };
 
-        let ts_result = generator
+        let ts_result: _ = generator
             .generate_from_prompt("创建 User 接口定义", Language::TypeScript, &ts_context)
             .await
             .expect("TypeScript 代码生成失败");
@@ -76,7 +78,7 @@ mod tests {
         println!("✅ TypeScript 代码生成测试通过");
 
         // 4. 测试代码补全
-        let completion = generator
+        let completion: _ = generator
             .complete_code("fun", 3, &context)
             .await
             .expect("代码补全失败");
@@ -87,7 +89,7 @@ mod tests {
         println!("✅ 代码补全测试通过");
 
         // 5. 测试代码质量分析
-        let suggestions = generator
+        let suggestions: _ = generator
             .analyze_code_quality(
                 "var x = 10; if (a == b) { console.log(x); }",
                 &Language::JavaScript,
@@ -105,9 +107,9 @@ mod tests {
     async fn test_multi_language_code_generation() {
         println!("🚀 开始多语言代码生成测试...");
 
-        let generator = AICodeGenerator::new_with_defaults();
+        let generator: _ = AICodeGenerator::new_with_defaults();
 
-        let languages = vec![
+        let languages: _ = vec![
             Language::JavaScript,
             Language::TypeScript,
             Language::JSX,
@@ -117,7 +119,7 @@ mod tests {
         ];
 
         for language in languages {
-            let context = CodeContext {
+            let context: _ = CodeContext {
                 language: language.clone(),
                 file_path: None,
                 surrounding_code: None,
@@ -127,7 +129,7 @@ mod tests {
                 classes: vec![],
             };
 
-            let result = generator
+            let result: _ = generator
                 .generate_from_prompt(
                     &format!("创建一个简单的函数，language: {:?}", language),
                     language.clone(),
@@ -149,9 +151,9 @@ mod tests {
     async fn test_ai_performance() {
         println!("🚀 开始 AI 性能测试...");
 
-        let generator = AICodeGenerator::new_with_defaults();
+        let generator: _ = AICodeGenerator::new_with_defaults();
 
-        let context = CodeContext {
+        let context: _ = CodeContext {
             language: Language::JavaScript,
             file_path: None,
             surrounding_code: None,
@@ -161,14 +163,14 @@ mod tests {
             classes: vec![],
         };
 
-        let start = SystemTime::now();
+        let start: _ = SystemTime::now();
 
-        let result = generator
+        let result: _ = generator
             .generate_from_prompt("测试性能", Language::JavaScript, &context)
             .await
             .expect("代码生成失败");
 
-        let elapsed = start.elapsed().unwrap();
+        let elapsed: _ = start.elapsed().unwrap();
 
         // 验证性能：代码生成时间 < 200ms
         assert!(

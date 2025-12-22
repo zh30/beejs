@@ -9,6 +9,8 @@ pub use encryption::*;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Unified security manager
 #[derive(Debug)]
@@ -23,8 +25,8 @@ impl SecurityModule {
         sandbox_config: SandboxConfig,
         encryption_config: EncryptionConfig,
     ) -> Result<Self> {
-        let sandbox = SecuritySandbox::new(sandbox_config)?;
-        let kms = KeyManagementService::new(encryption_config);
+        let sandbox: _ = SecuritySandbox::new(sandbox_config)?;
+        let kms: _ = KeyManagementService::new(encryption_config);
 
         Ok(Self {
             sandbox,

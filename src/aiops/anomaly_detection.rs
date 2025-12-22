@@ -7,6 +7,8 @@ use std::collections::HashMap;
 use std::time::SystemTime;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 异常类型
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -68,7 +70,7 @@ pub struct BaselineCalculator {
 impl BaselineCalculator {
     pub fn new() -> Self {
         Self {
-            historical_data: Arc::new(RwLock::new(Vec::new())),
+            historical_data: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         }
     }
 
@@ -78,11 +80,11 @@ impl BaselineCalculator {
             return Err("数据为空".into());
         }
 
-        let mean = self.calculate_mean(data);
-        let std_dev = self.calculate_std_dev(data, mean);
-        let min = data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-        let max = data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-        let median = self.calculate_median(data);
+        let mean: _ = self.calculate_mean(data);
+        let std_dev: _ = self.calculate_std_dev(data, mean);
+        let min: _ = data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        let max: _ = data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        let median: _ = self.calculate_median(data);
 
         Ok(Baseline {
             mean,
@@ -105,7 +107,7 @@ impl BaselineCalculator {
     }
 
     fn calculate_std_dev(&self, data: &[f64], mean: f64) -> f64 {
-        let variance = data.iter()
+        let variance: _ = data.iter()
             .map(|&x| (x - mean).powi(2))
             .sum::<f64>() / data.len() as f64;
 
@@ -115,7 +117,7 @@ impl BaselineCalculator {
     fn calculate_median(&self, data: &[f64]) -> f64 {
         let mut sorted = data.to_vec();
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        let mid = sorted.len() / 2;
+        let mid: _ = sorted.len() / 2;
 
         if sorted.len() % 2 == 0 {
             (sorted[mid - 1] + sorted[mid]) / 2.0
@@ -161,7 +163,7 @@ impl FeatureExtractor {
         let mut features = Vec::new();
 
         for i in self.window_size..time_series.len() {
-            let window = &time_series[i - self.window_size..i];
+            let window: _ = &time_series[i - self.window_size..i];
 
             features.push(Feature {
                 mean: self.calculate_mean(window),
@@ -180,8 +182,8 @@ impl FeatureExtractor {
     }
 
     fn calculate_std_dev(&self, data: &[f64]) -> f64 {
-        let mean = self.calculate_mean(data);
-        let variance = data.iter()
+        let mean: _ = self.calculate_mean(data);
+        let variance: _ = data.iter()
             .map(|&x| (x - mean).powi(2))
             .sum::<f64>() / data.len() as f64;
 
@@ -189,14 +191,14 @@ impl FeatureExtractor {
     }
 
     fn calculate_trend(&self, data: &[f64]) -> f64 {
-        let n = data.len() as f64;
+        let n: _ = data.len() as f64;
         let mut sum_x = 0.0;
         let mut sum_y = 0.0;
         let mut sum_xy = 0.0;
         let mut sum_x2 = 0.0;
 
         for (i, &y) in data.iter().enumerate() {
-            let x = i as f64;
+            let x: _ = i as f64;
             sum_x += x;
             sum_y += y;
             sum_xy += x * y;
@@ -207,7 +209,7 @@ impl FeatureExtractor {
     }
 
     fn calculate_autocorrelation(&self, data: &[f64]) -> f64 {
-        let mean = self.calculate_mean(data);
+        let mean: _ = self.calculate_mean(data);
         let mut numerator = 0.0;
         let mut denominator = 0.0;
 
@@ -270,7 +272,7 @@ impl MLModel {
     /// 预测异常
     pub async fn predict(&self, feature: &Feature) -> Result<f64, Box<dyn std::error::Error>> {
         // 计算异常分数
-        let anomaly_score = (feature.std_dev - self.threshold).max(0.0);
+        let anomaly_score: _ = (feature.std_dev - self.threshold).max(0.0);
 
         Ok(anomaly_score)
     }
@@ -287,7 +289,7 @@ impl StatisticalAnomalyDetector {
     pub fn new() -> Self {
         Self {
             threshold_config: ThresholdConfig::default(),
-            baseline_calculator: Arc::new(BaselineCalculator::new()),
+            baseline_calculator: Arc::new(std::sync::Mutex::new(BaselineCalculator::new())),
         }
     }
 
@@ -297,13 +299,13 @@ impl StatisticalAnomalyDetector {
             return Err("数据点不足".into());
         }
 
-        let baseline = self.baseline_calculator.calculate_baseline(data).await?;
+        let baseline: _ = self.baseline_calculator.calculate_baseline(data).await?;
 
         let mut anomalies = Vec::new();
 
         for (i, &value) in data.iter().enumerate() {
-            let deviation = (value - baseline.mean).abs();
-            let deviation_score = if baseline.std_dev > 0.0 {
+            let deviation: _ = (value - baseline.mean).abs();
+            let deviation_score: _ = if baseline.std_dev > 0.0 {
                 deviation / baseline.std_dev
             } else {
                 0.0
@@ -324,8 +326,8 @@ impl StatisticalAnomalyDetector {
 
             // 检测持续异常
             if i >= self.threshold_config.window_size {
-                let recent_window = &data[i - self.threshold_config.window_size..i];
-                let recent_deviation = recent_window.iter()
+                let recent_window: _ = &data[i - self.threshold_config.window_size..i];
+                let recent_deviation: _ = recent_window.iter()
                     .map(|&x| (x - baseline.mean).abs())
                     .sum::<f64>() / recent_window.len() as f64;
 
@@ -375,14 +377,14 @@ pub struct MLAnomalyDetector {
 impl MLAnomalyDetector {
     pub fn new() -> Self {
         Self {
-            model: Arc::new(RwLock::new(MLModel::new(2.0))),
-            feature_extractor: Arc::new(FeatureExtractor::new(10)),
+            model: Arc::new(std::sync::Mutex::new(RwLock::new(MLModel::new(2.0)))),
+            feature_extractor: Arc::new(std::sync::Mutex::new(FeatureExtractor::new(10))),
         }
     }
 
     /// 训练 ML 模型
     pub async fn train_model(&self, training_data: &[f64]) -> Result<(), Box<dyn std::error::Error>> {
-        let features = self.feature_extractor.extract_features(training_data).await?;
+        let features: _ = self.feature_extractor.extract_features(training_data).await?;
         let mut model = self.model.write().await;
         model.train(&features).await?;
 
@@ -391,11 +393,11 @@ impl MLAnomalyDetector {
 
     /// 使用 ML 方法检测异常
     pub async fn detect_ml_anomalies(&self, features: &[Feature]) -> Result<Vec<Anomaly>, Box<dyn std::error::Error>> {
-        let model = self.model.read().await;
+        let model: _ = self.model.read().await;
         let mut anomalies = Vec::new();
 
         for feature in features {
-            let anomaly_score = model.predict(feature).await?;
+            let anomaly_score: _ = model.predict(feature).await?;
 
             if anomaly_score > 0.0 {
                 anomalies.push(Anomaly {
@@ -442,8 +444,8 @@ pub struct AnomalyDetector {
 impl AnomalyDetector {
     pub fn new() -> Self {
         Self {
-            statistical_detector: Arc::new(StatisticalAnomalyDetector::new()),
-            ml_detector: Arc::new(MLAnomalyDetector::new()),
+            statistical_detector: Arc::new(std::sync::Mutex::new(StatisticalAnomalyDetector::new())),
+            ml_detector: Arc::new(std::sync::Mutex::new(MLAnomalyDetector::new())),
         }
     }
 
@@ -456,12 +458,12 @@ impl AnomalyDetector {
         let mut all_anomalies = Vec::new();
 
         // 使用统计方法检测
-        let statistical_anomalies = self.statistical_detector.detect_statistical_anomalies(data).await?;
+        let statistical_anomalies: _ = self.statistical_detector.detect_statistical_anomalies(data).await?;
         all_anomalies.extend(statistical_anomalies);
 
         // 使用 ML 方法检测
-        let features = self.ml_detector.feature_extractor.extract_features(data).await?;
-        let ml_anomalies = self.ml_detector.detect_ml_anomalies(&features).await?;
+        let features: _ = self.ml_detector.feature_extractor.extract_features(data).await?;
+        let ml_anomalies: _ = self.ml_detector.detect_ml_anomalies(&features).await?;
         all_anomalies.extend(ml_anomalies);
 
         // 合并重复的异常

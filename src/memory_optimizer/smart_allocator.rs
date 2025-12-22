@@ -83,7 +83,7 @@ impl SmartMemoryAllocator {
 
     /// 使用配置创建分配器
     pub fn with_config(config: PoolConfig) -> Self {
-        let pools = (0..config.pool_count)
+        let pools: _ = (0..config.pool_count)
             .map(|i| MemoryPool {
                 pool_id: format!("pool_{}", i),
                 block_size: 64 * (i + 1), // 64, 128, 256, 512 bytes
@@ -94,27 +94,27 @@ impl SmartMemoryAllocator {
             .collect();
 
         Self {
-            pools: Arc::new(RwLock::new(pools)),
-            metrics: Arc::new(RwLock::new(AllocationMetrics {
+            pools: Arc::new(std::sync::Mutex::new(RwLock::new(pools))),
+            metrics: Arc::new(std::sync::Mutex::new(RwLock::new(AllocationMetrics {
                 total_allocations: 0,
                 total_deallocations: 0,
                 cache_hits: 0,
                 cache_misses: 0,
                 average_allocation_time_ns: 0,
-            })),
+            }))),
             config,
         }
     }
 
     /// 分配内存
     pub async fn allocate(&self, size: usize) -> Option<Vec<u8>> {
-        let start = std::time::Instant::now();
+        let start: _ = std::time::Instant::now();
 
         // 查找合适的池
-        let pools = self.pools.read().await;
-        let suitable_pool = pools.iter().find(|p| p.block_size >= size && !p.free_blocks.is_empty());
+        let pools: _ = self.pools.read().await;
+        let suitable_pool: _ = pools.iter().find(|p| p.block_size >= size && !p.free_blocks.is_empty());
 
-        let result = if let Some(pool) = suitable_pool {
+        let result: _ = if let Some(pool) = suitable_pool {
             // 使用池分配
             let mut pools = self.pools.write().await;
             if let Some(pool_mut) = pools.iter_mut().find(|p| p.pool_id == pool.pool_id) {
@@ -127,7 +127,7 @@ impl SmartMemoryAllocator {
                         let mut metrics = self.metrics.write().await;
                         metrics.total_allocations += 1;
                         metrics.cache_hits += 1;
-                        let elapsed = start.elapsed();
+                        let elapsed: _ = start.elapsed();
                         metrics.average_allocation_time_ns = elapsed.as_nanos() as u64;
                     }
 
@@ -151,7 +151,7 @@ impl SmartMemoryAllocator {
 
     /// 释放内存
     pub async fn deallocate(&self, data: Vec<u8>) {
-        let size = data.len();
+        let size: _ = data.len();
 
         // 更新指标
         {
@@ -172,19 +172,21 @@ impl SmartMemoryAllocator {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_smart_allocator() {
-        let allocator = SmartMemoryAllocator::new();
+        let allocator: _ = SmartMemoryAllocator::new();
 
-        let data = allocator.allocate(128).await;
+        let data: _ = allocator.allocate(128).await;
         assert!(data.is_some());
 
         if let Some(data) = data {
             allocator.deallocate(data).await;
         }
 
-        let metrics = allocator.get_metrics().await;
+        let metrics: _ = allocator.get_metrics().await;
         assert_eq!(metrics.total_allocations, 1);
         assert_eq!(metrics.total_deallocations, 1);
     }

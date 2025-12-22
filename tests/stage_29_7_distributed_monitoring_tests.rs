@@ -33,12 +33,14 @@ use beejs::distributed::cluster_console::{
 };
 use std::collections::HashMap;
 use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 // ========== 分布式指标测试 ==========
 
 #[tokio::test]
 async fn test_metric_point_creation() {
-    let metric_point = MetricPoint {
+    let metric_point: _ = MetricPoint {
         metric_type: MetricType::Cluster,
         value: MetricValue::Gauge(100.0),
         timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
@@ -52,7 +54,7 @@ async fn test_metric_point_creation() {
 
 #[tokio::test]
 async fn test_real_time_metrics_structure() {
-    let summary = ClusterMetricsSummary {
+    let summary: _ = ClusterMetricsSummary {
         total_nodes: 5,
         healthy_nodes: 5,
         total_tasks: 1000,
@@ -84,7 +86,7 @@ async fn test_real_time_metrics_structure() {
         },
     );
 
-    let system_metrics = SystemMetrics {
+    let system_metrics: _ = SystemMetrics {
         load_average: 1.2,
         memory_pressure: 0.3,
         network_latency_ms: 2.0,
@@ -93,7 +95,7 @@ async fn test_real_time_metrics_structure() {
         jit_compilation_time_ms: 10.0,
     };
 
-    let real_time = RealTimeMetrics {
+    let real_time: _ = RealTimeMetrics {
         cluster_summary: summary,
         node_metrics,
         system_metrics,
@@ -107,7 +109,7 @@ async fn test_real_time_metrics_structure() {
 
 #[tokio::test]
 async fn test_metrics_config_creation() {
-    let config = MetricsConfig {
+    let config: _ = MetricsConfig {
         collection_interval: Duration::from_secs(5),
         retention_period: Duration::from_secs(300),
         enable_real_time: true,
@@ -124,7 +126,7 @@ async fn test_metrics_config_creation() {
 
 #[tokio::test]
 async fn test_trace_context() {
-    let context = TraceContext::new(
+    let context: _ = TraceContext::new(
         "test-trace-id".to_string(),
         "test-span-id".to_string(),
     );
@@ -133,13 +135,13 @@ async fn test_trace_context() {
     assert_eq!(context.span_id, "test-span-id");
     assert!(context.baggage.is_empty());
 
-    let context_with_baggage = context.with_baggage("key".to_string(), "value".to_string());
+    let context_with_baggage: _ = context.with_baggage("key".to_string(), "value".to_string());
     assert_eq!(context_with_baggage.baggage.get("key"), Some(&"value".to_string()));
 }
 
 #[tokio::test]
 async fn test_trace_event_creation() {
-    let event = TraceEvent {
+    let event: _ = TraceEvent {
         trace_id: "trace-123".to_string(),
         span_id: "span-456".to_string(),
         parent_span_id: Some("span-789".to_string()),
@@ -161,7 +163,7 @@ async fn test_trace_event_creation() {
 
 #[tokio::test]
 async fn test_performance_stats() {
-    let stats = PerformanceStats {
+    let stats: _ = PerformanceStats {
         total_traces: 100,
         total_spans: 500,
         average_trace_duration: Duration::from_millis(100),
@@ -186,7 +188,7 @@ async fn test_performance_stats() {
 
 #[tokio::test]
 async fn test_tracing_config_creation() {
-    let config = TracingConfig {
+    let config: _ = TracingConfig {
         max_traces: 1000,
         max_spans_per_trace: 100,
         trace_retention: Duration::from_secs(300),
@@ -204,7 +206,7 @@ async fn test_tracing_config_creation() {
 
 #[tokio::test]
 async fn test_cluster_overview_structure() {
-    let overview = ClusterOverview {
+    let overview: _ = ClusterOverview {
         cluster_name: "test-cluster".to_string(),
         total_nodes: 10,
         healthy_nodes: 9,
@@ -227,7 +229,7 @@ async fn test_cluster_overview_structure() {
 
 #[tokio::test]
 async fn test_node_status_detail() {
-    let status = NodeStatusDetail {
+    let status: _ = NodeStatusDetail {
         node_id: "node-1".to_string(),
         status: "Healthy".to_string(),
         cpu_usage: 45.0,
@@ -252,7 +254,7 @@ async fn test_node_status_detail() {
 
 #[tokio::test]
 async fn test_performance_metrics_detail() {
-    let metrics = PerformanceMetricsDetail {
+    let metrics: _ = PerformanceMetricsDetail {
         throughput: 250.0,
         latency_p50: 50.0,
         latency_p90: 100.0,
@@ -289,7 +291,7 @@ async fn test_trace_analysis_structure() {
         },
     );
 
-    let analysis = TraceAnalysis {
+    let analysis: _ = TraceAnalysis {
         total_traces: 50,
         slow_traces: vec![
             SlowTrace {
@@ -319,7 +321,7 @@ async fn test_trace_analysis_structure() {
 
 #[tokio::test]
 async fn test_alert_system() {
-    let alert = AlertMessage {
+    let alert: _ = AlertMessage {
         id: "alert-123".to_string(),
         level: AlertLevel::Critical,
         title: "High CPU Usage".to_string(),
@@ -340,7 +342,7 @@ async fn test_alert_level_comparison() {
 
 #[tokio::test]
 async fn test_resource_utilization() {
-    let utilization = ResourceUtilization {
+    let utilization: _ = ResourceUtilization {
         cpu_avg: 65.0,
         memory_avg: 75.0,
         network_avg: 50.0,
@@ -355,7 +357,7 @@ async fn test_resource_utilization() {
 
 #[tokio::test]
 async fn test_console_config_creation() {
-    let config = ConsoleConfig {
+    let config: _ = ConsoleConfig {
         refresh_interval: Duration::from_secs(5),
         alert_threshold_cpu: 80.0,
         alert_threshold_memory: 85.0,

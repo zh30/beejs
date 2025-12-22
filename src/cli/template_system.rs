@@ -46,7 +46,7 @@ impl PackageManager {
 
     /// 检测项目中使用的包管理器
     pub fn detect(project_path: &Path) -> Self {
-        let lockfiles = ["bun.lockb", "pnpm-lock.yaml", "yarn.lock", "package-lock.json"];
+        let lockfiles: _ = ["bun.lockb", "pnpm-lock.yaml", "yarn.lock", "package-lock.json"];
         for lockfile in lockfiles {
             if project_path.join(lockfile).exists() {
                 if let Some(pm) = Self::from_lockfile(lockfile) {
@@ -71,7 +71,7 @@ impl PackageManager {
 
     /// 生成添加依赖命令
     pub fn add_command(&self, deps: &[String], dev: bool) -> String {
-        let deps_str = deps.join(" ");
+        let deps_str: _ = deps.join(" ");
         match self {
             Self::Npm => {
                 if dev {
@@ -149,7 +149,7 @@ pub struct ProjectTemplate {
     /// 开发依赖列表
     pub dev_dependencies: Vec<String>,
     /// npm scripts
-    pub scripts: HashMap<String, String>,
+    pub scripts: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     /// 模板标签
     #[serde(default)]
     pub tags: Vec<String>,
@@ -177,7 +177,7 @@ impl Default for ProjectTemplate {
 /// 模板引擎
 pub struct TemplateEngine {
     /// 变量映射
-    variables: HashMap<String, String>,
+    variables: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 impl TemplateEngine {
@@ -195,7 +195,7 @@ impl TemplateEngine {
     }
 
     /// 批量设置变量
-    pub fn set_all(&mut self, vars: HashMap<String, String>) -> &mut Self {
+    pub fn set_all(&mut self, vars: HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> &mut Self {
         self.variables.extend(vars);
         self
     }
@@ -204,8 +204,8 @@ impl TemplateEngine {
     pub fn render(&self, template: &str) -> String {
         let mut result = template.to_string();
         for (key, value) in &self.variables {
-            let pattern = format!("{{{{{}}}}}", key);
-            result = result.replace(&pattern, value);
+            let pattern: _ = format!("{{{{{}}}}}", key);
+            result = result.clone();replace(&pattern, value);
         }
         result
     }
@@ -215,11 +215,11 @@ impl TemplateEngine {
         let mut result = template.to_string();
 
         // 处理 {{#if var}}...{{/if}}
-        let if_pattern = Regex::new(r"\{\{#if (\w+)\}\}([\s\S]*?)\{\{/if\}\}").unwrap();
+        let if_pattern: _ = Regex::new(r"\{\{#if (\w+)\}\}([\s\S]*?)\{\{/if\}\}").unwrap();
         result = if_pattern
             .replace_all(&result, |caps: &regex::Captures| {
-                let var_name = &caps[1];
-                let content = &caps[2];
+                let var_name: _ = &caps[1];
+                let content: _ = &caps[2];
 
                 if self
                     .variables
@@ -235,11 +235,11 @@ impl TemplateEngine {
             .to_string();
 
         // 处理 {{#unless var}}...{{/unless}}
-        let unless_pattern = Regex::new(r"\{\{#unless (\w+)\}\}([\s\S]*?)\{\{/unless\}\}").unwrap();
+        let unless_pattern: _ = Regex::new(r"\{\{#unless (\w+)\}\}([\s\S]*?)\{\{/unless\}\}").unwrap();
         result = unless_pattern
             .replace_all(&result, |caps: &regex::Captures| {
-                let var_name = &caps[1];
-                let content = &caps[2];
+                let var_name: _ = &caps[1];
+                let content: _ = &caps[2];
 
                 if self
                     .variables
@@ -259,7 +259,7 @@ impl TemplateEngine {
 
     /// 完整渲染（条件 + 变量）
     pub fn render_full(&self, template: &str) -> String {
-        let processed = self.process_conditionals(template);
+        let processed: _ = self.process_conditionals(template);
         self.render(&processed)
     }
 }
@@ -276,7 +276,7 @@ impl Default for TemplateEngine {
 
 /// 模板注册表
 pub struct TemplateRegistry {
-    templates: HashMap<String, ProjectTemplate>,
+    templates: HashMap<String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, String, ProjectTemplate>>,
 }
 
 impl TemplateRegistry {
@@ -772,7 +772,7 @@ impl DirectoryGenerator {
 
         // 创建目录
         for dir in &structure.directories {
-            let full_path = base_path.join(dir);
+            let full_path: _ = base_path.join(dir);
             if !full_path.exists() {
                 fs::create_dir_all(&full_path)?;
                 created.push(full_path);
@@ -781,7 +781,7 @@ impl DirectoryGenerator {
 
         // 创建文件
         for file in &structure.files {
-            let full_path = base_path.join(&file.path);
+            let full_path: _ = base_path.join(&file.path);
 
             // 确保父目录存在
             if let Some(parent) = full_path.parent() {
@@ -789,7 +789,7 @@ impl DirectoryGenerator {
             }
 
             // 渲染内容
-            let content = engine.render_full(&file.content);
+            let content: _ = engine.render_full(&file.content);
             fs::write(&full_path, content)?;
 
             // 设置可执行权限
@@ -814,7 +814,7 @@ impl DirectoryGenerator {
         template: &ProjectTemplate,
         engine: &TemplateEngine,
     ) -> anyhow::Result<Vec<PathBuf>> {
-        let structure = DirectoryStructure {
+        let structure: _ = DirectoryStructure {
             directories: template.directories.clone(),
             files: template
                 .files
@@ -866,12 +866,12 @@ impl DependencyInstaller {
 
     /// 安装依赖
     pub fn install(&self, project_path: &Path) -> anyhow::Result<()> {
-        let cmd = self.package_manager.install_command();
+        let cmd: _ = self.package_manager.install_command();
         self.formatter
             .progress_start(&format!("Running {}...", cmd));
 
         let parts: Vec<&str> = cmd.split_whitespace().collect();
-        let output = Command::new(parts[0])
+        let output: _ = Command::new(parts[0])
             .args(&parts[1..])
             .current_dir(project_path)
             .output()?;
@@ -880,7 +880,7 @@ impl DependencyInstaller {
             self.formatter.progress_done();
             Ok(())
         } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stderr: _ = String::from_utf8_lossy(&output.stderr);
             Err(anyhow::anyhow!("Install failed: {}", stderr))
         }
     }
@@ -896,11 +896,11 @@ impl DependencyInstaller {
             return Ok(());
         }
 
-        let cmd = self.package_manager.add_command(deps, dev);
+        let cmd: _ = self.package_manager.add_command(deps, dev);
         self.formatter.progress_start(&format!("Running {}...", cmd));
 
         let parts: Vec<&str> = cmd.split_whitespace().collect();
-        let output = Command::new(parts[0])
+        let output: _ = Command::new(parts[0])
             .args(&parts[1..])
             .current_dir(project_path)
             .output()?;
@@ -909,7 +909,7 @@ impl DependencyInstaller {
             self.formatter.progress_done();
             Ok(())
         } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stderr: _ = String::from_utf8_lossy(&output.stderr);
             Err(anyhow::anyhow!("Add dependencies failed: {}", stderr))
         }
     }
@@ -927,7 +927,7 @@ pub struct TemplateInstantiationConfig {
     /// 项目路径
     pub project_path: PathBuf,
     /// 模板变量
-    pub variables: HashMap<String, String>,
+    pub variables: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     /// 是否安装依赖
     pub install_deps: bool,
     /// 包管理器
@@ -952,7 +952,7 @@ impl TemplateInstantiator {
     /// 实例化模板
     pub fn instantiate(&self, config: &TemplateInstantiationConfig) -> anyhow::Result<()> {
         // 获取模板
-        let template = self
+        let template: _ = self
             .registry
             .get(&config.template_name)
             .ok_or_else(|| anyhow::anyhow!("Template not found: {}", config.template_name))?;
@@ -977,8 +977,8 @@ impl TemplateInstantiator {
 
         // 创建目录结构
         self.formatter.progress_start("Creating directory structure...");
-        let generator = DirectoryGenerator::new();
-        let created = generator.generate_from_template(&config.project_path, template, &engine)?;
+        let generator: _ = DirectoryGenerator::new();
+        let created: _ = generator.generate_from_template(&config.project_path, template, &engine)?;
         self.formatter.progress_done();
 
         // 生成 package.json
@@ -993,10 +993,10 @@ impl TemplateInstantiator {
 
         // 安装依赖
         if config.install_deps {
-            let pm = config
+            let pm: _ = config
                 .package_manager
                 .unwrap_or_else(|| PackageManager::detect(&config.project_path));
-            let installer = DependencyInstaller::with_package_manager(pm);
+            let installer: _ = DependencyInstaller::with_package_manager(pm);
 
             if !template.dependencies.is_empty() || !template.dev_dependencies.is_empty() {
                 self.formatter.progress_start("Installing dependencies...");
@@ -1022,8 +1022,8 @@ impl TemplateInstantiator {
         template: &ProjectTemplate,
         engine: &TemplateEngine,
     ) -> anyhow::Result<()> {
-        let project_name = engine.render("{{project_name}}");
-        let version = engine.render("{{version}}");
+        let project_name: _ = engine.render("{{project_name}}");
+        let version: _ = engine.render("{{version}}");
 
         let mut package = serde_json::json!({
             "name": project_name,
@@ -1033,7 +1033,7 @@ impl TemplateInstantiator {
         });
 
         if !template.dependencies.is_empty() {
-            let deps: HashMap<String, String> = template
+            let deps: HashMap<String, String, std::collections::HashMap<String, String, String, String>> = template
                 .dependencies
                 .iter()
                 .map(|d| (d.clone(), "*".to_string()))
@@ -1042,7 +1042,7 @@ impl TemplateInstantiator {
         }
 
         if !template.dev_dependencies.is_empty() {
-            let deps: HashMap<String, String> = template
+            let deps: HashMap<String, String, std::collections::HashMap<String, String, String, String>> = template
                 .dev_dependencies
                 .iter()
                 .map(|d| (d.clone(), "*".to_string()))
@@ -1050,14 +1050,14 @@ impl TemplateInstantiator {
             package["devDependencies"] = serde_json::to_value(deps)?;
         }
 
-        let content = serde_json::to_string_pretty(&package)?;
+        let content: _ = serde_json::to_string_pretty(&package)?;
         fs::write(path.join("package.json"), content)?;
 
         Ok(())
     }
 
     fn generate_gitignore(&self, path: &Path) -> anyhow::Result<()> {
-        let content = r#"# Dependencies
+        let content: _ = r#"# Dependencies
 node_modules/
 
 # Build output
@@ -1106,6 +1106,8 @@ impl Default for TemplateInstantiator {
 mod tests {
     use super::*;
     use tempfile::TempDir;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_template_engine_basic() {
@@ -1120,13 +1122,13 @@ mod tests {
         let mut engine = TemplateEngine::new();
         engine.set("typescript", "true");
 
-        let template = "{{#if typescript}}TS{{/if}}";
+        let template: _ = "{{#if typescript}}TS{{/if}}";
         assert_eq!(engine.process_conditionals(template), "TS");
     }
 
     #[test]
     fn test_package_manager_detect() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir: _ = TempDir::new().unwrap();
         fs::write(temp_dir.path().join("yarn.lock"), "").unwrap();
 
         assert_eq!(
@@ -1137,7 +1139,7 @@ mod tests {
 
     #[test]
     fn test_template_registry() {
-        let registry = TemplateRegistry::with_builtins();
+        let registry: _ = TemplateRegistry::with_builtins();
         assert!(registry.get("basic").is_some());
         assert!(registry.get("typescript").is_some());
         assert!(registry.get("fullstack").is_some());
@@ -1145,8 +1147,8 @@ mod tests {
 
     #[test]
     fn test_directory_generator() {
-        let temp_dir = TempDir::new().unwrap();
-        let structure = DirectoryStructure {
+        let temp_dir: _ = TempDir::new().unwrap();
+        let structure: _ = DirectoryStructure {
             directories: vec!["src".to_string(), "tests".to_string()],
             files: vec![FileEntry {
                 path: "src/index.ts".to_string(),
@@ -1155,9 +1157,9 @@ mod tests {
             }],
         };
 
-        let generator = DirectoryGenerator::new();
-        let engine = TemplateEngine::new();
-        let result = generator.generate(temp_dir.path(), &structure, &engine);
+        let generator: _ = DirectoryGenerator::new();
+        let engine: _ = TemplateEngine::new();
+        let result: _ = generator.generate(temp_dir.path(), &structure, &engine);
 
         assert!(result.is_ok());
         assert!(temp_dir.path().join("src").exists());

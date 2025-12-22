@@ -3,6 +3,8 @@
 use anyhow::Result;
 use tracing::info;
 use serde::{Serialize, Deserialize};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 #[derive(Debug, Clone)]
 pub struct EncryptionKey {
@@ -21,8 +23,8 @@ impl KeyManager {
     }
 
     pub fn generate_key(&mut self, key_id: String) -> Result<EncryptionKey> {
-        let key = vec![0u8; 32];
-        let encryption_key = EncryptionKey { key_id, key };
+        let key: _ = vec![0u8; 32];
+        let encryption_key: _ = EncryptionKey { key_id, key };
         self.keys.push(encryption_key.clone());
         Ok(encryption_key)
     }
@@ -35,7 +37,7 @@ pub struct EndToEndEncrypt {
 impl EndToEndEncrypt {
     pub fn new() -> Result<Self> {
         info!("🔒 初始化端到端加密器");
-        let key_manager = KeyManager::new()?;
+        let key_manager: _ = KeyManager::new()?;
         Ok(Self { key_manager })
     }
 

@@ -5,6 +5,8 @@ use super::{NetworkConfig, NetworkStats};
 use std::sync::{Arc, Mutex};
 use std::collections::VecDeque;
 use std::ptr::NonNull;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 缓冲区类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,7 +52,7 @@ pub struct NetworkBuffer {
 impl NetworkBuffer {
     /// 创建新的网络缓冲区
     pub fn new(size: usize) -> Self {
-        let buffer_type = Self::determine_buffer_type(size);
+        let buffer_type: _ = Self::determine_buffer_type(size);
 
         Self {
             buffer: Vec::with_capacity(size),
@@ -61,7 +63,7 @@ impl NetworkBuffer {
 
     /// 从现有缓冲区创建
     pub fn from_vec(data: Vec<u8>) -> Self {
-        let buffer_type = Self::determine_buffer_type(data.len());
+        let buffer_type: _ = Self::determine_buffer_type(data.len());
 
         Self {
             buffer: data,
@@ -148,30 +150,30 @@ pub struct BufferPool {
 impl BufferPool {
     /// 创建新的缓冲区池
     pub fn new(default_buffer_size: usize) -> Self {
-        let config = BufferConfig::default();
+        let config: _ = BufferConfig::default();
         Self {
-            small_pool: Arc::new(Mutex::new(VecDeque::new())),
+            small_pool: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
             config: config,
-            medium_pool: Arc::new(Mutex::new(VecDeque::new())),
-            large_pool: Arc::new(Mutex::new(VecDeque::new())),
-            huge_pool: Arc::new(Mutex::new(VecDeque::new())),
-            stats: Arc::new(Mutex::new(BufferStats {
+            medium_pool: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
+            large_pool: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
+            huge_pool: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(BufferStats {
                 total_buffers_allocated: 0,
                 total_buffers_freed: 0,
                 current_active_buffers: 0,
                 total_bytes_allocated: 0,
                 pool_hit_rate: 0.0,
                 average_buffer_size: 0.0,
-            })),
+            }))),
         }
     }
 
     /// 分配缓冲区
     pub fn allocate(&self, size: usize) -> NetworkBuffer {
-        let buffer_type = NetworkBuffer::determine_buffer_type(size);
+        let buffer_type: _ = NetworkBuffer::determine_buffer_type(size);
 
         // 尝试从池中获取
-        let pool = match buffer_type {
+        let pool: _ = match buffer_type {
             BufferType::Small => &self.small_pool,
             BufferType::Medium => &self.medium_pool,
             BufferType::Large => &self.large_pool,
@@ -201,10 +203,10 @@ impl BufferPool {
 
     /// 释放缓冲区
     pub fn release(&self, mut buffer: NetworkBuffer) {
-        let buffer_type = buffer.buffer_type();
+        let buffer_type: _ = buffer.buffer_type();
 
         // 检查是否可以放回池中
-        let pool = match buffer_type {
+        let pool: _ = match buffer_type {
             BufferType::Small => &self.small_pool,
             BufferType::Medium => &self.medium_pool,
             BufferType::Large => &self.large_pool,
@@ -217,7 +219,7 @@ impl BufferPool {
         buffer.clear();
 
         // 根据类型决定是否放回池中
-        let should_pool = match buffer_type {
+        let should_pool: _ = match buffer_type {
             BufferType::Small => pool_guard.len() < self.config.small_pool_size,
             BufferType::Medium => pool_guard.len() < self.config.medium_pool_size,
             BufferType::Large => pool_guard.len() < self.config.large_pool_size,
@@ -237,15 +239,15 @@ impl BufferPool {
     pub fn preallocate(&self) {
         // 预分配小缓冲区
         for _ in 0..self.config.small_pool_size / 2 {
-            let buffer = NetworkBuffer::new(512);
-            let pool = &self.small_pool;
+            let buffer: _ = NetworkBuffer::new(512);
+            let pool: _ = &self.small_pool;
             pool.lock().unwrap().push_back(buffer);
         }
 
         // 预分配中等缓冲区
         for _ in 0..self.config.medium_pool_size / 2 {
-            let buffer = NetworkBuffer::new(32 * 1024);
-            let pool = &self.medium_pool;
+            let buffer: _ = NetworkBuffer::new(32 * 1024);
+            let pool: _ = &self.medium_pool;
             pool.lock().unwrap().push_back(buffer);
         }
 

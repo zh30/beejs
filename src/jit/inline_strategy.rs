@@ -95,7 +95,7 @@ pub struct InlineStrategy {
     /// Minimum call count threshold
     min_call_threshold: u64,
     /// Inline history and learning
-    inline_history: HashMap<String, Vec<InlineResult>>,
+    inline_history: HashMap<String, Vec<InlineResult, std::collections::HashMap<String, Vec<InlineResult, String, Vec<InlineResult>>>,
     /// Statistics
     stats: InlineStats,
     /// Configuration
@@ -103,9 +103,9 @@ pub struct InlineStrategy {
     /// Stage 93 新增：当前系统负载（用于动态调整）
     current_system_load: f64,
     /// Stage 93 新增：热点函数追踪（结合 HotPathTrackerV2）
-    hot_path_functions: HashMap<String, f64>, // function_id -> hotness_score
+    hot_path_functions: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>, // function_id -> hotness_score
     /// Stage 93 新增：缓存局部性得分
-    cache_locality_scores: HashMap<String, f64>,
+    cache_locality_scores: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>,
 }
 
 /// Inline configuration - Stage 93 增强
@@ -179,19 +179,19 @@ impl InlineStrategy {
         }
 
         // Calculate benefit score
-        let benefit = self.estimate_benefit(callee);
-        let cost = self.estimate_cost(callee);
+        let benefit: _ = self.estimate_benefit(callee);
+        let cost: _ = self.estimate_cost(callee);
 
         // Cost-benefit analysis
-        let benefit_ratio = if cost > 0 {
+        let benefit_ratio: _ = if cost > 0 {
             benefit / cost as f64
         } else {
             benefit
         };
 
         // Decision based on benefit ratio (threshold 0.3 for more aggressive inlining)
-        let should_inline = benefit_ratio > 0.3;
-        let opt_level = self.determine_opt_level(benefit_ratio);
+        let should_inline: _ = benefit_ratio > 0.3;
+        let opt_level: _ = self.determine_opt_level(benefit_ratio);
 
         if should_inline {
             self.stats.inlined_count += 1;
@@ -254,15 +254,15 @@ impl InlineStrategy {
 
         // 原有因素保持不变
         // Call frequency bonus (more calls = more benefit)
-        let call_bonus = (callee.call_count as f64).log2() * 10.0 * self.config.call_frequency_weight;
+        let call_bonus: _ = (callee.call_count as f64).log2() * 10.0 * self.config.call_frequency_weight;
         benefit += call_bonus.min(30.0);
 
         // Size bonus (smaller = easier to inline)
-        let size_bonus = (1.0 - (callee.size as f64 / self.max_code_size as f64)) * 20.0;
+        let size_bonus: _ = (1.0 - (callee.size as f64 / self.max_code_size as f64)) * 20.0;
         benefit += size_bonus.max(0.0);
 
         // Complexity penalty
-        let complexity_penalty = callee.complexity * self.config.complexity_penalty;
+        let complexity_penalty: _ = callee.complexity * self.config.complexity_penalty;
         benefit -= complexity_penalty;
 
         // Recursion penalty
@@ -277,12 +277,12 @@ impl InlineStrategy {
 
         // Stage 93 新增：多维度优化考虑因素
         // 缓存局部性得分（越小越好，因为小函数更容易缓存）
-        let cache_locality = self.get_cache_locality_score(callee);
-        let cache_locality_bonus = cache_locality * self.config.cache_locality_weight * 15.0;
+        let cache_locality: _ = self.get_cache_locality_score(callee);
+        let cache_locality_bonus: _ = cache_locality * self.config.cache_locality_weight * 15.0;
         benefit += cache_locality_bonus;
 
         // 分支预测成本（有副作用的函数更难预测）
-        let branch_prediction_cost = if callee.has_side_effects {
+        let branch_prediction_cost: _ = if callee.has_side_effects {
             callee.complexity * 0.4 * self.config.branch_prediction_weight
         } else {
             0.0
@@ -290,7 +290,7 @@ impl InlineStrategy {
         benefit -= branch_prediction_cost;
 
         // Stage 93 新增：热路径优先调整
-        let hotness_score = self.hot_path_functions.get(&callee.id).unwrap_or(&0.0);
+        let hotness_score: _ = self.hot_path_functions.get(&callee.id).unwrap_or(&0.0);
         if *hotness_score > 0.7 {
             // 极热代码，给予额外奖励
             benefit *= 1.5;
@@ -303,7 +303,7 @@ impl InlineStrategy {
         }
 
         // Stage 93 新增：系统负载感知调整
-        let load_adjustment = self.calculate_load_adjustment();
+        let load_adjustment: _ = self.calculate_load_adjustment();
         benefit *= load_adjustment;
 
         // Learn from history (保持原有逻辑)
@@ -323,11 +323,11 @@ impl InlineStrategy {
 
     /// Estimate the cost of inlining
     fn estimate_cost(&self, callee: &FunctionInfo) -> usize {
-        let base_cost = callee.size;
+        let base_cost: _ = callee.size;
 
         // Account for expansion at call sites
-        let expansion = callee.call_count.min(10) as usize;
-        let total_cost = base_cost * expansion;
+        let expansion: _ = callee.call_count.min(10) as usize;
+        let total_cost: _ = base_cost * expansion;
 
         total_cost.min(self.max_code_size * 10)
     }
@@ -365,7 +365,7 @@ impl InlineStrategy {
 
     /// Record inline result for learning
     pub fn record_inline(&mut self, result: InlineResult) {
-        let function_id = result.function_id.clone();
+        let function_id: _ = result.function_id.clone();
         self.inline_history
             .entry(function_id.clone())
             .or_insert_with(Vec::new)
@@ -403,8 +403,8 @@ impl InlineStrategy {
     /// Stage 93: 获取缓存局部性得分
     /// 得分越高表示缓存友好度越好（函数越小、调用越频繁）
     fn get_cache_locality_score(&self, callee: &FunctionInfo) -> f64 {
-        let size_score = (1.0 / (callee.size as f64 / 10.0 + 1.0)).min(1.0);
-        let call_score = (callee.call_count as f64 / 100.0).min(1.0);
+        let size_score: _ = (1.0 / (callee.size as f64 / 10.0 + 1.0)).min(1.0);
+        let call_score: _ = (callee.call_count as f64 / 100.0).min(1.0);
         (size_score + call_score) / 2.0
     }
 
@@ -420,12 +420,12 @@ impl InlineStrategy {
 
     /// Stage 93: 更新系统负载
     pub fn update_system_load(&mut self, load: f64) {
-        self.current_system_load = load.max(0.0).min(300.0); // 限制范围
+        self.current_system_load = load.clone();max(0.0).min(300.0); // 限制范围
     }
 
     /// Stage 93: 标记热点函数（来自 HotPathTrackerV2）
     pub fn mark_hot_path(&mut self, function_id: String, hotness_score: f64) {
-        let clamped_score = hotness_score.clamp(0.0, 1.0);
+        let clamped_score: _ = hotness_score.clamp(0.0, 1.0);
         self.hot_path_functions.insert(function_id, clamped_score);
     }
 
@@ -437,23 +437,23 @@ impl InlineStrategy {
     /// Stage 93: 预测内联性能影响
     /// 返回预测的速度提升比例
     pub fn predict_performance_impact(&mut self, callee: &FunctionInfo) -> f64 {
-        let benefit = self.estimate_benefit(callee);
-        let cost = self.estimate_cost(callee) as f64;
+        let benefit: _ = self.estimate_benefit(callee);
+        let cost: _ = self.estimate_cost(callee) as f64;
 
         // 简化的性能预测模型
         // 收益来自消除函数调用开销，惩罚来自代码膨胀
-        let call_savings = (callee.call_count as f64 * 0.001).min(0.5);
-        let size_penalty = (callee.size as f64 * 0.0001).max(0.0);
-        let complexity_factor = (100.0 - callee.complexity) / 100.0;
+        let call_savings: _ = (callee.call_count as f64 * 0.001).min(0.5);
+        let size_penalty: _ = (callee.size as f64 * 0.0001).max(0.0);
+        let complexity_factor: _ = (100.0 - callee.complexity) / 100.0;
 
-        let predicted_speedup = (call_savings - size_penalty) * complexity_factor * (benefit / 100.0);
+        let predicted_speedup: _ = (call_savings - size_penalty) * complexity_factor * (benefit / 100.0);
 
         predicted_speedup.clamp(-1.0, 2.0) // 限制在合理范围
     }
 
     /// Stage 93: 获取优化统计信息
     pub fn get_optimization_stats(&self) -> OptimizationStats {
-        let hot_functions_count = self.hot_path_functions.len();
+        let hot_functions_count: _ = self.hot_path_functions.len();
         let avg_hotness: f64 = if hot_functions_count > 0 {
             self.hot_path_functions.values().sum::<f64>() / hot_functions_count as f64
         } else {
@@ -531,6 +531,8 @@ pub enum SystemProfile {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     fn make_function(name: &str, size: usize, calls: u64) -> FunctionInfo {
         FunctionInfo {
@@ -550,9 +552,9 @@ mod tests {
         let mut strategy = InlineStrategy::new();
         // Small function with moderate calls - cost is size * min(calls, 10)
         // So cost = 20 * 10 = 200, benefit should be high enough
-        let func = make_function("small_hot", 20, 100);
+        let func: _ = make_function("small_hot", 20, 100);
 
-        let decision = strategy.should_inline(&func);
+        let decision: _ = strategy.should_inline(&func);
         // benefit/cost ratio needs to be > 0.5
         // benefit ≈ 50 + call_bonus + size_bonus - complexity
         // Should inline if small enough and hot enough
@@ -563,9 +565,9 @@ mod tests {
     #[test]
     fn test_reject_large_function() {
         let mut strategy = InlineStrategy::new();
-        let func = make_function("large", 1000, 100);
+        let func: _ = make_function("large", 1000, 100);
 
-        let decision = strategy.should_inline(&func);
+        let decision: _ = strategy.should_inline(&func);
         assert!(!decision.should_inline);
         assert!(decision.reason.contains("too large"));
     }
@@ -573,9 +575,9 @@ mod tests {
     #[test]
     fn test_reject_rarely_called() {
         let mut strategy = InlineStrategy::new();
-        let func = make_function("cold", 50, 1);
+        let func: _ = make_function("cold", 50, 1);
 
-        let decision = strategy.should_inline(&func);
+        let decision: _ = strategy.should_inline(&func);
         assert!(!decision.should_inline);
         assert!(decision.reason.contains("Insufficient calls"));
     }
@@ -584,12 +586,12 @@ mod tests {
     fn test_recursive_penalty() {
         let mut strategy = InlineStrategy::new();
 
-        let normal = make_function("normal", 50, 50);
+        let normal: _ = make_function("normal", 50, 50);
         let mut recursive = make_function("recursive", 50, 50);
         recursive.is_recursive = true;
 
-        let normal_benefit = strategy.estimate_benefit(&normal);
-        let recursive_benefit = strategy.estimate_benefit(&recursive);
+        let normal_benefit: _ = strategy.estimate_benefit(&normal);
+        let recursive_benefit: _ = strategy.estimate_benefit(&recursive);
 
         assert!(normal_benefit > recursive_benefit);
     }
@@ -601,11 +603,11 @@ mod tests {
         // Mix of functions - some very small (should inline), some larger (may not)
         for i in 0..10 {
             // Very small functions with many calls should inline
-            let func = make_function(&format!("func_{}", i), 10 + i * 5, 100);
+            let func: _ = make_function(&format!("func_{}", i), 10 + i * 5, 100);
             strategy.should_inline(&func);
         }
 
-        let rate = strategy.get_inline_rate();
+        let rate: _ = strategy.get_inline_rate();
         // At least some should have been considered (even if not all inlined)
         assert!(rate >= 0.0, "Rate should be >= 0");
         assert!(rate <= 1.0, "Rate should be <= 1");
@@ -627,12 +629,12 @@ mod tests {
         });
 
         // Should boost benefit for this function
-        let func = make_function("func_a", 50, 50);
-        let benefit = strategy.estimate_benefit(&func);
+        let func: _ = make_function("func_a", 50, 50);
+        let benefit: _ = strategy.estimate_benefit(&func);
 
         // Reset and check without history
         strategy.inline_history.clear();
-        let benefit_no_history = strategy.estimate_benefit(&func);
+        let benefit_no_history: _ = strategy.estimate_benefit(&func);
 
         assert!(benefit > benefit_no_history);
     }

@@ -7,6 +7,8 @@ use tokio::sync::RwLock;
 use tokio::time::{Duration, Instant};
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Edge Runtime instance
 #[derive(Debug)]
@@ -21,7 +23,7 @@ pub struct EdgeRuntimeInstance {
 /// Edge Runtime Manager with resource management
 #[derive(Debug)]
 pub struct EdgeRuntime {
-    instances: Arc<RwLock<HashMap<String, EdgeRuntimeInstance>>>,
+    instances: Arc<RwLock<HashMap<String, EdgeRuntimeInstance, std::collections::HashMap<String, EdgeRuntimeInstance, String, EdgeRuntimeInstance>>>>,
     warm_regions: Arc<RwLock<Vec<String>>>,
     prewarm_pool: Arc<RwLock<Vec<String>>>,
     stats: Arc<RwLock<RuntimeStats>>,
@@ -99,19 +101,19 @@ impl EdgeRuntime {
     /// Create a new edge runtime manager
     pub fn new() -> Self {
         EdgeRuntime {
-            instances: Arc::new(RwLock::new(HashMap::new())),
-            warm_regions: Arc::new(RwLock::new(Vec::new())),
-            prewarm_pool: Arc::new(RwLock::new(Vec::new())),
-            stats: Arc::new(RwLock::new(RuntimeStats {
+            instances: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            warm_regions: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            prewarm_pool: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(RuntimeStats {
                 total_cold_starts: 0,
                 total_warm_executions: 0,
                 average_cold_start_ms: 0.0,
                 average_warm_execution_ms: 0.0,
-            })),
-            resource_manager: Arc::new(EdgeResourceManager::new(
+            }))),
+            resource_manager: Arc::new(std::sync::Mutex::new(EdgeResourceManager::new(
                 ResourceQuota { max_cpu_cores: 32, max_memory_mb: 65536 },
                 ResourceQuota { max_cpu_cores: 32, max_memory_mb: 65536 },
-            )),
+            ))),
         }
     }
 
@@ -128,7 +130,7 @@ impl EdgeRuntime {
         for region in regions {
             if !warm_regions.contains(region) {
                 // Create a warm instance
-                let instance = EdgeRuntimeInstance {
+                let instance: _ = EdgeRuntimeInstance {
                     id: format!("warm-instance-{}", region),
                     region: region.clone(),
                     is_warm: true,
@@ -149,16 +151,16 @@ impl EdgeRuntime {
 
     /// Get a runtime instance for a region
     pub async fn get_instance(&self, region: &str) -> Result<RuntimeExecutionContext> {
-        let instances = self.instances.read().await;
+        let instances: _ = self.instances.read().await;
 
         // Check for warm instance
         if let Some(instance) = instances.values().find(|i| i.region == region && i.is_warm) {
-            let start = Instant::now();
+            let start: _ = Instant::now();
 
             // Simulate warm execution (very fast)
             tokio::time::sleep(Duration::from_millis(2)).await;
 
-            let execution_time = start.elapsed();
+            let execution_time: _ = start.elapsed();
 
             // Update stats
             {
@@ -168,7 +170,7 @@ impl EdgeRuntime {
                     (stats.average_warm_execution_ms + execution_time.as_millis() as f64) / 2.0;
             }
 
-            let context = RuntimeExecutionContext {
+            let context: _ = RuntimeExecutionContext {
                 instance_id: instance.id.clone(),
                 region: instance.region.clone(),
                 is_warm: true,
@@ -183,9 +185,9 @@ impl EdgeRuntime {
             Ok(context)
         } else {
             // Cold start
-            let start = Instant::now();
+            let start: _ = Instant::now();
             tokio::time::sleep(Duration::from_millis(50)).await; // Simulate cold start
-            let execution_time = start.elapsed();
+            let execution_time: _ = start.elapsed();
 
             // Update stats
             {
@@ -195,7 +197,7 @@ impl EdgeRuntime {
                     (stats.average_cold_start_ms + execution_time.as_millis() as f64) / 2.0;
             }
 
-            let context = RuntimeExecutionContext {
+            let context: _ = RuntimeExecutionContext {
                 instance_id: format!("cold-instance-{}", region),
                 region: region.to_string(),
                 is_warm: false,
@@ -219,21 +221,21 @@ impl EdgeRuntime {
     ) -> Result<ExecutionResult> {
         // Allocate resources if requested
         if let Some(request) = resource_request {
-            let allocation = self.resource_manager.allocate_resources(&request).await?;
+            let allocation: _ = self.resource_manager.allocate_resources(&request).await?;
             if !allocation.allocated {
                 return Err(anyhow!("Failed to allocate resources"));
             }
         }
 
         // Get execution context
-        let context = self.get_instance("default").await?;
+        let context: _ = self.get_instance("default").await?;
 
         // Simulate script execution
-        let start = Instant::now();
+        let start: _ = Instant::now();
         tokio::time::sleep(Duration::from_millis(10)).await; // Simulate execution
-        let execution_time = start.elapsed().as_millis() as u64;
+        let execution_time: _ = start.elapsed().as_millis() as u64;
 
-        let result = ExecutionResult {
+        let result: _ = ExecutionResult {
             success: true,
             output: Some("Script executed successfully".to_string()),
             error: None,
@@ -268,16 +270,16 @@ impl EdgeResourceManager {
         EdgeResourceManager {
             cpu_limit,
             memory_limit,
-            battery_monitor: Arc::new(RwLock::new(BatteryMonitor {
+            battery_monitor: Arc::new(std::sync::Mutex::new(RwLock::new(BatteryMonitor {
                 is_supported: false,
                 level_percent: None,
                 is_charging: false,
-            })),
-            current_usage: Arc::new(RwLock::new(ResourceUsage {
+            }))),
+            current_usage: Arc::new(std::sync::Mutex::new(RwLock::new(ResourceUsage {
                 cpu_usage_percent: 0.0,
                 memory_usage_mb: 0,
                 active_instances: 0,
-            })),
+            }))),
         }
     }
 
@@ -309,19 +311,19 @@ impl EdgeResourceManager {
 
     /// Monitor current resource usage
     pub async fn monitor_usage(&self) -> Result<ResourceUsage> {
-        let usage = self.current_usage.read().await;
+        let usage: _ = self.current_usage.read().await;
         Ok(usage.clone())
     }
 
     /// Get battery status (if supported)
     pub async fn get_battery_status(&self) -> Result<BatteryMonitor> {
-        let battery = self.battery_monitor.read().await;
+        let battery: _ = self.battery_monitor.read().await;
         Ok(battery.clone())
     }
 
     /// Check if resource limits are exceeded
     pub async fn check_limits(&self) -> Result<bool> {
-        let usage = self.current_usage.read().await;
+        let usage: _ = self.current_usage.read().await;
         Ok(usage.cpu_usage_percent > 95.0 || usage.memory_usage_mb > self.memory_limit.max_memory_mb * 95 / 100)
     }
 }

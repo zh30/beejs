@@ -14,6 +14,8 @@ use anyhow::{Result, Context};
 use lru::LruCache;
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 缓存条目
 #[derive(Debug, Clone)]
@@ -60,7 +62,7 @@ pub struct CacheConfig {
 /// WASM 缓存管理器
 pub struct WasmCacheManager {
     cache: Arc<RwLock<LruCache<String, CacheEntry>>>,
-    access_patterns: Arc<RwLock<HashMap<String, AccessPattern>>>,
+    access_patterns: Arc<RwLock<HashMap<String, AccessPattern, std::collections::HashMap<String, AccessPattern, String, AccessPattern>>>>,
     config: CacheConfig,
     statistics: Arc<RwLock<CacheStatistics>>,
 }
@@ -79,13 +81,13 @@ impl WasmCacheManager {
         info!("🚀 初始化 WASM 缓存管理器 (策略: {:?}, 最大大小: {}, 最大内存: {}MB)",
               config.strategy, config.max_size, config.max_memory_mb);
 
-        let cache = Arc::new(RwLock::new(LruCache::new(NonZero::new(config.max_size).unwrap_or(NonZero::new(100).unwrap()))));
+        let cache: _ = Arc::new(std::sync::Mutex::new(RwLock::new(LruCache::new(NonZero::new(config.max_size)).unwrap_or(NonZero::new(100).unwrap()))));
 
-        let manager = Self {
+        let manager: _ = Self {
             cache,
-            access_patterns: Arc::new(RwLock::new(HashMap::new())),
+            access_patterns: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
             config,
-            statistics: Arc::new(RwLock::new(CacheStatistics {
+            statistics: Arc::new(std::sync::Mutex::new(RwLock::new(CacheStatistics {
                 total_entries: 0,
                 hits: 0,
                 misses: 0,
@@ -93,7 +95,7 @@ impl WasmCacheManager {
                 hit_rate: 0.0,
                 avg_access_time_ms: 0.0,
                 total_size_bytes: 0,
-            })),
+            }))),
         };
 
         info!("✅ 缓存管理器初始化完成");
@@ -102,14 +104,14 @@ impl WasmCacheManager {
 
     /// 获取缓存的模块
     pub async fn get(&self, name: &str) -> Result<Option<Arc<Module>>> {
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
         let mut cache = self.cache.write().await;
 
         if let Some(entry) = cache.get(name) {
             // 检查 TTL
             if let Some(ttl) = entry.ttl {
-                let now = SystemTime::now();
+                let now: _ = SystemTime::now();
                 if now.duration_since(entry.created_at).unwrap_or_default() > ttl {
                     // TTL 过期，移除条目
                     debug!("⏰ 缓存条目过期: {}", name);
@@ -140,11 +142,11 @@ impl WasmCacheManager {
 
     /// 缓存模块
     pub async fn put(&self, name: String, module: Arc<Module>) -> Result<()> {
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
         // 创建缓存条目
-        let entry = CacheEntry {
-            module: Arc::clone(&module),
+        let entry: _ = CacheEntry {
+            module: Arc::clone(module),
             access_count: 1,
             last_access: SystemTime::now(),
             created_at: SystemTime::now(),
@@ -152,7 +154,7 @@ impl WasmCacheManager {
             ttl: self.config.default_ttl,
         };
 
-        let entry_size = entry.size_bytes;
+        let entry_size: _ = entry.size_bytes;
 
         let mut cache = self.cache.write().await;
 
@@ -183,7 +185,7 @@ impl WasmCacheManager {
 
         info!("🔥 预加载 {} 个模块", modules.len());
 
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
         for (name, module) in modules {
             if self.get(&name).await?.is_none() {
@@ -191,25 +193,25 @@ impl WasmCacheManager {
             }
         }
 
-        let preload_time = start_time.elapsed().as_secs_f64() * 1000.0;
+        let preload_time: _ = start_time.elapsed().as_secs_f64() * 1000.0;
         info!("✅ 预加载完成 (耗时: {:.2}ms)", preload_time);
 
         Ok(())
     }
 
     /// 智能预热 - 基于访问模式
-    pub async fn smart_prewarm(&self, usage_history: &HashMap<String, usize>) -> Result<()> {
+    pub async fn smart_prewarm(&self, usage_history: &HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>) -> Result<()> {
         info!("🧠 开始智能预热 (基于 {} 个模块的使用历史)", usage_history.len());
 
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
         // 按使用频率排序
         let mut sorted_modules: Vec<_> = usage_history.iter().collect();
         sorted_modules.sort_by(|a, b| b.1.cmp(a.1));
 
         // 预热前 20% 的热门模块
-        let prewarm_count = (sorted_modules.len() * 20 / 100).max(1);
-        let hot_modules = &sorted_modules[..prewarm_count];
+        let prewarm_count: _ = (sorted_modules.len() * 20 / 100).max(1);
+        let hot_modules: _ = &sorted_modules[..prewarm_count];
 
         info!("🔥 预热前 {} 个热门模块", prewarm_count);
 
@@ -220,7 +222,7 @@ impl WasmCacheManager {
             // 实际实现中需要从磁盘加载模块
         }
 
-        let prewarm_time = start_time.elapsed().as_secs_f64() * 1000.0;
+        let prewarm_time: _ = start_time.elapsed().as_secs_f64() * 1000.0;
         info!("✅ 智能预热完成 (耗时: {:.2}ms)", prewarm_time);
 
         Ok(())
@@ -230,7 +232,7 @@ impl WasmCacheManager {
     pub async fn cleanup_expired(&self) -> Result<usize> {
         let mut cache = self.cache.write().await;
 
-        let now = SystemTime::now();
+        let now: _ = SystemTime::now();
         let mut expired_count = 0;
 
         let keys_to_remove: Vec<String> = cache
@@ -265,13 +267,13 @@ impl WasmCacheManager {
 
     /// 获取缓存统计
     pub async fn get_statistics(&self) -> CacheStatistics {
-        let stats = self.statistics.read().await;
+        let stats: _ = self.statistics.read().await;
         stats.clone()
     }
 
     /// 获取缓存内容
     pub async fn get_cache_contents(&self) -> Vec<(String, CacheEntry)> {
-        let cache = self.cache.read().await;
+        let cache: _ = self.cache.read().await;
         cache.iter().map(|(name, entry)| (name.clone(), entry.clone())).collect()
     }
 
@@ -280,8 +282,8 @@ impl WasmCacheManager {
         let mut stats = self.statistics.write().await;
         stats.hits += 1;
 
-        let access_time = start_time.elapsed().as_secs_f64() * 1000.0;
-        let total_hits = stats.hits as f64;
+        let access_time: _ = start_time.elapsed().as_secs_f64() * 1000.0;
+        let total_hits: _ = stats.hits as f64;
         stats.avg_access_time_ms = (stats.avg_access_time_ms * (total_hits - 1.0) + access_time) / total_hits;
 
         if stats.hits + stats.misses > 0 {
@@ -338,7 +340,7 @@ impl WasmCacheManager {
             }
             CacheStrategy::Adaptive => {
                 // 自适应策略：根据访问模式调整
-                let _patterns = self.access_patterns.read().await;
+                let _patterns: _ = self.access_patterns.read().await;
                 // TODO: 实现自适应逐出策略
             }
         }
@@ -349,7 +351,7 @@ impl WasmCacheManager {
     /// 更新统计信息
     async fn update_statistics(&self) {
         let mut stats = self.statistics.write().await;
-        let cache = self.cache.read().await;
+        let cache: _ = self.cache.read().await;
 
         stats.total_entries = cache.len();
         stats.total_size_bytes = cache.iter().map(|(_, e)| e.size_bytes).sum();
@@ -365,7 +367,7 @@ impl WasmCacheManager {
 
 impl Default for WasmCacheManager {
     fn default() -> Self {
-        let config = CacheConfig {
+        let config: _ = CacheConfig {
             max_size: 1000,
             max_memory_mb: 512,
             default_ttl: Some(Duration::from_secs(3600)), // 1小时

@@ -49,7 +49,7 @@ impl WatchExpression {
                 self.error_message.as_ref().unwrap_or(&"Unknown error".to_string())
             )
         } else if let Some(ref value) = self.last_value {
-            let type_str = self.value_type.as_ref()
+            let type_str: _ = self.value_type.as_ref()
                 .map(|t| format!(" ({})", t))
                 .unwrap_or_default();
             format!("{}: {}{}", self.expression, value, type_str)
@@ -70,7 +70,7 @@ impl WatchExpression {
 /// Manages a collection of watch expressions
 #[derive(Debug)]
 pub struct WatchManager {
-    watches: HashMap<String, WatchExpression>,
+    watches: HashMap<String, WatchExpression, std::collections::HashMap<String, WatchExpression, String, WatchExpression>>,
     /// Order in which watches were added (for consistent display)
     order: Vec<String>,
 }
@@ -86,8 +86,8 @@ impl WatchManager {
 
     /// Add a new watch expression
     pub fn add(&mut self, expression: &str) -> Result<WatchExpression, String> {
-        let watch = WatchExpression::new(expression);
-        let id = watch.id.clone();
+        let watch: _ = WatchExpression::new(expression);
+        let id: _ = watch.id.clone();
 
         self.order.push(id.clone());
         self.watches.insert(id, watch.clone());
@@ -183,10 +183,12 @@ impl Default for WatchManager {
 #[cfg(test)]
 mod unit_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_watch_expression_creation() {
-        let watch = WatchExpression::new("x + 1");
+        let watch: _ = WatchExpression::new("x + 1");
         assert_eq!(watch.expression, "x + 1");
         assert!(!watch.id.is_empty());
         assert!(watch.last_value.is_none());
@@ -197,11 +199,11 @@ mod unit_tests {
         let mut manager = WatchManager::new();
 
         // Add
-        let watch = manager.add("counter").unwrap();
+        let watch: _ = manager.add("counter").unwrap();
         assert_eq!(manager.count(), 1);
 
         // Get
-        let retrieved = manager.get(&watch.id).unwrap();
+        let retrieved: _ = manager.get(&watch.id).unwrap();
         assert_eq!(retrieved.expression, "counter");
 
         // Remove
@@ -217,7 +219,7 @@ mod unit_tests {
         manager.add("second").unwrap();
         manager.add("third").unwrap();
 
-        let list = manager.list();
+        let list: _ = manager.list();
         assert_eq!(list[0].expression, "first");
         assert_eq!(list[1].expression, "second");
         assert_eq!(list[2].expression, "third");

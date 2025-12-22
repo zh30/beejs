@@ -87,7 +87,7 @@ pub struct MobileRuntime {
 impl iOSRuntime {
     /// Create a new iOS runtime
     pub fn new(mobile_api: Arc<MobileAPI>) -> Result<Self> {
-        let isolate_pool = Arc::new(IsolatePool::new(10));
+        let isolate_pool: _ = Arc::new(std::sync::Mutex::new(IsolatePool::new(10)));
 
         Ok(iOSRuntime {
             isolate_pool,
@@ -116,7 +116,7 @@ impl iOSRuntime {
 impl AndroidRuntime {
     /// Create a new Android runtime
     pub fn new(jni_env: Arc<JNIEnv>) -> Result<Self> {
-        let isolate_pool = Arc::new(IsolatePool::new(10));
+        let isolate_pool: _ = Arc::new(std::sync::Mutex::new(IsolatePool::new(10)));
 
         Ok(AndroidRuntime {
             jni_env,
@@ -145,7 +145,7 @@ impl IsolatePool {
     /// Create a new isolate pool
     pub fn new(max_isolates: usize) -> Self {
         IsolatePool {
-            isolates: Arc::new(RwLock::new(Vec::new())),
+            isolates: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
             max_isolates,
         }
     }
@@ -164,7 +164,7 @@ impl IsolatePool {
 
         // Create new isolate if under limit
         if isolates.len() < self.max_isolates {
-            let id = format!("isolate_{}", uuid::Uuid::new_v4());
+            let id: _ = format!("isolate_{}", uuid::Uuid::new_v4());
             isolates.push(MobileIsolate {
                 id: id.clone(),
                 platform: platform.clone(),
@@ -278,34 +278,36 @@ impl MobileRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_ios_runtime() {
-        let capabilities = vec![
+        let capabilities: _ = vec![
             MobileCapability::Camera,
             MobileCapability::GPS,
             MobileCapability::PushNotifications,
         ];
 
-        let mobile_api = Arc::new(MobileAPI::new(MobilePlatform::iOS, capabilities));
-        let runtime = iOSRuntime::new(mobile_api).unwrap();
+        let mobile_api: _ = Arc::new(std::sync::Mutex::new(MobileAPI::new(MobilePlatform::iOS, capabilities)));
+        let runtime: _ = iOSRuntime::new(mobile_api).unwrap();
 
-        let result = runtime.execute_ios("console.log('Hello iOS')").await;
+        let result: _ = runtime.execute_ios("console.log('Hello iOS')").await;
         assert!(result.is_ok());
 
-        let result = runtime.execute_background("console.log('Background')").await;
+        let result: _ = runtime.execute_background("console.log('Background')").await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_android_runtime() {
-        let jni_env = Arc::new(JNIEnv { _env: std::ptr::null_mut() });
-        let runtime = AndroidRuntime::new(jni_env).unwrap();
+        let jni_env: _ = Arc::new(std::sync::Mutex::new(JNIEnv { _env: std::ptr::null_mut()) });
+        let runtime: _ = AndroidRuntime::new(jni_env).unwrap();
 
-        let result = runtime.execute_android("console.log('Hello Android')").await;
+        let result: _ = runtime.execute_android("console.log('Hello Android')").await;
         assert!(result.is_ok());
 
-        let result = runtime.execute_background("console.log('Background')").await;
+        let result: _ = runtime.execute_background("console.log('Background')").await;
         assert!(result.is_ok());
     }
 
@@ -314,44 +316,44 @@ mod tests {
         let mut runtime = MobileRuntime::new();
 
         // Test iOS
-        let capabilities = vec![MobileCapability::Camera];
-        let mobile_api = Arc::new(MobileAPI::new(MobilePlatform::iOS, capabilities));
+        let capabilities: _ = vec![MobileCapability::Camera];
+        let mobile_api: _ = Arc::new(std::sync::Mutex::new(MobileAPI::new(MobilePlatform::iOS, capabilities)));
         runtime.init_ios(mobile_api).unwrap();
 
-        let result = runtime.execute_mobile("ios", "console.log('iOS')").await;
+        let result: _ = runtime.execute_mobile("ios", "console.log('iOS')").await;
         assert!(result.is_ok());
 
         // Test Android
-        let jni_env = Arc::new(JNIEnv { _env: std::ptr::null_mut() });
+        let jni_env: _ = Arc::new(std::sync::Mutex::new(JNIEnv { _env: std::ptr::null_mut()) });
         runtime.init_android(jni_env).unwrap();
 
-        let result = runtime.execute_mobile("android", "console.log('Android')").await;
+        let result: _ = runtime.execute_mobile("android", "console.log('Android')").await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_isolate_pool() {
-        let pool = IsolatePool::new(5);
+        let pool: _ = IsolatePool::new(5);
 
-        let isolate_id = pool.get_isolate(MobilePlatform::iOS).await;
+        let isolate_id: _ = pool.get_isolate(MobilePlatform::iOS).await;
         assert!(isolate_id.is_ok());
 
-        let id = isolate_id.unwrap();
+        let id: _ = isolate_id.unwrap();
         pool.return_isolate(&id).await.unwrap();
 
         // Test reusing the same isolate
-        let isolate_id = pool.get_isolate(MobilePlatform::iOS).await;
+        let isolate_id: _ = pool.get_isolate(MobilePlatform::iOS).await;
         assert!(isolate_id.is_ok());
     }
 
     #[tokio::test]
     async fn test_mobile_api_capabilities() {
-        let capabilities = vec![
+        let capabilities: _ = vec![
             MobileCapability::Camera,
             MobileCapability::GPS,
         ];
 
-        let api = MobileAPI::new(MobilePlatform::iOS, capabilities);
+        let api: _ = MobileAPI::new(MobilePlatform::iOS, capabilities);
 
         assert!(api.has_capability(&MobileCapability::Camera));
         assert!(api.has_capability(&MobileCapability::GPS));

@@ -31,7 +31,7 @@ pub struct L2Stats {
 
 impl L2Stats {
     pub fn hit_rate(&self) -> f64 {
-        let total = self.hits + self.misses;
+        let total: _ = self.hits + self.misses;
         if total > 0 {
             self.hits as f64 / total as f64
         } else {
@@ -47,11 +47,11 @@ impl L2Stats {
 /// L2 Smart Cache with LRU/LFU hybrid strategy
 pub struct L2SmartCache {
     /// Main storage: key -> entry
-    entries: HashMap<CacheKey, L2Entry>,
+    entries: HashMap<CacheKey, L2Entry, std::collections::HashMap<CacheKey, L2Entry, CacheKey, L2Entry>>,
     /// LRU tracking: access order
     lru_queue: VecDeque<CacheKey>,
     /// LFU tracking: frequency-based ordering
-    lfu_tree: BTreeMap<(u32, CacheKey), CacheKey>,
+    lfu_tree: BTreeMap<(u32, CacheKey), CacheKey, (u32, CacheKey), CacheKey>,
     /// Statistics
     stats: L2Stats,
     /// Configuration
@@ -79,7 +79,7 @@ impl L2SmartCache {
 
     /// Put data into L2 cache
     pub fn put(&mut self, key: CacheKey, data: &[u8]) {
-        let data_size = data.len();
+        let data_size: _ = data.len();
 
         // Check if we're at capacity
         if self.entries.len() >= self.max_entries || self.stats.memory_usage_bytes + data_size > self.max_size_bytes {
@@ -87,7 +87,7 @@ impl L2SmartCache {
         }
 
         // Create entry
-        let entry = L2Entry {
+        let entry: _ = L2Entry {
             data: data.to_vec(),
             access_count: 0,
             last_accessed: Instant::now(),
@@ -113,7 +113,7 @@ impl L2SmartCache {
     /// Get data from L2 cache
     pub fn get(&mut self, key: CacheKey) -> Option<Vec<u8>> {
         // First get and update entry, then get the data
-        let data = if let Some(entry) = self.entries.get_mut(&key) {
+        let data: _ = if let Some(entry) = self.entries.get_mut(&key) {
             // Update access statistics
             entry.access_count += 1;
             entry.last_accessed = Instant::now();
@@ -156,7 +156,7 @@ impl L2SmartCache {
     /// Perform garbage collection
     pub fn gc(&mut self) {
         // Simple GC: remove entries older than 1 hour with low access count
-        let cutoff = Instant::now() - Duration::from_secs(3600);
+        let cutoff: _ = Instant::now() - Duration::from_secs(3600);
 
         let keys_to_remove: Vec<CacheKey> = self.entries
             .iter()
@@ -195,11 +195,11 @@ impl L2SmartCache {
     /// Evict entries to make space
     fn evict_entries(&mut self, required_bytes: usize) {
         // Calculate how much space we need to free
-        let target_free = required_bytes * 2;
+        let target_free: _ = required_bytes * 2;
         let mut freed_bytes = 0;
 
         // Determine eviction strategy based on access patterns
-        let eviction_strategy = self.determine_eviction_strategy();
+        let eviction_strategy: _ = self.determine_eviction_strategy();
 
         match eviction_strategy {
             EvictionStrategy::LRU => {
@@ -232,13 +232,13 @@ impl L2SmartCache {
                 // Hybrid: combine LRU and LFU
                 while freed_bytes < target_free && !self.entries.is_empty() {
                     // Evict from both strategies and choose better one
-                    let lru_key = self.lru_queue.front().cloned();
-                    let lfu_key = self.lfu_tree.iter().next().map(|(_, &k)| k);
+                    let lru_key: _ = self.lru_queue.front().cloned();
+                    let lfu_key: _ = self.lfu_tree.iter().next().map(|(_, &k)| k);
 
-                    let lru_score = lru_key.map(|k| self.calculate_lru_score(k)).unwrap_or(0.0);
-                    let lfu_score = lfu_key.map(|k| self.calculate_lfu_score(k)).unwrap_or(0.0);
+                    let lru_score: _ = lru_key.map(|k| self.calculate_lru_score(k)).unwrap_or(0.0);
+                    let lfu_score: _ = lfu_key.map(|k| self.calculate_lfu_score(k)).unwrap_or(0.0);
 
-                    let key_to_evict = if lru_score < lfu_score {
+                    let key_to_evict: _ = if lru_score < lfu_score {
                         lru_key
                     } else {
                         lfu_key
@@ -266,15 +266,15 @@ impl L2SmartCache {
     /// Determine best eviction strategy
     fn determine_eviction_strategy(&self) -> EvictionStrategy {
         // Analyze access patterns
-        let avg_access_count = if !self.entries.is_empty() {
+        let avg_access_count: _ = if !self.entries.is_empty() {
             self.entries.values().map(|e| e.access_count).sum::<u32>() as f64 / self.entries.len() as f64
         } else {
             0.0
         };
 
-        let recent_access_ratio = if !self.lru_queue.is_empty() {
+        let recent_access_ratio: _ = if !self.lru_queue.is_empty() {
             let recent_keys: std::collections::HashSet<_> = self.lru_queue.iter().take(self.lru_queue.len() / 2).collect();
-            let recent_count = self.entries.values().filter(|e| recent_keys.contains(&self.find_key_by_entry(e))).count();
+            let recent_count: _ = self.entries.values().filter(|e| recent_keys.contains(&self.find_key_by_entry(e))).count();
             recent_count as f64 / self.entries.len() as f64
         } else {
             0.0
@@ -301,7 +301,7 @@ impl L2SmartCache {
     fn calculate_lru_score(&self, key: CacheKey) -> f64 {
         // Lower score = more likely to be evicted
         if let Some(entry) = self.entries.get(&key) {
-            let age = entry.last_accessed.elapsed().as_secs();
+            let age: _ = entry.last_accessed.elapsed().as_secs();
             1.0 / (age as f64 + 1.0)
         } else {
             0.0
@@ -312,8 +312,8 @@ impl L2SmartCache {
     fn calculate_lfu_score(&self, key: CacheKey) -> f64 {
         // Lower score = more likely to be evicted
         if let Some(entry) = self.entries.get(&key) {
-            let access_count = entry.access_count as f64;
-            let time_factor = entry.last_accessed.elapsed().as_secs() as f64 / 3600.0; // Hours
+            let access_count: _ = entry.access_count as f64;
+            let time_factor: _ = entry.last_accessed.elapsed().as_secs() as f64 / 3600.0; // Hours
             access_count / (time_factor + 1.0)
         } else {
             0.0
@@ -347,13 +347,15 @@ impl Default for L2SmartCache {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_l2_basic_operations() {
         let mut cache = L2SmartCache::new();
 
         cache.put(123, b"console.log('test');");
-        let result = cache.get(123);
+        let result: _ = cache.get(123);
 
         assert!(result.is_some());
         assert_eq!(result.unwrap(), b"console.log('test');");
@@ -367,7 +369,7 @@ mod tests {
         cache.get(1);
         cache.get(1);
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.hits, 2);
     }
 
@@ -391,7 +393,7 @@ mod tests {
             cache.put(i, b"data");
         }
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert!(stats.evictions > 0);
     }
 }

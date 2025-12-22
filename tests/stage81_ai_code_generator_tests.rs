@@ -7,6 +7,8 @@ mod tests {
     use std::path::Path;
     use std::sync::Arc;
     use tokio::runtime::Runtime;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     // 模拟 AI 代码生成器的结构
     pub struct MockCodeGenerator {
@@ -80,7 +82,7 @@ mod tests {
             }
 
             // 基于提示词生成代码
-            let code = match context.language.as_str() {
+            let code: _ = match context.language.as_str() {
                 "javascript" => self.generate_javascript(prompt),
                 "typescript" => self.generate_typescript(prompt),
                 _ => format!("// Generated code for: {}", prompt),
@@ -101,7 +103,7 @@ mod tests {
         ) -> Result<CodeCompletion, String> {
             tokio::time::sleep(std::time::Duration::from_millis(self.model_response_delay_ms / 2)).await;
 
-            let completions = vec![
+            let completions: _ = vec![
                 CompletionItem {
                     text: self.suggest_completion(partial, position),
                     confidence: 0.9,
@@ -127,7 +129,7 @@ mod tests {
         ) -> Result<Vec<String>, String> {
             tokio::time::sleep(std::time::Duration::from_millis(self.model_response_delay_ms)).await;
 
-            let test_files = match test_type {
+            let test_files: _ = match test_type {
                 TestType::Unit => vec![
                     format!("// Unit tests for {}", source_file.display()),
                     "describe('function', () => { test('should work', () => {}); });".to_string(),
@@ -186,11 +188,11 @@ mod tests {
 
     #[test]
     fn test_context_analysis() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let generator = MockCodeGenerator::new(10, 0.95);
-            let context = CodeContext {
+            let generator: _ = MockCodeGenerator::new(10, 0.95);
+            let context: _ = CodeContext {
                 language: "javascript".to_string(),
                 file_path: Some("src/index.js".to_string()),
                 surrounding_code: Some("function add(a, b) { return a + b; }".to_string()),
@@ -213,19 +215,19 @@ mod tests {
 
     #[test]
     fn test_code_generation() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let generator = MockCodeGenerator::new(50, 0.95);
-            let context = CodeContext {
+            let generator: _ = MockCodeGenerator::new(50, 0.95);
+            let context: _ = CodeContext {
                 language: "javascript".to_string(),
                 file_path: None,
                 surrounding_code: None,
                 project_info: None,
             };
 
-            let prompt = "create a function to calculate fibonacci";
-            let result = generator.generate_code(prompt, &context).await.unwrap();
+            let prompt: _ = "create a function to calculate fibonacci";
+            let result: _ = generator.generate_code(prompt, &context).await.unwrap();
 
             // 验证生成结果
             assert!(!result.code.is_empty());
@@ -241,19 +243,19 @@ mod tests {
 
     #[test]
     fn test_typescript_code_generation() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let generator = MockCodeGenerator::new(50, 0.95);
-            let context = CodeContext {
+            let generator: _ = MockCodeGenerator::new(50, 0.95);
+            let context: _ = CodeContext {
                 language: "typescript".to_string(),
                 file_path: None,
                 surrounding_code: None,
                 project_info: None,
             };
 
-            let prompt = "create an interface for User";
-            let result = generator.generate_code(prompt, &context).await.unwrap();
+            let prompt: _ = "create an interface for User";
+            let result: _ = generator.generate_code(prompt, &context).await.unwrap();
 
             // 验证 TypeScript 代码生成
             assert!(!result.code.is_empty());
@@ -267,20 +269,20 @@ mod tests {
 
     #[test]
     fn test_code_completion() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let generator = MockCodeGenerator::new(30, 0.95);
-            let partial_code = "fun";
-            let position = partial_code.len();
+            let generator: _ = MockCodeGenerator::new(30, 0.95);
+            let partial_code: _ = "fun";
+            let position: _ = partial_code.len();
 
-            let result = generator.complete_code(partial_code, position).await.unwrap();
+            let result: _ = generator.complete_code(partial_code, position).await.unwrap();
 
             // 验证代码补全
             assert!(!result.completions.is_empty());
             assert_eq!(result.completions.len(), 2);
 
-            let first_completion = &result.completions[0];
+            let first_completion: _ = &result.completions[0];
             assert!(first_completion.text.contains("unction"));
             assert!(first_completion.confidence > 0.8);
             assert!(first_completion.description.is_some());
@@ -292,25 +294,25 @@ mod tests {
 
     #[test]
     fn test_test_generation() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let generator = MockCodeGenerator::new(100, 0.95);
-            let source_file = Path::new("src/utils.js");
+            let generator: _ = MockCodeGenerator::new(100, 0.95);
+            let source_file: _ = Path::new("src/utils.js");
 
             // 测试单元测试生成
-            let unit_tests = generator.generate_tests(source_file, TestType::Unit).await.unwrap();
+            let unit_tests: _ = generator.generate_tests(source_file, TestType::Unit).await.unwrap();
             assert!(!unit_tests.is_empty());
             assert!(unit_tests[0].contains("Unit tests"));
             assert!(unit_tests[1].contains("describe"));
 
             // 测试集成测试生成
-            let integration_tests = generator.generate_tests(source_file, TestType::Integration).await.unwrap();
+            let integration_tests: _ = generator.generate_tests(source_file, TestType::Integration).await.unwrap();
             assert!(!integration_tests.is_empty());
             assert!(integration_tests[0].contains("Integration tests"));
 
             // 测试 E2E 测试生成
-            let e2e_tests = generator.generate_tests(source_file, TestType::E2E).await.unwrap();
+            let e2e_tests: _ = generator.generate_tests(source_file, TestType::E2E).await.unwrap();
             assert!(!e2e_tests.is_empty());
             assert!(e2e_tests[0].contains("E2E tests"));
 
@@ -321,11 +323,11 @@ mod tests {
 
     #[test]
     fn test_code_generation_with_context() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let generator = MockCodeGenerator::new(50, 0.95);
-            let context = CodeContext {
+            let generator: _ = MockCodeGenerator::new(50, 0.95);
+            let context: _ = CodeContext {
                 language: "javascript".to_string(),
                 file_path: Some("src/api/users.js".to_string()),
                 surrounding_code: Some("const db = require('./db');".to_string()),
@@ -336,8 +338,8 @@ mod tests {
                 }),
             };
 
-            let prompt = "create a user model";
-            let result = generator.generate_code(prompt, &context).await.unwrap();
+            let prompt: _ = "create a user model";
+            let result: _ = generator.generate_code(prompt, &context).await.unwrap();
 
             // 验证基于上下文的代码生成
             assert!(!result.code.is_empty());
@@ -351,22 +353,22 @@ mod tests {
 
     #[test]
     fn test_ai_model_performance() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let start = SystemTime::now();
+            let start: _ = SystemTime::now();
 
-            let generator = MockCodeGenerator::new(100, 0.95);
-            let context = CodeContext {
+            let generator: _ = MockCodeGenerator::new(100, 0.95);
+            let context: _ = CodeContext {
                 language: "javascript".to_string(),
                 file_path: None,
                 surrounding_code: None,
                 project_info: None,
             };
 
-            let result = generator.generate_code("test prompt", &context).await.unwrap();
+            let result: _ = generator.generate_code("test prompt", &context).await.unwrap();
 
-            let elapsed = start.elapsed().unwrap();
+            let elapsed: _ = start.elapsed().unwrap();
 
             // 验证 AI 模型响应时间 < 200ms
             assert!(elapsed.as_millis() < 200, "AI 模型响应时间应 < 200ms，当前: {}ms", elapsed.as_millis());
@@ -382,30 +384,30 @@ mod tests {
 
     #[test]
     fn test_generation_accuracy_threshold() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
             // 测试低准确率情况
-            let low_accuracy_generator = MockCodeGenerator::new(50, 0.3);
-            let context = CodeContext {
+            let low_accuracy_generator: _ = MockCodeGenerator::new(50, 0.3);
+            let context: _ = CodeContext {
                 language: "javascript".to_string(),
                 file_path: None,
                 surrounding_code: None,
                 project_info: None,
             };
 
-            let result = low_accuracy_generator.generate_code("test", &context).await;
+            let result: _ = low_accuracy_generator.generate_code("test", &context).await;
 
             // 验证低准确率会返回错误
             assert!(result.is_err());
 
             // 测试高准确率情况
-            let high_accuracy_generator = MockCodeGenerator::new(50, 0.95);
-            let result = high_accuracy_generator.generate_code("test", &context).await;
+            let high_accuracy_generator: _ = MockCodeGenerator::new(50, 0.95);
+            let result: _ = high_accuracy_generator.generate_code("test", &context).await;
 
             // 验证高准确率成功
             assert!(result.is_ok());
-            let generated = result.unwrap();
+            let generated: _ = result.unwrap();
             assert!(generated.confidence > 0.9);
 
             println!("✅ 生成准确率阈值测试通过");
@@ -414,14 +416,14 @@ mod tests {
 
     #[test]
     fn test_multiple_completions_ranking() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let generator = MockCodeGenerator::new(30, 0.95);
-            let partial_code = "fun";
-            let position = partial_code.len();
+            let generator: _ = MockCodeGenerator::new(30, 0.95);
+            let partial_code: _ = "fun";
+            let position: _ = partial_code.len();
 
-            let result = generator.complete_code(partial_code, position).await.unwrap();
+            let result: _ = generator.complete_code(partial_code, position).await.unwrap();
 
             // 验证多个补全项
             assert_eq!(result.completions.len(), 2);
@@ -441,11 +443,11 @@ mod tests {
 
     #[test]
     fn test_error_handling() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let generator = MockCodeGenerator::new(50, 0.95);
-            let context = CodeContext {
+            let generator: _ = MockCodeGenerator::new(50, 0.95);
+            let context: _ = CodeContext {
                 language: "javascript".to_string(),
                 file_path: None,
                 surrounding_code: None,
@@ -453,11 +455,11 @@ mod tests {
             };
 
             // 测试空提示词
-            let result = generator.generate_code("", &context).await.unwrap();
+            let result: _ = generator.generate_code("", &context).await.unwrap();
             assert!(!result.code.is_empty()); // 应该仍然生成代码
 
             // 测试空部分代码
-            let result = generator.complete_code("", 0).await.unwrap();
+            let result: _ = generator.complete_code("", 0).await.unwrap();
             assert!(!result.completions.is_empty());
 
             println!("✅ 错误处理测试通过");

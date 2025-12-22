@@ -35,9 +35,9 @@ impl DebugSession {
         };
 
         // Create debugger engine with configuration
-        let config = DebugConfig::default();
-        let debugger = Arc::new(Mutex::new(DebuggerEngine::new(config)));
-        let event_listener = Arc::new(SimpleEventListener::new());
+        let config: _ = DebugConfig::default();
+        let debugger: _ = Arc::new(std::sync::Mutex::new(Mutex::new(DebuggerEngine::new(config))));
+        let event_listener: _ = Arc::new(std::sync::Mutex::new(SimpleEventListener::new()));
 
         Ok(Self {
             runtime,
@@ -85,7 +85,7 @@ impl DebugSession {
             println!("\n📄 Loading script: {}", script_path.display());
 
             // Read script content
-            let _code = std::fs::read_to_string(script_path)
+            let _code: _ = std::fs::read_to_string(script_path)
                 .context("Failed to read script file")?;
 
             // Set initial breakpoint if specified
@@ -113,7 +113,7 @@ impl DebugSession {
         // Create debug console
         let mut console = DebugConsole::new(
             Arc::clone(&self.debugger),
-            Arc::new(Mutex::new(self.runtime.clone())),
+            Arc::new(std::sync::Mutex::new(Mutex::new(self.runtime.clone()))),
         );
 
         // Run the console
@@ -142,11 +142,13 @@ impl DebugSession {
 mod tests {
     use super::*;
     use crate::cli::commands::SubCommand;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_debug_session_creation() {
-        let runtime = RuntimeLite::new(false).unwrap();
-        let cmd = SubCommand::Debug {
+        let runtime: _ = RuntimeLite::new(false).unwrap();
+        let cmd: _ = SubCommand::Debug {
             file: Some(PathBuf::from("test.js")),
             break_at: None,
             port: 9229,
@@ -154,7 +156,7 @@ mod tests {
             pid: None,
         };
 
-        let session = DebugSession::new(runtime, cmd).unwrap();
+        let session: _ = DebugSession::new(runtime, cmd).unwrap();
         assert_eq!(session.port(), 9229);
         assert!(!session.web_ui_enabled());
         assert_eq!(session.script_path().unwrap().to_str(), Some("test.js"));
@@ -162,8 +164,8 @@ mod tests {
 
     #[test]
     fn test_debug_session_attach() {
-        let runtime = RuntimeLite::new(false).unwrap();
-        let cmd = SubCommand::Debug {
+        let runtime: _ = RuntimeLite::new(false).unwrap();
+        let cmd: _ = SubCommand::Debug {
             file: None,
             break_at: None,
             port: 9229,
@@ -171,15 +173,15 @@ mod tests {
             pid: Some(1234),
         };
 
-        let session = DebugSession::new(runtime, cmd).unwrap();
+        let session: _ = DebugSession::new(runtime, cmd).unwrap();
         assert_eq!(session.port(), 9229);
         assert!(session.script_path().is_none());
     }
 
     #[test]
     fn test_debug_session_inspect() {
-        let runtime = RuntimeLite::new(false).unwrap();
-        let cmd = SubCommand::Debug {
+        let runtime: _ = RuntimeLite::new(false).unwrap();
+        let cmd: _ = SubCommand::Debug {
             file: None,
             break_at: None,
             port: 8080,
@@ -187,7 +189,7 @@ mod tests {
             pid: None,
         };
 
-        let session = DebugSession::new(runtime, cmd).unwrap();
+        let session: _ = DebugSession::new(runtime, cmd).unwrap();
         assert_eq!(session.port(), 8080);
         assert!(session.web_ui_enabled());
         assert!(session.script_path().is_none());

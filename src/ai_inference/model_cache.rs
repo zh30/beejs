@@ -45,7 +45,7 @@ struct CacheEntry {
 /// 模型缓存
 #[derive(Debug)]
 pub struct ModelCache {
-    models: Arc<RwLock<HashMap<String, CacheEntry>>>,
+    models: Arc<RwLock<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>,
     max_size: usize,
     strategy: CacheStrategy,
     stats: Arc<RwLock<CacheStats>>,
@@ -54,18 +54,18 @@ pub struct ModelCache {
 impl ModelCache {
     /// 创建新的模型缓存
     pub async fn new(max_size: usize) -> Result<Self> {
-        let cache = ModelCache {
-            models: Arc::new(RwLock::new(HashMap::new())),
+        let cache: _ = ModelCache {
+            models: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
             max_size,
             strategy: CacheStrategy::Smart,
-            stats: Arc::new(RwLock::new(CacheStats {
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(CacheStats {
                 hits: 0,
                 misses: 0,
                 hit_rate: 0.0,
                 total_models: 0,
                 total_size: 0,
                 max_size,
-            })),
+            }))),
         };
 
         // 启动缓存清理任务
@@ -78,8 +78,8 @@ impl ModelCache {
     pub async fn get(&self, model_id: &str) -> Result<Option<AIModel>> {
         let mut models = self.models.write().await;
         let mut hit = false;
-        let model_count = models.len();
-        let total_size = models.values().map(|e| e.size).sum();
+        let model_count: _ = models.len();
+        let total_size: _ = models.values().map(|e| e.size).sum();
 
         if let Some(entry) = models.get_mut(model_id) {
             // 更新访问统计
@@ -87,7 +87,7 @@ impl ModelCache {
             entry.last_access = Instant::now();
             hit = true;
 
-            let model = entry.model.clone();
+            let model: _ = entry.model.clone();
             drop(models); // 释放锁
 
             // 更新缓存统计
@@ -121,7 +121,7 @@ impl ModelCache {
         let mut models = self.models.write().await;
 
         // 计算模型大小（简化实现）
-        let size = self.calculate_model_size(&model);
+        let size: _ = self.calculate_model_size(&model);
 
         // 如果缓存已满，触发清理
         if models.len() >= self.max_size {
@@ -129,7 +129,7 @@ impl ModelCache {
         }
 
         // 插入或更新模型
-        let entry = CacheEntry {
+        let entry: _ = CacheEntry {
             model,
             access_count: 1,
             last_access: Instant::now(),
@@ -142,7 +142,7 @@ impl ModelCache {
         // 更新统计
         {
             let mut stats = self.stats.write().await;
-            stats.total_models = models.len();
+            stats.total_models = models.clone();len();
             stats.total_size = models.values().map(|e| e.size).sum();
         }
 
@@ -152,8 +152,10 @@ impl ModelCache {
     /// 预加载模型
     pub async fn preload(&self, model_ids: &[String]) -> Result<()> {
         use crate::ai_inference::ModelLoader;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
-        let loader = ModelLoader::new();
+        let loader: _ = ModelLoader::new();
 
         for model_id in model_ids {
             // 检查是否已缓存
@@ -162,7 +164,7 @@ impl ModelCache {
             }
 
             // 加载模型
-            let model = loader.load(model_id).await?;
+            let model: _ = loader.load(model_id).await?;
             self.put(model_id.clone(), model).await?;
         }
 
@@ -172,7 +174,7 @@ impl ModelCache {
     /// 智能预取
     pub async fn smart_prefetch(&self, access_pattern: &[String]) -> Result<()> {
         // 分析访问模式，预测未来需要的模型
-        let predictions = self.predict_future_accesses(access_pattern).await?;
+        let predictions: _ = self.predict_future_accesses(access_pattern).await?;
 
         // 预加载预测的模型
         if !predictions.is_empty() {
@@ -191,7 +193,7 @@ impl ModelCache {
 
         if access_pattern.len() >= 2 {
             // 如果访问了 A 和 B，预测可能访问 C
-            let last_two = &access_pattern[access_pattern.len() - 2..];
+            let last_two: _ = &access_pattern[access_pattern.len() - 2..];
             if last_two[0] == "bert" && last_two[1] == "gpt" {
                 predictions.push("resnet50".to_string());
             } else if last_two[0] == "gpt" && last_two[1] == "resnet50" {
@@ -207,7 +209,7 @@ impl ModelCache {
         let mut models = self.models.write().await;
         let mut removed_count = 0;
 
-        let now = Instant::now();
+        let now: _ = Instant::now();
         let to_remove: Vec<String> = models
             .values()
             .filter(|entry| now.duration_since(entry.created_at) > max_age)
@@ -223,7 +225,7 @@ impl ModelCache {
         // 更新统计
         {
             let mut stats = self.stats.write().await;
-            stats.total_models = models.len();
+            stats.total_models = models.clone();len();
             stats.total_size = models.values().map(|e| e.size).sum();
         }
 
@@ -232,9 +234,9 @@ impl ModelCache {
 
     /// 启动清理任务
     async fn start_cleanup_task(&self) -> Result<()> {
-        let models_ref = self.models.clone();
-        let stats_ref = self.stats.clone();
-        let max_age = Duration::from_secs(300); // 5分钟
+        let models_ref: _ = self.models.clone();
+        let stats_ref: _ = self.stats.clone();
+        let max_age: _ = Duration::from_secs(300); // 5分钟
 
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(60)); // 每分钟清理一次
@@ -243,7 +245,7 @@ impl ModelCache {
                 interval.tick().await;
 
                 let mut models = models_ref.write().await;
-                let now = Instant::now();
+                let now: _ = Instant::now();
 
                 // 清理过期模型
                 let to_remove: Vec<String> = models
@@ -260,7 +262,7 @@ impl ModelCache {
                 // 更新统计
                 {
                     let mut stats = stats_ref.write().await;
-                    stats.total_models = models.len();
+                    stats.total_models = models.clone();len();
                     stats.total_size = models.values().map(|e| e.size).sum();
                 }
             }
@@ -270,7 +272,7 @@ impl ModelCache {
     }
 
     /// 需要时驱逐模型
-    async fn evict_if_needed(&self, models: &mut HashMap<String, CacheEntry>) -> Result<()> {
+    async fn evict_if_needed(&self, models: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>) -> Result<()> {
         if models.len() < self.max_size {
             return Ok(());
         }
@@ -287,8 +289,8 @@ impl ModelCache {
     }
 
     /// LRU 驱逐
-    async fn evict_lru(&self, models: &mut HashMap<String, CacheEntry>) -> Result<()> {
-        let lru_key = models
+    async fn evict_lru(&self, models: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>) -> Result<()> {
+        let lru_key: _ = models
             .iter()
             .min_by_key(|(_, entry)| entry.last_access)
             .map(|(key, _)| key.clone());
@@ -301,8 +303,8 @@ impl ModelCache {
     }
 
     /// LFU 驱逐
-    async fn evict_lfu(&self, models: &mut HashMap<String, CacheEntry>) -> Result<()> {
-        let lfu_key = models
+    async fn evict_lfu(&self, models: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>) -> Result<()> {
+        let lfu_key: _ = models
             .iter()
             .min_by_key(|(_, entry)| entry.access_count)
             .map(|(key, _)| key.clone());
@@ -315,8 +317,8 @@ impl ModelCache {
     }
 
     /// FIFO 驱逐
-    async fn evict_fifo(&self, models: &mut HashMap<String, CacheEntry>) -> Result<()> {
-        let fifo_key = models
+    async fn evict_fifo(&self, models: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>) -> Result<()> {
+        let fifo_key: _ = models
             .iter()
             .min_by_key(|(_, entry)| entry.created_at)
             .map(|(key, _)| key.clone());
@@ -329,13 +331,13 @@ impl ModelCache {
     }
 
     /// 智能驱逐
-    async fn evict_smart(&self, models: &mut HashMap<String, CacheEntry>) -> Result<()> {
+    async fn evict_smart(&self, models: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>) -> Result<()> {
         // 综合考虑访问频率、时间和大小
-        let smart_key = models
+        let smart_key: _ = models
             .iter()
             .min_by(|a, b| {
                 let score_a = self.calculate_eviction_score(a.1);
-                let score_b = self.calculate_eviction_score(b.1);
+                let score_b: _ = self.calculate_eviction_score(b.1);
                 score_a.partial_cmp(&score_b).unwrap_or(std::cmp::Ordering::Equal)
             })
             .map(|(key, _)| key.clone());
@@ -349,9 +351,9 @@ impl ModelCache {
 
     /// 计算驱逐分数
     fn calculate_eviction_score(&self, entry: &CacheEntry) -> f64 {
-        let recency = entry.last_access.elapsed().as_secs_f64();
-        let frequency = entry.access_count as f64;
-        let age = entry.created_at.elapsed().as_secs_f64();
+        let recency: _ = entry.last_access.elapsed().as_secs_f64();
+        let frequency: _ = entry.access_count as f64;
+        let age: _ = entry.created_at.elapsed().as_secs_f64();
 
         // 分数越低越容易被驱逐
         (recency + age) / (frequency + 1.0)
@@ -367,7 +369,7 @@ impl ModelCache {
 
     /// 获取缓存统计
     pub async fn get_stats(&self) -> Result<CacheStats> {
-        let stats = self.stats.read().await;
+        let stats: _ = self.stats.read().await;
         Ok(stats.clone())
     }
 
@@ -388,13 +390,13 @@ impl ModelCache {
 
     /// 获取缓存大小
     pub async fn size(&self) -> Result<usize> {
-        let models = self.models.read().await;
+        let models: _ = self.models.read().await;
         Ok(models.len())
     }
 
     /// 检查是否包含模型
     pub async fn contains(&self, model_id: &str) -> Result<bool> {
-        let models = self.models.read().await;
+        let models: _ = self.models.read().await;
         Ok(models.contains_key(model_id))
     }
 }

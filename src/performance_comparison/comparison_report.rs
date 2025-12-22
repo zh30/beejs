@@ -10,6 +10,8 @@
 use crate::performance_comparison::ComparisonResult;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 报告格式
 #[derive(Debug, Clone)]
@@ -75,21 +77,21 @@ impl ReportGenerator {
 
         match self.config.format {
             ReportFormat::Html => {
-                let file = self.generate_html_report(result)?;
+                let file: _ = self.generate_html_report(result)?;
                 generated_files.push(file);
             }
             ReportFormat::Markdown => {
-                let file = self.generate_markdown_report(result)?;
+                let file: _ = self.generate_markdown_report(result)?;
                 generated_files.push(file);
             }
             ReportFormat::Json => {
-                let file = self.generate_json_report(result)?;
+                let file: _ = self.generate_json_report(result)?;
                 generated_files.push(file);
             }
             ReportFormat::All => {
-                let html_file = self.generate_html_report(result)?;
-                let md_file = self.generate_markdown_report(result)?;
-                let json_file = self.generate_json_report(result)?;
+                let html_file: _ = self.generate_html_report(result)?;
+                let md_file: _ = self.generate_markdown_report(result)?;
+                let json_file: _ = self.generate_json_report(result)?;
                 generated_files.push(html_file);
                 generated_files.push(md_file);
                 generated_files.push(json_file);
@@ -101,11 +103,11 @@ impl ReportGenerator {
 
     /// 生成 HTML 报告
     fn generate_html_report(&self, result: &ComparisonResult) -> Result<PathBuf, Box<dyn std::error::Error>> {
-        let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
-        let filename = format!("performance_report_{}.html", timestamp);
-        let file_path = self.config.output_dir.join(&filename);
+        let timestamp: _ = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+        let filename: _ = format!("performance_report_{}.html", timestamp);
+        let file_path: _ = self.config.output_dir.join(&filename);
 
-        let html = self.render_html_template(result)?;
+        let html: _ = self.render_html_template(result)?;
         fs::write(&file_path, html)?;
 
         Ok(file_path)
@@ -113,11 +115,11 @@ impl ReportGenerator {
 
     /// 生成 Markdown 报告
     fn generate_markdown_report(&self, result: &ComparisonResult) -> Result<PathBuf, Box<dyn std::error::Error>> {
-        let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
-        let filename = format!("performance_report_{}.md", timestamp);
-        let file_path = self.config.output_dir.join(&filename);
+        let timestamp: _ = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+        let filename: _ = format!("performance_report_{}.md", timestamp);
+        let file_path: _ = self.config.output_dir.join(&filename);
 
-        let markdown = self.render_markdown_template(result)?;
+        let markdown: _ = self.render_markdown_template(result)?;
         fs::write(&file_path, markdown)?;
 
         Ok(file_path)
@@ -125,11 +127,11 @@ impl ReportGenerator {
 
     /// 生成 JSON 报告
     fn generate_json_report(&self, result: &ComparisonResult) -> Result<PathBuf, Box<dyn std::error::Error>> {
-        let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
-        let filename = format!("performance_report_{}.json", timestamp);
-        let file_path = self.config.output_dir.join(&filename);
+        let timestamp: _ = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+        let filename: _ = format!("performance_report_{}.json", timestamp);
+        let file_path: _ = self.config.output_dir.join(&filename);
 
-        let json = serde_json::to_string_pretty(result)?;
+        let json: _ = serde_json::to_string_pretty(result)?;
         fs::write(&file_path, json)?;
 
         Ok(file_path)
@@ -289,31 +291,31 @@ impl ReportGenerator {
 "#);
 
         for test_result in &result.test_results {
-            let beejs_time = test_result
+            let beejs_time: _ = test_result
                 .beejs_result
                 .as_ref()
                 .map(|r| format!("{:.2}ms", r.avg_duration.as_secs_f64() * 1000.0))
                 .unwrap_or_else(|| "N/A".to_string());
 
-            let nodejs_time = test_result
+            let nodejs_time: _ = test_result
                 .nodejs_result
                 .as_ref()
                 .map(|r| format!("{:.2}ms", r.avg_duration.as_secs_f64() * 1000.0))
                 .unwrap_or_else(|| "N/A".to_string());
 
-            let bun_time = test_result
+            let bun_time: _ = test_result
                 .bun_result
                 .as_ref()
                 .map(|r| format!("{:.2}ms", r.avg_duration.as_secs_f64() * 1000.0))
                 .unwrap_or_else(|| "N/A".to_string());
 
-            let speedup_nodejs_class = if test_result.speedup_vs_nodejs > 1.0 {
+            let speedup_nodejs_class: _ = if test_result.speedup_vs_nodejs > 1.0 {
                 "positive"
             } else {
                 "negative"
             };
 
-            let speedup_bun_class = if test_result.speedup_vs_bun > 1.0 {
+            let speedup_bun_class: _ = if test_result.speedup_vs_bun > 1.0 {
                 "positive"
             } else {
                 "negative"
@@ -398,19 +400,19 @@ impl ReportGenerator {
         markdown.push_str("|-----------|--------|------------|--------------|----------|-------------------|----------------|\n");
 
         for test_result in &result.test_results {
-            let beejs_time = test_result
+            let beejs_time: _ = test_result
                 .beejs_result
                 .as_ref()
                 .map(|r| format!("{:.2}ms", r.avg_duration.as_secs_f64() * 1000.0))
                 .unwrap_or_else(|| "N/A".to_string());
 
-            let nodejs_time = test_result
+            let nodejs_time: _ = test_result
                 .nodejs_result
                 .as_ref()
                 .map(|r| format!("{:.2}ms", r.avg_duration.as_secs_f64() * 1000.0))
                 .unwrap_or_else(|| "N/A".to_string());
 
-            let bun_time = test_result
+            let bun_time: _ = test_result
                 .bun_result
                 .as_ref()
                 .map(|r| format!("{:.2}ms", r.avg_duration.as_secs_f64() * 1000.0))

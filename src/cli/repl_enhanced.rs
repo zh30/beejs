@@ -88,7 +88,7 @@ pub struct EnhancedRepl {
 impl EnhancedRepl {
     /// Create a new enhanced REPL
     pub fn new(runtime: Arc<RuntimeLite>) -> anyhow::Result<Self> {
-        let config = EnhancedReplConfig::default();
+        let config: _ = EnhancedReplConfig::default();
         Self::with_config(runtime, config)
     }
 
@@ -99,7 +99,7 @@ impl EnhancedRepl {
 
         // Load history if configured
         if let Some(ref history_file) = config.history_file {
-            let _ = editor.load_history(history_file);
+            let _: _ = editor.load_history(history_file);
         }
 
         // Set up tab completion
@@ -107,8 +107,8 @@ impl EnhancedRepl {
             editor.set_helper(Some(()));
         }
 
-        let completer = ReplCompleter::new();
-        let highlighter = ReplHighlighter::new();
+        let completer: _ = ReplCompleter::new();
+        let highlighter: _ = ReplHighlighter::new();
 
         Ok(Self {
             runtime,
@@ -128,7 +128,7 @@ impl EnhancedRepl {
 
     /// Set V8 runtime context for inspection
     pub fn set_v8_runtime(&mut self, isolate: Arc<v8::Isolate>, context: v8::Global<v8::Context>) {
-        self.isolate = Some(Arc::clone(&isolate));
+        self.isolate = Some(Arc::clone(isolate));
         self.context = Some(context.clone());
         self.completer.set_runtime(isolate, context);
     }
@@ -142,13 +142,13 @@ impl EnhancedRepl {
         println!();
 
         loop {
-            let prompt = if self.in_multiline {
+            let prompt: _ = if self.in_multiline {
                 format!("{}... ", " ".repeat(self.config.prompt.len() - 4))
             } else {
                 self.config.prompt.clone()
             };
 
-            let readline = self.editor.readline(&prompt);
+            let readline: _ = self.editor.readline(&prompt);
 
             match readline {
                 Ok(line) => {
@@ -173,7 +173,7 @@ impl EnhancedRepl {
 
         // Save history
         if let Some(ref history_file) = self.config.history_file {
-            let _ = self.editor.save_history(history_file);
+            let _: _ = self.editor.save_history(history_file);
         }
 
         Ok(())
@@ -181,11 +181,11 @@ impl EnhancedRepl {
 
     /// Handle user input
     fn handle_input(&mut self, input: &str) -> anyhow::Result<()> {
-        let trimmed = input.trim();
+        let trimmed: _ = input.trim();
 
         // Handle special REPL commands
         if trimmed.starts_with('.') {
-            let _ = self.handle_special_command(trimmed)?;
+            let _: _ = self.handle_special_command(trimmed)?;
             return Ok(());
         }
 
@@ -234,32 +234,32 @@ impl EnhancedRepl {
                 Ok(false)
             }
             cmd if cmd.starts_with(".load ") => {
-                let path = &cmd[6..].trim();
+                let path: _ = &cmd[6..].trim();
                 self.load_file(path)?;
                 Ok(false)
             }
             cmd if cmd.starts_with(".save ") => {
-                let path = &cmd[6..].trim();
+                let path: _ = &cmd[6..].trim();
                 self.save_session(path)?;
                 Ok(false)
             }
             cmd if cmd.starts_with(".inspect ") => {
-                let expr = &cmd[9..].trim();
+                let expr: _ = &cmd[9..].trim();
                 self.inspect_expression(expr)?;
                 Ok(false)
             }
             cmd if cmd.starts_with(".time ") => {
-                let expr = &cmd[6..].trim();
+                let expr: _ = &cmd[6..].trim();
                 self.time_expression(expr)?;
                 Ok(false)
             }
             cmd if cmd.starts_with(".type ") => {
-                let expr = &cmd[6..].trim();
+                let expr: _ = &cmd[6..].trim();
                 self.type_expression(expr)?;
                 Ok(false)
             }
             cmd if cmd.starts_with(".await ") => {
-                let expr = &cmd[8..].trim();
+                let expr: _ = &cmd[8..].trim();
                 self.await_expression(expr)?;
                 Ok(false)
             }
@@ -272,7 +272,7 @@ impl EnhancedRepl {
 
     /// Check if input starts a multiline block
     fn is_multiline_start(&self, input: &str) -> bool {
-        let trimmed = input.trim();
+        let trimmed: _ = input.trim();
         trimmed.ends_with('{') ||
             trimmed.ends_with('(') ||
             trimmed.ends_with('[') ||
@@ -297,7 +297,7 @@ impl EnhancedRepl {
 
         // Auto-indent
         if self.config.auto_indent {
-            let trimmed = input.trim();
+            let trimmed: _ = input.trim();
             if trimmed.ends_with('{') {
                 self.indent_level += 1;
             } else if trimmed.starts_with('}') && self.indent_level > 0 {
@@ -308,7 +308,7 @@ impl EnhancedRepl {
 
     /// Execute multiline buffer
     fn execute_multiline(&mut self) -> anyhow::Result<()> {
-        let code = self.multiline_buffer.join("\n");
+        let code: _ = self.multiline_buffer.join("\n");
         self.execute_code(&code)?;
 
         // Reset multiline state
@@ -331,11 +331,11 @@ impl EnhancedRepl {
 
     /// Execute JavaScript/TypeScript code
     fn execute_code(&mut self, code: &str) -> anyhow::Result<EnhancedReplResult> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         match self.runtime.execute_code(code) {
             Ok(result) => {
-                let execution_time = start.elapsed();
+                let execution_time: _ = start.elapsed();
                 self.execution_count += 1;
 
                 // Print result if not undefined
@@ -350,7 +350,7 @@ impl EnhancedRepl {
                 })
             }
             Err(e) => {
-                let execution_time = start.elapsed();
+                let execution_time: _ = start.elapsed();
                 eprintln!("Error: {}", e);
 
                 Ok(EnhancedReplResult {
@@ -367,7 +367,7 @@ impl EnhancedRepl {
         println!("\n🔍 Inspecting: {}", expr);
 
         // Execute the expression to get the value
-        let result = self.runtime.execute_code(expr);
+        let result: _ = self.runtime.execute_code(expr);
 
         match result {
             Ok(value) => {
@@ -390,15 +390,15 @@ impl EnhancedRepl {
         println!("\n⏱ Timing: {}", expr);
 
         // Run multiple iterations for accurate timing
-        let iterations = 1000;
-        let start = Instant::now();
+        let iterations: _ = 1000;
+        let start: _ = Instant::now();
 
         for _ in 0..iterations {
-            let _ = self.runtime.execute_code(expr);
+            let _: _ = self.runtime.execute_code(expr);
         }
 
-        let elapsed = start.elapsed();
-        let avg_time = elapsed.as_nanos() as f64 / iterations as f64;
+        let elapsed: _ = start.elapsed();
+        let avg_time: _ = elapsed.as_nanos() as f64 / iterations as f64;
 
         println!("  Total time: {:.3}ms", elapsed.as_secs_f64() * 1000.0);
         println!("  Average time: {:.3}µs", avg_time / 1000.0);
@@ -413,17 +413,17 @@ impl EnhancedRepl {
         println!("\n📝 Type of: {}", expr);
 
         // Execute to get value, then determine type
-        let result = self.runtime.execute_code(&format!("typeof ({})", expr));
+        let result: _ = self.runtime.execute_code(&format!("typeof ({})", expr));
 
         match result {
             Ok(type_str) => {
                 println!("Type: {}", type_str);
 
                 // Additional type information
-                let type_of_result = self.runtime.execute_code(&format!("({}) instanceof Object", expr));
+                let type_of_result: _ = self.runtime.execute_code(&format!("({}) instanceof Object", expr));
                 if let Ok(is_object) = type_of_result {
                     if is_object == "true" {
-                        let constructor = self.runtime.execute_code(&format!("({}).constructor?.name", expr));
+                        let constructor: _ = self.runtime.execute_code(&format!("({}).constructor?.name", expr));
                         if let Ok(name) = constructor {
                             println!("Constructor: {}", name);
                         }
@@ -444,7 +444,7 @@ impl EnhancedRepl {
         println!("\n⏳ Awaiting: {}", expr);
 
         // Execute async expression
-        let result = self.runtime.execute_code(&format!("(async () => {{ return {}; }})()", expr));
+        let result: _ = self.runtime.execute_code(&format!("(async () => {{ return {}; }})()", expr));
 
         match result {
             Ok(value) => {
@@ -478,13 +478,13 @@ impl EnhancedRepl {
 
     /// Load and execute file
     fn load_file(&mut self, path: &str) -> anyhow::Result<()> {
-        let content = std::fs::read_to_string(path)
+        let content: _ = std::fs::read_to_string(path)
             .map_err(|e| anyhow::anyhow!("Failed to read file: {}", e))?;
 
         println!("Loading file: {} ({} bytes)", path, content.len());
 
         // Execute the file
-        let result = self.runtime.execute_code(&content);
+        let result: _ = self.runtime.execute_code(&content);
 
         match result {
             Ok(_) => {
@@ -529,7 +529,7 @@ impl EnhancedRepl {
     fn print_history(&self) {
         println!("\nCommand History:");
         for (i, cmd) in self.history.iter().enumerate() {
-            let display = if cmd.len() > 60 {
+            let display: _ = if cmd.len() > 60 {
                 format!("{}...", &cmd[..57])
             } else {
                 cmd.clone()
@@ -541,8 +541,8 @@ impl EnhancedRepl {
 
     /// Get execution statistics
     pub fn get_stats(&self) -> EnhancedReplStats {
-        let total_commands = self.history.len();
-        let avg_history_len = if total_commands > 0 {
+        let total_commands: _ = self.history.len();
+        let avg_history_len: _ = if total_commands > 0 {
             self.history.iter().map(|s| s.len()).sum::<usize>() / total_commands
         } else {
             0
@@ -588,25 +588,27 @@ impl EnhancedReplStats {
 mod tests {
     use super::*;
     use std::sync::Arc;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_enhanced_repl_creation() {
-        let runtime = Arc::new(RuntimeLite::new(false).unwrap());
-        let repl = EnhancedRepl::new(runtime);
+        let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
+        let repl: _ = EnhancedRepl::new(runtime);
         assert!(repl.is_ok());
     }
 
     #[test]
     fn test_enhanced_repl_config() {
-        let runtime = Arc::new(RuntimeLite::new(false).unwrap());
-        let config = EnhancedReplConfig::default();
-        let repl = EnhancedRepl::with_config(runtime, config);
+        let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
+        let config: _ = EnhancedReplConfig::default();
+        let repl: _ = EnhancedRepl::with_config(runtime, config);
         assert!(repl.is_ok());
     }
 
     #[test]
     fn test_multiline_detection() {
-        let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
         let mut repl = EnhancedRepl::new(runtime).unwrap();
 
         assert!(repl.is_multiline_start("function foo() {"));
@@ -616,15 +618,15 @@ mod tests {
 
     #[test]
     fn test_save_session() {
-        let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
         let mut repl = EnhancedRepl::new(runtime).unwrap();
 
         // Add some commands to history
-        repl.history.push_back("let x = 1;".to_string());
-        repl.history.push_back("let y = 2;".to_string());
+        repl.history.push_back("let x: _ = 1;".to_string());
+        repl.history.push_back("let y: _ = 2;".to_string());
 
         let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-        let result = repl.save_session(temp_file.path().to_str().unwrap());
+        let result: _ = repl.save_session(temp_file.path().to_str().unwrap());
 
         assert!(result.is_ok());
         assert!(temp_file.path().exists());
@@ -632,59 +634,59 @@ mod tests {
 
     #[test]
     fn test_load_file() {
-        let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
         let mut repl = EnhancedRepl::new(runtime).unwrap();
 
         // Create a temporary file with JavaScript code
         let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-        writeln!(temp_file, "let test = 42;").unwrap();
+        writeln!(temp_file, "let test: _ = 42;").unwrap();
 
-        let result = repl.load_file(temp_file.path().to_str().unwrap());
+        let result: _ = repl.load_file(temp_file.path().to_str().unwrap());
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_inspect_command() {
-        let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
         let mut repl = EnhancedRepl::new(runtime).unwrap();
 
-        let result = repl.inspect_expression("42");
+        let result: _ = repl.inspect_expression("42");
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_time_command() {
-        let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
         let mut repl = EnhancedRepl::new(runtime).unwrap();
 
-        let result = repl.time_expression("1 + 1");
+        let result: _ = repl.time_expression("1 + 1");
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_type_command() {
-        let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
         let mut repl = EnhancedRepl::new(runtime).unwrap();
 
-        let result = repl.type_expression("42");
+        let result: _ = repl.type_expression("42");
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_await_command() {
-        let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
         let mut repl = EnhancedRepl::new(runtime).unwrap();
 
-        let result = repl.await_expression("Promise.resolve(42)");
+        let result: _ = repl.await_expression("Promise.resolve(42)");
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_get_stats() {
-        let runtime = Arc::new(RuntimeLite::new(false).unwrap());
-        let repl = EnhancedRepl::new(runtime).unwrap();
+        let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
+        let repl: _ = EnhancedRepl::new(runtime).unwrap();
 
-        let stats = repl.get_stats();
+        let stats: _ = repl.get_stats();
         assert_eq!(stats.total_commands, 0);
         assert!(stats.execution_count >= 0);
     }

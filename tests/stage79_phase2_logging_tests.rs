@@ -5,6 +5,8 @@
 mod tests {
     use std::collections::HashMap;
     use std::time::SystemTime;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     // 模拟 LogAggregator 结构体（待实现）
     #[allow(dead_code)]
@@ -34,7 +36,7 @@ mod tests {
         pub timestamp: SystemTime,
         pub level: LogLevel,
         pub message: String,
-        pub context: HashMap<String, String>,
+        pub context: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     }
 
     // 模拟日志上下文
@@ -51,12 +53,12 @@ mod tests {
     #[test]
     fn test_structured_logging() {
         // 测试结构化日志功能
-        let aggregator = LogAggregator {
+        let aggregator: _ = LogAggregator {
             writer: Box::new(MockLogWriter::new()),
         };
 
         // 创建日志上下文
-        let context = LogContext {
+        let context: _ = LogContext {
             service: "beejs".to_string(),
             version: "1.0.0".to_string(),
             request_id: Some("req-12345".to_string()),
@@ -64,7 +66,7 @@ mod tests {
         };
 
         // 创建日志条目
-        let log_entry = LogEntry {
+        let log_entry: _ = LogEntry {
             timestamp: SystemTime::now(),
             level: LogLevel::Info,
             message: "User login successful".to_string(),
@@ -85,10 +87,10 @@ mod tests {
     #[test]
     fn test_log_forwarding() {
         // 测试日志转发功能
-        let writer = Box::new(MockLogWriter::new());
+        let writer: _ = Box::new(MockLogWriter::new());
 
         // 创建多个日志条目
-        let logs = vec![
+        let logs: _ = vec![
             LogEntry {
                 timestamp: SystemTime::now(),
                 level: LogLevel::Info,
@@ -112,11 +114,11 @@ mod tests {
     #[test]
     fn test_log_levels() {
         // 测试不同日志级别
-        let trace_level = LogLevel::Trace;
-        let debug_level = LogLevel::Debug;
-        let info_level = LogLevel::Info;
-        let warn_level = LogLevel::Warn;
-        let error_level = LogLevel::Error;
+        let trace_level: _ = LogLevel::Trace;
+        let debug_level: _ = LogLevel::Debug;
+        let info_level: _ = LogLevel::Info;
+        let warn_level: _ = LogLevel::Warn;
+        let error_level: _ = LogLevel::Error;
 
         // 验证所有级别都可以创建
         assert!(matches!(trace_level, LogLevel::Trace));
@@ -155,15 +157,15 @@ mod tests {
     #[test]
     fn test_log_timestamps() {
         // 测试日志时间戳
-        let timestamp1 = SystemTime::now();
-        let log_entry = LogEntry {
+        let timestamp1: _ = SystemTime::now();
+        let log_entry: _ = LogEntry {
             timestamp: timestamp1,
             level: LogLevel::Info,
             message: "Test log".to_string(),
             context: HashMap::new(),
         };
 
-        let timestamp2 = SystemTime::now();
+        let timestamp2: _ = SystemTime::now();
 
         // 验证时间戳在合理范围内
         assert!(log_entry.timestamp <= timestamp2);

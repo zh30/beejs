@@ -27,9 +27,9 @@ impl Benchmark {
     where
         F: FnMut(),
     {
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         func();
-        let duration = start.elapsed().unwrap();
+        let duration: _ = start.elapsed().unwrap();
 
         self.iterations += 1;
         self.total_time += duration;
@@ -63,10 +63,12 @@ impl Benchmark {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_benchmark_creation() {
-        let benchmark = Benchmark::new("test");
+        let benchmark: _ = Benchmark::new("test");
         assert_eq!(benchmark.name(), "test");
         assert_eq!(benchmark.iterations(), 0);
         assert_eq!(benchmark.total_time(), Duration::from_millis(0));
@@ -110,14 +112,14 @@ mod tests {
             std::thread::sleep(Duration::from_millis(10));
         });
 
-        let avg = benchmark.average_time();
+        let avg: _ = benchmark.average_time();
         assert!(avg >= Duration::from_millis(9)); // 允许一些误差
         assert!(avg <= Duration::from_millis(11));
     }
 
     #[test]
     fn test_zero_iterations_average() {
-        let benchmark = Benchmark::new("test_zero");
+        let benchmark: _ = Benchmark::new("test_zero");
         assert_eq!(benchmark.average_time(), Duration::from_millis(0));
     }
 

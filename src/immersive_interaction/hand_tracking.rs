@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 //! 手部追踪系统
 
 /// 手势类型
@@ -117,7 +119,7 @@ impl HandTracking {
 
     /// 处理帧数据
     pub fn process_frame(&mut self, data: &MockHandData) -> Result<HandPose, HandTrackingError> {
-        let pose = HandPose {
+        let pose: _ = HandPose {
             joints: data.joints.clone(),
             confidence: data.confidence,
             is_left: false,

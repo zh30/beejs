@@ -2,6 +2,8 @@
 //! Stage 56.3 - Built-in Module Implementation
 
 use rusty_v8 as v8;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 pub mod fs;
 pub mod path;
@@ -14,7 +16,7 @@ pub mod util;
 
 /// Register all built-in modules with the V8 context
 pub fn register_builtins<'a>(scope: &mut v8::HandleScope<'a>) -> v8::Local<'a, v8::Object> {
-    let global = v8::Object::new(scope);
+    let global: _ = v8::Object::new(scope);
     
     // Register each module
     fs::register(scope, &global);

@@ -6,6 +6,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 包管理器类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -30,8 +32,8 @@ pub enum PackageSpec {
 pub struct PackageInfo {
     pub name: String,
     pub version: String,
-    pub dependencies: HashMap<String, String>,
-    pub peer_dependencies: HashMap<String, String>,
+    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub peer_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub exports: Option<serde_json::Value>,
     pub types: Option<String>,
     pub main: Option<String>,
@@ -148,7 +150,7 @@ impl TypeDefinitionGenerator {
         }
 
         // 写入文件
-        let output_file = self.config.output_dir.join(format!("{}.d.ts", package.name));
+        let output_file: _ = self.config.output_dir.join(format!("{}.d.ts", package.name));
 
         Ok(output_file)
     }
@@ -192,7 +194,7 @@ impl PackageManagerIntegrator {
 
         match spec {
             PackageSpec::Name(name) => {
-                let package_info = PackageInfo {
+                let package_info: _ = PackageInfo {
                     name: name.clone(),
                     version: "1.0.0".to_string(),
                     dependencies: HashMap::new(),
@@ -204,7 +206,7 @@ impl PackageManagerIntegrator {
                 Ok(package_info)
             }
             PackageSpec::NameVersion(name, version) => {
-                let package_info = PackageInfo {
+                let package_info: _ = PackageInfo {
                     name: name.clone(),
                     version: version.clone(),
                     dependencies: HashMap::new(),
@@ -224,20 +226,20 @@ impl PackageManagerIntegrator {
         &self,
         path: &PathBuf,
     ) -> Result<PackageInfo, Box<dyn std::error::Error>> {
-        let content = std::fs::read_to_string(path)?;
+        let content: _ = std::fs::read_to_string(path)?;
         let package_json: serde_json::Value = serde_json::from_str(&content)?;
 
-        let name = package_json["name"]
+        let name: _ = package_json["name"]
             .as_str()
             .ok_or("Invalid package.json: missing name")?
             .to_string();
 
-        let version = package_json["version"]
+        let version: _ = package_json["version"]
             .as_str()
             .ok_or("Invalid package.json: missing version")?
             .to_string();
 
-        let dependencies = if package_json["dependencies"].is_object() {
+        let dependencies: _ = if package_json["dependencies"].is_object() {
             package_json["dependencies"]
                 .as_object()
                 .unwrap()
@@ -248,7 +250,7 @@ impl PackageManagerIntegrator {
             HashMap::new()
         };
 
-        let peer_dependencies = if package_json["peerDependencies"].is_object() {
+        let peer_dependencies: _ = if package_json["peerDependencies"].is_object() {
             package_json["peerDependencies"]
                 .as_object()
                 .unwrap()
@@ -324,7 +326,7 @@ impl ReactRuntime {
         let mut transformed = jsx_code.to_string();
 
         // 简单的 JSX 替换示例
-        transformed = transformed.replace("<div>", "<div data-jsx=\"true\">");
+        transformed = transformed.clone();replace("<div>", "<div data-jsx=\"true\">");
 
         Ok(transformed)
     }
@@ -336,7 +338,7 @@ pub struct VsCodeExtensionConfig {
     pub name: String,
     pub version: String,
     pub publisher: String,
-    pub engines: HashMap<String, String>,
+    pub engines: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub categories: Vec<String>,
     pub activation_events: Vec<String>,
 }
@@ -410,9 +412,9 @@ pub struct EcosystemIntegrator {
 
 impl EcosystemIntegrator {
     pub fn new() -> Self {
-        let type_generator = TypeDefinitionGenerator::new(TypeGeneratorConfig::default());
-        let package_manager = PackageManagerIntegrator::new(PackageManagerConfig::default());
-        let react_runtime = ReactRuntime::new(ReactConfig::default());
+        let type_generator: _ = TypeDefinitionGenerator::new(TypeGeneratorConfig::default());
+        let package_manager: _ = PackageManagerIntegrator::new(PackageManagerConfig::default());
+        let react_runtime: _ = ReactRuntime::new(ReactConfig::default());
 
         Self {
             type_generator,
@@ -448,11 +450,11 @@ impl EcosystemIntegrator {
 
     /// 生成项目类型定义
     pub async fn generate_project_types(&self, project_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-        let package_json_path = project_path.join("package.json");
+        let package_json_path: _ = project_path.join("package.json");
 
         if package_json_path.exists() {
-            let package_info = self.package_manager.parse_package_json(&package_json_path).await?;
-            let _output_file = self.type_generator.generate_package_types(&package_info).await?;
+            let package_info: _ = self.package_manager.parse_package_json(&package_json_path).await?;
+            let _output_file: _ = self.type_generator.generate_package_types(&package_info).await?;
             println!("Generated types for package: {}", package_info.name);
         }
 

@@ -5,10 +5,12 @@ use beejs::enterprise::security::*;
 use beejs::enterprise::security_manager::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 #[tokio::test]
 async fn test_sandbox_creation() {
-    let config = SandboxConfig {
+    let config: _ = SandboxConfig {
         enabled: true,
         base_dir: PathBuf::from("/tmp/beejs-sandbox-test"),
         max_memory: 1024 * 1024 * 1024, // 1GB
@@ -22,20 +24,20 @@ async fn test_sandbox_creation() {
         blocked_env_vars: vec!["SECRET".to_string()],
     };
 
-    let sandbox = SecuritySandbox::new(config);
+    let sandbox: _ = SecuritySandbox::new(config);
     assert!(sandbox.is_ok());
 
-    let sandbox = sandbox.unwrap();
+    let sandbox: _ = sandbox.clone();unwrap();
     assert!(sandbox.is_path_allowed(&PathBuf::from("/tmp/beejs-sandbox-test/test.txt")));
     assert!(!sandbox.is_path_allowed(&PathBuf::from("/etc/passwd")));
 }
 
 #[tokio::test]
 async fn test_rbac_user_management() {
-    let manager = SecurityManager::new();
+    let manager: _ = SecurityManager::new();
 
     // Register admin user
-    let admin = User {
+    let admin: _ = User {
         id: "admin1".to_string(),
         username: "admin".to_string(),
         role: UserRole::Admin,
@@ -54,7 +56,7 @@ async fn test_rbac_user_management() {
     assert!(manager.register_user(admin).await.is_ok());
 
     // Register developer user
-    let developer = User {
+    let developer: _ = User {
         id: "dev1".to_string(),
         username: "developer".to_string(),
         role: UserRole::Developer,
@@ -105,23 +107,23 @@ async fn test_rbac_user_management() {
     ));
 
     // Check user stats
-    let stats = manager.get_user_stats().await;
+    let stats: _ = manager.get_user_stats().await;
     assert_eq!(stats["total_users"], serde_json::Value::from(2));
 }
 
 #[tokio::test]
 async fn test_key_management_service() {
-    let config = EncryptionConfig {
+    let config: _ = EncryptionConfig {
         default_algorithm: EncryptionAlgorithm::AES256GCM,
         key_rotation_interval_days: 90,
         enable_hsm: false,
         backup_keys: true,
     };
 
-    let kms = KeyManagementService::new(config);
+    let kms: _ = KeyManagementService::new(config);
 
     // Generate a symmetric key
-    let key = kms.generate_key(
+    let key: _ = kms.generate_key(
         KeyType::Symmetric,
         EncryptionAlgorithm::AES256GCM,
     ).await.unwrap();
@@ -131,15 +133,15 @@ async fn test_key_management_service() {
     assert_eq!(key.state, KeyState::Active);
 
     // Test encryption
-    let plaintext = b"Hello, Enterprise Security!";
-    let encrypted = kms.encrypt(&key.id, plaintext).await.unwrap();
+    let plaintext: _ = b"Hello, Enterprise Security!";
+    let encrypted: _ = kms.encrypt(&key.id, plaintext).await.unwrap();
     assert!(encrypted.success);
     assert!(encrypted.encrypted_data.is_some());
     assert!(encrypted.iv.is_some());
     assert!(encrypted.tag.is_some());
 
     // Test decryption
-    let decrypted = kms.decrypt(
+    let decrypted: _ = kms.decrypt(
         &key.id,
         encrypted.encrypted_data.as_ref().unwrap(),
         encrypted.iv.as_ref().unwrap(),
@@ -149,27 +151,27 @@ async fn test_key_management_service() {
     assert_eq!(decrypted.decrypted_data.as_ref().unwrap(), plaintext);
 
     // Test key rotation
-    let new_key = kms.rotate_key(&key.id).await.unwrap();
+    let new_key: _ = kms.rotate_key(&key.id).await.unwrap();
     assert_ne!(key.id, new_key.id);
     assert_eq!(new_key.key_type, key.key_type);
     assert_eq!(new_key.algorithm, key.algorithm);
 
     // Verify old key is expired
-    let old_key = kms.get_key(&key.id).await.unwrap();
+    let old_key: _ = kms.get_key(&key.id).await.unwrap();
     assert_eq!(old_key.state, KeyState::Expired);
 
     // Test key revocation
-    let test_key = kms.generate_key(
+    let test_key: _ = kms.generate_key(
         KeyType::Symmetric,
         EncryptionAlgorithm::AES256GCM,
     ).await.unwrap();
 
     kms.revoke_key(&test_key.id, "Security incident").await.unwrap();
-    let revoked_key = kms.get_key(&test_key.id).await.unwrap();
+    let revoked_key: _ = kms.get_key(&test_key.id).await.unwrap();
     assert_eq!(revoked_key.state, KeyState::Revoked);
 
     // Test key statistics
-    let stats = kms.get_key_stats().await;
+    let stats: _ = kms.get_key_stats().await;
     assert!(stats.contains_key("total_keys"));
     assert!(stats.contains_key("key_states"));
     assert!(stats.contains_key("algorithms"));
@@ -177,38 +179,38 @@ async fn test_key_management_service() {
 
 #[tokio::test]
 async fn test_encryption_algorithms() {
-    let config = EncryptionConfig {
+    let config: _ = EncryptionConfig {
         default_algorithm: EncryptionAlgorithm::AES256GCM,
         key_rotation_interval_days: 90,
         enable_hsm: false,
         backup_keys: true,
     };
 
-    let kms = KeyManagementService::new(config);
+    let kms: _ = KeyManagementService::new(config);
 
     // Test AES-256-GCM
-    let aes_key = kms.generate_key(
+    let aes_key: _ = kms.generate_key(
         KeyType::Symmetric,
         EncryptionAlgorithm::AES256GCM,
     ).await.unwrap();
     assert_eq!(aes_key.algorithm, EncryptionAlgorithm::AES256GCM);
 
     // Test ChaCha20-Poly1305
-    let chacha_key = kms.generate_key(
+    let chacha_key: _ = kms.generate_key(
         KeyType::Symmetric,
         EncryptionAlgorithm::ChaCha20Poly1305,
     ).await.unwrap();
     assert_eq!(chacha_key.algorithm, EncryptionAlgorithm::ChaCha20Poly1305);
 
     // Test RSA-4096
-    let rsa_key = kms.generate_key(
+    let rsa_key: _ = kms.generate_key(
         KeyType::Asymmetric,
         EncryptionAlgorithm::RSA4096,
     ).await.unwrap();
     assert_eq!(rsa_key.algorithm, EncryptionAlgorithm::RSA4096);
 
     // Test HMAC
-    let hmac_key = kms.generate_key(
+    let hmac_key: _ = kms.generate_key(
         KeyType::HMAC,
         EncryptionAlgorithm::AES256GCM,
     ).await.unwrap();
@@ -217,7 +219,7 @@ async fn test_encryption_algorithms() {
 
 #[tokio::test]
 async fn test_audit_logging() {
-    let manager = SecurityManager::new();
+    let manager: _ = SecurityManager::new();
 
     // Log security events
     manager.log_event(
@@ -237,7 +239,7 @@ async fn test_audit_logging() {
     ).await;
 
     // Get audit log
-    let log = manager.get_audit_log().await;
+    let log: _ = manager.get_audit_log().await;
     assert_eq!(log.len(), 2);
 
     // Verify log entries
@@ -252,7 +254,7 @@ async fn test_audit_logging() {
 
 #[tokio::test]
 async fn test_security_module_integration() {
-    let sandbox_config = SandboxConfig {
+    let sandbox_config: _ = SandboxConfig {
         enabled: true,
         base_dir: PathBuf::from("/tmp/beejs-security-test"),
         max_memory: 512 * 1024 * 1024, // 512MB
@@ -266,34 +268,34 @@ async fn test_security_module_integration() {
         blocked_env_vars: vec![],
     };
 
-    let encryption_config = EncryptionConfig {
+    let encryption_config: _ = EncryptionConfig {
         default_algorithm: EncryptionAlgorithm::AES256GCM,
         key_rotation_interval_days: 90,
         enable_hsm: false,
         backup_keys: true,
     };
 
-    let security_module = SecurityModule::new(sandbox_config, encryption_config);
+    let security_module: _ = SecurityModule::new(sandbox_config, encryption_config);
     assert!(security_module.is_ok());
 
-    let security_module = security_module.unwrap();
+    let security_module: _ = security_module.clone();unwrap();
 
     // Test sandbox integration
     assert!(security_module.sandbox.is_path_allowed(&PathBuf::from("/tmp/beejs-security-test/test")));
 
     // Test KMS integration
-    let key = security_module.kms.generate_key(
+    let key: _ = security_module.kms.generate_key(
         KeyType::Symmetric,
         EncryptionAlgorithm::AES256GCM,
     ).await.unwrap();
     assert!(key.state == KeyState::Active);
 
     // Test encryption/decryption
-    let plaintext = b"Integrated security test!";
-    let encrypted = security_module.kms.encrypt(&key.id, plaintext).await.unwrap();
+    let plaintext: _ = b"Integrated security test!";
+    let encrypted: _ = security_module.kms.encrypt(&key.id, plaintext).await.unwrap();
     assert!(encrypted.success);
 
-    let decrypted = security_module.kms.decrypt(
+    let decrypted: _ = security_module.kms.decrypt(
         &key.id,
         encrypted.encrypted_data.as_ref().unwrap(),
         encrypted.iv.as_ref().unwrap(),
@@ -305,10 +307,10 @@ async fn test_security_module_integration() {
 
 #[tokio::test]
 async fn test_tenant_isolation() {
-    let manager = SecurityManager::new();
+    let manager: _ = SecurityManager::new();
 
     // Create users from different tenants
-    let tenant1_admin = User {
+    let tenant1_admin: _ = User {
         id: "tenant1_admin".to_string(),
         username: "admin1".to_string(),
         role: UserRole::Admin,
@@ -324,7 +326,7 @@ async fn test_tenant_isolation() {
         tenant_id: Some("tenant1".to_string()),
     };
 
-    let tenant2_admin = User {
+    let tenant2_admin: _ = User {
         id: "tenant2_admin".to_string(),
         username: "admin2".to_string(),
         role: UserRole::Admin,
@@ -354,7 +356,7 @@ async fn test_tenant_isolation() {
     ));
 
     // Get stats
-    let stats = manager.get_user_stats().await;
+    let stats: _ = manager.get_user_stats().await;
     assert_eq!(stats["total_users"], serde_json::Value::from(2));
 }
 
@@ -387,64 +389,64 @@ async fn test_security_policy_enforcement() {
     );
 
     // Test permissive policy (default)
-    let result = manager.check_permission("default", "execute_script", &HashMap::new());
+    let result: _ = manager.check_permission("default", "execute_script", &HashMap::new());
     assert!(matches!(result, Ok(SecurityResult::Allowed)));
 
     // Test restrictive policy with allowed operation
     let mut context = HashMap::new();
     context.insert("user_role".to_string(), "Developer".to_string());
-    let result = manager.check_permission("restrictive", "execute_script", &context);
+    let result: _ = manager.check_permission("restrictive", "execute_script", &context);
     assert!(matches!(result, Ok(SecurityResult::Allowed)));
 
     // Test restrictive policy with denied operation
-    let result = manager.check_permission("restrictive", "delete_file", &HashMap::new());
+    let result: _ = manager.check_permission("restrictive", "delete_file", &HashMap::new());
     assert!(matches!(result, Ok(SecurityResult::Denied(_))));
 }
 
 #[tokio::test]
 async fn test_key_lifecycle_management() {
-    let config = EncryptionConfig {
+    let config: _ = EncryptionConfig {
         default_algorithm: EncryptionAlgorithm::AES256GCM,
         key_rotation_interval_days: 90,
         enable_hsm: false,
         backup_keys: true,
     };
 
-    let kms = KeyManagementService::new(config);
+    let kms: _ = KeyManagementService::new(config);
 
     // Generate multiple keys
-    let key1 = kms.generate_key(
+    let key1: _ = kms.generate_key(
         KeyType::Symmetric,
         EncryptionAlgorithm::AES256GCM,
     ).await.unwrap();
 
-    let key2 = kms.generate_key(
+    let key2: _ = kms.generate_key(
         KeyType::Symmetric,
         EncryptionAlgorithm::ChaCha20Poly1305,
     ).await.unwrap();
 
-    let key3 = kms.generate_key(
+    let key3: _ = kms.generate_key(
         KeyType::Asymmetric,
         EncryptionAlgorithm::RSA4096,
     ).await.unwrap();
 
     // List all keys
-    let keys = kms.list_keys().await;
+    let keys: _ = kms.list_keys().await;
     assert_eq!(keys.len(), 3);
 
     // Rotate key1
-    let rotated_key = kms.rotate_key(&key1.id).await.unwrap();
+    let rotated_key: _ = kms.rotate_key(&key1.id).await.unwrap();
     assert_ne!(key1.id, rotated_key.id);
 
     // Revoke key2
     kms.revoke_key(&key2.id, "Compromised key").await.unwrap();
 
     // Check key states
-    let stats = kms.get_key_stats().await;
-    let key_states = stats.get("key_states").unwrap();
+    let stats: _ = kms.get_key_stats().await;
+    let key_states: _ = stats.get("key_states").unwrap();
 
     // Should have: 2 active (rotated + key3), 1 expired (key1), 1 revoked (key2)
-    let key_states_map: HashMap<String, usize> = serde_json::from_value(key_states.clone()).unwrap();
+    let key_states_map: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>> = serde_json::from_value(key_states.clone()).unwrap();
     assert!(key_states_map.get("Active").unwrap() >= &2);
     assert!(key_states_map.contains_key("Expired"));
     assert!(key_states_map.contains_key("Revoked"));
@@ -455,7 +457,7 @@ async fn test_comprehensive_security_workflow() {
     let mut manager = SecurityManager::new();
 
     // 1. Create users
-    let admin = User {
+    let admin: _ = User {
         id: "admin".to_string(),
         username: "admin".to_string(),
         role: UserRole::Admin,
@@ -471,7 +473,7 @@ async fn test_comprehensive_security_workflow() {
         tenant_id: None,
     };
 
-    let developer = User {
+    let developer: _ = User {
         id: "dev".to_string(),
         username: "developer".to_string(),
         role: UserRole::Developer,
@@ -518,30 +520,30 @@ async fn test_comprehensive_security_workflow() {
     ).await;
 
     // 4. Verify audit log
-    let log = manager.get_audit_log().await;
+    let log: _ = manager.get_audit_log().await;
     assert_eq!(log.len(), 2);
 
     // 5. Check user statistics
-    let stats = manager.get_user_stats().await;
+    let stats: _ = manager.get_user_stats().await;
     assert_eq!(stats["total_users"], serde_json::Value::from(2));
 
     // 6. Create encryption keys
-    let config = EncryptionConfig {
+    let config: _ = EncryptionConfig {
         default_algorithm: EncryptionAlgorithm::AES256GCM,
         key_rotation_interval_days: 90,
         enable_hsm: false,
         backup_keys: true,
     };
 
-    let kms = KeyManagementService::new(config);
-    let key = kms.generate_key(KeyType::Symmetric, EncryptionAlgorithm::AES256GCM).await.unwrap();
+    let kms: _ = KeyManagementService::new(config);
+    let key: _ = kms.generate_key(KeyType::Symmetric, EncryptionAlgorithm::AES256GCM).await.unwrap();
 
     // 7. Test encryption workflow
-    let sensitive_data = b"Sensitive enterprise data";
-    let encrypted = kms.encrypt(&key.id, sensitive_data).await.unwrap();
+    let sensitive_data: _ = b"Sensitive enterprise data";
+    let encrypted: _ = kms.encrypt(&key.id, sensitive_data).await.unwrap();
     assert!(encrypted.success);
 
-    let decrypted = kms.decrypt(
+    let decrypted: _ = kms.decrypt(
         &key.id,
         encrypted.encrypted_data.as_ref().unwrap(),
         encrypted.iv.as_ref().unwrap(),
@@ -551,7 +553,7 @@ async fn test_comprehensive_security_workflow() {
     assert_eq!(decrypted.decrypted_data.as_ref().unwrap(), sensitive_data);
 
     // 8. Test sandbox
-    let sandbox_config = SandboxConfig {
+    let sandbox_config: _ = SandboxConfig {
         enabled: true,
         base_dir: PathBuf::from("/tmp/beejs-workflow-test"),
         max_memory: 1024 * 1024 * 1024,
@@ -565,7 +567,7 @@ async fn test_comprehensive_security_workflow() {
         blocked_env_vars: vec![],
     };
 
-    let sandbox = SecuritySandbox::new(sandbox_config).unwrap();
+    let sandbox: _ = SecuritySandbox::new(sandbox_config).unwrap();
     assert!(sandbox.is_path_allowed(&PathBuf::from("/tmp/beejs-workflow-test/safe.txt")));
     assert!(!sandbox.is_path_allowed(&PathBuf::from("/etc/passwd")));
 

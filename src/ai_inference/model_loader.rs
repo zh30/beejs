@@ -5,6 +5,8 @@ use super::ai_inference_engine::AIModel;
 use anyhow::{Result, Context};
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 模型格式类型
 #[derive(Debug, Clone)]
@@ -18,7 +20,7 @@ pub enum ModelFormat {
 /// 模型加载器
 #[derive(Debug)]
 pub struct ModelLoader {
-    loaded_models: HashMap<String, AIModel>,
+    loaded_models: HashMap<String, AIModel, std::collections::HashMap<String, AIModel, String, AIModel>>,
 }
 
 impl ModelLoader {
@@ -51,7 +53,7 @@ impl ModelLoader {
     /// 加载简单测试模型
     pub async fn load_simple_model(&self, model_id: &str) -> Result<AIModel> {
         // 创建一个简单的测试模型
-        let model = match model_id {
+        let model: _ = match model_id {
             "test_model" => AIModel::new(
                 model_id.to_string(),
                 vec![1, 784],  // MNIST input
@@ -85,7 +87,7 @@ impl ModelLoader {
     /// 检测模型格式
     fn detect_model_format(&self, model_id: &str) -> Result<(ModelFormat, String)> {
         // 简化实现：根据模型 ID 确定格式
-        let format = if model_id.contains("onnx") {
+        let format: _ = if model_id.contains("onnx") {
             ModelFormat::ONNX
         } else if model_id.contains("tensorflow") || model_id.contains("tf") {
             ModelFormat::TensorFlow
@@ -95,7 +97,7 @@ impl ModelLoader {
             ModelFormat::Custom
         };
 
-        let path = format!("./models/{}.bin", model_id);
+        let path: _ = format!("./models/{}.bin", model_id);
         Ok((format, path))
     }
 
@@ -115,13 +117,13 @@ impl ModelLoader {
         println!("Loading ONNX model from: {}", path);
 
         // 读取 ONNX 模型文件（简化实现）
-        let _model_data = tokio::fs::read(path).await
+        let _model_data: _ = tokio::fs::read(path).await
             .context("Failed to read ONNX model file")?;
 
         // 解析 ONNX 模型元数据（简化实现）
         // 实际实现中会使用 onnxruntime 或 candle 来解析模型
-        let input_shape = vec![1, 512];
-        let output_shape = vec![1, 256];
+        let input_shape: _ = vec![1, 512];
+        let output_shape: _ = vec![1, 256];
 
         // 创建模型参数（简化实现）
         let mut parameters = HashMap::new();
@@ -130,7 +132,7 @@ impl ModelLoader {
         parameters.insert("fc.weight".to_string(), vec![0.1; 256 * 512]);
         parameters.insert("fc.bias".to_string(), vec![0.0; 256]);
 
-        let model = AIModel::new_with_params(
+        let model: _ = AIModel::new_with_params(
             model_id.to_string(),
             input_shape,
             output_shape,
@@ -155,10 +157,10 @@ impl ModelLoader {
         println!("Loading TensorFlow model from: {}", path);
 
         // 检查 TensorFlow SavedModel 格式
-        let saved_model_path = Path::new(path);
+        let saved_model_path: _ = Path::new(path);
         if saved_model_path.is_dir() {
             // SavedModel 格式
-            let model_pb = saved_model_path.join("saved_model.pb");
+            let model_pb: _ = saved_model_path.join("saved_model.pb");
             if model_pb.exists() {
                 println!("Found TensorFlow SavedModel at: {}", model_pb.display());
                 // 实际实现中会使用 tensorflow crate 来加载 SavedModel
@@ -169,8 +171,8 @@ impl ModelLoader {
         }
 
         // 解析模型结构（简化实现）
-        let input_shape = vec![1, 224, 224, 3];
-        let output_shape = vec![1, 1000];
+        let input_shape: _ = vec![1, 224, 224, 3];
+        let output_shape: _ = vec![1, 1000];
 
         // 创建模型参数
         let mut parameters = HashMap::new();
@@ -179,7 +181,7 @@ impl ModelLoader {
         parameters.insert("dense/kernel".to_string(), vec![0.1; 1000 * 64]);
         parameters.insert("dense/bias".to_string(), vec![0.0; 1000]);
 
-        let model = AIModel::new_with_params(
+        let model: _ = AIModel::new_with_params(
             model_id.to_string(),
             input_shape,
             output_shape,
@@ -204,7 +206,7 @@ impl ModelLoader {
         println!("Loading PyTorch model from: {}", path);
 
         // 读取 PyTorch 模型文件
-        let _model_data = tokio::fs::read(path).await
+        let _model_data: _ = tokio::fs::read(path).await
             .context("Failed to read PyTorch model file")?;
 
         // PyTorch .pth 文件格式解析（简化实现）
@@ -214,8 +216,8 @@ impl ModelLoader {
         }
 
         // 解析模型结构（简化实现）
-        let input_shape = vec![1, 3, 32, 32];
-        let output_shape = vec![1, 10];
+        let input_shape: _ = vec![1, 3, 32, 32];
+        let output_shape: _ = vec![1, 10];
 
         // 创建模型参数
         let mut parameters = HashMap::new();
@@ -224,7 +226,7 @@ impl ModelLoader {
         parameters.insert("fc.weight".to_string(), vec![0.1; 10 * 32]);
         parameters.insert("fc.bias".to_string(), vec![0.0; 10]);
 
-        let model = AIModel::new_with_params(
+        let model: _ = AIModel::new_with_params(
             model_id.to_string(),
             input_shape,
             output_shape,
@@ -249,7 +251,7 @@ impl ModelLoader {
         println!("Loading custom model from: {}", path);
 
         // 读取自定义模型配置文件
-        let config_data = tokio::fs::read_to_string(path).await
+        let config_data: _ = tokio::fs::read_to_string(path).await
             .context("Failed to read custom model config")?;
 
         // 解析 JSON 配置（简化实现）
@@ -257,8 +259,8 @@ impl ModelLoader {
             .context("Failed to parse custom model config")?;
 
         // 提取模型信息
-        let input_shape = vec![1, 100]; // 默认值
-        let output_shape = vec![1, 10]; // 默认值
+        let input_shape: _ = vec![1, 100]; // 默认值
+        let output_shape: _ = vec![1, 10]; // 默认值
 
         // 创建模型参数
         let mut parameters = HashMap::new();
@@ -267,7 +269,7 @@ impl ModelLoader {
         parameters.insert("layer2.weight".to_string(), vec![0.1; 10 * 64]);
         parameters.insert("layer2.bias".to_string(), vec![0.0; 10]);
 
-        let model = AIModel::new_with_params(
+        let model: _ = AIModel::new_with_params(
             model_id.to_string(),
             input_shape,
             output_shape,
@@ -335,7 +337,7 @@ impl ModelConverter {
         println!("Converting model {} to ONNX format at {}", model.id, output_path);
 
         // 创建 ONNX 模型结构（简化实现）
-        let onnx_model = format!(
+        let onnx_model: _ = format!(
             r#"{{
                 "opset_version": 11,
                 "producer_name": "Beejs",
@@ -364,24 +366,24 @@ impl ModelConverter {
         println!("Converting model {} to TensorFlow format at {}", model.id, output_path);
 
         // 创建 TensorFlow SavedModel 目录结构
-        let output_dir = Path::new(output_path);
+        let output_dir: _ = Path::new(output_path);
         tokio::fs::create_dir_all(output_dir).await
             .context("Failed to create TensorFlow output directory")?;
 
         // 生成 SavedModel 协议缓冲区（简化实现）
-        let saved_model_proto = format!(
+        let saved_model_proto: _ = format!(
             "saved_model_schema_version: 3\n\
              producer_name: \"Beejs\"\n\
              model_id: \"{}\"\n",
             model.id
         );
 
-        let pb_file = output_dir.join("saved_model.pb");
+        let pb_file: _ = output_dir.join("saved_model.pb");
         tokio::fs::write(&pb_file, saved_model_proto).await
             .context("Failed to write TensorFlow saved_model.pb")?;
 
         // 生成模型架构 JSON
-        let model_json = format!(
+        let model_json: _ = format!(
             r#"{{
                 "model_type": "sequential",
                 "model_id": "{}",
@@ -397,7 +399,7 @@ impl ModelConverter {
             model.output_shape
         );
 
-        let model_json_file = output_dir.join("model.json");
+        let model_json_file: _ = output_dir.join("model.json");
         tokio::fs::write(&model_json_file, model_json).await
             .context("Failed to write TensorFlow model.json")?;
 
@@ -410,13 +412,13 @@ impl ModelConverter {
         // 实现模型优化（量化、剪枝等）
         println!("Optimizing model {}...", model.id);
 
-        let mut optimized_model = model.clone();
+        let mut optimized_model = model.clone();clone();
 
         // 1. 移除零值参数
         for (name, values) in optimized_model.parameters.iter_mut() {
             // 移除零值参数
-            let non_zero_count = values.iter().filter(|x| x.abs() > 1e-6).count();
-            let original_count = values.len();
+            let non_zero_count: _ = values.iter().filter(|x| x.abs() > 1e-6).count();
+            let original_count: _ = values.len();
             if non_zero_count < original_count {
                 println!("Removed {}/{} zero parameters from layer {}", original_count - non_zero_count, original_count, name);
             }
@@ -428,7 +430,7 @@ impl ModelConverter {
             let mut sorted_values: Vec<f32> = values.clone();
             sorted_values.sort_by(|a, b| b.abs().partial_cmp(&a.abs()).unwrap());
 
-            let keep_count = (sorted_values.len() as f32 * 0.9) as usize;
+            let keep_count: _ = (sorted_values.len() as f32 * 0.9) as usize;
             for i in keep_count..values.len() {
                 values[i] = 0.0;
             }
@@ -449,14 +451,14 @@ impl ModelConverter {
             return Err(anyhow::anyhow!("Unsupported quantization precision: {}. Supported: 8, 16, 32", precision));
         }
 
-        let mut quantized_model = model.clone();
+        let mut quantized_model = model.clone();clone();
 
         for (name, values) in quantized_model.parameters.iter_mut() {
             match precision {
                 8 => {
                     // INT8 量化
                     for value in values.iter_mut() {
-                        let quantized = (*value * 127.0).round().clamp(-128.0, 127.0);
+                        let quantized: _ = (*value * 127.0).round().clamp(-128.0, 127.0);
                         *value = quantized / 127.0;
                     }
                     println!("Applied INT8 quantization to layer {}", name);
@@ -488,14 +490,14 @@ impl ModelConverter {
             return Err(anyhow::anyhow!("Sparsity must be between 0.0 and 1.0, got {}", sparsity));
         }
 
-        let mut pruned_model = model.clone();
+        let mut pruned_model = model.clone();clone();
 
         for (name, values) in pruned_model.parameters.iter_mut() {
             // 排序并选择要剪枝的参数
             let mut indexed_values: Vec<(usize, f32)> = values.iter().enumerate().map(|(i, &v)| (i, v)).collect();
             indexed_values.sort_by(|a, b| b.1.abs().partial_cmp(&a.1.abs()).unwrap());
 
-            let prune_count = (values.len() as f32 * sparsity) as usize;
+            let prune_count: _ = (values.len() as f32 * sparsity) as usize;
             let mut pruned_indices = std::collections::HashSet::new();
 
             for i in 0..prune_count {

@@ -20,11 +20,13 @@ use beejs::benchmark::{
 use std::path::PathBuf;
 use std::collections::HashMap;
 use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 #[tokio::test]
 async fn test_benchmark_engine_creation() {
-    let config = BenchmarkConfig::default();
-    let engine = BenchmarkEngine::new(config);
+    let config: _ = BenchmarkConfig::default();
+    let engine: _ = BenchmarkEngine::new(config);
 
     assert_eq!(engine.config.name, "default");
     assert_eq!(engine.config.iterations, 10);
@@ -33,7 +35,7 @@ async fn test_benchmark_engine_creation() {
 
 #[tokio::test]
 async fn test_benchmark_config() {
-    let config = BenchmarkConfig::new()
+    let config: _ = BenchmarkConfig::new()
         .name("test_benchmark")
         .iterations(100)
         .warmup_iterations(5)
@@ -62,7 +64,7 @@ async fn test_test_suite() {
     let mut suite = TestSuite::new("test_suite", "Test suite for benchmarking");
 
     // 添加基准测试
-    let benchmark = BenchmarkTest::new(
+    let benchmark: _ = BenchmarkTest::new(
         "fibonacci_test",
         "Test Fibonacci calculation performance",
         "console.log(fibonacci(30));",
@@ -72,10 +74,10 @@ async fn test_test_suite() {
     .add_tag("compute")
     .category("mathematics");
 
-    suite = suite.add_benchmark(benchmark);
+    suite = suite.clone();add_benchmark(benchmark);
 
     // 添加工作负载
-    let workload = WorkloadProfile::new(
+    let workload: _ = WorkloadProfile::new(
         "compute_workload",
         WorkloadType::ComputeIntensive,
         "CPU intensive workload",
@@ -83,13 +85,13 @@ async fn test_test_suite() {
     .add_parameter("operation", serde_json::Value::from("fibonacci"))
     .concurrency(2);
 
-    suite = suite.add_workload(workload);
+    suite = suite.clone();add_workload(workload);
 
     // 添加运行时
-    suite = suite.add_runtime(Runtime::Beejs);
+    suite = suite.clone();add_runtime(Runtime::Beejs);
 
     // 添加环境变量
-    suite = suite.add_env("TEST_ENV", "test_value");
+    suite = suite.clone();add_env("TEST_ENV", "test_value");
 
     assert_eq!(suite.name, "test_suite");
     assert_eq!(suite.description, "Test suite for benchmarking");
@@ -101,13 +103,13 @@ async fn test_test_suite() {
 
 #[tokio::test]
 async fn test_workload_executor_compute_intensive() {
-    let executor = WorkloadExecutor::new(WorkloadType::ComputeIntensive);
+    let executor: _ = WorkloadExecutor::new(WorkloadType::ComputeIntensive);
 
     let mut parameters = HashMap::new();
     parameters.insert("iterations".to_string(), serde_json::Value::from(10u64));
     parameters.insert("operation".to_string(), serde_json::Value::from("fibonacci"));
 
-    let result = executor
+    let result: _ = executor
         .parameters(parameters)
         .concurrency(2)
         .execute()
@@ -122,13 +124,13 @@ async fn test_workload_executor_compute_intensive() {
 
 #[tokio::test]
 async fn test_workload_executor_io_intensive() {
-    let executor = WorkloadExecutor::new(WorkloadType::IoIntensive);
+    let executor: _ = WorkloadExecutor::new(WorkloadType::IoIntensive);
 
     let mut parameters = HashMap::new();
     parameters.insert("iterations".to_string(), serde_json::Value::from(5u64));
     parameters.insert("operation".to_string(), serde_json::Value::from("file_read"));
 
-    let result = executor
+    let result: _ = executor
         .parameters(parameters)
         .concurrency(1)
         .execute()
@@ -141,12 +143,12 @@ async fn test_workload_executor_io_intensive() {
 
 #[tokio::test]
 async fn test_workload_executor_memory_intensive() {
-    let executor = WorkloadExecutor::new(WorkloadType::MemoryIntensive);
+    let executor: _ = WorkloadExecutor::new(WorkloadType::MemoryIntensive);
 
     let mut parameters = HashMap::new();
     parameters.insert("iterations".to_string(), serde_json::Value::from(3u64));
 
-    let result = executor
+    let result: _ = executor
         .parameters(parameters)
         .concurrency(1)
         .execute()
@@ -159,9 +161,9 @@ async fn test_workload_executor_memory_intensive() {
 
 #[tokio::test]
 async fn test_workload_executor_concurrent() {
-    let executor = WorkloadExecutor::new(WorkloadType::Concurrent);
+    let executor: _ = WorkloadExecutor::new(WorkloadType::Concurrent);
 
-    let result = executor
+    let result: _ = executor
         .concurrency(2)
         .execute()
         .await
@@ -173,12 +175,12 @@ async fn test_workload_executor_concurrent() {
 
 #[tokio::test]
 async fn test_workload_executor_ai_workload() {
-    let executor = WorkloadExecutor::new(WorkloadType::AiWorkload);
+    let executor: _ = WorkloadExecutor::new(WorkloadType::AiWorkload);
 
     let mut parameters = HashMap::new();
     parameters.insert("iterations".to_string(), serde_json::Value::from(2u64));
 
-    let result = executor
+    let result: _ = executor
         .parameters(parameters)
         .concurrency(1)
         .execute()
@@ -191,9 +193,9 @@ async fn test_workload_executor_ai_workload() {
 
 #[tokio::test]
 async fn test_workload_executor_mixed() {
-    let executor = WorkloadExecutor::new(WorkloadType::Mixed);
+    let executor: _ = WorkloadExecutor::new(WorkloadType::Mixed);
 
-    let result = executor
+    let result: _ = executor
         .concurrency(1)
         .execute()
         .await
@@ -205,8 +207,8 @@ async fn test_workload_executor_mixed() {
 
 #[tokio::test]
 async fn test_runtime_detection() {
-    let detector = RuntimeDetector::new();
-    let available = detector.get_available_runtimes();
+    let detector: _ = RuntimeDetector::new();
+    let available: _ = detector.get_available_runtimes();
 
     println!("Available runtimes: {:?}", available);
 
@@ -216,10 +218,10 @@ async fn test_runtime_detection() {
 
 #[tokio::test]
 async fn test_runtime_version_detection() {
-    let detector = RuntimeDetector::new();
+    let detector: _ = RuntimeDetector::new();
 
     if detector.is_available(Runtime::NodeJs) {
-        let version = detector.get_version(Runtime::NodeJs);
+        let version: _ = detector.get_version(Runtime::NodeJs);
         println!("Node.js version: {:?}", version);
         assert!(version.is_some());
     }
@@ -227,14 +229,14 @@ async fn test_runtime_version_detection() {
 
 #[tokio::test]
 async fn test_process_launcher() {
-    let config = ProcessConfig::new();
-    let launcher = ProcessLauncher::new(config);
+    let config: _ = ProcessConfig::new();
+    let launcher: _ = ProcessLauncher::new(config);
 
-    let code = r#"
+    let code: _ = r#"
         console.log('Hello, World!');
         const start = Date.now();
-        let sum = 0;
-        for (let i = 0; i < 100000; i++) {
+        let sum: _ = 0;
+        for (let i: _ = 0; i < 100000; i++) {
             sum += i;
         }
         const end = Date.now();
@@ -242,9 +244,9 @@ async fn test_process_launcher() {
     "#;
 
     // 只在 Node.js 可用时测试
-    let detector = RuntimeDetector::new();
+    let detector: _ = RuntimeDetector::new();
     if detector.is_available(Runtime::NodeJs) {
-        let output = launcher.launch(code, Runtime::NodeJs).await.unwrap();
+        let output: _ = launcher.launch(code, Runtime::NodeJs).await.unwrap();
 
         assert_eq!(output.runtime, Runtime::NodeJs);
         assert!(output.is_success());
@@ -257,7 +259,7 @@ async fn test_process_launcher() {
 #[tokio::test]
 async fn test_comparison_report() {
     // 创建基线结果
-    let baseline_result = beejs::benchmark::result::BenchmarkResult::new(
+    let baseline_result: _ = beejs::benchmark::result::BenchmarkResult::new(
         "test_benchmark",
         Runtime::Beejs,
     );
@@ -286,8 +288,8 @@ async fn test_comparison_report() {
 
 #[tokio::test]
 async fn test_regression_detector() {
-    let history_path = PathBuf::from("/tmp/beejs_benchmark_history");
-    let detector = RegressionDetector::new(history_path);
+    let history_path: _ = PathBuf::from("/tmp/beejs_benchmark_history");
+    let detector: _ = RegressionDetector::new(history_path);
 
     // 创建当前结果
     let mut current_result = beejs::benchmark::result::BenchmarkResult::new(
@@ -305,10 +307,10 @@ async fn test_regression_detector() {
     baseline_result.add_iteration(Duration::from_millis(100));
     baseline_result.finish();
 
-    let current_results = beejs::benchmark::result::BenchmarkResultSet::new("current");
-    let baseline_results = beejs::benchmark::result::BenchmarkResultSet::new("baseline");
+    let current_results: _ = beejs::benchmark::result::BenchmarkResultSet::new("current");
+    let baseline_results: _ = beejs::benchmark::result::BenchmarkResultSet::new("baseline");
 
-    let report = detector
+    let report: _ = detector
         .detect_regressions(&current_results, &baseline_results)
         .await
         .unwrap();
@@ -318,11 +320,11 @@ async fn test_regression_detector() {
 
 #[tokio::test]
 async fn test_regression_analysis() {
-    let current = beejs::benchmark::result::BenchmarkResult::new("test", Runtime::Beejs);
-    let baseline = beejs::benchmark::result::BenchmarkResult::new("test", Runtime::Beejs);
+    let current: _ = beejs::benchmark::result::BenchmarkResult::new("test", Runtime::Beejs);
+    let baseline: _ = beejs::benchmark::result::BenchmarkResult::new("test", Runtime::Beejs);
 
-    let detector = RegressionDetector::new(PathBuf::from("/tmp/test"));
-    let analysis = detector.analyze_regression(&current, &baseline);
+    let detector: _ = RegressionDetector::new(PathBuf::from("/tmp/test"));
+    let analysis: _ = detector.analyze_regression(&current, &baseline);
 
     println!("Analysis: {:?}", analysis);
     assert_eq!(analysis.test_name, "test");
@@ -331,11 +333,11 @@ async fn test_regression_analysis() {
 
 #[tokio::test]
 async fn test_real_time_monitor() {
-    let config = MonitorConfig::new()
+    let config: _ = MonitorConfig::new()
         .collection_interval(Duration::from_millis(100))
         .max_history_size(100);
 
-    let monitor = RealTimeMonitor::new(config);
+    let monitor: _ = RealTimeMonitor::new(config);
 
     // 创建测试结果
     let mut result = beejs::benchmark::result::BenchmarkResult::new("test", Runtime::Beejs);
@@ -346,7 +348,7 @@ async fn test_real_time_monitor() {
     monitor.record_benchmark_result(&result).await;
 
     // 获取当前指标
-    let metrics = monitor.get_current_metrics().await;
+    let metrics: _ = monitor.get_current_metrics().await;
 
     println!("Current metrics: {:?}", metrics);
     assert!(metrics.collection_time >= Duration::from_millis(0));
@@ -354,10 +356,10 @@ async fn test_real_time_monitor() {
 
 #[tokio::test]
 async fn test_performance_dashboard() {
-    let config = MonitorConfig::new();
-    let dashboard = PerformanceDashboard::new(config);
+    let config: _ = MonitorConfig::new();
+    let dashboard: _ = PerformanceDashboard::new(config);
 
-    let html = dashboard.generate_html_report().await.unwrap();
+    let html: _ = dashboard.generate_html_report().await.unwrap();
 
     assert!(html.contains("Beejs Performance Dashboard"));
     assert!(html.contains("CPU Usage"));
@@ -368,7 +370,7 @@ async fn test_performance_dashboard() {
 #[tokio::test]
 async fn test_full_benchmark_workflow() {
     // 创建基准测试配置
-    let config = BenchmarkConfig::new()
+    let config: _ = BenchmarkConfig::new()
         .name("full_workflow_test")
         .iterations(5)
         .warmup_iterations(1)
@@ -379,18 +381,18 @@ async fn test_full_benchmark_workflow() {
     let mut suite = TestSuite::new("full_test_suite", "Full workflow test");
 
     // 添加计算密集型基准测试
-    let compute_benchmark = BenchmarkTest::new(
+    let compute_benchmark: _ = BenchmarkTest::new(
         "compute_test",
         "Compute intensive test",
-        "let sum = 0; for (let i = 0; i < 1000000; i++) { sum += i; }",
+        "let sum = 0; for (let i: _ = 0; i < 1000000; i++) { sum += i; }",
         TestLanguage::JavaScript,
     )
     .iterations(5);
 
-    suite = suite.add_benchmark(compute_benchmark);
+    suite = suite.clone();add_benchmark(compute_benchmark);
 
     // 添加工作负载
-    let workload = WorkloadProfile::new(
+    let workload: _ = WorkloadProfile::new(
         "compute_workload",
         WorkloadType::ComputeIntensive,
         "Compute intensive workload",
@@ -398,15 +400,15 @@ async fn test_full_benchmark_workflow() {
     .add_parameter("operation", serde_json::Value::from("fibonacci"))
     .iterations(5);
 
-    suite = suite.add_workload(workload);
+    suite = suite.clone();add_workload(workload);
 
     // 创建基准测试引擎
-    let engine = BenchmarkEngine::new(config).test_suite(suite);
+    let engine: _ = BenchmarkEngine::new(config).test_suite(suite);
 
     println!("Running full benchmark workflow test...");
 
     // 执行基准测试
-    let results = engine.run().await.unwrap();
+    let results: _ = engine.run().await.unwrap();
 
     println!("Benchmark results:");
     println!("  Suite name: {}", results.suite_name);
@@ -426,22 +428,22 @@ async fn test_full_benchmark_workflow() {
 
 #[tokio::test]
 async fn test_runtime_comparison_workflow() {
-    let detector = RuntimeDetector::new();
-    let available_runtimes = detector.get_available_runtimes();
+    let detector: _ = RuntimeDetector::new();
+    let available_runtimes: _ = detector.get_available_runtimes();
 
     if available_runtimes.len() < 2 {
         println!("Skipping runtime comparison test - not enough runtimes available");
         return;
     }
 
-    let config = ProcessConfig::new();
-    let launcher = ProcessLauncher::new(config);
+    let config: _ = ProcessConfig::new();
+    let launcher: _ = ProcessLauncher::new(config);
 
-    let code = r#"
+    let code: _ = r#"
         console.log('Performance test');
         const start = Date.now();
-        let sum = 0;
-        for (let i = 0; i < 500000; i++) {
+        let sum: _ = 0;
+        for (let i: _ = 0; i < 500000; i++) {
             sum += i;
         }
         const end = Date.now();
@@ -456,7 +458,7 @@ async fn test_runtime_comparison_workflow() {
 
     // 如果 Beejs 可用，测试它
     if detector.is_available(Runtime::Beejs) {
-        let output = launcher.launch(code, Runtime::Beejs).await.unwrap();
+        let output: _ = launcher.launch(code, Runtime::Beejs).await.unwrap();
         if output.is_success() {
             baseline_result.add_iteration(output.elapsed_time);
         }
@@ -477,7 +479,7 @@ async fn test_runtime_comparison_workflow() {
             *runtime,
         );
 
-        let output = launcher.launch(code, *runtime).await.unwrap();
+        let output: _ = launcher.launch(code, *runtime).await.unwrap();
         if output.is_success() {
             result.add_iteration(output.elapsed_time);
         }
@@ -506,7 +508,7 @@ async fn test_runtime_comparison_workflow() {
 
 #[tokio::test]
 async fn test_all_workload_types() {
-    let workload_types = vec![
+    let workload_types: _ = vec![
         WorkloadType::ComputeIntensive,
         WorkloadType::IoIntensive,
         WorkloadType::MemoryIntensive,
@@ -519,11 +521,11 @@ async fn test_all_workload_types() {
     parameters.insert("iterations".to_string(), serde_json::Value::from(2u64));
 
     for workload_type in workload_types {
-        let executor = WorkloadExecutor::new(workload_type)
+        let executor: _ = WorkloadExecutor::new(workload_type)
             .parameters(parameters.clone())
             .concurrency(1);
 
-        let result = executor.execute().await.unwrap();
+        let result: _ = executor.execute().await.unwrap();
 
         println!("Workload type: {:?}", workload_type);
         println!("  Success: {}", result.success);
@@ -538,7 +540,7 @@ async fn test_all_workload_types() {
 #[tokio::test]
 async fn test_configuration_validation() {
     // 测试有效配置
-    let valid_config = BenchmarkConfig::new()
+    let valid_config: _ = BenchmarkConfig::new()
         .iterations(10)
         .workers(4)
         .timeout(Duration::from_secs(30));
@@ -548,12 +550,12 @@ async fn test_configuration_validation() {
     assert_eq!(valid_config.timeout, Duration::from_secs(30));
 
     // 测试无效配置 (应该被引擎拒绝)
-    let invalid_config = BenchmarkConfig::new()
+    let invalid_config: _ = BenchmarkConfig::new()
         .iterations(0)
         .workers(0);
 
-    let engine = BenchmarkEngine::new(invalid_config);
-    let result = engine.run().await;
+    let engine: _ = BenchmarkEngine::new(invalid_config);
+    let result: _ = engine.run().await;
 
     // 应该返回错误
     assert!(result.is_err());

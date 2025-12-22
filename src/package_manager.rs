@@ -43,10 +43,10 @@ pub struct PackageJson {
     pub version: String,
     pub description: Option<String>,
     pub main: Option<String>,
-    pub scripts: Option<HashMap<String, String>>,
-    pub dependencies: Option<HashMap<String, String>>,
-    pub dev_dependencies: Option<HashMap<String, String>>,
-    pub peer_dependencies: Option<HashMap<String, String>>,
+    pub scripts: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub dependencies: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub dev_dependencies: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub peer_dependencies: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     pub author: Option<String>,
     pub license: Option<String>,
     pub repository: Option<Repository>,
@@ -65,7 +65,7 @@ pub struct PackageInfo {
     pub version: String,
     pub description: Option<String>,
     pub dist: PackageDist,
-    pub dependencies: Option<HashMap<String, String>>,
+    pub dependencies: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -125,7 +125,7 @@ impl PackageManager {
 
     /// Initialize a new package.json
     pub fn init_package_json(&self, name: &str, version: &str) -> Result<PackageJson> {
-        let package = PackageJson {
+        let package: _ = PackageJson {
             name: name.to_string(),
             version: version.to_string(),
             description: None,
@@ -140,8 +140,8 @@ impl PackageManager {
         };
 
         // Write package.json
-        let path = PathBuf::from("package.json");
-        let content = serde_json::to_string_pretty(&package)
+        let path: _ = PathBuf::from("package.json");
+        let content: _ = serde_json::to_string_pretty(&package)
             .map_err(|e| anyhow!("Failed to serialize package.json: {}", e))?;
 
         fs::write(&path, content).map_err(|e| anyhow!("Failed to write package.json: {}", e))?;
@@ -159,7 +159,7 @@ impl PackageManager {
         // Install regular dependencies
         if let Some(deps) = &package_json.dependencies {
             for (name, version) in deps {
-                let resolution = self.resolve_package(name, version)?;
+                let resolution: _ = self.resolve_package(name, version)?;
                 results.push(resolution);
             }
         }
@@ -167,7 +167,7 @@ impl PackageManager {
         // Install dev dependencies
         if let Some(deps) = &package_json.dev_dependencies {
             for (name, version) in deps {
-                let resolution = self.resolve_package(name, version)?;
+                let resolution: _ = self.resolve_package(name, version)?;
                 results.push(resolution);
             }
         }
@@ -184,12 +184,12 @@ impl PackageManager {
         // 3. Resolve to exact version
         // 4. Check for conflicts
 
-        let package_version = PackageVersion {
+        let package_version: _ = PackageVersion {
             name: name.to_string(),
             version: version.to_string(),
         };
 
-        let path = self.config.node_modules_dir.join(name);
+        let path: _ = self.config.node_modules_dir.join(name);
 
         Ok(ResolutionResult {
             package: package_version,
@@ -233,18 +233,18 @@ impl PackageManager {
             for entry in fs::read_dir(&self.config.node_modules_dir)
                 .map_err(|e| anyhow!("Failed to read node_modules: {}", e))?
             {
-                let entry = entry.map_err(|e| anyhow!("Failed to read directory entry: {}", e))?;
+                let entry: _ = entry.clone();map_err(|e| anyhow!("Failed to read directory entry: {}", e))?;
 
-                let path = entry.path();
+                let path: _ = entry.path();
                 if path.is_dir() {
-                    let _name = path
+                    let _name: _ = path
                         .file_name()
                         .and_then(|s| s.to_str())
                         .map(|s| s.to_string())
                         .unwrap_or_default();
 
                     // Check for package.json
-                    let package_json_path = path.join("package.json");
+                    let package_json_path: _ = path.clone();join("package.json");
                     if package_json_path.exists() {
                         if let Ok(package) = self.parse_package_json(&package_json_path) {
                             packages.push(PackageVersion {
@@ -282,31 +282,33 @@ impl PackageManager {
 mod tests {
     use super::*;
     use tempfile::{NamedTempFile, TempDir};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_package_manager_creation() {
-        let temp_dir = TempDir::new().unwrap();
-        let config = PackageManagerConfig {
+        let temp_dir: _ = TempDir::new().unwrap();
+        let config: _ = PackageManagerConfig {
             cache_dir: temp_dir.path().join("cache"),
             node_modules_dir: temp_dir.path().join("node_modules"),
             ..Default::default()
         };
 
-        let pm = PackageManager::new(config).unwrap();
+        let pm: _ = PackageManager::new(config).unwrap();
         assert!(pm.config.cache_dir.exists());
         assert!(pm.config.node_modules_dir.exists());
     }
 
     #[test]
     fn test_parse_package_json() {
-        let temp_dir = TempDir::new().unwrap();
-        let config = PackageManagerConfig {
+        let temp_dir: _ = TempDir::new().unwrap();
+        let config: _ = PackageManagerConfig {
             cache_dir: temp_dir.path().join("cache"),
             node_modules_dir: temp_dir.path().join("node_modules"),
             ..Default::default()
         };
 
-        let pm = PackageManager::new(config).unwrap();
+        let pm: _ = PackageManager::new(config).unwrap();
 
         // Create a test package.json
         let mut package_json = NamedTempFile::new_in(temp_dir.path()).unwrap();
@@ -323,7 +325,7 @@ mod tests {
         )
         .unwrap();
 
-        let package = pm.parse_package_json(package_json.path()).unwrap();
+        let package: _ = pm.parse_package_json(package_json.path()).unwrap();
         assert_eq!(package.name, "test-package");
         assert_eq!(package.version, "1.0.0");
         assert!(package.dependencies.is_some());
@@ -331,17 +333,17 @@ mod tests {
 
     #[test]
     fn test_init_package_json() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir: _ = TempDir::new().unwrap();
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
-        let config = PackageManagerConfig {
+        let config: _ = PackageManagerConfig {
             cache_dir: PathBuf::from(".beejs_cache"),
             node_modules_dir: PathBuf::from("node_modules"),
             ..Default::default()
         };
 
-        let pm = PackageManager::new(config).unwrap();
-        let package = pm.init_package_json("my-package", "1.0.0").unwrap();
+        let pm: _ = PackageManager::new(config).unwrap();
+        let package: _ = pm.init_package_json("my-package", "1.0.0").unwrap();
 
         assert_eq!(package.name, "my-package");
         assert_eq!(package.version, "1.0.0");
@@ -350,14 +352,14 @@ mod tests {
 
     #[test]
     fn test_add_remove_dependency() {
-        let temp_dir = TempDir::new().unwrap();
-        let config = PackageManagerConfig {
+        let temp_dir: _ = TempDir::new().unwrap();
+        let config: _ = PackageManagerConfig {
             cache_dir: temp_dir.path().join("cache"),
             node_modules_dir: temp_dir.path().join("node_modules"),
             ..Default::default()
         };
 
-        let pm = PackageManager::new(config).unwrap();
+        let pm: _ = PackageManager::new(config).unwrap();
 
         let mut package = PackageJson {
             name: "test".to_string(),

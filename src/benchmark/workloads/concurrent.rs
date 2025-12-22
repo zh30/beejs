@@ -24,19 +24,19 @@ impl ConcurrentWorkload {
     /// 执行工作负载
     pub async fn execute(
         &self,
-        parameters: HashMap<String, serde_json::Value>,
+        parameters: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>,
         concurrency: u32,
     ) -> Result<WorkloadResult> {
         let mut result = WorkloadResult::new(self.workload_type);
         result.start();
 
-        let iterations = get_iterations(&parameters);
+        let iterations: _ = get_iterations(&parameters);
 
         // 并发执行任务
         let mut tasks = Vec::new();
         for _ in 0..concurrency {
-            let iterations = iterations;
-            let task = tokio::spawn(async move {
+            let iterations: _ = iterations;
+            let task: _ = tokio::spawn(async move {
                 Self::run_concurrent_task(iterations).await
             });
             tasks.push(task);
@@ -59,7 +59,7 @@ impl ConcurrentWorkload {
         }
 
         // 收集资源使用情况
-        let resource_usage = Self::collect_resource_usage();
+        let resource_usage: _ = Self::collect_resource_usage();
         result.resource_usage = resource_usage;
 
         result.finish(total_iterations);
@@ -96,7 +96,7 @@ impl Default for ConcurrentWorkload {
 }
 
 /// 获取迭代次数
-fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
+fn get_iterations(parameters: &HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>) -> u32 {
     parameters
         .get("iterations")
         .and_then(|v| v.as_u64())
@@ -107,13 +107,15 @@ fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_workload_execution() {
-        let workload = ConcurrentWorkload::new();
-        let parameters = HashMap::new();
+        let workload: _ = ConcurrentWorkload::new();
+        let parameters: _ = HashMap::new();
 
-        let result = workload.execute(parameters, 2).await.unwrap();
+        let result: _ = workload.execute(parameters, 2).await.unwrap();
 
         assert_eq!(result.workload_type, super::super::WorkloadType::Concurrent);
         assert!(result.success);

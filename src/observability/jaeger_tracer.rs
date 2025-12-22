@@ -37,12 +37,12 @@ impl JaegerTracer {
     }
 
     /// Extract trace context from carrier
-    pub fn extract_from_carrier(&self, _carrier: &HashMap<String, String>) -> () {
+    pub fn extract_from_carrier(&self, _carrier: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> () {
         // TODO: Implement context extraction
     }
 
     /// Inject trace context to carrier
-    pub fn inject_to_carrier(&self, _carrier: &mut HashMap<String, String>) {
+    pub fn inject_to_carrier(&self, _carrier: &mut HashMap<String, String, std::collections::HashMap<String, String, String, String>>) {
         // TODO: Implement context injection
     }
 
@@ -65,12 +65,12 @@ impl JaegerSpan {
     }
 
     /// Add multiple attributes to the span
-    pub fn set_attributes(&self, _attributes: HashMap<String, String>) -> &Self {
+    pub fn set_attributes(&self, _attributes: HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> &Self {
         self
     }
 
     /// Add an event to the span
-    pub fn add_event(&self, _event_name: &str, _attributes: HashMap<String, String>) -> &Self {
+    pub fn add_event(&self, _event_name: &str, _attributes: HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> &Self {
         self
     }
 
@@ -109,19 +109,21 @@ impl JaegerSpan {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_jaeger_tracer_creation() {
-        let addr = "127.0.0.1:6831".parse().unwrap();
-        let tracer = JaegerTracer::new(addr);
+        let addr: _ = "127.0.0.1:6831".parse().unwrap();
+        let tracer: _ = JaegerTracer::new(addr);
         assert!(tracer.is_ok());
     }
 
     #[test]
     fn test_jaeger_span_creation() {
-        let addr = "127.0.0.1:6831".parse().unwrap();
-        let tracer = JaegerTracer::new(addr).unwrap();
-        let span = tracer.create_span("test_operation");
+        let addr: _ = "127.0.0.1:6831".parse().unwrap();
+        let tracer: _ = JaegerTracer::new(addr).unwrap();
+        let span: _ = tracer.create_span("test_operation");
         assert_eq!(span.operation_name, "test_operation");
     }
 }

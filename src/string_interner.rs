@@ -18,7 +18,7 @@ impl Symbol {
 /// 字符串Interner - 管理字符串池
 pub struct StringInterner {
     /// 字符串到符号的映射
-    string_to_symbol: HashMap<Arc<str>, Symbol>,
+    string_to_symbol: HashMap<Arc<str, std::collections::HashMap<Arc<str, Arc<str>>, Symbol>,
     /// 符号到字符串的映射
     symbol_to_string: Vec<Arc<str>>,
     /// 统计信息
@@ -71,7 +71,7 @@ impl StringInterner {
         }
 
         // 创建新符号
-        let symbol = Symbol(self.symbol_to_string.len() as u32);
+        let symbol: _ = Symbol(self.symbol_to_string.len() as u32);
         let arc_str: Arc<str> = Arc::from(s);
 
         self.string_to_symbol.insert(arc_str.clone(), symbol);
@@ -115,7 +115,7 @@ impl StringInterner {
     /// 预填充常用字符串
     pub fn prefill_common_strings(&mut self) {
         // JavaScript常用字符串
-        let common_strings = [
+        let common_strings: _ = [
             // 基本类型
             "undefined", "null", "true", "false",
             // 常用属性
@@ -228,10 +228,12 @@ pub fn interner_stats() -> InternerStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_string_interner_creation() {
-        let interner = StringInterner::new();
+        let interner: _ = StringInterner::new();
         assert_eq!(interner.len(), 0);
         assert!(interner.is_empty());
     }
@@ -240,10 +242,10 @@ mod tests {
     fn test_intern_and_resolve() {
         let mut interner = StringInterner::new();
 
-        let symbol = interner.intern("hello");
+        let symbol: _ = interner.intern("hello");
         assert_eq!(interner.resolve(symbol), Some("hello"));
 
-        let symbol2 = interner.intern("world");
+        let symbol2: _ = interner.intern("world");
         assert_eq!(interner.resolve(symbol2), Some("world"));
 
         assert_ne!(symbol, symbol2);
@@ -254,15 +256,15 @@ mod tests {
     fn test_intern_deduplication() {
         let mut interner = StringInterner::new();
 
-        let s1 = interner.intern("hello");
-        let s2 = interner.intern("hello");
-        let s3 = interner.intern("hello");
+        let s1: _ = interner.intern("hello");
+        let s2: _ = interner.intern("hello");
+        let s3: _ = interner.intern("hello");
 
         assert_eq!(s1, s2);
         assert_eq!(s2, s3);
         assert_eq!(interner.len(), 1);
 
-        let stats = interner.stats();
+        let stats: _ = interner.stats();
         assert_eq!(stats.total_intern_calls, 3);
         assert_eq!(stats.cache_hits, 2);
         assert_eq!(stats.new_strings, 1);
@@ -290,14 +292,14 @@ mod tests {
         assert!(interner.len() > 50);
 
         // 常用字符串应该已经存在
-        let symbol = interner.intern("length");
+        let symbol: _ = interner.intern("length");
         assert_eq!(interner.resolve(symbol), Some("length"));
     }
 
     #[test]
     fn test_global_interner() {
-        let s1 = GLOBAL_INTERNER.intern("global_test");
-        let s2 = GLOBAL_INTERNER.intern("global_test");
+        let s1: _ = GLOBAL_INTERNER.intern("global_test");
+        let s2: _ = GLOBAL_INTERNER.intern("global_test");
 
         assert_eq!(s1, s2);
         assert_eq!(GLOBAL_INTERNER.resolve(s1), Some("global_test".to_string()));
@@ -307,13 +309,13 @@ mod tests {
     fn test_memory_saved_estimation() {
         let mut interner = StringInterner::new();
 
-        let long_string = "this_is_a_very_long_string_that_takes_up_memory";
+        let long_string: _ = "this_is_a_very_long_string_that_takes_up_memory";
 
         for _ in 0..100 {
             interner.intern(long_string);
         }
 
-        let stats = interner.stats();
+        let stats: _ = interner.stats();
         // 99次命中，每次节省字符串长度的字节
         assert!(stats.memory_saved_bytes > 0);
         assert_eq!(stats.memory_saved_bytes, (long_string.len() * 99) as u64);
@@ -323,9 +325,9 @@ mod tests {
     fn test_symbol_id() {
         let mut interner = StringInterner::new();
 
-        let s0 = interner.intern("first");
-        let s1 = interner.intern("second");
-        let s2 = interner.intern("third");
+        let s0: _ = interner.intern("first");
+        let s1: _ = interner.intern("second");
+        let s2: _ = interner.intern("third");
 
         assert_eq!(s0.id(), 0);
         assert_eq!(s1.id(), 1);
@@ -334,12 +336,12 @@ mod tests {
 
     #[test]
     fn test_convenience_functions() {
-        let sym = intern("convenience_test");
-        let resolved = resolve(sym);
+        let sym: _ = intern("convenience_test");
+        let resolved: _ = resolve(sym);
 
         assert_eq!(resolved, Some("convenience_test".to_string()));
 
-        let stats = interner_stats();
+        let stats: _ = interner_stats();
         assert!(stats.total_intern_calls > 0);
     }
 }

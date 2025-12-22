@@ -9,25 +9,27 @@ mod tests {
     };
     use std::net::{SocketAddr, IpAddr, Ipv4Addr};
     use tokio;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试零拷贝网络套接字
     #[tokio::test]
     async fn test_zero_copy_socket() -> Result<(), Box<dyn std::error::Error>> {
-        let config = NetworkIoConfig::default();
-        let socket = ZeroCopySocket::new(config);
+        let config: _ = NetworkIoConfig::default();
+        let socket: _ = ZeroCopySocket::new(config);
 
         // 创建测试地址
-        let addr = SocketAddr::new(
+        let addr: _ = SocketAddr::new(
             IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             0
         );
 
         // 测试绑定
-        let listener = ZeroCopySocket::bind(&addr)?;
+        let listener: _ = ZeroCopySocket::bind(&addr)?;
         println!("✅ 零拷贝套接字绑定成功");
 
         // 获取统计信息
-        let stats = socket.get_stats().await;
+        let stats: _ = socket.get_stats().await;
         println!("📊 零拷贝统计: {:?}", stats);
 
         Ok(())
@@ -36,7 +38,7 @@ mod tests {
     /// 测试批量 I/O 引擎
     #[tokio::test]
     async fn test_batch_io_engine() -> Result<(), Box<dyn std::error::Error>> {
-        let config = NetworkIoConfig::default();
+        let config: _ = NetworkIoConfig::default();
         let mut batch_engine = BatchIoEngine::new(config);
 
         // 启动批处理器
@@ -45,7 +47,7 @@ mod tests {
 
         // 提交测试操作
         for i in 0..10 {
-            let operation = BatchOperation {
+            let operation: _ = BatchOperation {
                 id: i,
                 priority: BatchPriority::Normal,
                 created_at: std::time::Instant::now(),
@@ -62,7 +64,7 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(100)).await;
 
         // 获取统计信息
-        let stats = batch_engine.get_stats().await;
+        let stats: _ = batch_engine.get_stats().await;
         println!("📊 批量 I/O 统计: {:?}", stats);
 
         // 停止批处理器
@@ -74,13 +76,13 @@ mod tests {
     /// 测试异步零拷贝传输
     #[tokio::test]
     async fn test_async_zero_copy() -> Result<(), Box<dyn std::error::Error>> {
-        let config = NetworkIoConfig::default();
-        let async_engine = AsyncZeroCopy::new(config);
+        let config: _ = NetworkIoConfig::default();
+        let async_engine: _ = AsyncZeroCopy::new(config);
 
         println!("✅ 异步零拷贝引擎创建成功");
 
         // 创建传输请求
-        let request = TransferRequest {
+        let request: _ = TransferRequest {
             id: 1,
             source: vec![0u8; 1024],
             destination: "127.0.0.1:8080".to_string(),
@@ -89,13 +91,13 @@ mod tests {
         };
 
         // 执行传输
-        let future = async_engine.transfer(request).await?;
-        let result = future.await?;
+        let future: _ = async_engine.transfer(request).await?;
+        let result: _ = future.await?;
 
         println!("✅ 异步零拷贝传输完成，传输 {} 字节", result);
 
         // 获取统计信息
-        let stats = async_engine.get_stats().await;
+        let stats: _ = async_engine.get_stats().await;
         println!("📊 异步零拷贝统计: {:?}", stats);
 
         Ok(())
@@ -104,18 +106,18 @@ mod tests {
     /// 测试网络缓冲区池
     #[test]
     fn test_network_buffer_pool() {
-        let pool = BufferPool::new(64 * 1024);
+        let pool: _ = BufferPool::new(64 * 1024);
 
         // 预分配缓冲区
         pool.preallocate();
 
         // 测试分配小缓冲区
-        let small_buffer = pool.allocate(512);
+        let small_buffer: _ = pool.allocate(512);
         assert_eq!(small_buffer.len(), 512);
         println!("✅ 分配小缓冲区成功");
 
         // 测试分配中等缓冲区
-        let medium_buffer = pool.allocate(32 * 1024);
+        let medium_buffer: _ = pool.allocate(32 * 1024);
         assert_eq!(medium_buffer.len(), 32 * 1024);
         println!("✅ 分配中等缓冲区成功");
 
@@ -125,7 +127,7 @@ mod tests {
         println!("✅ 释放缓冲区成功");
 
         // 获取统计信息
-        let stats = pool.get_stats();
+        let stats: _ = pool.get_stats();
         println!("📊 缓冲区池统计: {:?}", stats);
 
         // 获取池状态
@@ -136,15 +138,15 @@ mod tests {
     /// 测试 io_uring 引擎
     #[tokio::test]
     async fn test_io_uring_engine() -> Result<(), Box<dyn std::error::Error>> {
-        let config = NetworkIoConfig::default();
-        let engine = IoUringEngine::new(config);
+        let config: _ = NetworkIoConfig::default();
+        let engine: _ = IoUringEngine::new(config);
 
         // 初始化引擎
         engine.initialize().await?;
         println!("✅ io_uring 引擎初始化成功");
 
         // 创建提交条目
-        let submission = UringSubmission {
+        let submission: _ = UringSubmission {
             opcode: 1, // READ
             flags: 0,
             ioprio: 0,
@@ -160,12 +162,12 @@ mod tests {
         println!("✅ 提交 I/O 操作成功");
 
         // 等待完成
-        let completions = engine.wait_for_completions(1).await;
+        let completions: _ = engine.wait_for_completions(1).await;
         assert_eq!(completions.len(), 1);
         println!("✅ 收到 {} 个完成事件", completions.len());
 
         // 获取统计信息
-        let stats = engine.get_stats().await;
+        let stats: _ = engine.get_stats().await;
         println!("📊 io_uring 统计: {:?}", stats);
 
         // 关闭引擎
@@ -177,7 +179,7 @@ mod tests {
     /// 测试网络 I/O 引擎集成
     #[tokio::test]
     async fn test_network_io_engine_integration() -> Result<(), Box<dyn std::error::Error>> {
-        let config = NetworkIoConfig {
+        let config: _ = NetworkIoConfig {
             enable_zero_copy: true,
             enable_batch_io: true,
             enable_io_uring: true,
@@ -188,19 +190,19 @@ mod tests {
         };
 
         // 创建网络 I/O 引擎
-        let engine = NetworkIoEngine::new(config);
+        let engine: _ = NetworkIoEngine::new(config);
 
         println!("✅ 网络 I/O 引擎创建成功");
 
         // 获取缓冲区池
-        let buffer_pool = engine.get_buffer_pool();
+        let buffer_pool: _ = engine.get_buffer_pool();
 
         // 分配缓冲区
-        let buffer = buffer_pool.allocate(1024);
+        let buffer: _ = buffer_pool.allocate(1024);
         println!("✅ 分配网络缓冲区成功，大小: {}", buffer.len());
 
         // 获取统计信息
-        let stats = engine.get_stats();
+        let stats: _ = engine.get_stats();
         println!("📊 网络 I/O 统计: {:?}", stats);
 
         Ok(())
@@ -209,17 +211,17 @@ mod tests {
     /// 性能基准测试
     #[tokio::test]
     async fn test_performance_benchmark() -> Result<(), Box<dyn std::error::Error>> {
-        let config = NetworkIoConfig::default();
-        let async_engine = AsyncZeroCopy::new(config);
+        let config: _ = NetworkIoConfig::default();
+        let async_engine: _ = AsyncZeroCopy::new(config);
 
-        let iterations = 100;
-        let start = std::time::Instant::now();
+        let iterations: _ = 100;
+        let start: _ = std::time::Instant::now();
 
         // 并发执行多个传输
         let mut handles = Vec::new();
 
         for i in 0..iterations {
-            let request = TransferRequest {
+            let request: _ = TransferRequest {
                 id: i,
                 source: vec![0u8; 1024],
                 destination: format!("127.0.0.1:{}", 8000 + (i % 10)),
@@ -227,17 +229,17 @@ mod tests {
                 timeout_ms: 1000,
             };
 
-            let future = async_engine.transfer(request).await?;
+            let future: _ = async_engine.transfer(request).await?;
             handles.push(future);
         }
 
         // 等待所有传输完成
         for handle in handles {
-            let _ = handle.await?;
+            let _: _ = handle.await?;
         }
 
-        let elapsed = start.elapsed();
-        let throughput = iterations as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start.elapsed();
+        let throughput: _ = iterations as f64 / elapsed.as_secs_f64();
 
         println!("🚀 性能基准测试结果:");
         println!("   - 总传输数: {}", iterations);

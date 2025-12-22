@@ -4,6 +4,8 @@
 
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Performance metrics for a single execution
 #[derive(Debug, Clone)]
@@ -44,13 +46,13 @@ impl PerformanceAnalyzer {
     where
         F: FnOnce() -> R,
     {
-        let start = Instant::now();
-        let result = f();
-        let duration = start.elapsed();
+        let start: _ = Instant::now();
+        let result: _ = f();
+        let duration: _ = start.elapsed();
 
         // Estimate cache hit based on execution time (faster = likely cache hit)
-        let execution_time_ms = duration.as_secs_f64() * 1000.0;
-        let cache_hit = execution_time_ms < 10.0; // Assume < 10ms is cache hit
+        let execution_time_ms: _ = duration.as_secs_f64() * 1000.0;
+        let cache_hit: _ = execution_time_ms < 10.0; // Assume < 10ms is cache hit
 
         self.metrics.push(ExecutionMetrics {
             execution_time_ms,
@@ -74,20 +76,20 @@ impl PerformanceAnalyzer {
             };
         }
 
-        let total_executions = self.metrics.len();
+        let total_executions: _ = self.metrics.len();
         let total_time: f64 = self.metrics.iter().map(|m| m.execution_time_ms).sum();
-        let average_time_ms = total_time / total_executions as f64;
+        let average_time_ms: _ = total_time / total_executions as f64;
 
-        let min_time_ms = self.metrics.iter()
+        let min_time_ms: _ = self.metrics.iter()
             .map(|m| m.execution_time_ms)
             .fold(f64::INFINITY, f64::min);
 
-        let max_time_ms = self.metrics.iter()
+        let max_time_ms: _ = self.metrics.iter()
             .map(|m| m.execution_time_ms)
             .fold(f64::NEG_INFINITY, f64::max);
 
-        let cache_hits = self.metrics.iter().filter(|m| m.cache_hit).count();
-        let cache_hit_rate = cache_hits as f64 / total_executions as f64 * 100.0;
+        let cache_hits: _ = self.metrics.iter().filter(|m| m.cache_hit).count();
+        let cache_hit_rate: _ = cache_hits as f64 / total_executions as f64 * 100.0;
 
         let total_code_executed: usize = self.metrics.iter()
             .map(|m| m.code_length)
@@ -105,7 +107,7 @@ impl PerformanceAnalyzer {
 
     /// Print a formatted performance report
     pub fn print_report(&self) {
-        let report = self.generate_report();
+        let report: _ = self.generate_report();
 
         println!("\n=== Beejs Performance Analysis Report ===");
         println!("Total executions: {}", report.total_executions);

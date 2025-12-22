@@ -19,6 +19,8 @@ use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
 use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 性能对比结果
 #[derive(Debug, Clone)]
@@ -30,8 +32,8 @@ pub struct PerformanceComparisonResult {
     pub speedup_vs_bun: f64,
     pub memory_savings_vs_nodejs: f64,
     pub memory_savings_vs_bun: f64,
-    pub execution_time_comparison: HashMap<String, Duration>,
-    pub memory_usage_comparison: HashMap<String, usize>,
+    pub execution_time_comparison: HashMap<String, Duration, std::collections::HashMap<String, Duration, String, Duration>>,
+    pub memory_usage_comparison: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>,
 }
 
 /// 性能对比摘要
@@ -50,9 +52,9 @@ pub struct PerformanceSummary {
 impl PerformanceSummary {
     /// 计算整体性能评分 (0-100)
     pub fn calculate_overall_score(&self) -> f64 {
-        let speedup_score = ((self.average_speedup_vs_nodejs + self.average_speedup_vs_bun) / 2.0 - 1.0) * 20.0;
-        let win_rate = (self.beejs_wins as f64 / self.total_tests as f64) * 40.0;
-        let memory_score = self.memory_efficiency_improvement * 0.4;
+        let speedup_score: _ = ((self.average_speedup_vs_nodejs + self.average_speedup_vs_bun) / 2.0 - 1.0) * 20.0;
+        let win_rate: _ = (self.beejs_wins as f64 / self.total_tests as f64) * 40.0;
+        let memory_score: _ = self.memory_efficiency_improvement * 0.4;
 
         (speedup_score + win_rate + memory_score).clamp(0.0, 100.0)
     }
@@ -155,11 +157,11 @@ impl BenchmarkTestCase {
             }
             BenchmarkTestCase::ExecutionSpeed => {
                 // 简单的执行速度测试代码
-                "let sum = 0; for (let i = 0; i < 1000000; i++) { sum += i; }".to_string()
+                "let sum: _ = 0; for (let i: _ = 0; i < 1000000; i++) { sum += i; }".to_string()
             }
             BenchmarkTestCase::MemoryUsage => {
                 // 内存使用测试代码
-                "let _arr = new Array(1000000).fill(0);".to_string()
+                "let _arr: _ = new Array(1000000).fill(0);".to_string()
             }
             BenchmarkTestCase::ConcurrentPerformance => {
                 // 并发性能测试代码
@@ -173,14 +175,14 @@ impl BenchmarkTestCase {
             }
             BenchmarkTestCase::Matrix { size } => {
                 format!(
-                    "let _matrix = Array.from({{length: {}}}, (_, i) => Array.from({{length: {}}}, (_, j) => i * j));",
+                    "let _matrix: _ = Array.from({{length: {}}}, (_, i) => Array.from({{length: {}}}, (_, j) => i * j));",
                     size, size
                 )
             }
             BenchmarkTestCase::JsonProcessing { data_size } => {
-                let json_data = generate_json_data(*data_size);
+                let json_data: _ = generate_json_data(*data_size);
                 format!(
-                    "let data = JSON.parse('{}'); JSON.stringify(data);",
+                    "let data: _ = JSON.parse('{}'); JSON.stringify(data);",
                     json_data
                 )
             }
@@ -203,7 +205,7 @@ fn generate_json_data(size: usize) -> String {
     let mut counter = 0;
 
     while current_size < size - 2 {
-        let entry = format!("\"key_{}\": \"value_{}\"", counter, counter);
+        let entry: _ = format!("\"key_{}\": \"value_{}\"", counter, counter);
         if current_size + entry.len() + 2 < size {
             if current_size > 1 {
                 json.push(',');

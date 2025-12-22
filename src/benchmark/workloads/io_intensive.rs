@@ -27,20 +27,20 @@ impl IOWorkload {
     /// 执行工作负载
     pub async fn execute(
         &self,
-        parameters: HashMap<String, serde_json::Value>,
+        parameters: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>,
         concurrency: u32,
     ) -> Result<WorkloadResult> {
         let mut result = WorkloadResult::new(self.workload_type);
         result.start();
 
-        let iterations = get_iterations(&parameters);
-        let operation = get_operation(&parameters);
+        let iterations: _ = get_iterations(&parameters);
+        let operation: _ = get_operation(&parameters);
 
         // 并行执行 I/O 任务
         let handles: Vec<_> = (0..concurrency)
             .map(|_| {
-                let operation = operation.clone();
-                let iterations = iterations;
+                let operation: _ = operation.clone();clone();
+                let iterations: _ = iterations;
                 tokio::spawn(async move {
                     Self::run_io_tasks(operation, iterations).await
                 })
@@ -64,7 +64,7 @@ impl IOWorkload {
         }
 
         // 收集资源使用情况
-        let resource_usage = Self::collect_resource_usage();
+        let resource_usage: _ = Self::collect_resource_usage();
         result.resource_usage = resource_usage;
 
         result.finish(total_iterations);
@@ -108,24 +108,24 @@ impl IOWorkload {
 
     /// 文件读取基准测试
     async fn file_read_benchmark() -> Result<(), BenchmarkError> {
-        let content = "Hello, World!".repeat(1000);
-        let temp_file = super::super::utils::create_temp_dir("io_bench")?;
-        let file_path = temp_file.path().join("test.txt");
+        let content: _ = "Hello, World!".repeat(1000);
+        let temp_file: _ = super::super::utils::create_temp_dir("io_bench")?;
+        let file_path: _ = temp_file.path().join("test.txt");
 
         // 写入文件
         tokio::fs::write(&file_path, &content).await?;
 
         // 读取文件
-        let _read_content = tokio::fs::read(&file_path).await?;
+        let _read_content: _ = tokio::fs::read(&file_path).await?;
 
         Ok(())
     }
 
     /// 文件写入基准测试
     async fn file_write_benchmark() -> Result<(), BenchmarkError> {
-        let content = "Hello, World!".repeat(1000);
-        let temp_file = super::super::utils::create_temp_dir("io_bench")?;
-        let file_path = temp_file.path().join("test.txt");
+        let content: _ = "Hello, World!".repeat(1000);
+        let temp_file: _ = super::super::utils::create_temp_dir("io_bench")?;
+        let file_path: _ = temp_file.path().join("test.txt");
 
         tokio::fs::write(&file_path, &content).await?;
 
@@ -160,7 +160,7 @@ impl Default for IOWorkload {
 }
 
 /// 获取迭代次数
-fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
+fn get_iterations(parameters: &HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>) -> u32 {
     parameters
         .get("iterations")
         .and_then(|v| v.as_u64())
@@ -169,7 +169,7 @@ fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
 }
 
 /// 获取操作类型
-fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
+fn get_operation(parameters: &HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>) -> String {
     parameters
         .get("operation")
         .and_then(|v| v.as_str())
@@ -180,15 +180,17 @@ fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_workload_execution() {
-        let workload = IOWorkload::new();
+        let workload: _ = IOWorkload::new();
         let mut parameters = HashMap::new();
         parameters.insert("iterations".to_string(), serde_json::Value::from(5u64));
         parameters.insert("operation".to_string(), serde_json::Value::from("file_read"));
 
-        let result = workload.execute(parameters, 1).await.unwrap();
+        let result: _ = workload.execute(parameters, 1).await.unwrap();
 
         assert_eq!(result.workload_type, super::super::WorkloadType::IoIntensive);
         assert_eq!(result.iterations, 5);

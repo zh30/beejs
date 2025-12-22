@@ -33,7 +33,7 @@ pub struct Task {
     pub priority: u8,
     pub created_at: Instant,
     pub timeout: Duration,
-    pub metadata: HashMap<String, String>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 任务结果
@@ -135,9 +135,9 @@ pub struct SchedulerStats {
 pub struct TaskScheduler {
     config: SchedulerConfig,
     pending_tasks: BinaryHeap<Reverse<TaskWrapper>>,
-    running_tasks: HashMap<String, Task>,
-    completed_tasks: HashMap<String, TaskResult>,
-    failed_tasks: HashMap<String, Task>,
+    running_tasks: HashMap<String, Task, std::collections::HashMap<String, Task, String, Task>>,
+    completed_tasks: HashMap<String, TaskResult, std::collections::HashMap<String, TaskResult, String, TaskResult>>,
+    failed_tasks: HashMap<String, Task, std::collections::HashMap<String, Task, String, Task>>,
     stats: SchedulerStats,
 }
 
@@ -229,7 +229,7 @@ impl TaskScheduler {
     /// 标记任务完成
     pub fn mark_task_completed(&mut self, task_id: &str) -> Option<TaskResult> {
         if let Some(task) = self.running_tasks.remove(task_id) {
-            let result = TaskResult {
+            let result: _ = TaskResult {
                 task_id: task.id.clone(),
                 status: TaskStatus::Completed,
                 result_data: Some(Vec::new()),
@@ -250,7 +250,7 @@ impl TaskScheduler {
 
     /// 清理超时任务
     pub fn cleanup_timed_out_tasks(&mut self) -> usize {
-        let now = Instant::now();
+        let now: _ = Instant::now();
         let mut timed_out_count = 0;
 
         // 清理 pending 队列中的超时任务
@@ -306,7 +306,7 @@ impl TaskScheduler {
 #[derive(Debug)]
 pub struct TaskDistributor {
     config: DistributorConfig,
-    nodes: HashMap<String, SchedulerNodeInfo>,
+    nodes: HashMap<String, SchedulerNodeInfo, std::collections::HashMap<String, SchedulerNodeInfo, String, SchedulerNodeInfo>>,
 }
 
 impl TaskDistributor {
@@ -346,18 +346,20 @@ impl TaskDistributor {
         }
 
         // 根据负载均衡策略选择节点
-        let node_id = match self.config.load_balancing_strategy.as_str() {
+        let node_id: _ = match self.config.load_balancing_strategy.as_str() {
             "least_loaded" => {
                 compatible_nodes.sort_by_key(|node| node.current_load);
                 compatible_nodes.first().map(|n| &n.id).cloned()
             }
             "random" => {
                 use rand::Rng;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
                 let mut rng = rand::thread_rng();
                 if compatible_nodes.is_empty() {
                     None
                 } else {
-                    let index = rng.gen_range(0..compatible_nodes.len());
+                    let index: _ = rng.gen_range(0..compatible_nodes.len());
                     Some(compatible_nodes[index].id.clone())
                 }
             }
@@ -400,7 +402,7 @@ impl TaskDistributor {
 #[derive(Debug)]
 pub struct ResultAggregator {
     config: AggregatorConfig,
-    batches: HashMap<String, BatchResults>,
+    batches: HashMap<String, BatchResults, std::collections::HashMap<String, BatchResults, String, BatchResults>>,
 }
 
 /// 批量结果
@@ -426,7 +428,7 @@ impl ResultAggregator {
 
     /// 收集任务结果
     pub fn collect_result(&mut self, result: TaskResult, batch_id: &str) -> Result<(), String> {
-        let batch = self.batches.entry(batch_id.to_string()).or_insert_with(|| BatchResults {
+        let batch: _ = self.batches.entry(batch_id.to_string()).or_insert_with(|| BatchResults {
             results: Vec::new(),
             start_time: Instant::now(),
             is_complete: false,

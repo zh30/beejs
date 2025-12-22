@@ -88,19 +88,19 @@ pub struct Phase2MemoryStats {
 impl Phase2MemoryEngine {
     /// 创建 Phase 2 内存引擎
     pub fn new(config: Phase2MemoryConfig) -> Self {
-        let zero_copy = Arc::new(EnhancedZeroCopy::new(
-            config.dma_config.clone(),
+        let zero_copy: _ = Arc::new(std::sync::Mutex::new(EnhancedZeroCopy::new(
+            config.dma_config.clone()),
             config.mmap_config.clone(),
             config.prefetch_config.clone(),
         ));
 
-        let prefetcher = Arc::new(SmartPrefetcher::new(
-            zero_copy.clone(),
+        let prefetcher: _ = Arc::new(std::sync::Mutex::new(SmartPrefetcher::new(
+            zero_copy.clone()),
             config.prefetch_strategy.clone(),
         ));
 
-        let gc_optimizer = Arc::new(EnhancedGcOptimizer::new(
-            config.gc_config.clone(),
+        let gc_optimizer: _ = Arc::new(std::sync::Mutex::new(EnhancedGcOptimizer::new(
+            config.gc_config.clone()),
         ));
 
         // 启用预测性 GC
@@ -111,7 +111,7 @@ impl Phase2MemoryEngine {
             zero_copy,
             prefetcher,
             gc_optimizer,
-            stats: Arc::new(Phase2MemoryStats::default()),
+            stats: Arc::new(std::sync::Mutex::new(Phase2MemoryStats::default())),
             started_at: Instant::now(),
         }
     }
@@ -128,18 +128,18 @@ impl Phase2MemoryEngine {
         self.stats.total_bytes_allocated.fetch_add(size, std::sync::atomic::Ordering::Relaxed);
 
         // 检查是否应该使用 DMA
-        let result = if size >= self.config.dma_config.dma_threshold {
+        let result: _ = if size >= self.config.dma_config.dma_threshold {
             // 使用 DMA 分配
             let buffer = self.zero_copy.allocate_dma(size).await.map_err(|_| "DMA allocation failed")?;
             self.stats.dma_operations.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             Ok(buffer.ptr)
         } else {
             // 使用标准分配
-            let layout = std::alloc::Layout::from_size_align(size, std::mem::align_of::<usize>())
+            let layout: _ = std::alloc::Layout::from_size_align(size, std::mem::align_of::<usize>())
                 .map_err(|_| "Invalid layout")?;
 
             unsafe {
-                let ptr = std::alloc::System.alloc(layout);
+                let ptr: _ = std::alloc::System.alloc(layout);
                 if ptr.is_null() {
                     Err("Allocation failed")
                 } else {
@@ -153,7 +153,7 @@ impl Phase2MemoryEngine {
 
         // 如果启用 AI 优化，记录访问
         if self.config.enable_ai_optimization {
-            let addr = match result {
+            let addr: _ = match result {
                 Ok(ptr) => ptr.as_ptr() as usize,
                 Err(_) => 0,
             };
@@ -181,7 +181,7 @@ impl Phase2MemoryEngine {
         } else {
             // 标准释放
             unsafe {
-                let layout = std::alloc::Layout::from_size_align_unchecked(size, std::mem::align_of::<usize>());
+                let layout: _ = std::alloc::Layout::from_size_align_unchecked(size, std::mem::align_of::<usize>());
                 std::alloc::System.dealloc(ptr.as_ptr(), layout);
             }
         }
@@ -194,7 +194,7 @@ impl Phase2MemoryEngine {
         self.stats.mmap_operations.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         // 使用零拷贝系统进行内存映射
-        let mmap = self.zero_copy.mmap_file(path, size).await?;
+        let mmap: _ = self.zero_copy.mmap_file(path, size).await?;
 
         Ok(mmap)
     }
@@ -238,9 +238,9 @@ impl Phase2MemoryEngine {
 
     /// 获取内存使用统计
     pub async fn get_memory_stats(&self) -> Phase2MemoryStatsSnapshot {
-        let perf_stats = self.zero_copy.get_performance_stats().await;
-        let prefetch_stats = self.zero_copy.get_prefetch_stats().await;
-        let gc_metrics = self.gc_optimizer.get_metrics().await;
+        let perf_stats: _ = self.zero_copy.get_performance_stats().await;
+        let prefetch_stats: _ = self.zero_copy.get_prefetch_stats().await;
+        let gc_metrics: _ = self.gc_optimizer.get_metrics().await;
 
         Phase2MemoryStatsSnapshot {
             uptime: self.started_at.elapsed(),
@@ -264,21 +264,21 @@ impl Phase2MemoryEngine {
 
     /// 获取内存效率指标
     pub async fn get_efficiency_metrics(&self) -> Phase2EfficiencyMetrics {
-        let stats = self.get_memory_stats().await;
+        let stats: _ = self.get_memory_stats().await;
 
-        let allocation_efficiency = if stats.total_bytes_allocated > 0 {
+        let allocation_efficiency: _ = if stats.total_bytes_allocated > 0 {
             stats.total_bytes_freed as f64 / stats.total_bytes_allocated as f64
         } else {
             0.0
         };
 
-        let zero_copy_ratio = if stats.total_allocations > 0 {
+        let zero_copy_ratio: _ = if stats.total_allocations > 0 {
             stats.zero_copy_operations as f64 / stats.total_allocations as f64
         } else {
             0.0
         };
 
-        let memory_reduction = if stats.total_bytes_allocated > 0 {
+        let memory_reduction: _ = if stats.total_bytes_allocated > 0 {
             stats.bytes_saved as f64 / stats.total_bytes_allocated as f64
         } else {
             0.0
@@ -299,7 +299,7 @@ impl Phase2MemoryEngine {
         self.prefetcher.cleanup_expired_tasks().await;
 
         // 强制执行一次 GC
-        let _ = self.force_gc().await;
+        let _: _ = self.force_gc().await;
     }
 }
 
@@ -336,17 +336,17 @@ pub struct Phase2EfficiencyMetrics {
 impl Phase2EfficiencyMetrics {
     pub fn overall_score(&self) -> f64 {
         // 计算综合性能得分 (0-100)
-        let allocation_score = self.allocation_efficiency * 20.0;
-        let zero_copy_score = self.zero_copy_ratio * 25.0;
-        let memory_score = (self.memory_reduction_percent / 100.0) * 25.0;
-        let gc_score = (self.gc_efficiency / 1_000_000.0).min(1.0) * 15.0;
-        let prefetch_score = self.prefetch_success_rate * 15.0;
+        let allocation_score: _ = self.allocation_efficiency * 20.0;
+        let zero_copy_score: _ = self.zero_copy_ratio * 25.0;
+        let memory_score: _ = (self.memory_reduction_percent / 100.0) * 25.0;
+        let gc_score: _ = (self.gc_efficiency / 1_000_000.0).min(1.0) * 15.0;
+        let prefetch_score: _ = self.prefetch_success_rate * 15.0;
 
         allocation_score + zero_copy_score + memory_score + gc_score + prefetch_score
     }
 
     pub fn performance_tier(&self) -> &'static str {
-        let score = self.overall_score();
+        let score: _ = self.overall_score();
         if score >= 90.0 {
             "S - 极致性能"
         } else if score >= 80.0 {
@@ -364,19 +364,21 @@ impl Phase2EfficiencyMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_phase2_memory_engine_creation() {
-        let engine = Phase2MemoryEngine::default();
+        let engine: _ = Phase2MemoryEngine::default();
         assert!(engine.config.enable_ai_optimization);
     }
 
     #[tokio::test]
     async fn test_memory_allocation() {
-        let engine = Phase2MemoryEngine::default();
+        let engine: _ = Phase2MemoryEngine::default();
 
         // 分配小内存
-        let ptr = engine.allocate(1024).await.unwrap();
+        let ptr: _ = engine.allocate(1024).await.unwrap();
         assert!(!ptr.as_ptr().is_null());
 
         // 释放内存
@@ -385,11 +387,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_zero_copy_transfer() {
-        let engine = Phase2MemoryEngine::default();
+        let engine: _ = Phase2MemoryEngine::default();
 
         // 分配两个缓冲区
-        let src = engine.allocate(1024).await.unwrap();
-        let dst = engine.allocate(1024).await.unwrap();
+        let src: _ = engine.allocate(1024).await.unwrap();
+        let dst: _ = engine.allocate(1024).await.unwrap();
 
         // 执行零拷贝传输
         engine.zero_copy_transfer(src, dst, 1024).await.unwrap();
@@ -401,21 +403,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_stats() {
-        let engine = Phase2MemoryEngine::default();
+        let engine: _ = Phase2MemoryEngine::default();
 
         // 执行一些操作
         engine.allocate(1024).await.unwrap();
         engine.force_gc().await.unwrap();
 
-        let stats = engine.get_memory_stats().await;
+        let stats: _ = engine.get_memory_stats().await;
         assert!(stats.total_allocations > 0);
     }
 
     #[tokio::test]
     async fn test_efficiency_metrics() {
-        let engine = Phase2MemoryEngine::default();
+        let engine: _ = Phase2MemoryEngine::default();
 
-        let metrics = engine.get_efficiency_metrics().await;
+        let metrics: _ = engine.get_efficiency_metrics().await;
         assert!(metrics.allocation_efficiency >= 0.0);
         assert!(metrics.zero_copy_ratio >= 0.0);
         assert!(metrics.overall_score() >= 0.0);

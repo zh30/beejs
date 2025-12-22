@@ -6,6 +6,8 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{RwLock, mpsc};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// io_uring 配置
 #[derive(Debug, Clone)]
@@ -67,7 +69,7 @@ pub struct IoUringEngine {
     config: NetworkConfig,
     uring_config: UringConfig,
     stats: Arc<RwLock<UringStats>>,
-    active_operations: Arc<RwLock<HashMap<u64, std::time::Instant>>>,
+    active_operations: Arc<RwLock<HashMap<u64, std::time::Instant, std::collections::HashMap<u64, std::time::Instant, u64, std::time::Instant>>>>,
     operation_counter: Arc<RwLock<u64>>,
     completion_queue: Arc<RwLock<Vec<UringCompletion>>>,
 }
@@ -75,19 +77,19 @@ pub struct IoUringEngine {
 impl IoUringEngine {
     /// 创建新的 io_uring 引擎
     pub fn new(config: NetworkConfig) -> Self {
-        let uring_config = UringConfig::default();
+        let uring_config: _ = UringConfig::default();
 
         Self {
-            stats: Arc::new(RwLock::new(UringStats {
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(UringStats {
                 submissions: 0,
                 completions: 0,
                 average_latency_ns: 0,
                 peak_qps: 0,
                 queue_utilization: 0.0,
-            })),
-            active_operations: Arc::new(RwLock::new(HashMap::new())),
-            operation_counter: Arc::new(RwLock::new(0)),
-            completion_queue: Arc::new(RwLock::new(Vec::new())),
+            }))),
+            active_operations: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            operation_counter: Arc::new(std::sync::Mutex::new(RwLock::new(0))),
+            completion_queue: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
             config,
             uring_config,
         }
@@ -101,8 +103,8 @@ impl IoUringEngine {
         println!("✅ io_uring 引擎初始化完成");
 
         // 启动完成队列处理
-        let completion_queue = Arc::clone(&self.completion_queue);
-        let stats = Arc::clone(&self.stats);
+        let completion_queue: _ = Arc::clone(&self.completion_queue);
+        let stats: _ = Arc::clone(&self.stats);
 
         tokio::spawn(async move {
             loop {
@@ -111,7 +113,7 @@ impl IoUringEngine {
                 // 处理完成队列
                 let mut completions = completion_queue.write().await;
                 if !completions.is_empty() {
-                    let start_time = std::time::Instant::now();
+                    let start_time: _ = std::time::Instant::now();
 
                     // 处理每个完成条目
                     for completion in completions.drain(..) {
@@ -119,7 +121,7 @@ impl IoUringEngine {
                     }
 
                     // 更新统计
-                    let elapsed = start_time.elapsed();
+                    let elapsed: _ = start_time.elapsed();
                     let mut stats_guard = stats.write().await;
                     stats_guard.average_latency_ns = (stats_guard.average_latency_ns
                         + elapsed.as_nanos() as u64) / 2;
@@ -132,13 +134,13 @@ impl IoUringEngine {
 
     /// 提交 I/O 操作
     pub async fn submit(&self, submission: UringSubmission) -> Result<(), Box<dyn std::error::Error>> {
-        let id = {
+        let id: _ = {
             let mut counter = self.operation_counter.write().await;
             *counter += 1;
             *counter
         };
 
-        let submission_with_id = UringSubmission {
+        let submission_with_id: _ = UringSubmission {
             user_data: id,
             ..submission
         };
@@ -193,7 +195,7 @@ impl IoUringEngine {
 
     /// 模拟操作完成
     async fn simulate_completion(&self, user_data: u64, result: i32) {
-        let completion = UringCompletion {
+        let completion: _ = UringCompletion {
             user_data,
             result,
             flags: 0,
@@ -258,8 +260,8 @@ impl IoUringEngine {
 impl Drop for IoUringEngine {
     fn drop(&mut self) {
         // 清理资源
-        let temp_file = std::env::temp_dir()
+        let temp_file: _ = std::env::temp_dir()
             .join(format!("beejs_io_uring_{}", std::process::id()));
-        let _ = std::fs::remove_file(temp_file);
+        let _: _ = std::fs::remove_file(temp_file);
     }
 }

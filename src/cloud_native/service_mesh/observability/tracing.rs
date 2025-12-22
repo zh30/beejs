@@ -40,15 +40,15 @@ impl DistributedTracer {
         operation_name: &str,
         trace_context: Option<TraceContext>,
     ) -> SpanHandle {
-        let trace_id = trace_context
+        let trace_id: _ = trace_context
             .as_ref()
             .map(|c| c.trace_id.clone())
             .unwrap_or_else(generate_trace_id);
 
-        let span_id = generate_span_id();
-        let parent_span_id = trace_context.map(|c| c.span_id);
+        let span_id: _ = generate_span_id();
+        let parent_span_id: _ = trace_context.map(|c| c.span_id);
 
-        let record = SpanRecord {
+        let record: _ = SpanRecord {
             span_id: span_id.clone(),
             trace_id: trace_id.clone(),
             parent_span_id,
@@ -76,7 +76,7 @@ impl DistributedTracer {
         parent: &SpanHandle,
         operation_name: &str,
     ) -> SpanHandle {
-        let context = TraceContext {
+        let context: _ = TraceContext {
             trace_id: parent.trace_id.clone(),
             span_id: parent.span_id.clone(),
         };
@@ -92,7 +92,7 @@ impl DistributedTracer {
     }
 
     /// Add event to span
-    pub fn add_event(&mut self, span: &SpanHandle, event_name: &str, attributes: HashMap<String, String>) {
+    pub fn add_event(&mut self, span: &SpanHandle, event_name: &str, attributes: HashMap<String, String, std::collections::HashMap<String, String, String, String>>) {
         if let Some(record) = self.span_history.iter_mut().find(|r| r.span_id == span.span_id) {
             record.events.push(SpanEvent {
                 name: event_name.to_string(),
@@ -137,7 +137,7 @@ impl DistributedTracer {
 
     /// Analyze span performance
     pub fn analyze_performance(&self, trace_id: &str) -> Option<PerformanceAnalysis> {
-        let trace_spans = self.get_trace(trace_id)?;
+        let trace_spans: _ = self.get_trace(trace_id)?;
 
         let mut total_duration = std::time::Duration::from_secs(0);
         let mut max_duration = std::time::Duration::from_secs(0);
@@ -145,7 +145,7 @@ impl DistributedTracer {
 
         for span in &trace_spans {
             if let Some(end_time) = span.end_time {
-                let duration = end_time.duration_since(span.start_time);
+                let duration: _ = end_time.duration_since(span.start_time);
                 total_duration += duration;
 
                 if duration > max_duration {
@@ -235,7 +235,7 @@ pub struct SpanRecord {
     pub events: Vec<SpanEvent>,
 
     /// Attributes
-    pub attributes: HashMap<String, String>,
+    pub attributes: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// Span status
@@ -256,7 +256,7 @@ pub struct SpanEvent {
     pub timestamp: std::time::Instant,
 
     /// Event attributes
-    pub attributes: HashMap<String, String>,
+    pub attributes: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// Performance analysis
@@ -367,13 +367,13 @@ pub struct RequestMetrics {
     pub total_requests: u64,
 
     /// Requests by method
-    requests_by_method: HashMap<String, u64>,
+    requests_by_method: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
 
     /// Requests by path
-    requests_by_path: HashMap<String, u64>,
+    requests_by_path: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
 
     /// Requests by status code
-    requests_by_status: HashMap<u16, u64>,
+    requests_by_status: HashMap<u16, u64, std::collections::HashMap<u16, u64, u16, u64>>,
 }
 
 impl RequestMetrics {
@@ -442,7 +442,7 @@ impl LatencyMetrics {
 
         let mut sorted = self.latencies.clone();
         sorted.sort();
-        let index = (sorted.len() as f64 * 0.95) as usize;
+        let index: _ = (sorted.len() as f64 * 0.95) as usize;
         sorted.get(index.min(sorted.len() - 1)).copied().unwrap_or(0) as f64
     }
 
@@ -453,7 +453,7 @@ impl LatencyMetrics {
 
         let mut sorted = self.latencies.clone();
         sorted.sort();
-        let index = (sorted.len() as f64 * 0.99) as usize;
+        let index: _ = (sorted.len() as f64 * 0.99) as usize;
         sorted.get(index.min(sorted.len() - 1)).copied().unwrap_or(0) as f64
     }
 }
@@ -465,7 +465,7 @@ pub struct ErrorMetrics {
     error_count: u64,
 
     /// Errors by endpoint
-    errors_by_endpoint: HashMap<String, u64>,
+    errors_by_endpoint: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
 }
 
 impl ErrorMetrics {
@@ -479,7 +479,7 @@ impl ErrorMetrics {
     fn record(&mut self, method: &str, path: &str, status_code: u16) {
         if status_code >= 400 {
             self.error_count += 1;
-            let endpoint = format!("{} {}", method, path);
+            let endpoint: _ = format!("{} {}", method, path);
             *self.errors_by_endpoint.entry(endpoint).or_insert(0) += 1;
         }
     }
@@ -526,10 +526,12 @@ pub struct MetricsReport {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_span_record() {
-        let record = SpanRecord {
+        let record: _ = SpanRecord {
             span_id: "span-123".to_string(),
             trace_id: "trace-456".to_string(),
             parent_span_id: None,
@@ -551,7 +553,7 @@ mod tests {
     fn test_distributed_tracer() {
         let mut tracer = DistributedTracer::new("test-service".to_string());
 
-        let span = tracer.start_span("test-operation", None);
+        let span: _ = tracer.start_span("test-operation", None);
         assert!(!span.span_id().is_empty());
         assert!(!span.trace_id().is_empty());
 
@@ -567,7 +569,7 @@ mod tests {
         collector.record_request("POST", "/api/users", 201, 75);
         collector.record_request("GET", "/api/users/1", 404, 25);
 
-        let report = collector.generate_report();
+        let report: _ = collector.generate_report();
 
         assert_eq!(report.service_name, "test-service");
         assert_eq!(report.total_requests, 3);

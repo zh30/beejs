@@ -30,7 +30,7 @@ pub struct WorkersConfig {
     pub durable_objects: Option<DurableObjectsConfig>,
     pub cron_triggers: Vec<String>,
     pub routes: Vec<String>,
-    pub environment_variables: HashMap<String, String>,
+    pub environment_variables: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// Cloudflare Pages 配置
@@ -39,7 +39,7 @@ pub struct PagesConfig {
     pub project_name: String,
     pub build_command: String,
     pub output_directory: String,
-    pub environment_variables: HashMap<String, String>,
+    pub environment_variables: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub framework: String,
     pub node_version: String,
 }
@@ -60,7 +60,7 @@ impl CloudflareAdapter {
 
     /// 部署 Workers 函数
     pub async fn deploy_workers(&self, config: &WorkersConfig) -> Result<DeploymentResult, Box<dyn std::error::Error + Send + Sync>> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         println!("🚀 开始部署 Cloudflare Workers 函数");
         println!("  账户 ID: {}", self.account_id);
@@ -78,9 +78,9 @@ impl CloudflareAdapter {
         println!("  🔄 配置路由和触发器...");
         tokio::time::sleep(Duration::from_millis(30)).await;
 
-        let deployment_time = start_time.elapsed();
+        let deployment_time: _ = start_time.elapsed();
 
-        let result = DeploymentResult {
+        let result: _ = DeploymentResult {
             deployment_id: format!("workers-{}-{}", config.name, chrono::Utc::now().timestamp()),
             status: "success".to_string(),
             endpoint: format!("https://{}.workers.dev", config.name),
@@ -94,7 +94,7 @@ impl CloudflareAdapter {
 
     /// 部署 Pages 项目
     pub async fn deploy_pages(&self, config: &PagesConfig) -> Result<DeploymentResult, Box<dyn std::error::Error + Send + Sync>> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         println!("🚀 开始部署 Cloudflare Pages 项目");
         println!("  项目名: {}", config.project_name);
@@ -115,9 +115,9 @@ impl CloudflareAdapter {
         println!("  🌐 配置自定义域名...");
         tokio::time::sleep(Duration::from_millis(20)).await;
 
-        let deployment_time = start_time.elapsed();
+        let deployment_time: _ = start_time.elapsed();
 
-        let result = DeploymentResult {
+        let result: _ = DeploymentResult {
             deployment_id: format!("pages-{}-{}", config.project_name, chrono::Utc::now().timestamp()),
             status: "success".to_string(),
             endpoint: format!("https://{}.pages.dev", config.project_name),
@@ -172,7 +172,7 @@ impl CloudflareAdapter {
         class_name: &str,
         script: &str,
     ) -> Result<DeploymentResult, Box<dyn std::error::Error + Send + Sync>> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         println!("🚀 配置 Durable Objects: {}", class_name);
         println!("  脚本大小: {} bytes", script.len());
@@ -180,9 +180,9 @@ impl CloudflareAdapter {
         // 模拟配置延迟
         tokio::time::sleep(Duration::from_millis(50)).await;
 
-        let deployment_time = start_time.elapsed();
+        let deployment_time: _ = start_time.elapsed();
 
-        let result = DeploymentResult {
+        let result: _ = DeploymentResult {
             deployment_id: format!("do-{}", class_name),
             status: "success".to_string(),
             endpoint: format!("https://api.cloudflare.com/client/v4/accounts/{}/workers/durable_objects/namespaces", self.account_id),
@@ -196,16 +196,16 @@ impl CloudflareAdapter {
 
     /// 配置 KV 命名空间
     pub async fn create_kv_namespace(&self, name: &str) -> Result<DeploymentResult, Box<dyn std::error::Error + Send + Sync>> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         println!("🚀 创建 KV 命名空间: {}", name);
 
         // 模拟创建延迟
         tokio::time::sleep(Duration::from_millis(30)).await;
 
-        let deployment_time = start_time.elapsed();
+        let deployment_time: _ = start_time.elapsed();
 
-        let result = DeploymentResult {
+        let result: _ = DeploymentResult {
             deployment_id: format!("kv-{}", name),
             status: "success".to_string(),
             endpoint: format!("https://api.cloudflare.com/client/v4/accounts/{}/storage/kv/namespaces", self.account_id),
@@ -223,7 +223,7 @@ impl CloudflareAdapter {
         function_name: &str,
         cron_expressions: Vec<String>,
     ) -> Result<DeploymentResult, Box<dyn std::error::Error + Send + Sync>> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         println!("🚀 配置 Cron 触发器: {}", function_name);
         println!("  Cron 表达式: {:?}", cron_expressions);
@@ -231,9 +231,9 @@ impl CloudflareAdapter {
         // 模拟配置延迟
         tokio::time::sleep(Duration::from_millis(30)).await;
 
-        let deployment_time = start_time.elapsed();
+        let deployment_time: _ = start_time.elapsed();
 
-        let result = DeploymentResult {
+        let result: _ = DeploymentResult {
             deployment_id: format!("cron-{}-{}", function_name, chrono::Utc::now().timestamp()),
             status: "success".to_string(),
             endpoint: format!("https://api.cloudflare.com/client/v4/accounts/{}/workers/scripts/{}/triggers", self.account_id, function_name),
@@ -287,7 +287,7 @@ impl CloudflareAdapter {
 impl CloudAdapter for CloudflareAdapter {
     async fn deploy_function(&self, config: &FunctionConfig) -> Result<DeploymentResult, Box<dyn std::error::Error + Send + Sync>> {
         // 假设部署到 Workers
-        let workers_config = WorkersConfig {
+        let workers_config: _ = WorkersConfig {
             name: config.name.clone(),
             script: config.code.clone(),
             kv_namespace: config.kv_namespace.clone(),
@@ -340,11 +340,13 @@ impl CloudAdapter for CloudflareAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试创建 Cloudflare 适配器
     #[tokio::test]
     async fn test_cloudflare_adapter_creation() {
-        let adapter = CloudflareAdapter::new("test-account-id".to_string());
+        let adapter: _ = CloudflareAdapter::new("test-account-id".to_string());
         assert_eq!(adapter.account_id, "test-account-id");
         println!("✅ 测试通过: Cloudflare 适配器创建");
     }
@@ -352,9 +354,9 @@ mod tests {
     /// 测试 Workers 函数部署
     #[tokio::test]
     async fn test_workers_deployment() {
-        let adapter = CloudflareAdapter::new("test-account".to_string());
+        let adapter: _ = CloudflareAdapter::new("test-account".to_string());
 
-        let config = WorkersConfig {
+        let config: _ = WorkersConfig {
             name: "test-worker".to_string(),
             script: "addEventListener('fetch', event => event.respondWith(new Response('Hello Worker')))".to_string(),
             kv_namespace: None,
@@ -364,7 +366,7 @@ mod tests {
             environment_variables: HashMap::new(),
         };
 
-        let result = adapter.deploy_workers(&config).await.expect("部署失败");
+        let result: _ = adapter.deploy_workers(&config).await.expect("部署失败");
         assert_eq!(result.status, "success");
         println!("✅ 测试通过: Workers 函数部署");
     }
@@ -372,9 +374,9 @@ mod tests {
     /// 测试 Pages 项目部署
     #[tokio::test]
     async fn test_pages_deployment() {
-        let adapter = CloudflareAdapter::new("test-account".to_string());
+        let adapter: _ = CloudflareAdapter::new("test-account".to_string());
 
-        let config = PagesConfig {
+        let config: _ = PagesConfig {
             project_name: "test-pages".to_string(),
             build_command: "npm run build".to_string(),
             output_directory: "dist".to_string(),
@@ -383,7 +385,7 @@ mod tests {
             node_version: "18".to_string(),
         };
 
-        let result = adapter.deploy_pages(&config).await.expect("部署失败");
+        let result: _ = adapter.deploy_pages(&config).await.expect("部署失败");
         assert_eq!(result.status, "success");
         println!("✅ 测试通过: Pages 项目部署");
     }
@@ -391,9 +393,9 @@ mod tests {
     /// 测试 Durable Objects 配置
     #[tokio::test]
     async fn test_durable_objects_configuration() {
-        let adapter = CloudflareAdapter::new("test-account".to_string());
+        let adapter: _ = CloudflareAdapter::new("test-account".to_string());
 
-        let result = adapter
+        let result: _ = adapter
             .configure_durable_objects("TestObject", "export default class TestObject {}")
             .await
             .expect("配置失败");
@@ -404,9 +406,9 @@ mod tests {
     /// 测试指标获取
     #[tokio::test]
     async fn test_metrics_collection() {
-        let adapter = CloudflareAdapter::new("test-account".to_string());
+        let adapter: _ = CloudflareAdapter::new("test-account".to_string());
 
-        let metrics = adapter.get_workers_metrics("test-worker").await.expect("获取指标失败");
+        let metrics: _ = adapter.get_workers_metrics("test-worker").await.expect("获取指标失败");
         assert!(metrics.cpu_usage > 0.0);
         assert!(metrics.memory_usage > 0.0);
         assert!(metrics.average_latency < 50.0); // Workers 延迟应该很低
@@ -416,9 +418,9 @@ mod tests {
     /// 测试边缘节点列表获取
     #[tokio::test]
     async fn test_edge_locations() {
-        let adapter = CloudflareAdapter::new("test-account".to_string());
+        let adapter: _ = CloudflareAdapter::new("test-account".to_string());
 
-        let locations = adapter.get_edge_locations().await.expect("获取失败");
+        let locations: _ = adapter.get_edge_locations().await.expect("获取失败");
         assert!(locations.len() > 20); // Cloudflare 有很多边缘节点
         println!("✅ 测试通过: 边缘节点列表获取 ({} 个节点)", locations.len());
     }

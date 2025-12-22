@@ -14,11 +14,11 @@ mod tests {
 
         #[tokio::test]
         async fn test_completion_for_variables() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Define a variable
-            repl.execute_code("let myVariable = 42;").await.unwrap();
+            repl.execute_code("let myVariable: _ = 42;").await.unwrap();
 
             // TODO: Test tab completion for "myVar"
             // This will be implemented in repl_completer.rs
@@ -26,11 +26,11 @@ mod tests {
 
         #[tokio::test]
         async fn test_completion_for_object_properties() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Define an object
-            repl.execute_code("let obj = { name: 'test', value: 100 };").await.unwrap();
+            repl.execute_code("let obj: _ = { name: 'test', value: 100 };").await.unwrap();
 
             // TODO: Test tab completion for "obj."
             // This will be implemented in repl_completer.rs
@@ -38,7 +38,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_completion_for_builtin_objects() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test tab completion for built-in objects like "console."
@@ -52,7 +52,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_highlight_keywords() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test syntax highlighting for keywords like "function", "if", "for"
@@ -61,7 +61,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_highlight_strings() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test syntax highlighting for strings
@@ -70,7 +70,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_highlight_numbers() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test syntax highlighting for numbers
@@ -84,11 +84,11 @@ mod tests {
 
         #[tokio::test]
         async fn test_inspect_command() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Define an object
-            repl.execute_code("let obj = { a: 1, b: { c: 2, d: 3 } };").await.unwrap();
+            repl.execute_code("let obj: _ = { a: 1, b: { c: 2, d: 3 } };").await.unwrap();
 
             // TODO: Test .inspect command for deep object inspection
             // This will be implemented in repl_enhanced.rs
@@ -96,7 +96,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_time_command() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test .time command for execution time measurement
@@ -105,7 +105,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_type_command() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test .type command for type information display
@@ -114,7 +114,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_await_command() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test .await command for Promise handling
@@ -123,12 +123,12 @@ mod tests {
 
         #[tokio::test]
         async fn test_save_command() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Add some commands to history
-            repl.execute_code("let x = 1;").await.unwrap();
-            repl.execute_code("let y = 2;").await.unwrap();
+            repl.execute_code("let x: _ = 1;").await.unwrap();
+            repl.execute_code("let y: _ = 2;").await.unwrap();
 
             // TODO: Test .save command to save session to file
             // This will be implemented in repl_enhanced.rs
@@ -141,7 +141,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_up_arrow_navigation() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Add commands to history
@@ -155,7 +155,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_down_arrow_navigation() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Add commands to history
@@ -173,7 +173,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_completion_config() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test configuration options for tab completion
@@ -182,7 +182,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_highlight_config() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test configuration options for syntax highlighting
@@ -191,7 +191,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_history_size_config() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test configuration for history size
@@ -202,18 +202,20 @@ mod tests {
     /// Test Integration
     mod integration_tests {
         use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
         #[tokio::test]
         async fn test_full_repl_session() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Execute various commands
-            repl.execute_code("let a = 10;").await.unwrap();
-            repl.execute_code("let b = 20;").await.unwrap();
-            repl.execute_code("let c = a + b;").await.unwrap();
+            repl.execute_code("let a: _ = 10;").await.unwrap();
+            repl.execute_code("let b: _ = 20;").await.unwrap();
+            repl.execute_code("let c: _ = a + b;").await.unwrap();
 
-            let stats = repl.get_stats();
+            let stats: _ = repl.get_stats();
             assert_eq!(stats.total_commands, 3);
 
             // TODO: Test that all enhanced features work together
@@ -222,7 +224,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_error_handling() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Test error in .inspect command
@@ -237,7 +239,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_multiline_with_enhancements() {
-            let runtime = Arc::new(RuntimeLite::new(false).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Test multiline input with enhanced features

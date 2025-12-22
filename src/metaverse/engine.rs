@@ -5,6 +5,8 @@ use std::sync::{Arc, RwLock};
 use std::time::Instant;
 
 use super::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
     Camera, Light, Material, RenderMode, RenderStats, SceneObject, Transform, XRPlatform,
 };
 
@@ -49,7 +51,7 @@ pub struct MetaverseEngine {
     /// 配置
     config: MetaverseConfig,
     /// 场景物体
-    objects: HashMap<String, SceneObject>,
+    objects: HashMap<String, SceneObject, std::collections::HashMap<String, SceneObject, String, SceneObject>>,
     /// 光源
     lights: Vec<Light>,
     /// 相机
@@ -103,7 +105,7 @@ impl MetaverseEngine {
 
     /// 渲染一帧
     pub fn render_frame(&self) -> Result<RenderStats, MetaverseError> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 模拟渲染工作
         let mut stats = RenderStats::default();
@@ -113,7 +115,7 @@ impl MetaverseEngine {
         stats.draw_calls = self.objects.len() as u64;
 
         // 计算帧时间
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
         stats.frame_time_ms = elapsed.as_secs_f64() * 1000.0;
         stats.fps = 1000.0 / stats.frame_time_ms.max(0.001);
         stats.latency_ms = elapsed.as_secs_f64() * 1000.0;

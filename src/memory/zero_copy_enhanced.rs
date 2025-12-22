@@ -166,12 +166,12 @@ impl EnhancedZeroCopy {
             dma_config,
             mmap_config,
             prefetch_config,
-            dma_buffers: Arc::new(RwLock::new(Vec::new())),
-            mmap_cache: Arc::new(RwLock::new(lru::LruCache::new(
-                std::num::NonZeroUsize::new(1024).unwrap()
+            dma_buffers: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            mmap_cache: Arc::new(std::sync::Mutex::new(RwLock::new(lru::LruCache::new(
+                std::num::NonZeroUsize::new(1024)).unwrap()
             ))),
-            prefetch_stats: Arc::new(PrefetchStats::default()),
-            performance_stats: Arc::new(PerformanceStats::default()),
+            prefetch_stats: Arc::new(std::sync::Mutex::new(PrefetchStats::default())),
+            performance_stats: Arc::new(std::sync::Mutex::new(PerformanceStats::default())),
         }
     }
 
@@ -195,7 +195,7 @@ impl EnhancedZeroCopy {
             let mut buffers = self.dma_buffers.write().await;
             for (idx, buffer) in buffers.iter().enumerate() {
                 if buffer.size >= size {
-                    let buffer = buffers.remove(idx);
+                    let buffer: _ = buffers.remove(idx);
                     self.performance_stats.dma_operations.fetch_add(1, Ordering::Relaxed);
                     return Ok(buffer);
                 }
@@ -203,12 +203,12 @@ impl EnhancedZeroCopy {
         }
 
         // 分配新的 DMA 缓冲区
-        let ptr = self.allocate_aligned_memory(size, self.dma_config.alignment)?;
-        let buffer = DmaBuffer {
+        let ptr: _ = self.allocate_aligned_memory(size, self.dma_config.alignment)?;
+        let buffer: _ = DmaBuffer {
             ptr,
             size,
             allocated_at: Instant::now(),
-            ref_count: Arc::new(AtomicUsize::new(1)),
+            ref_count: Arc::new(std::sync::Mutex::new(AtomicUsize::new(1))),
         };
 
         self.performance_stats.dma_operations.fetch_add(1, Ordering::Relaxed);
@@ -234,7 +234,7 @@ impl EnhancedZeroCopy {
         // 暂时跳过缓存，直接创建新的内存映射
 
         // 创建新的内存映射
-        let mmap = self.create_memory_mapping(path, size)?;
+        let mmap: _ = self.create_memory_mapping(path, size)?;
 
         // 添加到缓存
         {
@@ -256,7 +256,7 @@ impl EnhancedZeroCopy {
 
         // 使用 madvise 进行预取
         unsafe {
-            let result = madvise(
+            let result: _ = madvise(
                 addr.as_ptr() as *mut libc::c_void,
                 size,
                 MADV_WILLNEED,
@@ -282,9 +282,9 @@ impl EnhancedZeroCopy {
             AccessPattern::Sequential => {
                 // 顺序访问：预取后续页面
                 for i in 0..self.prefetch_config.prefetch_depth {
-                    let offset = (i + 1) * self.prefetch_config.window_size;
+                    let offset: _ = (i + 1) * self.prefetch_config.window_size;
                     if offset < size {
-                        let prefetch_addr = NonNull::new(unsafe { base_addr.as_ptr().add(offset) }).unwrap();
+                        let prefetch_addr: _ = NonNull::new(unsafe { base_addr.as_ptr().add(offset) }).unwrap();
                         self.smart_prefetch(prefetch_addr, self.prefetch_config.window_size).await?;
                     }
                 }
@@ -294,8 +294,8 @@ impl EnhancedZeroCopy {
                 use rand::Rng;
                 let mut rng = rand::thread_rng();
                 for _ in 0..self.prefetch_config.prefetch_depth {
-                    let offset = rng.gen_range(0..size.saturating_sub(self.prefetch_config.window_size));
-                    let prefetch_addr = NonNull::new(unsafe { base_addr.as_ptr().add(offset) }).unwrap();
+                    let offset: _ = rng.gen_range(0..size.saturating_sub(self.prefetch_config.window_size));
+                    let prefetch_addr: _ = NonNull::new(unsafe { base_addr.as_ptr().add(offset) }).unwrap();
                     self.smart_prefetch(prefetch_addr, self.prefetch_config.window_size).await?;
                 }
             }
@@ -313,7 +313,7 @@ impl EnhancedZeroCopy {
     ) -> Result<()> {
         // 使用 DMA 进行零拷贝传输
         if size >= self.dma_config.dma_threshold {
-            let _dma_buffer = self.allocate_dma(size).await?;
+            let _dma_buffer: _ = self.allocate_dma(size).await?;
             // 在实际实现中，这里会使用 DMA 引擎进行数据传输
         }
 
@@ -360,7 +360,7 @@ impl EnhancedZeroCopy {
 
         unsafe {
             let mut ptr: *mut c_void = std::ptr::null_mut();
-            let result = posix_memalign(&mut ptr, alignment, size);
+            let result: _ = posix_memalign(&mut ptr, alignment, size);
 
             if result == 0 && !ptr.is_null() {
                 Ok(NonNull::new_unchecked(ptr as *mut u8))
@@ -375,7 +375,7 @@ impl EnhancedZeroCopy {
         use std::fs::OpenOptions;
         use std::os::unix::io::AsRawFd;
 
-        let file = OpenOptions::new()
+        let file: _ = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
@@ -386,13 +386,13 @@ impl EnhancedZeroCopy {
         file.set_len(size as u64)?;
 
         // 创建内存映射
-        let mmap = unsafe {
+        let mmap: _ = unsafe {
             let mut opts = MmapOptions::new();
             opts.len(size)
                 .map(&file)?
         };
 
-        Ok(Arc::new(mmap))
+        Ok(Arc::new(std::sync::Mutex::new(mmap)))
     }
 }
 
@@ -435,7 +435,7 @@ impl PrefetchStatsSnapshot {
     }
 
     pub fn cache_hit_rate(&self) -> f64 {
-        let total = self.cache_hits + self.cache_misses;
+        let total: _ = self.cache_hits + self.cache_misses;
         if total == 0 {
             0.0
         } else {
@@ -447,18 +447,20 @@ impl PrefetchStatsSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_enhanced_zero_copy_creation() {
-        let zc = EnhancedZeroCopy::default();
+        let zc: _ = EnhancedZeroCopy::default();
         assert!(zc.dma_config.dma_threshold > 0);
         assert!(zc.mmap_config.enable_prefetch);
     }
 
     #[tokio::test]
     async fn test_performance_stats() {
-        let zc = EnhancedZeroCopy::default();
-        let stats = zc.get_performance_stats().await;
+        let zc: _ = EnhancedZeroCopy::default();
+        let stats: _ = zc.get_performance_stats().await;
 
         // 初始统计应该都是 0
         assert_eq!(stats.total_allocations, 0);
@@ -467,8 +469,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_prefetch_stats() {
-        let zc = EnhancedZeroCopy::default();
-        let stats = zc.get_prefetch_stats().await;
+        let zc: _ = EnhancedZeroCopy::default();
+        let stats: _ = zc.get_prefetch_stats().await;
 
         assert_eq!(stats.total_prefetches, 0);
         assert_eq!(stats.successful_prefetches, 0);
@@ -477,11 +479,11 @@ mod tests {
 
     #[test]
     fn test_access_pattern() {
-        let sequential = AccessPattern::Sequential;
-        let random = AccessPattern::Random;
+        let sequential: _ = AccessPattern::Sequential;
+        let random: _ = AccessPattern::Random;
 
         // 测试 Copy trait
-        let _sequential_copy = sequential;
-        let _random_copy = random;
+        let _sequential_copy: _ = sequential;
+        let _random_copy: _ = random;
     }
 }

@@ -18,8 +18,8 @@ pub struct V8SnapshotOptimizedManager {
     base_manager: V8SnapshotManager,
 
     /// 多级缓存系统
-    l1_cache: Arc<Mutex<HashMap<String, Arc<SnapshotEntry>>>>,
-    l2_cache: Arc<Mutex<HashMap<String, Arc<SnapshotEntry>>>>,
+    l1_cache: Arc<Mutex<HashMap<String, Arc<SnapshotEntry, std::collections::HashMap<String, Arc<SnapshotEntry, String, Arc<SnapshotEntry>>>>>,
+    l2_cache: Arc<Mutex<HashMap<String, Arc<SnapshotEntry, std::collections::HashMap<String, Arc<SnapshotEntry, String, Arc<SnapshotEntry>>>>>,
 
     /// 预加载快照
     preloaded_snapshots: Arc<Mutex<Vec<String>>>,
@@ -67,22 +67,22 @@ impl SnapshotOptimizationStats {
 
     /// L1 缓存命中率
     pub fn l1_hit_rate(&self) -> f64 {
-        let hits = self.l1_cache_hits.load(Ordering::Relaxed) as f64;
-        let total = hits + self.l1_cache_misses.load(Ordering::Relaxed) as f64;
+        let hits: _ = self.l1_cache_hits.load(Ordering::Relaxed) as f64;
+        let total: _ = hits + self.l1_cache_misses.load(Ordering::Relaxed) as f64;
         if total > 0.0 { hits / total } else { 0.0 }
     }
 
     /// L2 缓存命中率
     pub fn l2_hit_rate(&self) -> f64 {
-        let hits = self.l2_cache_hits.load(Ordering::Relaxed) as f64;
-        let total = hits + self.l2_cache_misses.load(Ordering::Relaxed) as f64;
+        let hits: _ = self.l2_cache_hits.load(Ordering::Relaxed) as f64;
+        let total: _ = hits + self.l2_cache_misses.load(Ordering::Relaxed) as f64;
         if total > 0.0 { hits / total } else { 0.0 }
     }
 
     /// 平均加载时间（微秒）
     pub fn avg_load_time_us(&self) -> f64 {
-        let total_time = self.total_load_time_ms.load(Ordering::Relaxed) as f64 * 1000.0;
-        let count = self.load_count.load(Ordering::Relaxed) as f64;
+        let total_time: _ = self.total_load_time_ms.load(Ordering::Relaxed) as f64 * 1000.0;
+        let count: _ = self.load_count.load(Ordering::Relaxed) as f64;
         if count > 0.0 { total_time / count } else { 0.0 }
     }
 
@@ -102,32 +102,32 @@ impl SnapshotOptimizationStats {
 impl V8SnapshotOptimizedManager {
     /// 创建新的优化快照管理器
     pub fn new() -> Result<Self> {
-        let base_manager = V8SnapshotManager::new()
+        let base_manager: _ = V8SnapshotManager::new()
             .map_err(|e| anyhow!("Failed to create base snapshot manager: {}", e))?;
 
         Ok(Self {
             base_manager,
-            l1_cache: Arc::new(Mutex::new(HashMap::new())),
-            l2_cache: Arc::new(Mutex::new(HashMap::new())),
-            preloaded_snapshots: Arc::new(Mutex::new(Vec::new())),
-            stats: Arc::new(SnapshotOptimizationStats::new()),
+            l1_cache: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            l2_cache: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            preloaded_snapshots: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            stats: Arc::new(std::sync::Mutex::new(SnapshotOptimizationStats::new())),
         })
     }
 
     /// 预加载快照到 L1 缓存
     pub fn preload_snapshots(&self, versions: &[&str]) {
-        let l1_cache = Arc::clone(&self.l1_cache);
-        let _preloaded = Arc::clone(&self.preloaded_snapshots);
-        let stats = Arc::clone(&self.stats);
+        let l1_cache: _ = Arc::clone(&self.l1_cache);
+        let _preloaded: _ = Arc::clone(&self.preloaded_snapshots);
+        let stats: _ = Arc::clone(&self.stats);
 
         for version in versions {
-            let version = version.to_string();
+            let version: _ = version.clone();to_string();
 
             // 在后台线程预加载
-            let handle = std::thread::spawn(move || {
+            let handle: _ = std::thread::spawn(move || {
                 if let Ok(snapshot_data) = Self::load_snapshot_blocking(&version) {
-                    let entry = Arc::new(SnapshotEntry {
-                        data: Arc::new(snapshot_data),
+                    let entry = Arc::new(std::sync::Mutex::new(SnapshotEntry {
+                        data: Arc::new(snapshot_data)),
                         created_at: std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
                             .unwrap()
@@ -136,13 +136,13 @@ impl V8SnapshotOptimizedManager {
                             .duration_since(std::time::UNIX_EPOCH)
                             .unwrap()
                             .as_secs(),
-                        access_count: Arc::new(AtomicUsize::new(0)),
+                        access_count: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
                         version: version.clone(),
                     });
 
                     // 添加到 L1 缓存
                     if let Ok(mut cache) = l1_cache.lock() {
-                        cache.insert(version.clone(), Arc::clone(&entry));
+                        cache.insert(version.clone(), Arc::clone(entry));
                     }
 
                     // 记录预加载
@@ -153,17 +153,17 @@ impl V8SnapshotOptimizedManager {
             });
 
             // 等待预加载完成
-            let _ = handle.join();
+            let _: _ = handle.join();
         }
     }
 
     /// 从优化缓存加载快照（目标 < 1ms）
     pub fn load_from_snapshot_optimized(&self, version: String) -> Result<Vec<u8>> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 1. 尝试 L1 缓存（最快）
         if let Some(entry) = self.get_from_l1_cache(&version) {
-            let load_time = start.elapsed();
+            let load_time: _ = start.elapsed();
             self.stats.record_load(load_time.as_micros() as u64, 1);
 
             if load_time < Duration::from_millis(1) {
@@ -175,7 +175,7 @@ impl V8SnapshotOptimizedManager {
 
         // 2. 尝试 L2 缓存
         if let Some(entry) = self.get_from_l2_cache(&version) {
-            let load_time = start.elapsed();
+            let load_time: _ = start.elapsed();
             self.stats.record_load(load_time.as_micros() as u64, 2);
 
             if load_time < Duration::from_millis(1) {
@@ -183,18 +183,18 @@ impl V8SnapshotOptimizedManager {
             }
 
             // 升级到 L1 缓存
-            self.upgrade_to_l1(&version, Arc::clone(&entry));
+            self.upgrade_to_l1(&version, Arc::clone(entry));
 
             return Ok(entry.data.as_ref().clone());
         }
 
         // 3. 从基础管理器加载
-        let snapshot_data = self.load_snapshot_blocking(&version)?;
-        let load_time = start.elapsed();
+        let snapshot_data: _ = self.load_snapshot_blocking(&version)?;
+        let load_time: _ = start.elapsed();
 
         // 创建条目并添加到缓存
-        let entry = Arc::new(SnapshotEntry {
-            data: Arc::new(snapshot_data.clone()),
+        let entry: _ = Arc::new(std::sync::Mutex::new(SnapshotEntry {
+            data: Arc::new(snapshot_data.clone())),
             created_at: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
@@ -203,12 +203,12 @@ impl V8SnapshotOptimizedManager {
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
-            access_count: Arc::new(AtomicUsize::new(1)),
+            access_count: Arc::new(std::sync::Mutex::new(AtomicUsize::new(1))),
             version: version.clone(),
         });
 
         // 添加到 L2 缓存
-        self.add_to_l2_cache(&version, Arc::clone(&entry));
+        self.add_to_l2_cache(&version, Arc::clone(entry));
 
         self.stats.record_load(load_time.as_micros() as u64, 0);
 
@@ -250,14 +250,14 @@ impl V8SnapshotOptimizedManager {
     /// 升级到 L1 缓存
     fn upgrade_to_l1(&self, version: &str, entry: Arc<SnapshotEntry>) {
         if let Ok(mut l1_cache) = self.l1_cache.lock() {
-            l1_cache.insert(version.to_string(), Arc::clone(&entry));
+            l1_cache.insert(version.to_string(), Arc::clone(entry));
         }
     }
 
     /// 添加到 L2 缓存
     fn add_to_l2_cache(&self, version: &str, entry: Arc<SnapshotEntry>) {
         if let Ok(mut l2_cache) = self.l2_cache.lock() {
-            l2_cache.insert(version.to_string(), Arc::clone(&entry));
+            l2_cache.insert(version.to_string(), Arc::clone(entry));
         }
     }
 
@@ -283,7 +283,7 @@ impl V8SnapshotOptimizedManager {
     /// 创建版本化快照
     pub fn create_versioned_snapshot(&self, version: &str) -> Result<String> {
         // 创建包含版本信息的快照数据
-        let snapshot_data = format!("optimized-snapshot-for-{}", version);
+        let snapshot_data: _ = format!("optimized-snapshot-for-{}", version);
 
         eprintln!("✅ Created versioned snapshot: {}", version);
 
@@ -347,21 +347,23 @@ pub struct SnapshotCacheStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_l1_cache() {
-        let manager = V8SnapshotOptimizedManager::new().unwrap();
+        let manager: _ = V8SnapshotOptimizedManager::new().unwrap();
 
         // 预加载快照
         manager.preload_snapshots(&["v0.1.0"]);
 
         // 从缓存加载
-        let snapshot = manager.load_from_snapshot_optimized("v0.1.0".to_string());
+        let snapshot: _ = manager.load_from_snapshot_optimized("v0.1.0".to_string());
         assert!(snapshot.is_ok());
 
-        let load_time = std::time::Instant::now();
-        let _snapshot2 = manager.load_from_snapshot_optimized("v0.1.0".to_string());
-        let load_time2 = std::time::Instant::now();
+        let load_time: _ = std::time::Instant::now();
+        let _snapshot2: _ = manager.load_from_snapshot_optimized("v0.1.0".to_string());
+        let load_time2: _ = std::time::Instant::now();
 
         // L1 缓存命中应该更快
         assert!(load_time2.duration_since(load_time) < Duration::from_millis(1));
@@ -369,18 +371,18 @@ mod tests {
 
     #[test]
     fn test_cache_stats() {
-        let manager = V8SnapshotOptimizedManager::new().unwrap();
+        let manager: _ = V8SnapshotOptimizedManager::new().unwrap();
 
-        let stats = manager.get_stats();
+        let stats: _ = manager.get_stats();
         // 初始状态，命中率应该为 0
         assert!(stats.hit_rate >= 0.0);
     }
 
     #[test]
     fn test_versioned_snapshot() {
-        let manager = V8SnapshotOptimizedManager::new().unwrap();
+        let manager: _ = V8SnapshotOptimizedManager::new().unwrap();
 
-        let v1 = manager.create_versioned_snapshot("v1.0.0");
+        let v1: _ = manager.create_versioned_snapshot("v1.0.0");
         assert!(v1.is_ok());
         assert!(v1.as_ref().unwrap().contains("v1.0.0"));
     }

@@ -17,7 +17,7 @@
 //!     TopologyGraphBuilder, DependencyGraphBuilder
 //! };
 //!
-//! let chart = LineChartBuilder::new()
+//! let chart: _ = LineChartBuilder::new()
 //!     .title("CPU Usage")
 //!     .data(vec![10.0, 20.0, 30.0])
 //!     .build()?;
@@ -100,7 +100,7 @@ pub struct DataPoint {
     pub y: f64,
     pub label: Option<String>,
     pub color: Option<String>,
-    pub metadata: HashMap<String, serde_json::Value>,
+    pub metadata: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>,
 }
 
 /// Data series
@@ -197,14 +197,14 @@ pub struct EventHandler {
 pub struct InteractiveFeature {
     pub feature_type: String,
     pub enabled: bool,
-    pub config: HashMap<String, serde_json::Value>,
+    pub config: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>,
 }
 
 /// Responsive configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResponsiveConfig {
     pub enabled: bool,
-    pub breakpoints: HashMap<String, u32>,
+    pub breakpoints: HashMap<String, u32, std::collections::HashMap<String, u32, String, u32>>,
 }
 
 impl Default for VisualizationConfig {
@@ -361,10 +361,12 @@ impl Default for ResponsiveConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_visualization_config_default() {
-        let config = VisualizationConfig::default();
+        let config: _ = VisualizationConfig::default();
         assert_eq!(config.width, 800);
         assert_eq!(config.height, 600);
         assert_eq!(config.font_size, 12);
@@ -372,7 +374,7 @@ mod tests {
 
     #[test]
     fn test_data_point_creation() {
-        let point = DataPoint {
+        let point: _ = DataPoint {
             x: 10.0,
             y: 20.0,
             label: Some("Test".to_string()),
@@ -387,7 +389,7 @@ mod tests {
 
     #[test]
     fn test_data_series_creation() {
-        let series = DataSeries {
+        let series: _ = DataSeries {
             name: "Series 1".to_string(),
             data: vec![
                 DataPoint {
@@ -417,7 +419,7 @@ mod tests {
 
     #[test]
     fn test_axis_config() {
-        let axis = AxisConfig {
+        let axis: _ = AxisConfig {
             show: true,
             min: Some(0.0),
             max: Some(100.0),
@@ -434,7 +436,7 @@ mod tests {
 
     #[test]
     fn test_line_style() {
-        let style = LineStyle {
+        let style: _ = LineStyle {
             width: 3.0,
             dash_array: Some(vec![5.0, 5.0]),
             cap: "square".to_string(),
@@ -447,7 +449,7 @@ mod tests {
 
     #[test]
     fn test_color_palette() {
-        let palette = ColorPalette {
+        let palette: _ = ColorPalette {
             primary: "#3b82f6".to_string(),
             secondary: "#10b981".to_string(),
             tertiary: "#f59e0b".to_string(),
@@ -463,7 +465,7 @@ mod tests {
 
     #[test]
     fn test_padding_default() {
-        let padding = Padding::default();
+        let padding: _ = Padding::default();
         assert_eq!(padding.top, 20);
         assert_eq!(padding.bottom, 40);
         assert_eq!(padding.left, 60);
@@ -472,7 +474,7 @@ mod tests {
 
     #[test]
     fn test_marker_config() {
-        let marker = MarkerConfig {
+        let marker: _ = MarkerConfig {
             enabled: true,
             size: 8,
             symbol: "diamond".to_string(),
@@ -486,7 +488,7 @@ mod tests {
 
     #[test]
     fn test_responsive_config() {
-        let responsive = ResponsiveConfig::default();
+        let responsive: _ = ResponsiveConfig::default();
         assert!(responsive.enabled);
         assert!(responsive.breakpoints.contains_key("md"));
         assert_eq!(responsive.breakpoints["lg"], 1280);
@@ -494,7 +496,7 @@ mod tests {
 
     #[test]
     fn test_export_config() {
-        let export = ExportConfig {
+        let export: _ = ExportConfig {
             format: "png".to_string(),
             quality: 95,
             transparent: true,
@@ -507,7 +509,7 @@ mod tests {
 
     #[test]
     fn test_grid_config() {
-        let grid = GridConfig {
+        let grid: _ = GridConfig {
             show: false,
             color: "#cccccc".to_string(),
             opacity: 0.3,
@@ -520,7 +522,7 @@ mod tests {
 
     #[test]
     fn test_legend_config() {
-        let legend = LegendConfig {
+        let legend: _ = LegendConfig {
             show: false,
             position: "right".to_string(),
             align: "start".to_string(),
@@ -532,7 +534,7 @@ mod tests {
 
     #[test]
     fn test_tooltip_config() {
-        let tooltip = TooltipConfig {
+        let tooltip: _ = TooltipConfig {
             show: true,
             trigger: "axis".to_string(),
             format: "{.2f}".to_string(),

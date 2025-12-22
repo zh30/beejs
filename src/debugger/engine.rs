@@ -18,6 +18,8 @@ use crate::debugger::{
     v8_stubs::{DebugEvent as V8DebugEvent, DebugExecutionState},
 };
 use crate::runtime_lite::RuntimeLite;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Debug execution state
 #[derive(Debug, Clone, PartialEq)]
@@ -57,12 +59,12 @@ pub struct SimpleEventListener {
 impl SimpleEventListener {
     pub fn new() -> Self {
         Self {
-            events: Arc::new(Mutex::new(Vec::new())),
+            events: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
         }
     }
 
     pub fn get_events(&self) -> Vec<DebugEvent> {
-        let events = self.events.lock().unwrap();
+        let events: _ = self.events.lock().unwrap();
         events.clone()
     }
 }
@@ -91,11 +93,11 @@ impl DebuggerEngine {
     pub fn new(config: DebugConfig) -> Self {
         Self {
             config,
-            state: Arc::new(Mutex::new(DebugState::Running)),
+            state: Arc::new(std::sync::Mutex::new(Mutex::new(DebugState::Running))),
             breakpoint_manager: BreakpointManager::new(),
             watch_manager: WatchManager::new(),
-            current_stack: Arc::new(Mutex::new(None)),
-            stats: Arc::new(Mutex::new(DebugStats::new())),
+            current_stack: Arc::new(std::sync::Mutex::new(Mutex::new(None))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(DebugStats::new()))),
             current_breakpoint_id: None,
             step_type: None,
             event_listeners: Vec::new(),
@@ -123,7 +125,7 @@ impl DebuggerEngine {
         script_name: String,
         line_number: u32,
     ) -> DebugResult<Breakpoint> {
-        let result = self.breakpoint_manager.add(script_id, script_name, line_number, 0);
+        let result: _ = self.breakpoint_manager.add(script_id, script_name, line_number, 0);
         if result.success {
             if let Some(breakpoint) = &result.data {
                 let mut stats = self.stats.lock().unwrap();
@@ -143,7 +145,7 @@ impl DebuggerEngine {
         line_number: u32,
         condition: crate::debugger::BreakpointCondition,
     ) -> DebugResult<Breakpoint> {
-        let result = self.breakpoint_manager.add_conditional(
+        let result: _ = self.breakpoint_manager.add_conditional(
             script_id,
             script_name,
             line_number,
@@ -231,25 +233,25 @@ impl DebuggerEngine {
 
     /// Get current execution state
     pub fn get_state(&self) -> DebugState {
-        let state = self.state.lock().unwrap();
+        let state: _ = self.state.lock().unwrap();
         state.clone()
     }
 
     /// Get current stack trace
     pub fn get_stack_trace(&self) -> Option<StackTrace> {
-        let stack = self.current_stack.lock().unwrap();
+        let stack: _ = self.current_stack.lock().unwrap();
         stack.clone()
     }
 
     /// Get stack frames
     pub fn get_stack_frames(&self) -> Option<Vec<StackFrame>> {
-        let stack = self.current_stack.lock().unwrap();
+        let stack: _ = self.current_stack.lock().unwrap();
         stack.as_ref().map(|s| s.frames.clone())
     }
 
     /// Check if we should pause at a location
     pub fn should_pause(&self, script_id: &str, line_number: u32) -> bool {
-        let breakpoints = self.breakpoint_manager.find_breakpoints(script_id, line_number);
+        let breakpoints: _ = self.breakpoint_manager.find_breakpoints(script_id, line_number);
 
         if !breakpoints.is_empty() {
             // Found breakpoints at this location
@@ -276,7 +278,7 @@ impl DebuggerEngine {
         }
 
         // Check if we're stepping
-        let state = self.state.lock().unwrap();
+        let state: _ = self.state.lock().unwrap();
         matches!(*state, DebugState::Stepping)
     }
 
@@ -289,10 +291,10 @@ impl DebuggerEngine {
         match event {
             V8DebugEvent::Break => {
                 // Execution paused - check if it's a breakpoint or step
-                let location = self.extract_location(exec_state);
+                let location: _ = self.extract_location(exec_state);
                 if let Some(loc) = location {
                     // Find matching breakpoints
-                    let breakpoints = self.breakpoint_manager.find_breakpoints(&loc.script_id, loc.line_number);
+                    let breakpoints: _ = self.breakpoint_manager.find_breakpoints(&loc.script_id, loc.line_number);
 
                     if !breakpoints.is_empty() {
                         // Hit a breakpoint
@@ -302,7 +304,7 @@ impl DebuggerEngine {
                     }
 
                     // Notify listeners
-                    let debug_event = DebugEvent::BreakpointHit {
+                    let debug_event: _ = DebugEvent::BreakpointHit {
                         breakpoint_id: self.current_breakpoint_id.clone().unwrap_or_default(),
                         location: loc.clone(),
                     };
@@ -311,9 +313,9 @@ impl DebuggerEngine {
             }
             V8DebugEvent::Exception => {
                 // Handle exception
-                let location = self.extract_location(exec_state);
+                let location: _ = self.extract_location(exec_state);
                 if let Some(loc) = location {
-                    let debug_event = DebugEvent::Exception {
+                    let debug_event: _ = DebugEvent::Exception {
                         exception: "Uncaught exception".to_string(),
                         location: loc,
                     };
@@ -363,7 +365,7 @@ impl DebuggerEngine {
 
     /// Get debugger statistics
     pub fn get_stats(&self) -> DebugStats {
-        let stats = self.stats.lock().unwrap();
+        let stats: _ = self.stats.lock().unwrap();
         stats.clone()
     }
 
@@ -390,8 +392,8 @@ impl DebuggerEngine {
         context: &v8::Global<v8::Context>,
         expression: &str,
     ) -> DebugResult<String> {
-        let inspector = VariableInspector::new(self.config.clone());
-        let result = inspector.evaluate_expression(context, expression);
+        let inspector: _ = VariableInspector::new(self.config.clone());
+        let result: _ = inspector.evaluate_expression(context, expression);
         if result.success {
             if let Some(var_info) = result.data {
                 DebugResult::ok(var_info.value)
@@ -407,11 +409,11 @@ impl DebuggerEngine {
     pub fn get_current_variables(
         &self,
         context: &v8::Global<v8::Context>,
-    ) -> DebugResult<HashMap<crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo>>> {
-        let inspector = VariableInspector::new(self.config.clone());
+    ) -> DebugResult<HashMap<crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo, std::collections::HashMap<crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo, crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo>>>> {
+        let inspector: _ = VariableInspector::new(self.config.clone());
         // This would build scopes from current execution state
-        let scopes = Vec::new();
-        let result = inspector.get_all_scope_variables(&scopes);
+        let scopes: _ = Vec::new();
+        let result: _ = inspector.get_all_scope_variables(&scopes);
         if result.success {
             if let Some(data) = result.data {
                 DebugResult::ok(data)
@@ -434,19 +436,19 @@ impl DebuggerEngine {
 
     /// Check if debugger is running
     pub fn is_running(&self) -> bool {
-        let state = self.state.lock().unwrap();
+        let state: _ = self.state.lock().unwrap();
         matches!(*state, DebugState::Running)
     }
 
     /// Check if debugger is paused
     pub fn is_paused(&self) -> bool {
-        let state = self.state.lock().unwrap();
+        let state: _ = self.state.lock().unwrap();
         matches!(*state, DebugState::Paused)
     }
 
     /// Check if debugger is stepping
     pub fn is_stepping(&self) -> bool {
-        let state = self.state.lock().unwrap();
+        let state: _ = self.state.lock().unwrap();
         matches!(*state, DebugState::Stepping)
     }
 
@@ -522,7 +524,7 @@ impl DebuggerEngine {
         match runtime.execute_code(expression) {
             Ok(value) => {
                 // Determine the type of the value
-                let value_type = match value.as_str() {
+                let value_type: _ = match value.as_str() {
                     "null" | "undefined" => "primitive".to_string(),
                     _ if value.parse::<i64>().is_ok() => "number".to_string(),
                     _ if value.parse::<f64>().is_ok() => "number".to_string(),
@@ -535,7 +537,7 @@ impl DebuggerEngine {
                 DebugResult::ok((value, value_type))
             }
             Err(e) => {
-                let error_msg = format!("Evaluation error: {}", e);
+                let error_msg: _ = format!("Evaluation error: {}", e);
                 DebugResult::err(error_msg)
             }
         }
@@ -551,7 +553,7 @@ impl DebuggerEngine {
         let mut results = Vec::new();
 
         // Get all watch expressions and collect their data first
-        let watches = self.watch_manager.list();
+        let watches: _ = self.watch_manager.list();
         let watch_data: Vec<(String, String)> = watches
             .into_iter()
             .map(|watch| (watch.id.clone(), watch.expression.clone()))
@@ -559,7 +561,7 @@ impl DebuggerEngine {
 
         // Evaluate each expression
         for (watch_id, expression) in watch_data {
-            let eval_result = self.evaluate_watch_expression(&expression, runtime);
+            let eval_result: _ = self.evaluate_watch_expression(&expression, runtime);
             if eval_result.success {
                 // Unwrap the successful result
                 if let Some((value, value_type)) = eval_result.data {
@@ -572,7 +574,7 @@ impl DebuggerEngine {
                 }
             } else {
                 // Handle error case
-                let error_msg = eval_result.error.unwrap_or_else(|| "Unknown error".to_string());
+                let error_msg: _ = eval_result.error.unwrap_or_else(|| "Unknown error".to_string());
                 // Set error on the watch
                 if let Err(e) = self.watch_manager.set_error(&watch_id, &error_msg) {
                     eprintln!("Warning: Failed to set error on watch {}: {:?}", watch_id, e);

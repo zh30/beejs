@@ -12,7 +12,7 @@ pub struct ContainerConfig {
     pub version: String,
     pub replicas: usize,
     pub port: u16,
-    pub env: HashMap<String, String>,
+    pub env: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub resource_config: ResourceConfig,
     pub network_config: NetworkConfig,
     pub health_check: Option<HealthCheckConfig>,
@@ -187,7 +187,7 @@ impl ContainerManager {
 
         let mut handles = Vec::new();
         for i in 0..config.replicas {
-            let handle = ContainerHandle {
+            let handle: _ = ContainerHandle {
                 id: format!("beejs-container-{}", i),
                 status: ContainerStatus::Running,
                 port: config.port + i as u16,
@@ -298,36 +298,38 @@ impl ContainerManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_build_image() {
-        let manager = ContainerManager::new();
-        let version = "v0.1.0";
-        let image = manager.build_image(version).await.unwrap();
+        let manager: _ = ContainerManager::new();
+        let version: _ = "v0.1.0";
+        let image: _ = manager.build_image(version).await.unwrap();
         assert_eq!(image, "beejs:v0.1.0");
     }
 
     #[tokio::test]
     async fn test_start_containers() {
-        let manager = ContainerManager::new();
-        let config = ContainerConfig::default();
+        let manager: _ = ContainerManager::new();
+        let config: _ = ContainerConfig::default();
 
-        let handles = manager.start_containers(&config).await.unwrap();
+        let handles: _ = manager.start_containers(&config).await.unwrap();
         assert_eq!(handles.len(), config.replicas);
         assert_eq!(handles[0].port, config.port);
     }
 
     #[tokio::test]
     async fn test_get_container_status() {
-        let manager = ContainerManager::new();
-        let status = manager.get_container_status("beejs-container-1").await.unwrap();
+        let manager: _ = ContainerManager::new();
+        let status: _ = manager.get_container_status("beejs-container-1").await.unwrap();
         assert_eq!(status, ContainerStatus::Running);
     }
 
     #[tokio::test]
     async fn test_get_container_metrics() {
-        let manager = ContainerManager::new();
-        let metrics = manager.get_container_metrics("beejs-container-1").await.unwrap();
+        let manager: _ = ContainerManager::new();
+        let metrics: _ = manager.get_container_metrics("beejs-container-1").await.unwrap();
 
         assert!(metrics.cpu_usage >= 0.0 && metrics.cpu_usage <= 100.0);
         assert!(metrics.memory_usage > 0.0);
@@ -335,7 +337,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_container_config_default() {
-        let config = ContainerConfig::default();
+        let config: _ = ContainerConfig::default();
         assert_eq!(config.replicas, 3);
         assert_eq!(config.port, 8080);
         assert!(config.env.contains_key("BEEJS_ENV"));
@@ -343,42 +345,42 @@ mod tests {
 
     #[tokio::test]
     async fn test_restart_container() {
-        let manager = ContainerManager::new();
-        let result = manager.restart_container("beejs-container-1").await;
+        let manager: _ = ContainerManager::new();
+        let result: _ = manager.restart_container("beejs-container-1").await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_scale_containers() {
-        let manager = ContainerManager::new();
-        let result = manager.scale_containers(3, 5).await;
+        let manager: _ = ContainerManager::new();
+        let result: _ = manager.scale_containers(3, 5).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_mount_volume() {
-        let manager = ContainerManager::new();
-        let volume = VolumeMount {
+        let manager: _ = ContainerManager::new();
+        let volume: _ = VolumeMount {
             source: "/data/beejs".to_string(),
             target: "/app/data".to_string(),
             read_only: false,
         };
 
-        let result = manager.mount_volume("beejs-container-1", &volume).await;
+        let result: _ = manager.mount_volume("beejs-container-1", &volume).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_check_container_health() {
-        let manager = ContainerManager::new();
-        let healthy = manager.check_container_health("beejs-container-1").await.unwrap();
+        let manager: _ = ContainerManager::new();
+        let healthy: _ = manager.check_container_health("beejs-container-1").await.unwrap();
         assert!(healthy);
     }
 
     #[tokio::test]
     async fn test_cleanup_containers() {
-        let manager = ContainerManager::new();
-        let result = manager.cleanup_containers().await;
+        let manager: _ = ContainerManager::new();
+        let result: _ = manager.cleanup_containers().await;
         assert!(result.is_ok());
     }
 }

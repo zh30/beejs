@@ -41,7 +41,7 @@ pub struct Tensor {
 impl Tensor {
     /// 创建全零张量
     pub fn zeros(shape: &[usize]) -> Self {
-        let numel = shape.iter().product();
+        let numel: _ = shape.iter().product();
         Self {
             data: vec![0.0; numel],
             shape: shape.to_vec(),
@@ -51,7 +51,7 @@ impl Tensor {
 
     /// 创建全一张量
     pub fn ones(shape: &[usize]) -> Self {
-        let numel = shape.iter().product();
+        let numel: _ = shape.iter().product();
         Self {
             data: vec![1.0; numel],
             shape: shape.to_vec(),
@@ -73,7 +73,7 @@ impl Tensor {
 
     /// 创建随机正态分布张量
     pub fn randn(shape: &[usize]) -> Self {
-        let numel = shape.iter().product();
+        let numel: _ = shape.iter().product();
         let data: Vec<f32> = (0..numel)
             .map(|_| {
                 // Box-Muller 变换生成正态分布
@@ -112,13 +112,13 @@ impl Tensor {
 
     /// 获取单个元素
     pub fn get(&self, indices: &[usize]) -> f32 {
-        let idx = self.flat_index(indices);
+        let idx: _ = self.flat_index(indices);
         self.data[idx]
     }
 
     /// 设置单个元素
     pub fn set(&mut self, indices: &[usize], value: f32) {
-        let idx = self.flat_index(indices);
+        let idx: _ = self.flat_index(indices);
         self.data[idx] = value;
     }
 
@@ -164,8 +164,8 @@ impl Tensor {
     pub fn transpose(&self) -> Self {
         assert_eq!(self.shape.len(), 2, "Transpose only supports 2D tensors");
 
-        let rows = self.shape[0];
-        let cols = self.shape[1];
+        let rows: _ = self.shape[0];
+        let cols: _ = self.shape[1];
         let mut data = vec![0.0; self.numel()];
 
         for i in 0..rows {
@@ -204,7 +204,7 @@ impl Tensor {
         assert_eq!(*self.shape.last().unwrap(), other.shape[0]);
 
         let mut data = self.data.clone();
-        let inner_size = other.shape[0];
+        let inner_size: _ = other.shape[0];
 
         for (i, val) in data.iter_mut().enumerate() {
             *val += other.data[i % inner_size];
@@ -250,9 +250,9 @@ impl Tensor {
         assert_eq!(other.shape.len(), 2);
         assert_eq!(self.shape[1], other.shape[0], "Matrix dimensions must match");
 
-        let m = self.shape[0];
-        let k = self.shape[1];
-        let n = other.shape[1];
+        let m: _ = self.shape[0];
+        let k: _ = self.shape[1];
+        let n: _ = other.shape[1];
 
         let mut data = vec![0.0; m * n];
 
@@ -304,10 +304,12 @@ impl Tensor {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_tensor_zeros() {
-        let t = Tensor::zeros(&[2, 3]);
+        let t: _ = Tensor::zeros(&[2, 3]);
         assert_eq!(t.numel(), 6);
         assert!((t.get(&[0, 0])).abs() < 1e-6);
     }

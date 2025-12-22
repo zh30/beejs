@@ -14,10 +14,12 @@ use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::collections::HashMap;
 use tokio::time::sleep;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 #[tokio::test]
 async fn test_smart_warmup_strategy() {
-    let strategy = SmartWarmupStrategy::default();
+    let strategy: _ = SmartWarmupStrategy::default();
     assert_eq!(strategy.max_warmup_workers, 8);
     assert!(strategy.predictive_warmup);
     assert_eq!(strategy.prediction_accuracy_threshold, 0.8);
@@ -29,10 +31,10 @@ async fn test_task_pattern_learning() {
 
     // 创建历史数据
     let mut history = Vec::new();
-    let base_time = SystemTime::now();
+    let base_time: _ = SystemTime::now();
 
     for i in 0..20 {
-        let complexity = match i % 3 {
+        let complexity: _ = match i % 3 {
             0 => TaskComplexity::Simple,
             1 => TaskComplexity::Medium,
             _ => TaskComplexity::Complex,
@@ -62,7 +64,7 @@ async fn test_task_pattern_learning() {
     assert!(pattern.avg_task_size >= 100);
 
     // 预测下一个任务
-    let prediction = pattern.predict_next_task();
+    let prediction: _ = pattern.predict_next_task();
     assert!(prediction.confidence >= 0.0);
     assert!(prediction.confidence <= 1.0);
 
@@ -77,7 +79,7 @@ async fn test_smart_load_balancer_performance_based() {
     let mut balancer = SmartLoadBalancer {
         strategy: LoadBalancingStrategy::PerformanceBased,
         worker_performance_history: HashMap::new(),
-        global_stats: Arc::new(Mutex::new(GlobalPerformanceStats::default())),
+        global_stats: Arc::new(std::sync::Mutex::new(Mutex::new(GlobalPerformanceStats::default()))),
     };
 
     // 模拟工作进程1的性能历史（较快）
@@ -130,8 +132,8 @@ async fn test_memory_sharing_manager() {
     };
 
     // 创建共享内存区域
-    let region_data = vec![0u8; 1024]; // 1KB 数据
-    let region = SharedMemoryRegion {
+    let region_data: _ = vec![0u8; 1024]; // 1KB 数据
+    let region: _ = SharedMemoryRegion {
         id: "test_region".to_string(),
         size: region_data.len(),
         access_count: AtomicUsize::new(0),
@@ -157,7 +159,7 @@ async fn test_performance_predictor_linear_regression() {
     let mut model = LinearRegressionModel::new(3);
 
     // 准备训练数据：y = 2*x1 + 3*x2 + 1*x3 + 5
-    let training_data = vec![
+    let training_data: _ = vec![
         (vec![1.0, 2.0, 3.0], 2.0*1.0 + 3.0*2.0 + 1.0*3.0 + 5.0), // 16.0
         (vec![2.0, 3.0, 4.0], 2.0*2.0 + 3.0*3.0 + 1.0*4.0 + 5.0), // 24.0
         (vec![3.0, 4.0, 5.0], 2.0*3.0 + 3.0*4.0 + 1.0*5.0 + 5.0), // 33.0
@@ -171,8 +173,8 @@ async fn test_performance_predictor_linear_regression() {
     }
 
     // 测试预测
-    let test_features = vec![6.0, 7.0, 8.0];
-    let prediction = model.predict(&test_features);
+    let test_features: _ = vec![6.0, 7.0, 8.0];
+    let prediction: _ = model.predict(&test_features);
 
     println!("性能预测模型测试通过:");
     println!("  - 测试输入: {:?}", test_features);
@@ -186,7 +188,7 @@ async fn test_performance_predictor_linear_regression() {
 
 #[tokio::test]
 async fn test_smart_process_pool_creation() {
-    let config = ProcessPoolConfig {
+    let config: _ = ProcessPoolConfig {
         max_workers: 8,
         initial_workers: 4,
         min_workers: 2,
@@ -200,7 +202,7 @@ async fn test_smart_process_pool_creation() {
         scale_down_step: 1,
     };
 
-    let pool = SmartProcessPool::new(config).unwrap();
+    let pool: _ = SmartProcessPool::new(config).unwrap();
 
     assert_eq!(pool.base_config.max_workers, 8);
     assert_eq!(pool.base_config.initial_workers, 4);
@@ -215,11 +217,11 @@ async fn test_smart_process_pool_creation() {
 
 #[tokio::test]
 async fn test_smart_process_pool_monitoring() {
-    let config = ProcessPoolConfig::default();
-    let pool = SmartProcessPool::new(config).unwrap();
+    let config: _ = ProcessPoolConfig::default();
+    let pool: _ = SmartProcessPool::new(config).unwrap();
 
     // 启动监控系统
-    let result = pool.start_monitoring().await;
+    let result: _ = pool.start_monitoring().await;
     assert!(result.is_ok());
 
     // 等待一段时间让监控系统运行
@@ -242,8 +244,8 @@ async fn test_smart_process_pool_monitoring() {
 
 #[tokio::test]
 async fn test_performance_bottleneck_prediction() {
-    let config = ProcessPoolConfig::default();
-    let pool = SmartProcessPool::new(config).unwrap();
+    let config: _ = ProcessPoolConfig::default();
+    let pool: _ = SmartProcessPool::new(config).unwrap();
 
     // 启动监控系统以收集数据
     pool.start_monitoring().await.unwrap();
@@ -252,7 +254,7 @@ async fn test_performance_bottleneck_prediction() {
     sleep(Duration::from_secs(2)).await;
 
     // 预测性能瓶颈
-    let prediction_result = pool.predict_performance_bottleneck().await;
+    let prediction_result: _ = pool.predict_performance_bottleneck().await;
 
     // 根据数据可用性检查结果
     match prediction_result {
@@ -280,25 +282,25 @@ async fn test_performance_bottleneck_prediction() {
 #[tokio::test]
 async fn test_task_complexity_classification() {
     // 测试简单任务
-    let simple_task = "console.log('hello');";
-    let complexity = TaskComplexity::from_script(simple_task);
+    let simple_task: _ = "console.log('hello');";
+    let complexity: _ = TaskComplexity::from_script(simple_task);
     println!("简单任务复杂度: {:?}", complexity);
     assert_eq!(complexity, TaskComplexity::Simple);
 
     // 测试中等复杂度任务
-    let medium_task = "
+    let medium_task: _ = "
         for(let i = 0; i < 10; i++) {
             if (i % 2 === 0) {
                 console.log(i);
             }
         }
     ";
-    let complexity = TaskComplexity::from_script(medium_task);
+    let complexity: _ = TaskComplexity::from_script(medium_task);
     println!("中等复杂度任务: {:?}", complexity);
     assert!(complexity == TaskComplexity::Simple || complexity == TaskComplexity::Medium);
 
     // 测试复杂任务
-    let complex_task = "
+    let complex_task: _ = "
         class MyClass {
             constructor() {
                 this.data = [];
@@ -330,7 +332,7 @@ async fn test_task_complexity_classification() {
             }
         }
     ";
-    let complexity = TaskComplexity::from_script(complex_task);
+    let complexity: _ = TaskComplexity::from_script(complex_task);
     println!("复杂任务复杂度: {:?}", complexity);
     assert!(complexity == TaskComplexity::Complex);
 
@@ -339,21 +341,21 @@ async fn test_task_complexity_classification() {
 
 #[tokio::test]
 async fn test_memory_sharing_operations() {
-    let config = ProcessPoolConfig::default();
-    let pool = SmartProcessPool::new(config).unwrap();
+    let config: _ = ProcessPoolConfig::default();
+    let pool: _ = SmartProcessPool::new(config).unwrap();
 
     // 启用内存共享
-    let test_data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-    let result = pool.enable_memory_sharing("test_shared_region".to_string(), test_data.clone()).await;
+    let test_data: _ = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    let result: _ = pool.enable_memory_sharing("test_shared_region".to_string(), test_data.clone()).await;
     assert!(result.is_ok());
 
     // 访问共享内存
-    let accessed_data = pool.access_shared_memory("test_shared_region").await.unwrap();
+    let accessed_data: _ = pool.access_shared_memory("test_shared_region").await.unwrap();
     assert_eq!(accessed_data, test_data);
 
     // 验证访问计数增加
-    let manager = pool.memory_manager.read().await;
-    let region = manager.shared_regions.get("test_shared_region").unwrap();
+    let manager: _ = pool.memory_manager.read().await;
+    let region: _ = manager.shared_regions.get("test_shared_region").unwrap();
     assert!(region.access_count.load(Ordering::Relaxed) > 0);
 
     println!("内存共享操作测试通过:");
@@ -364,24 +366,24 @@ async fn test_memory_sharing_operations() {
 
 #[tokio::test]
 async fn test_performance_event_system() {
-    let config = ProcessPoolConfig::default();
-    let _pool = SmartProcessPool::new(config).unwrap();
+    let config: _ = ProcessPoolConfig::default();
+    let _pool: _ = SmartProcessPool::new(config).unwrap();
 
     // 创建性能事件
-    let task_event = PerformanceEvent::TaskSubmitted {
+    let task_event: _ = PerformanceEvent::TaskSubmitted {
         complexity: TaskComplexity::Simple,
         size: 100,
         timestamp: SystemTime::now(),
     };
 
-    let completion_event = PerformanceEvent::TaskCompleted {
+    let completion_event: _ = PerformanceEvent::TaskCompleted {
         worker_id: 1,
         execution_time: Duration::from_millis(50),
         success: true,
         timestamp: SystemTime::now(),
     };
 
-    let queue_event = PerformanceEvent::QueueLengthChanged {
+    let queue_event: _ = PerformanceEvent::QueueLengthChanged {
         new_length: 5,
         timestamp: SystemTime::now(),
     };
@@ -419,7 +421,7 @@ async fn test_performance_event_system() {
 
 #[tokio::test]
 async fn test_end_to_end_smart_pool_workflow() {
-    let config = ProcessPoolConfig {
+    let config: _ = ProcessPoolConfig {
         max_workers: 8,
         initial_workers: 4,
         min_workers: 2,
@@ -433,7 +435,7 @@ async fn test_end_to_end_smart_pool_workflow() {
         scale_down_step: 1,
     };
 
-    let pool = SmartProcessPool::new(config).unwrap();
+    let pool: _ = SmartProcessPool::new(config).unwrap();
 
     // 1. 启动监控系统
     pool.start_monitoring().await.unwrap();
@@ -441,27 +443,27 @@ async fn test_end_to_end_smart_pool_workflow() {
     println!("步骤1: 监控系统启动 ✓");
 
     // 2. 启用内存共享
-    let shared_data = vec![42u8; 1024];
+    let shared_data: _ = vec![42u8; 1024];
     pool.enable_memory_sharing("shared_config".to_string(), shared_data).await.unwrap();
     println!("步骤2: 内存共享启用 ✓");
 
     // 3. 执行智能预热
-    let test_script = "console.log('Testing smart prewarm');";
+    let test_script: _ = "console.log('Testing smart prewarm');";
     pool.smart_prewarm(test_script).await.unwrap();
     println!("步骤3: 智能预热执行 ✓");
 
     // 4. 测试负载均衡选择
-    let optimal_worker = pool.select_optimal_worker(test_script).await;
+    let optimal_worker: _ = pool.select_optimal_worker(test_script).await;
     assert!(optimal_worker.is_ok());
     println!("步骤4: 智能负载均衡选择 ✓");
 
     // 5. 清理资源
     pool.stop_monitoring();
-    let _cleaned_regions = pool.cleanup_unused_regions().await.unwrap();
+    let _cleaned_regions: _ = pool.cleanup_unused_regions().await.unwrap();
     println!("步骤5: 资源清理 ✓");
 
     // 6. 性能瓶颈预测
-    let prediction = pool.predict_performance_bottleneck().await;
+    let prediction: _ = pool.predict_performance_bottleneck().await;
     match prediction {
         Ok(pred) => {
             println!("步骤6: 性能瓶颈预测 ✓");

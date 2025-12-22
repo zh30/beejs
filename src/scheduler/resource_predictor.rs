@@ -66,12 +66,12 @@ impl ResourcePredictor {
         // 简化的线性预测
         let recent_metrics: Vec<_> = self.history.iter().rev().take(10).collect();
 
-        let avg_cpu = recent_metrics.iter().map(|m| m.cpu_usage).sum::<f64>() / recent_metrics.len() as f64;
-        let avg_memory = recent_metrics.iter().map(|m| m.memory_usage).sum::<f64>() / recent_metrics.len() as f64;
+        let avg_cpu: _ = recent_metrics.iter().map(|m| m.cpu_usage).sum::<f64>() / recent_metrics.len() as f64;
+        let avg_memory: _ = recent_metrics.iter().map(|m| m.memory_usage).sum::<f64>() / recent_metrics.len() as f64;
 
         // 基于历史趋势的简单预测
-        let trend_cpu = self.calculate_trend(&recent_metrics.iter().map(|m| m.cpu_usage).collect());
-        let trend_memory = self.calculate_trend(&recent_metrics.iter().map(|m| m.memory_usage).collect());
+        let trend_cpu: _ = self.calculate_trend(&recent_metrics.iter().map(|m| m.cpu_usage).collect());
+        let trend_memory: _ = self.calculate_trend(&recent_metrics.iter().map(|m| m.memory_usage).collect());
 
         PredictionResult {
             predicted_cpu: (avg_cpu + trend_cpu * time_horizon as f64 / 60.0).clamp(0.0, 100.0),
@@ -87,13 +87,13 @@ impl ResourcePredictor {
         }
 
         // 简单的线性回归
-        let n = values.len() as f64;
+        let n: _ = values.len() as f64;
         let sum_x: f64 = (0..values.len()).map(|i| i as f64).sum();
         let sum_y: f64 = values.iter().sum();
         let sum_xy: f64 = values.iter().enumerate().map(|(i, &y)| i as f64 * y).sum();
         let sum_x2: f64 = (0..values.len()).map(|i| (i as f64).powi(2)).sum();
 
-        let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
+        let slope: _ = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
         slope
     }
 
@@ -102,10 +102,10 @@ impl ResourcePredictor {
         let mut cpu_forecast = Vec::new();
         let mut memory_forecast = Vec::new();
 
-        let now = Utc::now();
+        let now: _ = Utc::now();
         for i in 0..hours {
-            let time_point = now + chrono::Duration::minutes(i as i64);
-            let prediction = self.predict(i * 60); // convert hours to minutes
+            let time_point: _ = now + chrono::Duration::minutes(i as i64);
+            let prediction: _ = self.predict(i * 60); // convert hours to minutes
 
             time_points.push(time_point);
             cpu_forecast.push(prediction.predicted_cpu);
@@ -123,12 +123,14 @@ impl ResourcePredictor {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_resource_predictor() {
         let mut predictor = ResourcePredictor::new(100);
 
-        let now = Utc::now();
+        let now: _ = Utc::now();
         for i in 0..10 {
             predictor.add_metrics(ResourceMetrics {
                 timestamp: now + chrono::Duration::minutes(i),
@@ -139,7 +141,7 @@ mod tests {
             });
         }
 
-        let prediction = predictor.predict(30);
+        let prediction: _ = predictor.predict(30);
         assert!(prediction.confidence > 0.0);
         assert!(prediction.predicted_cpu > 50.0);
     }

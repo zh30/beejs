@@ -74,7 +74,7 @@ impl TestRunner {
             }
         }
 
-        let runtime = crate::Runtime::new(
+        let runtime: _ = crate::Runtime::new(
             67108864,   // 64MB stack
             1073741824, // 1GB heap
             config.verbose,  , false)?;
@@ -84,32 +84,32 @@ impl TestRunner {
 
     /// Run tests in a file
     pub fn run_file(&self, file: &Path) -> Result<TestSuite> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         if self.config.verbose {
             println!("Running tests in: {}", file.display());
         }
 
         // Execute tests
-        let result = self.runtime.execute_file(&file.to_path_buf())?;
+        let result: _ = self.runtime.execute_file(&file.to_path_buf())?;
 
         // Parse test results
-        let tests = self.parse_test_results(&result)?;
+        let tests: _ = self.parse_test_results(&result)?;
 
-        let passed = tests
+        let passed: _ = tests
             .iter()
             .filter(|t| matches!(t.status, TestStatus::Passed))
             .count();
-        let failed = tests
+        let failed: _ = tests
             .iter()
             .filter(|t| matches!(t.status, TestStatus::Failed(_)))
             .count();
-        let skipped = tests
+        let skipped: _ = tests
             .iter()
             .filter(|t| matches!(t.status, TestStatus::Skipped(_)))
             .count();
 
-        let suite = TestSuite {
+        let suite: _ = TestSuite {
             file: file.to_path_buf(),
             tests,
             passed,
@@ -133,7 +133,7 @@ impl TestRunner {
         let mut suites = Vec::new();
 
         // Find test files matching pattern
-        let test_files = self.find_test_files(pattern)?;
+        let test_files: _ = self.find_test_files(pattern)?;
 
         for file in test_files {
             match self.run_file(&file) {
@@ -154,7 +154,7 @@ impl TestRunner {
         let mut files = Vec::new();
 
         // Simple pattern matching - look for *.test.js or *.spec.js
-        let patterns = vec![
+        let patterns: _ = vec![
             "**/*.test.js",
             "**/*.spec.js",
             "**/test/**/*.js",
@@ -167,9 +167,9 @@ impl TestRunner {
             if let Ok(entries) = std::fs::read_dir(".") {
                 for entry in entries {
                     if let Ok(entry) = entry {
-                        let path = entry.path();
+                        let path: _ = entry.path();
                         if path.is_file() {
-                            let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                            let file_name: _ = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
                             if file_name.contains("test") || file_name.contains("spec") {
                                 if file_name.ends_with(".js") {
@@ -244,26 +244,28 @@ mod tests {
 
     // Import the V8 requirement macro
     use crate::require_v8;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_runner_creation() {
         require_v8!();
-        let config = TestRunnerConfig::default();
-        let runner = TestRunner::new(config);
+        let config: _ = TestRunnerConfig::default();
+        let runner: _ = TestRunner::new(config);
         assert!(runner.is_ok());
     }
 
     #[test]
     fn test_run_simple_file() {
         require_v8!();
-        let config = TestRunnerConfig::default();
-        let runner = TestRunner::new(config).unwrap();
+        let config: _ = TestRunnerConfig::default();
+        let runner: _ = TestRunner::new(config).unwrap();
 
         // Create a simple test file
         let mut file = NamedTempFile::new().unwrap();
         writeln!(file, "console.log('test output');").unwrap();
 
-        let result = runner.run_file(file.path());
+        let result: _ = runner.run_file(file.path());
         assert!(result.is_ok());
     }
 }

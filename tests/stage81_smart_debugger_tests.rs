@@ -7,6 +7,8 @@ mod tests {
     use std::path::Path;
     use std::sync::Arc;
     use tokio::runtime::Runtime;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     // 模拟智能调试器的结构
     pub struct MockSmartDebugger {
@@ -76,7 +78,7 @@ mod tests {
             }
 
             // 基于错误类型生成诊断
-            let diagnosis = match error.error_type.as_str() {
+            let diagnosis: _ = match error.error_type.as_str() {
                 "TypeError" => self.diagnose_type_error(error),
                 "ReferenceError" => self.diagnose_reference_error(error),
                 "SyntaxError" => self.diagnose_syntax_error(error),
@@ -94,8 +96,8 @@ mod tests {
             }
 
             // 分析栈追踪找到根因
-            let deepest_frame = &stack_trace[0];
-            let root_cause = RootCause {
+            let deepest_frame: _ = &stack_trace[0];
+            let root_cause: _ = RootCause {
                 description: format!("错误源于 {}:{} 中的 {}", deepest_frame.file, deepest_frame.line, deepest_frame.function),
                 location: format!("{}:{}", deepest_frame.file, deepest_frame.line),
                 related_code: Some("相关代码片段".to_string()),
@@ -169,7 +171,7 @@ mod tests {
         pub async fn explain_error(&self, error: &ErrorInfo) -> Result<String, String> {
             tokio::time::sleep(std::time::Duration::from_millis(self.diagnosis_delay_ms / 3)).await;
 
-            let explanation = match error.error_type.as_str() {
+            let explanation: _ = match error.error_type.as_str() {
                 "TypeError" => format!(
                     "TypeError: {}\n\n这个错误表示尝试对错误类型的值进行操作。常见原因包括：\n1. 访问未定义或 null 的属性\n2. 调用非函数的值\n3. 类型转换错误",
                     error.message
@@ -215,7 +217,7 @@ mod tests {
                 });
             }
 
-            let time_saved = (breakpoints.len() - optimized.len()) * 10;
+            let time_saved: _ = (breakpoints.len() - optimized.len()) * 10;
 
             Ok(DebugPath {
                 optimized_breakpoints: optimized,
@@ -319,11 +321,11 @@ mod tests {
 
     #[test]
     fn test_error_diagnosis() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let debugger = MockSmartDebugger::new(50, 0.95);
-            let error = ErrorInfo {
+            let debugger: _ = MockSmartDebugger::new(50, 0.95);
+            let error: _ = ErrorInfo {
                 error_type: "TypeError".to_string(),
                 message: "Cannot read property 'length' of undefined".to_string(),
                 stack_trace: vec![
@@ -341,7 +343,7 @@ mod tests {
                 context: Some("数据处理函数".to_string()),
             };
 
-            let diagnosis = debugger.diagnose_error(&error).await.unwrap();
+            let diagnosis: _ = debugger.diagnose_error(&error).await.unwrap();
 
             // 验证诊断结果
             assert_eq!(diagnosis.error_type, "TypeError");
@@ -356,11 +358,11 @@ mod tests {
 
     #[test]
     fn test_root_cause_analysis() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let debugger = MockSmartDebugger::new(50, 0.95);
-            let stack_trace = vec![
+            let debugger: _ = MockSmartDebugger::new(50, 0.95);
+            let stack_trace: _ = vec![
                 StackFrame {
                     file: "lib.js".to_string(),
                     line: 25,
@@ -378,7 +380,7 @@ mod tests {
                 },
             ];
 
-            let root_cause = debugger.find_root_cause(&stack_trace).await.unwrap();
+            let root_cause: _ = debugger.find_root_cause(&stack_trace).await.unwrap();
 
             // 验证根因分析
             assert!(!root_cause.description.is_empty());
@@ -393,11 +395,11 @@ mod tests {
 
     #[test]
     fn test_fix_suggestions() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let debugger = MockSmartDebugger::new(50, 0.95);
-            let diagnosis = Diagnosis {
+            let debugger: _ = MockSmartDebugger::new(50, 0.95);
+            let diagnosis: _ = Diagnosis {
                 error_type: "TypeError".to_string(),
                 root_cause: RootCause {
                     description: "类型错误".to_string(),
@@ -408,13 +410,13 @@ mod tests {
                 confidence: 0.9,
             };
 
-            let suggestions = debugger.suggest_fix(&diagnosis).await.unwrap();
+            let suggestions: _ = debugger.suggest_fix(&diagnosis).await.unwrap();
 
             // 验证修复建议
             assert!(!suggestions.is_empty());
             assert_eq!(suggestions.len(), 2); // TypeError 应该生成2个建议
 
-            let first_suggestion = &suggestions[0];
+            let first_suggestion: _ = &suggestions[0];
             assert!(!first_suggestion.title.is_empty());
             assert!(!first_suggestion.description.is_empty());
             assert!(!first_suggestion.fix_code.is_empty());
@@ -428,44 +430,44 @@ mod tests {
 
     #[test]
     fn test_error_explanation() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let debugger = MockSmartDebugger::new(30, 0.95);
+            let debugger: _ = MockSmartDebugger::new(30, 0.95);
 
             // 测试 TypeError 解释
-            let type_error = ErrorInfo {
+            let type_error: _ = ErrorInfo {
                 error_type: "TypeError".to_string(),
                 message: "Cannot read property 'map' of undefined".to_string(),
                 stack_trace: vec![],
                 context: None,
             };
 
-            let explanation = debugger.explain_error(&type_error).await.unwrap();
+            let explanation: _ = debugger.explain_error(&type_error).await.unwrap();
             assert!(explanation.contains("TypeError"));
             assert!(explanation.contains("类型不匹配"));
 
             // 测试 ReferenceError 解释
-            let ref_error = ErrorInfo {
+            let ref_error: _ = ErrorInfo {
                 error_type: "ReferenceError".to_string(),
                 message: "myVariable is not defined".to_string(),
                 stack_trace: vec![],
                 context: None,
             };
 
-            let explanation = debugger.explain_error(&ref_error).await.unwrap();
+            let explanation: _ = debugger.explain_error(&ref_error).await.unwrap();
             assert!(explanation.contains("ReferenceError"));
             assert!(explanation.contains("不存在"));
 
             // 测试 SyntaxError 解释
-            let syntax_error = ErrorInfo {
+            let syntax_error: _ = ErrorInfo {
                 error_type: "SyntaxError".to_string(),
                 message: "Unexpected token '}'".to_string(),
                 stack_trace: vec![],
                 context: None,
             };
 
-            let explanation = debugger.explain_error(&syntax_error).await.unwrap();
+            let explanation: _ = debugger.explain_error(&syntax_error).await.unwrap();
             assert!(explanation.contains("SyntaxError"));
             assert!(explanation.contains("语法"));
 
@@ -476,11 +478,11 @@ mod tests {
 
     #[test]
     fn test_debug_path_optimization() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let debugger = MockSmartDebugger::new(50, 0.95);
-            let breakpoints = vec![
+            let debugger: _ = MockSmartDebugger::new(50, 0.95);
+            let breakpoints: _ = vec![
                 BreakpointSuggestion {
                     file: "app.js".to_string(),
                     line: 5,
@@ -498,13 +500,13 @@ mod tests {
                 },
             ];
 
-            let execution_path = vec![
+            let execution_path: _ = vec![
                 "main".to_string(),
                 "app.init".to_string(),
                 "app.process".to_string(),
             ];
 
-            let debug_path = debugger.optimize_debug_path(&breakpoints, &execution_path).await.unwrap();
+            let debug_path: _ = debugger.optimize_debug_path(&breakpoints, &execution_path).await.unwrap();
 
             // 验证调试路径优化
             assert!(!debug_path.optimized_breakpoints.is_empty());
@@ -518,12 +520,12 @@ mod tests {
 
     #[test]
     fn test_breakpoint_suggestions() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let debugger = MockSmartDebugger::new(30, 0.95);
+            let debugger: _ = MockSmartDebugger::new(30, 0.95);
 
-            let code = r#"
+            let code: _ = r#"
 function processData(data) {
     if (data) {
         for (let i = 0; i < data.length; i++) {
@@ -539,7 +541,7 @@ function processData(data) {
 }
             "#;
 
-            let suggestions = debugger.suggest_breakpoints(code).await.unwrap();
+            let suggestions: _ = debugger.suggest_breakpoints(code).await.unwrap();
 
             // 验证断点建议
             assert!(!suggestions.is_empty());
@@ -555,13 +557,13 @@ function processData(data) {
 
     #[test]
     fn test_debugger_performance() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let start = SystemTime::now();
+            let start: _ = SystemTime::now();
 
-            let debugger = MockSmartDebugger::new(100, 0.95);
-            let error = ErrorInfo {
+            let debugger: _ = MockSmartDebugger::new(100, 0.95);
+            let error: _ = ErrorInfo {
                 error_type: "TypeError".to_string(),
                 message: "Test error".to_string(),
                 stack_trace: vec![StackFrame {
@@ -572,11 +574,11 @@ function processData(data) {
                 context: None,
             };
 
-            let diagnosis = debugger.diagnose_error(&error).await.unwrap();
-            let root_cause = debugger.find_root_cause(&error.stack_trace).await.unwrap();
-            let suggestions = debugger.suggest_fix(&diagnosis).await.unwrap();
+            let diagnosis: _ = debugger.diagnose_error(&error).await.unwrap();
+            let root_cause: _ = debugger.find_root_cause(&error.stack_trace).await.unwrap();
+            let suggestions: _ = debugger.suggest_fix(&diagnosis).await.unwrap();
 
-            let elapsed = start.elapsed().unwrap();
+            let elapsed: _ = start.elapsed().unwrap();
 
             // 验证性能
             assert!(elapsed.as_millis() < 500, "智能调试总时间应 < 500ms，当前: {}ms", elapsed.as_millis());
@@ -594,30 +596,30 @@ function processData(data) {
 
     #[test]
     fn test_low_accuracy_handling() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
             // 测试低准确率情况
-            let low_accuracy_debugger = MockSmartDebugger::new(50, 0.3);
-            let error = ErrorInfo {
+            let low_accuracy_debugger: _ = MockSmartDebugger::new(50, 0.3);
+            let error: _ = ErrorInfo {
                 error_type: "TypeError".to_string(),
                 message: "Test error".to_string(),
                 stack_trace: vec![],
                 context: None,
             };
 
-            let result = low_accuracy_debugger.diagnose_error(&error).await;
+            let result: _ = low_accuracy_debugger.diagnose_error(&error).await;
 
             // 验证低准确率返回错误
             assert!(result.is_err());
 
             // 测试高准确率情况
-            let high_accuracy_debugger = MockSmartDebugger::new(50, 0.95);
-            let result = high_accuracy_debugger.diagnose_error(&error).await;
+            let high_accuracy_debugger: _ = MockSmartDebugger::new(50, 0.95);
+            let result: _ = high_accuracy_debugger.diagnose_error(&error).await;
 
             // 验证高准确率成功
             assert!(result.is_ok());
-            let diagnosis = result.unwrap();
+            let diagnosis: _ = result.unwrap();
             assert!(diagnosis.confidence > 0.9);
 
             println!("✅ 低准确率处理测试通过");
@@ -626,14 +628,14 @@ function processData(data) {
 
     #[test]
     fn test_empty_stack_trace() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let debugger = MockSmartDebugger::new(30, 0.95);
+            let debugger: _ = MockSmartDebugger::new(30, 0.95);
 
             // 测试空栈追踪
             let empty_stack: Vec<StackFrame> = vec![];
-            let result = debugger.find_root_cause(&empty_stack).await;
+            let result: _ = debugger.find_root_cause(&empty_stack).await;
 
             // 验证空栈追踪返回错误
             assert!(result.is_err());
@@ -644,12 +646,12 @@ function processData(data) {
 
     #[test]
     fn test_multiple_error_types() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let debugger = MockSmartDebugger::new(40, 0.95);
+            let debugger: _ = MockSmartDebugger::new(40, 0.95);
 
-            let error_types = vec![
+            let error_types: _ = vec![
                 ("TypeError", "Cannot read property 'x' of undefined"),
                 ("ReferenceError", "x is not defined"),
                 ("SyntaxError", "Unexpected token"),
@@ -658,7 +660,7 @@ function processData(data) {
             ];
 
             for (error_type, message) in error_types {
-                let error = ErrorInfo {
+                let error: _ = ErrorInfo {
                     error_type: error_type.to_string(),
                     message: message.to_string(),
                     stack_trace: vec![StackFrame {
@@ -669,9 +671,9 @@ function processData(data) {
                     context: None,
                 };
 
-                let diagnosis = debugger.diagnose_error(&error).await.unwrap();
-                let explanation = debugger.explain_error(&error).await.unwrap();
-                let suggestions = debugger.suggest_fix(&diagnosis).await.unwrap();
+                let diagnosis: _ = debugger.diagnose_error(&error).await.unwrap();
+                let explanation: _ = debugger.explain_error(&error).await.unwrap();
+                let suggestions: _ = debugger.suggest_fix(&diagnosis).await.unwrap();
 
                 // 验证每种错误类型都能正确处理
                 assert_eq!(diagnosis.error_type, error_type);

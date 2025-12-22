@@ -14,7 +14,7 @@ pub struct PluginInfo {
 }
 
 pub struct PluginMarket {
-    plugins: HashMap<String, PluginInfo>,
+    plugins: HashMap<String, PluginInfo, std::collections::HashMap<String, PluginInfo, String, PluginInfo>>,
 }
 
 impl PluginMarket {
@@ -78,25 +78,27 @@ impl PluginMarket {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_plugin_market_creation() {
-        let market = PluginMarket::new();
+        let market: _ = PluginMarket::new();
         assert!(!market.list_all().is_empty());
     }
 
     #[test]
     fn test_search_plugins() {
-        let market = PluginMarket::new();
-        let results = market.search("typescript");
+        let market: _ = PluginMarket::new();
+        let results: _ = market.search("typescript");
         assert!(!results.is_empty());
         assert!(results[0].name.contains("typescript"));
     }
 
     #[test]
     fn test_install_plugin() {
-        let market = PluginMarket::new();
-        let result = market.install("typescript-transformer").unwrap();
+        let market: _ = PluginMarket::new();
+        let result: _ = market.install("typescript-transformer").unwrap();
         assert!(result.contains("Installed"));
     }
 }

@@ -86,8 +86,8 @@ impl SystemInfo {
     }
 
     fn get_os_info() -> String {
-        let os_name = std::env::consts::OS;
-        let family = std::env::consts::FAMILY;
+        let os_name: _ = std::env::consts::OS;
+        let family: _ = std::env::consts::FAMILY;
 
         // 尝试获取更详细的版本信息
         #[cfg(target_os = "macos")]
@@ -97,7 +97,7 @@ impl SystemInfo {
                 .output()
             {
                 if output.status.success() {
-                    let version = String::from_utf8_lossy(&output.stdout);
+                    let version: _ = String::from_utf8_lossy(&output.stdout);
                     return format!("macOS {}", version.trim());
                 }
             }
@@ -108,7 +108,7 @@ impl SystemInfo {
             if let Ok(content) = std::fs::read_to_string("/etc/os-release") {
                 for line in content.lines() {
                     if line.starts_with("PRETTY_NAME=") {
-                        let name = line.trim_start_matches("PRETTY_NAME=").trim_matches('"');
+                        let name: _ = line.trim_start_matches("PRETTY_NAME=").trim_matches('"');
                         return name.to_string();
                     }
                 }
@@ -160,7 +160,7 @@ impl SystemInfo {
         {
             if let Ok(output) = std::process::Command::new("vm_stat").output() {
                 if output.status.success() {
-                    let content = String::from_utf8_lossy(&output.stdout);
+                    let content: _ = String::from_utf8_lossy(&output.stdout);
                     let mut free_pages = 0u64;
                     for line in content.lines() {
                         if line.starts_with("Pages free:") {
@@ -252,7 +252,7 @@ impl InfoCommand {
 
     /// 执行 info 命令
     pub fn execute(&self) -> anyhow::Result<()> {
-        let info = SystemInfo::collect();
+        let info: _ = SystemInfo::collect();
 
         self.formatter.print_banner();
 
@@ -326,7 +326,7 @@ impl InfoCommand {
     }
 
     fn print_features(&self) {
-        let features = [
+        let features: _ = [
             ("TypeScript", true, "Native TypeScript execution"),
             ("ESM Modules", true, "ES Module support"),
             ("CommonJS", true, "CommonJS module support"),
@@ -340,8 +340,8 @@ impl InfoCommand {
         ];
 
         for (name, enabled, desc) in features {
-            let status = if enabled { "✓" } else { "✗" };
-            let status_color = if enabled { "\x1b[32m" } else { "\x1b[31m" };
+            let status: _ = if enabled { "✓" } else { "✗" };
+            let status_color: _ = if enabled { "\x1b[32m" } else { "\x1b[31m" };
 
             if self.formatter.color_enabled {
                 println!(
@@ -372,9 +372,9 @@ impl InfoCommand {
 
     /// 输出 JSON 格式的信息
     pub fn execute_json(&self) -> anyhow::Result<()> {
-        let info = SystemInfo::collect();
+        let info: _ = SystemInfo::collect();
 
-        let json = serde_json::json!({
+        let json: _ = serde_json::json!({
             "beejs": {
                 "version": info.beejs_version,
                 "v8_version": info.v8_version,
@@ -403,10 +403,12 @@ impl InfoCommand {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_system_info_collect() {
-        let info = SystemInfo::collect();
+        let info: _ = SystemInfo::collect();
 
         assert!(!info.beejs_version.is_empty());
         assert!(!info.os.is_empty());
@@ -416,13 +418,13 @@ mod tests {
 
     #[test]
     fn test_info_command_execute() {
-        let cmd = InfoCommand::new(false);
+        let cmd: _ = InfoCommand::new(false);
         assert!(cmd.execute().is_ok());
     }
 
     #[test]
     fn test_info_command_json() {
-        let cmd = InfoCommand::new(false);
+        let cmd: _ = InfoCommand::new(false);
         assert!(cmd.execute_json().is_ok());
     }
 }

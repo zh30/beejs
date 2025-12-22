@@ -7,6 +7,8 @@ use std::collections::HashMap;
 use rusty_v8 as v8;
 
 use crate::debugger::{DebugResult, config::DebugConfig};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Scope types in JavaScript
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -57,7 +59,7 @@ impl VariableInspector {
         &self,
         scope: &VariableScope,
     ) -> DebugResult<Vec<VariableInfo>> {
-        let variables = Vec::new();
+        let variables: _ = Vec::new();
 
         // Get object properties from V8
         // This would integrate with V8's Object API
@@ -69,7 +71,7 @@ impl VariableInspector {
     pub fn get_all_scope_variables(
         &self,
         scopes: &[VariableScope],
-    ) -> DebugResult<HashMap<ScopeType, Vec<VariableInfo>>> {
+    ) -> DebugResult<HashMap<ScopeType, Vec<VariableInfo, std::collections::HashMap<ScopeType, Vec<VariableInfo, ScopeType, Vec<VariableInfo>>>> {
         let mut all_vars = HashMap::new();
 
         for scope in scopes {
@@ -99,7 +101,7 @@ impl VariableInspector {
         // TODO: Implement proper expression evaluation with V8
 
         // For now, return a simple variable info
-        let info = VariableInfo {
+        let info: _ = VariableInfo {
             name: expression.to_string(),
             value: "undefined".to_string(),
             type_name: "unknown".to_string(),
@@ -166,11 +168,11 @@ impl VariableInspector {
         var_name: &str,
     ) -> Option<(ScopeType, VariableInfo)> {
         for scope in scopes {
-            let variables_result = self.get_scope_variables(scope);
+            let variables_result: _ = self.get_scope_variables(scope);
             if !variables_result.success {
                 continue;
             }
-            let variables = variables_result.data.unwrap_or_default();
+            let variables: _ = variables_result.data.unwrap_or_default();
             if let Some(var) = variables.iter().find(|v| v.name == var_name) {
                 return Some((scope.scope_type.clone(), var.clone()));
             }
@@ -184,10 +186,10 @@ impl VariableInspector {
         scope: &VariableScope,
         var_name: &str,
     ) -> DebugResult<Option<VariableInfo>> {
-        let variables_result = self.get_scope_variables(scope);
+        let variables_result: _ = self.get_scope_variables(scope);
         if variables_result.success {
             if let Some(variables) = variables_result.data {
-                let found = variables.into_iter().find(|v| v.name == var_name);
+                let found: _ = variables.into_iter().find(|v| v.name == var_name);
                 DebugResult::ok(found)
             } else {
                 DebugResult::ok(None)

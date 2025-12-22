@@ -6,6 +6,8 @@ use super::tensor_ops::Tensor;
 use anyhow::{Result};
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// GPU 设备信息
 #[derive(Debug, Clone)]
@@ -39,13 +41,13 @@ impl GPUAccelerator {
     /// 创建新的 GPU 加速器
     pub async fn new() -> Result<Self> {
         // 初始化 GPU 设备
-        let devices = Self::detect_gpu_devices().await;
+        let devices: _ = Self::detect_gpu_devices().await;
 
         // 计算初始统计
         let total_memory: u64 = devices.iter().map(|d| d.memory).sum();
-        let active_count = devices.iter().filter(|d| d.available).count();
+        let active_count: _ = devices.iter().filter(|d| d.available).count();
 
-        let stats = GPUStats {
+        let stats: _ = GPUStats {
             device_count: devices.len(),
             active_devices: active_count,
             total_memory,
@@ -55,8 +57,8 @@ impl GPUAccelerator {
 
         Ok(GPUAccelerator {
             devices,
-            active_device: Arc::new(RwLock::new(0)),
-            stats: Arc::new(RwLock::new(stats)),
+            active_device: Arc::new(std::sync::Mutex::new(RwLock::new(0))),
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(stats))),
         })
     }
 
@@ -95,13 +97,13 @@ impl GPUAccelerator {
 
     /// 选择最优设备
     pub async fn select_device(&self, task_type: &str) -> Result<usize> {
-        let available_devices = self.get_available_devices();
+        let available_devices: _ = self.get_available_devices();
         if available_devices.is_empty() {
             return Err(anyhow::anyhow!("No GPU devices available"));
         }
 
         // 根据任务类型选择最优设备
-        let device_id = match task_type {
+        let device_id: _ = match task_type {
             "training" => {
                 // 训练选择内存最大的设备
                 available_devices.iter()
@@ -133,7 +135,7 @@ impl GPUAccelerator {
         }
 
         // 获取当前活跃设备
-        let active_device_id = *self.active_device.read().await;
+        let active_device_id: _ = *self.active_device.read().await;
 
         // 模拟 GPU 计算
         self.simulate_gpu_compute(model, input, active_device_id).await
@@ -152,7 +154,7 @@ impl GPUAccelerator {
         let mut results = Vec::with_capacity(inputs.len());
 
         for input in inputs {
-            let result = self.compute(model, input).await?;
+            let result: _ = self.compute(model, input).await?;
             results.push(result);
         }
 
@@ -173,7 +175,7 @@ impl GPUAccelerator {
         let mut results = Vec::with_capacity(inputs.len());
 
         for input in inputs {
-            let result = self.compute(model, input).await?;
+            let result: _ = self.compute(model, input).await?;
             results.push(result);
         }
 
@@ -188,7 +190,7 @@ impl GPUAccelerator {
         device_id: usize,
     ) -> Result<Tensor> {
         // 获取设备信息
-        let device = self.devices.iter().find(|d| d.id == device_id);
+        let device: _ = self.devices.iter().find(|d| d.id == device_id);
 
         if let Some(device) = device {
             println!(
@@ -202,7 +204,7 @@ impl GPUAccelerator {
         tokio::time::sleep(tokio::time::Duration::from_millis(1)).await;
 
         // 执行模型计算
-        let output = model.compute(input)?;
+        let output: _ = model.compute(input)?;
 
         // 更新统计
         self.update_stats().await?;
@@ -227,7 +229,7 @@ impl GPUAccelerator {
 
     /// 获取 GPU 统计信息
     pub async fn get_stats(&self) -> Result<GPUStats> {
-        let stats = self.stats.read().await;
+        let stats: _ = self.stats.read().await;
         Ok(stats.clone())
     }
 
@@ -241,7 +243,7 @@ impl GPUAccelerator {
 
     /// 内存管理
     pub async fn memory_info(&self) -> Result<MemoryInfo> {
-        let stats = self.stats.read().await;
+        let stats: _ = self.stats.read().await;
         Ok(MemoryInfo {
             total: stats.total_memory,
             used: stats.used_memory,
@@ -300,7 +302,7 @@ impl GPUKernel for Conv2DKernel {
 
     fn execute(&self, input: &Tensor) -> Result<Tensor> {
         // 实现真正的 2D 卷积计算
-        let input_shape = input.shape();
+        let input_shape: _ = input.shape();
         if input_shape.len() != 4 {
             return Err(anyhow::anyhow!("Conv2D expects 4D input tensor (N, C, H, W)"));
         }
@@ -311,15 +313,15 @@ impl GPUKernel for Conv2DKernel {
         let (pad_h, pad_w) = self.padding;
 
         // 计算输出尺寸
-        let output_height = (height + 2 * pad_h - kernel_h) / stride_h + 1;
-        let output_width = (width + 2 * pad_w - kernel_w) / stride_w + 1;
+        let output_height: _ = (height + 2 * pad_h - kernel_h) / stride_h + 1;
+        let output_width: _ = (width + 2 * pad_w - kernel_w) / stride_w + 1;
 
         if output_height == 0 || output_width == 0 {
             return Err(anyhow::anyhow!("Invalid output dimensions"));
         }
 
         // 创建输出张量
-        let output_shape = vec![batch_size, channels, output_height, output_width];
+        let output_shape: _ = vec![batch_size, channels, output_height, output_width];
         let mut output_data = vec![0.0_f32; batch_size * channels * output_height * output_width];
 
         // 执行卷积计算
@@ -331,19 +333,19 @@ impl GPUKernel for Conv2DKernel {
 
                         for kh in 0..kernel_h {
                             for kw in 0..kernel_w {
-                                let ih = oh * stride_h + kh - pad_h;
-                                let iw = ow * stride_w + kw - pad_w;
+                                let ih: _ = oh * stride_h + kh - pad_h;
+                                let iw: _ = ow * stride_w + kw - pad_w;
 
                                 if ih >= 0 && ih < height && iw >= 0 && iw < width {
-                                    let input_idx = b * channels * height * width + c * height * width + ih * width + iw;
+                                    let input_idx: _ = b * channels * height * width + c * height * width + ih * width + iw;
                                     // 简化的卷积核（实际中会有真正的卷积权重）
-                                    let kernel_val = 1.0 / (kernel_h * kernel_w) as f32;
+                                    let kernel_val: _ = 1.0 / (kernel_h * kernel_w) as f32;
                                     sum += input.data()[input_idx] * kernel_val;
                                 }
                             }
                         }
 
-                        let output_idx = b * channels * output_height * output_width + c * output_height * output_width + oh * output_width + ow;
+                        let output_idx: _ = b * channels * output_height * output_width + c * output_height * output_width + oh * output_width + ow;
                         output_data[output_idx] = sum;
                     }
                 }
@@ -373,29 +375,29 @@ impl GPUKernel for AttentionKernel {
 
     fn execute(&self, input: &Tensor) -> Result<Tensor> {
         // 实现真正的多头注意力计算
-        let input_shape = input.shape();
+        let input_shape: _ = input.shape();
         if input_shape.len() != 3 {
             return Err(anyhow::anyhow!("Attention expects 3D input tensor (seq_len, batch_size, hidden_size)"));
         }
 
         let (seq_len, batch_size, hidden_size) = (input_shape[0], input_shape[1], input_shape[2]);
-        let head_dim = hidden_size / self.num_heads;
+        let head_dim: _ = hidden_size / self.num_heads;
 
         if hidden_size % self.num_heads != 0 {
             return Err(anyhow::anyhow!("Hidden size must be divisible by number of heads"));
         }
 
         // 计算 Q, K, V (简化实现，使用输入作为所有三个)
-        let q = input.data().to_vec();
-        let k = input.data().to_vec();
-        let v = input.data().to_vec();
+        let q: _ = input.data().to_vec();
+        let k: _ = input.data().to_vec();
+        let v: _ = input.data().to_vec();
 
         let mut output_data = vec![0.0_f32; input_shape.iter().product()];
 
         // 执行多头注意力
         for batch in 0..batch_size {
             for head in 0..self.num_heads {
-                let head_offset = head * head_dim;
+                let head_offset: _ = head * head_dim;
 
                 for seq in 0..seq_len {
                     // 计算注意力分数
@@ -406,8 +408,8 @@ impl GPUKernel for AttentionKernel {
                     for key_seq in 0..seq_len {
                         let mut score = 0.0_f32;
                         for dim in 0..head_dim {
-                            let q_idx = batch * seq_len * hidden_size + seq * hidden_size + head_offset + dim;
-                            let k_idx = batch * seq_len * hidden_size + key_seq * hidden_size + head_offset + dim;
+                            let q_idx: _ = batch * seq_len * hidden_size + seq * hidden_size + head_offset + dim;
+                            let k_idx: _ = batch * seq_len * hidden_size + key_seq * hidden_size + head_offset + dim;
                             score += q[q_idx] * k[k_idx];
                         }
                         attention_scores[key_seq] = score / (head_dim as f32).sqrt();
@@ -431,14 +433,14 @@ impl GPUKernel for AttentionKernel {
                     for key_seq in 0..seq_len {
                         let mut weighted_value = 0.0_f32;
                         for dim in 0..head_dim {
-                            let v_idx = batch * seq_len * hidden_size + key_seq * hidden_size + head_offset + dim;
+                            let v_idx: _ = batch * seq_len * hidden_size + key_seq * hidden_size + head_offset + dim;
                             weighted_value += v[v_idx] * attention_scores[key_seq];
                         }
                         output_sum += weighted_value;
                     }
 
                     // 写入输出
-                    let output_idx = batch * seq_len * hidden_size + seq * hidden_size + head_offset;
+                    let output_idx: _ = batch * seq_len * hidden_size + seq * hidden_size + head_offset;
                     output_data[output_idx] = output_sum;
                 }
             }

@@ -8,6 +8,8 @@ mod tests {
     };
     use std::sync::Arc;
     use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_adaptive_work_stealing() {
@@ -18,7 +20,7 @@ mod tests {
         // 模拟不均匀的工作负载
         // 线程 0: 20个任务（重负载）
         for i in 0..20 {
-            let task = Task {
+            let task: _ = Task {
                 id: i,
                 code: format!("heavy_task_{}", i),
                 priority: 5,
@@ -29,7 +31,7 @@ mod tests {
 
         // 线程 1-3: 0-2个任务（轻负载）
         for i in 20..22 {
-            let task = Task {
+            let task: _ = Task {
                 id: i,
                 code: format!("light_task_{}", i),
                 priority: 5,
@@ -42,7 +44,7 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(100)).await;
 
         // 验证窃取统计
-        let stats = scheduler.get_steal_stats();
+        let stats: _ = scheduler.get_steal_stats();
         println!("窃取尝试次数: {}", stats.steal_attempts.load());
         println!("成功窃取次数: {}", stats.successful_steals.load());
         println!("被窃取任务数: {}", stats.tasks_stolen.load());
@@ -63,7 +65,7 @@ mod tests {
 
         // 线程 0: 10个任务
         for i in 0..10 {
-            let task = Task {
+            let task: _ = Task {
                 id: i,
                 code: format!("batch_task_{}", i),
                 priority: 5,
@@ -77,13 +79,13 @@ mod tests {
         let stolen_tasks: Option<Vec<Task>> = scheduler.steal_batch_tasks(1, 5).await;
         assert!(stolen_tasks.is_some(), "应该能窃取到任务");
 
-        let stolen_count = stolen_tasks.as_ref().unwrap().len();
+        let stolen_count: _ = stolen_tasks.as_ref().unwrap().len();
         println!("批量窃取获得 {} 个任务", stolen_count);
 
         assert!(stolen_count > 0, "窃取数量应该大于0");
         assert!(stolen_count <= 5, "窃取数量不应该超过请求数量");
 
-        let stats = scheduler.get_steal_stats();
+        let stats: _ = scheduler.get_steal_stats();
         println!("批量窃取统计: 尝试={}, 成功={}",
                  stats.steal_attempts.load(),
                  stats.successful_steals.load());
@@ -120,14 +122,14 @@ mod tests {
             scheduler.submit_local_task(1, task).await.unwrap();
         }
 
-        let stats = scheduler.get_steal_stats();
-        let _initial_attempts = stats.steal_attempts.load();
+        let stats: _ = scheduler.get_steal_stats();
+        let _initial_attempts: _ = stats.steal_attempts.load();
 
         // 触发窃取检查
-        let should_steal = scheduler.should_steal(2, 3).await;
+        let should_steal: _ = scheduler.should_steal(2, 3).await;
         println!("轻负载下是否应该窃取: {}", should_steal);
 
-        let _final_attempts = stats.steal_attempts.load();
+        let _final_attempts: _ = stats.steal_attempts.load();
 
         // 验证窃取决策逻辑
         if should_steal {
@@ -176,7 +178,7 @@ mod tests {
         println!("初始队列分布: {:?}", distribution);
 
         // 触发负载均衡
-        let balanced = scheduler.balance_load().await;
+        let balanced: _ = scheduler.balance_load().await;
         assert!(balanced, "负载均衡应该成功");
 
         // 等待窃取完成
@@ -186,10 +188,10 @@ mod tests {
         println!("负载均衡后分布: {:?}", final_distribution);
 
         // 验证负载分布更均匀
-        let max_initial = distribution.iter().max().copied().unwrap_or(0);
-        let min_initial = distribution.iter().min().copied().unwrap_or(0);
-        let max_final = final_distribution.iter().max().copied().unwrap_or(0);
-        let min_final = final_distribution.iter().min().copied().unwrap_or(0);
+        let max_initial: _ = distribution.iter().max().copied().unwrap_or(0);
+        let min_initial: _ = distribution.iter().min().copied().unwrap_or(0);
+        let max_final: _ = final_distribution.iter().max().copied().unwrap_or(0);
+        let min_final: _ = final_distribution.iter().min().copied().unwrap_or(0);
 
         println!("初始负载差异: {} - {}", max_initial, min_initial);
         println!("均衡后负载差异: {} - {}", max_final, min_final);
@@ -205,17 +207,17 @@ mod tests {
     async fn test_work_stealing_performance() {
         println!("\n=== 测试工作窃取性能 ===");
 
-        let scheduler = Arc::new(WorkStealingScheduler::new(8));
+        let scheduler: _ = Arc::new(std::sync::Mutex::new(WorkStealingScheduler::new(8)));
 
         // 创建大量任务进行性能测试
-        let task_count = 1000;
-        let start_time = SystemTime::now();
+        let task_count: _ = 1000;
+        let start_time: _ = SystemTime::now();
 
         // 并发提交任务
         let mut handles = vec![];
         for thread_id in 0..8 {
-            let scheduler_clone: Arc<WorkStealingScheduler> = Arc::clone(&scheduler);
-            let handle = tokio::spawn(async move {
+            let scheduler_clone: Arc<WorkStealingScheduler> = Arc::clone(scheduler);
+            let handle: _ = tokio::spawn(async move {
                 for i in 0..(task_count / 8) {
                     let task_id = thread_id * (task_count / 8) + i;
                     let task: Task = Task {
@@ -235,17 +237,17 @@ mod tests {
             handle.await.unwrap();
         }
 
-        let submission_time = start_time.elapsed().unwrap();
+        let submission_time: _ = start_time.elapsed().unwrap();
         println!("提交 {} 个任务耗时: {:?}", task_count, submission_time);
 
         // 等待窃取和执行完成
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let total_time = start_time.elapsed().unwrap();
+        let total_time: _ = start_time.elapsed().unwrap();
         println!("总耗时: {:?}", total_time);
 
-        let stats = scheduler.get_steal_stats();
-        let throughput = task_count as f64 / total_time.as_secs_f64();
+        let stats: _ = scheduler.get_steal_stats();
+        let throughput: _ = task_count as f64 / total_time.as_secs_f64();
         println!("吞吐量: {:.2} 任务/秒", throughput);
         println!("窃取效率: {}/{} = {:.2}%",
                  stats.successful_steals.load(),
@@ -294,7 +296,7 @@ mod tests {
         let stolen_task: Option<Task> = scheduler.steal_high_priority_task(2).await;
         assert!(stolen_task.is_some(), "应该窃取到任务");
 
-        let stolen = stolen_task.unwrap();
+        let stolen: _ = stolen_task.unwrap();
         println!("窃取到的任务优先级: {}", stolen.priority);
         assert!(stolen.priority >= 5, "窃取到的任务应该有较高优先级");
 
@@ -312,7 +314,7 @@ mod tests {
         // 创建大队列用于批量窃取测试
         // 线程 0: 200个任务
         for i in 0..200 {
-            let task = Task {
+            let task: _ = Task {
                 id: i,
                 code: format!("batch_test_task_{}", i),
                 priority: 5,
@@ -323,7 +325,7 @@ mod tests {
 
         // 其他线程只有少量任务
         for i in 200..210 {
-            let task = Task {
+            let task: _ = Task {
                 id: i,
                 code: format!("local_task_{}", i),
                 priority: 5,
@@ -333,13 +335,13 @@ mod tests {
         }
 
         // 测试不同批量大小的窃取效果
-        let batch_sizes = vec![5, 10, 20, 50];
+        let batch_sizes: _ = vec![5, 10, 20, 50];
         let mut total_stolen = 0;
 
         for batch_size in batch_sizes {
             // 线程 1 尝试窃取
             if let Some(stolen_tasks) = scheduler.steal_batch_tasks(1, batch_size).await {
-                let stolen_count = stolen_tasks.len();
+                let stolen_count: _ = stolen_tasks.len();
                 total_stolen += stolen_count;
                 println!("   批量大小 {}: 窃取 {} 个任务", batch_size, stolen_count);
 
@@ -348,7 +350,7 @@ mod tests {
             }
         }
 
-        let stats = scheduler.get_steal_stats();
+        let stats: _ = scheduler.get_steal_stats();
         println!("   总窃取任务数: {}", total_stolen);
         println!("   平均窃取批量大小: {}", stats.avg_steal_batch_size.load(std::sync::atomic::Ordering::Relaxed));
         println!("   批量窃取次数: {}", stats.batch_steals.load());
@@ -366,7 +368,7 @@ mod tests {
         // 创建不同类型的任务模式
         // 高频任务类型
         for i in 0..100 {
-            let task = Task {
+            let task: _ = Task {
                 id: i,
                 code: "ai_inference()".to_string(), // 模拟AI推理任务
                 priority: 8,
@@ -377,7 +379,7 @@ mod tests {
 
         // 中频任务类型
         for i in 100..200 {
-            let task = Task {
+            let task: _ = Task {
                 id: i,
                 code: "batch_process()".to_string(), // 模拟批量处理
                 priority: 5,
@@ -388,7 +390,7 @@ mod tests {
 
         // 低频任务类型
         for i in 200..250 {
-            let task = Task {
+            let task: _ = Task {
                 id: i,
                 code: "simple_calc()".to_string(), // 简单计算
                 priority: 2,
@@ -429,14 +431,14 @@ mod tests {
         // 线程 4-7: 轻负载 (5个任务)
 
         for thread_id in 0..8 {
-            let task_count = match thread_id {
+            let task_count: _ = match thread_id {
                 0..=1 => 100,
                 2..=3 => 50,
                 _ => 5,
             };
 
             for i in 0..task_count {
-                let task = Task {
+                let task: _ = Task {
                     id: thread_id * 1000 + i,
                     code: format!("load_test_{}_{}", thread_id, i),
                     priority: 5,
@@ -446,26 +448,26 @@ mod tests {
             }
         }
 
-        let initial_distribution = scheduler.get_queue_distribution().await;
+        let initial_distribution: _ = scheduler.get_queue_distribution().await;
         println!("   初始负载分布: {:?}", initial_distribution);
 
-        let initial_max = initial_distribution.iter().max().copied().unwrap_or(0);
-        let initial_min = initial_distribution.iter().min().copied().unwrap_or(0);
-        let initial_imbalance = initial_max - initial_min;
+        let initial_max: _ = initial_distribution.iter().max().copied().unwrap_or(0);
+        let initial_min: _ = initial_distribution.iter().min().copied().unwrap_or(0);
+        let initial_imbalance: _ = initial_max - initial_min;
 
         // 执行多轮动态负载均衡
         let mut balance_rounds = 0;
         while balance_rounds < 20 {
-            let balanced = scheduler.balance_load().await;
+            let balanced: _ = scheduler.balance_load().await;
             balance_rounds += 1;
             if !balanced {
                 break;
             }
 
             // 检查是否已经足够均衡
-            let current_dist = scheduler.get_queue_distribution().await;
-            let current_max = current_dist.iter().max().copied().unwrap_or(0);
-            let current_min = current_dist.iter().min().copied().unwrap_or(0);
+            let current_dist: _ = scheduler.get_queue_distribution().await;
+            let current_max: _ = current_dist.iter().max().copied().unwrap_or(0);
+            let current_min: _ = current_dist.iter().min().copied().unwrap_or(0);
             if current_max - current_min <= 5 {
                 break;
             }
@@ -473,12 +475,12 @@ mod tests {
             tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         }
 
-        let final_distribution = scheduler.get_queue_distribution().await;
+        let final_distribution: _ = scheduler.get_queue_distribution().await;
         println!("   最终负载分布: {:?}", final_distribution);
 
-        let final_max = final_distribution.iter().max().copied().unwrap_or(0);
-        let final_min = final_distribution.iter().min().copied().unwrap_or(0);
-        let final_imbalance = final_max - final_min;
+        let final_max: _ = final_distribution.iter().max().copied().unwrap_or(0);
+        let final_min: _ = final_distribution.iter().min().copied().unwrap_or(0);
+        let final_imbalance: _ = final_max - final_min;
 
         println!("   初始负载差异: {}", initial_imbalance);
         println!("   最终负载差异: {}", final_imbalance);
@@ -503,7 +505,7 @@ mod tests {
         // 模拟工作负载变化
         // 阶段1: 低负载
         for i in 0..10 {
-            let task = Task {
+            let task: _ = Task {
                 id: i,
                 code: "low_load_task()".to_string(),
                 priority: 3,
@@ -512,12 +514,12 @@ mod tests {
             scheduler.submit_local_task(i % 4, task).await.unwrap();
         }
 
-        let dist1 = scheduler.get_queue_distribution().await;
+        let dist1: _ = scheduler.get_queue_distribution().await;
         println!("   低负载阶段分布: {:?}", dist1);
 
         // 阶段2: 高负载
         for i in 10..210 {
-            let task = Task {
+            let task: _ = Task {
                 id: i,
                 code: "high_load_task()".to_string(),
                 priority: 7,
@@ -526,7 +528,7 @@ mod tests {
             scheduler.submit_local_task(i % 4, task).await.unwrap();
         }
 
-        let dist2 = scheduler.get_queue_distribution().await;
+        let dist2: _ = scheduler.get_queue_distribution().await;
         println!("   高负载阶段分布: {:?}", dist2);
 
         // 验证负载自适应
@@ -551,8 +553,8 @@ mod tests {
     async fn test_stage25_comprehensive_performance() {
         println!("\n🧪 Stage 25.0: 综合性能基准测试...");
 
-        let start_time = SystemTime::now();
-        let scheduler = Arc::new(WorkStealingScheduler::new(12));
+        let start_time: _ = SystemTime::now();
+        let scheduler: _ = Arc::new(std::sync::Mutex::new(WorkStealingScheduler::new(12)));
 
         // 创建极度不均衡的工作负载分布
         // 前4个线程承担80%的任务，后8个线程只有少量任务
@@ -560,7 +562,7 @@ mod tests {
         // 线程 0-3: 重负载 (每个200个任务 = 800个任务)
         for thread_id in 0..4 {
             for i in 0..200 {
-                let task = Task {
+                let task: _ = Task {
                     id: thread_id * 200 + i,
                     code: format!("heavy_task_{}_{}", thread_id, i),
                     priority: if i % 3 == 0 { 9 } else { 6 },
@@ -573,7 +575,7 @@ mod tests {
         // 线程 4-11: 轻负载 (每个5个任务 = 40个任务)
         for thread_id in 4..12 {
             for i in 0..5 {
-                let task = Task {
+                let task: _ = Task {
                     id: 800 + thread_id * 5 + i,
                     code: format!("light_task_{}_{}", thread_id, i),
                     priority: 3,
@@ -584,7 +586,7 @@ mod tests {
         }
 
         // 验证初始负载分布
-        let initial_distribution = scheduler.get_queue_distribution().await;
+        let initial_distribution: _ = scheduler.get_queue_distribution().await;
         println!("   初始负载分布: {:?}", initial_distribution);
 
         // 模拟窃取和负载均衡过程
@@ -594,8 +596,8 @@ mod tests {
         for _round in 0..30 {
             for thread_id in 0..12 {
                 // 检查窃取条件
-                let distribution = scheduler.get_queue_distribution().await;
-                let local_len = distribution[thread_id];
+                let distribution: _ = scheduler.get_queue_distribution().await;
+                let local_len: _ = distribution[thread_id];
 
                 // 对于轻负载线程，强制尝试窃取
                 if thread_id >= 4 && local_len < 10 {
@@ -622,11 +624,11 @@ mod tests {
             tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
         }
 
-        let final_distribution = scheduler.get_queue_distribution().await;
+        let final_distribution: _ = scheduler.get_queue_distribution().await;
         println!("   最终负载分布: {:?}", final_distribution);
 
-        let total_time = start_time.elapsed().unwrap();
-        let stats = scheduler.get_steal_stats();
+        let total_time: _ = start_time.elapsed().unwrap();
+        let stats: _ = scheduler.get_steal_stats();
 
         println!("   总执行时间: {:?}", total_time);
         println!("   总窃取任务数: {}", total_stolen);
@@ -635,13 +637,13 @@ mod tests {
         println!("   高优先级窃取次数: {}", stats.priority_steals.load());
         println!("   平均窃取批量大小: {}", stats.avg_steal_batch_size.load(std::sync::atomic::Ordering::Relaxed));
 
-        let throughput = if total_time.as_secs_f64() > 0.0 {
+        let throughput: _ = if total_time.as_secs_f64() > 0.0 {
             total_stolen as f64 / total_time.as_secs_f64()
         } else {
             0.0
         };
 
-        let steal_success_rate = if steal_attempts > 0 {
+        let steal_success_rate: _ = if steal_attempts > 0 {
             (total_stolen as f64 / steal_attempts as f64) * 100.0
         } else {
             0.0

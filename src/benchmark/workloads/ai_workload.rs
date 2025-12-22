@@ -24,20 +24,20 @@ impl AIWorkload {
     /// 执行工作负载
     pub async fn execute(
         &self,
-        parameters: HashMap<String, serde_json::Value>,
+        parameters: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>,
         concurrency: u32,
     ) -> Result<WorkloadResult> {
         let mut result = WorkloadResult::new(self.workload_type);
         result.start();
 
-        let iterations = get_iterations(&parameters);
-        let operation = get_operation(&parameters);
+        let iterations: _ = get_iterations(&parameters);
+        let operation: _ = get_operation(&parameters);
 
         // 并行执行 AI 任务
         let handles: Vec<_> = (0..concurrency)
             .map(|_| {
-                let operation = operation.clone();
-                let iterations = iterations;
+                let operation: _ = operation.clone();clone();
+                let iterations: _ = iterations;
                 tokio::spawn(async move {
                     Self::run_ai_tasks(operation, iterations).await
                 })
@@ -61,7 +61,7 @@ impl AIWorkload {
         }
 
         // 收集资源使用情况
-        let resource_usage = Self::collect_resource_usage();
+        let resource_usage: _ = Self::collect_resource_usage();
         result.resource_usage = resource_usage;
 
         result.finish(total_iterations);
@@ -106,7 +106,7 @@ impl AIWorkload {
     /// 张量运算基准测试
     async fn tensor_operation_benchmark() -> Result<(), BenchmarkError> {
         // 模拟张量运算
-        let size = 100;
+        let size: _ = 100;
         let mut tensor = vec![vec![0.0f64; size]; size];
 
         for i in 0..size {
@@ -121,9 +121,9 @@ impl AIWorkload {
     /// 神经网络推理基准测试
     async fn neural_network_inference_benchmark() -> Result<(), BenchmarkError> {
         // 模拟神经网络推理
-        let input_size = 784; // MNIST 图像大小
-        let hidden_size = 128;
-        let output_size = 10;
+        let input_size: _ = 784; // MNIST 图像大小
+        let hidden_size: _ = 128;
+        let output_size: _ = 10;
 
         let mut input = vec![0.0f64; input_size];
         let mut hidden_weights = vec![vec![0.0f64; hidden_size]; input_size];
@@ -154,10 +154,10 @@ impl AIWorkload {
     /// Transformer 注意力机制基准测试
     async fn transformer_attention_benchmark() -> Result<(), BenchmarkError> {
         // 模拟注意力机制计算
-        let seq_len = 64;
-        let d_model = 512;
-        let num_heads = 8;
-        let head_dim = d_model / num_heads;
+        let seq_len: _ = 64;
+        let d_model: _ = 512;
+        let num_heads: _ = 8;
+        let head_dim: _ = d_model / num_heads;
 
         let mut query = vec![vec![0.0f64; head_dim]; seq_len * num_heads];
         let mut key = vec![vec![0.0f64; head_dim]; seq_len * num_heads];
@@ -172,7 +172,7 @@ impl AIWorkload {
                         score += query[h * seq_len + i][k] * key[h * seq_len + j][k];
                     }
                     // 模拟 softmax
-                    let _attention_weight = (score / (head_dim as f64).sqrt()).exp();
+                    let _attention_weight: _ = (score / (head_dim as f64).sqrt()).exp();
                 }
             }
         }
@@ -182,7 +182,7 @@ impl AIWorkload {
 
     /// AI 矩阵乘法基准测试
     async fn ai_matrix_multiplication_benchmark() -> Result<(), BenchmarkError> {
-        let size = 256;
+        let size: _ = 256;
         let mut a = vec![vec![0.0f64; size]; size];
         let mut b = vec![vec![0.0f64; size]; size];
         let mut c = vec![vec![0.0f64; size]; size];
@@ -223,7 +223,7 @@ impl Default for AIWorkload {
 }
 
 /// 获取迭代次数
-fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
+fn get_iterations(parameters: &HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>) -> u32 {
     parameters
         .get("iterations")
         .and_then(|v| v.as_u64())
@@ -232,7 +232,7 @@ fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
 }
 
 /// 获取操作类型
-fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
+fn get_operation(parameters: &HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>) -> String {
     parameters
         .get("operation")
         .and_then(|v| v.as_str())
@@ -243,14 +243,16 @@ fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_workload_execution() {
-        let workload = AIWorkload::new();
+        let workload: _ = AIWorkload::new();
         let mut parameters = HashMap::new();
         parameters.insert("iterations".to_string(), serde_json::Value::from(5u64));
 
-        let result = workload.execute(parameters, 1).await.unwrap();
+        let result: _ = workload.execute(parameters, 1).await.unwrap();
 
         assert_eq!(result.workload_type, super::super::WorkloadType::AiWorkload);
         assert!(result.success);

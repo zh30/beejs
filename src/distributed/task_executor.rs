@@ -7,6 +7,8 @@ use std::time::{Duration, Instant};
 use tracing::warn;
 
 use super::{Task, TaskType, TaskStatus, TaskResult};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 // ============================================================================
 // 配置结构体
@@ -170,12 +172,12 @@ impl ExecutorWorker {
     pub fn execute(&mut self, task: Task) -> Result<TaskResult, ExecutionError> {
         self.status = WorkerStatus::Running;
         self.current_task = Some(task.id.clone());
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 模拟任务执行
-        let result = self.execute_internal(&task);
+        let result: _ = self.execute_internal(&task);
 
-        let execution_time = start_time.elapsed();
+        let execution_time: _ = start_time.elapsed();
         self.stats.tasks_executed += 1;
         self.stats.total_execution_time += execution_time;
         self.stats.average_execution_time = self.stats.total_execution_time
@@ -216,7 +218,7 @@ impl ExecutorWorker {
         }
 
         // 模拟执行时间
-        let exec_time = match task.task_type {
+        let exec_time: _ = match task.task_type {
             TaskType::JavaScriptExecution => Duration::from_millis(10),
             TaskType::TypeScriptCompilation => Duration::from_millis(50),
             TaskType::AIInference => Duration::from_millis(100),
@@ -321,7 +323,7 @@ impl TaskExecutor {
             .map(|id| ExecutorWorker::new(id, WorkerConfig::default()))
             .collect();
 
-        let checkpoint_manager = if config.enable_checkpointing {
+        let checkpoint_manager: _ = if config.enable_checkpointing {
             Some(CheckpointManager::new(config.checkpoint_interval))
         } else {
             None
@@ -395,11 +397,11 @@ impl TaskExecutor {
 
     /// 执行单个任务
     pub fn execute_task(&mut self, task: Task) -> Result<TaskResult, String> {
-        let task_id = task.id.clone();
-        let start_time = Instant::now();
+        let task_id: _ = task.id.clone();
+        let start_time: _ = Instant::now();
 
         // 查找空闲的 worker
-        let worker = self.workers.iter_mut()
+        let worker: _ = self.workers.iter_mut()
             .find(|w| w.status() == WorkerStatus::Idle)
             .ok_or("No available worker")?;
 
@@ -420,7 +422,7 @@ impl TaskExecutor {
                 retry_count += 1;
                 self.stats.total_retries += 1;
 
-                let delay = handler.get_retry_delay(retry_count);
+                let delay: _ = handler.get_retry_delay(retry_count);
                 std::thread::sleep(delay);
 
                 result = worker.execute(task.clone());
@@ -436,14 +438,14 @@ impl TaskExecutor {
         }
 
         // 更新吞吐量
-        let elapsed = self.stats.start_time.elapsed().as_secs_f64();
+        let elapsed: _ = self.stats.start_time.elapsed().as_secs_f64();
         if elapsed > 0.0 {
             self.stats.throughput_per_second = self.stats.total_tasks_executed as f64 / elapsed;
         }
 
         // 记录监控指标
         if let Some(ref mut monitor) = self.monitor {
-            let success = result.as_ref().map(|r| r.status == TaskStatus::Completed).unwrap_or(false);
+            let success: _ = result.as_ref().map(|r| r.status == TaskStatus::Completed).unwrap_or(false);
             monitor.record_execution(&task_id, start_time.elapsed(), success);
         }
 
@@ -529,8 +531,8 @@ pub enum FaultAction {
 #[derive(Debug)]
 pub struct FaultHandler {
     pub config: FaultConfig,
-    failure_counts: HashMap<String, u32>,
-    circuit_states: HashMap<String, bool>, // true = open (blocked)
+    failure_counts: HashMap<String, u32, std::collections::HashMap<String, u32, String, u32>>,
+    circuit_states: HashMap<String, bool, std::collections::HashMap<String, bool, String, bool>>, // true = open (blocked)
 }
 
 impl FaultHandler {
@@ -554,7 +556,7 @@ impl FaultHandler {
             RetryPolicy::None => Duration::ZERO,
             RetryPolicy::Fixed(delay) => *delay,
             RetryPolicy::ExponentialBackoff { initial_delay, max_delay, multiplier } => {
-                let delay = initial_delay.as_millis() as f64 * multiplier.powi((attempt - 1) as i32);
+                let delay: _ = initial_delay.as_millis() as f64 * multiplier.powi((attempt - 1) as i32);
                 Duration::from_millis(delay.min(max_delay.as_millis() as f64) as u64)
             }
         }
@@ -573,7 +575,7 @@ impl FaultHandler {
 
     /// 记录失败
     pub fn record_failure(&mut self, node_id: &str, _error: &ExecutionError) {
-        let count = self.failure_counts.entry(node_id.to_string()).or_insert(0);
+        let count: _ = self.failure_counts.entry(node_id.to_string()).or_insert(0);
         *count += 1;
 
         // 如果失败次数超过阈值，打开熔断器
@@ -686,15 +688,15 @@ impl ExecutionMonitor {
 
     /// 获取指标
     pub fn get_metrics(&self) -> ExecutionMetrics {
-        let total = self.executions.len() as u64;
-        let successful = self.executions.iter().filter(|(_, _, s)| *s).count() as u64;
-        let failed = total - successful;
+        let total: _ = self.executions.len() as u64;
+        let successful: _ = self.executions.iter().filter(|(_, _, s)| *s).count() as u64;
+        let failed: _ = total - successful;
 
         let total_time: Duration = self.executions.iter()
             .map(|(_, t, _)| *t)
             .sum();
 
-        let average = if total > 0 {
+        let average: _ = if total > 0 {
             total_time / total as u32
         } else {
             Duration::ZERO
@@ -710,7 +712,7 @@ impl ExecutionMonitor {
 
     /// 获取吞吐量
     pub fn get_throughput(&self) -> f64 {
-        let elapsed = self.start_time.elapsed().as_secs_f64();
+        let elapsed: _ = self.start_time.elapsed().as_secs_f64();
         if elapsed > 0.0 {
             self.executions.len() as f64 / elapsed
         } else {
@@ -729,7 +731,7 @@ impl ExecutionMonitor {
             .collect();
         latencies.sort();
 
-        let index = ((percentile as f64 / 100.0) * (latencies.len() - 1) as f64) as usize;
+        let index: _ = ((percentile as f64 / 100.0) * (latencies.len() - 1) as f64) as usize;
         latencies[index]
     }
 
@@ -782,7 +784,7 @@ pub struct ResourceUsage {
 #[derive(Debug)]
 pub struct ResourceTracker {
     config: ResourceConfig,
-    allocations: HashMap<String, ResourceAllocation>,
+    allocations: HashMap<String, ResourceAllocation, std::collections::HashMap<String, ResourceAllocation, String, ResourceAllocation>>,
 }
 
 impl ResourceTracker {
@@ -796,7 +798,7 @@ impl ResourceTracker {
 
     /// 检查是否有可用资源
     pub fn has_available_resources(&self) -> bool {
-        let usage = self.get_usage();
+        let usage: _ = self.get_usage();
         usage.memory_percent < 100.0
             && usage.cpu_used_percent < self.config.max_cpu_percent
             && usage.concurrent_tasks < self.config.max_concurrent_tasks
@@ -806,7 +808,7 @@ impl ResourceTracker {
     pub fn allocate(&mut self, task_id: &str, memory_mb: usize, cpu_percent: u8)
         -> Result<ResourceAllocation, String>
     {
-        let usage = self.get_usage();
+        let usage: _ = self.get_usage();
 
         if usage.memory_used_mb + memory_mb > self.config.max_memory_mb {
             return Err("Insufficient memory".to_string());
@@ -820,7 +822,7 @@ impl ResourceTracker {
             return Err("Maximum concurrent tasks reached".to_string());
         }
 
-        let allocation = ResourceAllocation {
+        let allocation: _ = ResourceAllocation {
             task_id: task_id.to_string(),
             memory_mb,
             cpu_percent,
@@ -871,7 +873,7 @@ pub struct Checkpoint {
 #[derive(Debug)]
 pub struct CheckpointManager {
     interval: Duration,
-    checkpoints: HashMap<String, Checkpoint>,
+    checkpoints: HashMap<String, Checkpoint, std::collections::HashMap<String, Checkpoint, String, Checkpoint>>,
 }
 
 impl CheckpointManager {
@@ -890,12 +892,12 @@ impl CheckpointManager {
 
     /// 创建检查点
     pub fn create_checkpoint(&mut self, task_id: &str, state_data: Vec<u8>) -> Checkpoint {
-        let checkpoint_id = format!("cp-{}-{:x}", task_id, std::time::SystemTime::now()
+        let checkpoint_id: _ = format!("cp-{}-{:x}", task_id, std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_nanos());
 
-        let checkpoint = Checkpoint {
+        let checkpoint: _ = Checkpoint {
             checkpoint_id: checkpoint_id.clone(),
             task_id: task_id.to_string(),
             state_data,
@@ -913,8 +915,8 @@ impl CheckpointManager {
 
     /// 清理过期检查点
     pub fn cleanup_expired(&mut self) -> usize {
-        let now = Instant::now();
-        let before = self.checkpoints.len();
+        let now: _ = Instant::now();
+        let before: _ = self.checkpoints.len();
 
         self.checkpoints.retain(|_, cp| {
             now.duration_since(cp.created_at) < self.interval
@@ -956,7 +958,7 @@ impl Default for RecoveryConfig {
 #[derive(Debug)]
 pub struct RecoveryManager {
     config: RecoveryConfig,
-    failure_history: HashMap<String, Vec<String>>,
+    failure_history: HashMap<String, Vec<String, std::collections::HashMap<String, Vec<String, String, Vec<String>>>,
 }
 
 impl RecoveryManager {
@@ -991,7 +993,7 @@ impl RecoveryManager {
 
     /// 记录失败
     pub fn record_failure(&mut self, task_id: &str, reason: &str) {
-        let history = self.failure_history
+        let history: _ = self.failure_history
             .entry(task_id.to_string())
             .or_insert_with(Vec::new);
         history.push(reason.to_string());

@@ -89,7 +89,7 @@ impl RegressionDetector {
                 &current_result.name,
                 current_result.runtime,
             ) {
-                let analysis = self.analyze_regression(current_result, baseline_result);
+                let analysis: _ = self.analyze_regression(current_result, baseline_result);
                 report.add_analysis(analysis);
             }
         }
@@ -103,9 +103,9 @@ impl RegressionDetector {
         current: &BenchmarkResult,
         baseline: &BenchmarkResult,
     ) -> RegressionAnalysis {
-        let performance_change = self.calculate_performance_change(current, baseline);
-        let is_regression = performance_change < -self.regression_threshold;
-        let is_significant = Self::is_statistically_significant(
+        let performance_change: _ = self.calculate_performance_change(current, baseline);
+        let is_regression: _ = performance_change < -self.regression_threshold;
+        let is_significant: _ = Self::is_statistically_significant(
             current,
             baseline,
             self.significance_threshold,
@@ -125,8 +125,8 @@ impl RegressionDetector {
 
     /// 计算性能变化
     fn calculate_performance_change(&self, current: &BenchmarkResult, baseline: &BenchmarkResult) -> f64 {
-        let baseline_ns = baseline.average_duration().as_nanos() as f64;
-        let current_ns = current.average_duration().as_nanos() as f64;
+        let baseline_ns: _ = baseline.average_duration().as_nanos() as f64;
+        let current_ns: _ = current.average_duration().as_nanos() as f64;
 
         if baseline_ns == 0.0 {
             0.0
@@ -164,14 +164,14 @@ impl RegressionDetector {
 
         create_dir_if_not_exists(&self.history_path)?;
 
-        let filename = format!(
+        let filename: _ = format!(
             "{}_{}.json",
             history.commit_hash,
             history.timestamp.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()
         );
-        let filepath = self.history_path.join(filename);
+        let filepath: _ = self.history_path.join(filename);
 
-        let json = serde_json::to_string_pretty(history)
+        let json: _ = serde_json::to_string_pretty(history)
             .map_err(super::BenchmarkError::JsonError)?;
 
         write_file(&filepath, &json)?;
@@ -187,15 +187,15 @@ impl RegressionDetector {
         use super::super::utils::read_file;
 
         // 查找匹配的历史文件
-        let entries = tokio::fs::read_dir(&self.history_path).await?;
+        let entries: _ = tokio::fs::read_dir(&self.history_path).await?;
 
         for entry in entries {
-            let entry = entry?;
-            let filename = entry.file_name().to_string_lossy().to_string();
+            let entry: _ = entry?;
+            let filename: _ = entry.file_name().to_string_lossy().to_string();
 
             if filename.starts_with(commit_hash) {
-                let filepath = self.history_path.join(&filename);
-                let content = read_file(&filepath)?;
+                let filepath: _ = self.history_path.join(&filename);
+                let content: _ = read_file(&filepath)?;
 
                 let history: PerformanceHistory = serde_json::from_str(&content)
                     .map_err(super::BenchmarkError::JsonError)?;
@@ -233,9 +233,9 @@ impl RegressionReport {
 
     /// 更新总结
     fn update_summary(&mut self) {
-        let total_tests = self.analyses.len();
-        let regressions = self.analyses.iter().filter(|a| a.is_regression).count();
-        let significant_regressions = self.analyses
+        let total_tests: _ = self.analyses.len();
+        let regressions: _ = self.analyses.iter().filter(|a| a.is_regression).count();
+        let significant_regressions: _ = self.analyses
             .iter()
             .filter(|a| a.is_regression && a.is_significant)
             .count();
@@ -312,7 +312,7 @@ impl RegressionAnalysis {
             return RegressionSeverity::None;
         }
 
-        let decline = self.performance_change_percent.abs();
+        let decline: _ = self.performance_change_percent.abs();
 
         if decline >= 50.0 {
             RegressionSeverity::Critical
@@ -388,14 +388,16 @@ impl RegressionSummary {
 mod tests {
     use super::*;
     use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_regression_analysis() {
-        let current = super::super::result::BenchmarkResult::new("test", Runtime::Beejs);
-        let baseline = super::super::result::BenchmarkResult::new("test", Runtime::Beejs);
+        let current: _ = super::super::result::BenchmarkResult::new("test", Runtime::Beejs);
+        let baseline: _ = super::super::result::BenchmarkResult::new("test", Runtime::Beejs);
 
-        let detector = RegressionDetector::new(PathBuf::from("/tmp/test"));
-        let analysis = detector.analyze_regression(&current, &baseline);
+        let detector: _ = RegressionDetector::new(PathBuf::from("/tmp/test"));
+        let analysis: _ = detector.analyze_regression(&current, &baseline);
 
         println!("Analysis: {:?}", analysis);
     }

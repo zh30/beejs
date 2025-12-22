@@ -141,7 +141,7 @@ pub struct V8APIAdapter {
     /// 配置
     config: AdapterConfig,
     /// 适配器映射
-    adapters: Arc<RwLock<HashMap<String, AdapterItem>>>,
+    adapters: Arc<RwLock<HashMap<String, AdapterItem, std::collections::HashMap<String, AdapterItem, String, AdapterItem>>>>,
     /// 统计信息
     stats: Arc<RwLock<AdaptationStats>>,
 }
@@ -151,15 +151,15 @@ impl V8APIAdapter {
     pub fn new(config: AdapterConfig) -> Self {
         let mut adapter = Self {
             config,
-            adapters: Arc::new(RwLock::new(HashMap::new())),
-            stats: Arc::new(RwLock::new(AdaptationStats {
+            adapters: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(AdaptationStats {
                 total_adapters: 0,
                 successful_adapters: 0,
                 failed_adapters: 0,
                 skipped_adapters: 0,
                 avg_performance_impact: 0.0,
                 total_performance_impact: 0.0,
-            })),
+            }))),
         };
 
         // 初始化内置适配器
@@ -282,19 +282,19 @@ impl V8APIAdapter {
 
     /// 注册新的适配器
     pub fn register_adapter(&mut self, adapter: AdapterItem) {
-        let adapters = Arc::get_mut(&mut self.adapters).unwrap();
+        let adapters: _ = Arc::get_mut(&mut self.adapters).unwrap();
         let mut adapters_map = adapters.try_write().unwrap();
         adapters_map.insert(adapter.original_name.clone(), adapter);
 
         // 更新统计
-        let stats = Arc::get_mut(&mut self.stats).unwrap();
+        let stats: _ = Arc::get_mut(&mut self.stats).unwrap();
         let mut stats_map = stats.try_write().unwrap();
         stats_map.total_adapters += 1;
     }
 
     /// 适配 API 调用
     pub async fn adapt_api_call(&self, original_api: &str, parameters: serde_json::Value) -> AdaptationResult {
-        let adapters = self.adapters.read().await;
+        let adapters: _ = self.adapters.read().await;
 
         if let Some(adapter) = adapters.get(original_api) {
             // 执行适配
@@ -314,7 +314,7 @@ impl V8APIAdapter {
                 }
                 AdapterType::ParameterConversion => {
                     // 参数转换逻辑
-                    let converted_params = self.convert_parameters(original_api, parameters).await;
+                    let converted_params: _ = self.convert_parameters(original_api, parameters).await;
                     AdaptationResult {
                         success: converted_params.is_ok(),
                         adapted_name: adapter.target_name.clone(),
@@ -408,31 +408,31 @@ impl V8APIAdapter {
 
     /// 检查 API 是否需要适配
     pub async fn needs_adaptation(&self, api_name: &str) -> bool {
-        let adapters = self.adapters.read().await;
+        let adapters: _ = self.adapters.read().await;
         adapters.contains_key(api_name)
     }
 
     /// 获取适配器信息
     pub async fn get_adapter_info(&self, api_name: &str) -> Option<AdapterItem> {
-        let adapters = self.adapters.read().await;
+        let adapters: _ = self.adapters.read().await;
         adapters.get(api_name).cloned()
     }
 
     /// 获取所有适配器
-    pub async fn get_all_adapters(&self) -> HashMap<String, AdapterItem> {
-        let adapters = self.adapters.read().await;
+    pub async fn get_all_adapters(&self) -> HashMap<String, AdapterItem, std::collections::HashMap<String, AdapterItem, String, AdapterItem>> {
+        let adapters: _ = self.adapters.read().await;
         adapters.clone()
     }
 
     /// 获取统计信息
     pub async fn get_stats(&self) -> AdaptationStats {
-        let stats = self.stats.read().await;
+        let stats: _ = self.stats.read().await;
         stats.clone()
     }
 
     /// 验证适配器
     pub async fn verify_adapter(&self, api_name: &str) -> Result<bool, anyhow::Error> {
-        let adapters = self.adapters.read().await;
+        let adapters: _ = self.adapters.read().await;
 
         if let Some(adapter) = adapters.get(api_name) {
             // 这里可以实现实际的验证逻辑
@@ -455,7 +455,7 @@ impl V8APIAdapter {
 
     /// 批量验证所有适配器
     pub async fn verify_all_adapters(&self) -> Result<Vec<String>, anyhow::Error> {
-        let adapters = self.adapters.read().await;
+        let adapters: _ = self.adapters.read().await;
         let api_names: Vec<String> = adapters.keys().cloned().collect();
         drop(adapters);
 
@@ -471,28 +471,28 @@ impl V8APIAdapter {
 
     /// 移除适配器
     pub async fn remove_adapter(&mut self, api_name: &str) -> bool {
-        let adapters = Arc::get_mut(&mut self.adapters).unwrap();
+        let adapters: _ = Arc::get_mut(&mut self.adapters).unwrap();
         let mut adapters_map = adapters.try_write().unwrap();
         adapters_map.remove(api_name).is_some()
     }
 
     /// 清除所有适配器
     pub async fn clear_adapters(&mut self) {
-        let adapters = Arc::get_mut(&mut self.adapters).unwrap();
+        let adapters: _ = Arc::get_mut(&mut self.adapters).unwrap();
         let mut adapters_map = adapters.try_write().unwrap();
         adapters_map.clear();
     }
 
     /// 导出适配器配置
     pub async fn export_config(&self) -> Result<String, anyhow::Error> {
-        let adapters = self.adapters.read().await;
-        let config_data = serde_json::to_string_pretty(&(*adapters))?;
+        let adapters: _ = self.adapters.read().await;
+        let config_data: _ = serde_json::to_string_pretty(&(*adapters))?;
         Ok(config_data)
     }
 
     /// 导入适配器配置
     pub async fn import_config(&mut self, config_json: &str) -> Result<(), anyhow::Error> {
-        let adapters: HashMap<String, AdapterItem> = serde_json::from_str(config_json)?;
+        let adapters: HashMap<String, AdapterItem, std::collections::HashMap<String, AdapterItem, String, AdapterItem>> = serde_json::from_str(config_json)?;
         let mut adapters_map = self.adapters.try_write().unwrap();
         *adapters_map = adapters;
         Ok(())
@@ -500,8 +500,8 @@ impl V8APIAdapter {
 
     /// 生成适配报告
     pub async fn generate_report(&self) -> Result<AdaptationReport, anyhow::Error> {
-        let adapters = self.adapters.read().await;
-        let stats = self.get_stats().await;
+        let adapters: _ = self.adapters.read().await;
+        let stats: _ = self.get_stats().await;
 
         let mut adapter_list = Vec::new();
         for (name, adapter) in adapters.iter() {
@@ -526,14 +526,14 @@ impl V8APIAdapter {
     async fn generate_recommendations(&self) -> Vec<String> {
         let mut recommendations = Vec::new();
 
-        let adapters = self.adapters.read().await;
-        let unverified_count = adapters.values().filter(|a| !a.verified).count();
+        let adapters: _ = self.adapters.read().await;
+        let unverified_count: _ = adapters.values().filter(|a| !a.verified).count();
 
         if unverified_count > 0 {
             recommendations.push(format!("⚠️  有 {} 个适配器未验证，建议运行验证", unverified_count));
         }
 
-        let high_impact_count = adapters.values()
+        let high_impact_count: _ = adapters.values()
             .filter(|a| matches!(a.performance_impact.impact_level, ImpactLevel::High | ImpactLevel::Critical))
             .count();
 
@@ -576,18 +576,20 @@ impl Default for V8APIAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_v8_api_adapter_creation() {
-        let adapter = V8APIAdapter::new_with_default_config();
-        let stats = adapter.get_stats().await;
+        let adapter: _ = V8APIAdapter::new_with_default_config();
+        let stats: _ = adapter.get_stats().await;
         assert!(stats.total_adapters > 0);
     }
 
     #[tokio::test]
     async fn test_register_adapter() {
         let mut adapter = V8APIAdapter::new_with_default_config();
-        let initial_count = adapter.get_stats().await.total_adapters;
+        let initial_count: _ = adapter.get_stats().await.total_adapters;
 
         adapter.register_adapter(AdapterItem {
             original_name: "TestAPI".to_string(),
@@ -603,37 +605,37 @@ mod tests {
             },
         });
 
-        let new_count = adapter.get_stats().await.total_adapters;
+        let new_count: _ = adapter.get_stats().await.total_adapters;
         assert_eq!(new_count, initial_count + 1);
     }
 
     #[tokio::test]
     async fn test_adapt_api_call() {
-        let adapter = V8APIAdapter::new_with_default_config();
+        let adapter: _ = V8APIAdapter::new_with_default_config();
 
-        let result = adapter.adapt_api_call("OldContext", serde_json::json!({})).await;
+        let result: _ = adapter.adapt_api_call("OldContext", serde_json::json!({})).await;
         assert!(result.success);
         assert_eq!(result.adapted_name, "V8Context");
     }
 
     #[tokio::test]
     async fn test_needs_adaptation() {
-        let adapter = V8APIAdapter::new_with_default_config();
+        let adapter: _ = V8APIAdapter::new_with_default_config();
         assert!(adapter.needs_adaptation("OldContext").await);
         assert!(!adapter.needs_adaptation("NonExistentAPI").await);
     }
 
     #[tokio::test]
     async fn test_verify_adapter() {
-        let adapter = V8APIAdapter::new_with_default_config();
-        let result = adapter.verify_adapter("OldContext").await;
+        let adapter: _ = V8APIAdapter::new_with_default_config();
+        let result: _ = adapter.verify_adapter("OldContext").await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_generate_report() {
-        let adapter = V8APIAdapter::new_with_default_config();
-        let report = adapter.generate_report().await.unwrap();
+        let adapter: _ = V8APIAdapter::new_with_default_config();
+        let report: _ = adapter.generate_report().await.unwrap();
         assert!(report.total_adapters > 0);
         assert!(!report.recommendations.is_empty());
     }

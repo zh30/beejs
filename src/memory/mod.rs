@@ -53,7 +53,7 @@ impl MemoryStats {
         self.allocation_count.fetch_add(1, Ordering::Relaxed);
 
         // 更新峰值使用量
-        let current = self.current_usage.load(Ordering::Relaxed);
+        let current: _ = self.current_usage.load(Ordering::Relaxed);
         let mut peak = self.peak_usage.load(Ordering::Relaxed);
         while current > peak {
             match self.peak_usage.compare_exchange_weak(
@@ -128,7 +128,7 @@ impl AllocationHandle {
 impl Drop for AllocationHandle {
     fn drop(&mut self) {
         unsafe {
-            let layout = std::alloc::Layout::from_size_align_unchecked(self.size, std::mem::align_of::<usize>());
+            let layout: _ = std::alloc::Layout::from_size_align_unchecked(self.size, std::mem::align_of::<usize>());
             std::alloc::dealloc(self.ptr, layout);
         }
     }
@@ -147,10 +147,12 @@ pub static GLOBAL_MEMORY_STATS: MemoryStats = MemoryStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_memory_stats() {
-        let stats = MemoryStats::new();
+        let stats: _ = MemoryStats::new();
 
         // 记录分配
         stats.record_allocation(1024);
@@ -159,7 +161,7 @@ mod tests {
         // 记录释放
         stats.record_deallocation(1024);
 
-        let snapshot = stats.get_stats();
+        let snapshot: _ = stats.get_stats();
         assert_eq!(snapshot.total_allocated, 3072);
         assert_eq!(snapshot.total_freed, 1024);
         assert_eq!(snapshot.current_usage, 2048);
@@ -171,7 +173,7 @@ mod tests {
 
     #[test]
     fn test_peak_usage_tracking() {
-        let stats = MemoryStats::new();
+        let stats: _ = MemoryStats::new();
 
         stats.record_allocation(1000);
         assert_eq!(stats.peak_usage.load(Ordering::Relaxed), 1000);

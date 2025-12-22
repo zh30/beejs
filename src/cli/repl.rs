@@ -96,7 +96,7 @@ impl Repl {
 
         loop {
             // Display prompt
-            let prompt = if self.in_multiline {
+            let prompt: _ = if self.in_multiline {
                 format!("{}... ", " ".repeat(self.config.prompt.len() - 4))
             } else {
                 self.config.prompt.clone()
@@ -106,7 +106,7 @@ impl Repl {
             io::stdout().flush()?;
 
             // Read input
-            let input = self.read_line()?;
+            let input: _ = self.read_line()?;
 
             // Process input
             if input.trim() == ".exit" || input.trim() == ".quit" {
@@ -165,7 +165,7 @@ impl Repl {
 
     /// Check if input starts a multiline block
     fn is_multiline_start(&self, input: &str) -> bool {
-        let trimmed = input.trim();
+        let trimmed: _ = input.trim();
         trimmed.ends_with('{') ||
         trimmed.ends_with('(') ||
         trimmed.ends_with('[') ||
@@ -190,7 +190,7 @@ impl Repl {
 
         // Auto-indent
         if self.config.auto_indent {
-            let trimmed = input.trim();
+            let trimmed: _ = input.trim();
             if trimmed.ends_with('{') {
                 self.indent_level += 1;
             } else if trimmed.starts_with('}') && self.indent_level > 0 {
@@ -201,7 +201,7 @@ impl Repl {
 
     /// Execute multiline buffer
     async fn execute_multiline(&mut self) -> anyhow::Result<()> {
-        let code = self.multiline_buffer.join("\n");
+        let code: _ = self.multiline_buffer.join("\n");
         self.execute_code(&code).await?;
 
         // Reset multiline state
@@ -227,11 +227,11 @@ impl Repl {
 
     /// Execute JavaScript/TypeScript code
     async fn execute_code(&self, code: &str) -> anyhow::Result<ReplResult> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         match self.runtime.execute_code(code) {
             Ok(result) => {
-                let execution_time = start.elapsed();
+                let execution_time: _ = start.elapsed();
 
                 // Print result if not undefined
                 if result != "undefined" && !result.is_empty() {
@@ -245,7 +245,7 @@ impl Repl {
                 })
             }
             Err(e) => {
-                let execution_time = start.elapsed();
+                let execution_time: _ = start.elapsed();
                 println!("Error: {}", e);
 
                 Ok(ReplResult {
@@ -259,7 +259,7 @@ impl Repl {
 
     /// Execute code and record in history (for testing)
     pub async fn execute_and_record(&mut self, code: &str) -> anyhow::Result<ReplResult> {
-        let result = self.execute_code(code).await?;
+        let result: _ = self.execute_code(code).await?;
 
         // Add to history
         if self.history.len() >= self.config.history_size {
@@ -301,8 +301,8 @@ impl Repl {
 
     /// Get execution statistics
     pub fn get_stats(&self) -> ReplStats {
-        let total_commands = self.history.len();
-        let avg_history_len = if total_commands > 0 {
+        let total_commands: _ = self.history.len();
+        let avg_history_len: _ = if total_commands > 0 {
             self.history.iter().map(|s| s.len()).sum::<usize>() / total_commands
         } else {
             0
@@ -340,29 +340,31 @@ impl ReplStats {
 mod tests {
     use super::*;
     use crate::RuntimeLite;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_repl_basic_execution() {
-        let runtime = Arc::new(RuntimeLite::new(false).expect("Failed to create runtime"));
+        let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).expect("Failed to create runtime"));
         let mut repl = Repl::new(runtime);
 
-        let result = repl.execute_code("1 + 1").await.expect("Failed to execute");
+        let result: _ = repl.execute_code("1 + 1").await.expect("Failed to execute");
         assert_eq!(result.output, "2");
         assert!(!result.is_error);
     }
 
     #[tokio::test]
     async fn test_repl_error_handling() {
-        let runtime = Arc::new(RuntimeLite::new(false).expect("Failed to create runtime"));
+        let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).expect("Failed to create runtime"));
         let mut repl = Repl::new(runtime);
 
-        let result = repl.execute_code("invalid syntax {{").await.expect("Failed to execute");
+        let result: _ = repl.execute_code("invalid syntax {{").await.expect("Failed to execute");
         assert!(result.is_error);
     }
 
     #[tokio::test]
     async fn test_repl_multiline_detection() {
-        let runtime = Arc::new(RuntimeLite::new(false).expect("Failed to create runtime"));
+        let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).expect("Failed to create runtime"));
         let mut repl = Repl::new(runtime);
 
         assert!(repl.is_multiline_start("function foo() {"));
@@ -372,13 +374,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_repl_history() {
-        let runtime = Arc::new(RuntimeLite::new(false).expect("Failed to create runtime"));
+        let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(false)).expect("Failed to create runtime"));
         let mut repl = Repl::new(runtime);
 
         repl.execute_and_record("1 + 1").await.expect("Failed to execute");
         repl.execute_and_record("2 + 2").await.expect("Failed to execute");
 
-        let stats = repl.get_stats();
+        let stats: _ = repl.get_stats();
         assert_eq!(stats.total_commands, 2);
     }
 }

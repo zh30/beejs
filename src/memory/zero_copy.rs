@@ -132,7 +132,7 @@ impl MemoryPoolStats {
             ),
         };
 
-        let total = hits + misses;
+        let total: _ = hits + misses;
         if total > 0 {
             hits as f64 / total as f64
         } else {
@@ -174,10 +174,10 @@ impl OptimizedMemoryPool {
     pub fn new(config: MemoryPoolConfig) -> Self {
         Self {
             config: config.clone(),
-            small_pool: Arc::new(Mutex::new(VecDeque::new())),
-            medium_pool: Arc::new(Mutex::new(VecDeque::new())),
-            large_pool: Arc::new(Mutex::new(VecDeque::new())),
-            stats: Arc::new(MemoryPoolStats::default()),
+            small_pool: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
+            medium_pool: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
+            large_pool: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
+            stats: Arc::new(std::sync::Mutex::new(MemoryPoolStats::default())),
         }
     }
 
@@ -188,7 +188,7 @@ impl OptimizedMemoryPool {
 
     /// 分配内存
     pub fn allocate(&self, size: usize) -> Result<NonNull<u8>, &'static str> {
-        let pool_type = self.determine_pool_type(size);
+        let pool_type: _ = self.determine_pool_type(size);
 
         match self.try_get_from_pool(pool_type, size) {
             Some(ptr) => {
@@ -220,10 +220,10 @@ impl OptimizedMemoryPool {
 
     /// 释放内存
     pub fn deallocate(&self, ptr: NonNull<u8>, size: usize) -> Result<(), &'static str> {
-        let pool_type = self.determine_pool_type(size);
+        let pool_type: _ = self.determine_pool_type(size);
 
         // 将内存块返回到池中
-        let block = MemoryBlock::new(ptr, size);
+        let block: _ = MemoryBlock::new(ptr, size);
         self.add_to_pool(pool_type, block)?;
 
         // 记录释放
@@ -246,7 +246,7 @@ impl OptimizedMemoryPool {
 
     /// 从池中获取内存块
     fn try_get_from_pool(&self, pool_type: PoolType, size: usize) -> Option<NonNull<u8>> {
-        let pool = match pool_type {
+        let pool: _ = match pool_type {
             PoolType::Small => &self.small_pool,
             PoolType::Medium => &self.medium_pool,
             PoolType::Large => &self.large_pool,
@@ -259,7 +259,7 @@ impl OptimizedMemoryPool {
             if let Some(block) = pool_guard.get(i) {
                 if block.size() >= size {
                     // 找到合适的块
-                    let block = pool_guard.remove(i).unwrap();
+                    let block: _ = pool_guard.remove(i).unwrap();
                     return Some(block.ptr);
                 }
             }
@@ -270,16 +270,16 @@ impl OptimizedMemoryPool {
 
     /// 从系统分配内存
     fn allocate_from_system(&self, size: usize, pool_type: PoolType) -> Result<NonNull<u8>, &'static str> {
-        let layout = Layout::from_size_align(size, std::mem::align_of::<usize>())
+        let layout: _ = Layout::from_size_align(size, std::mem::align_of::<usize>())
             .map_err(|_| "Invalid layout")?;
 
         // 使用系统分配器分配内存
         unsafe {
-            let ptr = System.alloc(layout);
+            let ptr: _ = System.alloc(layout);
             if ptr.is_null() {
                 Err("Allocation failed")
             } else {
-                let non_null = NonNull::new_unchecked(ptr);
+                let non_null: _ = NonNull::new_unchecked(ptr);
                 Ok(non_null)
             }
         }
@@ -287,7 +287,7 @@ impl OptimizedMemoryPool {
 
     /// 添加内存块到池中
     fn add_to_pool(&self, pool_type: PoolType, block: MemoryBlock) -> Result<(), &'static str> {
-        let pool = match pool_type {
+        let pool: _ = match pool_type {
             PoolType::Small => &self.small_pool,
             PoolType::Medium => &self.medium_pool,
             PoolType::Large => &self.large_pool,
@@ -296,7 +296,7 @@ impl OptimizedMemoryPool {
         let mut pool_guard = pool.lock().unwrap();
 
         // 检查池大小限制
-        let max_size = match pool_type {
+        let max_size: _ = match pool_type {
             PoolType::Small => self.config.small_pool_size,
             PoolType::Medium => self.config.medium_pool_size,
             PoolType::Large => self.config.large_pool_size,
@@ -313,7 +313,7 @@ impl OptimizedMemoryPool {
             if let Some(old_block) = pool_guard.pop_front() {
                 // 释放旧块
                 unsafe {
-                    let layout = Layout::from_size_align_unchecked(old_block.size(), std::mem::align_of::<usize>());
+                    let layout: _ = Layout::from_size_align_unchecked(old_block.size(), std::mem::align_of::<usize>());
                     System.dealloc(old_block.ptr(), layout);
                 }
             }
@@ -326,7 +326,7 @@ impl OptimizedMemoryPool {
 
     /// 清理过期内存块
     pub fn cleanup_expired_blocks(&self) {
-        let now = Instant::now();
+        let now: _ = Instant::now();
 
         // 清理小对象池
         self.cleanup_pool(&self.small_pool, &now);
@@ -348,7 +348,7 @@ impl OptimizedMemoryPool {
                 if block.age() > self.config.max_block_age {
                     // 释放内存
                     unsafe {
-                        let layout = Layout::from_size_align_unchecked(block.size(), std::mem::align_of::<usize>());
+                        let layout: _ = Layout::from_size_align_unchecked(block.size(), std::mem::align_of::<usize>());
                         System.dealloc(block.ptr(), layout);
                     }
 
@@ -383,9 +383,9 @@ impl OptimizedMemoryPool {
 
     /// 获取池大小
     pub fn get_pool_sizes(&self) -> (usize, usize, usize) {
-        let small_size = self.small_pool.lock().unwrap().len();
-        let medium_size = self.medium_pool.lock().unwrap().len();
-        let large_size = self.large_pool.lock().unwrap().len();
+        let small_size: _ = self.small_pool.lock().unwrap().len();
+        let medium_size: _ = self.medium_pool.lock().unwrap().len();
+        let large_size: _ = self.large_pool.lock().unwrap().len();
         (small_size, medium_size, large_size)
     }
 }
@@ -414,7 +414,7 @@ impl PoolStats {
     }
 
     pub fn hit_rate(&self) -> f64 {
-        let total = self.hits + self.misses;
+        let total: _ = self.hits + self.misses;
         if total > 0 {
             self.hits as f64 / total as f64
         } else {
@@ -426,33 +426,35 @@ impl PoolStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_memory_pool_creation() {
-        let pool = OptimizedMemoryPool::default();
-        let stats = pool.get_stats();
+        let pool: _ = OptimizedMemoryPool::default();
+        let stats: _ = pool.get_stats();
         assert_eq!(stats.total_allocations, 0);
         assert_eq!(stats.total_deallocations, 0);
     }
 
     #[test]
     fn test_memory_pool_allocation() {
-        let pool = OptimizedMemoryPool::default();
+        let pool: _ = OptimizedMemoryPool::default();
 
         // 分配小内存块
-        let ptr1 = pool.allocate(100).unwrap();
-        let stats1 = pool.get_stats();
+        let ptr1: _ = pool.allocate(100).unwrap();
+        let stats1: _ = pool.get_stats();
         assert_eq!(stats1.total_allocations, 1);
 
         // 释放内存
         pool.deallocate(ptr1, 100).unwrap();
-        let stats2 = pool.get_stats();
+        let stats2: _ = pool.get_stats();
         assert_eq!(stats2.total_deallocations, 1);
     }
 
     #[test]
     fn test_determine_pool_type() {
-        let pool = OptimizedMemoryPool::default();
+        let pool: _ = OptimizedMemoryPool::default();
 
         // 测试不同大小的内存分配
         assert_eq!(pool.determine_pool_type(512), PoolType::Small);
@@ -464,27 +466,27 @@ mod tests {
 
     #[test]
     fn test_pool_stats() {
-        let pool = OptimizedMemoryPool::default();
+        let pool: _ = OptimizedMemoryPool::default();
 
         // 分配并释放内存
-        let ptr = pool.allocate(100).unwrap();
+        let ptr: _ = pool.allocate(100).unwrap();
         pool.deallocate(ptr, 100).unwrap();
 
-        let stats = pool.get_stats();
+        let stats: _ = pool.get_stats();
         assert_eq!(stats.total_allocations, 1);
         assert_eq!(stats.total_deallocations, 1);
     }
 
     #[test]
     fn test_memory_block() {
-        let block = MemoryBlock::new(NonNull::new(0x1000 as *mut u8).unwrap(), 1024);
+        let block: _ = MemoryBlock::new(NonNull::new(0x1000 as *mut u8).unwrap(), 1024);
         assert_eq!(block.size(), 1024);
         assert!(block.age().as_secs_f64() >= 0.0);
     }
 
     #[test]
     fn test_custom_config() {
-        let config = MemoryPoolConfig {
+        let config: _ = MemoryPoolConfig {
             small_pool_size: 512 * 1024,
             medium_pool_size: 32 * 1024 * 1024,
             large_pool_size: 512 * 1024 * 1024,
@@ -494,7 +496,7 @@ mod tests {
             max_block_age: Duration::from_secs(600),
         };
 
-        let pool = OptimizedMemoryPool::new(config);
+        let pool: _ = OptimizedMemoryPool::new(config);
         let (small, medium, large) = pool.get_pool_sizes();
         assert_eq!(small, 0);
         assert_eq!(medium, 0);

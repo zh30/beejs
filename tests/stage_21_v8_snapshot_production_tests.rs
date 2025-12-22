@@ -7,6 +7,8 @@ use std::time::Instant;
 #[cfg(test)]
 mod stage_21_v8_snapshot_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     // Initialize V8 before running tests
     fn init_v8() {
@@ -23,15 +25,15 @@ mod stage_21_v8_snapshot_tests {
         println!("\n🧪 Test: V8 Snapshot Creation");
 
         // In test mode, V8 snapshot creation returns mock data
-        let manager = SnapshotManager::new(beejs::v8_snapshot::SnapshotConfig::default());
+        let manager: _ = SnapshotManager::new(beejs::v8_snapshot::SnapshotConfig::default());
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let snapshot = manager.create_snapshot("test-v0.1.0");
-        let elapsed = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let snapshot: _ = manager.create_snapshot("test-v0.1.0");
+        let elapsed: _ = start.elapsed().unwrap();
 
         assert!(snapshot.is_ok(), "Snapshot creation should succeed");
 
-        let snapshot_data = snapshot.unwrap();
+        let snapshot_data: _ = snapshot.unwrap();
         assert!(!snapshot_data.is_empty(), "Snapshot data should not be empty");
 
         println!("  ✅ Snapshot created: {} bytes in {:.2}ms",
@@ -39,7 +41,7 @@ mod stage_21_v8_snapshot_tests {
                  elapsed.as_millis());
 
         // Verify stats
-        let stats = manager.get_stats();
+        let stats: _ = manager.get_stats();
         assert!(stats.total_snapshots.load(std::sync::atomic::Ordering::Relaxed) > 0);
 
         println!("  ✅ Snapshot creation test passed");
@@ -51,31 +53,31 @@ mod stage_21_v8_snapshot_tests {
         init_v8();
         println!("\n🧪 Test: V8 Snapshot Caching");
 
-        let manager = SnapshotManager::new(beejs::v8_snapshot::SnapshotConfig::default());
+        let manager: _ = SnapshotManager::new(beejs::v8_snapshot::SnapshotConfig::default());
 
         // First call - should create snapshot
-        let start1 = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let snapshot1 = manager.get_or_create_snapshot("cache-test-v0.1.0");
-        let elapsed1 = start1.elapsed().unwrap();
+        let start1: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let snapshot1: _ = manager.get_or_create_snapshot("cache-test-v0.1.0");
+        let elapsed1: _ = start1.elapsed().unwrap();
 
         assert!(snapshot1.is_ok() && snapshot1.unwrap().is_some());
         println!("  📊 First call (create): {:.2}ms", elapsed1.as_millis());
 
-        let stats = manager.get_stats();
-        let misses_before = stats.cache_misses.load(std::sync::atomic::Ordering::Relaxed);
+        let stats: _ = manager.get_stats();
+        let misses_before: _ = stats.cache_misses.load(std::sync::atomic::Ordering::Relaxed);
 
         // Second call - should hit cache
-        let start2 = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let snapshot2 = manager.generate_snapshot("cache-test-v0.1.0");
-        let elapsed2 = start2.elapsed().unwrap();
+        let start2: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let snapshot2: _ = manager.generate_snapshot("cache-test-v0.1.0");
+        let elapsed2: _ = start2.elapsed().unwrap();
 
         assert!(snapshot2.is_ok() && snapshot2.unwrap().is_some());
         println!("  📊 Second call (cache hit): {:.2}ms", elapsed2.as_millis());
 
         // Verify cache hit
-        let stats = manager.get_stats();
-        let hits = stats.cache_hits.load(std::sync::atomic::Ordering::Relaxed);
-        let misses_after = stats.cache_misses.load(std::sync::atomic::Ordering::Relaxed);
+        let stats: _ = manager.get_stats();
+        let hits: _ = stats.cache_hits.load(std::sync::atomic::Ordering::Relaxed);
+        let misses_after: _ = stats.cache_misses.load(std::sync::atomic::Ordering::Relaxed);
 
         assert!(hits > 0, "Should have cache hits");
         assert_eq!(misses_before, misses_after, "Cache misses should not increase on second call");
@@ -91,12 +93,12 @@ mod stage_21_v8_snapshot_tests {
         println!("\n🧪 Test: RuntimeLite with V8 Snapshot");
 
         // This test verifies that RuntimeLite properly handles V8 snapshots
-        let runtime = beejs::RuntimeLite::new(true);
+        let runtime: _ = beejs::RuntimeLite::new(true);
 
         assert!(runtime.is_ok(), "RuntimeLite creation should succeed");
 
         // Execute a simple script to verify it works
-        let result = runtime.unwrap().execute_code("1 + 1");
+        let result: _ = runtime.unwrap().execute_code("1 + 1");
 
         assert!(result.is_ok(), "Code execution should succeed");
         assert_eq!(result.unwrap(), "2", "Execution result should be correct");
@@ -111,11 +113,11 @@ mod stage_21_v8_snapshot_tests {
         init_v8();
         println!("\n🧪 Test: Snapshot Stats Tracking");
 
-        let manager = SnapshotManager::new(beejs::v8_snapshot::SnapshotConfig::default());
+        let manager: _ = SnapshotManager::new(beejs::v8_snapshot::SnapshotConfig::default());
 
         // Get initial stats
-        let stats1 = manager.get_stats();
-        let total1 = stats1.snapshots_generated;
+        let stats1: _ = manager.get_stats();
+        let total1: _ = stats1.snapshots_generated;
 
         // Note: generate_snapshot requires a mutable isolate,
         // so we just verify the stats structure works

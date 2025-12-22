@@ -81,8 +81,8 @@ impl MetricsHistory {
             return None;
         }
 
-        let count = self.metrics.len() as f64;
-        let sum = self.metrics.iter().fold(
+        let count: _ = self.metrics.len() as f64;
+        let sum: _ = self.metrics.iter().fold(
             (0.0, 0.0, 0.0, 0, 0, 0.0, 0.0),
             |acc, m| (
                 acc.0 + m.cpu_utilization,
@@ -182,14 +182,14 @@ impl Autoscaler {
         self.record_metrics(current_metrics.clone());
 
         // 获取历史平均值（如果有）
-        let avg_metrics = self.history.get_average()
+        let avg_metrics: _ = self.history.get_average()
             .unwrap_or_else(|| current_metrics.clone());
 
         // 计算综合负载分数
-        let load_score = self.calculate_load_score(&avg_metrics);
+        let load_score: _ = self.calculate_load_score(&avg_metrics);
 
         // 决策扩缩容
-        let action = self.make_scaling_decision(load_score, &avg_metrics);
+        let action: _ = self.make_scaling_decision(load_score, &avg_metrics);
 
         // 记录扩缩容事件
         if action != ScalingAction::NoOp {
@@ -217,23 +217,23 @@ impl Autoscaler {
         }
 
         // 加权计算综合负载分数
-        let cpu_weight = 0.35;  // 增加 CPU 权重
-        let memory_weight = 0.35;  // 增加内存权重
-        let queue_weight = 0.15;
-        let response_time_weight = 0.10;
-        let error_rate_weight = 0.03;
-        let task_weight = 0.02;
+        let cpu_weight: _ = 0.35;  // 增加 CPU 权重
+        let memory_weight: _ = 0.35;  // 增加内存权重
+        let queue_weight: _ = 0.15;
+        let response_time_weight: _ = 0.10;
+        let error_rate_weight: _ = 0.03;
+        let task_weight: _ = 0.02;
 
         // 归一化队列深度（假设最大队列为 200）
-        let queue_score = (metrics.queue_depth as f64 / 200.0).min(1.0);
+        let queue_score: _ = (metrics.queue_depth as f64 / 200.0).min(1.0);
 
         // 归一化响应时间（假设最大响应时间为 1000ms）
-        let response_time_score = (metrics.response_time_ms as f64 / 1000.0).min(1.0);
+        let response_time_score: _ = (metrics.response_time_ms as f64 / 1000.0).min(1.0);
 
         // 归一化活跃任务数（假设最大任务数为 200）
-        let task_score = (metrics.active_tasks as f64 / 200.0).min(1.0);
+        let task_score: _ = (metrics.active_tasks as f64 / 200.0).min(1.0);
 
-        let load_score = metrics.cpu_utilization * cpu_weight +
+        let load_score: _ = metrics.cpu_utilization * cpu_weight +
             metrics.memory_utilization * memory_weight +
             queue_score * queue_weight +
             response_time_score * response_time_weight +
@@ -256,13 +256,13 @@ impl Autoscaler {
     fn make_scaling_decision(&self, load_score: f64, metrics: &ClusterMetrics) -> ScalingAction {
         // 高负载 -> 扩容
         if load_score >= self.config.scale_up_threshold {
-            let scale_up_count = self.calculate_scale_up_count(metrics);
+            let scale_up_count: _ = self.calculate_scale_up_count(metrics);
             return ScalingAction::ScaleUp(scale_up_count);
         }
 
         // 低负载 -> 缩容
         if load_score <= self.config.scale_down_threshold {
-            let scale_down_count = self.calculate_scale_down_count(metrics);
+            let scale_down_count: _ = self.calculate_scale_down_count(metrics);
             return ScalingAction::ScaleDown(scale_down_count);
         }
 
@@ -273,10 +273,10 @@ impl Autoscaler {
     /// 计算扩容节点数
     fn calculate_scale_up_count(&self, metrics: &ClusterMetrics) -> usize {
         // 简化逻辑：基于负载分数调整扩容数量
-        let base_count = 1;
+        let base_count: _ = 1;
 
         // 根据负载分数调整
-        let load_factor = if metrics.cpu_utilization > 0.9 {
+        let load_factor: _ = if metrics.cpu_utilization > 0.9 {
             2
         } else if metrics.cpu_utilization > 0.85 {
             1
@@ -290,7 +290,7 @@ impl Autoscaler {
     /// 计算缩容节点数
     fn calculate_scale_down_count(&self, metrics: &ClusterMetrics) -> usize {
         // 基于负载程度计算缩容节点数
-        let base_count = 1;
+        let base_count: _ = 1;
 
         // 根据队列深度调整（队列为空才能缩容）
         if metrics.queue_depth > 0 {
@@ -298,7 +298,7 @@ impl Autoscaler {
         }
 
         // 根据负载分数调整
-        let load_factor = if metrics.cpu_utilization < 0.15 {
+        let load_factor: _ = if metrics.cpu_utilization < 0.15 {
             1  // 极低负载，额外缩容 1 个节点
         } else if metrics.cpu_utilization < 0.25 {
             0  // 低负载，只缩容 base_count 个节点
@@ -312,7 +312,7 @@ impl Autoscaler {
     /// 更新冷却时间
     fn update_cooldown(&mut self) {
         if let Some(last_time) = self.last_scaling_time {
-            let elapsed = last_time.elapsed();
+            let elapsed: _ = last_time.elapsed();
             if elapsed < self.config.cooldown_period {
                 self.cooldown_remaining = self.config.cooldown_period - elapsed;
             } else {
@@ -350,20 +350,20 @@ impl Autoscaler {
 
         // 简单预测：使用最近的指标趋势
         let metrics_vec: Vec<&ClusterMetrics> = self.history.metrics.iter().collect();
-        let recent_metrics = &metrics_vec[metrics_vec.len().saturating_sub(5)..];
+        let recent_metrics: _ = &metrics_vec[metrics_vec.len().saturating_sub(5)..];
 
         // 计算负载趋势
         let mut trend = 0.0;
         for i in 1..recent_metrics.len() {
-            let prev_load = self.calculate_load_score(recent_metrics[i - 1]);
-            let curr_load = self.calculate_load_score(recent_metrics[i]);
+            let prev_load: _ = self.calculate_load_score(recent_metrics[i - 1]);
+            let curr_load: _ = self.calculate_load_score(recent_metrics[i]);
             trend += curr_load - prev_load;
         }
         trend /= (recent_metrics.len() - 1) as f64;
 
         // 预测未来负载
-        let current_load = self.calculate_load_score(recent_metrics[recent_metrics.len() - 1]);
-        let time_factor = (horizon.as_secs_f64() / self.policy.prediction_window.as_secs_f64()).min(1.0);
+        let current_load: _ = self.calculate_load_score(recent_metrics[recent_metrics.len() - 1]);
+        let time_factor: _ = (horizon.as_secs_f64() / self.policy.prediction_window.as_secs_f64()).min(1.0);
         Some(current_load + trend * time_factor)
     }
 }
@@ -393,10 +393,12 @@ impl Default for AutoscalerStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_autoscaler_creation() {
-        let config = AutoscalerConfig {
+        let config: _ = AutoscalerConfig {
             scale_up_threshold: 0.80,
             scale_down_threshold: 0.30,
             cooldown_period: Duration::from_secs(60),
@@ -404,7 +406,7 @@ mod tests {
             max_nodes: 10,
         };
 
-        let autoscaler = Autoscaler::new(config);
+        let autoscaler: _ = Autoscaler::new(config);
         assert!(autoscaler.is_enabled());
         assert_eq!(autoscaler.get_cooldown_remaining(), Duration::ZERO);
     }
@@ -419,7 +421,7 @@ mod tests {
             max_nodes: 10,
         });
 
-        let high_load_metrics = ClusterMetrics {
+        let high_load_metrics: _ = ClusterMetrics {
             cpu_utilization: 0.85,
             memory_utilization: 0.90,
             network_utilization: 0.75,
@@ -430,7 +432,7 @@ mod tests {
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
 
-        let action = autoscaler.evaluate_scaling(&high_load_metrics);
+        let action: _ = autoscaler.evaluate_scaling(&high_load_metrics);
         assert!(matches!(action, ScalingAction::ScaleUp(_)));
     }
 
@@ -444,7 +446,7 @@ mod tests {
             max_nodes: 10,
         });
 
-        let low_load_metrics = ClusterMetrics {
+        let low_load_metrics: _ = ClusterMetrics {
             cpu_utilization: 0.20,
             memory_utilization: 0.25,
             network_utilization: 0.15,
@@ -455,7 +457,7 @@ mod tests {
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
 
-        let action = autoscaler.evaluate_scaling(&low_load_metrics);
+        let action: _ = autoscaler.evaluate_scaling(&low_load_metrics);
         assert!(matches!(action, ScalingAction::ScaleDown(_)));
     }
 
@@ -469,7 +471,7 @@ mod tests {
             max_nodes: 10,
         });
 
-        let normal_load_metrics = ClusterMetrics {
+        let normal_load_metrics: _ = ClusterMetrics {
             cpu_utilization: 0.50,
             memory_utilization: 0.55,
             network_utilization: 0.45,
@@ -480,7 +482,7 @@ mod tests {
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
 
-        let action = autoscaler.evaluate_scaling(&normal_load_metrics);
+        let action: _ = autoscaler.evaluate_scaling(&normal_load_metrics);
         assert!(matches!(action, ScalingAction::NoOp));
     }
 
@@ -494,7 +496,7 @@ mod tests {
             max_nodes: 10,
         });
 
-        let high_load_metrics = ClusterMetrics {
+        let high_load_metrics: _ = ClusterMetrics {
             cpu_utilization: 0.85,
             memory_utilization: 0.90,
             network_utilization: 0.75,
@@ -506,11 +508,11 @@ mod tests {
         };
 
         // 第一次扩容
-        let action = autoscaler.evaluate_scaling(&high_load_metrics);
+        let action: _ = autoscaler.evaluate_scaling(&high_load_metrics);
         assert!(matches!(action, ScalingAction::ScaleUp(_)));
 
         // 冷却期间不应该再次扩容
-        let action = autoscaler.evaluate_scaling(&high_load_metrics);
+        let action: _ = autoscaler.evaluate_scaling(&high_load_metrics);
         assert!(matches!(action, ScalingAction::NoOp));
         assert!(autoscaler.get_cooldown_remaining() > Duration::ZERO);
     }

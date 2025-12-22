@@ -7,6 +7,8 @@ use tokio::time::{Duration, Instant};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use super::local_cache::{LocalCodeCache, OfflineDataStore};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Offline execution engine
 #[derive(Debug)]
@@ -75,12 +77,12 @@ impl OfflineExecutionEngine {
         local_cache: LocalCodeCache,
         data_store: OfflineDataStore,
     ) -> Result<Self> {
-        let engine = OfflineExecutionEngine {
-            runtime: Arc::new(RwLock::new(None)),
-            local_cache: Arc::new(local_cache),
-            data_store: Arc::new(data_store),
-            dependency_resolver: Arc::new(DependencyResolver::new()),
-            sync_manager: Arc::new(super::local_cache::SyncManager::new().await?),
+        let engine: _ = OfflineExecutionEngine {
+            runtime: Arc::new(std::sync::Mutex::new(RwLock::new(None))),
+            local_cache: Arc::new(std::sync::Mutex::new(local_cache)),
+            data_store: Arc::new(std::sync::Mutex::new(data_store)),
+            dependency_resolver: Arc::new(std::sync::Mutex::new(DependencyResolver::new())),
+            sync_manager: Arc::new(std::sync::Mutex::new(super::local_cache::SyncManager::new()).await?),
         };
 
         // Initialize runtime
@@ -98,16 +100,16 @@ impl OfflineExecutionEngine {
 
     /// Execute a script in offline mode
     pub async fn execute_offline(&self, script: &str) -> Result<ExecutionResult> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         println!("Starting offline script execution...");
 
         // Resolve dependencies
-        let resolution = self.resolve_dependencies(script).await?;
+        let resolution: _ = self.resolve_dependencies(script).await?;
         println!("Resolved {} dependencies", resolution.dependencies.len());
 
         // Load cached modules
-        let cached_modules = self.load_cached_modules(&resolution.dependencies).await?;
+        let cached_modules: _ = self.load_cached_modules(&resolution.dependencies).await?;
 
         // Initialize runtime if needed
         let mut runtime = self.runtime.write().await;
@@ -116,11 +118,11 @@ impl OfflineExecutionEngine {
         }
 
         // Execute script
-        let execution_result = self.execute_script_internal(script, &cached_modules).await?;
+        let execution_result: _ = self.execute_script_internal(script, &cached_modules).await?;
 
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
 
-        let result = ExecutionResult {
+        let result: _ = ExecutionResult {
             success: execution_result.success,
             output: execution_result.output,
             error: execution_result.error,
@@ -167,13 +169,13 @@ impl OfflineExecutionEngine {
 
     /// Resolve dependencies for a script
     pub async fn resolve_dependencies(&self, script: &str) -> Result<ResolutionResult> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
-        let dependencies = self.dependency_resolver.resolve(script).await?;
+        let dependencies: _ = self.dependency_resolver.resolve(script).await?;
 
-        let elapsed = start.elapsed();
-        let cached_count = dependencies.iter().filter(|d| d.source == DependencySource::LocalCache).count() as u32;
-        let bundled_count = dependencies.iter().filter(|d| d.source == DependencySource::Bundled).count() as u32;
+        let elapsed: _ = start.elapsed();
+        let cached_count: _ = dependencies.iter().filter(|d| d.source == DependencySource::LocalCache).count() as u32;
+        let bundled_count: _ = dependencies.iter().filter(|d| d.source == DependencySource::Bundled).count() as u32;
 
         println!("Dependency resolution completed in {}ms", elapsed.as_millis());
 
@@ -214,7 +216,7 @@ impl OfflineExecutionEngine {
 
     /// Create a new runtime instance
     async fn create_runtime_instance(&self) -> Result<OfflineRuntime> {
-        let instance = OfflineRuntime {
+        let instance: _ = OfflineRuntime {
             instance_id: format!("offline-runtime-{}", uuid::Uuid::new_v4()),
             initialized_at: std::time::SystemTime::now(),
             loaded_modules: Vec::new(),
@@ -227,7 +229,7 @@ impl OfflineExecutionEngine {
     /// Internal script execution
     async fn execute_script_internal(&self, script: &str, modules: &[String]) -> Result<ExecutionResult> {
         // Simulate script execution
-        let start = Instant::now();
+        let start: _ = Instant::now();
         tokio::time::sleep(Duration::from_millis(10)).await;
 
         // In real implementation, this would:
@@ -236,7 +238,7 @@ impl OfflineExecutionEngine {
         // 3. Execute script
         // 4. Return result
 
-        let output = Some(format!(
+        let output: _ = Some(format!(
             "Executed script with {} modules in {}ms",
             modules.len(),
             start.elapsed().as_millis()
@@ -318,7 +320,7 @@ impl DependencyResolver {
         }
 
         // Check for external dependencies
-        let external_patterns = ["lodash", "axios", "moment", "express"];
+        let external_patterns: _ = ["lodash", "axios", "moment", "express"];
         for pattern in &external_patterns {
             if script.contains(pattern) {
                 dependencies.push(Dependency {

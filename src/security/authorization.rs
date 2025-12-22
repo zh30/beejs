@@ -6,6 +6,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 权限控制错误
 #[derive(Error, Debug)]
@@ -95,13 +97,13 @@ impl PolicyEngine {
 /// 角色管理器
 #[derive(Debug)]
 pub struct RoleManager {
-    user_roles: Arc<std::sync::Mutex<HashMap<UserId, Vec<Role>>>>,
+    user_roles: Arc<std::sync::Mutex<HashMap<UserId, Vec<Role, std::collections::HashMap<UserId, Vec<Role, UserId, Vec<Role>>>>>,
 }
 
 impl RoleManager {
     pub fn new() -> Self {
         Self {
-            user_roles: Arc::new(std::sync::Mutex::new(HashMap::new())),
+            user_roles: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(HashMap::new()))),
         }
     }
 
@@ -120,12 +122,12 @@ impl RoleManager {
     }
 
     pub async fn get_roles(&self, user_id: &UserId) -> Result<Vec<Role>, AuthzError> {
-        let user_roles = self.user_roles.lock().unwrap();
+        let user_roles: _ = self.user_roles.lock().unwrap();
         Ok(user_roles.get(user_id).cloned().unwrap_or_default())
     }
 
     pub async fn check_role(&self, user_id: &UserId, role: &Role) -> Result<bool, AuthzError> {
-        let user_roles = self.user_roles.lock().unwrap();
+        let user_roles: _ = self.user_roles.lock().unwrap();
         Ok(user_roles.get(user_id).map_or(false, |roles| roles.contains(role)))
     }
 }
@@ -140,13 +142,13 @@ pub struct AuthorizationService {
 impl AuthorizationService {
     pub fn new() -> Self {
         Self {
-            policy_engine: Arc::new(PolicyEngine::new()),
-            role_manager: Arc::new(RoleManager::new()),
+            policy_engine: Arc::new(std::sync::Mutex::new(PolicyEngine::new())),
+            role_manager: Arc::new(std::sync::Mutex::new(RoleManager::new())),
         }
     }
 
     pub async fn check_permission(&self, user_id: &UserId, action: &Action) -> Result<bool, AuthzError> {
-        let roles = self.role_manager.get_roles(user_id).await.unwrap_or_default();
+        let roles: _ = self.role_manager.get_roles(user_id).await.unwrap_or_default();
         Ok(self.policy_engine.check_permission(action, &roles))
     }
 

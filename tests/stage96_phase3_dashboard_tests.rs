@@ -27,31 +27,31 @@ mod dashboard_integration_tests {
     /// Test dashboard manager creation
     #[tokio::test]
     async fn test_dashboard_manager_creation() {
-        let config = DashboardConfig::default();
-        let manager = DashboardManager::new(config).await;
+        let config: _ = DashboardConfig::default();
+        let manager: _ = DashboardManager::new(config).await;
 
         assert!(manager.is_ok(), "Dashboard manager should be created successfully");
 
-        let manager = manager.unwrap();
+        let manager: _ = manager.clone();unwrap();
         assert!(manager.list_dashboards().await.is_empty());
     }
 
     /// Test dashboard creation
     #[tokio::test]
     async fn test_dashboard_creation() {
-        let config = DashboardConfig::default();
-        let manager = DashboardManager::new(config).await.unwrap();
+        let config: _ = DashboardConfig::default();
+        let manager: _ = DashboardManager::new(config).await.unwrap();
 
         // Create a dashboard
-        let uid = manager.create_dashboard("test-dashboard").await.unwrap();
+        let uid: _ = manager.create_dashboard("test-dashboard").await.unwrap();
         assert_eq!(uid, "test-dashboard");
 
         // Verify dashboard exists
-        let dashboards = manager.list_dashboards().await;
+        let dashboards: _ = manager.list_dashboards().await;
         assert!(dashboards.contains(&"test-dashboard".to_string()));
 
         // Verify dashboard data
-        let dashboard = manager.get_dashboard("test-dashboard").await.unwrap();
+        let dashboard: _ = manager.get_dashboard("test-dashboard").await.unwrap();
         assert_eq!(dashboard.title, "test-dashboard");
         assert_eq!(dashboard.uid, "test-dashboard");
         assert!(dashboard.panels.is_empty());
@@ -60,14 +60,14 @@ mod dashboard_integration_tests {
     /// Test panel management
     #[tokio::test]
     async fn test_panel_management() {
-        let config = DashboardConfig::default();
-        let manager = DashboardManager::new(config).await.unwrap();
+        let config: _ = DashboardConfig::default();
+        let manager: _ = DashboardManager::new(config).await.unwrap();
 
         // Create dashboard
-        let uid = manager.create_dashboard("test-panel-dashboard").await.unwrap();
+        let uid: _ = manager.create_dashboard("test-panel-dashboard").await.unwrap();
 
         // Create a panel
-        let panel = PanelConfig {
+        let panel: _ = PanelConfig {
             id: "cpu-usage".to_string(),
             title: "CPU Usage".to_string(),
             panel_type: "graph".to_string(),
@@ -97,25 +97,25 @@ mod dashboard_integration_tests {
         manager.add_panel(&uid, panel.clone()).await.unwrap();
 
         // Verify panel was added
-        let dashboard = manager.get_dashboard(&uid).await.unwrap();
+        let dashboard: _ = manager.get_dashboard(&uid).await.unwrap();
         assert_eq!(dashboard.panels.len(), 1);
         assert_eq!(dashboard.panels[0].id, "cpu-usage");
         assert_eq!(dashboard.panels[0].title, "CPU Usage");
 
         // Update panel
-        let mut updated_panel = panel.clone();
+        let mut updated_panel = panel.clone();clone();
         updated_panel.title = "CPU Usage (Updated)".to_string();
         manager.update_panel(&uid, "cpu-usage", updated_panel).await.unwrap();
 
         // Verify panel was updated
-        let dashboard = manager.get_dashboard(&uid).await.unwrap();
+        let dashboard: _ = manager.get_dashboard(&uid).await.unwrap();
         assert_eq!(dashboard.panels[0].title, "CPU Usage (Updated)");
 
         // Remove panel
         manager.remove_panel(&uid, "cpu-usage").await.unwrap();
 
         // Verify panel was removed
-        let dashboard = manager.get_dashboard(&uid).await.unwrap();
+        let dashboard: _ = manager.get_dashboard(&uid).await.unwrap();
         assert!(dashboard.panels.is_empty());
     }
 
@@ -123,14 +123,14 @@ mod dashboard_integration_tests {
     #[tokio::test]
     async fn test_line_chart_rendering() {
         let mut builder = LineChartBuilder::new();
-        let chart = builder
+        let chart: _ = builder
             .title("Test Line Chart")
             .dimensions(800, 600)
             .data(vec![10.0, 20.0, 30.0, 25.0, 35.0, 40.0])
             .build()
             .unwrap();
 
-        let svg = chart.render();
+        let svg: _ = chart.render();
         assert!(svg.contains("<svg"));
         assert!(svg.contains("Test Line Chart"));
         assert!(svg.contains("path"));
@@ -141,14 +141,14 @@ mod dashboard_integration_tests {
     #[tokio::test]
     async fn test_bar_chart_rendering() {
         let mut builder = BarChartBuilder::new();
-        let chart = builder
+        let chart: _ = builder
             .title("Test Bar Chart")
             .dimensions(800, 600)
             .data(vec![15.0, 25.0, 35.0, 45.0, 55.0])
             .build()
             .unwrap();
 
-        let svg = chart.render();
+        let svg: _ = chart.render();
         assert!(svg.contains("<svg"));
         assert!(svg.contains("Test Bar Chart"));
         assert!(svg.contains("rect"));
@@ -158,7 +158,7 @@ mod dashboard_integration_tests {
     #[tokio::test]
     async fn test_pie_chart_rendering() {
         let mut builder = PieChartBuilder::new();
-        let chart = builder
+        let chart: _ = builder
             .title("Test Pie Chart")
             .dimensions(600, 600)
             .data(30.0, "Category A")
@@ -167,7 +167,7 @@ mod dashboard_integration_tests {
             .build()
             .unwrap();
 
-        let svg = chart.render();
+        let svg: _ = chart.render();
         assert!(svg.contains("<svg"));
         assert!(svg.contains("Test Pie Chart"));
         assert!(svg.contains("path"));
@@ -190,7 +190,7 @@ mod dashboard_integration_tests {
         // Apply layout
         graph.apply_layout().await.unwrap();
 
-        let svg = graph.render();
+        let svg: _ = graph.render();
         assert!(svg.contains("<svg"));
         assert!(svg.contains("Test Topology"));
         assert!(svg.contains("line"));
@@ -200,7 +200,7 @@ mod dashboard_integration_tests {
     /// Test different layout algorithms
     #[tokio::test]
     async fn test_layout_algorithms() {
-        let config = VisualizationConfig::default();
+        let config: _ = VisualizationConfig::default();
         let mut graph = TopologyGraph::new(config);
 
         // Add nodes
@@ -244,7 +244,7 @@ mod dashboard_integration_tests {
         graph.layout_config = layout_config;
         graph.apply_layout().await.unwrap();
 
-        let svg = graph.render();
+        let svg: _ = graph.render();
         assert!(svg.contains("<svg"));
 
         // Test hierarchical layout
@@ -253,7 +253,7 @@ mod dashboard_integration_tests {
         graph.layout_config = layout_config;
         graph.apply_layout().await.unwrap();
 
-        let svg = graph.render();
+        let svg: _ = graph.render();
         assert!(svg.contains("<svg"));
 
         // Test circular layout
@@ -262,7 +262,7 @@ mod dashboard_integration_tests {
         graph.layout_config = layout_config;
         graph.apply_layout().await.unwrap();
 
-        let svg = graph.render();
+        let svg: _ = graph.render();
         assert!(svg.contains("<svg"));
 
         // Test grid layout
@@ -271,7 +271,7 @@ mod dashboard_integration_tests {
         graph.layout_config = layout_config;
         graph.apply_layout().await.unwrap();
 
-        let svg = graph.render();
+        let svg: _ = graph.render();
         assert!(svg.contains("<svg"));
     }
 
@@ -280,11 +280,11 @@ mod dashboard_integration_tests {
     async fn test_chart_renderer() {
         use beejs::observability::dashboard::renderer::{ChartRenderer, RenderConfig};
 
-        let config = RenderConfig::default();
-        let renderer = ChartRenderer::new(config);
+        let config: _ = RenderConfig::default();
+        let renderer: _ = ChartRenderer::new(config);
 
         // Create a chart
-        let chart_config = super::super::super::super::observability::dashboard::renderer::ChartConfig {
+        let chart_config: _ = super::super::super::super::observability::dashboard::renderer::ChartConfig {
             title: "Test Chart".to_string(),
             width: 800,
             height: 600,
@@ -318,7 +318,7 @@ mod dashboard_integration_tests {
         ).await.unwrap();
 
         // Update chart data
-        let chart_data = super::super::super::super::observability::dashboard::renderer::ChartData {
+        let chart_data: _ = super::super::super::super::observability::dashboard::renderer::ChartData {
             x_data: vec![1.0, 2.0, 3.0, 4.0, 5.0],
             y_data: vec![10.0, 20.0, 15.0, 25.0, 30.0],
             series: Vec::new(),
@@ -329,12 +329,12 @@ mod dashboard_integration_tests {
         renderer.update_chart_data("test-chart", chart_data).await.unwrap();
 
         // Render chart
-        let svg = renderer.render_chart_svg("test-chart").await.unwrap();
+        let svg: _ = renderer.render_chart_svg("test-chart").await.unwrap();
         assert!(svg.contains("<svg"));
         assert!(svg.contains("Test Chart"));
 
         // Check stats
-        let stats = renderer.get_chart_stats("test-chart").await.unwrap();
+        let stats: _ = renderer.get_chart_stats("test-chart").await.unwrap();
         assert!(stats.total_renders > 0);
     }
 
@@ -343,11 +343,11 @@ mod dashboard_integration_tests {
     async fn test_graph_renderer() {
         use beejs::observability::dashboard::renderer::{GraphRenderer, RenderConfig};
 
-        let config = RenderConfig::default();
-        let renderer = GraphRenderer::new(config);
+        let config: _ = RenderConfig::default();
+        let renderer: _ = GraphRenderer::new(config);
 
         // Create a graph
-        let nodes = vec![
+        let nodes: _ = vec![
             GraphNode {
                 id: "node1".to_string(),
                 label: "Node 1".to_string(),
@@ -374,7 +374,7 @@ mod dashboard_integration_tests {
             },
         ];
 
-        let edges = vec![
+        let edges: _ = vec![
             GraphEdge {
                 source: "node1".to_string(),
                 target: "node2".to_string(),
@@ -404,7 +404,7 @@ mod dashboard_integration_tests {
         renderer.apply_layout("test-graph").await.unwrap();
 
         // Render graph
-        let svg = renderer.render_graph_svg("test-graph").await.unwrap();
+        let svg: _ = renderer.render_graph_svg("test-graph").await.unwrap();
         assert!(svg.contains("<svg"));
         assert!(svg.contains("line"));
         assert!(svg.contains("circle"));
@@ -415,9 +415,9 @@ mod dashboard_integration_tests {
     async fn test_template_engine() {
         use beejs::observability::dashboard::renderer::{TemplateEngine, Template, TemplateFunction};
 
-        let engine = TemplateEngine::new();
+        let engine: _ = TemplateEngine::new();
 
-        let template = Template {
+        let template: _ = Template {
             id: "dashboard-template".to_string(),
             content: "Dashboard: {{title}}, Instance: {{instance}}, Time Range: {{time_range}}".to_string(),
             variables: vec!["title".to_string(), "instance".to_string(), "time_range".to_string()],
@@ -431,7 +431,7 @@ mod dashboard_integration_tests {
         variables.insert("instance".to_string(), serde_json::Value::String("beejs-1".to_string()));
         variables.insert("time_range".to_string(), serde_json::Value::String("Last 1 hour".to_string()));
 
-        let result = engine.render_template("dashboard-template", &variables).await.unwrap();
+        let result: _ = engine.render_template("dashboard-template", &variables).await.unwrap();
         assert!(result.contains("CPU Overview"));
         assert!(result.contains("beejs-1"));
         assert!(result.contains("Last 1 hour"));
@@ -442,8 +442,8 @@ mod dashboard_integration_tests {
     async fn test_metrics_collection() {
         use beejs::observability::dashboard::manager::{DashboardManager, DashboardConfig, MetricsCollector};
 
-        let config = DashboardConfig::default();
-        let manager = DashboardManager::new(config).await.unwrap();
+        let config: _ = DashboardConfig::default();
+        let manager: _ = DashboardManager::new(config).await.unwrap();
 
         // Start metrics collection
         manager.start_metrics_collection().await.unwrap();
@@ -452,7 +452,7 @@ mod dashboard_integration_tests {
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
         // Get metrics snapshot
-        let snapshot = manager.get_metrics_snapshot().await.unwrap();
+        let snapshot: _ = manager.get_metrics_snapshot().await.unwrap();
         assert!(snapshot.is_empty() || !snapshot.is_empty()); // May be empty if no metrics available
 
         // Stop metrics collection
@@ -463,15 +463,17 @@ mod dashboard_integration_tests {
     #[tokio::test]
     async fn test_grafana_client_conversion() {
         use beejs::observability::dashboard::manager::{DashboardManager, DashboardConfig};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
-        let config = DashboardConfig::default();
-        let manager = DashboardManager::new(config).await.unwrap();
+        let config: _ = DashboardConfig::default();
+        let manager: _ = DashboardManager::new(config).await.unwrap();
 
         // Create a dashboard with panels
-        let uid = manager.create_dashboard("grafana-test").await.unwrap();
+        let uid: _ = manager.create_dashboard("grafana-test").await.unwrap();
 
         // Export to Grafana format
-        let grafana_dashboard = manager.export_dashboard(&uid).await.unwrap();
+        let grafana_dashboard: _ = manager.export_dashboard(&uid).await.unwrap();
         assert!(grafana_dashboard.get("dashboard").is_some());
         assert!(grafana_dashboard.get("folderId").is_some());
     }
@@ -488,14 +490,14 @@ mod dashboard_integration_tests {
         config.enable_realtime = false;
         config.enable_templating = false;
 
-        let manager = DashboardManager::new(config).await.unwrap();
+        let manager: _ = DashboardManager::new(config).await.unwrap();
         assert_eq!(manager.list_dashboards().await.len(), 1); // Should have overview dashboard
     }
 
     /// Test color palette
     #[tokio::test]
     fn test_color_palette() {
-        let palette = ColorPalette {
+        let palette: _ = ColorPalette {
             primary: "#3b82f6".to_string(),
             secondary: "#10b981".to_string(),
             tertiary: "#f59e0b".to_string(),
@@ -516,7 +518,7 @@ mod dashboard_integration_tests {
         let mut metadata = std::collections::HashMap::new();
         metadata.insert("category".to_string(), serde_json::Value::String("test".to_string()));
 
-        let series = DataSeries {
+        let series: _ = DataSeries {
             name: "Test Series".to_string(),
             data: vec![
                 DataPoint {
@@ -553,7 +555,7 @@ mod dashboard_integration_tests {
     /// Test axis configuration
     #[tokio::test]
     fn test_axis_configuration() {
-        let axis = AxisConfig {
+        let axis: _ = AxisConfig {
             show: true,
             min: Some(0.0),
             max: Some(100.0),
@@ -574,7 +576,7 @@ mod dashboard_integration_tests {
     async fn test_chart_builder_fluent_interface() {
         // Test Line Chart Builder
         let mut line_builder = LineChartBuilder::new();
-        let line_chart = line_builder
+        let line_chart: _ = line_builder
             .title("Line Chart Test")
             .dimensions(1000, 700)
             .data(vec![10.0, 20.0, 30.0])
@@ -585,7 +587,7 @@ mod dashboard_integration_tests {
 
         // Test Bar Chart Builder
         let mut bar_builder = BarChartBuilder::new();
-        let bar_chart = bar_builder
+        let bar_chart: _ = bar_builder
             .title("Bar Chart Test")
             .dimensions(900, 600)
             .data(vec![15.0, 25.0, 35.0])
@@ -596,7 +598,7 @@ mod dashboard_integration_tests {
 
         // Test Pie Chart Builder
         let mut pie_builder = PieChartBuilder::new();
-        let pie_chart = pie_builder
+        let pie_chart: _ = pie_builder
             .title("Pie Chart Test")
             .dimensions(500, 500)
             .data(40.0, "A")
@@ -610,15 +612,15 @@ mod dashboard_integration_tests {
     /// Test error handling
     #[tokio::test]
     async fn test_error_handling() {
-        let config = DashboardConfig::default();
-        let manager = DashboardManager::new(config).await.unwrap();
+        let config: _ = DashboardConfig::default();
+        let manager: _ = DashboardManager::new(config).await.unwrap();
 
         // Try to get non-existent dashboard
-        let dashboard = manager.get_dashboard("non-existent").await;
+        let dashboard: _ = manager.get_dashboard("non-existent").await;
         assert!(dashboard.is_none());
 
         // Try to add panel to non-existent dashboard
-        let panel = PanelConfig {
+        let panel: _ = PanelConfig {
             id: "test".to_string(),
             title: "Test".to_string(),
             panel_type: "graph".to_string(),
@@ -639,34 +641,34 @@ mod dashboard_integration_tests {
             },
         };
 
-        let result = manager.add_panel("non-existent", panel).await;
+        let result: _ = manager.add_panel("non-existent", panel).await;
         assert!(result.is_err());
 
         // Test chart rendering with empty data
-        let config = VisualizationConfig::default();
-        let line_chart = LineChart::new(config);
-        let result = line_chart.render_svg();
+        let config: _ = VisualizationConfig::default();
+        let line_chart: _ = LineChart::new(config);
+        let result: _ = line_chart.render_svg();
         assert!(result.is_err());
     }
 
     /// Test performance characteristics
     #[tokio::test]
     async fn test_performance() {
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
         // Create and render a complex chart
         let mut builder = LineChartBuilder::new();
         let data: Vec<f64> = (0..100).map(|i| (i as f64 * 0.1).sin() * 50.0 + 50.0).collect();
 
-        let chart = builder
+        let chart: _ = builder
             .title("Performance Test Chart")
             .dimensions(1920, 1080)
             .data(data)
             .build()
             .unwrap();
 
-        let render_time = start_time.elapsed();
-        let svg = chart.render();
+        let render_time: _ = start_time.elapsed();
+        let svg: _ = chart.render();
 
         // Verify chart was rendered
         assert!(svg.contains("<svg"));
@@ -679,15 +681,15 @@ mod dashboard_integration_tests {
     /// Test concurrent operations
     #[tokio::test]
     async fn test_concurrent_operations() {
-        let config = DashboardConfig::default();
-        let manager = DashboardManager::new(config).await.unwrap();
+        let config: _ = DashboardConfig::default();
+        let manager: _ = DashboardManager::new(config).await.unwrap();
 
         // Create multiple dashboards concurrently
         let mut handles = Vec::new();
 
         for i in 0..10 {
-            let manager_ref = &manager;
-            let handle = tokio::spawn(async move {
+            let manager_ref: _ = &manager;
+            let handle: _ = tokio::spawn(async move {
                 let uid = format!("dashboard-{}", i);
                 manager_ref.create_dashboard(&uid).await.unwrap();
                 uid
@@ -701,7 +703,7 @@ mod dashboard_integration_tests {
         }
 
         // Verify all dashboards were created
-        let dashboards = manager.list_dashboards().await;
+        let dashboards: _ = manager.list_dashboards().await;
         assert_eq!(dashboards.len(), 11); // 10 created + 1 overview
     }
 }

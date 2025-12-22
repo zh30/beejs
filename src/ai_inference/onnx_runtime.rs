@@ -37,7 +37,7 @@ pub struct OnnxSession {
     /// 输出名称列表
     output_names: Vec<String>,
     /// 会话元数据
-    metadata: std::collections::HashMap<String, String>,
+    metadata: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// ONNX GPU 加速器
@@ -126,10 +126,10 @@ impl Default for OnnxEngineFactory {
 impl EngineFactory for OnnxEngineFactory {
     async fn create(&self, engine_type: EngineType) -> Result<Box<dyn InferenceEngine>> {
         // 创建 ONNX 会话
-        let session = OnnxSession::new()?;
+        let session: _ = OnnxSession::new()?;
 
         // 创建 GPU 加速器（如果支持）
-        let gpu_accelerator = match engine_type.clone() {
+        let gpu_accelerator: _ = match engine_type.clone() {
             EngineType::CUDA | EngineType::ROCm | EngineType::Metal => {
                 Some(OnnxGPUAccelerator::new(engine_type.clone()).await?)
             }
@@ -137,11 +137,11 @@ impl EngineFactory for OnnxEngineFactory {
         };
 
         // 创建优化器
-        let optimizer = Some(OnnxOptimizer::new());
+        let optimizer: _ = Some(OnnxOptimizer::new());
 
         // 创建引擎统计
-        let stats = Arc::new(RwLock::new(EngineStats {
-            engine_name: "ONNXRuntime".to_string(),
+        let stats: _ = Arc::new(std::sync::Mutex::new(RwLock::new(EngineStats {
+            engine_name: "ONNXRuntime".to_string()),
             total_inferences: 0,
             successful_inferences: 0,
             failed_inferences: 0,
@@ -152,8 +152,8 @@ impl EngineFactory for OnnxEngineFactory {
             cache_hit_rate: 0.0,
         }));
 
-        let engine = OnnxEngine {
-            session: Arc::new(session),
+        let engine: _ = OnnxEngine {
+            session: Arc::new(std::sync::Mutex::new(session)),
             gpu_accelerator,
             optimizer,
             stats,
@@ -203,7 +203,7 @@ impl OnnxSession {
     /// 执行推理
     pub async fn infer(&self, input: &Tensor, gpu_accelerator: Option<&OnnxGPUAccelerator>) -> Result<Tensor> {
         // 模拟推理计算时间
-        let compute_time = match gpu_accelerator {
+        let compute_time: _ = match gpu_accelerator {
             Some(_) => Duration::from_millis(5), // GPU 加速
             None => Duration::from_millis(15),   // CPU 计算
         };
@@ -211,7 +211,7 @@ impl OnnxSession {
         tokio::time::sleep(compute_time).await;
 
         // 模拟输出张量（实际实现中会调用 ONNX Runtime 推理）
-        let output = Tensor::new(vec![1.0; 1000], vec![1, 1000])?;
+        let output: _ = Tensor::new(vec![1.0; 1000], vec![1, 1000])?;
 
         Ok(output)
     }
@@ -221,13 +221,13 @@ impl OnnxGPUAccelerator {
     /// 创建新的 GPU 加速器
     pub async fn new(engine_type: EngineType) -> Result<Self> {
         // 检查 GPU 可用性
-        let device_id = 0; // 默认设备 ID
+        let device_id: _ = 0; // 默认设备 ID
 
         // 初始化内存池
-        let memory_pool = GPUMemoryPool::new(1024 * 1024 * 1024)?; // 1GB 内存池
+        let memory_pool: _ = GPUMemoryPool::new(1024 * 1024 * 1024)?; // 1GB 内存池
 
         // 初始化流管理器
-        let stream_manager = StreamManager::new(4)?; // 4 个并发流
+        let stream_manager: _ = StreamManager::new(4)?; // 4 个并发流
 
         Ok(OnnxGPUAccelerator {
             device_type: engine_type,
@@ -253,14 +253,14 @@ impl GPUMemoryPool {
     fn new(pool_size: usize) -> Result<Self> {
         Ok(GPUMemoryPool {
             pool_size,
-            available_blocks: Arc::new(Mutex::new(Vec::new())),
+            available_blocks: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
         })
     }
 
     /// 分配内存
     pub fn allocate(&self, size: usize) -> Result<MemoryBlock> {
         // 简化实现：模拟内存分配
-        let block = MemoryBlock {
+        let block: _ = MemoryBlock {
             size,
             offset: 0,
         };
@@ -287,7 +287,7 @@ impl StreamManager {
 
         Ok(StreamManager {
             stream_count,
-            active_streams: Arc::new(Mutex::new(streams)),
+            active_streams: Arc::new(std::sync::Mutex::new(Mutex::new(streams))),
         })
     }
 
@@ -362,12 +362,12 @@ impl InferenceEngine for OnnxEngine {
         // 应用优化（如果启用）
         if options.optimization {
             if let Some(optimizer) = &self.optimizer {
-                let _ = optimizer.optimize(model_path).await?;
+                let _: _ = optimizer.optimize(model_path).await?;
             }
         }
 
         // 创建模型句柄
-        let model_handle = ModelHandle {
+        let model_handle: _ = ModelHandle {
             id: format!("onnx_model_{}", uuid::Uuid::new_v4()),
             path: model_path.to_string(),
             format: ModelFormat::ONNX,
@@ -380,12 +380,12 @@ impl InferenceEngine for OnnxEngine {
     }
 
     async fn infer(&self, model: &ModelHandle, input: &Tensor) -> Result<InferenceResult> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 执行推理
-        let output = self.session.infer(input, self.gpu_accelerator.as_ref()).await?;
+        let output: _ = self.session.infer(input, self.gpu_accelerator.as_ref()).await?;
 
-        let inference_time = start.elapsed();
+        let inference_time: _ = start.elapsed();
 
         // 更新统计信息
         {
@@ -408,7 +408,7 @@ impl InferenceEngine for OnnxEngine {
         let mut results = Vec::with_capacity(inputs.len());
 
         for input in inputs {
-            let result = self.infer(model, input).await?;
+            let result: _ = self.infer(model, input).await?;
             results.push(result);
         }
 
@@ -421,13 +421,13 @@ impl InferenceEngine for OnnxEngine {
         input: Tensor,
     ) -> Result<tokio::sync::mpsc::Receiver<Result<Tensor>>> {
         let (tx, rx) = tokio::sync::mpsc::channel(10);
-        let session = Arc::clone(&self.session);
-        let gpu_accelerator = self.gpu_accelerator.clone();
+        let session: _ = Arc::clone(&self.session);
+        let gpu_accelerator: _ = self.gpu_accelerator.clone();
 
         // 启动异步推理任务
         tokio::spawn(async move {
-            let output = session.infer(&input, gpu_accelerator.as_ref()).await?;
-            let _ = tx.send(Ok(output)).await;
+            let output: _ = session.infer(&input, gpu_accelerator.as_ref()).await?;
+            let _: _ = tx.send(Ok(output)).await;
             Ok::<(), anyhow::Error>(())
         });
 
@@ -463,10 +463,10 @@ impl InferenceEngine for OnnxEngine {
 
     async fn warmup(&self, model: &ModelHandle) -> Result<()> {
         // 创建预热输入
-        let warmup_input = Tensor::new(vec![0.0; 3 * 224 * 224], vec![1, 3, 224, 224])?;
+        let warmup_input: _ = Tensor::new(vec![0.0; 3 * 224 * 224], vec![1, 3, 224, 224])?;
 
         // 执行一次推理来预热
-        let _ = self.infer(model, &warmup_input).await?;
+        let _: _ = self.infer(model, &warmup_input).await?;
 
         Ok(())
     }
@@ -477,7 +477,7 @@ impl InferenceEngine for OnnxEngine {
     }
 
     async fn get_stats(&self) -> Result<EngineStats> {
-        let stats = self.stats.read().await;
+        let stats: _ = self.stats.read().await;
         Ok(stats.clone())
     }
 }
@@ -485,11 +485,13 @@ impl InferenceEngine for OnnxEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_onnx_engine_creation() -> Result<()> {
-        let factory = OnnxEngineFactory::new();
-        let engine = factory.create(EngineType::CPU).await?;
+        let factory: _ = OnnxEngineFactory::new();
+        let engine: _ = factory.create(EngineType::CPU).await?;
 
         assert_eq!(engine.name(), "ONNXRuntime");
         assert!(engine.is_available());
@@ -498,15 +500,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_onnx_model_loading() -> Result<()> {
-        let factory = OnnxEngineFactory::new();
-        let engine = factory.create(EngineType::CPU).await?;
+        let factory: _ = OnnxEngineFactory::new();
+        let engine: _ = factory.create(EngineType::CPU).await?;
 
         // 创建临时模型文件
-        let temp_dir = std::env::temp_dir();
-        let model_path = temp_dir.join("test_model.onnx");
+        let temp_dir: _ = std::env::temp_dir();
+        let model_path: _ = temp_dir.join("test_model.onnx");
         std::fs::write(&model_path, "dummy model data")?;
 
-        let options = InferenceOptions {
+        let options: _ = InferenceOptions {
             engine_type: EngineType::CPU,
             batch_size: None,
             optimization: false,
@@ -515,7 +517,7 @@ mod tests {
             custom_options: std::collections::HashMap::new(),
         };
 
-        let model_handle = engine.load_model(&model_path.to_string_lossy(), options).await?;
+        let model_handle: _ = engine.load_model(&model_path.to_string_lossy(), options).await?;
         assert_eq!(model_handle.format, ModelFormat::ONNX);
 
         // 清理
@@ -525,10 +527,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_onnx_inference() -> Result<()> {
-        let factory = OnnxEngineFactory::new();
-        let engine = factory.create(EngineType::CPU).await?;
+        let factory: _ = OnnxEngineFactory::new();
+        let engine: _ = factory.create(EngineType::CPU).await?;
 
-        let model = ModelHandle {
+        let model: _ = ModelHandle {
             id: "test".to_string(),
             path: "test.onnx".to_string(),
             format: ModelFormat::ONNX,
@@ -537,8 +539,8 @@ mod tests {
             metadata: std::collections::HashMap::new(),
         };
 
-        let input = Tensor::new(vec![1.0; 3 * 224 * 224], vec![1, 3, 224, 224])?;
-        let result = engine.infer(&model, &input).await?;
+        let input: _ = Tensor::new(vec![1.0; 3 * 224 * 224], vec![1, 3, 224, 224])?;
+        let result: _ = engine.infer(&model, &input).await?;
 
         assert_eq!(result.output.shape(), &vec![1, 1000]);
         Ok(())
@@ -546,10 +548,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_onnx_batch_inference() -> Result<()> {
-        let factory = OnnxEngineFactory::new();
-        let engine = factory.create(EngineType::CPU).await?;
+        let factory: _ = OnnxEngineFactory::new();
+        let engine: _ = factory.create(EngineType::CPU).await?;
 
-        let model = ModelHandle {
+        let model: _ = ModelHandle {
             id: "test".to_string(),
             path: "test.onnx".to_string(),
             format: ModelFormat::ONNX,
@@ -560,21 +562,21 @@ mod tests {
 
         let mut inputs = Vec::new();
         for _ in 0..4 {
-            let input = Tensor::new(vec![1.0; 3 * 224 * 224], vec![1, 3, 224, 224])?;
+            let input: _ = Tensor::new(vec![1.0; 3 * 224 * 224], vec![1, 3, 224, 224])?;
             inputs.push(input);
         }
 
-        let results = engine.batch_infer(&model, &inputs).await?;
+        let results: _ = engine.batch_infer(&model, &inputs).await?;
         assert_eq!(results.len(), 4);
         Ok(())
     }
 
     #[tokio::test]
     async fn test_onnx_stream_inference() -> Result<()> {
-        let factory = OnnxEngineFactory::new();
-        let engine = factory.create(EngineType::CPU).await?;
+        let factory: _ = OnnxEngineFactory::new();
+        let engine: _ = factory.create(EngineType::CPU).await?;
 
-        let model = ModelHandle {
+        let model: _ = ModelHandle {
             id: "test".to_string(),
             path: "test.onnx".to_string(),
             format: ModelFormat::ONNX,
@@ -583,7 +585,7 @@ mod tests {
             metadata: std::collections::HashMap::new(),
         };
 
-        let input = Tensor::new(vec![1.0; 3 * 224 * 224], vec![1, 3, 224, 224])?;
+        let input: _ = Tensor::new(vec![1.0; 3 * 224 * 224], vec![1, 3, 224, 224])?;
         let mut receiver = engine.infer_stream(&model, input).await?;
 
         if let Some(result) = receiver.recv().await {

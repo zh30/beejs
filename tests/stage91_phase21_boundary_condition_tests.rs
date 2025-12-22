@@ -3,11 +3,13 @@
 
 use beejs::RuntimeLite;
 use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 测试超大数值操作
 #[tokio::test]
 async fn test_extreme_numeric_values() -> Result<(), Box<dyn std::error::Error>> {
-    let code = r#"
+    let code: _ = r#"
         // 测试最大安全整数
         const maxSafe = Number.MAX_SAFE_INTEGER;
         const result1 = maxSafe + 1;
@@ -39,7 +41,7 @@ async fn test_extreme_numeric_values() -> Result<(), Box<dyn std::error::Error>>
         "Successfully handled extreme numeric values";
     "#;
 
-    let result = RuntimeLite::new(false)?.execute_standard(code);
+    let result: _ = RuntimeLite::new(false)?.execute_standard(code);
     assert!(result.is_ok());
     Ok(())
 }
@@ -47,7 +49,7 @@ async fn test_extreme_numeric_values() -> Result<(), Box<dyn std::error::Error>>
 /// 测试极长字符串操作
 #[tokio::test]
 async fn test_extreme_string_length() -> Result<(), Box<dyn std::error::Error>> {
-    let code = r#"
+    let code: _ = r#"
         // 测试极长字符串
         const longStr = 'A'.repeat(1000000);
         assert(longStr.length === 1000000);
@@ -63,7 +65,7 @@ async fn test_extreme_string_length() -> Result<(), Box<dyn std::error::Error>> 
         "Successfully handled extreme string lengths";
     "#;
 
-    let result = RuntimeLite::new(false)?.execute_standard(code);
+    let result: _ = RuntimeLite::new(false)?.execute_standard(code);
     assert!(result.is_ok());
     Ok(())
 }
@@ -71,27 +73,27 @@ async fn test_extreme_string_length() -> Result<(), Box<dyn std::error::Error>> 
 /// 测试极深的对象嵌套
 #[tokio::test]
 async fn test_extreme_object_nesting() -> Result<(), Box<dyn std::error::Error>> {
-    let code = r#"
+    let code: _ = r#"
         // 测试极深对象嵌套（1000层）
         let obj = {};
-        let current = obj;
-        for (let i = 0; i < 1000; i++) {
+        let current: _ = obj;
+        for (let i: _ = 0; i < 1000; i++) {
             current.next = {};
-            current = current.next;
+            current = current.clone();next;
         }
         current.value = 'deep';
 
         // 验证嵌套
-        let deep = obj;
-        for (let i = 0; i < 1000; i++) {
-            deep = deep.next;
+        let deep: _ = obj;
+        for (let i: _ = 0; i < 1000; i++) {
+            deep = deep.clone();next;
         }
         assert(deep.value === 'deep');
 
         "Successfully handled extreme object nesting";
     "#;
 
-    let result = RuntimeLite::new(false)?.execute_standard(code);
+    let result: _ = RuntimeLite::new(false)?.execute_standard(code);
     assert!(result.is_ok());
     Ok(())
 }
@@ -99,10 +101,10 @@ async fn test_extreme_object_nesting() -> Result<(), Box<dyn std::error::Error>>
 /// 测试极大量数组操作
 #[tokio::test]
 async fn test_extreme_array_size() -> Result<(), Box<dyn std::error::Error>> {
-    let code = r#"
+    let code: _ = r#"
         // 测试极大数组
         const largeArray = new Array(100000);
-        for (let i = 0; i < 100000; i++) {
+        for (let i: _ = 0; i < 100000; i++) {
             largeArray[i] = i;
         }
         assert(largeArray.length === 100000);
@@ -121,7 +123,7 @@ async fn test_extreme_array_size() -> Result<(), Box<dyn std::error::Error>> {
         "Successfully handled extreme array sizes";
     "#;
 
-    let result = RuntimeLite::new(false)?.execute_standard(code);
+    let result: _ = RuntimeLite::new(false)?.execute_standard(code);
     assert!(result.is_ok());
     Ok(())
 }
@@ -129,10 +131,10 @@ async fn test_extreme_array_size() -> Result<(), Box<dyn std::error::Error>> {
 /// 测试边界条件的内存分配
 #[tokio::test]
 async fn test_memory_allocation_boundaries() -> Result<(), Box<dyn std::error::Error>> {
-    let code = r#"
+    let code: _ = r#"
         // 测试多次快速分配和释放
         const start = Date.now();
-        for (let i = 0; i < 10000; i++) {
+        for (let i: _ = 0; i < 10000; i++) {
             const arr = new Array(1000).fill(i);
             arr.length = 0; // 释放
         }
@@ -143,7 +145,7 @@ async fn test_memory_allocation_boundaries() -> Result<(), Box<dyn std::error::E
         "Successfully handled memory allocation boundaries";
     "#;
 
-    let result = RuntimeLite::new(false)?.execute_standard(code);
+    let result: _ = RuntimeLite::new(false)?.execute_standard(code);
     assert!(result.is_ok());
     Ok(())
 }
@@ -151,10 +153,10 @@ async fn test_memory_allocation_boundaries() -> Result<(), Box<dyn std::error::E
 /// 测试并发边界条件
 #[tokio::test]
 async fn test_concurrent_boundaries() -> Result<(), Box<dyn std::error::Error>> {
-    let code = r#"
+    let code: _ = r#"
         // 测试大量并发操作
         const promises = [];
-        for (let i = 0; i < 1000; i++) {
+        for (let i: _ = 0; i < 1000; i++) {
             promises.push(new Promise(resolve => {
                 setTimeout(() => resolve(i * i), 1);
             }));
@@ -168,7 +170,7 @@ async fn test_concurrent_boundaries() -> Result<(), Box<dyn std::error::Error>> 
         "Successfully handled concurrent boundaries";
     "#;
 
-    let result = RuntimeLite::new(false)?.execute_standard(code);
+    let result: _ = RuntimeLite::new(false)?.execute_standard(code);
     assert!(result.is_ok());
     Ok(())
 }
@@ -176,7 +178,7 @@ async fn test_concurrent_boundaries() -> Result<(), Box<dyn std::error::Error>> 
 /// 测试类型转换边界
 #[tokio::test]
 async fn test_type_conversion_boundaries() -> Result<(), Box<dyn std::error::Error>> {
-    let code = r#"
+    let code: _ = r#"
         // 测试各种类型转换
         assert(Number('0') === 0);
         assert(Number('abc') === NaN);
@@ -202,7 +204,7 @@ async fn test_type_conversion_boundaries() -> Result<(), Box<dyn std::error::Err
         "Successfully handled type conversion boundaries";
     "#;
 
-    let result = RuntimeLite::new(false)?.execute_standard(code);
+    let result: _ = RuntimeLite::new(false)?.execute_standard(code);
     assert!(result.is_ok());
     Ok(())
 }
@@ -210,7 +212,7 @@ async fn test_type_conversion_boundaries() -> Result<(), Box<dyn std::error::Err
 /// 测试异常边界条件
 #[tokio::test]
 async fn test_exception_boundaries() -> Result<(), Box<dyn std::error::Error>> {
-    let code = r#"
+    let code: _ = r#"
         // 测试未捕获异常
         try {
             throw new Error('Test error');
@@ -230,7 +232,7 @@ async fn test_exception_boundaries() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         // 测试 finally 块
-        let finallyRan = false;
+        let finallyRan: _ = false;
         try {
             throw new Error('Test');
         } catch (e) {
@@ -243,7 +245,7 @@ async fn test_exception_boundaries() -> Result<(), Box<dyn std::error::Error>> {
         "Successfully handled exception boundaries";
     "#;
 
-    let result = RuntimeLite::new(false)?.execute_standard(code);
+    let result: _ = RuntimeLite::new(false)?.execute_standard(code);
     assert!(result.is_ok());
     Ok(())
 }
@@ -251,7 +253,7 @@ async fn test_exception_boundaries() -> Result<(), Box<dyn std::error::Error>> {
 /// 测试正则表达式边界
 #[tokio::test]
 async fn test_regex_boundaries() -> Result<(), Box<dyn std::error::Error>> {
-    let code = r#"
+    let code: _ = r#"
         // 测试复杂正则表达式
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         assert(emailRegex.test('test@example.com'));
@@ -268,7 +270,7 @@ async fn test_regex_boundaries() -> Result<(), Box<dyn std::error::Error>> {
         "Successfully handled regex boundaries";
     "#;
 
-    let result = RuntimeLite::new(false)?.execute_standard(code);
+    let result: _ = RuntimeLite::new(false)?.execute_standard(code);
     assert!(result.is_ok());
     Ok(())
 }
@@ -276,7 +278,7 @@ async fn test_regex_boundaries() -> Result<(), Box<dyn std::error::Error>> {
 /// 测试日期边界
 #[tokio::test]
 async fn test_date_boundaries() -> Result<(), Box<dyn std::error::Error>> {
-    let code = r#"
+    let code: _ = r#"
         // 测试最小/最大日期
         const minDate = new Date(-8640000000000000);
         const maxDate = new Date(8640000000000000);
@@ -295,7 +297,7 @@ async fn test_date_boundaries() -> Result<(), Box<dyn std::error::Error>> {
         "Successfully handled date boundaries";
     "#;
 
-    let result = RuntimeLite::new(false)?.execute_standard(code);
+    let result: _ = RuntimeLite::new(false)?.execute_standard(code);
     assert!(result.is_ok());
     Ok(())
 }
@@ -303,10 +305,10 @@ async fn test_date_boundaries() -> Result<(), Box<dyn std::error::Error>> {
 /// 测试 JSON 序列化边界
 #[tokio::test]
 async fn test_json_serialization_boundaries() -> Result<(), Box<dyn std::error::Error>> {
-    let code = r#"
+    let code: _ = r#"
         // 测试大对象序列化
         const largeObj = {};
-        for (let i = 0; i < 1000; i++) {
+        for (let i: _ = 0; i < 1000; i++) {
             largeObj['key' + i] = 'value' + i;
         }
         const jsonStr = JSON.stringify(largeObj);
@@ -318,7 +320,7 @@ async fn test_json_serialization_boundaries() -> Result<(), Box<dyn std::error::
         assert(JSON.stringify(NaN) === 'null');
 
         // 测试循环引用处理（应该抛出错误）
-        let circularRef = {};
+        let circularRef: _ = {};
         circularRef.self = circularRef;
         try {
             JSON.stringify(circularRef);
@@ -330,7 +332,7 @@ async fn test_json_serialization_boundaries() -> Result<(), Box<dyn std::error::
         "Successfully handled JSON serialization boundaries";
     "#;
 
-    let result = RuntimeLite::new(false)?.execute_standard(code);
+    let result: _ = RuntimeLite::new(false)?.execute_standard(code);
     assert!(result.is_ok());
     Ok(())
 }
@@ -338,7 +340,7 @@ async fn test_json_serialization_boundaries() -> Result<(), Box<dyn std::error::
 /// 测试函数调用深度边界
 #[tokio::test]
 async fn test_function_call_depth_boundaries() -> Result<(), Box<dyn std::error::Error>> {
-    let code = r#"
+    let code: _ = r#"
         // 测试极深递归调用
         function deepRecursion(n) {
             if (n <= 0) return 0;
@@ -359,7 +361,7 @@ async fn test_function_call_depth_boundaries() -> Result<(), Box<dyn std::error:
         "Successfully handled function call depth boundaries";
     "#;
 
-    let result = RuntimeLite::new(false)?.execute_standard(code);
+    let result: _ = RuntimeLite::new(false)?.execute_standard(code);
     assert!(result.is_ok());
     Ok(())
 }
@@ -367,7 +369,7 @@ async fn test_function_call_depth_boundaries() -> Result<(), Box<dyn std::error:
 /// 测试模块加载边界
 #[tokio::test]
 async fn test_module_loading_boundaries() -> Result<(), Box<dyn std::error::Error>> {
-    let code = r#"
+    let code: _ = r#"
         // 测试循环依赖处理
         // 由于模块系统的复杂性，这里测试基本加载能力
         assert(typeof require === 'function');
@@ -377,7 +379,7 @@ async fn test_module_loading_boundaries() -> Result<(), Box<dyn std::error::Erro
         "Successfully handled module loading boundaries";
     "#;
 
-    let result = RuntimeLite::new(false)?.execute_standard(code);
+    let result: _ = RuntimeLite::new(false)?.execute_standard(code);
     assert!(result.is_ok());
     Ok(())
 }
@@ -385,9 +387,9 @@ async fn test_module_loading_boundaries() -> Result<(), Box<dyn std::error::Erro
 /// 性能测试：边界条件下的响应时间
 #[tokio::test]
 async fn test_boundary_performance() -> Result<(), Box<dyn std::error::Error>> {
-    let start = Instant::now();
+    let start: _ = Instant::now();
 
-    let code = r#"
+    let code: _ = r#"
         // 执行一系列边界操作
         for (let i = 0; i < 100000; i++) {
             // 边界操作：空值检查
@@ -399,8 +401,8 @@ async fn test_boundary_performance() -> Result<(), Box<dyn std::error::Error>> {
         }
     "#;
 
-    let result = RuntimeLite::new(false)?.execute_standard(code);
-    let duration = start.elapsed();
+    let result: _ = RuntimeLite::new(false)?.execute_standard(code);
+    let duration: _ = start.elapsed();
 
     assert!(result.is_ok());
     assert!(duration < Duration::from_secs(10));

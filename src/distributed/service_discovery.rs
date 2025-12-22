@@ -44,23 +44,23 @@ pub struct GossipMessage {
 #[derive(Debug, Clone)]
 pub struct ServiceDiscovery {
     config: DiscoveryConfig,
-    nodes: Arc<RwLock<HashMap<String, NodeMetadata>>>,
+    nodes: Arc<RwLock<HashMap<String, NodeMetadata, std::collections::HashMap<String, NodeMetadata, String, NodeMetadata>>>>,
     gossip_history: Arc<RwLock<Vec<GossipMessage>>>,
 }
 
 impl ServiceDiscovery {
     /// 创建新的服务发现实例
     pub fn new(config: DiscoveryConfig) -> Self {
-        let discovery = Self {
+        let discovery: _ = Self {
             config: config.clone(),
-            nodes: Arc::new(RwLock::new(HashMap::new())),
-            gossip_history: Arc::new(RwLock::new(Vec::new())),
+            nodes: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            gossip_history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         };
 
         // 启动后台 gossip 任务
-        let config_clone = config.clone();
-        let nodes_clone = discovery.nodes.clone();
-        let gossip_history_clone = discovery.gossip_history.clone();
+        let config_clone: _ = config.clone();
+        let nodes_clone: _ = discovery.nodes.clone();
+        let gossip_history_clone: _ = discovery.gossip_history.clone();
 
         tokio::spawn(async move {
             let mut interval = interval(config_clone.gossip_interval);
@@ -80,7 +80,7 @@ impl ServiceDiscovery {
     /// 注册当前节点
     pub async fn register_self(&self, node_info: NodeInfo) {
         let mut nodes = self.nodes.write().await;
-        let metadata = NodeMetadata {
+        let metadata: _ = NodeMetadata {
             cpu_cores: node_info.cpu_cores,
             memory_gb: node_info.memory_gb,
             location: node_info.location.clone(),
@@ -109,7 +109,7 @@ impl ServiceDiscovery {
             info!("Updated node: {}", node_info.id);
         } else {
             // 新节点注册
-            let metadata = NodeMetadata {
+            let metadata: _ = NodeMetadata {
                 cpu_cores: node_info.cpu_cores,
                 memory_gb: node_info.memory_gb,
                 location: node_info.location.clone(),
@@ -130,11 +130,11 @@ impl ServiceDiscovery {
 
     /// 获取已知节点列表
     pub async fn get_known_nodes(&self) -> Vec<NodeInfo> {
-        let nodes = self.nodes.read().await;
-        let known_nodes = Vec::new();
+        let nodes: _ = self.nodes.read().await;
+        let known_nodes: _ = Vec::new();
 
         // 清理超时节点
-        let now = Instant::now();
+        let now: _ = Instant::now();
         let timeout_nodes: Vec<String> = nodes
             .iter()
             .filter(|(_, metadata)| now.duration_since(metadata.last_heartbeat) > self.config.node_timeout)
@@ -159,11 +159,11 @@ impl ServiceDiscovery {
 
     /// Gossip 协议实现
     async fn gossip_protocol(
-        nodes: Arc<RwLock<HashMap<String, NodeMetadata>>>,
+        nodes: Arc<RwLock<HashMap<String, NodeMetadata, std::collections::HashMap<String, NodeMetadata, String, NodeMetadata>>>>,
         _gossip_history: Arc<RwLock<Vec<GossipMessage>>>,
         _config: &DiscoveryConfig,
     ) {
-        let known_nodes = {
+        let known_nodes: _ = {
             let nodes_guard = nodes.read().await;
             nodes_guard.keys().cloned().collect::<Vec<_>>()
         };
@@ -175,7 +175,7 @@ impl ServiceDiscovery {
         // 随机选择 gossip 目标
         
         let mut rng = rand::thread_rng();
-        let target_count = (known_nodes.len() / 3).max(1);
+        let target_count: _ = (known_nodes.len() / 3).max(1);
 
         for _ in 0..target_count {
             if let Some(target) = known_nodes.iter().choose(&mut rng) {
@@ -188,7 +188,7 @@ impl ServiceDiscovery {
 
     /// 广播 Gossip 消息
     async fn broadcast_gossip(&self, node_info: &NodeInfo) {
-        let message = GossipMessage {
+        let message: _ = GossipMessage {
             cluster_name: self.config.cluster_name.clone(),
             node_id: node_info.id.clone(),
             node_info: node_info.clone(),
@@ -210,9 +210,9 @@ impl ServiceDiscovery {
             return; // 忽略不同集群的消息
         }
 
-        let node_id = message.node_id.clone();
+        let node_id: _ = message.node_id.clone();
         let mut nodes = self.nodes.write().await;
-        let metadata = NodeMetadata {
+        let metadata: _ = NodeMetadata {
             cpu_cores: message.node_info.cpu_cores,
             memory_gb: message.node_info.memory_gb,
             location: message.node_info.location.clone(),
@@ -230,7 +230,7 @@ impl ServiceDiscovery {
     /// 清理离线节点
     pub async fn cleanup_offline_nodes(&self) -> usize {
         let mut nodes = self.nodes.write().await;
-        let now = Instant::now();
+        let now: _ = Instant::now();
 
         let offline_nodes: Vec<String> = nodes
             .iter()
@@ -248,8 +248,8 @@ impl ServiceDiscovery {
 
     /// 获取集群统计信息
     pub async fn get_cluster_stats(&self) -> ClusterStats {
-        let nodes = self.nodes.read().await;
-        let now = Instant::now();
+        let nodes: _ = self.nodes.read().await;
+        let now: _ = Instant::now();
 
         let (online, offline, total) = {
             let mut online_count = 0;
@@ -302,18 +302,20 @@ impl ClusterStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_service_discovery_registration() {
-        let config = DiscoveryConfig {
+        let config: _ = DiscoveryConfig {
             cluster_name: "test-cluster".to_string(),
             gossip_interval: Duration::from_millis(100),
             node_timeout: Duration::from_secs(5),
         };
 
-        let discovery = ServiceDiscovery::new(config);
+        let discovery: _ = ServiceDiscovery::new(config);
 
-        let node = NodeInfo {
+        let node: _ = NodeInfo {
             id: "test-node".to_string(),
             address: "192.168.1.1:8080".to_string(),
             cpu_cores: 4,
@@ -327,22 +329,22 @@ mod tests {
         // 等待 gossip 传播
         tokio::time::sleep(Duration::from_millis(200)).await;
 
-        let stats = discovery.get_cluster_stats().await;
+        let stats: _ = discovery.get_cluster_stats().await;
         assert_eq!(stats.total_nodes, 1);
         assert_eq!(stats.online_nodes, 1);
     }
 
     #[tokio::test]
     async fn test_node_cleanup() {
-        let config = DiscoveryConfig {
+        let config: _ = DiscoveryConfig {
             cluster_name: "test-cluster".to_string(),
             gossip_interval: Duration::from_millis(100),
             node_timeout: Duration::from_millis(300),
         };
 
-        let discovery = ServiceDiscovery::new(config);
+        let discovery: _ = ServiceDiscovery::new(config);
 
-        let node = NodeInfo {
+        let node: _ = NodeInfo {
             id: "test-node".to_string(),
             address: "192.168.1.1:8080".to_string(),
             cpu_cores: 4,
@@ -356,10 +358,10 @@ mod tests {
         // 等待超时
         tokio::time::sleep(Duration::from_millis(400)).await;
 
-        let cleaned_count = discovery.cleanup_offline_nodes().await;
+        let cleaned_count: _ = discovery.cleanup_offline_nodes().await;
         assert_eq!(cleaned_count, 1);
 
-        let stats = discovery.get_cluster_stats().await;
+        let stats: _ = discovery.get_cluster_stats().await;
         assert_eq!(stats.total_nodes, 0);
     }
 }

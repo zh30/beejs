@@ -22,17 +22,17 @@ impl RealTimeMonitor {
     /// 创建新的实时监控器
     pub fn new(config: MonitorConfig) -> Self {
         Self {
-            metrics_collector: Arc::new(RwLock::new(MetricsCollector::new())),
+            metrics_collector: Arc::new(std::sync::Mutex::new(RwLock::new(MetricsCollector::new()))),
             config,
         }
     }
 
     /// 启动监控
     pub async fn start(&self) -> Result<(), super::BenchmarkError> {
-        let metrics_collector = self.metrics_collector.clone();
+        let metrics_collector: _ = self.metrics_collector.clone();
 
         // 启动定期指标收集
-        let interval = self.config.collection_interval;
+        let interval: _ = self.config.collection_interval;
         let mut interval_timer = tokio::time::interval(interval);
 
         tokio::spawn(async move {
@@ -54,7 +54,7 @@ impl RealTimeMonitor {
 
     /// 获取当前指标
     pub async fn get_current_metrics(&self) -> CurrentMetrics {
-        let collector = self.metrics_collector.read().await;
+        let collector: _ = self.metrics_collector.read().await;
         collector.get_current_metrics().await
     }
 }
@@ -143,7 +143,7 @@ impl MetricsCollector {
 
     /// 记录基准测试结果
     pub async fn record_benchmark_result(&mut self, result: &BenchmarkResult) {
-        let metrics = BenchmarkMetrics {
+        let metrics: _ = BenchmarkMetrics {
             test_name: result.name.clone(),
             runtime: result.runtime,
             execution_time: result.average_duration(),
@@ -331,9 +331,9 @@ impl PerformanceDashboard {
 
     /// 生成 HTML 报告
     pub async fn generate_html_report(&self) -> Result<String, super::BenchmarkError> {
-        let metrics = self.monitor.get_current_metrics().await;
+        let metrics: _ = self.monitor.get_current_metrics().await;
 
-        let html = format!(r#"
+        let html: _ = format!(r#"
 <!DOCTYPE html>
 <html>
 <head>
@@ -415,11 +415,13 @@ fn format_bytes(bytes: u64) -> String {
 mod tests {
     use super::*;
     use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_real_time_monitor() {
-        let config = MonitorConfig::new();
-        let monitor = RealTimeMonitor::new(config);
+        let config: _ = MonitorConfig::new();
+        let monitor: _ = RealTimeMonitor::new(config);
 
         // 创建测试结果
         let mut result = super::super::result::BenchmarkResult::new("test", Runtime::Beejs);
@@ -430,16 +432,16 @@ mod tests {
         monitor.record_benchmark_result(&result).await;
 
         // 获取当前指标
-        let metrics = monitor.get_current_metrics().await;
+        let metrics: _ = monitor.get_current_metrics().await;
         println!("Metrics: {:?}", metrics);
     }
 
     #[tokio::test]
     async fn test_performance_dashboard() {
-        let config = MonitorConfig::new();
-        let dashboard = PerformanceDashboard::new(config);
+        let config: _ = MonitorConfig::new();
+        let dashboard: _ = PerformanceDashboard::new(config);
 
-        let html = dashboard.generate_html_report().await.unwrap();
+        let html: _ = dashboard.generate_html_report().await.unwrap();
         println!("HTML Report:\n{}", html);
     }
 }

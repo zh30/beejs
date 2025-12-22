@@ -80,9 +80,9 @@ impl Repl {
         isolate: &mut v8::OwnedIsolate,
         verbose: bool,
     ) -> Result<()> {
-        let handle_scope = &mut v8::HandleScope::new(isolate);
-        let context = v8::Context::new(handle_scope);
-        let context_scope = &mut v8::ContextScope::new(handle_scope, context);
+        let handle_scope: _ = &mut v8::HandleScope::new(isolate);
+        let context: _ = v8::Context::new(handle_scope);
+        let context_scope: _ = &mut v8::ContextScope::new(handle_scope, context);
 
         // Set up console and Node.js APIs
         self.setup_repl_environment(context_scope, &context)?;
@@ -111,7 +111,7 @@ impl Repl {
                 }
             }
 
-            let trimmed = input.trim();
+            let trimmed: _ = input.trim();
 
             // Handle special commands
             if trimmed.starts_with('.') {
@@ -127,7 +127,7 @@ impl Repl {
             }
 
             // Handle multi-line input
-            let code = self.collect_multiline_input(trimmed)?;
+            let code: _ = self.collect_multiline_input(trimmed)?;
 
             // Add to history
             if self.config.enable_history && !code.is_empty() {
@@ -135,7 +135,7 @@ impl Repl {
             }
 
             // Execute the code
-            let start = std::time::Instant::now();
+            let start: _ = std::time::Instant::now();
             match self.execute_in_context(context_scope, &code) {
                 Ok(result) => {
                     self.execution_count += 1;
@@ -145,7 +145,7 @@ impl Repl {
                     }
 
                     if self.config.show_time || verbose {
-                        let elapsed = start.elapsed();
+                        let elapsed: _ = start.elapsed();
                         println!("⏱  {:.3}ms", elapsed.as_secs_f64() * 1000.0);
                     }
                 }
@@ -165,46 +165,46 @@ impl Repl {
         context: &v8::Local<v8::Context>,
     ) -> Result<()> {
         // Set up console API
-        let console = v8::Object::new(scope);
+        let console: _ = v8::Object::new(scope);
 
         // console.log
-        let log_func = v8::FunctionTemplate::new(scope, crate::console_log_callback);
+        let log_func: _ = v8::FunctionTemplate::new(scope, crate::console_log_callback);
         if let Some(log_instance) = log_func.get_function(scope) {
-            let log_key = v8::String::new(scope, "log").unwrap();
+            let log_key: _ = v8::String::new(scope, "log").unwrap();
             console.set(scope, log_key.into(), log_instance.into());
         }
 
         // console.error
-        let error_func = v8::FunctionTemplate::new(scope, crate::console_error_callback);
+        let error_func: _ = v8::FunctionTemplate::new(scope, crate::console_error_callback);
         if let Some(error_instance) = error_func.get_function(scope) {
-            let error_key = v8::String::new(scope, "error").unwrap();
+            let error_key: _ = v8::String::new(scope, "error").unwrap();
             console.set(scope, error_key.into(), error_instance.into());
         }
 
         // console.warn
-        let warn_func = v8::FunctionTemplate::new(scope, crate::console_warn_callback);
+        let warn_func: _ = v8::FunctionTemplate::new(scope, crate::console_warn_callback);
         if let Some(warn_instance) = warn_func.get_function(scope) {
-            let warn_key = v8::String::new(scope, "warn").unwrap();
+            let warn_key: _ = v8::String::new(scope, "warn").unwrap();
             console.set(scope, warn_key.into(), warn_instance.into());
         }
 
         // console.info
-        let info_func = v8::FunctionTemplate::new(scope, crate::console_info_callback);
+        let info_func: _ = v8::FunctionTemplate::new(scope, crate::console_info_callback);
         if let Some(info_instance) = info_func.get_function(scope) {
-            let info_key = v8::String::new(scope, "info").unwrap();
+            let info_key: _ = v8::String::new(scope, "info").unwrap();
             console.set(scope, info_key.into(), info_instance.into());
         }
 
         // console.debug
-        let debug_func = v8::FunctionTemplate::new(scope, crate::console_debug_callback);
+        let debug_func: _ = v8::FunctionTemplate::new(scope, crate::console_debug_callback);
         if let Some(debug_instance) = debug_func.get_function(scope) {
-            let debug_key = v8::String::new(scope, "debug").unwrap();
+            let debug_key: _ = v8::String::new(scope, "debug").unwrap();
             console.set(scope, debug_key.into(), debug_instance.into());
         }
 
         // Set console on global
-        let global = context.global(scope);
-        let console_key = v8::String::new(scope, "console").unwrap();
+        let global: _ = context.global(scope);
+        let console_key: _ = v8::String::new(scope, "console").unwrap();
         global.set(scope, console_key.into(), console.into());
 
         // Set up Node.js APIs
@@ -221,13 +221,13 @@ impl Repl {
         code: &str,
     ) -> Result<String> {
         // Create try-catch for error handling
-        let try_catch = &mut v8::TryCatch::new(scope);
+        let try_catch: _ = &mut v8::TryCatch::new(scope);
 
         // Compile the code
-        let source = v8::String::new(try_catch, code)
+        let source: _ = v8::String::new(try_catch, code)
             .ok_or_else(|| anyhow::anyhow!("Failed to create source string"))?;
 
-        let script = match v8::Script::compile(try_catch, source, None) {
+        let script: _ = match v8::Script::compile(try_catch, source, None) {
             Some(s) => s,
             None => {
                 return self.format_exception(try_catch);
@@ -237,7 +237,7 @@ impl Repl {
         // Run the script
         match script.run(try_catch) {
             Some(result) => {
-                let result_str = result
+                let result_str: _ = result
                     .to_string(try_catch)
                     .map(|s| s.to_rust_string_lossy(try_catch))
                     .unwrap_or_else(|| "undefined".to_string());
@@ -251,13 +251,13 @@ impl Repl {
     fn format_exception(&self, try_catch: &mut v8::TryCatch<v8::HandleScope>) -> Result<String> {
         if let Some(exception) = try_catch.exception() {
             if let Some(message) = try_catch.message() {
-                let msg = message
+                let msg: _ = message
                     .get(try_catch)
                     .to_rust_string_lossy(try_catch);
-                let line = message.get_line_number(try_catch).unwrap_or(0);
+                let line: _ = message.get_line_number(try_catch).unwrap_or(0);
                 Err(anyhow::anyhow!("Line {}: {}", line, msg))
             } else {
-                let err_str = exception
+                let err_str: _ = exception
                     .to_string(try_catch)
                     .map(|s| s.to_rust_string_lossy(try_catch))
                     .unwrap_or_else(|| "Unknown error".to_string());
@@ -290,7 +290,7 @@ impl Repl {
             ".clear" | ".cls" => {
                 // Clear screen using ANSI escape codes
                 print!("\x1B[2J\x1B[1;1H");
-                let _ = io::stdout().flush();
+                let _: _ = io::stdout().flush();
                 false
             }
             ".history" => {
@@ -302,7 +302,7 @@ impl Repl {
                 false
             }
             cmd if cmd.starts_with(".load ") => {
-                let path = &cmd[6..].trim();
+                let path: _ = &cmd[6..].trim();
                 self.load_file(path);
                 false
             }
@@ -337,7 +337,7 @@ impl Repl {
         }
 
         for (i, cmd) in self.history.iter().enumerate() {
-            let display = if cmd.len() > 60 {
+            let display: _ = if cmd.len() > 60 {
                 format!("{}...", &cmd[..57])
             } else {
                 cmd.clone()
@@ -371,12 +371,12 @@ impl Repl {
 
         // Simple heuristic: count braces/brackets/parens
         loop {
-            let open_braces = code.matches('{').count();
-            let close_braces = code.matches('}').count();
-            let open_parens = code.matches('(').count();
-            let close_parens = code.matches(')').count();
-            let open_brackets = code.matches('[').count();
-            let close_brackets = code.matches(']').count();
+            let open_braces: _ = code.matches('{').count();
+            let close_braces: _ = code.matches('}').count();
+            let open_parens: _ = code.matches('(').count();
+            let close_parens: _ = code.matches(')').count();
+            let open_brackets: _ = code.matches('[').count();
+            let close_brackets: _ = code.matches(']').count();
 
             // Check if expression is complete
             if open_braces <= close_braces
@@ -433,10 +433,12 @@ impl Repl {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_repl_config_default() {
-        let config = ReplConfig::default();
+        let config: _ = ReplConfig::default();
         assert!(config.show_result);
         assert!(!config.show_time);
         assert_eq!(config.prompt, "beejs> ");
@@ -445,7 +447,7 @@ mod tests {
 
     #[test]
     fn test_repl_creation() {
-        let repl = Repl::with_defaults();
+        let repl: _ = Repl::with_defaults();
         assert_eq!(repl.execution_count(), 0);
         assert!(repl.history().is_empty());
     }

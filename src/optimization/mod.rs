@@ -6,3 +6,5 @@ pub mod performance_monitor;
 
 pub use adaptive_optimizer::{AdaptiveOptimizer, OptimizationPolicy, PerformanceHistory, CodeFeatures, OptimizationHints};
 pub use performance_monitor::{PerformanceMonitor, MetricsCollector, OptimizationStats};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};

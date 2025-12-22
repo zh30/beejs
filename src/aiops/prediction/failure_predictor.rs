@@ -170,7 +170,7 @@ pub struct MLFailurePredictor {
 impl MLFailurePredictor {
     /// Create a new ML-based failure predictor
     pub fn new(config: FailurePredictorConfig) -> Self {
-        let anomaly_config = AnomalyDetectorConfig {
+        let anomaly_config: _ = AnomalyDetectorConfig {
             threshold_std_dev: 2.0,
             min_samples: 10,
             window_size: 30,
@@ -178,7 +178,7 @@ impl MLFailurePredictor {
             enable_pattern: false,
         };
 
-        let trend_config = TrendAnalyzerConfig {
+        let trend_config: _ = TrendAnalyzerConfig {
             min_data_points: 5,
             trend_threshold: 0.1,
             r_squared_threshold: 0.5,
@@ -201,7 +201,7 @@ impl MLFailurePredictor {
         trend_result: &crate::prediction::TrendResult,
         anomaly_count: usize,
     ) -> FailureType {
-        let avg_value = metrics.iter().map(|m| m.value).sum::<f64>() / metrics.len() as f64;
+        let avg_value: _ = metrics.iter().map(|m| m.value).sum::<f64>() / metrics.len() as f64;
 
         match metrics.first().map(|m| &m.metric_type) {
             Some(MetricType::CpuUsage) | Some(MetricType::MemoryUsage) => {
@@ -246,9 +246,9 @@ impl MLFailurePredictor {
         anomaly_count: usize,
         total_metrics: usize,
     ) -> f64 {
-        let anomaly_ratio = anomaly_count as f64 / total_metrics as f64;
-        let trend_factor = trend_result.trend.strength;
-        let direction_factor = match trend_result.trend.direction {
+        let anomaly_ratio: _ = anomaly_count as f64 / total_metrics as f64;
+        let trend_factor: _ = trend_result.trend.strength;
+        let direction_factor: _ = match trend_result.trend.direction {
             crate::prediction::TrendDirection::Upward
             | crate::prediction::TrendDirection::Downward => 1.0,
             _ => 0.5,
@@ -271,13 +271,13 @@ impl MLFailurePredictor {
         }
 
         // Simple linear extrapolation to threshold
-        let threshold = 100.0; // Assume 100% is critical threshold
-        let current_value = trend_result.trend.predicted_next;
-        let slope = trend_result.trend.slope;
+        let threshold: _ = 100.0; // Assume 100% is critical threshold
+        let current_value: _ = trend_result.trend.predicted_next;
+        let slope: _ = trend_result.trend.slope;
 
         if slope > 0.0 && current_value < threshold {
-            let remaining = threshold - current_value;
-            let time_units = remaining / slope.abs();
+            let remaining: _ = threshold - current_value;
+            let time_units: _ = remaining / slope.abs();
 
             // Assume each unit is 1 second (simplified)
             Some(Duration::from_secs_f64(time_units.max(0.0)))
@@ -388,7 +388,7 @@ impl FailurePredictor for MLFailurePredictor {
         }
 
         // Analyze trends
-        let trend_result = self.trend_analyzer.analyze_trend(metrics).await?;
+        let trend_result: _ = self.trend_analyzer.analyze_trend(metrics).await?;
 
         // Detect anomalies
         let mut anomaly_count = 0;
@@ -396,8 +396,8 @@ impl FailurePredictor for MLFailurePredictor {
 
         for chunk in metrics.chunks(self.anomaly_detector.config.window_size) {
             if chunk.len() >= self.anomaly_detector.config.min_samples {
-                let history = &chunk[..chunk.len() - 1];
-                let current = &chunk[chunk.len() - 1];
+                let history: _ = &chunk[..chunk.len() - 1];
+                let current: _ = &chunk[chunk.len() - 1];
 
                 if let Ok(result) = self.anomaly_detector.detect_anomaly(current, history).await {
                     if result.is_anomaly {
@@ -409,18 +409,18 @@ impl FailurePredictor for MLFailurePredictor {
         }
 
         // Calculate risk score
-        let risk_score = self.calculate_risk_score(&trend_result, anomaly_count, metrics.len());
+        let risk_score: _ = self.calculate_risk_score(&trend_result, anomaly_count, metrics.len());
 
         // Determine if failure is predicted
-        let is_predicted = risk_score > self.config.risk_threshold;
+        let is_predicted: _ = risk_score > self.config.risk_threshold;
 
-        let prediction = if is_predicted {
+        let prediction: _ = if is_predicted {
             let failure_type = self.determine_failure_type(metrics, &trend_result, anomaly_count);
-            let probability = risk_score;
-            let confidence = self.determine_confidence(probability);
-            let time_to_failure = self.estimate_time_to_failure(&trend_result);
-            let warning_signs = self.generate_warning_signs(&trend_result, anomaly_count);
-            let recommended_actions = self.generate_recommended_actions(&failure_type);
+            let probability: _ = risk_score;
+            let confidence: _ = self.determine_confidence(probability);
+            let time_to_failure: _ = self.estimate_time_to_failure(&trend_result);
+            let warning_signs: _ = self.generate_warning_signs(&trend_result, anomaly_count);
+            let recommended_actions: _ = self.generate_recommended_actions(&failure_type);
 
             Some(FailurePrediction {
                 failure_type,
@@ -436,7 +436,7 @@ impl FailurePredictor for MLFailurePredictor {
             None
         };
 
-        let contributing_factors = vec![
+        let contributing_factors: _ = vec![
             format!("Anomaly count: {}", anomaly_count),
             format!("Trend strength: {:.2}", trend_result.trend.strength),
             format!("Trend direction: {:?}", trend_result.trend.direction),
@@ -469,6 +469,8 @@ impl FailurePredictor for MLFailurePredictor {
 mod tests {
     use super::*;
     use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     fn create_test_metric(value: f64, timestamp_secs: u64, metric_type: MetricType) -> Metric {
         Metric {
@@ -483,7 +485,7 @@ mod tests {
         let mut metrics = Vec::new();
         // Simulate degrading performance
         for i in 0..20 {
-            let value = 50.0 + (i as f64 * 3.0); // Steady increase
+            let value: _ = 50.0 + (i as f64 * 3.0); // Steady increase
             metrics.push(create_test_metric(value, i as u64, MetricType::CpuUsage));
         }
         metrics
@@ -492,7 +494,7 @@ mod tests {
     fn create_spike_metrics() -> Vec<Metric> {
         let mut metrics = Vec::new();
         for i in 0..10 {
-            let value = if i == 8 { 200.0 } else { 50.0 };
+            let value: _ = if i == 8 { 200.0 } else { 50.0 };
             metrics.push(create_test_metric(value, i as u64, MetricType::CpuUsage));
         }
         metrics
@@ -500,16 +502,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_predict_degrading_performance() {
-        let predictor = MLFailurePredictor::new(FailurePredictorConfig::default());
-        let metrics = create_degrading_metrics();
+        let predictor: _ = MLFailurePredictor::new(FailurePredictorConfig::default());
+        let metrics: _ = create_degrading_metrics();
 
-        let result = predictor.predict_failure(&metrics).await.unwrap();
+        let result: _ = predictor.predict_failure(&metrics).await.unwrap();
 
         assert!(result.is_predicted);
         assert!(result.risk_score > 0.5);
         assert!(result.prediction.is_some());
 
-        let prediction = result.prediction.unwrap();
+        let prediction: _ = result.prediction.unwrap();
         assert_eq!(prediction.failure_type, FailureType::PerformanceDegradation);
         assert!(matches!(
             prediction.confidence,
@@ -519,15 +521,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_predict_resource_exhaustion() {
-        let predictor = MLFailurePredictor::new(FailurePredictorConfig::default());
+        let predictor: _ = MLFailurePredictor::new(FailurePredictorConfig::default());
         let mut metrics = Vec::new();
 
         for i in 0..15 {
-            let value = 80.0 + (i as f64 * 1.5); // Approaching 100%
+            let value: _ = 80.0 + (i as f64 * 1.5); // Approaching 100%
             metrics.push(create_test_metric(value, i as u64, MetricType::MemoryUsage));
         }
 
-        let result = predictor.predict_failure(&metrics).await.unwrap();
+        let result: _ = predictor.predict_failure(&metrics).await.unwrap();
 
         assert!(result.is_predicted);
         assert!(result.risk_score > 0.7);
@@ -539,12 +541,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_no_failure_prediction() {
-        let predictor = MLFailurePredictor::new(FailurePredictorConfig::default());
+        let predictor: _ = MLFailurePredictor::new(FailurePredictorConfig::default());
         let metrics: Vec<Metric> = (0..15)
             .map(|i| create_test_metric(50.0, i as u64, MetricType::CpuUsage))
             .collect();
 
-        let result = predictor.predict_failure(&metrics).await.unwrap();
+        let result: _ = predictor.predict_failure(&metrics).await.unwrap();
 
         assert!(!result.is_predicted);
         assert!(result.risk_score < 0.7);
@@ -552,10 +554,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_predict_with_spike() {
-        let predictor = MLFailurePredictor::new(FailurePredictorConfig::default());
-        let metrics = create_spike_metrics();
+        let predictor: _ = MLFailurePredictor::new(FailurePredictorConfig::default());
+        let metrics: _ = create_spike_metrics();
 
-        let result = predictor.predict_failure(&metrics).await.unwrap();
+        let result: _ = predictor.predict_failure(&metrics).await.unwrap();
 
         assert!(result.is_predicted);
         assert!(result.risk_score > 0.5);
@@ -563,12 +565,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_insufficient_data() {
-        let predictor = MLFailurePredictor::new(FailurePredictorConfig::default());
+        let predictor: _ = MLFailurePredictor::new(FailurePredictorConfig::default());
         let metrics: Vec<Metric> = (0..5)
             .map(|i| create_test_metric(50.0, i as u64, MetricType::CpuUsage))
             .collect();
 
-        let result = predictor.predict_failure(&metrics).await.unwrap();
+        let result: _ = predictor.predict_failure(&metrics).await.unwrap();
 
         assert!(!result.is_predicted);
         assert_eq!(result.risk_score, 0.0);
@@ -579,10 +581,10 @@ mod tests {
         let mut config = FailurePredictorConfig::default();
         config.enable_time_to_failure = true;
 
-        let predictor = MLFailurePredictor::new(config);
-        let metrics = create_degrading_metrics();
+        let predictor: _ = MLFailurePredictor::new(config);
+        let metrics: _ = create_degrading_metrics();
 
-        let result = predictor.predict_failure(&metrics).await.unwrap();
+        let result: _ = predictor.predict_failure(&metrics).await.unwrap();
 
         if let Some(prediction) = result.prediction {
             if let Some(time_to_failure) = prediction.time_to_failure {
@@ -593,20 +595,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_warning_signs() {
-        let predictor = MLFailurePredictor::new(FailurePredictorConfig::default());
-        let metrics = create_degrading_metrics();
+        let predictor: _ = MLFailurePredictor::new(FailurePredictorConfig::default());
+        let metrics: _ = create_degrading_metrics();
 
-        let result = predictor.predict_failure(&metrics).await.unwrap();
+        let result: _ = predictor.predict_failure(&metrics).await.unwrap();
 
         assert!(!result.prediction.as_ref().unwrap().warning_signs.is_empty());
     }
 
     #[tokio::test]
     async fn test_recommended_actions() {
-        let predictor = MLFailurePredictor::new(FailurePredictorConfig::default());
-        let metrics = create_degrading_metrics();
+        let predictor: _ = MLFailurePredictor::new(FailurePredictorConfig::default());
+        let metrics: _ = create_degrading_metrics();
 
-        let result = predictor.predict_failure(&metrics).await.unwrap();
+        let result: _ = predictor.predict_failure(&metrics).await.unwrap();
 
         assert!(!result.prediction.as_ref().unwrap().recommended_actions.is_empty());
     }
@@ -616,10 +618,10 @@ mod tests {
         let mut config = FailurePredictorConfig::default();
         config.risk_threshold = 0.9; // Very high threshold
 
-        let predictor = MLFailurePredictor::new(config);
-        let metrics = create_degrading_metrics();
+        let predictor: _ = MLFailurePredictor::new(config);
+        let metrics: _ = create_degrading_metrics();
 
-        let result = predictor.predict_failure(&metrics).await.unwrap();
+        let result: _ = predictor.predict_failure(&metrics).await.unwrap();
 
         // Should not predict with very high threshold
         if !result.is_predicted {
@@ -630,11 +632,11 @@ mod tests {
     #[tokio::test]
     async fn test_model_update() {
         let mut predictor = MLFailurePredictor::new(FailurePredictorConfig::default());
-        let metrics = create_degrading_metrics();
+        let metrics: _ = create_degrading_metrics();
 
         predictor.update_model(&metrics).await.unwrap();
 
-        let confidence = predictor.get_confidence();
+        let confidence: _ = predictor.get_confidence();
         assert!(confidence > 0.0);
     }
 }

@@ -21,7 +21,7 @@ impl ErrorHandler {
     /// 创建新的错误处理器
     pub fn new(verbose: bool) -> Self {
         Self {
-            stats: Arc::new(Mutex::new(ErrorStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(ErrorStats::default()))),
             verbose,
         }
     }
@@ -49,7 +49,7 @@ impl ErrorHandler {
 
     /// 获取错误统计
     pub fn get_stats(&self) -> ErrorStats {
-        let stats = self.stats.lock().unwrap();
+        let stats: _ = self.stats.lock().unwrap();
         stats.clone()
     }
 
@@ -61,7 +61,7 @@ impl ErrorHandler {
 
     /// 检查错误率是否过高
     pub fn is_error_rate_high(&self, threshold: f64) -> bool {
-        let stats = self.stats.lock().unwrap();
+        let stats: _ = self.stats.lock().unwrap();
         stats.avg_error_rate > threshold
     }
 }
@@ -69,11 +69,13 @@ impl ErrorHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_error_handler_creation() {
-        let handler = ErrorHandler::new(true);
-        let stats = handler.get_stats();
+        let handler: _ = ErrorHandler::new(true);
+        let stats: _ = handler.get_stats();
         assert_eq!(stats.total_errors, 0);
         assert_eq!(stats.compilation_errors, 0);
         assert_eq!(stats.runtime_errors, 0);
@@ -81,7 +83,7 @@ mod tests {
 
     #[test]
     fn test_error_stats_reset() {
-        let handler = ErrorHandler::new(false);
+        let handler: _ = ErrorHandler::new(false);
         // 模拟一些错误
         let mut stats = handler.stats.lock().unwrap();
         stats.total_errors = 5;
@@ -90,7 +92,7 @@ mod tests {
         drop(stats);
 
         handler.reset_stats();
-        let new_stats = handler.get_stats();
+        let new_stats: _ = handler.get_stats();
         assert_eq!(new_stats.total_errors, 0);
         assert_eq!(new_stats.compilation_errors, 0);
         assert_eq!(new_stats.runtime_errors, 0);

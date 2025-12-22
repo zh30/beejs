@@ -1,4 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 // Stage 31.4: 包管理器测试套件
 // 测试范围：包安装、卸载、依赖解析、版本管理
 

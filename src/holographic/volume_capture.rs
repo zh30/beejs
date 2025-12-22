@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 //! 体积捕捉系统
 
 /// 颜色格式
@@ -69,9 +71,9 @@ impl VolumeCapture {
     /// 捕捉体积数据
     pub fn capture(&mut self) -> Result<&VolumeData, CaptureError> {
         let (x, y, z) = self.config.resolution;
-        let voxel_count = (x * y * z) as usize;
+        let voxel_count: _ = (x * y * z) as usize;
 
-        let volume = VolumeData {
+        let volume: _ = VolumeData {
             resolution: self.config.resolution,
             voxels: vec![Voxel::default(); voxel_count],
             timestamp: std::time::SystemTime::now(),

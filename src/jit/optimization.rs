@@ -68,8 +68,8 @@ pub enum OptimizationFlag {
 /// Hot path optimizer for critical code paths
 #[derive(Debug)]
 pub struct HotPathOptimizer {
-    hot_paths: HashMap<String, HotPathInfo>,
-    execution_counters: HashMap<String, u64>,
+    hot_paths: HashMap<String, HotPathInfo, std::collections::HashMap<String, HotPathInfo, String, HotPathInfo>>,
+    execution_counters: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
     optimization_threshold: u64,
 }
 
@@ -94,11 +94,11 @@ impl HotPathOptimizer {
 
     /// Mark a code path as hot
     pub fn mark_hot_path(&mut self, path_name: &str) {
-        let count = self.execution_counters.entry(path_name.to_string()).or_insert(0);
+        let count: _ = self.execution_counters.entry(path_name.to_string()).or_insert(0);
         *count += 1;
 
         if *count >= self.optimization_threshold {
-            let info = self.hot_paths.entry(path_name.to_string()).or_insert(HotPathInfo {
+            let info: _ = self.hot_paths.entry(path_name.to_string()).or_insert(HotPathInfo {
                 path_name: path_name.to_string(),
                 execution_count: *count,
                 first_seen: Instant::now(),
@@ -153,7 +153,7 @@ pub struct HotPathStats {
 #[derive(Debug)]
 pub struct FunctionInliner {
     max_inline_depth: usize,
-    inline_candidates: HashMap<String, InlineCandidate>,
+    inline_candidates: HashMap<String, InlineCandidate, std::collections::HashMap<String, InlineCandidate, String, InlineCandidate>>,
     inlined_functions: HashSet<String>,
 }
 
@@ -181,9 +181,9 @@ impl FunctionInliner {
         let mut inlined = Vec::new();
 
         for func in functions {
-            let candidate = self.analyze_function(func);
+            let candidate: _ = self.analyze_function(func);
             if candidate.can_inline {
-                let inlined_func = self.perform_inlining(func, &candidate);
+                let inlined_func: _ = self.perform_inlining(func, &candidate);
                 inlined.push(inlined_func);
                 self.inlined_functions.insert(candidate.function_name.clone());
             } else {
@@ -196,10 +196,10 @@ impl FunctionInliner {
 
     /// Analyze function for inlining
     fn analyze_function(&self, func: &str) -> InlineCandidate {
-        let size = func.len();
-        let complexity = self.calculate_complexity(func);
-        let call_sites = self.count_call_sites(func);
-        let can_inline = size < 256 && complexity < 10.0 && self.max_inline_depth > 0;
+        let size: _ = func.len();
+        let complexity: _ = self.calculate_complexity(func);
+        let call_sites: _ = self.count_call_sites(func);
+        let can_inline: _ = size < 256 && complexity < 10.0 && self.max_inline_depth > 0;
 
         InlineCandidate {
             function_name: self.extract_function_name(func),
@@ -251,7 +251,7 @@ impl FunctionInliner {
 /// Escape analysis for stack allocation opportunities
 #[derive(Debug)]
 pub struct EscapeAnalyzer {
-    escape_graph: HashMap<String, EscapeInfo>,
+    escape_graph: HashMap<String, EscapeInfo, std::collections::HashMap<String, EscapeInfo, String, EscapeInfo>>,
 }
 
 #[derive(Debug, Clone)]
@@ -307,9 +307,9 @@ impl EscapeAnalyzer {
     /// Extract variable name from declaration
     fn extract_variable_name(&self, line: &str) -> Option<String> {
         if let Some(start) = line.find("let ").or_else(|| line.find("const ").or_else(|| line.find("var "))) {
-            let after_keyword = &line[start + 4..];
+            let after_keyword: _ = &line[start + 4..];
             if let Some(end) = after_keyword.find('=') {
-                let name = after_keyword[..end].trim();
+                let name: _ = after_keyword[..end].trim();
                 if name.chars().all(|c| c.is_alphanumeric() || c == '_') {
                     return Some(name.to_string());
                 }
@@ -365,7 +365,7 @@ impl DeadCodeEliminator {
         let mut result = Vec::new();
 
         for line in lines {
-            let trimmed = line.trim();
+            let trimmed: _ = line.trim();
 
             // Check if function is used
             if trimmed.starts_with("function ") {
@@ -388,9 +388,9 @@ impl DeadCodeEliminator {
     fn extract_function_call(&self, line: &str) -> Option<String> {
         // Simple heuristic: look for pattern "function_name("
         if let Some(pos) = line.find('(') {
-            let before_paren = &line[..pos];
+            let before_paren: _ = &line[..pos];
             if let Some(space_pos) = before_paren.rfind(' ') {
-                let func_name = before_paren[space_pos + 1..].trim();
+                let func_name: _ = before_paren[space_pos + 1..].trim();
                 if func_name.chars().all(|c| c.is_alphanumeric() || c == '_') {
                     return Some(func_name.to_string());
                 }
@@ -566,10 +566,12 @@ pub struct JITOptimizationStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_v8_config_aggressive() {
-        let config = V8OptimizationConfig::aggressive();
+        let config: _ = V8OptimizationConfig::aggressive();
         assert!(config.is_valid());
         assert!(config.optimization_flags.len() >= 3);
     }
@@ -592,26 +594,26 @@ mod tests {
     #[test]
     fn test_function_inliner() {
         let mut inliner = FunctionInliner::new();
-        let functions = vec![
+        let functions: _ = vec![
             "function small() { return 42; }",
             "function medium(a) { return small() + a; }",
         ];
 
-        let inlined = inliner.inline_functions(&functions);
+        let inlined: _ = inliner.inline_functions(&functions);
         assert_eq!(inlined.len(), 2);
     }
 
     #[test]
     fn test_escape_analyzer() {
         let mut analyzer = EscapeAnalyzer::new();
-        let code = r#"
+        let code: _ = r#"
             function createObject() {
                 let obj = { value: 42 };
                 return obj;
             }
         "#;
 
-        let has_escape = analyzer.analyze(code);
+        let has_escape: _ = analyzer.analyze(code);
         // If code returns an object, it escapes
         assert!(has_escape);
     }
@@ -619,14 +621,14 @@ mod tests {
     #[test]
     fn test_dead_code_eliminator() {
         let mut eliminator = DeadCodeEliminator::new();
-        let code = r#"
+        let code: _ = r#"
             function test() {
                 let x = 1 + 1;
                 return x;
             }
         "#;
 
-        let optimized = eliminator.eliminate_dead_code(code);
+        let optimized: _ = eliminator.eliminate_dead_code(code);
         // Basic test that the method works
         assert!(optimized.contains("test"));
         assert!(optimized.contains("return"));
@@ -635,14 +637,14 @@ mod tests {
     #[test]
     fn test_optimization_pipeline() {
         let mut pipeline = OptimizationPipeline::new();
-        let code = r#"
+        let code: _ = r#"
             function compute(a, b) {
                 let result = a + b;
                 return result;
             }
         "#;
 
-        let optimized = pipeline.optimize(code);
+        let optimized: _ = pipeline.optimize(code);
         // Basic test that the pipeline works
         assert!(optimized.contains("compute"));
         assert!(optimized.contains("return"));
@@ -653,8 +655,8 @@ mod tests {
         let mut jit = JITOptimizer::new();
         jit.set_optimization_level(OptimizationLevel::Aggressive);
 
-        let code = "function test() { let x = 1 + 1; return x; }";
-        let optimized = jit.optimize(code);
+        let code: _ = "function test() { let x = 1 + 1; return x; }";
+        let optimized: _ = jit.optimize(code);
 
         assert!(!optimized.is_empty());
         assert!(jit.get_stats().v8_config_valid);

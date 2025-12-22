@@ -66,12 +66,12 @@ mod jit_compiler_tests {
     /// 性能基准测试: JIT 编译速度
     #[test]
     fn benchmark_jit_compilation_speed() {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // TODO: 执行 JIT 编译基准测试
         // 目标: 解释器 < 1ms, 基线编译 < 10ms, 优化编译 < 100ms
 
-        let duration = start.elapsed();
+        let duration: _ = start.elapsed();
         println!("JIT 编译耗时: {:?}", duration);
 
         // 断言编译时间在合理范围内
@@ -169,8 +169,8 @@ mod adaptive_optimization_tests {
         };
 
         // 创建 JIT 编译器配置
-        let config = JitCompilerConfig::default();
-        let jit_compiler = JitCompiler::new(config);
+        let config: _ = JitCompilerConfig::default();
+        let jit_compiler: _ = JitCompiler::new(config);
 
         // 验证初始状态：编译器创建成功
         assert!(true, "JIT compiler created successfully");
@@ -183,7 +183,7 @@ mod adaptive_optimization_tests {
     #[test]
     fn test_stage93_adjustment_factor_calculation() {
         // 测试边界情况
-        let test_cases = vec![
+        let test_cases: _ = vec![
             (10.0_f64, 10.0),    // 正常情况
             (100.0_f64, 1.0),    // 高阈值 -> 低因子
             (1000.0_f64, 0.1),   // 极高阈值 -> 最小因子
@@ -191,7 +191,7 @@ mod adaptive_optimization_tests {
         ];
 
         for (adaptive_threshold, _expected) in test_cases {
-            let adjustment_factor = (100.0_f64 / adaptive_threshold.max(1.0)).min(10.0).max(0.1);
+            let adjustment_factor: _ = (100.0_f64 / adaptive_threshold.max(1.0)).min(10.0).max(0.1);
 
             // 验证调整因子在合理范围内
             assert!(adjustment_factor >= 0.1 && adjustment_factor <= 10.0,
@@ -209,6 +209,8 @@ mod adaptive_optimization_tests {
 #[cfg(test)]
 mod stage93_inline_optimization_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试智能阈值调整
     /// 验证内联策略能够根据运行时反馈动态调整参数
@@ -217,7 +219,7 @@ mod stage93_inline_optimization_tests {
         println!("Stage 93 Phase 1.1: 测试智能阈值调整");
 
         // 模拟不同系统负载下的阈值调整
-        let load_scenarios = vec![
+        let load_scenarios: _ = vec![
             ("low_load", 50.0),      // 低负载，可以更激进
             ("medium_load", 100.0),  // 中等负载，标准策略
             ("high_load", 200.0),    // 高负载，需要保守
@@ -225,7 +227,7 @@ mod stage93_inline_optimization_tests {
 
         for (scenario, system_load) in load_scenarios {
             // 根据系统负载调整阈值
-            let adjustment_factor = match system_load {
+            let adjustment_factor: _ = match system_load {
                 x if x < 75.0 => 1.2,  // 低负载，更激进
                 x if x < 150.0 => 1.0, // 中等负载，标准
                 _ => 0.8,              // 高负载，更保守
@@ -248,7 +250,7 @@ mod stage93_inline_optimization_tests {
         println!("Stage 93 Phase 1.1: 测试多维度优化");
 
         // 模拟具有不同特征的函数
-        let function_scenarios = vec![
+        let function_scenarios: _ = vec![
             ("cache_friendly", 30, 100, 20.0, false),  // 缓存友好：小函数，频繁调用
             ("branch_heavy", 80, 50, 70.0, true),      // 分支密集：大函数，有副作用
             ("hot_path", 25, 200, 15.0, false),        // 热路径：极小函数，超高调用
@@ -257,10 +259,10 @@ mod stage93_inline_optimization_tests {
 
         for (name, size, calls, complexity, has_side_effects) in &function_scenarios {
             // 计算多维度得分
-            let cache_locality_score = (100.0 / *size as f64).min(5.0);  // 越小越好
-            let branch_prediction_cost = if *has_side_effects { 30.0 } else { 0.0 };
-            let call_frequency_bonus = (*calls as f64 / 10.0).min(20.0);  // 越高越好
-            let complexity_penalty = *complexity * 0.3;
+            let cache_locality_score: _ = (100.0 / *size as f64).min(5.0);  // 越小越好
+            let branch_prediction_cost: _ = if *has_side_effects { 30.0 } else { 0.0 };
+            let call_frequency_bonus: _ = (*calls as f64 / 10.0).min(20.0);  // 越高越好
+            let complexity_penalty: _ = *complexity * 0.3;
 
             let multi_dimensional_score =
                 cache_locality_score + call_frequency_bonus - branch_prediction_cost - complexity_penalty;
@@ -282,7 +284,7 @@ mod stage93_inline_optimization_tests {
         println!("Stage 93 Phase 1.1: 测试自适应配置");
 
         // 模拟不同系统配置
-        let system_configs = vec![
+        let system_configs: _ = vec![
             ("high_performance", 512, 15, 2.5),  // 高性能：更大阈值，更深内联
             ("balanced", 256, 10, 2.0),          // 平衡：中等配置
             ("memory_constrained", 128, 6, 1.5), // 内存受限：更小阈值
@@ -308,7 +310,7 @@ mod stage93_inline_optimization_tests {
         println!("Stage 93 Phase 1.1: 测试热路径优先内联");
 
         // 模拟不同热度的函数
-        let hotness_levels = vec![
+        let hotness_levels: _ = vec![
             ("cold", 0.1),
             ("warm", 0.5),
             ("hot", 0.8),
@@ -317,7 +319,7 @@ mod stage93_inline_optimization_tests {
 
         for (name, hotness) in &hotness_levels {
             // 根据热度调整内联阈值
-            let inline_threshold = match hotness {
+            let inline_threshold: _ = match hotness {
                 x if *x < 0.3 => 0.8,   // 冷代码，较严格
                 x if *x < 0.6 => 1.0,   // 温代码，标准阈值
                 x if *x < 0.9 => 1.5,   // 热代码，放宽阈值
@@ -340,7 +342,7 @@ mod stage93_inline_optimization_tests {
         println!("Stage 93 Phase 1.1: 测试性能预测");
 
         // 模拟不同场景的性能预测
-        let prediction_scenarios = vec![
+        let prediction_scenarios: _ = vec![
             ("small_function", 20, 100, 0.85),    // 小函数，高频调用，高预测收益
             ("medium_function", 60, 50, 0.60),    // 中等函数，中频调用
             ("large_function", 200, 20, 0.20),    // 大函数，低频调用
@@ -348,9 +350,9 @@ mod stage93_inline_optimization_tests {
 
         for (name, size, calls, predicted_benefit) in &prediction_scenarios {
             // 计算性能预测
-            let call_savings = (*calls as f64 * 0.001).min(0.5);  // 每次调用节省
-            let size_penalty = (*size as f64 * 0.0001).max(0.0); // 代码膨胀惩罚
-            let predicted_speedup = call_savings - size_penalty;
+            let call_savings: _ = (*calls as f64 * 0.001).min(0.5);  // 每次调用节省
+            let size_penalty: _ = (*size as f64 * 0.0001).max(0.0); // 代码膨胀惩罚
+            let predicted_speedup: _ = call_savings - size_penalty;
 
             println!("函数: {}, 预测加速: {:.3}, 实际预测: {:.2}",
                 name, predicted_speedup, predicted_benefit);
@@ -369,7 +371,7 @@ mod stage93_inline_optimization_tests {
         println!("Stage 93 Phase 1.1: 测试内联优化集成");
 
         // 模拟完整优化流程
-        let optimization_pipeline = vec![
+        let optimization_pipeline: _ = vec![
             "threshold_adjustment",  // 阈值调整
             "multi_dimensional_analysis",  // 多维度分析
             "adaptive_configuration",  // 自适应配置
@@ -383,7 +385,7 @@ mod stage93_inline_optimization_tests {
             println!("执行优化步骤: {}", step);
 
             // 每个步骤贡献一定分数
-            let step_score = match *step {
+            let step_score: _ = match *step {
                 "threshold_adjustment" => 20.0,
                 "multi_dimensional_analysis" => 25.0,
                 "adaptive_configuration" => 20.0,

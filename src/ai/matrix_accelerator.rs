@@ -143,22 +143,22 @@ impl MatrixAccelerator {
     pub fn gemm_optimized(&self, a: &Matrix, b: &Matrix) -> Matrix {
         assert_eq!(a.cols(), b.rows());
 
-        let rows = a.rows();
-        let cols = b.cols();
-        let k = a.cols();
+        let rows: _ = a.rows();
+        let cols: _ = b.cols();
+        let k: _ = a.cols();
 
         let mut result = Matrix::new(rows, cols);
 
         // 选择最佳块大小
-        let block_size = self.select_block_size();
+        let block_size: _ = self.select_block_size();
 
         // 分块矩阵乘法优化
         for ii in (0..rows).step_by(block_size) {
             for jj in (0..cols).step_by(block_size) {
                 for kk in (0..k).step_by(block_size) {
-                    let i_end = (ii + block_size).min(rows);
-                    let j_end = (jj + block_size).min(cols);
-                    let k_end = (kk + block_size).min(k);
+                    let i_end: _ = (ii + block_size).min(rows);
+                    let j_end: _ = (jj + block_size).min(cols);
+                    let k_end: _ = (kk + block_size).min(k);
 
                     self.multiply_blocks(
                         a,
@@ -183,7 +183,7 @@ impl MatrixAccelerator {
     pub fn vector_dot_product(&self, a: &[f32], b: &[f32]) -> f32 {
         assert_eq!(a.len(), b.len());
 
-        let len = a.len();
+        let len: _ = a.len();
         let mut sum = 0.0f32;
 
         // 根据硬件特性选择最佳实现
@@ -212,7 +212,7 @@ impl MatrixAccelerator {
         let mut results = Vec::with_capacity(batch.len());
 
         for pair in batch {
-            let result = self.gemm_optimized(&pair.a, &pair.b);
+            let result: _ = self.gemm_optimized(&pair.a, &pair.b);
             results.push(result);
         }
 
@@ -222,10 +222,10 @@ impl MatrixAccelerator {
 
     /// 优化矩阵内存布局
     pub fn optimize_layout(&self, matrix: &Matrix) -> OptimizedMatrix {
-        let block_size = self.select_block_size();
+        let block_size: _ = self.select_block_size();
 
         // 计算内存访问模式
-        let memory_accesses = (matrix.rows() * matrix.cols()) as u64;
+        let memory_accesses: _ = (matrix.rows() * matrix.cols()) as u64;
 
         OptimizedMatrix {
             original: matrix.clone(),
@@ -277,16 +277,16 @@ impl MatrixAccelerator {
         if is_x86_feature_detected!("avx512f") {
             use std::arch::x86_64::*;
             let mut sum = _mm512_setzero_ps();
-            let len = a.len() / 16;
+            let len: _ = a.len() / 16;
 
             for i in 0..len {
-                let a_chunk = _mm512_loadu_ps(&a[i * 16..]);
-                let b_chunk = _mm512_loadu_ps(&b[i * 16..]);
-                let prod = _mm512_mul_ps(a_chunk, b_chunk);
+                let a_chunk: _ = _mm512_loadu_ps(&a[i * 16..]);
+                let b_chunk: _ = _mm512_loadu_ps(&b[i * 16..]);
+                let prod: _ = _mm512_mul_ps(a_chunk, b_chunk);
                 sum = _mm512_add_ps(sum, prod);
             }
 
-            let result = _mm512_reduce_add_ps(sum);
+            let result: _ = _mm512_reduce_add_ps(sum);
             return result + self.accumulate_remainder(a, b, len * 16);
         }
         self.scalar_vector_dot(a, b)
@@ -298,19 +298,19 @@ impl MatrixAccelerator {
         if is_x86_feature_detected!("avx2") {
             use std::arch::x86_64::*;
             let mut sum = _mm256_setzero_ps();
-            let len = a.len() / 8;
+            let len: _ = a.len() / 8;
 
             for i in 0..len {
-                let a_chunk = _mm256_loadu_ps(&a[i * 8..]);
-                let b_chunk = _mm256_loadu_ps(&b[i * 8..]);
-                let prod = _mm256_mul_ps(a_chunk, b_chunk);
+                let a_chunk: _ = _mm256_loadu_ps(&a[i * 8..]);
+                let b_chunk: _ = _mm256_loadu_ps(&b[i * 8..]);
+                let prod: _ = _mm256_mul_ps(a_chunk, b_chunk);
                 sum = _mm256_add_ps(sum, prod);
             }
 
-            let result = _mm256_hadd_ps(sum, sum);
-            let result = _mm256_hadd_ps(result, result);
-            let result = _mm256_hadd_ps(result, result);
-            let result = _mm256_extract_epi32(_mm256_castps_si256(result), 0) as f32;
+            let result: _ = _mm256_hadd_ps(sum, sum);
+            let result: _ = _mm256_hadd_ps(result, result);
+            let result: _ = _mm256_hadd_ps(result, result);
+            let result: _ = _mm256_extract_epi32(_mm256_castps_si256(result), 0) as f32;
 
             return result + self.accumulate_remainder(a, b, len * 8);
         }
@@ -322,19 +322,21 @@ impl MatrixAccelerator {
         #[cfg(target_arch = "x86_64")]
         if is_x86_feature_detected!("sse4.2") {
             use std::arch::x86_64::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
             let mut sum = _mm_setzero_ps();
-            let len = a.len() / 4;
+            let len: _ = a.len() / 4;
 
             for i in 0..len {
-                let a_chunk = _mm_loadu_ps(&a[i * 4..]);
-                let b_chunk = _mm_loadu_ps(&b[i * 4..]);
-                let prod = _mm_mul_ps(a_chunk, b_chunk);
+                let a_chunk: _ = _mm_loadu_ps(&a[i * 4..]);
+                let b_chunk: _ = _mm_loadu_ps(&b[i * 4..]);
+                let prod: _ = _mm_mul_ps(a_chunk, b_chunk);
                 sum = _mm_add_ps(sum, prod);
             }
 
-            let result = _mm_hadd_ps(sum, sum);
-            let result = _mm_hadd_ps(result, result);
-            let result = _mm_extract_ps(result, 0) as f32;
+            let result: _ = _mm_hadd_ps(sum, sum);
+            let result: _ = _mm_hadd_ps(result, result);
+            let result: _ = _mm_extract_ps(result, 0) as f32;
 
             return result + self.accumulate_remainder(a, b, len * 4);
         }
@@ -343,7 +345,7 @@ impl MatrixAccelerator {
 
     /// 标量向量点积
     fn scalar_vector_dot(&self, a: &[f32], b: &[f32]) -> f32 {
-        let len = a.len();
+        let len: _ = a.len();
         let mut sum = 0.0f32;
 
         for i in 0..len {
@@ -355,7 +357,7 @@ impl MatrixAccelerator {
 
     /// 累加剩余元素
     fn accumulate_remainder(&self, a: &[f32], b: &[f32], start: usize) -> f32 {
-        let len = a.len();
+        let len: _ = a.len();
         let mut sum = 0.0f32;
 
         for i in start..len {

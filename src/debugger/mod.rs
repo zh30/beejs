@@ -32,6 +32,8 @@ pub use watch::{WatchExpression, WatchManager};
 
 // Stage 93 Phase 3.2: Enhanced debugger exports
 pub use enhanced::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
     EnhancedDebugger,
     ConditionalBreakpoint,
     HitCountCondition,

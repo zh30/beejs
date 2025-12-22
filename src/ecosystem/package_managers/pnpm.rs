@@ -6,6 +6,8 @@
 use super::*;
 use std::path::PathBuf;
 use tokio;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// pnpm 兼容性管理器
 #[derive(Debug)]
@@ -31,7 +33,7 @@ impl PnpmCompatibility {
 
     /// 初始化 pnpm 项目
     pub async fn init(&self, project_name: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let package_json = PackageJson {
+        let package_json: _ = PackageJson {
             name: project_name.to_string(),
             version: "1.0.0".to_string(),
             description: None,
@@ -74,7 +76,7 @@ impl PnpmCompatibility {
         file.write_all(&serde_json::to_string_pretty(&package_json)?.into_bytes()).await?;
 
         // 创建 pnpm-workspace.yaml
-        let workspace_content = r#"packages:
+        let workspace_content: _ = r#"packages:
   - 'packages/*'
   - '.'
 "#;
@@ -98,24 +100,24 @@ impl PnpmCompatibility {
 
     /// 从 lockfile 安装
     async fn install_from_lockfile(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let lockfile = PnpmLockfile::load("pnpm-lock.yaml").await?;
+        let lockfile: _ = PnpmLockfile::load("pnpm-lock.yaml").await?;
 
         // 解析所有包并链接
         for (package_path, entry) in lockfile.packages {
-            let package_name = self.extract_package_name(&package_path)?;
-            let version = entry.version;
+            let package_name: _ = self.extract_package_name(&package_path)?;
+            let version: _ = entry.version;
 
             // 检查存储中是否已存在
-            let store_path = self.store_manager.get_package_path(&package_name, &version).await?;
-            let package_dir = PathBuf::from("node_modules").join(&package_name);
+            let store_path: _ = self.store_manager.get_package_path(&package_name, &version).await?;
+            let package_dir: _ = PathBuf::from("node_modules").join(&package_name);
 
             // 硬链接到 node_modules
             self.link_strategy.create_hardlink(&store_path, &package_dir).await?;
 
             // 处理依赖
             for (dep_name, dep_version) in entry.requires {
-                let dep_store_path = self.store_manager.get_package_path(&dep_name, &dep_version).await?;
-                let dep_link_path = package_dir.join("node_modules").join(&dep_name);
+                let dep_store_path: _ = self.store_manager.get_package_path(&dep_name, &dep_version).await?;
+                let dep_link_path: _ = package_dir.join("node_modules").join(&dep_name);
                 tokio::fs::create_dir_all(&dep_link_path.parent().unwrap()).await?;
                 self.link_strategy.create_hardlink(&dep_store_path, &dep_link_path).await?;
             }
@@ -126,27 +128,27 @@ impl PnpmCompatibility {
 
     /// 从 package.json 安装
     async fn install_from_package_json(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let content = tokio::fs::read_to_string("package.json").await?;
+        let content: _ = tokio::fs::read_to_string("package.json").await?;
         let package_json: PackageJson = serde_json::from_str(&content)?;
 
         let mut lockfile = PnpmLockfile::new();
 
         // 安装所有依赖
-        let all_deps: HashMap<String, String> = package_json.dependencies
+        let all_deps: HashMap<String, String, std::collections::HashMap<String, String, String, String>> = package_json.dependencies
             .iter()
             .chain(package_json.dev_dependencies.iter())
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
 
         for (name, version_spec) in all_deps {
-            let version_range = VersionRange::parse(&version_spec)?;
-            let resolution = self.resolve_package(&PackageSpec::NameRange(name.clone(), version_spec)).await?;
+            let version_range: _ = VersionRange::parse(&version_spec)?;
+            let resolution: _ = self.resolve_package(&PackageSpec::NameRange(name.clone(), version_spec)).await?;
 
             // 下载到存储
-            let store_path = self.store_manager.store_package(&resolution).await?;
+            let store_path: _ = self.store_manager.store_package(&resolution).await?;
 
             // 链接到 node_modules
-            let package_dir = PathBuf::from("node_modules").join(&name);
+            let package_dir: _ = PathBuf::from("node_modules").join(&name);
             self.link_strategy.create_hardlink(&store_path, &package_dir).await?;
 
             // 添加到 lockfile
@@ -168,10 +170,10 @@ impl PnpmCompatibility {
             _ => return Err("Unsupported package spec for pnpm".into()),
         };
 
-        let package_info = self.registry_client.get_package_info(&package_name).await?;
-        let selected_version = self.select_version(&package_info, &version_range)?;
+        let package_info: _ = self.registry_client.get_package_info(&package_name).await?;
+        let selected_version: _ = self.select_version(&package_info, &version_range)?;
 
-        let resolution = PackageResolution {
+        let resolution: _ = PackageResolution {
             package_name,
             version: selected_version.clone(),
             resolved_url: format!("https://registry.npmjs.org/{}/-/{}-{}.tgz", package_name, package_name, selected_version),
@@ -204,13 +206,13 @@ impl PnpmCompatibility {
         let mut lockfile = PnpmLockfile::load("pnpm-lock.yaml").await.unwrap_or_else(|_| PnpmLockfile::new());
 
         for spec in packages {
-            let resolution = self.resolve_package(spec).await?;
+            let resolution: _ = self.resolve_package(spec).await?;
 
             // 下载到存储
-            let store_path = self.store_manager.store_package(&resolution).await?;
+            let store_path: _ = self.store_manager.store_package(&resolution).await?;
 
             // 链接到 node_modules
-            let package_dir = PathBuf::from("node_modules").join(&resolution.package_name);
+            let package_dir: _ = PathBuf::from("node_modules").join(&resolution.package_name);
             self.link_strategy.create_hardlink(&store_path, &package_dir).await?;
 
             // 添加到 lockfile
@@ -233,14 +235,14 @@ impl PnpmCompatibility {
         dev: bool,
         optional: bool,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let content = tokio::fs::read_to_string("package.json").await?;
+        let content: _ = tokio::fs::read_to_string("package.json").await?;
         let mut package_json: PackageJson = serde_json::from_str(&content)?;
 
         for spec in packages {
             match spec {
                 PackageSpec::Name(name) => {
-                    let resolution = self.resolve_package(spec).await?;
-                    let version_spec = format!("^{}", resolution.version);
+                    let resolution: _ = self.resolve_package(spec).await?;
+                    let version_spec: _ = format!("^{}", resolution.version);
 
                     if optional {
                         package_json.optional_dependencies.insert(name.clone(), version_spec);
@@ -288,21 +290,21 @@ pub struct PnpmStoreManager {
 impl PnpmStoreManager {
     /// 创建新的存储管理器
     pub fn new() -> Self {
-        let store_path = PathBuf::from("~/.pnpm-store").to_path_buf();
+        let store_path: _ = PathBuf::from("~/.pnpm-store").to_path_buf();
 
         Self { store_path }
     }
 
     /// 存储包
     pub async fn store_package(&self, resolution: &PackageResolution) -> Result<PathBuf, Box<dyn std::error::Error>> {
-        let package_dir = self.get_package_path(&resolution.package_name, &resolution.version).await?;
+        let package_dir: _ = self.get_package_path(&resolution.package_name, &resolution.version).await?;
 
         // 下载包（简化实现）
         if !package_dir.exists() {
             tokio::fs::create_dir_all(&package_dir).await?;
 
             // 创建 package.json
-            let package_json = PackageJson {
+            let package_json: _ = PackageJson {
                 name: resolution.package_name.clone(),
                 version: resolution.version.clone(),
                 main: resolution.main.clone(),
@@ -314,7 +316,7 @@ impl PnpmStoreManager {
                 ..Default::default()
             };
 
-            let package_json_path = package_dir.join("package.json");
+            let package_json_path: _ = package_dir.join("package.json");
             let mut file = tokio::fs::File::create(&package_json_path).await?;
             file.write_all(&serde_json::to_string_pretty(&package_json)?.into_bytes()).await?;
         }
@@ -324,8 +326,8 @@ impl PnpmStoreManager {
 
     /// 获取包路径
     pub async fn get_package_path(&self, name: &str, version: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
-        let sanitized_name = name.replace('/', "_");
-        let package_dir = self.store_path
+        let sanitized_name: _ = name.clone();replace('/', "_");
+        let package_dir: _ = self.store_path
             .join(&sanitized_name)
             .join(version);
 
@@ -396,7 +398,7 @@ impl Default for LinkStrategy {
 #[derive(Debug, Default)]
 pub struct PnpmLockfile {
     pub lockfile_version: String,
-    pub packages: HashMap<String, PnpmLockEntry>,
+    pub packages: HashMap<String, PnpmLockEntry, std::collections::HashMap<String, PnpmLockEntry, String, PnpmLockEntry>>,
 }
 
 impl PnpmLockfile {
@@ -411,7 +413,7 @@ impl PnpmLockfile {
     /// 从文件加载
     pub async fn load(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
         // 简化的 YAML 解析
-        let content = tokio::fs::read_to_string(path).await?;
+        let content: _ = tokio::fs::read_to_string(path).await?;
         let mut lockfile = Self::new();
 
         let lines: Vec<&str> = content.lines().collect();
@@ -451,8 +453,8 @@ impl PnpmLockfile {
 
     /// 添加包
     pub fn add_package(&mut self, name: &str, resolution: &PackageResolution) {
-        let package_path = format!("node_modules/{}", name);
-        let entry = PnpmLockEntry {
+        let package_path: _ = format!("node_modules/{}", name);
+        let entry: _ = PnpmLockEntry {
             version: resolution.version.clone(),
             requires: resolution.dependencies.clone(),
             dev: false,
@@ -490,6 +492,6 @@ impl PnpmLockfile {
 #[derive(Debug, Clone)]
 pub struct PnpmLockEntry {
     pub version: String,
-    pub requires: HashMap<String, String>,
+    pub requires: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub dev: bool,
 }

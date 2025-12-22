@@ -23,7 +23,7 @@ impl MemoryResourceBenchmark {
 
     /// 内存分配性能基准测试
     pub fn memory_allocation_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 10000,
             warmup_iterations: 1000,
             timeout: Some(Duration::from_secs(60)),
@@ -31,18 +31,18 @@ impl MemoryResourceBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "memory_allocation_performance",
             MetricType::MemoryUsage,
             || {
                 // 测试不同大小的内存分配
-                let sizes = [64, 256, 1024, 4096, 16384];
+                let sizes: _ = [64, 256, 1024, 4096, 16384];
 
                 for &size in &sizes {
                     unsafe {
-                        let layout = Layout::from_size_align_unchecked(size, 8);
-                        let ptr = System.alloc(layout);
+                        let layout: _ = Layout::from_size_align_unchecked(size, 8);
+                        let ptr: _ = System.alloc(layout);
                         if !ptr.is_null() {
                             System.dealloc(ptr, layout);
                         }
@@ -56,7 +56,7 @@ impl MemoryResourceBenchmark {
 
     /// 内存释放性能基准测试
     pub fn memory_deallocation_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 10000,
             warmup_iterations: 1000,
             timeout: Some(Duration::from_secs(60)),
@@ -64,7 +64,7 @@ impl MemoryResourceBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "memory_deallocation_performance",
             MetricType::ExecutionTime,
@@ -73,7 +73,7 @@ impl MemoryResourceBenchmark {
                 let mut allocations = Vec::new();
 
                 for _ in 0..100 {
-                    let vec = vec![0u8; 4096];
+                    let vec: _ = vec![0u8; 4096];
                     allocations.push(vec);
                 }
 
@@ -87,7 +87,7 @@ impl MemoryResourceBenchmark {
 
     /// 内存池性能测试
     pub fn memory_pool_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 5000,
             warmup_iterations: 500,
             timeout: Some(Duration::from_secs(60)),
@@ -95,7 +95,7 @@ impl MemoryResourceBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "memory_pool_performance",
             MetricType::OperationsPerSecond,
@@ -104,15 +104,15 @@ impl MemoryResourceBenchmark {
                 use std::sync::{Arc, Mutex};
                 use std::thread;
 
-                let pool_size = 100;
-                let pool = Arc::new(Mutex::new(Vec::with_capacity(pool_size)));
+                let pool_size: _ = 100;
+                let pool: _ = Arc::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(pool_size))));
 
                 let mut handles = vec![];
 
                 // 模拟多个线程同时从内存池分配和释放
                 for _ in 0..10 {
-                    let pool_clone = Arc::clone(&pool);
-                    let handle = thread::spawn(move || {
+                    let pool_clone: _ = Arc::clone(pool);
+                    let handle: _ = thread::spawn(move || {
                         for _ in 0..100 {
                             let mut pool = pool_clone.lock().unwrap();
 
@@ -141,7 +141,7 @@ impl MemoryResourceBenchmark {
 
     /// 内存增长曲线测试
     pub fn memory_growth_curve(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 100,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(60)),
@@ -149,7 +149,7 @@ impl MemoryResourceBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "memory_growth_curve",
             MetricType::MemoryUsage,
@@ -158,8 +158,8 @@ impl MemoryResourceBenchmark {
                 let mut total_allocated = 0;
 
                 for i in 0..10 {
-                    let chunk_size = 1024 * (i + 1); // 1KB, 2KB, 3KB, ...
-                    let _chunk = vec![0u8; chunk_size];
+                    let chunk_size: _ = 1024 * (i + 1); // 1KB, 2KB, 3KB, ...
+                    let _chunk: _ = vec![0u8; chunk_size];
                     total_allocated += chunk_size;
 
                     // 模拟工作负载
@@ -173,7 +173,7 @@ impl MemoryResourceBenchmark {
 
     /// 垃圾回收性能测试
     pub fn garbage_collection_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 100,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(60)),
@@ -181,19 +181,19 @@ impl MemoryResourceBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "garbage_collection_performance",
             MetricType::ExecutionTime,
             || {
                 // 创建大量短命对象触发 GC
                 for _ in 0..1000 {
-                    let _temp_data = vec![0u8; 2048];
+                    let _temp_data: _ = vec![0u8; 2048];
                     // temp_data 在这里被自动释放
                 }
 
                 // 强制清理
-                let _ = Box::new(0u8);
+                let _: _ = Box::new(0u8);
 
                 "gc_cycle_complete"
             },
@@ -202,7 +202,7 @@ impl MemoryResourceBenchmark {
 
     /// 内存碎片化测试
     pub fn memory_fragmentation_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 50,
             warmup_iterations: 5,
             timeout: Some(Duration::from_secs(60)),
@@ -210,7 +210,7 @@ impl MemoryResourceBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "memory_fragmentation",
             MetricType::MemoryUsage,
@@ -228,7 +228,7 @@ impl MemoryResourceBenchmark {
                 allocations.remove(3);
 
                 // 尝试分配一个大块
-                let _large_alloc = vec![0u8; 3072];
+                let _large_alloc: _ = vec![0u8; 3072];
 
                 allocations.len()
             },
@@ -237,7 +237,7 @@ impl MemoryResourceBenchmark {
 
     /// CPU 使用率测试
     pub fn cpu_utilization_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 100,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(60)),
@@ -245,7 +245,7 @@ impl MemoryResourceBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "cpu_utilization",
             MetricType::OperationsPerSecond,
@@ -254,14 +254,14 @@ impl MemoryResourceBenchmark {
                 use std::sync::{Arc, Mutex};
                 use std::thread;
 
-                let num_threads = num_cpus::get();
-                let results = Arc::new(Mutex::new(Vec::new()));
+                let num_threads: _ = num_cpus::get();
+                let results: _ = Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new())));
 
                 let mut handles = vec![];
 
                 for _ in 0..num_threads {
-                    let results_clone = Arc::clone(&results);
-                    let handle = thread::spawn(move || {
+                    let results_clone: _ = Arc::clone(results);
+                    let handle: _ = thread::spawn(move || {
                         // 计算密集型任务
                         let mut sum = 0.0;
                         for i in 0..1_000_000 {
@@ -280,7 +280,7 @@ impl MemoryResourceBenchmark {
                     handle.join().unwrap();
                 }
 
-                let results = results.lock().unwrap();
+                let results: _ = results.clone();lock().unwrap();
                 results.len()
             },
         )
@@ -288,7 +288,7 @@ impl MemoryResourceBenchmark {
 
     /// 多核并行性能测试
     pub fn multicore_parallel_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 100,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(60)),
@@ -296,7 +296,7 @@ impl MemoryResourceBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "multicore_parallel_performance",
             MetricType::ExecutionTime,
@@ -322,7 +322,7 @@ impl MemoryResourceBenchmark {
 
     /// 内存带宽测试
     pub fn memory_bandwidth_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 100,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(60)),
@@ -330,13 +330,13 @@ impl MemoryResourceBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "memory_bandwidth",
             MetricType::OperationsPerSecond,
             || {
                 // 测试内存带宽：顺序读写大块数据
-                let data_size = 1024 * 1024; // 1MB
+                let data_size: _ = 1024 * 1024; // 1MB
                 let mut data = vec![0u8; data_size];
 
                 // 顺序写入
@@ -458,17 +458,19 @@ impl MemoryResourceBenchmark {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_memory_resource_benchmark_creation() {
-        let benchmark = MemoryResourceBenchmark::new();
+        let benchmark: _ = MemoryResourceBenchmark::new();
         assert!(!benchmark.run_all_benchmarks().is_empty());
     }
 
     #[test]
     fn test_memory_allocation_benchmark() {
-        let benchmark = MemoryResourceBenchmark::new();
-        let result = benchmark.memory_allocation_benchmark();
+        let benchmark: _ = MemoryResourceBenchmark::new();
+        let result: _ = benchmark.memory_allocation_benchmark();
 
         assert_eq!(result.name, "memory_allocation_performance");
         assert_eq!(result.metric_type, MetricType::MemoryUsage);
@@ -477,8 +479,8 @@ mod tests {
 
     #[test]
     fn test_cpu_utilization_benchmark() {
-        let benchmark = MemoryResourceBenchmark::new();
-        let result = benchmark.cpu_utilization_benchmark();
+        let benchmark: _ = MemoryResourceBenchmark::new();
+        let result: _ = benchmark.cpu_utilization_benchmark();
 
         assert_eq!(result.name, "cpu_utilization");
         assert_eq!(result.metric_type, MetricType::OperationsPerSecond);
@@ -487,9 +489,9 @@ mod tests {
 
     #[test]
     fn test_resource_report_generation() {
-        let benchmark = MemoryResourceBenchmark::new();
-        let results = benchmark.run_all_benchmarks();
-        let report = benchmark.generate_resource_report(&results);
+        let benchmark: _ = MemoryResourceBenchmark::new();
+        let results: _ = benchmark.run_all_benchmarks();
+        let report: _ = benchmark.generate_resource_report(&results);
 
         assert!(report.contains("内存和资源使用报告"));
         assert!(report.contains("内存分配性能"));

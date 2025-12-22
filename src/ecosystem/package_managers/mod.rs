@@ -20,6 +20,8 @@ pub use auth::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 包管理器类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -89,10 +91,10 @@ pub struct PackageResolution {
     pub version: String,
     pub resolved_url: String,
     pub integrity: String,
-    pub dependencies: HashMap<String, String>,
-    pub peer_dependencies: HashMap<String, String>,
-    pub optional_dependencies: HashMap<String, String>,
-    pub bins: HashMap<String, PathBuf>,
+    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub peer_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub optional_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub bins: HashMap<String, PathBuf, std::collections::HashMap<String, PathBuf, String, PathBuf>>,
     pub main: String,
     pub types: Option<String>,
     pub exports: Option<serde_json::Value>,

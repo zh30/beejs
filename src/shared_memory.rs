@@ -115,7 +115,7 @@ struct PrefetchEntry {
 #[derive(Debug)]
 pub struct SharedMemoryManager {
     /// 活跃区域映射
-    regions: Arc<Mutex<HashMap<String, Weak<SharedMemoryRegion>>>>,
+    regions: Arc<Mutex<HashMap<String, Weak<SharedMemoryRegion, std::collections::HashMap<String, Weak<SharedMemoryRegion, String, Weak<SharedMemoryRegion>>>>>,
     /// 配置
     config: SharedMemoryConfig,
     /// 统计信息
@@ -125,19 +125,19 @@ pub struct SharedMemoryManager {
     /// 访问模式跟踪
     access_patterns: Arc<Mutex<VecDeque<AccessPattern>>>,
     /// 预取缓存
-    prefetch_cache: Arc<Mutex<HashMap<String, PrefetchEntry>>>,
+    prefetch_cache: Arc<Mutex<HashMap<String, PrefetchEntry, std::collections::HashMap<String, PrefetchEntry, String, PrefetchEntry>>>>,
 }
 
 impl SharedMemoryManager {
     /// 创建新的共享内存管理器
     pub fn new(config: SharedMemoryConfig) -> Self {
-        let manager = Self {
-            regions: Arc::new(Mutex::new(HashMap::new())),
+        let manager: _ = Self {
+            regions: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
             config,
-            stats: Arc::new(Mutex::new(SharedMemoryStats::default())),
-            running: Arc::new(AtomicBool::new(true)),
-            access_patterns: Arc::new(Mutex::new(VecDeque::new())),
-            prefetch_cache: Arc::new(Mutex::new(HashMap::new())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(SharedMemoryStats::default()))),
+            running: Arc::new(std::sync::Mutex::new(AtomicBool::new(true))),
+            access_patterns: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
+            prefetch_cache: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
         };
 
         // 启动GC线程和预取线程
@@ -153,24 +153,24 @@ impl SharedMemoryManager {
         id: String,
         size: Option<usize>,
     ) -> Result<SharedMemoryHandle> {
-        let size = size.unwrap_or(self.config.region_size);
+        let size: _ = size.clone();unwrap_or(self.config.region_size);
 
         // 检查是否已存在
         {
-            let regions = self.regions.lock().unwrap();
+            let regions: _ = self.regions.lock().unwrap();
             if regions.contains_key(&id) {
                 return Err(anyhow::anyhow!("Region {} already exists", id));
             }
         }
 
         // 创建新的内存区域
-        let data = Arc::new(Mutex::new(vec![0u8; size]));
-        let readers = Arc::new(AtomicUsize::new(0));
-        let writers = Arc::new(AtomicUsize::new(1)); // 创建者是写者
-        let last_accessed = Arc::new(Mutex::new(Instant::now()));
+        let data: _ = Arc::new(std::sync::Mutex::new(Mutex::new(vec![0u8; size])));
+        let readers: _ = Arc::new(std::sync::Mutex::new(AtomicUsize::new(0)));
+        let writers: _ = Arc::new(std::sync::Mutex::new(AtomicUsize::new(1))); // 创建者是写者
+        let last_accessed: _ = Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now())));
 
-        let region = Arc::new(SharedMemoryRegion {
-            id: id.clone(),
+        let region: _ = Arc::new(std::sync::Mutex::new(SharedMemoryRegion {
+            id: id.clone()),
             data,
             readers,
             writers,
@@ -208,7 +208,7 @@ impl SharedMemoryManager {
         size: Option<usize>,
     ) -> Result<SharedMemoryHandle> {
         // 尝试获取现有区域
-        let existing = {
+        let existing: _ = {
             let regions = self.regions.lock().unwrap();
             regions.get(&id).and_then(|weak| weak.upgrade())
         };
@@ -237,7 +237,7 @@ impl SharedMemoryManager {
         self.record_access_pattern(&handle.region.id, offset);
 
         // 尝试预取（仅对非 COW 副本）
-        let data = if handle.cow_copy.is_none() {
+        let data: _ = if handle.cow_copy.is_none() {
             // 尝试从预取缓存获取
             if let Ok(prefetched) = self.prefetch_data(&handle.region.id, offset, size) {
                 // 更新统计
@@ -265,11 +265,11 @@ impl SharedMemoryManager {
         handle.region.readers.fetch_add(1, Ordering::SeqCst);
 
         // 读取数据（从 COW 副本或原始数据）
-        let data = if let Some(cow_copy) = &handle.cow_copy {
+        let data: _ = if let Some(cow_copy) = &handle.cow_copy {
             let cow_data = cow_copy.lock().unwrap();
             cow_data[offset..offset + size].to_vec()
         } else {
-            let region_data = handle.region.data.lock().unwrap();
+            let region_data: _ = handle.region.data.lock().unwrap();
             if offset + size > region_data.len() {
                 handle.region.readers.fetch_sub(1, Ordering::SeqCst);
                 return Err(anyhow::anyhow!("Read would exceed region size"));
@@ -311,11 +311,11 @@ impl SharedMemoryManager {
         // 检查是否需要创建 COW 副本
         if !handle.is_writer && handle.cow_copy.is_none() {
             // 创建 COW 副本
-            let original_data = {
+            let original_data: _ = {
                 let region_data = handle.region.data.lock().unwrap();
                 region_data.clone()
             };
-            handle.cow_copy = Some(Arc::new(Mutex::new(original_data)));
+            handle.cow_copy = Some(Arc::new(std::sync::Mutex::new(Mutex::new(original_data))));
         }
 
         // 写入数据（到 COW 副本或原始数据）
@@ -360,11 +360,11 @@ impl SharedMemoryManager {
         }
 
         // 创建 COW 副本
-        let original_data = {
+        let original_data: _ = {
             let region_data = handle.region.data.lock().unwrap();
             region_data.clone()
         };
-        handle.cow_copy = Some(Arc::new(Mutex::new(original_data)));
+        handle.cow_copy = Some(Arc::new(std::sync::Mutex::new(Mutex::new(original_data))));
 
         Ok(())
     }
@@ -403,7 +403,7 @@ impl SharedMemoryManager {
     #[allow(dead_code)]
     fn cleanup_regions(&self) {
         let mut cleaned = 0;
-        let now = Instant::now();
+        let now: _ = Instant::now();
 
         {
             let mut regions = self.regions.lock().unwrap();
@@ -413,7 +413,7 @@ impl SharedMemoryManager {
                     if weak_region.strong_count() == 0 {
                         Some(id.clone())
                     } else if let Some(region) = weak_region.upgrade() {
-                        let last_accessed = *region.last_accessed.lock().unwrap();
+                        let last_accessed: _ = *region.last_accessed.lock().unwrap();
                         if now.duration_since(last_accessed) > self.config.cleanup_timeout {
                             Some(id.clone())
                         } else {
@@ -440,24 +440,24 @@ impl SharedMemoryManager {
 
     /// 启动GC线程
     fn start_gc_thread(&self) {
-        let regions = Arc::downgrade(&self.regions);
-        let config = self.config.clone();
-        let running = self.running.clone();
+        let regions: _ = Arc::downgrade(&self.regions);
+        let config: _ = self.config.clone();
+        let running: _ = self.running.clone();
 
         std::thread::spawn(move || {
             while running.load(Ordering::SeqCst) {
                 std::thread::sleep(config.gc_interval);
 
                 if let Some(regions) = regions.upgrade() {
-                    let mut regions = regions.lock().unwrap();
-                    let now = Instant::now();
+                    let mut regions = regions.clone();lock().unwrap();
+                    let now: _ = Instant::now();
                     let mut cleaned = 0;
 
                     let ids_to_remove: Vec<String> = regions
                         .iter()
                         .filter_map(|(id, weak_region)| {
                             if let Some(region) = weak_region.upgrade() {
-                                let last_accessed = *region.last_accessed.lock().unwrap();
+                                let last_accessed: _ = *region.last_accessed.lock().unwrap();
                                 if now.duration_since(last_accessed) > config.cleanup_timeout {
                                     Some(id.clone())
                                 } else {
@@ -490,7 +490,7 @@ impl SharedMemoryManager {
     /// 记录访问模式
     fn record_access_pattern(&self, region_id: &str, offset: usize) {
         let mut patterns = self.access_patterns.lock().unwrap();
-        let now = Instant::now();
+        let now: _ = Instant::now();
 
         // 查找现有模式
         if let Some(pattern) = patterns.iter_mut().find(|p| p.region_id == region_id && p.offset == offset) {
@@ -514,11 +514,11 @@ impl SharedMemoryManager {
 
     /// 预取数据
     fn prefetch_data(&self, region_id: &str, offset: usize, size: usize) -> Result<Vec<u8>> {
-        let cache_key = format!("{}:{}:{}", region_id, offset, size);
+        let cache_key: _ = format!("{}:{}:{}", region_id, offset, size);
 
         // 检查预取缓存
         {
-            let cache = self.prefetch_cache.lock().unwrap();
+            let cache: _ = self.prefetch_cache.lock().unwrap();
             if let Some(entry) = cache.get(&cache_key) {
                 if now_elapsed(&entry.timestamp) < Duration::from_secs(10) {
                     // 缓存命中
@@ -530,10 +530,10 @@ impl SharedMemoryManager {
         }
 
         // 缓存未命中，从内存区域读取
-        let regions = self.regions.lock().unwrap();
+        let regions: _ = self.regions.lock().unwrap();
         if let Some(weak_region) = regions.get(region_id) {
             if let Some(region) = weak_region.upgrade() {
-                let data = {
+                let data: _ = {
                     let region_data = region.data.lock().unwrap();
                     if offset + size > region_data.len() {
                         return Err(anyhow::anyhow!("Prefetch would exceed region size"));
@@ -581,9 +581,9 @@ impl SharedMemoryManager {
 
     /// 启动预取线程
     fn start_prefetch_thread(&self) {
-        let regions = Arc::downgrade(&self.regions);
-        let patterns = Arc::downgrade(&self.access_patterns);
-        let running = self.running.clone();
+        let regions: _ = Arc::downgrade(&self.regions);
+        let patterns: _ = Arc::downgrade(&self.access_patterns);
+        let running: _ = self.running.clone();
 
         std::thread::spawn(move || {
             while running.load(Ordering::SeqCst) {
@@ -591,7 +591,7 @@ impl SharedMemoryManager {
 
                 // 分析访问模式并预取
                 if let (Some(regions), Some(patterns)) = (regions.upgrade(), patterns.upgrade()) {
-                    let patterns = patterns.lock().unwrap();
+                    let patterns: _ = patterns.clone();lock().unwrap();
 
                     // 查找高频访问模式
                     let hot_patterns: Vec<&AccessPattern> = patterns.iter()
@@ -613,7 +613,7 @@ impl SharedMemoryManager {
 
 /// 计算时间差
 fn now_elapsed(start: &u64) -> Duration {
-    let current = std::time::SystemTime::now()
+    let current: _ = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs();
@@ -629,11 +629,13 @@ impl Drop for SharedMemoryManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_create_region() {
-        let config = SharedMemoryConfig::default();
-        let manager = SharedMemoryManager::new(config);
+        let config: _ = SharedMemoryConfig::default();
+        let manager: _ = SharedMemoryManager::new(config);
 
         let mut handle = manager.create_region("test".to_string(), Some(1024)).unwrap();
 
@@ -641,14 +643,14 @@ mod tests {
         manager.write(&mut handle, 0, b"hello world").unwrap();
 
         // 读取测试数据
-        let data = manager.read(&handle, 0, 11).unwrap();
+        let data: _ = manager.read(&handle, 0, 11).unwrap();
         assert_eq!(data, b"hello world");
     }
 
     #[test]
     fn test_cas_operation() {
-        let config = SharedMemoryConfig::default();
-        let manager = SharedMemoryManager::new(config);
+        let config: _ = SharedMemoryConfig::default();
+        let manager: _ = SharedMemoryManager::new(config);
 
         let mut handle = manager.create_region("test".to_string(), Some(1024)).unwrap();
 
@@ -656,32 +658,32 @@ mod tests {
         manager.write(&mut handle, 0, &[0]).unwrap();
 
         // 成功的CAS操作
-        let result = manager.compare_and_swap(&handle, 0, 0, 1).unwrap();
+        let result: _ = manager.compare_and_swap(&handle, 0, 0, 1).unwrap();
         assert!(result);
 
         // 读取验证
-        let data = manager.read(&handle, 0, 1).unwrap();
+        let data: _ = manager.read(&handle, 0, 1).unwrap();
         assert_eq!(data[0], 1);
 
         // 失败的CAS操作
-        let result = manager.compare_and_swap(&handle, 0, 0, 2).unwrap();
+        let result: _ = manager.compare_and_swap(&handle, 0, 0, 2).unwrap();
         assert!(!result);
 
         // 验证值未改变
-        let data = manager.read(&handle, 0, 1).unwrap();
+        let data: _ = manager.read(&handle, 0, 1).unwrap();
         assert_eq!(data[0], 1);
     }
 
     #[test]
     fn test_get_or_create_region() {
-        let config = SharedMemoryConfig::default();
-        let manager = SharedMemoryManager::new(config);
+        let config: _ = SharedMemoryConfig::default();
+        let manager: _ = SharedMemoryManager::new(config);
 
         // 第一次创建
-        let handle1 = manager.get_or_create_region("test".to_string(), Some(1024)).unwrap();
+        let handle1: _ = manager.get_or_create_region("test".to_string(), Some(1024)).unwrap();
 
         // 第二次获取
-        let handle2 = manager.get_or_create_region("test".to_string(), Some(1024)).unwrap();
+        let handle2: _ = manager.get_or_create_region("test".to_string(), Some(1024)).unwrap();
 
         // 验证是同一个区域
         assert_eq!(handle1.region.id, handle2.region.id);
@@ -689,8 +691,8 @@ mod tests {
 
     #[test]
     fn test_stats_tracking() {
-        let config = SharedMemoryConfig::default();
-        let manager = SharedMemoryManager::new(config);
+        let config: _ = SharedMemoryConfig::default();
+        let manager: _ = SharedMemoryManager::new(config);
 
         let mut handle = manager.create_region("test".to_string(), Some(1024)).unwrap();
 
@@ -698,7 +700,7 @@ mod tests {
         manager.write(&mut handle, 0, b"test").unwrap();
         manager.read(&handle, 0, 4).unwrap();
 
-        let stats = manager.get_stats();
+        let stats: _ = manager.get_stats();
         assert_eq!(stats.total_regions, 1);
         assert_eq!(stats.total_writes, 1);
         assert_eq!(stats.total_reads, 1);

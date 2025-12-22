@@ -10,9 +10,9 @@ use tokio::sync::RwLock;
 
 #[tokio::test]
 async fn test_enhanced_code_completion() {
-    let generator = AICodeGenerator::new_with_defaults();
+    let generator: _ = AICodeGenerator::new_with_defaults();
 
-    let context = CodeContext {
+    let context: _ = CodeContext {
         language: Language::JavaScript,
         file_path: Some("test.js".to_string()),
         surrounding_code: Some("function test() {".to_string()),
@@ -27,7 +27,7 @@ async fn test_enhanced_code_completion() {
         classes: vec![],
     };
 
-    let result = generator
+    let result: _ = generator
         .complete_code("fun", 3, &context)
         .await
         .unwrap();
@@ -36,13 +36,13 @@ async fn test_enhanced_code_completion() {
     println!("补全项数量: {}", result.completions.len());
 
     // 验证至少有一个补全项包含性能影响信息
-    let has_performance_data = result.completions.iter().any(|item| {
+    let has_performance_data: _ = result.completions.iter().any(|item| {
         item.performance_impact.is_some()
     });
     assert!(has_performance_data, "应该有补全项包含性能影响信息");
 
     // 验证有上下文感知的补全
-    let has_context_aware = result.completions.iter().any(|item| {
+    let has_context_aware: _ = result.completions.iter().any(|item| {
         item.context_aware
     });
     assert!(has_context_aware, "应该有上下文感知的补全项");
@@ -50,9 +50,9 @@ async fn test_enhanced_code_completion() {
 
 #[tokio::test]
 async fn test_realtime_code_completion() {
-    let generator = AICodeGenerator::new_with_defaults();
+    let generator: _ = AICodeGenerator::new_with_defaults();
 
-    let context = CodeContext {
+    let context: _ = CodeContext {
         language: Language::JavaScript,
         file_path: None,
         surrounding_code: None,
@@ -63,7 +63,7 @@ async fn test_realtime_code_completion() {
     };
 
     // 实时代码补全（只使用模式分析器）
-    let result = generator
+    let result: _ = generator
         .complete_code_realtime("imp", 3, &context)
         .await
         .unwrap();
@@ -72,7 +72,7 @@ async fn test_realtime_code_completion() {
     println!("实时补全项数量: {}", result.completions.len());
 
     // 验证所有补全项都是上下文感知的（因为来自模式分析器）
-    let all_context_aware = result.completions.iter().all(|item| {
+    let all_context_aware: _ = result.completions.iter().all(|item| {
         item.context_aware
     });
     assert!(all_context_aware, "实时补全的所有项都应该是上下文感知的");
@@ -80,7 +80,7 @@ async fn test_realtime_code_completion() {
 
 #[tokio::test]
 async fn test_performance_aware_completion() {
-    let perf_config = PerformanceAwareConfig {
+    let perf_config: _ = PerformanceAwareConfig {
         enable_performance_analysis: true,
         performance_threshold_ms: 5.0,
         max_memory_overhead_mb: 50.0,
@@ -88,15 +88,17 @@ async fn test_performance_aware_completion() {
     };
 
     use beejs::ai::code_generator::{ContextCache, CodeDatabase};
-    let model = Arc::new(MockAiModel::new(50, 0.95));
-    let generator = AICodeGenerator::new_with_performance_aware(
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
+    let model: _ = Arc::new(std::sync::Mutex::new(MockAiModel::new(50, 0.95)));
+    let generator: _ = AICodeGenerator::new_with_performance_aware(
         model,
-        Arc::new(RwLock::new(ContextCache::new(100))),
-        Arc::new(CodeDatabase::new()),
+        Arc::new(std::sync::Mutex::new(RwLock::new(ContextCache::new(100)))),
+        Arc::new(std::sync::Mutex::new(CodeDatabase::new())),
         perf_config,
     );
 
-    let context = CodeContext {
+    let context: _ = CodeContext {
         language: Language::JavaScript,
         file_path: None,
         surrounding_code: None,
@@ -106,7 +108,7 @@ async fn test_performance_aware_completion() {
         classes: vec![],
     };
 
-    let result = generator
+    let result: _ = generator
         .complete_code("for", 3, &context)
         .await
         .unwrap();
@@ -117,7 +119,7 @@ async fn test_performance_aware_completion() {
     let mut prev_score = f64::MAX;
     for item in &result.completions {
         if let Some(ref perf) = item.performance_impact {
-            let score = 1.0 / (1.0 + perf.estimated_execution_time_ms + perf.memory_overhead_mb);
+            let score: _ = 1.0 / (1.0 + perf.estimated_execution_time_ms + perf.memory_overhead_mb);
             assert!(score <= prev_score || item.confidence > 0.85, "性能优先排序失败");
             prev_score = score;
         }
@@ -126,10 +128,10 @@ async fn test_performance_aware_completion() {
 
 #[tokio::test]
 async fn test_multilang_completion() {
-    let generator = AICodeGenerator::new_with_defaults();
+    let generator: _ = AICodeGenerator::new_with_defaults();
 
     // 测试 JavaScript
-    let js_context = CodeContext {
+    let js_context: _ = CodeContext {
         language: Language::JavaScript,
         file_path: Some("test.js".to_string()),
         surrounding_code: None,
@@ -139,7 +141,7 @@ async fn test_multilang_completion() {
         classes: vec![],
     };
 
-    let js_result = generator
+    let js_result: _ = generator
         .complete_code("asy", 3, &js_context)
         .await
         .unwrap();
@@ -147,7 +149,7 @@ async fn test_multilang_completion() {
     assert!(!js_result.completions.is_empty());
 
     // 测试 TypeScript
-    let ts_context = CodeContext {
+    let ts_context: _ = CodeContext {
         language: Language::TypeScript,
         file_path: Some("test.ts".to_string()),
         surrounding_code: None,
@@ -157,7 +159,7 @@ async fn test_multilang_completion() {
         classes: vec![],
     };
 
-    let ts_result = generator
+    let ts_result: _ = generator
         .complete_code("int", 3, &ts_context)
         .await
         .unwrap();
@@ -165,7 +167,7 @@ async fn test_multilang_completion() {
     assert!(!ts_result.completions.is_empty());
 
     // 测试 Python
-    let py_context = CodeContext {
+    let py_context: _ = CodeContext {
         language: Language::Python,
         file_path: Some("test.py".to_string()),
         surrounding_code: None,
@@ -175,7 +177,7 @@ async fn test_multilang_completion() {
         classes: vec![],
     };
 
-    let py_result = generator
+    let py_result: _ = generator
         .complete_code("def", 3, &py_context)
         .await
         .unwrap();
@@ -183,7 +185,7 @@ async fn test_multilang_completion() {
     assert!(!py_result.completions.is_empty());
 
     // 测试 Rust
-    let rust_context = CodeContext {
+    let rust_context: _ = CodeContext {
         language: Language::Rust,
         file_path: Some("test.rs".to_string()),
         surrounding_code: None,
@@ -193,7 +195,7 @@ async fn test_multilang_completion() {
         classes: vec![],
     };
 
-    let rust_result = generator
+    let rust_result: _ = generator
         .complete_code("fn ", 3, &rust_context)
         .await
         .unwrap();
@@ -209,9 +211,9 @@ async fn test_multilang_completion() {
 
 #[tokio::test]
 async fn test_completion_performance_impact() {
-    let generator = AICodeGenerator::new_with_defaults();
+    let generator: _ = AICodeGenerator::new_with_defaults();
 
-    let context = CodeContext {
+    let context: _ = CodeContext {
         language: Language::JavaScript,
         file_path: None,
         surrounding_code: None,
@@ -221,7 +223,7 @@ async fn test_completion_performance_impact() {
         classes: vec![],
     };
 
-    let result = generator
+    let result: _ = generator
         .complete_code("map", 3, &context)
         .await
         .unwrap();
@@ -247,9 +249,9 @@ async fn test_completion_performance_impact() {
 
 #[tokio::test]
 async fn test_completion_confidence_scoring() {
-    let generator = AICodeGenerator::new_with_defaults();
+    let generator: _ = AICodeGenerator::new_with_defaults();
 
-    let context = CodeContext {
+    let context: _ = CodeContext {
         language: Language::JavaScript,
         file_path: None,
         surrounding_code: None,
@@ -259,7 +261,7 @@ async fn test_completion_confidence_scoring() {
         classes: vec![],
     };
 
-    let result = generator
+    let result: _ = generator
         .complete_code("fun", 3, &context)
         .await
         .unwrap();
@@ -279,9 +281,9 @@ async fn test_completion_confidence_scoring() {
 
 #[tokio::test]
 async fn test_performance_config_update() {
-    let generator = AICodeGenerator::new_with_defaults();
+    let generator: _ = AICodeGenerator::new_with_defaults();
 
-    let new_config = PerformanceAwareConfig {
+    let new_config: _ = PerformanceAwareConfig {
         enable_performance_analysis: false,
         performance_threshold_ms: 20.0,
         max_memory_overhead_mb: 100.0,
@@ -290,7 +292,7 @@ async fn test_performance_config_update() {
 
     generator.update_performance_config(new_config.clone()).await;
 
-    let retrieved_config = generator.get_performance_config().await;
+    let retrieved_config: _ = generator.get_performance_config().await;
 
     assert_eq!(retrieved_config.enable_performance_analysis, false);
     assert_eq!(retrieved_config.performance_threshold_ms, 20.0);
@@ -302,9 +304,9 @@ async fn test_performance_config_update() {
 
 #[tokio::test]
 async fn test_replace_range_calculation() {
-    let generator = AICodeGenerator::new_with_defaults();
+    let generator: _ = AICodeGenerator::new_with_defaults();
 
-    let context = CodeContext {
+    let context: _ = CodeContext {
         language: Language::JavaScript,
         file_path: None,
         surrounding_code: None,
@@ -314,7 +316,7 @@ async fn test_replace_range_calculation() {
         classes: vec![],
     };
 
-    let result = generator
+    let result: _ = generator
         .complete_code("console.log", 11, &context)
         .await
         .unwrap();
@@ -328,9 +330,9 @@ async fn test_replace_range_calculation() {
 
 #[tokio::test]
 async fn test_completion_with_surrounding_code() {
-    let generator = AICodeGenerator::new_with_defaults();
+    let generator: _ = AICodeGenerator::new_with_defaults();
 
-    let context = CodeContext {
+    let context: _ = CodeContext {
         language: Language::JavaScript,
         file_path: Some("test.js".to_string()),
         surrounding_code: Some("const data = [1, 2, 3];\ndata.".to_string()),
@@ -340,7 +342,7 @@ async fn test_completion_with_surrounding_code() {
         classes: vec![],
     };
 
-    let result = generator
+    let result: _ = generator
         .complete_code("map", 3, &context)
         .await
         .unwrap();
@@ -348,7 +350,7 @@ async fn test_completion_with_surrounding_code() {
     assert!(!result.completions.is_empty());
 
     // 验证周围代码上下文被使用
-    let has_map_completion = result.completions.iter().any(|item| {
+    let has_map_completion: _ = result.completions.iter().any(|item| {
         item.text.contains("map")
     });
     assert!(has_map_completion, "应该有map相关的补全");

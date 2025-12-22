@@ -1,6 +1,8 @@
 //! 元宇宙分布式网络
 
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 节点角色
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -75,7 +77,7 @@ pub struct MetaverseNetwork {
     /// 配置
     config: NetworkConfig,
     /// 节点映射
-    nodes: HashMap<String, NetworkNode>,
+    nodes: HashMap<String, NetworkNode, std::collections::HashMap<String, NetworkNode, String, NetworkNode>>,
     /// 是否运行中
     running: bool,
 }

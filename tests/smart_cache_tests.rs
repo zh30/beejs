@@ -21,12 +21,14 @@ use std::time::Duration;
 mod tests {
     use super::*;
     use serial_test::serial;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试 1: 缓存创建和基本操作
     #[test]
     #[serial]
     fn test_cache_creation_and_basic_operations() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
         assert!(cache.is_empty());
         assert_eq!(cache.len(), 0);
 
@@ -36,7 +38,7 @@ mod tests {
         assert_eq!(cache.len(), 1);
 
         // 获取值
-        let value = cache.get("key1");
+        let value: _ = cache.get("key1");
         assert!(value.is_some());
         assert_eq!(value.unwrap(), "value1");
 
@@ -49,12 +51,12 @@ mod tests {
     #[test]
     #[serial]
     fn test_cache_miss() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
 
-        let value = cache.get("nonexistent");
+        let value: _ = cache.get("nonexistent");
         assert!(value.is_none());
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.misses, 1);
     }
 
@@ -62,14 +64,14 @@ mod tests {
     #[test]
     #[serial]
     fn test_cache_override() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
 
         cache.set("key".to_string(), "value1".to_string());
-        let value1 = cache.get("key").unwrap();
+        let value1: _ = cache.get("key").unwrap();
         assert_eq!(value1, "value1");
 
         cache.set("key".to_string(), "value2".to_string());
-        let value2 = cache.get("key").unwrap();
+        let value2: _ = cache.get("key").unwrap();
         assert_eq!(value2, "value2");
 
         assert_eq!(cache.len(), 1);
@@ -79,7 +81,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_batch_set() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
 
         let mut items = HashMap::new();
         items.insert("key1".to_string(), "value1".to_string());
@@ -98,25 +100,25 @@ mod tests {
     #[test]
     #[serial]
     fn test_cache_statistics() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
 
         // 初始统计
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.hits, 0);
         assert_eq!(stats.misses, 0);
         assert_eq!(stats.size, 0);
 
         // 第一次访问 - miss
-        let _ = cache.get("key1");
+        let _: _ = cache.get("key1");
 
         // 设置并访问 - hit
         cache.set("key1".to_string(), "value1".to_string());
-        let _ = cache.get("key1");
+        let _: _ = cache.get("key1");
 
         // 再次访问 - hit
-        let _ = cache.get("key1");
+        let _: _ = cache.get("key1");
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.misses, 1);
         assert_eq!(stats.hits, 2);
         assert_eq!(stats.size, 1);
@@ -126,20 +128,20 @@ mod tests {
     #[test]
     #[serial]
     fn test_hit_rate_calculation() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
 
         // 多次 miss
         for _ in 0..10 {
-            let _ = cache.get("nonexistent");
+            let _: _ = cache.get("nonexistent");
         }
 
         // 设置并多次 hit
         cache.set("key".to_string(), "value".to_string());
         for _ in 0..90 {
-            let _ = cache.get("key");
+            let _: _ = cache.get("key");
         }
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.misses, 10);
         assert_eq!(stats.hits, 90);
         assert!((stats.hit_rate() - 0.9).abs() < 0.001);
@@ -153,7 +155,7 @@ mod tests {
         let mut config = CacheConfig::default();
         config.max_size = 3;
 
-        let cache = SmartCache::<String>::new(config);
+        let cache: _ = SmartCache::<String>::new(config);
 
         // 添加 3 个项
         cache.set("key1".to_string(), "value1".to_string());
@@ -177,14 +179,14 @@ mod tests {
         let mut config = CacheConfig::default();
         config.max_size = 3;
 
-        let cache = SmartCache::<String>::new(config);
+        let cache: _ = SmartCache::<String>::new(config);
 
         cache.set("key1".to_string(), "value1".to_string());
         cache.set("key2".to_string(), "value2".to_string());
         cache.set("key3".to_string(), "value3".to_string());
 
         // 访问 key1 (将其标记为最近使用)
-        let _ = cache.get("key1");
+        let _: _ = cache.get("key1");
 
         // 添加新项，应该逐出 key2 (最久未使用)
         cache.set("key4".to_string(), "value4".to_string());
@@ -199,7 +201,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_cache_clear() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
 
         cache.set("key1".to_string(), "value1".to_string());
         cache.set("key2".to_string(), "value2".to_string());
@@ -211,7 +213,7 @@ mod tests {
         assert!(cache.is_empty());
         assert_eq!(cache.len(), 0);
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.size, 0);
     }
 
@@ -219,16 +221,16 @@ mod tests {
     #[test]
     #[serial]
     fn test_get_all_keys() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
 
-        let keys_before = cache.keys();
+        let keys_before: _ = cache.keys();
         assert!(keys_before.is_empty());
 
         cache.set("key1".to_string(), "value1".to_string());
         cache.set("key2".to_string(), "value2".to_string());
         cache.set("key3".to_string(), "value3".to_string());
 
-        let keys = cache.keys();
+        let keys: _ = cache.keys();
         assert_eq!(keys.len(), 3);
         assert!(keys.contains(&"key1".to_string()));
         assert!(keys.contains(&"key2".to_string()));
@@ -239,16 +241,16 @@ mod tests {
     #[test]
     #[serial]
     fn test_access_pattern_hot() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
 
         cache.set("hot_key".to_string(), "value".to_string());
 
         // 多次访问以达到热点阈值
         for _ in 0..5 {
-            let _ = cache.get("hot_key");
+            let _: _ = cache.get("hot_key");
         }
 
-        let pattern = cache.get_access_pattern("hot_key");
+        let pattern: _ = cache.get_access_pattern("hot_key");
         assert!(matches!(pattern, AccessPattern::Hot));
     }
 
@@ -256,16 +258,16 @@ mod tests {
     #[test]
     #[serial]
     fn test_access_pattern_warm() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
 
         cache.set("warm_key".to_string(), "value".to_string());
 
         // 中等频率访问
         for _ in 0..2 {
-            let _ = cache.get("warm_key");
+            let _: _ = cache.get("warm_key");
         }
 
-        let pattern = cache.get_access_pattern("warm_key");
+        let pattern: _ = cache.get_access_pattern("warm_key");
         assert!(matches!(pattern, AccessPattern::Warm));
     }
 
@@ -273,20 +275,20 @@ mod tests {
     #[test]
     #[serial]
     fn test_access_pattern_cold() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
 
         cache.set("cold_key".to_string(), "value".to_string());
 
         // 只访问一次
-        let _ = cache.get("cold_key");
+        let _: _ = cache.get("cold_key");
 
-        let _pattern = cache.get_access_pattern("cold_key");
+        let _pattern: _ = cache.get_access_pattern("cold_key");
         // After set (1) + 1 get = 2, which is Warm with new threshold
         // To test Cold, we should NOT access it after set
         // Let's create a key that we never access
         cache.set("never_accessed".to_string(), "value".to_string());
 
-        let cold_pattern = cache.get_access_pattern("never_accessed");
+        let cold_pattern: _ = cache.get_access_pattern("never_accessed");
         assert!(matches!(cold_pattern, AccessPattern::Cold));
     }
 
@@ -294,7 +296,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_custom_configuration() {
-        let config = CacheConfig {
+        let config: _ = CacheConfig {
             max_size: 100,
             default_ttl: Duration::from_secs(7200),
             cleanup_interval: Duration::from_secs(600),
@@ -303,7 +305,7 @@ mod tests {
             enable_ttl: true,
         };
 
-        let cache = SmartCache::<String>::new(config);
+        let cache: _ = SmartCache::<String>::new(config);
         assert_eq!(cache.len(), 0);
     }
 
@@ -311,9 +313,9 @@ mod tests {
     #[test]
     #[serial]
     fn test_convenience_constructors() {
-        let cache1 = create_smart_cache::<String>(500, 3600);
-        let cache2 = create_high_performance_cache::<String>(2000);
-        let cache3 = create_persistent_cache::<String>(100);
+        let cache1: _ = create_smart_cache::<String>(500, 3600);
+        let cache2: _ = create_high_performance_cache::<String>(2000);
+        let cache3: _ = create_persistent_cache::<String>(100);
 
         assert!(cache1.is_empty());
         assert!(cache2.is_empty());
@@ -324,19 +326,19 @@ mod tests {
     #[test]
     #[serial]
     fn test_efficiency_report() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
 
         cache.set("key1".to_string(), "value1".to_string());
         cache.set("key2".to_string(), "value2".to_string());
 
         for _ in 0..8 {
-            let _ = cache.get("key1");
+            let _: _ = cache.get("key1");
         }
         for _ in 0..2 {
-            let _ = cache.get("key2");
+            let _: _ = cache.get("key2");
         }
 
-        let report = cache.get_efficiency_report();
+        let report: _ = cache.get_efficiency_report();
         assert!(report.contains("Cache Efficiency Report"));
         assert!(report.contains("Hit Rate"));
         assert!(report.contains("Efficiency Score"));
@@ -349,7 +351,7 @@ mod tests {
         let mut config = CacheConfig::default();
         config.default_ttl = Duration::from_millis(100);
 
-        let cache = SmartCache::<String>::new(config);
+        let cache: _ = SmartCache::<String>::new(config);
 
         cache.set("temp_key".to_string(), "temp_value".to_string());
         assert!(cache.contains("temp_key"));
@@ -368,7 +370,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_maintenance() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
 
         cache.set("key1".to_string(), "value1".to_string());
         cache.set("key2".to_string(), "value2".to_string());
@@ -385,7 +387,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_prewarm_mechanism() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
 
         // 添加一些键
         cache.set("key1".to_string(), "value1".to_string());
@@ -394,15 +396,15 @@ mod tests {
 
         // 模拟历史访问模式
         for _ in 0..5 {
-            let _ = cache.get("key1");
+            let _: _ = cache.get("key1");
         }
         for _ in 0..3 {
-            let _ = cache.get("key2");
+            let _: _ = cache.get("key2");
         }
-        let _ = cache.get("key3");
+        let _: _ = cache.get("key3");
 
         // 执行预热
-        let keys = cache.keys();
+        let keys: _ = cache.keys();
         cache.prewarm(keys);
 
         // 预热后验证访问模式
@@ -418,7 +420,7 @@ mod tests {
         let mut config = CacheConfig::default();
         config.max_size = 5;
 
-        let cache = SmartCache::<String>::new(config);
+        let cache: _ = SmartCache::<String>::new(config);
 
         // 阶段 1: 填充缓存
         for i in 0..5 {
@@ -429,8 +431,8 @@ mod tests {
 
         // 阶段 2: 访问一些键 (让 key0 和 key1 变热)
         for _ in 0..10 {
-            let _ = cache.get("key0");
-            let _ = cache.get("key1");
+            let _: _ = cache.get("key0");
+            let _: _ = cache.get("key1");
         }
 
         // 阶段 3: 添加更多键 (触发逐出)
@@ -443,7 +445,7 @@ mod tests {
         assert_eq!(cache.len(), 5, "Cache should have 5 items");
 
         // 验证统计信息
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         // 有一些命中 (来自阶段2的访问) 和一些未命中 (来自阶段3的新键)
         assert!(stats.total_accesses > 0, "Should have some accesses");
     }

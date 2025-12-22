@@ -154,10 +154,10 @@ impl Optimizer {
     /// 优化结果
     pub fn optimize(&mut self, metrics: &PerformanceMetrics) -> OptimizationResult {
         // 分析性能指标
-        let plan = self.auto_tuner.analyzer.analyze_performance(metrics);
+        let plan: _ = self.auto_tuner.analyzer.analyze_performance(metrics);
 
         // 应用优化
-        let result = self.auto_tuner.apply_optimization(&plan);
+        let result: _ = self.auto_tuner.apply_optimization(&plan);
 
         // 记录统计信息
         self.stats.record_optimization(&result);
@@ -178,8 +178,8 @@ impl Optimizer {
         &mut self,
         metrics: &PerformanceMetrics,
     ) -> OptimizationReport {
-        let plan = self.auto_tuner.analyzer.analyze_performance(metrics);
-        let result = self.auto_tuner.apply_optimization(&plan);
+        let plan: _ = self.auto_tuner.analyzer.analyze_performance(metrics);
+        let result: _ = self.auto_tuner.apply_optimization(&plan);
 
         // 记录统计信息
         self.stats.record_optimization(&result);
@@ -222,8 +222,8 @@ impl Optimizer {
 
                 // 接收新的性能指标
                 if let Some(metrics) = metrics_rx.recv().await {
-                    let plan = optimizer.analyzer.analyze_performance(&metrics);
-                    let _ = optimizer.apply_optimization(&plan);
+                    let plan: _ = optimizer.analyzer.analyze_performance(&metrics);
+                    let _: _ = optimizer.apply_optimization(&plan);
                 }
             }
         }));
@@ -272,7 +272,7 @@ impl Optimizer {
     ///
     /// 性能评估结果
     pub fn evaluate_performance(&self, metrics: &PerformanceMetrics) -> PerformanceEvaluation {
-        let plan = self.auto_tuner.analyzer.analyze_performance(metrics);
+        let plan: _ = self.auto_tuner.analyzer.analyze_performance(metrics);
 
         PerformanceEvaluation {
             current_score: plan.current_score,
@@ -310,7 +310,7 @@ impl Optimizer {
 
     /// 生成优化建议报告
     pub fn generate_optimization_report(&self, metrics: &PerformanceMetrics) -> String {
-        let plan = self.auto_tuner.analyzer.analyze_performance(metrics);
+        let plan: _ = self.auto_tuner.analyzer.analyze_performance(metrics);
 
         let mut report = String::new();
 
@@ -395,10 +395,12 @@ pub struct PerformanceEvaluation {
 mod tests {
     use super::*;
     use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     fn create_test_metrics() -> PerformanceMetrics {
         let mut metrics = Vec::new();
-        let start_time = SystemTime::now();
+        let start_time: _ = SystemTime::now();
 
         // CPU 使用率
         for i in 0..10 {
@@ -428,7 +430,7 @@ mod tests {
 
     #[test]
     fn test_optimizer_creation() {
-        let optimizer = Optimizer::new();
+        let optimizer: _ = Optimizer::new();
         assert_eq!(optimizer.stats.total_optimizations, 0);
         assert!(!optimizer.enable_realtime_optimization);
         assert_eq!(optimizer.optimization_interval, Duration::from_secs(60));
@@ -437,9 +439,9 @@ mod tests {
     #[test]
     fn test_optimize() {
         let mut optimizer = Optimizer::new();
-        let metrics = create_test_metrics();
+        let metrics: _ = create_test_metrics();
 
-        let result = optimizer.optimize(&metrics);
+        let result: _ = optimizer.optimize(&metrics);
 
         assert_eq!(optimizer.stats.total_optimizations, 1);
         assert_eq!(optimizer.stats.successful_optimizations, if result.success { 1 } else { 0 });
@@ -448,9 +450,9 @@ mod tests {
     #[test]
     fn test_optimize_with_report() {
         let mut optimizer = Optimizer::new();
-        let metrics = create_test_metrics();
+        let metrics: _ = create_test_metrics();
 
-        let report = optimizer.optimize_with_report(&metrics);
+        let report: _ = optimizer.optimize_with_report(&metrics);
 
         assert_eq!(report.stats.total_optimizations, 1);
         assert!(!report.plan.suggestions.is_empty());
@@ -458,10 +460,10 @@ mod tests {
 
     #[test]
     fn test_evaluate_performance() {
-        let optimizer = Optimizer::new();
-        let metrics = create_test_metrics();
+        let optimizer: _ = Optimizer::new();
+        let metrics: _ = create_test_metrics();
 
-        let evaluation = optimizer.evaluate_performance(&metrics);
+        let evaluation: _ = optimizer.evaluate_performance(&metrics);
 
         assert!(evaluation.current_score >= 0.0);
         assert!(evaluation.target_score >= 0.0);
@@ -470,10 +472,10 @@ mod tests {
 
     #[test]
     fn test_generate_optimization_report() {
-        let optimizer = Optimizer::new();
-        let metrics = create_test_metrics();
+        let optimizer: _ = Optimizer::new();
+        let metrics: _ = create_test_metrics();
 
-        let report = optimizer.generate_optimization_report(&metrics);
+        let report: _ = optimizer.generate_optimization_report(&metrics);
 
         assert!(report.contains("性能优化建议报告"));
         assert!(report.contains("当前性能分数"));
@@ -483,7 +485,7 @@ mod tests {
     fn test_optimizer_stats_record_optimization() {
         let mut stats = OptimizerStats::new();
 
-        let success_result = OptimizationResult {
+        let success_result: _ = OptimizationResult {
             success: true,
             improvement: 20.0,
             new_performance_score: 80.0,
@@ -502,7 +504,7 @@ mod tests {
         assert_eq!(stats.min_improvement, 20.0);
 
         // 测试失败的情况
-        let failure_result = OptimizationResult {
+        let failure_result: _ = OptimizationResult {
             success: false,
             improvement: 0.0,
             new_performance_score: 60.0,

@@ -9,6 +9,8 @@ mod tests {
 
     // 导入分布式模块
     use beejs::distributed::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
         scaling_manager::{ScalingManager, ScalingConfig},
         autoscaler::{Autoscaler, AutoscalerConfig, ScalingAction, ClusterMetrics},
         resource_tracker::{ResourceTracker, ResourceConfig},
@@ -29,13 +31,13 @@ mod tests {
 
     #[test]
     fn test_resource_tracker_creation() {
-        let config = ResourceConfig {
+        let config: _ = ResourceConfig {
             max_memory_mb: 8192,
             max_cpu_percent: 90,
             max_concurrent_tasks: 200,
         };
 
-        let tracker = ResourceTracker::new(config);
+        let tracker: _ = ResourceTracker::new(config);
 
         assert_eq!(tracker.get_allocated_memory(), 0);
         assert_eq!(tracker.get_usage().concurrent_tasks, 0);
@@ -47,12 +49,12 @@ mod tests {
         let mut tracker = ResourceTracker::new(ResourceConfig::default());
 
         // 分配资源
-        let allocation = tracker.allocate("task-1", 512, 10).unwrap();
+        let allocation: _ = tracker.allocate("task-1", 512, 10).unwrap();
         assert_eq!(allocation.memory_mb, 512);
         assert_eq!(allocation.cpu_percent, 10);
 
         // 检查使用情况
-        let usage = tracker.get_usage();
+        let usage: _ = tracker.get_usage();
         assert_eq!(usage.memory_used_mb, 512);
         assert_eq!(usage.concurrent_tasks, 1);
 
@@ -87,7 +89,7 @@ mod tests {
 
     #[test]
     fn test_autoscaler_creation() {
-        let config = AutoscalerConfig {
+        let config: _ = AutoscalerConfig {
             scale_up_threshold: 0.80,
             scale_down_threshold: 0.30,
             cooldown_period: Duration::from_secs(60),
@@ -95,7 +97,7 @@ mod tests {
             max_nodes: MAX_NODES,
         };
 
-        let autoscaler = Autoscaler::new(config);
+        let autoscaler: _ = Autoscaler::new(config);
         assert!(autoscaler.is_enabled());
         assert_eq!(autoscaler.get_cooldown_remaining(), Duration::ZERO);
     }
@@ -111,8 +113,8 @@ mod tests {
         });
 
         // 高负载应该触发扩容
-        let metrics = create_high_load_metrics();
-        let action = autoscaler.evaluate_scaling(&metrics);
+        let metrics: _ = create_high_load_metrics();
+        let action: _ = autoscaler.evaluate_scaling(&metrics);
 
         assert_eq!(action, ScalingAction::ScaleUp(1));
     }
@@ -128,8 +130,8 @@ mod tests {
         });
 
         // 低负载应该触发缩容
-        let metrics = create_low_load_metrics();
-        let action = autoscaler.evaluate_scaling(&metrics);
+        let metrics: _ = create_low_load_metrics();
+        let action: _ = autoscaler.evaluate_scaling(&metrics);
 
         assert_eq!(action, ScalingAction::ScaleDown(1));
     }
@@ -145,8 +147,8 @@ mod tests {
         });
 
         // 正常负载不应该触发扩缩容
-        let metrics = create_normal_load_metrics();
-        let action = autoscaler.evaluate_scaling(&metrics);
+        let metrics: _ = create_normal_load_metrics();
+        let action: _ = autoscaler.evaluate_scaling(&metrics);
 
         assert_eq!(action, ScalingAction::NoOp);
     }
@@ -162,12 +164,12 @@ mod tests {
         });
 
         // 第一次扩容
-        let metrics = create_high_load_metrics();
-        let action = autoscaler.evaluate_scaling(&metrics);
+        let metrics: _ = create_high_load_metrics();
+        let action: _ = autoscaler.evaluate_scaling(&metrics);
         assert_eq!(action, ScalingAction::ScaleUp(1));
 
         // 冷却期间不应该再次扩容
-        let action = autoscaler.evaluate_scaling(&metrics);
+        let action: _ = autoscaler.evaluate_scaling(&metrics);
         assert_eq!(action, ScalingAction::NoOp);
 
         assert!(autoscaler.get_cooldown_remaining() > Duration::ZERO);
@@ -179,7 +181,7 @@ mod tests {
 
     #[test]
     fn test_scaling_manager_creation() {
-        let config = ScalingConfig {
+        let config: _ = ScalingConfig {
             autoscaler_config: AutoscalerConfig {
                 scale_up_threshold: 0.80,
                 scale_down_threshold: 0.30,
@@ -191,7 +193,7 @@ mod tests {
             monitoring_interval: Duration::from_secs(10),
         };
 
-        let manager = ScalingManager::new(config);
+        let manager: _ = ScalingManager::new(config);
         assert!(manager.is_running());
         assert_eq!(manager.get_current_node_count(), 0);
     }
@@ -204,8 +206,8 @@ mod tests {
         assert_eq!(manager.get_current_node_count(), 0);
 
         // 触发扩容
-        let action = ScalingAction::ScaleUp(2);
-        let result = manager.execute_scaling_action(action);
+        let action: _ = ScalingAction::ScaleUp(2);
+        let result: _ = manager.execute_scaling_action(action);
         assert!(result.is_ok());
 
         // 检查节点数变化
@@ -214,7 +216,7 @@ mod tests {
 
     #[test]
     fn test_scaling_manager_resource_monitoring() {
-        let _manager = ScalingManager::new(create_scaling_config());
+        let _manager: _ = ScalingManager::new(create_scaling_config());
 
         // 直接测试自动扩缩容器，使用高负载指标
         let mut autoscaler = Autoscaler::new(AutoscalerConfig {
@@ -226,7 +228,7 @@ mod tests {
         });
 
         // 创建高负载指标
-        let high_load_metrics = ClusterMetrics {
+        let high_load_metrics: _ = ClusterMetrics {
             cpu_utilization: 0.95,  // 95% CPU
             memory_utilization: 0.90,  // 90% 内存
             network_utilization: 0.80,
@@ -238,7 +240,7 @@ mod tests {
         };
 
         // 评估扩缩容
-        let action = autoscaler.evaluate_scaling(&high_load_metrics);
+        let action: _ = autoscaler.evaluate_scaling(&high_load_metrics);
         println!("高负载扩缩容评估结果: {:?}", action);
 
         // 应该触发扩容
@@ -260,14 +262,14 @@ mod tests {
         });
 
         // 尝试扩容到超过最大值
-        let action = ScalingAction::ScaleUp(10);
-        let result = manager.execute_scaling_action(action);
+        let action: _ = ScalingAction::ScaleUp(10);
+        let result: _ = manager.execute_scaling_action(action);
         assert!(result.is_ok());
         assert_eq!(manager.get_current_node_count(), 5); // 被限制到最大值
 
         // 尝试缩容到低于最小值
-        let action = ScalingAction::ScaleDown(10);
-        let result = manager.execute_scaling_action(action);
+        let action: _ = ScalingAction::ScaleDown(10);
+        let result: _ = manager.execute_scaling_action(action);
         assert!(result.is_ok());
         assert_eq!(manager.get_current_node_count(), 3); // 被限制到最小值
     }
@@ -278,7 +280,7 @@ mod tests {
 
     #[test]
     fn test_end_to_end_scaling_workflow() {
-        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 1. 创建扩缩容管理器
         let mut manager = ScalingManager::new(create_scaling_config());
@@ -288,40 +290,40 @@ mod tests {
         assert!(manager.is_running());
 
         // 3. 扩容操作
-        let result = manager.execute_scaling_action(ScalingAction::ScaleUp(3));
+        let result: _ = manager.execute_scaling_action(ScalingAction::ScaleUp(3));
         assert!(result.is_ok(), "扩容操作失败: {:?}", result);
         assert_eq!(manager.get_current_node_count(), 3);
 
         // 4. 资源分配测试
-        let tracker = manager.get_resource_tracker();
-        let allocation = tracker.allocate("task-1", 1024, 20);
+        let tracker: _ = manager.get_resource_tracker();
+        let allocation: _ = tracker.allocate("task-1", 1024, 20);
         assert!(allocation.is_ok(), "资源分配失败");
         assert_eq!(tracker.get_allocated_memory(), 1024);
 
         // 5. 模拟负载变化
         manager.simulate_load_increase(0.85); // 高负载
-        let needs_scaling = manager.check_scaling_needed();
+        let needs_scaling: _ = manager.check_scaling_needed();
         assert!(needs_scaling.is_some(), "高负载应该触发扩容");
 
         // 6. 执行扩容
         if let Some(action) = needs_scaling {
-            let result = manager.execute_scaling_action(action);
+            let result: _ = manager.execute_scaling_action(action);
             assert!(result.is_ok(), "扩容执行失败");
         }
 
         // 7. 模拟负载下降
         manager.simulate_load_decrease(0.25); // 低负载
-        let needs_scaling = manager.check_scaling_needed();
+        let needs_scaling: _ = manager.check_scaling_needed();
         assert!(needs_scaling.is_some(), "低负载应该触发缩容");
 
         // 8. 执行缩容
         if let Some(action) = needs_scaling {
-            let result = manager.execute_scaling_action(action);
+            let result: _ = manager.execute_scaling_action(action);
             assert!(result.is_ok(), "缩容执行失败");
         }
 
         // 9. 验证性能
-        let elapsed = start_time.elapsed().unwrap();
+        let elapsed: _ = start_time.elapsed().unwrap();
         assert!(elapsed < TEST_TIMEOUT, "测试超时: {:?}", elapsed);
 
         info!("端到端扩缩容流程测试完成，耗时: {:?}", elapsed);
@@ -333,16 +335,16 @@ mod tests {
 
         // 快速连续扩容，但不超过最大节点数
         for i in 1..=5 {
-            let action = ScalingAction::ScaleUp(1);
-            let result = manager.execute_scaling_action(action);
+            let action: _ = ScalingAction::ScaleUp(1);
+            let result: _ = manager.execute_scaling_action(action);
             assert!(result.is_ok(), "第 {} 次扩容失败", i);
             assert_eq!(manager.get_current_node_count(), i);
         }
 
         // 尝试扩容到超过最大值应该被限制
-        let _initial_count = manager.get_current_node_count();
-        let action = ScalingAction::ScaleUp(10);
-        let result = manager.execute_scaling_action(action);
+        let _initial_count: _ = manager.get_current_node_count();
+        let action: _ = ScalingAction::ScaleUp(10);
+        let result: _ = manager.execute_scaling_action(action);
         assert!(result.is_ok());
         assert_eq!(manager.get_current_node_count(), MAX_NODES); // 被限制到最大值
     }
@@ -366,9 +368,9 @@ mod tests {
         });
 
         // 分配大量资源触发扩容
-        let tracker = manager.get_resource_tracker();
+        let tracker: _ = manager.get_resource_tracker();
         for i in 0..100 {
-            let allocation = tracker.allocate(
+            let allocation: _ = tracker.allocate(
                 &format!("task-{}", i),
                 50, // 50MB per task
                 1,
@@ -379,10 +381,10 @@ mod tests {
         }
 
         // 检查是否需要扩容（资源使用率过高）
-        let usage = tracker.get_usage();
+        let usage: _ = tracker.get_usage();
         assert!(usage.memory_percent > 50.0);
 
-        let needs_scaling = manager.check_scaling_needed();
+        let needs_scaling: _ = manager.check_scaling_needed();
         assert!(needs_scaling.is_some(), "资源使用率过高应该触发扩容");
     }
 
@@ -398,7 +400,7 @@ mod tests {
         manager.execute_scaling_action(ScalingAction::ScaleDown(1)).unwrap();
         manager.execute_scaling_action(ScalingAction::ScaleUp(1)).unwrap();
 
-        let stats = manager.get_statistics();
+        let stats: _ = manager.get_statistics();
 
         // 注意：ScalingManager 的统计与实际扩缩容事件同步
         // 每次执行扩缩容操作都会更新统计
@@ -425,7 +427,7 @@ mod tests {
         assert!(!manager.is_running());
 
         // 节点应该被清空或保留（取决于配置）
-        let stats = manager.get_statistics();
+        let stats: _ = manager.get_statistics();
         assert_eq!(stats.current_node_count, 0);
     }
 

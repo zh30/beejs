@@ -5,6 +5,8 @@
 
 use super::*;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// .d.ts 文件发射器
 #[derive(Debug)]
@@ -23,7 +25,7 @@ impl DtsEmitter {
     }
 
     /// 发射类型定义
-    pub fn emit_types(&self, types: &HashMap<String, TypeDefinition>, filename: &str) -> Result<String, Box<dyn std::error::Error>> {
+    pub fn emit_types(&self, types: &HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>, filename: &str) -> Result<String, Box<dyn std::error::Error>> {
         let mut output = String::new();
 
         // 添加文件头
@@ -37,7 +39,7 @@ impl DtsEmitter {
 
         // 发射所有类型
         for (_name, type_def) in types {
-            let type_output = self.emit_type_definition(type_def)?;
+            let type_output: _ = self.emit_type_definition(type_def)?;
             output.push_str(&type_output);
             output.push('\n');
         }
@@ -78,7 +80,7 @@ impl DtsEmitter {
 
                 // 成员
                 for (_member_name, member) in &type_def.members {
-                    let member_output = self.emit_type_member(member)?;
+                    let member_output: _ = self.emit_type_member(member)?;
                     output.push_str(&member_output);
                     output.push('\n');
                 }
@@ -107,7 +109,7 @@ impl DtsEmitter {
 
                 // 成员
                 for (_member_name, member) in &type_def.members {
-                    let member_output = self.emit_type_member(member)?;
+                    let member_output: _ = self.emit_type_member(member)?;
                     output.push_str(&member_output);
                     output.push('\n');
                 }
@@ -186,7 +188,7 @@ impl DtsEmitter {
                 PrimitiveType::Never => Ok("never".to_string()),
             },
             Type::Array(element_type) => {
-                let inner = self.emit_type(element_type)?;
+                let inner: _ = self.emit_type(element_type)?;
                 Ok(format!("{}[]", inner))
             }
             Type::Union(types) => {
@@ -233,7 +235,7 @@ impl DtsEmitter {
             }
             Type::TypeRef(type_name) => Ok(type_name.clone()),
             Type::Generic { base, args } => {
-                let base_str = self.emit_type(base)?;
+                let base_str: _ = self.emit_type(base)?;
                 let arg_strs: Result<Vec<String>, _> = args.iter().map(|a| self.emit_type(a)).collect();
                 Ok(format!("{}<{}>", base_str, arg_strs?.join(", ")))
             }
@@ -255,7 +257,7 @@ impl DtsEmitter {
             self.indent();
 
             for (_name, type_def) in &project_info.globals {
-                let type_output = self.emit_type_definition(type_def)?;
+                let type_output: _ = self.emit_type_definition(type_def)?;
                 output.push_str(&type_output);
                 output.push('\n');
             }
@@ -270,7 +272,7 @@ impl DtsEmitter {
             self.indent();
 
             for (_export_name, type_def) in &module_info.exports {
-                let type_output = self.emit_type_definition(type_def)?;
+                let type_output: _ = self.emit_type_definition(type_def)?;
                 output.push_str(&type_output);
                 output.push('\n');
             }
@@ -325,7 +327,7 @@ impl DtsEmitter {
     /// 获取模块名
     fn get_module_name(&self, filename: &str) -> String {
         // 简化实现 - 从文件名提取模块名
-        let path = std::path::Path::new(filename);
+        let path: _ = std::path::Path::new(filename);
         if let Some(stem) = path.file_stem() {
             stem.to_string_lossy().to_string()
         } else {

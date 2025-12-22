@@ -12,7 +12,7 @@ mod nodejs_v8;
 /// Initialize V8 engine
 fn initialize_v8() -> Result<()> {
     // Create platform
-    let platform = v8::new_default_platform()
+    let platform: _ = v8::new_default_platform()
         .ok_or_else(|| anyhow!("Failed to create V8 platform"))?;
 
     // Initialize V8
@@ -44,7 +44,7 @@ impl Runtime {
         initialize_v8()?;
 
         if verbose {
-            let version = v8::V8::get_version();
+            let version: _ = v8::V8::get_version();
             println!("Runtime created with:");
             println!("  Stack size: {} bytes", stack_size);
             println!("  Max heap: {} bytes", max_heap);
@@ -56,16 +56,16 @@ impl Runtime {
             .ok_or_else(|| anyhow!("Failed to create V8 isolate"))?;
 
         // Create a context for script execution
-        let scope = &mut v8::HandleScope::new(&mut isolate);
-        let context = v8::Context::new(scope);
-        let context = v8::Global::new(scope, context);
+        let scope: _ = &mut v8::HandleScope::new(&mut isolate);
+        let context: _ = v8::Context::new(scope);
+        let context: _ = v8::Global::new(scope, context);
 
         Ok(Self {
             stack_size,
             max_heap,
-            execution_count: Arc::new(AtomicUsize::new(0)),
+            execution_count: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
             verbose,
-            isolate: Arc::new(isolate),
+            isolate: Arc::new(std::sync::Mutex::new(isolate)),
             context,
         })
     }
@@ -76,10 +76,10 @@ impl Runtime {
             println!("Executing file: {}", path.display());
         }
 
-        let code = fs::read_to_string(path)
+        let code: _ = fs::read_to_string(path)
             .context(format!("Failed to read file: {}", path.display()))?;
 
-        let base_dir = path.parent()
+        let base_dir: _ = path.parent()
             .unwrap_or_else(|| Path::new("."))
             .to_path_buf();
 
@@ -93,13 +93,13 @@ impl Runtime {
         }
 
         // Check if this is TypeScript code
-        let is_typescript = code.contains(':')
+        let is_typescript: _ = code.contains(':')
             || code.contains("interface ")
             || code.contains("enum ")
             || code.contains("type ")
             || code.contains("namespace ");
 
-        let code_to_execute = if is_typescript {
+        let code_to_execute: _ = if is_typescript {
             // Compile TypeScript to JavaScript
             if self.verbose {
                 println!("Detected TypeScript code, compiling to JavaScript...");
@@ -125,11 +125,11 @@ impl Runtime {
             .map_err(|e| anyhow!("Failed to acquire isolate lock: {}", e))?;
 
         // Create a handle scope for this execution
-        let scope = &mut v8::HandleScope::new(&mut **isolate);
+        let scope: _ = &mut v8::HandleScope::new(&mut **isolate);
 
         // Re-enter the context
-        let context = v8::Local::new(scope, &self.context);
-        let scope = &mut v8::ContextScope::new(scope, context);
+        let context: _ = v8::Local::new(scope, &self.context);
+        let scope: _ = &mut v8::ContextScope::new(scope, context);
 
         // Set up console API
         self.setup_console(scope)?;
@@ -138,31 +138,31 @@ impl Runtime {
         nodejs_v8::setup_nodejs_apis(scope)?;
 
         // Compile and execute the script
-        let source = v8::String::new(scope, &code_to_execute)
+        let source: _ = v8::String::new(scope, &code_to_execute)
             .ok_or_else(|| anyhow!("Failed to create V8 string"))?;
 
         // Use try-catch for error handling
-        let scope = &mut v8::TryCatch::new(scope);
+        let scope: _ = &mut v8::TryCatch::new(scope);
 
-        let script = match v8::Script::compile(scope, source, None) {
+        let script: _ = match v8::Script::compile(scope, source, None) {
             Some(script) => script,
             None => {
                 let exception = scope.exception()
                     .unwrap_or_else(|| v8::String::new(scope, "Unknown compilation error").unwrap().into());
-                let exception_str = exception.to_string(scope)
+                let exception_str: _ = exception.to_string(scope)
                     .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
                     .to_rust_string_lossy(scope);
                 return Err(anyhow!("JavaScript compilation error: {}", exception_str));
             }
         };
 
-        let result = match script.run(scope) {
+        let result: _ = match script.run(scope) {
             Some(result) => result,
             None => {
                 if scope.has_caught() {
                     let exception = scope.exception()
                         .unwrap_or_else(|| v8::String::new(scope, "Unknown runtime error").unwrap().into());
-                    let exception_str = exception.to_string(scope)
+                    let exception_str: _ = exception.to_string(scope)
                         .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
                         .to_rust_string_lossy(scope);
                     return Err(anyhow!("JavaScript execution error: {}", exception_str));
@@ -180,7 +180,7 @@ impl Runtime {
         }
 
         // Convert result to string with better formatting
-        let result_str = if result.is_undefined() {
+        let result_str: _ = if result.is_undefined() {
             "undefined".to_string()
         } else if result.is_null() {
             "null".to_string()
@@ -216,19 +216,19 @@ impl Runtime {
 
     /// Set up console API for V8
     fn setup_console(&self, scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
-        let console = v8::Object::new(scope);
+        let console: _ = v8::Object::new(scope);
 
         // console.log - standard output
-        let console_log = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let console_log: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let mut output = String::new();
             for i in 0..args.length() {
                 if i > 0 {
                     output.push(' ');
                 }
-                let arg = args.get(i);
+                let arg: _ = args.get(i);
 
                 // Use JSON.stringify for better formatting of complex objects
-                let arg_str = if arg.is_string() {
+                let arg_str: _ = if arg.is_string() {
                     arg.to_string(scope)
                         .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
                         .to_rust_string_lossy(scope)
@@ -262,14 +262,14 @@ impl Runtime {
         });
 
         // console.error - error output (stderr)
-        let console_error = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let console_error: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let mut output = String::new();
             for i in 0..args.length() {
                 if i > 0 {
                     output.push(' ');
                 }
-                let arg = args.get(i);
-                let arg_str = if arg.is_string() {
+                let arg: _ = args.get(i);
+                let arg_str: _ = if arg.is_string() {
                     arg.to_string(scope)
                         .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
                         .to_rust_string_lossy(scope)
@@ -301,14 +301,14 @@ impl Runtime {
         });
 
         // console.warn - warning output (stderr)
-        let console_warn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let console_warn: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let mut output = String::new();
             for i in 0..args.length() {
                 if i > 0 {
                     output.push(' ');
                 }
-                let arg = args.get(i);
-                let arg_str = if arg.is_string() {
+                let arg: _ = args.get(i);
+                let arg_str: _ = if arg.is_string() {
                     arg.to_string(scope)
                         .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
                         .to_rust_string_lossy(scope)
@@ -340,14 +340,14 @@ impl Runtime {
         });
 
         // console.info - info output (stdout, same as log)
-        let console_info = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let console_info: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let mut output = String::new();
             for i in 0..args.length() {
                 if i > 0 {
                     output.push(' ');
                 }
-                let arg = args.get(i);
-                let arg_str = if arg.is_string() {
+                let arg: _ = args.get(i);
+                let arg_str: _ = if arg.is_string() {
                     arg.to_string(scope)
                         .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
                         .to_rust_string_lossy(scope)
@@ -379,14 +379,14 @@ impl Runtime {
         });
 
         // console.debug - debug output
-        let console_debug = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let console_debug: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let mut output = String::new();
             for i in 0..args.length() {
                 if i > 0 {
                     output.push(' ');
                 }
-                let arg = args.get(i);
-                let arg_str = if arg.is_string() {
+                let arg: _ = args.get(i);
+                let arg_str: _ = if arg.is_string() {
                     arg.to_string(scope)
                         .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
                         .to_rust_string_lossy(scope)
@@ -418,15 +418,15 @@ impl Runtime {
         });
 
         // Get the function instances
-        let console_log_fn = console_log.get_function(scope)
+        let console_log_fn: _ = console_log.get_function(scope)
             .ok_or_else(|| anyhow!("Failed to get console.log function"))?;
-        let console_error_fn = console_error.get_function(scope)
+        let console_error_fn: _ = console_error.get_function(scope)
             .ok_or_else(|| anyhow!("Failed to get console.error function"))?;
-        let console_warn_fn = console_warn.get_function(scope)
+        let console_warn_fn: _ = console_warn.get_function(scope)
             .ok_or_else(|| anyhow!("Failed to get console.warn function"))?;
-        let console_info_fn = console_info.get_function(scope)
+        let console_info_fn: _ = console_info.get_function(scope)
             .ok_or_else(|| anyhow!("Failed to get console.info function"))?;
-        let console_debug_fn = console_debug.get_function(scope)
+        let console_debug_fn: _ = console_debug.get_function(scope)
             .ok_or_else(|| anyhow!("Failed to get console.debug function"))?;
 
         // Set all console methods
@@ -442,10 +442,10 @@ impl Runtime {
             .map_err(|e| anyhow!("Failed to set console.debug: {}", e))?;
 
         // Get the global object and set console
-        let global = context.global(scope);
-        let global_key = v8::String::new(scope, "console").unwrap();
+        let global: _ = context.global(scope);
+        let global_key: _ = v8::String::new(scope, "console").unwrap();
 
-        let global_val = console.into(;
+        let global_val: _ = console.into(;
 
         global.set(scope, global_key.into(), global_val);)
             .map_err(|e| anyhow!("Failed to set global console: {}", e))?;
@@ -455,7 +455,7 @@ impl Runtime {
 
     /// Execute JavaScript/TypeScript code
     pub fn execute_code(&self, code: &str) -> Result<String> {
-        let base_dir = PathBuf::from(".");
+        let base_dir: _ = PathBuf::from(".");
         self.execute_code_with_context(code, base_dir)
     }
 
@@ -473,7 +473,7 @@ impl Runtime {
 impl Drop for Runtime {
     fn drop(&mut self) {
         if self.verbose {
-            let count = self.execution_count.load(Ordering::SeqCst);
+            let count: _ = self.execution_count.load(Ordering::SeqCst);
             println!("Runtime shutting down. Total executions: {}", count);
         }
     }
@@ -484,38 +484,40 @@ mod tests {
     use super::*;
     use tempfile::NamedTempFile;
     use std::io::Write;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_runtime_creation() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime: _ = Runtime::new(67108864, 1073741824, false);
         assert!(runtime.is_ok());
         assert!(runtime.unwrap().is_initialized());
     }
 
     #[test]
     fn test_simple_code_execution() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
-        let result = runtime.execute_code("1 + 1");
+        let runtime: _ = Runtime::new(67108864, 1073741824, false);
+        let result: _ = runtime.execute_code("1 + 1");
         assert!(result.is_ok());
         assert_eq!(result.unwrap().trim(), "2");
     }
 
     #[test]
     fn test_file_execution() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime: _ = Runtime::new(67108864, 1073741824, false);
 
         // Create a temporary file with JavaScript code
         let mut file = NamedTempFile::new().unwrap();
         writeln!(file, "const x = 42; x * 2;").unwrap();
 
-        let result = runtime.execute_file(&file.path().to_path_buf());
+        let result: _ = runtime.execute_file(&file.path().to_path_buf());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().trim(), "84");
     }
 
     #[test]
     fn test_execution_count() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime: _ = Runtime::new(67108864, 1073741824, false);
         assert_eq!(runtime.execution_count(), 0);
 
         runtime.execute_code("1").unwrap();

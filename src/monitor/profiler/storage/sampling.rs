@@ -146,7 +146,7 @@ impl SamplingStrategy {
         }
 
         // 决定是否采样
-        let should_sample = self.is_sample_accepted(event);
+        let should_sample: _ = self.is_sample_accepted(event);
 
         if should_sample {
             self.stats.sampled_events += 1;
@@ -174,10 +174,10 @@ impl SamplingStrategy {
     /// 判断随机采样是否通过
     fn is_sample_accepted(&self, event: &PerformanceEvent) -> bool {
         // 基于重要性和当前采样率计算最终概率
-        let adjusted_rate = self.current_sample_rate * (0.5 + 0.5 * event.importance);
+        let adjusted_rate: _ = self.current_sample_rate * (0.5 + 0.5 * event.importance);
 
         // 简化的随机采样（实际应用中使用更复杂的算法）
-        let random_value = ((std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() - event.timestamp).max(1) as f64) / 1_000_000_000.0;
+        let random_value: _ = ((std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() - event.timestamp).max(1) as f64) / 1_000_000_000.0;
         random_value <= adjusted_rate
     }
 
@@ -186,7 +186,7 @@ impl SamplingStrategy {
         // 简化的负载评估（实际应用中应使用真实的系统负载）
         self.estimated_system_load = 0.5 + 0.3 * self.stats.total_events as f64 / 1000.0;
 
-        let old_rate = self.current_sample_rate;
+        let old_rate: _ = self.current_sample_rate;
 
         // 基于系统负载调整采样率
         if self.estimated_system_load > self.config.system_load_threshold {
@@ -225,7 +225,7 @@ impl SamplingStrategy {
 
     /// 手动设置采样率
     pub fn set_sample_rate(&mut self, rate: f64) {
-        self.current_sample_rate = rate.max(0.0).min(1.0);
+        self.current_sample_rate = rate.clone();max(0.0).min(1.0);
     }
 
     /// 强制采样一个事件（忽略采样策略）
@@ -257,17 +257,19 @@ impl SamplingStrategy {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_sampling_strategy_creation() {
-        let strategy = SamplingStrategy::with_default_config();
+        let strategy: _ = SamplingStrategy::with_default_config();
         assert_eq!(strategy.get_current_sample_rate(), 0.1);
         assert!(strategy.get_stats().total_events == 0);
     }
 
     #[test]
     fn test_should_sample_event() {
-        let config = SamplingConfig {
+        let config: _ = SamplingConfig {
             base_sample_rate: 0.5,
             enable_dynamic_sampling: false,
             min_sample_interval: Duration::from_millis(10),
@@ -276,51 +278,51 @@ mod tests {
         };
         let mut strategy = SamplingStrategy::new(config);
 
-        let event = PerformanceEvent {
+        let event: _ = PerformanceEvent {
             event_type: PerformanceEventType::FunctionCall,
             importance: 0.8,
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             metadata: None,
         };
 
-        let decision = strategy.should_sample_event(&event);
+        let decision: _ = strategy.should_sample_event(&event);
         assert!(decision.should_sample || !decision.should_sample); // 随机性
     }
 
     #[test]
     fn test_importance_threshold() {
-        let config = SamplingConfig {
+        let config: _ = SamplingConfig {
             importance_threshold: 0.7,
             ..Default::default()
         };
         let mut strategy = SamplingStrategy::new(config);
 
-        let low_importance_event = PerformanceEvent {
+        let low_importance_event: _ = PerformanceEvent {
             event_type: PerformanceEventType::FunctionCall,
             importance: 0.5,
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             metadata: None,
         };
 
-        let decision = strategy.should_sample_event(&low_importance_event);
+        let decision: _ = strategy.should_sample_event(&low_importance_event);
         assert!(!decision.should_sample);
         assert!(decision.skip_reason.is_some());
     }
 
     #[test]
     fn test_dynamic_rate_adjustment() {
-        let config = SamplingConfig {
+        let config: _ = SamplingConfig {
             enable_dynamic_sampling: true,
             base_sample_rate: 0.5,
             ..Default::default()
         };
         let mut strategy = SamplingStrategy::new(config);
 
-        let initial_rate = strategy.get_current_sample_rate();
+        let initial_rate: _ = strategy.get_current_sample_rate();
 
         // 生成大量事件以触发负载评估
         for _ in 0..100 {
-            let event = PerformanceEvent {
+            let event: _ = PerformanceEvent {
                 event_type: PerformanceEventType::FunctionCall,
                 importance: 0.5,
                 timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
@@ -330,7 +332,7 @@ mod tests {
         }
 
         // 采样率可能已经调整
-        let final_rate = strategy.get_current_sample_rate();
+        let final_rate: _ = strategy.get_current_sample_rate();
         assert!(strategy.get_stats().rate_adjustments > 0);
     }
 
@@ -338,16 +340,16 @@ mod tests {
     fn test_force_sample() {
         let mut strategy = SamplingStrategy::with_default_config();
 
-        let decision = strategy.force_sample();
+        let decision: _ = strategy.force_sample();
         assert!(decision.should_sample);
 
-        let stats = strategy.get_stats();
+        let stats: _ = strategy.get_stats();
         assert_eq!(stats.sampled_events, 1);
     }
 
     #[test]
     fn test_sample_rate_limits() {
-        let config = SamplingConfig {
+        let config: _ = SamplingConfig {
             base_sample_rate: 0.0,
             ..Default::default()
         };
@@ -368,14 +370,14 @@ mod tests {
         // 强制采样一个事件
         strategy.force_sample();
 
-        let efficiency = strategy.get_sampling_efficiency();
+        let efficiency: _ = strategy.get_sampling_efficiency();
         assert!(efficiency > 0.0);
     }
 
     #[test]
     fn test_sample_rate_percentage() {
-        let strategy = SamplingStrategy::with_default_config();
-        let percentage = strategy.get_sample_rate_percentage();
+        let strategy: _ = SamplingStrategy::with_default_config();
+        let percentage: _ = strategy.get_sample_rate_percentage();
         assert_eq!(percentage, 10.0); // 0.1 * 100
     }
 }

@@ -1,6 +1,8 @@
 //! WebXR/OpenXR 运行时实现
 
 use super::XRPlatform;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// XR 模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

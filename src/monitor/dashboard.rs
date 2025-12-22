@@ -75,7 +75,7 @@ pub struct LayoutConfig {
     /// 行高
     pub row_height: u32,
     /// 响应式断点
-    pub breakpoints: HashMap<String, BreakpointConfig>,
+    pub breakpoints: HashMap<String, BreakpointConfig, std::collections::HashMap<String, BreakpointConfig, String, BreakpointConfig>>,
 }
 
 /// 断点配置
@@ -127,7 +127,7 @@ pub struct DashboardData {
     /// 实时指标
     pub real_time_metrics: Vec<MetricValue>,
     /// 聚合指标
-    pub aggregated_metrics: HashMap<MetricType, f64>,
+    pub aggregated_metrics: HashMap<MetricType, f64, std::collections::HashMap<MetricType, f64, MetricType, f64>>,
     /// 活跃告警
     pub active_alerts: Vec<AlertInstance>,
     /// 连接统计
@@ -167,7 +167,7 @@ impl WebDashboard {
         data_store: Arc<DataStore>,
         alert_system: Arc<AlertSystem>,
     ) -> Self {
-        let layout = DashboardLayout {
+        let layout: _ = DashboardLayout {
             name: "Default Dashboard".to_string(),
             description: "Default Beejs monitoring dashboard".to_string(),
             charts: Self::create_default_charts(),
@@ -178,14 +178,14 @@ impl WebDashboard {
             config,
             data_store,
             alert_system,
-            layout: Arc::new(Mutex::new(layout)),
-            connection_stats: Arc::new(Mutex::new(ConnectionStats {
+            layout: Arc::new(std::sync::Mutex::new(Mutex::new(layout))),
+            connection_stats: Arc::new(std::sync::Mutex::new(Mutex::new(ConnectionStats {
                 current_connections: 0,
                 total_connections: 0,
                 peak_connections: 0,
                 disconnected_count: 0,
-            })),
-            last_update: Arc::new(Mutex::new(Instant::now())),
+            }))),
+            last_update: Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now()))),
         }
     }
 
@@ -194,7 +194,7 @@ impl WebDashboard {
         data_store: Arc<DataStore>,
         alert_system: Arc<AlertSystem>,
     ) -> Self {
-        let config = DashboardConfig {
+        let config: _ = DashboardConfig {
             port: 8080,
             host: "0.0.0.0".to_string(),
             static_files_path: "./static".to_string(),
@@ -306,13 +306,13 @@ impl WebDashboard {
 
     /// 获取仪表板数据
     pub fn get_dashboard_data(&self) -> Result<DashboardData, String> {
-        let current_time = std::time::SystemTime::now()
+        let current_time: _ = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs();
 
         // 获取实时指标
-        let real_time_metrics = self.data_store.get_real_time_metrics()?;
+        let real_time_metrics: _ = self.data_store.get_real_time_metrics()?;
 
         // 获取聚合指标（简化实现）
         let mut aggregated_metrics = HashMap::new();
@@ -321,10 +321,10 @@ impl WebDashboard {
         }
 
         // 获取活跃告警
-        let active_alerts = self.alert_system.get_active_alerts()?;
+        let active_alerts: _ = self.alert_system.get_active_alerts()?;
 
         // 获取连接统计
-        let connection_stats = {
+        let connection_stats: _ = {
             let stats = self.connection_stats.lock().map_err(|e| e.to_string())?;
             stats.clone()
         };
@@ -346,17 +346,17 @@ impl WebDashboard {
 
     /// 获取图表数据
     pub fn get_chart_data(&self, chart_id: &str) -> Result<ChartData, String> {
-        let layout = self.layout.lock().map_err(|e| e.to_string())?;
+        let layout: _ = self.layout.lock().map_err(|e| e.to_string())?;
 
         // 查找图表配置
-        let chart_config = layout
+        let chart_config: _ = layout
             .charts
             .iter()
             .find(|chart| chart.id == chart_id && chart.enabled)
             .ok_or_else(|| format!("Chart '{}' not found or disabled", chart_id))?;
 
         // 查询数据
-        let condition = QueryCondition {
+        let condition: _ = QueryCondition {
             metric_type: Some(chart_config.metric_type.clone()),
             start_time: None,
             end_time: None,
@@ -364,10 +364,10 @@ impl WebDashboard {
             limit: Some(100), // 限制返回数据点数量
         };
 
-        let data_points = self.data_store.query(condition)?;
+        let data_points: _ = self.data_store.query(condition)?;
 
         // 转换数据格式
-        let chart_data = self.convert_to_chart_data(&data_points, chart_config)?;
+        let chart_data: _ = self.convert_to_chart_data(&data_points, chart_config)?;
 
         Ok(chart_data)
     }
@@ -412,7 +412,7 @@ impl WebDashboard {
 
     /// 获取当前布局
     pub fn get_layout(&self) -> Result<DashboardLayout, String> {
-        let layout = self.layout.lock().map_err(|e| e.to_string())?;
+        let layout: _ = self.layout.lock().map_err(|e| e.to_string())?;
         Ok(layout.clone())
     }
 
@@ -421,7 +421,7 @@ impl WebDashboard {
         &self,
         export_config: ExportConfig,
     ) -> Result<String, String> {
-        let condition = QueryCondition {
+        let condition: _ = QueryCondition {
             metric_type: None,
             start_time: None,
             end_time: None,
@@ -434,8 +434,8 @@ impl WebDashboard {
 
     /// 生成 HTML 仪表板
     pub fn generate_html(&self) -> Result<String, String> {
-        let dashboard_data = self.get_dashboard_data()?;
-        let layout = self.get_layout()?;
+        let dashboard_data: _ = self.get_dashboard_data()?;
+        let layout: _ = self.get_layout()?;
 
         let mut html = String::new();
 
@@ -707,7 +707,7 @@ updateDashboard(); // 立即更新一次
 
     /// 获取连接统计
     pub fn get_connection_stats(&self) -> Result<ConnectionStats, String> {
-        let stats = self.connection_stats.lock().map_err(|e| e.to_string())?;
+        let stats: _ = self.connection_stats.lock().map_err(|e| e.to_string())?;
         Ok(stats.clone())
     }
 
@@ -751,31 +751,33 @@ pub struct Dataset {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_dashboard_creation() {
-        let data_store = Arc::new(DataStore::with_default_config());
-        let alert_system = Arc::new(AlertSystem::with_default_config());
-        let dashboard = WebDashboard::with_default_config(data_store, alert_system);
+        let data_store: _ = Arc::new(std::sync::Mutex::new(DataStore::with_default_config()));
+        let alert_system: _ = Arc::new(std::sync::Mutex::new(AlertSystem::with_default_config()));
+        let dashboard: _ = WebDashboard::with_default_config(data_store, alert_system);
         assert!(dashboard.get_layout().is_ok());
     }
 
     #[test]
     fn test_get_dashboard_data() {
-        let data_store = Arc::new(DataStore::with_default_config());
-        let alert_system = Arc::new(AlertSystem::with_default_config());
-        let dashboard = WebDashboard::with_default_config(data_store, alert_system);
+        let data_store: _ = Arc::new(std::sync::Mutex::new(DataStore::with_default_config()));
+        let alert_system: _ = Arc::new(std::sync::Mutex::new(AlertSystem::with_default_config()));
+        let dashboard: _ = WebDashboard::with_default_config(data_store, alert_system);
 
         assert!(dashboard.get_dashboard_data().is_ok());
     }
 
     #[test]
     fn test_generate_html() {
-        let data_store = Arc::new(DataStore::with_default_config());
-        let alert_system = Arc::new(AlertSystem::with_default_config());
-        let dashboard = WebDashboard::with_default_config(data_store, alert_system);
+        let data_store: _ = Arc::new(std::sync::Mutex::new(DataStore::with_default_config()));
+        let alert_system: _ = Arc::new(std::sync::Mutex::new(AlertSystem::with_default_config()));
+        let dashboard: _ = WebDashboard::with_default_config(data_store, alert_system);
 
-        let html = dashboard.generate_html().unwrap();
+        let html: _ = dashboard.generate_html().unwrap();
         assert!(html.contains("<html"));
         assert!(html.contains("Beejs Monitoring Dashboard"));
         assert!(html.contains("</html>"));
@@ -783,23 +785,23 @@ mod tests {
 
     #[test]
     fn test_escape_html() {
-        let data_store = Arc::new(DataStore::with_default_config());
-        let alert_system = Arc::new(AlertSystem::with_default_config());
-        let dashboard = WebDashboard::with_default_config(data_store, alert_system);
+        let data_store: _ = Arc::new(std::sync::Mutex::new(DataStore::with_default_config()));
+        let alert_system: _ = Arc::new(std::sync::Mutex::new(AlertSystem::with_default_config()));
+        let dashboard: _ = WebDashboard::with_default_config(data_store, alert_system);
 
-        let input = "<script>alert('xss')</script>";
-        let output = dashboard.escape_html(input);
+        let input: _ = "<script>alert('xss')</script>";
+        let output: _ = dashboard.escape_html(input);
         assert!(!output.contains("<script>"));
         assert!(output.contains("&lt;script&gt;"));
     }
 
     #[test]
     fn test_update_layout() {
-        let data_store = Arc::new(DataStore::with_default_config());
-        let alert_system = Arc::new(AlertSystem::with_default_config());
-        let dashboard = WebDashboard::with_default_config(data_store, alert_system);
+        let data_store: _ = Arc::new(std::sync::Mutex::new(DataStore::with_default_config()));
+        let alert_system: _ = Arc::new(std::sync::Mutex::new(AlertSystem::with_default_config()));
+        let dashboard: _ = WebDashboard::with_default_config(data_store, alert_system);
 
-        let layout = DashboardLayout {
+        let layout: _ = DashboardLayout {
             name: "Test Layout".to_string(),
             description: "Test description".to_string(),
             charts: Vec::new(),
@@ -807,13 +809,13 @@ mod tests {
         };
 
         assert!(dashboard.update_layout(layout.clone()).is_ok());
-        let retrieved_layout = dashboard.get_layout().unwrap();
+        let retrieved_layout: _ = dashboard.get_layout().unwrap();
         assert_eq!(retrieved_layout.name, "Test Layout");
     }
 
     #[test]
     fn test_chart_config_creation() {
-        let charts = WebDashboard::create_default_charts();
+        let charts: _ = WebDashboard::create_default_charts();
         assert_eq!(charts.len(), 4);
         assert_eq!(charts[0].id, "cpu_usage");
         assert_eq!(charts[1].id, "memory_usage");
@@ -823,22 +825,22 @@ mod tests {
 
     #[test]
     fn test_connection_stats() {
-        let data_store = Arc::new(DataStore::with_default_config());
-        let alert_system = Arc::new(AlertSystem::with_default_config());
-        let dashboard = WebDashboard::with_default_config(data_store, alert_system);
+        let data_store: _ = Arc::new(std::sync::Mutex::new(DataStore::with_default_config()));
+        let alert_system: _ = Arc::new(std::sync::Mutex::new(AlertSystem::with_default_config()));
+        let dashboard: _ = WebDashboard::with_default_config(data_store, alert_system);
 
         // 增加连接
         dashboard.update_connection_count(1).unwrap();
         dashboard.update_connection_count(2).unwrap();
 
-        let stats = dashboard.get_connection_stats().unwrap();
+        let stats: _ = dashboard.get_connection_stats().unwrap();
         assert_eq!(stats.current_connections, 3);
         assert_eq!(stats.total_connections, 3);
         assert_eq!(stats.peak_connections, 3);
 
         // 减少连接
         dashboard.update_connection_count(-1).unwrap();
-        let stats = dashboard.get_connection_stats().unwrap();
+        let stats: _ = dashboard.get_connection_stats().unwrap();
         assert_eq!(stats.current_connections, 2);
         assert_eq!(stats.disconnected_count, 1);
     }

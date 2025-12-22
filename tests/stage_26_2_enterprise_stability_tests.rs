@@ -16,19 +16,21 @@ use std::time::{Duration, Instant};
 #[cfg(test)]
 mod stage_26_2_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// Test 1: Memory Leak Detection
     /// Verifies automatic detection and cleanup of memory leaks
     #[test]
     fn test_memory_leak_detection() {
-        let detector = MemoryLeakDetector::new();
+        let detector: _ = MemoryLeakDetector::new();
 
         // Simulate memory allocation
         detector.track_allocation("test_context_1", 1024);
         detector.track_allocation("test_context_2", 2048);
 
         // Force cleanup
-        let leaks = detector.detect_and_cleanup(Duration::from_millis(100));
+        let leaks: _ = detector.detect_and_cleanup(Duration::from_millis(100));
 
         // Should detect no leaks (all contexts are still active)
         assert!(leaks.is_empty(), "Should not detect leaks for active contexts");
@@ -51,7 +53,7 @@ mod stage_26_2_tests {
         assert!(monitor.is_threshold_exceeded(), "Should exceed threshold");
 
         // Check alert
-        let alert = monitor.check_alert();
+        let alert: _ = monitor.check_alert();
         assert!(alert.is_some(), "Should generate alert when threshold exceeded");
 
         println!("✓ Memory Threshold Monitoring: Alert generated at threshold");
@@ -61,7 +63,7 @@ mod stage_26_2_tests {
     /// Verifies script execution failure auto-retry mechanism
     #[tokio::test]
     async fn test_automatic_error_recovery() {
-        let recovery_manager = ErrorRecoveryManager::new(3); // Max 3 retries
+        let recovery_manager: _ = ErrorRecoveryManager::new(3); // Max 3 retries
 
         // Simulate failing operation
         let result: Result<String, String> = recovery_manager
@@ -74,7 +76,7 @@ mod stage_26_2_tests {
         assert!(result.is_err(), "Should eventually fail after max retries");
 
         // Check retry count
-        let stats = recovery_manager.get_stats();
+        let stats: _ = recovery_manager.get_stats();
         assert_eq!(stats.retry_count, 3, "Should retry 3 times");
 
         println!("✓ Error Recovery: Retried 3 times before failing");
@@ -84,15 +86,15 @@ mod stage_26_2_tests {
     /// Verifies recovery succeeds when operation eventually succeeds
     #[tokio::test]
     async fn test_successful_error_recovery() {
-        let recovery_manager = ErrorRecoveryManager::new(5);
-        let attempt_counter = Arc::new(std::sync::atomic::AtomicUsize::new(0));
-        let attempt_counter_clone = attempt_counter.clone();
+        let recovery_manager: _ = ErrorRecoveryManager::new(5);
+        let attempt_counter: _ = Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicUsize::new(0)));
+        let attempt_counter_clone: _ = attempt_counter.clone();
 
         let result: Result<String, String> = recovery_manager
             .execute_with_retry("unstable_operation", || {
-                let counter = attempt_counter_clone.clone();
+                let counter: _ = attempt_counter_clone.clone();
                 async move {
-                    let current = counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    let current: _ = counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                     if current < 2 {
                         Err(format!("Attempt {} failed", current + 1))
                     } else {
@@ -107,7 +109,7 @@ mod stage_26_2_tests {
         assert_eq!(result.unwrap(), "Success after retries");
 
         // Should have retried 2 times
-        let stats = recovery_manager.get_stats();
+        let stats: _ = recovery_manager.get_stats();
         assert_eq!(stats.retry_count, 2, "Should retry 2 times");
 
         println!("✓ Error Recovery: Succeeded after 2 retries");
@@ -117,21 +119,21 @@ mod stage_26_2_tests {
     /// Verifies runtime health monitoring and self-healing
     #[test]
     fn test_runtime_health_check() {
-        let health_checker = RuntimeHealthChecker::new();
+        let health_checker: _ = RuntimeHealthChecker::new();
 
         // Check when healthy
-        let health = health_checker.check_health();
+        let health: _ = health_checker.check_health();
         assert!(health.is_healthy, "Should be healthy initially");
 
         // Simulate degraded performance
         health_checker.simulate_degraded_performance();
 
-        let health = health_checker.check_health();
+        let health: _ = health_checker.check_health();
         assert!(!health.is_healthy, "Should detect degraded performance");
 
         // Check self-healing
         health_checker.trigger_self_healing();
-        let health = health_checker.check_health();
+        let health: _ = health_checker.check_health();
         assert!(health.is_healthy, "Should heal after self-healing trigger");
 
         println!("✓ Health Check: Detected degradation and self-healed");
@@ -141,12 +143,12 @@ mod stage_26_2_tests {
     /// Verifies graceful degradation under high load
     #[test]
     fn test_graceful_degradation() {
-        let degradation_manager = GracefulDegradationManager::new();
+        let degradation_manager: _ = GracefulDegradationManager::new();
 
         // Simulate high load
         degradation_manager.simulate_high_load(1000); // 1000 concurrent tasks
 
-        let status = degradation_manager.get_status();
+        let status: _ = degradation_manager.get_status();
         assert!(status.is_degraded, "Should enter degraded mode");
 
         // Verify reduced service level
@@ -154,7 +156,7 @@ mod stage_26_2_tests {
 
         // Recovery
         degradation_manager.simulate_load_reduction(100);
-        let status = degradation_manager.get_status();
+        let status: _ = degradation_manager.get_status();
         assert!(!status.is_degraded, "Should recover from degraded mode");
 
         println!("✓ Graceful Degradation: Reduced load and recovered");
@@ -164,11 +166,11 @@ mod stage_26_2_tests {
     /// Verifies circuit breaker prevents cascade failures
     #[test]
     fn test_circuit_breaker_pattern() {
-        let circuit_breaker = CircuitBreaker::new(5, Duration::from_secs(10));
+        let circuit_breaker: _ = CircuitBreaker::new(5, Duration::from_secs(10));
 
         // Simulate failures
         for i in 0..5 {
-            let result = circuit_breaker.call(|| {
+            let result: _ = circuit_breaker.call(|| {
                 if i < 5 {
                     Err("Service unavailable".to_string())
                 } else {
@@ -182,7 +184,7 @@ mod stage_26_2_tests {
         assert!(circuit_breaker.is_open(), "Circuit should be open after failures");
 
         // Calls should fail fast
-        let result = circuit_breaker.call(|| Ok("Success".to_string()));
+        let result: _ = circuit_breaker.call(|| Ok("Success".to_string()));
         assert!(result.is_err(), "Should fail fast when circuit is open");
 
         println!("✓ Circuit Breaker: Opened after failures, blocking subsequent calls");
@@ -192,7 +194,7 @@ mod stage_26_2_tests {
     /// Verifies performance metrics are collected in real-time
     #[test]
     fn test_real_time_performance_monitoring() {
-        let dashboard = MetricsDashboard::new();
+        let dashboard: _ = MetricsDashboard::new();
 
         // Record metrics
         dashboard.record_execution_time(Duration::from_millis(10));
@@ -203,9 +205,9 @@ mod stage_26_2_tests {
         dashboard.record_memory_usage(60 * 1024 * 1024); // 60MB
 
         // Get metrics (should be < 100ms)
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let metrics = dashboard.get_current_metrics();
-        let fetch_time = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let metrics: _ = dashboard.get_current_metrics();
+        let fetch_time: _ = start.elapsed().unwrap();
 
         assert!(fetch_time < Duration::from_millis(100), "Metrics fetch should be < 100ms");
         assert!(metrics.execution_count > 0, "Should have execution metrics");
@@ -218,7 +220,7 @@ mod stage_26_2_tests {
     /// Verifies memory usage trends are tracked and analyzed
     #[test]
     fn test_memory_usage_trend_analysis() {
-        let dashboard = MetricsDashboard::new();
+        let dashboard: _ = MetricsDashboard::new();
 
         // Record memory usage over time
         for i in 0..10 {
@@ -226,7 +228,7 @@ mod stage_26_2_tests {
             std::thread::sleep(Duration::from_millis(10));
         }
 
-        let trends = dashboard.analyze_memory_trends();
+        let trends: _ = dashboard.analyze_memory_trends();
         assert!(trends.is_growing, "Should detect growing trend");
 
         assert!(trends.growth_rate > 0.0, "Should calculate growth rate");
@@ -239,7 +241,7 @@ mod stage_26_2_tests {
     /// Verifies automatic identification of performance bottlenecks
     #[test]
     fn test_performance_bottleneck_identification() {
-        let dashboard = MetricsDashboard::new();
+        let dashboard: _ = MetricsDashboard::new();
 
         // Simulate slow I/O operations
         for _ in 0..50 {
@@ -248,11 +250,11 @@ mod stage_26_2_tests {
             dashboard.record_operation("computation", Duration::from_millis(5));
         }
 
-        let bottlenecks = dashboard.identify_bottlenecks();
+        let bottlenecks: _ = dashboard.identify_bottlenecks();
         assert!(!bottlenecks.is_empty(), "Should identify bottlenecks");
 
         // I/O operations should be identified as bottlenecks
-        let has_io_bottleneck = bottlenecks
+        let has_io_bottleneck: _ = bottlenecks
             .iter()
             .any(|b| b.operation_type.contains("io") && b.severity > 0.5);
 
@@ -281,12 +283,12 @@ struct AllocationRecord {
 impl MemoryLeakDetector {
     pub fn new() -> Self {
         Self {
-            allocations: Arc::new(std::sync::Mutex::new(Vec::new())),
+            allocations: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new()))),
         }
     }
 
     pub fn track_allocation(&self, context: &str, size: usize) {
-        let record = AllocationRecord {
+        let record: _ = AllocationRecord {
             context: context.to_string(),
             size,
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
@@ -322,8 +324,8 @@ impl MemoryMonitor {
     pub fn new(threshold: usize) -> Self {
         Self {
             threshold,
-            total_allocated: Arc::new(std::sync::Mutex::new(0)),
-            allocations: Arc::new(std::sync::Mutex::new(Vec::new())),
+            total_allocated: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(0))),
+            allocations: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new()))),
         }
     }
 
@@ -373,7 +375,7 @@ impl ErrorRecoveryManager {
     pub fn new(max_retries: usize) -> Self {
         Self {
             max_retries,
-            retry_count: Arc::new(std::sync::Mutex::new(0)),
+            retry_count: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(0))),
         }
     }
 
@@ -398,8 +400,8 @@ impl ErrorRecoveryManager {
             }
 
             // Exponential backoff
-            let delay_ms = 10u64.saturating_mul(2u64.pow(attempt as u32));
-            let delay = Duration::from_millis(delay_ms);
+            let delay_ms: _ = 10u64.saturating_mul(2u64.pow(attempt as u32));
+            let delay: _ = Duration::from_millis(delay_ms);
             tokio::time::sleep(delay).await;
         }
 
@@ -428,8 +430,8 @@ pub struct RuntimeHealthChecker {
 impl RuntimeHealthChecker {
     pub fn new() -> Self {
         Self {
-            is_degraded: Arc::new(std::sync::Mutex::new(false)),
-            healing_triggered: Arc::new(std::sync::Mutex::new(false)),
+            is_degraded: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(false))),
+            healing_triggered: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(false))),
         }
     }
 
@@ -469,8 +471,8 @@ pub struct GracefulDegradationManager {
 impl GracefulDegradationManager {
     pub fn new() -> Self {
         Self {
-            is_degraded: Arc::new(std::sync::Mutex::new(false)),
-            max_concurrent: Arc::new(std::sync::Mutex::new(1000)),
+            is_degraded: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(false))),
+            max_concurrent: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(1000))),
         }
     }
 
@@ -515,8 +517,8 @@ impl CircuitBreaker {
         Self {
             failure_threshold,
             recovery_timeout,
-            failure_count: Arc::new(std::sync::Mutex::new(0)),
-            last_failure_time: Arc::new(std::sync::Mutex::new(None)),
+            failure_count: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(0))),
+            last_failure_time: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(None))),
         }
     }
 
@@ -547,7 +549,7 @@ impl CircuitBreaker {
     }
 
     pub fn is_open(&self) -> bool {
-        let count = *self.failure_count.lock().unwrap();
+        let count: _ = *self.failure_count.lock().unwrap();
         if count >= self.failure_threshold {
             if let Some(last_failure) = *self.last_failure_time.lock().unwrap() {
                 return last_failure.elapsed().unwrap() < self.recovery_timeout;
@@ -561,15 +563,15 @@ impl CircuitBreaker {
 pub struct MetricsDashboard {
     execution_times: Arc<std::sync::Mutex<Vec<Duration>>>,
     memory_usage: Arc<std::sync::Mutex<Vec<(usize, Instant)>>>,
-    operation_times: Arc<std::sync::Mutex<std::collections::HashMap<String, Vec<Duration>>>>,
+    operation_times: Arc<std::sync::Mutex<std::collections::HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration>>>>>,
 }
 
 impl MetricsDashboard {
     pub fn new() -> Self {
         Self {
-            execution_times: Arc::new(std::sync::Mutex::new(Vec::new())),
-            memory_usage: Arc::new(std::sync::Mutex::new(Vec::new())),
-            operation_times: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
+            execution_times: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new()))),
+            memory_usage: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new()))),
+            operation_times: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashMap::new()))),
         }
     }
 
@@ -590,10 +592,10 @@ impl MetricsDashboard {
     }
 
     pub fn get_current_metrics(&self) -> CurrentMetrics {
-        let execution_times = self.execution_times.lock().unwrap();
-        let memory_usage = self.memory_usage.lock().unwrap();
+        let execution_times: _ = self.execution_times.lock().unwrap();
+        let memory_usage: _ = self.memory_usage.lock().unwrap();
 
-        let avg_time = if !execution_times.is_empty() {
+        let avg_time: _ = if !execution_times.is_empty() {
             execution_times.iter().sum::<Duration>() / execution_times.len() as u32
         } else {
             Duration::from_millis(0)
@@ -607,7 +609,7 @@ impl MetricsDashboard {
     }
 
     pub fn analyze_memory_trends(&self) -> MemoryTrends {
-        let memory_usage = self.memory_usage.lock().unwrap();
+        let memory_usage: _ = self.memory_usage.lock().unwrap();
 
         if memory_usage.len() < 2 {
             return MemoryTrends {
@@ -617,10 +619,10 @@ impl MetricsDashboard {
             };
         }
 
-        let first = memory_usage[0].0;
-        let last = memory_usage[memory_usage.len() - 1].0;
+        let first: _ = memory_usage[0].0;
+        let last: _ = memory_usage[memory_usage.len() - 1].0;
 
-        let growth_rate = if first > 0 {
+        let growth_rate: _ = if first > 0 {
             (last as f64 - first as f64) / first as f64
         } else {
             0.0
@@ -634,13 +636,13 @@ impl MetricsDashboard {
     }
 
     pub fn identify_bottlenecks(&self) -> Vec<Bottleneck> {
-        let operations = self.operation_times.lock().unwrap();
+        let operations: _ = self.operation_times.lock().unwrap();
         let mut bottlenecks = Vec::new();
 
         for (op_type, times) in operations.iter() {
             if times.len() > 10 {
-                let avg_time = times.iter().sum::<Duration>() / times.len() as u32;
-                let severity = if avg_time > Duration::from_millis(50) {
+                let avg_time: _ = times.iter().sum::<Duration>() / times.len() as u32;
+                let severity: _ = if avg_time > Duration::from_millis(50) {
                     0.8
                 } else if avg_time > Duration::from_millis(20) {
                     0.5

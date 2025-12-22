@@ -16,31 +16,31 @@ pub fn setup_network_apis(
     _network_statistics: Arc<NetworkStats>,
 ) -> Result<()> {
     // 创建全局 network 对象
-    let network_global = v8::Object::new(scope);
+    let network_global: _ = v8::Object::new(scope);
 
     // 添加一个简单的测试函数
-    let test_func = v8::FunctionTemplate::new(scope, |callback_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+    let test_func: _ = v8::FunctionTemplate::new(scope, |callback_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
         let result = v8::Object::new(callback_scope);
 
         // 分步创建字符串避免借用检查问题
-        let success_key = v8::String::new(callback_scope, "success").unwrap();
-        let success_val = v8::Boolean::new(callback_scope, true);
+        let success_key: _ = v8::String::new(callback_scope, "success").unwrap();
+        let success_val: _ = v8::Boolean::new(callback_scope, true);
         result.set(callback_scope, success_key.into(), success_val.into());
 
-        let message_key = v8::String::new(callback_scope, "message").unwrap();
-        let message_val = v8::String::new(callback_scope, "Zero-copy network I/O APIs initialized").unwrap();
+        let message_key: _ = v8::String::new(callback_scope, "message").unwrap();
+        let message_val: _ = v8::String::new(callback_scope, "Zero-copy network I/O APIs initialized").unwrap();
         result.set(callback_scope, message_key.into(), message_val.into());
 
         retval.set(result.into());
     });
 
-    let test_func_instance = test_func.get_function(scope).unwrap();
-    let test_key = v8::String::new(scope, "testNetworkAPI").unwrap();
+    let test_func_instance: _ = test_func.get_function(scope).unwrap();
+    let test_key: _ = v8::String::new(scope, "testNetworkAPI").unwrap();
     network_global.set(scope, test_key.into(), test_func_instance.into());
 
     // 将 network 对象设置为全局
-    let global = context.global(scope);
-    let network_key = v8::String::new(scope, "Network").unwrap();
+    let global: _ = context.global(scope);
+    let network_key: _ = v8::String::new(scope, "Network").unwrap();
     global.set(scope, network_key.into(), network_global.into());
 
     Ok(())
@@ -50,13 +50,15 @@ pub fn setup_network_apis(
 mod tests {
     use crate::network::{ConnectionPool, NetworkStats};
     use std::sync::Arc;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_setup_network_apis() {
         // TODO: 实现真正的缓冲池测试
-        let _buffer_pool = Arc::new(());
-        let _connection_pool = Arc::new(ConnectionPool::new(Default::default()).unwrap());
-        let network_statistics = Arc::new(NetworkStats {
+        let _buffer_pool: _ = Arc::new(std::sync::Mutex::new(()));
+        let _connection_pool: _ = Arc::new(std::sync::Mutex::new(ConnectionPool::new(Default::default())).unwrap());
+        let network_statistics: _ = Arc::new(std::sync::Mutex::new(NetworkStats {
             total_connections: 0,
             active_connections: 0,
             zero_copy_operations: 0,
@@ -65,7 +67,7 @@ mod tests {
             batch_operations: 0,
             average_latency_us: 0,
             memory_usage: 0,
-        });
+        }));
 
         // 简化的测试，验证网络模块的基本功能
         // TODO: 缓冲池统计信息

@@ -5,6 +5,8 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     // 模拟 ContainerManager 结构体（待实现）
     #[allow(dead_code)]
@@ -44,10 +46,10 @@ mod tests {
     #[tokio::test]
     async fn test_docker_build() {
         // 测试 Docker 镜像构建
-        let manager = ContainerManager {};
+        let manager: _ = ContainerManager {};
 
-        let version = "v0.1.0";
-        let expected_image = format!("beejs:{}", version);
+        let version: _ = "v0.1.0";
+        let expected_image: _ = format!("beejs:{}", version);
 
         // 模拟构建镜像
         // 实际实现中会调用 manager.build_image(version).await
@@ -57,9 +59,9 @@ mod tests {
     #[tokio::test]
     async fn test_container_orchestration() {
         // 测试容器编排
-        let manager = ContainerManager {};
+        let manager: _ = ContainerManager {};
 
-        let config = ContainerConfig {
+        let config: _ = ContainerConfig {
             image: "beejs:latest".to_string(),
             version: "v0.1.0".to_string(),
             replicas: 3,
@@ -80,12 +82,12 @@ mod tests {
     #[tokio::test]
     async fn test_container_lifecycle() {
         // 测试容器生命周期管理
-        let manager = ContainerManager {};
+        let manager: _ = ContainerManager {};
 
-        let container_id = "beejs-container-123";
+        let container_id: _ = "beejs-container-123";
 
         // 模拟启动容器
-        // let handle = manager.start_container(&container_id).await.unwrap();
+        // let handle: _ = manager.start_container(&container_id).await.unwrap();
         // assert_eq!(handle.status, ContainerStatus::Running);
 
         // 模拟停止容器
@@ -97,10 +99,10 @@ mod tests {
     #[tokio::test]
     async fn test_multiple_replicas() {
         // 测试多副本容器启动
-        let manager = ContainerManager {};
+        let manager: _ = ContainerManager {};
 
-        let replicas = 5;
-        let base_port = 8080;
+        let replicas: _ = 5;
+        let base_port: _ = 8080;
 
         // 验证副本配置
         assert!(replicas >= 1);
@@ -108,7 +110,7 @@ mod tests {
 
         // 模拟为每个副本分配端口
         for i in 0..replicas {
-            let port = base_port + i as u16;
+            let port: _ = base_port + i as u16;
             assert!(port >= base_port);
             assert!(port < base_port + replicas as u16);
         }
@@ -117,7 +119,7 @@ mod tests {
     #[tokio::test]
     async fn test_container_environment() {
         // 测试容器环境变量配置
-        let env_vars = vec![
+        let env_vars: _ = vec![
             ("BEEJS_VERSION".to_string(), "v0.1.0".to_string()),
             ("RUST_ENV".to_string(), "production".to_string()),
             ("BEEJS_WORKERS".to_string(), "4".to_string()),
@@ -132,7 +134,7 @@ mod tests {
     #[tokio::test]
     async fn test_container_resource_limits() {
         // 测试容器资源限制
-        let resource_config = ResourceConfig {
+        let resource_config: _ = ResourceConfig {
             cpu_limit: "500m".to_string(),
             memory_limit: "1Gi".to_string(),
             disk_limit: "10Gi".to_string(),
@@ -147,7 +149,7 @@ mod tests {
     #[tokio::test]
     async fn test_container_networking() {
         // 测试容器网络配置
-        let network_config = NetworkConfig {
+        let network_config: _ = NetworkConfig {
             port_mappings: vec![
                 (8080, 8080),  // HTTP
                 (8443, 8443),  // HTTPS
@@ -163,11 +165,11 @@ mod tests {
     #[tokio::test]
     async fn test_container_logs() {
         // 测试容器日志收集
-        let manager = ContainerManager {};
-        let container_id = "beejs-container-456";
+        let manager: _ = ContainerManager {};
+        let container_id: _ = "beejs-container-456";
 
         // 模拟获取日志
-        // let logs = manager.get_logs(container_id).await.unwrap();
+        // let logs: _ = manager.get_logs(container_id).await.unwrap();
         // assert!(!logs.is_empty());
 
         assert_eq!(container_id, "beejs-container-456");
@@ -176,7 +178,7 @@ mod tests {
     #[tokio::test]
     async fn test_container_metrics() {
         // 测试容器指标收集
-        let metrics = ContainerMetrics {
+        let metrics: _ = ContainerMetrics {
             cpu_usage: 45.5,
             memory_usage: 512.0, // MB
             disk_io: 1024.0,     // MB/s
@@ -193,7 +195,7 @@ mod tests {
     #[tokio::test]
     async fn test_container_volume_mount() {
         // 测试容器卷挂载
-        let volume_mounts = vec![
+        let volume_mounts: _ = vec![
             VolumeMount {
                 source: "/data/beejs".to_string(),
                 target: "/app/data".to_string(),
@@ -215,7 +217,7 @@ mod tests {
     #[tokio::test]
     async fn test_container_health_check() {
         // 测试容器健康检查
-        let health_check = HealthCheckConfig {
+        let health_check: _ = HealthCheckConfig {
             path: "/health".to_string(),
             port: 8080,
             interval: 10,  // 秒
@@ -233,7 +235,7 @@ mod tests {
     #[tokio::test]
     async fn test_container_restart_policy() {
         // 测试容器重启策略
-        let restart_policy = RestartPolicy {
+        let restart_policy: _ = RestartPolicy {
             condition: "on_failure".to_string(),
             delay: 5,    // 秒
             max_attempts: 3,
@@ -248,10 +250,10 @@ mod tests {
     #[tokio::test]
     async fn test_container_scaling() {
         // 测试容器动态扩缩容
-        let manager = ContainerManager {};
+        let manager: _ = ContainerManager {};
 
-        let current_replicas = 3;
-        let target_replicas = 5;
+        let current_replicas: _ = 3;
+        let target_replicas: _ = 5;
 
         // 模拟扩容操作
         // manager.scale_to(target_replicas).await.unwrap();

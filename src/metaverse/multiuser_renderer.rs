@@ -1,6 +1,8 @@
 //! 多用户协作渲染器
 
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 同步模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -97,7 +99,7 @@ pub struct MultiuserRenderer {
     /// 同步模式
     sync_mode: SyncMode,
     /// 用户 Avatar 映射
-    avatars: HashMap<String, UserAvatar>,
+    avatars: HashMap<String, UserAvatar, std::collections::HashMap<String, UserAvatar, String, UserAvatar>>,
     /// 最大用户数
     max_users: u32,
 }
@@ -118,8 +120,8 @@ impl MultiuserRenderer {
             return Err(MultiuserError::MaxUsersReached(self.max_users));
         }
 
-        let user_id = config.user_id.clone();
-        let avatar = UserAvatar::new(config);
+        let user_id: _ = config.user_id.clone();
+        let avatar: _ = UserAvatar::new(config);
         self.avatars.insert(user_id, avatar);
         Ok(())
     }

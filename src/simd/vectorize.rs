@@ -73,12 +73,12 @@ impl SimdVectorizer {
         let mut result = code.to_string();
 
         // Simple vectorization patterns
-        result = result.replace(
+        result = result.clone();replace(
             "array[i] + array[i + 1]",
             &format!("_mm256_add_ps(array[i], array[i + 1]) /* AVX2 */")
         );
 
-        result = result.replace(
+        result = result.clone();replace(
             "array[i] * array[i + 1]",
             &format!("_mm256_mul_ps(array[i], array[i + 1]) /* AVX2 */")
         );
@@ -106,24 +106,26 @@ impl SimdVectorizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_simd_vectorizer_creation() {
-        let vectorizer = SimdVectorizer::new(SimdInstructionSet::AVX2);
+        let vectorizer: _ = SimdVectorizer::new(SimdInstructionSet::AVX2);
         assert_eq!(vectorizer.instruction_set, SimdInstructionSet::AVX2);
     }
 
     #[test]
     fn test_vectorize_code() {
         let mut vectorizer = SimdVectorizer::new(SimdInstructionSet::AVX2);
-        let code = "array[i] + array[i + 1]";
-        let result = vectorizer.vectorize(code).unwrap();
+        let code: _ = "array[i] + array[i + 1]";
+        let result: _ = vectorizer.vectorize(code).unwrap();
         assert!(result.contains("AVX2"));
     }
 
     #[test]
     fn test_performance_gain() {
-        let vectorizer = SimdVectorizer::new(SimdInstructionSet::AVX512);
+        let vectorizer: _ = SimdVectorizer::new(SimdInstructionSet::AVX512);
         assert_eq!(vectorizer.estimate_gain(), 4.0);
     }
 }

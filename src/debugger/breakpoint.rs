@@ -7,6 +7,8 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::debugger::{DebugResult, SourceLocation};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Unique breakpoint ID generator
 static BREAKPOINT_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -42,7 +44,7 @@ impl Breakpoint {
         line_number: u32,
         column_number: u32,
     ) -> Self {
-        let id = BREAKPOINT_ID_COUNTER.fetch_add(1, Ordering::SeqCst).to_string();
+        let id: _ = BREAKPOINT_ID_COUNTER.fetch_add(1, Ordering::SeqCst).to_string();
         Self {
             id,
             script_id,
@@ -109,8 +111,8 @@ impl Breakpoint {
 
 /// Breakpoint manager
 pub struct BreakpointManager {
-    breakpoints: HashMap<String, Breakpoint>,
-    script_breakpoints: HashMap<String, Vec<String>>, // script_id -> [breakpoint_ids]
+    breakpoints: HashMap<String, Breakpoint, std::collections::HashMap<String, Breakpoint, String, Breakpoint>>,
+    script_breakpoints: HashMap<String, Vec<String, std::collections::HashMap<String, Vec<String, String, Vec<String>>>, // script_id -> [breakpoint_ids]
 }
 
 impl BreakpointManager {
@@ -124,7 +126,7 @@ impl BreakpointManager {
 
     /// Add a breakpoint
     pub fn add_breakpoint(&mut self, mut breakpoint: Breakpoint) -> DebugResult<Breakpoint> {
-        let id = breakpoint.id.clone();
+        let id: _ = breakpoint.id.clone();
 
         // Initialize hit count
         breakpoint.hit_count = 0;
@@ -148,7 +150,7 @@ impl BreakpointManager {
         line_number: u32,
         column_number: u32,
     ) -> DebugResult<Breakpoint> {
-        let breakpoint = Breakpoint::new(script_id, script_name, line_number, column_number);
+        let breakpoint: _ = Breakpoint::new(script_id, script_name, line_number, column_number);
         self.add_breakpoint(breakpoint)
     }
 
@@ -161,7 +163,7 @@ impl BreakpointManager {
         column_number: u32,
         condition: BreakpointCondition,
     ) -> DebugResult<Breakpoint> {
-        let breakpoint = Breakpoint::with_condition(script_id, script_name, line_number, column_number, condition);
+        let breakpoint: _ = Breakpoint::with_condition(script_id, script_name, line_number, column_number, condition);
         self.add_breakpoint(breakpoint)
     }
 

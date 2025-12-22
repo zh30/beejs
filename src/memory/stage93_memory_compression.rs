@@ -144,14 +144,14 @@ pub struct CompressionResult {
 impl Stage93MemoryCompressor {
     /// 创建新的 Stage 93 内存压缩器
     pub fn new(config: Stage93CompressionConfig) -> Self {
-        let cache_size = config.decompress_cache_size;
+        let cache_size: _ = config.decompress_cache_size;
 
         Self {
             config,
-            compression_pool: Arc::new(RwLock::new(LruCache::new(cache_size as u64))),
-            decompress_cache: Arc::new(RwLock::new(LruCache::new(cache_size as u64))),
-            stats: Arc::new(RwLock::new(CompressionStats::default())),
-            work_queue: Arc::new(Mutex::new(Vec::new())),
+            compression_pool: Arc::new(std::sync::Mutex::new(RwLock::new(LruCache::new(cache_size as u64)))),
+            decompress_cache: Arc::new(std::sync::Mutex::new(RwLock::new(LruCache::new(cache_size as u64)))),
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(CompressionStats::default()))),
+            work_queue: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
             active_compressions: AtomicUsize::new(0),
             next_block_id: AtomicUsize::new(1),
         }
@@ -169,34 +169,34 @@ impl Stage93MemoryCompressor {
             });
         }
 
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 根据算法压缩
         let (compressed_data, compression_ratio) = match self.config.algorithm {
             CompressionAlgorithm::LZ4 => {
                 // 使用 lz4_flex 压缩
-                let compressed = lz4_flex::compress(data);
-                let ratio = compressed.len() as f64 / data.len() as f64;
+                let compressed: _ = lz4_flex::compress(data);
+                let ratio: _ = compressed.len() as f64 / data.len() as f64;
                 (compressed, ratio)
             }
             CompressionAlgorithm::Zstd => {
                 // 使用 zstd 压缩
-                let compressed = zstd::bulk::compress(data, self.config.compression_level as i32)?;
-                let ratio = compressed.len() as f64 / data.len() as f64;
+                let compressed: _ = zstd::bulk::compress(data, self.config.compression_level as i32)?;
+                let ratio: _ = compressed.len() as f64 / data.len() as f64;
                 (compressed, ratio)
             }
             CompressionAlgorithm::Snappy => {
                 // 使用 snap 压缩
-                let compressed = snap::write::FrameEncoder::new_vec();
+                let compressed: _ = snap::write::FrameEncoder::new_vec();
                 let mut encoder = compressed;
                 encoder.write_all(data)?;
-                let compressed = encoder.into_inner();
-                let ratio = compressed.len() as f64 / data.len() as f64;
+                let compressed: _ = encoder.into_inner();
+                let ratio: _ = compressed.len() as f64 / data.len() as f64;
                 (compressed, ratio)
             }
         };
 
-        let compression_time = start.elapsed();
+        let compression_time: _ = start.elapsed();
 
         // 检查压缩比是否满足要求
         if compression_ratio > self.config.min_compression_ratio {
@@ -222,7 +222,7 @@ impl Stage93MemoryCompressor {
                 stats.compressed_total_bytes as f64 / stats.original_total_bytes as f64;
         }
 
-        let bytes_saved = data.len() - compressed_data.len();
+        let bytes_saved: _ = data.len() - compressed_data.len();
 
         Ok(CompressionResult {
             compressed_data,
@@ -234,12 +234,12 @@ impl Stage93MemoryCompressor {
 
     /// 解压缩数据
     pub async fn decompress(&self, compressed_data: &[u8], original_size: usize) -> Result<Vec<u8>> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 尝试从缓存获取
-        let cache_key = self.calculate_cache_key(compressed_data);
+        let cache_key: _ = self.calculate_cache_key(compressed_data);
         {
-            let cache = self.decompress_cache.read().await;
+            let cache: _ = self.decompress_cache.read().await;
             if let Some(cached) = cache.get(&cache_key) {
                 let mut stats = self.stats.write().await;
                 stats.cache_hits += 1;
@@ -248,7 +248,7 @@ impl Stage93MemoryCompressor {
         }
 
         // 缓存未命中，执行解压缩
-        let decompressed_data = match self.config.algorithm {
+        let decompressed_data: _ = match self.config.algorithm {
             CompressionAlgorithm::LZ4 => {
                 lz4_flex::decompress(compressed_data, original_size)?
             }
@@ -260,7 +260,7 @@ impl Stage93MemoryCompressor {
             }
         };
 
-        let decompression_time = start.elapsed();
+        let decompression_time: _ = start.elapsed();
 
         // 放入缓存
         {
@@ -281,15 +281,15 @@ impl Stage93MemoryCompressor {
 
     /// 压缩并存储在池中
     pub async fn compress_and_store(&self, data: Vec<u8>) -> Result<usize> {
-        let block_id = self.next_block_id.fetch_add(1, Ordering::Relaxed);
+        let block_id: _ = self.next_block_id.fetch_add(1, Ordering::Relaxed);
 
         // 异步压缩
-        let compression_pool = self.compression_pool.clone();
-        let config = self.config.clone();
+        let compression_pool: _ = self.compression_pool.clone();
+        let config: _ = self.config.clone();
 
         tokio::spawn(async move {
-            let compressor = Stage93MemoryCompressor::new(config);
-            let _ = compressor.compress(&data).await;
+            let compressor: _ = Stage93MemoryCompressor::new(config);
+            let _: _ = compressor.compress(&data).await;
         });
 
         Ok(block_id)
@@ -297,7 +297,7 @@ impl Stage93MemoryCompressor {
 
     /// 从池中获取压缩块
     pub async fn get_compressed_block(&self, block_id: usize) -> Option<Arc<CompressionBlock>> {
-        let pool = self.compression_pool.read().await;
+        let pool: _ = self.compression_pool.read().await;
         pool.get(&block_id).cloned()
     }
 
@@ -335,21 +335,21 @@ impl Stage93MemoryCompressor {
 
     /// 获取性能报告
     pub async fn get_performance_report(&self) -> Stage93CompressionReport {
-        let stats = self.stats.read().await.clone();
+        let stats: _ = self.stats.read().await.clone();
 
-        let compression_speed_mbps = if stats.total_compression_time.as_secs() > 0 {
+        let compression_speed_mbps: _ = if stats.total_compression_time.as_secs() > 0 {
             (stats.original_total_bytes as f64 / (1024.0 * 1024.0)) / stats.total_compression_time.as_secs() as f64
         } else {
             0.0
         };
 
-        let decompression_speed_mbps = if stats.total_decompression_time.as_secs() > 0 {
+        let decompression_speed_mbps: _ = if stats.total_decompression_time.as_secs() > 0 {
             (stats.original_total_bytes as f64 / (1024.0 * 1024.0)) / stats.total_decompression_time.as_secs() as f64
         } else {
             0.0
         };
 
-        let cache_hit_rate = if stats.cache_hits + stats.cache_misses > 0 {
+        let cache_hit_rate: _ = if stats.cache_hits + stats.cache_misses > 0 {
             stats.cache_hits as f64 / (stats.cache_hits + stats.cache_misses) as f64 * 100.0
         } else {
             0.0
@@ -395,11 +395,13 @@ pub struct Stage93CompressionReport {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_stage93_compressor_creation() {
-        let config = Stage93CompressionConfig::default();
-        let compressor = Stage93MemoryCompressor::new(config);
+        let config: _ = Stage93CompressionConfig::default();
+        let compressor: _ = Stage93MemoryCompressor::new(config);
 
         assert!(config.enable_compression);
         assert_eq!(config.algorithm, CompressionAlgorithm::Zstd);
@@ -407,63 +409,63 @@ mod tests {
 
     #[tokio::test]
     async fn test_compression_decompression() {
-        let compressor = Stage93MemoryCompressor::new(Stage93CompressionConfig::default());
+        let compressor: _ = Stage93MemoryCompressor::new(Stage93CompressionConfig::default());
 
-        let original_data = b"This is a test data for compression. ".repeat(100);
-        let compression_result = compressor.compress(&original_data).await.unwrap();
+        let original_data: _ = b"This is a test data for compression. ".repeat(100);
+        let compression_result: _ = compressor.compress(&original_data).await.unwrap();
 
         assert!(compression_result.compressed_data.len() <= original_data.len());
         assert!(compression_result.compression_ratio > 0.0);
         assert!(compression_result.compression_ratio <= 1.0);
 
-        let decompressed = compressor.decompress(&compression_result.compressed_data, original_data.len()).await.unwrap();
+        let decompressed: _ = compressor.decompress(&compression_result.compressed_data, original_data.len()).await.unwrap();
         assert_eq!(decompressed, original_data);
     }
 
     #[tokio::test]
     async fn test_smart_compression() {
-        let compressor = Stage93MemoryCompressor::new(Stage93CompressionConfig::default());
+        let compressor: _ = Stage93MemoryCompressor::new(Stage93CompressionConfig::default());
 
-        let data = b"Test data".to_vec();
+        let data: _ = b"Test data".to_vec();
 
         // 高频访问 - 不压缩
-        let result_high_freq = compressor.smart_compress(&data, 0.9).await.unwrap();
+        let result_high_freq: _ = compressor.smart_compress(&data, 0.9).await.unwrap();
         assert_eq!(result_high_freq.compression_ratio, 1.0);
 
         // 低频访问 - 压缩
-        let result_low_freq = compressor.smart_compress(&data, 0.1).await.unwrap();
+        let result_low_freq: _ = compressor.smart_compress(&data, 0.1).await.unwrap();
         // 可能压缩也可能不压缩，取决于数据
     }
 
     #[tokio::test]
     async fn test_performance_report() {
-        let compressor = Stage93MemoryCompressor::new(Stage93CompressionConfig::default());
+        let compressor: _ = Stage93MemoryCompressor::new(Stage93CompressionConfig::default());
 
-        let data = b"Test data for performance report".to_vec();
-        let _ = compressor.compress(&data).await.unwrap();
+        let data: _ = b"Test data for performance report".to_vec();
+        let _: _ = compressor.compress(&data).await.unwrap();
 
-        let report = compressor.get_performance_report().await;
+        let report: _ = compressor.get_performance_report().await;
         assert!(report.total_compressions >= 1);
         assert!(report.compression_speed_mbps >= 0.0);
     }
 
     #[tokio::test]
     async fn test_cache_functionality() {
-        let compressor = Stage93MemoryCompressor::new(Stage93CompressionConfig {
+        let compressor: _ = Stage93MemoryCompressor::new(Stage93CompressionConfig {
             decompress_cache_size: 100,
             ..Default::default()
         });
 
-        let data = b"Cache test data".to_vec();
-        let compressed = compressor.compress(&data).await.unwrap();
+        let data: _ = b"Cache test data".to_vec();
+        let compressed: _ = compressor.compress(&data).await.unwrap();
 
         // 第一次解压 - 缓存未命中
-        let _ = compressor.decompress(&compressed.compressed_data, data.len()).await.unwrap();
+        let _: _ = compressor.decompress(&compressed.compressed_data, data.len()).await.unwrap();
 
         // 第二次解压 - 缓存命中
-        let _ = compressor.decompress(&compressed.compressed_data, data.len()).await.unwrap();
+        let _: _ = compressor.decompress(&compressed.compressed_data, data.len()).await.unwrap();
 
-        let stats = compressor.get_compression_stats().await;
+        let stats: _ = compressor.get_compression_stats().await;
         assert_eq!(stats.cache_hits, 1);
         assert_eq!(stats.cache_misses, 1);
     }

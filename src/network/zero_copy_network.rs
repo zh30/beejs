@@ -9,6 +9,8 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use std::net::SocketAddr;
 use std::io::{Result, Error, ErrorKind};
 use memmap2::{Mmap, MmapOptions};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 零拷贝网络配置
 #[derive(Debug, Clone)]
@@ -65,19 +67,19 @@ impl ZeroCopySocket {
     pub fn new(config: NetworkConfig) -> Self {
         Self {
             zero_copy_config: ZeroCopyConfig::default(),
-            stats: Arc::new(RwLock::new(NetworkZeroCopyStats::default())),
-            mmap_pool: Arc::new(Mutex::new(Vec::new())),
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(NetworkZeroCopyStats::default()))),
+            mmap_pool: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
             config,
         }
     }
 
     /// 创建零拷贝监听器
     pub async fn bind(addr: &SocketAddr) -> Result<ZeroCopyListener> {
-        let listener = TcpListener::bind(addr).await?;
+        let listener: _ = TcpListener::bind(addr).await?;
         Ok(ZeroCopyListener {
             listener,
             config: NetworkConfig::default(),
-            stats: Arc::new(RwLock::new(NetworkZeroCopyStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(NetworkZeroCopyStats::default()))),
         })
     }
 
@@ -89,10 +91,10 @@ impl ZeroCopySocket {
         }
 
         // 使用零拷贝发送
-        let start = std::time::Instant::now();
+        let start: _ = std::time::Instant::now();
 
         // 创建内存映射
-        let mmap = self.create_mmap(data.len())?;
+        let mmap: _ = self.create_mmap(data.len())?;
 
         // 复制数据到映射内存
         unsafe {
@@ -104,7 +106,7 @@ impl ZeroCopySocket {
         }
 
         // 通过套接字发送（简化实现）
-        let result = stream.write(data).await;
+        let result: _ = stream.write(data).await;
 
         // 更新统计
         let mut stats = self.stats.write().await;
@@ -116,13 +118,13 @@ impl ZeroCopySocket {
 
     /// 接收数据（零拷贝）
     pub async fn recv_zero_copy(&self, stream: &mut TcpStream, buf: &mut [u8]) -> Result<usize> {
-        let start = std::time::Instant::now();
+        let start: _ = std::time::Instant::now();
 
         // 预分配内存映射缓冲区
-        let mmap = self.allocate_mmap(buf.len())?;
+        let mmap: _ = self.allocate_mmap(buf.len())?;
 
         // 接收数据
-        let result = stream.read(buf).await;
+        let result: _ = stream.read(buf).await;
 
         // 更新统计
         let mut stats = self.stats.write().await;
@@ -135,9 +137,9 @@ impl ZeroCopySocket {
     /// 创建内存映射
     fn create_mmap(&self, size: usize) -> Result<Mmap> {
         // 创建临时文件用于内存映射
-        let temp_file = std::env::temp_dir().join(format!("beejs_zero_copy_{}", std::process::id()));
+        let temp_file: _ = std::env::temp_dir().join(format!("beejs_zero_copy_{}", std::process::id()));
 
-        let file = std::fs::OpenOptions::new()
+        let file: _ = std::fs::OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
@@ -148,7 +150,7 @@ impl ZeroCopySocket {
 
         // 创建内存映射
         unsafe {
-            let mmap = MmapOptions::new()
+            let mmap: _ = MmapOptions::new()
                 .map(&file)?;
 
             Ok(mmap)
@@ -206,8 +208,8 @@ impl ZeroCopyStream {
 impl Drop for ZeroCopySocket {
     fn drop(&mut self) {
         // 清理临时文件
-        let temp_dir = std::env::temp_dir();
-        let temp_file = temp_dir.join(format!("beejs_zero_copy_{}", std::process::id()));
-        let _ = std::fs::remove_file(temp_file);
+        let temp_dir: _ = std::env::temp_dir();
+        let temp_file: _ = temp_dir.join(format!("beejs_zero_copy_{}", std::process::id()));
+        let _: _ = std::fs::remove_file(temp_file);
     }
 }

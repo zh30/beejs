@@ -122,7 +122,7 @@ pub struct AiPerformanceEngine {
     /// 张量优化器
     tensor_optimizer: Arc<Mutex<TensorOptimizer>>,
     /// 预测缓存
-    prediction_cache: Arc<Mutex<HashMap<String, PerformancePrediction>>>,
+    prediction_cache: Arc<Mutex<HashMap<String, PerformancePrediction, std::collections::HashMap<String, PerformancePrediction, String, PerformancePrediction>>>>,
     /// 是否正在训练
     is_training: Arc<Mutex<bool>>,
     /// 训练进度
@@ -134,12 +134,12 @@ impl AiPerformanceEngine {
     pub fn new(config: AiPerformanceEngineConfig) -> Self {
         Self {
             config: config.clone(),
-            metrics_history: Arc::new(RwLock::new(VecDeque::with_capacity(config.prediction_window))),
-            predictor: Arc::new(Mutex::new(PerformancePredictor::new(config.clone()))),
-            tensor_optimizer: Arc::new(Mutex::new(TensorOptimizer::new())),
-            prediction_cache: Arc::new(Mutex::new(HashMap::new())),
-            is_training: Arc::new(Mutex::new(false)),
-            training_progress: Arc::new(Mutex::new(0.0)),
+            metrics_history: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::with_capacity(config.prediction_window)))),
+            predictor: Arc::new(std::sync::Mutex::new(Mutex::new(PerformancePredictor::new(config.clone())))),
+            tensor_optimizer: Arc::new(std::sync::Mutex::new(Mutex::new(TensorOptimizer::new()))),
+            prediction_cache: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            is_training: Arc::new(std::sync::Mutex::new(Mutex::new(false))),
+            training_progress: Arc::new(std::sync::Mutex::new(Mutex::new(0.0))),
         }
     }
 
@@ -161,24 +161,24 @@ impl AiPerformanceEngine {
 
     /// 预测性能
     pub async fn predict_performance(&self) -> Result<PerformancePrediction, Box<dyn std::error::Error>> {
-        let history = self.metrics_history.read().await;
+        let history: _ = self.metrics_history.read().await;
 
         if history.len() < 10 {
             return Err("历史数据不足，无法进行预测".into());
         }
 
         // 检查缓存
-        let cache_key = self.generate_cache_key(&history);
-        let cache = self.prediction_cache.lock().unwrap();
+        let cache_key: _ = self.generate_cache_key(&history);
+        let cache: _ = self.prediction_cache.lock().unwrap();
         if let Some(prediction) = cache.get(&cache_key) {
             return Ok(prediction.clone());
         }
         drop(cache);
 
         // 使用预测器进行预测
-        let predictor = self.predictor.lock().unwrap();
+        let predictor: _ = self.predictor.lock().unwrap();
         let history_vec: Vec<PerformanceMetrics> = history.iter().cloned().collect();
-        let prediction = predictor.predict(&history_vec)?;
+        let prediction: _ = predictor.predict(&history_vec)?;
 
         // 缓存预测结果
         let mut cache = self.prediction_cache.lock().unwrap();
@@ -189,14 +189,14 @@ impl AiPerformanceEngine {
 
     /// 自动调优
     pub async fn auto_tune(&self) -> Result<Vec<OptimizationSuggestion>, Box<dyn std::error::Error>> {
-        let prediction = self.predict_performance().await?;
+        let prediction: _ = self.predict_performance().await?;
 
         // 根据预测结果生成优化建议
         let mut suggestions = prediction.optimization_suggestions;
 
         // 基于历史数据进行额外优化
-        let history = self.metrics_history.read().await;
-        let additional_suggestions = self.generate_suggestions_from_history(&history)?;
+        let history: _ = self.metrics_history.read().await;
+        let additional_suggestions: _ = self.generate_suggestions_from_history(&history)?;
         suggestions.extend(additional_suggestions);
 
         // 应用优化建议
@@ -209,14 +209,14 @@ impl AiPerformanceEngine {
 
     /// 获取当前性能指标
     pub async fn get_current_metrics(&self) -> Option<PerformanceMetrics> {
-        let history = self.metrics_history.read().await;
+        let history: _ = self.metrics_history.read().await;
         history.back().cloned()
     }
 
     /// 获取性能趋势
     pub async fn get_performance_trend(&self, duration: Duration) -> Vec<PerformanceMetrics> {
-        let history = self.metrics_history.read().await;
-        let cutoff = chrono::Utc::now().timestamp() as u64 - duration.as_secs();
+        let history: _ = self.metrics_history.read().await;
+        let cutoff: _ = chrono::Utc::now().timestamp() as u64 - duration.as_secs();
 
         history
             .iter()
@@ -227,7 +227,7 @@ impl AiPerformanceEngine {
 
     /// 检查性能回归
     pub async fn check_performance_regression(&self, baseline: &[PerformanceMetrics]) -> bool {
-        let current = self.get_performance_trend(Duration::from_secs(60)).await;
+        let current: _ = self.get_performance_trend(Duration::from_secs(60)).await;
 
         if current.is_empty() || baseline.is_empty() {
             return false;
@@ -246,7 +246,7 @@ impl AiPerformanceEngine {
             return;
         }
 
-        let history = self.metrics_history.read().await;
+        let history: _ = self.metrics_history.read().await;
         if history.len() < self.config.batch_size {
             return;
         }
@@ -255,22 +255,22 @@ impl AiPerformanceEngine {
 
         // TODO: 修复异步训练的 Send 问题
         // 异步训练
-        // let predictor = Arc::clone(&self.predictor);
-        // let tensor_optimizer = Arc::clone(&self.tensor_optimizer);
-        // let progress = Arc::clone(&self.training_progress);
-        // let is_training = Arc::clone(&self.is_training);
-        // let history_data = history.iter().cloned().collect::<Vec<_>>();
+        // let predictor: _ = Arc::clone(&self.predictor);
+        // let tensor_optimizer: _ = Arc::clone(&self.tensor_optimizer);
+        // let progress: _ = Arc::clone(&self.training_progress);
+        // let is_training: _ = Arc::clone(&self.is_training);
+        // let history_data: _ = history.iter().cloned().collect::<Vec<_>>();
 
         // tokio::spawn(async move {
         //     // 训练预测器
         //     {
-        //         let mut predictor = predictor.lock().unwrap();
+        //         let mut predictor = predictor.clone();lock().unwrap();
         //         predictor.train(&history_data).await;
         //     }
 
         //     // 训练张量优化器
         //     {
-        //         let _optimizer_guard = tensor_optimizer.lock().unwrap();
+        //         let _optimizer_guard: _ = tensor_optimizer.lock().unwrap();
         //         // 简化的训练过程（实际实现中会使用真实数据）
         //         // TODO: 使用真实的历史数据进行训练
         //     }
@@ -299,9 +299,9 @@ impl AiPerformanceEngine {
         }
 
         // 计算平均指标
-        let avg_cpu = history.iter().map(|m| m.cpu_usage).sum::<f64>() / history.len() as f64;
-        let avg_memory = history.iter().map(|m| m.memory_usage).sum::<f64>() / history.len() as f64;
-        let avg_gc_time = history.iter().map(|m| m.gc_time).sum::<f64>() / history.len() as f64;
+        let avg_cpu: _ = history.iter().map(|m| m.cpu_usage).sum::<f64>() / history.len() as f64;
+        let avg_memory: _ = history.iter().map(|m| m.memory_usage).sum::<f64>() / history.len() as f64;
+        let avg_gc_time: _ = history.iter().map(|m| m.gc_time).sum::<f64>() / history.len() as f64;
 
         // 基于 CPU 使用率生成建议
         if avg_cpu > 80.0 {
@@ -380,15 +380,17 @@ impl AiPerformanceEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_record_and_predict() {
-        let config = AiPerformanceEngineConfig::default();
-        let engine = AiPerformanceEngine::new(config);
+        let config: _ = AiPerformanceEngineConfig::default();
+        let engine: _ = AiPerformanceEngine::new(config);
 
         // 记录一些指标
         for i in 0..20 {
-            let metrics = PerformanceMetrics {
+            let metrics: _ = PerformanceMetrics {
                 cpu_usage: 50.0 + i as f64,
                 memory_usage: 100.0 + i as f64 * 2.0,
                 heap_size: 200.0 + i as f64,
@@ -403,7 +405,7 @@ mod tests {
         }
 
         // 预测性能
-        let prediction = engine.predict_performance().await.unwrap();
+        let prediction: _ = engine.predict_performance().await.unwrap();
         println!("预测结果: {:?}", prediction);
 
         assert!(prediction.confidence > 0.0);
@@ -411,12 +413,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_auto_tune() {
-        let config = AiPerformanceEngineConfig::default();
-        let engine = AiPerformanceEngine::new(config);
+        let config: _ = AiPerformanceEngineConfig::default();
+        let engine: _ = AiPerformanceEngine::new(config);
 
         // 记录高 CPU 使用率的指标
         for _ in 0..20 {
-            let metrics = PerformanceMetrics {
+            let metrics: _ = PerformanceMetrics {
                 cpu_usage: 90.0,
                 memory_usage: 1500.0,
                 heap_size: 300.0,
@@ -431,7 +433,7 @@ mod tests {
         }
 
         // 自动调优
-        let suggestions = engine.auto_tune().await.unwrap();
+        let suggestions: _ = engine.auto_tune().await.unwrap();
         println!("优化建议: {:?}", suggestions);
 
         assert!(!suggestions.is_empty());

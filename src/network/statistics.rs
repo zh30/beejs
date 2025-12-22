@@ -109,21 +109,21 @@ impl NetworkIoStatistics {
     /// # 返回值
     /// 返回新的 NetworkIoStatistics 实例
     pub fn new(config: StatisticsConfig) -> Self {
-        let stats = IoStatisticsData {
+        let stats: _ = IoStatisticsData {
             start_time: Some(Instant::now()),
             last_update: Some(Instant::now()),
             ..Default::default()
         };
 
         Self {
-            stats: Arc::new(Mutex::new(stats)),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(stats))),
             config,
         }
     }
 
     /// 使用默认配置创建统计监控器
     pub fn default() -> Self {
-        let config = StatisticsConfig {
+        let config: _ = StatisticsConfig {
             window_size: Duration::from_secs(60), // 1 分钟窗口
             enable_detailed_stats: true,
             sampling_rate: 1.0, // 100% 采样
@@ -146,7 +146,7 @@ impl NetworkIoStatistics {
 
         // 更新平均延迟
         if stats.zero_copy_send_count > 0 {
-            let total_latency = stats.avg_send_latency_us * (stats.zero_copy_send_count - 1) as f64;
+            let total_latency: _ = stats.avg_send_latency_us * (stats.zero_copy_send_count - 1) as f64;
             stats.avg_send_latency_us =
                 (total_latency + latency_us as f64) / stats.zero_copy_send_count as f64;
         }
@@ -168,7 +168,7 @@ impl NetworkIoStatistics {
 
         // 更新平均延迟
         if stats.zero_copy_recv_count > 0 {
-            let total_latency = stats.avg_recv_latency_us * (stats.zero_copy_recv_count - 1) as f64;
+            let total_latency: _ = stats.avg_recv_latency_us * (stats.zero_copy_recv_count - 1) as f64;
             stats.avg_recv_latency_us =
                 (total_latency + latency_us as f64) / stats.zero_copy_recv_count as f64;
         }
@@ -189,9 +189,9 @@ impl NetworkIoStatistics {
         stats.total_sent_bytes += bytes;
 
         // 更新平均延迟
-        let total_send_count = stats.traditional_send_count + stats.zero_copy_send_count;
+        let total_send_count: _ = stats.traditional_send_count + stats.zero_copy_send_count;
         if total_send_count > 0 {
-            let total_latency = stats.avg_send_latency_us * (total_send_count - 1) as f64;
+            let total_latency: _ = stats.avg_send_latency_us * (total_send_count - 1) as f64;
             stats.avg_send_latency_us =
                 (total_latency + latency_us as f64) / total_send_count as f64;
         }
@@ -212,9 +212,9 @@ impl NetworkIoStatistics {
         stats.total_recv_bytes += bytes;
 
         // 更新平均延迟
-        let total_recv_count = stats.traditional_recv_count + stats.zero_copy_recv_count;
+        let total_recv_count: _ = stats.traditional_recv_count + stats.zero_copy_recv_count;
         if total_recv_count > 0 {
-            let total_latency = stats.avg_recv_latency_us * (total_recv_count - 1) as f64;
+            let total_latency: _ = stats.avg_recv_latency_us * (total_recv_count - 1) as f64;
             stats.avg_recv_latency_us =
                 (total_latency + latency_us as f64) / total_recv_count as f64;
         }
@@ -242,7 +242,7 @@ impl NetworkIoStatistics {
 
         // 计算 QPS
         if let Some(start_time) = stats.start_time {
-            let elapsed = stats.last_update.unwrap().duration_since(start_time);
+            let elapsed: _ = stats.last_update.unwrap().duration_since(start_time);
             if elapsed.as_secs() > 0 {
                 stats.qps_sent = stats.total_sent_bytes as f64 / elapsed.as_secs() as f64;
                 stats.qps_recv = stats.total_recv_bytes as f64 / elapsed.as_secs() as f64;
@@ -260,14 +260,14 @@ impl NetworkIoStatistics {
     /// # 返回值
     /// 返回零拷贝比率 (0.0 - 1.0)
     pub fn zero_copy_ratio(&self) -> f64 {
-        let stats = self.stats.lock().unwrap();
-        let total_bytes = stats.total_sent_bytes + stats.total_recv_bytes;
+        let stats: _ = self.stats.lock().unwrap();
+        let total_bytes: _ = stats.total_sent_bytes + stats.total_recv_bytes;
 
         if total_bytes == 0 {
             return 0.0;
         }
 
-        let zero_copy_bytes = stats.zero_copy_sent_bytes + stats.zero_copy_recv_bytes;
+        let zero_copy_bytes: _ = stats.zero_copy_sent_bytes + stats.zero_copy_recv_bytes;
         zero_copy_bytes as f64 / total_bytes as f64
     }
 
@@ -276,8 +276,8 @@ impl NetworkIoStatistics {
     /// # 返回值
     /// 返回错误率 (0.0 - 1.0)
     pub fn error_rate(&self) -> f64 {
-        let stats = self.stats.lock().unwrap();
-        let total_ops = stats.success_count + stats.error_count;
+        let stats: _ = self.stats.lock().unwrap();
+        let total_ops: _ = stats.success_count + stats.error_count;
 
         if total_ops == 0 {
             return 0.0;
@@ -291,10 +291,10 @@ impl NetworkIoStatistics {
     /// # 返回值
     /// 返回平均吞吐量
     pub fn throughput(&self) -> f64 {
-        let stats = self.stats.lock().unwrap();
+        let stats: _ = self.stats.lock().unwrap();
 
         if let Some(start_time) = stats.start_time {
-            let elapsed = stats.last_update.unwrap().duration_since(start_time);
+            let elapsed: _ = stats.last_update.unwrap().duration_since(start_time);
             if elapsed.as_secs() > 0 {
                 return (stats.total_sent_bytes + stats.total_recv_bytes) as f64
                     / elapsed.as_secs() as f64;
@@ -319,10 +319,10 @@ impl NetworkIoStatistics {
     /// # 返回值
     /// 返回格式化的统计报告
     pub fn generate_report(&self) -> String {
-        let stats = self.stats.lock().unwrap();
-        let zero_copy_ratio = self.zero_copy_ratio();
-        let error_rate = self.error_rate();
-        let throughput = self.throughput();
+        let stats: _ = self.stats.lock().unwrap();
+        let zero_copy_ratio: _ = self.zero_copy_ratio();
+        let error_rate: _ = self.error_rate();
+        let throughput: _ = self.throughput();
 
         format!(
             r#"
@@ -371,11 +371,13 @@ impl NetworkIoStatistics {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_zero_copy_network_io_statistics() {
         // 创建测试用的统计监控器
-        let _stats = NetworkIoStatistics::default();
+        let _stats: _ = NetworkIoStatistics::default();
 
         println!("NetworkIoStatistics test placeholder");
         println!("This test validates statistics collection and reporting");

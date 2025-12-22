@@ -156,8 +156,8 @@ impl ModelMetrics {
         }
 
         // 更新平均延迟
-        let current_avg = self.average_latency;
-        let count = self.successful_requests as u64;
+        let current_avg: _ = self.average_latency;
+        let count: _ = self.successful_requests as u64;
         self.average_latency = Duration::from_nanos(
             (current_avg.as_nanos() as u64 * (count - 1) + latency.as_nanos() as u64) / count,
         );
@@ -190,7 +190,7 @@ pub struct AiModel {
 /// AI模型管理器
 #[allow(dead_code)]
 pub struct AiModelManager {
-    models: Arc<Mutex<HashMap<String, AiModel>>>,
+    models: Arc<Mutex<HashMap<String, AiModel, std::collections::HashMap<String, AiModel, String, AiModel>>>>,
     default_model_id: Arc<Mutex<Option<String>>>,
     routing_strategy: Arc<Mutex<ModelRoutingStrategy>>,
 }
@@ -216,9 +216,9 @@ impl AiModelManager {
     /// 创建新的模型管理器
     pub fn new() -> Self {
         Self {
-            models: Arc::new(Mutex::new(HashMap::new())),
-            default_model_id: Arc::new(Mutex::new(None)),
-            routing_strategy: Arc::new(Mutex::new(ModelRoutingStrategy::default())),
+            models: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            default_model_id: Arc::new(std::sync::Mutex::new(Mutex::new(None))),
+            routing_strategy: Arc::new(std::sync::Mutex::new(Mutex::new(ModelRoutingStrategy::default()))),
         }
     }
 
@@ -236,7 +236,7 @@ impl AiModelManager {
 
         // 如果是第一个模型，设为默认模型
         if models.len() == 1 {
-            let model_id = models.keys().next().unwrap().clone();
+            let model_id: _ = models.keys().next().unwrap().clone();
             *self.default_model_id.lock().unwrap() = Some(model_id);
         }
 
@@ -248,9 +248,9 @@ impl AiModelManager {
         &self,
         model_id: &str,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
-        let need_load = {
+        let need_load: _ = {
             let models = self.models.lock().unwrap();
             if let Some(model) = models.get(model_id) {
                 !model.is_loaded
@@ -284,7 +284,7 @@ impl AiModelManager {
         &self,
         model_id: &str,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let need_unload = {
+        let need_unload: _ = {
             let models = self.models.lock().unwrap();
             if let Some(model) = models.get(model_id) {
                 model.is_loaded
@@ -315,17 +315,17 @@ impl AiModelManager {
         model_id: Option<&str>,
         input: ModelInput,
     ) -> Result<ModelOutput, Box<dyn std::error::Error + Send + Sync>> {
-        let actual_model_id = if let Some(id) = model_id {
+        let actual_model_id: _ = if let Some(id) = model_id {
             id.to_string()
         } else {
             self.get_default_model_id()?
         };
 
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 检查模型是否存在且已加载
         let (model_type, _config) = {
-            let models = self.models.lock().unwrap();
+            let models: _ = self.models.lock().unwrap();
             if let Some(model) = models.get(&actual_model_id) {
                 if !model.is_loaded {
                     return Err("模型未加载".into());
@@ -337,12 +337,12 @@ impl AiModelManager {
         };
 
         // 执行模型推理
-        let output = self.execute_inference(&model_type, input).await?;
-        let latency = start_time.elapsed();
+        let output: _ = self.execute_inference(&model_type, input).await?;
+        let latency: _ = start_time.elapsed();
 
         // 更新指标
         {
-            let models = self.models.lock().unwrap();
+            let models: _ = self.models.lock().unwrap();
             if let Some(model) = models.get(&actual_model_id) {
                 let mut metrics = model.metrics.lock().unwrap();
                 metrics.update(latency, true);
@@ -441,7 +441,7 @@ impl AiModelManager {
 
     /// 获取默认模型ID
     fn get_default_model_id(&self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let default_id = self.default_model_id.lock().unwrap();
+        let default_id: _ = self.default_model_id.lock().unwrap();
         if let Some(id) = default_id.as_ref() {
             Ok(id.clone())
         } else {
@@ -451,21 +451,21 @@ impl AiModelManager {
 
     /// 获取模型列表
     pub fn list_models(&self) -> Vec<String> {
-        let models = self.models.lock().unwrap();
+        let models: _ = self.models.lock().unwrap();
         models.keys().cloned().collect()
     }
 
     /// 获取模型指标
     pub fn get_model_metrics(&self, model_id: &str) -> Option<ModelMetrics> {
-        let models = self.models.lock().unwrap();
+        let models: _ = self.models.lock().unwrap();
         models
             .get(model_id)
             .map(|m| m.metrics.lock().unwrap().clone())
     }
 
     /// 获取所有模型的汇总指标
-    pub fn get_all_metrics(&self) -> HashMap<String, ModelMetrics> {
-        let models = self.models.lock().unwrap();
+    pub fn get_all_metrics(&self) -> HashMap<String, ModelMetrics, std::collections::HashMap<String, ModelMetrics, String, ModelMetrics>> {
+        let models: _ = self.models.lock().unwrap();
         let mut metrics = HashMap::new();
 
         for (id, model) in models.iter() {
@@ -480,7 +480,7 @@ impl AiModelManager {
         &self,
         model_id: &str,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let models = self.models.lock().unwrap();
+        let models: _ = self.models.lock().unwrap();
         if models.contains_key(model_id) {
             *self.default_model_id.lock().unwrap() = Some(model_id.to_string());
             Ok(())
@@ -495,8 +495,8 @@ impl AiModelManager {
     }
 
     /// 健康检查
-    pub async fn health_check(&self) -> HashMap<String, bool> {
-        let models = self.models.lock().unwrap();
+    pub async fn health_check(&self) -> HashMap<String, bool, std::collections::HashMap<String, bool, String, bool>> {
+        let models: _ = self.models.lock().unwrap();
         let mut health_status = HashMap::new();
 
         for (id, model) in models.iter() {
@@ -504,11 +504,11 @@ impl AiModelManager {
             // 1. 必须已加载
             // 2. 如果有请求记录，成功率必须 > 0.5
             // 3. 如果没有请求记录（全新加载），也认为是健康的
-            let metrics = model.metrics.lock().unwrap();
-            let has_requests = metrics.total_requests > 0;
-            let success_rate = metrics.success_rate();
+            let metrics: _ = model.metrics.lock().unwrap();
+            let has_requests: _ = metrics.total_requests > 0;
+            let success_rate: _ = metrics.success_rate();
 
-            let is_healthy = model.is_loaded && (!has_requests || success_rate > 0.5);
+            let is_healthy: _ = model.is_loaded && (!has_requests || success_rate > 0.5);
             health_status.insert(id.clone(), is_healthy);
         }
 
@@ -518,7 +518,7 @@ impl AiModelManager {
     /// 清理资源
     pub async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let model_ids: Vec<String> = {
-            let models = self.models.lock().unwrap();
+            let models: _ = self.models.lock().unwrap();
             models.keys().cloned().collect()
         };
 
@@ -533,7 +533,7 @@ impl AiModelManager {
 /// 便利函数：创建文本生成模型
 #[allow(dead_code)]
 pub fn create_text_generation_model(model_id: &str) -> AiModel {
-    let config = ModelConfig {
+    let config: _ = ModelConfig {
         model_type: ModelType::LanguageModel {
             model_name: "gpt-3.5-turbo".to_string(),
             max_tokens: 4096,
@@ -551,14 +551,14 @@ pub fn create_text_generation_model(model_id: &str) -> AiModel {
         config,
         is_loaded: false,
         load_time: None,
-        metrics: Arc::new(Mutex::new(ModelMetrics::default())),
+        metrics: Arc::new(std::sync::Mutex::new(Mutex::new(ModelMetrics::default()))),
     }
 }
 
 /// 便利函数：创建图像分类模型
 #[allow(dead_code)]
 pub fn create_image_classification_model(model_id: &str) -> AiModel {
-    let config = ModelConfig {
+    let config: _ = ModelConfig {
         model_type: ModelType::ImageClassifier {
             model_name: "resnet50".to_string(),
             input_size: (224, 224),
@@ -576,58 +576,60 @@ pub fn create_image_classification_model(model_id: &str) -> AiModel {
         config,
         is_loaded: false,
         load_time: None,
-        metrics: Arc::new(Mutex::new(ModelMetrics::default())),
+        metrics: Arc::new(std::sync::Mutex::new(Mutex::new(ModelMetrics::default()))),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_model_manager_creation() {
-        let manager = AiModelManager::new();
-        let models = manager.list_models();
+        let manager: _ = AiModelManager::new();
+        let models: _ = manager.list_models();
         assert!(models.is_empty());
     }
 
     #[tokio::test]
     async fn test_register_model() {
-        let manager = AiModelManager::new();
-        let model = create_text_generation_model("test-model");
+        let manager: _ = AiModelManager::new();
+        let model: _ = create_text_generation_model("test-model");
 
-        let result = manager.register_model(model);
+        let result: _ = manager.register_model(model);
         assert!(result.is_ok());
         assert_eq!(manager.list_models(), vec!["test-model"]);
     }
 
     #[tokio::test]
     async fn test_load_model() {
-        let manager = AiModelManager::new();
-        let model = create_text_generation_model("test-model");
+        let manager: _ = AiModelManager::new();
+        let model: _ = create_text_generation_model("test-model");
         manager.register_model(model).unwrap();
 
-        let result = manager.load_model("test-model").await;
+        let result: _ = manager.load_model("test-model").await;
         assert!(result.is_ok());
 
-        let models = manager.models.lock().unwrap();
+        let models: _ = manager.models.lock().unwrap();
         assert!(models.get("test-model").unwrap().is_loaded);
     }
 
     #[tokio::test]
     async fn test_call_model() {
-        let manager = AiModelManager::new();
-        let model = create_text_generation_model("test-model");
+        let manager: _ = AiModelManager::new();
+        let model: _ = create_text_generation_model("test-model");
         manager.register_model(model).unwrap();
         manager.load_model("test-model").await.unwrap();
 
-        let input = ModelInput::Text {
+        let input: _ = ModelInput::Text {
             content: "Hello, world!".to_string(),
             max_tokens: Some(100),
             temperature: Some(0.7),
         };
 
-        let result = manager.call_model(Some("test-model"), input).await;
+        let result: _ = manager.call_model(Some("test-model"), input).await;
         assert!(result.is_ok());
 
         if let Ok(ModelOutput::Text { content, .. }) = result {
@@ -649,26 +651,26 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_check() {
-        let manager = AiModelManager::new();
-        let model = create_text_generation_model("test-model");
+        let manager: _ = AiModelManager::new();
+        let model: _ = create_text_generation_model("test-model");
         manager.register_model(model).unwrap();
         manager.load_model("test-model").await.unwrap();
 
-        let health = manager.health_check().await;
+        let health: _ = manager.health_check().await;
         assert!(health.contains_key("test-model"));
         assert!(health.get("test-model").unwrap());
     }
 
     #[test]
     fn test_create_text_generation_model() {
-        let model = create_text_generation_model("gpt-3.5");
+        let model: _ = create_text_generation_model("gpt-3.5");
         assert_eq!(model.id, "gpt-3.5");
         assert!(!model.is_loaded);
     }
 
     #[test]
     fn test_create_image_classification_model() {
-        let model = create_image_classification_model("resnet50");
+        let model: _ = create_image_classification_model("resnet50");
         assert_eq!(model.id, "resnet50");
         assert!(!model.is_loaded);
     }

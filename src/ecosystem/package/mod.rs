@@ -8,3 +8,5 @@ pub mod version_selector;
 pub use dependency_resolver::*;
 pub use cache_manager::*;
 pub use version_selector::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};

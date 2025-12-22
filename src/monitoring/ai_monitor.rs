@@ -51,9 +51,9 @@ pub enum AlertSeverity {
 
 /// 实时性能监控器
 pub struct RealtimePerformanceMonitor {
-    metrics: Arc<RwLock<HashMap<String, Vec<PerformanceMetrics>>>>,
+    metrics: Arc<RwLock<HashMap<String, Vec<PerformanceMetrics, std::collections::HashMap<String, Vec<PerformanceMetrics, String, Vec<PerformanceMetrics>>>>>,
     alerts: Arc<RwLock<Vec<Alert>>>,
-    thresholds: Arc<RwLock<HashMap<MetricType, f64>>>,
+    thresholds: Arc<RwLock<HashMap<MetricType, f64, std::collections::HashMap<MetricType, f64, MetricType, f64>>>>,
 }
 
 impl RealtimePerformanceMonitor {
@@ -66,15 +66,15 @@ impl RealtimePerformanceMonitor {
         thresholds.insert(MetricType::ErrorRate, 5.0); // %
 
         Self {
-            metrics: Arc::new(RwLock::new(HashMap::new())),
-            alerts: Arc::new(RwLock::new(Vec::new())),
-            thresholds: Arc::new(RwLock::new(thresholds)),
+            metrics: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            alerts: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            thresholds: Arc::new(std::sync::Mutex::new(RwLock::new(thresholds))),
         }
     }
 
     pub async fn record_metric(&self, metric: PerformanceMetrics) {
         let mut metrics = self.metrics.write().await;
-        let key = format!("{}:{}", metric.metric_type, metric.source);
+        let key: _ = format!("{}:{}", metric.metric_type, metric.source);
 
         metrics.entry(key).or_insert_with(Vec::new).push(metric);
 
@@ -83,10 +83,10 @@ impl RealtimePerformanceMonitor {
     }
 
     async fn check_threshold(&self, metric: &PerformanceMetrics) {
-        let thresholds = self.thresholds.read().await;
+        let thresholds: _ = self.thresholds.read().await;
         if let Some(&threshold) = thresholds.get(&metric.metric_type) {
             if metric.value > threshold {
-                let alert = Alert {
+                let alert: _ = Alert {
                     alert_id: format!("alert_{}", Utc::now().timestamp()),
                     severity: self.determine_severity(&metric.metric_type, metric.value, threshold),
                     message: format!("{:?} 超过阈值: {:.2} > {:.2}", metric.metric_type, metric.value, threshold),
@@ -103,7 +103,7 @@ impl RealtimePerformanceMonitor {
     }
 
     fn determine_severity(&self, metric_type: &MetricType, value: f64, threshold: f64) -> AlertSeverity {
-        let ratio = value / threshold;
+        let ratio: _ = value / threshold;
         if ratio > 1.5 {
             AlertSeverity::Critical
         } else if ratio > 1.2 {
@@ -114,8 +114,8 @@ impl RealtimePerformanceMonitor {
     }
 
     pub async fn get_recent_metrics(&self, metric_type: MetricType, minutes: i32) -> Vec<PerformanceMetrics> {
-        let metrics = self.metrics.read().await;
-        let cutoff = Utc::now() - chrono::Duration::minutes(minutes as i64);
+        let metrics: _ = self.metrics.read().await;
+        let cutoff: _ = Utc::now() - chrono::Duration::minutes(minutes as i64);
 
         let mut result = Vec::new();
         for (_key, metric_list) in metrics.iter() {
@@ -131,7 +131,7 @@ impl RealtimePerformanceMonitor {
     }
 
     pub async fn get_alerts(&self, severity: Option<AlertSeverity>) -> Vec<Alert> {
-        let alerts = self.alerts.read().await;
+        let alerts: _ = self.alerts.read().await;
 
         if let Some(sev) = severity {
             alerts.iter()
@@ -152,12 +152,14 @@ impl RealtimePerformanceMonitor {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_performance_monitor() {
-        let monitor = RealtimePerformanceMonitor::new();
+        let monitor: _ = RealtimePerformanceMonitor::new();
 
-        let metric = PerformanceMetrics {
+        let metric: _ = PerformanceMetrics {
             timestamp: Utc::now(),
             metric_type: MetricType::CpuUsage,
             value: 85.0,
@@ -167,7 +169,7 @@ mod tests {
 
         monitor.record_metric(metric).await;
 
-        let alerts = monitor.get_alerts(None).await;
+        let alerts: _ = monitor.get_alerts(None).await;
         assert!(!alerts.is_empty());
         assert_eq!(alerts[0].severity, AlertSeverity::Warning);
     }

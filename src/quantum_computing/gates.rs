@@ -8,6 +8,8 @@ use num_complex::Complex64;
 use std::f64::consts::{FRAC_PI_2, PI};
 
 use super::Qubit;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 量子门操作
 pub struct QuantumGate;
@@ -21,10 +23,10 @@ impl QuantumGate {
     /// 创建叠加态
     pub fn hadamard(qubit: &mut Qubit) {
         let (alpha, beta) = qubit.amplitudes();
-        let s = 1.0 / 2.0_f64.sqrt();
+        let s: _ = 1.0 / 2.0_f64.sqrt();
 
-        let new_alpha = s * (alpha + beta);
-        let new_beta = s * (alpha - beta);
+        let new_alpha: _ = s * (alpha + beta);
+        let new_beta: _ = s * (alpha - beta);
 
         qubit.set_amplitudes(new_alpha, new_beta);
     }
@@ -39,10 +41,10 @@ impl QuantumGate {
     /// Pauli-Y 门: Y = [[0, -i], [i, 0]]
     pub fn pauli_y(qubit: &mut Qubit) {
         let (alpha, beta) = qubit.amplitudes();
-        let i = Complex64::new(0.0, 1.0);
+        let i: _ = Complex64::new(0.0, 1.0);
 
-        let new_alpha = -i * beta;
-        let new_beta = i * alpha;
+        let new_alpha: _ = -i * beta;
+        let new_beta: _ = i * alpha;
 
         qubit.set_amplitudes(new_alpha, new_beta);
     }
@@ -57,7 +59,7 @@ impl QuantumGate {
     /// 相位门: P(θ) = [[1, 0], [0, e^(iθ)]]
     pub fn phase(qubit: &mut Qubit, theta: f64) {
         let (alpha, beta) = qubit.amplitudes();
-        let phase_factor = Complex64::from_polar(1.0, theta);
+        let phase_factor: _ = Complex64::from_polar(1.0, theta);
         qubit.set_amplitudes(alpha, beta * phase_factor);
     }
 
@@ -74,11 +76,11 @@ impl QuantumGate {
     /// 绕 X 轴旋转: Rx(θ) = [[cos(θ/2), -i*sin(θ/2)], [-i*sin(θ/2), cos(θ/2)]]
     pub fn rotation_x(qubit: &mut Qubit, theta: f64) {
         let (alpha, beta) = qubit.amplitudes();
-        let c = Complex64::new((theta / 2.0).cos(), 0.0);
-        let s = Complex64::new(0.0, -(theta / 2.0).sin());
+        let c: _ = Complex64::new((theta / 2.0).cos(), 0.0);
+        let s: _ = Complex64::new(0.0, -(theta / 2.0).sin());
 
-        let new_alpha = c * alpha + s * beta;
-        let new_beta = s * alpha + c * beta;
+        let new_alpha: _ = c * alpha + s * beta;
+        let new_beta: _ = s * alpha + c * beta;
 
         qubit.set_amplitudes(new_alpha, new_beta);
     }
@@ -86,11 +88,11 @@ impl QuantumGate {
     /// 绕 Y 轴旋转: Ry(θ) = [[cos(θ/2), -sin(θ/2)], [sin(θ/2), cos(θ/2)]]
     pub fn rotation_y(qubit: &mut Qubit, theta: f64) {
         let (alpha, beta) = qubit.amplitudes();
-        let c = (theta / 2.0).cos();
-        let s = (theta / 2.0).sin();
+        let c: _ = (theta / 2.0).cos();
+        let s: _ = (theta / 2.0).sin();
 
-        let new_alpha = Complex64::new(c, 0.0) * alpha - Complex64::new(s, 0.0) * beta;
-        let new_beta = Complex64::new(s, 0.0) * alpha + Complex64::new(c, 0.0) * beta;
+        let new_alpha: _ = Complex64::new(c, 0.0) * alpha - Complex64::new(s, 0.0) * beta;
+        let new_beta: _ = Complex64::new(s, 0.0) * alpha + Complex64::new(c, 0.0) * beta;
 
         qubit.set_amplitudes(new_alpha, new_beta);
     }
@@ -98,8 +100,8 @@ impl QuantumGate {
     /// 绕 Z 轴旋转: Rz(θ) = [[e^(-iθ/2), 0], [0, e^(iθ/2)]]
     pub fn rotation_z(qubit: &mut Qubit, theta: f64) {
         let (alpha, beta) = qubit.amplitudes();
-        let phase_neg = Complex64::from_polar(1.0, -theta / 2.0);
-        let phase_pos = Complex64::from_polar(1.0, theta / 2.0);
+        let phase_neg: _ = Complex64::from_polar(1.0, -theta / 2.0);
+        let phase_pos: _ = Complex64::from_polar(1.0, theta / 2.0);
 
         qubit.set_amplitudes(alpha * phase_neg, beta * phase_pos);
     }
@@ -110,14 +112,14 @@ impl QuantumGate {
 
     /// 获取 Hadamard 矩阵
     pub fn hadamard_matrix() -> [[Complex64; 2]; 2] {
-        let s = Complex64::new(1.0 / 2.0_f64.sqrt(), 0.0);
+        let s: _ = Complex64::new(1.0 / 2.0_f64.sqrt(), 0.0);
         [[s, s], [s, -s]]
     }
 
     /// 获取 CNOT 矩阵 (4x4)
     pub fn cnot_matrix() -> [[Complex64; 4]; 4] {
-        let zero = Complex64::new(0.0, 0.0);
-        let one = Complex64::new(1.0, 0.0);
+        let zero: _ = Complex64::new(0.0, 0.0);
+        let one: _ = Complex64::new(1.0, 0.0);
 
         [
             [one, zero, zero, zero],   // |00⟩ -> |00⟩
@@ -129,9 +131,9 @@ impl QuantumGate {
 
     /// 获取 CZ 矩阵 (4x4)
     pub fn cz_matrix() -> [[Complex64; 4]; 4] {
-        let zero = Complex64::new(0.0, 0.0);
-        let one = Complex64::new(1.0, 0.0);
-        let neg_one = Complex64::new(-1.0, 0.0);
+        let zero: _ = Complex64::new(0.0, 0.0);
+        let one: _ = Complex64::new(1.0, 0.0);
+        let neg_one: _ = Complex64::new(-1.0, 0.0);
 
         [
             [one, zero, zero, zero],
@@ -143,8 +145,8 @@ impl QuantumGate {
 
     /// 获取 SWAP 矩阵 (4x4)
     pub fn swap_matrix() -> [[Complex64; 4]; 4] {
-        let zero = Complex64::new(0.0, 0.0);
-        let one = Complex64::new(1.0, 0.0);
+        let zero: _ = Complex64::new(0.0, 0.0);
+        let one: _ = Complex64::new(1.0, 0.0);
 
         [
             [one, zero, zero, zero],
@@ -198,8 +200,8 @@ impl GateType {
 
     /// 判断是否可以与另一个门并行执行
     pub fn can_parallel_with(&self, other: &GateType) -> bool {
-        let self_qubits = self.qubits();
-        let other_qubits = other.qubits();
+        let self_qubits: _ = self.qubits();
+        let other_qubits: _ = other.qubits();
 
         // 如果没有共同的量子比特，可以并行
         for q in &self_qubits {

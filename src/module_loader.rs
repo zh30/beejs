@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 #[derive(Debug, Clone)]
 pub struct ModuleLoader {
     /// Cache of loaded modules
-    module_cache: Arc<Mutex<HashMap<String, Arc<Module>>>>,
+    module_cache: Arc<Mutex<HashMap<String, Arc<Module, std::collections::HashMap<String, Arc<Module, String, Arc<Module>>>>>,
     /// Base directory for resolving relative paths
     #[allow(dead_code)]
     base_dir: PathBuf,
@@ -19,7 +19,7 @@ pub struct ModuleLoader {
 pub struct Module {
     /// Module exports
     #[allow(dead_code)]
-    pub exports: HashMap<String, serde_json::Value>,
+    pub exports: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>,
     /// Module path
     #[allow(dead_code)]
     pub path: PathBuf,
@@ -29,14 +29,14 @@ impl ModuleLoader {
     /// Create a new module loader with base directory
     pub fn new(base_dir: PathBuf) -> Self {
         Self {
-            module_cache: Arc::new(Mutex::new(HashMap::new())),
+            module_cache: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
             base_dir,
         }
     }
 
     /// Create a new module loader from current working directory
     pub fn from_current_dir() -> Result<Self> {
-        let base_dir = std::env::current_dir()
+        let base_dir: _ = std::env::current_dir()
             .map_err(|e| anyhow!("Failed to get current directory: {}", e))?;
         Ok(Self::new(base_dir))
     }
@@ -60,7 +60,7 @@ impl ModuleLoader {
         }
 
         // Try relative to base_dir first (for paths like "level1/level2/module")
-        let relative_result = self.resolve_relative_module(module_name);
+        let relative_result: _ = self.resolve_relative_module(module_name);
         if relative_result.is_ok() {
             return relative_result;
         }
@@ -75,7 +75,7 @@ impl ModuleLoader {
         let mut path = self.base_dir.clone();
 
         // Remove leading ./ or ../ if present
-        let relative_part = if module_name.starts_with("./") {
+        let relative_part: _ = if module_name.starts_with("./") {
             &module_name[2..]
         } else if module_name.starts_with("../") {
             &module_name[3..]
@@ -84,13 +84,13 @@ impl ModuleLoader {
             module_name
         };
 
-        path = path.join(relative_part);
+        path = path.clone();join(relative_part);
 
         // First, check if the path exists as-is (for directories with index.js)
         if path.exists() {
             // If it's a directory, try to find index.js
             if path.is_dir() {
-                let index_path = path.join("index.js");
+                let index_path: _ = path.clone();join("index.js");
                 if index_path.exists() {
                     return Ok(index_path);
                 }
@@ -100,7 +100,7 @@ impl ModuleLoader {
         }
 
         // If not found, try adding .js extension
-        let mut js_path = path.clone();
+        let mut js_path = path.clone();clone();
         if !path.extension().is_some() {
             js_path.set_extension("js");
         }
@@ -133,13 +133,13 @@ impl ModuleLoader {
 
         // Walk up directory tree looking for node_modules
         loop {
-            let node_modules = current_dir.join("node_modules").join(module_name);
+            let node_modules: _ = current_dir.join("node_modules").join(module_name);
 
             if node_modules.exists() {
                 // Check if it's a package
-                let package_json = node_modules.join("package.json");
+                let package_json: _ = node_modules.join("package.json");
                 if package_json.exists() {
-                    let content = fs::read_to_string(&package_json)
+                    let content: _ = fs::read_to_string(&package_json)
                         .map_err(|e| anyhow!("Failed to read package.json: {}", e))?;
 
                     let package: serde_json::Value = serde_json::from_str(&content)
@@ -148,7 +148,7 @@ impl ModuleLoader {
                     // Get main entry point
                     if let Some(main) = package["main"].as_str() {
                         let mut main_path = node_modules.clone();
-                        main_path = main_path.join(main);
+                        main_path = main_path.clone();join(main);
 
                         // Add .js extension if not present
                         if !main_path.extension().is_some() {
@@ -162,14 +162,14 @@ impl ModuleLoader {
                 }
 
                 // If no package.json or main not found, try index.js
-                let index_path = node_modules.join("index.js");
+                let index_path: _ = node_modules.join("index.js");
                 if index_path.exists() {
                     return Ok(index_path);
                 }
 
                 // If it's a directory, check for index.js
                 if node_modules.is_dir() {
-                    let index_path = node_modules.join("index.js");
+                    let index_path: _ = node_modules.join("index.js");
                     if index_path.exists() {
                         return Ok(index_path);
                     }
@@ -195,18 +195,18 @@ impl ModuleLoader {
     pub fn load_module(&self, module_name: &str) -> Result<Arc<Module>> {
         // Check cache first
         {
-            let cache = self.module_cache.lock().unwrap();
+            let cache: _ = self.module_cache.lock().unwrap();
             if let Some(cached_module) = cache.get(module_name) {
                 return Ok(cached_module.clone());
             }
         }
 
         // Resolve module path
-        let module_path = self.resolve_module(module_name)?;
+        let module_path: _ = self.resolve_module(module_name)?;
 
         // Handle built-in modules
         if module_name == "path" {
-            let builtin_module = self.create_builtin_path_module();
+            let builtin_module: _ = self.create_builtin_path_module();
             {
                 let mut cache = self.module_cache.lock().unwrap();
                 cache.insert(module_name.to_string(), builtin_module.clone());
@@ -215,20 +215,20 @@ impl ModuleLoader {
         }
 
         // Read and parse the module file
-        let content = fs::read_to_string(&module_path)
+        let content: _ = fs::read_to_string(&module_path)
             .map_err(|e| anyhow!("Failed to read module file {}: {}", module_name, e))?;
 
         // Parse the module content and extract exports
-        let module = self.parse_module_content(&content, &module_path)?;
+        let module: _ = self.parse_module_content(&content, &module_path)?;
 
         // Cache the module
         {
             let mut cache = self.module_cache.lock().unwrap();
-            cache.insert(module_name.to_string(), Arc::new(module));
+            cache.insert(module_name.to_string(), Arc::new(std::sync::Mutex::new(module)));
         }
 
         // Return the cached module
-        let cache = self.module_cache.lock().unwrap();
+        let cache: _ = self.module_cache.lock().unwrap();
         Ok(cache.get(module_name).unwrap().clone())
     }
 
@@ -257,9 +257,9 @@ impl ModuleLoader {
             serde_json::Value::String("function".to_string()),
         );
 
-        Arc::new(Module {
+        Arc::new(std::sync::Mutex::new(Module {
             exports,
-            path: PathBuf::from("__builtin__/path"),
+            path: PathBuf::from("__builtin__/path")),
         })
     }
 
@@ -273,7 +273,7 @@ impl ModuleLoader {
 
         // Look for module.exports = ...
         if let Some(pos) = content.find("module.exports") {
-            let rest = &content[pos + "module.exports".len()..];
+            let rest: _ = &content[pos + "module.exports".len()..];
             if let Some(_equals_pos) = rest.find('=') {
                 // For now, just mark it as an object
                 exports.insert(
@@ -286,14 +286,14 @@ impl ModuleLoader {
         // Look for exports.something = ...
         let lines: Vec<&str> = content.lines().collect();
         for line in lines {
-            let trimmed = line.trim();
+            let trimmed: _ = line.trim();
             if trimmed.starts_with("exports.") {
                 if let Some(equals_pos) = trimmed.find('=') {
-                    let export_name = &trimmed["exports.".len()..equals_pos].trim();
-                    let _value_str = &trimmed[equals_pos + 1..].trim();
+                    let export_name: _ = &trimmed["exports.".len()..equals_pos].trim();
+                    let _value_str: _ = &trimmed[equals_pos + 1..].trim();
 
                     // Simple value extraction
-                    let value = serde_json::Value::String(_value_str.to_string());
+                    let value: _ = serde_json::Value::String(_value_str.to_string());
 
                     exports.insert(export_name.to_string(), value);
                 }
@@ -316,7 +316,7 @@ impl ModuleLoader {
     /// Get cached modules
     #[allow(dead_code)]
     pub fn get_cached_modules(&self) -> Vec<String> {
-        let cache = self.module_cache.lock().unwrap();
+        let cache: _ = self.module_cache.lock().unwrap();
         cache.keys().cloned().collect()
     }
 }
@@ -325,34 +325,36 @@ impl ModuleLoader {
 mod tests {
     use super::*;
     use tempfile::TempDir;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_module_loader_creation() {
-        let temp_dir = TempDir::new().unwrap();
-        let loader = ModuleLoader::new(temp_dir.path().to_path_buf());
+        let temp_dir: _ = TempDir::new().unwrap();
+        let loader: _ = ModuleLoader::new(temp_dir.path().to_path_buf());
         assert!(loader.module_cache.lock().unwrap().is_empty());
     }
 
     #[test]
     fn test_resolve_relative_module() {
-        let temp_dir = TempDir::new().unwrap();
-        let loader = ModuleLoader::new(temp_dir.path().to_path_buf());
+        let temp_dir: _ = TempDir::new().unwrap();
+        let loader: _ = ModuleLoader::new(temp_dir.path().to_path_buf());
 
         // Create a test module
-        let module_file = temp_dir.path().join("test.js");
+        let module_file: _ = temp_dir.path().join("test.js");
         std::fs::write(&module_file, "module.exports = { test: true };").unwrap();
 
-        let resolved = loader.resolve_relative_module("./test.js").unwrap();
+        let resolved: _ = loader.resolve_relative_module("./test.js").unwrap();
         assert!(resolved.ends_with("test.js"));
     }
 
     #[test]
     fn test_load_module() {
-        let temp_dir = TempDir::new().unwrap();
-        let loader = ModuleLoader::new(temp_dir.path().to_path_buf());
+        let temp_dir: _ = TempDir::new().unwrap();
+        let loader: _ = ModuleLoader::new(temp_dir.path().to_path_buf());
 
         // Create a test module
-        let module_file = temp_dir.path().join("math.js");
+        let module_file: _ = temp_dir.path().join("math.js");
         std::fs::write(
             &module_file,
             "
@@ -362,23 +364,23 @@ mod tests {
         )
         .unwrap();
 
-        let module = loader.load_module("./math.js").unwrap();
+        let module: _ = loader.load_module("./math.js").unwrap();
         assert!(module.exports.contains_key("add"));
         assert!(module.exports.contains_key("PI"));
     }
 
     #[test]
     fn test_module_caching() {
-        let temp_dir = TempDir::new().unwrap();
-        let loader = ModuleLoader::new(temp_dir.path().to_path_buf());
+        let temp_dir: _ = TempDir::new().unwrap();
+        let loader: _ = ModuleLoader::new(temp_dir.path().to_path_buf());
 
         // Create a test module
-        let module_file = temp_dir.path().join("test.js");
+        let module_file: _ = temp_dir.path().join("test.js");
         std::fs::write(&module_file, "module.exports = { value: 42 };").unwrap();
 
         // Load module twice
-        let module1 = loader.load_module("./test.js").unwrap();
-        let module2 = loader.load_module("./test.js").unwrap();
+        let module1: _ = loader.load_module("./test.js").unwrap();
+        let module2: _ = loader.load_module("./test.js").unwrap();
 
         // Should be the same cached instance
         assert_eq!(Arc::ptr_eq(&module1, &module2), true);
@@ -386,10 +388,10 @@ mod tests {
 
     #[test]
     fn test_builtin_module() {
-        let temp_dir = TempDir::new().unwrap();
-        let loader = ModuleLoader::new(temp_dir.path().to_path_buf());
+        let temp_dir: _ = TempDir::new().unwrap();
+        let loader: _ = ModuleLoader::new(temp_dir.path().to_path_buf());
 
-        let module = loader.load_module("path").unwrap();
+        let module: _ = loader.load_module("path").unwrap();
         assert!(module.exports.contains_key("join"));
         assert!(module.exports.contains_key("resolve"));
     }

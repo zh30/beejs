@@ -22,6 +22,8 @@ pub use runtime_comparison::{RuntimeDetector, ProcessLauncher, ComparisonReport}
 pub use workloads::{WorkloadExecutor, WorkloadType, ComputeWorkload, IOWorkload, MemoryWorkload, ConcurrentWorkload, AIWorkload};
 pub use regression::{RegressionDetector, PerformanceHistory, RegressionReport};
 pub use monitoring::{RealTimeMonitor, PerformanceDashboard, MetricsCollector};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 运行时类型枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

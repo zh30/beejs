@@ -31,10 +31,10 @@ impl BenchmarkResult {
         memory_stats: Option<MemoryStats>,
     ) -> Self {
         let total_duration: Duration = durations.iter().sum();
-        let avg_duration = total_duration / iterations as u32;
-        let min_duration = durations.iter().min().copied().unwrap_or_default();
-        let max_duration = durations.iter().max().copied().unwrap_or_default();
-        let operations_per_second = if avg_duration.as_secs_f64() > 0.0 {
+        let avg_duration: _ = total_duration / iterations as u32;
+        let min_duration: _ = durations.iter().min().copied().unwrap_or_default();
+        let max_duration: _ = durations.iter().max().copied().unwrap_or_default();
+        let operations_per_second: _ = if avg_duration.as_secs_f64() > 0.0 {
             1.0 / avg_duration.as_secs_f64()
         } else {
             0.0
@@ -103,14 +103,14 @@ impl BenchmarkRunner {
     pub fn benchmark_execution(&self, code: &str, runtime: &Runtime) -> BenchmarkResult {
         // Warmup
         for _ in 0..self.warmup_iterations {
-            let _ = runtime.execute_code(code);
+            let _: _ = runtime.execute_code(code);
         }
 
         // Actual benchmark
         let mut durations = Vec::with_capacity(self.iterations);
         for _ in 0..self.iterations {
-            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-            let _ = runtime.execute_code(code);
+            let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let _: _ = runtime.execute_code(code);
             durations.push(Duration::from_secs(start));
         }
 
@@ -126,13 +126,13 @@ impl BenchmarkRunner {
     pub fn benchmark_startup(&self, runtime: &Runtime) -> BenchmarkResult {
         // Warmup
         for _ in 0..self.warmup_iterations {
-            let _ = runtime.execute_code("1");
+            let _: _ = runtime.execute_code("1");
         }
 
         let mut durations = Vec::with_capacity(self.iterations);
         for _ in 0..self.iterations {
-            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-            let _ = runtime.execute_code("1");
+            let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let _: _ = runtime.execute_code("1");
             durations.push(Duration::from_secs(start));
         }
 
@@ -152,13 +152,13 @@ impl BenchmarkRunner {
     ) -> BenchmarkResult {
         // Warmup
         for _ in 0..self.warmup_iterations {
-            let _ = runtime.execute_file(&file_path.to_path_buf());
+            let _: _ = runtime.execute_file(&file_path.to_path_buf());
         }
 
         let mut durations = Vec::with_capacity(self.iterations);
         for _ in 0..self.iterations {
-            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-            let _ = runtime.execute_file(&file_path.to_path_buf());
+            let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let _: _ = runtime.execute_file(&file_path.to_path_buf());
             durations.push(Duration::from_secs(start));
         }
 
@@ -182,13 +182,13 @@ pub struct PerformanceComparison {
 
 impl PerformanceComparison {
     pub fn new(beejs_result: BenchmarkResult, bun_result: Option<BenchmarkResult>) -> Self {
-        let speedup_ratio = if let Some(bun_result) = &bun_result {
+        let speedup_ratio: _ = if let Some(bun_result) = &bun_result {
             bun_result.avg_duration.as_secs_f64() / beejs_result.avg_duration.as_secs_f64()
         } else {
             1.0
         };
 
-        let performance_gain_percent = if speedup_ratio > 1.0 {
+        let performance_gain_percent: _ = if speedup_ratio > 1.0 {
             (speedup_ratio - 1.0) * 100.0
         } else {
             0.0
@@ -246,21 +246,23 @@ impl PerformanceComparison {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_benchmark_runner_creation() {
-        let runner = BenchmarkRunner::new(100, 10);
+        let runner: _ = BenchmarkRunner::new(100, 10);
         assert_eq!(runner.iterations, 100);
         assert_eq!(runner.warmup_iterations, 10);
     }
 
     #[test]
     fn test_simple_code_execution_benchmark() {
-        let runtime = Runtime::new(67108864, 1073741824, false, false);
-        let runner = BenchmarkRunner::new(10, 2);
+        let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+        let runner: _ = BenchmarkRunner::new(10, 2);
 
-        let code = "1 + 1";
-        let result = runner.benchmark_execution(code, &runtime);
+        let code: _ = "1 + 1";
+        let result: _ = runner.benchmark_execution(code, &runtime);
 
         assert_eq!(result.name, "code_execution");
         assert_eq!(result.iterations, 10);
@@ -270,10 +272,10 @@ mod tests {
 
     #[test]
     fn test_startup_benchmark() {
-        let runtime = Runtime::new(67108864, 1073741824, false, false);
-        let runner = BenchmarkRunner::new(10, 2);
+        let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+        let runner: _ = BenchmarkRunner::new(10, 2);
 
-        let result = runner.benchmark_startup(&runtime);
+        let result: _ = runner.benchmark_startup(&runtime);
 
         assert_eq!(result.name, "startup_time");
         assert_eq!(result.iterations, 10);
@@ -282,13 +284,13 @@ mod tests {
 
     #[test]
     fn test_benchmark_result_formatting() {
-        let durations = vec![
+        let durations: _ = vec![
             Duration::from_micros(100),
             Duration::from_micros(110),
             Duration::from_micros(90),
         ];
 
-        let result = BenchmarkResult::new(
+        let result: _ = BenchmarkResult::new(
             "test".to_string(),
             3,
             durations,
@@ -300,21 +302,21 @@ mod tests {
             }),
         );
 
-        let summary = result.format_summary();
+        let summary: _ = result.format_summary();
         assert!(summary.contains("test"));
         assert!(summary.contains("Iterations: 3"));
     }
 
     #[test]
     fn test_performance_comparison() {
-        let durations1 = vec![Duration::from_micros(100); 10];
-        let durations2 = vec![Duration::from_micros(120); 10];
+        let durations1: _ = vec![Duration::from_micros(100); 10];
+        let durations2: _ = vec![Duration::from_micros(120); 10];
 
-        let beejs_result = BenchmarkResult::new("beejs".to_string(), 10, durations1, None);
+        let beejs_result: _ = BenchmarkResult::new("beejs".to_string(), 10, durations1, None);
 
-        let bun_result = BenchmarkResult::new("bun".to_string(), 10, durations2, None);
+        let bun_result: _ = BenchmarkResult::new("bun".to_string(), 10, durations2, None);
 
-        let comparison = PerformanceComparison::new(beejs_result, Some(bun_result));
+        let comparison: _ = PerformanceComparison::new(beejs_result, Some(bun_result));
 
         assert!(comparison.speedup_ratio > 1.0);
         assert!(comparison.performance_gain_percent > 0.0);
@@ -322,20 +324,20 @@ mod tests {
 
     #[test]
     fn test_complex_code_execution_benchmark() {
-        let runtime = Runtime::new(67108864, 1073741824, false, false);
-        let runner = BenchmarkRunner::new(5, 1);
+        let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+        let runner: _ = BenchmarkRunner::new(5, 1);
 
-        let code = r#"
+        let code: _ = r#"
             (function() {
                 let sum = 0;
-                for (let i = 0; i < 1000; i++) {
+                for (let i: _ = 0; i < 1000; i++) {
                     sum += i;
                 }
                 return sum;
             })();
         "#;
 
-        let result = runner.benchmark_execution(code, &runtime);
+        let result: _ = runner.benchmark_execution(code, &runtime);
 
         assert_eq!(result.name, "code_execution");
         assert_eq!(result.iterations, 5);
@@ -344,11 +346,11 @@ mod tests {
 
     #[test]
     fn test_nodejs_api_benchmark() {
-        let runtime = Runtime::new(67108864, 1073741824, false, false);
-        let runner = BenchmarkRunner::new(10, 2);
+        let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+        let runner: _ = BenchmarkRunner::new(10, 2);
 
-        let code = "path.join('a', 'b', 'c')";
-        let result = runner.benchmark_execution(code, &runtime);
+        let code: _ = "path.join('a', 'b', 'c')";
+        let result: _ = runner.benchmark_execution(code, &runtime);
 
         assert_eq!(result.name, "code_execution");
         assert_eq!(result.iterations, 10);
@@ -357,11 +359,11 @@ mod tests {
 
     #[test]
     fn test_module_require_benchmark() {
-        let runtime = Runtime::new(67108864, 1073741824, false, false);
-        let runner = BenchmarkRunner::new(10, 2);
+        let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+        let runner: _ = BenchmarkRunner::new(10, 2);
 
-        let code = "const p = require('path'); p.join('x', 'y')";
-        let result = runner.benchmark_execution(code, &runtime);
+        let code: _ = "const p = require('path'); p.join('x', 'y')";
+        let result: _ = runner.benchmark_execution(code, &runtime);
 
         assert_eq!(result.name, "code_execution");
         assert_eq!(result.iterations, 10);
@@ -370,11 +372,11 @@ mod tests {
 
     #[test]
     fn test_console_api_benchmark() {
-        let runtime = Runtime::new(67108864, 1073741824, false, false);
-        let runner = BenchmarkRunner::new(10, 2);
+        let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+        let runner: _ = BenchmarkRunner::new(10, 2);
 
-        let code = "console.log('benchmark test')";
-        let result = runner.benchmark_execution(code, &runtime);
+        let code: _ = "console.log('benchmark test')";
+        let result: _ = runner.benchmark_execution(code, &runtime);
 
         assert_eq!(result.name, "code_execution");
         assert_eq!(result.iterations, 10);
@@ -383,18 +385,18 @@ mod tests {
 
     #[test]
     fn test_arithmetic_operations_benchmark() {
-        let runtime = Runtime::new(67108864, 1073741824, false, false);
-        let runner = BenchmarkRunner::new(10, 2);
+        let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+        let runner: _ = BenchmarkRunner::new(10, 2);
 
-        let code = r#"
+        let code: _ = r#"
             let result = 0;
-            for (let i = 0; i < 100; i++) {
+            for (let i: _ = 0; i < 100; i++) {
                 result += i * 2 - 1;
             }
             result;
         "#;
 
-        let result = runner.benchmark_execution(code, &runtime);
+        let result: _ = runner.benchmark_execution(code, &runtime);
 
         assert_eq!(result.name, "code_execution");
         assert_eq!(result.iterations, 10);

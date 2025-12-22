@@ -27,11 +27,11 @@ struct Dependency {
 /// Pattern analyzer for smart prefetching
 pub struct PatternAnalyzer {
     /// Script access patterns
-    patterns: HashMap<String, AccessPattern>,
+    patterns: HashMap<String, AccessPattern, std::collections::HashMap<String, AccessPattern, String, AccessPattern>>,
     /// Dependency graph
     dependencies: Vec<Dependency>,
     /// Access history for pattern detection
-    access_history: BTreeMap<Instant, String>,
+    access_history: BTreeMap<Instant, String, Instant, String>,
     /// Prediction confidence threshold
     confidence_threshold: f64,
     /// Maximum history size
@@ -52,7 +52,7 @@ impl PatternAnalyzer {
 
     /// Record an access to a script
     pub fn record_access(&mut self, script_name: &str) {
-        let now = Instant::now();
+        let now: _ = Instant::now();
 
         // Update access history
         self.access_history.insert(now, script_name.to_string());
@@ -65,9 +65,9 @@ impl PatternAnalyzer {
         }
 
         // Update pattern
-        let script_name_owned = script_name.to_string();
+        let script_name_owned: _ = script_name.to_string();
         {
-            let pattern = self.patterns.entry(script_name_owned.clone()).or_insert_with(|| AccessPattern {
+            let pattern: _ = self.patterns.entry(script_name_owned.clone()).or_insert_with(|| AccessPattern {
                 access_count: 0,
                 last_access: now,
                 access_times: Vec::with_capacity(100),
@@ -88,16 +88,16 @@ impl PatternAnalyzer {
             if pattern.access_times.len() >= 2 {
                 let mut total_interval = Duration::from_secs(0);
                 for i in 1..pattern.access_times.len() {
-                    let interval = pattern.access_times[i].duration_since(pattern.access_times[i - 1]);
+                    let interval: _ = pattern.access_times[i].duration_since(pattern.access_times[i - 1]);
                     total_interval += interval;
                 }
-                let count = pattern.access_times.len() - 1;
+                let count: _ = pattern.access_times.len() - 1;
                 pattern.average_interval = Duration::from_nanos(total_interval.as_nanos() as u64 / count as u64);
             }
         }
 
         // Update confidence score (after releasing the mutable borrow)
-        let confidence = self.calculate_confidence(&script_name);
+        let confidence: _ = self.calculate_confidence(&script_name);
         if let Some(pattern) = self.patterns.get_mut(&script_name_owned) {
             pattern.confidence = confidence;
         }
@@ -108,23 +108,23 @@ impl PatternAnalyzer {
         let mut predictions = Vec::new();
 
         // 1. Find dependencies of current script
-        let deps = self.find_dependencies(current_script);
+        let deps: _ = self.find_dependencies(current_script);
         for dep in deps {
             predictions.push(dep);
         }
 
         // 2. Find scripts with similar access patterns
-        let similar_scripts = self.find_similar_scripts(current_script);
+        let similar_scripts: _ = self.find_similar_scripts(current_script);
         predictions.extend(similar_scripts);
 
         // 3. Find frequently accessed scripts
-        let frequent_scripts = self.find_frequent_scripts();
+        let frequent_scripts: _ = self.find_frequent_scripts();
         predictions.extend(frequent_scripts);
 
         // Remove duplicates and sort by confidence
         predictions.sort_by(|a, b| {
-            let conf_a = self.get_confidence(a);
-            let conf_b = self.get_confidence(b);
+            let conf_a: _ = self.get_confidence(a);
+            let conf_b: _ = self.get_confidence(b);
             conf_b.partial_cmp(&conf_a).unwrap_or(std::cmp::Ordering::Equal)
         });
 
@@ -140,10 +140,10 @@ impl PatternAnalyzer {
             // 2. Regularity (coefficient of variation)
             // 3. Recency
 
-            let frequency_score = (pattern.access_count as f64 / 100.0).min(1.0);
+            let frequency_score: _ = (pattern.access_count as f64 / 100.0).min(1.0);
 
             // Calculate regularity (inverse of coefficient of variation)
-            let regularity_score = if pattern.access_times.len() >= 3 {
+            let regularity_score: _ = if pattern.access_times.len() >= 3 {
                 let intervals: Vec<f64> = pattern.access_times.windows(2)
                     .map(|w| w[1].duration_since(w[0]).as_secs_f64())
                     .collect();
@@ -152,8 +152,8 @@ impl PatternAnalyzer {
                 let variance: f64 = intervals.iter()
                     .map(|&x| (x - mean).powi(2))
                     .sum::<f64>() / intervals.len() as f64;
-                let std_dev = variance.sqrt();
-                let cv = std_dev / mean;
+                let std_dev: _ = variance.sqrt();
+                let cv: _ = std_dev / mean;
 
                 // Lower CV = more regular = higher score
                 (1.0 / (1.0 + cv)).min(1.0)
@@ -162,11 +162,11 @@ impl PatternAnalyzer {
             };
 
             // Recency score
-            let time_since_last = pattern.last_access.elapsed().as_secs();
-            let recency_score = (1.0 - (time_since_last as f64 / 3600.0)).max(0.0).min(1.0);
+            let time_since_last: _ = pattern.last_access.elapsed().as_secs();
+            let recency_score: _ = (1.0 - (time_since_last as f64 / 3600.0)).max(0.0).min(1.0);
 
             // Weighted combination
-            let confidence = frequency_score * 0.4 + regularity_score * 0.4 + recency_score * 0.2;
+            let confidence: _ = frequency_score * 0.4 + regularity_score * 0.4 + recency_score * 0.2;
 
             confidence.min(1.0).max(0.0)
         } else {
@@ -191,7 +191,7 @@ impl PatternAnalyzer {
             for (name, pattern) in &self.patterns {
                 if name != script_name {
                     // Calculate pattern similarity
-                    let similarity = self.calculate_pattern_similarity(target_pattern, pattern);
+                    let similarity: _ = self.calculate_pattern_similarity(target_pattern, pattern);
                     if similarity > 0.8 {
                         similar.push(name.clone());
                     }
@@ -207,17 +207,17 @@ impl PatternAnalyzer {
     /// Calculate similarity between two access patterns
     fn calculate_pattern_similarity(&self, a: &AccessPattern, b: &AccessPattern) -> f64 {
         // Compare access frequencies
-        let freq_sim = 1.0 - ((a.access_count as f64 - b.access_count as f64).abs()
+        let freq_sim: _ = 1.0 - ((a.access_count as f64 - b.access_count as f64).abs()
             / (a.access_count.max(b.access_count) as f64 + 1.0));
 
         // Compare average intervals
-        let interval_diff = if a.access_count > 0 && b.access_count > 0 {
+        let interval_diff: _ = if a.access_count > 0 && b.access_count > 0 {
             let diff = a.average_interval.as_secs_f64() - b.average_interval.as_secs_f64();
             (diff / a.average_interval.as_secs_f64().max(b.average_interval.as_secs_f64())).abs()
         } else {
             1.0
         };
-        let interval_sim = 1.0 - interval_diff.min(1.0);
+        let interval_sim: _ = 1.0 - interval_diff.min(1.0);
 
         // Weighted combination
         (freq_sim * 0.6 + interval_sim * 0.4).max(0.0).min(1.0)
@@ -232,8 +232,8 @@ impl PatternAnalyzer {
             .collect();
 
         frequent.sort_by(|a, b| {
-            let conf_a = self.get_confidence(a);
-            let conf_b = self.get_confidence(b);
+            let conf_a: _ = self.get_confidence(a);
+            let conf_b: _ = self.get_confidence(b);
             conf_b.partial_cmp(&conf_a).unwrap_or(std::cmp::Ordering::Equal)
         });
 
@@ -256,9 +256,9 @@ impl PatternAnalyzer {
 
     /// Get prediction statistics
     pub fn get_stats(&self) -> PatternStats {
-        let total_scripts = self.patterns.len();
-        let high_confidence = self.patterns.values().filter(|p| p.confidence > self.confidence_threshold).count();
-        let avg_confidence = if total_scripts > 0 {
+        let total_scripts: _ = self.patterns.len();
+        let high_confidence: _ = self.patterns.values().filter(|p| p.confidence > self.confidence_threshold).count();
+        let avg_confidence: _ = if total_scripts > 0 {
             self.patterns.values().map(|p| p.confidence).sum::<f64>() / total_scripts as f64
         } else {
             0.0
@@ -293,6 +293,8 @@ impl Default for PatternAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_pattern_recording() {
@@ -302,7 +304,7 @@ mod tests {
         analyzer.record_access("test.js");
         analyzer.record_access("test.js");
 
-        let stats = analyzer.get_stats();
+        let stats: _ = analyzer.get_stats();
         assert_eq!(stats.total_scripts, 1);
         assert!(stats.average_confidence > 0.0);
     }
@@ -316,7 +318,7 @@ mod tests {
             analyzer.record_access("frequent.js");
         }
 
-        let confidence = analyzer.get_confidence("frequent.js");
+        let confidence: _ = analyzer.get_confidence("frequent.js");
         assert!(confidence > 0.5);
     }
 
@@ -326,7 +328,7 @@ mod tests {
 
         analyzer.add_dependency("main.js", "util.js", 0.9);
 
-        let deps = analyzer.find_dependencies("main.js");
+        let deps: _ = analyzer.find_dependencies("main.js");
         assert_eq!(deps.len(), 1);
         assert_eq!(deps[0], "util.js");
     }
@@ -343,7 +345,7 @@ mod tests {
         // Add dependency
         analyzer.add_dependency("main.js", "dep1.js", 0.8);
 
-        let predictions = analyzer.predict_prefetch("main.js");
+        let predictions: _ = analyzer.predict_prefetch("main.js");
         assert!(!predictions.is_empty());
     }
 }

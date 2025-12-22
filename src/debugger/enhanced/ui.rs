@@ -9,6 +9,8 @@
 use anyhow::Result;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Breakpoint condition types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,7 +33,7 @@ pub struct Breakpoint {
 /// Breakpoint manager
 pub struct BreakpointManager {
     next_id: u32,
-    breakpoints: HashMap<u32, Breakpoint>,
+    breakpoints: HashMap<u32, Breakpoint, std::collections::HashMap<u32, Breakpoint, u32, Breakpoint>>,
 }
 
 impl BreakpointManager {
@@ -43,7 +45,7 @@ impl BreakpointManager {
     }
 
     pub async fn add_breakpoint(&mut self, mut breakpoint: Breakpoint) -> Result<u32> {
-        let id = self.next_id;
+        let id: _ = self.next_id;
         self.next_id += 1;
         breakpoint.id = id;
         self.breakpoints.insert(id, breakpoint);
@@ -59,7 +61,7 @@ impl BreakpointManager {
         self.breakpoints.get(&id)
     }
 
-    pub async fn should_break(&self, id: u32, _variables: &HashMap<String, JsValue>) -> Result<bool> {
+    pub async fn should_break(&self, id: u32, _variables: &HashMap<String, JsValue, std::collections::HashMap<String, JsValue, String, JsValue>>) -> Result<bool> {
         if let Some(bp) = self.breakpoints.get(&id) {
             // TODO: Evaluate condition
             Ok(true)
@@ -83,7 +85,7 @@ impl VariableInspector {
         Self {}
     }
 
-    pub async fn inspect_variables(&self, variables: &HashMap<String, JsValue>) -> Result<HashMap<String, JsValue>> {
+    pub async fn inspect_variables(&self, variables: &HashMap<String, JsValue, std::collections::HashMap<String, JsValue, String, JsValue>>) -> Result<HashMap<String, JsValue, std::collections::HashMap<String, JsValue, String, JsValue>>> {
         // Return a copy or transformed version
         Ok(variables.clone())
     }

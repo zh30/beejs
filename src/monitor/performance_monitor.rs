@@ -41,7 +41,7 @@ pub struct MetricValue {
     /// 时间戳
     pub timestamp: u64,
     /// 标签
-    pub tags: HashMap<String, String>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 性能指标聚合结果
@@ -100,7 +100,7 @@ pub struct PerformanceMonitor {
     /// 原始指标队列
     raw_metrics: Arc<Mutex<VecDeque<MetricValue>>>,
     /// 聚合指标缓存
-    aggregated_metrics: Arc<Mutex<HashMap<MetricType, AggregatedMetric>>>,
+    aggregated_metrics: Arc<Mutex<HashMap<MetricType, AggregatedMetric, std::collections::HashMap<MetricType, AggregatedMetric, MetricType, AggregatedMetric>>>>,
     /// 指标收集统计
     stats: Arc<Mutex<CollectionStats>>,
 }
@@ -123,20 +123,20 @@ impl PerformanceMonitor {
     pub fn new(config: MonitorConfig) -> Self {
         Self {
             config,
-            raw_metrics: Arc::new(Mutex::new(VecDeque::new())),
-            aggregated_metrics: Arc::new(Mutex::new(HashMap::new())),
-            stats: Arc::new(Mutex::new(CollectionStats {
+            raw_metrics: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
+            aggregated_metrics: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(CollectionStats {
                 total_collections: 0,
                 total_metrics: 0,
                 last_collection_time: None,
                 error_count: 0,
-            })),
+            }))),
         }
     }
 
     /// 创建默认配置的性能监控器
     pub fn with_default_config() -> Self {
-        let config = MonitorConfig {
+        let config: _ = MonitorConfig {
             aggregation_window: Duration::from_secs(10),
             retention_period: Duration::from_secs(3600), // 1小时
             max_metrics: 10000,
@@ -198,23 +198,23 @@ impl PerformanceMonitor {
 
     /// 获取实时指标
     pub fn get_real_time_metrics(&self) -> Result<Vec<MetricValue>, String> {
-        let raw_metrics = self.raw_metrics.lock().map_err(|e| e.to_string())?;
+        let raw_metrics: _ = self.raw_metrics.lock().map_err(|e| e.to_string())?;
         Ok(raw_metrics.iter().cloned().collect())
     }
 
     /// 获取聚合指标
-    pub fn get_aggregated_metrics(&self) -> Result<HashMap<MetricType, AggregatedMetric>, String> {
-        let aggregated_metrics = self.aggregated_metrics.lock().map_err(|e| e.to_string())?;
+    pub fn get_aggregated_metrics(&self) -> Result<HashMap<MetricType, AggregatedMetric, std::collections::HashMap<MetricType, AggregatedMetric, MetricType, AggregatedMetric>>, String> {
+        let aggregated_metrics: _ = self.aggregated_metrics.lock().map_err(|e| e.to_string())?;
         Ok(aggregated_metrics.clone())
     }
 
     /// 计算聚合指标
     pub fn aggregate_metrics(&self) -> Result<(), String> {
-        let raw_metrics = self.raw_metrics.lock().map_err(|e| e.to_string())?;
+        let raw_metrics: _ = self.raw_metrics.lock().map_err(|e| e.to_string())?;
         let mut aggregated_metrics = self.aggregated_metrics.lock().map_err(|e| e.to_string())?;
 
         // 按指标类型分组
-        let mut grouped_metrics: HashMap<MetricType, Vec<f64>> = HashMap::new();
+        let mut grouped_metrics: HashMap<MetricType, Vec<f64, std::collections::HashMap<MetricType, Vec<f64, MetricType, Vec<f64>>> = HashMap::new();
 
         for metric in raw_metrics.iter() {
             grouped_metrics
@@ -229,22 +229,22 @@ impl PerformanceMonitor {
                 continue;
             }
 
-            let mut sorted_values = values.clone();
+            let mut sorted_values = values.clone();clone();
             sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
-            let count = sorted_values.len() as u64;
+            let count: _ = sorted_values.len() as u64;
             let sum: f64 = sorted_values.iter().sum();
-            let avg = sum / count as f64;
-            let min = sorted_values[0];
-            let max = sorted_values[count as usize - 1];
+            let avg: _ = sum / count as f64;
+            let min: _ = sorted_values[0];
+            let max: _ = sorted_values[count as usize - 1];
 
             // 计算百分位数
-            let p50 = Self::calculate_percentile(&sorted_values, 0.50);
-            let p90 = Self::calculate_percentile(&sorted_values, 0.90);
-            let p95 = Self::calculate_percentile(&sorted_values, 0.95);
-            let p99 = Self::calculate_percentile(&sorted_values, 0.99);
+            let p50: _ = Self::calculate_percentile(&sorted_values, 0.50);
+            let p90: _ = Self::calculate_percentile(&sorted_values, 0.90);
+            let p95: _ = Self::calculate_percentile(&sorted_values, 0.95);
+            let p99: _ = Self::calculate_percentile(&sorted_values, 0.99);
 
-            let aggregated = AggregatedMetric {
+            let aggregated: _ = AggregatedMetric {
                 metric_type,
                 avg,
                 min,
@@ -269,14 +269,14 @@ impl PerformanceMonitor {
             return 0.0;
         }
 
-        let index = (sorted_values.len() as f64 * percentile).floor() as usize;
-        let index = std::cmp::min(index, sorted_values.len() - 1);
+        let index: _ = (sorted_values.len() as f64 * percentile).floor() as usize;
+        let index: _ = std::cmp::min(index, sorted_values.len() - 1);
         sorted_values[index]
     }
 
     /// 检查阈值
     pub fn check_thresholds(&self) -> Result<Vec<ThresholdViolation>, String> {
-        let aggregated_metrics = self.aggregated_metrics.lock().map_err(|e| e.to_string())?;
+        let aggregated_metrics: _ = self.aggregated_metrics.lock().map_err(|e| e.to_string())?;
         let mut violations = Vec::new();
 
         for threshold in &self.config.thresholds {
@@ -285,7 +285,7 @@ impl PerformanceMonitor {
             }
 
             if let Some(metric) = aggregated_metrics.get(&threshold.metric_type) {
-                let severity = if metric.avg >= threshold.critical {
+                let severity: _ = if metric.avg >= threshold.critical {
                     ThresholdSeverity::Critical
                 } else if metric.avg >= threshold.warning {
                     ThresholdSeverity::Warning
@@ -315,7 +315,7 @@ impl PerformanceMonitor {
     /// 清理过期指标
     fn cleanup_old_metrics(&self) -> Result<(), String> {
         let mut raw_metrics = self.raw_metrics.lock().map_err(|e| e.to_string())?;
-        let _cutoff_time = Instant::now()
+        let _cutoff_time: _ = Instant::now()
             .checked_sub(self.config.retention_period)
             .unwrap();
 
@@ -330,7 +330,7 @@ impl PerformanceMonitor {
 
     /// 获取统计信息
     pub fn get_stats(&self) -> Result<CollectionStats, String> {
-        let stats = self.stats.lock().map_err(|e| e.to_string())?;
+        let stats: _ = self.stats.lock().map_err(|e| e.to_string())?;
         Ok(stats.clone())
     }
 
@@ -372,17 +372,19 @@ impl ThresholdSeverity {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_performance_monitor_creation() {
-        let monitor = PerformanceMonitor::with_default_config();
+        let monitor: _ = PerformanceMonitor::with_default_config();
         assert!(monitor.get_stats().is_ok());
     }
 
     #[test]
     fn test_collect_single_metric() {
-        let monitor = PerformanceMonitor::with_default_config();
-        let metric = MetricValue {
+        let monitor: _ = PerformanceMonitor::with_default_config();
+        let metric: _ = MetricValue {
             metric_type: MetricType::CpuUsage,
             value: 50.0,
             timestamp: PerformanceMonitor::get_current_timestamp(),
@@ -390,14 +392,14 @@ mod tests {
         };
 
         assert!(monitor.collect_metric(metric).is_ok());
-        let stats = monitor.get_stats().unwrap();
+        let stats: _ = monitor.get_stats().unwrap();
         assert_eq!(stats.total_metrics, 1);
     }
 
     #[test]
     fn test_collect_multiple_metrics() {
-        let monitor = PerformanceMonitor::with_default_config();
-        let metrics = vec![
+        let monitor: _ = PerformanceMonitor::with_default_config();
+        let metrics: _ = vec![
             MetricValue {
                 metric_type: MetricType::CpuUsage,
                 value: 50.0,
@@ -413,14 +415,14 @@ mod tests {
         ];
 
         assert!(monitor.collect_metrics(metrics).is_ok());
-        let stats = monitor.get_stats().unwrap();
+        let stats: _ = monitor.get_stats().unwrap();
         assert_eq!(stats.total_metrics, 2);
     }
 
     #[test]
     fn test_real_time_metrics() {
-        let monitor = PerformanceMonitor::with_default_config();
-        let metric = MetricValue {
+        let monitor: _ = PerformanceMonitor::with_default_config();
+        let metric: _ = MetricValue {
             metric_type: MetricType::CpuUsage,
             value: 50.0,
             timestamp: PerformanceMonitor::get_current_timestamp(),
@@ -428,17 +430,17 @@ mod tests {
         };
 
         monitor.collect_metric(metric).unwrap();
-        let real_time_metrics = monitor.get_real_time_metrics().unwrap();
+        let real_time_metrics: _ = monitor.get_real_time_metrics().unwrap();
         assert_eq!(real_time_metrics.len(), 1);
     }
 
     #[test]
     fn test_aggregate_metrics() {
-        let monitor = PerformanceMonitor::with_default_config();
+        let monitor: _ = PerformanceMonitor::with_default_config();
 
         // 收集多个 CPU 使用率指标
         for i in 0..10 {
-            let metric = MetricValue {
+            let metric: _ = MetricValue {
                 metric_type: MetricType::CpuUsage,
                 value: 50.0 + i as f64,
                 timestamp: PerformanceMonitor::get_current_timestamp(),
@@ -448,20 +450,20 @@ mod tests {
         }
 
         monitor.aggregate_metrics().unwrap();
-        let aggregated = monitor.get_aggregated_metrics().unwrap();
+        let aggregated: _ = monitor.get_aggregated_metrics().unwrap();
 
         assert!(aggregated.contains_key(&MetricType::CpuUsage));
-        let cpu_metric = aggregated.get(&MetricType::CpuUsage).unwrap();
+        let cpu_metric: _ = aggregated.get(&MetricType::CpuUsage).unwrap();
         assert_eq!(cpu_metric.count, 10);
         assert!(cpu_metric.avg > 0.0);
     }
 
     #[test]
     fn test_threshold_detection() {
-        let monitor = PerformanceMonitor::with_default_config();
+        let monitor: _ = PerformanceMonitor::with_default_config();
 
         // 收集超过阈值的指标
-        let metric = MetricValue {
+        let metric: _ = MetricValue {
             metric_type: MetricType::CpuUsage,
             value: 95.0, // 超过 critical 阈值 90.0
             timestamp: PerformanceMonitor::get_current_timestamp(),
@@ -471,18 +473,18 @@ mod tests {
         monitor.collect_metric(metric).unwrap();
         monitor.aggregate_metrics().unwrap();
 
-        let violations = monitor.check_thresholds().unwrap();
+        let violations: _ = monitor.check_thresholds().unwrap();
         assert!(!violations.is_empty());
         assert_eq!(violations[0].severity, ThresholdSeverity::Critical);
     }
 
     #[test]
     fn test_percentile_calculation() {
-        let values = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+        let values: _ = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
 
-        let p50 = PerformanceMonitor::calculate_percentile(&values, 0.50);
-        let p90 = PerformanceMonitor::calculate_percentile(&values, 0.90);
-        let p95 = PerformanceMonitor::calculate_percentile(&values, 0.95);
+        let p50: _ = PerformanceMonitor::calculate_percentile(&values, 0.50);
+        let p90: _ = PerformanceMonitor::calculate_percentile(&values, 0.90);
+        let p95: _ = PerformanceMonitor::calculate_percentile(&values, 0.95);
 
         assert_eq!(p50, 5.0);
         assert_eq!(p90, 9.0);
@@ -491,7 +493,7 @@ mod tests {
 
     #[test]
     fn test_custom_metric_type() {
-        let custom_type = MetricType::Custom("custom_metric".to_string());
+        let custom_type: _ = MetricType::Custom("custom_metric".to_string());
         assert_eq!(
             custom_type,
             MetricType::Custom("custom_metric".to_string())

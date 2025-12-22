@@ -4,6 +4,8 @@
 use crate::network::{NetworkConfig, NetworkError};
 use std::collections::HashMap;
 use std::net::UdpSocket;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// HTTP/3 路由处理器类型
 pub type Http3Handler = fn(&str, &[u8]) -> Result<Vec<u8>, NetworkError>;
@@ -32,7 +34,7 @@ pub struct Http3ServerStats {
 pub struct Http3Server {
     config: NetworkConfig,
     enabled: bool,
-    routes: HashMap<String, Http3Handler>,
+    routes: HashMap<String, Http3Handler, std::collections::HashMap<String, Http3Handler, String, Http3Handler>>,
     stats: std::sync::Arc<std::sync::Mutex<Http3ServerStats>>,
 }
 
@@ -43,12 +45,12 @@ impl Http3Server {
             enabled: config.enable_http3,
             config,
             routes: HashMap::new(),
-            stats: std::sync::Arc::new(std::sync::Mutex::new(Http3ServerStats {
+            stats: std::sync::Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(Http3ServerStats {
                 total_requests: 0,
                 active_connections: 0,
                 total_connections: 0,
                 zero_rtt_connections: 0,
-            })),
+            }))),
         })
     }
 
@@ -70,7 +72,7 @@ impl Http3Server {
         }
 
         // HTTP/3 使用 UDP 而不是 TCP
-        let socket = UdpSocket::bind(addr)
+        let socket: _ = UdpSocket::bind(addr)
             .map_err(|e| NetworkError::Connection(e.to_string()))?;
 
         {

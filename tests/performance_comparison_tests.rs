@@ -20,6 +20,8 @@ pub struct ComparisonResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 模拟的Bun性能数据（实际运行时会从Bun获取真实数据）
     fn get_mock_bun_benchmarks() -> Vec<ComparisonResult> {
@@ -65,13 +67,13 @@ mod tests {
     /// 测试性能数据收集
     #[test]
     fn test_collect_performance_metrics() {
-        let runtime = Runtime::new(67108864, 1073741824, false, false);
+        let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
         // 测试1: 启动时间测量
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let test_code = r#"console.log("Hello, Beejs!");"#;
-        let _ = runtime.execute_code(test_code);
-        let elapsed = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let test_code: _ = r#"console.log("Hello, Beejs!");"#;
+        let _: _ = runtime.execute_code(test_code);
+        let elapsed: _ = start.elapsed().unwrap();
 
         // 验证启动时间在合理范围内
         assert!(
@@ -83,15 +85,15 @@ mod tests {
         println!("✅ 启动时间测量: {}ms", elapsed.as_millis());
 
         // 测试2: 执行速度测量
-        let iterations = 1000;
-        let test_code = "let sum = 0; for (let i = 0; i < 1000; i++) { sum += i; } sum";
+        let iterations: _ = 1000;
+        let test_code: _ = "let sum = 0; for (let i: _ = 0; i < 1000; i++) { sum += i; } sum";
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for _ in 0..iterations {
-            let _ = runtime.execute_code(test_code);
+            let _: _ = runtime.execute_code(test_code);
         }
-        let elapsed = start.elapsed().unwrap();
-        let ops_per_sec = iterations as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start.elapsed().unwrap();
+        let ops_per_sec: _ = iterations as f64 / elapsed.as_secs_f64();
 
         // 验证执行速度 - 在测试环境中，由于深度优化分析开销，阈值设为50 ops/sec
         assert!(
@@ -106,7 +108,7 @@ mod tests {
     /// 测试性能对比报告生成
     #[test]
     fn test_generate_comparison_report() {
-        let mock_results = get_mock_bun_benchmarks();
+        let mock_results: _ = get_mock_bun_benchmarks();
 
         // 计算总体改进
         let total_improvement: f64 =
@@ -123,7 +125,7 @@ mod tests {
 
         // 验证各项指标
         for result in &mock_results {
-            let status = if result.improvement > 0.0 {
+            let status: _ = if result.improvement > 0.0 {
                 "✅"
             } else {
                 "❌"
@@ -152,10 +154,10 @@ mod tests {
     /// 测试性能对比报告格式
     #[test]
     fn test_comparison_report_format() {
-        let mock_results = get_mock_bun_benchmarks();
+        let mock_results: _ = get_mock_bun_benchmarks();
 
         // 生成报告
-        let report = generate_performance_report(&mock_results);
+        let report: _ = generate_performance_report(&mock_results);
 
         // 验证报告包含必要部分
         assert!(
@@ -173,7 +175,7 @@ mod tests {
     /// 测试性能趋势分析
     #[test]
     fn test_performance_trend_analysis() {
-        let results = get_mock_bun_benchmarks();
+        let results: _ = get_mock_bun_benchmarks();
 
         // 分析性能趋势
         let mut fast_metrics = 0;
@@ -205,10 +207,10 @@ mod tests {
     #[test]
     fn test_memory_efficiency_comparison() {
         // 模拟内存使用测试
-        let beejs_memory = 85.0; // MB
-        let bun_memory = 102.0; // MB
+        let beejs_memory: _ = 85.0; // MB
+        let bun_memory: _ = 102.0; // MB
 
-        let memory_savings = (bun_memory - beejs_memory) / bun_memory * 100.0;
+        let memory_savings: _ = (bun_memory - beejs_memory) / bun_memory * 100.0;
 
         // 验证内存使用优化
         assert!(
@@ -223,8 +225,8 @@ mod tests {
     /// 测试并发能力对比
     #[test]
     fn test_concurrent_capability_comparison() {
-        let beejs_concurrent = 10500;
-        let bun_concurrent = 8200;
+        let beejs_concurrent: _ = 10500;
+        let bun_concurrent: _ = 8200;
 
         let improvement =
             (beejs_concurrent - bun_concurrent) as f64 / bun_concurrent as f64 * 100.0;

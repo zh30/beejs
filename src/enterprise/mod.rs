@@ -44,8 +44,8 @@ impl EnterpriseManager {
     /// Create a new enterprise manager
     pub fn new() -> Self {
         EnterpriseManager {
-            security: Arc::new(SecurityManager::new()),
-            compliance: Arc::new(ComplianceManager::new()),
+            security: Arc::new(std::sync::Mutex::new(SecurityManager::new())),
+            compliance: Arc::new(std::sync::Mutex::new(ComplianceManager::new())),
         }
     }
 
@@ -62,12 +62,12 @@ impl EnterpriseManager {
     /// Run full enterprise security and compliance check
     pub async fn run_full_audit(&self, script: &str, user_id: &str) -> Result<EnterpriseAuditResult> {
         // Run security check
-        let security_result = self.security.enforce_policy(script, user_id).await?;
+        let security_result: _ = self.security.enforce_policy(script, user_id).await?;
 
         // Run compliance checks for multiple frameworks
         let mut compliance_reports = Vec::new();
 
-        let frameworks = vec![
+        let frameworks: _ = vec![
             ComplianceFramework::GDPR,
             ComplianceFramework::HIPAA,
             ComplianceFramework::SOC2,
@@ -75,16 +75,16 @@ impl EnterpriseManager {
         ];
 
         for framework in frameworks {
-            let report = self.compliance.check_compliance(script, framework).await?;
+            let report: _ = self.compliance.check_compliance(script, framework).await?;
             compliance_reports.push(report);
         }
 
         // Calculate overall score
-        let avg_score = compliance_reports.iter()
+        let avg_score: _ = compliance_reports.iter()
             .map(|r| r.score)
             .sum::<f64>() / compliance_reports.len() as f64;
 
-        let overall_compliant = security_result.allowed && avg_score >= 0.8;
+        let overall_compliant: _ = security_result.allowed && avg_score >= 0.8;
 
         Ok(EnterpriseAuditResult {
             security: security_result,
@@ -115,15 +115,17 @@ pub struct EnterpriseAuditResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_enterprise_manager() {
-        let manager = EnterpriseManager::new();
+        let manager: _ = EnterpriseManager::new();
 
-        let script = "console.log('Hello');";
-        let user_id = "test_user";
+        let script: _ = "console.log('Hello');";
+        let user_id: _ = "test_user";
 
-        let result = manager.run_full_audit(script, user_id).await.unwrap();
+        let result: _ = manager.run_full_audit(script, user_id).await.unwrap();
 
         assert!(result.overall_score >= 0.0 && result.overall_score <= 1.0);
         assert!(!result.compliance.is_empty());
@@ -132,16 +134,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_security_and_compliance() {
-        let manager = EnterpriseManager::new();
+        let manager: _ = EnterpriseManager::new();
 
         // Test with safe code
-        let safe_script = "const x = 42;";
-        let result = manager.run_full_audit(safe_script, "user1").await.unwrap();
+        let safe_script: _ = "const x = 42;";
+        let result: _ = manager.run_full_audit(safe_script, "user1").await.unwrap();
         assert!(result.security.allowed);
 
         // Test with unsafe code
-        let unsafe_script = "eval('alert(1)');";
-        let result = manager.run_full_audit(unsafe_script, "user2").await.unwrap();
+        let unsafe_script: _ = "eval('alert(1)');";
+        let result: _ = manager.run_full_audit(unsafe_script, "user2").await.unwrap();
         assert!(!result.security.allowed);
     }
 }

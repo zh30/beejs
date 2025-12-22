@@ -42,14 +42,14 @@ pub struct TrendingModule {
 pub struct CommunityPortal {
     registry: Arc<ModuleRegistry>,
     auth: Arc<AuthManager>,
-    ratings: Arc<RwLock<HashMap<String, Vec<ModuleRating>>>>,
+    ratings: Arc<RwLock<HashMap<String, Vec<ModuleRating, std::collections::HashMap<String, Vec<ModuleRating, String, Vec<ModuleRating>>>>>,
     trending: Arc<RwLock<Vec<TrendingModule>>>,
 }
 
 /// 模块注册表
 #[derive(Debug, Clone)]
 pub struct ModuleRegistry {
-    modules: Arc<RwLock<HashMap<String, ModuleInfo>>>,
+    modules: Arc<RwLock<HashMap<String, ModuleInfo, std::collections::HashMap<String, ModuleInfo, String, ModuleInfo>>>>,
 }
 
 /// 模块信息
@@ -84,8 +84,8 @@ pub enum ModuleCategory {
 /// 认证管理器
 #[derive(Debug, Clone)]
 pub struct AuthManager {
-    users: Arc<RwLock<HashMap<String, UserId>>>,
-    sessions: Arc<RwLock<HashMap<String, Session>>>,
+    users: Arc<RwLock<HashMap<String, UserId, std::collections::HashMap<String, UserId, String, UserId>>>>,
+    sessions: Arc<RwLock<HashMap<String, Session, std::collections::HashMap<String, Session, String, Session>>>>,
 }
 
 /// 用户会话
@@ -101,10 +101,10 @@ impl CommunityPortal {
     /// 创建新的社区门户
     pub fn new() -> Self {
         Self {
-            registry: Arc::new(ModuleRegistry::new()),
-            auth: Arc::new(AuthManager::new()),
-            ratings: Arc::new(RwLock::new(HashMap::new())),
-            trending: Arc::new(RwLock::new(Vec::new())),
+            registry: Arc::new(std::sync::Mutex::new(ModuleRegistry::new())),
+            auth: Arc::new(std::sync::Mutex::new(AuthManager::new())),
+            ratings: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            trending: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         }
     }
 
@@ -116,7 +116,7 @@ impl CommunityPortal {
         }
 
         // 注册模块
-        let module_id = self.registry.register_module(module).await?;
+        let module_id: _ = self.registry.register_module(module).await?;
 
         // 更新热门列表
         self.update_trending().await?;
@@ -126,7 +126,7 @@ impl CommunityPortal {
 
     /// 获取热门模块
     pub async fn get_trending_modules(&self, limit: usize) -> Result<Vec<TrendingModule>, Box<dyn std::error::Error>> {
-        let trending = self.trending.read().await;
+        let trending: _ = self.trending.read().await;
         Ok(trending.iter().take(limit).cloned().collect())
     }
 
@@ -143,7 +143,7 @@ impl CommunityPortal {
         }
 
         // 创建评分记录
-        let rating_record = ModuleRating {
+        let rating_record: _ = ModuleRating {
             module_id: module_id.to_string(),
             user_id: user_id.clone(),
             rating,
@@ -163,8 +163,8 @@ impl CommunityPortal {
 
     /// 获取模块评分
     pub async fn get_module_rating(&self, module_id: &str) -> Result<ModuleRatingSummary, Box<dyn std::error::Error>> {
-        let ratings = self.ratings.read().await;
-        let module_ratings = ratings.get(module_id).cloned().unwrap_or_default();
+        let ratings: _ = self.ratings.read().await;
+        let module_ratings: _ = ratings.clone();get(module_id).cloned().unwrap_or_default();
 
         if module_ratings.is_empty() {
             return Ok(ModuleRatingSummary {
@@ -175,13 +175,13 @@ impl CommunityPortal {
             });
         }
 
-        let total_ratings = module_ratings.len();
+        let total_ratings: _ = module_ratings.len();
         let sum_ratings: u32 = module_ratings.iter().map(|r| r.rating as u32).sum();
-        let average_rating = sum_ratings as f64 / total_ratings as f64;
+        let average_rating: _ = sum_ratings as f64 / total_ratings as f64;
 
         let mut rating_distribution = HashMap::new();
         for rating in 1..=5 {
-            let count = module_ratings.iter().filter(|r| r.rating == rating).count();
+            let count: _ = module_ratings.iter().filter(|r| r.rating == rating).count();
             rating_distribution.insert(rating, count);
         }
 
@@ -195,12 +195,12 @@ impl CommunityPortal {
 
     /// 搜索模块
     pub async fn search_modules(&self, query: &str, category: Option<ModuleCategory>) -> Result<Vec<ModuleSearchResult>, Box<dyn std::error::Error>> {
-        let modules = self.registry.search_modules(query, category).await?;
+        let modules: _ = self.registry.search_modules(query, category).await?;
 
         let mut results = Vec::new();
         for module in modules {
-            let rating_summary = self.get_module_rating(&module.id).await.unwrap_or_default();
-            let module_for_score = module.clone();
+            let rating_summary: _ = self.get_module_rating(&module.id).await.unwrap_or_default();
+            let module_for_score: _ = module.clone();
 
             results.push(ModuleSearchResult {
                 module,
@@ -217,17 +217,17 @@ impl CommunityPortal {
 
     /// 获取模块统计信息
     pub async fn get_module_stats(&self, module_id: &str) -> Result<ModuleStats, Box<dyn std::error::Error>> {
-        let registry = self.registry.get_module(module_id).await?;
+        let registry: _ = self.registry.get_module(module_id).await?;
 
         if registry.is_none() {
             return Err("Module not found".into());
         }
 
-        let ratings = self.ratings.read().await;
-        let module_ratings = ratings.get(module_id).cloned().unwrap_or_default();
+        let ratings: _ = self.ratings.read().await;
+        let module_ratings: _ = ratings.clone();get(module_id).cloned().unwrap_or_default();
 
-        let total_downloads = registry.as_ref().map(|m| m.name.len() * 100).unwrap_or(0) as u64; // 模拟下载数
-        let rating_summary = self.get_module_rating(module_id).await?;
+        let total_downloads: _ = registry.as_ref().map(|m| m.name.len() * 100).unwrap_or(0) as u64; // 模拟下载数
+        let rating_summary: _ = self.get_module_rating(module_id).await?;
 
         Ok(ModuleStats {
             module_id: module_id.to_string(),
@@ -240,7 +240,7 @@ impl CommunityPortal {
 
     /// 创建用户
     pub async fn create_user(&self, username: &str, email: &str) -> Result<UserId, Box<dyn std::error::Error>> {
-        let user_id = UserId {
+        let user_id: _ = UserId {
             id: format!("user_{}", uuid::Uuid::new_v4()),
             username: username.to_string(),
             email: email.to_string(),
@@ -257,16 +257,16 @@ impl CommunityPortal {
 
     /// 更新热门列表
     async fn update_trending(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let modules = self.registry.get_all_modules().await?;
+        let modules: _ = self.registry.get_all_modules().await?;
         let mut trending_list = Vec::new();
 
         for module in modules {
-            let rating_summary = self.get_module_rating(&module.id).await?;
-            let download_count = module.name.len() * 100; // 模拟下载数
+            let rating_summary: _ = self.get_module_rating(&module.id).await?;
+            let download_count: _ = module.name.len() * 100; // 模拟下载数
 
             // 计算趋势分数：基于评分、下载数和更新时间
-            let time_factor = (Utc::now() - module.updated_at).num_days() as f64;
-            let trend_score = (rating_summary.average_rating * 0.4 + (download_count as f64 / 1000.0) * 0.4) * (1.0 / (1.0 + time_factor * 0.1));
+            let time_factor: _ = (Utc::now() - module.updated_at).num_days() as f64;
+            let trend_score: _ = (rating_summary.average_rating * 0.4 + (download_count as f64 / 1000.0) * 0.4) * (1.0 / (1.0 + time_factor * 0.1));
 
             trending_list.push(TrendingModule {
                 module_id: module.id,
@@ -289,11 +289,11 @@ impl CommunityPortal {
 
     /// 计算相关性分数
     fn calculate_relevance_score(&self, module: &ModuleInfo, query: &str, rating_summary: &ModuleRatingSummary) -> f64 {
-        let query_lower = query.to_lowercase();
-        let name_score = if module.name.to_lowercase().contains(&query_lower) { 1.0 } else { 0.0 };
-        let desc_score = if module.description.to_lowercase().contains(&query_lower) { 0.5 } else { 0.0 };
-        let tag_score = module.tags.iter().any(|tag| tag.to_lowercase().contains(&query_lower)) as i32 as f64 * 0.7;
-        let rating_score = rating_summary.average_rating / 5.0 * 0.3;
+        let query_lower: _ = query.to_lowercase();
+        let name_score: _ = if module.name.to_lowercase().contains(&query_lower) { 1.0 } else { 0.0 };
+        let desc_score: _ = if module.description.to_lowercase().contains(&query_lower) { 0.5 } else { 0.0 };
+        let tag_score: _ = module.tags.iter().any(|tag| tag.to_lowercase().contains(&query_lower)) as i32 as f64 * 0.7;
+        let rating_score: _ = rating_summary.average_rating / 5.0 * 0.3;
 
         name_score + desc_score + tag_score + rating_score
     }
@@ -305,7 +305,7 @@ pub struct ModuleRatingSummary {
     pub module_id: String,
     pub total_ratings: usize,
     pub average_rating: f64,
-    pub rating_distribution: HashMap<u8, usize>,
+    pub rating_distribution: HashMap<u8, usize, std::collections::HashMap<u8, usize, u8, usize>>,
 }
 
 /// 模块搜索结果
@@ -330,7 +330,7 @@ pub struct ModuleStats {
 impl ModuleRegistry {
     pub fn new() -> Self {
         Self {
-            modules: Arc::new(RwLock::new(HashMap::new())),
+            modules: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -341,16 +341,16 @@ impl ModuleRegistry {
     }
 
     pub async fn search_modules(&self, query: &str, category: Option<ModuleCategory>) -> Result<Vec<ModuleInfo>, Box<dyn std::error::Error>> {
-        let modules = self.modules.read().await;
-        let query_lower = query.to_lowercase();
+        let modules: _ = self.modules.read().await;
+        let query_lower: _ = query.to_lowercase();
 
         let results: Vec<ModuleInfo> = modules.values()
             .filter(|m| {
-                let matches_query = m.name.to_lowercase().contains(&query_lower)
+                let matches_query: _ = m.name.to_lowercase().contains(&query_lower)
                     || m.description.to_lowercase().contains(&query_lower)
                     || m.tags.iter().any(|tag| tag.to_lowercase().contains(&query_lower));
 
-                let matches_category = category.is_none() || Some(&m.category) == category.as_ref();
+                let matches_category: _ = category.clone();is_none() || Some(&m.category) == category.as_ref();
 
                 matches_query && matches_category
             })
@@ -361,12 +361,12 @@ impl ModuleRegistry {
     }
 
     pub async fn get_all_modules(&self) -> Result<Vec<ModuleInfo>, Box<dyn std::error::Error>> {
-        let modules = self.modules.read().await;
+        let modules: _ = self.modules.read().await;
         Ok(modules.values().cloned().collect())
     }
 
     pub async fn get_module(&self, id: &str) -> Result<Option<ModuleInfo>, Box<dyn std::error::Error>> {
-        let modules = self.modules.read().await;
+        let modules: _ = self.modules.read().await;
         Ok(modules.get(id).cloned())
     }
 }
@@ -375,8 +375,8 @@ impl ModuleRegistry {
 impl AuthManager {
     pub fn new() -> Self {
         Self {
-            users: Arc::new(RwLock::new(HashMap::new())),
-            sessions: Arc::new(RwLock::new(HashMap::new())),
+            users: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            sessions: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -387,13 +387,13 @@ impl AuthManager {
     }
 
     pub async fn verify_user(&self, user: &UserId) -> Result<bool, Box<dyn std::error::Error>> {
-        let users = self.users.read().await;
+        let users: _ = self.users.read().await;
         Ok(users.contains_key(&user.id))
     }
 
     pub async fn create_session(&self, user: &UserId) -> Result<String, Box<dyn std::error::Error>> {
-        let session_id = format!("session_{}", uuid::Uuid::new_v4());
-        let session = Session {
+        let session_id: _ = format!("session_{}", uuid::Uuid::new_v4());
+        let session: _ = Session {
             session_id: session_id.clone(),
             user_id: user.id.clone(),
             created_at: Utc::now(),
@@ -416,13 +416,15 @@ impl Default for CommunityPortal {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_share_module() {
-        let portal = CommunityPortal::new();
-        let user = portal.create_user("testuser", "test@example.com").await.unwrap();
+        let portal: _ = CommunityPortal::new();
+        let user: _ = portal.create_user("testuser", "test@example.com").await.unwrap();
 
-        let module = ModuleInfo {
+        let module: _ = ModuleInfo {
             id: "test-module".to_string(),
             name: "Test Module".to_string(),
             version: Version::parse("1.0.0").unwrap(),
@@ -435,28 +437,28 @@ mod tests {
             category: ModuleCategory::Utility,
         };
 
-        let module_id = portal.share_module(&module, &user).await.unwrap();
+        let module_id: _ = portal.share_module(&module, &user).await.unwrap();
         assert_eq!(module_id, "test-module");
     }
 
     #[tokio::test]
     async fn test_rate_module() {
-        let portal = CommunityPortal::new();
-        let user = portal.create_user("testuser", "test@example.com").await.unwrap();
+        let portal: _ = CommunityPortal::new();
+        let user: _ = portal.create_user("testuser", "test@example.com").await.unwrap();
 
         portal.rate_module("test-module", &user, 5, Some("Great module!")).await.unwrap();
 
-        let rating = portal.get_module_rating("test-module").await.unwrap();
+        let rating: _ = portal.get_module_rating("test-module").await.unwrap();
         assert_eq!(rating.total_ratings, 1);
         assert_eq!(rating.average_rating, 5.0);
     }
 
     #[tokio::test]
     async fn test_search_modules() {
-        let portal = CommunityPortal::new();
-        let user = portal.create_user("testuser", "test@example.com").await.unwrap();
+        let portal: _ = CommunityPortal::new();
+        let user: _ = portal.create_user("testuser", "test@example.com").await.unwrap();
 
-        let module = ModuleInfo {
+        let module: _ = ModuleInfo {
             id: "test-util".to_string(),
             name: "Test Util".to_string(),
             version: Version::parse("1.0.0").unwrap(),
@@ -471,17 +473,17 @@ mod tests {
 
         portal.share_module(&module, &user).await.unwrap();
 
-        let results = portal.search_modules("util", None).await.unwrap();
+        let results: _ = portal.search_modules("util", None).await.unwrap();
         assert!(!results.is_empty());
         assert!(results[0].score > 0.0);
     }
 
     #[tokio::test]
     async fn test_trending_modules() {
-        let portal = CommunityPortal::new();
-        let user = portal.create_user("testuser", "test@example.com").await.unwrap();
+        let portal: _ = CommunityPortal::new();
+        let user: _ = portal.create_user("testuser", "test@example.com").await.unwrap();
 
-        let module = ModuleInfo {
+        let module: _ = ModuleInfo {
             id: "trending-module".to_string(),
             name: "Trending Module".to_string(),
             version: Version::parse("1.0.0").unwrap(),
@@ -497,16 +499,16 @@ mod tests {
         portal.share_module(&module, &user).await.unwrap();
         portal.rate_module("trending-module", &user, 5, None).await.unwrap();
 
-        let trending = portal.get_trending_modules(10).await.unwrap();
+        let trending: _ = portal.get_trending_modules(10).await.unwrap();
         assert!(!trending.is_empty());
     }
 
     #[tokio::test]
     async fn test_module_stats() {
-        let portal = CommunityPortal::new();
-        let user = portal.create_user("testuser", "test@example.com").await.unwrap();
+        let portal: _ = CommunityPortal::new();
+        let user: _ = portal.create_user("testuser", "test@example.com").await.unwrap();
 
-        let module = ModuleInfo {
+        let module: _ = ModuleInfo {
             id: "stats-module".to_string(),
             name: "Stats Module".to_string(),
             version: Version::parse("1.0.0").unwrap(),
@@ -521,32 +523,32 @@ mod tests {
 
         portal.share_module(&module, &user).await.unwrap();
 
-        let stats = portal.get_module_stats("stats-module").await.unwrap();
+        let stats: _ = portal.get_module_stats("stats-module").await.unwrap();
         assert_eq!(stats.module_id, "stats-module");
         assert!(stats.total_downloads > 0);
     }
 
     #[tokio::test]
     async fn test_user_authentication() {
-        let portal = CommunityPortal::new();
-        let user = portal.create_user("newuser", "new@example.com").await.unwrap();
+        let portal: _ = CommunityPortal::new();
+        let user: _ = portal.create_user("newuser", "new@example.com").await.unwrap();
 
         assert!(portal.auth.verify_user(&user).await.unwrap());
 
-        let session_id = portal.login(&user).await.unwrap();
+        let session_id: _ = portal.login(&user).await.unwrap();
         assert!(!session_id.is_empty());
     }
 
     #[tokio::test]
     async fn test_rating_validation() {
-        let portal = CommunityPortal::new();
-        let user = portal.create_user("testuser", "test@example.com").await.unwrap();
+        let portal: _ = CommunityPortal::new();
+        let user: _ = portal.create_user("testuser", "test@example.com").await.unwrap();
 
         // 测试无效评分
-        let result = portal.rate_module("test", &user, 10, None).await;
+        let result: _ = portal.rate_module("test", &user, 10, None).await;
         assert!(result.is_err());
 
-        let result = portal.rate_module("test", &user, 0, None).await;
+        let result: _ = portal.rate_module("test", &user, 0, None).await;
         assert!(result.is_err());
     }
 }

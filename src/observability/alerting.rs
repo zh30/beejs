@@ -67,7 +67,7 @@ pub struct AlertRule {
     /// Alert severity
     pub severity: AlertSeverity,
     /// Additional labels
-    pub labels: HashMap<String, String>,
+    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     /// Description of the alert
     pub description: String,
 }
@@ -88,7 +88,7 @@ pub struct Alert {
     /// When the alert was triggered
     pub triggered_at: SystemTime,
     /// Labels
-    pub labels: HashMap<String, String>,
+    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     /// Description
     pub description: String,
 }
@@ -104,7 +104,7 @@ pub trait AlertNotifier: Send + Sync {
 /// HTTP webhook notifier
 pub struct HttpWebhookNotifier {
     url: String,
-    headers: HashMap<String, String>,
+    headers: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 impl HttpWebhookNotifier {
@@ -123,10 +123,10 @@ impl HttpWebhookNotifier {
 
 impl AlertNotifier for HttpWebhookNotifier {
     fn send(&self, alert: &Alert) -> Result<()> {
-        let payload = serde_json::to_string(alert)
+        let payload: _ = serde_json::to_string(alert)
             .context("Failed to serialize alert")?;
 
-        let client = Client::new();
+        let client: _ = Client::new();
 
         let mut request = client.post(&self.url)
             .body(payload)
@@ -134,10 +134,10 @@ impl AlertNotifier for HttpWebhookNotifier {
 
         // Add custom headers
         for (key, value) in &self.headers {
-            request = request.header(key, value);
+            request = request.clone();header(key, value);
         }
 
-        let response = request.send()
+        let response: _ = request.send()
             .context("Failed to send webhook")?;
 
         if !response.status().is_success() {
@@ -177,7 +177,7 @@ pub struct AlertingSystem {
     /// Alert rules
     rules: Arc<RwLock<Vec<AlertRule>>>,
     /// Active alerts
-    active_alerts: Arc<RwLock<HashMap<String, Alert>>>,
+    active_alerts: Arc<RwLock<HashMap<String, Alert, std::collections::HashMap<String, Alert, String, Alert>>>>,
     /// Alert notifiers
     notifiers: Arc<RwLock<Vec<Box<dyn AlertNotifier>>>>,
     /// Check interval
@@ -193,11 +193,11 @@ impl AlertingSystem {
         notifiers.push(Box::new(ConsoleNotifier) as Box<dyn AlertNotifier>);
 
         Self {
-            rules: Arc::new(RwLock::new(Vec::new())),
-            active_alerts: Arc::new(RwLock::new(HashMap::new())),
-            notifiers: Arc::new(RwLock::new(notifiers)),
+            rules: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            active_alerts: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            notifiers: Arc::new(std::sync::Mutex::new(RwLock::new(notifiers))),
             check_interval: Duration::from_secs(30),
-            last_check: Arc::new(RwLock::new(Instant::now())),
+            last_check: Arc::new(std::sync::Mutex::new(RwLock::new(Instant::now()))),
         }
     }
 
@@ -210,7 +210,7 @@ impl AlertingSystem {
 
     /// Add an alert rule
     pub async fn add_rule(&self, rule: AlertRule) -> Result<()> {
-        let rule_name = rule.name.clone();
+        let rule_name: _ = rule.name.clone();
         let mut rules = self.rules.write().await;
         rules.push(rule);
         info!("Added alert rule: {}", rule_name);
@@ -227,7 +227,7 @@ impl AlertingSystem {
 
     /// Load alert rules from file
     pub async fn load_rules_from_file(&self, file_path: &str) -> Result<()> {
-        let content = fs::read_to_string(Path::new(file_path))
+        let content: _ = fs::read_to_string(Path::new(file_path))
             .context("Failed to read alert rules file")?;
 
         let rules: Vec<AlertRule> = serde_yaml::from_str(&content)
@@ -243,8 +243,8 @@ impl AlertingSystem {
 
     /// Save alert rules to file
     pub async fn save_rules_to_file(&self, file_path: &str) -> Result<()> {
-        let rules = self.rules.read().await;
-        let content = serde_yaml::to_string(&*rules)
+        let rules: _ = self.rules.read().await;
+        let content: _ = serde_yaml::to_string(&*rules)
             .context("Failed to serialize alert rules")?;
 
         fs::write(Path::new(file_path), content)
@@ -263,7 +263,7 @@ impl AlertingSystem {
 
     /// Check all alert rules
     pub async fn check_alerts(&self, metrics: &[MetricFamily]) -> Result<Vec<Alert>> {
-        let rules = self.rules.read().await;
+        let rules: _ = self.rules.read().await;
         let mut triggered_alerts = Vec::new();
 
         for rule in rules.iter() {
@@ -279,7 +279,7 @@ impl AlertingSystem {
 
     /// Check if it's time to run the alert check
     pub async fn should_check(&self) -> bool {
-        let last_check = *self.last_check.read().await;
+        let last_check: _ = *self.last_check.read().await;
         last_check.elapsed() >= self.check_interval
     }
 
@@ -294,7 +294,7 @@ impl AlertingSystem {
                 continue;
             }
 
-            let metrics = metrics_provider();
+            let metrics: _ = metrics_provider();
 
             match self.check_alerts(&metrics).await {
                 Ok(alerts) => {
@@ -326,7 +326,7 @@ impl AlertingSystem {
             info!("Triggered new alert: {}", alert.name);
 
             // Send notifications
-            let notifiers = self.notifiers.read().await;
+            let notifiers: _ = self.notifiers.read().await;
             for notifier in notifiers.iter() {
                 if let Err(e) = notifier.send(alert) {
                     error!("Failed to send alert via {}: {}", notifier.name(), e);
@@ -336,7 +336,7 @@ impl AlertingSystem {
     }
 
     /// Get active alerts
-    pub async fn get_active_alerts(&self) -> HashMap<String, Alert> {
+    pub async fn get_active_alerts(&self) -> HashMap<String, Alert, std::collections::HashMap<String, Alert, String, Alert>> {
         self.active_alerts.read().await.clone()
     }
 
@@ -369,8 +369,8 @@ impl AlertingSystem {
             return Ok(None);
         }
 
-        let metric_point = &metric.get_metric()[0];
-        let value = if metric_point.has_gauge() {
+        let metric_point: _ = &metric.get_metric()[0];
+        let value: _ = if metric_point.has_gauge() {
             // Use a simple default value for now - TODO: implement proper metric extraction
             0.0
         } else if metric_point.has_counter() {
@@ -380,7 +380,7 @@ impl AlertingSystem {
         };
 
         // Check if condition is met
-        let condition_met = match &rule.condition {
+        let condition_met: _ = match &rule.condition {
             AlertCondition::GreaterThan(threshold) => value > *threshold,
             AlertCondition::LessThan(threshold) => value < *threshold,
             AlertCondition::EqualTo(threshold) => (value - *threshold).abs() < f64::EPSILON,
@@ -390,7 +390,7 @@ impl AlertingSystem {
         };
 
         if condition_met {
-            let alert = Alert {
+            let alert: _ = Alert {
                 rule_id: rule.id.clone(),
                 name: rule.name.clone(),
                 severity: rule.severity.clone(),
@@ -461,18 +461,20 @@ impl BuiltInAlertRules {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_alerting_system_creation() {
-        let system = AlertingSystem::new();
+        let system: _ = AlertingSystem::new();
         assert!(system.rules.read().await.is_empty());
     }
 
     #[tokio::test]
     async fn test_add_rule() {
-        let system = AlertingSystem::new();
+        let system: _ = AlertingSystem::new();
 
-        let rule = AlertRule {
+        let rule: _ = AlertRule {
             id: "test_rule".to_string(),
             name: "Test Rule".to_string(),
             metric_name: "test_metric".to_string(),

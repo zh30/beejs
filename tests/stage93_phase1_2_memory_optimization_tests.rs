@@ -14,6 +14,8 @@ use std::collections::HashMap;
 #[cfg(test)]
 mod memory_optimization_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试零拷贝内存映射优化
     #[test]
@@ -50,12 +52,12 @@ mod memory_optimization_tests {
     /// 测试内存优化整体性能
     #[tokio::test]
     async fn test_memory_optimization_performance() {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // TODO: 集成测试 - 验证所有内存优化功能协同工作
         // 预期性能提升: 整体内存性能提升 40%+
 
-        let duration = start.elapsed();
+        let duration: _ = start.elapsed();
         println!("内存优化性能测试完成，耗时: {:?}", duration);
         assert!(duration.as_millis() < 1000, "测试应在 1 秒内完成");
     }

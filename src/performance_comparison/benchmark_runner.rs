@@ -13,6 +13,8 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Command;
 use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 运行时配置
 #[derive(Debug, Clone)]
@@ -49,7 +51,7 @@ impl RuntimeConfig {
     /// 获取运行时版本
     pub async fn get_version(&self) -> Result<String> {
         if let Some(ref version_cmd) = self.version_cmd {
-            let output = Command::new("sh")
+            let output: _ = Command::new("sh")
                 .arg("-c")
                 .arg(version_cmd)
                 .output()
@@ -62,7 +64,7 @@ impl RuntimeConfig {
             }
         } else {
             // 使用默认的 --version 参数
-            let output = Command::new(&self.command)
+            let output: _ = Command::new(&self.command)
                 .arg("--version")
                 .output()
                 .context("Failed to get version")?;
@@ -90,9 +92,9 @@ pub struct TestCase {
 impl TestCase {
     /// 创建新的测试用例
     pub fn new(test_type: BenchmarkTestCase) -> Self {
-        let name = test_type.name();
-        let description = test_type.description();
-        let code = test_type.generate_test_code();
+        let name: _ = test_type.name();
+        let description: _ = test_type.description();
+        let code: _ = test_type.generate_test_code();
 
         Self {
             name,
@@ -165,7 +167,7 @@ impl BenchmarkRunner {
         });
 
         // 添加 Node.js 运行时（如果可用）
-        let nodejs_runtime = RuntimeConfig {
+        let nodejs_runtime: _ = RuntimeConfig {
             name: "nodejs".to_string(),
             command: "node".to_string(),
             args: vec![],
@@ -175,7 +177,7 @@ impl BenchmarkRunner {
         runtimes.push(nodejs_runtime);
 
         // 添加 Bun 运行时（如果可用）
-        let bun_runtime = RuntimeConfig {
+        let bun_runtime: _ = RuntimeConfig {
             name: "bun".to_string(),
             command: "bun".to_string(),
             args: vec![],
@@ -271,7 +273,7 @@ impl BenchmarkRunner {
     }
 
     /// 运行所有基准测试
-    pub async fn run_all(&mut self) -> Result<HashMap<String, PerformanceComparisonResult>> {
+    pub async fn run_all(&mut self) -> Result<HashMap<String, PerformanceComparisonResult, std::collections::HashMap<String, PerformanceComparisonResult, String, PerformanceComparisonResult>>> {
         if self.test_cases.is_empty() {
             self.add_standard_test_suite();
         }
@@ -281,7 +283,7 @@ impl BenchmarkRunner {
         for test_case in &self.test_cases {
             println!("Running benchmark: {}", test_case.name);
 
-            let comparison_result = self.run_single_benchmark(test_case).await?;
+            let comparison_result: _ = self.run_single_benchmark(test_case).await?;
             results.insert(test_case.name.clone(), comparison_result);
         }
 
@@ -323,13 +325,13 @@ impl BenchmarkRunner {
         }
 
         // 计算性能对比
-        let speedup_vs_nodejs = self.calculate_speedup(&beejs_result, &nodejs_result);
-        let speedup_vs_bun = self.calculate_speedup(&beejs_result, &bun_result);
+        let speedup_vs_nodejs: _ = self.calculate_speedup(&beejs_result, &nodejs_result);
+        let speedup_vs_bun: _ = self.calculate_speedup(&beejs_result, &bun_result);
         let memory_savings_vs_nodejs =
             self.calculate_memory_savings(&beejs_result, &nodejs_result);
-        let memory_savings_vs_bun = self.calculate_memory_savings(&beejs_result, &bun_result);
+        let memory_savings_vs_bun: _ = self.calculate_memory_savings(&beejs_result, &bun_result);
 
-        let execution_time_comparison = self.create_execution_time_comparison(
+        let execution_time_comparison: _ = self.create_execution_time_comparison(
             &beejs_result,
             &nodejs_result,
             &bun_result,
@@ -357,21 +359,21 @@ impl BenchmarkRunner {
         test_case: &TestCase,
     ) -> Result<BenchmarkResult> {
         // 创建临时文件
-        let temp_dir = std::env::temp_dir();
-        let test_file = temp_dir.join(format!("beejs_test_{}.js", std::process::id()));
+        let temp_dir: _ = std::env::temp_dir();
+        let test_file: _ = temp_dir.join(format!("beejs_test_{}.js", std::process::id()));
         std::fs::write(&test_file, &test_case.code)?;
 
         // 运行测试
-        let start = Instant::now();
-        let output = Command::new(&runtime.command)
+        let start: _ = Instant::now();
+        let output: _ = Command::new(&runtime.command)
             .args(&runtime.args)
             .arg(&test_file)
             .output()?;
 
-        let duration = start.elapsed();
+        let duration: _ = start.elapsed();
 
         // 清理临时文件
-        let _ = std::fs::remove_file(&test_file);
+        let _: _ = std::fs::remove_file(&test_file);
 
         if !output.status.success() {
             return Err(anyhow::anyhow!(
@@ -381,7 +383,7 @@ impl BenchmarkRunner {
         }
 
         // 创建基准测试结果
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: test_case.iterations,
             warmup_iterations: 10,
             timeout: test_case.timeout,
@@ -389,7 +391,7 @@ impl BenchmarkRunner {
             compare_with_baseline: self.config.compare_with_baseline,
         };
 
-        let _framework = BenchmarkFramework::new(config);
+        let _framework: _ = BenchmarkFramework::new(config);
 
         // 使用简化的时间测量（实际实现会更复杂）
         Ok(BenchmarkResult {
@@ -459,7 +461,7 @@ impl BenchmarkRunner {
         beejs_result: &Option<BenchmarkResult>,
         nodejs_result: &Option<BenchmarkResult>,
         bun_result: &Option<BenchmarkResult>,
-    ) -> HashMap<String, Duration> {
+    ) -> HashMap<String, Duration, std::collections::HashMap<String, Duration, String, Duration>> {
         let mut comparison = HashMap::new();
 
         if let Some(result) = beejs_result {
@@ -481,7 +483,7 @@ impl BenchmarkRunner {
         beejs_result: &Option<BenchmarkResult>,
         nodejs_result: &Option<BenchmarkResult>,
         bun_result: &Option<BenchmarkResult>,
-    ) -> HashMap<String, usize> {
+    ) -> HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>> {
         let mut comparison = HashMap::new();
 
         if let Some(result) = beejs_result {

@@ -21,7 +21,7 @@ pub struct GoRoutineId(pub String);
 #[derive(Debug)]
 pub struct GoRuntime {
     vm: Arc<GoVM>,
-    goroutines: Arc<RwLock<HashMap<GoRoutineId, GoRoutine>>>,
+    goroutines: Arc<RwLock<HashMap<GoRoutineId, GoRoutine, std::collections::HashMap<GoRoutineId, GoRoutine, GoRoutineId, GoRoutine>>>>,
     bee_api: Arc<BeeAPI>,
     executor: Arc<GoExecutor>,
 }
@@ -82,10 +82,10 @@ impl GoVM {
 impl GoRuntime {
     /// Create a new Go runtime
     pub fn new(bee_api: Arc<BeeAPI>) -> Result<Self> {
-        let vm = Arc::new(GoVM::new()?);
-        let goroutines = Arc::new(RwLock::new(HashMap::new()));
-        let executor = Arc::new(GoExecutor {
-            bee_runtime: bee_api.runtime.clone(),
+        let vm: _ = Arc::new(std::sync::Mutex::new(GoVM::new())?);
+        let goroutines: _ = Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new())));
+        let executor: _ = Arc::new(std::sync::Mutex::new(GoExecutor {
+            bee_runtime: bee_api.runtime.clone()),
         });
 
         Ok(GoRuntime {
@@ -114,11 +114,11 @@ impl GoRuntime {
 
     /// Spawn a new Go routine
     pub async fn spawn_goroutine(&self, script: &str) -> Result<GoRoutineId> {
-        let id = GoRoutineId(format!("goroutine_{}", uuid::Uuid::new_v4()));
+        let id: _ = GoRoutineId(format!("goroutine_{}", uuid::Uuid::new_v4()));
 
         let (tx, mut rx) = mpsc::unbounded_channel::<GoMessage>();
 
-        let goroutine = GoRoutine {
+        let goroutine: _ = GoRoutine {
             id: id.clone(),
             script: script.to_string(),
             channel: tx,
@@ -131,11 +131,11 @@ impl GoRuntime {
         }
 
         // Spawn async task for the goroutine
-        let script_clone = script.to_string();
-        let bee_api = self.bee_api.clone();
+        let script_clone: _ = script.to_string();
+        let bee_api: _ = self.bee_api.clone();
 
         tokio::spawn(async move {
-            let result = execute_go_script(&script_clone, &bee_api).await;
+            let result: _ = execute_go_script(&script_clone, &bee_api).await;
             match result {
                 Ok(output) => {
                     // Send result back
@@ -171,7 +171,7 @@ impl GoRuntime {
 
     /// Get all active goroutines
     pub async fn list_goroutines(&self) -> Result<Vec<GoRoutineId>> {
-        let map = self.goroutines.read().await;
+        let map: _ = self.goroutines.read().await;
         Ok(map.keys().cloned().collect())
     }
 }
@@ -212,7 +212,7 @@ async fn execute_go_script(script: &str, bee_api: &BeeAPI) -> Result<String> {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     if script.contains("fmt.Println") {
-        let msg = script.split('"').nth(1).unwrap_or("Hello");
+        let msg: _ = script.split('"').nth(1).unwrap_or("Hello");
         Ok(format!("Output: {}", msg))
     } else {
         Ok("Script executed".to_string())
@@ -222,16 +222,18 @@ async fn execute_go_script(script: &str, bee_api: &BeeAPI) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_go_basic_execution() {
-        let bee_api = Arc::new(BeeAPI {
-            runtime: Arc::new(MockBeeRuntime),
+        let bee_api: _ = Arc::new(std::sync::Mutex::new(BeeAPI {
+            runtime: Arc::new(MockBeeRuntime)),
         });
 
-        let runtime = GoRuntime::new(bee_api).unwrap();
+        let runtime: _ = GoRuntime::new(bee_api).unwrap();
 
-        let code = r#"
+        let code: _ = r#"
 package main
 
 import "fmt"
@@ -241,49 +243,49 @@ func main() {
 }
 "#;
 
-        let result = runtime.execute_go(code).await;
+        let result: _ = runtime.execute_go(code).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_go_goroutine_spawn() {
-        let bee_api = Arc::new(BeeAPI {
-            runtime: Arc::new(MockBeeRuntime),
+        let bee_api: _ = Arc::new(std::sync::Mutex::new(BeeAPI {
+            runtime: Arc::new(MockBeeRuntime)),
         });
 
-        let runtime = GoRuntime::new(bee_api).unwrap();
+        let runtime: _ = GoRuntime::new(bee_api).unwrap();
 
-        let script = r#"
+        let script: _ = r#"
 go func() {
     fmt.Println("Running in goroutine")
 }()
 "#;
 
-        let result = runtime.spawn_goroutine(script).await;
+        let result: _ = runtime.spawn_goroutine(script).await;
         assert!(result.is_ok());
 
-        let id = result.unwrap();
-        let result = runtime.wait_for_goroutine(&id).await;
+        let id: _ = result.unwrap();
+        let result: _ = runtime.wait_for_goroutine(&id).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_go_bee_interop() {
-        let bee_api = Arc::new(BeeAPI {
-            runtime: Arc::new(MockBeeRuntime),
+        let bee_api: _ = Arc::new(std::sync::Mutex::new(BeeAPI {
+            runtime: Arc::new(MockBeeRuntime)),
         });
 
-        let runtime = GoRuntime::new(bee_api).unwrap();
+        let runtime: _ = GoRuntime::new(bee_api).unwrap();
 
-        let bridge = GoBeeBridge::new(
-            Arc::new(MockBeeRuntime),
-            Arc::new(GoVM::new().unwrap()),
+        let bridge: _ = GoBeeBridge::new(
+            Arc::new(std::sync::Mutex::new(MockBeeRuntime)),
+            Arc::new(std::sync::Mutex::new(GoVM::new()).unwrap()),
         );
 
-        let result = bridge.call_bee_from_go("console.log('Hello from Go calling Bee')").await;
+        let result: _ = bridge.call_bee_from_go("console.log('Hello from Go calling Bee')").await;
         assert!(result.is_ok());
 
-        let result = bridge.execute_go_from_bee("fmt.Println('Hello from Bee calling Go')").await;
+        let result: _ = bridge.execute_go_from_bee("fmt.Println('Hello from Bee calling Go')").await;
         assert!(result.is_ok());
     }
 

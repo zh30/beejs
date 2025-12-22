@@ -1,6 +1,8 @@
 //! 波前传播器实现
 
 use super::Complex;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 传播方法
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -53,7 +55,7 @@ impl WavefrontPropagator {
 
     /// 传播波前
     pub fn propagate(&self, wavefront: &[Complex], distance: f64) -> Result<Vec<Complex>, PropagatorError> {
-        let result = match self.method {
+        let result: _ = match self.method {
             PropagationMethod::AngularSpectrum => self.propagate_angular_spectrum(wavefront, distance),
             PropagationMethod::Fresnel => self.propagate_fresnel(wavefront, distance),
             PropagationMethod::RayleighSommerfeld => self.propagate_rayleigh_sommerfeld(wavefront, distance),

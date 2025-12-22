@@ -25,7 +25,7 @@ impl WasmCompiler {
     ///
     /// # 示例
     /// ```
-    /// let compiler = WasmCompiler::new()?;
+    /// let compiler: _ = WasmCompiler::new()?;
     /// ```
     pub fn new() -> Result<Self> {
         let mut config = Config::default();
@@ -44,11 +44,11 @@ impl WasmCompiler {
         // config.profiler(ProfilerKind::Perf);
 
         // 创建引擎
-        let engine = Engine::new(&config)
+        let engine: _ = Engine::new(&config)
             .context("Failed to create Wasmtime engine")?;
 
         Ok(WasmCompiler {
-            engine: Arc::new(engine),
+            engine: Arc::new(std::sync::Mutex::new(engine)),
             config,
         })
     }
@@ -72,19 +72,19 @@ impl WasmCompiler {
     ///
     /// # 示例
     /// ```
-    /// let js_code = "export function add(a, b) { return a + b; }";
-    /// let wasm_bytes = compiler.compile_js_to_wasm(js_code, None)?;
+    /// let js_code: _ = "export function add(a, b) { return a + b; }";
+    /// let wasm_bytes: _ = compiler.compile_js_to_wasm(js_code, None)?;
     /// ```
     pub fn compile_js_to_wasm(&self, js_code: &str, wit_path: Option<&str>) -> Result<Vec<u8>> {
         // 注意：实际的 Javy 集成需要额外的设置
         // 这里提供基本的编译框架，实际的 JS -> WASM 编译需要 Javy 工具链
 
         // 模拟编译过程 - 在实际实现中，这里会调用 Javy
-        // let wasm_bytes = self.invoke_javy_compiler(js_code, wit_path)?;
+        // let wasm_bytes: _ = self.invoke_javy_compiler(js_code, wit_path)?;
 
         // 为了演示，返回一个简单的 WASM 模块
         // 这将在实际实现中替换为真正的 Javy 编译
-        let wasm_bytes = self.generate_demo_wasm(js_code)?;
+        let wasm_bytes: _ = self.generate_demo_wasm(js_code)?;
 
         Ok(wasm_bytes)
     }
@@ -107,19 +107,19 @@ impl WasmCompiler {
         types.function([ValType::I32, ValType::I32], [ValType::I32]);
         // func(i32) -> i32
         types.function([ValType::I32], [ValType::I32]);
-        let types_id = module.section(&types);
+        let types_id: _ = module.section(&types);
 
         // Function section
         let mut functions = FunctionSection::new();
         functions.function(types_id, 0);
         functions.function(types_id, 1);
-        let functions_id = module.section(&functions);
+        let functions_id: _ = module.section(&functions);
 
         // Export section
         let mut exports = ExportSection::new();
         exports.function("add", functions_id, 0);
         exports.function("main", functions_id, 1);
-        let _exports_id = module.section(&exports);
+        let _exports_id: _ = module.section(&exports);
 
         // Code section
         let mut codes = CodeSection::new();
@@ -160,7 +160,7 @@ impl WasmCompiler {
     /// # 返回值
     /// * `Result<WasiCtx>` - WASI 上下文
     pub fn create_wasi_context(&self) -> Result<WasiCtx> {
-        let wasi = WasiCtxBuilder::new()
+        let wasi: _ = WasiCtxBuilder::new()
             .build();
         Ok(wasi)
     }
@@ -189,43 +189,45 @@ impl Default for WasmCompiler {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_compiler_creation() {
-        let compiler = WasmCompiler::new();
+        let compiler: _ = WasmCompiler::new();
         assert!(compiler.is_ok());
     }
 
     #[test]
     fn test_compiler_engine() {
-        let compiler = WasmCompiler::new().unwrap();
+        let compiler: _ = WasmCompiler::new().unwrap();
         assert!(compiler.engine().clone().into_parts().0.is_some());
     }
 
     #[test]
     fn test_demo_wasm_generation() {
-        let compiler = WasmCompiler::new().unwrap();
-        let js_code = "export function add(a, b) { return a + b; }";
-        let wasm_bytes = compiler.generate_demo_wasm(js_code);
+        let compiler: _ = WasmCompiler::new().unwrap();
+        let js_code: _ = "export function add(a, b) { return a + b; }";
+        let wasm_bytes: _ = compiler.generate_demo_wasm(js_code);
         assert!(wasm_bytes.is_ok());
-        let wasm_bytes = wasm_bytes.unwrap();
+        let wasm_bytes: _ = wasm_bytes.clone();unwrap();
         assert!(!wasm_bytes.is_empty());
     }
 
     #[test]
     fn test_wasm_validation() {
-        let compiler = WasmCompiler::new().unwrap();
-        let js_code = "export function test() { return 42; }";
-        let wasm_bytes = compiler.generate_demo_wasm(js_code).unwrap();
+        let compiler: _ = WasmCompiler::new().unwrap();
+        let js_code: _ = "export function test() { return 42; }";
+        let wasm_bytes: _ = compiler.generate_demo_wasm(js_code).unwrap();
 
-        let result = compiler.validate_wasm(&wasm_bytes);
+        let result: _ = compiler.validate_wasm(&wasm_bytes);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_config_info() {
-        let compiler = WasmCompiler::new().unwrap();
-        let config_info = compiler.get_config_info();
+        let compiler: _ = WasmCompiler::new().unwrap();
+        let config_info: _ = compiler.get_config_info();
         assert!(config_info.contains("WasmCompiler"));
         assert!(config_info.contains("SpeedAndSize"));
         assert!(config_info.contains("Parallel Compilation"));
@@ -233,8 +235,8 @@ mod tests {
 
     #[test]
     fn test_wasi_context_creation() {
-        let compiler = WasmCompiler::new().unwrap();
-        let wasi = compiler.create_wasi_context();
+        let compiler: _ = WasmCompiler::new().unwrap();
+        let wasi: _ = compiler.create_wasi_context();
         assert!(wasi.is_ok());
     }
 }

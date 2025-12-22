@@ -26,5 +26,7 @@ pub use auto_tuner::{
 };
 
 pub use optimizer::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
     Optimizer,
 };

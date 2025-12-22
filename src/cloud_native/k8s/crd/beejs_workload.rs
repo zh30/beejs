@@ -28,7 +28,7 @@ pub struct BeejsWorkloadSpec {
     pub script_args: Vec<String>,
 
     /// Environment variables
-    pub environment: HashMap<String, String>,
+    pub environment: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 
     /// Number of replicas
     pub replicas: u32,
@@ -95,7 +95,7 @@ pub struct CustomMetric {
     pub target_value: String,
 
     /// Metric selector
-    pub metric_selector: Option<HashMap<String, String>>,
+    pub metric_selector: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 /// Scale policy
@@ -189,7 +189,7 @@ pub struct InputSource {
     pub source_type: String,
 
     /// Source configuration
-    pub config: HashMap<String, String>,
+    pub config: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 
     /// Format (json, csv, parquet, etc.)
     pub format: Option<String>,
@@ -206,7 +206,7 @@ pub struct OutputDestination {
     pub dest_type: String,
 
     /// Destination configuration
-    pub config: HashMap<String, String>,
+    pub config: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 
     /// Format (json, csv, parquet, etc.)
     pub format: Option<String>,
@@ -308,7 +308,7 @@ pub struct IngressConfig {
     pub ingress_class: Option<String>,
 
     /// Annotations
-    pub annotations: Option<HashMap<String, String>>,
+    pub annotations: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 
     /// Hosts
     pub hosts: Option<Vec<IngressHost>>,
@@ -434,10 +434,12 @@ pub struct NetworkPolicyPort {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_beejs_workload_crd_creation() {
-        let workload = BeejsWorkload::new(
+        let workload: _ = BeejsWorkload::new(
             "my-workload",
             BeejsWorkloadSpec {
                 cluster_ref: "my-cluster".to_string(),
@@ -481,7 +483,7 @@ mod tests {
 
     #[test]
     fn test_hpa_config() {
-        let hpa = HPAConfig {
+        let hpa: _ = HPAConfig {
             enabled: true,
             min_replicas: 3,
             max_replicas: 50,
@@ -511,7 +513,7 @@ mod tests {
 
     #[test]
     fn test_execution_config() {
-        let execution = ExecutionConfig {
+        let execution: _ = ExecutionConfig {
             mode: ExecutionMode::Distributed,
             timeout_seconds: Some(300),
             retry: Some(RetryConfig {
@@ -532,7 +534,7 @@ mod tests {
 
     #[test]
     fn test_io_config() {
-        let io_config = IOConfig {
+        let io_config: _ = IOConfig {
             inputs: Some(vec![InputSource {
                 source_type: "kafka".to_string(),
                 config: HashMap::from([
@@ -567,7 +569,7 @@ mod tests {
 
     #[test]
     fn test_networking_config() {
-        let networking = NetworkingConfig {
+        let networking: _ = NetworkingConfig {
             service: Some(ServiceConfig {
                 enabled: true,
                 service_type: "ClusterIP".to_string(),

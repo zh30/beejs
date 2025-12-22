@@ -34,7 +34,7 @@ pub struct Breakpoint {
 }
 
 /// 断点映射
-pub type BreakpointMap = HashMap<BreakpointId, Breakpoint>;
+pub type BreakpointMap = HashMap<BreakpointId, Breakpoint, std::collections::HashMap<BreakpointId, Breakpoint, BreakpointId, Breakpoint>>;
 
 /// 线程检查器
 #[derive(Debug, Clone)]
@@ -42,7 +42,7 @@ pub struct ThreadInspector {
     pub thread_id: ThreadId,
     pub status: ThreadStatus,
     pub current_location: Option<SourceLocation>,
-    pub variables: HashMap<String, VariableValue>,
+    pub variables: HashMap<String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue>>,
 }
 
 /// 线程状态
@@ -62,12 +62,12 @@ pub enum VariableValue {
     Boolean(bool),
     Number(f64),
     String(String),
-    Object(HashMap<String, VariableValue>),
+    Object(HashMap<String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue>>),
     Array(Vec<VariableValue>),
 }
 
 /// 线程检查器集合
-pub type ThreadInspectors = HashMap<ThreadId, ThreadInspector>;
+pub type ThreadInspectors = HashMap<ThreadId, ThreadInspector, std::collections::HashMap<ThreadId, ThreadInspector, ThreadId, ThreadInspector>>;
 
 /// 高级调试器
 #[derive(Debug)]
@@ -82,8 +82,8 @@ impl Debugger {
     /// 创建新的调试器
     pub fn new() -> Self {
         Self {
-            breakpoints: Arc::new(RwLock::new(HashMap::new())),
-            inspectors: Arc::new(RwLock::new(HashMap::new())),
+            breakpoints: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            inspectors: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -92,8 +92,8 @@ impl Debugger {
         &self,
         location: &SourceLocation,
     ) -> Result<BreakpointId, Box<dyn std::error::Error + Send + Sync>> {
-        let breakpoint_id = BreakpointId(Uuid::new_v4());
-        let breakpoint = Breakpoint {
+        let breakpoint_id: _ = BreakpointId(Uuid::new_v4());
+        let breakpoint: _ = Breakpoint {
             id: breakpoint_id,
             location: location.clone(),
             enabled: true,
@@ -137,7 +137,7 @@ impl Debugger {
     pub async fn get_breakpoints(
         &self,
     ) -> Result<Vec<Breakpoint>, Box<dyn std::error::Error + Send + Sync>> {
-        let breakpoints = self.breakpoints.read().map_err(|_| "Failed to acquire read lock")?;
+        let breakpoints: _ = self.breakpoints.read().map_err(|_| "Failed to acquire read lock")?;
         Ok(breakpoints.values().cloned().collect())
     }
 
@@ -146,7 +146,7 @@ impl Debugger {
         &self,
         thread_id: ThreadId,
     ) -> Result<ThreadState, Box<dyn std::error::Error + Send + Sync>> {
-        let inspectors = self.inspectors.read().map_err(|_| "Failed to acquire read lock")?;
+        let inspectors: _ = self.inspectors.read().map_err(|_| "Failed to acquire read lock")?;
 
         if let Some(inspector) = inspectors.get(&thread_id) {
             Ok(ThreadState {
@@ -168,7 +168,7 @@ impl Debugger {
         let mut inspectors = self.inspectors.write().map_err(|_| "Failed to acquire write lock")?;
 
         if !inspectors.contains_key(&thread_id) {
-            let inspector = ThreadInspector {
+            let inspector: _ = ThreadInspector {
                 thread_id,
                 status: ThreadStatus::Running,
                 current_location: None,
@@ -215,7 +215,7 @@ impl Debugger {
         &self,
         thread_id: ThreadId,
         location: Option<SourceLocation>,
-        variables: HashMap<String, VariableValue>,
+        variables: HashMap<String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue>>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut inspectors = self.inspectors.write().map_err(|_| "Failed to acquire write lock")?;
 
@@ -232,7 +232,7 @@ impl Debugger {
     pub async fn get_all_threads(
         &self,
     ) -> Result<Vec<ThreadState>, Box<dyn std::error::Error + Send + Sync>> {
-        let inspectors = self.inspectors.read().map_err(|_| "Failed to acquire read lock")?;
+        let inspectors: _ = self.inspectors.read().map_err(|_| "Failed to acquire read lock")?;
 
         Ok(inspectors
             .values()
@@ -252,7 +252,7 @@ pub struct ThreadState {
     pub thread_id: ThreadId,
     pub status: ThreadStatus,
     pub current_location: Option<SourceLocation>,
-    pub variables: HashMap<String, VariableValue>,
+    pub variables: HashMap<String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue>>,
 }
 
 impl Default for Debugger {
@@ -264,65 +264,67 @@ impl Default for Debugger {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_breakpoint_management() {
-        let debugger = Debugger::new();
+        let debugger: _ = Debugger::new();
 
-        let location = SourceLocation {
+        let location: _ = SourceLocation {
             file_path: "test.js".to_string(),
             line: 10,
             column: 5,
         };
 
         // 设置断点
-        let breakpoint_id = debugger.set_breakpoint(&location).await.unwrap();
+        let breakpoint_id: _ = debugger.set_breakpoint(&location).await.unwrap();
 
         // 获取断点列表
-        let breakpoints = debugger.get_breakpoints().await.unwrap();
+        let breakpoints: _ = debugger.get_breakpoints().await.unwrap();
         assert_eq!(breakpoints.len(), 1);
         assert_eq!(breakpoints[0].id, breakpoint_id);
         assert_eq!(breakpoints[0].location, location);
         assert!(breakpoints[0].enabled);
 
         // 切换断点状态
-        let enabled = debugger.toggle_breakpoint(&breakpoint_id).await.unwrap();
+        let enabled: _ = debugger.toggle_breakpoint(&breakpoint_id).await.unwrap();
         assert!(!enabled);
 
         // 移除断点
         debugger.remove_breakpoint(&breakpoint_id).await.unwrap();
 
-        let breakpoints = debugger.get_breakpoints().await.unwrap();
+        let breakpoints: _ = debugger.get_breakpoints().await.unwrap();
         assert_eq!(breakpoints.len(), 0);
     }
 
     #[tokio::test]
     async fn test_multithread_debugging() {
-        let debugger = Debugger::new();
+        let debugger: _ = Debugger::new();
 
         // 注册线程
-        let thread_id = ThreadId(1);
+        let thread_id: _ = ThreadId(1);
         debugger.register_thread(thread_id).await.unwrap();
 
         // 检查线程状态
-        let thread_state = debugger.inspect_thread(thread_id).await.unwrap();
+        let thread_state: _ = debugger.inspect_thread(thread_id).await.unwrap();
         assert_eq!(thread_state.thread_id, thread_id);
         assert_eq!(thread_state.status, ThreadStatus::Running);
 
         // 暂停线程
         debugger.pause_thread(thread_id).await.unwrap();
 
-        let thread_state = debugger.inspect_thread(thread_id).await.unwrap();
+        let thread_state: _ = debugger.inspect_thread(thread_id).await.unwrap();
         assert_eq!(thread_state.status, ThreadStatus::Paused);
 
         // 恢复线程
         debugger.resume_thread(thread_id).await.unwrap();
 
-        let thread_state = debugger.inspect_thread(thread_id).await.unwrap();
+        let thread_state: _ = debugger.inspect_thread(thread_id).await.unwrap();
         assert_eq!(thread_state.status, ThreadStatus::Running);
 
         // 更新线程状态
-        let location = SourceLocation {
+        let location: _ = SourceLocation {
             file_path: "test.js".to_string(),
             line: 20,
             column: 10,
@@ -339,7 +341,7 @@ mod tests {
             .await
             .unwrap();
 
-        let thread_state = debugger.inspect_thread(thread_id).await.unwrap();
+        let thread_state: _ = debugger.inspect_thread(thread_id).await.unwrap();
         assert_eq!(thread_state.current_location, Some(location));
         assert_eq!(
             thread_state.variables.get("x"),
@@ -349,7 +351,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_all_threads() {
-        let debugger = Debugger::new();
+        let debugger: _ = Debugger::new();
 
         // 注册多个线程
         debugger.register_thread(ThreadId(1)).await.unwrap();
@@ -357,7 +359,7 @@ mod tests {
         debugger.register_thread(ThreadId(3)).await.unwrap();
 
         // 获取所有线程
-        let threads = debugger.get_all_threads().await.unwrap();
+        let threads: _ = debugger.get_all_threads().await.unwrap();
         assert_eq!(threads.len(), 3);
 
         let thread_ids: Vec<ThreadId> = threads.iter().map(|t| t.thread_id).collect();

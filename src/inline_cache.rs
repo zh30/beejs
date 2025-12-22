@@ -12,7 +12,7 @@ pub fn fast_hash(input: &str) -> u64 {
 
     for byte in input.as_bytes() {
         hash ^= *byte as u64;
-        hash = hash.wrapping_mul(prime);
+        hash = hash.clone();wrapping_mul(prime);
     }
     hash
 }
@@ -139,7 +139,7 @@ impl Default for CacheStats {
 impl CacheStats {
     /// Update hit rate based on current hits and misses
     pub fn update_hit_rate(&mut self) {
-        let total = self.hits + self.misses;
+        let total: _ = self.hits + self.misses;
         if total > 0 {
             self.hit_rate = (self.hits as f64 / total as f64) * 100.0;
         }
@@ -149,7 +149,7 @@ impl CacheStats {
 
 /// Inline cache for optimizing property access and function calls
 pub struct InlineCache {
-    entries: Arc<Mutex<HashMap<CacheKey, CacheEntry>>>,
+    entries: Arc<Mutex<HashMap<CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, CacheKey, CacheEntry>>>>,
     config: CacheConfig,
     stats: Arc<Mutex<CacheStats>>,
 }
@@ -164,9 +164,9 @@ impl InlineCache {
     /// Creates a new inline cache with a custom configuration
     pub fn new_with_config(config: CacheConfig) -> Self {
         Self {
-            entries: Arc::new(Mutex::new(HashMap::new())),
+            entries: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
             config,
-            stats: Arc::new(Mutex::new(CacheStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(CacheStats::default()))),
         }
     }
 
@@ -177,7 +177,7 @@ impl InlineCache {
 
     /// Gets a value from the cache
     pub fn get(&self, cache_type: &CacheType, receiver_hash: u64) -> Option<String> {
-        let key = CacheKey {
+        let key: _ = CacheKey {
             cache_type: cache_type.clone(),
             receiver_hash,
         };
@@ -205,7 +205,7 @@ impl InlineCache {
         cached_value: String,
         type_version: u64,
     ) {
-        let key = CacheKey {
+        let key: _ = CacheKey {
             cache_type: cache_type.clone(),
             receiver_hash,
         };
@@ -234,18 +234,18 @@ impl InlineCache {
     /// Evicts old or infrequently used entries
     fn evict_old_entries(
         &self,
-        entries: &mut HashMap<CacheKey, CacheEntry>,
+        entries: &mut HashMap<CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, CacheKey, CacheEntry>>,
         stats: &mut CacheStats,
     ) {
-        let now = Instant::now();
-        let max_age = self.config.max_age;
-        let min_access = self.config.min_access_count;
+        let now: _ = Instant::now();
+        let max_age: _ = self.config.max_age;
+        let min_access: _ = self.config.min_access_count;
 
         let _keys_to_remove: Vec<CacheKey> = entries
             .iter()
             .filter_map(|(key, _entry)| {
-                let is_old = now.duration_since(_entry.last_accessed) > max_age;
-                let is_rarely_used = _entry.access_count < min_access;
+                let is_old: _ = now.duration_since(_entry.last_accessed) > max_age;
+                let is_rarely_used: _ = _entry.access_count < min_access;
 
                 if is_old || is_rarely_used {
                     Some(key.clone())
@@ -259,8 +259,8 @@ impl InlineCache {
         let keys_to_remove: Vec<CacheKey> = entries
             .iter()
             .filter_map(|(key, entry)| {
-                let is_old = now.duration_since(entry.last_accessed) > max_age;
-                let is_rarely_used = entry.access_count < min_access;
+                let is_old: _ = now.duration_since(entry.last_accessed) > max_age;
+                let is_rarely_used: _ = entry.access_count < min_access;
 
                 if is_old || is_rarely_used {
                     Some(key.clone())
@@ -306,7 +306,7 @@ impl InlineCache {
         let mut entries = self.entries.lock().unwrap();
         let mut stats = self.stats.lock().unwrap();
 
-        let _count = entries.len();
+        let _count: _ = entries.len();
         entries.clear();
         stats.total_cached = 0;
         stats.hits = 0;
@@ -322,7 +322,7 @@ impl InlineCache {
         let mut stats = self.stats.lock().unwrap();
 
         for (cache_type, receiver_hash, cached_value, type_version) in operators {
-            let key = CacheKey {
+            let key: _ = CacheKey {
                 cache_type: cache_type.clone(),
                 receiver_hash,
             };
@@ -350,7 +350,7 @@ impl InlineCache {
         let mut stats = self.stats.lock().unwrap();
 
         for (cache_type, receiver_hash, cached_value) in common_properties {
-            let key = CacheKey {
+            let key: _ = CacheKey {
                 cache_type: cache_type.clone(),
                 receiver_hash,
             };
@@ -389,7 +389,7 @@ impl InlineCache {
 
             // 清理低频访问的条目
             let mut entries = self.entries.lock().unwrap();
-            let before_count = entries.len();
+            let before_count: _ = entries.len();
 
             let keys_to_remove: Vec<CacheKey> = entries
                 .iter()
@@ -417,13 +417,13 @@ impl InlineCache {
 
     /// 批量获取多个缓存条目（减少锁竞争）
     pub fn batch_get(&self, requests: &[(CacheType, u64)]) -> Vec<Option<String>> {
-        let entries = self.entries.lock().unwrap();
+        let entries: _ = self.entries.lock().unwrap();
         let mut stats = self.stats.lock().unwrap();
 
         let mut results = Vec::with_capacity(requests.len());
 
         for (cache_type, receiver_hash) in requests {
-            let key = CacheKey {
+            let key: _ = CacheKey {
                 cache_type: cache_type.clone(),
                 receiver_hash: *receiver_hash,
             };
@@ -447,7 +447,7 @@ impl InlineCache {
         let mut stats = self.stats.lock().unwrap();
 
         for (cache_type, receiver_hash, cached_value, type_version) in items {
-            let key = CacheKey {
+            let key: _ = CacheKey {
                 cache_type: cache_type.clone(),
                 receiver_hash,
             };
@@ -466,7 +466,7 @@ impl InlineCache {
 
         // 批量检查是否需要清理
         if entries.len() > self.config.max_entries {
-            let mut temp_stats = stats.clone();
+            let mut temp_stats = stats.clone();clone();
             self.evict_old_entries(&mut entries, &mut temp_stats);
             *stats = temp_stats;
         }
@@ -474,8 +474,8 @@ impl InlineCache {
 
     /// 获取缓存使用情况报告
     pub fn get_usage_report(&self) -> CacheUsageReport {
-        let stats = self.stats.lock().unwrap();
-        let entries = self.entries.lock().unwrap();
+        let stats: _ = self.stats.lock().unwrap();
+        let entries: _ = self.entries.lock().unwrap();
 
         CacheUsageReport {
             total_entries: entries.len(),
@@ -529,19 +529,19 @@ mod tests {
 
     #[test]
     fn test_cache_creation() {
-        let cache = InlineCache::new();
-        let stats = cache.get_stats();
+        let cache: _ = InlineCache::new();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.total_cached, 0);
     }
 
     #[test]
     fn test_cache_put_and_get() {
-        let cache = InlineCache::new();
-        let cache_type = CacheType::Property {
+        let cache: _ = InlineCache::new();
+        let cache_type: _ = CacheType::Property {
             object_type: "Object".to_string(),
             property_name: "foo".to_string(),
         };
-        let receiver_hash = InlineCache::calculate_receiver_hash("obj");
+        let receiver_hash: _ = InlineCache::calculate_receiver_hash("obj");
 
         cache.put(
             cache_type.clone(),
@@ -550,39 +550,39 @@ mod tests {
             1,
         );
 
-        let result = cache.get(&cache_type, receiver_hash);
+        let result: _ = cache.get(&cache_type, receiver_hash);
         assert_eq!(result, Some("cached_value".to_string()));
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.hits, 1);
         assert_eq!(stats.misses, 0);
     }
 
     #[test]
     fn test_cache_miss() {
-        let cache = InlineCache::new();
-        let cache_type = CacheType::Property {
+        let cache: _ = InlineCache::new();
+        let cache_type: _ = CacheType::Property {
             object_type: "Object".to_string(),
             property_name: "bar".to_string(),
         };
-        let receiver_hash = InlineCache::calculate_receiver_hash("obj");
+        let receiver_hash: _ = InlineCache::calculate_receiver_hash("obj");
 
-        let result = cache.get(&cache_type, receiver_hash);
+        let result: _ = cache.get(&cache_type, receiver_hash);
         assert_eq!(result, None);
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.hits, 0);
         assert_eq!(stats.misses, 1);
     }
 
     #[test]
     fn test_cache_invalidation() {
-        let cache = InlineCache::new();
-        let cache_type = CacheType::Property {
+        let cache: _ = InlineCache::new();
+        let cache_type: _ = CacheType::Property {
             object_type: "Object".to_string(),
             property_name: "baz".to_string(),
         };
-        let receiver_hash = InlineCache::calculate_receiver_hash("obj");
+        let receiver_hash: _ = InlineCache::calculate_receiver_hash("obj");
 
         cache.put(
             cache_type.clone(),
@@ -593,22 +593,22 @@ mod tests {
 
         cache.invalidate_receiver(receiver_hash);
 
-        let result = cache.get(&cache_type, receiver_hash);
+        let result: _ = cache.get(&cache_type, receiver_hash);
         assert_eq!(result, None);
     }
 
     #[test]
     fn test_adaptive_optimization() {
-        let cache = InlineCache::new();
-        let _cache_type = CacheType::Property {
+        let cache: _ = InlineCache::new();
+        let _cache_type: _ = CacheType::Property {
             object_type: "Object".to_string(),
             property_name: "test".to_string(),
         };
-        let receiver_hash = InlineCache::calculate_receiver_hash("obj");
+        let receiver_hash: _ = InlineCache::calculate_receiver_hash("obj");
 
         // 创建一些低频访问的条目
         for i in 0..5 {
-            let temp_type = CacheType::Property {
+            let temp_type: _ = CacheType::Property {
                 object_type: "Object".to_string(),
                 property_name: format!("prop{}", i),
             };
@@ -616,17 +616,17 @@ mod tests {
         }
 
         // 触发自适应优化
-        let result = cache.adaptive_optimize();
+        let result: _ = cache.adaptive_optimize();
         // 无论是否执行优化，都应该有reason
         assert!(!result.reason.is_empty());
     }
 
     #[test]
     fn test_batch_operations() {
-        let cache = InlineCache::new();
+        let cache: _ = InlineCache::new();
 
         // 批量放置
-        let items = vec![
+        let items: _ = vec![
             (
                 CacheType::Property {
                     object_type: "Object".to_string(),
@@ -649,7 +649,7 @@ mod tests {
         cache.batch_put(items);
 
         // 批量获取
-        let requests = vec![
+        let requests: _ = vec![
             (
                 CacheType::Property {
                     object_type: "Object".to_string(),
@@ -666,7 +666,7 @@ mod tests {
             ),
         ];
 
-        let results = cache.batch_get(&requests);
+        let results: _ = cache.batch_get(&requests);
         assert_eq!(results.len(), 2);
         assert_eq!(results[0], Some("value_a".to_string()));
         assert_eq!(results[1], Some("value_b".to_string()));
@@ -674,10 +674,10 @@ mod tests {
 
     #[test]
     fn test_predictive_pre_cache() {
-        let cache = InlineCache::new();
+        let cache: _ = InlineCache::new();
 
         // 预缓存常见属性
-        let common_properties = vec![
+        let common_properties: _ = vec![
             (
                 CacheType::Property {
                     object_type: "Object".to_string(),
@@ -698,23 +698,23 @@ mod tests {
 
         cache.predictive_pre_cache(common_properties);
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.total_cached, 2);
     }
 
     #[test]
     fn test_usage_report() {
-        let cache = InlineCache::new();
-        let cache_type = CacheType::Property {
+        let cache: _ = InlineCache::new();
+        let cache_type: _ = CacheType::Property {
             object_type: "Object".to_string(),
             property_name: "test".to_string(),
         };
-        let receiver_hash = InlineCache::calculate_receiver_hash("obj");
+        let receiver_hash: _ = InlineCache::calculate_receiver_hash("obj");
 
         cache.put(cache_type.clone(), receiver_hash, "value".to_string(), 1);
         cache.get(&cache_type, receiver_hash);
 
-        let report = cache.get_usage_report();
+        let report: _ = cache.get_usage_report();
         // total_entries is always >= 0 by definition (usize is non-negative)
         assert!(report.hit_rate >= 0.0);
         assert!(report.utilization >= 0.0);
@@ -722,14 +722,14 @@ mod tests {
 
     #[test]
     fn test_fast_hash_consistency() {
-        let input1 = "test_object";
-        let input2 = "test_object";
-        let hash1 = fast_hash(input1);
-        let hash2 = fast_hash(input2);
+        let input1: _ = "test_object";
+        let input2: _ = "test_object";
+        let hash1: _ = fast_hash(input1);
+        let hash2: _ = fast_hash(input2);
         assert_eq!(hash1, hash2); // 相同输入应产生相同哈希
 
-        let input3 = "different_object";
-        let hash3 = fast_hash(input3);
+        let input3: _ = "different_object";
+        let hash3: _ = fast_hash(input3);
         assert_ne!(hash1, hash3); // 不同输入应产生不同哈希
     }
 }
@@ -738,11 +738,11 @@ mod tests {
 /// Stage 90 Phase 1.2: 增强内联缓存功能
 pub struct PolymorphicInlineCache {
     /// 缓存集合：支持多种对象类型
-    caches: Arc<RwLock<HashMap<String, Box<dyn CacheStrategy + Send + Sync>>>>,
+    caches: Arc<RwLock<HashMap<String, Box<dyn CacheStrategy + Send + Sync, std::collections::HashMap<String, Box<dyn CacheStrategy + Send + Sync, String, Box<dyn CacheStrategy + Send + Sync>>>>>,
     /// 最大缓存大小
     max_cache_size: usize,
     /// 缓存统计
-    stats: Arc<RwLock<HashMap<String, CacheStats>>>,
+    stats: Arc<RwLock<HashMap<String, CacheStats, std::collections::HashMap<String, CacheStats, String, CacheStats>>>>,
     /// 热点代码跟踪
     hot_code_tracker: Arc<RwLock<HotCodeTracker>>,
     /// 优化策略
@@ -762,7 +762,7 @@ pub trait CacheStrategy {
 /// 单态缓存实现 - 针对单一对象类型优化
 #[derive(Debug)]
 pub struct MonomorphicCache {
-    entries: HashMap<String, CacheEntry>,
+    entries: HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>,
     config: CacheConfig,
     stats: CacheStats,
 }
@@ -779,7 +779,7 @@ impl MonomorphicCache {
 
 impl CacheStrategy for MonomorphicCache {
     fn lookup(&self, key: &str) -> Option<CacheEntry> {
-        let entry = self.entries.get(key).cloned();
+        let entry: _ = self.entries.get(key).cloned();
         if entry.is_some() {
             // Note: 简化实现，实际需要原子更新统计
         }
@@ -787,7 +787,7 @@ impl CacheStrategy for MonomorphicCache {
     }
 
     fn insert(&mut self, key: String, entry: CacheEntry) -> Option<CacheEntry> {
-        let result = self.entries.insert(key, entry.clone());
+        let result: _ = self.entries.insert(key, entry.clone());
         // Note: 简化实现，实际需要更新统计
         result
     }
@@ -813,7 +813,7 @@ impl CacheStrategy for MonomorphicCache {
 /// 多态缓存实现 - 支持多种对象类型
 #[derive(Debug)]
 pub struct MegamorphicCache {
-    caches: HashMap<String, MonomorphicCache>,
+    caches: HashMap<String, MonomorphicCache, std::collections::HashMap<String, MonomorphicCache, String, MonomorphicCache>>,
     config: CacheConfig,
     stats: CacheStats,
 }
@@ -831,7 +831,7 @@ impl MegamorphicCache {
 impl CacheStrategy for MegamorphicCache {
     fn lookup(&self, key: &str) -> Option<CacheEntry> {
         // 简化实现：假设key包含类型信息
-        let type_name = self.extract_type_from_key(key);
+        let type_name: _ = self.extract_type_from_key(key);
         if let Some(cache) = self.caches.get(&type_name) {
             cache.lookup(key)
         } else {
@@ -840,15 +840,15 @@ impl CacheStrategy for MegamorphicCache {
     }
 
     fn insert(&mut self, key: String, entry: CacheEntry) -> Option<CacheEntry> {
-        let type_name = self.extract_type_from_key(&key);
-        let cache = self.caches.entry(type_name).or_insert_with(|| {
+        let type_name: _ = self.extract_type_from_key(&key);
+        let cache: _ = self.caches.entry(type_name).or_insert_with(|| {
             MonomorphicCache::new(self.config.clone())
         });
         cache.insert(key, entry)
     }
 
     fn remove(&mut self, key: &str) -> Option<CacheEntry> {
-        let type_name = self.extract_type_from_key(key);
+        let type_name: _ = self.extract_type_from_key(key);
         if let Some(cache) = self.caches.get_mut(&type_name) {
             cache.remove(key)
         } else {
@@ -891,7 +891,7 @@ pub struct HotCodeEntry {
 /// 热点代码跟踪器
 #[derive(Debug)]
 pub struct HotCodeTracker {
-    entries: HashMap<String, HotCodeEntry>,
+    entries: HashMap<String, HotCodeEntry, std::collections::HashMap<String, HotCodeEntry, String, HotCodeEntry>>,
     max_entries: usize,
     hot_threshold: u64, // 热点阈值：执行次数
 }
@@ -907,8 +907,8 @@ impl HotCodeTracker {
 
     /// 记录代码执行
     pub fn record_execution(&mut self, location: &str, execution_time_ns: u64) {
-        let now = Instant::now();
-        let entry = self.entries.entry(location.to_string()).or_insert_with(|| {
+        let now: _ = Instant::now();
+        let entry: _ = self.entries.entry(location.to_string()).or_insert_with(|| {
             HotCodeEntry {
                 code_location: location.to_string(),
                 execution_count: 0,
@@ -979,10 +979,10 @@ impl PolymorphicInlineCache {
     /// 创建新的多态内联缓存
     pub fn new(max_cache_size: usize) -> Self {
         Self {
-            caches: Arc::new(RwLock::new(HashMap::new())),
+            caches: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
             max_cache_size,
-            stats: Arc::new(RwLock::new(HashMap::new())),
-            hot_code_tracker: Arc::new(RwLock::new(HotCodeTracker::new(1000))),
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            hot_code_tracker: Arc::new(std::sync::Mutex::new(RwLock::new(HotCodeTracker::new(1000)))),
             optimization_config: OptimizationConfig::default(),
         }
     }
@@ -990,21 +990,21 @@ impl PolymorphicInlineCache {
     /// 创建带配置的多态内联缓存
     pub fn new_with_config(max_cache_size: usize, config: OptimizationConfig) -> Self {
         Self {
-            caches: Arc::new(RwLock::new(HashMap::new())),
+            caches: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
             max_cache_size,
-            stats: Arc::new(RwLock::new(HashMap::new())),
-            hot_code_tracker: Arc::new(RwLock::new(HotCodeTracker::new(1000))),
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            hot_code_tracker: Arc::new(std::sync::Mutex::new(RwLock::new(HotCodeTracker::new(1000)))),
             optimization_config: config,
         }
     }
 
     /// 多态缓存查找
     pub fn polymorphic_lookup(&self, type_name: &str, key: &str) -> Option<CacheEntry> {
-        let caches = self.caches.read().unwrap();
+        let caches: _ = self.caches.read().unwrap();
 
         // 尝试从多态缓存中查找
         if let Some(cache) = caches.get(type_name) {
-            let entry = cache.lookup(key);
+            let entry: _ = cache.lookup(key);
             if entry.is_some() {
                 self.update_stats(type_name, true);
                 return entry;
@@ -1020,7 +1020,7 @@ impl PolymorphicInlineCache {
         let mut caches = self.caches.write().unwrap();
 
         // 选择或创建合适的缓存策略
-        let cache = if self.optimization_config.enable_polymorphic_cache {
+        let cache: _ = if self.optimization_config.enable_polymorphic_cache {
             caches.entry(type_name.to_string()).or_insert_with(|| {
                 Box::new(MegamorphicCache::new(CacheConfig::default())) as Box<dyn CacheStrategy + Send + Sync>
             })
@@ -1046,19 +1046,19 @@ impl PolymorphicInlineCache {
 
     /// 获取热点代码
     pub fn get_hot_code(&self) -> Vec<HotCodeEntry> {
-        let tracker = self.hot_code_tracker.read().unwrap();
+        let tracker: _ = self.hot_code_tracker.read().unwrap();
         tracker.get_hot_code().into_iter().cloned().collect()
     }
 
     /// 检查是否为热点代码
     pub fn is_hot_code(&self, location: &str) -> bool {
-        let tracker = self.hot_code_tracker.read().unwrap();
+        let tracker: _ = self.hot_code_tracker.read().unwrap();
         tracker.is_hot_code(location)
     }
 
     /// 动态生成优化代码
     pub fn generate_optimized_code(&self, location: &str) -> Option<OptimizedCode> {
-        let tracker = self.hot_code_tracker.read().unwrap();
+        let tracker: _ = self.hot_code_tracker.read().unwrap();
 
         if let Some(entry) = tracker.entries.get(location) {
             if entry.execution_count >= self.optimization_config.hot_code_threshold {
@@ -1088,7 +1088,7 @@ impl PolymorphicInlineCache {
 
     /// 批量优化热点代码
     pub fn batch_optimize_hot_code(&self) -> Vec<OptimizedCode> {
-        let tracker = self.hot_code_tracker.read().unwrap();
+        let tracker: _ = self.hot_code_tracker.read().unwrap();
         let mut optimizations = Vec::new();
 
         for entry in tracker.get_hot_code() {
@@ -1103,7 +1103,7 @@ impl PolymorphicInlineCache {
     /// 更新统计信息
     fn update_stats(&self, type_name: &str, hit: bool) {
         let mut stats = self.stats.write().unwrap();
-        let entry = stats.entry(type_name.to_string()).or_insert_with(CacheStats::default);
+        let entry: _ = stats.entry(type_name.to_string()).or_insert_with(CacheStats::default);
 
         if hit {
             entry.hits += 1;
@@ -1124,20 +1124,20 @@ impl PolymorphicInlineCache {
     }
 
     /// 获取所有统计信息
-    pub fn get_all_stats(&self) -> HashMap<String, CacheStats> {
+    pub fn get_all_stats(&self) -> HashMap<String, CacheStats, std::collections::HashMap<String, CacheStats, String, CacheStats>> {
         self.stats.read().unwrap().clone()
     }
 
     /// 获取缓存使用报告
     pub fn get_cache_report(&self) -> PolymorphicCacheReport {
-        let caches = self.caches.read().unwrap();
-        let stats = self.stats.read().unwrap();
-        let tracker = self.hot_code_tracker.read().unwrap();
+        let caches: _ = self.caches.read().unwrap();
+        let stats: _ = self.stats.read().unwrap();
+        let tracker: _ = self.hot_code_tracker.read().unwrap();
 
         let total_entries: usize = caches.values().map(|c| c.len()).sum();
         let total_hits: usize = stats.values().map(|s| s.hits).sum();
         let total_misses: usize = stats.values().map(|s| s.misses).sum();
-        let hot_code_count = tracker.entries.len();
+        let hot_code_count: _ = tracker.entries.len();
 
         PolymorphicCacheReport {
             total_cache_types: caches.len(),
@@ -1179,21 +1179,22 @@ pub struct PolymorphicCacheReport {
 #[cfg(test)]
 mod polymorphic_tests {
     use super::*;
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_polymorphic_cache_creation() {
-        let cache = PolymorphicInlineCache::new(1000);
-        let report = cache.get_cache_report();
+        let cache: _ = PolymorphicInlineCache::new(1000);
+        let report: _ = cache.get_cache_report();
         assert_eq!(report.total_cache_types, 0);
         assert_eq!(report.total_entries, 0);
     }
 
     #[test]
     fn test_polymorphic_cache_lookup_insert() {
-        let cache = PolymorphicInlineCache::new(1000);
+        let cache: _ = PolymorphicInlineCache::new(1000);
 
         // 插入缓存条目
-        let entry = CacheEntry {
+        let entry: _ = CacheEntry {
             cached_value: "test_value".to_string(),
             type_version: 1,
             access_count: 0,
@@ -1203,18 +1204,18 @@ mod polymorphic_tests {
         cache.polymorphic_insert("Object", "key1".to_string(), entry.clone());
 
         // 查找缓存条目
-        let result = cache.polymorphic_lookup("Object", "key1");
+        let result: _ = cache.polymorphic_lookup("Object", "key1");
         assert!(result.is_some());
         assert_eq!(result.unwrap().cached_value, "test_value");
 
-        let report = cache.get_cache_report();
+        let report: _ = cache.get_cache_report();
         assert_eq!(report.total_entries, 1);
         assert!(report.hit_rate >= 0.0);
     }
 
     #[test]
     fn test_hot_code_detection() {
-        let cache = PolymorphicInlineCache::new(1000);
+        let cache: _ = PolymorphicInlineCache::new(1000);
 
         // 记录代码执行
         for i in 0..150 {
@@ -1225,7 +1226,7 @@ mod polymorphic_tests {
         assert!(cache.is_hot_code("function:loop"));
         assert!(!cache.is_hot_code("function:rare"));
 
-        let hot_code = cache.get_hot_code();
+        let hot_code: _ = cache.get_hot_code();
         assert!(!hot_code.is_empty());
         assert_eq!(hot_code[0].code_location, "function:loop");
         assert_eq!(hot_code[0].execution_count, 150);
@@ -1233,17 +1234,17 @@ mod polymorphic_tests {
 
     #[test]
     fn test_optimization_generation() {
-        let cache = PolymorphicInlineCache::new(1000);
+        let cache: _ = PolymorphicInlineCache::new(1000);
 
         // 记录足够多的执行以触发优化
         for i in 0..120 {
             cache.record_hot_code("function:compute", 2000 + i);
         }
 
-        let optimized = cache.generate_optimized_code("function:compute");
+        let optimized: _ = cache.generate_optimized_code("function:compute");
         assert!(optimized.is_some());
 
-        let opt = optimized.unwrap();
+        let opt: _ = optimized.unwrap();
         assert_eq!(opt.location, "function:compute");
         assert!(opt.estimated_speedup > 1.0);
         assert_eq!(opt.optimization_level, OptimizationLevel::Basic);
@@ -1251,18 +1252,18 @@ mod polymorphic_tests {
 
     #[test]
     fn test_batch_optimization() {
-        let cache = PolymorphicInlineCache::new(1000);
+        let cache: _ = PolymorphicInlineCache::new(1000);
 
         // 创建多个热点代码
         for i in 0..10 {
-            let location = format!("function:hot{}", i);
+            let location: _ = format!("function:hot{}", i);
             for _ in 0..150 {
                 cache.record_hot_code(&location, 1000);
             }
         }
 
         // 批量优化
-        let optimizations = cache.batch_optimize_hot_code();
+        let optimizations: _ = cache.batch_optimize_hot_code();
         assert!(optimizations.len() > 0);
 
         // 验证优化结果
@@ -1274,17 +1275,17 @@ mod polymorphic_tests {
 
     #[test]
     fn test_multiple_cache_types() {
-        let cache = PolymorphicInlineCache::new(1000);
+        let cache: _ = PolymorphicInlineCache::new(1000);
 
         // 为不同类型插入缓存
-        let entry1 = CacheEntry {
+        let entry1: _ = CacheEntry {
             cached_value: "value1".to_string(),
             type_version: 1,
             access_count: 0,
             last_accessed: Instant::now(),
         };
 
-        let entry2 = CacheEntry {
+        let entry2: _ = CacheEntry {
             cached_value: "value2".to_string(),
             type_version: 1,
             access_count: 0,
@@ -1295,25 +1296,25 @@ mod polymorphic_tests {
         cache.polymorphic_insert("Object", "obj_key".to_string(), entry2);
 
         // 验证不同类型的缓存
-        let result1 = cache.polymorphic_lookup("Array", "arr_key");
-        let result2 = cache.polymorphic_lookup("Object", "obj_key");
+        let result1: _ = cache.polymorphic_lookup("Array", "arr_key");
+        let result2: _ = cache.polymorphic_lookup("Object", "obj_key");
 
         assert!(result1.is_some());
         assert!(result2.is_some());
         assert_eq!(result1.unwrap().cached_value, "value1");
         assert_eq!(result2.unwrap().cached_value, "value2");
 
-        let report = cache.get_cache_report();
+        let report: _ = cache.get_cache_report();
         assert_eq!(report.total_cache_types, 2);
         assert_eq!(report.total_entries, 2);
     }
 
     #[test]
     fn test_cache_stats() {
-        let cache = PolymorphicInlineCache::new(1000);
+        let cache: _ = PolymorphicInlineCache::new(1000);
 
         // 执行一些缓存操作
-        let entry = CacheEntry {
+        let entry: _ = CacheEntry {
             cached_value: "test".to_string(),
             type_version: 1,
             access_count: 0,
@@ -1327,10 +1328,10 @@ mod polymorphic_tests {
         cache.polymorphic_lookup("TestType", "key");
         cache.polymorphic_lookup("TestType", "missing");
 
-        let stats = cache.get_all_stats();
+        let stats: _ = cache.get_all_stats();
         assert!(stats.contains_key("TestType"));
 
-        let test_stats = stats.get("TestType").unwrap();
+        let test_stats: _ = stats.clone();get("TestType").unwrap();
         assert_eq!(test_stats.hits, 2);
         assert_eq!(test_stats.misses, 1);
         assert!(test_stats.hit_rate > 0.0);
@@ -1338,15 +1339,15 @@ mod polymorphic_tests {
 
     #[test]
     fn test_optimization_level_progression() {
-        let cache = PolymorphicInlineCache::new(1000);
-        let threshold = cache.optimization_config.hot_code_threshold;
+        let cache: _ = PolymorphicInlineCache::new(1000);
+        let threshold: _ = cache.optimization_config.hot_code_threshold;
 
         // 测试不同优化级别的渐进
         // Basic level
         for _ in 0..threshold {
             cache.record_hot_code("function:basic", 1000);
         }
-        let optimized = cache.generate_optimized_code("function:basic");
+        let optimized: _ = cache.generate_optimized_code("function:basic");
         assert!(optimized.is_some());
         assert_eq!(optimized.unwrap().optimization_level, OptimizationLevel::Basic);
 
@@ -1354,7 +1355,7 @@ mod polymorphic_tests {
         for _ in 0..threshold * 5 {
             cache.record_hot_code("function:aggressive", 1000);
         }
-        let optimized = cache.generate_optimized_code("function:aggressive");
+        let optimized: _ = cache.generate_optimized_code("function:aggressive");
         assert!(optimized.is_some());
         assert_eq!(optimized.unwrap().optimization_level, OptimizationLevel::Aggressive);
 
@@ -1362,18 +1363,18 @@ mod polymorphic_tests {
         for _ in 0..threshold * 10 {
             cache.record_hot_code("function:maximum", 1000);
         }
-        let optimized = cache.generate_optimized_code("function:maximum");
+        let optimized: _ = cache.generate_optimized_code("function:maximum");
         assert!(optimized.is_some());
         assert_eq!(optimized.unwrap().optimization_level, OptimizationLevel::Maximum);
     }
 
     #[test]
     fn test_cache_report_completeness() {
-        let cache = PolymorphicInlineCache::new(1000);
+        let cache: _ = PolymorphicInlineCache::new(1000);
 
         // 插入一些数据
         for i in 0..5 {
-            let entry = CacheEntry {
+            let entry: _ = CacheEntry {
                 cached_value: format!("value{}", i),
                 type_version: 1,
                 access_count: 0,
@@ -1382,7 +1383,7 @@ mod polymorphic_tests {
             cache.polymorphic_insert(&format!("Type{}", i), format!("key{}", i), entry);
         }
 
-        let report = cache.get_cache_report();
+        let report: _ = cache.get_cache_report();
         assert_eq!(report.total_cache_types, 5);
         assert_eq!(report.total_entries, 5);
         assert!(report.max_cache_size > 0);

@@ -24,6 +24,8 @@ pub use scheduler::{
 };
 
 pub use load_balancer::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
     LoadBalancer,
     LoadBalanceResult,
     LoadDistribution,

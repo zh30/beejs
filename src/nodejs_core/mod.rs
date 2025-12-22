@@ -17,6 +17,8 @@ pub mod child_process;
 
 use anyhow::Result;
 use rusty_v8 as v8;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 设置所有Node.js核心API
 pub fn setup_nodejs_core_apis(
@@ -49,25 +51,25 @@ fn setup_globals(
     scope: &mut v8::ContextScope<v8::HandleScope>,
     context: &v8::Local<v8::Context>,
 ) -> Result<()> {
-    let global = context.global(scope);
+    let global: _ = context.global(scope);
 
     // 设置global对象
-    let global_obj = v8::Object::new(scope);
-    let global_key = v8::String::new(scope, "global").unwrap();
+    let global_obj: _ = v8::Object::new(scope);
+    let global_key: _ = v8::String::new(scope, "global").unwrap();
     global.set(scope, global_key.into(), global_obj.into());
 
     // 设置GLOBAL别名
-    let global_alias_key = v8::String::new(scope, "GLOBAL").unwrap();
+    let global_alias_key: _ = v8::String::new(scope, "GLOBAL").unwrap();
     global.set(scope, global_alias_key.into(), global_obj.into());
 
     // 设置__dirname
-    let dirname_key = v8::String::new(scope, "__dirname").unwrap();
-    let dirname_val = v8::String::new(scope, "/").unwrap();
+    let dirname_key: _ = v8::String::new(scope, "__dirname").unwrap();
+    let dirname_val: _ = v8::String::new(scope, "/").unwrap();
     global.set(scope, dirname_key.into(), dirname_val.into());
 
     // 设置__filename
-    let filename_key = v8::String::new(scope, "__filename").unwrap();
-    let filename_val = v8::String::new(scope, "main.js").unwrap();
+    let filename_key: _ = v8::String::new(scope, "__filename").unwrap();
+    let filename_val: _ = v8::String::new(scope, "main.js").unwrap();
     global.set(scope, filename_key.into(), filename_val.into());
 
     Ok(())

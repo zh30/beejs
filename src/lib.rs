@@ -354,7 +354,7 @@ static V8_INITIALIZED: std::sync::OnceLock<std::sync::atomic::AtomicBool> = std:
 /// Initialize V8 engine (idempotent - safe to call multiple times)
 pub fn initialize_v8() -> Result<()> {
     // Check if already initialized
-    let initialized_flag = V8_INITIALIZED.get_or_init(|| {
+    let initialized_flag: _ = V8_INITIALIZED.get_or_init(|| {
         std::sync::atomic::AtomicBool::new(false)
     });
 
@@ -363,18 +363,18 @@ pub fn initialize_v8() -> Result<()> {
         use rusty_v8 as v8;
 
         // Stage 65: V8 初始化优化 - 只使用有效的 V8 标志
-        let v8_flags = vec![
+        let v8_flags: _ = vec![
             "--opt".to_string(),                          // 启用优化
             "--max-old-space-size=2048".to_string(),      // 设置堆大小限制
             "--max-heap-size=2048".to_string(),           // 最大堆大小
             "--gc-interval=100".to_string(),              // GC 间隔优化
         ];
 
-        let v8_flags_str = v8_flags.join(" ");
+        let v8_flags_str: _ = v8_flags.join(" ");
         v8::V8::set_flags_from_string(&v8_flags_str);
 
         // Create platform
-        let platform = v8::new_default_platform()
+        let platform: _ = v8::new_default_platform()
             .unwrap();
 
         // Initialize V8
@@ -472,7 +472,7 @@ impl Runtime {
         optimize_mode: OptimizeMode,
         verbose: bool,
     ) -> Self {
-        let enable_optimization = match optimize_mode {
+        let enable_optimization: _ = match optimize_mode {
             OptimizeMode::Speed => true,
             OptimizeMode::Size => false,
             OptimizeMode::Auto => true,
@@ -483,7 +483,7 @@ impl Runtime {
 
     /// 运行基准测试
     pub fn run_benchmarks(&self) -> Vec<BenchmarkResult> {
-        let framework = BenchmarkFramework::new_default();
+        let framework: _ = BenchmarkFramework::new_default();
 
         vec![
             framework.run_benchmark(
@@ -513,13 +513,13 @@ impl Runtime {
     /// 执行 JavaScript 代码
     pub fn execute_code(&self, code: &str) -> Result<String> {
         // 使用 RuntimeLite 来执行代码
-        let lite_runtime = crate::runtime_lite::RuntimeLite::new(self.verbose)?;
+        let lite_runtime: _ = crate::runtime_lite::RuntimeLite::new(self.verbose)?;
         lite_runtime.execute_code(code)
     }
 
     /// 执行 JavaScript 文件
     pub fn execute_file(&self, path: &std::path::Path) -> Result<String> {
-        let code = std::fs::read_to_string(path)
+        let code: _ = std::fs::read_to_string(path)
             .map_err(|e| anyhow!("Failed to read file {}: {}", path.display(), e))?;
         self.execute_code(&code)
     }
@@ -540,7 +540,7 @@ pub fn get_smart_runtime(
     // TODO: 根据代码特征选择最佳优化策略
     // 目前使用默认实现
 
-    let enable_optimization = match optimize_mode {
+    let enable_optimization: _ = match optimize_mode {
         OptimizeMode::Speed => true,
         OptimizeMode::Size => false,
         OptimizeMode::Auto => true,
@@ -571,18 +571,18 @@ pub fn get_global_runtime(
 
 /// 运行完整的性能测试套件
 pub fn run_performance_suite() -> Result<TestSuiteResults, crate::automation::test_runner::TestRunnerError> {
-    let _config = crate::PerformanceConfig::default();
+    let _config: _ = crate::PerformanceConfig::default();
 
     // 创建回归检测器
-    let regression_detector = std::sync::Arc::new(std::sync::Mutex::new(
-        PerformanceRegressionDetector::new_default()
+    let regression_detector: _ = std::sync::Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(
+        PerformanceRegressionDetector::new_default())
     ));
 
     // 创建自动化测试运行器
-    let test_runner = AutomatedTestRunner::new_default(regression_detector);
+    let test_runner: _ = AutomatedTestRunner::new_default(regression_detector);
 
     // 运行测试套件
-    let rt = tokio::runtime::Runtime::new()
+    let rt: _ = tokio::runtime::Runtime::new()
         .map_err(|e| crate::automation::test_runner::TestRunnerError::ExecutionFailed(e.to_string()))?;
     rt.block_on(test_runner.run_full_test_suite())
 }
@@ -592,8 +592,8 @@ pub fn generate_performance_report(
     results: &[BenchmarkResult],
     format: ReportFormat,
 ) -> Result<std::path::PathBuf, crate::automation::report_generator::ReportError> {
-    let output_dir = std::path::PathBuf::from("performance_reports");
-    let config = ReportOutput {
+    let output_dir: _ = std::path::PathBuf::from("performance_reports");
+    let config: _ = ReportOutput {
         format,
         report_type: ReportType::Benchmark,
         output_dir: output_dir.clone(),
@@ -603,7 +603,7 @@ pub fn generate_performance_report(
         template_name: None,
     };
 
-    let generator = ReportGenerator::new(output_dir);
+    let generator: _ = ReportGenerator::new(output_dir);
     generator.generate_benchmark_report(results, &config)
 }
 
@@ -619,8 +619,8 @@ pub fn console_log_callback(
         if i > 0 {
             output.push(' ');
         }
-        let arg = args.get(i);
-        let arg_str = arg.to_string(_scope).unwrap_or_else(|| v8::String::new(_scope, "<unknown>").unwrap());
+        let arg: _ = args.get(i);
+        let arg_str: _ = arg.to_string(_scope).unwrap_or_else(|| v8::String::new(_scope, "<unknown>").unwrap());
         output.push_str(&arg_str.to_rust_string_lossy(_scope));
     }
     println!("{}", output);
@@ -662,18 +662,20 @@ pub fn console_debug_callback(
 mod tests {
     use super::*;
     use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_runtime_creation() {
-        let runtime = Runtime::new(4, 512 * 1024 * 1024, true, false);
+        let runtime: _ = Runtime::new(4, 512 * 1024 * 1024, true, false);
         std::assert_eq!(runtime.get_config().pool_size, 4);
         std::assert_eq!(runtime.get_config().max_memory, 512 * 1024 * 1024);
     }
 
     #[test]
     fn test_benchmark_framework() {
-        let framework = BenchmarkFramework::new_default();
-        let result = framework.run_benchmark(
+        let framework: _ = BenchmarkFramework::new_default();
+        let result: _ = framework.run_benchmark(
             "test",
             MetricType::ExecutionTime,
             || {
@@ -689,10 +691,10 @@ mod tests {
 
     #[test]
     fn test_performance_regression_detector() {
-        let detector = std::sync::Arc::new(std::sync::Mutex::new(
-            PerformanceRegressionDetector::new_default()
+        let detector: _ = std::sync::Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(
+            PerformanceRegressionDetector::new_default())
         ));
-        let baseline = PerformanceBaseline {
+        let baseline: _ = PerformanceBaseline {
             test_name: "test_baseline".to_string(),
             metric_type: MetricType::ExecutionTime,
             avg_duration_ns: 1000000,
@@ -709,7 +711,7 @@ mod tests {
             detector_mut.add_baseline(baseline);
         }
 
-        let test_result = BenchmarkResult {
+        let test_result: _ = BenchmarkResult {
             name: "test_baseline".to_string(),
             metric_type: MetricType::ExecutionTime,
             iterations: 100,
@@ -724,7 +726,7 @@ mod tests {
             metadata: std::collections::HashMap::new(),
         };
 
-        let detection = detector.lock().unwrap().detect_regression(&test_result);
+        let detection: _ = detector.lock().unwrap().detect_regression(&test_result);
         std::assert_eq!(detection.test_name, "test_baseline");
     }
 
@@ -733,13 +735,13 @@ mod tests {
         let mut manager = ThresholdManager::new_default();
         std::assert!(manager.load_config().is_ok() || manager.save_config().is_ok());
 
-        let stats = manager.get_stats();
+        let stats: _ = manager.get_stats();
         std::assert!(stats.total_rules >= 0);
     }
 
     #[test]
     fn test_report_generator() {
-        let results = vec![BenchmarkResult {
+        let results: _ = vec![BenchmarkResult {
             name: "test".to_string(),
             metric_type: MetricType::ExecutionTime,
             iterations: 100,
@@ -754,8 +756,8 @@ mod tests {
             metadata: std::collections::HashMap::new(),
         }];
 
-        let generator = ReportGenerator::new_default();
-        let config = ReportOutput {
+        let generator: _ = ReportGenerator::new_default();
+        let config: _ = ReportOutput {
             format: ReportFormat::Json,
             report_type: ReportType::Benchmark,
             output_dir: std::path::PathBuf::from("test_reports"),
@@ -766,7 +768,7 @@ mod tests {
         };
 
         // 注意：这个测试可能会因为文件系统权限而失败，这是正常的
-        let _ = generator.generate_benchmark_report(&results, &config);
+        let _: _ = generator.generate_benchmark_report(&results, &config);
     }
 }
 

@@ -16,22 +16,22 @@ mod ai_workload_tests {
     /// 测试张量操作的性能
     #[tokio::test]
     async fn test_tensor_operations_benchmark() {
-        let runtime = Runtime::new().await.unwrap();
-        let analyzer = PerformanceAnalyzer::new();
+        let runtime: _ = Runtime::new().await.unwrap();
+        let analyzer: _ = PerformanceAnalyzer::new();
 
-        let start_time = Instant::now();
-        let start_memory = analyzer.get_memory_usage().await;
+        let start_time: _ = Instant::now();
+        let start_memory: _ = analyzer.get_memory_usage().await;
 
         // 执行张量操作基准测试
-        let code = r#"
+        let code: _ = r#"
             // 模拟张量操作
             function tensorMul(a, b, size) {
                 let result = new Array(size);
-                for (let i = 0; i < size; i++) {
+                for (let i: _ = 0; i < size; i++) {
                     result[i] = new Array(size);
-                    for (let j = 0; j < size; j++) {
+                    for (let j: _ = 0; j < size; j++) {
                         result[i][j] = 0;
-                        for (let k = 0; k < size; k++) {
+                        for (let k: _ = 0; k < size; k++) {
                             result[i][j] += a[i][k] * b[k][j];
                         }
                     }
@@ -44,10 +44,10 @@ mod ai_workload_tests {
             const a = new Array(size);
             const b = new Array(size);
 
-            for (let i = 0; i < size; i++) {
+            for (let i: _ = 0; i < size; i++) {
                 a[i] = new Array(size);
                 b[i] = new Array(size);
-                for (let j = 0; j < size; j++) {
+                for (let j: _ = 0; j < size; j++) {
                     a[i][j] = Math.random();
                     b[i][j] = Math.random();
                 }
@@ -58,16 +58,16 @@ mod ai_workload_tests {
             result[0][0]; // 防止优化
         "#;
 
-        let result = runtime.execute(code).await.unwrap();
+        let result: _ = runtime.execute(code).await.unwrap();
 
-        let duration = start_time.elapsed();
-        let end_memory = analyzer.get_memory_usage().await;
+        let duration: _ = start_time.elapsed();
+        let end_memory: _ = analyzer.get_memory_usage().await;
 
         // 验证性能指标
         assert!(duration < Duration::from_millis(1000),
             "张量操作耗时过长: {:?}ms", duration.as_millis());
 
-        let memory_diff = end_memory - start_memory;
+        let memory_diff: _ = end_memory - start_memory;
         assert!(memory_diff < 100 * 1024 * 1024,
             "内存使用过高: {}MB", memory_diff / 1024 / 1024);
 
@@ -78,21 +78,21 @@ mod ai_workload_tests {
     /// 测试批处理推理性能
     #[tokio::test]
     async fn test_batch_inference_benchmark() {
-        let runtime = Runtime::new().await.unwrap();
-        let analyzer = PerformanceAnalyzer::new();
+        let runtime: _ = Runtime::new().await.unwrap();
+        let analyzer: _ = PerformanceAnalyzer::new();
 
-        let batch_size = 1000;
-        let start_time = Instant::now();
+        let batch_size: _ = 1000;
+        let start_time: _ = Instant::now();
 
-        let code = format!(r#"
+        let code: _ = format!(r#"
             // 模拟批处理推理
             function batchInference(batchSize) {{
                 const results = new Array(batchSize);
-                for (let i = 0; i < batchSize; i++) {{
+                for (let i: _ = 0; i < batchSize; i++) {{
                     // 模拟简单的神经网络推理
-                    let x = Math.random() * 2 - 1;
-                    let y = Math.random() * 2 - 1;
-                    let z = x * 0.5 + y * 0.3 + 0.1;
+                    let x: _ = Math.random() * 2 - 1;
+                    let y: _ = Math.random() * 2 - 1;
+                    let z: _ = x * 0.5 + y * 0.3 + 0.1;
                     results[i] = z > 0 ? 1 : 0;
                 }}
                 return results;
@@ -102,10 +102,10 @@ mod ai_workload_tests {
             results.length;
         "#, batch_size);
 
-        let result = runtime.execute(&code).await.unwrap();
+        let result: _ = runtime.execute(&code).await.unwrap();
 
-        let duration = start_time.elapsed();
-        let throughput = batch_size as f64 / duration.as_secs_f64();
+        let duration: _ = start_time.elapsed();
+        let throughput: _ = batch_size as f64 / duration.as_secs_f64();
 
         // 验证批处理性能
         assert!(throughput > 10000.0,
@@ -118,21 +118,21 @@ mod ai_workload_tests {
     /// 测试内存优化性能
     #[tokio::test]
     async fn test_memory_optimization_benchmark() {
-        let runtime = Runtime::new().await.unwrap();
-        let analyzer = PerformanceAnalyzer::new();
+        let runtime: _ = Runtime::new().await.unwrap();
+        let analyzer: _ = PerformanceAnalyzer::new();
 
-        let iterations = 100;
-        let start_time = Instant::now();
-        let start_memory = analyzer.get_memory_usage().await;
+        let iterations: _ = 100;
+        let start_time: _ = Instant::now();
+        let start_memory: _ = analyzer.get_memory_usage().await;
 
-        let code = r#"
+        let code: _ = r#"
             // 模拟内存优化的数据处理
             function processData(iterations) {
                 let total = 0;
-                for (let i = 0; i < iterations; i++) {
+                for (let i: _ = 0; i < iterations; i++) {
                     // 使用对象池模式避免频繁分配
                     const data = new Array(1000);
-                    for (let j = 0; j < 1000; j++) {
+                    for (let j: _ = 0; j < 1000; j++) {
                         data[j] = Math.random();
                     }
                     // 立即释放引用
@@ -145,11 +145,11 @@ mod ai_workload_tests {
             processData(100);
         "#;
 
-        let result = runtime.execute(code).await.unwrap();
+        let result: _ = runtime.execute(code).await.unwrap();
 
-        let duration = start_time.elapsed();
-        let end_memory = analyzer.get_memory_usage().await;
-        let memory_growth = end_memory - start_memory;
+        let duration: _ = start_time.elapsed();
+        let end_memory: _ = analyzer.get_memory_usage().await;
+        let memory_growth: _ = end_memory - start_memory;
 
         // 验证内存优化效果
         assert!(memory_growth < 50 * 1024 * 1024,
@@ -171,27 +171,27 @@ mod enterprise_benchmark_tests {
     /// 测试多租户隔离性能
     #[tokio::test]
     async fn test_multi_tenant_isolation_benchmark() {
-        let runtime = Runtime::new().await.unwrap();
-        let tenant_count = 10;
-        let operations_per_tenant = 100;
+        let runtime: _ = Runtime::new().await.unwrap();
+        let tenant_count: _ = 10;
+        let operations_per_tenant: _ = 100;
 
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 模拟多租户场景
         for tenant_id in 0..tenant_count {
-            let code = format!(r#"
+            let code: _ = format!(r#"
                 // 租户隔离测试
                 const tenantId = {};
                 const operations = {};
 
                 function tenantWorkload(id, ops) {{
-                    let result = 0;
-                    for (let i = 0; i < ops; i++) {{
+                    let result: _ = 0;
+                    for (let i: _ = 0; i < ops; i++) {{
                         // 模拟租户特定的工作负载
                         result += Math.random() * tenantId;
                         // 模拟租户数据访问
                         const data = new Array(100);
-                        for (let j = 0; j < 100; j++) {{
+                        for (let j: _ = 0; j < 100; j++) {{
                             data[j] = id * Math.random();
                         }}
                     }}
@@ -201,14 +201,14 @@ mod enterprise_benchmark_tests {
                 tenantWorkload(tenantId, operations);
             "#, tenant_id, operations_per_tenant);
 
-            let result = runtime.execute(&code).await.unwrap();
+            let result: _ = runtime.execute(&code).await.unwrap();
             assert!(result.is_ok(), "租户 {} 执行失败", tenant_id);
         }
 
-        let duration = start_time.elapsed();
+        let duration: _ = start_time.elapsed();
 
         // 验证多租户性能
-        let avg_time_per_tenant = duration / tenant_count;
+        let avg_time_per_tenant: _ = duration / tenant_count;
         assert!(avg_time_per_tenant < Duration::from_millis(50),
             "多租户平均响应时间过长: {:?}ms", avg_time_per_tenant.as_millis());
 
@@ -219,21 +219,21 @@ mod enterprise_benchmark_tests {
     /// 测试高并发请求处理性能
     #[tokio::test]
     async fn test_high_concurrency_benchmark() {
-        let runtime = Runtime::new().await.unwrap();
-        let concurrent_requests = 1000;
-        let operations_per_request = 10;
+        let runtime: _ = Runtime::new().await.unwrap();
+        let concurrent_requests: _ = 1000;
+        let operations_per_request: _ = 10;
 
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 创建并发任务
         let mut handles = Vec::new();
 
         for _ in 0..concurrent_requests {
-            let runtime_clone = runtime.clone();
-            let code = format!(r#"
+            let runtime_clone: _ = runtime.clone();
+            let code: _ = format!(r#"
                 function handleRequest(ops) {{
                     let result = 0;
-                    for (let i = 0; i < ops; i++) {{
+                    for (let i: _ = 0; i < ops; i++) {{
                         result += Math.sqrt(Math.random() * 1000);
                     }}
                     return result;
@@ -242,7 +242,7 @@ mod enterprise_benchmark_tests {
                 handleRequest({});
             "#, operations_per_request);
 
-            let handle = tokio::spawn(async move {
+            let handle: _ = tokio::spawn(async move {
                 runtime_clone.execute(&code).await
             });
             handles.push(handle);
@@ -250,12 +250,12 @@ mod enterprise_benchmark_tests {
 
         // 等待所有请求完成
         for handle in handles {
-            let result = handle.await.unwrap();
+            let result: _ = handle.await.unwrap();
             assert!(result.is_ok(), "并发请求处理失败");
         }
 
-        let duration = start_time.elapsed();
-        let throughput = concurrent_requests as f64 / duration.as_secs_f64();
+        let duration: _ = start_time.elapsed();
+        let throughput: _ = concurrent_requests as f64 / duration.as_secs_f64();
 
         // 验证并发性能
         assert!(throughput > 50000.0,
@@ -268,22 +268,22 @@ mod enterprise_benchmark_tests {
     /// 测试长时间运行稳定性
     #[tokio::test]
     async fn test_long_running_stability_benchmark() {
-        let runtime = Runtime::new().await.unwrap();
-        let duration = Duration::from_secs(5); // 5秒测试
-        let start_time = Instant::now();
+        let runtime: _ = Runtime::new().await.unwrap();
+        let duration: _ = Duration::from_secs(5); // 5秒测试
+        let start_time: _ = Instant::now();
 
         let mut iteration = 0;
         let mut errors = 0;
 
         while start_time.elapsed() < duration {
-            let code = format!(r#"
+            let code: _ = format!(r#"
                 // 稳定性测试工作负载
                 let result = 0;
-                for (let i = 0; i < 1000; i++) {{
+                for (let i: _ = 0; i < 1000; i++) {{
                     result += Math.sin(i) * Math.cos(i);
                     // 模拟内存分配和释放
                     const temp = new Array(100);
-                    for (let j = 0; j < 100; j++) {{
+                    for (let j: _ = 0; j < 100; j++) {{
                         temp[j] = Math.random();
                     }}
                 }}
@@ -303,9 +303,9 @@ mod enterprise_benchmark_tests {
             }
         }
 
-        let total_duration = start_time.elapsed();
-        let iterations_per_sec = iteration as f64 / total_duration.as_secs_f64();
-        let error_rate = errors as f64 / iteration as f64 * 100.0;
+        let total_duration: _ = start_time.elapsed();
+        let iterations_per_sec: _ = iteration as f64 / total_duration.as_secs_f64();
+        let error_rate: _ = errors as f64 / iteration as f64 * 100.0;
 
         // 验证稳定性
         assert!(error_rate < 1.0,
@@ -327,17 +327,17 @@ mod concurrent_load_tests {
     /// 测试多线程执行效率
     #[tokio::test]
     async fn test_multithreading_efficiency_benchmark() {
-        let runtime = Runtime::new().await.unwrap();
-        let thread_count = 10;
-        let work_per_thread = 1000;
+        let runtime: _ = Runtime::new().await.unwrap();
+        let thread_count: _ = 10;
+        let work_per_thread: _ = 1000;
 
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 单线程基线测试
-        let single_thread_code = format!(r#"
+        let single_thread_code: _ = format!(r#"
             function doWork(count) {{
                 let result = 0;
-                for (let i = 0; i < count; i++) {{
+                for (let i: _ = 0; i < count; i++) {{
                     result += Math.sqrt(i) * Math.log(i + 1);
                 }}
                 return result;
@@ -346,19 +346,19 @@ mod concurrent_load_tests {
             doWork({});
         "#, work_per_thread * thread_count);
 
-        let single_thread_start = Instant::now();
+        let single_thread_start: _ = Instant::now();
         runtime.execute(&single_thread_code).await.unwrap();
-        let single_thread_duration = single_thread_start.elapsed();
+        let single_thread_duration: _ = single_thread_start.elapsed();
 
         // 多线程测试
         let mut handles = Vec::new();
 
         for _ in 0..thread_count {
-            let runtime_clone = runtime.clone();
-            let code = format!(r#"
+            let runtime_clone: _ = runtime.clone();
+            let code: _ = format!(r#"
                 function doWork(count) {{
                     let result = 0;
-                    for (let i = 0; i < count; i++) {{
+                    for (let i: _ = 0; i < count; i++) {{
                         result += Math.sqrt(i) * Math.log(i + 1);
                     }}
                     return result;
@@ -367,7 +367,7 @@ mod concurrent_load_tests {
                 doWork({});
             "#, work_per_thread);
 
-            let handle = tokio::spawn(async move {
+            let handle: _ = tokio::spawn(async move {
                 runtime_clone.execute(&code).await
             });
             handles.push(handle);
@@ -377,12 +377,12 @@ mod concurrent_load_tests {
             handle.await.unwrap().unwrap();
         }
 
-        let multi_thread_duration = start_time.elapsed();
+        let multi_thread_duration: _ = start_time.elapsed();
 
         // 计算并行效率
-        let theoretical_speedup = single_thread_duration.as_secs_f64() /
+        let theoretical_speedup: _ = single_thread_duration.as_secs_f64() /
             multi_thread_duration.as_secs_f64();
-        let efficiency = theoretical_speedup / thread_count as f64 * 100.0;
+        let efficiency: _ = theoretical_speedup / thread_count as f64 * 100.0;
 
         // 验证并行效率
         assert!(efficiency > 80.0,
@@ -395,27 +395,27 @@ mod concurrent_load_tests {
     /// 测试锁竞争性能
     #[tokio::test]
     async fn test_lock_contention_benchmark() {
-        let runtime = Runtime::new().await.unwrap();
-        let concurrent_accessors = 50;
-        let operations_per_accessor = 100;
+        let runtime: _ = Runtime::new().await.unwrap();
+        let concurrent_accessors: _ = 50;
+        let operations_per_accessor: _ = 100;
 
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 模拟锁竞争场景
         let mut handles = Vec::new();
 
         for _ in 0..concurrent_accessors {
-            let runtime_clone = runtime.clone();
-            let code = format!(r#"
+            let runtime_clone: _ = runtime.clone();
+            let code: _ = format!(r#"
                 // 模拟需要同步的操作
                 let sharedCounter = 0;
 
                 function incrementWithSync(count) {{
-                    for (let i = 0; i < count; i++) {{
+                    for (let i: _ = 0; i < count; i++) {{
                         // 模拟锁获取和释放
                         const temp = sharedCounter;
                         // 模拟一些计算工作
-                        for (let j = 0; j < 10; j++) {{
+                        for (let j: _ = 0; j < 10; j++) {{
                             Math.random();
                         }}
                         sharedCounter = temp + 1;
@@ -426,7 +426,7 @@ mod concurrent_load_tests {
                 incrementWithSync({});
             "#, operations_per_accessor);
 
-            let handle = tokio::spawn(async move {
+            let handle: _ = tokio::spawn(async move {
                 runtime_clone.execute(&code).await
             });
             handles.push(handle);
@@ -436,9 +436,9 @@ mod concurrent_load_tests {
             handle.await.unwrap().unwrap();
         }
 
-        let duration = start_time.elapsed();
-        let total_operations = concurrent_accessors * operations_per_accessor;
-        let throughput = total_operations as f64 / duration.as_secs_f64();
+        let duration: _ = start_time.elapsed();
+        let total_operations: _ = concurrent_accessors * operations_per_accessor;
+        let throughput: _ = total_operations as f64 / duration.as_secs_f64();
 
         // 验证锁竞争性能
         assert!(throughput > 10000.0,
@@ -451,23 +451,23 @@ mod concurrent_load_tests {
     /// 测试线程池效率
     #[tokio::test]
     async fn test_thread_pool_efficiency_benchmark() {
-        let runtime = Runtime::new().await.unwrap();
-        let pool_size = 8;
-        let tasks = 100;
+        let runtime: _ = Runtime::new().await.unwrap();
+        let pool_size: _ = 8;
+        let tasks: _ = 100;
 
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 创建线程池任务
         let mut handles = Vec::new();
 
         for i in 0..tasks {
-            let runtime_clone = runtime.clone();
-            let task_id = i;
-            let code = format!(r#"
+            let runtime_clone: _ = runtime.clone();
+            let task_id: _ = i;
+            let code: _ = format!(r#"
                 // 模拟CPU密集型任务
                 function cpuIntensiveTask(id) {{
                     let result = 0;
-                    for (let i = 0; i < 100000; i++) {{
+                    for (let i: _ = 0; i < 100000; i++) {{
                         result += Math.sqrt(i) * Math.sin(i);
                     }}
                     return {{ taskId: id, result: result }};
@@ -476,7 +476,7 @@ mod concurrent_load_tests {
                 cpuIntensiveTask({});
             "#, task_id);
 
-            let handle = tokio::spawn(async move {
+            let handle: _ = tokio::spawn(async move {
                 runtime_clone.execute(&code).await
             });
             handles.push(handle);
@@ -484,12 +484,12 @@ mod concurrent_load_tests {
 
         // 等待所有任务完成
         for handle in handles {
-            let result = handle.await.unwrap();
+            let result: _ = handle.await.unwrap();
             assert!(result.is_ok(), "线程池任务执行失败");
         }
 
-        let duration = start_time.elapsed();
-        let tasks_per_sec = tasks as f64 / duration.as_secs_f64();
+        let duration: _ = start_time.elapsed();
+        let tasks_per_sec: _ = tasks as f64 / duration.as_secs_f64();
 
         // 验证线程池效率
         assert!(tasks_per_sec > 10.0,
@@ -516,14 +516,14 @@ mod benchmark_helpers {
         let mut memory_samples = Vec::with_capacity(iterations);
 
         for _ in 0..iterations {
-            let analyzer = PerformanceAnalyzer::new();
-            let memory_before = analyzer.get_memory_usage().await;
+            let analyzer: _ = PerformanceAnalyzer::new();
+            let memory_before: _ = analyzer.get_memory_usage().await;
 
-            let start = Instant::now();
-            let _result = f();
-            let duration = start.elapsed();
+            let start: _ = Instant::now();
+            let _result: _ = f();
+            let duration: _ = start.elapsed();
 
-            let memory_after = analyzer.get_memory_usage().await;
+            let memory_after: _ = analyzer.get_memory_usage().await;
 
             durations.push(duration);
             memory_samples.push(memory_after - memory_before);
@@ -538,8 +538,8 @@ mod benchmark_helpers {
         max_duration_ms: u64,
         max_memory_mb: u64,
     ) -> bool {
-        let max_duration = metrics.max_duration();
-        let max_memory = metrics.max_memory();
+        let max_duration: _ = metrics.max_duration();
+        let max_memory: _ = metrics.max_memory();
 
         max_duration < Duration::from_millis(max_duration_ms) &&
             max_memory < max_memory_mb * 1024 * 1024
@@ -549,6 +549,8 @@ mod benchmark_helpers {
 #[cfg(test)]
 mod integration_benchmark_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 综合性能基准测试
     #[tokio::test]

@@ -4,11 +4,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use crate::ecosystem::types::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 模块注册表
 #[derive(Debug, Clone)]
 pub struct ModuleRegistry {
-    packages: HashMap<String, PackageInfo>,
+    packages: HashMap<String, PackageInfo, std::collections::HashMap<String, PackageInfo, String, PackageInfo>>,
 }
 
 impl ModuleRegistry {
@@ -150,7 +152,7 @@ impl ModuleRegistry {
 
     /// 注册模块
     pub async fn register_module(&self, module: &crate::ecosystem::marketplace::ModuleInfo) -> Result<crate::ecosystem::marketplace::ModuleId, Box<dyn std::error::Error>> {
-        let module_id = crate::ecosystem::marketplace::ModuleId {
+        let module_id: _ = crate::ecosystem::marketplace::ModuleId {
             name: module.name.clone(),
             version: module.module_id.version.clone(),
         };
@@ -168,7 +170,7 @@ impl ModuleRegistry {
         // 简单的文本搜索实现
         for (name, package) in &self.packages {
             if name.to_lowercase().contains(&query.query.to_lowercase()) {
-                let score = self.calculate_relevance_score(name, &query.query);
+                let score: _ = self.calculate_relevance_score(name, &query.query);
                 results.push(crate::ecosystem::marketplace::ModuleSearchResult {
                     module_id: crate::ecosystem::marketplace::ModuleId {
                         name: name.clone(),
@@ -194,9 +196,9 @@ impl ModuleRegistry {
             for (dep_name, _) in &manifest.dependencies {
                 if let Some(package) = self.packages.get(dep_name) {
                     // 推荐相关的包
-                    let related = self.find_related_packages(dep_name);
+                    let related: _ = self.find_related_packages(dep_name);
                     for related_name in related {
-                        let confidence = self.calculate_recommendation_confidence(dep_name, &related_name);
+                        let confidence: _ = self.calculate_recommendation_confidence(dep_name, &related_name);
                         recommendations.push(crate::ecosystem::marketplace::ModuleRecommendation {
                             module_id: crate::ecosystem::marketplace::ModuleId {
                                 name: related_name,
@@ -212,7 +214,7 @@ impl ModuleRegistry {
             // 基于查询的推荐
             for (name, package) in &self.packages {
                 if name.to_lowercase().contains(&context.query.to_lowercase()) {
-                    let confidence = 0.8;
+                    let confidence: _ = 0.8;
                     recommendations.push(crate::ecosystem::marketplace::ModuleRecommendation {
                         module_id: crate::ecosystem::marketplace::ModuleId {
                             name: name.clone(),
@@ -233,8 +235,8 @@ impl ModuleRegistry {
 
     /// 计算相关性得分
     fn calculate_relevance_score(&self, name: &str, query: &str) -> f64 {
-        let name_lower = name.to_lowercase();
-        let query_lower = query.to_lowercase();
+        let name_lower: _ = name.to_lowercase();
+        let query_lower: _ = query.to_lowercase();
 
         if name_lower == query_lower {
             1.0
@@ -256,7 +258,7 @@ impl ModuleRegistry {
             for (name, package) in &self.packages {
                 if name != package_name {
                     // 检查是否有共同的依赖
-                    let common_deps = self.find_common_deps(&target_package.manifest.dependencies, &package.manifest.dependencies);
+                    let common_deps: _ = self.find_common_deps(&target_package.manifest.dependencies, &package.manifest.dependencies);
                     if !common_deps.is_empty() {
                         related.push(name.clone());
                     }
@@ -268,7 +270,7 @@ impl ModuleRegistry {
     }
 
     /// 查找共同依赖
-    fn find_common_deps(&self, deps1: &HashMap<String, VersionConstraint>, deps2: &HashMap<String, VersionConstraint>) -> Vec<String> {
+    fn find_common_deps(&self, deps1: &HashMap<String, VersionConstraint, std::collections::HashMap<String, VersionConstraint, String, VersionConstraint>>, deps2: &HashMap<String, VersionConstraint, std::collections::HashMap<String, VersionConstraint, String, VersionConstraint>>) -> Vec<String> {
         let mut common = Vec::new();
         for (name, _) in deps1 {
             if deps2.contains_key(name) {
@@ -282,9 +284,9 @@ impl ModuleRegistry {
     fn calculate_recommendation_confidence(&self, source: &str, target: &str) -> f64 {
         // 基于相关性的简单置信度计算
         if let (Some(source_pkg), Some(target_pkg)) = (self.packages.get(source), self.packages.get(target)) {
-            let common_deps = self.find_common_deps(&source_pkg.manifest.dependencies, &target_pkg.manifest.dependencies);
-            let common_count = common_deps.len();
-            let source_dep_count = source_pkg.manifest.dependencies.len();
+            let common_deps: _ = self.find_common_deps(&source_pkg.manifest.dependencies, &target_pkg.manifest.dependencies);
+            let common_count: _ = common_deps.len();
+            let source_dep_count: _ = source_pkg.manifest.dependencies.len();
 
             if source_dep_count > 0 {
                 (common_count as f64 / source_dep_count as f64).min(0.95)

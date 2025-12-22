@@ -41,7 +41,7 @@ pub struct StressTestResult {
     pub average_latency: Duration,
     pub p95_latency: Duration,
     pub p99_latency: Duration,
-    pub errors_by_type: HashMap<String, u64>,
+    pub errors_by_type: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
     pub throughput_per_second: f64,
     pub memory_peak_mb: f64,
     pub test_duration: Duration,
@@ -60,7 +60,7 @@ struct ExecutionStats {
     successful_executions: u64,
     failed_executions: u64,
     latencies: Vec<std::time::Duration>,
-    errors: HashMap<String, u64>,
+    errors: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
     memory_samples: Vec<f64>,
 }
 
@@ -70,7 +70,7 @@ impl StressTester {
         Self {
             runtime,
             config,
-            execution_stats: Arc::new(Mutex::new(ExecutionStats::default())),
+            execution_stats: Arc::new(std::sync::Mutex::new(Mutex::new(ExecutionStats::default()))),
         }
     }
 
@@ -80,12 +80,12 @@ impl StressTester {
         println!("   并发任务数: {}", self.config.concurrent_tasks);
         println!("   测试时长: {:?}", self.config.test_duration);
 
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 简化的并发测试：顺序执行以避免复杂的 Send 问题
         for worker_id in 0..self.config.concurrent_tasks {
-            let script = generate_test_script(worker_id, 0);
-            let result = self.runtime.execute_code(&script);
+            let script: _ = generate_test_script(worker_id, 0);
+            let result: _ = self.runtime.execute_code(&script);
 
             let mut stats = self.execution_stats.lock().unwrap();
             stats.total_executions += 1;
@@ -94,21 +94,21 @@ impl StressTester {
                 stats.successful_executions += 1;
             } else {
                 stats.failed_executions += 1;
-                let error_type = format!("{:?}", result.as_ref().err());
+                let error_type: _ = format!("{:?}", result.as_ref().err());
                 *stats.errors.entry(error_type).or_insert(0) += 1;
             }
         }
 
-        let test_duration = start_time.elapsed();
-        let stats = self.execution_stats.lock().unwrap();
+        let test_duration: _ = start_time.elapsed();
+        let stats: _ = self.execution_stats.lock().unwrap();
 
-        let average_latency = if stats.total_executions > 0 {
+        let average_latency: _ = if stats.total_executions > 0 {
             stats.latencies.iter().sum::<Duration>() / stats.total_executions as u32
         } else {
             Duration::default()
         };
 
-        let throughput = stats.total_executions as f64 / test_duration.as_secs_f64();
+        let throughput: _ = stats.total_executions as f64 / test_duration.as_secs_f64();
 
         println!("✅ 高并发压力测试完成");
         println!("   总执行次数: {}", stats.total_executions);
@@ -134,14 +134,14 @@ impl StressTester {
     pub async fn run_memory_pressure_test(&self) -> Result<StressTestResult> {
         println!("🧠 开始内存压力测试...");
 
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 简化的内存压力测试
         for _batch_id in 0..self.config.concurrent_tasks / 10 {
-            let script = format!(r#"
+            let script: _ = format!(r#"
                 // 内存压力任务
                 let objects = [];
-                for (let j = 0; j < 10000; j++) {{
+                for (let j: _ = 0; j < 10000; j++) {{
                     objects.push({{
                         id: j,
                         data: new Array(100).fill(Math.random()),
@@ -151,7 +151,7 @@ impl StressTester {
                 objects.length;
             "#);
 
-            let result = self.runtime.execute_code(&script);
+            let result: _ = self.runtime.execute_code(&script);
 
             let mut stats = self.execution_stats.lock().unwrap();
             stats.total_executions += 1;
@@ -163,8 +163,8 @@ impl StressTester {
             }
         }
 
-        let test_duration = start_time.elapsed();
-        let stats = self.execution_stats.lock().unwrap();
+        let test_duration: _ = start_time.elapsed();
+        let stats: _ = self.execution_stats.lock().unwrap();
 
         println!("✅ 内存压力测试完成");
         println!("   执行次数: {}", stats.total_executions);
@@ -189,26 +189,28 @@ impl StressTester {
     pub async fn run_fault_injection_test(&self) -> Result<StressTestResult> {
         println!("💥 开始故障注入测试...");
 
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
         let mut execution_count = 0;
         let mut error_injection_count = 0;
 
         while execution_count < self.config.concurrent_tasks as u64 {
             // 决定是否注入故障
             use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
             static RANDOM_CACHE: AtomicBool = AtomicBool::new(false);
-            let should_inject_fault = rand::random::<f64>() < self.config.error_injection_rate;
+            let should_inject_fault: _ = rand::random::<f64>() < self.config.error_injection_rate;
 
-            let script = if should_inject_fault {
+            let script: _ = if should_inject_fault {
                 error_injection_count += 1;
                 get_fault_injection_script(error_injection_count as usize)
             } else {
                 generate_normal_script(execution_count)
             };
 
-            let task_start = Instant::now();
-            let result = self.runtime.execute_code(&script);
-            let latency = task_start.elapsed();
+            let task_start: _ = Instant::now();
+            let result: _ = self.runtime.execute_code(&script);
+            let latency: _ = task_start.elapsed();
 
             let mut stats = self.execution_stats.lock().unwrap();
             stats.total_executions += 1;
@@ -229,8 +231,8 @@ impl StressTester {
             }
         }
 
-        let test_duration = start_time.elapsed();
-        let stats = self.execution_stats.lock().unwrap();
+        let test_duration: _ = start_time.elapsed();
+        let stats: _ = self.execution_stats.lock().unwrap();
 
         println!("✅ 故障注入测试完成");
         println!("   执行次数: {}", stats.total_executions);
@@ -254,8 +256,8 @@ impl StressTester {
 
     /// 获取测试结果
     pub fn get_results(&self) -> StressTestResult {
-        let stats = self.execution_stats.lock().unwrap();
-        let average_latency = if stats.total_executions > 0 {
+        let stats: _ = self.execution_stats.lock().unwrap();
+        let average_latency: _ = if stats.total_executions > 0 {
             stats.latencies.iter().sum::<Duration>() / stats.total_executions as u32
         } else {
             Duration::default()
@@ -263,10 +265,10 @@ impl StressTester {
 
         let mut latencies = stats.latencies.clone();
         latencies.sort();
-        let p95_index = (latencies.len() as f64 * 0.95) as usize;
-        let p99_index = (latencies.len() as f64 * 0.99) as usize;
-        let p95_latency = latencies.get(p95_index).cloned().unwrap_or_default();
-        let p99_latency = latencies.get(p99_index).cloned().unwrap_or_default();
+        let p95_index: _ = (latencies.len() as f64 * 0.95) as usize;
+        let p99_index: _ = (latencies.len() as f64 * 0.99) as usize;
+        let p95_latency: _ = latencies.get(p95_index).cloned().unwrap_or_default();
+        let p99_latency: _ = latencies.get(p99_index).cloned().unwrap_or_default();
 
         StressTestResult {
             total_executions: stats.total_executions,
@@ -287,8 +289,8 @@ impl StressTester {
 fn generate_test_script(worker_id: usize, execution_count: u64) -> String {
     format!(r#"
         // Worker {worker_id}, Execution {execution_count}
-        let result = 0;
-        for (let i = 0; i < 1000; i++) {{
+        let result: _ = 0;
+        for (let i: _ = 0; i < 1000; i++) {{
             result += Math.sqrt(i) * Math.sin(i) * Math.cos(i);
         }}
         result;
@@ -299,8 +301,8 @@ fn generate_test_script(worker_id: usize, execution_count: u64) -> String {
 fn generate_normal_script(execution_count: u64) -> String {
     format!(r#"
         // Normal execution {execution_count}
-        let sum = 0;
-        for (let i = 0; i < 500; i++) {{
+        let sum: _ = 0;
+        for (let i: _ = 0; i < 500; i++) {{
             sum += Math.sqrt(i);
         }}
         sum;
@@ -309,7 +311,7 @@ fn generate_normal_script(execution_count: u64) -> String {
 
 /// 获取故障注入脚本
 fn get_fault_injection_script(fault_id: usize) -> String {
-    let fault_types = [
+    let fault_types: _ = [
         "ReferenceError",
         "TypeError",
         "SyntaxError",
@@ -317,12 +319,12 @@ fn get_fault_injection_script(fault_id: usize) -> String {
         "Error",
     ];
 
-    let fault_type = fault_types[fault_id % fault_types.len()];
+    let fault_type: _ = fault_types[fault_id % fault_types.len()];
 
     match fault_type {
         "ReferenceError" => "nonExistentVariable;".to_string(),
         "TypeError" => "null.someMethod();".to_string(),
-        "SyntaxError" => "let _invalid = {;".to_string(),
+        "SyntaxError" => "let _invalid: _ = {;".to_string(),
         "RangeError" => "Array(-1);".to_string(),
         "Error" => "throw new Error('Injected fault');".to_string(),
         _ => "throw new Error('Unknown fault');".to_string(),

@@ -50,7 +50,7 @@ struct ReusableContext {
 
 impl ReusableContext {
     fn new(mut isolate: v8::OwnedIsolate, context: v8::Global<v8::Context>) -> Self {
-        let now = Instant::now();
+        let now: _ = Instant::now();
         Self {
             isolate,
             context,
@@ -112,16 +112,16 @@ impl V8ContextPool {
         max_pool_size: usize,
         max_context_age: Duration,
     ) -> Self {
-        let hot_size = std::cmp::min(4, max_pool_size); // Keep up to 4 hot contexts
+        let hot_size: _ = std::cmp::min(4, max_pool_size); // Keep up to 4 hot contexts
         Self {
-            pool: Arc::new(Mutex::new(VecDeque::new())),
-            hot_pool: Arc::new(Mutex::new(VecDeque::new())),
+            pool: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
+            hot_pool: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
             max_pool_size,
             max_hot_pool_size: hot_size,
             max_context_age,
             optimization_level: OptimizationLevel::Aggressive,
-            stats: Arc::new(Mutex::new(ContextPoolStats::default())),
-            init_time_saved: Arc::new(Mutex::new(Duration::default())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(ContextPoolStats::default()))),
+            init_time_saved: Arc::new(std::sync::Mutex::new(Mutex::new(Duration::default()))),
         }
     }
 
@@ -131,7 +131,7 @@ impl V8ContextPool {
         max_context_age: Duration,
         level: OptimizationLevel,
     ) -> Self {
-        let hot_size = match level {
+        let hot_size: _ = match level {
             OptimizationLevel::None => 0,
             OptimizationLevel::Basic => 2,
             OptimizationLevel::Aggressive => std::cmp::min(4, max_pool_size),
@@ -139,23 +139,23 @@ impl V8ContextPool {
         };
 
         Self {
-            pool: Arc::new(Mutex::new(VecDeque::new())),
-            hot_pool: Arc::new(Mutex::new(VecDeque::new())),
+            pool: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
+            hot_pool: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
             max_pool_size,
             max_hot_pool_size: hot_size,
             max_context_age,
             optimization_level: level,
-            stats: Arc::new(Mutex::new(ContextPoolStats::default())),
-            init_time_saved: Arc::new(Mutex::new(Duration::default())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(ContextPoolStats::default()))),
+            init_time_saved: Arc::new(std::sync::Mutex::new(Mutex::new(Duration::default()))),
         }
     }
 
     /// Initialize the pool with pre-warmed contexts
     pub fn initialize(&self, runtime: &RuntimeLite, initial_size: usize) -> Result<()> {
-        let init_start = Instant::now();
+        let init_start: _ = Instant::now();
 
         // Pre-warm contexts based on optimization level
-        let warm_size = match self.optimization_level {
+        let warm_size: _ = match self.optimization_level {
             OptimizationLevel::None => 0,
             OptimizationLevel::Basic => std::cmp::min(2, initial_size),
             OptimizationLevel::Aggressive => std::cmp::min(4, initial_size),
@@ -194,7 +194,7 @@ impl V8ContextPool {
         }
 
         // Update statistics
-        let init_time = init_start.elapsed();
+        let init_time: _ = init_start.elapsed();
         let mut stats = self.stats.lock().unwrap();
         stats.pool_size = self.hot_pool.lock().unwrap().len() + self.pool.lock().unwrap().len();
         stats.created_count = stats.pool_size as u64;
@@ -267,7 +267,7 @@ impl V8ContextPool {
             return;
         }
 
-        let ctx = ReusableContext::new(isolate, context);
+        let ctx: _ = ReusableContext::new(isolate, context);
 
         // Prefer returning to hot pool
         let mut hot_pool = self.hot_pool.lock().unwrap();
@@ -288,9 +288,9 @@ impl V8ContextPool {
     fn create_context_minimal(&self, _runtime: &RuntimeLite) -> Result<(v8::OwnedIsolate, v8::Global<v8::Context>)> {
         let mut isolate = v8::Isolate::new(v8::CreateParams::default());
 
-        let context_global = {
+        let context_global: _ = {
             let mut scope = v8::HandleScope::new(&mut isolate);
-            let context = v8::Context::new(&mut scope);
+            let context: _ = v8::Context::new(&mut scope);
             v8::Global::new(&mut scope, context)
         };
 
@@ -301,16 +301,16 @@ impl V8ContextPool {
     fn create_context(&self, runtime: &RuntimeLite) -> Result<(v8::OwnedIsolate, v8::Global<v8::Context>)> {
         let mut isolate = v8::Isolate::new(v8::CreateParams::default());
 
-        let context_global = {
+        let context_global: _ = {
             let mut scope = v8::HandleScope::new(&mut isolate);
-            let context = v8::Context::new(&mut scope);
+            let context: _ = v8::Context::new(&mut scope);
             let mut context_scope = v8::ContextScope::new(&mut scope, context);
 
             // Initialize Web APIs only if needed
             if self.optimization_level >= OptimizationLevel::Basic {
                 if let Err(e) = crate::web_api::init_web_api(&mut context_scope, &context) {
                     // Silently continue without Web APIs
-                    let _ = e;
+                    let _: _ = e;
                 }
             }
 
@@ -322,10 +322,10 @@ impl V8ContextPool {
 
     /// Get current statistics
     pub fn get_stats(&self) -> ContextPoolStats {
-        let stats = self.stats.lock().unwrap();
-        let init_saved = self.init_time_saved.lock().unwrap();
-        let hot_pool_size = self.hot_pool.lock().unwrap().len();
-        let pool_size = self.pool.lock().unwrap().len();
+        let stats: _ = self.stats.lock().unwrap();
+        let init_saved: _ = self.init_time_saved.lock().unwrap();
+        let hot_pool_size: _ = self.hot_pool.lock().unwrap().len();
+        let pool_size: _ = self.pool.lock().unwrap().len();
 
         ContextPoolStats {
             created_count: stats.created_count,
@@ -355,14 +355,14 @@ impl V8ContextPool {
         let mut hot_pool = self.hot_pool.lock().unwrap();
         let mut pool = self.pool.lock().unwrap();
 
-        let hot_before = hot_pool.len();
-        let before = pool.len();
+        let hot_before: _ = hot_pool.len();
+        let before: _ = pool.len();
 
         hot_pool.retain(|ctx| !ctx.is_stale(self.max_context_age));
         pool.retain(|ctx| !ctx.is_stale(self.max_context_age));
 
-        let hot_removed = hot_before - hot_pool.len();
-        let removed = before - pool.len();
+        let hot_removed: _ = hot_before - hot_pool.len();
+        let removed: _ = before - pool.len();
 
         if removed > 0 || hot_removed > 0 {
             eprintln!("🧹 Context pool cleanup: removed {} hot + {} regular stale contexts",
@@ -393,10 +393,12 @@ impl Default for V8ContextPool {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_context_pool_creation() {
-        let pool = V8ContextPool::default();
+        let pool: _ = V8ContextPool::default();
         assert_eq!(pool.len(), 0);
         assert!(pool.is_empty());
     }

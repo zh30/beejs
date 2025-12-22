@@ -71,15 +71,15 @@ impl SendFile {
     /// # 返回值
     /// 返回新的 SendFile 实例
     pub fn new(file: File) -> io::Result<Self> {
-        let file_size = file.metadata()?.len();
-        let fd = file.as_raw_fd();
+        let file_size: _ = file.metadata()?.len();
+        let fd: _ = file.as_raw_fd();
 
         Ok(Self {
             file,
             fd,
             file_size,
             current_pos: 0,
-            stats: Arc::new(std::sync::Mutex::new(SendFileStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(SendFileStats::default()))),
         })
     }
 
@@ -91,7 +91,7 @@ impl SendFile {
     /// # 返回值
     /// 返回创建结果
     pub fn from_path(path: &str) -> io::Result<Self> {
-        let file = File::open(path)?;
+        let file: _ = File::open(path)?;
         Self::new(file)
     }
 
@@ -107,15 +107,15 @@ impl SendFile {
     /// # 返回值
     /// 返回传输的字节数
     pub fn send_to<W: Write + AsRawFd>(&mut self, output: &mut W, max_bytes: usize) -> io::Result<u64> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
         let mut bytes_sent = 0;
-        let chunk_size = 64 * 1024; // 64KB 块大小
+        let chunk_size: _ = 64 * 1024; // 64KB 块大小
 
         // 获取输出文件的文件描述符
-        let out_fd = output.as_raw_fd();
+        let out_fd: _ = output.as_raw_fd();
 
         // 计算要传输的字节数
-        let bytes_to_send = if max_bytes == 0 {
+        let bytes_to_send: _ = if max_bytes == 0 {
             self.file_size - self.current_pos
         } else {
             std::cmp::min(max_bytes as u64, self.file_size - self.current_pos)
@@ -124,7 +124,7 @@ impl SendFile {
         // 分块传输
         let mut remaining = bytes_to_send;
         while remaining > 0 {
-            let chunk = std::cmp::min(chunk_size as u64, remaining);
+            let chunk: _ = std::cmp::min(chunk_size as u64, remaining);
 
             match self.sendfile_chunk(out_fd, chunk) {
                 Ok(sent) => {
@@ -157,7 +157,7 @@ impl SendFile {
             stats.end_time = Some(Instant::now());
             if let Some(end) = stats.end_time {
                 if let Some(start_time) = stats.start_time {
-                    let duration = end.duration_since(start_time);
+                    let duration: _ = end.duration_since(start_time);
                     if duration.as_secs() > 0 {
                         stats.avg_speed = bytes_sent as f64 / duration.as_secs_f64();
                     }
@@ -176,7 +176,7 @@ impl SendFile {
             use libc::off_t;
 
             let mut offset: off_t = self.current_pos as off_t;
-            let result = unsafe {
+            let result: _ = unsafe {
                 libc::sendfile(out_fd, self.fd, 0, &mut offset, std::ptr::null_mut(), 0)
             };
 
@@ -193,7 +193,7 @@ impl SendFile {
             // 降级到传统的读写方式
             let mut buffer = vec![0u8; count as usize];
             self.file.seek(SeekFrom::Start(self.current_pos))?;
-            let _read_bytes = self.file.read(&mut buffer)?;
+            let _read_bytes: _ = self.file.read(&mut buffer)?;
             self.file.seek(SeekFrom::Start(self.current_pos))?; // 重置位置
 
             // 这里需要输出流的写入方法，但 AsRawFd 限制了我们
@@ -217,7 +217,7 @@ impl SendFile {
         stats.syscall_count += 1;
 
         // 计算瞬时速度
-        let elapsed = start.elapsed().as_secs_f64();
+        let elapsed: _ = start.elapsed().as_secs_f64();
         if elapsed > 0.0 {
             stats.instant_speed = bytes as f64 / elapsed;
         }
@@ -269,11 +269,13 @@ impl SendFile {
 mod tests {
     use super::*;
     use std::io::Cursor;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_sendfile_zero_copy_file_transfer() {
         // 创建测试文件
-        let test_data = b"Hello, World! This is a test file for sendfile.";
+        let test_data: _ = b"Hello, World! This is a test file for sendfile.";
         let mut cursor = Cursor::new(Vec::new());
         cursor.write_all(test_data).unwrap();
 

@@ -19,7 +19,7 @@ pub enum SharedValue {
     Number(f64),
     String(String),
     Array(Vec<SharedValue>),
-    Object(HashMap<String, SharedValue>),
+    Object(HashMap<String, SharedValue, std::collections::HashMap<String, SharedValue, String, SharedValue>>),
 }
 
 impl Hash for SharedValue {
@@ -57,9 +57,9 @@ impl SharedObject {
         Self {
             value,
             created_at: Instant::now(),
-            last_accessed: Arc::new(Mutex::new(Instant::now())),
-            access_count: Arc::new(AtomicUsize::new(0)),
-            ref_count: Arc::new(AtomicUsize::new(1)),
+            last_accessed: Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now()))),
+            access_count: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
+            ref_count: Arc::new(std::sync::Mutex::new(AtomicUsize::new(1))),
         }
     }
 
@@ -165,7 +165,7 @@ struct LruCache<K, V> {
     /// 访问顺序列表（最近访问的在前面）
     order: Vec<K>,
     /// 键值对
-    map: HashMap<K, (V, usize)>,
+    map: HashMap<K, (V, usize), std::collections::HashMap<K, (V, usize), K, (V, usize)>>,
 }
 
 impl<K: Hash + Eq + Clone, V> LruCache<K, V> {
@@ -194,12 +194,12 @@ impl<K: Hash + Eq + Clone, V> LruCache<K, V> {
     }
 
     fn insert(&mut self, key: K, value: V) -> Option<V> {
-        let access_count = 1;
+        let access_count: _ = 1;
 
         if self.map.contains_key(&key) {
             // 更新现有项
             if let Some((old_value, _)) = self.map.get_mut(&key) {
-                let old_value = std::mem::replace(old_value, value);
+                let old_value: _ = std::mem::replace(old_value, value);
                 // 更新访问顺序
                 if let Some(pos) = self.order.iter().position(|k| k == &key) {
                     self.order.remove(pos);
@@ -269,12 +269,12 @@ impl std::fmt::Debug for SharedObjectCache {
 impl SharedObjectCache {
     /// 创建新的共享对象缓存
     pub fn new(config: SharedObjectCacheConfig) -> Self {
-        let cache = Self {
-            string_cache: Arc::new(StringInterner::new()),
-            object_cache: Arc::new(Mutex::new(LruCache::new(config.max_objects))),
+        let cache: _ = Self {
+            string_cache: Arc::new(std::sync::Mutex::new(StringInterner::new())),
+            object_cache: Arc::new(std::sync::Mutex::new(Mutex::new(LruCache::new(config.max_objects)))),
             config: config.clone(),
-            stats: Arc::new(Mutex::new(SharedObjectCacheStats::default())),
-            running: Arc::new(AtomicBool::new(true)),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(SharedObjectCacheStats::default()))),
+            running: Arc::new(std::sync::Mutex::new(AtomicBool::new(true))),
         };
 
         // 启动GC线程
@@ -314,11 +314,11 @@ impl SharedObjectCache {
 
     /// 存储共享对象
     pub fn insert(&self, key: String, value: SharedValue) -> Arc<SharedObject> {
-        let obj = Arc::new(SharedObject::new(value));
+        let obj: _ = Arc::new(std::sync::Mutex::new(SharedObject::new(value)));
 
         {
             let mut cache = self.object_cache.lock().unwrap();
-            cache.insert(key.clone(), Arc::clone(&obj));
+            cache.insert(key.clone(), Arc::clone(obj));
         }
 
         // 更新统计
@@ -354,7 +354,7 @@ impl SharedObjectCache {
     /// 预加载常用对象
     fn preload_common_objects(&self) {
         // 预加载常用字符串
-        let common_strings = vec![
+        let common_strings: _ = vec![
             "undefined", "null", "true", "false",
             "0", "1", "-1", "",
             "console", "log", "error", "warn",
@@ -363,13 +363,13 @@ impl SharedObjectCache {
         ];
 
         for s in &common_strings {
-            let key = format!("string:{}", s);
+            let key: _ = format!("string:{}", s);
             self.insert(key, SharedValue::String(s.to_string()));
         }
 
         // 预加载常用数字
         for i in 0..100 {
-            let key = format!("number:{}", i);
+            let key: _ = format!("number:{}", i);
             self.insert(key, SharedValue::Number(i as f64));
         }
 
@@ -403,7 +403,7 @@ impl SharedObjectCache {
     /// 清理过期对象
     #[allow(dead_code)]
     fn cleanup_expired(&self) {
-        let now = Instant::now();
+        let now: _ = Instant::now();
         let mut cleaned = 0;
 
         {
@@ -414,8 +414,8 @@ impl SharedObjectCache {
                 .map
                 .iter()
                 .filter_map(|(key, (obj, _))| {
-                    let age = now.duration_since(obj.get_created_at());
-                    let access_count = obj.get_access_count();
+                    let age: _ = now.duration_since(obj.get_created_at());
+                    let access_count: _ = obj.get_access_count();
 
                     if age > self.config.ttl && access_count < self.config.lru_threshold {
                         Some(key.clone())
@@ -442,9 +442,9 @@ impl SharedObjectCache {
 
     /// 启动GC线程
     fn start_gc_thread(&self) {
-        let object_cache = Arc::downgrade(&self.object_cache);
-        let config = self.config.clone();
-        let running = self.running.clone();
+        let object_cache: _ = Arc::downgrade(&self.object_cache);
+        let config: _ = self.config.clone();
+        let running: _ = self.running.clone();
 
         std::thread::spawn(move || {
             while running.load(Ordering::SeqCst) {
@@ -480,10 +480,12 @@ pub fn calculate_value_hash(value: &SharedValue) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_shared_object_creation() {
-        let obj = SharedObject::new(SharedValue::Number(42.0));
+        let obj: _ = SharedObject::new(SharedValue::Number(42.0));
 
         assert_eq!(obj.get_access_count(), 0);
         assert_eq!(obj.get_ref_count(), 1);
@@ -494,36 +496,36 @@ mod tests {
 
     #[test]
     fn test_cache_insert_and_get() {
-        let config = SharedObjectCacheConfig::default();
-        let cache = SharedObjectCache::new(config);
+        let config: _ = SharedObjectCacheConfig::default();
+        let cache: _ = SharedObjectCache::new(config);
 
-        let key = "test_key".to_string();
-        let value = SharedValue::Number(123.0);
+        let key: _ = "test_key".to_string();
+        let value: _ = SharedValue::Number(123.0);
 
-        let obj = cache.insert(key.clone(), value.clone());
+        let obj: _ = cache.insert(key.clone(), value.clone());
         assert_eq!(obj.get_value(), &value);
 
-        let retrieved = cache.get(&key).unwrap();
+        let retrieved: _ = cache.get(&key).unwrap();
         assert_eq!(retrieved.get_value(), &value);
     }
 
     #[test]
     fn test_cache_hits_and_misses() {
-        let config = SharedObjectCacheConfig::default();
-        let cache = SharedObjectCache::new(config);
+        let config: _ = SharedObjectCacheConfig::default();
+        let cache: _ = SharedObjectCache::new(config);
 
         // 第一次访问（未命中）
-        let _ = cache.get("missing_key");
+        let _: _ = cache.get("missing_key");
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.cache_hits, 0);
         assert_eq!(stats.cache_misses, 1);
 
         // 插入并访问（命中）
         cache.insert("test_key".to_string(), SharedValue::Number(1.0));
-        let _ = cache.get("test_key");
+        let _: _ = cache.get("test_key");
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.cache_hits, 1);
         assert_eq!(stats.cache_misses, 1);
     }
@@ -549,19 +551,19 @@ mod tests {
 
     #[test]
     fn test_string_interning() {
-        let config = SharedObjectCacheConfig::default();
-        let cache = SharedObjectCache::new(config);
+        let config: _ = SharedObjectCacheConfig::default();
+        let cache: _ = SharedObjectCache::new(config);
 
         // 测试插入字符串值
         cache.insert("str1".to_string(), SharedValue::String("hello".to_string()));
         cache.insert("str2".to_string(), SharedValue::String("world".to_string()));
 
         // 验证字符串缓存正常工作 - 检查缓存是否工作
-        let value1 = cache.get(&"str1".to_string());
+        let value1: _ = cache.get(&"str1".to_string());
         assert!(value1.is_some(), "应该能找到插入的字符串");
 
         // 验证缓存统计
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert!(stats.total_objects > 0, "应该有对象被缓存");
     }
 }

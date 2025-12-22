@@ -31,7 +31,7 @@ pub struct BalancingDecision {
 
 /// 智能负载均衡器
 pub struct LoadBalancer {
-    workers: HashMap<String, WorkerLoad>,
+    workers: HashMap<String, WorkerLoad, std::collections::HashMap<String, WorkerLoad, String, WorkerLoad>>,
     strategy: BalancingStrategy,
 }
 
@@ -65,7 +65,7 @@ impl LoadBalancer {
     }
 
     fn least_connections(&self) -> Option<BalancingDecision> {
-        let min_load_worker = self.workers.values()
+        let min_load_worker: _ = self.workers.values()
             .min_by(|a, b| a.current_load.partial_cmp(&b.current_load).unwrap());
 
         min_load_worker.map(|w| BalancingDecision {
@@ -81,7 +81,7 @@ impl LoadBalancer {
             return None;
         }
 
-        let best_worker = self.workers.values()
+        let best_worker: _ = self.workers.values()
             .max_by(|a, b| {
                 (a.capacity / total_capacity)
                     .partial_cmp(&(b.capacity / total_capacity))
@@ -102,11 +102,11 @@ impl LoadBalancer {
 
         for worker in self.workers.values() {
             // 综合评分：利用率 + 响应时间 + 资源可用性
-            let utilization_score = 1.0 - worker.utilization;
-            let load_score = 1.0 / (1.0 + worker.current_load);
-            let capacity_score = worker.capacity / 100.0;
+            let utilization_score: _ = 1.0 - worker.utilization;
+            let load_score: _ = 1.0 / (1.0 + worker.current_load);
+            let capacity_score: _ = worker.capacity / 100.0;
 
-            let score = utilization_score * 0.4 + load_score * 0.4 + capacity_score * 0.2;
+            let score: _ = utilization_score * 0.4 + load_score * 0.4 + capacity_score * 0.2;
 
             if score > best_score {
                 best_score = score;
@@ -125,6 +125,8 @@ impl LoadBalancer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_load_balancer() {
@@ -144,7 +146,7 @@ mod tests {
             utilization: 0.05,
         });
 
-        let decision = lb.select_worker();
+        let decision: _ = lb.select_worker();
         assert!(decision.is_some());
         assert_eq!(decision.unwrap().selected_worker, "worker2");
     }

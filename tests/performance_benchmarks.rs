@@ -36,25 +36,25 @@ impl PerformanceBenchmarker {
 
     /// 运行 JavaScript 计算密集型测试
     pub async fn run_compute_intensive_test(&self) -> Result<BenchmarkResult> {
-        let test_code = r#"
+        let test_code: _ = r#"
 // 计算密集型测试 - Fibonacci 递归
 function fibonacci(n) {
     if (n <= 1) return n;
     return fibonacci(n - 1) + fibonacci(n - 2);
 }
 
-let iterations = 1000;
-let start = Date.now();
-for (let i = 0; i < iterations; i++) {
+let iterations: _ = 1000;
+let start: _ = Date.now();
+for (let i: _ = 0; i < iterations; i++) {
     fibonacci(20);
 }
-let end = Date.now();
+let end: _ = Date.now();
 (end - start) / iterations;
 "#;
 
-        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let _result = self.execute_js_code(test_code).await?;
-        let duration = start_time.elapsed().unwrap();
+        let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let _result: _ = self.execute_js_code(test_code).await?;
+        let duration: _ = start_time.elapsed().unwrap();
 
         Ok(BenchmarkResult {
             runtime_name: self.runtime_name.clone(),
@@ -68,28 +68,28 @@ let end = Date.now();
 
     /// 运行 I/O 密集型测试
     pub async fn run_io_intensive_test(&self) -> Result<BenchmarkResult> {
-        let test_code = r#"
+        let test_code: _ = r#"
 // I/O 密集型测试 - 大量文件操作
 const fs = require('fs');
 const path = require('path');
 
-let iterations = 1000;
-let start = Date.now();
+let iterations: _ = 1000;
+let start: _ = Date.now();
 
-for (let i = 0; i < iterations; i++) {
-    let testFile = `/tmp/test_${i}.txt`;
+for (let i: _ = 0; i < iterations; i++) {
+    let testFile: _ = `/tmp/test_${i}.txt`;
     fs.writeFileSync(testFile, 'test data');
     fs.readFileSync(testFile, 'utf8');
     fs.unlinkSync(testFile);
 }
 
-let end = Date.now();
+let end: _ = Date.now();
 (end - start) / iterations;
 "#;
 
-        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let _result = self.execute_js_code(test_code).await?;
-        let duration = start_time.elapsed().unwrap();
+        let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let _result: _ = self.execute_js_code(test_code).await?;
+        let duration: _ = start_time.elapsed().unwrap();
 
         Ok(BenchmarkResult {
             runtime_name: self.runtime_name.clone(),
@@ -103,13 +103,13 @@ let end = Date.now();
 
     /// 运行内存分配测试
     pub async fn run_memory_allocation_test(&self) -> Result<BenchmarkResult> {
-        let test_code = r#"
+        let test_code: _ = r#"
 // 内存分配测试 - 大量对象创建
 let iterations = 10000;
-let start = Date.now();
+let start: _ = Date.now();
 
-let objects = [];
-for (let i = 0; i < iterations; i++) {
+let objects: _ = [];
+for (let i: _ = 0; i < iterations; i++) {
     objects.push({
         id: i,
         name: `object_${i}`,
@@ -118,13 +118,13 @@ for (let i = 0; i < iterations; i++) {
     });
 }
 
-let end = Date.now();
+let end: _ = Date.now();
 (end - start) / iterations;
 "#;
 
-        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let _result = self.execute_js_code(test_code).await?;
-        let duration = start_time.elapsed().unwrap();
+        let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let _result: _ = self.execute_js_code(test_code).await?;
+        let duration: _ = start_time.elapsed().unwrap();
 
         Ok(BenchmarkResult {
             runtime_name: self.runtime_name.clone(),
@@ -138,24 +138,24 @@ let end = Date.now();
 
     /// 运行字符串操作测试
     pub async fn run_string_operations_test(&self) -> Result<BenchmarkResult> {
-        let test_code = r#"
+        let test_code: _ = r#"
 // 字符串操作测试 - 大量字符串处理
 let iterations = 10000;
-let start = Date.now();
+let start: _ = Date.now();
 
-let result = "";
-for (let i = 0; i < iterations; i++) {
-    let str = `test_${i}_string_${Math.random().toString(36).substring(7)}`;
+let result: _ = "";
+for (let i: _ = 0; i < iterations; i++) {
+    let str: _ = `test_${i}_string_${Math.random().toString(36).substring(7)}`;
     result += str.toUpperCase().substring(0, 20);
 }
 
-let end = Date.now();
+let end: _ = Date.now();
 (end - start) / iterations;
 "#;
 
-        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let _result = self.execute_js_code(test_code).await?;
-        let duration = start_time.elapsed().unwrap();
+        let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let _result: _ = self.execute_js_code(test_code).await?;
+        let duration: _ = start_time.elapsed().unwrap();
 
         Ok(BenchmarkResult {
             runtime_name: self.runtime_name.clone(),
@@ -169,16 +169,16 @@ let end = Date.now();
 
     /// 运行 AI 工作负载测试（矩阵运算）
     pub async fn run_ai_workload_test(&self) -> Result<BenchmarkResult> {
-        let test_code = r#"
+        let test_code: _ = r#"
 // AI 工作负载测试 - 矩阵运算模拟
 function matrixMultiply(a, b) {
     let rows = a.length;
-    let cols = b[0].length;
-    let result = Array(rows).fill().map(() => Array(cols).fill(0));
+    let cols: _ = b[0].length;
+    let result: _ = Array(rows).fill().map(() => Array(cols).fill(0));
 
-    for (let i = 0; i < rows; i++) {
-        for (let j = 0; j < cols; j++) {
-            for (let k = 0; k < a[0].length; k++) {
+    for (let i: _ = 0; i < rows; i++) {
+        for (let j: _ = 0; j < cols; j++) {
+            for (let k: _ = 0; k < a[0].length; k++) {
                 result[i][j] += a[i][k] * b[k][j];
             }
         }
@@ -187,28 +187,28 @@ function matrixMultiply(a, b) {
 }
 
 // 创建 50x50 矩阵
-let size = 50;
-let matrixA = Array(size).fill().map(() =>
+let size: _ = 50;
+let matrixA: _ = Array(size).fill().map(() =>
     Array(size).fill().map(() => Math.random())
 );
-let matrixB = Array(size).fill().map(() =>
+let matrixB: _ = Array(size).fill().map(() =>
     Array(size).fill().map(() => Math.random())
 );
 
-let iterations = 10;
-let start = Date.now();
+let iterations: _ = 10;
+let start: _ = Date.now();
 
-for (let i = 0; i < iterations; i++) {
+for (let i: _ = 0; i < iterations; i++) {
     matrixMultiply(matrixA, matrixB);
 }
 
-let end = Date.now();
+let end: _ = Date.now();
 (end - start) / iterations;
 "#;
 
-        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let _result = self.execute_js_code(test_code).await?;
-        let duration = start_time.elapsed().unwrap();
+        let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let _result: _ = self.execute_js_code(test_code).await?;
+        let duration: _ = start_time.elapsed().unwrap();
 
         Ok(BenchmarkResult {
             runtime_name: self.runtime_name.clone(),
@@ -244,7 +244,7 @@ pub async fn compare_runtimes(
 
     for (beejs_result, bun_result) in beejs_results.iter().zip(bun_results.iter()) {
         if beejs_result.test_name == bun_result.test_name {
-            let speedup = bun_result.execution_time_ms / beejs_result.execution_time_ms;
+            let speedup: _ = bun_result.execution_time_ms / beejs_result.execution_time_ms;
             comparisons.push((beejs_result.test_name.clone(), speedup));
         }
     }
@@ -256,36 +256,36 @@ pub async fn compare_runtimes(
 pub async fn run_full_benchmark_suite() -> Result<Vec<BenchmarkResult>> {
     println!("🚀 开始运行 Beejs 性能基准测试套件...\n");
 
-    let beejs_benchmarker = PerformanceBenchmarker::new("Beejs");
+    let beejs_benchmarker: _ = PerformanceBenchmarker::new("Beejs");
     let mut results = Vec::new();
 
     // 计算密集型测试
     println!("📊 运行计算密集型测试 (Fibonacci)...");
-    let result = beejs_benchmarker.run_compute_intensive_test().await?;
+    let result: _ = beejs_benchmarker.run_compute_intensive_test().await?;
     results.push(result);
     println!("   完成: {:.2}ms\n", results.last().unwrap().execution_time_ms);
 
     // I/O 密集型测试
     println!("📊 运行 I/O 密集型测试 (文件操作)...");
-    let result = beejs_benchmarker.run_io_intensive_test().await?;
+    let result: _ = beejs_benchmarker.run_io_intensive_test().await?;
     results.push(result);
     println!("   完成: {:.2}ms\n", results.last().unwrap().execution_time_ms);
 
     // 内存分配测试
     println!("📊 运行内存分配测试 (对象创建)...");
-    let result = beejs_benchmarker.run_memory_allocation_test().await?;
+    let result: _ = beejs_benchmarker.run_memory_allocation_test().await?;
     results.push(result);
     println!("   完成: {:.2}ms\n", results.last().unwrap().execution_time_ms);
 
     // 字符串操作测试
     println!("📊 运行字符串操作测试...");
-    let result = beejs_benchmarker.run_string_operations_test().await?;
+    let result: _ = beejs_benchmarker.run_string_operations_test().await?;
     results.push(result);
     println!("   完成: {:.2}ms\n", results.last().unwrap().execution_time_ms);
 
     // AI 工作负载测试
     println!("📊 运行 AI 工作负载测试 (矩阵运算)...");
-    let result = beejs_benchmarker.run_ai_workload_test().await?;
+    let result: _ = beejs_benchmarker.run_ai_workload_test().await?;
     results.push(result);
     println!("   完成: {:.2}ms\n", results.last().unwrap().execution_time_ms);
 
@@ -297,11 +297,13 @@ pub async fn run_full_benchmark_suite() -> Result<Vec<BenchmarkResult>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_compute_intensive_benchmark() {
-        let benchmarker = PerformanceBenchmarker::new("Test");
-        let result = benchmarker.run_compute_intensive_test().await.unwrap();
+        let benchmarker: _ = PerformanceBenchmarker::new("Test");
+        let result: _ = benchmarker.run_compute_intensive_test().await.unwrap();
 
         assert_eq!(result.runtime_name, "Test");
         assert_eq!(result.test_name, "compute_intensive_fibonacci");
@@ -311,8 +313,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_io_intensive_benchmark() {
-        let benchmarker = PerformanceBenchmarker::new("Test");
-        let result = benchmarker.run_io_intensive_test().await.unwrap();
+        let benchmarker: _ = PerformanceBenchmarker::new("Test");
+        let result: _ = benchmarker.run_io_intensive_test().await.unwrap();
 
         assert_eq!(result.runtime_name, "Test");
         assert_eq!(result.test_name, "io_intensive_file_ops");
@@ -321,8 +323,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_allocation_benchmark() {
-        let benchmarker = PerformanceBenchmarker::new("Test");
-        let result = benchmarker.run_memory_allocation_test().await.unwrap();
+        let benchmarker: _ = PerformanceBenchmarker::new("Test");
+        let result: _ = benchmarker.run_memory_allocation_test().await.unwrap();
 
         assert_eq!(result.runtime_name, "Test");
         assert_eq!(result.test_name, "memory_allocation_objects");
@@ -331,8 +333,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_string_operations_benchmark() {
-        let benchmarker = PerformanceBenchmarker::new("Test");
-        let result = benchmarker.run_string_operations_test().await.unwrap();
+        let benchmarker: _ = PerformanceBenchmarker::new("Test");
+        let result: _ = benchmarker.run_string_operations_test().await.unwrap();
 
         assert_eq!(result.runtime_name, "Test");
         assert_eq!(result.test_name, "string_operations");
@@ -341,8 +343,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_ai_workload_benchmark() {
-        let benchmarker = PerformanceBenchmarker::new("Test");
-        let result = benchmarker.run_ai_workload_test().await.unwrap();
+        let benchmarker: _ = PerformanceBenchmarker::new("Test");
+        let result: _ = benchmarker.run_ai_workload_test().await.unwrap();
 
         assert_eq!(result.runtime_name, "Test");
         assert_eq!(result.test_name, "ai_workload_matrix_ops");

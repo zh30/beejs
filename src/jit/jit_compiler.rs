@@ -115,7 +115,7 @@ pub struct JitCompiler {
     config: JitCompilerConfig,
     hot_path_tracker: Arc<HotPathTrackerV2>,
     inline_strategy: Arc<InlineStrategy>,
-    code_cache: Arc<RwLock<HashMap<u64, CompilationResult>>>,
+    code_cache: Arc<RwLock<HashMap<u64, CompilationResult, std::collections::HashMap<u64, CompilationResult, u64, CompilationResult>>>>,
     perf_stats: Arc<RwLock<JitPerfStats>>,
 }
 
@@ -136,16 +136,16 @@ impl JitCompiler {
     pub fn new(config: JitCompilerConfig) -> Self {
         Self {
             config: config.clone(),
-            hot_path_tracker: Arc::new(HotPathTrackerV2::new()),
-            inline_strategy: Arc::new(InlineStrategy::new()),
-            code_cache: Arc::new(RwLock::new(HashMap::new())),
-            perf_stats: Arc::new(RwLock::new(JitPerfStats::default())),
+            hot_path_tracker: Arc::new(std::sync::Mutex::new(HotPathTrackerV2::new())),
+            inline_strategy: Arc::new(std::sync::Mutex::new(InlineStrategy::new())),
+            code_cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            perf_stats: Arc::new(std::sync::Mutex::new(RwLock::new(JitPerfStats::default()))),
         }
     }
 
     /// 编译函数
     pub fn compile(&self, request: CompilationRequest) -> Result<CompilationResult, String> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 检查代码缓存
         if let Some(cached) = self.get_cached_code(request.function_id) {
@@ -154,10 +154,10 @@ impl JitCompiler {
         }
 
         // 选择编译层级
-        let tier = self.select_compilation_tier(&request);
+        let tier: _ = self.select_compilation_tier(&request);
 
         // 执行编译
-        let result = match tier {
+        let result: _ = match tier {
             CompilationTier::Interpreter => self.compile_interpreter(&request)?,
             CompilationTier::Baseline => self.compile_baseline(&request)?,
             CompilationTier::Optimizing => self.compile_optimizing(&request)?,
@@ -175,19 +175,19 @@ impl JitCompiler {
     /// 选择编译层级 - Stage 93 Phase 1: 动态阈值调整
     /// 集成 HotPathTrackerV2 的自适应阈值，实现智能编译层级选择
     fn select_compilation_tier(&self, request: &CompilationRequest) -> CompilationTier {
-        let hotness = request.hotness_score;
+        let hotness: _ = request.hotness_score;
 
         // 获取动态阈值（来自 HotPathTrackerV2）
-        let adaptive_threshold = self.hot_path_tracker.get_threshold() as f64;
+        let adaptive_threshold: _ = self.hot_path_tracker.get_threshold() as f64;
 
         // 动态调整因子：
         // - 当 adaptive_threshold 高时（系统整体很热），降低编译阈值，更激进地优化
         // - 当 adaptive_threshold 低时（系统不忙），提高编译阈值，避免过早优化
-        let adjustment_factor = (100.0_f64 / adaptive_threshold.max(1.0)).min(10.0).max(0.1);
+        let adjustment_factor: _ = (100.0_f64 / adaptive_threshold.max(1.0)).min(10.0).max(0.1);
 
         // 计算动态阈值
-        let dynamic_baseline_threshold = self.config.tier_selection_thresholds.baseline_threshold * adjustment_factor;
-        let dynamic_optimizing_threshold = self.config.tier_selection_thresholds.optimizing_threshold * adjustment_factor;
+        let dynamic_baseline_threshold: _ = self.config.tier_selection_thresholds.baseline_threshold * adjustment_factor;
+        let dynamic_optimizing_threshold: _ = self.config.tier_selection_thresholds.optimizing_threshold * adjustment_factor;
 
         // 使用动态阈值进行层级选择
         if hotness >= dynamic_optimizing_threshold {
@@ -201,17 +201,17 @@ impl JitCompiler {
 
     /// 解释器层编译
     fn compile_interpreter(&self, request: &CompilationRequest) -> Result<CompilationResult, String> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 字节码优化
-        let optimizations_applied = if self.config.interpreter_config.bytecode_optimization {
+        let optimizations_applied: _ = if self.config.interpreter_config.bytecode_optimization {
             vec!["bytecode_optimization".to_string()]
         } else {
             vec![]
         };
 
-        let compilation_time = start.elapsed();
-        let performance_score = 1.0; // 最低性能
+        let compilation_time: _ = start.elapsed();
+        let performance_score: _ = 1.0; // 最低性能
 
         Ok(CompilationResult {
             function_id: request.function_id,
@@ -225,7 +225,7 @@ impl JitCompiler {
 
     /// 基线编译
     fn compile_baseline(&self, request: &CompilationRequest) -> Result<CompilationResult, String> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         let mut optimizations_applied = vec!["baseline_compilation".to_string()];
 
@@ -234,8 +234,8 @@ impl JitCompiler {
             optimizations_applied.push("simple_optimizations".to_string());
         }
 
-        let compilation_time = start.elapsed();
-        let performance_score = 3.0; // 中等性能
+        let compilation_time: _ = start.elapsed();
+        let performance_score: _ = 3.0; // 中等性能
 
         Ok(CompilationResult {
             function_id: request.function_id,
@@ -249,7 +249,7 @@ impl JitCompiler {
 
     /// 优化编译
     fn compile_optimizing(&self, request: &CompilationRequest) -> Result<CompilationResult, String> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         let mut optimizations_applied = vec!["optimizing_compilation".to_string()];
 
@@ -261,8 +261,8 @@ impl JitCompiler {
         // 内联优化
         optimizations_applied.push("function_inlining".to_string());
 
-        let compilation_time = start.elapsed();
-        let performance_score = 10.0; // 最高性能
+        let compilation_time: _ = start.elapsed();
+        let performance_score: _ = 10.0; // 最高性能
 
         Ok(CompilationResult {
             function_id: request.function_id,
@@ -276,7 +276,7 @@ impl JitCompiler {
 
     /// 获取缓存的代码
     fn get_cached_code(&self, function_id: u64) -> Option<CompilationResult> {
-        let cache = self.code_cache.read().unwrap();
+        let cache: _ = self.code_cache.read().unwrap();
         cache.get(&function_id).cloned()
     }
 
@@ -343,21 +343,23 @@ impl JitCompiler {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_jit_compiler_creation() {
-        let config = JitCompilerConfig::default();
-        let compiler = JitCompiler::new(config);
+        let config: _ = JitCompilerConfig::default();
+        let compiler: _ = JitCompiler::new(config);
 
         assert!(compiler.get_perf_stats().total_compilations == 0);
     }
 
     #[test]
     fn test_tier_selection() {
-        let config = JitCompilerConfig::default();
-        let compiler = JitCompiler::new(config);
+        let config: _ = JitCompilerConfig::default();
+        let compiler: _ = JitCompiler::new(config);
 
-        let hot_request = CompilationRequest {
+        let hot_request: _ = CompilationRequest {
             function_id: 1,
             source_code: "function test() { }".to_string(),
             tier: CompilationTier::Interpreter,
@@ -365,16 +367,16 @@ mod tests {
             optimization_hints: vec![],
         };
 
-        let result = compiler.compile(hot_request).unwrap();
+        let result: _ = compiler.compile(hot_request).unwrap();
         assert_eq!(result.tier, CompilationTier::Optimizing);
     }
 
     #[test]
     fn test_performance_stats() {
-        let config = JitCompilerConfig::default();
-        let compiler = JitCompiler::new(config);
+        let config: _ = JitCompilerConfig::default();
+        let compiler: _ = JitCompiler::new(config);
 
-        let request = CompilationRequest {
+        let request: _ = CompilationRequest {
             function_id: 1,
             source_code: "function test() { return 42; }".to_string(),
             tier: CompilationTier::Baseline,
@@ -382,9 +384,9 @@ mod tests {
             optimization_hints: vec![],
         };
 
-        let _ = compiler.compile(request);
+        let _: _ = compiler.compile(request);
 
-        let stats = compiler.get_perf_stats();
+        let stats: _ = compiler.get_perf_stats();
         assert!(stats.total_compilations > 0);
         assert!(stats.baseline_compilations > 0);
     }

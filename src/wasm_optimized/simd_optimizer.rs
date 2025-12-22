@@ -9,6 +9,8 @@ use anyhow::{Result, Context};
 use tracing::{debug, info};
 
 use rayon::prelude::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// SIMD 优化结果
 #[derive(Debug, Clone)]
@@ -43,13 +45,13 @@ impl WasmSimdOptimizer {
     pub fn new() -> Result<Self> {
         info!("🚀 初始化 WASM SIMD 优化器");
 
-        let simd_enabled = true;
-        let vector_width = 128; // 128 位 SIMD (AVX, SSE, NEON)
+        let simd_enabled: _ = true;
+        let vector_width: _ = 128; // 128 位 SIMD (AVX, SSE, NEON)
 
-        let optimizer = Self {
+        let optimizer: _ = Self {
             simd_enabled,
             vector_width,
-            optimizations_applied: Arc::new(std::sync::Mutex::new(Vec::new())),
+            optimizations_applied: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new()))),
         };
 
         if simd_enabled {
@@ -63,24 +65,24 @@ impl WasmSimdOptimizer {
 
     /// 优化 WASM 模块的 SIMD 指令
     pub fn optimize_module(&self, module: &mut Module) -> Result<SimdOptimizationResult> {
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
         info!("🔧 开始 SIMD 优化");
 
         // 1. 向量数学运算优化
-        let _vector_math_optimization = self.optimize_vector_math(module)?;
+        let _vector_math_optimization: _ = self.optimize_vector_math(module)?;
 
         // 2. 内存操作优化
-        let _memory_optimization = self.optimize_memory_operations(module)?;
+        let _memory_optimization: _ = self.optimize_memory_operations(module)?;
 
         // 3. 检测并优化特定模式
-        let _pattern_optimizations = self.detect_and_optimize_patterns(module)?;
+        let _pattern_optimizations: _ = self.detect_and_optimize_patterns(module)?;
 
-        let scalar_time = 100.0; // 假设标量执行时间
-        let simd_time = scalar_time / 4.0; // SIMD 优化后时间
-        let speedup = scalar_time / simd_time;
+        let scalar_time: _ = 100.0; // 假设标量执行时间
+        let simd_time: _ = scalar_time / 4.0; // SIMD 优化后时间
+        let speedup: _ = scalar_time / simd_time;
 
-        let result = SimdOptimizationResult {
+        let result: _ = SimdOptimizationResult {
             vector_width: self.vector_width,
             elements_per_vector: (self.vector_width / 32) as usize, // 32 位元素
             scalar_time_ms: scalar_time,
@@ -93,7 +95,7 @@ impl WasmSimdOptimizer {
             ],
         };
 
-        let optimization_time = start_time.elapsed().as_secs_f64() * 1000.0;
+        let optimization_time: _ = start_time.elapsed().as_secs_f64() * 1000.0;
 
         // 记录优化
         let mut optimizations = self.optimizations_applied.lock().unwrap();
@@ -110,7 +112,7 @@ impl WasmSimdOptimizer {
         info!("🧮 优化向量数学运算");
 
         // 检测数学函数
-        let math_functions = self.detect_math_functions(module)?;
+        let math_functions: _ = self.detect_math_functions(module)?;
 
         if !math_functions.is_empty() {
             info!("📊 检测到 {} 个数学函数，将应用 SIMD 优化", math_functions.len());
@@ -131,7 +133,7 @@ impl WasmSimdOptimizer {
         info!("💾 优化内存操作");
 
         // 检测内存访问模式
-        let memory_patterns = self.detect_memory_patterns(module)?;
+        let memory_patterns: _ = self.detect_memory_patterns(module)?;
 
         if !memory_patterns.is_empty() {
             info!("📊 检测到 {} 种内存访问模式，将应用 SIMD 优化", memory_patterns.len());
@@ -213,31 +215,31 @@ impl WasmSimdOptimizer {
     pub fn benchmark_vector_operations(&self, size: usize) -> Result<SimdOptimizationResult> {
         info!("📊 向量运算基准测试 (大小: {})", size);
 
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
         // 生成测试数据
         let a: Vec<f32> = (0..size).map(|i| i as f32).collect();
         let b: Vec<f32> = (0..size).map(|i| (i * 2) as f32).collect();
 
         // 标量计算
-        let scalar_start = std::time::Instant::now();
+        let scalar_start: _ = std::time::Instant::now();
         let mut scalar_result = vec![0.0f32; size];
         for i in 0..size {
             scalar_result[i] = a[i] + b[i];
         }
-        let scalar_time = scalar_start.elapsed().as_secs_f64() * 1000.0;
+        let scalar_time: _ = scalar_start.elapsed().as_secs_f64() * 1000.0;
 
         // SIMD 计算 (模拟)
-        let simd_start = std::time::Instant::now();
+        let simd_start: _ = std::time::Instant::now();
         let mut simd_result = vec![0.0f32; size];
         simd_result.par_iter_mut().enumerate().for_each(|(i, val)| {
             *val = a[i] + b[i];
         });
-        let simd_time = simd_start.elapsed().as_secs_f64() * 1000.0;
+        let simd_time: _ = simd_start.elapsed().as_secs_f64() * 1000.0;
 
-        let speedup = scalar_time / simd_time;
+        let speedup: _ = scalar_time / simd_time;
 
-        let result = SimdOptimizationResult {
+        let result: _ = SimdOptimizationResult {
             vector_width: self.vector_width,
             elements_per_vector: (self.vector_width / 32) as usize,
             scalar_time_ms: scalar_time,
@@ -246,7 +248,7 @@ impl WasmSimdOptimizer {
             optimization_applied: vec!["向量加法".to_string()],
         };
 
-        let total_time = start_time.elapsed().as_secs_f64() * 1000.0;
+        let total_time: _ = start_time.elapsed().as_secs_f64() * 1000.0;
         info!("✅ 向量运算基准测试完成 (总耗时: {:.2}ms, 性能提升: {:.2}x)", total_time, speedup);
 
         Ok(result)
@@ -264,7 +266,7 @@ impl WasmSimdOptimizer {
 
     /// 获取已应用的优化
     pub fn get_applied_optimizations(&self) -> Vec<String> {
-        let optimizations = self.optimizations_applied.lock().unwrap();
+        let optimizations: _ = self.optimizations_applied.lock().unwrap();
         optimizations.clone()
     }
 }

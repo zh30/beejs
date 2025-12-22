@@ -3,6 +3,8 @@
 
 use std::collections::HashMap;
 use crate::ecosystem::types::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 版本选择器
 #[derive(Debug, Clone)]
@@ -19,12 +21,12 @@ impl VersionSelector {
     /// 选择最佳版本组合
     pub fn select_best_versions(
         &self,
-        dependencies: &HashMap<String, Vec<PackageInfo>>,
-    ) -> Result<HashMap<String, Version>, Box<dyn std::error::Error>> {
+        dependencies: &HashMap<String, Vec<PackageInfo, std::collections::HashMap<String, Vec<PackageInfo, String, Vec<PackageInfo>>>,
+    ) -> Result<HashMap<String, Version, std::collections::HashMap<String, Version, String, Version>>, Box<dyn std::error::Error>> {
         let mut selected = HashMap::new();
 
         for (name, packages) in dependencies {
-            let best_version = self.select_best_version(packages)?;
+            let best_version: _ = self.select_best_version(packages)?;
             selected.insert(name.clone(), best_version);
         }
 

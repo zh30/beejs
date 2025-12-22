@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 //! Standalone CI/CD Unit Tests
 //! Tests for GitOps workflows and CI/CD pipeline integration without cloud_native dependency
 
@@ -37,7 +39,7 @@ mod tests {
         pub namespace: String,
         pub chart_name: String,
         pub chart_repo: String,
-        pub values: std::collections::HashMap<String, String>,
+        pub values: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     }
 
     impl FluxHelmRelease {
@@ -118,7 +120,7 @@ mod tests {
         pub name: String,
         pub environment: String,
         pub stages: Vec<String>,
-        pub jobs: std::collections::HashMap<String, Vec<String>>,
+        pub jobs: std::collections::HashMap<String, Vec<String, std::collections::HashMap<String, Vec<String, String, Vec<String>>>,
     }
 
     impl GitLabCIPipeline {
@@ -255,7 +257,7 @@ mod tests {
     // Tests
     #[test]
     fn test_argocd_application_creation() {
-        let app = ArgoCDApplication::new(
+        let app: _ = ArgoCDApplication::new(
             "beejs-app".to_string(),
             "production".to_string(),
             "https://github.com/example/beejs-manifests.git".to_string(),
@@ -350,7 +352,7 @@ mod tests {
 
     #[test]
     fn test_blue_green_deployment() {
-        let deployment = BlueGreenDeployment::new(
+        let deployment: _ = BlueGreenDeployment::new(
             "beejs-service".to_string(),
             "production".to_string(),
             "v1.0.0".to_string(),
@@ -365,7 +367,7 @@ mod tests {
 
     #[test]
     fn test_canary_deployment() {
-        let deployment = CanaryDeployment::new(
+        let deployment: _ = CanaryDeployment::new(
             "beejs-service".to_string(),
             "production".to_string(),
             "v1.0.0".to_string(),
@@ -382,7 +384,7 @@ mod tests {
 
     #[test]
     fn test_rolling_deployment() {
-        let deployment = RollingDeployment::new(
+        let deployment: _ = RollingDeployment::new(
             "beejs-service".to_string(),
             "production".to_string(),
             "v1.0.0".to_string(),
@@ -401,7 +403,7 @@ mod tests {
 
     #[test]
     fn test_pipeline_status() {
-        let workflow = GitHubActionsWorkflow::new(
+        let workflow: _ = GitHubActionsWorkflow::new(
             "ci.yml".to_string(),
             "Build and Test".to_string(),
         );
@@ -416,7 +418,7 @@ mod tests {
             "production".to_string(),
         );
 
-        let stages = vec!["build", "test", "deploy", "notify"];
+        let stages: _ = vec!["build", "test", "deploy", "notify"];
         for stage in stages {
             pipeline.add_stage(stage.to_string());
         }

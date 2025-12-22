@@ -8,10 +8,12 @@
 
 use beejs::performance_analyzer::{PerformanceAnalyzer, ExecutionMetrics, PerformanceReport};
 use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 #[test]
 fn test_performance_analyzer_creation() {
-    let analyzer = PerformanceAnalyzer::new();
+    let analyzer: _ = PerformanceAnalyzer::new();
 
     assert_eq!(analyzer.metrics().len(), 0);
     assert!(analyzer.start_time().elapsed() >= Duration::from_secs(0));
@@ -21,7 +23,7 @@ fn test_performance_analyzer_creation() {
 fn test_measure_execution() {
     let mut analyzer = PerformanceAnalyzer::new();
 
-    let result = analyzer.measure_execution("console.log('test')", || {
+    let result: _ = analyzer.measure_execution("console.log('test')", || {
         std::thread::sleep(Duration::from_millis(10));
         42
     });
@@ -29,7 +31,7 @@ fn test_measure_execution() {
     assert_eq!(result, 42);
     assert_eq!(analyzer.metrics().len(), 1);
 
-    let metric = &analyzer.metrics()[0];
+    let metric: _ = &analyzer.metrics()[0];
     assert!(metric.execution_time_ms >= 10.0);
     assert!(metric.code_length > 0);
 }
@@ -43,7 +45,7 @@ fn test_measure_fast_execution() {
         1 + 1
     });
 
-    let metric = &analyzer.metrics()[0];
+    let metric: _ = &analyzer.metrics()[0];
     // Fast execution should be marked as cache hit
     assert!(metric.cache_hit);
 }
@@ -57,7 +59,7 @@ fn test_measure_slow_execution() {
         std::thread::sleep(Duration::from_millis(20));
     });
 
-    let metric = &analyzer.metrics()[0];
+    let metric: _ = &analyzer.metrics()[0];
     // Slow execution should not be marked as cache hit
     assert!(!metric.cache_hit);
 }
@@ -83,9 +85,9 @@ fn test_multiple_measurements() {
 
 #[test]
 fn test_generate_report_empty() {
-    let analyzer = PerformanceAnalyzer::new();
+    let analyzer: _ = PerformanceAnalyzer::new();
 
-    let report = analyzer.generate_report();
+    let report: _ = analyzer.generate_report();
 
     assert_eq!(report.total_executions, 0);
     assert_eq!(report.average_time_ms, 0.0);
@@ -118,7 +120,7 @@ fn test_generate_report_with_data() {
         code_length: 15,
     });
 
-    let report = analyzer.generate_report();
+    let report: _ = analyzer.generate_report();
 
     assert_eq!(report.total_executions, 3);
     assert!((report.average_time_ms - 10.0).abs() < 0.001);
@@ -134,7 +136,7 @@ fn test_cache_hit_rate_calculation() {
 
     // 5 cache hits out of 10 = 50%
     for i in 0..10 {
-        let cache_hit = i < 5;
+        let cache_hit: _ = i < 5;
         analyzer.add_metric(ExecutionMetrics {
             execution_time_ms: if cache_hit { 5.0 } else { 15.0 },
             cache_hit,
@@ -142,13 +144,13 @@ fn test_cache_hit_rate_calculation() {
         });
     }
 
-    let report = analyzer.generate_report();
+    let report: _ = analyzer.generate_report();
     assert!((report.cache_hit_rate - 50.0).abs() < 0.001);
 }
 
 #[test]
 fn test_performance_metrics_operations() {
-    let metric = ExecutionMetrics {
+    let metric: _ = ExecutionMetrics {
         execution_time_ms: 100.5,
         cache_hit: false,
         code_length: 256,
@@ -161,7 +163,7 @@ fn test_performance_metrics_operations() {
 
 #[test]
 fn test_serialization_deserialization() {
-    let report = PerformanceReport {
+    let report: _ = PerformanceReport {
         total_executions: 100,
         average_time_ms: 25.5,
         min_time_ms: 5.0,
@@ -171,7 +173,7 @@ fn test_serialization_deserialization() {
     };
 
     // Test JSON serialization
-    let json = serde_json::to_string(&report).unwrap();
+    let json: _ = serde_json::to_string(&report).unwrap();
     let deserialized: PerformanceReport = serde_json::from_str(&json).unwrap();
 
     assert_eq!(deserialized.total_executions, report.total_executions);
@@ -196,7 +198,7 @@ fn test_extreme_execution_times() {
         code_length: 1000,
     });
 
-    let report = analyzer.generate_report();
+    let report: _ = analyzer.generate_report();
 
     assert_eq!(report.min_time_ms, 0.001);
     assert_eq!(report.max_time_ms, 10000.0);
@@ -218,7 +220,7 @@ fn test_code_length_tracking() {
     assert_eq!(analyzer.metrics().last().unwrap().code_length, 28);
 
     // Test large string
-    let large_code = "x".repeat(1000);
+    let large_code: _ = "x".repeat(1000);
     analyzer.measure_execution(&large_code, || {});
     assert_eq!(analyzer.metrics().last().unwrap().code_length, 1000);
 }
@@ -256,7 +258,7 @@ fn test_performance_trend_detection() {
         });
     }
 
-    let report = analyzer.generate_report();
+    let report: _ = analyzer.generate_report();
 
     // Should detect improvement trend
     assert!(report.min_time_ms < report.max_time_ms);
@@ -272,7 +274,7 @@ fn test_zero_execution_time() {
         code_length: 10,
     });
 
-    let report = analyzer.generate_report();
+    let report: _ = analyzer.generate_report();
 
     assert_eq!(report.min_time_ms, 0.0);
     assert_eq!(report.max_time_ms, 0.0);
@@ -283,11 +285,11 @@ fn test_zero_execution_time() {
 fn test_large_code_size() {
     let mut analyzer = PerformanceAnalyzer::new();
 
-    let large_code = "x = 1; ".repeat(10000);
+    let large_code: _ = "x = 1; ".repeat(10000);
 
     analyzer.measure_execution(&large_code, || {});
 
-    let metric = analyzer.metrics().last().unwrap();
+    let metric: _ = analyzer.metrics().last().unwrap();
     assert_eq!(metric.code_length, large_code.len());
 }
 
@@ -296,7 +298,7 @@ fn test_performance_report_accuracy() {
     let mut analyzer = PerformanceAnalyzer::new();
 
     // Add precise measurements
-    let measurements = vec![10.0, 20.0, 30.0, 40.0, 50.0];
+    let measurements: _ = vec![10.0, 20.0, 30.0, 40.0, 50.0];
 
     for time in measurements {
         analyzer.add_metric(ExecutionMetrics {
@@ -306,7 +308,7 @@ fn test_performance_report_accuracy() {
         });
     }
 
-    let report = analyzer.generate_report();
+    let report: _ = analyzer.generate_report();
 
     assert_eq!(report.total_executions, 5);
     assert!((report.average_time_ms - 30.0).abs() < 0.001);
@@ -331,7 +333,7 @@ fn test_boundary_conditions() {
         code_length: usize::MAX,
     });
 
-    let report = analyzer.generate_report();
+    let report: _ = analyzer.generate_report();
 
     assert_eq!(report.total_executions, 2);
     assert!(report.min_time_ms.is_finite());
@@ -340,7 +342,7 @@ fn test_boundary_conditions() {
 
 #[test]
 fn test_performance_overhead() {
-    let start = std::time::Instant::now();
+    let start: _ = std::time::Instant::now();
 
     let mut analyzer = PerformanceAnalyzer::new();
 
@@ -349,7 +351,7 @@ fn test_performance_overhead() {
         analyzer.measure_execution("x = 1", || {});
     }
 
-    let overhead = start.elapsed();
+    let overhead: _ = start.elapsed();
 
     // Overhead should be reasonable (< 1 second for 1000 measurements)
     assert!(overhead < Duration::from_secs(1));
@@ -367,7 +369,7 @@ fn test_memory_usage_during_measurements() {
     }
 
     // Should still be able to generate report
-    let report = analyzer.generate_report();
+    let report: _ = analyzer.generate_report();
 
     assert_eq!(report.total_executions, 10000);
     assert!(report.total_code_executed > 0);
@@ -390,7 +392,7 @@ fn test_cache_hit_threshold() {
         code_length: 10,
     });
 
-    let report = analyzer.generate_report();
+    let report: _ = analyzer.generate_report();
 
     assert!((report.cache_hit_rate - 50.0).abs() < 0.001);
 }

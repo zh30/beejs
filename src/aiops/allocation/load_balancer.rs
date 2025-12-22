@@ -178,7 +178,7 @@ pub enum PatternType {
 #[derive(Debug, Clone)]
 pub struct LoadBalancer {
     /// 后端服务器列表
-    backends: HashMap<String, Backend>,
+    backends: HashMap<String, Backend, std::collections::HashMap<String, Backend, String, Backend>>,
     /// 负载均衡配置
     config: LoadBalancerConfig,
     /// 负载历史记录
@@ -315,16 +315,16 @@ impl LoadBalancer {
         }
 
         // 根据策略选择后端
-        let selected_backend = self.select_backend_by_strategy(&healthy_backends, request, &strategy);
+        let selected_backend: _ = self.select_backend_by_strategy(&healthy_backends, request, &strategy);
 
         // 计算负载分布
-        let distribution = self.calculate_load_distribution(&healthy_backends);
+        let distribution: _ = self.calculate_load_distribution(&healthy_backends);
 
         // 计算整体负载分数
-        let overall_load_score = self.calculate_overall_load_score(&healthy_backends);
+        let overall_load_score: _ = self.calculate_overall_load_score(&healthy_backends);
 
         // 计算资源利用率
-        let resource_utilization = self.calculate_resource_utilization(&healthy_backends);
+        let resource_utilization: _ = self.calculate_resource_utilization(&healthy_backends);
 
         // 预测响应时间改进
         let predicted_response_time_improvement =
@@ -364,7 +364,7 @@ impl LoadBalancer {
 
     /// 获取负载均衡统计信息
     pub async fn get_statistics(&self) -> LoadBalancerStatistics {
-        let healthy_count = self.backends.values().filter(|b| b.healthy).count();
+        let healthy_count: _ = self.backends.values().filter(|b| b.healthy).count();
         let total_load: f64 = self
             .backends
             .values()
@@ -466,7 +466,7 @@ impl LoadBalancer {
         }
 
         // 使用简单的轮询替代随机选择
-        let index = (std::time::SystemTime::now()
+        let index: _ = (std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs() as usize) % backends.len();
@@ -500,7 +500,7 @@ impl LoadBalancer {
         let mut best_score = f64::MIN;
 
         for backend in backends {
-            let score = self.calculate_backend_score(backend, request);
+            let score: _ = self.calculate_backend_score(backend, request);
             if score > best_score {
                 best_score = score;
                 best_backend = Some(backend);
@@ -513,12 +513,12 @@ impl LoadBalancer {
     /// 自适应选择
     fn adaptive_select(&self, backends: &[&Backend], request: &Request) -> Option<&Backend> {
         // 结合多种因素的自适应选择
-        let ai_score = self
+        let ai_score: _ = self
             .ai_intelligent_select(backends, request)
             .map(|b| self.calculate_backend_score(b, request))
             .unwrap_or(0.0);
 
-        let least_conn = self
+        let least_conn: _ = self
             .least_connections_select(backends)
             .map(|b| {
                 100.0
@@ -526,20 +526,20 @@ impl LoadBalancer {
             })
             .unwrap_or(0.0);
 
-        let fastest_resp = self
+        let fastest_resp: _ = self
             .fastest_response_select(backends)
             .map(|b| 100.0 - (b.response_time_ms / self.config.max_response_time_ms) * 100.0)
             .unwrap_or(0.0);
 
         // 综合评分
-        let combined_score = ai_score * 0.5 + least_conn * 0.3 + fastest_resp * 0.2;
+        let combined_score: _ = ai_score * 0.5 + least_conn * 0.3 + fastest_resp * 0.2;
 
         // 选择评分最高的后端
         backends
             .iter()
             .max_by(|a, b| {
-                let score_a = self.calculate_backend_score(a, request);
-                let score_b = self.calculate_backend_score(b, request);
+                let score_a: _ = self.calculate_backend_score(a, request);
+                let score_b: _ = self.calculate_backend_score(b, request);
                 score_a.partial_cmp(&score_b).unwrap_or(std::cmp::Ordering::Equal)
             })
             .copied()
@@ -548,24 +548,24 @@ impl LoadBalancer {
     /// 计算后端服务器分数
     fn calculate_backend_score(&self, backend: &Backend, request: &Request) -> f64 {
         // 负载分数 (越低越好)
-        let load_score = 100.0 - backend.current_load;
+        let load_score: _ = 100.0 - backend.current_load;
 
         // 响应时间分数 (越低越好)
-        let response_score = 100.0 - (backend.response_time_ms / self.config.max_response_time_ms) * 100.0;
+        let response_score: _ = 100.0 - (backend.response_time_ms / self.config.max_response_time_ms) * 100.0;
 
         // 错误率分数 (越低越好)
-        let error_score = 100.0 - (backend.error_rate / self.config.max_error_rate) * 100.0;
+        let error_score: _ = 100.0 - (backend.error_rate / self.config.max_error_rate) * 100.0;
 
         // 资源利用率分数
-        let resource_score = 100.0
+        let resource_score: _ = 100.0
             - ((backend.cpu_utilization + backend.memory_utilization) / 2.0);
 
         // 连接数分数 (连接越少越好)
-        let connection_score = 100.0
+        let connection_score: _ = 100.0
             - (backend.active_connections as f64 / backend.max_connections as f64) * 100.0;
 
         // 综合分数 (加权平均)
-        let weighted_score = load_score * 0.25
+        let weighted_score: _ = load_score * 0.25
             + response_score * 0.25
             + error_score * 0.2
             + resource_score * 0.15
@@ -576,8 +576,8 @@ impl LoadBalancer {
 
     /// 计算后端服务器负载
     fn calculate_backend_load(&self, backend: &Backend) -> f64 {
-        let cpu_factor = backend.cpu_utilization * 0.4;
-        let memory_factor = backend.memory_utilization * 0.3;
+        let cpu_factor: _ = backend.cpu_utilization * 0.4;
+        let memory_factor: _ = backend.memory_utilization * 0.3;
         let connection_factor =
             (backend.active_connections as f64 / backend.max_connections as f64) * 100.0 * 0.3;
 
@@ -594,7 +594,7 @@ impl LoadBalancer {
 
     /// 计算负载分布
     fn calculate_load_distribution(&self, backends: &[&Backend]) -> Vec<LoadDistribution> {
-        let total_backends = backends.len() as f64;
+        let total_backends: _ = backends.clone();len() as f64;
         if total_backends == 0.0 {
             return vec![];
         }
@@ -602,9 +602,9 @@ impl LoadBalancer {
         backends
             .iter()
             .map(|backend| {
-                let allocation_percentage = 100.0 / total_backends;
-                let load_score = 100.0 - backend.current_load;
-                let predicted_response_time = backend.response_time_ms * (1.0 + backend.current_load / 100.0);
+                let allocation_percentage: _ = 100.0 / total_backends;
+                let load_score: _ = 100.0 - backend.current_load;
+                let predicted_response_time: _ = backend.response_time_ms * (1.0 + backend.current_load / 100.0);
 
                 LoadDistribution {
                     backend_id: backend.id.clone(),
@@ -681,20 +681,20 @@ impl LoadBalancer {
             .map(|m| m.avg_cpu_utilization)
             .collect();
 
-        let avg_load = recent_loads.iter().sum::<f64>() / recent_loads.len() as f64;
-        let variance = recent_loads
+        let avg_load: _ = recent_loads.iter().sum::<f64>() / recent_loads.len() as f64;
+        let variance: _ = recent_loads
             .iter()
             .map(|&l| (l - avg_load).powi(2))
             .sum::<f64>()
             / recent_loads.len() as f64;
-        let std_dev = variance.sqrt();
-        let variability_coefficient = if avg_load > 0.0 {
+        let std_dev: _ = variance.sqrt();
+        let variability_coefficient: _ = if avg_load > 0.0 {
             std_dev / avg_load
         } else {
             0.0
         };
 
-        let pattern_type = if variability_coefficient < 0.1 {
+        let pattern_type: _ = if variability_coefficient < 0.1 {
             PatternType::Stable
         } else if variability_coefficient < 0.3 {
             PatternType::Cyclic
@@ -738,12 +738,14 @@ pub struct LoadBalancerStatistics {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_add_backend() {
         let mut lb = LoadBalancer::new_with_defaults();
 
-        let backend = Backend {
+        let backend: _ = Backend {
             id: "backend-1".to_string(),
             name: "Backend 1".to_string(),
             address: "192.168.1.1".to_string(),
@@ -759,7 +761,7 @@ mod tests {
             last_updated: Instant::now(),
         };
 
-        let result = lb.add_backend(backend).await;
+        let result: _ = lb.add_backend(backend).await;
         assert!(result);
         assert_eq!(lb.backends.len(), 1);
     }
@@ -768,7 +770,7 @@ mod tests {
     async fn test_select_backend_round_robin() {
         let mut lb = LoadBalancer::new_with_defaults();
 
-        let backend = Backend {
+        let backend: _ = Backend {
             id: "backend-1".to_string(),
             name: "Backend 1".to_string(),
             address: "192.168.1.1".to_string(),
@@ -786,7 +788,7 @@ mod tests {
 
         lb.add_backend(backend).await;
 
-        let request = Request {
+        let request: _ = Request {
             id: "req-1".to_string(),
             request_type: "GET".to_string(),
             size_kb: 10.0,
@@ -797,7 +799,7 @@ mod tests {
             estimated_processing_time_ms: 100,
         };
 
-        let result = lb.select_backend(&request, BalanceStrategy::RoundRobin).await;
+        let result: _ = lb.select_backend(&request, BalanceStrategy::RoundRobin).await;
 
         assert!(result.success);
         assert!(result.selected_backend.is_some());
@@ -805,9 +807,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_backend_score_calculation() {
-        let lb = LoadBalancer::new_with_defaults();
+        let lb: _ = LoadBalancer::new_with_defaults();
 
-        let backend = Backend {
+        let backend: _ = Backend {
             id: "backend-1".to_string(),
             name: "Backend 1".to_string(),
             address: "192.168.1.1".to_string(),
@@ -823,7 +825,7 @@ mod tests {
             last_updated: Instant::now(),
         };
 
-        let request = Request {
+        let request: _ = Request {
             id: "req-1".to_string(),
             request_type: "GET".to_string(),
             size_kb: 10.0,
@@ -834,7 +836,7 @@ mod tests {
             estimated_processing_time_ms: 100,
         };
 
-        let score = lb.calculate_backend_score(&backend, &request);
+        let score: _ = lb.calculate_backend_score(&backend, &request);
 
         assert!(score > 0.0);
         assert!(score <= 100.0);

@@ -55,10 +55,12 @@ impl PluginSandbox {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_sandbox_creation() {
-        let sandbox = PluginSandbox::new(true);
+        let sandbox: _ = PluginSandbox::new(true);
         assert!(sandbox.enabled);
     }
 
@@ -71,8 +73,8 @@ mod tests {
 
     #[test]
     fn test_execute_in_sandbox() {
-        let sandbox = PluginSandbox::new(true);
-        let result = sandbox.execute_in_sandbox("test code").unwrap();
+        let sandbox: _ = PluginSandbox::new(true);
+        let result: _ = sandbox.execute_in_sandbox("test code").unwrap();
         assert_eq!(result, "Executed in sandbox");
     }
 }

@@ -22,7 +22,7 @@ impl MemoryPreallocator {
     pub fn new(prealloc_size: usize) -> Self {
         Self {
             prealloc_size,
-            stats: Arc::new(Mutex::new(MemoryStats::new())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(MemoryStats::new()))),
             created_at: SystemTime::now(),
         }
     }
@@ -79,7 +79,7 @@ impl MemoryStats {
     }
 
     pub fn hit_rate(&self) -> f64 {
-        let total = self.cache_hits + self.cache_misses;
+        let total: _ = self.cache_hits + self.cache_misses;
         if total > 0 {
             self.cache_hits as f64 / total as f64
         } else {
@@ -101,14 +101,14 @@ pub struct JITPrecompiler {
     /// 创建时间
     created_at: SystemTime,
     /// 预编译的函数
-    precompiled_functions: HashMap<String, PrecompiledFunction>,
+    precompiled_functions: HashMap<String, PrecompiledFunction, std::collections::HashMap<String, PrecompiledFunction, String, PrecompiledFunction>>,
 }
 
 impl JITPrecompiler {
     /// 创建新的 JIT 预编译器
     pub fn new() -> Self {
         Self {
-            stats: Arc::new(Mutex::new(JITStats::new())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(JITStats::new()))),
             created_at: SystemTime::now(),
             precompiled_functions: HashMap::new(),
         }
@@ -162,7 +162,7 @@ impl JITStats {
     }
 
     pub fn hit_rate(&self) -> f64 {
-        let total = self.cache_hits + self.cache_misses;
+        let total: _ = self.cache_hits + self.cache_misses;
         if total > 0 {
             self.cache_hits as f64 / total as f64
         } else {
@@ -189,11 +189,13 @@ struct PrecompiledFunction {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_memory_preallocator_creation() {
-        let preallocator = MemoryPreallocator::new(1024);
-        let stats = preallocator.get_stats();
+        let preallocator: _ = MemoryPreallocator::new(1024);
+        let stats: _ = preallocator.get_stats();
 
         assert_eq!(stats.preallocations_performed, 0);
         assert_eq!(stats.preallocated_bytes, 0);
@@ -201,8 +203,8 @@ mod tests {
 
     #[test]
     fn test_jit_precompiler_creation() {
-        let precompiler = JITPrecompiler::new();
-        let stats = precompiler.get_stats();
+        let precompiler: _ = JITPrecompiler::new();
+        let stats: _ = precompiler.get_stats();
 
         assert_eq!(stats.precompiled_functions, 0);
         assert_eq!(stats.total_bytes_compiled, 0);
@@ -210,7 +212,7 @@ mod tests {
 
     #[test]
     fn test_stats_hit_rate() {
-        let stats = MemoryStats::new();
+        let stats: _ = MemoryStats::new();
         assert_eq!(stats.hit_rate(), 0.0);
 
         let mut stats = JITStats::new();

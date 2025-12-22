@@ -6,6 +6,8 @@
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Angular 运行时
 #[derive(Debug)]
@@ -36,16 +38,16 @@ impl AngularRuntime {
         bootstrap_component: &str,
     ) -> Result<RenderResult, Box<dyn std::error::Error>> {
         // 1. 编译组件树
-        let compiled_tree = self.compile_component_tree(app)?;
+        let compiled_tree: _ = self.compile_component_tree(app)?;
 
         // 2. 创建变更检测上下文
-        let change_context = self.change_detection.create_context(&compiled_tree)?;
+        let change_context: _ = self.change_detection.create_context(&compiled_tree)?;
 
         // 3. 渲染到 DOM
-        let rendered_dom = self.ivy_renderer.render(&compiled_tree, bootstrap_component)?;
+        let rendered_dom: _ = self.ivy_renderer.render(&compiled_tree, bootstrap_component)?;
 
         // 4. 生成 HTML
-        let html = self.generate_html(&rendered_dom)?;
+        let html: _ = self.generate_html(&rendered_dom)?;
 
         Ok(RenderResult {
             html,
@@ -63,13 +65,13 @@ impl AngularRuntime {
         url: &str,
     ) -> Result<String, Box<dyn std::error::Error>> {
         // 1. 路由解析
-        let route = self.parse_route(url)?;
+        let route: _ = self.parse_route(url)?;
 
         // 2. 预加载模块
         self.preload_modules(&route)?;
 
         // 3. 服务端渲染
-        let render_result = self.compile_and_render_app(app, "app-root").await?;
+        let render_result: _ = self.compile_and_render_app(app, "app-root").await?;
 
         Ok(render_result.html)
     }
@@ -84,7 +86,7 @@ impl AngularRuntime {
         self.zone_integration.initialize()?;
 
         // 2. 创建应用实例
-        let app_instance = self.create_app_instance(initial_state)?;
+        let app_instance: _ = self.create_app_instance(initial_state)?;
 
         // 3. 绑定变更检测
         self.change_detection.bind_to_instance(app_instance)?;
@@ -97,7 +99,7 @@ impl AngularRuntime {
 
     /// 编译组件
     pub fn compile_component(&self, component: &AngularComponent) -> Result<CompiledComponent, Box<dyn std::error::Error>> {
-        let compiled = CompiledComponent {
+        let compiled: _ = CompiledComponent {
             name: component.name.clone(),
             selector: component.selector.clone(),
             template: component.template.clone(),
@@ -113,7 +115,7 @@ impl AngularRuntime {
     /// 编译组件树
     fn compile_component_tree(&self, app: &AngularApp) -> Result<ComponentTree, Box<dyn std::error::Error>> {
         // 简化的组件树编译
-        let tree = ComponentTree {
+        let tree: _ = ComponentTree {
             root: app.root_component.clone(),
             children: Vec::new(),
         };
@@ -315,7 +317,7 @@ pub enum BindingType {
 pub struct Route {
     pub path: String,
     pub component: String,
-    pub params: HashMap<String, String>,
+    pub params: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// Ivy 渲染器
@@ -337,7 +339,7 @@ impl IvyRenderer {
         container: &str,
     ) -> Result<RenderedDom, Box<dyn std::error::Error>> {
         // 使用 Ivy 渲染器渲染组件
-        let html = format!("<div id=\"{}\">Angular App Rendered</div>", container);
+        let html: _ = format!("<div id=\"{}\">Angular App Rendered</div>", container);
 
         Ok(RenderedDom {
             html,

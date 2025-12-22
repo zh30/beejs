@@ -73,7 +73,7 @@ pub struct LogEntry {
     /// Message
     pub message: String,
     /// Additional fields
-    pub fields: HashMap<String, serde_json::Value>,
+    pub fields: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>,
     /// Source file
     pub file: Option<String>,
     /// Source line
@@ -114,7 +114,7 @@ impl LogEntry {
 
     /// Add a field
     pub fn field<T: Serialize>(&mut self, key: &str, value: T) -> Result<&mut Self> {
-        let json_value = serde_json::to_value(value)
+        let json_value: _ = serde_json::to_value(value)
             .context("Failed to serialize field value")?;
         self.fields.insert(key.to_string(), json_value);
         Ok(self)
@@ -214,9 +214,9 @@ impl LogAggregator {
         let (log_sender, mut log_receiver) = mpsc::unbounded_channel::<LogEntry>();
 
         // Spawn async log processor
-        let log_dir = config.log_dir.clone();
-        let current_file = Arc::new(Mutex::new(None));
-        let current_file_clone = current_file.clone();
+        let log_dir: _ = config.log_dir.clone();
+        let current_file: _ = Arc::new(std::sync::Mutex::new(Mutex::new(None)));
+        let current_file_clone: _ = current_file.clone();
 
         tokio::spawn(async move {
             while let Some(log_entry) = log_receiver.recv().await {
@@ -231,7 +231,7 @@ impl LogAggregator {
         Ok(Self {
             config,
             current_file,
-            log_queue: Arc::new(Mutex::new(Vec::new())),
+            log_queue: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
             log_sender,
         })
     }
@@ -274,7 +274,7 @@ impl LogAggregator {
     /// Write a log entry
     pub async fn write(&self, mut log_entry: LogEntry) -> Result<()> {
         // Add source location if available
-        let location = std::panic::Location::caller();
+        let location: _ = std::panic::Location::caller();
         log_entry.location(
             location.file(),
             location.line(),
@@ -299,14 +299,14 @@ impl LogAggregator {
     }
 
     /// Get log statistics
-    pub fn get_stats(&self) -> HashMap<String, usize> {
-        let queue = self.log_queue.lock().unwrap();
+    pub fn get_stats(&self) -> HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>> {
+        let queue: _ = self.log_queue.lock().unwrap();
         let mut stats = HashMap::new();
         stats.insert("buffered_logs".to_string(), queue.len());
 
         // Count logs by level
         for entry in queue.iter() {
-            let level_key = format!("logs_{}", entry.level.as_str().to_lowercase());
+            let level_key: _ = format!("logs_{}", entry.level.as_str().to_lowercase());
             *stats.entry(level_key).or_insert(0) += 1;
         }
 
@@ -324,7 +324,7 @@ async fn process_log_entry(
     // This would be implemented based on the aggregator config
 
     // Format the log entry
-    let formatted = if log_entry.fields.is_empty() {
+    let formatted: _ = if log_entry.fields.is_empty() {
         format!("[{}] {}: {}",
             log_entry.timestamp.format("%Y-%m-%d %H:%M:%S%.3f"),
             log_entry.level.as_str(),
@@ -355,7 +355,7 @@ async fn process_log_entry(
 
 /// Initialize global logger
 pub fn init_logger(config: LogAggregatorConfig) -> Result<Arc<LogAggregator>> {
-    let aggregator = Arc::new(LogAggregator::new(config)?);
+    let aggregator: _ = Arc::new(std::sync::Mutex::new(LogAggregator::new(config))?);
 
     // Set up tracing subscriber
     tracing_subscriber::fmt()
@@ -370,10 +370,12 @@ pub fn init_logger(config: LogAggregatorConfig) -> Result<Arc<LogAggregator>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_log_entry_creation() {
-        let entry = LogEntry::new(
+        let entry: _ = LogEntry::new(
             LogLevel::Info,
             "test-service".to_string(),
             "Test message".to_string(),
@@ -423,13 +425,13 @@ mod tests {
             .unwrap()
             .operation("test_operation");
 
-        let json = entry.to_json();
+        let json: _ = entry.to_json();
         assert!(json.is_ok());
     }
 
     #[test]
     fn test_log_aggregator_creation() {
-        let config = LogAggregatorConfig {
+        let config: _ = LogAggregatorConfig {
             service_name: "test-service".to_string(),
             log_dir: "/tmp/beejs-logs".to_string(),
             max_file_size: 10 * 1024 * 1024, // 10MB
@@ -444,7 +446,7 @@ mod tests {
             logstash_endpoint: None,
         };
 
-        let aggregator = LogAggregator::new(config);
+        let aggregator: _ = LogAggregator::new(config);
         assert!(aggregator.is_ok());
     }
 }

@@ -88,8 +88,8 @@ impl WasmModuleLoader {
     /// # 返回值
     /// * `Result<WasmModuleLoader>` - 成功返回加载器，失败返回错误
     pub fn new() -> Result<Self> {
-        let config = Config::default();
-        let engine = Arc::new(Engine::new(&config)
+        let config: _ = Config::default();
+        let engine: _ = Arc::new(std::sync::Mutex::new(Engine::new(&config))
             .context("Failed to create Wasmtime engine for module loader")?);
 
         Ok(WasmModuleLoader {
@@ -112,8 +112,8 @@ impl WasmModuleLoader {
         enable_validation: bool,
         enable_parallel: bool,
     ) -> Result<Self> {
-        let config = Config::default();
-        let engine = Arc::new(Engine::new(&config)
+        let config: _ = Config::default();
+        let engine: _ = Arc::new(std::sync::Mutex::new(Engine::new(&config))
             .context("Failed to create Wasmtime engine")?);
 
         Ok(WasmModuleLoader {
@@ -136,12 +136,12 @@ impl WasmModuleLoader {
     ///
     /// # 示例
     /// ```
-    /// let loader = WasmModuleLoader::new()?;
-    /// let wasm_bytes = read_wasm_file("module.wasm")?;
-    /// let module = loader.load_module(&wasm_bytes)?;
+    /// let loader: _ = WasmModuleLoader::new()?;
+    /// let wasm_bytes: _ = read_wasm_file("module.wasm")?;
+    /// let module: _ = loader.load_module(&wasm_bytes)?;
     /// ```
     pub fn load_module(&self, wasm_bytes: &[u8]) -> Result<WasmModule> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 检查模块大小
         if wasm_bytes.len() > self.config.max_module_size {
@@ -159,7 +159,7 @@ impl WasmModuleLoader {
         }
 
         // 编译模块
-        let module = Module::new(&self.engine, wasm_bytes)
+        let module: _ = Module::new(&self.engine, wasm_bytes)
             .context("Failed to compile WASM module")?;
 
         // 创建存储（不使用 WASI，简化实现）
@@ -169,15 +169,15 @@ impl WasmModuleLoader {
         let linker: Linker<()> = Linker::new(&self.engine);
 
         // 实例化模块
-        let instance = linker
+        let instance: _ = linker
             .instantiate(&mut store, &module)
             .context("Failed to instantiate WASM module")?;
 
         // 生成模块 ID（基于内容哈希）
-        let id = self.generate_module_id(wasm_bytes)?;
+        let id: _ = self.generate_module_id(wasm_bytes)?;
 
-        let load_time = start.elapsed();
-        let size = wasm_bytes.len();
+        let load_time: _ = start.elapsed();
+        let size: _ = wasm_bytes.len();
 
         Ok(WasmModule {
             instance,
@@ -195,7 +195,7 @@ impl WasmModuleLoader {
     /// # 返回值
     /// * `Result<WasmModule>` - 模块实例
     pub fn load_module_from_file(&self, file_path: &str) -> Result<WasmModule> {
-        let wasm_bytes = std::fs::read(file_path)
+        let wasm_bytes: _ = std::fs::read(file_path)
             .context(format!("Failed to read WASM file: {}", file_path))?;
 
         self.load_module(&wasm_bytes)
@@ -212,7 +212,7 @@ impl WasmModuleLoader {
         let mut modules = Vec::with_capacity(wasm_bytes_list.len());
 
         for wasm_bytes in wasm_bytes_list {
-            let module = self.load_module(&wasm_bytes)?;
+            let module: _ = self.load_module(&wasm_bytes)?;
             modules.push(module);
         }
 
@@ -236,7 +236,7 @@ impl WasmModuleLoader {
 
         let mut hasher = Hasher::new();
         hasher.update(wasm_bytes);
-        let hash = hasher.finalize();
+        let hash: _ = hasher.finalize();
         Ok(hash.to_hex().to_string())
     }
 
@@ -286,16 +286,18 @@ impl std::fmt::Display for LoaderStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_loader_creation() {
-        let loader = WasmModuleLoader::new();
+        let loader: _ = WasmModuleLoader::new();
         assert!(loader.is_ok());
     }
 
     #[test]
     fn test_loader_with_config() {
-        let loader = WasmModuleLoader::new_with_config(
+        let loader: _ = WasmModuleLoader::new_with_config(
             50 * 1024 * 1024, // 50MB
             true,
             true,
@@ -305,8 +307,8 @@ mod tests {
 
     #[test]
     fn test_stats() {
-        let loader = WasmModuleLoader::new().unwrap();
-        let stats = loader.get_stats();
+        let loader: _ = WasmModuleLoader::new().unwrap();
+        let stats: _ = loader.get_stats();
         assert!(stats.max_module_size > 0);
         assert!(stats.enable_validation);
     }

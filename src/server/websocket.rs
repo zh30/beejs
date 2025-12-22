@@ -11,6 +11,8 @@ use futures_util::{StreamExt, SinkExt};
 use tracing::{info, warn, error};
 use crate::Runtime;
 use super::EvalResponse;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// WebSocket server configuration
 #[derive(Debug, Clone)]
@@ -59,14 +61,14 @@ impl WebSocketServer {
     pub fn new(config: WebSocketConfig, runtime: Runtime) -> Self {
         Self {
             config,
-            runtime: Arc::new(Mutex::new(runtime)),
+            runtime: Arc::new(std::sync::Mutex::new(Mutex::new(runtime))),
         }
     }
 
     /// Start the WebSocket server
     pub async fn start(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let addr = format!("{}:{}", self.config.host, self.config.port);
-        let listener = TcpListener::bind(&addr).await
+        let addr: _ = format!("{}:{}", self.config.host, self.config.port);
+        let listener: _ = TcpListener::bind(&addr).await
             .map_err(|e| format!("Failed to bind WebSocket server to {}: {}", addr, e))?;
 
         info!("🔌 WebSocket server started on ws://{}", addr);
@@ -77,7 +79,7 @@ impl WebSocketServer {
             match listener.accept().await {
                 Ok((stream, peer_addr)) => {
                     info!("New WebSocket connection from {}", peer_addr);
-                    let runtime_clone = self.runtime.clone();
+                    let runtime_clone: _ = self.runtime.clone();
                     tokio::spawn(async move {
                         if let Err(e) = Self::handle_connection(stream, runtime_clone).await {
                             error!("WebSocket connection error: {}", e);
@@ -97,7 +99,7 @@ impl WebSocketServer {
         runtime: Arc<Mutex<Runtime>>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Accept the WebSocket connection
-        let ws_stream = accept_async(stream).await?;
+        let ws_stream: _ = accept_async(stream).await?;
 
         info!("WebSocket connection established");
 
@@ -107,7 +109,7 @@ impl WebSocketServer {
 
         while connection_alive {
             // Receive message with timeout
-            let message = tokio::time::timeout(
+            let message: _ = tokio::time::timeout(
                 std::time::Duration::from_secs(30),
                 receiver.next()
             ).await;
@@ -157,16 +159,16 @@ impl WebSocketServer {
                         match msg {
                             WebSocketMessage::Eval { code, timeout: _, optimize: _ } => {
                                 // Execute the code
-                                let start_time = std::time::Instant::now();
-                                let result = {
+                                let start_time: _ = std::time::Instant::now();
+                                let result: _ = {
                                     let runtime_guard = runtime.lock().map_err(|e| format!("Runtime lock error: {}", e))?;
                                     runtime_guard.execute_code(&code)
                                 };
 
-                                let execution_time_ms = start_time.elapsed().as_millis() as u64;
+                                let execution_time_ms: _ = start_time.elapsed().as_millis() as u64;
 
                                 // Send response
-                                let response = match result {
+                                let response: _ = match result {
                                     Ok(output) => EvalResponse {
                                         result: output,
                                         execution_time_ms,
@@ -182,21 +184,21 @@ impl WebSocketServer {
                                 };
 
                                 if let Ok(response_json) = serde_json::to_string(&response) {
-                                    let _ = sender.send(Message::Text(response_json)).await;
+                                    let _: _ = sender.send(Message::Text(response_json)).await;
                                 }
                             }
                             WebSocketMessage::Ping => {
-                                let _ = sender.send(Message::Text(r#"{"type":"pong"}"#.to_string())).await;
+                                let _: _ = sender.send(Message::Text(r#"{"type":"pong"}"#.to_string())).await;
                             }
                             WebSocketMessage::Pong => {
                                 // Respond to pong with ack
-                                let _ = sender.send(Message::Text(r#"{"type":"ack"}"#.to_string())).await;
+                                let _: _ = sender.send(Message::Text(r#"{"type":"ack"}"#.to_string())).await;
                             }
                         }
                     }
                     Err(e) => {
                         // Send error response
-                        let error_response = EvalResponse {
+                        let error_response: _ = EvalResponse {
                             result: String::new(),
                             execution_time_ms: 0,
                             cached: false,
@@ -204,7 +206,7 @@ impl WebSocketServer {
                         };
 
                         if let Ok(response_json) = serde_json::to_string(&error_response) {
-                            let _ = sender.send(Message::Text(response_json)).await;
+                            let _: _ = sender.send(Message::Text(response_json)).await;
                         }
                     }
                 }

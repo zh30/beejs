@@ -118,7 +118,7 @@ pub struct AiMemoryPool {
     config: AiMemoryPoolConfig,
     blocks: Arc<Mutex<Vec<MemoryBlock>>>,
     available_blocks: Arc<Mutex<Vec<usize>>>, // 存储可用的block ID
-    model_configs: Arc<Mutex<HashMap<String, ModelMemoryConfig>>>,
+    model_configs: Arc<Mutex<HashMap<String, ModelMemoryConfig, std::collections::HashMap<String, ModelMemoryConfig, String, ModelMemoryConfig>>>>,
     stats: Arc<Mutex<MemoryPoolStats>>,
     total_allocated: Arc<Mutex<usize>>,
     peak_allocated: Arc<Mutex<usize>>,
@@ -141,7 +141,7 @@ pub struct MemoryPoolStats {
 impl MemoryPoolStats {
     #[allow(dead_code)]
     pub fn cache_hit_rate(&self) -> f64 {
-        let total = self.cache_hits + self.cache_misses;
+        let total: _ = self.cache_hits + self.cache_misses;
         if total > 0 {
             self.cache_hits as f64 / total as f64
         } else {
@@ -152,8 +152,8 @@ impl MemoryPoolStats {
     #[allow(dead_code)]
     pub fn record_allocation(&mut self, time: Duration) {
         self.total_allocations += 1;
-        let current_avg = self.average_allocation_time;
-        let count = self.total_allocations as u64;
+        let current_avg: _ = self.average_allocation_time;
+        let count: _ = self.total_allocations as u64;
         self.average_allocation_time = Duration::from_nanos(
             (current_avg.as_nanos() as u64 * (count - 1) + time.as_nanos() as u64) / count,
         );
@@ -162,8 +162,8 @@ impl MemoryPoolStats {
     #[allow(dead_code)]
     pub fn record_deallocation(&mut self, time: Duration) {
         self.total_deallocations += 1;
-        let current_avg = self.average_deallocation_time;
-        let count = self.total_deallocations as u64;
+        let current_avg: _ = self.average_deallocation_time;
+        let count: _ = self.total_deallocations as u64;
         self.average_deallocation_time = Duration::from_nanos(
             (current_avg.as_nanos() as u64 * (count - 1) + time.as_nanos() as u64) / count,
         );
@@ -174,14 +174,14 @@ impl MemoryPoolStats {
 impl AiMemoryPool {
     /// 创建新的AI内存池
     pub fn new(config: AiMemoryPoolConfig) -> Self {
-        let pool = Self {
+        let pool: _ = Self {
             config: config.clone(),
-            blocks: Arc::new(Mutex::new(Vec::new())),
-            available_blocks: Arc::new(Mutex::new(Vec::new())),
-            model_configs: Arc::new(Mutex::new(HashMap::new())),
-            stats: Arc::new(Mutex::new(MemoryPoolStats::default())),
-            total_allocated: Arc::new(Mutex::new(0)),
-            peak_allocated: Arc::new(Mutex::new(0)),
+            blocks: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            available_blocks: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            model_configs: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(MemoryPoolStats::default()))),
+            total_allocated: Arc::new(std::sync::Mutex::new(Mutex::new(0))),
+            peak_allocated: Arc::new(std::sync::Mutex::new(Mutex::new(0))),
         };
 
         // 根据策略进行预分配
@@ -198,18 +198,18 @@ impl AiMemoryPool {
                 block_count,
             } => {
                 for i in 0..*block_count {
-                    let block = self.create_block(i, *block_size);
+                    let block: _ = self.create_block(i, *block_size);
                     self.add_block(block);
                 }
             }
             PreallocationStrategy::ModelBased { common_models } => {
                 for (i, model_config) in common_models.iter().enumerate() {
-                    let weights_block = self.create_block(i * 4, model_config.weights_memory);
+                    let weights_block: _ = self.create_block(i * 4, model_config.weights_memory);
                     let activations_block =
                         self.create_block(i * 4 + 1, model_config.activations_memory);
                     let gradients_block =
                         self.create_block(i * 4 + 2, model_config.gradients_memory);
-                    let temp_block = self.create_block(i * 4 + 3, model_config.temp_buffer_size);
+                    let temp_block: _ = self.create_block(i * 4 + 3, model_config.temp_buffer_size);
 
                     self.add_block(weights_block);
                     self.add_block(activations_block);
@@ -219,7 +219,7 @@ impl AiMemoryPool {
             }
             PreallocationStrategy::Adaptive => {
                 // 自适应预分配：预分配一些常用大小的块
-                let common_sizes = [
+                let common_sizes: _ = [
                     1024,    // 1KB - 小文本
                     4096,    // 4KB - 中文本
                     16384,   // 16KB - 大文本
@@ -230,7 +230,7 @@ impl AiMemoryPool {
 
                 for (i, &size) in common_sizes.iter().enumerate() {
                     for _ in 0..2 {
-                        let block = self.create_block(i, size);
+                        let block: _ = self.create_block(i, size);
                         self.add_block(block);
                     }
                 }
@@ -265,7 +265,7 @@ impl AiMemoryPool {
 
     /// 分配内存块
     pub fn allocate(&self, size: usize) -> Option<MemoryBlock> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 首先尝试从可用块中获取（零拷贝路径）
         {
@@ -275,12 +275,12 @@ impl AiMemoryPool {
             if let Some(&block_id) = available.iter().find(|&&id| blocks[id].size >= size) {
                 // 找到合适的块
                 available.retain(|&id| id != block_id);
-                let block = &mut blocks[block_id];
+                let block: _ = &mut blocks[block_id];
 
                 block.last_accessed = Instant::now();
                 block.access_count += 1;
 
-                let allocation_time = start_time.elapsed();
+                let allocation_time: _ = start_time.elapsed();
                 {
                     let mut stats = self.stats.lock().unwrap();
                     stats.cache_hits += 1;
@@ -302,15 +302,15 @@ impl AiMemoryPool {
         }
 
         // 如果没有合适的块，创建新块
-        let new_block_id = {
+        let new_block_id: _ = {
             let blocks = self.blocks.lock().unwrap();
             blocks.len()
         };
 
-        let block = self.create_block(new_block_id, size);
+        let block: _ = self.create_block(new_block_id, size);
         self.add_block(block.clone());
 
-        let allocation_time = start_time.elapsed();
+        let allocation_time: _ = start_time.elapsed();
         {
             let mut stats = self.stats.lock().unwrap();
             stats.cache_misses += 1;
@@ -322,9 +322,9 @@ impl AiMemoryPool {
 
     /// 释放内存块
     pub fn deallocate(&self, block_id: usize) {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
-        let block_size = {
+        let block_size: _ = {
             let blocks = self.blocks.lock().unwrap();
             blocks.get(block_id).map(|b| b.size).unwrap_or(0)
         };
@@ -336,7 +336,7 @@ impl AiMemoryPool {
             }
         }
 
-        let deallocation_time = start_time.elapsed();
+        let deallocation_time: _ = start_time.elapsed();
         {
             let mut stats = self.stats.lock().unwrap();
             stats.record_deallocation(deallocation_time);
@@ -351,23 +351,23 @@ impl AiMemoryPool {
     /// 预热模型内存
     pub fn warmup_model(&self, model_config: &ModelMemoryConfig) {
         // 极优化：只分配小量内存用于标记，避免大块分配开销
-        let warmup_size = std::cmp::min(
+        let warmup_size: _ = std::cmp::min(
             (model_config.total_memory() as f32 * model_config.warmup_ratio) as usize,
             64 * 1024 // 限制为 64KB
         );
 
         // 只做一次小量分配用于缓存预热
         if warmup_size > 0 {
-            let _ = self.allocate(warmup_size);
+            let _: _ = self.allocate(warmup_size);
         }
     }
 
     /// 获取内存使用情况
     pub fn get_memory_usage(&self) -> MemoryUsage {
-        let total_allocated = *self.total_allocated.lock().unwrap();
-        let peak_allocated = *self.peak_allocated.lock().unwrap();
-        let pool_capacity = self.config.max_pool_size;
-        let utilization = total_allocated as f64 / pool_capacity as f64;
+        let total_allocated: _ = *self.total_allocated.lock().unwrap();
+        let peak_allocated: _ = *self.peak_allocated.lock().unwrap();
+        let pool_capacity: _ = self.config.max_pool_size;
+        let utilization: _ = total_allocated as f64 / pool_capacity as f64;
 
         MemoryUsage {
             total_allocated,
@@ -386,15 +386,15 @@ impl AiMemoryPool {
 
     /// 清理未使用的内存块
     pub fn cleanup_unused(&self) {
-        let cutoff = Instant::now() - Duration::from_secs(self.config.auto_cleanup_interval);
-        let blocks = self.blocks.lock().unwrap();
+        let cutoff: _ = Instant::now() - Duration::from_secs(self.config.auto_cleanup_interval);
+        let blocks: _ = self.blocks.lock().unwrap();
         let mut available = self.available_blocks.lock().unwrap();
 
         // 清理长时间未访问的块
-        let before_count = available.len();
+        let before_count: _ = available.len();
         available.retain(|&id| blocks[id].last_accessed > cutoff);
 
-        let cleaned = before_count - available.len();
+        let cleaned: _ = before_count - available.len();
         if cleaned > 0 {
             let mut stats = self.stats.lock().unwrap();
             stats.fragmentation_count += 1;
@@ -403,7 +403,7 @@ impl AiMemoryPool {
 
     /// 碎片整理
     pub fn defragment(&self) {
-        let _blocks = self.blocks.lock().unwrap();
+        let _blocks: _ = self.blocks.lock().unwrap();
         let mut available = self.available_blocks.lock().unwrap();
 
         // 简单的碎片整理：重新组织可用块
@@ -471,7 +471,7 @@ impl MemoryUsage {
 /// 便利函数：创建大语言模型内存池
 #[allow(dead_code)]
 pub fn create_llm_memory_pool() -> AiMemoryPool {
-    let config = AiMemoryPoolConfig {
+    let config: _ = AiMemoryPoolConfig {
         max_pool_size: 2 * 1024 * 1024 * 1024, // 2GB
         max_block_size: 128 * 1024 * 1024,     // 128MB
         // 优化：使用 OnDemand 策略避免预分配开销
@@ -486,7 +486,7 @@ pub fn create_llm_memory_pool() -> AiMemoryPool {
 /// 便利函数：创建计算机视觉内存池
 #[allow(dead_code)]
 pub fn create_cv_memory_pool() -> AiMemoryPool {
-    let config = AiMemoryPoolConfig {
+    let config: _ = AiMemoryPoolConfig {
         max_pool_size: 4 * 1024 * 1024 * 1024, // 4GB
         max_block_size: 256 * 1024 * 1024,     // 256MB
         preallocation_strategy: PreallocationStrategy::Fixed {
@@ -508,10 +508,12 @@ pub fn create_general_ai_memory_pool() -> AiMemoryPool {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_memory_block_creation() {
-        let block = MemoryBlock {
+        let block: _ = MemoryBlock {
             id: 0,
             size: 1024,
             data: vec![0; 1024],
@@ -526,7 +528,7 @@ mod tests {
 
     #[test]
     fn test_model_memory_config() {
-        let config = ModelMemoryConfig::new("test-model", 1000, 500);
+        let config: _ = ModelMemoryConfig::new("test-model", 1000, 500);
         assert_eq!(config.model_name, "test-model");
         assert_eq!(config.weights_memory, 1000);
         assert_eq!(config.activations_memory, 500);
@@ -535,29 +537,29 @@ mod tests {
 
     #[test]
     fn test_memory_pool_allocation() {
-        let pool = AiMemoryPool::new(AiMemoryPoolConfig::default());
-        let block = pool.allocate(1024).unwrap();
+        let pool: _ = AiMemoryPool::new(AiMemoryPoolConfig::default());
+        let block: _ = pool.allocate(1024).unwrap();
         assert!(block.size >= 1024);
     }
 
     #[test]
     fn test_memory_pool_deallocation() {
-        let pool = AiMemoryPool::new(AiMemoryPoolConfig::default());
-        let block = pool.allocate(1024).unwrap();
-        let block_id = block.id;
+        let pool: _ = AiMemoryPool::new(AiMemoryPoolConfig::default());
+        let block: _ = pool.allocate(1024).unwrap();
+        let block_id: _ = block.id;
 
         pool.deallocate(block_id);
         // 验证块已释放（通过重新分配获得相同的块）
-        let new_block = pool.allocate(1024).unwrap();
+        let new_block: _ = pool.allocate(1024).unwrap();
         assert_eq!(new_block.id, block_id);
     }
 
     #[test]
     fn test_memory_usage() {
-        let pool = AiMemoryPool::new(AiMemoryPoolConfig::default());
-        let _block = pool.allocate(1024).unwrap();
+        let pool: _ = AiMemoryPool::new(AiMemoryPoolConfig::default());
+        let _block: _ = pool.allocate(1024).unwrap();
 
-        let usage = pool.get_memory_usage();
+        let usage: _ = pool.get_memory_usage();
         assert!(usage.total_allocated >= 1024);
         assert!(usage.utilization > 0.0);
         assert!(!usage.is_near_capacity(0.5));
@@ -565,25 +567,25 @@ mod tests {
 
     #[test]
     fn test_stats_tracking() {
-        let pool = AiMemoryPool::new(AiMemoryPoolConfig::default());
-        let _block = pool.allocate(1024).unwrap();
+        let pool: _ = AiMemoryPool::new(AiMemoryPoolConfig::default());
+        let _block: _ = pool.allocate(1024).unwrap();
 
-        let stats = pool.get_stats();
+        let stats: _ = pool.get_stats();
         assert_eq!(stats.total_allocations, 1);
         assert!(stats.average_allocation_time > Duration::from_nanos(0));
     }
 
     #[test]
     fn test_llm_memory_pool() {
-        let pool = create_llm_memory_pool();
-        let usage = pool.get_memory_usage();
+        let pool: _ = create_llm_memory_pool();
+        let usage: _ = pool.get_memory_usage();
         assert!(usage.pool_capacity >= 2 * 1024 * 1024 * 1024);
     }
 
     #[test]
     fn test_cv_memory_pool() {
-        let pool = create_cv_memory_pool();
-        let usage = pool.get_memory_usage();
+        let pool: _ = create_cv_memory_pool();
+        let usage: _ = pool.get_memory_usage();
         assert!(usage.pool_capacity >= 4 * 1024 * 1024 * 1024);
     }
 }

@@ -20,19 +20,19 @@ mod stage85_aiops_tests {
         use beejs::aiops::prediction_engine::{PredictionEngine, AnomalyDetector};
         use beejs::aiops::anomaly_detection::{Anomaly, AnomalyType};
 
-        let detector = AnomalyDetector::new();
+        let detector: _ = AnomalyDetector::new();
 
         // 创建模拟异常数据
-        let normal_data = vec![1.0, 1.1, 0.9, 1.05, 1.0];
-        let anomalous_data = vec![1.0, 1.1, 10.0, 1.0, 0.8]; // 包含异常值 10.0
+        let normal_data: _ = vec![1.0, 1.1, 0.9, 1.05, 1.0];
+        let anomalous_data: _ = vec![1.0, 1.1, 10.0, 1.0, 0.8]; // 包含异常值 10.0
 
-        let anomalies = detector.detect_anomalies(&anomalous_data).await.unwrap();
+        let anomalies: _ = detector.detect_anomalies(&anomalous_data).await.unwrap();
 
         // 验证检测到异常
         assert!(!anomalies.is_empty(), "应该检测到至少一个异常");
 
         // 验证异常类型
-        let has_spike = anomalies.iter().any(|a| a.anomaly_type == AnomalyType::Spike);
+        let has_spike: _ = anomalies.iter().any(|a| a.anomaly_type == AnomalyType::Spike);
         assert!(has_spike, "应该检测到峰值异常");
     }
 
@@ -40,30 +40,30 @@ mod stage85_aiops_tests {
     async fn test_failure_prediction() {
         use beejs::aiops::prediction_engine::{PredictionEngine, Prediction, MetricType};
 
-        let engine = PredictionEngine::new();
+        let engine: _ = PredictionEngine::new();
 
         // 创建模拟系统指标
-        let cpu_metrics = vec![
+        let cpu_metrics: _ = vec![
             create_metric(MetricType::CpuUsage, 50.0),
             create_metric(MetricType::CpuUsage, 70.0),
             create_metric(MetricType::CpuUsage, 90.0),
         ];
 
-        let memory_metrics = vec![
+        let memory_metrics: _ = vec![
             create_metric(MetricType::MemoryUsage, 60.0),
             create_metric(MetricType::MemoryUsage, 80.0),
             create_metric(MetricType::MemoryUsage, 95.0),
         ];
 
-        let metrics = [cpu_metrics, memory_metrics].concat();
+        let metrics: _ = [cpu_metrics, memory_metrics].concat();
 
-        let predictions = engine.predict_failures(&metrics).await.unwrap();
+        let predictions: _ = engine.predict_failures(&metrics).await.unwrap();
 
         // 验证预测结果
         assert!(!predictions.is_empty(), "应该生成至少一个预测");
 
         // 验证高资源使用率预测
-        let high_cpu_prediction = predictions.iter()
+        let high_cpu_prediction: _ = predictions.iter()
             .find(|p| p.metric_type == MetricType::CpuUsage);
 
         assert!(high_cpu_prediction.is_some(), "应该预测 CPU 使用率问题");
@@ -77,18 +77,18 @@ mod stage85_aiops_tests {
     async fn test_trend_analysis() {
         use beejs::aiops::prediction_engine::{PredictionEngine, TrendAnalysis, TrendDirection};
 
-        let engine = PredictionEngine::new();
+        let engine: _ = PredictionEngine::new();
 
         // 创建上升趋势数据
-        let increasing_data = create_time_series(10, 10.0, 1.0);
-        let trend_report = engine.analyze_trends(&increasing_data).await.unwrap();
+        let increasing_data: _ = create_time_series(10, 10.0, 1.0);
+        let trend_report: _ = engine.analyze_trends(&increasing_data).await.unwrap();
 
         assert_eq!(trend_report.direction, TrendDirection::Increasing);
         assert!(trend_report.slope > 0.0, "上升趋势的斜率应该 > 0");
 
         // 创建下降趋势数据
-        let decreasing_data = create_time_series(10, 100.0, -1.0);
-        let trend_report = engine.analyze_trends(&decreasing_data).await.unwrap();
+        let decreasing_data: _ = create_time_series(10, 100.0, -1.0);
+        let trend_report: _ = engine.analyze_trends(&decreasing_data).await.unwrap();
 
         assert_eq!(trend_report.direction, TrendDirection::Decreasing);
         assert!(trend_report.slope < 0.0, "下降趋势的斜率应该 < 0");
@@ -98,11 +98,11 @@ mod stage85_aiops_tests {
     async fn test_baseline_calculation() {
         use beejs::aiops::anomaly_detection::{BaselineCalculator, Baseline};
 
-        let calculator = BaselineCalculator::new();
+        let calculator: _ = BaselineCalculator::new();
 
         // 使用稳定数据计算基线
-        let stable_data = vec![1.0, 1.05, 0.95, 1.02, 0.98, 1.01];
-        let baseline = calculator.calculate_baseline(&stable_data).await.unwrap();
+        let stable_data: _ = vec![1.0, 1.05, 0.95, 1.02, 0.98, 1.01];
+        let baseline: _ = calculator.calculate_baseline(&stable_data).await.unwrap();
 
         assert!((baseline.mean - 1.0).abs() < 0.05, "基线均值应该接近 1.0");
         assert!(baseline.std_dev > 0.0, "标准差应该 > 0");
@@ -117,10 +117,10 @@ mod stage85_aiops_tests {
         use beejs::aiops::root_cause_analysis::{RootCauseAnalyzer, Incident, IncidentType};
         use beejs::aiops::knowledge_graph::{CausalGraph, Causality};
 
-        let analyzer = RootCauseAnalyzer::new();
+        let analyzer: _ = RootCauseAnalyzer::new();
 
         // 创建模拟事件
-        let incident = Incident {
+        let incident: _ = Incident {
             id: "INC-001".to_string(),
             incident_type: IncidentType::ServiceOutage,
             timestamp: SystemTime::now(),
@@ -128,7 +128,7 @@ mod stage85_aiops_tests {
             symptoms: vec!["high-latency".to_string()],
         };
 
-        let analysis = analyzer.analyze_root_cause(&incident).await.unwrap();
+        let analysis: _ = analyzer.analyze_root_cause(&incident).await.unwrap();
 
         assert!(!analysis.root_causes.is_empty(), "应该识别至少一个根因");
         assert!(
@@ -141,10 +141,10 @@ mod stage85_aiops_tests {
     async fn test_change_impact_analysis() {
         use beejs::aiops::root_cause_analysis::{RootCauseAnalyzer, Change, ChangeType};
 
-        let analyzer = RootCauseAnalyzer::new();
+        let analyzer: _ = RootCauseAnalyzer::new();
 
         // 创建模拟变更
-        let change = Change {
+        let change: _ = Change {
             id: "CHG-001".to_string(),
             change_type: ChangeType::Configuration,
             timestamp: SystemTime::now() - Duration::from_secs(3600), // 1小时前
@@ -152,7 +152,7 @@ mod stage85_aiops_tests {
             deployed_by: "user@company.com".to_string(),
         };
 
-        let impact_analysis = analyzer.analyze_change_impact(&change).await.unwrap();
+        let impact_analysis: _ = analyzer.analyze_change_impact(&change).await.unwrap();
 
         assert!(impact_analysis.risk_level >= 0.0, "风险级别应该 >= 0");
         assert!(impact_analysis.risk_level <= 1.0, "风险级别应该 <= 1");
@@ -162,17 +162,17 @@ mod stage85_aiops_tests {
     async fn test_knowledge_graph_construction() {
         use beejs::aiops::knowledge_graph::{KnowledgeGraph, Entity, Relationship, EntityType};
 
-        let graph = KnowledgeGraph::new();
+        let graph: _ = KnowledgeGraph::new();
 
         // 创建实体
-        let service = Entity {
+        let service: _ = Entity {
             id: "service-api".to_string(),
             entity_type: EntityType::Service,
             name: "API Service".to_string(),
             properties: std::collections::HashMap::new(),
         };
 
-        let database = Entity {
+        let database: _ = Entity {
             id: "db-primary".to_string(),
             entity_type: EntityType::Database,
             name: "Primary Database".to_string(),
@@ -180,7 +180,7 @@ mod stage85_aiops_tests {
         };
 
         // 添加关系
-        let relationship = Relationship {
+        let relationship: _ = Relationship {
             from_entity_id: "service-api".to_string(),
             to_entity_id: "db-primary".to_string(),
             relationship_type: "depends_on".to_string(),
@@ -192,7 +192,7 @@ mod stage85_aiops_tests {
         graph.add_relationship(&relationship).await.unwrap();
 
         // 查询关系
-        let relationships = graph.get_relationships("service-api").await.unwrap();
+        let relationships: _ = graph.get_relationships("service-api").await.unwrap();
         assert_eq!(relationships.len(), 1, "应该有 1 个关系");
         assert_eq!(relationships[0].relationship_type, "depends_on");
     }
@@ -201,14 +201,14 @@ mod stage85_aiops_tests {
     async fn test_relationship_inference() {
         use beejs::aiops::knowledge_graph::{KnowledgeGraph, InferenceEngine};
 
-        let graph = KnowledgeGraph::new();
-        let inference_engine = InferenceEngine::new(Arc::new(graph));
+        let graph: _ = KnowledgeGraph::new();
+        let inference_engine: _ = InferenceEngine::new(Arc::new(std::sync::Mutex::new(graph)));
 
         // 添加已知关系
         add_sample_data(&inference_engine.graph).await;
 
         // 推断新关系
-        let inferred_relationships = inference_engine.infer_relationships().await.unwrap();
+        let inferred_relationships: _ = inference_engine.infer_relationships().await.unwrap();
 
         assert!(!inferred_relationships.is_empty(), "应该推断出一些关系");
     }
@@ -221,10 +221,10 @@ mod stage85_aiops_tests {
     async fn test_alert_deduplication() {
         use beejs::aiops::alert_aggregation::{AlertAggregator, Alert, AlertSeverity};
 
-        let aggregator = AlertAggregator::new();
+        let aggregator: _ = AlertAggregator::new();
 
         // 创建重复告警
-        let alert1 = Alert {
+        let alert1: _ = Alert {
             id: "ALERT-001".to_string(),
             severity: AlertSeverity::High,
             source: "monitoring-system".to_string(),
@@ -233,7 +233,7 @@ mod stage85_aiops_tests {
             labels: std::collections::HashMap::new(),
         };
 
-        let alert2 = Alert {
+        let alert2: _ = Alert {
             id: "ALERT-002".to_string(), // 不同的 ID
             severity: AlertSeverity::High,
             source: "monitoring-system".to_string(),
@@ -242,8 +242,8 @@ mod stage85_aiops_tests {
             labels: std::collections::HashMap::new(),
         };
 
-        let alerts = vec![alert1, alert2];
-        let deduplicated = aggregator.deduplicate_alerts(&alerts).await.unwrap();
+        let alerts: _ = vec![alert1, alert2];
+        let deduplicated: _ = aggregator.deduplicate_alerts(&alerts).await.unwrap();
 
         assert_eq!(
             deduplicated.len(),
@@ -256,17 +256,17 @@ mod stage85_aiops_tests {
     async fn test_alert_aggregation() {
         use beejs::aiops::alert_aggregation::{AlertAggregator, Alert, AggregationStrategy};
 
-        let aggregator = AlertAggregator::new();
+        let aggregator: _ = AlertAggregator::new();
 
         // 创建相关告警
-        let alerts = create_related_alerts();
+        let alerts: _ = create_related_alerts();
 
-        let aggregated = aggregator.aggregate_alerts(&alerts).await.unwrap();
+        let aggregated: _ = aggregator.aggregate_alerts(&alerts).await.unwrap();
 
         assert!(!aggregated.is_empty(), "应该有聚合后的告警");
 
         // 验证相关告警被聚合
-        let first_group = &aggregated[0];
+        let first_group: _ = &aggregated[0];
         assert!(
             first_group.alert_count > 1,
             "聚合组应该包含多个告警"
@@ -277,18 +277,18 @@ mod stage85_aiops_tests {
     async fn test_alert_suppression() {
         use beejs::aiops::alert_aggregation::{AlertAggregator, Alert, SuppressionRule};
 
-        let aggregator = AlertAggregator::new();
+        let aggregator: _ = AlertAggregator::new();
 
         // 创建抑制规则
-        let suppression_rule = SuppressionRule {
+        let suppression_rule: _ = SuppressionRule {
             source_pattern: "monitoring-*".to_string(),
             message_pattern: "CPU usage*".to_string(),
             suppression_window: Duration::from_secs(300), // 5分钟
         };
 
-        let alerts = create_test_alerts();
+        let alerts: _ = create_test_alerts();
 
-        let suppressed = aggregator.suppress_alerts_with_rules(&alerts, &[suppression_rule]).await.unwrap();
+        let suppressed: _ = aggregator.suppress_alerts_with_rules(&alerts, &[suppression_rule]).await.unwrap();
 
         assert!(suppressed.len() < alerts.len(), "应该有告警被抑制");
     }
@@ -297,10 +297,10 @@ mod stage85_aiops_tests {
     async fn test_alert_priority_calculation() {
         use beejs::aiops::alert_aggregation::{AlertAggregator, Alert, AlertPriority};
 
-        let aggregator = AlertAggregator::new();
+        let aggregator: _ = AlertAggregator::new();
 
         // 创建高严重性告警
-        let high_severity_alert = Alert {
+        let high_severity_alert: _ = Alert {
             id: "ALERT-HIGH".to_string(),
             severity: AlertSeverity::Critical,
             source: "core-service".to_string(),
@@ -311,7 +311,7 @@ mod stage85_aiops_tests {
             ]),
         };
 
-        let priority = aggregator.calculate_alert_priority(&high_severity_alert).await.unwrap();
+        let priority: _ = aggregator.calculate_alert_priority(&high_severity_alert).await.unwrap();
 
         assert_eq!(
             priority,
@@ -328,10 +328,10 @@ mod stage85_aiops_tests {
     async fn test_auto_remediation() {
         use beejs::aiops::auto_remediation::{AutoRemediationEngine, Incident, IncidentType};
 
-        let remediation_engine = AutoRemediationEngine::new();
+        let remediation_engine: _ = AutoRemediationEngine::new();
 
         // 创建模拟故障
-        let incident = Incident {
+        let incident: _ = Incident {
             id: "INC-002".to_string(),
             incident_type: IncidentType::HighMemoryUsage,
             timestamp: SystemTime::now(),
@@ -339,7 +339,7 @@ mod stage85_aiops_tests {
             symptoms: vec!["out-of-memory".to_string()],
         };
 
-        let remediation_result = remediation_engine.execute_remediation(&incident).await.unwrap();
+        let remediation_result: _ = remediation_engine.execute_remediation(&incident).await.unwrap();
 
         assert!(remediation_result.success, "自动修复应该成功");
         assert!(
@@ -352,10 +352,10 @@ mod stage85_aiops_tests {
     async fn test_playbook_execution() {
         use beejs::aiops::auto_remediation::{AutoRemediationEngine, Playbook, PlaybookStep};
 
-        let remediation_engine = AutoRemediationEngine::new();
+        let remediation_engine: _ = AutoRemediationEngine::new();
 
         // 创建修复手册
-        let playbook = Playbook {
+        let playbook: _ = Playbook {
             id: "PLAYBOOK-001".to_string(),
             name: "高内存使用修复".to_string(),
             steps: vec![
@@ -374,7 +374,7 @@ mod stage85_aiops_tests {
             ],
         };
 
-        let execution_result = remediation_engine.execute_playbook(&playbook).await.unwrap();
+        let execution_result: _ = remediation_engine.execute_playbook(&playbook).await.unwrap();
 
         assert!(execution_result.success, "手册执行应该成功");
         assert_eq!(
@@ -388,10 +388,10 @@ mod stage85_aiops_tests {
     async fn test_approval_workflow() {
         use beejs::aiops::auto_remediation::{AutoRemediationEngine, ChangeRequest, ChangeType};
 
-        let remediation_engine = AutoRemediationEngine::new();
+        let remediation_engine: _ = AutoRemediationEngine::new();
 
         // 创建高风险变更请求
-        let change_request = ChangeRequest {
+        let change_request: _ = ChangeRequest {
             id: "CHGREQ-001".to_string(),
             change_type: ChangeType::Production,
             description: "重启生产环境服务".to_string(),
@@ -399,7 +399,7 @@ mod stage85_aiops_tests {
             requested_by: "system".to_string(),
         };
 
-        let approval_result = remediation_engine.request_approval(&change_request).await.unwrap();
+        let approval_result: _ = remediation_engine.request_approval(&change_request).await.unwrap();
 
         assert!(
             approval_result.requires_human_approval,
@@ -411,11 +411,11 @@ mod stage85_aiops_tests {
     async fn test_fix_validation() {
         use beejs::aiops::remediation_validation::{RemediationValidator, ValidationResult};
 
-        let validator = RemediationValidator::new();
+        let validator: _ = RemediationValidator::new();
 
         // 创建模拟修复
-        let remediation_id = "REM-001".to_string();
-        let validation_result = validator.validate_fix(&remediation_id).await.unwrap();
+        let remediation_id: _ = "REM-001".to_string();
+        let validation_result: _ = validator.validate_fix(&remediation_id).await.unwrap();
 
         assert!(validation_result.is_valid, "修复验证应该通过");
         assert!(
@@ -432,16 +432,16 @@ mod stage85_aiops_tests {
     async fn test_resource_prediction() {
         use beejs::aiops::capacity_planning::{CapacityPlanner, ResourceForecast, ResourceType};
 
-        let planner = CapacityPlanner::new();
+        let planner: _ = CapacityPlanner::new();
 
         // 使用历史资源使用率数据
-        let historical_usage = create_historical_usage();
-        let forecast = planner.predict_resource_needs(&historical_usage).await.unwrap();
+        let historical_usage: _ = create_historical_usage();
+        let forecast: _ = planner.predict_resource_needs(&historical_usage).await.unwrap();
 
         assert!(!forecast.predictions.is_empty(), "应该有资源预测");
 
         // 验证 CPU 预测
-        let cpu_prediction = forecast.predictions
+        let cpu_prediction: _ = forecast.predictions
             .iter()
             .find(|p| p.resource_type == ResourceType::Cpu);
 
@@ -456,12 +456,12 @@ mod stage85_aiops_tests {
     async fn test_scaling_recommendation() {
         use beejs::aiops::capacity_planning::{CapacityPlanner, ScalingRecommendation, ScalingAction};
 
-        let planner = CapacityPlanner::new();
+        let planner: _ = CapacityPlanner::new();
 
         // 创建当前高使用率
-        let current_usage = create_high_usage_metrics();
+        let current_usage: _ = create_high_usage_metrics();
 
-        let recommendation = planner.recommend_scaling(&current_usage).await.unwrap();
+        let recommendation: _ = planner.recommend_scaling(&current_usage).await.unwrap();
 
         assert!(
             recommendation.action != ScalingAction::NoAction,
@@ -480,17 +480,17 @@ mod stage85_aiops_tests {
     async fn test_parameter_optimization() {
         use beejs::aiops::auto_tuning::{AutoTuner, OptimizationTarget, OptimizationType};
 
-        let tuner = AutoTuner::new();
+        let tuner: _ = AutoTuner::new();
 
         // 创建性能优化目标
-        let target = OptimizationTarget {
+        let target: _ = OptimizationTarget {
             optimization_type: OptimizationType::Latency,
             target_service: "api-service".to_string(),
             current_latency: 500.0, // 毫秒
             target_latency: 200.0,
         };
 
-        let optimization_result = tuner.optimize_parameters(&target).await.unwrap();
+        let optimization_result: _ = tuner.optimize_parameters(&target).await.unwrap();
 
         assert!(optimization_result.success, "参数优化应该成功");
         assert!(
@@ -507,10 +507,10 @@ mod stage85_aiops_tests {
     async fn test_full_aiops_workflow() {
         use beejs::aiops::full_workflow::{FullAIOpsWorkflow, WorkflowConfig};
 
-        let workflow = FullAIOpsWorkflow::new(WorkflowConfig::default());
+        let workflow: _ = FullAIOpsWorkflow::new(WorkflowConfig::default());
 
         // 模拟完整运维流程
-        let workflow_result = workflow.execute_full_cycle().await.unwrap();
+        let workflow_result: _ = workflow.execute_full_cycle().await.unwrap();
 
         assert!(workflow_result.predictions_generated > 0, "应该生成预测");
         assert!(workflow_result.root_causes_identified > 0, "应该识别根因");
@@ -525,15 +525,17 @@ mod stage85_aiops_tests {
     #[tokio::test]
     async fn test_prediction_performance() {
         use beejs::aiops::prediction_engine::PredictionEngine;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
-        let engine = PredictionEngine::new();
+        let engine: _ = PredictionEngine::new();
 
         // 创建大量指标数据
-        let large_dataset = create_large_metric_dataset(10000);
+        let large_dataset: _ = create_large_metric_dataset(10000);
 
-        let start = SystemTime::now();
-        let predictions = engine.predict_failures(&large_dataset).await.unwrap();
-        let elapsed = start.elapsed().unwrap();
+        let start: _ = SystemTime::now();
+        let predictions: _ = engine.predict_failures(&large_dataset).await.unwrap();
+        let elapsed: _ = start.elapsed().unwrap();
 
         assert!(predictions.len() > 0, "应该生成预测");
         assert!(
@@ -566,21 +568,21 @@ mod stage85_aiops_tests {
 
     async fn add_sample_data(graph: &KnowledgeGraph) {
         // 添加示例数据到知识图谱
-        let service_a = Entity {
+        let service_a: _ = Entity {
             id: "service-a".to_string(),
             entity_type: EntityType::Service,
             name: "Service A".to_string(),
             properties: std::collections::HashMap::new(),
         };
 
-        let service_b = Entity {
+        let service_b: _ = Entity {
             id: "service-b".to_string(),
             entity_type: EntityType::Service,
             name: "Service B".to_string(),
             properties: std::collections::HashMap::new(),
         };
 
-        let relationship = Relationship {
+        let relationship: _ = Relationship {
             from_entity_id: "service-a".to_string(),
             to_entity_id: "service-b".to_string(),
             relationship_type: "calls".to_string(),
@@ -669,7 +671,7 @@ pub struct SystemMetric {
     pub metric_type: MetricType,
     pub value: f64,
     pub timestamp: SystemTime,
-    pub labels: std::collections::HashMap<String, String>,
+    pub labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -710,7 +712,7 @@ pub struct Alert {
     pub source: String,
     pub message: String,
     pub timestamp: SystemTime,
-    pub labels: std::collections::HashMap<String, String>,
+    pub labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

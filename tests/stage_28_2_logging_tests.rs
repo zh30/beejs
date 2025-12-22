@@ -45,7 +45,7 @@ pub struct LogEntry {
     pub level: LogLevel,
     pub message: String,
     pub module: Option<String>,
-    pub fields: HashMap<String, String>,
+    pub fields: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 impl LogEntry {
@@ -71,7 +71,7 @@ impl LogEntry {
 
     /// 格式化为 JSON
     pub fn to_json(&self) -> String {
-        let ts = self.timestamp
+        let ts: _ = self.timestamp
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis();
@@ -99,7 +99,7 @@ impl LogEntry {
 
     /// 格式化为人类可读格式
     pub fn to_text(&self) -> String {
-        let ts = self.timestamp
+        let ts: _ = self.timestamp
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
@@ -201,9 +201,9 @@ pub enum MetricValue {
 /// 指标记录器
 #[derive(Debug, Default)]
 pub struct MetricsCollector {
-    counters: HashMap<String, Arc<AtomicU64>>,
-    gauges: HashMap<String, f64>,
-    histograms: HashMap<String, Vec<f64>>,
+    counters: HashMap<String, Arc<AtomicU64, std::collections::HashMap<String, Arc<AtomicU64, String, Arc<AtomicU64>>>,
+    gauges: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>,
+    histograms: HashMap<String, Vec<f64, std::collections::HashMap<String, Vec<f64, String, Vec<f64>>>,
 }
 
 impl MetricsCollector {
@@ -218,9 +218,9 @@ impl MetricsCollector {
 
     /// 递增计数器指定值
     pub fn increment_by(&mut self, name: &str, value: u64) {
-        let counter = self.counters
+        let counter: _ = self.counters
             .entry(name.to_string())
-            .or_insert_with(|| Arc::new(AtomicU64::new(0)));
+            .or_insert_with(|| Arc::new(std::sync::Mutex::new(AtomicU64::new(0))));
         counter.fetch_add(value, Ordering::Relaxed);
     }
 
@@ -257,17 +257,17 @@ impl MetricsCollector {
                 return HistogramStats::default();
             }
 
-            let count = values.len();
+            let count: _ = values.len();
             let sum: f64 = values.iter().sum();
-            let mean = sum / count as f64;
-            let min = values.iter().cloned().fold(f64::INFINITY, f64::min);
-            let max = values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+            let mean: _ = sum / count as f64;
+            let min: _ = values.iter().cloned().fold(f64::INFINITY, f64::min);
+            let max: _ = values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
 
             // 计算 p99
             let mut sorted = values.clone();
             sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
-            let p99_idx = ((count as f64) * 0.99).ceil() as usize - 1;
-            let p99 = sorted.get(p99_idx.min(count - 1)).copied().unwrap_or(0.0);
+            let p99_idx: _ = ((count as f64) * 0.99).ceil() as usize - 1;
+            let p99: _ = sorted.get(p99_idx.min(count - 1)).copied().unwrap_or(0.0);
 
             HistogramStats { count, sum, mean, min, max, p99 }
         })
@@ -278,7 +278,7 @@ impl MetricsCollector {
         let mut output = String::new();
 
         for (name, counter) in &self.counters {
-            let value = counter.load(Ordering::Relaxed);
+            let value: _ = counter.load(Ordering::Relaxed);
             output.push_str(&format!("# TYPE {} counter\n", name));
             output.push_str(&format!("{} {}\n", name, value));
         }
@@ -321,7 +321,7 @@ pub struct Span {
     name: String,
     start: Instant,
     duration: Option<Duration>,
-    attributes: HashMap<String, String>,
+    attributes: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 impl Span {
@@ -384,6 +384,8 @@ impl Tracer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     // -------------------------------------------------------------------------
     // 日志系统测试
@@ -391,7 +393,7 @@ mod tests {
 
     #[test]
     fn test_logger_creation() {
-        let logger = Logger::new(LogLevel::Info);
+        let logger: _ = Logger::new(LogLevel::Info);
         assert_eq!(logger.count(), 0);
     }
 
@@ -422,11 +424,11 @@ mod tests {
 
     #[test]
     fn test_log_entry_json_format() {
-        let entry = LogEntry::new(LogLevel::Info, "test message")
+        let entry: _ = LogEntry::new(LogLevel::Info, "test message")
             .with_module("beejs::test")
             .with_field("request_id", "123");
 
-        let json = entry.to_json();
+        let json: _ = entry.to_json();
         assert!(json.contains(r#""level":"INFO""#));
         assert!(json.contains(r#""message":"test message""#));
         assert!(json.contains(r#""module":"beejs::test""#));
@@ -435,8 +437,8 @@ mod tests {
 
     #[test]
     fn test_log_entry_text_format() {
-        let entry = LogEntry::new(LogLevel::Error, "something went wrong");
-        let text = entry.to_text();
+        let entry: _ = LogEntry::new(LogLevel::Error, "something went wrong");
+        let text: _ = entry.to_text();
 
         assert!(text.contains("ERROR"));
         assert!(text.contains("something went wrong"));
@@ -476,7 +478,7 @@ mod tests {
             metrics.observe("request_duration", i as f64);
         }
 
-        let stats = metrics.get_histogram_stats("request_duration").unwrap();
+        let stats: _ = metrics.get_histogram_stats("request_duration").unwrap();
         assert_eq!(stats.count, 100);
         assert_eq!(stats.min, 1.0);
         assert_eq!(stats.max, 100.0);
@@ -490,7 +492,7 @@ mod tests {
         metrics.increment_by("http_requests_total", 100);
         metrics.set_gauge("memory_bytes", 1024.0);
 
-        let output = metrics.export_prometheus();
+        let output: _ = metrics.export_prometheus();
         assert!(output.contains("# TYPE http_requests_total counter"));
         assert!(output.contains("http_requests_total 100"));
         assert!(output.contains("# TYPE memory_bytes gauge"));
@@ -506,7 +508,7 @@ mod tests {
         let mut tracer = Tracer::new();
 
         {
-            let span = tracer.start_span("test_operation");
+            let span: _ = tracer.start_span("test_operation");
             span.end();
         }
 
@@ -516,7 +518,7 @@ mod tests {
 
     #[test]
     fn test_span_attributes() {
-        let span = Span::new("http_request")
+        let span: _ = Span::new("http_request")
             .with_attribute("method", "GET")
             .with_attribute("path", "/api/users");
 
@@ -528,12 +530,12 @@ mod tests {
     fn test_tracer_completed_spans() {
         let mut tracer = Tracer::new();
 
-        let span1 = tracer.start_span("completed");
+        let span1: _ = tracer.start_span("completed");
         span1.end();
 
-        let _span2 = tracer.start_span("in_progress"); // 未结束
+        let _span2: _ = tracer.start_span("in_progress"); // 未结束
 
-        let completed = tracer.completed_spans();
+        let completed: _ = tracer.completed_spans();
         assert_eq!(completed.len(), 1);
         assert_eq!(completed[0].name(), "completed");
     }
@@ -572,7 +574,7 @@ fn test_stage_28_2_logging_integration() {
 
     // 验证 JSON 格式
     for entry in logger.entries() {
-        let json = entry.to_json();
+        let json: _ = entry.to_json();
         assert!(json.starts_with('{'));
         assert!(json.ends_with('}'));
         assert!(json.contains("timestamp"));
@@ -600,12 +602,12 @@ fn test_stage_28_2_metrics_integration() {
     assert_eq!(metrics.get_counter("http_requests_total"), 100);
     assert!(metrics.get_gauge("process_memory_bytes").is_some());
 
-    let duration_stats = metrics.get_histogram_stats("http_request_duration_ms").unwrap();
+    let duration_stats: _ = metrics.get_histogram_stats("http_request_duration_ms").unwrap();
     assert_eq!(duration_stats.count, 100);
     assert!(duration_stats.p99 > 0.0);
 
     // 导出 Prometheus 格式
-    let prometheus_output = metrics.export_prometheus();
+    let prometheus_output: _ = metrics.export_prometheus();
     assert!(prometheus_output.contains("http_requests_total 100"));
 
     println!("Stage 28.2 Metrics Integration Test: PASSED");
@@ -617,19 +619,19 @@ fn test_stage_28_2_tracing_integration() {
 
     // 模拟请求追踪
     {
-        let request_span = tracer.start_span("http_request");
+        let request_span: _ = tracer.start_span("http_request");
         std::thread::sleep(Duration::from_micros(100));
         request_span.end();
     }
 
     {
-        let db_span = tracer.start_span("database_query");
+        let db_span: _ = tracer.start_span("database_query");
         std::thread::sleep(Duration::from_micros(50));
         db_span.end();
     }
 
     // 验证追踪
-    let completed = tracer.completed_spans();
+    let completed: _ = tracer.completed_spans();
     assert_eq!(completed.len(), 2);
 
     for span in completed {
@@ -644,21 +646,21 @@ fn test_stage_28_2_tracing_integration() {
 fn test_stage_28_2_logging_performance() {
     let mut logger = Logger::new(LogLevel::Info);
 
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     for i in 0..10000 {
         logger.log(
             LogEntry::new(LogLevel::Info, format!("Log message {}", i))
                 .with_field("iteration", i.to_string())
         );
     }
-    let log_time = start.elapsed().unwrap();
+    let log_time: _ = start.elapsed().unwrap();
 
     // JSON 格式化性能
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     for entry in logger.entries() {
-        let _ = entry.to_json();
+        let _: _ = entry.to_json();
     }
-    let format_time = start.elapsed().unwrap();
+    let format_time: _ = start.elapsed().unwrap();
 
     println!("Logging Performance:");
     println!("  Log 10000 entries: {:?}", log_time);

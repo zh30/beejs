@@ -202,7 +202,7 @@ impl AiModel for MockAiModel {
         std::thread::sleep(std::time::Duration::from_millis(self.response_delay_ms));
 
         // 基于语言生成代码
-        let code = match context.language {
+        let code: _ = match context.language {
             Language::JavaScript => self.generate_javascript(prompt),
             Language::TypeScript => self.generate_typescript(prompt),
             Language::JSX => self.generate_jsx(prompt),
@@ -217,7 +217,7 @@ impl AiModel for MockAiModel {
     fn complete(&self, partial_code: &str, _position: usize, _context: &CodeContext) -> Result<Vec<String>, Box<dyn std::error::Error>> {
         std::thread::sleep(std::time::Duration::from_millis(self.response_delay_ms / 2));
 
-        let completions = vec![
+        let completions: _ = vec![
             self.suggest_completion(partial_code),
             self.suggest_alternative(partial_code),
         ];
@@ -358,7 +358,7 @@ pub struct PatternHint {
 
 impl PatternAnalyzer {
     pub fn new() -> Self {
-        let common_patterns = vec![
+        let common_patterns: _ = vec![
             CommonPattern {
                 pattern: "fun".to_string(),
                 completions: vec![
@@ -403,7 +403,7 @@ impl PatternAnalyzer {
             },
         ];
 
-        let javascript = vec![
+        let javascript: _ = vec![
             PatternHint {
                 trigger: "for".to_string(),
                 completion: "for (let i = 0; i < array.length; i++) {\n  // TODO\n}".to_string(),
@@ -424,7 +424,7 @@ impl PatternAnalyzer {
             },
         ];
 
-        let typescript = vec![
+        let typescript: _ = vec![
             PatternHint {
                 trigger: "interface".to_string(),
                 completion: "interface MyInterface {\n  // TODO: Define properties\n}".to_string(),
@@ -439,7 +439,7 @@ impl PatternAnalyzer {
             },
         ];
 
-        let python = vec![
+        let python: _ = vec![
             PatternHint {
                 trigger: "def".to_string(),
                 completion: "def function_name():\n    # TODO: Implement\n    pass".to_string(),
@@ -454,7 +454,7 @@ impl PatternAnalyzer {
             },
         ];
 
-        let rust = vec![
+        let rust: _ = vec![
             PatternHint {
                 trigger: "fn ".to_string(),
                 completion: "pub fn function_name() -> Result<T, E> {\n    // TODO: Implement\n    Ok(T)\n}".to_string(),
@@ -470,13 +470,13 @@ impl PatternAnalyzer {
         ];
 
         Self {
-            common_patterns: Arc::new(RwLock::new(common_patterns)),
-            language_specific_hints: Arc::new(RwLock::new(LanguageHints {
+            common_patterns: Arc::new(std::sync::Mutex::new(RwLock::new(common_patterns))),
+            language_specific_hints: Arc::new(std::sync::Mutex::new(RwLock::new(LanguageHints {
                 javascript,
                 typescript,
                 python,
                 rust,
-            })),
+            }))),
         }
     }
 
@@ -485,7 +485,7 @@ impl PatternAnalyzer {
         let mut items = Vec::new();
 
         // 检查常见模式
-        let patterns = self.common_patterns.read().await;
+        let patterns: _ = self.common_patterns.read().await;
         for pattern in patterns.iter() {
             if pattern.language == *language && partial_code.contains(&pattern.pattern) {
                 for completion in &pattern.completions {
@@ -504,8 +504,8 @@ impl PatternAnalyzer {
         drop(patterns);
 
         // 检查语言特定提示
-        let hints = self.language_specific_hints.read().await;
-        let language_hints = match language {
+        let hints: _ = self.language_specific_hints.read().await;
+        let language_hints: _ = match language {
             Language::JavaScript => &hints.javascript,
             Language::TypeScript => &hints.typescript,
             Language::Python => &hints.python,
@@ -537,8 +537,8 @@ impl PatternAnalyzer {
 
     /// 估算代码性能影响
     fn estimate_performance_impact(&self, code: &str, language: &Language) -> PerformanceImpact {
-        let lines = code.lines().count();
-        let complexity_score = (lines as f64 / 5.0).min(10.0) as u8;
+        let lines: _ = code.lines().count();
+        let complexity_score: _ = (lines as f64 / 5.0).min(10.0) as u8;
 
         let (execution_time, memory_overhead) = match language {
             Language::JavaScript | Language::TypeScript => {
@@ -588,7 +588,7 @@ pub struct ContextCache {
 impl ContextCache {
     pub fn new(capacity: usize) -> Self {
         Self {
-            cache: Arc::new(RwLock::new(lru::LruCache::new(std::num::NonZeroUsize::new(capacity).unwrap_or(std::num::NonZeroUsize::new(100).unwrap())))),
+            cache: Arc::new(std::sync::Mutex::new(RwLock::new(lru::LruCache::new(std::num::NonZeroUsize::new(capacity)).unwrap_or(std::num::NonZeroUsize::new(100).unwrap())))),
         }
     }
 
@@ -619,7 +619,7 @@ pub struct CodeTemplate {
 
 impl CodeDatabase {
     pub fn new() -> Self {
-        let templates = vec![
+        let templates: _ = vec![
             CodeTemplate {
                 language: Language::JavaScript,
                 pattern: "function.*\\(.*\\)".to_string(),
@@ -635,12 +635,12 @@ impl CodeDatabase {
         ];
 
         Self {
-            templates: Arc::new(RwLock::new(templates)),
+            templates: Arc::new(std::sync::Mutex::new(RwLock::new(templates))),
         }
     }
 
     pub async fn get_template(&self, language: &Language, pattern: &str) -> Option<String> {
-        let templates = self.templates.read().await;
+        let templates: _ = self.templates.read().await;
         for template in templates.iter() {
             if template.language == *language && pattern.contains(&template.pattern) {
                 return Some(template.template.clone());
@@ -661,16 +661,16 @@ impl AICodeGenerator {
             model,
             context_cache,
             code_db,
-            performance_config: Arc::new(RwLock::new(PerformanceAwareConfig::default())),
-            pattern_analyzer: Arc::new(PatternAnalyzer::new()),
+            performance_config: Arc::new(std::sync::Mutex::new(RwLock::new(PerformanceAwareConfig::default()))),
+            pattern_analyzer: Arc::new(std::sync::Mutex::new(PatternAnalyzer::new())),
         }
     }
 
     /// 使用默认配置创建生成器
     pub fn new_with_defaults() -> Self {
-        let model = Arc::new(MockAiModel::new(100, 0.95));
-        let context_cache = Arc::new(RwLock::new(ContextCache::new(1000)));
-        let code_db = Arc::new(CodeDatabase::new());
+        let model: _ = Arc::new(std::sync::Mutex::new(MockAiModel::new(100, 0.95)));
+        let context_cache: _ = Arc::new(std::sync::Mutex::new(RwLock::new(ContextCache::new(1000))));
+        let code_db: _ = Arc::new(std::sync::Mutex::new(CodeDatabase::new()));
         Self::new(model, context_cache, code_db)
     }
 
@@ -685,8 +685,8 @@ impl AICodeGenerator {
             model,
             context_cache,
             code_db,
-            performance_config: Arc::new(RwLock::new(performance_config)),
-            pattern_analyzer: Arc::new(PatternAnalyzer::new()),
+            performance_config: Arc::new(std::sync::Mutex::new(RwLock::new(performance_config))),
+            pattern_analyzer: Arc::new(std::sync::Mutex::new(PatternAnalyzer::new())),
         }
     }
 
@@ -698,7 +698,7 @@ impl AICodeGenerator {
 
     /// 获取性能感知配置
     pub async fn get_performance_config(&self) -> PerformanceAwareConfig {
-        let config = self.performance_config.read().await;
+        let config: _ = self.performance_config.read().await;
         config.clone()
     }
 
@@ -710,25 +710,25 @@ impl AICodeGenerator {
         context: &CodeContext,
     ) -> Result<GeneratedCode, Box<dyn std::error::Error>> {
         // 1. 增强提示词
-        let enhanced_prompt = self.enhance_prompt(prompt, context).await?;
+        let enhanced_prompt: _ = self.enhance_prompt(prompt, context).await?;
 
         // 2. 调用 AI 模型
-        let raw_output = self.model.generate(&enhanced_prompt, context)?;
+        let raw_output: _ = self.model.generate(&enhanced_prompt, context)?;
 
         // 3. 后处理
-        let processed = self.post_process(&raw_output, &language)?;
+        let processed: _ = self.post_process(&raw_output, &language)?;
 
         // 4. 生成建议
-        let suggestions = self.generate_suggestions(&processed, &language)?;
+        let suggestions: _ = self.generate_suggestions(&processed, &language)?;
 
         // 5. 生成测试（可选）
-        let tests = if language == Language::JavaScript || language == Language::TypeScript {
+        let tests: _ = if language == Language::JavaScript || language == Language::TypeScript {
             Some(self.generate_basic_tests(processed.clone(), &language).await?)
         } else {
             None
         };
 
-        let code_to_explain = processed.clone();
+        let code_to_explain: _ = processed.clone();
         Ok(GeneratedCode {
             code: processed,
             confidence: 0.95,
@@ -747,13 +747,13 @@ impl AICodeGenerator {
         context: &CodeContext,
     ) -> Result<CodeCompletion, Box<dyn std::error::Error>> {
         // 1. 分析上下文
-        let context_analysis = self.analyze_context(partial_code, cursor_position, context)?;
+        let context_analysis: _ = self.analyze_context(partial_code, cursor_position, context)?;
 
         // 2. 使用模式分析器获取智能补全
-        let pattern_completions = self.pattern_analyzer.analyze_pattern(partial_code, &context.language).await;
+        let pattern_completions: _ = self.pattern_analyzer.analyze_pattern(partial_code, &context.language).await;
 
         // 3. 生成 AI 补全
-        let ai_completions = self.model.complete(partial_code, cursor_position, context)?;
+        let ai_completions: _ = self.model.complete(partial_code, cursor_position, context)?;
 
         // 4. 处理和合并补全项
         let mut completion_items = Vec::new();
@@ -765,11 +765,11 @@ impl AICodeGenerator {
 
         // 添加 AI 模型生成的补全
         for (i, completion) in ai_completions.iter().enumerate() {
-            let kind = self.detect_completion_kind(completion, partial_code);
-            let perf_config = self.performance_config.read().await;
+            let kind: _ = self.detect_completion_kind(completion, partial_code);
+            let perf_config: _ = self.performance_config.read().await;
 
             // 计算性能影响（如果启用）
-            let performance_impact = if perf_config.enable_performance_analysis {
+            let performance_impact: _ = if perf_config.enable_performance_analysis {
                 Some(self.estimate_ai_completion_performance(completion, &context.language))
             } else {
                 None
@@ -790,7 +790,7 @@ impl AICodeGenerator {
         self.sort_completions(&mut completion_items).await;
 
         // 6. 获取替换范围
-        let replace_range = self.get_replace_range(partial_code, cursor_position);
+        let replace_range: _ = self.get_replace_range(partial_code, cursor_position);
 
         Ok(CodeCompletion {
             completions: completion_items,
@@ -806,9 +806,9 @@ impl AICodeGenerator {
         context: &CodeContext,
     ) -> Result<CodeCompletion, Box<dyn std::error::Error>> {
         // 快速模式分析（不使用 AI 模型）
-        let pattern_completions = self.pattern_analyzer.analyze_pattern(partial_code, &context.language).await;
+        let pattern_completions: _ = self.pattern_analyzer.analyze_pattern(partial_code, &context.language).await;
 
-        let replace_range = self.get_replace_range(partial_code, cursor_position);
+        let replace_range: _ = self.get_replace_range(partial_code, cursor_position);
 
         Ok(CodeCompletion {
             completions: pattern_completions,
@@ -818,13 +818,13 @@ impl AICodeGenerator {
 
     /// 性能感知补全排序
     async fn sort_completions(&self, completions: &mut Vec<CompletionItem>) {
-        let perf_config = self.performance_config.read().await;
+        let perf_config: _ = self.performance_config.read().await;
 
         if perf_config.prefer_performance {
             // 按性能优先排序
             completions.sort_by(|a, b| {
-                let score_a = self.calculate_performance_score(a, &perf_config);
-                let score_b = self.calculate_performance_score(b, &perf_config);
+                let score_a: _ = self.calculate_performance_score(a, &perf_config);
+                let score_b: _ = self.calculate_performance_score(b, &perf_config);
                 score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
             });
         } else {
@@ -837,8 +837,8 @@ impl AICodeGenerator {
 
     /// 计算性能评分
     fn calculate_performance_score(&self, item: &CompletionItem, config: &PerformanceAwareConfig) -> f64 {
-        let confidence_score = item.confidence;
-        let performance_score = if let Some(ref impact) = item.performance_impact {
+        let confidence_score: _ = item.confidence;
+        let performance_score: _ = if let Some(ref impact) = item.performance_impact {
             // 性能分数 = 1 / (1 + 执行时间 + 内存开销)
             1.0 / (1.0 + impact.estimated_execution_time_ms + impact.memory_overhead_mb)
         } else {
@@ -851,8 +851,8 @@ impl AICodeGenerator {
 
     /// 估算 AI 补全的性能影响
     fn estimate_ai_completion_performance(&self, completion: &str, language: &Language) -> PerformanceImpact {
-        let lines = completion.lines().count();
-        let complexity_score = (lines as f64 / 3.0).min(10.0) as u8;
+        let lines: _ = completion.lines().count();
+        let complexity_score: _ = (lines as f64 / 3.0).min(10.0) as u8;
 
         let (execution_time, memory_overhead) = match language {
             Language::JavaScript | Language::TypeScript => {
@@ -977,7 +977,7 @@ impl AICodeGenerator {
 
         // 移除多余的空行
         while processed.contains("\n\n\n") {
-            processed = processed.replace("\n\n\n", "\n\n");
+            processed = processed.clone();replace("\n\n\n", "\n\n");
         }
 
         // 添加分号（如果需要）
@@ -1067,8 +1067,8 @@ impl AICodeGenerator {
     /// 获取替换范围
     fn get_replace_range(&self, partial: &str, position: usize) -> (usize, usize) {
         // 简单实现：向前和向后各扩展 20 个字符
-        let start = position.saturating_sub(20);
-        let end = (position + 20).min(partial.len());
+        let start: _ = position.saturating_sub(20);
+        let end: _ = (position + 20).min(partial.len());
         (start, end)
     }
 
@@ -1099,11 +1099,13 @@ struct ContextAnalysis {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_generate_from_prompt() {
-        let generator = AICodeGenerator::new_with_defaults();
-        let context = CodeContext {
+        let generator: _ = AICodeGenerator::new_with_defaults();
+        let context: _ = CodeContext {
             language: Language::JavaScript,
             file_path: Some("test.js".to_string()),
             surrounding_code: None,
@@ -1118,7 +1120,7 @@ mod tests {
             classes: vec![],
         };
 
-        let result = generator
+        let result: _ = generator
             .generate_from_prompt("create a function to add two numbers", Language::JavaScript, &context)
             .await
             .unwrap();
@@ -1130,8 +1132,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_complete_code() {
-        let generator = AICodeGenerator::new_with_defaults();
-        let context = CodeContext {
+        let generator: _ = AICodeGenerator::new_with_defaults();
+        let context: _ = CodeContext {
             language: Language::JavaScript,
             file_path: None,
             surrounding_code: None,
@@ -1141,7 +1143,7 @@ mod tests {
             classes: vec![],
         };
 
-        let result = generator.complete_code("fun", 3, &context).await.unwrap();
+        let result: _ = generator.complete_code("fun", 3, &context).await.unwrap();
 
         assert!(!result.completions.is_empty());
         assert_eq!(result.completions.len(), 2);
@@ -1149,10 +1151,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_analyze_code_quality() {
-        let generator = AICodeGenerator::new_with_defaults();
+        let generator: _ = AICodeGenerator::new_with_defaults();
 
-        let source = "var x = 5;\nif (a == b) { console.log('test'); }";
-        let suggestions = generator.analyze_code_quality(source, &Language::JavaScript).await.unwrap();
+        let source: _ = "var x = 5;\nif (a == b) { console.log('test'); }";
+        let suggestions: _ = generator.analyze_code_quality(source, &Language::JavaScript).await.unwrap();
 
         assert!(!suggestions.is_empty());
         assert!(suggestions.len() >= 2);

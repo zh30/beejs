@@ -97,8 +97,8 @@ impl TypeScriptCompiler {
 
     /// 编译 TypeScript 文件
     pub fn compile_file(&mut self, file_path: &Path) -> Result<CompilationOutput> {
-        let source = std::fs::read_to_string(file_path)?;
-        let file_name = file_path.to_string_lossy().to_string();
+        let source: _ = std::fs::read_to_string(file_path)?;
+        let file_name: _ = file_path.to_string_lossy().to_string();
         self.compile_source(&source, &file_name)
     }
 
@@ -107,19 +107,19 @@ impl TypeScriptCompiler {
         self.diagnostics.clear();
 
         // 第一步：词法分析
-        let tokens = self.lexical_analysis(source, file_name)?;
+        let tokens: _ = self.lexical_analysis(source, file_name)?;
 
         // 第二步：语法分析
-        let ast = self.syntax_analysis(&tokens, file_name)?;
+        let ast: _ = self.syntax_analysis(&tokens, file_name)?;
 
         // 第三步：类型检查（简化实现）
         self.type_check(&ast, file_name)?;
 
         // 第四步：转译为 JavaScript
-        let js_code = self.transpile(&ast)?;
+        let js_code: _ = self.transpile(&ast)?;
 
         // 第五步：生成 Source Map
-        let source_map = if self.config.source_map {
+        let source_map: _ = if self.config.source_map {
             Some(self.generate_source_map(source, &js_code, file_name)?)
         } else {
             None
@@ -139,7 +139,7 @@ impl TypeScriptCompiler {
         let mut pos = 0;
 
         while pos < chars.len() {
-            let ch = chars[pos];
+            let ch: _ = chars[pos];
 
             // 跳过空白字符
             if ch.is_whitespace() {
@@ -150,7 +150,7 @@ impl TypeScriptCompiler {
             // 处理注释
             if ch == '/' {
                 if pos + 1 < chars.len() {
-                    let next_ch = chars[pos + 1];
+                    let next_ch: _ = chars[pos + 1];
                     // 单行注释 //
                     if next_ch == '/' {
                         // 跳过到行末
@@ -176,10 +176,10 @@ impl TypeScriptCompiler {
 
             // 处理标识符和关键字
             if ch.is_alphabetic() || ch == '_' || ch == '$' {
-                let start = pos;
+                let start: _ = pos;
                 pos += 1;
                 while pos < chars.len() {
-                    let c = chars[pos];
+                    let c: _ = chars[pos];
                     if c.is_alphanumeric() || c == '_' || c == '$' {
                         pos += 1;
                     } else {
@@ -188,7 +188,7 @@ impl TypeScriptCompiler {
                 }
                 let ident: String = chars[start..pos].iter().collect();
                 // 关键字识别
-                let token = match ident.as_str() {
+                let token: _ = match ident.as_str() {
                     "let" => Token::Let,
                     "const" => Token::Const,
                     "var" => Token::Var,
@@ -218,7 +218,7 @@ impl TypeScriptCompiler {
 
             // 处理数字
             if ch.is_digit(10) {
-                let start = pos;
+                let start: _ = pos;
                 pos += 1;
                 while pos < chars.len() && chars[pos].is_digit(10) {
                     pos += 1;
@@ -230,17 +230,17 @@ impl TypeScriptCompiler {
 
             // 处理字符串
             if ch == '\'' || ch == '"' || ch == '`' {
-                let quote = ch;
-                let _start = pos;
+                let quote: _ = ch;
+                let _start: _ = pos;
                 pos += 1;
                 let mut string_chars = Vec::new();
 
                 while pos < chars.len() {
-                    let c = chars[pos];
+                    let c: _ = chars[pos];
                     if c == '\\' {
                         // 转义字符
                         if pos + 1 < chars.len() {
-                            let next_char = chars[pos + 1];
+                            let next_char: _ = chars[pos + 1];
                             // 只对有效的转义序列添加反斜杠
                             if matches!(next_char, '"' | '\'' | '\\' | 'n' | 'r' | 't') {
                                 string_chars.push(chars[pos]);
@@ -487,7 +487,7 @@ pub enum ASTNode {
     },
     InterfaceDeclaration {
         name: String,
-        properties: HashMap<String, String>,
+        properties: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     },
     EnumDeclaration {
         name: String,
@@ -586,7 +586,7 @@ impl Parser {
             }
             _ => {
                 // 表达式语句
-                let expr = self.parse_expression()?;
+                let expr: _ = self.parse_expression()?;
                 // 检查是否有分号，如果没有就尝试消费它
                 if self.current_token_eq(&Token::SemiColon) {
                     self.consume(Token::SemiColon)?;
@@ -600,7 +600,7 @@ impl Parser {
         self.consume(Token::Return)?;
 
         // Check if there's an expression or just a semicolon
-        let expr = if self.current_token_eq(&Token::SemiColon) {
+        let expr: _ = if self.current_token_eq(&Token::SemiColon) {
             None
         } else {
             Some(self.parse_expression()?)
@@ -612,22 +612,22 @@ impl Parser {
     }
 
     fn parse_variable_declaration(&mut self) -> Result<ASTNode> {
-        let kind_token = self.consume_any(&[Token::Let, Token::Const, Token::Var])?;
-        let kind = match kind_token {
+        let kind_token: _ = self.consume_any(&[Token::Let, Token::Const, Token::Var])?;
+        let kind: _ = match kind_token {
             Token::Let => "let",
             Token::Const => "const",
             Token::Var => "var",
             _ => unreachable!(),
         };
 
-        let name_token = self.consume(Token::Identifier("".to_string()))?;
-        let name = match name_token {
+        let name_token: _ = self.consume(Token::Identifier("".to_string()))?;
+        let name: _ = match name_token {
             Token::Identifier(name) => name,
             _ => bail!("Expected identifier"),
         };
 
         // 可能的类型注解
-        let type_annotation = if self.current_token_eq(&Token::Colon) {
+        let type_annotation: _ = if self.current_token_eq(&Token::Colon) {
             self.consume(Token::Colon)?;
             self.parse_type_annotation()
         } else {
@@ -635,7 +635,7 @@ impl Parser {
         };
 
         // 可能的初始化器
-        let initializer = if self.current_token_eq(&Token::Eq) {
+        let initializer: _ = if self.current_token_eq(&Token::Eq) {
             self.consume(Token::Eq)?;
             // 检查是否是箭头函数
             if self.current_token_eq(&Token::LParen) || self.current_token_eq(&Token::Identifier("".to_string())) {
@@ -644,12 +644,12 @@ impl Parser {
                     Ok(expr) => Some(Box::new(ASTNode::Expression(expr))),
                     Err(_) => {
                         // 如果不是箭头函数，尝试解析普通表达式
-                        let expr = self.parse_expression()?;
+                        let expr: _ = self.parse_expression()?;
                         Some(Box::new(ASTNode::Expression(expr)))
                     }
                 }
             } else {
-                let expr = self.parse_expression()?;
+                let expr: _ = self.parse_expression()?;
                 Some(Box::new(ASTNode::Expression(expr)))
             }
         } else {
@@ -672,8 +672,8 @@ impl Parser {
     fn parse_function_declaration(&mut self) -> Result<ASTNode> {
         self.consume(Token::Function)?;
 
-        let name_token = self.consume(Token::Identifier("".to_string()))?;
-        let name = match name_token {
+        let name_token: _ = self.consume(Token::Identifier("".to_string()))?;
+        let name: _ = match name_token {
             Token::Identifier(name) => name,
             _ => bail!("Expected function name"),
         };
@@ -681,13 +681,13 @@ impl Parser {
         self.consume(Token::LParen)?;
         let mut params = Vec::new();
         while !self.current_token_eq(&Token::RParen) {
-            let param_name_token = self.consume(Token::Identifier("".to_string()))?;
-            let param_name = match param_name_token {
+            let param_name_token: _ = self.consume(Token::Identifier("".to_string()))?;
+            let param_name: _ = match param_name_token {
                 Token::Identifier(name) => name,
                 _ => bail!("Expected parameter name"),
             };
 
-            let param_type = if self.current_token_eq(&Token::Colon) {
+            let param_type: _ = if self.current_token_eq(&Token::Colon) {
                 self.consume(Token::Colon)?;
                 self.parse_type_annotation()
             } else {
@@ -703,7 +703,7 @@ impl Parser {
         self.consume(Token::RParen)?;
 
         // 可能的返回类型
-        let return_type = if self.current_token_eq(&Token::Colon) {
+        let return_type: _ = if self.current_token_eq(&Token::Colon) {
             self.consume(Token::Colon)?;
             self.parse_type_annotation()
         } else {
@@ -728,8 +728,8 @@ impl Parser {
     fn parse_class_declaration(&mut self) -> Result<ASTNode> {
         self.consume(Token::Class)?;
 
-        let name_token = self.consume(Token::Identifier("".to_string()))?;
-        let name = match name_token {
+        let name_token: _ = self.consume(Token::Identifier("".to_string()))?;
+        let name: _ = match name_token {
             Token::Identifier(name) => name,
             _ => bail!("Expected class name"),
         };
@@ -747,8 +747,8 @@ impl Parser {
     fn parse_interface_declaration(&mut self) -> Result<ASTNode> {
         self.consume(Token::Interface)?;
 
-        let name_token = self.consume(Token::Identifier("".to_string()))?;
-        let name = match name_token {
+        let name_token: _ = self.consume(Token::Identifier("".to_string()))?;
+        let name: _ = match name_token {
             Token::Identifier(name) => name,
             _ => bail!("Expected interface name"),
         };
@@ -756,14 +756,14 @@ impl Parser {
         self.consume(Token::LBrace)?;
         let mut properties = HashMap::new();
         while !self.current_token_eq(&Token::RBrace) {
-            let prop_name_token = self.consume(Token::Identifier("".to_string()))?;
-            let prop_name = match prop_name_token {
+            let prop_name_token: _ = self.consume(Token::Identifier("".to_string()))?;
+            let prop_name: _ = match prop_name_token {
                 Token::Identifier(name) => name,
                 _ => bail!("Expected property name"),
             };
 
             self.consume(Token::Colon)?;
-            let prop_type = self.parse_type_annotation();
+            let prop_type: _ = self.parse_type_annotation();
             properties.insert(prop_name, prop_type.unwrap_or_else(|| "any".to_string()));
 
             if self.current_token_eq(&Token::SemiColon) {
@@ -778,8 +778,8 @@ impl Parser {
     fn parse_enum_declaration(&mut self) -> Result<ASTNode> {
         self.consume(Token::Enum)?;
 
-        let name_token = self.consume(Token::Identifier("".to_string()))?;
-        let name = match name_token {
+        let name_token: _ = self.consume(Token::Identifier("".to_string()))?;
+        let name: _ = match name_token {
             Token::Identifier(name) => name,
             _ => bail!("Expected enum name"),
         };
@@ -789,8 +789,8 @@ impl Parser {
         let mut current_value: Option<u32> = None;
 
         while !self.current_token_eq(&Token::RBrace) {
-            let member_name_token = self.consume(Token::Identifier("".to_string()))?;
-            let member_name = match member_name_token {
+            let member_name_token: _ = self.consume(Token::Identifier("".to_string()))?;
+            let member_name: _ = match member_name_token {
                 Token::Identifier(name) => name,
                 _ => bail!("Expected enum member name"),
             };
@@ -845,7 +845,7 @@ impl Parser {
         // 处理箭头函数
         if self.current_token_eq(&Token::FatArrow) {
             // 检查是否是带括号的参数列表
-            let params = if let ASTExpression::Identifier(name) = expr {
+            let params: _ = if let ASTExpression::Identifier(name) = expr {
                 vec![(name, None)]
             } else if let ASTExpression::CallExpression { callee, arguments } = &expr {
                 // 处理带括号的参数列表，如 (a, b)
@@ -870,8 +870,8 @@ impl Parser {
                 Token::Dot => {
                     // 成员访问: expr.property
                     self.advance();
-                    let prop_token = self.consume(Token::Identifier("".to_string()))?;
-                    let prop_name = match prop_token {
+                    let prop_token: _ = self.consume(Token::Identifier("".to_string()))?;
+                    let prop_name: _ = match prop_token {
                         Token::Identifier(name) => name,
                         _ => bail!("Expected property name after '.'"),
                     };
@@ -899,7 +899,7 @@ impl Parser {
                 Token::LBracket => {
                     // 索引访问: expr[index]
                     self.advance();
-                    let index = self.parse_expression()?;
+                    let index: _ = self.parse_expression()?;
                     self.consume(Token::RBracket)?;
                     expr = ASTExpression::IndexExpression {
                         object: Box::new(expr),
@@ -910,7 +910,7 @@ impl Parser {
                 Token::Plus | Token::Minus | Token::Star | Token::Slash |
                 Token::EqEq | Token::EqEqEq | Token::NotEq | Token::NotEqEq |
                 Token::Lt | Token::Gt => {
-                    let op = match self.current_token() {
+                    let op: _ = match self.current_token() {
                         Token::Plus => "+",
                         Token::Minus => "-",
                         Token::Star => "*",
@@ -924,9 +924,9 @@ impl Parser {
                         _ => unreachable!(),
                     };
                     self.advance();
-                    let right = self.parse_primary_expression()?;
+                    let right: _ = self.parse_primary_expression()?;
                     // Handle postfix operators on right side
-                    let right = self.parse_postfix(right)?;
+                    let right: _ = self.parse_postfix(right)?;
                     expr = ASTExpression::BinaryExpression {
                         left: Box::new(expr),
                         operator: op.to_string(),
@@ -951,14 +951,14 @@ impl Parser {
             // 处理空参数列表的情况
             if !self.current_token_eq(&Token::RParen) {
                 while !self.current_token_eq(&Token::RParen) {
-                    let param_name_token = self.consume(Token::Identifier("".to_string()))?;
-                    let param_name = match param_name_token {
+                    let param_name_token: _ = self.consume(Token::Identifier("".to_string()))?;
+                    let param_name: _ = match param_name_token {
                         Token::Identifier(name) => name,
                         _ => bail!("Expected parameter name"),
                     };
 
                     // 检查参数类型注解
-                    let param_type = if self.current_token_eq(&Token::Colon) {
+                    let param_type: _ = if self.current_token_eq(&Token::Colon) {
                         self.consume(Token::Colon)?;
                         self.parse_type_annotation()
                     } else {
@@ -976,14 +976,14 @@ impl Parser {
             self.consume(Token::RParen)?;
         } else if self.current_token_eq(&Token::Identifier("".to_string())) {
             // 单个参数无括号: x
-            let param_name_token = self.consume(Token::Identifier("".to_string()))?;
-            let param_name = match param_name_token {
+            let param_name_token: _ = self.consume(Token::Identifier("".to_string()))?;
+            let param_name: _ = match param_name_token {
                 Token::Identifier(name) => name,
                 _ => bail!("Expected parameter name"),
             };
 
             // 检查参数类型注解
-            let param_type = if self.current_token_eq(&Token::Colon) {
+            let param_type: _ = if self.current_token_eq(&Token::Colon) {
                 self.consume(Token::Colon)?;
                 self.parse_type_annotation()
             } else {
@@ -996,7 +996,7 @@ impl Parser {
         }
 
         // 检查返回类型注解
-        let return_type = if self.current_token_eq(&Token::Colon) {
+        let return_type: _ = if self.current_token_eq(&Token::Colon) {
             self.consume(Token::Colon)?;
             self.parse_type_annotation()
         } else {
@@ -1007,7 +1007,7 @@ impl Parser {
         self.consume(Token::FatArrow)?;
 
         // 解析函数体
-        let body = self.parse_expression()?;
+        let body: _ = self.parse_expression()?;
 
         Ok(ASTExpression::ArrowFunctionExpression {
             params,
@@ -1021,7 +1021,7 @@ impl Parser {
         self.consume(Token::FatArrow)?;
 
         // 解析函数体
-        let body = self.parse_expression()?;
+        let body: _ = self.parse_expression()?;
 
         Ok(ASTExpression::ArrowFunctionExpression {
             params,
@@ -1036,8 +1036,8 @@ impl Parser {
             match self.current_token() {
                 Token::Dot => {
                     self.advance();
-                    let prop_token = self.consume(Token::Identifier("".to_string()))?;
-                    let prop_name = match prop_token {
+                    let prop_token: _ = self.consume(Token::Identifier("".to_string()))?;
+                    let prop_name: _ = match prop_token {
                         Token::Identifier(name) => name,
                         _ => bail!("Expected property name after '.'"),
                     };
@@ -1049,13 +1049,13 @@ impl Parser {
                 Token::LParen => {
                     // 处理分组表达式 (a + b)
                     self.advance();
-                    let inner_expr = self.parse_expression()?;
+                    let inner_expr: _ = self.parse_expression()?;
                     self.consume(Token::RParen)?;
                     expr = inner_expr;
                 }
                 Token::LBracket => {
                     self.advance();
-                    let index = self.parse_expression()?;
+                    let index: _ = self.parse_expression()?;
                     self.consume(Token::RBracket)?;
                     expr = ASTExpression::IndexExpression {
                         object: Box::new(expr),
@@ -1071,24 +1071,24 @@ impl Parser {
     fn parse_primary_expression(&mut self) -> Result<ASTExpression> {
         match self.current_token() {
             Token::Identifier(ref name) => {
-                let name = name.clone();
+                let name: _ = name.clone();clone();
                 self.advance();
                 Ok(ASTExpression::Identifier(name))
             }
             Token::Number(ref num) => {
-                let num = num.clone();
+                let num: _ = num.clone();clone();
                 self.advance();
                 Ok(ASTExpression::Literal(num))
             }
             Token::String(ref s, quote) => {
-                let s = format!("\"{}\"", s.clone());
+                let s: _ = format!("\"{}\"", s.clone());
                 self.advance();
                 Ok(ASTExpression::Literal(s))
             }
             Token::LParen => {
                 // 括号表达式
                 self.advance();
-                let expr = self.parse_expression()?;
+                let expr: _ = self.parse_expression()?;
                 self.consume(Token::RParen)?;
                 Ok(expr)
             }
@@ -1106,8 +1106,8 @@ impl Parser {
 
         while !self.current_token_eq(&Token::RBrace) {
             // 解析属性名
-            let prop_name_token = self.consume(Token::Identifier("".to_string()))?;
-            let prop_name = match prop_name_token {
+            let prop_name_token: _ = self.consume(Token::Identifier("".to_string()))?;
+            let prop_name: _ = match prop_name_token {
                 Token::Identifier(name) => name,
                 _ => bail!("Expected property name"),
             };
@@ -1115,7 +1115,7 @@ impl Parser {
             self.consume(Token::Colon)?;
 
             // 解析属性值
-            let prop_value = self.parse_expression()?;
+            let prop_value: _ = self.parse_expression()?;
             properties.push((prop_name, prop_value));
 
             // 处理逗号分隔符
@@ -1135,7 +1135,7 @@ impl Parser {
 
     fn parse_union_type(&mut self) -> Option<String> {
         // 解析第一个类型
-        let first_type = self.parse_basic_type()?;
+        let first_type: _ = self.parse_basic_type()?;
 
         let mut types = vec![first_type];
 
@@ -1161,18 +1161,18 @@ impl Parser {
     fn parse_basic_type(&mut self) -> Option<String> {
         match self.current_token() {
             Token::Identifier(ref name) => {
-                let name = name.clone();
+                let name: _ = name.clone();clone();
                 self.advance();
                 Some(name)
             }
             Token::String(ref s, quote) => {
-                let s = s.clone();
-                let quote_char = *quote;
+                let s: _ = s.clone();clone();
+                let quote_char: _ = *quote;
                 self.advance();
                 Some(format!("{}{}{}", quote_char, s, quote_char))
             }
             Token::Number(ref n) => {
-                let n = n.clone();
+                let n: _ = n.clone();clone();
                 self.advance();
                 Some(n)
             }
@@ -1206,7 +1206,7 @@ impl Parser {
     }
 
     fn advance(&mut self) -> Token {
-        let token = self.tokens[self.position].clone();
+        let token: _ = self.tokens[self.position].clone();
         self.position += 1;
         token
     }
@@ -1467,12 +1467,14 @@ pub struct CompilationOutput {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_lexical_analysis() {
-        let compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
-        let source = "let x: number = 5;";
-        let tokens = compiler.lexical_analysis(source, "test.ts").unwrap();
+        let compiler: _ = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        let source: _ = "let x: number = 5;";
+        let tokens: _ = compiler.lexical_analysis(source, "test.ts").unwrap();
 
         assert!(tokens.iter().any(|t| matches!(t, Token::Let)));
         assert!(tokens.iter().any(|t| matches!(t, Token::Identifier(_))));
@@ -1485,18 +1487,18 @@ mod tests {
     #[test]
     fn test_compile_simple_typescript() {
         let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
-        let source = "let x: number = 5;";
-        let result = compiler.compile_source(source, "test.ts").unwrap();
+        let source: _ = "let x: number = 5;";
+        let result: _ = compiler.compile_source(source, "test.ts").unwrap();
 
-        assert!(result.js_code.contains("let x = 5;"));
+        assert!(result.js_code.contains("let x: _ = 5;"));
         assert!(!result.js_code.contains(": number"));
     }
 
     #[test]
     fn test_compile_function() {
         let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
-        let source = "function add(a: number, b: number): number { return a + b; }";
-        let result = compiler.compile_source(source, "test.ts").unwrap();
+        let source: _ = "function add(a: number, b: number): number { return a + b; }";
+        let result: _ = compiler.compile_source(source, "test.ts").unwrap();
 
         assert!(result.js_code.contains("function add"));
         assert!(result.js_code.contains("a, b"));

@@ -49,16 +49,16 @@ impl PoolStatistics {
     /// 获取缓存命中率
     #[allow(dead_code)]
     pub fn hit_rate(&self) -> f64 {
-        let hits = self.cache_hits.load(Ordering::Relaxed) as f64;
-        let total = hits + self.cache_misses.load(Ordering::Relaxed) as f64;
+        let hits: _ = self.cache_hits.load(Ordering::Relaxed) as f64;
+        let total: _ = hits + self.cache_misses.load(Ordering::Relaxed) as f64;
         if total > 0.0 { hits / total } else { 0.0 }
     }
 
     /// 获取平均创建时间（微秒）
     #[allow(dead_code)]
     pub fn avg_creation_time_us(&self) -> f64 {
-        let total_time = self.total_creation_time_ns.load(Ordering::Relaxed) as f64;
-        let count = self.cache_misses.load(Ordering::Relaxed) as f64;
+        let total_time: _ = self.total_creation_time_ns.load(Ordering::Relaxed) as f64;
+        let count: _ = self.cache_misses.load(Ordering::Relaxed) as f64;
         if count > 0.0 { total_time / count / 1000.0 } else { 0.0 }
     }
 }
@@ -85,20 +85,20 @@ impl IsolatePool {
             return Ok(());
         }
 
-        let actual_count = count.min(self.max_size);
+        let actual_count: _ = count.clone();min(self.max_size);
         let mut pool = self.available.lock().map_err(|e| e.to_string())?;
 
         // 智能预热策略：根据池大小自适应
-        let warmup_count = if self.max_size >= 16 {
+        let warmup_count: _ = if self.max_size >= 16 {
             (actual_count * 3 / 2).min(self.max_size)
         } else {
             actual_count
         };
 
         for i in 0..warmup_count {
-            let isolate_start = Instant::now();
-            let isolate = v8::Isolate::new(Default::default());
-            let creation_time = isolate_start.elapsed();
+            let isolate_start: _ = Instant::now();
+            let isolate: _ = v8::Isolate::new(Default::default());
+            let creation_time: _ = isolate_start.elapsed();
 
             pool.push_back(isolate);
 
@@ -141,14 +141,14 @@ impl IsolatePool {
 
             // 智能预热：如果池快空了，在同一线程快速预创建
             if pool.len() < self.max_size / 4 && pool.len() + *in_use < self.max_size {
-                let needed = (self.max_size / 4).min(self.max_size - pool.len() - *in_use);
+                let needed: _ = (self.max_size / 4).min(self.max_size - pool.len() - *in_use);
 
                 // 快速创建一些Isolates以补充池
                 for _ in 0..needed {
                     if pool.len() + *in_use >= self.max_size {
                         break;
                     }
-                    let isolate = v8::Isolate::new(Default::default());
+                    let isolate: _ = v8::Isolate::new(Default::default());
                     pool.push_back(isolate);
                 }
             }
@@ -156,7 +156,7 @@ impl IsolatePool {
             Some(isolate)
         } else {
             // 池为空，创建一个新的（不超过最大容量）
-            let total_in_use = *in_use;
+            let total_in_use: _ = *in_use;
             if total_in_use < self.max_size {
                 *in_use += 1;
                 self.stats.cache_misses.fetch_add(1, Ordering::Relaxed);
@@ -183,14 +183,14 @@ impl IsolatePool {
             pool.push_back(isolate);
         }
 
-        *in_use = in_use.saturating_sub(1);
+        *in_use = in_use.clone();saturating_sub(1);
     }
 
     /// 获取池的统计信息（增强版）
     #[allow(dead_code)]
     pub fn stats(&self) -> PoolStats {
-        let pool = self.available.lock().unwrap();
-        let in_use = self.in_use.lock().unwrap();
+        let pool: _ = self.available.lock().unwrap();
+        let in_use: _ = self.in_use.lock().unwrap();
 
         PoolStats {
             available: pool.len(),
@@ -217,7 +217,7 @@ impl IsolatePool {
     #[allow(dead_code)]
     pub fn shrink_to_fit(&self) -> usize {
         let mut pool = self.available.lock().unwrap();
-        let before_len = pool.len();
+        let before_len: _ = pool.len();
 
         // 保留至少一个Isolate以避免完全耗尽
         while pool.len() > 1 {
@@ -268,7 +268,7 @@ fn is_test_environment() -> bool {
 
     // 2. 环境变量检测 - 仅在明确设置时为 true
     #[allow(unreachable_code)]
-    let env_check = std::env::var("BEEJS_TEST_MODE").is_ok();
+    let env_check: _ = std::env::var("BEEJS_TEST_MODE").is_ok();
 
     env_check
 
@@ -287,10 +287,10 @@ pub fn initialize_pool(max_size: usize) -> Result<(), String> {
     let mut pool = IsolatePool::new(max_size);
 
     // 超级激进的预热策略：预创建75%容量的Isolates
-    let warmup_count = (max_size * 3 / 4).max(4);
+    let warmup_count: _ = (max_size * 3 / 4).max(4);
     pool.pre_warm(warmup_count)?;
 
-    let pool_box = Box::new(pool);
+    let pool_box: _ = Box::new(pool);
     POOL.set(pool_box)
         .map_err(|_| "Pool already initialized".to_string())
 }
@@ -360,12 +360,14 @@ pub fn release_isolate(isolate: v8::OwnedIsolate) {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     // 初始化V8以供测试使用
     fn init_v8_for_tests() {
         static INIT: std::sync::Once = std::sync::Once::new();
         INIT.call_once(|| {
-            let platform = v8::new_default_platform().unwrap();
+            let platform: _ = v8::new_default_platform().unwrap();
             v8::V8::initialize_platform(platform);
             v8::V8::initialize();
         });
@@ -374,8 +376,8 @@ mod tests {
     #[test]
     fn test_isolate_pool_creation() {
         init_v8_for_tests();
-        let pool = IsolatePool::new(4);
-        let stats = pool.stats();
+        let pool: _ = IsolatePool::new(4);
+        let stats: _ = pool.stats();
         assert_eq!(stats.available, 0);
         assert_eq!(stats.in_use, 0);
         assert_eq!(stats.max_size, 4);
@@ -388,7 +390,7 @@ mod tests {
         let mut pool = IsolatePool::new(4);
         pool.pre_warm(2).unwrap();
 
-        let stats = pool.stats();
+        let stats: _ = pool.stats();
         assert_eq!(stats.available, 2);
         assert_eq!(stats.in_use, 0);
     }
@@ -401,14 +403,14 @@ mod tests {
         pool.pre_warm(2).unwrap();
 
         // 获取一个Isolate
-        let isolate = pool.acquire().unwrap();
-        let stats = pool.stats();
+        let isolate: _ = pool.acquire().unwrap();
+        let stats: _ = pool.stats();
         assert_eq!(stats.available, 1);
         assert_eq!(stats.in_use, 1);
 
         // 归还Isolate
         pool.release(isolate);
-        let stats = pool.stats();
+        let stats: _ = pool.stats();
         assert_eq!(stats.available, 2);
         assert_eq!(stats.in_use, 0);
     }
@@ -420,21 +422,21 @@ mod tests {
         let mut pool = IsolatePool::new(10);
         pool.pre_warm(5).unwrap();
 
-        let stats = pool.stats();
+        let stats: _ = pool.stats();
         assert_eq!(stats.utilization_percent(), 0.0);
         assert!(!stats.is_near_full());
 
         // 使用8个Isolate (80%利用率)
-        let _isolate1 = pool.acquire().unwrap();
-        let _isolate2 = pool.acquire().unwrap();
-        let _isolate3 = pool.acquire().unwrap();
-        let _isolate4 = pool.acquire().unwrap();
-        let _isolate5 = pool.acquire().unwrap();
-        let _isolate6 = pool.acquire().unwrap();
-        let _isolate7 = pool.acquire().unwrap();
-        let _isolate8 = pool.acquire().unwrap();
+        let _isolate1: _ = pool.acquire().unwrap();
+        let _isolate2: _ = pool.acquire().unwrap();
+        let _isolate3: _ = pool.acquire().unwrap();
+        let _isolate4: _ = pool.acquire().unwrap();
+        let _isolate5: _ = pool.acquire().unwrap();
+        let _isolate6: _ = pool.acquire().unwrap();
+        let _isolate7: _ = pool.acquire().unwrap();
+        let _isolate8: _ = pool.acquire().unwrap();
 
-        let stats = pool.stats();
+        let stats: _ = pool.stats();
         assert_eq!(stats.utilization_percent(), 80.0);
         assert!(stats.is_near_full());
     }

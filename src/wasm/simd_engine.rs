@@ -126,11 +126,11 @@ pub fn detect_cpu_features() -> HardwareFeatures {
 
 #[cfg(target_arch = "x86_64")]
 fn detect_x86_features() -> HardwareFeatures {
-    let has_avx512 = is_x86_feature_detected!("avx512f");
-    let has_avx2 = is_x86_feature_detected!("avx2");
-    let has_sse4_2 = is_x86_feature_detected!("sse4.2");
+    let has_avx512: _ = is_x86_feature_detected!("avx512f");
+    let has_avx2: _ = is_x86_feature_detected!("avx2");
+    let has_sse4_2: _ = is_x86_feature_detected!("sse4.2");
 
-    let optimal_vector_width = if has_avx512 {
+    let optimal_vector_width: _ = if has_avx512 {
         VectorWidth::Avx512(512)
     } else if has_avx2 {
         VectorWidth::Avx2(256)
@@ -210,8 +210,8 @@ pub struct SimdEngine {
 impl SimdEngine {
     /// 创建新的 SIMD 引擎
     pub fn new() -> Self {
-        let features = detect_cpu_features();
-        let capability = Self::determine_capability(&features);
+        let features: _ = detect_cpu_features();
+        let capability: _ = Self::determine_capability(&features);
 
         Self {
             features,
@@ -284,10 +284,10 @@ impl SimdEngine {
 
     /// 获取统计信息
     pub fn get_stats(&self) -> SimdStats {
-        let ops = self.operations_count.load(Ordering::Relaxed);
-        let vec_ops = self.vector_ops_count.load(Ordering::Relaxed);
+        let ops: _ = self.operations_count.load(Ordering::Relaxed);
+        let vec_ops: _ = self.vector_ops_count.load(Ordering::Relaxed);
 
-        let simd_utilization = if ops > 0 {
+        let simd_utilization: _ = if ops > 0 {
             vec_ops as f64 / ops as f64
         } else {
             0.0
@@ -327,7 +327,7 @@ impl SimdEngine {
             return vec![];
         }
 
-        let len = a.len().min(b.len());
+        let len: _ = a.len().min(b.len());
         let mut result = Vec::with_capacity(len);
 
         #[cfg(target_arch = "x86_64")]
@@ -347,18 +347,18 @@ impl SimdEngine {
     fn vector_add_f32_avx2(&self, a: &[f32], b: &[f32], result: &mut Vec<f32>) {
         use std::arch::x86_64::*;
 
-        let len = a.len().min(b.len());
+        let len: _ = a.len().min(b.len());
         result.reserve(len);
 
-        let chunks = len / 8;
-        let remainder = len % 8;
+        let chunks: _ = len / 8;
+        let remainder: _ = len % 8;
 
         unsafe {
             for i in 0..chunks {
-                let offset = i * 8;
-                let va = _mm256_loadu_ps(a.as_ptr().add(offset));
-                let vb = _mm256_loadu_ps(b.as_ptr().add(offset));
-                let vr = _mm256_add_ps(va, vb);
+                let offset: _ = i * 8;
+                let va: _ = _mm256_loadu_ps(a.as_ptr().add(offset));
+                let vb: _ = _mm256_loadu_ps(b.as_ptr().add(offset));
+                let vr: _ = _mm256_add_ps(va, vb);
 
                 let mut tmp = [0.0f32; 8];
                 _mm256_storeu_ps(tmp.as_mut_ptr(), vr);
@@ -367,7 +367,7 @@ impl SimdEngine {
         }
 
         // 处理剩余元素
-        let base = chunks * 8;
+        let base: _ = chunks * 8;
         for i in 0..remainder {
             result.push(a[base + i] + b[base + i]);
         }
@@ -381,7 +381,7 @@ impl SimdEngine {
             return vec![];
         }
 
-        let len = a.len().min(b.len());
+        let len: _ = a.len().min(b.len());
         let mut result = Vec::with_capacity(len);
 
         #[cfg(target_arch = "x86_64")]
@@ -400,18 +400,18 @@ impl SimdEngine {
     fn vector_mul_f32_avx2(&self, a: &[f32], b: &[f32], result: &mut Vec<f32>) {
         use std::arch::x86_64::*;
 
-        let len = a.len().min(b.len());
+        let len: _ = a.len().min(b.len());
         result.reserve(len);
 
-        let chunks = len / 8;
-        let remainder = len % 8;
+        let chunks: _ = len / 8;
+        let remainder: _ = len % 8;
 
         unsafe {
             for i in 0..chunks {
-                let offset = i * 8;
-                let va = _mm256_loadu_ps(a.as_ptr().add(offset));
-                let vb = _mm256_loadu_ps(b.as_ptr().add(offset));
-                let vr = _mm256_mul_ps(va, vb);
+                let offset: _ = i * 8;
+                let va: _ = _mm256_loadu_ps(a.as_ptr().add(offset));
+                let vb: _ = _mm256_loadu_ps(b.as_ptr().add(offset));
+                let vr: _ = _mm256_mul_ps(va, vb);
 
                 let mut tmp = [0.0f32; 8];
                 _mm256_storeu_ps(tmp.as_mut_ptr(), vr);
@@ -419,7 +419,7 @@ impl SimdEngine {
             }
         }
 
-        let base = chunks * 8;
+        let base: _ = chunks * 8;
         for i in 0..remainder {
             result.push(a[base + i] * b[base + i]);
         }
@@ -447,9 +447,9 @@ impl SimdEngine {
     fn dot_product_f32_avx2(&self, a: &[f32], b: &[f32]) -> f32 {
         use std::arch::x86_64::*;
 
-        let len = a.len().min(b.len());
-        let chunks = len / 8;
-        let remainder = len % 8;
+        let len: _ = a.len().min(b.len());
+        let chunks: _ = len / 8;
+        let remainder: _ = len % 8;
 
         let mut sum = 0.0f32;
 
@@ -457,10 +457,10 @@ impl SimdEngine {
             let mut vsum = _mm256_setzero_ps();
 
             for i in 0..chunks {
-                let offset = i * 8;
-                let va = _mm256_loadu_ps(a.as_ptr().add(offset));
-                let vb = _mm256_loadu_ps(b.as_ptr().add(offset));
-                let vr = _mm256_mul_ps(va, vb);
+                let offset: _ = i * 8;
+                let va: _ = _mm256_loadu_ps(a.as_ptr().add(offset));
+                let vb: _ = _mm256_loadu_ps(b.as_ptr().add(offset));
+                let vr: _ = _mm256_mul_ps(va, vb);
                 vsum = _mm256_add_ps(vsum, vr);
             }
 
@@ -471,7 +471,7 @@ impl SimdEngine {
         }
 
         // 处理剩余元素
-        let base = chunks * 8;
+        let base: _ = chunks * 8;
         for i in 0..remainder {
             sum += a[base + i] * b[base + i];
         }
@@ -501,9 +501,9 @@ impl SimdEngine {
     fn vector_sum_f32_avx2(&self, data: &[f32]) -> f32 {
         use std::arch::x86_64::*;
 
-        let len = data.len();
-        let chunks = len / 8;
-        let remainder = len % 8;
+        let len: _ = data.len();
+        let chunks: _ = len / 8;
+        let remainder: _ = len % 8;
 
         let mut sum = 0.0f32;
 
@@ -511,8 +511,8 @@ impl SimdEngine {
             let mut vsum = _mm256_setzero_ps();
 
             for i in 0..chunks {
-                let offset = i * 8;
-                let v = _mm256_loadu_ps(data.as_ptr().add(offset));
+                let offset: _ = i * 8;
+                let v: _ = _mm256_loadu_ps(data.as_ptr().add(offset));
                 vsum = _mm256_add_ps(vsum, v);
             }
 
@@ -521,7 +521,7 @@ impl SimdEngine {
             sum = tmp.iter().sum();
         }
 
-        let base = chunks * 8;
+        let base: _ = chunks * 8;
         for i in 0..remainder {
             sum += data[base + i];
         }
@@ -551,17 +551,17 @@ impl SimdEngine {
     fn vector_sqrt_f32_avx2(&self, data: &[f32]) -> Vec<f32> {
         use std::arch::x86_64::*;
 
-        let len = data.len();
+        let len: _ = data.len();
         let mut result = Vec::with_capacity(len);
 
-        let chunks = len / 8;
-        let remainder = len % 8;
+        let chunks: _ = len / 8;
+        let remainder: _ = len % 8;
 
         unsafe {
             for i in 0..chunks {
-                let offset = i * 8;
-                let v = _mm256_loadu_ps(data.as_ptr().add(offset));
-                let vr = _mm256_sqrt_ps(v);
+                let offset: _ = i * 8;
+                let v: _ = _mm256_loadu_ps(data.as_ptr().add(offset));
+                let vr: _ = _mm256_sqrt_ps(v);
 
                 let mut tmp = [0.0f32; 8];
                 _mm256_storeu_ps(tmp.as_mut_ptr(), vr);
@@ -569,7 +569,7 @@ impl SimdEngine {
             }
         }
 
-        let base = chunks * 8;
+        let base: _ = chunks * 8;
         for i in 0..remainder {
             result.push(data[base + i].sqrt());
         }
@@ -607,7 +607,7 @@ impl SimdEngine {
             return vec![];
         }
 
-        let len = a.len().min(b.len()).min(c.len());
+        let len: _ = a.len().min(b.len()).min(c.len());
 
         #[cfg(target_arch = "x86_64")]
         {
@@ -623,19 +623,19 @@ impl SimdEngine {
     fn fma_f32_avx2(&self, a: &[f32], b: &[f32], c: &[f32]) -> Vec<f32> {
         use std::arch::x86_64::*;
 
-        let len = a.len().min(b.len()).min(c.len());
+        let len: _ = a.len().min(b.len()).min(c.len());
         let mut result = Vec::with_capacity(len);
 
-        let chunks = len / 8;
-        let remainder = len % 8;
+        let chunks: _ = len / 8;
+        let remainder: _ = len % 8;
 
         unsafe {
             for i in 0..chunks {
-                let offset = i * 8;
-                let va = _mm256_loadu_ps(a.as_ptr().add(offset));
-                let vb = _mm256_loadu_ps(b.as_ptr().add(offset));
-                let vc = _mm256_loadu_ps(c.as_ptr().add(offset));
-                let vr = _mm256_fmadd_ps(va, vb, vc);
+                let offset: _ = i * 8;
+                let va: _ = _mm256_loadu_ps(a.as_ptr().add(offset));
+                let vb: _ = _mm256_loadu_ps(b.as_ptr().add(offset));
+                let vc: _ = _mm256_loadu_ps(c.as_ptr().add(offset));
+                let vr: _ = _mm256_fmadd_ps(va, vb, vc);
 
                 let mut tmp = [0.0f32; 8];
                 _mm256_storeu_ps(tmp.as_mut_ptr(), vr);
@@ -643,7 +643,7 @@ impl SimdEngine {
             }
         }
 
-        let base = chunks * 8;
+        let base: _ = chunks * 8;
         for i in 0..remainder {
             result.push(a[base + i] * b[base + i] + c[base + i]);
         }
@@ -664,7 +664,7 @@ impl SimdEngine {
         }
 
         // 选择最佳向量化策略
-        let lane_width = self.features.optimal_vector_width.f32_lanes();
+        let lane_width: _ = self.features.optimal_vector_width.f32_lanes();
 
         // 对于小数组，直接使用标量操作（避免 SIMD 开销）
         if code.len() < lane_width {
@@ -690,20 +690,20 @@ impl SimdEngine {
         self.increment_ops(true);
 
         let mut result = Vec::with_capacity(iterations);
-        let lane_width = self.features.optimal_vector_width.f32_lanes();
+        let lane_width: _ = self.features.optimal_vector_width.f32_lanes();
 
         #[cfg(target_arch = "x86_64")]
         {
             if self.capability != SimdCapability::None && iterations >= lane_width * 4 {
                 // 使用 SIMD 向量化循环
-                let vector_iters = iterations / lane_width;
-                let remainder = iterations % lane_width;
+                let vector_iters: _ = iterations / lane_width;
+                let remainder: _ = iterations % lane_width;
 
                 unsafe {
-                    let step_v = _mm256_set1_ps(step);
+                    let step_v: _ = _mm256_set1_ps(step);
                     for vector_idx in 0..vector_iters {
-                        let base_val = init_val + vector_idx as f32 * lane_width as f32 * step;
-                        let v = _mm256_set1_ps(base_val);
+                        let base_val: _ = init_val + vector_idx as f32 * lane_width as f32 * step;
+                        let v: _ = _mm256_set1_ps(base_val);
 
                         // 展开向量并存储结果
                         let mut tmp = [0.0f32; 8];
@@ -739,23 +739,23 @@ impl SimdEngine {
             return data.to_vec(); // 小数据不需要优化
         }
 
-        let lane_width = self.features.optimal_vector_width.f32_lanes();
-        let num_vectors = data.len() / lane_width;
-        let remainder = data.len() % lane_width;
+        let lane_width: _ = self.features.optimal_vector_width.f32_lanes();
+        let num_vectors: _ = data.len() / lane_width;
+        let remainder: _ = data.len() % lane_width;
 
         let mut optimized = Vec::with_capacity(data.len());
 
         // 按 SIMD 块重新组织数据
         for chunk_idx in 0..num_vectors {
-            let chunk_start = chunk_idx * lane_width;
-            let chunk_end = chunk_start + lane_width;
+            let chunk_start: _ = chunk_idx * lane_width;
+            let chunk_end: _ = chunk_start + lane_width;
 
             #[cfg(target_arch = "x86_64")]
             {
                 if self.features.has_avx2 {
                     // 使用 AVX2 加载和存储以确保对齐
                     unsafe {
-                        let v = _mm256_loadu_ps(data.as_ptr().add(chunk_start));
+                        let v: _ = _mm256_loadu_ps(data.as_ptr().add(chunk_start));
                         let mut tmp = [0.0f32; 8];
                         _mm256_storeu_ps(tmp.as_mut_ptr(), v);
                         optimized.extend_from_slice(&tmp);
@@ -773,7 +773,7 @@ impl SimdEngine {
 
         // 处理剩余元素
         if remainder > 0 {
-            let start = num_vectors * lane_width;
+            let start: _ = num_vectors * lane_width;
             optimized.extend_from_slice(&data[start..]);
         }
 
@@ -790,7 +790,7 @@ impl SimdEngine {
 
         assert_eq!(batch_a.len(), batch_b.len(), "批次大小必须相同");
 
-        let batch_size = batch_a.len();
+        let batch_size: _ = batch_a.len();
         let mut results = Vec::with_capacity(batch_size);
 
         // 并行处理批次（如果支持）
@@ -821,7 +821,7 @@ impl SimdEngine {
 
         for (a, b) in matrices {
             // 简化的矩阵乘法实现
-            let len = a.len().min(b.len());
+            let len: _ = a.len().min(b.len());
             let mut product = Vec::with_capacity(len);
 
             for i in 0..len {
@@ -856,22 +856,22 @@ impl SimdEngine {
         }
 
         // 选择最佳块大小（基于缓存行大小）
-        let cache_line_size = 64;
-        let vector_width_bytes = self.features.optimal_vector_width.bits() / 8;
-        let optimal_chunk_size = (cache_line_size / 4).max(vector_width_bytes as usize / 4);
+        let cache_line_size: _ = 64;
+        let vector_width_bytes: _ = self.features.optimal_vector_width.bits() / 8;
+        let optimal_chunk_size: _ = (cache_line_size / 4).max(vector_width_bytes as usize / 4);
 
-        let chunk_size = optimal_chunk_size.max(1024); // 至少 1024 个元素
-        let num_chunks = (data.len() + chunk_size - 1) / chunk_size;
+        let chunk_size: _ = optimal_chunk_size.max(1024); // 至少 1024 个元素
+        let num_chunks: _ = (data.len() + chunk_size - 1) / chunk_size;
 
         let mut results = Vec::with_capacity(data.len());
 
         for chunk_idx in 0..num_chunks {
-            let start = chunk_idx * chunk_size;
-            let end = (start + chunk_size).min(data.len());
-            let chunk = &data[start..end];
+            let start: _ = chunk_idx * chunk_size;
+            let end: _ = (start + chunk_size).min(data.len());
+            let chunk: _ = &data[start..end];
 
             // 处理当前块
-            let processed = self.process_chunk_f32(chunk);
+            let processed: _ = self.process_chunk_f32(chunk);
             results.extend(processed);
         }
 
@@ -893,17 +893,17 @@ impl SimdEngine {
     fn simd_process_chunk_avx512(&self, chunk: &[f32]) -> Vec<f32> {
         use std::arch::x86_64::*;
 
-        let len = chunk.len();
+        let len: _ = chunk.len();
         let mut result = Vec::with_capacity(len);
 
-        let chunks = len / 16;
-        let remainder = len % 16;
+        let chunks: _ = len / 16;
+        let remainder: _ = len % 16;
 
         unsafe {
             for i in 0..chunks {
-                let offset = i * 16;
-                let v = _mm512_loadu_ps(chunk.as_ptr().add(offset));
-                let processed = _mm512_add_ps(v, v); // 示例操作：x + x
+                let offset: _ = i * 16;
+                let v: _ = _mm512_loadu_ps(chunk.as_ptr().add(offset));
+                let processed: _ = _mm512_add_ps(v, v); // 示例操作：x + x
                 let mut tmp = [0.0f32; 16];
                 _mm512_storeu_ps(tmp.as_mut_ptr(), processed);
                 result.extend_from_slice(&tmp);
@@ -911,7 +911,7 @@ impl SimdEngine {
         }
 
         // 处理剩余元素
-        let base = chunks * 16;
+        let base: _ = chunks * 16;
         for i in 0..remainder {
             result.push(chunk[base + i] * 2.0);
         }
@@ -923,24 +923,24 @@ impl SimdEngine {
     fn simd_process_chunk_avx2(&self, chunk: &[f32]) -> Vec<f32> {
         use std::arch::x86_64::*;
 
-        let len = chunk.len();
+        let len: _ = chunk.len();
         let mut result = Vec::with_capacity(len);
 
-        let chunks = len / 8;
-        let remainder = len % 8;
+        let chunks: _ = len / 8;
+        let remainder: _ = len % 8;
 
         unsafe {
             for i in 0..chunks {
-                let offset = i * 8;
-                let v = _mm256_loadu_ps(chunk.as_ptr().add(offset));
-                let processed = _mm256_add_ps(v, v);
+                let offset: _ = i * 8;
+                let v: _ = _mm256_loadu_ps(chunk.as_ptr().add(offset));
+                let processed: _ = _mm256_add_ps(v, v);
                 let mut tmp = [0.0f32; 8];
                 _mm256_storeu_ps(tmp.as_mut_ptr(), processed);
                 result.extend_from_slice(&tmp);
             }
         }
 
-        let base = chunks * 8;
+        let base: _ = chunks * 8;
         for i in 0..remainder {
             result.push(chunk[base + i] * 2.0);
         }
@@ -952,24 +952,24 @@ impl SimdEngine {
     fn simd_process_chunk_sse4(&self, chunk: &[f32]) -> Vec<f32> {
         use std::arch::x86_64::*;
 
-        let len = chunk.len();
+        let len: _ = chunk.len();
         let mut result = Vec::with_capacity(len);
 
-        let chunks = len / 4;
-        let remainder = len % 4;
+        let chunks: _ = len / 4;
+        let remainder: _ = len % 4;
 
         unsafe {
             for i in 0..chunks {
-                let offset = i * 4;
-                let v = _mm_loadu_ps(chunk.as_ptr().add(offset));
-                let processed = _mm_add_ps(v, v);
+                let offset: _ = i * 4;
+                let v: _ = _mm_loadu_ps(chunk.as_ptr().add(offset));
+                let processed: _ = _mm_add_ps(v, v);
                 let mut tmp = [0.0f32; 4];
                 _mm_storeu_ps(tmp.as_mut_ptr(), processed);
                 result.extend_from_slice(&tmp);
             }
         }
 
-        let base = chunks * 4;
+        let base: _ = chunks * 4;
         for i in 0..remainder {
             result.push(chunk[base + i] * 2.0);
         }
@@ -1007,26 +1007,28 @@ impl Default for SimdEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_feature_detection() {
-        let features = detect_cpu_features();
+        let features: _ = detect_cpu_features();
         println!("CPU Features: {:?}", features);
         // 至少应该完成检测而不 panic
     }
 
     #[test]
     fn test_engine_creation() {
-        let engine = SimdEngine::new();
+        let engine: _ = SimdEngine::new();
         assert!(engine.is_initialized());
     }
 
     #[test]
     fn test_basic_vector_add() {
-        let engine = SimdEngine::new();
-        let a = vec![1.0, 2.0, 3.0, 4.0];
-        let b = vec![4.0, 3.0, 2.0, 1.0];
-        let result = engine.vector_add_f32(&a, &b);
+        let engine: _ = SimdEngine::new();
+        let a: _ = vec![1.0, 2.0, 3.0, 4.0];
+        let b: _ = vec![4.0, 3.0, 2.0, 1.0];
+        let result: _ = engine.vector_add_f32(&a, &b);
         assert_eq!(result, vec![5.0, 5.0, 5.0, 5.0]);
     }
 }

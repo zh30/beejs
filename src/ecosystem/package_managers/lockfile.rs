@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tokio;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Lockfile 类型
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,14 +25,14 @@ pub struct LockfileEntry {
     pub version: String,
     pub resolved: String,
     pub integrity: String,
-    pub requires: HashMap<String, String>,
-    pub dependencies: HashMap<String, String>,
+    pub requires: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub dev: bool,
     pub optional: bool,
     pub bundled: bool,
     pub license: Option<String>,
-    pub bin: Option<HashMap<String, String>>,
-    pub engines: Option<HashMap<String, String>>,
+    pub bin: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub engines: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     pub os: Option<Vec<String>>,
     pub cpu: Option<Vec<String>>,
 }
@@ -39,13 +41,13 @@ pub struct LockfileEntry {
 #[derive(Debug)]
 pub struct LockfileManager {
     lockfile_type: LockfileType,
-    entries: HashMap<String, LockfileEntry>,
+    entries: HashMap<String, LockfileEntry, std::collections::HashMap<String, LockfileEntry, String, LockfileEntry>>,
 }
 
 impl LockfileManager {
     /// 创建新的 lockfile 管理器
     pub fn new() -> Self {
-        let lockfile_type = if PathBuf::from("yarn.lock").exists() {
+        let lockfile_type: _ = if PathBuf::from("yarn.lock").exists() {
             LockfileType::YarnLock
         } else if PathBuf::from("pnpm-lock.yaml").exists() {
             LockfileType::PnpmLock
@@ -61,7 +63,7 @@ impl LockfileManager {
 
     /// 从文件加载 lockfile
     pub async fn load_from_file(&mut self, path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-        let content = tokio::fs::read_to_string(path).await?;
+        let content: _ = tokio::fs::read_to_string(path).await?;
 
         match self.lockfile_type {
             LockfileType::PackageLock => {
@@ -85,9 +87,9 @@ impl LockfileManager {
         if let Some(packages) = package_lock.get("packages") {
             for (key, value) in packages.as_object().unwrap() {
                 if key.starts_with("node_modules/") {
-                    let package_name = key.strip_prefix("node_modules/").unwrap();
+                    let package_name: _ = key.strip_prefix("node_modules/").unwrap();
 
-                    let entry = LockfileEntry {
+                    let entry: _ = LockfileEntry {
                         version: value.get("version").unwrap().as_str().unwrap_or("").to_string(),
                         resolved: value.get("resolved").unwrap().as_str().unwrap_or("").to_string(),
                         integrity: value.get("integrity").unwrap().as_str().unwrap_or("").to_string(),
@@ -194,15 +196,15 @@ impl LockfileManager {
 
     /// 解析 yarn.lock 键
     fn parse_yarn_lock_key(&self, key: &str) -> Option<(String, String)> {
-        let key = key.trim().trim_matches('"');
+        let key: _ = key.clone();trim().trim_matches('"');
         if let Some(at_pos) = key.rfind('@') {
             let (name_part, version_part) = key.split_at(at_pos);
-            let name = if name_part.starts_with("@scope/") {
+            let name: _ = if name_part.starts_with("@scope/") {
                 name_part.to_string()
             } else {
                 name_part.trim_start_matches('@').to_string()
             };
-            let version = version_part.trim_start_matches('@').to_string();
+            let version: _ = version_part.trim_start_matches('@').to_string();
             Some((name, version))
         } else {
             None
@@ -221,8 +223,8 @@ impl LockfileManager {
             if line.starts_with("  ") && line.contains(":") {
                 let parts: Vec<&str> = line.split(':').collect();
                 if parts.len() >= 2 {
-                    let key = parts[0].trim();
-                    let value = parts[1].trim();
+                    let key: _ = parts[0].trim();
+                    let value: _ = parts[1].trim();
 
                     match key {
                         "version" => {
@@ -235,7 +237,7 @@ impl LockfileManager {
                 // 包路径
                 let parts: Vec<&str> = line.split('/').collect();
                 if parts.len() >= 2 {
-                    let name = if parts[0].starts_with("@") {
+                    let name: _ = if parts[0].starts_with("@") {
                         format!("{}/{}", parts[0], parts[1])
                     } else {
                         parts[0].to_string()
@@ -304,7 +306,7 @@ impl LockfileManager {
             package_obj.insert("optional".to_string(), serde_json::Value::Bool(entry.optional));
 
             if !entry.requires.is_empty() {
-                let requires = serde_json::Value::Object(
+                let requires: _ = serde_json::Value::Object(
                     entry.requires.iter()
                         .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
                         .collect(),
@@ -313,7 +315,7 @@ impl LockfileManager {
             }
 
             if !entry.dependencies.is_empty() {
-                let dependencies = serde_json::Value::Object(
+                let dependencies: _ = serde_json::Value::Object(
                     entry.dependencies.iter()
                         .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
                         .collect(),
@@ -321,13 +323,13 @@ impl LockfileManager {
                 package_obj.insert("dependencies".to_string(), dependencies);
             }
 
-            let package_key = format!("node_modules/{}", name);
+            let package_key: _ = format!("node_modules/{}", name);
             packages.insert(package_key, serde_json::Value::Object(package_obj));
         }
 
         package_lock.insert("packages".to_string(), serde_json::Value::Object(packages));
 
-        let content = serde_json::to_string_pretty(&serde_json::Value::Object(package_lock))?;
+        let content: _ = serde_json::to_string_pretty(&serde_json::Value::Object(package_lock))?;
         tokio::fs::write(path, content).await?;
 
         Ok(())
@@ -373,7 +375,7 @@ impl LockfileManager {
         content.push_str("packages:\n");
 
         for (name, entry) in &self.entries {
-            let package_path = if name.starts_with("@") {
+            let package_path: _ = if name.starts_with("@") {
                 format!("node_modules/{}", name)
             } else {
                 format!("node_modules/{}", name)
@@ -400,10 +402,10 @@ impl LockfileManager {
     /// 更新 lockfile
     pub async fn update_lockfile(
         &mut self,
-        resolutions: &HashMap<String, PackageResolution>,
+        resolutions: &HashMap<String, PackageResolution, std::collections::HashMap<String, PackageResolution, String, PackageResolution>>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         for (name, resolution) in resolutions {
-            let entry = LockfileEntry {
+            let entry: _ = LockfileEntry {
                 version: resolution.version.clone(),
                 resolved: resolution.resolved_url.clone(),
                 integrity: resolution.integrity.clone(),
@@ -426,7 +428,7 @@ impl LockfileManager {
     }
 
     /// 获取所有条目
-    pub fn get_entries(&self) -> &HashMap<String, LockfileEntry> {
+    pub fn get_entries(&self) -> &HashMap<String, LockfileEntry, std::collections::HashMap<String, LockfileEntry, String, LockfileEntry>> {
         &self.entries
     }
 

@@ -13,19 +13,21 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::Level;
 use tokio::time::{sleep, Duration};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 #[tokio::test]
 async fn test_structured_logger_creation() {
-    let logger = StructuredLogger::new(Level::INFO, "beejs".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs".to_string());
     // Just verify it was created
     assert!(true);
 }
 
 #[tokio::test]
 async fn test_log_levels() {
-    let logger = StructuredLogger::new(Level::DEBUG, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::DEBUG, "beejs-test".to_string());
 
-    let context = HashMap::from([
+    let context: _ = HashMap::from([
         ("test_key".to_string(), json!("test_value"))
     ]);
 
@@ -42,7 +44,7 @@ async fn test_log_levels() {
 
 #[tokio::test]
 async fn test_context_management() {
-    let logger = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
 
     // Set correlation ID
     logger.set_correlation_id("test-correlation-123".to_string()).await;
@@ -52,21 +54,21 @@ async fn test_context_management() {
     logger.add_context("session_id".to_string(), json!("abc123")).await;
 
     // Get context
-    let context = logger.get_context().await;
+    let context: _ = logger.get_context().await;
 
     assert!(context.contains_key("correlation_id"));
     assert!(context.contains_key("user_id"));
     assert!(context.contains_key("session_id"));
 
-    let correlation_id = context.get("correlation_id").unwrap();
+    let correlation_id: _ = context.get("correlation_id").unwrap();
     assert_eq!(correlation_id, &json!("test-correlation-123"));
 }
 
 #[tokio::test]
 async fn test_json_log_format() {
-    let logger = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
 
-    let context = HashMap::from([
+    let context: _ = HashMap::from([
         ("event_type".to_string(), json!("user_action")),
         ("user_id".to_string(), json!(123)),
         ("timestamp".to_string(), json!(chrono::Utc::now().to_rfc3339())),
@@ -81,17 +83,17 @@ async fn test_json_log_format() {
 
 #[tokio::test]
 async fn test_concurrent_logging() {
-    let logger = Arc::new(StructuredLogger::new(Level::INFO, "beejs-test".to_string()));
+    let logger: _ = Arc::new(std::sync::Mutex::new(StructuredLogger::new(Level::INFO, "beejs-test".to_string())));
 
     let mut handles = vec![];
     for i in 0..10 {
-        let logger_clone = Arc::clone(&logger);
-        let context = HashMap::from([
+        let logger_clone: _ = Arc::clone(logger);
+        let context: _ = HashMap::from([
             ("iteration".to_string(), json!(i)),
             ("thread_id".to_string(), json!(i % 3)),
         ]);
 
-        let handle = tokio::spawn(async move {
+        let handle: _ = tokio::spawn(async move {
             logger_clone.info(&format!("Log message {}", i), context).await;
         });
         handles.push(handle);
@@ -107,7 +109,7 @@ async fn test_concurrent_logging() {
 
 #[tokio::test]
 async fn test_large_context() {
-    let logger = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
 
     // Create large context
     let mut context = HashMap::new();
@@ -125,9 +127,9 @@ async fn test_large_context() {
 
 #[tokio::test]
 async fn test_nested_context_data() {
-    let logger = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
 
-    let nested_object = json!({
+    let nested_object: _ = json!({
         "user": {
             "id": 42,
             "name": "John Doe",
@@ -142,7 +144,7 @@ async fn test_nested_context_data() {
         }
     });
 
-    let context = HashMap::from([
+    let context: _ = HashMap::from([
         ("data".to_string(), nested_object)
     ]);
 
@@ -153,9 +155,9 @@ async fn test_nested_context_data() {
 
 #[tokio::test]
 async fn test_special_characters_in_context() {
-    let logger = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
 
-    let context = HashMap::from([
+    let context: _ = HashMap::from([
         ("message".to_string(), json!("Hello \"World\" with \\ backslashes")),
         ("unicode".to_string(), json!("Hello 世界 🌍")),
         ("newlines".to_string(), json!("Line 1\nLine 2\nLine 3")),
@@ -168,9 +170,9 @@ async fn test_special_characters_in_context() {
 
 #[tokio::test]
 async fn test_empty_message() {
-    let logger = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
 
-    let context = HashMap::from([
+    let context: _ = HashMap::from([
         ("key".to_string(), json!("value"))
     ]);
 
@@ -184,10 +186,10 @@ async fn test_empty_message() {
 
 #[tokio::test]
 async fn test_empty_context() {
-    let logger = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
 
     // Log with empty context
-    let empty_context = HashMap::new();
+    let empty_context: _ = HashMap::new();
     logger.info("Log with empty context", empty_context).await;
 
     assert!(true);
@@ -195,26 +197,26 @@ async fn test_empty_context() {
 
 #[tokio::test]
 async fn test_correlation_id_persistence() {
-    let logger = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
 
     // Set correlation ID
     logger.set_correlation_id("test-123".to_string()).await;
 
     // Log multiple times - correlation ID should persist
-    let context1 = HashMap::from([("event".to_string(), json!("first"))]);
-    let context2 = HashMap::from([("event".to_string(), json!("second"))]);
+    let context1: _ = HashMap::from([("event".to_string(), json!("first"))]);
+    let context2: _ = HashMap::from([("event".to_string(), json!("second"))]);
 
     logger.info("First log", context1).await;
     logger.info("Second log", context2).await;
 
     // Verify correlation ID is still set
-    let context = logger.get_context().await;
+    let context: _ = logger.get_context().await;
     assert!(context.contains_key("correlation_id"));
 }
 
 #[tokio::test]
 async fn test_context_override() {
-    let logger = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
 
     // Add initial context
     logger.add_context("key1".to_string(), json!("value1")).await;
@@ -222,17 +224,17 @@ async fn test_context_override() {
     // Override the key
     logger.add_context("key1".to_string(), json!("value2")).await;
 
-    let context = logger.get_context().await;
+    let context: _ = logger.get_context().await;
     assert_eq!(context.get("key1"), Some(&json!("value2")));
 }
 
 #[tokio::test]
 async fn test_different_log_levels_filtering() {
-    let logger_info = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
-    let logger_warn = StructuredLogger::new(Level::WARN, "beejs-test".to_string());
-    let logger_error = StructuredLogger::new(Level::ERROR, "beejs-test".to_string());
+    let logger_info: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger_warn: _ = StructuredLogger::new(Level::WARN, "beejs-test".to_string());
+    let logger_error: _ = StructuredLogger::new(Level::ERROR, "beejs-test".to_string());
 
-    let context = HashMap::from([("test".to_string(), json!("value"))]);
+    let context: _ = HashMap::from([("test".to_string(), json!("value"))]);
 
     // All should log
     logger_info.info("Info message", context.clone()).await;
@@ -247,19 +249,19 @@ async fn test_different_log_levels_filtering() {
 
 #[tokio::test]
 async fn test_log_performance() {
-    let logger = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
 
-    let start = std::time::Instant::now();
-    let iterations = 1000;
+    let start: _ = std::time::Instant::now();
+    let iterations: _ = 1000;
 
     for i in 0..iterations {
-        let context = HashMap::from([
+        let context: _ = HashMap::from([
             ("iteration".to_string(), json!(i)),
         ]);
         logger.info(&format!("Performance test log {}", i), context).await;
     }
 
-    let elapsed = start.elapsed();
+    let elapsed: _ = start.elapsed();
 
     // Should complete within reasonable time (less than 10 seconds)
     assert!(elapsed < std::time::Duration::from_secs(10),
@@ -268,9 +270,9 @@ async fn test_log_performance() {
 
 #[tokio::test]
 async fn test_log_with_various_data_types() {
-    let logger = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
 
-    let context = HashMap::from([
+    let context: _ = HashMap::from([
         ("string".to_string(), json!("text")),
         ("integer".to_string(), json!(42)),
         ("float".to_string(), json!(3.14)),
@@ -290,7 +292,7 @@ async fn test_environment_variable() {
     // Set environment variable
     std::env::set_var("BEEJS_ENV", "test");
 
-    let logger = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
 
     // Environment should be set to "test"
     // Just verify logger was created successfully
@@ -302,11 +304,11 @@ async fn test_environment_variable() {
 
 #[tokio::test]
 async fn test_rapid_logging() {
-    let logger = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
 
     // Log rapidly
     for i in 0..100 {
-        let context = HashMap::from([
+        let context: _ = HashMap::from([
             ("iteration".to_string(), json!(i)),
         ]);
         logger.info("Rapid log", context).await;
@@ -322,9 +324,9 @@ async fn test_rapid_logging() {
 
 #[tokio::test]
 async fn test_log_message_with_quotes() {
-    let logger = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
 
-    let context = HashMap::from([
+    let context: _ = HashMap::from([
         ("message".to_string(), json!("This is a \"quoted\" message")),
     ]);
 
@@ -335,9 +337,9 @@ async fn test_log_message_with_quotes() {
 
 #[tokio::test]
 async fn test_unicode_logging() {
-    let logger = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
 
-    let context = HashMap::from([
+    let context: _ = HashMap::from([
         ("chinese".to_string(), json!("你好世界")),
         ("emoji".to_string(), json!("🚀 🌟 💫")),
         ("japanese".to_string(), json!("こんにちは")),
@@ -352,10 +354,10 @@ async fn test_unicode_logging() {
 
 #[tokio::test]
 async fn test_log_with_timestamp_context() {
-    let logger = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
+    let logger: _ = StructuredLogger::new(Level::INFO, "beejs-test".to_string());
 
-    let now = chrono::Utc::now();
-    let context = HashMap::from([
+    let now: _ = chrono::Utc::now();
+    let context: _ = HashMap::from([
         ("timestamp".to_string(), json!(now.to_rfc3339())),
         ("timestamp_millis".to_string(), json!(now.timestamp_millis())),
     ]);

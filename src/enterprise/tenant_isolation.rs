@@ -162,13 +162,13 @@ pub struct UsageMetrics {
 /// Policy engine
 #[derive(Debug)]
 pub struct PolicyEngine {
-    policies: Arc<RwLock<BTreeMap<TenantId, TenantConfig>>>,
+    policies: Arc<RwLock<BTreeMap<TenantId, TenantConfig, TenantId, TenantConfig>>>,
 }
 
 /// Tenant manager
 #[derive(Debug)]
 pub struct TenantManager {
-    tenants: Arc<RwLock<BTreeMap<TenantId, Tenant>>>,
+    tenants: Arc<RwLock<BTreeMap<TenantId, Tenant, TenantId, Tenant>>>,
     policy_engine: Arc<PolicyEngine>,
     quota_enforcer: Arc<RwLock<QuotaEnforcer>>,
 }
@@ -176,7 +176,7 @@ pub struct TenantManager {
 /// Quota enforcer
 #[derive(Debug)]
 pub struct QuotaEnforcer {
-    quotas: Arc<RwLock<BTreeMap<TenantId, QuotaStatus>>>,
+    quotas: Arc<RwLock<BTreeMap<TenantId, QuotaStatus, TenantId, QuotaStatus>>>,
 }
 
 /// Tenant isolation manager
@@ -191,36 +191,36 @@ pub struct TenantIsolationManager {
 /// Network isolator
 #[derive(Debug)]
 pub struct NetworkIsolator {
-    namespaces: Arc<RwLock<BTreeMap<TenantId, String>>>,
+    namespaces: Arc<RwLock<BTreeMap<TenantId, String, TenantId, String>>>,
 }
 
 /// Storage isolator
 #[derive(Debug)]
 pub struct StorageIsolator {
-    storage_classes: Arc<RwLock<BTreeMap<TenantId, String>>>,
+    storage_classes: Arc<RwLock<BTreeMap<TenantId, String, TenantId, String>>>,
 }
 
 /// Compute isolator
 #[derive(Debug)]
 pub struct ComputeIsolator {
-    quota_names: Arc<RwLock<BTreeMap<TenantId, String>>>,
+    quota_names: Arc<RwLock<BTreeMap<TenantId, String, TenantId, String>>>,
 }
 
 impl TenantManager {
     /// Create a new tenant manager
     pub fn new() -> Self {
         Self {
-            tenants: Arc::new(RwLock::new(BTreeMap::new())),
-            policy_engine: Arc::new(PolicyEngine::new()),
-            quota_enforcer: Arc::new(RwLock::new(QuotaEnforcer::new())),
+            tenants: Arc::new(std::sync::Mutex::new(RwLock::new(BTreeMap::new()))),
+            policy_engine: Arc::new(std::sync::Mutex::new(PolicyEngine::new())),
+            quota_enforcer: Arc::new(std::sync::Mutex::new(RwLock::new(QuotaEnforcer::new()))),
         }
     }
 
     /// Create a new tenant
     pub async fn create_tenant(&self, config: TenantConfig) -> Result<TenantId> {
-        let tenant_id = TenantId::new(Uuid::new_v4().to_string());
+        let tenant_id: _ = TenantId::new(Uuid::new_v4().to_string());
 
-        let tenant = Tenant {
+        let tenant: _ = Tenant {
             id: tenant_id.clone(),
             config: config.clone(),
             status: TenantStatus::Creating,
@@ -266,7 +266,7 @@ impl TenantManager {
 
     /// Get tenant by ID
     pub async fn get_tenant(&self, tenant_id: &TenantId) -> Result<Tenant> {
-        let tenants = self.tenants.read().unwrap();
+        let tenants: _ = self.tenants.read().unwrap();
         tenants
             .get(tenant_id)
             .cloned()
@@ -275,7 +275,7 @@ impl TenantManager {
 
     /// List all tenants
     pub async fn list_tenants(&self) -> Result<Vec<Tenant>> {
-        let tenants = self.tenants.read().unwrap();
+        let tenants: _ = self.tenants.read().unwrap();
         Ok(tenants.values().cloned().collect())
     }
 
@@ -335,41 +335,41 @@ impl TenantIsolationManager {
     /// Create a new tenant isolation manager
     pub fn new() -> Self {
         Self {
-            tenant_manager: Arc::new(TenantManager::new()),
-            network_isolator: Arc::new(NetworkIsolator::new()),
-            storage_isolator: Arc::new(StorageIsolator::new()),
-            compute_isolator: Arc::new(ComputeIsolator::new()),
+            tenant_manager: Arc::new(std::sync::Mutex::new(TenantManager::new())),
+            network_isolator: Arc::new(std::sync::Mutex::new(NetworkIsolator::new())),
+            storage_isolator: Arc::new(std::sync::Mutex::new(StorageIsolator::new())),
+            compute_isolator: Arc::new(std::sync::Mutex::new(ComputeIsolator::new())),
         }
     }
 
     /// Create tenant isolation
     pub async fn create_tenant_isolation(&self, tenant: &Tenant) -> Result<IsolationBoundary> {
-        let tenant_id = &tenant.id;
+        let tenant_id: _ = &tenant.id;
 
         // Create network isolation
-        let network_namespace = self
+        let network_namespace: _ = self
             .network_isolator
             .create_isolation(tenant_id, &tenant.config.network_policy)
             .await?;
 
         // Create storage isolation
-        let storage_class = self
+        let storage_class: _ = self
             .storage_isolator
             .create_isolation(tenant_id, &tenant.config.storage_quota)
             .await?;
 
         // Create compute isolation
-        let compute_quota = self
+        let compute_quota: _ = self
             .compute_isolator
             .create_isolation(tenant_id, &tenant.config.limits)
             .await?;
 
         // Create security context
-        let security_context = self
+        let security_context: _ = self
             .create_security_context(tenant_id, &tenant.config.security_policy)
             .await?;
 
-        let boundary = IsolationBoundary {
+        let boundary: _ = IsolationBoundary {
             tenant_id: tenant_id.clone(),
             network_namespace,
             storage_class,
@@ -388,7 +388,7 @@ impl TenantIsolationManager {
         security_policy: &SecurityPolicy,
     ) -> Result<String> {
         // In real implementation, this would create Kubernetes SecurityContext
-        let context_name = format!("beejs-sec-{}-{}-{}", tenant_id.as_str(), security_policy.encryption_enabled, security_policy.rbac_enabled);
+        let context_name: _ = format!("beejs-sec-{}-{}-{}", tenant_id.as_str(), security_policy.encryption_enabled, security_policy.rbac_enabled);
         Ok(context_name)
     }
 }
@@ -396,13 +396,13 @@ impl TenantIsolationManager {
 impl PolicyEngine {
     pub fn new() -> Self {
         Self {
-            policies: Arc::new(RwLock::new(BTreeMap::new())),
+            policies: Arc::new(std::sync::Mutex::new(RwLock::new(BTreeMap::new()))),
         }
     }
 
     /// Check if action is allowed for tenant
     pub async fn is_action_allowed(&self, tenant_id: &TenantId, action: &str) -> Result<bool> {
-        let policies = self.policies.read().unwrap();
+        let policies: _ = self.policies.read().unwrap();
         if let Some(config) = policies.get(tenant_id) {
             // Simple policy check - in real implementation, this would be more sophisticated
             Ok(match action {
@@ -418,7 +418,7 @@ impl PolicyEngine {
 
     /// Get policy for tenant
     pub async fn get_policy(&self, tenant_id: &TenantId) -> Result<TenantConfig> {
-        let policies = self.policies.read().unwrap();
+        let policies: _ = self.policies.read().unwrap();
         policies
             .get(tenant_id)
             .cloned()
@@ -429,13 +429,13 @@ impl PolicyEngine {
 impl QuotaEnforcer {
     pub fn new() -> Self {
         Self {
-            quotas: Arc::new(RwLock::new(BTreeMap::new())),
+            quotas: Arc::new(std::sync::Mutex::new(RwLock::new(BTreeMap::new()))),
         }
     }
 
     /// Enforce quota for tenant
     pub async fn enforce_quota(&self, tenant_id: &TenantId) -> Result<QuotaStatus> {
-        let quotas = self.quotas.read().unwrap();
+        let quotas: _ = self.quotas.read().unwrap();
         quotas
             .get(tenant_id)
             .cloned()
@@ -467,7 +467,7 @@ impl QuotaEnforcer {
 impl NetworkIsolator {
     pub fn new() -> Self {
         Self {
-            namespaces: Arc::new(RwLock::new(BTreeMap::new())),
+            namespaces: Arc::new(std::sync::Mutex::new(RwLock::new(BTreeMap::new()))),
         }
     }
 
@@ -478,7 +478,7 @@ impl NetworkIsolator {
         policy: &NetworkPolicy,
     ) -> Result<String> {
         // Generate namespace name
-        let namespace = format!("beejs-tenant-{}", tenant_id.as_str());
+        let namespace: _ = format!("beejs-tenant-{}", tenant_id.as_str());
 
         // In real implementation, this would create Kubernetes Namespace with NetworkPolicy
         {
@@ -494,7 +494,7 @@ impl NetworkIsolator {
 impl StorageIsolator {
     pub fn new() -> Self {
         Self {
-            storage_classes: Arc::new(RwLock::new(BTreeMap::new())),
+            storage_classes: Arc::new(std::sync::Mutex::new(RwLock::new(BTreeMap::new()))),
         }
     }
 
@@ -505,7 +505,7 @@ impl StorageIsolator {
         quota: &StorageQuota,
     ) -> Result<String> {
         // Generate storage class name
-        let storage_class = format!("beejs-tenant-storage-{}", tenant_id.as_str());
+        let storage_class: _ = format!("beejs-tenant-storage-{}", tenant_id.as_str());
 
         // In real implementation, this would create Kubernetes StorageClass
         {
@@ -521,7 +521,7 @@ impl StorageIsolator {
 impl ComputeIsolator {
     pub fn new() -> Self {
         Self {
-            quota_names: Arc::new(RwLock::new(BTreeMap::new())),
+            quota_names: Arc::new(std::sync::Mutex::new(RwLock::new(BTreeMap::new()))),
         }
     }
 
@@ -532,7 +532,7 @@ impl ComputeIsolator {
         limits: &ResourceLimits,
     ) -> Result<String> {
         // Generate quota name
-        let quota_name = format!("beejs-tenant-quota-{}", tenant_id.as_str());
+        let quota_name: _ = format!("beejs-tenant-quota-{}", tenant_id.as_str());
 
         // In real implementation, this would create Kubernetes ResourceQuota
         {
@@ -548,11 +548,13 @@ impl ComputeIsolator {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_create_tenant() {
-        let manager = TenantManager::new();
-        let config = TenantConfig {
+        let manager: _ = TenantManager::new();
+        let config: _ = TenantConfig {
             name: "test-tenant".to_string(),
             description: Some("Test tenant".to_string()),
             owner: "test-owner".to_string(),
@@ -588,16 +590,16 @@ mod tests {
             },
         };
 
-        let tenant_id = manager.create_tenant(config).await.unwrap();
+        let tenant_id: _ = manager.create_tenant(config).await.unwrap();
         assert!(!tenant_id.as_str().is_empty());
     }
 
     #[tokio::test]
     async fn test_tenant_isolation() {
-        let isolation_manager = TenantIsolationManager::new();
-        let tenant_id = TenantId::new("test-tenant-1".to_string());
+        let isolation_manager: _ = TenantIsolationManager::new();
+        let tenant_id: _ = TenantId::new("test-tenant-1".to_string());
 
-        let config = TenantConfig {
+        let config: _ = TenantConfig {
             name: "test-tenant".to_string(),
             description: None,
             owner: "test-owner".to_string(),
@@ -633,7 +635,7 @@ mod tests {
             },
         };
 
-        let tenant = Tenant {
+        let tenant: _ = Tenant {
             id: tenant_id,
             config,
             status: TenantStatus::Active,
@@ -642,7 +644,7 @@ mod tests {
             resource_usage: ResourceUsage::default(),
         };
 
-        let boundary = isolation_manager
+        let boundary: _ = isolation_manager
             .create_tenant_isolation(&tenant)
             .await
             .unwrap();
@@ -653,10 +655,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_quota_enforcement() {
-        let enforcer = QuotaEnforcer::new();
-        let tenant_id = TenantId::new("test-tenant".to_string());
+        let enforcer: _ = QuotaEnforcer::new();
+        let tenant_id: _ = TenantId::new("test-tenant".to_string());
 
-        let usage = ResourceUsage {
+        let usage: _ = ResourceUsage {
             cpu_used: 2.0,
             memory_used_gb: 4.0,
             storage_used_gb: 50.0,

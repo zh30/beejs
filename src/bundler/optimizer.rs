@@ -7,7 +7,7 @@ pub fn optimize_code(code: &str, level: u8) -> Result<String> {
         0 => Ok(code.to_string()),
         1 => {
             // Basic optimization: remove line comments
-            let result = code
+            let result: _ = code
                 .lines()
                 .map(|line| {
                     // Find the position of // and remove everything from there
@@ -16,7 +16,7 @@ pub fn optimize_code(code: &str, level: u8) -> Result<String> {
                         let before_comment = &line[..pos];
                         let mut in_string = false;
                         let mut string_char = '\0';
-                        let _inside_string = false;
+                        let _inside_string: _ = false;
 
                         for (i, c) in before_comment.chars().enumerate() {
                             if c == '"' || c == '\'' {
@@ -49,7 +49,7 @@ pub fn optimize_code(code: &str, level: u8) -> Result<String> {
             // Medium optimization: remove comments and extra whitespace
             let lines: Vec<&str> = code.lines()
                 .filter(|line| {
-                    let trimmed = line.trim();
+                    let trimmed: _ = line.trim();
                     !trimmed.starts_with("//") && !trimmed.starts_with("/*")
                 })
                 .map(|line| line.trim())
@@ -91,18 +91,20 @@ pub fn optimize_code(code: &str, level: u8) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_optimize_level_0() {
-        let code = "console.log('test'); // comment";
-        let result = optimize_code(code, 0).unwrap();
+        let code: _ = "console.log('test'); // comment";
+        let result: _ = optimize_code(code, 0).unwrap();
         assert!(result.contains("// comment"));
     }
 
     #[test]
     fn test_optimize_level_1() {
-        let code = "console.log('test'); // comment";
-        let result = optimize_code(code, 1).unwrap();
+        let code: _ = "console.log('test'); // comment";
+        let result: _ = optimize_code(code, 1).unwrap();
         assert!(!result.contains("// comment"));
     }
 }

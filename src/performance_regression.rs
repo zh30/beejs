@@ -18,6 +18,8 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 性能回归检测错误
 #[derive(Error, Debug)]
@@ -68,7 +70,7 @@ pub struct PerformanceBaseline {
     pub memory_stats: Option<crate::benchmarks::MemoryStats>,
     pub timestamp: u64,
     pub sample_count: usize,
-    pub metadata: HashMap<String, String>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 性能回归检测结果
@@ -111,7 +113,7 @@ impl RegressionSeverity {
 /// 性能回归检测器
 pub struct PerformanceRegressionDetector {
     thresholds: PerformanceThresholds,
-    baselines: HashMap<String, PerformanceBaseline>,
+    baselines: HashMap<String, PerformanceBaseline, std::collections::HashMap<String, PerformanceBaseline, String, PerformanceBaseline>>,
     baseline_dir: PathBuf,
 }
 
@@ -147,7 +149,7 @@ impl PerformanceRegressionDetector {
 
     /// 创建默认配置的检测器
     pub fn new_default() -> Self {
-        let baseline_dir = PathBuf::from("performance_baselines");
+        let baseline_dir: _ = PathBuf::from("performance_baselines");
         Self::new(PerformanceThresholds::default(), baseline_dir)
     }
 
@@ -160,11 +162,11 @@ impl PerformanceRegressionDetector {
         for entry in fs::read_dir(&self.baseline_dir)
             .map_err(|e| RegressionError::BaselineLoadError(e.to_string()))?
         {
-            let entry = entry.map_err(|e| RegressionError::BaselineLoadError(e.to_string()))?;
-            let path = entry.path();
+            let entry: _ = entry.clone();map_err(|e| RegressionError::BaselineLoadError(e.to_string()))?;
+            let path: _ = entry.path();
 
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
-                let content = fs::read_to_string(&path)
+                let content: _ = fs::read_to_string(&path)
                     .map_err(|e| RegressionError::BaselineLoadError(e.to_string()))?;
 
                 let baseline: PerformanceBaseline = serde_json::from_str(&content)
@@ -179,13 +181,13 @@ impl PerformanceRegressionDetector {
 
     /// 保存基线数据到文件
     pub fn save_baseline(&self, baseline: &PerformanceBaseline) -> Result<(), RegressionError> {
-        let filename = format!("{}_{}.json",
+        let filename: _ = format!("{}_{}.json",
             baseline.test_name,
             baseline.timestamp
         );
-        let path = self.baseline_dir.join(filename);
+        let path: _ = self.baseline_dir.join(filename);
 
-        let content = serde_json::to_string_pretty(baseline)
+        let content: _ = serde_json::to_string_pretty(baseline)
             .map_err(|e| RegressionError::BaselineSaveError(e.to_string()))?;
 
         fs::write(&path, content)
@@ -214,11 +216,11 @@ impl PerformanceRegressionDetector {
 
     /// 检测单个测试的性能回归
     pub fn detect_regression(&self, result: &BenchmarkResult) -> RegressionDetectionResult {
-        let test_name = &result.name;
-        let baseline = self.baselines.get(test_name);
+        let test_name: _ = &result.name;
+        let baseline: _ = self.baselines.get(test_name);
 
         // 获取对应的阈值
-        let threshold_percent = match result.metric_type {
+        let threshold_percent: _ = match result.metric_type {
             MetricType::StartupTime => self.thresholds.startup_time_regression_percent,
             MetricType::ExecutionTime => self.thresholds.execution_time_regression_percent,
             MetricType::MemoryUsage => self.thresholds.memory_regression_percent,
@@ -229,11 +231,11 @@ impl PerformanceRegressionDetector {
 
         let (is_regression, actual_delta_percent, recommendations) = if let Some(baseline) = baseline {
             // 计算性能变化
-            let current_avg_ns = result.avg_duration.as_nanos() as f64;
-            let baseline_avg_ns = baseline.avg_duration_ns as f64;
+            let current_avg_ns: _ = result.avg_duration.as_nanos() as f64;
+            let baseline_avg_ns: _ = baseline.avg_duration_ns as f64;
 
             // 对于执行时间，增加表示性能下降（回归）
-            let time_delta_percent = ((current_avg_ns - baseline_avg_ns) / baseline_avg_ns) * 100.0;
+            let time_delta_percent: _ = ((current_avg_ns - baseline_avg_ns) / baseline_avg_ns) * 100.0;
 
             // 对于吞吐量，减少表示性能下降
             let throughput_delta_percent =
@@ -241,7 +243,7 @@ impl PerformanceRegressionDetector {
                     / baseline.operations_per_second) * 100.0;
 
             // 综合判断回归情况
-            let regression_percent = if matches!(result.metric_type, MetricType::OperationsPerSecond)
+            let regression_percent: _ = if matches!(result.metric_type, MetricType::OperationsPerSecond)
                 || matches!(result.metric_type, MetricType::Throughput)
             {
                 -throughput_delta_percent // 负号表示性能下降
@@ -249,8 +251,8 @@ impl PerformanceRegressionDetector {
                 time_delta_percent
             };
 
-            let is_regression = regression_percent > threshold_percent;
-            let severity = RegressionSeverity::from_percentage(regression_percent.abs());
+            let is_regression: _ = regression_percent > threshold_percent;
+            let severity: _ = RegressionSeverity::from_percentage(regression_percent.abs());
 
             // 生成建议
             let mut recommendations = Vec::new();
@@ -337,10 +339,10 @@ impl PerformanceRegressionDetector {
         };
 
         // 执行所有测试
-        let test_results = test_runner.run_all_tests()?;
+        let test_results: _ = test_runner.run_all_tests()?;
 
         for result in test_results {
-            let detection = self.detect_regression(&result);
+            let detection: _ = self.detect_regression(&result);
             results.push(detection.clone());
 
             stats.total_tests += 1;
@@ -394,13 +396,13 @@ impl PerformanceRegressionDetector {
     }
 
     /// 获取所有基线数据
-    pub fn get_all_baselines(&self) -> &HashMap<String, PerformanceBaseline> {
+    pub fn get_all_baselines(&self) -> &HashMap<String, PerformanceBaseline, std::collections::HashMap<String, PerformanceBaseline, String, PerformanceBaseline>> {
         &self.baselines
     }
 
     /// 清理过期的基线数据
     pub fn cleanup_old_baselines(&self, max_age_days: u64) -> Result<usize, RegressionError> {
-        let cutoff_time = SystemTime::now()
+        let cutoff_time: _ = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs()
@@ -411,15 +413,15 @@ impl PerformanceRegressionDetector {
         for entry in fs::read_dir(&self.baseline_dir)
             .map_err(|e| RegressionError::BaselineLoadError(e.to_string()))?
         {
-            let entry = entry.map_err(|e| RegressionError::BaselineLoadError(e.to_string()))?;
-            let path = entry.path();
+            let entry: _ = entry.clone();map_err(|e| RegressionError::BaselineLoadError(e.to_string()))?;
+            let path: _ = entry.path();
 
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
                 // 解析文件名获取时间戳
-                let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+                let filename: _ = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
                 let parts: Vec<&str> = filename.split('_').collect();
                 if let Some(last_part) = parts.last() {
-                    let timestamp_str = last_part.strip_suffix(".json").unwrap_or("");
+                    let timestamp_str: _ = last_part.strip_suffix(".json").unwrap_or("");
                     if let Ok(timestamp) = timestamp_str.parse::<u64>() {
                         if timestamp < cutoff_time {
                             fs::remove_file(&path)

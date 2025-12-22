@@ -5,6 +5,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 事件响应错误
 #[derive(Error, Debug)]
@@ -40,7 +42,7 @@ pub struct ThreatDetectionResult {
 /// 威胁检测器
 #[derive(Debug)]
 pub struct ThreatDetector {
-    detection_rules: HashMap<String, f64>,
+    detection_rules: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>,
 }
 
 impl ThreatDetector {
@@ -55,14 +57,14 @@ impl ThreatDetector {
 
     pub fn detect(&self, activity: &str) -> ThreatDetectionResult {
         // 简化的威胁检测逻辑
-        let threat_detected = activity.contains("malware") || activity.contains("attack");
-        let threat_type = if threat_detected {
+        let threat_detected: _ = activity.contains("malware") || activity.contains("attack");
+        let threat_type: _ = if threat_detected {
             Some(ThreatType::Malware)
         } else {
             None
         };
-        let severity = if threat_detected { 85.0 } else { 10.0 };
-        let confidence = if threat_detected { 90.0 } else { 5.0 };
+        let severity: _ = if threat_detected { 85.0 } else { 10.0 };
+        let confidence: _ = if threat_detected { 90.0 } else { 5.0 };
 
         ThreatDetectionResult {
             threat_detected,
@@ -79,14 +81,14 @@ impl ThreatDetector {
 pub struct VulnerabilityScanResult {
     pub vulnerabilities_found: bool,
     pub vulnerability_count: usize,
-    pub severity_distribution: HashMap<String, usize>,
+    pub severity_distribution: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>,
     pub timestamp: std::time::SystemTime,
 }
 
 /// 漏洞扫描器
 #[derive(Debug)]
 pub struct VulnerabilityScanner {
-    scan_rules: HashMap<String, f64>,
+    scan_rules: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>,
 }
 
 impl VulnerabilityScanner {
@@ -101,8 +103,8 @@ impl VulnerabilityScanner {
 
     pub fn scan(&self, target: &str) -> VulnerabilityScanResult {
         // 简化的漏洞扫描逻辑
-        let vulnerabilities_found = target.contains("vulnerable");
-        let vulnerability_count = if vulnerabilities_found { 3 } else { 0 };
+        let vulnerabilities_found: _ = target.contains("vulnerable");
+        let vulnerability_count: _ = if vulnerabilities_found { 3 } else { 0 };
 
         let mut severity_distribution = HashMap::new();
         severity_distribution.insert("high".to_string(), if vulnerabilities_found { 2 } else { 0 });
@@ -150,7 +152,7 @@ pub struct Incident {
 /// 事件检测器
 #[derive(Debug)]
 pub struct IncidentDetector {
-    detection_patterns: HashMap<String, IncidentType>,
+    detection_patterns: HashMap<String, IncidentType, std::collections::HashMap<String, IncidentType, String, IncidentType>>,
 }
 
 impl IncidentDetector {
@@ -183,7 +185,7 @@ impl IncidentDetector {
 /// 自动修复器
 #[derive(Debug)]
 pub struct AutoRemediator {
-    remediation_rules: HashMap<String, String>,
+    remediation_rules: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 impl AutoRemediator {
@@ -197,7 +199,7 @@ impl AutoRemediator {
     }
 
     pub fn remediate(&self, incident: &Incident) -> Result<String, IncidentResponseError> {
-        let action = match incident.incident_type {
+        let action: _ = match incident.incident_type {
             IncidentType::SecurityBreach => "关闭受影响的系统",
             IncidentType::SystemFailure => "重启服务",
             IncidentType::DataLoss => "恢复备份数据",
@@ -211,7 +213,7 @@ impl AutoRemediator {
 /// 事件升级器
 #[derive(Debug)]
 pub struct EscalationManager {
-    escalation_rules: HashMap<IncidentSeverity, Vec<String>>,
+    escalation_rules: HashMap<IncidentSeverity, Vec<String, std::collections::HashMap<IncidentSeverity, Vec<String, IncidentSeverity, Vec<String>>>,
 }
 
 impl EscalationManager {
@@ -238,7 +240,7 @@ impl EscalationManager {
     }
 
     pub fn escalate(&self, incident: &Incident) -> Result<Vec<String>, IncidentResponseError> {
-        let contacts = self.escalation_rules.get(&incident.severity)
+        let contacts: _ = self.escalation_rules.get(&incident.severity)
             .cloned()
             .ok_or_else(|| IncidentResponseError::ResponseFailed("未找到升级规则".to_string()))?;
 

@@ -117,21 +117,23 @@ pub struct CloudNativeStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_cloud_native_runtime() {
         let mut runtime = CloudNativeRuntime::new();
 
         // Initialize Kubernetes
-        let k8s_config = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
+        let k8s_config: _ = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
         runtime.init_k8s(k8s_config).unwrap();
 
         // Test Kubernetes execution
-        let result = runtime.execute_in_k8s("console.log('Hello K8s')", "node:18-alpine").await;
+        let result: _ = runtime.execute_in_k8s("console.log('Hello K8s')", "node:18-alpine").await;
         assert!(result.is_ok());
 
         // Initialize service mesh
-        let mesh_config = ServiceMeshConfig::new(
+        let mesh_config: _ = ServiceMeshConfig::new(
             ServiceMeshType::Istio,
             "http://istio:15010".to_string(),
             "default".to_string(),
@@ -139,12 +141,12 @@ mod tests {
         runtime.init_service_mesh(mesh_config).unwrap();
 
         // Check supported features
-        let features = runtime.supported_features();
+        let features: _ = runtime.supported_features();
         assert!(features.contains(&"kubernetes".to_string()));
         assert!(features.contains(&"service_mesh".to_string()));
 
         // Get statistics
-        let stats = runtime.get_stats().await.unwrap();
+        let stats: _ = runtime.get_stats().await.unwrap();
         assert!(stats.k8s.is_some());
     }
 
@@ -152,10 +154,10 @@ mod tests {
     async fn test_autoscale_execution() {
         let mut runtime = CloudNativeRuntime::new();
 
-        let k8s_config = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
+        let k8s_config: _ = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
         runtime.init_k8s(k8s_config).unwrap();
 
-        let results = runtime.execute_with_autoscale("console.log('test')", 3).await.unwrap();
+        let results: _ = runtime.execute_with_autoscale("console.log('test')", 3).await.unwrap();
         assert_eq!(results.len(), 3);
     }
 }

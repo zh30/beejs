@@ -4,6 +4,8 @@
 use rusty_v8 as v8;
 use crate::testing::{register_suite, get_all_suites};
 use crate::testing::test_context::{TestSuite, TestCase};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Register all testing functions in the V8 global scope
 pub fn register_testing_api(_scope: &mut v8::HandleScope, _global: v8::Local<v8::Object>) {
@@ -20,17 +22,17 @@ fn test_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let name = args.get(0).to_rust_string_lossy(scope);
-    let function = args.get(1);
+    let name: _ = args.get(0).to_rust_string_lossy(scope);
+    let function: _ = args.get(1);
 
     if !function.is_function() {
-        let error = v8::String::new(scope, "test() requires a function as second argument").unwrap();
-        let exception = v8::Exception::error(scope, error);
+        let error: _ = v8::String::new(scope, "test() requires a function as second argument").unwrap();
+        let exception: _ = v8::Exception::error(scope, error);
         scope.throw_exception(exception);
         return;
     }
 
-    let _func = v8::Local::<v8::Function>::try_from(args.get(1)).unwrap();
+    let _func: _ = v8::Local::<v8::Function>::try_from(args.get(1)).unwrap();
 
     // Temporarily disabled test registration
     // Will be re-implemented with proper V8 function handling
@@ -47,7 +49,7 @@ fn describe_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let _name = args.get(0).to_rust_string_lossy(scope);
+    let _name: _ = args.get(0).to_rust_string_lossy(scope);
 
     // For now, just return undefined
     // TODO: Implement suite registration
@@ -69,10 +71,10 @@ fn expect_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let _value = args.get(0);
+    let _value: _ = args.get(0);
 
     // Create a simple expect object (matchers disabled for now)
-    let expect_obj = v8::Object::new(scope);
+    let expect_obj: _ = v8::Object::new(scope);
     retval.set(expect_obj.into());
 }
 
@@ -149,7 +151,7 @@ fn to_be_matcher(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let _expected = args.get(0);
+    let _expected: _ = args.get(0);
 
     // Simple implementation - just return true for now
     retval.set(v8::Boolean::new(scope, true).into());
@@ -161,7 +163,7 @@ fn to_equal_matcher(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let _expected = args.get(0);
+    let _expected: _ = args.get(0);
 
     // Simple implementation - just return true for now
     retval.set(v8::Boolean::new(scope, true).into());

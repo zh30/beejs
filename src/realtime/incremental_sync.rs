@@ -73,8 +73,8 @@ impl IncrementalSync {
     pub fn new(compression: CompressionConfig) -> Result<Self> {
         info!("🔄 初始化增量同步引擎 (算法: {:?})", compression.algorithm);
 
-        let sync_state = Arc::new(RocksDB::new()?);
-        let change_cache = Arc::new(RocksDB::new()?);
+        let sync_state: _ = Arc::new(std::sync::Mutex::new(RocksDB::new())?);
+        let change_cache: _ = Arc::new(std::sync::Mutex::new(RocksDB::new())?);
 
         Ok(Self {
             sync_state,
@@ -87,14 +87,14 @@ impl IncrementalSync {
     pub async fn detect_changes(&self, document: &Document) -> Result<Vec<Change>> {
         debug!("🔍 检测文档变更: {}", document.id);
 
-        let current_hash = self.compute_checksum(document)?;
-        let current_version = document.version;
+        let current_hash: _ = self.compute_checksum(document)?;
+        let current_version: _ = document.version;
 
         // 从数据库获取上次同步的状态
-        let sync_key = format!("sync_state:{}", document.id);
+        let sync_key: _ = format!("sync_state:{}", document.id);
         let last_sync_state: Option<SyncState> = self.sync_state.get(&sync_key)?;
 
-        let changes = if let Some(state) = last_sync_state {
+        let changes: _ = if let Some(state) = last_sync_state {
             if state.last_sync_hash == current_hash {
                 // 文档没有变化
                 debug!("📄 文档无变化");
@@ -135,11 +135,11 @@ impl IncrementalSync {
         debug!("🗜️  压缩 {} 个变更", changes.len());
 
         // 序列化变更
-        let serialized = serde_json::to_vec(&changes)
+        let serialized: _ = serde_json::to_vec(&changes)
             .context("序列化变更失败")?;
 
         // 简化实现：不进行压缩
-        let compression_ratio = 0.0;
+        let compression_ratio: _ = 0.0;
 
         debug!("✅ 压缩完成 (压缩率: {:.1}%)", compression_ratio);
         Ok(serialized)
@@ -162,6 +162,8 @@ impl IncrementalSync {
         // 简化实现：使用简单的哈希
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
         let mut hasher = DefaultHasher::new();
         document.content.hash(&mut hasher);
@@ -172,13 +174,13 @@ impl IncrementalSync {
 
     /// 更新同步状态
     async fn update_sync_state(&self, document_id: String, hash: String, version: u64) -> Result<()> {
-        let sync_key = format!("sync_state:{}", document_id);
-        let timestamp = SystemTime::now()
+        let sync_key: _ = format!("sync_state:{}", document_id);
+        let timestamp: _ = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
 
-        let state = SyncState {
+        let state: _ = SyncState {
             document_id,
             last_sync_hash: hash,
             last_sync_version: version,
@@ -192,34 +194,34 @@ impl IncrementalSync {
 
     /// 获取同步状态
     pub fn get_sync_state(&self, document_id: &str) -> Result<Option<SyncState>> {
-        let sync_key = format!("sync_state:{}", document_id);
+        let sync_key: _ = format!("sync_state:{}", document_id);
         self.sync_state.get(&sync_key)
     }
 
     /// 缓存变更
     pub async fn cache_changes(&self, document_id: &str, changes: &[Change]) -> Result<()> {
-        let cache_key = format!("changes:{}", document_id);
+        let cache_key: _ = format!("changes:{}", document_id);
         self.change_cache.put(&cache_key, &changes.to_vec())?;
         Ok(())
     }
 
     /// 获取缓存的变更
     pub async fn get_cached_changes(&self, document_id: &str) -> Result<Option<Vec<Change>>> {
-        let cache_key = format!("changes:{}", document_id);
+        let cache_key: _ = format!("changes:{}", document_id);
         self.change_cache.get(&cache_key)
     }
 
     /// 清除变更缓存
     pub async fn clear_cache(&self, document_id: &str) -> Result<()> {
-        let cache_key = format!("changes:{}", document_id);
+        let cache_key: _ = format!("changes:{}", document_id);
         self.change_cache.remove(&cache_key)?;
         Ok(())
     }
 
     /// 获取同步统计
     pub async fn get_statistics(&self, document_id: &str) -> Result<SyncStatistics> {
-        let state_opt = self.get_sync_state(document_id)?;
-        let cache_key = format!("changes:{}", document_id);
+        let state_opt: _ = self.get_sync_state(document_id)?;
+        let cache_key: _ = format!("changes:{}", document_id);
         let cached_changes: Option<Vec<Change>> = self.change_cache.get(&cache_key)?;
 
         Ok(SyncStatistics {

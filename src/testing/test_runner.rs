@@ -4,6 +4,8 @@
 use crate::testing::test_context::{TestSuite, TestCase, TestResult};
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Test runner configuration
 #[derive(Debug, Clone)]
@@ -78,12 +80,12 @@ impl TestRunner {
         suite_name: &str,
         test: &TestCase,
     ) -> TestResult {
-        let start = Instant::now();
+        let start: _ = Instant::now();
         let mut result = TestResult::new(suite_name.to_string(), test.name.clone());
 
         if test.skip {
             // Return a passed result for skipped tests
-            let duration = start.elapsed();
+            let duration: _ = start.elapsed();
             result.duration = duration;
             return result;
         }
@@ -91,7 +93,7 @@ impl TestRunner {
         // TODO: Execute the actual test function using V8
         // For now, we'll just simulate execution
 
-        let duration = start.elapsed();
+        let duration: _ = start.elapsed();
         result.duration = duration;
 
         result
@@ -112,10 +114,10 @@ impl TestRunner {
 
         // Run tests in the suite
         for test in &suite.tests {
-            let result = self.run_test(&suite.name, test);
+            let result: _ = self.run_test(&suite.name, test);
 
             {
-                let mut locked_stats = stats.lock().unwrap();
+                let mut locked_stats = stats.clone();lock().unwrap();
                 locked_stats.add_result(&result);
             }
 
@@ -141,13 +143,13 @@ impl TestRunner {
         &self,
         suites: Vec<TestSuite>,
     ) -> (Vec<TestResult>, TestRunnerStats) {
-        let stats = Arc::new(Mutex::new(TestRunnerStats::new()));
+        let stats: _ = Arc::new(std::sync::Mutex::new(Mutex::new(TestRunnerStats::new())));
         let mut all_results = Vec::new();
 
         for suite in suites {
             // If any test is marked as only, skip tests without only
-            let has_only = suite.has_only();
-            let suite_to_run = if has_only {
+            let has_only: _ = suite.has_only();
+            let suite_to_run: _ = if has_only {
                 // Filter tests to only those marked as only
                 suite.tests.iter().filter(|t| t.only).cloned().collect()
             } else {
@@ -158,11 +160,11 @@ impl TestRunner {
             let mut filtered_suite = suite;
             filtered_suite.tests = suite_to_run;
 
-            let results = self.run_suite(&filtered_suite, Arc::clone(&stats));
+            let results: _ = self.run_suite(&filtered_suite, Arc::clone(stats));
             all_results.extend(results);
         }
 
-        let final_stats = Arc::try_unwrap(stats)
+        let final_stats: _ = Arc::try_unwrap(stats)
             .ok()
             .map(|m| m.into_inner().unwrap())
             .unwrap_or_default();
@@ -200,7 +202,7 @@ impl TestReporter for ConsoleReporter {
         if self.verbose {
             println!("\n=== Test Details ===");
             for result in results {
-                let status = if result.passed { "✓" } else { "✗" };
+                let status: _ = if result.passed { "✓" } else { "✗" };
                 println!("{} {} - {:?}", status, result.test_name, result.duration);
                 if !result.passed {
                     if let Some(ref error) = result.error {

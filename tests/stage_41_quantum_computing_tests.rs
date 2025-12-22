@@ -19,7 +19,7 @@ use num_complex::Complex64;
 
 #[test]
 fn test_qubit_creation_zero_state() {
-    let qubit = Qubit::new(QubitState::Zero);
+    let qubit: _ = Qubit::new(QubitState::Zero);
 
     // |0⟩ 状态: α = 1, β = 0
     let (alpha, beta) = qubit.amplitudes();
@@ -31,7 +31,7 @@ fn test_qubit_creation_zero_state() {
 
 #[test]
 fn test_qubit_creation_one_state() {
-    let qubit = Qubit::new(QubitState::One);
+    let qubit: _ = Qubit::new(QubitState::One);
 
     // |1⟩ 状态: α = 0, β = 1
     let (alpha, beta) = qubit.amplitudes();
@@ -43,7 +43,7 @@ fn test_qubit_creation_one_state() {
 
 #[test]
 fn test_qubit_probability() {
-    let qubit = Qubit::new(QubitState::Zero);
+    let qubit: _ = Qubit::new(QubitState::Zero);
 
     // |0⟩ 状态测量结果概率
     let (p0, p1) = qubit.measurement_probabilities();
@@ -53,14 +53,14 @@ fn test_qubit_probability() {
 
 #[test]
 fn test_qubit_normalization() {
-    let qubit = Qubit::from_amplitudes(
+    let qubit: _ = Qubit::from_amplitudes(
         Complex64::new(0.6, 0.0),
         Complex64::new(0.8, 0.0),
     );
 
     // 验证归一化: |α|² + |β|² = 1
     let (alpha, beta) = qubit.amplitudes();
-    let norm = alpha.norm_sqr() + beta.norm_sqr();
+    let norm: _ = alpha.norm_sqr() + beta.norm_sqr();
     assert!((norm - 1.0).abs() < 1e-10);
 }
 
@@ -76,7 +76,7 @@ fn test_hadamard_gate_on_zero() {
     QuantumGate::hadamard(&mut qubit);
 
     let (alpha, beta) = qubit.amplitudes();
-    let expected = 1.0 / 2.0_f64.sqrt();
+    let expected: _ = 1.0 / 2.0_f64.sqrt();
 
     assert!((alpha.re - expected).abs() < 1e-10);
     assert!((beta.re - expected).abs() < 1e-10);
@@ -90,7 +90,7 @@ fn test_hadamard_gate_on_one() {
     QuantumGate::hadamard(&mut qubit);
 
     let (alpha, beta) = qubit.amplitudes();
-    let expected = 1.0 / 2.0_f64.sqrt();
+    let expected: _ = 1.0 / 2.0_f64.sqrt();
 
     assert!((alpha.re - expected).abs() < 1e-10);
     assert!((beta.re + expected).abs() < 1e-10); // β 为负
@@ -161,7 +161,7 @@ fn test_rotation_x_gate() {
 
 #[test]
 fn test_quantum_circuit_creation() {
-    let circuit = QuantumCircuit::new(3);
+    let circuit: _ = QuantumCircuit::new(3);
 
     assert_eq!(circuit.num_qubits(), 3);
     assert_eq!(circuit.depth(), 0);
@@ -185,13 +185,13 @@ fn test_bell_state_circuit() {
     circuit.add_hadamard(0);
     circuit.add_cnot(0, 1);
 
-    let result = circuit.execute();
+    let result: _ = circuit.execute();
 
     // 验证纠缠态
-    let prob_00 = result.probability(&[0, 0]);
-    let prob_11 = result.probability(&[1, 1]);
-    let prob_01 = result.probability(&[0, 1]);
-    let prob_10 = result.probability(&[1, 0]);
+    let prob_00: _ = result.probability(&[0, 0]);
+    let prob_11: _ = result.probability(&[1, 1]);
+    let prob_01: _ = result.probability(&[0, 1]);
+    let prob_10: _ = result.probability(&[1, 0]);
 
     assert!((prob_00 - 0.5).abs() < 1e-10);
     assert!((prob_11 - 0.5).abs() < 1e-10);
@@ -207,10 +207,10 @@ fn test_ghz_state_circuit() {
     circuit.add_cnot(0, 1);
     circuit.add_cnot(1, 2);
 
-    let result = circuit.execute();
+    let result: _ = circuit.execute();
 
-    let prob_000 = result.probability(&[0, 0, 0]);
-    let prob_111 = result.probability(&[1, 1, 1]);
+    let prob_000: _ = result.probability(&[0, 0, 0]);
+    let prob_111: _ = result.probability(&[1, 1, 1]);
 
     assert!((prob_000 - 0.5).abs() < 1e-10);
     assert!((prob_111 - 0.5).abs() < 1e-10);
@@ -224,10 +224,10 @@ fn test_quantum_circuit_measurement() {
     // 多次测量统计
     let mut zero_count = 0;
     let mut one_count = 0;
-    let shots = 1000;
+    let shots: _ = 1000;
 
     for _ in 0..shots {
-        let result = circuit.measure();
+        let result: _ = circuit.measure();
         if result[0] == 0 {
             zero_count += 1;
         } else {
@@ -236,7 +236,7 @@ fn test_quantum_circuit_measurement() {
     }
 
     // 验证接近 50/50 分布 (容差 10%)
-    let ratio = zero_count as f64 / shots as f64;
+    let ratio: _ = zero_count as f64 / shots as f64;
     assert!((ratio - 0.5).abs() < 0.1);
 }
 
@@ -246,7 +246,7 @@ fn test_quantum_circuit_measurement() {
 
 #[test]
 fn test_quantum_simulator_creation() {
-    let simulator = QuantumSimulator::new(10);
+    let simulator: _ = QuantumSimulator::new(10);
 
     assert_eq!(simulator.num_qubits(), 10);
     assert_eq!(simulator.state_vector_size(), 1024); // 2^10
@@ -259,8 +259,8 @@ fn test_simulator_apply_single_qubit_gate() {
     // 在 qubit 0 上应用 Hadamard
     simulator.apply_hadamard(0);
 
-    let state = simulator.state_vector();
-    let expected = 1.0 / 2.0_f64.sqrt();
+    let state: _ = simulator.state_vector();
+    let expected: _ = 1.0 / 2.0_f64.sqrt();
 
     // |00⟩ 和 |01⟩ 的振幅应该相等 (qubit 0 是 LSB)
     assert!((state[0].re - expected).abs() < 1e-10);
@@ -275,8 +275,8 @@ fn test_simulator_entanglement() {
     simulator.apply_cnot(0, 1);
 
     // 验证 Bell 状态
-    let state = simulator.state_vector();
-    let expected = 1.0 / 2.0_f64.sqrt();
+    let state: _ = simulator.state_vector();
+    let expected: _ = 1.0 / 2.0_f64.sqrt();
 
     assert!((state[0].re - expected).abs() < 1e-10); // |00⟩
     assert!((state[3].re - expected).abs() < 1e-10); // |11⟩
@@ -287,7 +287,7 @@ fn test_simulator_entanglement() {
 #[test]
 fn test_simulator_large_register() {
     // 测试 20 量子比特模拟器
-    let simulator = QuantumSimulator::new(20);
+    let simulator: _ = QuantumSimulator::new(20);
 
     assert_eq!(simulator.num_qubits(), 20);
     assert_eq!(simulator.state_vector_size(), 1 << 20);
@@ -305,8 +305,8 @@ fn test_circuit_optimization_gate_cancellation() {
     circuit.add_hadamard(0);
     circuit.add_hadamard(0);
 
-    let optimizer = QuantumOptimizer::new();
-    let optimized = optimizer.optimize(&circuit);
+    let optimizer: _ = QuantumOptimizer::new();
+    let optimized: _ = optimizer.optimize(&circuit);
 
     assert_eq!(optimized.gate_count(), 0);
 }
@@ -319,8 +319,8 @@ fn test_circuit_optimization_rotation_merge() {
     circuit.add_rotation_z(0, std::f64::consts::FRAC_PI_4);
     circuit.add_rotation_z(0, std::f64::consts::FRAC_PI_4);
 
-    let optimizer = QuantumOptimizer::new();
-    let optimized = optimizer.optimize(&circuit);
+    let optimizer: _ = QuantumOptimizer::new();
+    let optimized: _ = optimizer.optimize(&circuit);
 
     assert_eq!(optimized.gate_count(), 1);
 }
@@ -335,8 +335,8 @@ fn test_circuit_depth_optimization() {
     circuit.add_hadamard(2);
     circuit.add_hadamard(3);
 
-    let optimizer = QuantumOptimizer::new();
-    let optimized = optimizer.optimize(&circuit);
+    let optimizer: _ = QuantumOptimizer::new();
+    let optimized: _ = optimizer.optimize(&circuit);
 
     // 并行执行后深度为 1
     assert_eq!(optimized.depth(), 1);
@@ -348,11 +348,11 @@ fn test_circuit_depth_optimization() {
 
 #[test]
 fn test_hybrid_computing_variational() {
-    let hybrid = HybridComputing::new(2);
+    let hybrid: _ = HybridComputing::new(2);
 
     // 变分量子本征求解器 (VQE) 测试
-    let params = vec![0.5, 0.3, 0.1, 0.2];
-    let result = hybrid.variational_circuit(&params);
+    let params: _ = vec![0.5, 0.3, 0.1, 0.2];
+    let result: _ = hybrid.variational_circuit(&params);
 
     assert!(result.energy.is_finite());
     assert!(result.gradient.len() == params.len());
@@ -360,17 +360,17 @@ fn test_hybrid_computing_variational() {
 
 #[test]
 fn test_hybrid_computing_qaoa() {
-    let hybrid = HybridComputing::new(4);
+    let hybrid: _ = HybridComputing::new(4);
 
     // 量子近似优化算法 (QAOA) 测试
-    let problem = vec![
+    let problem: _ = vec![
         (0, 1, 1.0),  // 边 (0,1) 权重 1.0
         (1, 2, 1.0),
         (2, 3, 1.0),
         (3, 0, 1.0),
     ];
 
-    let result = hybrid.qaoa(&problem, 2); // 2 层 QAOA
+    let result: _ = hybrid.qaoa(&problem, 2); // 2 层 QAOA
 
     assert!(result.best_cut_value >= 0.0);
     assert_eq!(result.best_bitstring.len(), 4);
@@ -378,19 +378,19 @@ fn test_hybrid_computing_qaoa() {
 
 #[test]
 fn test_classical_quantum_interface() {
-    let hybrid = HybridComputing::new(3);
+    let hybrid: _ = HybridComputing::new(3);
 
     // 经典数据编码到量子态
-    let classical_data = vec![1.0, 0.5, 0.25];
-    let quantum_state = hybrid.encode_amplitude(&classical_data);
+    let classical_data: _ = vec![1.0, 0.5, 0.25];
+    let quantum_state: _ = hybrid.encode_amplitude(&classical_data);
 
     assert_eq!(quantum_state.num_qubits(), 2); // ceil(log2(3)) = 2
 
     // 量子测量结果解码为经典数据
-    let decoded = hybrid.decode_measurement(&quantum_state);
+    let decoded: _ = hybrid.decode_measurement(&quantum_state);
 
     // 验证数据保真度
-    let fidelity = hybrid.compute_fidelity(&classical_data, &decoded);
+    let fidelity: _ = hybrid.compute_fidelity(&classical_data, &decoded);
     assert!(fidelity > 0.9);
 }
 
@@ -406,7 +406,7 @@ fn test_quantum_fourier_transform() {
     circuit.add_pauli_x(0);
     circuit.add_qft();
 
-    let result = circuit.execute();
+    let result: _ = circuit.execute();
 
     // QFT 后的状态应该有特定的相位分布
     assert!(result.total_probability() > 0.99);
@@ -417,11 +417,11 @@ fn test_grover_search() {
     let mut circuit = QuantumCircuit::new(3);
 
     // Grover 搜索: 查找 |101⟩
-    let oracle = |state: &[u8]| state == &[1, 0, 1];
+    let oracle: _ = |state: &[u8]| state == &[1, 0, 1];
     circuit.grover_search(oracle, 2); // 2 次迭代
 
-    let result = circuit.execute();
-    let target_prob = result.probability(&[1, 0, 1]);
+    let result: _ = circuit.execute();
+    let target_prob: _ = result.probability(&[1, 0, 1]);
 
     // 目标状态概率应该高于均匀分布 (1/8 = 0.125)
     // 简化实现可能不完美，放宽条件
@@ -430,11 +430,11 @@ fn test_grover_search() {
 
 #[test]
 fn test_quantum_phase_estimation() {
-    let circuit = QuantumCircuit::new(4);
+    let circuit: _ = QuantumCircuit::new(4);
 
     // 相位估计: 估计 U 的本征值
-    let unitary_phase = std::f64::consts::FRAC_PI_4;
-    let estimated_phase = circuit.phase_estimation(unitary_phase, 3);
+    let unitary_phase: _ = std::f64::consts::FRAC_PI_4;
+    let estimated_phase: _ = circuit.phase_estimation(unitary_phase, 3);
 
     // 误差应该在 2^-3 以内
     assert!((estimated_phase - unitary_phase).abs() < 0.5);
@@ -448,7 +448,7 @@ fn test_quantum_phase_estimation() {
 fn test_quantum_simulation_performance() {
     use std::time::Instant;
 
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
     // 创建 15 量子比特模拟器
     let mut simulator = QuantumSimulator::new(15);
@@ -463,7 +463,7 @@ fn test_quantum_simulation_performance() {
         simulator.apply_cnot(i, i + 1);
     }
 
-    let elapsed = start.elapsed().unwrap();
+    let elapsed: _ = start.elapsed().unwrap();
 
     // 15 量子比特电路应该在 1 秒内完成
     assert!(elapsed.as_secs() < 1);
@@ -472,9 +472,11 @@ fn test_quantum_simulation_performance() {
 #[test]
 fn test_circuit_execution_throughput() {
     use std::time::Instant;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
-    let iterations = 100;
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let iterations: _ = 100;
+    let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
     for _ in 0..iterations {
         let mut circuit = QuantumCircuit::new(5);
@@ -486,8 +488,8 @@ fn test_circuit_execution_throughput() {
         circuit.execute();
     }
 
-    let elapsed = start.elapsed().unwrap();
-    let throughput = iterations as f64 / elapsed.as_secs_f64();
+    let elapsed: _ = start.elapsed().unwrap();
+    let throughput: _ = iterations as f64 / elapsed.as_secs_f64();
 
     // 至少 100 次/秒的执行吞吐量
     assert!(throughput > 100.0);

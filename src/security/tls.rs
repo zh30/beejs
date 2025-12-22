@@ -6,6 +6,8 @@ use std::sync::Arc;
 use std::cmp::Ordering;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// TLS 错误
 #[derive(Error, Debug)]
@@ -57,7 +59,7 @@ pub struct TlsConfig {
 #[derive(Debug)]
 pub struct CertificateManager {
     // 证书存储
-    certificates: std::collections::HashMap<String, Certificate>,
+    certificates: std::collections::HashMap<String, Certificate, std::collections::HashMap<String, Certificate, String, Certificate>>,
 }
 
 impl CertificateManager {
@@ -69,8 +71,8 @@ impl CertificateManager {
 
     pub async fn load_certificate(&mut self, cert_data: &[u8], key_data: &[u8]) -> Result<String, TlsError> {
         // 简化的证书加载（生产环境应使用真实的 X.509 解析）
-        let cert_id = format!("cert-{}", cert_data.len());
-        let certificate = Certificate {
+        let cert_id: _ = format!("cert-{}", cert_data.len());
+        let certificate: _ = Certificate {
             id: cert_id.clone(),
             data: cert_data.to_vec(),
             private_key: key_data.to_vec(),
@@ -112,7 +114,7 @@ impl TlsConfig {
                 CipherSuite::Chacha20Poly1305,
                 CipherSuite::Aes128Gcm,
             ],
-            cert_manager: Arc::new(CertificateManager::new().expect("Failed to create certificate manager")),
+            cert_manager: Arc::new(std::sync::Mutex::new(CertificateManager::new()).expect("Failed to create certificate manager")),
         }
     }
 

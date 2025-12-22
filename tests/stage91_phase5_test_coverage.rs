@@ -149,16 +149,16 @@ mod tests {
     #[test]
     fn test_jit_optimization_performance() {
         // JIT 优化性能测试 - 目标: > 1000 ops/sec
-        let start = Instant::now();
-        let iterations = 10000;
+        let start: _ = Instant::now();
+        let iterations: _ = 10000;
         let mut count = 0;
 
         for i in 0..iterations {
             count += i;
         }
 
-        let elapsed = start.elapsed();
-        let ops_per_sec = iterations as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start.elapsed();
+        let ops_per_sec: _ = iterations as f64 / elapsed.as_secs_f64();
 
         println!("✓ JIT optimization performance: {:.2} ops/sec (target: > 1000)", ops_per_sec);
         assert!(ops_per_sec > 1000.0, "Performance below target: {:.2} ops/sec", ops_per_sec);
@@ -167,16 +167,16 @@ mod tests {
     #[test]
     fn test_memory_management_performance() {
         // 内存管理性能测试 - 目标: > 50,000 ops/sec
-        let start = Instant::now();
-        let iterations = 100000;
+        let start: _ = Instant::now();
+        let iterations: _ = 100000;
         let mut data = Vec::new();
 
         for i in 0..iterations {
             data.push(i);
         }
 
-        let elapsed = start.elapsed();
-        let ops_per_sec = iterations as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start.elapsed();
+        let ops_per_sec: _ = iterations as f64 / elapsed.as_secs_f64();
 
         println!("✓ Memory management performance: {:.2} ops/sec (target: > 50,000)", ops_per_sec);
         assert!(ops_per_sec > 50000.0, "Performance below target: {:.2} ops/sec", ops_per_sec);
@@ -188,8 +188,8 @@ mod tests {
     #[test]
     fn test_concurrent_scheduling_performance() {
         // 并发调度性能测试 - 目标: > 1000 tasks/sec
-        let start = Instant::now();
-        let iterations = 5000;
+        let start: _ = Instant::now();
+        let iterations: _ = 5000;
 
         let handles: Vec<_> = (0..iterations)
             .map(|_| {
@@ -207,8 +207,8 @@ mod tests {
             handle.join().unwrap();
         }
 
-        let elapsed = start.elapsed();
-        let tasks_per_sec = iterations as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start.elapsed();
+        let tasks_per_sec: _ = iterations as f64 / elapsed.as_secs_f64();
 
         println!("✓ Concurrent scheduling performance: {:.2} tasks/sec (target: > 1000)", tasks_per_sec);
         assert!(tasks_per_sec > 1000.0, "Performance below target: {:.2} tasks/sec", tasks_per_sec);
@@ -217,13 +217,13 @@ mod tests {
     #[test]
     fn test_startup_time() {
         // 启动时间测试 - 目标: < 2ms
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 模拟启动过程
-        let _temp_dir = TempDir::new().unwrap();
+        let _temp_dir: _ = TempDir::new().unwrap();
 
-        let elapsed = start.elapsed();
-        let elapsed_ms = elapsed.as_millis();
+        let elapsed: _ = start.elapsed();
+        let elapsed_ms: _ = elapsed.as_millis();
 
         println!("✓ Startup time: {} ms (target: < 2 ms)", elapsed_ms);
         assert!(elapsed_ms < 2, "Startup time too slow: {} ms", elapsed_ms);
@@ -232,16 +232,16 @@ mod tests {
     #[test]
     fn test_string_operations_performance() {
         // 字符串操作性能测试 - 目标: > 30M ops/sec
-        let start = Instant::now();
-        let iterations = 1_000_000;
+        let start: _ = Instant::now();
+        let iterations: _ = 1_000_000;
         let mut result = String::new();
 
         for i in 0..iterations {
             result.push_str(&i.to_string());
         }
 
-        let elapsed = start.elapsed();
-        let ops_per_sec = iterations as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start.elapsed();
+        let ops_per_sec: _ = iterations as f64 / elapsed.as_secs_f64();
 
         println!("✓ String operations performance: {:.2} ops/sec (target: > 30,000,000)", ops_per_sec);
         assert!(ops_per_sec > 30_000_000.0, "Performance below target: {:.2} ops/sec", ops_per_sec);
@@ -250,17 +250,17 @@ mod tests {
     #[test]
     fn test_array_operations_performance() {
         // 数组操作性能测试 - 目标: > 2M ops/sec
-        let start = Instant::now();
-        let iterations = 100_000;
+        let start: _ = Instant::now();
+        let iterations: _ = 100_000;
         let mut arr = Vec::new();
 
         for i in 0..iterations {
             arr.push(i);
-            let _ = arr.get(i);
+            let _: _ = arr.get(i);
         }
 
-        let elapsed = start.elapsed();
-        let ops_per_sec = iterations as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start.elapsed();
+        let ops_per_sec: _ = iterations as f64 / elapsed.as_secs_f64();
 
         println!("✓ Array operations performance: {:.2} ops/sec (target: > 2,000,000)", ops_per_sec);
         assert!(ops_per_sec > 2_000_000.0, "Performance below target: {:.2} ops/sec", ops_per_sec);
@@ -270,9 +270,11 @@ mod tests {
     fn test_object_operations_performance() {
         // 对象操作性能测试 - 目标: > 15M ops/sec
         use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
-        let start = Instant::now();
-        let iterations = 500_000;
+        let start: _ = Instant::now();
+        let iterations: _ = 500_000;
         let mut map = HashMap::new();
 
         for i in 0..iterations {
@@ -280,11 +282,11 @@ mod tests {
         }
 
         for i in 0..iterations {
-            let _ = map.get(&i.to_string());
+            let _: _ = map.get(&i.to_string());
         }
 
-        let elapsed = start.elapsed();
-        let ops_per_sec = (iterations * 2) as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start.elapsed();
+        let ops_per_sec: _ = (iterations * 2) as f64 / elapsed.as_secs_f64();
 
         println!("✓ Object operations performance: {:.2} ops/sec (target: > 15,000,000)", ops_per_sec);
         assert!(ops_per_sec > 15_000_000.0, "Performance below target: {:.2} ops/sec", ops_per_sec);
@@ -297,7 +299,7 @@ mod tests {
         // 高并发压力测试
         println!("✓ High concurrency stress test started");
 
-        let tasks = (0..100).map(|_| {
+        let tasks: _ = (0..100).map(|_| {
             tokio::spawn(async {
                 let mut sum = 0;
                 for i in 0..1000 {
@@ -307,7 +309,7 @@ mod tests {
             })
         });
 
-        let results = futures::future::join_all(tasks).await;
+        let results: _ = futures::future::join_all(tasks).await;
         assert_eq!(results.len(), 100);
 
         println!("✓ High concurrency stress test passed (100 concurrent tasks)");
@@ -320,8 +322,8 @@ mod tests {
         println!("✓ Memory leak detection test started");
 
         for _ in 0..10 {
-            let _temp_dir = TempDir::new().unwrap();
-            let _vec = vec![0; 1000];
+            let _temp_dir: _ = TempDir::new().unwrap();
+            let _vec: _ = vec![0; 1000];
             sleep(Duration::from_millis(10)).await;
         }
 
@@ -335,7 +337,7 @@ mod tests {
         println!("✓ Long-running stability test started (simulating 10 seconds)");
 
         for i in 0..100 {
-            let _ = i * i;
+            let _: _ = i * i;
             if i % 10 == 0 {
                 sleep(Duration::from_millis(100)).await;
             }
@@ -351,11 +353,11 @@ mod tests {
         println!("✓ Error recovery test started");
 
         // 模拟错误处理
-        let result = tokio::spawn(async {
+        let result: _ = tokio::spawn(async {
             panic!("Simulated error");
         });
 
-        let recovery_result = result.await;
+        let recovery_result: _ = result.clone();await;
 
         match recovery_result {
             Ok(_) => println!("✓ Error recovery test: unexpected success"),
@@ -386,11 +388,11 @@ console.log(message);
     /// ========== 基准测试辅助 ==========
 
     fn run_benchmark(name: &str, iterations: usize, func: fn() -> ()) -> Duration {
-        let start = Instant::now();
+        let start: _ = Instant::now();
         for _ in 0..iterations {
             func();
         }
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
         println!("Benchmark '{}': {} iterations in {:?}", name, iterations, elapsed);
         elapsed
     }

@@ -33,7 +33,7 @@ pub struct L3Stats {
 
 impl L3Stats {
     pub fn hit_rate(&self) -> f64 {
-        let total = self.hits + self.misses;
+        let total: _ = self.hits + self.misses;
         if total > 0 {
             self.hits as f64 / total as f64
         } else {
@@ -49,7 +49,7 @@ impl L3Stats {
 /// L3 Memory-Mapped Cache
 pub struct L3MmapCache {
     /// Cache storage: key -> entry
-    entries: Arc<RwLock<HashMap<String, L3Entry>>>,
+    entries: Arc<RwLock<HashMap<String, L3Entry, std::collections::HashMap<String, L3Entry, String, L3Entry>>>>,
     /// Statistics
     stats: Arc<RwLock<L3Stats>>,
     /// Configuration
@@ -63,12 +63,12 @@ pub struct L3MmapCache {
 impl L3MmapCache {
     /// Create a new L3 cache
     pub fn new() -> Self {
-        let cache_dir = PathBuf::from("/tmp/beejs_l3_cache");
+        let cache_dir: _ = PathBuf::from("/tmp/beejs_l3_cache");
         std::fs::create_dir_all(&cache_dir).unwrap_or(());
 
         Self {
-            entries: Arc::new(RwLock::new(HashMap::new())),
-            stats: Arc::new(RwLock::new(L3Stats::default())),
+            entries: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(L3Stats::default()))),
             cache_dir,
             max_memory_mapped: 1024 * 1024 * 1024, // 1 GB
             max_disk_files: 10000,
@@ -78,16 +78,16 @@ impl L3MmapCache {
 
     /// Put data into L3 cache
     pub async fn put(&self, key: &str, data: &[u8]) {
-        let file_name = format!("{}.cache", self.hash_key(key));
-        let file_path = self.cache_dir.join(&file_name);
+        let file_name: _ = format!("{}.cache", self.hash_key(key));
+        let file_path: _ = self.cache_dir.join(&file_name);
 
         // Write to disk
         if let Ok(mut file) = File::create(&file_path) {
-            let _ = file.write_all(data);
+            let _: _ = file.write_all(data);
         }
 
         // Create cache entry
-        let entry = L3Entry {
+        let entry: _ = L3Entry {
             file_path,
             file_size: data.len(),
             last_accessed: Instant::now(),
@@ -137,7 +137,7 @@ impl L3MmapCache {
     pub async fn invalidate(&self, key: &str) {
         if let Some(entry) = self.entries.write().unwrap().remove(key) {
             // Delete file
-            let _ = std::fs::remove_file(&entry.file_path);
+            let _: _ = std::fs::remove_file(&entry.file_path);
 
             // Update statistics
             let mut stats = self.stats.write().unwrap();
@@ -153,8 +153,8 @@ impl L3MmapCache {
         let mut entries = self.entries.write().unwrap();
 
         // Remove old entries with low access count
-        let cutoff = Instant::now() - Duration::from_secs(7200); // 2 hours
-        let min_access_count = 3;
+        let cutoff: _ = Instant::now() - Duration::from_secs(7200); // 2 hours
+        let min_access_count: _ = 3;
 
         let keys_to_remove: Vec<String> = entries
             .iter()
@@ -164,7 +164,7 @@ impl L3MmapCache {
 
         for key in keys_to_remove {
             if let Some(entry) = entries.remove(&key) {
-                let _ = std::fs::remove_file(&entry.file_path);
+                let _: _ = std::fs::remove_file(&entry.file_path);
                 drop(entry); // Explicit drop
             }
         }
@@ -200,7 +200,7 @@ impl L3MmapCache {
 
     /// Perform cleanup if cache is over capacity
     async fn cleanup_if_needed(&self) {
-        let stats = self.stats.read().unwrap();
+        let stats: _ = self.stats.read().unwrap();
 
         if stats.disk_files > self.max_disk_files {
             self.evict_old_entries().await;
@@ -216,14 +216,14 @@ impl L3MmapCache {
             let mut sorted_entries: Vec<_> = entries.iter().collect();
             sorted_entries.sort_by(|a, b| a.1.last_accessed.cmp(&b.1.last_accessed));
 
-            let to_remove = sorted_entries.len() / 4;
+            let to_remove: _ = sorted_entries.len() / 4;
             sorted_entries.into_iter().take(to_remove).map(|(k, _)| k.clone()).collect()
         };
 
         // Remove collected keys
         for key in keys_to_remove {
             if let Some(entry) = entries.remove(&key) {
-                let _ = std::fs::remove_file(&entry.file_path);
+                let _: _ = std::fs::remove_file(&entry.file_path);
             }
         }
     }
@@ -258,13 +258,15 @@ impl Default for L3MmapCache {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_l3_basic_operations() {
-        let cache = L3MmapCache::new();
+        let cache: _ = L3MmapCache::new();
 
         cache.put("test.js", b"console.log('test');").await;
-        let result = cache.get("test.js").await;
+        let result: _ = cache.get("test.js").await;
 
         assert!(result.is_some());
         assert_eq!(result.unwrap(), b"console.log('test');");
@@ -272,19 +274,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_l3_file_storage() {
-        let cache = L3MmapCache::new();
+        let cache: _ = L3MmapCache::new();
 
-        let large_data = b"x".repeat(10000);
+        let large_data: _ = b"x".repeat(10000);
         cache.put("large.js", &large_data).await;
 
-        let result = cache.get("large.js").await;
+        let result: _ = cache.get("large.js").await;
         assert!(result.is_some());
         assert_eq!(result.unwrap().len(), 10000);
     }
 
     #[tokio::test]
     async fn test_l3_invalidation() {
-        let cache = L3MmapCache::new();
+        let cache: _ = L3MmapCache::new();
 
         cache.put("test.js", b"test").await;
         assert!(cache.get("test.js").await.is_some());
@@ -295,12 +297,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_l3_stats() {
-        let cache = L3MmapCache::new();
+        let cache: _ = L3MmapCache::new();
 
         cache.put("test.js", b"test").await;
         cache.get("test.js").await;
 
-        let stats = cache.get_stats().await;
+        let stats: _ = cache.get_stats().await;
         assert_eq!(stats.hits, 1);
         assert!(stats.disk_files > 0);
     }

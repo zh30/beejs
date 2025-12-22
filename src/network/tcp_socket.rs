@@ -10,6 +10,8 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 零拷贝 TCP 套接字
 ///
@@ -58,10 +60,10 @@ impl ZeroCopyTcpSocket {
     /// 返回新的 ZeroCopyTcpSocket 实例
     pub fn new(stream: TcpStream, buffer_size: usize) -> Self {
         let mut socket = Self {
-            stream: Arc::new(Mutex::new(stream)),
-            send_buffer: Arc::new(Mutex::new(Vec::with_capacity(buffer_size))),
+            stream: Arc::new(std::sync::Mutex::new(Mutex::new(stream))),
+            send_buffer: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(buffer_size)))),
             buffer_size,
-            stats: Arc::new(Mutex::new(ZeroCopyStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(ZeroCopyStats::default()))),
         };
 
         // 应用 TCP 优化设置
@@ -78,7 +80,7 @@ impl ZeroCopyTcpSocket {
     /// # 返回值
     /// 返回连接结果
     pub fn connect(addr: &str) -> std::io::Result<Self> {
-        let stream = TcpStream::connect(addr)?;
+        let stream: _ = TcpStream::connect(addr)?;
         Ok(Self::new(stream, 64 * 1024)) // 默认 64KB 缓冲区
     }
 
@@ -109,10 +111,10 @@ impl ZeroCopyTcpSocket {
     fn apply_tcp_optimizations(&mut self) {
         if let Ok(stream) = self.stream.lock() {
             // 启用 TCP_NODELAY，禁用 Nagle 算法
-            let _ = stream.set_nodelay(true);
+            let _: _ = stream.set_nodelay(true);
 
             // 设置发送缓冲区大小
-            let _ = stream.set_write_timeout(Some(Duration::from_secs(30)));
+            let _: _ = stream.set_write_timeout(Some(Duration::from_secs(30)));
         }
     }
 
@@ -169,19 +171,19 @@ impl ZeroCopyTcpSocket {
 
     /// 获取本地地址
     pub fn local_addr(&self) -> std::io::Result<std::net::SocketAddr> {
-        let stream = self.stream.lock().unwrap();
+        let stream: _ = self.stream.lock().unwrap();
         stream.local_addr()
     }
 
     /// 获取远程地址
     pub fn peer_addr(&self) -> std::io::Result<std::net::SocketAddr> {
-        let stream = self.stream.lock().unwrap();
+        let stream: _ = self.stream.lock().unwrap();
         stream.peer_addr()
     }
 
     /// 设置读写超时
     pub fn set_timeout(&self, timeout: Option<Duration>) -> std::io::Result<()> {
-        let stream = self.stream.lock().unwrap();
+        let stream: _ = self.stream.lock().unwrap();
         stream.set_read_timeout(timeout)?;
         stream.set_write_timeout(timeout)?;
         Ok(())

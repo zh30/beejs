@@ -204,7 +204,7 @@ pub struct ScopeInfo {
     /// 作用域名称
     pub name: Option<String>,
     /// 作用域中的变量
-    pub variables: HashMap<String, VariableInfo>,
+    pub variables: HashMap<String, VariableInfo, std::collections::HashMap<String, VariableInfo, String, VariableInfo>>,
 }
 
 impl ScopeInfo {
@@ -392,8 +392,8 @@ impl Clone for DebuggerProfiler {
         Self {
             enabled: self.enabled,
             sample_interval_us: self.sample_interval_us,
-            samples: Arc::new(Mutex::new(Vec::new())),
-            hot_spots: Arc::new(Mutex::new(Vec::new())),
+            samples: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            hot_spots: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
         }
     }
 }
@@ -404,8 +404,8 @@ impl DebuggerProfiler {
         Self {
             enabled: false,
             sample_interval_us,
-            samples: Arc::new(Mutex::new(Vec::new())),
-            hot_spots: Arc::new(Mutex::new(Vec::new())),
+            samples: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            hot_spots: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
         }
     }
 
@@ -434,13 +434,13 @@ impl DebuggerProfiler {
 
     /// 分析热点
     pub fn analyze_hot_spots(&self) -> Vec<HotSpot> {
-        let samples = self.samples.lock().unwrap();
-        let mut function_times: HashMap<String, (u64, u64)> = HashMap::new();
+        let samples: _ = self.samples.lock().unwrap();
+        let mut function_times: HashMap<String, (u64, u64), std::collections::HashMap<String, (u64, u64), String, (u64, u64)>> = HashMap::new();
         let total_time: u64 = samples.iter().map(|s| s.cpu_time_us).sum();
 
         for sample in samples.iter() {
             if let Some(top_frame) = sample.stack_frames.first() {
-                let entry = function_times.entry(top_frame.clone()).or_insert((0, 0));
+                let entry: _ = function_times.entry(top_frame.clone()).or_insert((0, 0));
                 entry.0 += 1;
                 entry.1 += sample.cpu_time_us;
             }
@@ -554,14 +554,14 @@ impl SourceMap {
 
     /// 添加源文件
     pub fn add_source(&mut self, source: String) -> usize {
-        let index = self.sources.len();
+        let index: _ = self.sources.len();
         self.sources.push(source);
         index
     }
 
     /// 添加名称
     pub fn add_name(&mut self, name: String) -> usize {
-        let index = self.names.len();
+        let index: _ = self.names.len();
         self.names.push(name);
         index
     }
@@ -608,7 +608,7 @@ impl SourceMap {
         original_line: u32,
         original_column: u32,
     ) -> Option<GeneratedLocation> {
-        let source_index = self.sources.iter().position(|s| s == source)?;
+        let source_index: _ = self.sources.iter().position(|s| s == source)?;
 
         let mut best_match: Option<&MappingSegment> = None;
 
@@ -638,7 +638,7 @@ impl SourceMap {
 #[derive(Debug, Clone, Default)]
 pub struct SourceMapManager {
     /// 文件 -> 源代码映射
-    maps: HashMap<String, SourceMap>,
+    maps: HashMap<String, SourceMap, std::collections::HashMap<String, SourceMap, String, SourceMap>>,
 }
 
 impl SourceMapManager {
@@ -754,7 +754,7 @@ impl RemoteDebugSession {
 
     /// 获取连接 URL
     pub fn get_connection_url(&self) -> String {
-        let protocol = if self.config.tls_enabled { "wss" } else { "ws" };
+        let protocol: _ = if self.config.tls_enabled { "wss" } else { "ws" };
         format!(
             "{}://{}:{}",
             protocol, self.config.host, self.config.port
@@ -835,7 +835,7 @@ impl EnhancedDebugger {
 
     /// 移除断点
     pub fn remove_breakpoint(&mut self, id: &str) -> bool {
-        let initial_len = self.breakpoints.len();
+        let initial_len: _ = self.breakpoints.len();
         self.breakpoints.retain(|bp| bp.id != id);
         self.breakpoints.len() < initial_len
     }
@@ -974,6 +974,8 @@ impl EnhancedDebugger {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_conditional_breakpoint() {
@@ -994,15 +996,15 @@ mod tests {
 
     #[test]
     fn test_hit_count_conditions() {
-        let equal = HitCountCondition::Equal(5);
+        let equal: _ = HitCountCondition::Equal(5);
         assert!(!equal.should_break(4));
         assert!(equal.should_break(5));
 
-        let gt = HitCountCondition::GreaterThan(3);
+        let gt: _ = HitCountCondition::GreaterThan(3);
         assert!(!gt.should_break(3));
         assert!(gt.should_break(4));
 
-        let mult = HitCountCondition::Multiple(3);
+        let mult: _ = HitCountCondition::Multiple(3);
         assert!(mult.should_break(6));
         assert!(!mult.should_break(7));
     }
@@ -1020,7 +1022,7 @@ mod tests {
             name_index: None,
         });
 
-        let loc = sm.find_original_location(10, 0);
+        let loc: _ = sm.find_original_location(10, 0);
         assert!(loc.is_some());
         assert_eq!(loc.unwrap().line, 5);
     }

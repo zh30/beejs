@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 //! 动作捕捉系统
 
 /// 动作捕捉配置
@@ -91,7 +93,7 @@ impl MotionCapture {
     /// 获取身体姿态
     pub fn get_body_pose(&mut self) -> Result<BodyPose, MotionCaptureError> {
         self.frame_count += 1;
-        let pose = BodyPose {
+        let pose: _ = BodyPose {
             joints: vec![JointPosition::default(); self.config.joint_count as usize],
             confidence: 0.95,
             timestamp: self.frame_count,

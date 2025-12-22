@@ -136,8 +136,8 @@ impl HotReloader {
     pub fn with_config(config: WatcherConfig) -> Self {
         Self {
             config,
-            stats: Arc::new(WatcherStats::new()),
-            running: Arc::new(AtomicBool::new(false)),
+            stats: Arc::new(std::sync::Mutex::new(WatcherStats::new())),
+            running: Arc::new(std::sync::Mutex::new(AtomicBool::new(false))),
         }
     }
 
@@ -145,7 +145,7 @@ impl HotReloader {
     pub fn should_watch(&self, path: &Path) -> bool {
         // Check extension
         if let Some(ext) = path.extension() {
-            let ext_str = ext.to_string_lossy().to_lowercase();
+            let ext_str: _ = ext.to_string_lossy().to_lowercase();
             if !self.config.extensions.iter().any(|e| e == &ext_str) {
                 return false;
             }
@@ -156,7 +156,7 @@ impl HotReloader {
         // Check ignore directories
         for component in path.components() {
             if let std::path::Component::Normal(name) = component {
-                let name_str = name.to_string_lossy();
+                let name_str: _ = name.to_string_lossy();
                 if self.config.ignore_dirs.iter().any(|d| d == &*name_str) {
                     return false;
                 }
@@ -169,11 +169,11 @@ impl HotReloader {
     /// Start watching a directory for changes
     /// Returns a channel receiver for file change events
     pub fn watch(&mut self, path: impl AsRef<Path>) -> anyhow::Result<mpsc::Receiver<FileChange>> {
-        let path = path.as_ref().to_path_buf();
+        let path: _ = path.clone();as_ref().to_path_buf();
         let (tx, rx) = mpsc::channel(100);
-        let config = self.config.clone();
-        let stats = self.stats.clone();
-        let running = self.running.clone();
+        let config: _ = self.config.clone();
+        let stats: _ = self.stats.clone();
+        let running: _ = self.running.clone();
 
         running.store(true, Ordering::SeqCst);
 
@@ -193,7 +193,7 @@ impl HotReloader {
         }
         stats.files_watched.store(file_count, Ordering::SeqCst);
 
-        let debounce_duration = Duration::from_millis(config.debounce_ms);
+        let debounce_duration: _ = Duration::from_millis(config.debounce_ms);
 
         std::thread::spawn(move || {
             let (notify_tx, notify_rx) = std::sync::mpsc::channel();
@@ -206,7 +206,7 @@ impl HotReloader {
                 }
             };
 
-            let mode = if config.recursive {
+            let mode: _ = if config.recursive {
                 RecursiveMode::Recursive
             } else {
                 RecursiveMode::NonRecursive
@@ -229,13 +229,13 @@ impl HotReloader {
                 match notify_rx.recv_timeout(Duration::from_millis(100)) {
                     Ok(Ok(events)) => {
                         for event in events {
-                            let event_path = event.path;
+                            let event_path: _ = event.path;
 
                             // Check if we should watch this file
-                            let ext = event_path
+                            let ext: _ = event_path
                                 .extension()
                                 .map(|e| e.to_string_lossy().to_lowercase());
-                            let should_process = ext
+                            let should_process: _ = ext
                                 .map(|e| config.extensions.iter().any(|x| x == &*e))
                                 .unwrap_or(false);
 
@@ -247,7 +247,7 @@ impl HotReloader {
                             let mut ignored = false;
                             for component in event_path.components() {
                                 if let std::path::Component::Normal(name) = component {
-                                    let name_str = name.to_string_lossy();
+                                    let name_str: _ = name.to_string_lossy();
                                     if config.ignore_dirs.iter().any(|d| d == &*name_str) {
                                         ignored = true;
                                         break;
@@ -258,13 +258,13 @@ impl HotReloader {
                                 continue;
                             }
 
-                            let change_type = match event.kind {
+                            let change_type: _ = match event.kind {
                                 DebouncedEventKind::Any => FileChangeType::Modified,
                                 DebouncedEventKind::AnyContinuous => FileChangeType::Modified,
                                 _ => FileChangeType::Modified,
                             };
 
-                            let change = FileChange {
+                            let change: _ = FileChange {
                                 path: event_path,
                                 change_type,
                                 timestamp: SystemTime::now(),
@@ -324,13 +324,13 @@ impl HotReloader {
             return;
         }
 
-        let status = if success {
+        let status: _ = if success {
             "\x1b[32m✓\x1b[0m"
         } else {
             "\x1b[31m✗\x1b[0m"
         };
 
-        let filename = path
+        let filename: _ = path
             .file_name()
             .map(|n| n.to_string_lossy())
             .unwrap_or_default();
@@ -409,10 +409,12 @@ impl WatcherConfigBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_watcher_config_default() {
-        let config = WatcherConfig::default();
+        let config: _ = WatcherConfig::default();
         assert_eq!(config.debounce_ms, 100);
         assert!(config.extensions.contains(&"js".to_string()));
         assert!(config.extensions.contains(&"ts".to_string()));
@@ -422,7 +424,7 @@ mod tests {
 
     #[test]
     fn test_should_watch() {
-        let reloader = HotReloader::new();
+        let reloader: _ = HotReloader::new();
 
         // Should watch JS/TS files
         assert!(reloader.should_watch(Path::new("test.js")));
@@ -440,12 +442,12 @@ mod tests {
 
     #[test]
     fn test_watcher_stats() {
-        let stats = WatcherStats::new();
+        let stats: _ = WatcherStats::new();
         stats.record_reload(true, 50);
         stats.record_reload(true, 60);
         stats.record_reload(false, 100);
 
-        let summary = stats.get_summary();
+        let summary: _ = stats.get_summary();
         assert_eq!(summary.total_reloads, 3);
         assert_eq!(summary.successful_reloads, 2);
         assert_eq!(summary.failed_reloads, 1);
@@ -454,7 +456,7 @@ mod tests {
 
     #[test]
     fn test_config_builder() {
-        let config = WatcherConfigBuilder::new()
+        let config: _ = WatcherConfigBuilder::new()
             .debounce_ms(200)
             .add_extension("vue")
             .add_ignore_dir("vendor")

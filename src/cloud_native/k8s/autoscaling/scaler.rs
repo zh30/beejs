@@ -34,7 +34,7 @@ impl Scaler {
         // Get current deployment
         let mut deployment = deployments.get(name).await?;
 
-        let current_replicas = deployment
+        let current_replicas: _ = deployment
             .spec
             .as_ref()
             .and_then(|s| s.replicas)
@@ -54,7 +54,7 @@ impl Scaler {
         }
 
         // Apply scale policy if provided
-        let final_replicas = if let Some(policy) = policy {
+        let final_replicas: _ = if let Some(policy) = policy {
             self.apply_scale_policy(current_replicas, replicas, policy)?
         } else {
             replicas
@@ -66,8 +66,8 @@ impl Scaler {
         }
 
         // Patch the deployment
-        let params = kube::api::PatchParams::default();
-        let patch = serde_json::json!({
+        let params: _ = kube::api::PatchParams::default();
+        let patch: _ = serde_json::json!({
             "spec": {
                 "replicas": final_replicas
             }
@@ -119,7 +119,7 @@ impl Scaler {
         // Get current statefulset
         let mut statefulset = statefulsets.get(name).await?;
 
-        let current_replicas = statefulset
+        let current_replicas: _ = statefulset
             .spec
             .as_ref()
             .and_then(|s| s.replicas)
@@ -139,7 +139,7 @@ impl Scaler {
         }
 
         // Apply scale policy if provided
-        let final_replicas = if let Some(policy) = policy {
+        let final_replicas: _ = if let Some(policy) = policy {
             self.apply_scale_policy(current_replicas, replicas, policy)?
         } else {
             replicas
@@ -151,8 +151,8 @@ impl Scaler {
         }
 
         // Patch the statefulset
-        let params = kube::api::PatchParams::default();
-        let patch = serde_json::json!({
+        let params: _ = kube::api::PatchParams::default();
+        let patch: _ = serde_json::json!({
             "spec": {
                 "replicas": final_replicas
             }
@@ -196,13 +196,13 @@ impl Scaler {
         desired: u32,
         policy: &ScalePolicy,
     ) -> Result<u32, Error> {
-        let policy_type = ScalePolicyType::from_str(&policy.policy_type)?;
+        let policy_type: _ = ScalePolicyType::from_str(&policy.policy_type)?;
 
         match policy_type {
             ScalePolicyType::Percent => {
-                let percent = policy.value;
-                let delta = (current as f64 * percent as f64 / 100.0).round() as i32;
-                let new_replicas = current as i32 + delta;
+                let percent: _ = policy.value;
+                let delta: _ = (current as f64 * percent as f64 / 100.0).round() as i32;
+                let new_replicas: _ = current as i32 + delta;
 
                 if new_replicas > 0 {
                     Ok(new_replicas as u32)
@@ -212,8 +212,8 @@ impl Scaler {
                 }
             }
             ScalePolicyType::Pods => {
-                let delta = policy.value as i32;
-                let new_replicas = current as i32 + delta;
+                let delta: _ = policy.value as i32;
+                let new_replicas: _ = current as i32 + delta;
 
                 if new_replicas > 0 {
                     Ok(new_replicas as u32)
@@ -334,10 +334,12 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_scaling_result() {
-        let result = ScalingResult {
+        let result: _ = ScalingResult {
             resource_type: ResourceType::Deployment,
             name: "test-deployment".to_string(),
             namespace: "default".to_string(),
@@ -355,7 +357,7 @@ mod tests {
 
     #[test]
     fn test_scaling_result_down() {
-        let result = ScalingResult {
+        let result: _ = ScalingResult {
             resource_type: ResourceType::StatefulSet,
             name: "test-statefulset".to_string(),
             namespace: "default".to_string(),

@@ -82,8 +82,8 @@ impl PerformanceOptimizer {
 
         // Sort by priority
         suggestions.sort_by(|a, b| {
-            let a_val = self.priority_to_value(&a.priority);
-            let b_val = self.priority_to_value(&b.priority);
+            let a_val: _ = self.priority_to_value(&a.priority);
+            let b_val: _ = self.priority_to_value(&b.priority);
             b_val.cmp(&a_val)
         });
 
@@ -453,14 +453,14 @@ impl PerformanceOptimizer {
     pub fn generate_optimization_report(
         &self,
         report: &PerformanceReport,
-    ) -> HashMap<String, Vec<OptimizationSuggestion>> {
-        let bottlenecks = self.bottleneck_detector.detect_bottlenecks(report);
-        let suggestions = self.generate_suggestions(&bottlenecks);
+    ) -> HashMap<String, Vec<OptimizationSuggestion, std::collections::HashMap<String, Vec<OptimizationSuggestion, String, Vec<OptimizationSuggestion>>> {
+        let bottlenecks: _ = self.bottleneck_detector.detect_bottlenecks(report);
+        let suggestions: _ = self.generate_suggestions(&bottlenecks);
 
         let mut categorized_suggestions = HashMap::new();
 
         for suggestion in suggestions {
-            let category = format!("{:?}", suggestion.category);
+            let category: _ = format!("{:?}", suggestion.category);
             categorized_suggestions
                 .entry(category)
                 .or_insert_with(Vec::new)
@@ -480,18 +480,20 @@ impl Default for PerformanceOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_optimizer_creation() {
-        let optimizer = PerformanceOptimizer::new();
+        let optimizer: _ = PerformanceOptimizer::new();
         // Just ensure it doesn't panic
-        let _ = optimizer;
+        let _: _ = optimizer;
     }
 
     #[test]
     fn test_generate_suggestions_for_slow_execution() {
-        let optimizer = PerformanceOptimizer::new();
-        let bottleneck = Bottleneck {
+        let optimizer: _ = PerformanceOptimizer::new();
+        let bottleneck: _ = Bottleneck {
             bottleneck_type: BottleneckType::SlowExecution,
             severity: BottleneckSeverity::High,
             description: "Slow execution detected".to_string(),
@@ -500,15 +502,15 @@ mod tests {
             code_location: None,
         };
 
-        let suggestions = optimizer.generate_suggestions(&[bottleneck]);
+        let suggestions: _ = optimizer.generate_suggestions(&[bottleneck]);
         assert!(!suggestions.is_empty());
         assert!(suggestions.iter().any(|s| s.category == OptimizationCategory::JITOptimization));
     }
 
     #[test]
     fn test_generate_suggestions_for_low_cache_hit_rate() {
-        let optimizer = PerformanceOptimizer::new();
-        let bottleneck = Bottleneck {
+        let optimizer: _ = PerformanceOptimizer::new();
+        let bottleneck: _ = Bottleneck {
             bottleneck_type: BottleneckType::LowCacheHitRate,
             severity: BottleneckSeverity::Medium,
             description: "Low cache hit rate".to_string(),
@@ -517,15 +519,15 @@ mod tests {
             code_location: None,
         };
 
-        let suggestions = optimizer.generate_suggestions(&[bottleneck]);
+        let suggestions: _ = optimizer.generate_suggestions(&[bottleneck]);
         assert!(!suggestions.is_empty());
         assert!(suggestions.iter().any(|s| s.category == OptimizationCategory::CachingStrategy));
     }
 
     #[test]
     fn test_generate_optimization_report() {
-        let optimizer = PerformanceOptimizer::new();
-        let report = PerformanceReport {
+        let optimizer: _ = PerformanceOptimizer::new();
+        let report: _ = PerformanceReport {
             total_executions: 10,
             average_time_ms: 15.0,
             min_time_ms: 5.0,
@@ -534,15 +536,15 @@ mod tests {
             total_code_executed: 1000,
         };
 
-        let optimization_report = optimizer.generate_optimization_report(&report);
+        let optimization_report: _ = optimizer.generate_optimization_report(&report);
         assert!(!optimization_report.is_empty());
     }
 
     #[test]
     fn test_priority_sorting() {
-        let optimizer = PerformanceOptimizer::new();
+        let optimizer: _ = PerformanceOptimizer::new();
 
-        let suggestions = vec![
+        let suggestions: _ = vec![
             OptimizationSuggestion {
                 id: "1".to_string(),
                 title: "Low Priority".to_string(),
@@ -572,7 +574,7 @@ mod tests {
         ];
 
         // Manually create bottlenecks and suggestions
-        let bottlenecks = vec![
+        let bottlenecks: _ = vec![
             Bottleneck {
                 bottleneck_type: BottleneckType::SlowExecution,
                 severity: BottleneckSeverity::High,
@@ -585,8 +587,8 @@ mod tests {
 
         let mut suggestions = optimizer.generate_suggestions(&bottlenecks);
         suggestions.sort_by(|a, b| {
-            let a_val = optimizer.priority_to_value(&a.priority);
-            let b_val = optimizer.priority_to_value(&b.priority);
+            let a_val: _ = optimizer.priority_to_value(&a.priority);
+            let b_val: _ = optimizer.priority_to_value(&b.priority);
             b_val.cmp(&a_val)
         });
 

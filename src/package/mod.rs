@@ -10,8 +10,8 @@ pub struct PackageInfo {
     pub name: String,
     pub version: String,
     pub description: String,
-    pub dependencies: HashMap<String, String>,
-    pub dev_dependencies: HashMap<String, String>,
+    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub dev_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// Package lock entry
@@ -54,7 +54,7 @@ impl PackageManager {
     pub fn list(&self) -> Result<Vec<PackageInfo>> {
         println!("Listing installed packages");
 
-        let packages = vec![
+        let packages: _ = vec![
             PackageInfo {
                 name: "typescript".to_string(),
                 version: "5.0.0".to_string(),
@@ -77,7 +77,7 @@ impl PackageManager {
     pub fn search(&self, query: &str) -> Result<Vec<PackageInfo>> {
         println!("Searching packages: {}", query);
 
-        let packages = vec![
+        let packages: _ = vec![
             PackageInfo {
                 name: query.to_string(),
                 version: "1.0.0".to_string(),
@@ -94,10 +94,12 @@ impl PackageManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_package_manager_creation() {
-        let manager = PackageManager::new(
+        let manager: _ = PackageManager::new(
             "https://registry.npmjs.org".to_string(),
             "/tmp/cache".to_string()
         );
@@ -106,15 +108,15 @@ mod tests {
 
     #[test]
     fn test_install_package() {
-        let manager = PackageManager::new("https://registry.npmjs.org".to_string(), "/tmp/cache".to_string());
-        let result = manager.install("lodash", Some("4.17.21")).unwrap();
+        let manager: _ = PackageManager::new("https://registry.npmjs.org".to_string(), "/tmp/cache".to_string());
+        let result: _ = manager.install("lodash", Some("4.17.21")).unwrap();
         assert!(result.contains("Installed"));
     }
 
     #[test]
     fn test_list_packages() {
-        let manager = PackageManager::new("https://registry.npmjs.org".to_string(), "/tmp/cache".to_string());
-        let packages = manager.list().unwrap();
+        let manager: _ = PackageManager::new("https://registry.npmjs.org".to_string(), "/tmp/cache".to_string());
+        let packages: _ = manager.list().unwrap();
         assert!(!packages.is_empty());
     }
 }

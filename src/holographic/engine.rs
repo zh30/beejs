@@ -1,6 +1,8 @@
 //! 全息计算引擎核心实现
 
 use super::wavefront_propagator::PropagationMethod;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 全息引擎配置
 #[derive(Debug, Clone)]
@@ -51,7 +53,7 @@ impl HolographicEngine {
     /// 计算全息图
     pub fn compute_hologram(&self) -> Result<Vec<u8>, HolographicError> {
         let (x, y, _z) = self.config.resolution;
-        let size = (x * y) as usize;
+        let size: _ = (x * y) as usize;
         Ok(vec![0u8; size])
     }
 

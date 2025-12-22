@@ -3,14 +3,16 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 零拷贝内存分配器 - 最小化内存复制开销
 /// 通过直接内存映射和智能池化策略，实现接近零开销的内存分配
 pub struct ZeroCopyAllocator {
     /// 内存池按大小分类管理
-    pools: Arc<Mutex<HashMap<usize, MemoryPool>>>,
+    pools: Arc<Mutex<HashMap<usize, MemoryPool, std::collections::HashMap<usize, MemoryPool, usize, MemoryPool>>>>,
     /// 大内存直接分配池
-    large_allocations: Arc<Mutex<HashMap<usize, LargeAllocation>>>,
+    large_allocations: Arc<Mutex<HashMap<usize, LargeAllocation, std::collections::HashMap<usize, LargeAllocation, usize, LargeAllocation>>>>,
     /// 统计信息
     stats: Arc<AllocatorStats>,
     /// 配置参数
@@ -109,10 +111,10 @@ impl ZeroCopyAllocator {
         }
 
         Self {
-            pools: Arc::new(Mutex::new(pools)),
-            large_allocations: Arc::new(Mutex::new(HashMap::new())),
-            stats: Arc::new(AllocatorStats {
-                total_allocations: AtomicU64::new(0),
+            pools: Arc::new(std::sync::Mutex::new(Mutex::new(pools))),
+            large_allocations: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            stats: Arc::new(std::sync::Mutex::new(AllocatorStats {
+                total_allocations: AtomicU64::new(0)),
                 total_deallocations: AtomicU64::new(0),
                 zero_copy_allocations: AtomicU64::new(0),
                 pool_hits: AtomicU64::new(0),
@@ -148,7 +150,7 @@ impl ZeroCopyAllocator {
         } else {
             // 直接系统分配
             unsafe {
-                let layout = Layout::from_size_align_unchecked(size, 1);
+                let layout: _ = Layout::from_size_align_unchecked(size, 1);
                 std::alloc::alloc(layout)
             }
         }
@@ -162,7 +164,7 @@ impl ZeroCopyAllocator {
 
         // 检查是否为大内存分配
         {
-            let large_allocs = self.large_allocations.lock().unwrap();
+            let large_allocs: _ = self.large_allocations.lock().unwrap();
             for (_, alloc) in large_allocs.iter() {
                 if alloc.ptr == ptr {
                     // 大内存释放
@@ -182,7 +184,7 @@ impl ZeroCopyAllocator {
 
         // 直接系统释放
         unsafe {
-            let layout = Layout::from_size_align_unchecked(size, 1);
+            let layout: _ = Layout::from_size_align_unchecked(size, 1);
             std::alloc::dealloc(ptr, layout);
         }
     }
@@ -222,8 +224,8 @@ impl ZeroCopyAllocator {
 
     /// 大内存分配
     fn allocate_large(&self, size: usize) -> *mut u8 {
-        let layout = unsafe { Layout::from_size_align_unchecked(size, 1) };
-        let ptr = unsafe { std::alloc::alloc(layout) };
+        let layout: _ = unsafe { Layout::from_size_align_unchecked(size, 1) };
+        let ptr: _ = unsafe { std::alloc::alloc(layout) };
 
         // 记录大内存分配
         if !ptr.is_null() {
@@ -248,7 +250,7 @@ impl ZeroCopyAllocator {
         large_allocs.remove(&(ptr as usize));
 
         unsafe {
-            let layout = Layout::from_size_align_unchecked(size, 1);
+            let layout: _ = Layout::from_size_align_unchecked(size, 1);
             std::alloc::dealloc(ptr, layout);
         }
     }
@@ -260,17 +262,17 @@ impl ZeroCopyAllocator {
 
     /// 生成地址
     fn generate_address(&self) -> usize {
-        let timestamp = std::time::SystemTime::now()
+        let timestamp: _ = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos() as usize;
-        let random = fastrand::usize(..);
+        let random: _ = fastrand::usize(..);
         timestamp ^ random
     }
 
     /// 获取统计信息
     pub fn get_stats(&self) -> AllocatorStatsSnapshot {
-        let pools = self.pools.lock().unwrap();
+        let pools: _ = self.pools.lock().unwrap();
         let total_pool_blocks: usize = pools.values()
             .map(|pool| pool.free_blocks.len() + pool.allocated_blocks.len())
             .sum();
@@ -292,7 +294,7 @@ impl ZeroCopyAllocator {
     /// 清理未使用的池块
     pub fn cleanup_idle_pools(&self) {
         let mut pools = self.pools.lock().unwrap();
-        let now = Instant::now();
+        let now: _ = Instant::now();
 
         for pool in pools.values_mut() {
             // 清理超过5分钟未使用的块
@@ -324,8 +326,8 @@ impl MemoryPool {
 
         // 预分配初始块
         for _ in 0..initial_blocks {
-            let layout = unsafe { Layout::from_size_align_unchecked(block_size, 1) };
-            let ptr = unsafe { std::alloc::alloc(layout) };
+            let layout: _ = unsafe { Layout::from_size_align_unchecked(block_size, 1) };
+            let ptr: _ = unsafe { std::alloc::alloc(layout) };
             if !ptr.is_null() {
                 free_blocks.push(ptr);
             }
@@ -350,8 +352,8 @@ impl MemoryPool {
             Some(ptr)
         } else if self.allocated_blocks.len() < self.max_blocks {
             // 分配新块
-            let layout = unsafe { Layout::from_size_align_unchecked(self.block_size, 1) };
-            let ptr = unsafe { std::alloc::alloc(layout) };
+            let layout: _ = unsafe { Layout::from_size_align_unchecked(self.block_size, 1) };
+            let ptr: _ = unsafe { std::alloc::alloc(layout) };
             if !ptr.is_null() {
                 self.allocated_blocks.push(ptr);
                 Some(ptr)
@@ -377,7 +379,7 @@ impl MemoryPool {
 
     fn cleanup(&mut self) {
         // 保留最近使用的块，释放其余的
-        let retain_count = std::cmp::min(self.free_blocks.len(), 10);
+        let retain_count: _ = std::cmp::min(self.free_blocks.len(), 10);
         let mut blocks_to_free = Vec::new();
 
         // 保留最后使用的块
@@ -388,7 +390,7 @@ impl MemoryPool {
         // 释放块
         for ptr in blocks_to_free {
             unsafe {
-                let layout = Layout::from_size_align_unchecked(self.block_size, 1);
+                let layout: _ = Layout::from_size_align_unchecked(self.block_size, 1);
                 std::alloc::dealloc(ptr, layout);
             }
         }
@@ -398,18 +400,18 @@ impl MemoryPool {
 impl Drop for MemoryPool {
     fn drop(&mut self) {
         // 释放所有块
-        let all_blocks = std::mem::take(&mut self.free_blocks);
+        let all_blocks: _ = std::mem::take(&mut self.free_blocks);
         for ptr in all_blocks {
             unsafe {
-                let layout = Layout::from_size_align_unchecked(self.block_size, 1);
+                let layout: _ = Layout::from_size_align_unchecked(self.block_size, 1);
                 std::alloc::dealloc(ptr, layout);
             }
         }
 
-        let allocated_blocks = std::mem::take(&mut self.allocated_blocks);
+        let allocated_blocks: _ = std::mem::take(&mut self.allocated_blocks);
         for ptr in allocated_blocks {
             unsafe {
-                let layout = Layout::from_size_align_unchecked(self.block_size, 1);
+                let layout: _ = Layout::from_size_align_unchecked(self.block_size, 1);
                 std::alloc::dealloc(ptr, layout);
             }
         }

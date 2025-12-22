@@ -48,10 +48,12 @@ impl PluginLoader {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_plugin_loader_creation() {
-        let loader = PluginLoader::new();
+        let loader: _ = PluginLoader::new();
         assert_eq!(loader.plugin_dirs.len(), 1);
     }
 

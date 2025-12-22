@@ -63,11 +63,11 @@ pub struct StartupResult {
 impl V8StartupOptimizer {
     /// 创建新的启动优化器
     pub fn new() -> Result<Self> {
-        let config = StartupConfig::default();
+        let config: _ = StartupConfig::default();
 
         Ok(Self {
-            embedded_builtins: Arc::new(EmbeddedBuiltinsManager::new()),
-            snapshot_manager: Arc::new(V8SnapshotOptimizedManager::new()?),
+            embedded_builtins: Arc::new(std::sync::Mutex::new(EmbeddedBuiltinsManager::new())),
+            snapshot_manager: Arc::new(std::sync::Mutex::new(V8SnapshotOptimizedManager::new())?),
             config,
         })
     }
@@ -75,15 +75,15 @@ impl V8StartupOptimizer {
     /// 使用指定配置创建启动优化器
     pub fn with_config(config: StartupConfig) -> Result<Self> {
         Ok(Self {
-            embedded_builtins: Arc::new(EmbeddedBuiltinsManager::new()),
-            snapshot_manager: Arc::new(V8SnapshotOptimizedManager::new()?),
+            embedded_builtins: Arc::new(std::sync::Mutex::new(EmbeddedBuiltinsManager::new())),
+            snapshot_manager: Arc::new(std::sync::Mutex::new(V8SnapshotOptimizedManager::new())?),
             config,
         })
     }
 
     /// 创建优化的运行时（目标 < 2ms）
     pub fn create_optimized_runtime(&self) -> Result<OptimizedRuntime> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         let mut components_initialized = vec![];
 
@@ -93,7 +93,7 @@ impl V8StartupOptimizer {
                 || {
                     if self.config.prewarm_builtins {
                         // 预热内置函数（访问所有内置函数）
-                        let _ = self.embedded_builtins.get_builtins_count();
+                        let _: _ = self.embedded_builtins.get_builtins_count();
                         components_initialized.push("embedded_builtins".to_string());
                         Ok(())
                     } else {
@@ -117,7 +117,7 @@ impl V8StartupOptimizer {
         } else {
             // 串行初始化
             if self.config.prewarm_builtins {
-                let _ = self.embedded_builtins.get_builtins_count();
+                let _: _ = self.embedded_builtins.get_builtins_count();
                 components_initialized.push("embedded_builtins".to_string());
             }
 
@@ -135,10 +135,10 @@ impl V8StartupOptimizer {
             components_initialized.push("jit_warmup".to_string());
         }
 
-        let startup_time = start.elapsed();
+        let startup_time: _ = start.elapsed();
 
         // 验证启动时间
-        let target_achieved = startup_time < Duration::from_millis(self.config.target_startup_ms);
+        let target_achieved: _ = startup_time < Duration::from_millis(self.config.target_startup_ms);
 
         if target_achieved {
             eprintln!("✅ Optimized Startup: {:?} (< {}ms target achieved!)",
@@ -172,9 +172,9 @@ impl V8StartupOptimizer {
         let mut target_achieved_count = 0;
 
         for _ in 0..iterations {
-            let start = Instant::now();
-            let _runtime = self.create_optimized_runtime();
-            let elapsed = start.elapsed();
+            let start: _ = Instant::now();
+            let _runtime: _ = self.create_optimized_runtime();
+            let elapsed: _ = start.elapsed();
 
             times.push(elapsed);
             if elapsed < Duration::from_millis(self.config.target_startup_ms) {
@@ -183,11 +183,11 @@ impl V8StartupOptimizer {
         }
 
         let total_time: Duration = times.iter().sum();
-        let avg_time = total_time / iterations as u32;
-        let min_time = times.iter().min().cloned().unwrap_or_default();
-        let max_time = times.iter().max().cloned().unwrap_or_default();
+        let avg_time: _ = total_time / iterations as u32;
+        let min_time: _ = times.iter().min().cloned().unwrap_or_default();
+        let max_time: _ = times.iter().max().cloned().unwrap_or_default();
 
-        let target_achievement_rate = target_achieved_count as f64 / iterations as f64;
+        let target_achievement_rate: _ = target_achieved_count as f64 / iterations as f64;
 
         eprintln!("📊 Startup Benchmark ({} iterations):", iterations);
         eprintln!("   Average: {:?}", avg_time);
@@ -241,14 +241,16 @@ pub struct StartupBenchmarkResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_startup_time() {
-        let optimizer = V8StartupOptimizer::new().unwrap();
+        let optimizer: _ = V8StartupOptimizer::new().unwrap();
 
-        let start = Instant::now();
-        let runtime = optimizer.create_optimized_runtime();
-        let startup_time = start.elapsed();
+        let start: _ = Instant::now();
+        let runtime: _ = optimizer.create_optimized_runtime();
+        let startup_time: _ = start.elapsed();
 
         assert!(runtime.is_ok(), "Runtime creation should succeed");
         assert!(startup_time < Duration::from_millis(2),
@@ -259,8 +261,8 @@ mod tests {
 
     #[test]
     fn test_benchmark_startup() {
-        let optimizer = V8StartupOptimizer::new().unwrap();
-        let result = optimizer.benchmark_startup(5);
+        let optimizer: _ = V8StartupOptimizer::new().unwrap();
+        let result: _ = optimizer.benchmark_startup(5);
 
         assert_eq!(result.iterations, 5);
         assert!(result.avg_time > Duration::from_nanos(0));
@@ -270,15 +272,15 @@ mod tests {
 
     #[test]
     fn test_custom_config() {
-        let config = StartupConfig {
+        let config: _ = StartupConfig {
             use_snapshot: false,
             prewarm_builtins: false,
             parallel_init: false,
             target_startup_ms: 1,
         };
 
-        let optimizer = V8StartupOptimizer::with_config(config).unwrap();
-        let runtime = optimizer.create_optimized_runtime();
+        let optimizer: _ = V8StartupOptimizer::with_config(config).unwrap();
+        let runtime: _ = optimizer.create_optimized_runtime();
 
         assert!(runtime.is_ok(), "Runtime creation should succeed");
     }

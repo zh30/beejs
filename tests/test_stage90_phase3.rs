@@ -8,6 +8,8 @@ use std::time::{Duration, Instant};
 use tokio::runtime::Runtime;
 
 use crate::lock_free::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
     LockFreeCounter, LockFreeQueue, LockFreeTaskScheduler, ShardedLock,
     LockFreeBufferPool, AtomicStats
 };
@@ -15,15 +17,15 @@ use crate::lock_free::{
 /// 测试无锁计数器的性能
 #[tokio::test]
 async fn test_lock_free_counter_performance() {
-    let counter = Arc::new(LockFreeCounter::new(0));
-    let num_threads = 10;
-    let increments_per_thread = 1000;
+    let counter: _ = Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0)));
+    let num_threads: _ = 10;
+    let increments_per_thread: _ = 1000;
 
     // 多线程并发递增
     let mut handles = Vec::new();
     for _ in 0..num_threads {
-        let counter = Arc::clone(&counter);
-        let handle = tokio::spawn(async move {
+        let counter: _ = Arc::clone(counter);
+        let handle: _ = tokio::spawn(async move {
             for _ in 0..increments_per_thread {
                 counter.increment();
             }
@@ -36,8 +38,8 @@ async fn test_lock_free_counter_performance() {
         handle.await.unwrap();
     }
 
-    let final_count = counter.load();
-    let expected_count = num_threads * increments_per_thread;
+    let final_count: _ = counter.load();
+    let expected_count: _ = num_threads * increments_per_thread;
     assert_eq!(final_count, expected_count);
     println!("✅ 无锁计数器性能测试通过: {} 次并发递增", final_count);
 }
@@ -45,7 +47,7 @@ async fn test_lock_free_counter_performance() {
 /// 测试无锁队列的基本操作
 #[tokio::test]
 async fn test_lock_free_queue_basic() {
-    let queue = Arc::new(LockFreeQueue::new());
+    let queue: _ = Arc::new(std::sync::Mutex::new(LockFreeQueue::new()));
 
     // 测试单线程入队出队
     assert!(queue.try_enqueue(42));
@@ -53,15 +55,15 @@ async fn test_lock_free_queue_basic() {
     assert_eq!(queue.try_dequeue(), None);
 
     // 测试多线程入队出队
-    let num_threads = 5;
-    let items_per_thread = 100;
+    let num_threads: _ = 5;
+    let items_per_thread: _ = 100;
 
     // 生产者线程
     for _ in 0..num_threads {
-        let queue = Arc::clone(&queue);
+        let queue: _ = Arc::clone(queue);
         tokio::spawn(async move {
             for i in 0..items_per_thread {
-                let item = i * 1000;
+                let item: _ = i * 1000;
                 while !queue.try_enqueue(item) {
                     tokio::task::yield_now().await;
                 }
@@ -70,14 +72,14 @@ async fn test_lock_free_queue_basic() {
     }
 
     // 消费者线程
-    let consumer_queue = Arc::clone(&queue);
-    let total_expected = num_threads * items_per_thread;
-    let start_time = Instant::now();
+    let consumer_queue: _ = Arc::clone(queue);
+    let total_expected: _ = num_threads * items_per_thread;
+    let start_time: _ = Instant::now();
 
-    let consumed_items = Arc::new(LockFreeCounter::new(0));
-    let consumed_items_clone = Arc::clone(&consumed_items);
+    let consumed_items: _ = Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0)));
+    let consumed_items_clone: _ = Arc::clone(consumed_items);
 
-    let consumer = tokio::spawn(async move {
+    let consumer: _ = tokio::spawn(async move {
         let mut consumed = 0;
         while consumed < total_expected {
             if let Some(_item) = consumer_queue.try_dequeue() {
@@ -89,8 +91,8 @@ async fn test_lock_free_queue_basic() {
         consumed
     });
 
-    let consumed = consumer.await.unwrap();
-    let elapsed = start_time.elapsed();
+    let consumed: _ = consumer.await.unwrap();
+    let elapsed: _ = start_time.elapsed();
 
     assert_eq!(consumed, total_expected);
     println!("✅ 无锁队列性能测试通过: {} 项任务在 {:?} 内完成", consumed, elapsed);
@@ -99,14 +101,14 @@ async fn test_lock_free_queue_basic() {
 /// 测试分片锁的性能
 #[tokio::test]
 async fn test_sharded_lock_performance() {
-    let sharded_lock = Arc::new(ShardedLock::new(16, 0u64));
-    let num_threads = 8;
-    let operations_per_thread = 5000;
+    let sharded_lock: _ = Arc::new(std::sync::Mutex::new(ShardedLock::new(16, 0u64)));
+    let num_threads: _ = 8;
+    let operations_per_thread: _ = 5000;
 
     let mut handles = Vec::new();
     for i in 0..num_threads {
-        let sharded_lock = Arc::clone(&sharded_lock);
-        let handle = tokio::spawn(async move {
+        let sharded_lock: _ = Arc::clone(sharded_lock);
+        let handle: _ = tokio::spawn(async move {
             let key = format!("key_{}", i % 16);
             for _ in 0..operations_per_thread {
                 let mut value = sharded_lock.shard(&key).await;
@@ -123,12 +125,12 @@ async fn test_sharded_lock_performance() {
     // 验证总数
     let mut total = 0u64;
     for i in 0..16 {
-        let key = format!("key_{}", i);
-        let value = sharded_lock.shard(&key).await;
+        let key: _ = format!("key_{}", i);
+        let value: _ = sharded_lock.shard(&key).await;
         total += *value;
     }
 
-    let expected_total = num_threads * operations_per_thread;
+    let expected_total: _ = num_threads * operations_per_thread;
     assert_eq!(total, expected_total);
     println!("✅ 分片锁性能测试通过: {} 次操作", total);
 }
@@ -136,8 +138,8 @@ async fn test_sharded_lock_performance() {
 /// 测试无锁任务调度器
 #[tokio::test]
 async fn test_lock_free_task_scheduler() {
-    let scheduler = Arc::new(LockFreeTaskScheduler::new());
-    let num_tasks = 1000;
+    let scheduler: _ = Arc::new(std::sync::Mutex::new(LockFreeTaskScheduler::new()));
+    let num_tasks: _ = 1000;
 
     // 提交任务
     for _ in 0..num_tasks {
@@ -147,13 +149,13 @@ async fn test_lock_free_task_scheduler() {
     // 模拟任务执行
     let mut active_tasks = 0;
     let mut completed_tasks = 0;
-    let num_workers = 4;
+    let num_workers: _ = 4;
 
     // 创建工作线程
     let mut handles = Vec::new();
     for _ in 0..num_workers {
-        let scheduler = Arc::clone(&scheduler);
-        let handle = tokio::spawn(async move {
+        let scheduler: _ = Arc::clone(scheduler);
+        let handle: _ = tokio::spawn(async move {
             let mut local_completed = 0;
             while !scheduler.should_shutdown() {
                 if scheduler.start_task() {
@@ -177,7 +179,7 @@ async fn test_lock_free_task_scheduler() {
 
     // 等待所有工作线程完成
     for handle in handles {
-        let completed = handle.await.unwrap();
+        let completed: _ = handle.await.unwrap();
         completed_tasks += completed;
     }
 
@@ -187,13 +189,13 @@ async fn test_lock_free_task_scheduler() {
 /// 测试锁自由缓冲区池
 #[tokio::test]
 async fn test_lock_free_buffer_pool() {
-    let pool = Arc::new(LockFreeBufferPool::new());
-    let num_operations = 1000;
+    let pool: _ = Arc::new(std::sync::Mutex::new(LockFreeBufferPool::new()));
+    let num_operations: _ = 1000;
 
     let mut handles = Vec::new();
     for _ in 0..num_operations {
-        let pool = Arc::clone(&pool);
-        let handle = tokio::spawn(async move {
+        let pool: _ = Arc::clone(pool);
+        let handle: _ = tokio::spawn(async move {
             pool.allocate();
             tokio::time::sleep(Duration::from_millis(1)).await;
             pool.deallocate();
@@ -205,9 +207,9 @@ async fn test_lock_free_buffer_pool() {
         handle.await.unwrap();
     }
 
-    let active = pool.active_count();
+    let active: _ = pool.active_count();
     assert_eq!(active, 0, "所有缓冲区应该已释放");
-    let total_allocs = pool.total_allocations();
+    let total_allocs: _ = pool.total_allocations();
     assert_eq!(total_allocs, num_operations);
 
     println!("✅ 锁自由缓冲区池测试通过: {} 次分配", total_allocs);
@@ -216,7 +218,7 @@ async fn test_lock_free_buffer_pool() {
 /// 测试原子操作统计
 #[test]
 fn test_atomic_stats() {
-    let stats = Arc::new(AtomicStats::new());
+    let stats: _ = Arc::new(std::sync::Mutex::new(AtomicStats::new()));
 
     // 记录操作
     for _ in 0..100 {
@@ -225,7 +227,7 @@ fn test_atomic_stats() {
         stats.record_false_sharing();
     }
 
-    let report = stats.get_report();
+    let report: _ = stats.get_report();
     println!("原子操作统计报告:\n{}", report);
 
     assert!(report.contains("总操作数: 100"));
@@ -238,16 +240,16 @@ fn test_atomic_stats() {
 /// 并发性能基准测试
 #[tokio::test]
 async fn test_concurrent_performance_benchmark() {
-    let num_threads = 8;
-    let operations_per_thread = 10000;
-    let counter = Arc::new(LockFreeCounter::new(0));
+    let num_threads: _ = 8;
+    let operations_per_thread: _ = 10000;
+    let counter: _ = Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0)));
 
-    let start_time = Instant::now();
+    let start_time: _ = Instant::now();
 
     let mut handles = Vec::new();
     for _ in 0..num_threads {
-        let counter = Arc::clone(&counter);
-        let handle = tokio::spawn(async move {
+        let counter: _ = Arc::clone(counter);
+        let handle: _ = tokio::spawn(async move {
             for _ in 0..operations_per_thread {
                 counter.increment();
             }
@@ -259,9 +261,9 @@ async fn test_concurrent_performance_benchmark() {
         handle.await.unwrap();
     }
 
-    let elapsed = start_time.elapsed();
-    let total_operations = num_threads * operations_per_thread;
-    let ops_per_sec = total_operations as f64 / elapsed.as_secs_f64();
+    let elapsed: _ = start_time.elapsed();
+    let total_operations: _ = num_threads * operations_per_thread;
+    let ops_per_sec: _ = total_operations as f64 / elapsed.as_secs_f64();
 
     println!("并发性能基准测试结果:");
     println!("  总操作数: {}", total_operations);
@@ -277,18 +279,18 @@ async fn test_concurrent_performance_benchmark() {
 /// 测试高并发场景下的锁竞争
 #[tokio::test]
 async fn test_high_contention_scenario() {
-    let num_threads = 16;
-    let operations_per_thread = 5000;
-    let counter = Arc::new(LockFreeCounter::new(0));
-    let stats = Arc::new(AtomicStats::new());
+    let num_threads: _ = 16;
+    let operations_per_thread: _ = 5000;
+    let counter: _ = Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0)));
+    let stats: _ = Arc::new(std::sync::Mutex::new(AtomicStats::new()));
 
-    let start_time = Instant::now();
+    let start_time: _ = Instant::now();
 
     let mut handles = Vec::new();
     for _ in 0..num_threads {
-        let counter = Arc::clone(&counter);
-        let stats = Arc::clone(&stats);
-        let handle = tokio::spawn(async move {
+        let counter: _ = Arc::clone(counter);
+        let stats: _ = Arc::clone(stats);
+        let handle: _ = tokio::spawn(async move {
             for _ in 0..operations_per_thread {
                 stats.record_operation();
                 counter.increment();
@@ -301,9 +303,9 @@ async fn test_high_contention_scenario() {
         handle.await.unwrap();
     }
 
-    let elapsed = start_time.elapsed();
-    let total_operations = num_threads * operations_per_thread;
-    let ops_per_sec = total_operations as f64 / elapsed.as_secs_f64();
+    let elapsed: _ = start_time.elapsed();
+    let total_operations: _ = num_threads * operations_per_thread;
+    let ops_per_sec: _ = total_operations as f64 / elapsed.as_secs_f64();
 
     println!("高并发场景测试结果:");
     println!("  线程数: {}", num_threads);

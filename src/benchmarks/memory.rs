@@ -11,6 +11,8 @@ use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, Benchma
 use std::time::Duration;
 use std::sync::{Arc, Mutex};
 use tokio::task;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 内存使用基准测试套件
 pub struct MemoryBenchmark;
@@ -23,7 +25,7 @@ impl MemoryBenchmark {
 
     /// 内存分配性能测试
     pub fn allocation_performance_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 1000,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(60)),
@@ -31,7 +33,7 @@ impl MemoryBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "allocation_performance",
             MetricType::MemoryUsage,
@@ -48,7 +50,7 @@ impl MemoryBenchmark {
 
     /// 大对象分配测试
     pub fn large_object_allocation_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 100,
             warmup_iterations: 5,
             timeout: Some(Duration::from_secs(60)),
@@ -56,7 +58,7 @@ impl MemoryBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "large_object_allocation",
             MetricType::MemoryUsage,
@@ -73,7 +75,7 @@ impl MemoryBenchmark {
 
     /// 内存碎片化测试
     pub fn memory_fragmentation_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 100,
             warmup_iterations: 5,
             timeout: Some(Duration::from_secs(60)),
@@ -81,7 +83,7 @@ impl MemoryBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "memory_fragmentation",
             MetricType::MemoryUsage,
@@ -89,7 +91,7 @@ impl MemoryBenchmark {
                 // 模拟内存碎片化
                 let mut allocations = Vec::new();
                 for i in 0..1000 {
-                    let size = (i % 10 + 1) * 1024;
+                    let size: _ = (i % 10 + 1) * 1024;
                     allocations.push(vec![0u8; size]);
                 }
                 // 释放部分内存
@@ -101,7 +103,7 @@ impl MemoryBenchmark {
 
     /// 内存池性能测试
     pub fn memory_pool_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 1000,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(60)),
@@ -109,15 +111,15 @@ impl MemoryBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "memory_pool",
             MetricType::MemoryUsage,
             || {
                 // 模拟内存池使用
-                let pool = Arc::new(Mutex::new(Vec::<u8>::new()));
+                let pool: _ = Arc::new(std::sync::Mutex::new(Mutex::new(Vec::<u8>::new())));
                 for _ in 0..100 {
-                    let _chunk = pool.lock().unwrap();
+                    let _chunk: _ = pool.lock().unwrap();
                     // 保持锁一小段时间来模拟实际使用
                     std::hint::black_box(_chunk);
                 }
@@ -127,7 +129,7 @@ impl MemoryBenchmark {
 
     /// 字符串内存使用测试
     pub fn string_memory_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 1000,
             warmup_iterations: 10,
             timeout: Some(Duration::from_secs(60)),
@@ -135,7 +137,7 @@ impl MemoryBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "string_memory",
             MetricType::MemoryUsage,
@@ -152,7 +154,7 @@ impl MemoryBenchmark {
 
     /// 递归数据结构内存测试
     pub fn recursive_data_structure_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 100,
             warmup_iterations: 5,
             timeout: Some(Duration::from_secs(60)),
@@ -160,7 +162,7 @@ impl MemoryBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "recursive_data_structure",
             MetricType::MemoryUsage,
@@ -183,7 +185,7 @@ impl MemoryBenchmark {
 
     /// 异步内存使用测试
     pub fn async_memory_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 100,
             warmup_iterations: 5,
             timeout: Some(Duration::from_secs(60)),
@@ -191,7 +193,7 @@ impl MemoryBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "async_memory",
             MetricType::MemoryUsage,
@@ -210,7 +212,7 @@ impl MemoryBenchmark {
 
     /// 内存泄漏检测测试
     pub fn memory_leak_detection_benchmark(&self) -> BenchmarkResult {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 10,
             warmup_iterations: 2,
             timeout: Some(Duration::from_secs(60)),
@@ -218,18 +220,18 @@ impl MemoryBenchmark {
             compare_with_baseline: true,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "memory_leak_detection",
             MetricType::MemoryUsage,
             || {
                 // 模拟内存泄漏检测
-                let before = get_current_memory();
+                let before: _ = get_current_memory();
                 {
-                    let _leaked = Box::into_raw(Box::new(vec![0u8; 1000000]));
+                    let _leaked: _ = Box::into_raw(Box::new(vec![0u8; 1000000]));
                     // 注意：故意不释放，以测试泄漏检测
                 }
-                let after = get_current_memory();
+                let after: _ = get_current_memory();
                 (after - before) as i64
             },
         )
@@ -260,13 +262,13 @@ impl MemoryBenchmark {
         }
 
         // 统计分析
-        let total_memory = results
+        let total_memory: _ = results
             .iter()
             .filter_map(|r| r.memory_stats.as_ref())
             .map(|stats| stats.current_rss)
             .sum::<usize>();
 
-        let avg_memory = if !results.is_empty() {
+        let avg_memory: _ = if !results.is_empty() {
             total_memory / results.len()
         } else {
             0

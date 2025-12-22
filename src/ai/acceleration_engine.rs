@@ -48,7 +48,7 @@ pub struct AccelerationEngine {
     runtime: Arc<Runtime>,
     gpu_available: bool,
     npu_available: bool,
-    active_tasks: Arc<Mutex<HashMap<u64, InferenceTask>>>,
+    active_tasks: Arc<Mutex<HashMap<u64, InferenceTask, std::collections::HashMap<u64, InferenceTask, u64, InferenceTask>>>>,
     batch_queue: Arc<Mutex<VecDeque<InferenceTask>>>,
     performance_stats: Arc<Mutex<AccelerationStats>>,
     batch_config: Arc<Mutex<BatchConfig>>,
@@ -82,22 +82,22 @@ impl AccelerationEngine {
     /// 创建新的加速引擎实例
     pub fn new(runtime: &Arc<Runtime>, config: AccelerationConfig) -> Result<Self, String> {
         // 检测硬件可用性
-        let gpu_available = config.use_gpu && AccelerationEngine::detect_gpu()?;
-        let npu_available = config.use_npu && AccelerationEngine::detect_npu()?;
+        let gpu_available: _ = config.use_gpu && AccelerationEngine::detect_gpu()?;
+        let npu_available: _ = config.use_npu && AccelerationEngine::detect_npu()?;
 
         Ok(AccelerationEngine {
             config: config.clone(),
             runtime: runtime.clone(),
             gpu_available,
             npu_available,
-            active_tasks: Arc::new(Mutex::new(HashMap::new())),
-            batch_queue: Arc::new(Mutex::new(VecDeque::new())),
-            performance_stats: Arc::new(Mutex::new(AccelerationStats::default())),
-            batch_config: Arc::new(Mutex::new(BatchConfig {
+            active_tasks: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            batch_queue: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
+            performance_stats: Arc::new(std::sync::Mutex::new(Mutex::new(AccelerationStats::default()))),
+            batch_config: Arc::new(std::sync::Mutex::new(Mutex::new(BatchConfig {
                 dynamic_batching: false,
                 max_batch_size: 32,
                 batch_timeout_ms: 10,
-            })),
+            }))),
         })
     }
 
@@ -115,7 +115,7 @@ impl AccelerationEngine {
 
     /// 执行推理
     pub fn inference(&mut self, input: &[f32]) -> Result<InferenceResult, String> {
-        let task = InferenceTask {
+        let task: _ = InferenceTask {
             id: self.generate_task_id(),
             input_data: input.to_vec(),
             output_data: None,
@@ -129,10 +129,10 @@ impl AccelerationEngine {
         }
 
         // 选择硬件
-        let hardware_type = self.select_hardware(input.len())?;
+        let hardware_type: _ = self.select_hardware(input.len())?;
 
         // 执行推理
-        let result = match hardware_type {
+        let result: _ = match hardware_type {
             HardwareType::GPU => self.gpu_inference(input),
             HardwareType::NPU => self.npu_inference(input),
             HardwareType::CPU => self.cpu_inference(input),
@@ -146,11 +146,11 @@ impl AccelerationEngine {
 
     /// CPU 推理
     pub fn cpu_inference(&self, input: &[f32]) -> Result<InferenceResult, String> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 模拟 CPU 推理
-        let output = self.simulate_inference(input, HardwareType::CPU)?;
-        let latency = start.elapsed();
+        let output: _ = self.simulate_inference(input, HardwareType::CPU)?;
+        let latency: _ = start.elapsed();
 
         Ok(InferenceResult {
             output,
@@ -162,15 +162,15 @@ impl AccelerationEngine {
 
     /// GPU 推理
     pub fn gpu_inference(&self, input: &[f32]) -> Result<InferenceResult, String> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         if !self.gpu_available {
             return Err("GPU not available".to_string());
         }
 
         // 模拟 GPU 推理（更快）
-        let output = self.simulate_inference(input, HardwareType::GPU)?;
-        let latency = start.elapsed();
+        let output: _ = self.simulate_inference(input, HardwareType::GPU)?;
+        let latency: _ = start.elapsed();
 
         Ok(InferenceResult {
             output,
@@ -182,15 +182,15 @@ impl AccelerationEngine {
 
     /// NPU 推理
     pub fn npu_inference(&self, input: &[f32]) -> Result<InferenceResult, String> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         if !self.npu_available {
             return Err("NPU not available".to_string());
         }
 
         // 模拟 NPU 推理（最快）
-        let output = self.simulate_inference(input, HardwareType::NPU)?;
-        let latency = start.elapsed();
+        let output: _ = self.simulate_inference(input, HardwareType::NPU)?;
+        let latency: _ = start.elapsed();
 
         Ok(InferenceResult {
             output,
@@ -206,10 +206,10 @@ impl AccelerationEngine {
             return Ok(Vec::new());
         }
 
-        let batch_size = inputs.len();
-        let hardware_type = self.select_hardware(batch_size)?;
+        let batch_size: _ = inputs.len();
+        let hardware_type: _ = self.select_hardware(batch_size)?;
 
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 并行处理批量输入
         let outputs: Result<Vec<_>, _> = inputs
@@ -217,10 +217,10 @@ impl AccelerationEngine {
             .map(|input| self.simulate_inference(input, hardware_type.clone()))
             .collect();
 
-        let outputs = outputs?;
-        let latency = start.elapsed();
+        let outputs: _ = outputs?;
+        let latency: _ = start.elapsed();
 
-        let results = outputs
+        let results: _ = outputs
             .into_iter()
             .map(|output| InferenceResult {
                 output,
@@ -239,12 +239,12 @@ impl AccelerationEngine {
             return self.batch_inference(inputs);
         }
 
-        let pipeline_stages = 4; // 4 阶段流水线
+        let pipeline_stages: _ = 4; // 4 阶段流水线
         let mut results = Vec::with_capacity(inputs.len());
 
         // 简化的流水线实现
         for chunk in inputs.chunks(pipeline_stages) {
-            let chunk_results = self.batch_inference(chunk)?;
+            let chunk_results: _ = self.batch_inference(chunk)?;
             for result in chunk_results {
                 results.push(result);
             }
@@ -262,9 +262,9 @@ impl AccelerationEngine {
         }
 
         // 检查是否达到批处理大小
-        let should_process = {
+        let should_process: _ = {
             let batch_config = self.batch_config.lock().unwrap();
-            let queue = self.batch_queue.lock().unwrap();
+            let queue: _ = self.batch_queue.lock().unwrap();
             queue.len() >= batch_config.max_batch_size
                 || (queue.len() > 0 && self.should_timeout(&queue, batch_config.batch_timeout_ms))
         };
@@ -273,7 +273,7 @@ impl AccelerationEngine {
             self.process_batch()
         } else {
             // 等待批处理
-            let timeout_ms = {
+            let timeout_ms: _ = {
                 let batch_config = self.batch_config.lock().unwrap();
                 batch_config.batch_timeout_ms
             };
@@ -292,7 +292,7 @@ impl AccelerationEngine {
             }
 
             // 收集批次
-            let batch_size = {
+            let batch_size: _ = {
                 let batch_config = self.batch_config.lock().unwrap();
                 batch_config.max_batch_size.min(queue.len())
             };
@@ -301,7 +301,7 @@ impl AccelerationEngine {
         };
 
         let inputs: Vec<Vec<f32>> = tasks.iter().map(|t| t.input_data.clone()).collect();
-        let results = self.batch_inference(&inputs)?;
+        let results: _ = self.batch_inference(&inputs)?;
 
         // 返回第一个结果（简化）
         Ok(results[0].clone())
@@ -331,7 +331,7 @@ impl AccelerationEngine {
     /// 模拟推理计算
     fn simulate_inference(&self, input: &[f32], hardware: HardwareType) -> Result<Vec<f32>, String> {
         // 模拟不同硬件的计算延迟
-        let delay = match hardware {
+        let delay: _ = match hardware {
             HardwareType::CPU => Duration::from_millis(50),
             HardwareType::GPU => Duration::from_millis(10),
             HardwareType::NPU => Duration::from_millis(5),
@@ -340,7 +340,7 @@ impl AccelerationEngine {
         std::thread::sleep(delay);
 
         // 模拟输出计算
-        let output_size = input.len();
+        let output_size: _ = input.len();
         let mut output = vec![0.0; output_size];
 
         for (i, &val) in input.iter().enumerate() {
@@ -395,7 +395,7 @@ impl AccelerationEngine {
 
     /// 检查引擎健康状态
     pub fn is_healthy(&self) -> bool {
-        let stats = self.performance_stats.lock().unwrap();
+        let stats: _ = self.performance_stats.lock().unwrap();
         stats.total_inferences > 0
     }
 
@@ -411,67 +411,69 @@ fn avg_duration(current_avg: Duration, new_value: Duration, count: u64) -> Durat
         return new_value;
     }
 
-    let total_secs = current_avg.as_secs_f64() * (count - 1) as f64 + new_value.as_secs_f64();
+    let total_secs: _ = current_avg.as_secs_f64() * (count - 1) as f64 + new_value.as_secs_f64();
     Duration::from_secs_f64(total_secs / count as f64)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_acceleration_engine_creation() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
-        let config = AccelerationConfig {
+        let runtime: _ = Arc::new(std::sync::Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)));
+        let config: _ = AccelerationConfig {
             use_gpu: true,
             use_npu: false,
             batch_size: 32,
             pipeline_parallel: true,
         };
 
-        let engine = AccelerationEngine::new(&runtime, config);
+        let engine: _ = AccelerationEngine::new(&runtime, config);
         assert!(engine.is_ok());
     }
 
     #[test]
     fn test_cpu_inference() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
-        let config = AccelerationConfig {
+        let runtime: _ = Arc::new(std::sync::Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)));
+        let config: _ = AccelerationConfig {
             use_gpu: false,
             use_npu: false,
             batch_size: 1,
             pipeline_parallel: false,
         };
 
-        let engine = AccelerationEngine::new(&runtime, config).unwrap();
-        let input = vec![1.0, 2.0, 3.0];
+        let engine: _ = AccelerationEngine::new(&runtime, config).unwrap();
+        let input: _ = vec![1.0, 2.0, 3.0];
 
-        let result = engine.cpu_inference(&input);
+        let result: _ = engine.cpu_inference(&input);
         assert!(result.is_ok());
         assert_eq!(result.unwrap().output.len(), input.len());
     }
 
     #[test]
     fn test_gpu_inference() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
-        let config = AccelerationConfig {
+        let runtime: _ = Arc::new(std::sync::Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)));
+        let config: _ = AccelerationConfig {
             use_gpu: true,
             use_npu: false,
             batch_size: 1,
             pipeline_parallel: false,
         };
 
-        let engine = AccelerationEngine::new(&runtime, config).unwrap();
-        let input = vec![1.0, 2.0, 3.0];
+        let engine: _ = AccelerationEngine::new(&runtime, config).unwrap();
+        let input: _ = vec![1.0, 2.0, 3.0];
 
-        let result = engine.gpu_inference(&input);
+        let result: _ = engine.gpu_inference(&input);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_batch_inference() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
-        let config = AccelerationConfig {
+        let runtime: _ = Arc::new(std::sync::Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)));
+        let config: _ = AccelerationConfig {
             use_gpu: false,
             use_npu: false,
             batch_size: 64,
@@ -479,21 +481,21 @@ mod tests {
         };
 
         let mut engine = AccelerationEngine::new(&runtime, config).unwrap();
-        let inputs = vec![
+        let inputs: _ = vec![
             vec![1.0, 2.0],
             vec![3.0, 4.0],
             vec![5.0, 6.0],
         ];
 
-        let results = engine.batch_inference(&inputs);
+        let results: _ = engine.batch_inference(&inputs);
         assert!(results.is_ok());
         assert_eq!(results.unwrap().len(), 3);
     }
 
     #[test]
     fn test_pipeline_inference() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
-        let config = AccelerationConfig {
+        let runtime: _ = Arc::new(std::sync::Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)));
+        let config: _ = AccelerationConfig {
             use_gpu: false,
             use_npu: false,
             batch_size: 32,
@@ -501,22 +503,22 @@ mod tests {
         };
 
         let mut engine = AccelerationEngine::new(&runtime, config).unwrap();
-        let inputs = vec![
+        let inputs: _ = vec![
             vec![1.0, 2.0],
             vec![3.0, 4.0],
             vec![5.0, 6.0],
             vec![7.0, 8.0],
         ];
 
-        let results = engine.pipeline_inference(&inputs);
+        let results: _ = engine.pipeline_inference(&inputs);
         assert!(results.is_ok());
         assert_eq!(results.unwrap().len(), 4);
     }
 
     #[test]
     fn test_dynamic_batching() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
-        let config = AccelerationConfig {
+        let runtime: _ = Arc::new(std::sync::Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)));
+        let config: _ = AccelerationConfig {
             use_gpu: false,
             use_npu: false,
             batch_size: 16,
@@ -526,8 +528,8 @@ mod tests {
         let mut engine = AccelerationEngine::new(&runtime, config).unwrap();
         engine.set_dynamic_batching(true);
 
-        let input = vec![1.0, 2.0];
-        let result = engine.inference(&input);
+        let input: _ = vec![1.0, 2.0];
+        let result: _ = engine.inference(&input);
         assert!(result.is_ok());
     }
 }

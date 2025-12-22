@@ -22,7 +22,7 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_load_command_parsing() {
         println!("🚀 测试 1: WasmLoadCommand 解析");
 
-        let cmd = WasmLoadCommand::parse_from(&[
+        let cmd: _ = WasmLoadCommand::parse_from(&[
             "beejs", "wasm", "load",
             "module.wasm",
             "--name", "test_module",
@@ -43,7 +43,7 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_list_command_parsing() {
         println!("🚀 测试 2: WasmListCommand 解析");
 
-        let cmd = WasmListCommand::parse_from(&[
+        let cmd: _ = WasmListCommand::parse_from(&[
             "beejs", "wasm", "list",
             "--format", "json",
             "--detailed"
@@ -60,7 +60,7 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_execute_command_parsing() {
         println!("🚀 测试 3: WasmExecuteCommand 解析");
 
-        let cmd = WasmExecuteCommand::parse_from(&[
+        let cmd: _ = WasmExecuteCommand::parse_from(&[
             "beejs", "wasm", "execute",
             "module.wasm",
             "add",
@@ -85,7 +85,7 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_benchmark_command_parsing() {
         println!("🚀 测试 4: WasmBenchmarkCommand 解析");
 
-        let cmd = WasmBenchmarkCommand::parse_from(&[
+        let cmd: _ = WasmBenchmarkCommand::parse_from(&[
             "beejs", "wasm", "benchmark",
             "module.wasm",
             "--function", "compute",
@@ -112,7 +112,7 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_profile_command_parsing() {
         println!("🚀 测试 5: WasmProfileCommand 解析");
 
-        let cmd = WasmProfileCommand::parse_from(&[
+        let cmd: _ = WasmProfileCommand::parse_from(&[
             "beejs", "wasm", "profile",
             "module.wasm",
             "--function", "compute",
@@ -135,7 +135,7 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_analyze_command_parsing() {
         println!("🚀 测试 6: WasmAnalyzeCommand 解析");
 
-        let cmd = WasmAnalyzeCommand::parse_from(&[
+        let cmd: _ = WasmAnalyzeCommand::parse_from(&[
             "beejs", "wasm", "analyze",
             "module.wasm",
             "--level", "full",
@@ -153,7 +153,7 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_cache_stats_command_parsing() {
         println!("🚀 测试 7: WasmCacheCommand Stats 解析");
 
-        let cmd = WasmCacheCommand::parse_from(&[
+        let cmd: _ = WasmCacheCommand::parse_from(&[
             "beejs", "wasm", "cache", "stats",
             "--detailed",
             "--format", "json"
@@ -172,7 +172,7 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_cache_clear_command_parsing() {
         println!("🚀 测试 8: WasmCacheCommand Clear 解析");
 
-        let cmd = WasmCacheCommand::parse_from(&[
+        let cmd: _ = WasmCacheCommand::parse_from(&[
             "beejs", "wasm", "cache", "clear",
             "--level", "l1",
             "--force"
@@ -190,7 +190,7 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_cache_warmup_command_parsing() {
         println!("🚀 测试 9: WasmCacheCommand Warmup 解析");
 
-        let cmd = WasmCacheCommand::parse_from(&[
+        let cmd: _ = WasmCacheCommand::parse_from(&[
             "beejs", "wasm", "cache", "warmup",
             "module1.wasm", "module2.wasm",
             "--concurrency", "4"
@@ -211,7 +211,7 @@ mod stage77_phase3_cli_integration_tests {
         println!("🚀 测试 10: WasmSubCommand 枚举完整性");
 
         // 确保所有子命令都可以被解析
-        let _subcommands = vec![
+        let _subcommands: _ = vec![
             "beejs", "wasm", "load", "module.wasm",
             "beejs", "wasm", "list",
             "beejs", "wasm", "execute", "module.wasm", "func",
@@ -234,7 +234,7 @@ mod stage77_phase3_cli_integration_tests {
     fn test_runtime_lite_wasm_initialization() {
         println!("🚀 测试 11: RuntimeLite WASM 字段初始化");
 
-        let _runtime = RuntimeLite::new(false).unwrap();
+        let _runtime: _ = RuntimeLite::new(false).unwrap();
 
         // 检查 WASM 相关字段是否存在（懒加载）
         // 这些字段应该在首次使用时初始化
@@ -247,8 +247,8 @@ mod stage77_phase3_cli_integration_tests {
     fn test_runtime_lite_wasm_cache_stats_uninitialized() {
         println!("🚀 测试 12: RuntimeLite WASM 缓存统计（未初始化）");
 
-        let runtime = RuntimeLite::new(false).unwrap();
-        let stats = runtime.get_wasm_cache_stats().unwrap();
+        let runtime: _ = RuntimeLite::new(false).unwrap();
+        let stats: _ = runtime.get_wasm_cache_stats().unwrap();
 
         assert_eq!(stats, "WASM cache not initialized yet");
 
@@ -260,8 +260,8 @@ mod stage77_phase3_cli_integration_tests {
     fn test_runtime_lite_wasm_loader_stats_uninitialized() {
         println!("🚀 测试 13: RuntimeLite WASM Loader 统计（未初始化）");
 
-        let runtime = RuntimeLite::new(false).unwrap();
-        let stats = runtime.get_wasm_loader_stats().unwrap();
+        let runtime: _ = RuntimeLite::new(false).unwrap();
+        let stats: _ = runtime.get_wasm_loader_stats().unwrap();
 
         assert_eq!(stats, "WASM loader not initialized yet");
 
@@ -273,8 +273,8 @@ mod stage77_phase3_cli_integration_tests {
     fn test_runtime_lite_wasm_cache_initialization() {
         println!("🚀 测试 14: RuntimeLite WASM 缓存初始化");
 
-        let runtime = RuntimeLite::new(false).unwrap();
-        let _result = runtime.initialize_wasm_cache();
+        let runtime: _ = RuntimeLite::new(false).unwrap();
+        let _result: _ = runtime.initialize_wasm_cache();
 
         // 由于 WasmModuleCache::new() 可能失败，我们只检查不会 panic
         println!("✅ 测试 14 通过: WASM 缓存初始化调用成功");
@@ -285,8 +285,8 @@ mod stage77_phase3_cli_integration_tests {
     fn test_runtime_lite_clear_wasm_cache() {
         println!("🚀 测试 15: RuntimeLite 清空 WASM 缓存");
 
-        let runtime = RuntimeLite::new(false).unwrap();
-        let result = runtime.clear_wasm_cache();
+        let runtime: _ = RuntimeLite::new(false).unwrap();
+        let result: _ = runtime.clear_wasm_cache();
 
         assert!(result.is_ok());
 
@@ -298,13 +298,13 @@ mod stage77_phase3_cli_integration_tests {
     fn test_runtime_lite_warmup_wasm_cache() {
         println!("🚀 测试 16: RuntimeLite 预热 WASM 缓存");
 
-        let runtime = RuntimeLite::new(false).unwrap();
-        let modules = vec![
+        let runtime: _ = RuntimeLite::new(false).unwrap();
+        let modules: _ = vec![
             PathBuf::from("module1.wasm"),
             PathBuf::from("module2.wasm"),
         ];
 
-        let _result = runtime.warmup_wasm_cache(modules);
+        let _result: _ = runtime.warmup_wasm_cache(modules);
 
         // 由于模块可能不存在，我们只检查不会 panic
         println!("✅ 测试 16 通过: 预热 WASM 缓存调用成功");
@@ -315,13 +315,13 @@ mod stage77_phase3_cli_integration_tests {
     fn test_runtime_lite_mixed_execution_mode() {
         println!("🚀 测试 17: RuntimeLite 混合执行模式");
 
-        let runtime = RuntimeLite::new(false).unwrap();
-        let code = r#"console.log("Hello from JavaScript");"#;
+        let runtime: _ = RuntimeLite::new(false).unwrap();
+        let code: _ = r#"console.log("Hello from JavaScript");"#;
 
-        let result = runtime.execute_mixed_mode(code);
+        let result: _ = runtime.execute_mixed_mode(code);
 
         assert!(result.is_ok());
-        let output = result.unwrap();
+        let output: _ = result.unwrap();
         assert!(output.contains("Hello from JavaScript"));
 
         println!("✅ 测试 17 通过: 混合执行模式工作正常");
@@ -332,10 +332,10 @@ mod stage77_phase3_cli_integration_tests {
     fn test_runtime_lite_detect_wasm_no_match() {
         println!("🚀 测试 18: RuntimeLite 自动 WASM 检测（无匹配）");
 
-        let runtime = RuntimeLite::new(false).unwrap();
-        let script_path = PathBuf::from("/tmp/nonexistent.js");
+        let runtime: _ = RuntimeLite::new(false).unwrap();
+        let script_path: _ = PathBuf::from("/tmp/nonexistent.js");
 
-        let result = runtime.detect_and_load_wasm(&script_path);
+        let result: _ = runtime.detect_and_load_wasm(&script_path);
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), None);
@@ -349,7 +349,7 @@ mod stage77_phase3_cli_integration_tests {
         println!("🚀 测试 19: RuntimeLite 详细日志模式下的 WASM 初始化");
 
         // 使用详细模式创建运行时
-        let runtime = RuntimeLite::new(true).unwrap();
+        let runtime: _ = RuntimeLite::new(true).unwrap();
 
         // 检查是否成功创建
         assert!(runtime.execution_count() >= 0);
@@ -363,9 +363,11 @@ mod stage77_phase3_cli_integration_tests {
         println!("🚀 测试 20: RuntimeLite 自定义 V8 配置下的 WASM 集成");
 
         use beejs::v8_engine::flags::V8EngineFlags;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
-        let config = V8EngineFlags::high_performance();
-        let runtime = RuntimeLite::new_with_config(false, config).unwrap();
+        let config: _ = V8EngineFlags::high_performance();
+        let runtime: _ = RuntimeLite::new_with_config(false, config).unwrap();
 
         // 检查是否成功创建
         assert!(runtime.execution_count() >= 0);
@@ -383,11 +385,11 @@ mod stage77_phase3_cli_integration_tests {
         println!("🚀 测试 21: CLI 和 Runtime 完整集成流程");
 
         // 1. 创建运行时
-        let runtime = RuntimeLite::new(false).unwrap();
+        let runtime: _ = RuntimeLite::new(false).unwrap();
 
         // 2. 执行代码
-        let code = r#"console.log("Integration test");"#;
-        let result = runtime.execute_mixed_mode(code);
+        let code: _ = r#"console.log("Integration test");"#;
+        let result: _ = runtime.execute_mixed_mode(code);
 
         assert!(result.is_ok());
 
@@ -399,14 +401,14 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_cache_loader_coordination() {
         println!("🚀 测试 22: WASM 缓存和 Loader 协调工作");
 
-        let runtime = RuntimeLite::new(false).unwrap();
+        let runtime: _ = RuntimeLite::new(false).unwrap();
 
         // 初始化缓存
-        let _ = runtime.initialize_wasm_cache();
+        let _: _ = runtime.initialize_wasm_cache();
 
         // 获取统计信息
-        let cache_stats = runtime.get_wasm_cache_stats();
-        let loader_stats = runtime.get_wasm_loader_stats();
+        let cache_stats: _ = runtime.get_wasm_cache_stats();
+        let loader_stats: _ = runtime.get_wasm_loader_stats();
 
         assert!(cache_stats.is_ok());
         assert!(loader_stats.is_ok());
@@ -419,12 +421,12 @@ mod stage77_phase3_cli_integration_tests {
     fn test_multiple_initialization_safety() {
         println!("🚀 测试 23: 多次初始化的安全性");
 
-        let runtime = RuntimeLite::new(false).unwrap();
+        let runtime: _ = RuntimeLite::new(false).unwrap();
 
         // 多次初始化缓存应该安全
         for _ in 0..5 {
-            let _ = runtime.initialize_wasm_cache();
-            let _ = runtime.clear_wasm_cache();
+            let _: _ = runtime.initialize_wasm_cache();
+            let _: _ = runtime.clear_wasm_cache();
         }
 
         println!("✅ 测试 23 通过: 多次初始化是安全的");
@@ -435,11 +437,11 @@ mod stage77_phase3_cli_integration_tests {
     fn test_error_handling_and_recovery() {
         println!("🚀 测试 24: 错误处理和恢复");
 
-        let runtime = RuntimeLite::new(false).unwrap();
+        let runtime: _ = RuntimeLite::new(false).unwrap();
 
         // 测试无效路径
-        let invalid_path = PathBuf::from("/invalid/path/to/module.wasm");
-        let result = runtime.detect_and_load_wasm(&invalid_path);
+        let invalid_path: _ = PathBuf::from("/invalid/path/to/module.wasm");
+        let result: _ = runtime.detect_and_load_wasm(&invalid_path);
 
         // 应该返回 Ok(None) 而不是 panic
         assert!(result.is_ok());
@@ -453,16 +455,16 @@ mod stage77_phase3_cli_integration_tests {
     fn test_performance_and_resource_management() {
         println!("🚀 测试 25: 性能和资源管理");
 
-        let runtime = RuntimeLite::new(false).unwrap();
+        let runtime: _ = RuntimeLite::new(false).unwrap();
 
         // 执行多次操作，检查资源管理
         for i in 0..100 {
-            let code = format!(r#"console.log("Iteration {}", {});"#, i, i);
-            let _ = runtime.execute_mixed_mode(&code);
+            let code: _ = format!(r#"console.log("Iteration {}", {});"#, i, i);
+            let _: _ = runtime.execute_mixed_mode(&code);
         }
 
         // 检查执行计数
-        let count = runtime.execution_count();
+        let count: _ = runtime.execution_count();
         assert!(count >= 100);
 
         println!("✅ 测试 25 通过: 性能和资源管理正确");

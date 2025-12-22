@@ -82,7 +82,7 @@ impl ReplHighlighter {
 
     /// Create a new highlighter with custom theme
     pub fn with_theme(theme: HighlightTheme) -> Self {
-        let keywords = vec![
+        let keywords: _ = vec![
             "break", "case", "catch", "class", "const", "continue", "debugger", "default",
             "delete", "do", "else", "export", "extends", "finally", "for", "function",
             "if", "import", "in", "instanceof", "new", "return", "super", "switch",
@@ -91,13 +91,13 @@ impl ReplHighlighter {
             "package", "private", "protected", "public", "true", "false", "null", "undefined",
         ];
 
-        let builtins = vec![
+        let builtins: _ = vec![
             "console", "Object", "Array", "String", "Number", "Math", "Date", "Promise",
             "Set", "Map", "RegExp", "JSON", "globalThis", "window", "document",
             "Buffer", "process", "module", "require", "exports", "__dirname", "__filename",
         ];
 
-        let operators = vec![
+        let operators: _ = vec![
             "+", "-", "*", "/", "%", "=", "==", "===", "!=", "!==",
             "<", ">", "<=", ">=", "&&", "||", "!", "&", "|", "^", "~",
             "<<", ">>", ">>>", "+=", "-=", "*=", "/=", "%=",
@@ -128,7 +128,7 @@ impl ReplHighlighter {
             return code.to_string();
         }
 
-        let tokens = self.tokenize(code);
+        let tokens: _ = self.tokenize(code);
         self.render_tokens(&tokens)
     }
 
@@ -138,7 +138,7 @@ impl ReplHighlighter {
             return code.to_string();
         }
 
-        let tokens = self.tokenize(code);
+        let tokens: _ = self.tokenize(code);
         self.render_tokens_with_cursor(&tokens, cursor_pos)
     }
 
@@ -149,11 +149,11 @@ impl ReplHighlighter {
         let mut pos = 0;
 
         while pos < chars.len() {
-            let ch = chars[pos];
+            let ch: _ = chars[pos];
 
             // Skip whitespace
             if ch.is_whitespace() {
-                let start = pos;
+                let start: _ = pos;
                 while pos < chars.len() && chars[pos].is_whitespace() {
                     pos += 1;
                 }
@@ -169,7 +169,7 @@ impl ReplHighlighter {
                 if pos + 1 < chars.len() {
                     if chars[pos + 1] == '/' {
                         // Line comment
-                        let start = pos;
+                        let start: _ = pos;
                         pos += 2;
                         while pos < chars.len() && chars[pos] != '\n' {
                             pos += 1;
@@ -181,7 +181,7 @@ impl ReplHighlighter {
                         continue;
                     } else if chars[pos + 1] == '*' {
                         // Block comment
-                        let start = pos;
+                        let start: _ = pos;
                         pos += 2;
                         while pos + 1 < chars.len() && !(chars[pos] == '*' && chars[pos + 1] == '/') {
                             pos += 1;
@@ -202,8 +202,8 @@ impl ReplHighlighter {
 
             // Strings
             if ch == '"' || ch == '\'' || ch == '`' {
-                let string_type = ch;
-                let start = pos;
+                let string_type: _ = ch;
+                let start: _ = pos;
                 pos += 1;
 
                 // Handle escape sequences
@@ -228,11 +228,11 @@ impl ReplHighlighter {
 
             // Numbers
             if ch.is_ascii_digit() || (ch == '.' && pos + 1 < chars.len() && chars[pos + 1].is_ascii_digit()) {
-                let start = pos;
+                let start: _ = pos;
                 pos += 1;
 
                 while pos < chars.len() {
-                    let c = chars[pos];
+                    let c: _ = chars[pos];
                     if c.is_ascii_digit() || c == '.' || c == 'x' || c == 'X' || c == 'e' || c == 'E' || c == '+' || c == '-' {
                         pos += 1;
                     } else {
@@ -249,7 +249,7 @@ impl ReplHighlighter {
 
             // Operators and punctuation
             if self.operators.iter().any(|op| code[pos..].starts_with(*op)) {
-                let operator = self.operators
+                let operator: _ = self.operators
                     .iter()
                     .find(|op| code[pos..].starts_with(**op))
                     .unwrap();
@@ -263,11 +263,11 @@ impl ReplHighlighter {
 
             // Identifiers and keywords
             if ch.is_ascii_alphabetic() || ch == '_' || ch == '$' {
-                let start = pos;
+                let start: _ = pos;
                 pos += 1;
 
                 while pos < chars.len() {
-                    let c = chars[pos];
+                    let c: _ = chars[pos];
                     if c.is_ascii_alphanumeric() || c == '_' || c == '$' {
                         pos += 1;
                     } else {
@@ -332,9 +332,9 @@ impl ReplHighlighter {
         for token in tokens {
             if current_pos <= cursor_pos && cursor_pos < current_pos + token.text.len() {
                 // Split token at cursor
-                let before_cursor = &token.text[..cursor_pos - current_pos];
-                let at_cursor = &token.text[cursor_pos - current_pos..cursor_pos - current_pos + 1];
-                let after_cursor = &token.text[cursor_pos - current_pos + 1..];
+                let before_cursor: _ = &token.text[..cursor_pos - current_pos];
+                let at_cursor: _ = &token.text[cursor_pos - current_pos..cursor_pos - current_pos + 1];
+                let after_cursor: _ = &token.text[cursor_pos - current_pos + 1..];
 
                 if !before_cursor.is_empty() {
                     result.push_str(&self.colorize_token(&HighlightedToken {
@@ -397,10 +397,12 @@ impl Default for ReplHighlighter {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_highlighter_creation() {
-        let highlighter = ReplHighlighter::new();
+        let highlighter: _ = ReplHighlighter::new();
         assert!(highlighter.is_enabled());
     }
 
@@ -408,58 +410,58 @@ mod tests {
     fn test_highlight_disable() {
         let mut highlighter = ReplHighlighter::new();
         highlighter.set_enabled(false);
-        let result = highlighter.highlight("function test() { return 42; }");
+        let result: _ = highlighter.highlight("function test() { return 42; }");
         assert_eq!(result, "function test() { return 42; }");
     }
 
     #[test]
     fn test_highlight_keyword() {
-        let highlighter = ReplHighlighter::new();
-        let result = highlighter.highlight("function");
+        let highlighter: _ = ReplHighlighter::new();
+        let result: _ = highlighter.highlight("function");
         assert!(result.contains("function"));
     }
 
     #[test]
     fn test_highlight_string() {
-        let highlighter = ReplHighlighter::new();
-        let result = highlighter.highlight("'hello'");
+        let highlighter: _ = ReplHighlighter::new();
+        let result: _ = highlighter.highlight("'hello'");
         assert!(result.contains("hello"));
     }
 
     #[test]
     fn test_highlight_number() {
-        let highlighter = ReplHighlighter::new();
-        let result = highlighter.highlight("42");
+        let highlighter: _ = ReplHighlighter::new();
+        let result: _ = highlighter.highlight("42");
         assert!(result.contains("42"));
     }
 
     #[test]
     fn test_highlight_comment() {
-        let highlighter = ReplHighlighter::new();
-        let result = highlighter.highlight("// This is a comment");
+        let highlighter: _ = ReplHighlighter::new();
+        let result: _ = highlighter.highlight("// This is a comment");
         assert!(result.contains("This is a comment"));
     }
 
     #[test]
     fn test_highlight_function() {
-        let highlighter = ReplHighlighter::new();
-        let result = highlighter.highlight("console.log");
+        let highlighter: _ = ReplHighlighter::new();
+        let result: _ = highlighter.highlight("console.log");
         assert!(result.contains("console"));
         assert!(result.contains("log"));
     }
 
     #[test]
     fn test_highlight_with_cursor() {
-        let highlighter = ReplHighlighter::new();
-        let result = highlighter.highlight_with_cursor("function test() {", 9);
+        let highlighter: _ = ReplHighlighter::new();
+        let result: _ = highlighter.highlight_with_cursor("function test() {", 9);
         // Should highlight with cursor
         assert!(result.contains("test"));
     }
 
     #[test]
     fn test_tokenize_keywords() {
-        let highlighter = ReplHighlighter::new();
-        let tokens = highlighter.tokenize("if else while");
+        let highlighter: _ = ReplHighlighter::new();
+        let tokens: _ = highlighter.tokenize("if else while");
 
         assert_eq!(tokens.len(), 3);
         assert_eq!(tokens[0].token_type, TokenType::Keyword);
@@ -469,8 +471,8 @@ mod tests {
 
     #[test]
     fn test_tokenize_strings() {
-        let highlighter = ReplHighlighter::new();
-        let tokens = highlighter.tokenize("'hello'");
+        let highlighter: _ = ReplHighlighter::new();
+        let tokens: _ = highlighter.tokenize("'hello'");
 
         assert_eq!(tokens.len(), 1);
         assert_eq!(tokens[0].token_type, TokenType::String);
@@ -479,8 +481,8 @@ mod tests {
 
     #[test]
     fn test_tokenize_numbers() {
-        let highlighter = ReplHighlighter::new();
-        let tokens = highlighter.tokenize("123 456.789");
+        let highlighter: _ = ReplHighlighter::new();
+        let tokens: _ = highlighter.tokenize("123 456.789");
 
         assert_eq!(tokens.len(), 2);
         assert_eq!(tokens[0].token_type, TokenType::Number);
@@ -489,8 +491,8 @@ mod tests {
 
     #[test]
     fn test_tokenize_operators() {
-        let highlighter = ReplHighlighter::new();
-        let tokens = highlighter.tokenize("+ - * /");
+        let highlighter: _ = ReplHighlighter::new();
+        let tokens: _ = highlighter.tokenize("+ - * /");
 
         assert_eq!(tokens.len(), 4);
         for token in &tokens {

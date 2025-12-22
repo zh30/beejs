@@ -91,7 +91,7 @@ impl InitCommand {
     pub fn execute(&self) -> anyhow::Result<()> {
         self.formatter.title("Beejs Project Initialization");
 
-        let project_path = Path::new(&self.config.project_dir);
+        let project_path: _ = Path::new(&self.config.project_dir);
 
         // 1. 创建项目目录
         self.formatter
@@ -159,19 +159,19 @@ impl InitCommand {
     }
 
     fn generate_package_json(&self, path: &Path) -> anyhow::Result<()> {
-        let package_json = self.create_package_json();
-        let content = serde_json::to_string_pretty(&package_json)?;
+        let package_json: _ = self.create_package_json();
+        let content: _ = serde_json::to_string_pretty(&package_json)?;
         fs::write(path.join("package.json"), content)?;
         Ok(())
     }
 
     fn create_package_json(&self) -> serde_json::Value {
-        let main_file = match self.config.template {
+        let main_file: _ = match self.config.template {
             ProjectTemplate::TypeScript | ProjectTemplate::WebApi => "src/index.ts",
             _ => "src/index.js",
         };
 
-        let scripts = match self.config.template {
+        let scripts: _ = match self.config.template {
             ProjectTemplate::Basic => serde_json::json!({
                 "start": "beejs run src/index.js",
                 "dev": "beejs run --watch src/index.js",
@@ -220,7 +220,7 @@ impl InitCommand {
     }
 
     fn generate_basic_template(&self, path: &Path) -> anyhow::Result<()> {
-        let index_content = r#"// Beejs - Basic JavaScript Project
+        let index_content: _ = r#"// Beejs - Basic JavaScript Project
 // Created with `beejs init`
 
 console.log("🚀 Welcome to Beejs!");
@@ -248,7 +248,7 @@ main();
         fs::write(path.join("src/index.js"), index_content)?;
 
         // 创建示例测试文件
-        let test_content = r#"// Example test file
+        let test_content: _ = r#"// Example test file
 // Run with: beejs test
 
 import { describe, it, expect } from 'beejs:test';
@@ -269,7 +269,7 @@ describe('Basic Tests', () => {
     }
 
     fn generate_typescript_template(&self, path: &Path) -> anyhow::Result<()> {
-        let index_content = r#"// Beejs - TypeScript Project
+        let index_content: _ = r#"// Beejs - TypeScript Project
 // Created with `beejs init --template typescript`
 
 interface User {
@@ -301,7 +301,7 @@ main().catch(console.error);
         fs::write(path.join("src/index.ts"), index_content)?;
 
         // 创建 TypeScript 测试文件
-        let test_content = r#"// TypeScript test file
+        let test_content: _ = r#"// TypeScript test file
 import { describe, it, expect } from 'beejs:test';
 
 interface Calculator {
@@ -329,7 +329,7 @@ describe('TypeScript Tests', () => {
     }
 
     fn generate_webapi_template(&self, path: &Path) -> anyhow::Result<()> {
-        let index_content = r#"// Beejs - Web API Server
+        let index_content: _ = r#"// Beejs - Web API Server
 // Created with `beejs init --template web-api`
 
 interface Route {
@@ -382,7 +382,7 @@ console.log('💡 Implement HTTP server using Beejs fetch/serve APIs.');
         fs::write(path.join("src/index.ts"), index_content)?;
 
         // 创建 API 测试
-        let test_content = r#"// API endpoint tests
+        let test_content: _ = r#"// API endpoint tests
 import { describe, it, expect } from 'beejs:test';
 
 describe('API Tests', () => {
@@ -404,7 +404,7 @@ describe('API Tests', () => {
     }
 
     fn generate_cli_template(&self, path: &Path) -> anyhow::Result<()> {
-        let cli_content = r#"#!/usr/bin/env beejs
+        let cli_content: _ = r#"#!/usr/bin/env beejs
 // Beejs - CLI Tool Template
 // Created with `beejs init --template cli-tool`
 
@@ -467,7 +467,7 @@ switch (command) {
         fs::write(path.join("src/cli.js"), cli_content)?;
 
         // CLI 测试
-        let test_content = r#"// CLI command tests
+        let test_content: _ = r#"// CLI command tests
 import { describe, it, expect } from 'beejs:test';
 
 describe('CLI Commands', () => {
@@ -490,7 +490,7 @@ describe('CLI Commands', () => {
     }
 
     fn generate_tsconfig(&self, path: &Path) -> anyhow::Result<()> {
-        let tsconfig = serde_json::json!({
+        let tsconfig: _ = serde_json::json!({
             "compilerOptions": {
                 "target": "ESNext",
                 "module": "ESNext",
@@ -509,13 +509,13 @@ describe('CLI Commands', () => {
             "exclude": ["node_modules", "dist"]
         });
 
-        let content = serde_json::to_string_pretty(&tsconfig)?;
+        let content: _ = serde_json::to_string_pretty(&tsconfig)?;
         fs::write(path.join("tsconfig.json"), content)?;
         Ok(())
     }
 
     fn generate_gitignore(&self, path: &Path) -> anyhow::Result<()> {
-        let gitignore_content = r#"# Dependencies
+        let gitignore_content: _ = r#"# Dependencies
 node_modules/
 
 # Build output
@@ -561,7 +561,7 @@ coverage/
         }
 
         // 尝试初始化 git
-        let output = std::process::Command::new("git")
+        let output: _ = std::process::Command::new("git")
             .args(["init"])
             .current_dir(path)
             .output();
@@ -586,7 +586,7 @@ coverage/
 
         self.formatter.subtitle("Next steps:");
 
-        let project_dir = if self.config.project_dir == "." {
+        let project_dir: _ = if self.config.project_dir == "." {
             String::new()
         } else {
             format!("cd {} && ", self.config.project_dir)
@@ -631,7 +631,7 @@ pub fn interactive_init(formatter: &OutputFormatter) -> anyhow::Result<InitConfi
     io::stdout().flush()?;
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
-    let input = input.trim();
+    let input: _ = input.clone();trim();
     if !input.is_empty() {
         config.project_name = input.to_string();
         config.project_dir = input.to_string();
@@ -649,7 +649,7 @@ pub fn interactive_init(formatter: &OutputFormatter) -> anyhow::Result<InitConfi
     io::stdout().flush()?;
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
-    let input = input.trim();
+    let input: _ = input.clone();trim();
     config.template = match input {
         "2" | "typescript" | "ts" => ProjectTemplate::TypeScript,
         "3" | "web-api" | "api" => ProjectTemplate::WebApi,
@@ -673,6 +673,8 @@ pub fn interactive_init(formatter: &OutputFormatter) -> anyhow::Result<InitConfi
 mod tests {
     use super::*;
     use tempfile::TempDir;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_project_template_from_str() {
@@ -701,8 +703,8 @@ mod tests {
 
     #[test]
     fn test_init_basic_project() {
-        let temp_dir = TempDir::new().unwrap();
-        let config = InitConfig {
+        let temp_dir: _ = TempDir::new().unwrap();
+        let config: _ = InitConfig {
             project_dir: temp_dir.path().to_string_lossy().to_string(),
             project_name: "test-project".to_string(),
             template: ProjectTemplate::Basic,
@@ -710,7 +712,7 @@ mod tests {
             install_deps: false,
         };
 
-        let cmd = InitCommand::new(config);
+        let cmd: _ = InitCommand::new(config);
         assert!(cmd.execute().is_ok());
 
         // 验证文件创建
@@ -721,8 +723,8 @@ mod tests {
 
     #[test]
     fn test_init_typescript_project() {
-        let temp_dir = TempDir::new().unwrap();
-        let config = InitConfig {
+        let temp_dir: _ = TempDir::new().unwrap();
+        let config: _ = InitConfig {
             project_dir: temp_dir.path().to_string_lossy().to_string(),
             project_name: "ts-project".to_string(),
             template: ProjectTemplate::TypeScript,
@@ -730,7 +732,7 @@ mod tests {
             install_deps: false,
         };
 
-        let cmd = InitCommand::new(config);
+        let cmd: _ = InitCommand::new(config);
         assert!(cmd.execute().is_ok());
 
         // 验证 TypeScript 特定文件

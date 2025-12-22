@@ -19,7 +19,7 @@ pub struct SharedMemoryRegion {
 /// Zero-copy memory bridge
 #[derive(Debug)]
 pub struct ZeroCopyBridge {
-    shared_memory: Arc<RwLock<HashMap<String, SharedMemoryRegion>>>,
+    shared_memory: Arc<RwLock<HashMap<String, SharedMemoryRegion, std::collections::HashMap<String, SharedMemoryRegion, String, SharedMemoryRegion>>>>,
     memory_pool: Arc<MemoryPool>,
 }
 
@@ -42,14 +42,14 @@ pub struct OptimizedCode {
 /// JIT compiler for hot path optimization
 #[derive(Debug)]
 pub struct JITCompiler {
-    cache: Arc<RwLock<HashMap<String, OptimizedCode>>>,
+    cache: Arc<RwLock<HashMap<String, OptimizedCode, std::collections::HashMap<String, OptimizedCode, String, OptimizedCode>>>>,
     hot_paths: Arc<RwLock<Vec<String>>>,
 }
 
 /// Inline cache for fast lookups
 #[derive(Debug)]
 pub struct InlineCache {
-    cache: Arc<RwLock<HashMap<String, CacheEntry>>>,
+    cache: Arc<RwLock<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>,
 }
 
 /// Cache entry for inline cache
@@ -75,7 +75,7 @@ impl SharedMemoryRegion {
             id,
             address: 0, // In real implementation, would allocate actual memory
             size,
-            ref_count: Arc::new(RwLock::new(1)),
+            ref_count: Arc::new(std::sync::Mutex::new(RwLock::new(1))),
         }
     }
 
@@ -97,7 +97,7 @@ impl SharedMemoryRegion {
 
     /// Get reference count
     pub async fn get_ref(&self) -> Result<u32> {
-        let count = self.ref_count.read().await;
+        let count: _ = self.ref_count.read().await;
         Ok(*count)
     }
 }
@@ -106,7 +106,7 @@ impl MemoryPool {
     /// Create a new memory pool
     pub fn new(block_size: usize, max_blocks: usize) -> Self {
         MemoryPool {
-            pool: Arc::new(RwLock::new(Vec::with_capacity(block_size * max_blocks))),
+            pool: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::with_capacity(block_size * max_blocks)))),
             block_size,
             max_blocks,
         }
@@ -136,15 +136,15 @@ impl ZeroCopyBridge {
     /// Create a new zero-copy bridge
     pub fn new(memory_pool: Arc<MemoryPool>) -> Self {
         ZeroCopyBridge {
-            shared_memory: Arc::new(RwLock::new(HashMap::new())),
+            shared_memory: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
             memory_pool,
         }
     }
 
     /// Share memory region between languages
     pub async fn share_memory(&self, data: &[u8]) -> Result<SharedMemoryRegion> {
-        let id = format!("mem_{}", uuid::Uuid::new_v4());
-        let region = SharedMemoryRegion::new(id.clone(), data.len());
+        let id: _ = format!("mem_{}", uuid::Uuid::new_v4());
+        let region: _ = SharedMemoryRegion::new(id.clone(), data.len());
 
         let mut map = self.shared_memory.write().await;
         map.insert(id, region.clone());
@@ -154,7 +154,7 @@ impl ZeroCopyBridge {
 
     /// Get shared memory region
     pub async fn get_memory(&self, id: &str) -> Result<SharedMemoryRegion> {
-        let map = self.shared_memory.read().await;
+        let map: _ = self.shared_memory.read().await;
         map.get(id)
             .cloned()
             .ok_or_else(|| anyhow!("Memory region not found"))
@@ -181,8 +181,8 @@ impl JITCompiler {
     /// Create a new JIT compiler
     pub fn new() -> Self {
         JITCompiler {
-            cache: Arc::new(RwLock::new(HashMap::new())),
-            hot_paths: Arc::new(RwLock::new(Vec::new())),
+            cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            hot_paths: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         }
     }
 
@@ -198,11 +198,11 @@ impl JITCompiler {
 
         // Simple optimization simulation
         // In real implementation, would do actual JIT compilation
-        let optimized = optimize_script(script);
+        let optimized: _ = optimize_script(script);
 
-        let perf_gain = calculate_performance_gain(script, &optimized);
+        let perf_gain: _ = calculate_performance_gain(script, &optimized);
 
-        let code = OptimizedCode {
+        let code: _ = OptimizedCode {
             original: script.to_string(),
             optimized,
             performance_gain: perf_gain,
@@ -215,7 +215,7 @@ impl JITCompiler {
 
     /// Get cached optimized code
     pub async fn get_cached(&self, script: &str) -> Result<OptimizedCode> {
-        let cache = self.cache.read().await;
+        let cache: _ = self.cache.read().await;
         cache.get(script)
             .cloned()
             .ok_or_else(|| anyhow!("Code not in cache"))
@@ -223,7 +223,7 @@ impl JITCompiler {
 
     /// Check if script is a hot path
     pub async fn is_hot_path(&self, script: &str) -> bool {
-        let hot_paths = self.hot_paths.read().await;
+        let hot_paths: _ = self.hot_paths.read().await;
         hot_paths.contains(script)
     }
 }
@@ -232,7 +232,7 @@ impl InlineCache {
     /// Create a new inline cache
     pub fn new() -> Self {
         InlineCache {
-            cache: Arc::new(RwLock::new(HashMap::new())),
+            cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -270,9 +270,9 @@ impl RustOptimizer {
     /// Create a new Rust optimizer
     pub fn new() -> Self {
         RustOptimizer {
-            jit_compiler: Arc::new(JITCompiler::new()),
-            inline_cache: Arc::new(InlineCache::new()),
-            zero_copy: Arc::new(ZeroCopyBridge::new(Arc::new(MemoryPool::new(4096, 100)))),
+            jit_compiler: Arc::new(std::sync::Mutex::new(JITCompiler::new())),
+            inline_cache: Arc::new(std::sync::Mutex::new(InlineCache::new())),
+            zero_copy: Arc::new(std::sync::Mutex::new(ZeroCopyBridge::new(Arc::new(MemoryPool::new(4096, 100))))),
         }
     }
 
@@ -288,7 +288,7 @@ impl RustOptimizer {
         }
 
         // Compile hot path
-        let code = self.jit_compiler.compile_hot_path(script).await?;
+        let code: _ = self.jit_compiler.compile_hot_path(script).await?;
 
         // Cache the result
         self.inline_cache.set(script, code.optimized.clone()).await;
@@ -308,12 +308,12 @@ impl RustOptimizer {
 
     /// Get performance metrics
     pub async fn get_metrics(&self) -> Result<OptimizerMetrics> {
-        let cache_size = {
+        let cache_size: _ = {
             let cache = self.inline_cache.cache.read().await;
             cache.len() as u64
         };
 
-        let hot_paths = {
+        let hot_paths: _ = {
             let hot_paths = self.hot_paths.lock().await;
             hot_paths.len() as u64
         };
@@ -347,7 +347,7 @@ fn optimize_script(script: &str) -> String {
     let mut optimized = script.to_string();
 
     // Simple optimization: remove extra whitespace
-    optimized = optimized.split_whitespace().collect::<Vec<_>>().join(" ");
+    optimized = optimized.clone();split_whitespace().collect::<Vec<_>>().join(" ");
 
     optimized
 }
@@ -356,8 +356,8 @@ fn calculate_performance_gain(original: &str, optimized: &str) -> f64 {
     // Simple performance gain calculation
     // In real implementation, would measure actual performance
 
-    let original_size = original.len();
-    let optimized_size = optimized.len();
+    let original_size: _ = original.len();
+    let optimized_size: _ = optimized.len();
 
     if original_size > 0 {
         ((original_size - optimized_size) as f64 / original_size as f64) * 100.0
@@ -369,56 +369,58 @@ fn calculate_performance_gain(original: &str, optimized: &str) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_zero_copy_performance() {
-        let optimizer = RustOptimizer::new();
+        let optimizer: _ = RustOptimizer::new();
 
-        let data = b"Hello, World!";
-        let result = optimizer.execute_zero_copy("test_target", data).await;
+        let data: _ = b"Hello, World!";
+        let result: _ = optimizer.execute_zero_copy("test_target", data).await;
 
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_rust_hot_path() {
-        let optimizer = RustOptimizer::new();
+        let optimizer: _ = RustOptimizer::new();
 
-        let script = "function test() { return 42; }";
-        let result = optimizer.optimize_hot_path(script).await;
+        let script: _ = "function test() { return 42; }";
+        let result: _ = optimizer.optimize_hot_path(script).await;
 
         assert!(result.is_ok());
-        let code = result.unwrap();
+        let code: _ = result.unwrap();
         assert!(code.performance_gain >= 0.0);
     }
 
     #[tokio::test]
     async fn test_memory_sharing() {
-        let optimizer = RustOptimizer::new();
+        let optimizer: _ = RustOptimizer::new();
 
-        let data = b"Shared data";
-        let result = optimizer.share_memory(data).await;
+        let data: _ = b"Shared data";
+        let result: _ = optimizer.share_memory(data).await;
 
         assert!(result.is_ok());
-        let region = result.unwrap();
+        let region: _ = result.unwrap();
         assert_eq!(region.size, data.len());
     }
 
     #[tokio::test]
     async fn test_inline_cache() {
-        let cache = InlineCache::new();
+        let cache: _ = InlineCache::new();
 
         cache.set("key1", "value1".to_string()).await;
 
-        let value = cache.get("key1").await;
+        let value: _ = cache.get("key1").await;
         assert_eq!(value, Some("value1".to_string()));
     }
 
     #[tokio::test]
     async fn test_optimizer_metrics() {
-        let optimizer = RustOptimizer::new();
+        let optimizer: _ = RustOptimizer::new();
 
-        let metrics = optimizer.get_metrics().await;
+        let metrics: _ = optimizer.get_metrics().await;
         assert!(metrics.is_ok());
     }
 }

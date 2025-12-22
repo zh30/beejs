@@ -15,11 +15,11 @@
 //! };
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let config = DashboardConfig::default();
-//! let manager = DashboardManager::new(config).await?;
+//! let config: _ = DashboardConfig::default();
+//! let manager: _ = DashboardManager::new(config).await?;
 //!
 //! // Create a new dashboard
-//! let dashboard = manager.create_dashboard("beejs-overview")?;
+//! let dashboard: _ = manager.create_dashboard("beejs-overview")?;
 //!
 //! # Ok(())
 //! # }
@@ -201,10 +201,12 @@ pub struct VariableOption {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_panel_config_creation() {
-        let config = PanelConfig {
+        let config: _ = PanelConfig {
             id: "panel-1".to_string(),
             title: "CPU Usage".to_string(),
             panel_type: "graph".to_string(),
@@ -232,14 +234,14 @@ mod tests {
 
     #[test]
     fn test_grid_pos_validation() {
-        let pos = GridPos { x: 0, y: 0, w: 24, h: 12 };
+        let pos: _ = GridPos { x: 0, y: 0, w: 24, h: 12 };
         assert!(pos.w > 0);
         assert!(pos.h > 0);
     }
 
     #[test]
     fn test_threshold_config() {
-        let thresholds = ThresholdsConfig {
+        let thresholds: _ = ThresholdsConfig {
             steps: vec![
                 ThresholdStep { color: "green".to_string(), value: None },
                 ThresholdStep { color: "yellow".to_string(), value: Some(50.0) },

@@ -156,13 +156,13 @@ impl OutputFormatter {
 
     /// 格式化键值对
     pub fn key_value(&self, key: &str, value: &str) {
-        let formatted_key = self.colorize(key, colors::CYAN);
+        let formatted_key: _ = self.colorize(key, colors::CYAN);
         println!("  {}: {}", formatted_key, value);
     }
 
     /// 格式化键值对 (带图标)
     pub fn key_value_with_icon(&self, icon: &str, key: &str, value: &str) {
-        let formatted_key = self.colorize(key, colors::CYAN);
+        let formatted_key: _ = self.colorize(key, colors::CYAN);
         println!("  {} {}: {}", icon, formatted_key, value);
     }
 
@@ -199,12 +199,12 @@ impl OutputFormatter {
 
     /// 格式化持续时间
     pub fn format_duration(duration: Duration) -> String {
-        let secs = duration.as_secs();
-        let millis = duration.subsec_millis();
+        let secs: _ = duration.as_secs();
+        let millis: _ = duration.subsec_millis();
 
         if secs >= 60 {
-            let mins = secs / 60;
-            let remaining_secs = secs % 60;
+            let mins: _ = secs / 60;
+            let remaining_secs: _ = secs % 60;
             format!("{}m {}s", mins, remaining_secs)
         } else if secs > 0 {
             format!("{}.{:03}s", secs, millis)
@@ -265,7 +265,7 @@ impl OutputFormatter {
     /// 简单的进度指示器
     pub fn progress_start(&self, message: &str) {
         print!("{} {} ", self.colorize("⏳", colors::YELLOW), message);
-        let _ = io::stdout().flush();
+        let _: _ = io::stdout().flush();
     }
 
     /// 进度完成
@@ -291,13 +291,13 @@ impl OutputFormatter {
 
     /// 打印带边框的消息框
     pub fn box_message(&self, title: &str, content: &[&str]) {
-        let max_len = content
+        let max_len: _ = content
             .iter()
             .map(|s| s.len())
             .max()
             .unwrap_or(0)
             .max(title.len());
-        let border_width = max_len + 4;
+        let border_width: _ = max_len + 4;
 
         // 顶部边框
         println!("  ╭{}╮", "─".repeat(border_width));
@@ -326,7 +326,7 @@ impl OutputFormatter {
 
     /// 打印 Beejs 版本横幅
     pub fn print_banner(&self) {
-        let banner = r#"
+        let banner: _ = r#"
    ____            _
   |  _ \          (_)
   | |_) | ___  ___ _ ___
@@ -379,6 +379,8 @@ mod atty {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_format_size() {
@@ -411,13 +413,13 @@ mod tests {
 
     #[test]
     fn test_output_formatter_new() {
-        let formatter = OutputFormatter::new();
+        let formatter: _ = OutputFormatter::new();
         assert!(!formatter.verbose);
     }
 
     #[test]
     fn test_output_formatter_with_verbose() {
-        let formatter = OutputFormatter::with_verbose(true);
+        let formatter: _ = OutputFormatter::with_verbose(true);
         assert!(formatter.verbose);
     }
 

@@ -4,6 +4,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 开发者信息
 #[derive(Debug, Clone)]
@@ -43,16 +45,16 @@ pub struct ProductivityReport {
 /// 贡献度跟踪器
 pub struct ContributionTracker {
     // 贡献数据存储
-    contribution_data: Arc<RwLock<HashMap<String, Vec<ContributionMetrics>>>>,
+    contribution_data: Arc<RwLock<HashMap<String, Vec<ContributionMetrics, std::collections::HashMap<String, Vec<ContributionMetrics, String, Vec<ContributionMetrics>>>>>,
     // 开发者档案
-    developer_profiles: Arc<RwLock<HashMap<String, Developer>>>,
+    developer_profiles: Arc<RwLock<HashMap<String, Developer, std::collections::HashMap<String, Developer, String, Developer>>>>,
 }
 
 impl ContributionTracker {
     pub fn new() -> Self {
         Self {
-            contribution_data: Arc::new(RwLock::new(HashMap::new())),
-            developer_profiles: Arc::new(RwLock::new(HashMap::new())),
+            contribution_data: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            developer_profiles: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -63,44 +65,44 @@ impl ContributionTracker {
         timeframe: String,
     ) -> Result<ContributionMetrics, String> {
         // 模拟数据生成 - 在实际应用中会从 Git、历史记录等获取真实数据
-        let mock_commits = match developer.role.as_str() {
+        let mock_commits: _ = match developer.role.as_str() {
             "Senior Engineer" => 150 + (rand::random::<u32>() % 100),
             "Mid Engineer" => 100 + (rand::random::<u32>() % 100),
             "Junior Engineer" => 50 + (rand::random::<u32>() % 50),
             _ => 75,
         };
 
-        let mock_lines_added = mock_commits * 50 + (rand::random::<u32>() % 1000);
-        let mock_lines_removed = mock_commits * 20 + (rand::random::<u32>() % 500);
-        let mock_bug_fixes = match developer.role.as_str() {
+        let mock_lines_added: _ = mock_commits * 50 + (rand::random::<u32>() % 1000);
+        let mock_lines_removed: _ = mock_commits * 20 + (rand::random::<u32>() % 500);
+        let mock_bug_fixes: _ = match developer.role.as_str() {
             "Senior Engineer" => 40 + (rand::random::<u32>() % 30),
             "Mid Engineer" => 30 + (rand::random::<u32>() % 20),
             "Junior Engineer" => 15 + (rand::random::<u32>() % 15),
             _ => 25,
         };
 
-        let mock_features = match developer.role.as_str() {
+        let mock_features: _ = match developer.role.as_str() {
             "Senior Engineer" => 25 + (rand::random::<u32>() % 20),
             "Mid Engineer" => 15 + (rand::random::<u32>() % 15),
             "Junior Engineer" => 8 + (rand::random::<u32>() % 10),
             _ => 12,
         };
 
-        let mock_reviews = match developer.role.as_str() {
+        let mock_reviews: _ = match developer.role.as_str() {
             "Senior Engineer" => 100 + (rand::random::<u32>() % 100),
             "Mid Engineer" => 60 + (rand::random::<u32>() % 60),
             "Junior Engineer" => 20 + (rand::random::<u32>() % 30),
             _ => 50,
         };
 
-        let mock_docs = match developer.role.as_str() {
+        let mock_docs: _ = match developer.role.as_str() {
             "Senior Engineer" => 30 + (rand::random::<u32>() % 20),
             "Mid Engineer" => 20 + (rand::random::<u32>() % 15),
             "Junior Engineer" => 10 + (rand::random::<u32>() % 10),
             _ => 15,
         };
 
-        let mock_tests = match developer.role.as_str() {
+        let mock_tests: _ = match developer.role.as_str() {
             "Senior Engineer" => 80 + (rand::random::<u32>() % 60),
             "Mid Engineer" => 60 + (rand::random::<u32>() % 40),
             "Junior Engineer" => 40 + (rand::random::<u32>() % 30),
@@ -108,7 +110,7 @@ impl ContributionTracker {
         };
 
         // 计算综合分数
-        let overall_score = self.calculate_overall_score(
+        let overall_score: _ = self.calculate_overall_score(
             mock_commits,
             mock_lines_added,
             mock_bug_fixes,
@@ -119,7 +121,7 @@ impl ContributionTracker {
             &developer.role,
         );
 
-        let metrics = ContributionMetrics {
+        let metrics: _ = ContributionMetrics {
             commits_count: mock_commits,
             lines_added: mock_lines_added,
             lines_removed: mock_lines_removed,
@@ -169,25 +171,25 @@ impl ContributionTracker {
 
         // 计算团队指标
         let total_score: f64 = scores.iter().map(|(_, s)| s).sum();
-        let average_score = total_score / scores.len() as f64;
+        let average_score: _ = total_score / scores.len() as f64;
 
         // 计算团队速度 (基于提交数、特性实现等)
         let total_commits: u32 = team_metrics.iter().map(|m| m.commits_count).sum();
         let total_features: u32 = team_metrics.iter().map(|m| m.feature_implementations).sum();
-        let team_velocity = (total_commits as f64 * 0.4 + total_features as f64 * 0.6) / team.len() as f64;
+        let team_velocity: _ = (total_commits as f64 * 0.4 + total_features as f64 * 0.6) / team.len() as f64;
 
         // 识别顶级表现者
         scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
         let top_performers: Vec<String> = scores.iter().take(3).map(|(name, _)| name.clone()).collect();
 
         // 生成改进建议
-        let improvement_suggestions = self.generate_improvement_suggestions(&team_metrics);
+        let improvement_suggestions: _ = self.generate_improvement_suggestions(&team_metrics);
 
         // 分析团队优势
-        let team_strengths = self.identify_team_strengths(&team_metrics);
+        let team_strengths: _ = self.identify_team_strengths(&team_metrics);
 
         // 分析团队弱点
-        let team_weaknesses = self.identify_team_weaknesses(&team_metrics);
+        let team_weaknesses: _ = self.identify_team_weaknesses(&team_metrics);
 
         Ok(ProductivityReport {
             team_metrics,
@@ -221,15 +223,15 @@ impl ContributionTracker {
         };
 
         // 标准化分数 (0-100)
-        let normalized_commits = (commits as f64 / 200.0 * 100.0).min(100.0);
-        let normalized_features = (features as f64 / 40.0 * 100.0).min(100.0);
-        let normalized_bugs = (bug_fixes as f64 / 60.0 * 100.0).min(100.0);
-        let normalized_reviews = (reviews as f64 / 150.0 * 100.0).min(100.0);
-        let normalized_docs = (docs as f64 / 40.0 * 100.0).min(100.0);
-        let normalized_tests = (tests as f64 / 100.0 * 100.0).min(100.0);
+        let normalized_commits: _ = (commits as f64 / 200.0 * 100.0).min(100.0);
+        let normalized_features: _ = (features as f64 / 40.0 * 100.0).min(100.0);
+        let normalized_bugs: _ = (bug_fixes as f64 / 60.0 * 100.0).min(100.0);
+        let normalized_reviews: _ = (reviews as f64 / 150.0 * 100.0).min(100.0);
+        let normalized_docs: _ = (docs as f64 / 40.0 * 100.0).min(100.0);
+        let normalized_tests: _ = (tests as f64 / 100.0 * 100.0).min(100.0);
 
         // 计算加权平均
-        let score = normalized_commits * commit_weight
+        let score: _ = normalized_commits * commit_weight
             + normalized_features * feature_weight
             + normalized_bugs * bug_weight
             + normalized_reviews * review_weight
@@ -333,7 +335,7 @@ impl ContributionTracker {
 
     /// 获取开发者贡献历史
     pub async fn get_contribution_history(&self, developer_id: &str) -> Vec<ContributionMetrics> {
-        let data = self.contribution_data.read().await;
+        let data: _ = self.contribution_data.read().await;
         data.get(developer_id).cloned().unwrap_or_default()
     }
 
@@ -342,7 +344,7 @@ impl ContributionTracker {
         let mut rankings = Vec::new();
 
         for id in team_ids {
-            let history = self.get_contribution_history(id).await;
+            let history: _ = self.get_contribution_history(id).await;
             if let Some(latest) = history.last() {
                 rankings.push((id.clone(), latest.overall_score));
             }

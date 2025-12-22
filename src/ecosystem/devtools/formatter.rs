@@ -89,7 +89,7 @@ impl Formatter {
     /// 创建新的格式化器
     pub fn new(config: FormatConfig) -> Self {
         Self {
-            config: Arc::new(config),
+            config: Arc::new(std::sync::Mutex::new(config)),
         }
     }
 
@@ -103,14 +103,14 @@ impl Formatter {
         let mut output = String::new();
         let mut line_count = 0;
         let mut current_line_len = 0;
-        let indent = if self.config.use_tabs { "\t" } else { &" ".repeat(self.config.indent_size) };
+        let indent: _ = if self.config.use_tabs { "\t" } else { &" ".repeat(self.config.indent_size) };
 
         // 简单解析和格式化
         let lines: Vec<&str> = source.split('\n').collect();
         let mut pending_semicolon = false;
 
         for (i, line) in lines.iter().enumerate() {
-            let trimmed = line.trim();
+            let trimmed: _ = line.trim();
 
             // 跳过空行
             if trimmed.is_empty() {
@@ -121,7 +121,7 @@ impl Formatter {
             }
 
             // 添加缩进
-            let indent_level = self.calculate_indent_level(trimmed);
+            let indent_level: _ = self.calculate_indent_level(trimmed);
             for _ in 0..indent_level {
                 output.push_str(indent);
                 current_line_len += if self.config.use_tabs { 1 } else { self.config.indent_size };
@@ -163,7 +163,7 @@ impl Formatter {
             current_line_len = formatted_line.len();
         }
 
-        let output_for_check = output.clone();
+        let output_for_check: _ = output.clone();
         Ok(FormatResult {
             formatted_code: output,
             changed: output_for_check.trim() != source.trim(),
@@ -176,7 +176,7 @@ impl Formatter {
         let mut results = Vec::new();
 
         for (filename, content) in files {
-            let result = self.format_code(content)?;
+            let result: _ = self.format_code(content)?;
             results.push((filename.to_string(), result));
         }
 
@@ -185,17 +185,17 @@ impl Formatter {
 
     /// 格式化并写入文件
     pub fn format_to_file(&self, source: &str, output_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let result = self.format_code(source)?;
+        let result: _ = self.format_code(source)?;
         std::fs::write(output_path, result.formatted_code)?;
         Ok(())
     }
 
     /// 获取格式化统计信息
     pub fn get_format_stats(&self, source: &str) -> Result<FormatStats, Box<dyn std::error::Error>> {
-        let lines = source.split('\n').count();
-        let chars = source.len();
-        let bytes = source.as_bytes().len();
-        let avg_line_len = if lines > 0 { chars / lines } else { 0 };
+        let lines: _ = source.split('\n').count();
+        let chars: _ = source.len();
+        let bytes: _ = source.as_bytes().len();
+        let avg_line_len: _ = if lines > 0 { chars / lines } else { 0 };
 
         Ok(FormatStats {
             total_lines: lines,
@@ -252,12 +252,12 @@ impl Formatter {
     /// 清理操作符周围的空格
     fn cleanup_operator_spaces(&self, line: &str) -> String {
         let mut result = line.to_string();
-        let operators = ["+", "-", "*", "/", "%", "=", "==", "===", "!=", "!==", ">", "<", ">=", "<=", "&&", "||", "&", "|"];
+        let operators: _ = ["+", "-", "*", "/", "%", "=", "==", "===", "!=", "!==", ">", "<", ">=", "<=", "&&", "||", "&", "|"];
 
         for op in &operators {
-            let pattern = format!(" {} ", op);
-            let replacement = format!("{} ", op);
-            result = result.replace(&pattern, &replacement);
+            let pattern: _ = format!(" {} ", op);
+            let replacement: _ = format!("{} ", op);
+            result = result.clone();replace(&pattern, &replacement);
         }
 
         result
@@ -313,12 +313,14 @@ pub struct FormatStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_basic_formatting() {
-        let formatter = Formatter::new_with_defaults();
-        let source = "function test(){return  42;}";
-        let result = formatter.format_code(source).unwrap();
+        let formatter: _ = Formatter::new_with_defaults();
+        let source: _ = "function test(){return  42;}";
+        let result: _ = formatter.format_code(source).unwrap();
 
         assert!(result.changed);
         assert!(result.formatted_code.contains("function test()"));
@@ -327,11 +329,11 @@ mod tests {
 
     #[test]
     fn test_indentation() {
-        let formatter = Formatter::new_with_defaults();
-        let source = r#"if (true) {
+        let formatter: _ = Formatter::new_with_defaults();
+        let source: _ = r#"if (true) {
 console.log("test");
 }"#;
-        let result = formatter.format_code(source).unwrap();
+        let result: _ = formatter.format_code(source).unwrap();
 
         assert!(result.changed);
         assert!(result.formatted_code.contains("    console.log"));
@@ -341,29 +343,29 @@ console.log("test");
     fn test_quotes_conversion() {
         let mut config = FormatConfig::default();
         config.quotes = QuoteStyle::Single;
-        let formatter = Formatter::new(config);
-        let source = r#"let x = "hello world";"#;
-        let result = formatter.format_code(source).unwrap();
+        let formatter: _ = Formatter::new(config);
+        let source: _ = r#"let x = "hello world";"#;
+        let result: _ = formatter.format_code(source).unwrap();
 
         assert!(result.formatted_code.contains("'hello world'"));
     }
 
     #[test]
     fn test_semicolon_handling() {
-        let formatter = Formatter::new_with_defaults();
-        let source = r#"let x = 5
+        let formatter: _ = Formatter::new_with_defaults();
+        let source: _ = r#"let x = 5
 let y = 10"#;
-        let result = formatter.format_code(source).unwrap();
+        let result: _ = formatter.format_code(source).unwrap();
 
-        assert!(result.formatted_code.contains("let x = 5;"));
-        assert!(result.formatted_code.contains("let y = 10;"));
+        assert!(result.formatted_code.contains("let x: _ = 5;"));
+        assert!(result.formatted_code.contains("let y: _ = 10;"));
     }
 
     #[test]
     fn test_format_stats() {
-        let formatter = Formatter::new_with_defaults();
-        let source = "line1\nline2\nline3";
-        let stats = formatter.get_format_stats(source).unwrap();
+        let formatter: _ = Formatter::new_with_defaults();
+        let source: _ = "line1\nline2\nline3";
+        let stats: _ = formatter.get_format_stats(source).unwrap();
 
         assert_eq!(stats.total_lines, 3);
         assert_eq!(stats.total_chars, 15);
@@ -371,12 +373,12 @@ let y = 10"#;
 
     #[test]
     fn test_format_files() {
-        let formatter = Formatter::new_with_defaults();
-        let files = vec![
+        let formatter: _ = Formatter::new_with_defaults();
+        let files: _ = vec![
             ("file1.js", "let x=1;"),
             ("file2.js", "let y=2;"),
         ];
-        let results = formatter.format_files(&files).unwrap();
+        let results: _ = formatter.format_files(&files).unwrap();
 
         assert_eq!(results.len(), 2);
         assert!(results[0].1.changed);
@@ -387,9 +389,9 @@ let y = 10"#;
     fn test_line_length_check() {
         let mut config = FormatConfig::default();
         config.line_width = 20;
-        let formatter = Formatter::new(config);
-        let source = "very_long_variable_name_that_exceeds_limit = 42;";
-        let result = formatter.format_code(source).unwrap();
+        let formatter: _ = Formatter::new(config);
+        let source: _ = "very_long_variable_name_that_exceeds_limit = 42;";
+        let result: _ = formatter.format_code(source).unwrap();
 
         // 验证长行处理（简化版）
         assert!(result.changed);

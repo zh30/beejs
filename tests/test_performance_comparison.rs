@@ -9,7 +9,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_runtime_config_creation() {
-        let runtime = RuntimeConfig {
+        let runtime: _ = RuntimeConfig {
             name: "test".to_string(),
             command: "echo".to_string(),
             args: vec!["test".to_string()],
@@ -23,7 +23,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_test_case_creation() {
-        let test_case = TestCase::custom(
+        let test_case: _ = TestCase::custom(
             "Test".to_string(),
             "Test description".to_string(),
             "console.log('hello');".to_string(),
@@ -37,11 +37,13 @@ mod tests {
     async fn test_result_collector() {
         use beejs::benchmarks::{BenchmarkResult, MetricType};
         use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
         let mut collector = ResultCollector::new();
 
         // Create a dummy benchmark result
-        let result = BenchmarkResult {
+        let result: _ = BenchmarkResult {
             name: "test".to_string(),
             metric_type: MetricType::ExecutionTime,
             iterations: 100,
@@ -57,7 +59,7 @@ mod tests {
         };
 
         // Create a comparison result
-        let comparison = beejs::performance_comparison::BenchmarkComparison {
+        let comparison: _ = beejs::performance_comparison::BenchmarkComparison {
             test_name: "test_comparison".to_string(),
             beejs_result: Some(result.clone()),
             nodejs_result: Some(result.clone()),
@@ -71,7 +73,7 @@ mod tests {
         };
 
         collector.add_result(comparison);
-        let comparison_result = collector.generate_comparison_result();
+        let comparison_result: _ = collector.generate_comparison_result();
 
         assert_eq!(comparison_result.test_results.len(), 1);
         assert_eq!(comparison_result.summary.total_tests, 1);
@@ -79,14 +81,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_benchmark_runner_creation() {
-        let _runner = BenchmarkRunner::new();
+        let _runner: _ = BenchmarkRunner::new();
         // Just verify it can be created without panicking
         assert!(true);
     }
 
     #[test]
     fn test_report_generator_creation() {
-        let _generator = ReportGenerator::new();
+        let _generator: _ = ReportGenerator::new();
         // Just verify it can be created without panicking
         assert!(true);
     }
@@ -103,7 +105,7 @@ mod tests {
         ));
 
         // Run the benchmarks
-        let results = runner.run_all().await;
+        let results: _ = runner.run_all().await;
 
         // Should complete without panic (may have errors if runtimes not available)
         assert!(results.is_ok() || results.is_err());
@@ -115,7 +117,7 @@ mod tests {
         runner.add_standard_test_suite();
 
         // The method should not panic
-        let results = runner.run_all().await;
+        let results: _ = runner.run_all().await;
         assert!(results.is_ok() || results.is_err());
     }
 }

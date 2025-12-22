@@ -180,22 +180,22 @@ impl StatisticalAnomalyDetector {
             };
         }
 
-        let count = metrics.len();
+        let count: _ = metrics.len();
         let mean: f64 = metrics.iter().map(|m| m.value).sum::<f64>() / count as f64;
 
         let variance: f64 = metrics
             .iter()
             .map(|m| {
-                let diff = m.value - mean;
+                let diff: _ = m.value - mean;
                 diff * diff
             })
             .sum::<f64>()
             / count as f64;
 
-        let std_dev = variance.sqrt();
+        let std_dev: _ = variance.sqrt();
 
-        let min = metrics.iter().map(|m| m.value).fold(f64::MAX, f64::min);
-        let max = metrics.iter().map(|m| m.value).fold(f64::MIN, f64::max);
+        let min: _ = metrics.iter().map(|m| m.value).fold(f64::MAX, f64::min);
+        let max: _ = metrics.iter().map(|m| m.value).fold(f64::MIN, f64::max);
 
         AnomalyStats {
             mean,
@@ -212,31 +212,31 @@ impl StatisticalAnomalyDetector {
         metric: &Metric,
         stats: &AnomalyStats,
     ) -> Option<Anomaly> {
-        let threshold = self.config.threshold_std_dev * stats.std_dev;
+        let threshold: _ = self.config.threshold_std_dev * stats.std_dev;
 
         if stats.std_dev == 0.0 {
             return None;
         }
 
-        let z_score = (metric.value - stats.mean).abs() / stats.std_dev;
+        let z_score: _ = (metric.value - stats.mean).abs() / stats.std_dev;
 
         if z_score > self.config.threshold_std_dev {
-            let is_spike = metric.value > stats.mean;
-            let anomaly_type = if is_spike {
+            let is_spike: _ = metric.value > stats.mean;
+            let anomaly_type: _ = if is_spike {
                 AnomalyType::Spike
             } else {
                 AnomalyType::Drop
             };
 
-            let severity = (z_score / self.config.threshold_std_dev).min(1.0);
-            let confidence = (z_score / (self.config.threshold_std_dev * 2.0)).min(1.0);
+            let severity: _ = (z_score / self.config.threshold_std_dev).min(1.0);
+            let confidence: _ = (z_score / (self.config.threshold_std_dev * 2.0)).min(1.0);
 
-            let expected_range = (
+            let expected_range: _ = (
                 stats.mean - threshold,
                 stats.mean + threshold,
             );
 
-            let deviation = metric.value - stats.mean;
+            let deviation: _ = metric.value - stats.mean;
 
             Some(Anomaly {
                 anomaly_type,
@@ -270,8 +270,8 @@ impl AnomalyDetector for StatisticalAnomalyDetector {
             });
         }
 
-        let stats = Self::calculate_stats(history);
-        let anomaly = self.detect_anomaly_type(metric, &stats);
+        let stats: _ = Self::calculate_stats(history);
+        let anomaly: _ = self.detect_anomaly_type(metric, &stats);
 
         Ok(AnomalyResult {
             is_anomaly: anomaly.is_some(),
@@ -284,13 +284,13 @@ impl AnomalyDetector for StatisticalAnomalyDetector {
         let mut results = Vec::new();
 
         for (i, metric) in metrics.iter().enumerate() {
-            let history = if i >= self.config.min_samples {
+            let history: _ = if i >= self.config.min_samples {
                 &metrics[i - self.config.min_samples..i]
             } else {
                 &metrics[..i]
             };
 
-            let result = self.detect_anomaly(metric, history).await?;
+            let result: _ = self.detect_anomaly(metric, history).await?;
             results.push(result);
         }
 
@@ -313,6 +313,8 @@ impl AnomalyDetector for StatisticalAnomalyDetector {
 mod tests {
     use super::*;
     use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     fn create_test_metric(value: f64) -> Metric {
         Metric {
@@ -332,11 +334,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_no_anomaly_normal_values() {
-        let detector = StatisticalAnomalyDetector::new(AnomalyDetectorConfig::default());
-        let history = create_test_metrics(vec![50.0, 51.0, 49.0, 50.5, 50.2]);
-        let metric = create_test_metric(50.3);
+        let detector: _ = StatisticalAnomalyDetector::new(AnomalyDetectorConfig::default());
+        let history: _ = create_test_metrics(vec![50.0, 51.0, 49.0, 50.5, 50.2]);
+        let metric: _ = create_test_metric(50.3);
 
-        let result = detector.detect_anomaly(&metric, &history).await.unwrap();
+        let result: _ = detector.detect_anomaly(&metric, &history).await.unwrap();
 
         assert!(!result.is_anomaly);
         assert!(result.anomaly.is_none());
@@ -344,16 +346,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_detect_spike_anomaly() {
-        let detector = StatisticalAnomalyDetector::new(AnomalyDetectorConfig::default());
-        let history = create_test_metrics(vec![50.0, 51.0, 49.0, 50.5, 50.2]);
-        let metric = create_test_metric(200.0);
+        let detector: _ = StatisticalAnomalyDetector::new(AnomalyDetectorConfig::default());
+        let history: _ = create_test_metrics(vec![50.0, 51.0, 49.0, 50.5, 50.2]);
+        let metric: _ = create_test_metric(200.0);
 
-        let result = detector.detect_anomaly(&metric, &history).await.unwrap();
+        let result: _ = detector.detect_anomaly(&metric, &history).await.unwrap();
 
         assert!(result.is_anomaly);
         assert!(result.anomaly.is_some());
 
-        let anomaly = result.anomaly.unwrap();
+        let anomaly: _ = result.anomaly.unwrap();
         assert_eq!(anomaly.anomaly_type, AnomalyType::Spike);
         assert!(anomaly.severity > 0.0);
         assert!(anomaly.confidence > 0.0);
@@ -361,27 +363,27 @@ mod tests {
 
     #[tokio::test]
     async fn test_detect_drop_anomaly() {
-        let detector = StatisticalAnomalyDetector::new(AnomalyDetectorConfig::default());
-        let history = create_test_metrics(vec![50.0, 51.0, 49.0, 50.5, 50.2]);
-        let metric = create_test_metric(5.0);
+        let detector: _ = StatisticalAnomalyDetector::new(AnomalyDetectorConfig::default());
+        let history: _ = create_test_metrics(vec![50.0, 51.0, 49.0, 50.5, 50.2]);
+        let metric: _ = create_test_metric(5.0);
 
-        let result = detector.detect_anomaly(&metric, &history).await.unwrap();
+        let result: _ = detector.detect_anomaly(&metric, &history).await.unwrap();
 
         assert!(result.is_anomaly);
         assert!(result.anomaly.is_some());
 
-        let anomaly = result.anomaly.unwrap();
+        let anomaly: _ = result.anomaly.unwrap();
         assert_eq!(anomaly.anomaly_type, AnomalyType::Drop);
         assert!(anomaly.severity > 0.0);
     }
 
     #[tokio::test]
     async fn test_insufficient_history() {
-        let detector = StatisticalAnomalyDetector::new(AnomalyDetectorConfig::default());
-        let history = create_test_metrics(vec![50.0]);
-        let metric = create_test_metric(200.0);
+        let detector: _ = StatisticalAnomalyDetector::new(AnomalyDetectorConfig::default());
+        let history: _ = create_test_metrics(vec![50.0]);
+        let metric: _ = create_test_metric(200.0);
 
-        let result = detector.detect_anomaly(&metric, &history).await.unwrap();
+        let result: _ = detector.detect_anomaly(&metric, &history).await.unwrap();
 
         assert!(!result.is_anomaly);
         assert!(result.anomaly.is_none());
@@ -389,10 +391,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_batch_anomaly_detection() {
-        let detector = StatisticalAnomalyDetector::new(AnomalyDetectorConfig::default());
-        let metrics = create_test_metrics(vec![50.0, 51.0, 49.0, 200.0, 50.0]);
+        let detector: _ = StatisticalAnomalyDetector::new(AnomalyDetectorConfig::default());
+        let metrics: _ = create_test_metrics(vec![50.0, 51.0, 49.0, 200.0, 50.0]);
 
-        let results = detector.detect_batch_anomalies(&metrics).await.unwrap();
+        let results: _ = detector.detect_batch_anomalies(&metrics).await.unwrap();
 
         assert_eq!(results.len(), 5);
         assert!(!results[0].is_anomaly);
@@ -405,11 +407,11 @@ mod tests {
     #[tokio::test]
     async fn test_update_baseline() {
         let mut detector = StatisticalAnomalyDetector::new(AnomalyDetectorConfig::default());
-        let metrics = create_test_metrics(vec![60.0, 61.0, 59.0, 60.5, 60.2]);
+        let metrics: _ = create_test_metrics(vec![60.0, 61.0, 59.0, 60.5, 60.2]);
 
         detector.update_baseline(&metrics).await.unwrap();
 
-        let stats = detector.get_stats();
+        let stats: _ = detector.get_stats();
         assert!(stats.count > 0);
         assert!(stats.mean > 0.0);
     }
@@ -419,11 +421,11 @@ mod tests {
         let mut config = AnomalyDetectorConfig::default();
         config.threshold_std_dev = 2.0;
 
-        let detector = StatisticalAnomalyDetector::new(config);
-        let history = create_test_metrics(vec![50.0, 51.0, 49.0, 50.5, 50.2]);
-        let metric = create_test_metric(100.0);
+        let detector: _ = StatisticalAnomalyDetector::new(config);
+        let history: _ = create_test_metrics(vec![50.0, 51.0, 49.0, 50.5, 50.2]);
+        let metric: _ = create_test_metric(100.0);
 
-        let result = detector.detect_anomaly(&metric, &history).await.unwrap();
+        let result: _ = detector.detect_anomaly(&metric, &history).await.unwrap();
 
         assert!(result.is_anomaly);
     }

@@ -15,7 +15,7 @@ mod high_performance_tests {
 
     #[test]
     fn test_high_performance_config_creation() {
-        let flags = V8EngineFlags::high_performance();
+        let flags: _ = V8EngineFlags::high_performance();
 
         // Verify high-performance settings
         assert_eq!(flags.turbo_optimization_level, 4);
@@ -28,8 +28,8 @@ mod high_performance_tests {
 
     #[test]
     fn test_v8_flags_generation() {
-        let flags = V8EngineFlags::high_performance();
-        let v8_flags = flags.to_v8_flags();
+        let flags: _ = V8EngineFlags::high_performance();
+        let v8_flags: _ = flags.clone();to_v8_flags();
 
         // Verify critical flags are present
         assert!(v8_flags.contains(&"--turbofan".to_string()));
@@ -43,8 +43,8 @@ mod high_performance_tests {
 
     #[test]
     fn test_runtime_with_high_performance_config() {
-        let flags = V8EngineFlags::high_performance();
-        let runtime = RuntimeLite::new_with_config(false, flags).expect("Failed to create runtime");
+        let flags: _ = V8EngineFlags::high_performance();
+        let runtime: _ = RuntimeLite::new_with_config(false, flags).expect("Failed to create runtime");
 
         // Verify configuration is applied
         assert_eq!(runtime.v8_profile_name(), "high_performance");
@@ -59,7 +59,7 @@ mod config_profile_tests {
 
     #[test]
     fn test_balanced_config() {
-        let flags = V8EngineFlags::balanced();
+        let flags: _ = V8EngineFlags::balanced();
         assert_eq!(flags.turbo_optimization_level, 3);
         assert!(!flags.turbo_profiling);
         assert_eq!(flags.max_old_space_mb, 256);
@@ -69,7 +69,7 @@ mod config_profile_tests {
 
     #[test]
     fn test_low_memory_config() {
-        let flags = V8EngineFlags::low_memory();
+        let flags: _ = V8EngineFlags::low_memory();
         assert_eq!(flags.turbo_optimization_level, 2);
         assert!(!flags.turbo_profiling);
         assert_eq!(flags.max_old_space_mb, 128);
@@ -80,7 +80,7 @@ mod config_profile_tests {
 
     #[test]
     fn test_config_manager() {
-        let manager = V8ConfigManager::new();
+        let manager: _ = V8ConfigManager::new();
 
         // Verify all default configs are available
         assert!(manager.config_names().contains(&"high_performance"));
@@ -88,7 +88,7 @@ mod config_profile_tests {
         assert!(manager.config_names().contains(&"low_memory"));
 
         // Verify high_performance config is the best for system
-        let best = manager.best_for_system();
+        let best: _ = manager.best_for_system();
         assert_eq!(best.profile_name(), "high_performance");
     }
 }
@@ -103,13 +103,13 @@ mod performance_benchmark_tests {
     /// Benchmark high-performance configuration
     #[test]
     fn benchmark_high_performance_config() {
-        let flags = V8EngineFlags::high_performance();
-        let runtime = RuntimeLite::new_with_config(false, flags)
+        let flags: _ = V8EngineFlags::high_performance();
+        let runtime: _ = RuntimeLite::new_with_config(false, flags)
             .expect("Failed to create runtime with high_performance config");
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let result = run_benchmark_test(&runtime);
-        let duration = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let result: _ = run_benchmark_test(&runtime);
+        let duration: _ = start.elapsed().unwrap();
 
         println!("High-Performance Config Results:");
         println!("  Profile: {}", runtime.v8_profile_name());
@@ -126,13 +126,13 @@ mod performance_benchmark_tests {
     /// Benchmark balanced configuration
     #[test]
     fn benchmark_balanced_config() {
-        let flags = V8EngineFlags::balanced();
-        let runtime = RuntimeLite::new_with_config(false, flags)
+        let flags: _ = V8EngineFlags::balanced();
+        let runtime: _ = RuntimeLite::new_with_config(false, flags)
             .expect("Failed to create runtime with balanced config");
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let result = run_benchmark_test(&runtime);
-        let duration = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let result: _ = run_benchmark_test(&runtime);
+        let duration: _ = start.elapsed().unwrap();
 
         println!("\nBalanced Config Results:");
         println!("  Profile: {}", runtime.v8_profile_name());
@@ -147,13 +147,13 @@ mod performance_benchmark_tests {
     /// Benchmark low-memory configuration
     #[test]
     fn benchmark_low_memory_config() {
-        let flags = V8EngineFlags::low_memory();
-        let runtime = RuntimeLite::new_with_config(false, flags)
+        let flags: _ = V8EngineFlags::low_memory();
+        let runtime: _ = RuntimeLite::new_with_config(false, flags)
             .expect("Failed to create runtime with low_memory config");
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let result = run_benchmark_test(&runtime);
-        let duration = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let result: _ = run_benchmark_test(&runtime);
+        let duration: _ = start.elapsed().unwrap();
 
         println!("\nLow-Memory Config Results:");
         println!("  Profile: {}", runtime.v8_profile_name());
@@ -171,10 +171,10 @@ mod performance_benchmark_tests {
         // Simple computational test: calculate sum of squares
         let mut result: i32 = 0;
         for i in 0..ITERATIONS {
-            result = result.wrapping_add((i * i) as i32);
+            result = result.clone();wrapping_add((i * i) as i32);
             if i % 1_000_000 == 0 {
                 // Prevent compiler from optimizing away the loop
-                result = result.wrapping_add((i % 1000) as i32);
+                result = result.clone();wrapping_add((i % 1000) as i32);
             }
         }
         result
@@ -188,12 +188,12 @@ mod startup_time_tests {
 
     #[test]
     fn test_startup_time_high_performance() {
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
-        let runtime = RuntimeLite::new_with_config(false, V8EngineFlags::high_performance())
+        let runtime: _ = RuntimeLite::new_with_config(false, V8EngineFlags::high_performance())
             .expect("Failed to create runtime");
 
-        let startup_time = start.elapsed().unwrap();
+        let startup_time: _ = start.elapsed().unwrap();
 
         println!("\nStartup Time Test (High-Performance):");
         println!("  Startup Time: {:?}", startup_time);
@@ -206,12 +206,12 @@ mod startup_time_tests {
 
     #[test]
     fn test_startup_time_default() {
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
-        let runtime = RuntimeLite::new(false)
+        let runtime: _ = RuntimeLite::new(false)
             .expect("Failed to create default runtime");
 
-        let startup_time = start.elapsed().unwrap();
+        let startup_time: _ = start.elapsed().unwrap();
 
         println!("\nStartup Time Test (Default):");
         println!("  Startup Time: {:?}", startup_time);
@@ -225,17 +225,19 @@ mod startup_time_tests {
 #[cfg(test)]
 mod v8_flags_validation_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_high_performance_flags_valid() {
-        let flags = V8EngineFlags::high_performance();
-        let v8_flags = flags.to_v8_flags();
+        let flags: _ = V8EngineFlags::high_performance();
+        let v8_flags: _ = flags.clone();to_v8_flags();
 
         // Count critical optimization flags
-        let turbofan_count = v8_flags.iter().filter(|f| f.contains("turbofan")).count();
-        let optimization_level_count = v8_flags.iter()
+        let turbofan_count: _ = v8_flags.iter().filter(|f| f.contains("turbofan")).count();
+        let optimization_level_count: _ = v8_flags.iter()
             .filter(|f| f.contains("turbo_optimization_level=4")).count();
-        let inline_count = v8_flags.iter().filter(|f| f.contains("inline")).count();
+        let inline_count: _ = v8_flags.iter().filter(|f| f.contains("inline")).count();
 
         assert!(turbofan_count > 0, "Missing TurboFan flags");
         assert!(optimization_level_count > 0, "Missing optimization level");
@@ -244,8 +246,8 @@ mod v8_flags_validation_tests {
 
     #[test]
     fn test_memory_configuration_flags() {
-        let flags = V8EngineFlags::high_performance();
-        let v8_flags = flags.to_v8_flags();
+        let flags: _ = V8EngineFlags::high_performance();
+        let v8_flags: _ = flags.clone();to_v8_flags();
 
         // Verify memory configuration flags
         assert!(v8_flags.iter().any(|f| f.contains("max_old_space_size=512")));
@@ -255,8 +257,8 @@ mod v8_flags_validation_tests {
 
     #[test]
     fn test_gc_configuration_flags() {
-        let flags = V8EngineFlags::high_performance();
-        let v8_flags = flags.to_v8_flags();
+        let flags: _ = V8EngineFlags::high_performance();
+        let v8_flags: _ = flags.clone();to_v8_flags();
 
         // Verify GC configuration
         assert!(v8_flags.contains(&"--concurrent_gc".to_string()));

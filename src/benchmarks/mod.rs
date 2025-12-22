@@ -23,6 +23,8 @@ pub mod memory_resource;
 use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 性能指标类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -41,7 +43,7 @@ pub struct MetricDataPoint {
     pub timestamp: u64, // 使用 Unix 时间戳替代 Instant
     pub value: f64,
     pub unit: String,
-    pub metadata: HashMap<String, String>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 基准测试结果
@@ -58,7 +60,7 @@ pub struct BenchmarkResult {
     pub operations_per_second: f64,
     pub memory_stats: Option<MemoryStats>,
     pub data_points: Vec<MetricDataPoint>,
-    pub metadata: HashMap<String, String>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 内存统计数据
@@ -107,7 +109,7 @@ impl Default for BenchmarkConfig {
 #[derive(Clone)]
 pub struct BenchmarkFramework {
     config: BenchmarkConfig,
-    baseline_results: HashMap<String, BenchmarkResult>,
+    baseline_results: HashMap<String, BenchmarkResult, std::collections::HashMap<String, BenchmarkResult, String, BenchmarkResult>>,
 }
 
 impl BenchmarkFramework {
@@ -139,15 +141,15 @@ impl BenchmarkFramework {
 
         // 预热阶段
         for _ in 0..self.config.warmup_iterations {
-            let _ = test_fn();
+            let _: _ = test_fn();
         }
 
         // 正式测试
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
         for i in 0..self.config.iterations {
-            let iter_start = Instant::now();
-            let _ = test_fn();
-            let iter_duration = iter_start.elapsed();
+            let iter_start: _ = Instant::now();
+            let _: _ = test_fn();
+            let iter_duration: _ = iter_start.elapsed();
             durations.push(iter_duration);
 
             if self.config.save_raw_data {
@@ -165,16 +167,16 @@ impl BenchmarkFramework {
                 });
             }
         }
-        let total_duration = start_time.elapsed();
+        let total_duration: _ = start_time.elapsed();
 
         // 计算统计信息
-        let avg_duration = durations.iter().sum::<Duration>() / self.config.iterations as u32;
-        let min_duration = durations.iter().min().copied().unwrap_or_default();
-        let max_duration = durations.iter().max().copied().unwrap_or_default();
+        let avg_duration: _ = durations.iter().sum::<Duration>() / self.config.iterations as u32;
+        let min_duration: _ = durations.iter().min().copied().unwrap_or_default();
+        let max_duration: _ = durations.iter().max().copied().unwrap_or_default();
 
         // 计算标准差
-        let mean = avg_duration.as_secs_f64();
-        let variance = durations
+        let mean: _ = avg_duration.as_secs_f64();
+        let variance: _ = durations
             .iter()
             .map(|d| {
                 let diff = d.as_secs_f64() - mean;
@@ -182,10 +184,10 @@ impl BenchmarkFramework {
             })
             .sum::<f64>()
             / self.config.iterations as f64;
-        let std_deviation = variance.sqrt();
+        let std_deviation: _ = variance.sqrt();
 
         // 计算每秒操作数
-        let operations_per_second = if avg_duration.as_secs_f64() > 0.0 {
+        let operations_per_second: _ = if avg_duration.as_secs_f64() > 0.0 {
             1.0 / avg_duration.as_secs_f64()
         } else {
             0.0
@@ -222,28 +224,28 @@ impl BenchmarkFramework {
 
         // 预热阶段
         for _ in 0..self.config.warmup_iterations {
-            let _ = test_fn();
+            let _: _ = test_fn();
         }
 
         // 正式测试
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
         for _ in 0..self.config.iterations {
-            let iter_start = Instant::now();
-            let _ = test_fn();
-            let iter_duration = iter_start.elapsed();
+            let iter_start: _ = Instant::now();
+            let _: _ = test_fn();
+            let iter_duration: _ = iter_start.elapsed();
             durations.push(iter_duration);
             memory_stats.push(self.get_memory_stats());
         }
-        let total_duration = start_time.elapsed();
+        let total_duration: _ = start_time.elapsed();
 
         // 计算统计信息
-        let avg_duration = durations.iter().sum::<Duration>() / self.config.iterations as u32;
-        let min_duration = durations.iter().min().copied().unwrap_or_default();
-        let max_duration = durations.iter().max().copied().unwrap_or_default();
+        let avg_duration: _ = durations.iter().sum::<Duration>() / self.config.iterations as u32;
+        let min_duration: _ = durations.iter().min().copied().unwrap_or_default();
+        let max_duration: _ = durations.iter().max().copied().unwrap_or_default();
 
         // 计算标准差
-        let mean = avg_duration.as_secs_f64();
-        let variance = durations
+        let mean: _ = avg_duration.as_secs_f64();
+        let variance: _ = durations
             .iter()
             .map(|d| {
                 let diff = d.as_secs_f64() - mean;
@@ -251,17 +253,17 @@ impl BenchmarkFramework {
             })
             .sum::<f64>()
             / self.config.iterations as f64;
-        let std_deviation = variance.sqrt();
+        let std_deviation: _ = variance.sqrt();
 
         // 计算每秒操作数
-        let operations_per_second = if avg_duration.as_secs_f64() > 0.0 {
+        let operations_per_second: _ = if avg_duration.as_secs_f64() > 0.0 {
             1.0 / avg_duration.as_secs_f64()
         } else {
             0.0
         };
 
         // 获取平均内存统计
-        let avg_memory = memory_stats.iter().fold(MemoryStats::default(), |acc, stats| {
+        let avg_memory: _ = memory_stats.iter().fold(MemoryStats::default(), |acc, stats| {
             MemoryStats {
                 current_rss: acc.current_rss + stats.current_rss,
                 peak_rss: acc.peak_rss.max(stats.peak_rss),
@@ -305,8 +307,8 @@ impl BenchmarkFramework {
     /// 比较基准测试结果与基线
     pub fn compare_with_baseline(&self, result: &BenchmarkResult) -> Option<PerformanceDelta> {
         if let Some(baseline) = self.baseline_results.get(&result.name) {
-            let time_delta = result.avg_duration.as_secs_f64() - baseline.avg_duration.as_secs_f64();
-            let ops_delta = result.operations_per_second - baseline.operations_per_second;
+            let time_delta: _ = result.avg_duration.as_secs_f64() - baseline.avg_duration.as_secs_f64();
+            let ops_delta: _ = result.operations_per_second - baseline.operations_per_second;
 
             Some(PerformanceDelta {
                 name: result.name.clone(),
@@ -325,7 +327,7 @@ impl BenchmarkFramework {
     }
 
     /// 获取所有基线结果
-    pub fn get_baselines(&self) -> &HashMap<String, BenchmarkResult> {
+    pub fn get_baselines(&self) -> &HashMap<String, BenchmarkResult, std::collections::HashMap<String, BenchmarkResult, String, BenchmarkResult>> {
         &self.baseline_results
     }
 }
@@ -368,11 +370,11 @@ impl BenchmarkResult {
 
     /// 检查性能是否在可接受范围内
     pub fn is_within_threshold(&self, threshold_percent: f64) -> bool {
-        let mean = self.avg_duration.as_secs_f64();
+        let mean: _ = self.avg_duration.as_secs_f64();
         if mean == 0.0 {
             return true;
         }
-        let cv = (self.std_deviation / mean) * 100.0;
+        let cv: _ = (self.std_deviation / mean) * 100.0;
         cv <= threshold_percent
     }
 }

@@ -17,12 +17,14 @@ mod tests {
     use std::io::{Read, Write};
     use std::net::{TcpListener, TcpStream};
     use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     // ==================== 缓冲区池测试 ====================
 
     #[test]
     fn test_network_buffer_pool_default() {
-        let pool = NetworkBufferPool::default();
+        let pool: _ = NetworkBufferPool::default();
         // 验证池可以工作
         let (buffer, _) = pool.get_buffer(1024);
         assert!(buffer.len() >= 1024);
@@ -30,7 +32,7 @@ mod tests {
 
     #[test]
     fn test_network_buffer_pool_get_buffer() {
-        let pool = NetworkBufferPool::default();
+        let pool: _ = NetworkBufferPool::default();
 
         // 获取缓冲区
         let (buffer, id) = pool.get_buffer(1024);
@@ -42,43 +44,43 @@ mod tests {
 
     #[test]
     fn test_network_io_statistics_creation() {
-        let config = StatisticsConfig {
+        let config: _ = StatisticsConfig {
             window_size: Duration::from_secs(60),
             enable_detailed_stats: true,
             sampling_rate: 1.0,
         };
-        let stats = NetworkIoStatistics::new(config);
-        let data = stats.get_stats();
+        let stats: _ = NetworkIoStatistics::new(config);
+        let data: _ = stats.get_stats();
         assert!(data.total_sent_bytes >= 0);
         assert!(data.total_recv_bytes >= 0);
     }
 
     #[test]
     fn test_network_io_statistics_update() {
-        let config = StatisticsConfig {
+        let config: _ = StatisticsConfig {
             window_size: Duration::from_secs(60),
             enable_detailed_stats: true,
             sampling_rate: 1.0,
         };
-        let stats = NetworkIoStatistics::new(config);
+        let stats: _ = NetworkIoStatistics::new(config);
 
         // 模拟发送和接收
         stats.record_zero_copy_send(1024, 1000);
         stats.record_zero_copy_recv(512, 800);
 
-        let data = stats.get_stats();
+        let data: _ = stats.get_stats();
         assert_eq!(data.total_sent_bytes, 1024);
         assert_eq!(data.total_recv_bytes, 512);
     }
 
     #[test]
     fn test_network_io_statistics_throughput() {
-        let config = StatisticsConfig {
+        let config: _ = StatisticsConfig {
             window_size: Duration::from_secs(60),
             enable_detailed_stats: true,
             sampling_rate: 1.0,
         };
-        let stats = NetworkIoStatistics::new(config);
+        let stats: _ = NetworkIoStatistics::new(config);
 
         // 发送数据
         stats.record_zero_copy_send(2048, 1200);
@@ -88,7 +90,7 @@ mod tests {
         std::thread::sleep(Duration::from_millis(100));
 
         // 计算吞吐量
-        let throughput = stats.throughput();
+        let throughput: _ = stats.throughput();
         assert!(throughput >= 0.0);
     }
 
@@ -97,16 +99,16 @@ mod tests {
     #[test]
     fn test_zero_copy_tcp_echo_server() {
         // 创建简单的回声服务器
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap();
+        let listener: _ = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr: _ = listener.local_addr().unwrap();
 
-        let server_handle = std::thread::spawn(move || {
+        let server_handle: _ = std::thread::spawn(move || {
             for stream in listener.incoming() {
                 match stream {
                     Ok(mut stream) => {
                         let mut buf = vec![0u8; 1024];
                         if let Ok(n) = stream.read(&mut buf) {
-                            let _ = stream.write_all(&buf[..n]);
+                            let _: _ = stream.write_all(&buf[..n]);
                         }
                         break;
                     }
@@ -120,12 +122,12 @@ mod tests {
 
         // 创建客户端连接
         let mut client = TcpStream::connect(addr).unwrap();
-        let test_data = b"Hello, Zero Copy TCP!";
+        let test_data: _ = b"Hello, Zero Copy TCP!";
         client.write_all(test_data).unwrap();
 
         // 读取响应
         let mut buf = vec![0u8; 1024];
-        let n = client.read(&mut buf).unwrap();
+        let n: _ = client.read(&mut buf).unwrap();
         assert_eq!(&buf[..n], test_data);
 
         server_handle.join().unwrap();
@@ -135,12 +137,12 @@ mod tests {
 
     #[test]
     fn test_network_io_comprehensive() {
-        let config = StatisticsConfig {
+        let config: _ = StatisticsConfig {
             window_size: Duration::from_secs(60),
             enable_detailed_stats: true,
             sampling_rate: 1.0,
         };
-        let stats = NetworkIoStatistics::new(config);
+        let stats: _ = NetworkIoStatistics::new(config);
 
         // 模拟多次发送和接收
         for i in 0..10 {
@@ -148,13 +150,13 @@ mod tests {
             stats.record_zero_copy_recv(512 * (i + 1), 800);
         }
 
-        let data = stats.get_stats();
+        let data: _ = stats.get_stats();
         assert_eq!(data.total_sent_bytes, 1024 * 55); // 1+2+...+10 = 55
         assert_eq!(data.total_recv_bytes, 512 * 55);
 
         // 测试吞吐量计算（允许为0.0，因为可能没有开始时间）
         std::thread::sleep(Duration::from_millis(100));
-        let throughput = stats.throughput();
+        let throughput: _ = stats.throughput();
         assert!(throughput >= 0.0);
     }
 
@@ -162,12 +164,12 @@ mod tests {
 
     #[test]
     fn test_high_throughput_network_stats() {
-        let config = StatisticsConfig {
+        let config: _ = StatisticsConfig {
             window_size: Duration::from_secs(60),
             enable_detailed_stats: true,
             sampling_rate: 1.0,
         };
-        let stats = NetworkIoStatistics::new(config);
+        let stats: _ = NetworkIoStatistics::new(config);
 
         // 模拟高吞吐量场景
         for _ in 0..1000 {
@@ -175,13 +177,13 @@ mod tests {
             stats.record_zero_copy_recv(65536, 800);
         }
 
-        let data = stats.get_stats();
+        let data: _ = stats.get_stats();
         assert_eq!(data.total_sent_bytes, 65536 * 1000);
         assert_eq!(data.total_recv_bytes, 65536 * 1000);
 
         // 等待并计算吞吐量（允许为0.0）
         std::thread::sleep(Duration::from_millis(200));
-        let throughput = stats.throughput();
+        let throughput: _ = stats.throughput();
         assert!(throughput >= 0.0);
     }
 }

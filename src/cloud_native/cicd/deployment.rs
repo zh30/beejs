@@ -20,7 +20,7 @@ pub struct DeploymentConfig {
     pub next_version: String,
 
     /// Additional parameters
-    pub parameters: std::collections::HashMap<String, String>,
+    pub parameters: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// Deployment status
@@ -465,7 +465,7 @@ impl DeploymentStrategySelector {
     pub fn select_strategy(&mut self, config: &DeploymentConfig) -> Result<DeploymentStrategy, Error> {
         match config.strategy.to_lowercase().as_str() {
             "blue-green" | "blue_green" => {
-                let strategy = BlueGreenDeployment::new(
+                let strategy: _ = BlueGreenDeployment::new(
                     config.service_name.clone(),
                     config.environment.clone(),
                     config.current_version.clone(),
@@ -474,7 +474,7 @@ impl DeploymentStrategySelector {
                 Ok(DeploymentStrategy::BlueGreen(strategy))
             }
             "canary" => {
-                let traffic_split = config.parameters
+                let traffic_split: _ = config.parameters
                     .get("traffic_split")
                     .and_then(|s| s.parse().ok())
                     .unwrap_or(10);
@@ -489,13 +489,13 @@ impl DeploymentStrategySelector {
 
                 if let Some(threshold) = config.parameters.get("promotion_threshold") {
                     if let Ok(t) = threshold.parse() {
-                        strategy = strategy.promotion_threshold(t);
+                        strategy = strategy.clone();promotion_threshold(t);
                     }
                 }
 
                 if let Some(interval) = config.parameters.get("health_check_interval") {
                     if let Ok(i) = interval.parse() {
-                        strategy = strategy.health_check_interval(i);
+                        strategy = strategy.clone();health_check_interval(i);
                     }
                 }
 
@@ -511,19 +511,19 @@ impl DeploymentStrategySelector {
 
                 if let Some(max_unavailable) = config.parameters.get("max_unavailable") {
                     if let Ok(m) = max_unavailable.parse() {
-                        strategy = strategy.max_unavailable(m);
+                        strategy = strategy.clone();max_unavailable(m);
                     }
                 }
 
                 if let Some(max_surge) = config.parameters.get("max_surge") {
                     if let Ok(m) = max_surge.parse() {
-                        strategy = strategy.max_surge(m);
+                        strategy = strategy.clone();max_surge(m);
                     }
                 }
 
                 if let Some(min_ready) = config.parameters.get("min_ready_seconds") {
                     if let Ok(m) = min_ready.parse() {
-                        strategy = strategy.min_ready_seconds(m);
+                        strategy = strategy.clone();min_ready_seconds(m);
                     }
                 }
 
@@ -537,8 +537,8 @@ impl DeploymentStrategySelector {
 
     /// Execute deployment with selected strategy
     pub fn execute_deployment(&mut self, config: &DeploymentConfig) -> Result<DeploymentStatus, Error> {
-        let strategy = self.select_strategy(config)?;
-        let result = strategy.execute();
+        let strategy: _ = self.select_strategy(config)?;
+        let result: _ = strategy.execute();
 
         if result.is_ok() {
             self.manager.add_strategy(strategy);
@@ -578,17 +578,19 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_blue_green_deployment() {
-        let deployment = BlueGreenDeployment::new(
+        let deployment: _ = BlueGreenDeployment::new(
             "beejs-service".to_string(),
             "production".to_string(),
             "v1.0.0".to_string(),
             "v1.1.0".to_string(),
         );
 
-        let result = deployment.execute();
+        let result: _ = deployment.execute();
         assert!(result.is_ok());
         if let Ok(status) = result {
             assert!(status.success);
@@ -598,7 +600,7 @@ mod tests {
 
     #[test]
     fn test_canary_deployment() {
-        let deployment = CanaryDeployment::new(
+        let deployment: _ = CanaryDeployment::new(
             "beejs-service".to_string(),
             "production".to_string(),
             "v1.0.0".to_string(),
@@ -606,7 +608,7 @@ mod tests {
             10,
         );
 
-        let result = deployment.execute();
+        let result: _ = deployment.execute();
         assert!(result.is_ok());
         if let Ok(status) = result {
             assert!(status.success);
@@ -616,7 +618,7 @@ mod tests {
 
     #[test]
     fn test_canary_promotion() {
-        let deployment = CanaryDeployment::new(
+        let deployment: _ = CanaryDeployment::new(
             "beejs-service".to_string(),
             "production".to_string(),
             "v1.0.0".to_string(),
@@ -624,7 +626,7 @@ mod tests {
             10,
         );
 
-        let result = deployment.promote_canary();
+        let result: _ = deployment.promote_canary();
         assert!(result.is_ok());
         if let Ok(status) = result {
             assert!(status.success);
@@ -635,7 +637,7 @@ mod tests {
 
     #[test]
     fn test_canary_rollback() {
-        let deployment = CanaryDeployment::new(
+        let deployment: _ = CanaryDeployment::new(
             "beejs-service".to_string(),
             "production".to_string(),
             "v1.0.0".to_string(),
@@ -643,7 +645,7 @@ mod tests {
             10,
         );
 
-        let result = deployment.rollback_canary();
+        let result: _ = deployment.rollback_canary();
         assert!(result.is_ok());
         if let Ok(status) = result {
             assert!(status.success);
@@ -654,14 +656,14 @@ mod tests {
 
     #[test]
     fn test_rolling_deployment() {
-        let deployment = RollingDeployment::new(
+        let deployment: _ = RollingDeployment::new(
             "beejs-service".to_string(),
             "production".to_string(),
             "v1.0.0".to_string(),
             "v1.1.0".to_string(),
         );
 
-        let result = deployment.execute();
+        let result: _ = deployment.execute();
         assert!(result.is_ok());
         if let Ok(status) = result {
             assert!(status.success);
@@ -671,7 +673,7 @@ mod tests {
 
     #[test]
     fn test_rolling_deployment_params() {
-        let deployment = RollingDeployment::new(
+        let deployment: _ = RollingDeployment::new(
             "beejs-service".to_string(),
             "production".to_string(),
             "v1.0.0".to_string(),
@@ -690,7 +692,7 @@ mod tests {
     fn test_strategy_selection() {
         let mut selector = DeploymentStrategySelector::new();
 
-        let config = DeploymentConfig {
+        let config: _ = DeploymentConfig {
             strategy: "blue-green".to_string(),
             service_name: "beejs-service".to_string(),
             environment: "production".to_string(),
@@ -699,7 +701,7 @@ mod tests {
             parameters: std::collections::HashMap::new(),
         };
 
-        let result = selector.select_strategy(&config);
+        let result: _ = selector.select_strategy(&config);
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), DeploymentStrategy::BlueGreen(_)));
     }
@@ -712,7 +714,7 @@ mod tests {
         params.insert("traffic_split".to_string(), "20".to_string());
         params.insert("promotion_threshold".to_string(), "99".to_string());
 
-        let config = DeploymentConfig {
+        let config: _ = DeploymentConfig {
             strategy: "canary".to_string(),
             service_name: "beejs-service".to_string(),
             environment: "production".to_string(),
@@ -721,7 +723,7 @@ mod tests {
             parameters: params,
         };
 
-        let result = selector.select_strategy(&config);
+        let result: _ = selector.select_strategy(&config);
         assert!(result.is_ok());
         if let Ok(DeploymentStrategy::Canary(canary)) = result {
             assert_eq!(canary.traffic_split, 20);
@@ -731,9 +733,9 @@ mod tests {
 
     #[test]
     fn test_invalid_strategy() {
-        let selector = DeploymentStrategySelector::new();
+        let selector: _ = DeploymentStrategySelector::new();
 
-        let config = DeploymentConfig {
+        let config: _ = DeploymentConfig {
             strategy: "invalid".to_string(),
             service_name: "beejs-service".to_string(),
             environment: "production".to_string(),
@@ -742,7 +744,7 @@ mod tests {
             parameters: std::collections::HashMap::new(),
         };
 
-        let result = selector.select_strategy(&config);
+        let result: _ = selector.select_strategy(&config);
         assert!(result.is_err());
     }
 
@@ -750,7 +752,7 @@ mod tests {
     fn test_deployment_manager() {
         let mut manager = DeploymentManager::new();
 
-        let strategy = BlueGreenDeployment::new(
+        let strategy: _ = BlueGreenDeployment::new(
             "beejs-service".to_string(),
             "production".to_string(),
             "v1.0.0".to_string(),

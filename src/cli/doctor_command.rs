@@ -78,7 +78,7 @@ impl DoctorCommand {
 
     /// 执行所有诊断检查
     pub fn execute(&mut self) -> anyhow::Result<()> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         self.formatter.title("Beejs Environment Diagnostics");
         println!();
@@ -98,7 +98,7 @@ impl DoctorCommand {
         self.print_results();
 
         // 统计
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
         let (pass, warn, fail) = self.count_status();
 
         println!();
@@ -138,7 +138,7 @@ impl DoctorCommand {
     }
 
     fn check_beejs_version(&mut self) {
-        let version = env!("CARGO_PKG_VERSION");
+        let version: _ = env!("CARGO_PKG_VERSION");
 
         self.add_check(DiagnosticCheck {
             name: "Beejs Version".to_string(),
@@ -151,7 +151,7 @@ impl DoctorCommand {
 
     fn check_v8_engine(&mut self) {
         // V8 引擎通常与 rusty_v8 绑定
-        let v8_version = "10.x (rusty_v8 0.22)";
+        let v8_version: _ = "10.x (rusty_v8 0.22)";
 
         self.add_check(DiagnosticCheck {
             name: "V8 JavaScript Engine".to_string(),
@@ -165,7 +165,7 @@ impl DoctorCommand {
     fn check_rust_toolchain(&mut self) {
         match Command::new("rustc").arg("--version").output() {
             Ok(output) if output.status.success() => {
-                let version = String::from_utf8_lossy(&output.stdout);
+                let version: _ = String::from_utf8_lossy(&output.stdout);
                 self.add_check(DiagnosticCheck {
                     name: "Rust Toolchain".to_string(),
                     description: "Check Rust compiler".to_string(),
@@ -190,7 +190,7 @@ impl DoctorCommand {
         // 检查是否有 Node.js (用于比较和兼容性)
         match Command::new("node").arg("--version").output() {
             Ok(output) if output.status.success() => {
-                let version = String::from_utf8_lossy(&output.stdout);
+                let version: _ = String::from_utf8_lossy(&output.stdout);
                 self.add_check(DiagnosticCheck {
                     name: "Node.js (Compatibility)".to_string(),
                     description: "Check Node.js for comparison".to_string(),
@@ -214,7 +214,7 @@ impl DoctorCommand {
     fn check_git(&mut self) {
         match Command::new("git").arg("--version").output() {
             Ok(output) if output.status.success() => {
-                let version = String::from_utf8_lossy(&output.stdout);
+                let version: _ = String::from_utf8_lossy(&output.stdout);
                 self.add_check(DiagnosticCheck {
                     name: "Git".to_string(),
                     description: "Version control system".to_string(),
@@ -237,7 +237,7 @@ impl DoctorCommand {
 
     fn check_package_managers(&mut self) {
         // Check npm
-        let npm_status = match Command::new("npm").arg("--version").output() {
+        let npm_status: _ = match Command::new("npm").arg("--version").output() {
             Ok(output) if output.status.success() => {
                 let version = String::from_utf8_lossy(&output.stdout);
                 (CheckStatus::Pass, Some(format!("npm {}", version.trim())))
@@ -246,7 +246,7 @@ impl DoctorCommand {
         };
 
         // Check yarn
-        let yarn_status = match Command::new("yarn").arg("--version").output() {
+        let yarn_status: _ = match Command::new("yarn").arg("--version").output() {
             Ok(output) if output.status.success() => {
                 let version = String::from_utf8_lossy(&output.stdout);
                 (CheckStatus::Pass, Some(format!("yarn {}", version.trim())))
@@ -255,7 +255,7 @@ impl DoctorCommand {
         };
 
         // Check pnpm
-        let pnpm_status = match Command::new("pnpm").arg("--version").output() {
+        let pnpm_status: _ = match Command::new("pnpm").arg("--version").output() {
             Ok(output) if output.status.success() => {
                 let version = String::from_utf8_lossy(&output.stdout);
                 (CheckStatus::Pass, Some(format!("pnpm {}", version.trim())))
@@ -295,20 +295,20 @@ impl DoctorCommand {
 
     fn check_disk_space(&mut self) {
         // 获取当前目录的磁盘空间
-        let cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let cwd: _ = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
 
         #[cfg(unix)]
         {
             use std::ffi::CString;
 
-            let path = CString::new(cwd.to_string_lossy().as_bytes()).unwrap();
+            let path: _ = CString::new(cwd.to_string_lossy().as_bytes()).unwrap();
             let mut stat: libc::statvfs = unsafe { std::mem::zeroed() };
 
-            let result = unsafe { libc::statvfs(path.as_ptr(), &mut stat) };
+            let result: _ = unsafe { libc::statvfs(path.as_ptr(), &mut stat) };
 
             if result == 0 {
-                let free_bytes = stat.f_bavail as u64 * stat.f_bsize as u64;
-                let free_gb = free_bytes / (1024 * 1024 * 1024);
+                let free_bytes: _ = stat.f_bavail as u64 * stat.f_bsize as u64;
+                let free_gb: _ = free_bytes / (1024 * 1024 * 1024);
 
                 let (status, suggestion) = if free_gb < 1 {
                     (
@@ -349,7 +349,7 @@ impl DoctorCommand {
         // 简单的网络连通性检查
         #[cfg(unix)]
         {
-            let result = Command::new("ping")
+            let result: _ = Command::new("ping")
                 .args(["-c", "1", "-W", "2", "8.8.8.8"])
                 .output();
 
@@ -391,13 +391,13 @@ impl DoctorCommand {
     }
 
     fn check_permissions(&mut self) {
-        let cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let cwd: _ = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
 
         // 检查写入权限
-        let test_file = cwd.join(".beejs-permission-test");
-        let can_write = fs::write(&test_file, "test").is_ok();
+        let test_file: _ = cwd.join(".beejs-permission-test");
+        let can_write: _ = fs::write(&test_file, "test").is_ok();
         if can_write {
-            let _ = fs::remove_file(&test_file);
+            let _: _ = fs::remove_file(&test_file);
         }
 
         let (status, message) = if can_write {
@@ -424,8 +424,8 @@ impl DoctorCommand {
 
     fn print_results(&self) {
         for check in &self.checks {
-            let icon = check.status.icon();
-            let color = check.status.color();
+            let icon: _ = check.status.icon();
+            let color: _ = check.status.color();
 
             if self.formatter.color_enabled {
                 print!("  {}{}\x1b[0m {}", color, icon, check.name);
@@ -471,6 +471,8 @@ impl DoctorCommand {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_check_status_icon() {

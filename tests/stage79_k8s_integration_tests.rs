@@ -6,6 +6,8 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 mod tests {
     use std::sync::Arc;
     use tokio::time::{sleep, Duration};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     // 模拟 K8sManager 结构体（待实现）
     #[allow(dead_code)]
@@ -51,11 +53,11 @@ mod tests {
     #[tokio::test]
     async fn test_k8s_deployment() {
         // 测试 Kubernetes 部署功能
-        let manager = K8sManager {
+        let manager: _ = K8sManager {
             namespace: "beejs-test".to_string(),
         };
 
-        let config = ClusterConfig {
+        let config: _ = ClusterConfig {
             min_replicas: 2,
             max_replicas: 10,
             cpu_threshold: 70.0,
@@ -72,7 +74,7 @@ mod tests {
     #[tokio::test]
     async fn test_auto_scaling() {
         // 测试自动扩缩容功能
-        let config = ClusterConfig {
+        let config: _ = ClusterConfig {
             min_replicas: 2,
             max_replicas: 10,
             cpu_threshold: 70.0,
@@ -80,14 +82,14 @@ mod tests {
         };
 
         // 模拟高负载场景 - 应该触发扩容
-        let high_load_metrics = ClusterMetrics {
+        let high_load_metrics: _ = ClusterMetrics {
             cpu_usage: 85.0,
             memory_usage: 75.0,
             request_rate: 1000.0,
         };
 
         // 模拟低负载场景 - 应该触发缩容
-        let low_load_metrics = ClusterMetrics {
+        let low_load_metrics: _ = ClusterMetrics {
             cpu_usage: 30.0,
             memory_usage: 40.0,
             request_rate: 100.0,
@@ -101,11 +103,11 @@ mod tests {
     #[tokio::test]
     async fn test_health_check() {
         // 测试健康检查功能
-        let manager = K8sManager {
+        let manager: _ = K8sManager {
             namespace: "beejs-test".to_string(),
         };
 
-        let node_id = "beejs-node-1";
+        let node_id: _ = "beejs-node-1";
 
         // 模拟健康检查
         // 实际实现中会调用 manager.check_node_health(node_id).await
@@ -116,7 +118,7 @@ mod tests {
     #[tokio::test]
     async fn test_cluster_config_validation() {
         // 测试集群配置验证
-        let valid_config = ClusterConfig {
+        let valid_config: _ = ClusterConfig {
             min_replicas: 2,
             max_replicas: 10,
             cpu_threshold: 70.0,
@@ -133,7 +135,7 @@ mod tests {
     #[tokio::test]
     async fn test_replica_scaling_logic() {
         // 测试副本扩缩容逻辑
-        let config = ClusterConfig {
+        let config: _ = ClusterConfig {
             min_replicas: 2,
             max_replicas: 10,
             cpu_threshold: 70.0,
@@ -141,14 +143,14 @@ mod tests {
         };
 
         // 测试扩容条件
-        let should_scale_up = ClusterMetrics {
+        let should_scale_up: _ = ClusterMetrics {
             cpu_usage: 85.0,
             memory_usage: 90.0,
             request_rate: 2000.0,
         };
 
         // 测试缩容条件
-        let should_scale_down = ClusterMetrics {
+        let should_scale_down: _ = ClusterMetrics {
             cpu_usage: 25.0,
             memory_usage: 30.0,
             request_rate: 50.0,
@@ -162,11 +164,11 @@ mod tests {
     #[tokio::test]
     async fn test_namespace_isolation() {
         // 测试命名空间隔离
-        let manager1 = K8sManager {
+        let manager1: _ = K8sManager {
             namespace: "beejs-prod".to_string(),
         };
 
-        let manager2 = K8sManager {
+        let manager2: _ = K8sManager {
             namespace: "beejs-dev".to_string(),
         };
 
@@ -178,7 +180,7 @@ mod tests {
     #[tokio::test]
     async fn test_cluster_metrics_collection() {
         // 测试集群指标收集
-        let metrics = ClusterMetrics {
+        let metrics: _ = ClusterMetrics {
             cpu_usage: 65.5,
             memory_usage: 72.3,
             request_rate: 1500.0,
@@ -193,12 +195,12 @@ mod tests {
     #[tokio::test]
     async fn test_failover_scenario() {
         // 测试故障转移场景
-        let manager = K8sManager {
+        let manager: _ = K8sManager {
             namespace: "beejs-test".to_string(),
         };
 
         // 模拟节点故障
-        let failed_node_health = HealthStatus::Unhealthy("Node beejs-node-1 is down".to_string());
+        let failed_node_health: _ = HealthStatus::Unhealthy("Node beejs-node-1 is down".to_string());
 
         match failed_node_health {
             HealthStatus::Unhealthy(reason) => {
@@ -212,12 +214,12 @@ mod tests {
     #[tokio::test]
     async fn test_rolling_update() {
         // 测试滚动更新
-        let manager = K8sManager {
+        let manager: _ = K8sManager {
             namespace: "beejs-prod".to_string(),
         };
 
         // 模拟滚动更新过程
-        let update_version = "v1.2.3";
+        let update_version: _ = "v1.2.3";
         assert_eq!(manager.namespace, "beejs-prod");
         assert_eq!(update_version, "v1.2.3");
 
@@ -227,7 +229,7 @@ mod tests {
     #[tokio::test]
     async fn test_resource_quota() {
         // 测试资源配额
-        let config = ClusterConfig {
+        let config: _ = ClusterConfig {
             min_replicas: 3,
             max_replicas: 15,
             cpu_threshold: 75.0,

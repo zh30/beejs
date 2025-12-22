@@ -21,7 +21,7 @@ pub struct DashboardManager {
     /// HTTP client for Grafana API
     http_client: HttpClient,
     /// Active dashboards
-    dashboards: Arc<RwLock<HashMap<String, Dashboard>>>,
+    dashboards: Arc<RwLock<HashMap<String, Dashboard, std::collections::HashMap<String, Dashboard, String, Dashboard>>>>,
     /// Grafana client
     grafana_client: Arc<GrafanaClient>,
     /// Metrics collector
@@ -70,7 +70,7 @@ pub struct MetricsCollector {
     /// Collection interval
     interval: std::time::Duration,
     /// Collected metrics
-    metrics: Arc<RwLock<HashMap<String, Value>>>,
+    metrics: Arc<RwLock<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>>,
     /// Active collectors
     collectors: Vec<Box<dyn MetricsCollectorTrait + Send + Sync>>,
 }
@@ -78,7 +78,7 @@ pub struct MetricsCollector {
 /// Metrics Collector Trait
 #[async_trait::async_trait]
 pub trait MetricsCollectorTrait {
-    async fn collect(&self) -> Result<HashMap<String, Value>>;
+    async fn collect(&self) -> Result<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>;
     fn name(&self) -> &str;
 }
 
@@ -96,9 +96,9 @@ impl PrometheusCollector {
 
 #[async_trait::async_trait]
 impl MetricsCollectorTrait for PrometheusCollector {
-    async fn collect(&self) -> Result<HashMap<String, Value>> {
-        let client = HttpClient::new();
-        let response = client
+    async fn collect(&self) -> Result<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>> {
+        let client: _ = HttpClient::new();
+        let response: _ = client
             .get(&format!("{}/api/v1/query", self.endpoint))
             .send()
             .await
@@ -168,15 +168,15 @@ impl DashboardManager {
     pub async fn new(config: DashboardConfig) -> Result<Self> {
         info!("Initializing Dashboard Manager...");
 
-        let http_client = HttpClient::new();
-        let grafana_client = Arc::new(GrafanaClient::new(
-            config.grafana_url.clone(),
+        let http_client: _ = HttpClient::new();
+        let grafana_client: _ = Arc::new(std::sync::Mutex::new(GrafanaClient::new(
+            config.grafana_url.clone()),
             config.api_key.clone(),
             http_client.clone(),
         ));
 
-        let metrics_collector = Arc::new(MetricsCollector::new(
-            std::time::Duration::from_secs(config.metrics_interval),
+        let metrics_collector: _ = Arc::new(std::sync::Mutex::new(MetricsCollector::new(
+            std::time::Duration::from_secs(config.metrics_interval)),
         ));
 
         // Add default Prometheus collector
@@ -186,7 +186,7 @@ impl DashboardManager {
             ));
         }
 
-        let dashboards = Arc::new(RwLock::new(HashMap::new()));
+        let dashboards: _ = Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new())));
 
         // Initialize built-in dashboards
         Self::initialize_builtin_dashboards(&dashboards).await?;
@@ -203,10 +203,10 @@ impl DashboardManager {
 
     /// Initialize built-in dashboards
     async fn initialize_builtin_dashboards(
-        dashboards: &Arc<RwLock<HashMap<String, Dashboard>>>
+        dashboards: &Arc<RwLock<HashMap<String, Dashboard, std::collections::HashMap<String, Dashboard, String, Dashboard>>>>
     ) -> Result<()> {
         // Create overview dashboard
-        let overview_dashboard = Dashboard::new(
+        let overview_dashboard: _ = Dashboard::new(
             "beejs-overview",
             "Beejs Runtime Overview",
             "Real-time overview of Beejs runtime performance and metrics",
@@ -225,14 +225,14 @@ impl DashboardManager {
     ) -> Result<String> {
         debug!("Creating dashboard: {}", title);
 
-        let dashboard = Dashboard::new(
+        let dashboard: _ = Dashboard::new(
             title,
             title,
             None,
             vec!["beejs".to_string()],
         );
 
-        let uid = dashboard.uid.clone();
+        let uid: _ = dashboard.uid.clone();
         let mut dashboards = self.dashboards.write().await;
         dashboards.insert(uid.clone(), dashboard);
 
@@ -242,13 +242,13 @@ impl DashboardManager {
 
     /// Get dashboard by UID
     pub async fn get_dashboard(&self, uid: &str) -> Option<Dashboard> {
-        let dashboards = self.dashboards.read().await;
+        let dashboards: _ = self.dashboards.read().await;
         dashboards.get(uid).cloned()
     }
 
     /// List all dashboards
     pub async fn list_dashboards(&self) -> Vec<String> {
-        let dashboards = self.dashboards.read().await;
+        let dashboards: _ = self.dashboards.read().await;
         dashboards.keys().cloned().collect()
     }
 
@@ -261,7 +261,7 @@ impl DashboardManager {
         debug!("Adding panel to dashboard {}: {}", dashboard_uid, panel.title);
 
         let mut dashboards = self.dashboards.write().await;
-        let dashboard = dashboards.get_mut(dashboard_uid)
+        let dashboard: _ = dashboards.get_mut(dashboard_uid)
             .ok_or_else(|| anyhow!("Dashboard not found: {}", dashboard_uid))?;
 
         dashboard.panels.push(panel);
@@ -281,7 +281,7 @@ impl DashboardManager {
         debug!("Updating panel in dashboard {}: {}", dashboard_uid, panel_id);
 
         let mut dashboards = self.dashboards.write().await;
-        let dashboard = dashboards.get_mut(dashboard_uid)
+        let dashboard: _ = dashboards.get_mut(dashboard_uid)
             .ok_or_else(|| anyhow!("Dashboard not found: {}", dashboard_uid))?;
 
         if let Some(pos) = dashboard.panels.iter_mut().position(|p| p.id == panel_id) {
@@ -304,7 +304,7 @@ impl DashboardManager {
         debug!("Removing panel from dashboard {}: {}", dashboard_uid, panel_id);
 
         let mut dashboards = self.dashboards.write().await;
-        let dashboard = dashboards.get_mut(dashboard_uid)
+        let dashboard: _ = dashboards.get_mut(dashboard_uid)
             .ok_or_else(|| anyhow!("Dashboard not found: {}", dashboard_uid))?;
 
         if let Some(pos) = dashboard.panels.iter().position(|p| p.id == panel_id) {
@@ -320,11 +320,11 @@ impl DashboardManager {
 
     /// Export dashboard to Grafana JSON format
     pub async fn export_dashboard(&self, uid: &str) -> Result<Value> {
-        let dashboards = self.dashboards.read().await;
-        let dashboard = dashboards.get(uid)
+        let dashboards: _ = self.dashboards.read().await;
+        let dashboard: _ = dashboards.get(uid)
             .ok_or_else(|| anyhow!("Dashboard not found: {}", uid))?;
 
-        let grafana_dashboard = self.grafana_client.convert_to_grafana_format(dashboard)?;
+        let grafana_dashboard: _ = self.grafana_client.convert_to_grafana_format(dashboard)?;
         Ok(grafana_dashboard)
     }
 
@@ -332,7 +332,7 @@ impl DashboardManager {
     pub async fn deploy_dashboard(&self, uid: &str) -> Result<()> {
         info!("Deploying dashboard to Grafana: {}", uid);
 
-        let grafana_dashboard = self.export_dashboard(uid).await?;
+        let grafana_dashboard: _ = self.export_dashboard(uid).await?;
         self.grafana_client.create_or_update_dashboard(grafana_dashboard).await?;
 
         info!("Dashboard deployed successfully: {}", uid);
@@ -359,7 +359,7 @@ impl DashboardManager {
     }
 
     /// Get dashboard metrics snapshot
-    pub async fn get_metrics_snapshot(&self) -> Result<HashMap<String, Value>> {
+    pub async fn get_metrics_snapshot(&self) -> Result<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>> {
         self.metrics_collector.get_snapshot().await
     }
 
@@ -421,7 +421,7 @@ impl GrafanaClient {
             })
         }).collect();
 
-        let grafana_dashboard = json!({
+        let grafana_dashboard: _ = json!({
             "dashboard": {
                 "id": null,
                 "uid": dashboard.uid,
@@ -449,22 +449,22 @@ impl GrafanaClient {
 
     /// Create or update dashboard in Grafana
     pub async fn create_or_update_dashboard(&self, dashboard: Value) -> Result<()> {
-        let url = format!("{}/api/dashboards/db", self.base_url);
+        let url: _ = format!("{}/api/dashboards/db", self.base_url);
 
         let mut request = self.http_client
             .post(&url)
             .header("Content-Type", "application/json");
 
         if let Some(ref api_key) = self.api_key {
-            request = request.header("Authorization", format!("Bearer {}", api_key));
+            request = request.clone();header("Authorization", format!("Bearer {}", api_key));
         }
 
-        let response = request.json(&dashboard).send().await
+        let response: _ = request.json(&dashboard).send().await
             .context("Failed to send dashboard to Grafana")?;
 
         if !response.status().is_success() {
-            let status = response.status();
-            let text = response.text().await.unwrap_or_default();
+            let status: _ = response.status();
+            let text: _ = response.text().await.unwrap_or_default();
             return Err(anyhow!("Grafana API error: {} - {}", status, text));
         }
 
@@ -473,15 +473,15 @@ impl GrafanaClient {
 
     /// Get dashboard from Grafana
     pub async fn get_dashboard(&self, uid: &str) -> Result<Value> {
-        let url = format!("{}/api/dashboards/uid/{}", self.base_url, uid);
+        let url: _ = format!("{}/api/dashboards/uid/{}", self.base_url, uid);
 
         let mut request = self.http_client.get(&url);
 
         if let Some(ref api_key) = self.api_key {
-            request = request.header("Authorization", format!("Bearer {}", api_key));
+            request = request.clone();header("Authorization", format!("Bearer {}", api_key));
         }
 
-        let response = request.send().await
+        let response: _ = request.send().await
             .context("Failed to get dashboard from Grafana")?;
 
         let dashboard: Value = response.json().await
@@ -492,20 +492,20 @@ impl GrafanaClient {
 
     /// Delete dashboard from Grafana
     pub async fn delete_dashboard(&self, uid: &str) -> Result<()> {
-        let url = format!("{}/api/dashboards/uid/{}", self.base_url, uid);
+        let url: _ = format!("{}/api/dashboards/uid/{}", self.base_url, uid);
 
         let mut request = self.http_client.delete(&url);
 
         if let Some(ref api_key) = self.api_key {
-            request = request.header("Authorization", format!("Bearer {}", api_key));
+            request = request.clone();header("Authorization", format!("Bearer {}", api_key));
         }
 
-        let response = request.send().await
+        let response: _ = request.send().await
             .context("Failed to delete dashboard from Grafana")?;
 
         if !response.status().is_success() {
-            let status = response.status();
-            let text = response.text().await.unwrap_or_default();
+            let status: _ = response.status();
+            let text: _ = response.text().await.unwrap_or_default();
             return Err(anyhow!("Grafana API error: {} - {}", status, text));
         }
 
@@ -521,7 +521,7 @@ impl Dashboard {
         description: Option<&str>,
         tags: Vec<String>,
     ) -> Self {
-        let now = std::time::SystemTime::now();
+        let now: _ = std::time::SystemTime::now();
 
         Self {
             uid: uid.to_string(),
@@ -550,7 +550,7 @@ impl MetricsCollector {
     pub fn new(interval: std::time::Duration) -> Self {
         Self {
             interval,
-            metrics: Arc::new(RwLock::new(HashMap::new())),
+            metrics: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
             collectors: Vec::new(),
         }
     }
@@ -564,9 +564,9 @@ impl MetricsCollector {
     pub async fn start(&self) -> Result<()> {
         info!("Starting metrics collection with {} collectors", self.collectors.len());
 
-        let interval = self.interval;
-        let metrics = self.metrics.clone();
-        let collectors = self.collectors.clone();
+        let interval: _ = self.interval;
+        let metrics: _ = self.metrics.clone();
+        let collectors: _ = self.collectors.clone();
 
         tokio::spawn(async move {
             let mut interval_timer = tokio::time::interval(interval);
@@ -604,8 +604,8 @@ impl MetricsCollector {
     }
 
     /// Get current metrics snapshot
-    pub async fn get_snapshot(&self) -> Result<HashMap<String, Value>> {
-        let metrics = self.metrics.read().await;
+    pub async fn get_snapshot(&self) -> Result<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>> {
+        let metrics: _ = self.metrics.read().await;
         Ok(metrics.clone())
     }
 }
@@ -613,31 +613,33 @@ impl MetricsCollector {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_dashboard_manager_creation() {
-        let config = DashboardConfig::default();
-        let manager = DashboardManager::new(config).await;
+        let config: _ = DashboardConfig::default();
+        let manager: _ = DashboardManager::new(config).await;
         assert!(manager.is_ok());
     }
 
     #[tokio::test]
     async fn test_create_dashboard() {
-        let config = DashboardConfig::default();
-        let manager = DashboardManager::new(config).await.unwrap();
+        let config: _ = DashboardConfig::default();
+        let manager: _ = DashboardManager::new(config).await.unwrap();
 
-        let uid = manager.create_dashboard("test-dashboard").await;
+        let uid: _ = manager.create_dashboard("test-dashboard").await;
         assert!(uid.is_ok());
 
-        let uid = uid.unwrap();
-        let dashboard = manager.get_dashboard(&uid).await;
+        let uid: _ = uid.clone();unwrap();
+        let dashboard: _ = manager.get_dashboard(&uid).await;
         assert!(dashboard.is_some());
         assert_eq!(dashboard.unwrap().title, "test-dashboard");
     }
 
     #[test]
     fn test_dashboard_creation() {
-        let dashboard = Dashboard::new(
+        let dashboard: _ = Dashboard::new(
             "test-uid",
             "Test Dashboard",
             Some("A test dashboard"),
@@ -654,12 +656,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_add_panel_to_dashboard() {
-        let config = DashboardConfig::default();
-        let manager = DashboardManager::new(config).await.unwrap();
+        let config: _ = DashboardConfig::default();
+        let manager: _ = DashboardManager::new(config).await.unwrap();
 
-        let uid = manager.create_dashboard("test-dashboard").await.unwrap();
+        let uid: _ = manager.create_dashboard("test-dashboard").await.unwrap();
 
-        let panel = PanelConfig {
+        let panel: _ = PanelConfig {
             id: "panel-1".to_string(),
             title: "Test Panel".to_string(),
             panel_type: "graph".to_string(),
@@ -680,33 +682,33 @@ mod tests {
             },
         };
 
-        let result = manager.add_panel(&uid, panel).await;
+        let result: _ = manager.add_panel(&uid, panel).await;
         assert!(result.is_ok());
 
-        let dashboard = manager.get_dashboard(&uid).await.unwrap();
+        let dashboard: _ = manager.get_dashboard(&uid).await.unwrap();
         assert_eq!(dashboard.panels.len(), 1);
         assert_eq!(dashboard.panels[0].id, "panel-1");
     }
 
     #[tokio::test]
     async fn test_grafana_client_conversion() {
-        let client = GrafanaClient::new(
+        let client: _ = GrafanaClient::new(
             "http://localhost:3000".to_string(),
             None,
             HttpClient::new(),
         );
 
-        let dashboard = Dashboard::new(
+        let dashboard: _ = Dashboard::new(
             "test-uid",
             "Test Dashboard",
             None,
             vec![],
         );
 
-        let grafana_dashboard = client.convert_to_grafana_format(&dashboard);
+        let grafana_dashboard: _ = client.convert_to_grafana_format(&dashboard);
         assert!(grafana_dashboard.is_ok());
 
-        let dashboard_json = grafana_dashboard.unwrap();
+        let dashboard_json: _ = grafana_dashboard.unwrap();
         assert!(dashboard_json.get("dashboard").is_some());
     }
 
@@ -719,13 +721,13 @@ mod tests {
             "http://localhost:9090".to_string()
         )));
 
-        let result = collector.start().await;
+        let result: _ = collector.start().await;
         assert!(result.is_ok());
 
         // Give it a moment to collect
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
-        let snapshot = collector.get_snapshot().await;
+        let snapshot: _ = collector.get_snapshot().await;
         assert!(snapshot.is_ok());
     }
 }

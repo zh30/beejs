@@ -65,8 +65,8 @@ unsafe impl Sync for ArenaAllocator {}
 impl ArenaAllocator {
     /// 创建新的 Arena 分配器
     pub fn new(size: usize, alignment: usize) -> Self {
-        let layout = Layout::from_size_align(size, alignment).unwrap();
-        let ptr = unsafe { std::alloc::alloc(layout) };
+        let layout: _ = Layout::from_size_align(size, alignment).unwrap();
+        let ptr: _ = unsafe { std::alloc::alloc(layout) };
 
         if ptr.is_null() {
             panic!("Failed to allocate arena memory");
@@ -82,11 +82,11 @@ impl ArenaAllocator {
 
     /// 从 Arena 分配内存
     pub fn allocate(&self, size: usize) -> Option<NonNull<u8>> {
-        let align = self.alignment;
+        let align: _ = self.alignment;
         let mut current_offset = self.offset.load(Ordering::Relaxed);
 
         // 计算对齐偏移
-        let aligned_offset = (current_offset + align - 1) & !(align - 1);
+        let aligned_offset: _ = (current_offset + align - 1) & !(align - 1);
 
         if aligned_offset + size > self.size {
             None
@@ -109,7 +109,7 @@ impl ArenaAllocator {
 
 impl Drop for ArenaAllocator {
     fn drop(&mut self) {
-        let layout = Layout::from_size_align(self.size, self.alignment).unwrap();
+        let layout: _ = Layout::from_size_align(self.size, self.alignment).unwrap();
         unsafe {
             std::alloc::dealloc(self.start, layout);
         }
@@ -142,7 +142,7 @@ impl SizeClass {
     /// 分配对象
     pub fn allocate(&self) -> Option<NonNull<u8>> {
         // 尝试从空闲列表获取
-        let ptr = self.free_list.swap(std::ptr::null_mut(), Ordering::AcqRel);
+        let ptr: _ = self.free_list.swap(std::ptr::null_mut(), Ordering::AcqRel);
 
         if !ptr.is_null() {
             self.allocated_count.fetch_add(1, Ordering::Relaxed);
@@ -151,8 +151,8 @@ impl SizeClass {
 
         // 空闲列表为空，分配新对象
         if self.allocated_count.load(Ordering::Relaxed) < self.total_count {
-            let layout = Layout::from_size_align(self.size, std::mem::align_of::<usize>()).unwrap();
-            let ptr = unsafe { std::alloc::alloc(layout) };
+            let layout: _ = Layout::from_size_align(self.size, std::mem::align_of::<usize>()).unwrap();
+            let ptr: _ = unsafe { std::alloc::alloc(layout) };
 
             if !ptr.is_null() {
                 self.allocated_count.fetch_add(1, Ordering::Relaxed);
@@ -168,7 +168,7 @@ impl SizeClass {
     /// 释放对象
     pub fn deallocate(&self, ptr: NonNull<u8>) {
         // 将对象放回空闲列表
-        let old_ptr = self.free_list.swap(ptr.as_ptr(), Ordering::AcqRel);
+        let old_ptr: _ = self.free_list.swap(ptr.as_ptr(), Ordering::AcqRel);
         self.allocated_count.fetch_sub(1, Ordering::Relaxed);
     }
 
@@ -233,15 +233,15 @@ impl Defragmenter {
         let total_fragment_size: usize = free_blocks.iter().sum();
         let total_size: usize = allocated_blocks.iter().sum::<usize>() + total_fragment_size;
 
-        let fragment_count = free_blocks.len();
-        let max_fragment_size = free_blocks.iter().max().copied().unwrap_or(0);
-        let fragmentation_ratio = if total_size > 0 {
+        let fragment_count: _ = free_blocks.len();
+        let max_fragment_size: _ = free_blocks.iter().max().copied().unwrap_or(0);
+        let fragmentation_ratio: _ = if total_size > 0 {
             total_fragment_size as f64 / total_size as f64
         } else {
             0.0
         };
 
-        let info = FragmentInfo {
+        let info: _ = FragmentInfo {
             total_fragment_size,
             fragment_count,
             max_fragment_size,
@@ -295,7 +295,7 @@ impl Stage93OptimizedAllocator {
     /// 创建新的 Stage 93 优化分配器
     pub fn new(base: SmartMemoryAllocator, config: Stage93AllocatorConfig) -> Self {
         // 创建 Arena 分配器
-        let arena = if config.enable_arena {
+        let arena: _ = if config.enable_arena {
             Some(ArenaAllocator::new(config.arena_size, 4096))
         } else {
             None
@@ -304,7 +304,7 @@ impl Stage93OptimizedAllocator {
         // 创建大小类
         let mut size_classes = Vec::with_capacity(config.size_class_count);
         for i in 0..config.size_class_count {
-            let size = 8 * (i + 1); // 8, 16, 24, 32, ...
+            let size: _ = 8 * (i + 1); // 8, 16, 24, 32, ...
             size_classes.push(SizeClass::new(size, config.objects_per_size_class));
         }
 
@@ -313,8 +313,8 @@ impl Stage93OptimizedAllocator {
             config,
             arena,
             size_classes,
-            defragmenter: Arc::new(RwLock::new(Defragmenter::new(config.defrag_threshold))),
-            stats: Arc::new(Stage93AllocatorStats::default()),
+            defragmenter: Arc::new(std::sync::Mutex::new(RwLock::new(Defragmenter::new(config.defrag_threshold)))),
+            stats: Arc::new(std::sync::Mutex::new(Stage93AllocatorStats::default())),
         }
     }
 
@@ -343,7 +343,7 @@ impl Stage93OptimizedAllocator {
     /// 锁_free分配
     fn lock_free_allocate(&self, size: usize) -> Option<NonNull<u8>> {
         // 查找合适的大小类
-        let size_class = self.size_classes
+        let size_class: _ = self.size_classes
             .iter()
             .find(|sc| sc.size >= size);
 
@@ -367,18 +367,18 @@ impl Stage93OptimizedAllocator {
         let mut defragmenter = self.defragmenter.write().await;
 
         // 分析当前碎片情况
-        let allocated_blocks = self.size_classes
+        let allocated_blocks: _ = self.size_classes
             .iter()
             .map(|sc| sc.allocated_count.load(Ordering::Relaxed) * sc.size)
             .collect::<Vec<_>>();
 
-        let free_blocks = self.size_classes
+        let free_blocks: _ = self.size_classes
             .iter()
             .map(|sc| (sc.total_count - sc.allocated_count.load(Ordering::Relaxed)) * sc.size)
             .filter(|&size| size > 0)
             .collect::<Vec<_>>();
 
-        let fragment_info = defragmenter.analyze_fragmentation(&allocated_blocks, &free_blocks);
+        let fragment_info: _ = defragmenter.analyze_fragmentation(&allocated_blocks, &free_blocks);
 
         if !defragmenter.should_defragment(&fragment_info) {
             return Ok(DefragResult {
@@ -390,12 +390,12 @@ impl Stage93OptimizedAllocator {
         }
 
         defragmenter.start_defragmentation();
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 执行碎片整理逻辑
         // 这里可以实现具体的整理算法
 
-        let time_taken = start.elapsed();
+        let time_taken: _ = start.elapsed();
         defragmenter.finish_defragmentation();
 
         self.stats.defragmentations.fetch_add(1, Ordering::Relaxed);
@@ -411,9 +411,9 @@ impl Stage93OptimizedAllocator {
 
     /// 获取性能报告
     pub async fn get_performance_report(&self) -> Stage93AllocatorReport {
-        let arena_utilization = self.arena.as_ref().map(|a| (a.utilization() * 100.0) as u32).unwrap_or(0);
+        let arena_utilization: _ = self.arena.as_ref().map(|a| (a.utilization() * 100.0) as u32).unwrap_or(0);
 
-        let size_class_stats = self.size_classes
+        let size_class_stats: _ = self.size_classes
             .iter()
             .map(|sc| SizeClassStats {
                 size: sc.size,
@@ -467,12 +467,14 @@ pub struct Stage93AllocatorReport {
 mod tests {
     use super::*;
     use crate::memory_optimizer::smart_allocator::SmartMemoryAllocator;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_stage93_allocator_creation() {
-        let base = SmartMemoryAllocator::new();
-        let config = Stage93AllocatorConfig::default();
-        let allocator = Stage93OptimizedAllocator::new(base, config);
+        let base: _ = SmartMemoryAllocator::new();
+        let config: _ = Stage93AllocatorConfig::default();
+        let allocator: _ = Stage93OptimizedAllocator::new(base, config);
 
         assert!(config.enable_arena);
         assert!(config.enable_lock_free);
@@ -480,31 +482,31 @@ mod tests {
 
     #[tokio::test]
     async fn test_arena_allocation() {
-        let base = SmartMemoryAllocator::new();
-        let allocator = Stage93OptimizedAllocator::new(base, Stage93AllocatorConfig::default());
+        let base: _ = SmartMemoryAllocator::new();
+        let allocator: _ = Stage93OptimizedAllocator::new(base, Stage93AllocatorConfig::default());
 
-        let ptr = allocator.optimized_allocate(64).await;
+        let ptr: _ = allocator.optimized_allocate(64).await;
         assert!(ptr.is_some());
     }
 
     #[tokio::test]
     async fn test_defragmentation() {
-        let base = SmartMemoryAllocator::new();
-        let allocator = Stage93OptimizedAllocator::new(base, Stage93AllocatorConfig::default());
+        let base: _ = SmartMemoryAllocator::new();
+        let allocator: _ = Stage93OptimizedAllocator::new(base, Stage93AllocatorConfig::default());
 
-        let result = allocator.defragment().await;
+        let result: _ = allocator.defragment().await;
         assert!(result.is_ok());
 
-        let report = result.unwrap();
+        let report: _ = result.unwrap();
         assert!(report.before_fragmentation.fragment_count >= 0);
     }
 
     #[tokio::test]
     async fn test_performance_report() {
-        let base = SmartMemoryAllocator::new();
-        let allocator = Stage93OptimizedAllocator::new(base, Stage93AllocatorConfig::default());
+        let base: _ = SmartMemoryAllocator::new();
+        let allocator: _ = Stage93OptimizedAllocator::new(base, Stage93AllocatorConfig::default());
 
-        let report = allocator.get_performance_report().await;
+        let report: _ = allocator.get_performance_report().await;
         assert!(report.total_arena_allocations >= 0);
         assert!(report.size_class_stats.len() > 0);
     }

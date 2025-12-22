@@ -24,7 +24,7 @@ pub struct CacheEntry {
 /// 用于缓存V8脚本编译结果，避免重复编译相同代码
 pub struct BytecodeCache {
     /// 缓存存储
-    entries: Arc<Mutex<HashMap<String, CacheEntry>>>,
+    entries: Arc<Mutex<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>,
     /// 缓存配置
     config: CacheConfig,
     /// 统计信息
@@ -77,9 +77,9 @@ impl BytecodeCache {
     /// 创建新的字节码缓存
     pub fn new(config: CacheConfig) -> Self {
         Self {
-            entries: Arc::new(Mutex::new(HashMap::new())),
+            entries: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
             config,
-            stats: Arc::new(Mutex::new(CacheStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(CacheStats::default()))),
         }
     }
 
@@ -103,7 +103,7 @@ impl BytecodeCache {
 
     /// 获取缓存的脚本
     pub fn get(&self, code: &str, source: Option<&str>) -> Option<Vec<u8>> {
-        let key = Self::get_cache_key(code, source);
+        let key: _ = Self::get_cache_key(code, source);
 
         let mut entries = self.entries.lock().unwrap();
         let mut stats = self.stats.lock().unwrap();
@@ -128,8 +128,8 @@ impl BytecodeCache {
 
     /// 存储脚本到缓存
     pub fn put(&self, code: &str, source: Option<&str>, script: Vec<u8>) {
-        let key = Self::get_cache_key(code, source);
-        let now = Instant::now();
+        let key: _ = Self::get_cache_key(code, source);
+        let now: _ = Instant::now();
 
         let mut entries = self.entries.lock().unwrap();
         let mut stats = self.stats.lock().unwrap();
@@ -160,17 +160,17 @@ impl BytecodeCache {
     }
 
     /// 清除过期条目
-    fn evict_old_entries(&self, entries: &mut HashMap<String, CacheEntry>, stats: &mut CacheStats) {
-        let now = Instant::now();
-        let max_age = self.config.max_age;
-        let min_access = self.config.min_access_count;
+    fn evict_old_entries(&self, entries: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>, stats: &mut CacheStats) {
+        let now: _ = Instant::now();
+        let max_age: _ = self.config.max_age;
+        let min_access: _ = self.config.min_access_count;
 
         // 收集要删除的键
         let keys_to_remove: Vec<String> = entries
             .iter()
             .filter_map(|(key, entry)| {
-                let is_old = now.duration_since(entry.created_at) > max_age;
-                let is_rarely_used = entry.access_count < min_access;
+                let is_old: _ = now.duration_since(entry.created_at) > max_age;
+                let is_rarely_used: _ = entry.access_count < min_access;
 
                 if is_old || is_rarely_used {
                     Some(key.clone())
@@ -214,7 +214,7 @@ impl BytecodeCache {
         let mut entries = self.entries.lock().unwrap();
         let mut stats = self.stats.lock().unwrap();
 
-        let count = entries.len();
+        let count: _ = entries.len();
         entries.clear();
         stats.total_cached = 0;
 
@@ -223,7 +223,7 @@ impl BytecodeCache {
 
     /// 获取缓存使用率
     pub fn usage_ratio(&self) -> f64 {
-        let entries = self.entries.lock().unwrap();
+        let entries: _ = self.entries.lock().unwrap();
         entries.len() as f64 / self.config.max_entries as f64
     }
 }
@@ -231,52 +231,54 @@ impl BytecodeCache {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_cache_basic_operations() {
-        let cache = BytecodeCache::new(CacheConfig::default());
+        let cache: _ = BytecodeCache::new(CacheConfig::default());
 
         // 测试存储和获取
-        let script_data = vec![1, 2, 3, 4, 5];
+        let script_data: _ = vec![1, 2, 3, 4, 5];
         cache.put("test code", None, script_data.clone());
 
-        let retrieved = cache.get("test code", None);
+        let retrieved: _ = cache.get("test code", None);
         assert_eq!(retrieved, Some(script_data));
 
         // 测试缓存统计
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.hits, 1);
         assert_eq!(stats.misses, 0);
     }
 
     #[test]
     fn test_cache_miss() {
-        let cache = BytecodeCache::new(CacheConfig::default());
+        let cache: _ = BytecodeCache::new(CacheConfig::default());
 
         // 测试缓存未命中
-        let retrieved = cache.get("nonexistent code", None);
+        let retrieved: _ = cache.get("nonexistent code", None);
         assert_eq!(retrieved, None);
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.hits, 0);
         assert_eq!(stats.misses, 1);
     }
 
     #[test]
     fn test_cache_key_generation() {
-        let _cache = BytecodeCache::new(CacheConfig::default());
+        let _cache: _ = BytecodeCache::new(CacheConfig::default());
 
         // 测试相同代码生成相同哈希
-        let key1 = BytecodeCache::get_cache_key("const x = 1;", None);
-        let key2 = BytecodeCache::get_cache_key("const x = 1;", None);
+        let key1: _ = BytecodeCache::get_cache_key("const x = 1;", None);
+        let key2: _ = BytecodeCache::get_cache_key("const x = 1;", None);
         assert_eq!(key1, key2);
 
         // 测试不同代码生成不同哈希
-        let key3 = BytecodeCache::get_cache_key("const x = 2;", None);
+        let key3: _ = BytecodeCache::get_cache_key("const x = 2;", None);
         assert_ne!(key1, key3);
 
         // 测试文件路径作为键
-        let file_key = BytecodeCache::get_cache_key("const x = 1;", Some("/path/to/file.js"));
+        let file_key: _ = BytecodeCache::get_cache_key("const x = 1;", Some("/path/to/file.js"));
         assert!(file_key.starts_with("file:"));
     }
 }

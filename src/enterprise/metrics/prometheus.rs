@@ -128,22 +128,22 @@ pub struct PrometheusManager {
 impl PrometheusManager {
     /// Create a new PrometheusManager
     pub fn new(config: PrometheusConfig) -> Result<Self> {
-        let registry = Registry::new();
+        let registry: _ = Registry::new();
 
         // Initialize runtime metrics
-        let runtime = RuntimeMetrics::new(&registry, &config.namespace)?;
+        let runtime: _ = RuntimeMetrics::new(&registry, &config.namespace)?;
 
         // Initialize performance metrics
-        let performance = PerformanceMetrics::new(&registry, &config.namespace)?;
+        let performance: _ = PerformanceMetrics::new(&registry, &config.namespace)?;
 
         // Initialize network metrics
-        let network = NetworkMetrics::new(&registry, &config.namespace)?;
+        let network: _ = NetworkMetrics::new(&registry, &config.namespace)?;
 
         // Initialize business metrics
-        let business = BusinessMetrics::new(&registry, &config.namespace)?;
+        let business: _ = BusinessMetrics::new(&registry, &config.namespace)?;
 
         // Initialize cluster metrics
-        let cluster = ClusterMetrics::new(&registry, &config.namespace)?;
+        let cluster: _ = ClusterMetrics::new(&registry, &config.namespace)?;
 
         Ok(Self {
             registry,
@@ -197,8 +197,8 @@ impl PrometheusManager {
             .observe(compilation_time_ms);
 
         // Update cache hit rate (simple moving average)
-        let current_hit_rate = self.performance.jit_cache_hit_rate.get();
-        let new_hit_rate = if cache_hit {
+        let current_hit_rate: _ = self.performance.jit_cache_hit_rate.get();
+        let new_hit_rate: _ = if cache_hit {
             current_hit_rate * 0.9 + 0.1
         } else {
             current_hit_rate * 0.9
@@ -308,8 +308,8 @@ impl PrometheusManager {
         self.collect_system_metrics().await;
 
         // Generate Prometheus text format
-        let encoder = TextEncoder::new();
-        let metric_families = self.registry.gather();
+        let encoder: _ = TextEncoder::new();
+        let metric_families: _ = self.registry.gather();
 
         let mut output = String::new();
         encoder.encode_utf8(&metric_families, &mut output)
@@ -331,7 +331,7 @@ impl PrometheusManager {
         }
 
         // Update uptime
-        let uptime = self.last_collection.elapsed().as_secs();
+        let uptime: _ = self.last_collection.elapsed().as_secs();
         self.business.uptime_seconds.set(uptime as i64);
 
         info!("Collected system metrics (uptime: {}s)", uptime);
@@ -341,9 +341,9 @@ impl PrometheusManager {
 /// Implement RuntimeMetrics
 impl RuntimeMetrics {
     fn new(registry: &Registry, namespace: &str) -> Result<Self> {
-        let ns = format!("{}_", namespace);
+        let ns: _ = format!("{}_", namespace);
 
-        let process_start_time = IntGauge::with_opts(
+        let process_start_time: _ = IntGauge::with_opts(
             Opts::new(
                 format!("{}process_start_time_seconds", ns),
                 "Process start time in seconds".to_string(),
@@ -351,7 +351,7 @@ impl RuntimeMetrics {
         )
         .context("Failed to create process_start_time metric")?;
 
-        let active_isolates = IntGauge::with_opts(
+        let active_isolates: _ = IntGauge::with_opts(
             Opts::new(
                 format!("{}active_isolates", ns),
                 "Number of active isolates".to_string(),
@@ -359,7 +359,7 @@ impl RuntimeMetrics {
         )
         .context("Failed to create active_isolates metric")?;
 
-        let total_executions = IntCounter::with_opts(
+        let total_executions: _ = IntCounter::with_opts(
             Opts::new(
                 format!("{}executions_total", ns),
                 "Total number of executions".to_string(),
@@ -367,7 +367,7 @@ impl RuntimeMetrics {
         )
         .context("Failed to create executions_total metric")?;
 
-        let execution_errors = IntCounter::with_opts(
+        let execution_errors: _ = IntCounter::with_opts(
             Opts::new(
                 format!("{}execution_errors_total", ns),
                 "Total number of execution errors".to_string(),
@@ -375,7 +375,7 @@ impl RuntimeMetrics {
         )
         .context("Failed to create execution_errors metric")?;
 
-        let memory_usage_bytes = IntGauge::with_opts(
+        let memory_usage_bytes: _ = IntGauge::with_opts(
             Opts::new(
                 format!("{}memory_usage_bytes", ns),
                 "Current memory usage in bytes".to_string(),
@@ -383,7 +383,7 @@ impl RuntimeMetrics {
         )
         .context("Failed to create memory_usage metric")?;
 
-        let cpu_usage_percent = Gauge::with_opts(
+        let cpu_usage_percent: _ = Gauge::with_opts(
             Opts::new(
                 format!("{}cpu_usage_percent", ns),
                 "Current CPU usage percentage".to_string(),
@@ -413,9 +413,9 @@ impl RuntimeMetrics {
 /// Implement PerformanceMetrics
 impl PerformanceMetrics {
     fn new(registry: &Registry, namespace: &str) -> Result<Self> {
-        let ns = format!("{}_", namespace);
+        let ns: _ = format!("{}_", namespace);
 
-        let execution_duration = HistogramVec::new(
+        let execution_duration: _ = HistogramVec::new(
             HistogramOpts::new(
                 format!("{}execution_duration_seconds", ns),
                 "Execution duration in seconds".to_string(),
@@ -425,7 +425,7 @@ impl PerformanceMetrics {
         )
         .context("Failed to create execution_duration metric")?;
 
-        let jit_compilation_time = HistogramVec::new(
+        let jit_compilation_time: _ = HistogramVec::new(
             HistogramOpts::new(
                 format!("{}jit_compilation_time_seconds", ns),
                 "JIT compilation time in seconds".to_string(),
@@ -435,7 +435,7 @@ impl PerformanceMetrics {
         )
         .context("Failed to create jit_compilation_time metric")?;
 
-        let jit_cache_hit_rate = Gauge::with_opts(
+        let jit_cache_hit_rate: _ = Gauge::with_opts(
             Opts::new(
                 format!("{}jit_cache_hit_rate", ns),
                 "JIT cache hit rate (0-1)".to_string(),
@@ -443,7 +443,7 @@ impl PerformanceMetrics {
         )
         .context("Failed to create jit_cache_hit_rate metric")?;
 
-        let memory_allocation_rate = Gauge::with_opts(
+        let memory_allocation_rate: _ = Gauge::with_opts(
             Opts::new(
                 format!("{}memory_allocation_rate_bytes_per_second", ns),
                 "Memory allocation rate in bytes per second".to_string(),
@@ -451,7 +451,7 @@ impl PerformanceMetrics {
         )
         .context("Failed to create memory_allocation_rate metric")?;
 
-        let gc_pause_time = HistogramVec::new(
+        let gc_pause_time: _ = HistogramVec::new(
             HistogramOpts::new(
                 format!("{}gc_pause_time_seconds", ns),
                 "Garbage collection pause time in seconds".to_string(),
@@ -461,7 +461,7 @@ impl PerformanceMetrics {
         )
         .context("Failed to create gc_pause_time metric")?;
 
-        let gc_frequency = CounterVec::new(
+        let gc_frequency: _ = CounterVec::new(
             Opts::new(
                 format!("{}gc_runs_total", ns),
                 "Total number of GC runs".to_string(),
@@ -492,9 +492,9 @@ impl PerformanceMetrics {
 /// Implement NetworkMetrics
 impl NetworkMetrics {
     fn new(registry: &Registry, namespace: &str) -> Result<Self> {
-        let ns = format!("{}_", namespace);
+        let ns: _ = format!("{}_", namespace);
 
-        let network_requests_total = IntCounterVec::new(
+        let network_requests_total: _ = IntCounterVec::new(
             Opts::new(
                 format!("{}network_requests_total", ns),
                 "Total number of network requests".to_string(),
@@ -503,7 +503,7 @@ impl NetworkMetrics {
         )
         .context("Failed to create network_requests_total metric")?;
 
-        let network_request_duration = HistogramVec::new(
+        let network_request_duration: _ = HistogramVec::new(
             HistogramOpts::new(
                 format!("{}network_request_duration_seconds", ns),
                 "Network request duration in seconds".to_string(),
@@ -513,7 +513,7 @@ impl NetworkMetrics {
         )
         .context("Failed to create network_request_duration metric")?;
 
-        let network_errors = IntCounterVec::new(
+        let network_errors: _ = IntCounterVec::new(
             Opts::new(
                 format!("{}network_errors_total", ns),
                 "Total number of network errors".to_string(),
@@ -522,7 +522,7 @@ impl NetworkMetrics {
         )
         .context("Failed to create network_errors metric")?;
 
-        let active_connections = IntGauge::with_opts(
+        let active_connections: _ = IntGauge::with_opts(
             Opts::new(
                 format!("{}active_connections", ns),
                 "Number of active network connections".to_string(),
@@ -530,7 +530,7 @@ impl NetworkMetrics {
         )
         .context("Failed to create active_connections metric")?;
 
-        let network_throughput = GaugeVec::new(
+        let network_throughput: _ = GaugeVec::new(
             Opts::new(
                 format!("{}network_throughput_bytes_per_second", ns),
                 "Network throughput in bytes per second".to_string(),
@@ -559,9 +559,9 @@ impl NetworkMetrics {
 /// Implement BusinessMetrics
 impl BusinessMetrics {
     fn new(registry: &Registry, namespace: &str) -> Result<Self> {
-        let ns = format!("{}_", namespace);
+        let ns: _ = format!("{}_", namespace);
 
-        let requests_per_second = Gauge::with_opts(
+        let requests_per_second: _ = Gauge::with_opts(
             Opts::new(
                 format!("{}requests_per_second", ns),
                 "Requests per second".to_string(),
@@ -569,7 +569,7 @@ impl BusinessMetrics {
         )
         .context("Failed to create requests_per_second metric")?;
 
-        let response_time_p50 = Gauge::with_opts(
+        let response_time_p50: _ = Gauge::with_opts(
             Opts::new(
                 format!("{}response_time_p50_seconds", ns),
                 "50th percentile response time in seconds".to_string(),
@@ -577,7 +577,7 @@ impl BusinessMetrics {
         )
         .context("Failed to create response_time_p50 metric")?;
 
-        let response_time_p95 = Gauge::with_opts(
+        let response_time_p95: _ = Gauge::with_opts(
             Opts::new(
                 format!("{}response_time_p95_seconds", ns),
                 "95th percentile response time in seconds".to_string(),
@@ -585,7 +585,7 @@ impl BusinessMetrics {
         )
         .context("Failed to create response_time_p95 metric")?;
 
-        let response_time_p99 = Gauge::with_opts(
+        let response_time_p99: _ = Gauge::with_opts(
             Opts::new(
                 format!("{}response_time_p99_seconds", ns),
                 "99th percentile response time in seconds".to_string(),
@@ -593,7 +593,7 @@ impl BusinessMetrics {
         )
         .context("Failed to create response_time_p99 metric")?;
 
-        let error_rate = Gauge::with_opts(
+        let error_rate: _ = Gauge::with_opts(
             Opts::new(
                 format!("{}error_rate", ns),
                 "Error rate (0-1)".to_string(),
@@ -601,7 +601,7 @@ impl BusinessMetrics {
         )
         .context("Failed to create error_rate metric")?;
 
-        let uptime_seconds = IntGauge::with_opts(
+        let uptime_seconds: _ = IntGauge::with_opts(
             Opts::new(
                 format!("{}uptime_seconds", ns),
                 "Uptime in seconds".to_string(),
@@ -631,9 +631,9 @@ impl BusinessMetrics {
 /// Implement ClusterMetrics
 impl ClusterMetrics {
     fn new(registry: &Registry, namespace: &str) -> Result<Self> {
-        let ns = format!("{}_", namespace);
+        let ns: _ = format!("{}_", namespace);
 
-        let cluster_nodes_total = IntGauge::with_opts(
+        let cluster_nodes_total: _ = IntGauge::with_opts(
             Opts::new(
                 format!("{}cluster_nodes_total", ns),
                 "Total number of cluster nodes".to_string(),
@@ -641,7 +641,7 @@ impl ClusterMetrics {
         )
         .context("Failed to create cluster_nodes_total metric")?;
 
-        let cluster_nodes_ready = IntGauge::with_opts(
+        let cluster_nodes_ready: _ = IntGauge::with_opts(
             Opts::new(
                 format!("{}cluster_nodes_ready", ns),
                 "Number of ready cluster nodes".to_string(),
@@ -649,7 +649,7 @@ impl ClusterMetrics {
         )
         .context("Failed to create cluster_nodes_ready metric")?;
 
-        let cluster_cpu_usage = GaugeVec::new(
+        let cluster_cpu_usage: _ = GaugeVec::new(
             Opts::new(
                 format!("{}cluster_cpu_usage_percent", ns),
                 "Cluster CPU usage percentage".to_string(),
@@ -658,7 +658,7 @@ impl ClusterMetrics {
         )
         .context("Failed to create cluster_cpu_usage metric")?;
 
-        let cluster_memory_usage = GaugeVec::new(
+        let cluster_memory_usage: _ = GaugeVec::new(
             Opts::new(
                 format!("{}cluster_memory_usage_bytes", ns),
                 "Cluster memory usage in bytes".to_string(),
@@ -667,7 +667,7 @@ impl ClusterMetrics {
         )
         .context("Failed to create cluster_memory_usage metric")?;
 
-        let pod_restarts = IntCounterVec::new(
+        let pod_restarts: _ = IntCounterVec::new(
             Opts::new(
                 format!("{}pod_restarts_total", ns),
                 "Total number of pod restarts".to_string(),
@@ -676,7 +676,7 @@ impl ClusterMetrics {
         )
         .context("Failed to create pod_restarts metric")?;
 
-        let upgrade_progress = GaugeVec::new(
+        let upgrade_progress: _ = GaugeVec::new(
             Opts::new(
                 format!("{}upgrade_progress_percent", ns),
                 "Upgrade progress percentage".to_string(),
@@ -707,10 +707,12 @@ impl ClusterMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_prometheus_manager_creation() {
-        let config = PrometheusConfig {
+        let config: _ = PrometheusConfig {
             port: 9090,
             path: "/metrics".to_string(),
             namespace: "beejs".to_string(),
@@ -718,13 +720,13 @@ mod tests {
             histogram_buckets: vec![0.1, 0.5, 1.0],
         };
 
-        let manager = PrometheusManager::new(config);
+        let manager: _ = PrometheusManager::new(config);
         assert!(manager.is_ok());
     }
 
     #[test]
     fn test_record_execution() {
-        let config = PrometheusConfig {
+        let config: _ = PrometheusConfig {
             port: 9090,
             path: "/metrics".to_string(),
             namespace: "beejs".to_string(),
@@ -732,7 +734,7 @@ mod tests {
             histogram_buckets: vec![0.1, 0.5, 1.0],
         };
 
-        let manager = PrometheusManager::new(config).unwrap();
+        let manager: _ = PrometheusManager::new(config).unwrap();
 
         // Record successful execution
         manager.record_execution(10.0, true);
@@ -741,19 +743,19 @@ mod tests {
         manager.record_execution(5.0, false);
 
         // Verify metrics can be collected
-        let output = tokio::runtime::Runtime::new()
+        let output: _ = tokio::runtime::Runtime::new()
             .unwrap()
             .block_on(manager.collect_and_export());
 
         assert!(output.is_ok());
-        let text = output.unwrap();
+        let text: _ = output.unwrap();
         assert!(text.contains("beejs_executions_total"));
         assert!(text.contains("beejs_execution_errors_total"));
     }
 
     #[test]
     fn test_record_jit_compilation() {
-        let config = PrometheusConfig {
+        let config: _ = PrometheusConfig {
             port: 9090,
             path: "/metrics".to_string(),
             namespace: "beejs".to_string(),
@@ -761,19 +763,19 @@ mod tests {
             histogram_buckets: vec![0.1, 0.5, 1.0],
         };
 
-        let manager = PrometheusManager::new(config).unwrap();
+        let manager: _ = PrometheusManager::new(config).unwrap();
 
         // Record JIT compilation
         manager.record_jit_compilation(5.0, true);
         manager.record_jit_compilation(10.0, false);
 
         // Verify metrics can be collected
-        let output = tokio::runtime::Runtime::new()
+        let output: _ = tokio::runtime::Runtime::new()
             .unwrap()
             .block_on(manager.collect_and_export());
 
         assert!(output.is_ok());
-        let text = output.unwrap();
+        let text: _ = output.unwrap();
         assert!(text.contains("beejs_jit_compilation_time_seconds"));
     }
 }

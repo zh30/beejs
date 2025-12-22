@@ -29,7 +29,7 @@ pub struct LambdaConfig {
     pub timeout: u32,
     pub runtime: String,
     pub handler: String,
-    pub environment: HashMap<String, String>,
+    pub environment: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub layers: Vec<String>,
     pub dead_letter_config: Option<String>,
 }
@@ -72,7 +72,7 @@ pub struct Ec2Config {
     pub key_name: String,
     pub security_groups: Vec<String>,
     pub user_data: Option<String>,
-    pub tags: HashMap<String, String>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 impl AwsAdapter {
@@ -91,7 +91,7 @@ impl AwsAdapter {
 
     /// 部署 Lambda 函数
     pub async fn deploy_lambda(&self, config: &LambdaConfig) -> Result<DeploymentResult, Box<dyn std::error::Error + Send + Sync>> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         println!("🚀 开始部署 AWS Lambda 函数");
         println!("  区域: {}", self.region);
@@ -112,9 +112,9 @@ impl AwsAdapter {
         println!("  ⚙️  配置环境变量...");
         tokio::time::sleep(Duration::from_millis(30)).await;
 
-        let deployment_time = start_time.elapsed();
+        let deployment_time: _ = start_time.elapsed();
 
-        let result = DeploymentResult {
+        let result: _ = DeploymentResult {
             deployment_id: format!("lambda-{}", chrono::Utc::now().timestamp()),
             status: "success".to_string(),
             endpoint: format!("https://lambda.{}.amazonaws.com/function", self.region),
@@ -128,7 +128,7 @@ impl AwsAdapter {
 
     /// 部署 ECS 服务
     pub async fn deploy_ecs(&self, config: &EcsConfig) -> Result<DeploymentResult, Box<dyn std::error::Error + Send + Sync>> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         println!("🚀 开始部署 AWS ECS 服务");
         println!("  集群: {}", config.cluster);
@@ -145,9 +145,9 @@ impl AwsAdapter {
         println!("  🚀 更新服务...");
         tokio::time::sleep(Duration::from_millis(100)).await;
 
-        let deployment_time = start_time.elapsed();
+        let deployment_time: _ = start_time.elapsed();
 
-        let result = DeploymentResult {
+        let result: _ = DeploymentResult {
             deployment_id: format!("ecs-{}-{}", config.cluster, config.service),
             status: "success".to_string(),
             endpoint: format!("https://{}.amazonaws.com", config.cluster),
@@ -161,7 +161,7 @@ impl AwsAdapter {
 
     /// 部署 EKS 部署
     pub async fn deploy_eks(&self, config: &EksConfig) -> Result<DeploymentResult, Box<dyn std::error::Error + Send + Sync>> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         println!("🚀 开始部署 AWS EKS 部署");
         println!("  集群: {}", config.cluster);
@@ -179,9 +179,9 @@ impl AwsAdapter {
         println!("  ⏳ 等待 Pod 启动...");
         tokio::time::sleep(Duration::from_millis(100)).await;
 
-        let deployment_time = start_time.elapsed();
+        let deployment_time: _ = start_time.elapsed();
 
-        let result = DeploymentResult {
+        let result: _ = DeploymentResult {
             deployment_id: format!("eks-{}-{}", config.cluster, config.deployment),
             status: "success".to_string(),
             endpoint: format!("https://{}.eks.{}.amazonaws.com", config.deployment, self.region),
@@ -195,7 +195,7 @@ impl AwsAdapter {
 
     /// 启动 EC2 实例
     pub async fn launch_ec2(&self, config: &Ec2Config) -> Result<DeploymentResult, Box<dyn std::error::Error + Send + Sync>> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         println!("🚀 开始启动 AWS EC2 实例");
         println!("  实例类型: {}", config.instance_type);
@@ -212,9 +212,9 @@ impl AwsAdapter {
         println!("  ⏳ 等待实例运行...");
         tokio::time::sleep(Duration::from_millis(100)).await;
 
-        let deployment_time = start_time.elapsed();
+        let deployment_time: _ = start_time.elapsed();
 
-        let result = DeploymentResult {
+        let result: _ = DeploymentResult {
             deployment_id: format!("ec2-{}", chrono::Utc::now().timestamp()),
             status: "success".to_string(),
             endpoint: "https://console.aws.amazon.com/ec2".to_string(),
@@ -285,7 +285,7 @@ impl CloudAdapter for AwsAdapter {
     async fn deploy_function(&self, config: &FunctionConfig) -> Result<DeploymentResult, Box<dyn std::error::Error + Send + Sync>> {
         // 这里应该根据配置决定部署到哪个 AWS 服务
         // 为了简化，我们假设部署到 Lambda
-        let lambda_config = LambdaConfig {
+        let lambda_config: _ = LambdaConfig {
             memory_size: config.memory_size.unwrap_or(512),
             timeout: config.timeout.unwrap_or(30),
             runtime: config.runtime.clone(),
@@ -338,11 +338,13 @@ impl CloudAdapter for AwsAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试创建 AWS 适配器
     #[tokio::test]
     async fn test_aws_adapter_creation() {
-        let adapter = AwsAdapter::new("us-west-2".to_string());
+        let adapter: _ = AwsAdapter::new("us-west-2".to_string());
         assert_eq!(adapter.region, "us-west-2");
         println!("✅ 测试通过: AWS 适配器创建");
     }
@@ -350,9 +352,9 @@ mod tests {
     /// 测试 Lambda 函数部署
     #[tokio::test]
     async fn test_lambda_deployment() {
-        let adapter = AwsAdapter::new("us-east-1".to_string());
+        let adapter: _ = AwsAdapter::new("us-east-1".to_string());
 
-        let config = LambdaConfig {
+        let config: _ = LambdaConfig {
             memory_size: 512,
             timeout: 30,
             runtime: "nodejs18.x".to_string(),
@@ -362,7 +364,7 @@ mod tests {
             dead_letter_config: None,
         };
 
-        let result = adapter.deploy_lambda(&config).await.expect("部署失败");
+        let result: _ = adapter.deploy_lambda(&config).await.expect("部署失败");
         assert_eq!(result.status, "success");
         println!("✅ 测试通过: Lambda 函数部署");
     }
@@ -370,9 +372,9 @@ mod tests {
     /// 测试 ECS 服务部署
     #[tokio::test]
     async fn test_ecs_deployment() {
-        let adapter = AwsAdapter::new("eu-west-1".to_string());
+        let adapter: _ = AwsAdapter::new("eu-west-1".to_string());
 
-        let config = EcsConfig {
+        let config: _ = EcsConfig {
             cluster: "my-cluster".to_string(),
             service: "my-service".to_string(),
             task_definition: "my-task:1".to_string(),
@@ -381,7 +383,7 @@ mod tests {
             network_configuration: None,
         };
 
-        let result = adapter.deploy_ecs(&config).await.expect("部署失败");
+        let result: _ = adapter.deploy_ecs(&config).await.expect("部署失败");
         assert_eq!(result.status, "success");
         println!("✅ 测试通过: ECS 服务部署");
     }
@@ -389,9 +391,9 @@ mod tests {
     /// 测试 EKS 部署
     #[tokio::test]
     async fn test_eks_deployment() {
-        let adapter = AwsAdapter::new("ap-southeast-1".to_string());
+        let adapter: _ = AwsAdapter::new("ap-southeast-1".to_string());
 
-        let config = EksConfig {
+        let config: _ = EksConfig {
             cluster: "my-eks-cluster".to_string(),
             namespace: "default".to_string(),
             deployment: "my-deployment".to_string(),
@@ -400,7 +402,7 @@ mod tests {
             service_type: "ClusterIP".to_string(),
         };
 
-        let result = adapter.deploy_eks(&config).await.expect("部署失败");
+        let result: _ = adapter.deploy_eks(&config).await.expect("部署失败");
         assert_eq!(result.status, "success");
         println!("✅ 测试通过: EKS 部署");
     }
@@ -408,9 +410,9 @@ mod tests {
     /// 测试 EC2 实例启动
     #[tokio::test]
     async fn test_ec2_launch() {
-        let adapter = AwsAdapter::new("us-west-2".to_string());
+        let adapter: _ = AwsAdapter::new("us-west-2".to_string());
 
-        let config = Ec2Config {
+        let config: _ = Ec2Config {
             instance_type: "t3.micro".to_string(),
             ami_id: "ami-0abcdef1234567890".to_string(),
             key_name: "my-keypair".to_string(),
@@ -419,7 +421,7 @@ mod tests {
             tags: HashMap::new(),
         };
 
-        let result = adapter.launch_ec2(&config).await.expect("启动失败");
+        let result: _ = adapter.launch_ec2(&config).await.expect("启动失败");
         assert_eq!(result.status, "success");
         println!("✅ 测试通过: EC2 实例启动");
     }
@@ -427,9 +429,9 @@ mod tests {
     /// 测试指标获取
     #[tokio::test]
     async fn test_metrics_collection() {
-        let adapter = AwsAdapter::new("us-east-1".to_string());
+        let adapter: _ = AwsAdapter::new("us-east-1".to_string());
 
-        let metrics = adapter.get_lambda_metrics("test-function").await.expect("获取指标失败");
+        let metrics: _ = adapter.get_lambda_metrics("test-function").await.expect("获取指标失败");
         assert!(metrics.cpu_usage > 0.0);
         assert!(metrics.memory_usage > 0.0);
         println!("✅ 测试通过: 指标获取");

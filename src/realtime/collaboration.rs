@@ -9,6 +9,8 @@ use tokio::sync::RwLock;
 use anyhow::Result;
 use tracing::info;
 use serde::{Serialize, Deserialize};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Participant {
@@ -27,7 +29,7 @@ pub enum Operation {
 pub struct CollaborationSession {
     session_id: String,
     document_id: String,
-    participants: Arc<RwLock<HashMap<String, Participant>>>,
+    participants: Arc<RwLock<HashMap<String, Participant, std::collections::HashMap<String, Participant, String, Participant>>>>,
     operations: Arc<Mutex<Vec<Operation>>>,
     version: Arc<AtomicU64>,
 }
@@ -38,15 +40,15 @@ impl CollaborationSession {
         Self {
             session_id,
             document_id,
-            participants: Arc::new(RwLock::new(HashMap::new())),
-            operations: Arc::new(Mutex::new(Vec::new())),
-            version: Arc::new(AtomicU64::new(0)),
+            participants: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            operations: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            version: Arc::new(std::sync::Mutex::new(AtomicU64::new(0))),
         }
     }
 
     pub async fn join(&self, participant: Participant) -> Result<()> {
-        let participant_id = participant.id.clone();
-        let participant_name = participant.name.clone();
+        let participant_id: _ = participant.id.clone();
+        let participant_name: _ = participant.name.clone();
         
         info!("👤 参与者加入: {} ({})", participant_name, participant_id);
         
@@ -59,7 +61,7 @@ impl CollaborationSession {
     }
 
     pub async fn get_participants(&self) -> Vec<Participant> {
-        let participants = self.participants.read().await;
+        let participants: _ = self.participants.read().await;
         participants.values().cloned().collect()
     }
 
@@ -69,7 +71,7 @@ impl CollaborationSession {
 }
 
 pub struct RealtimeCollaboration {
-    sessions: HashMap<String, CollaborationSession>,
+    sessions: HashMap<String, CollaborationSession, std::collections::HashMap<String, CollaborationSession, String, CollaborationSession>>,
 }
 
 impl RealtimeCollaboration {
@@ -81,8 +83,8 @@ impl RealtimeCollaboration {
     }
 
     pub async fn create_session(&self, document_id: &str) -> Result<CollaborationSession> {
-        let session_id = format!("session_{}", document_id);
-        let session = CollaborationSession::new(session_id, document_id.to_string());
+        let session_id: _ = format!("session_{}", document_id);
+        let session: _ = CollaborationSession::new(session_id, document_id.to_string());
         Ok(session)
     }
 }

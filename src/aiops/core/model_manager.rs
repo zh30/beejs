@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Model types supported by the AI Ops engine
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -71,18 +73,18 @@ pub struct Model {
 /// - Model metadata management
 pub struct ModelManager {
     /// Models cache
-    models: Arc<RwLock<HashMap<String, Model>>>,
+    models: Arc<RwLock<HashMap<String, Model, std::collections::HashMap<String, Model, String, Model>>>>,
 
     /// Model metadata
-    metadata: Arc<RwLock<HashMap<String, ModelMetadata>>>,
+    metadata: Arc<RwLock<HashMap<String, ModelMetadata, std::collections::HashMap<String, ModelMetadata, String, ModelMetadata>>>>,
 }
 
 impl ModelManager {
     /// Create a new model manager
     pub fn new() -> Self {
         Self {
-            models: Arc::new(RwLock::new(HashMap::new())),
-            metadata: Arc::new(RwLock::new(HashMap::new())),
+            models: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            metadata: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -103,9 +105,9 @@ impl ModelManager {
         model_type: ModelType,
         model_data: Vec<u8>,
     ) -> Result<()> {
-        let now = std::time::SystemTime::now();
+        let now: _ = std::time::SystemTime::now();
 
-        let metadata = ModelMetadata {
+        let metadata: _ = ModelMetadata {
             model_type,
             version: "1.0.0".to_string(),
             accuracy: None,
@@ -114,7 +116,7 @@ impl ModelManager {
             updated_at: now,
         };
 
-        let model = Model {
+        let model: _ = Model {
             metadata: metadata.clone(),
             data: model_data,
         };
@@ -157,7 +159,7 @@ impl ModelManager {
     ///
     /// Returns `Option<ModelMetadata>` containing the metadata
     pub async fn get_metadata(&self, model_id: &str) -> Option<ModelMetadata> {
-        let metadata_map = self.metadata.read().await;
+        let metadata_map: _ = self.metadata.read().await;
         metadata_map.get(model_id).cloned()
     }
 
@@ -167,7 +169,7 @@ impl ModelManager {
     ///
     /// Returns `Vec<String>` containing all model IDs
     pub async fn list_models(&self) -> Vec<String> {
-        let models = self.models.read().await;
+        let models: _ = self.models.read().await;
         models.keys().cloned().collect()
     }
 
@@ -181,7 +183,7 @@ impl ModelManager {
     ///
     /// Returns `bool` indicating whether the model exists
     pub async fn model_exists(&self, model_id: &str) -> bool {
-        let models = self.models.read().await;
+        let models: _ = self.models.read().await;
         models.contains_key(model_id)
     }
 
@@ -195,7 +197,7 @@ impl ModelManager {
     ///
     /// Returns `Result<bool>` indicating whether the model is valid
     pub async fn validate_model(&self, model_id: &str) -> Result<bool> {
-        let models = self.models.read().await;
+        let models: _ = self.models.read().await;
 
         match models.get(model_id) {
             Some(model) => {

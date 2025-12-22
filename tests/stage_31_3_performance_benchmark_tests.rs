@@ -17,11 +17,13 @@ mod tests {
         concurrent::{ConcurrentBenchmark, ConcurrentOptimizationSuggestions},
     };
     use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试基准测试框架基本功能
     #[test]
     fn test_benchmark_framework_basic() {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 100,
             warmup_iterations: 5,
             timeout: Some(Duration::from_secs(10)),
@@ -29,9 +31,9 @@ mod tests {
             compare_with_baseline: false,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
 
-        let result = framework.run_benchmark(
+        let result: _ = framework.run_benchmark(
             "test_basic",
             MetricType::StartupTime,
             || {
@@ -54,7 +56,7 @@ mod tests {
     /// 测试基准测试框架与内存监控
     #[test]
     fn test_benchmark_framework_with_memory() {
-        let config = BenchmarkConfig {
+        let config: _ = BenchmarkConfig {
             iterations: 50,
             warmup_iterations: 5,
             timeout: Some(Duration::from_secs(10)),
@@ -62,9 +64,9 @@ mod tests {
             compare_with_baseline: false,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let framework: _ = BenchmarkFramework::new(config);
 
-        let result = framework.run_benchmark_with_memory(
+        let result: _ = framework.run_benchmark_with_memory(
             "test_memory",
             MetricType::MemoryUsage,
             || {
@@ -80,7 +82,7 @@ mod tests {
     /// 测试基准测试结果格式化
     #[test]
     fn test_benchmark_result_format() {
-        let result = BenchmarkResult {
+        let result: _ = BenchmarkResult {
             name: "test_result".to_string(),
             metric_type: MetricType::StartupTime,
             iterations: 100,
@@ -95,7 +97,7 @@ mod tests {
             metadata: std::collections::HashMap::new(),
         };
 
-        let formatted = result.format_summary();
+        let formatted: _ = result.format_summary();
         assert!(formatted.contains("test_result"));
         assert!(formatted.contains("StartupTime"));
         assert!(formatted.contains("1000"));
@@ -104,7 +106,7 @@ mod tests {
     /// 测试性能阈值检查
     #[test]
     fn test_benchmark_threshold_check() {
-        let result = BenchmarkResult {
+        let result: _ = BenchmarkResult {
             name: "test_threshold".to_string(),
             metric_type: MetricType::ExecutionTime,
             iterations: 100,
@@ -129,8 +131,8 @@ mod tests {
     /// 测试启动时间基准测试
     #[test]
     fn test_startup_benchmark() {
-        let benchmark = StartupBenchmark::new();
-        let result = benchmark.cold_start_benchmark();
+        let benchmark: _ = StartupBenchmark::new();
+        let result: _ = benchmark.cold_start_benchmark();
 
         assert!(result.iterations > 0);
         assert!(result.avg_duration > Duration::from_nanos(0));
@@ -158,8 +160,8 @@ mod tests {
             metadata: std::collections::HashMap::new(),
         });
 
-        let suggestions = StartupOptimizationSuggestions::generate(&results);
-        let formatted = suggestions.format();
+        let suggestions: _ = StartupOptimizationSuggestions::generate(&results);
+        let formatted: _ = suggestions.format();
 
         assert!(formatted.contains("Startup Optimization Suggestions"));
         assert!(!suggestions.suggestions.is_empty());
@@ -169,8 +171,8 @@ mod tests {
     /// 测试执行速度基准测试
     #[test]
     fn test_execution_benchmark() {
-        let benchmark = ExecutionBenchmark::new();
-        let result = benchmark.simple_expression_benchmark();
+        let benchmark: _ = ExecutionBenchmark::new();
+        let result: _ = benchmark.simple_expression_benchmark();
 
         assert!(result.iterations > 0);
         assert!(result.operations_per_second > 0.0);
@@ -198,8 +200,8 @@ mod tests {
             metadata: std::collections::HashMap::new(),
         });
 
-        let suggestions = ExecutionOptimizationSuggestions::generate(&results);
-        let formatted = suggestions.format();
+        let suggestions: _ = ExecutionOptimizationSuggestions::generate(&results);
+        let formatted: _ = suggestions.format();
 
         assert!(formatted.contains("Execution Optimization Suggestions"));
         println!("{}", formatted);
@@ -208,8 +210,8 @@ mod tests {
     /// 测试内存使用基准测试
     #[test]
     fn test_memory_benchmark() {
-        let benchmark = MemoryBenchmark::new();
-        let result = benchmark.allocation_performance_benchmark();
+        let benchmark: _ = MemoryBenchmark::new();
+        let result: _ = benchmark.allocation_performance_benchmark();
 
         assert!(result.iterations > 0);
         println!("{}", result.format_summary());
@@ -241,8 +243,8 @@ mod tests {
             metadata: std::collections::HashMap::new(),
         });
 
-        let suggestions = MemoryOptimizationSuggestions::generate(&results);
-        let formatted = suggestions.format();
+        let suggestions: _ = MemoryOptimizationSuggestions::generate(&results);
+        let formatted: _ = suggestions.format();
 
         assert!(formatted.contains("Memory Optimization Suggestions"));
         println!("{}", formatted);
@@ -251,8 +253,8 @@ mod tests {
     /// 测试并发性能基准测试
     #[test]
     fn test_concurrent_benchmark() {
-        let benchmark = ConcurrentBenchmark::new();
-        let result = benchmark.lock_free_counter_benchmark();
+        let benchmark: _ = ConcurrentBenchmark::new();
+        let result: _ = benchmark.lock_free_counter_benchmark();
 
         assert!(result.iterations > 0);
         assert!(result.operations_per_second > 0.0);
@@ -280,8 +282,8 @@ mod tests {
             metadata: std::collections::HashMap::new(),
         });
 
-        let suggestions = ConcurrentOptimizationSuggestions::generate(&results);
-        let formatted = suggestions.format();
+        let suggestions: _ = ConcurrentOptimizationSuggestions::generate(&results);
+        let formatted: _ = suggestions.format();
 
         assert!(formatted.contains("Concurrent Optimization Suggestions"));
         println!("{}", formatted);
@@ -290,8 +292,8 @@ mod tests {
     /// 测试运行所有启动时间基准测试
     #[test]
     fn test_run_all_startup_benchmarks() {
-        let benchmark = StartupBenchmark::new();
-        let results = benchmark.run_all_benchmarks();
+        let benchmark: _ = StartupBenchmark::new();
+        let results: _ = benchmark.run_all_benchmarks();
 
         assert!(!results.is_empty());
         assert!(results.len() >= 3); // 至少应该有 3 个基准测试
@@ -301,7 +303,7 @@ mod tests {
             assert!(result.avg_duration > Duration::from_nanos(0));
         }
 
-        let report = benchmark.generate_report(&results);
+        let report: _ = benchmark.generate_report(&results);
         assert!(report.contains("Startup Time Performance Report"));
         println!("{}", report);
     }
@@ -309,8 +311,8 @@ mod tests {
     /// 测试运行所有执行速度基准测试
     #[test]
     fn test_run_all_execution_benchmarks() {
-        let benchmark = ExecutionBenchmark::new();
-        let results = benchmark.run_all_benchmarks();
+        let benchmark: _ = ExecutionBenchmark::new();
+        let results: _ = benchmark.run_all_benchmarks();
 
         assert!(!results.is_empty());
         assert!(results.len() >= 5); // 至少应该有 5 个基准测试
@@ -320,7 +322,7 @@ mod tests {
             assert!(result.operations_per_second > 0.0);
         }
 
-        let report = benchmark.generate_report(&results);
+        let report: _ = benchmark.generate_report(&results);
         assert!(report.contains("Execution Speed Performance Report"));
         println!("{}", report);
     }
@@ -328,8 +330,8 @@ mod tests {
     /// 测试运行所有内存使用基准测试
     #[test]
     fn test_run_all_memory_benchmarks() {
-        let benchmark = MemoryBenchmark::new();
-        let results = benchmark.run_all_benchmarks();
+        let benchmark: _ = MemoryBenchmark::new();
+        let results: _ = benchmark.run_all_benchmarks();
 
         assert!(!results.is_empty());
         assert!(results.len() >= 5); // 至少应该有 5 个基准测试
@@ -338,7 +340,7 @@ mod tests {
             assert!(result.iterations > 0);
         }
 
-        let report = benchmark.generate_report(&results);
+        let report: _ = benchmark.generate_report(&results);
         assert!(report.contains("Memory Usage Performance Report"));
         println!("{}", report);
     }
@@ -346,8 +348,8 @@ mod tests {
     /// 测试运行所有并发性能基准测试
     #[test]
     fn test_run_all_concurrent_benchmarks() {
-        let benchmark = ConcurrentBenchmark::new();
-        let results = benchmark.run_all_benchmarks();
+        let benchmark: _ = ConcurrentBenchmark::new();
+        let results: _ = benchmark.run_all_benchmarks();
 
         assert!(!results.is_empty());
         assert!(results.len() >= 4); // 至少应该有 4 个基准测试
@@ -357,7 +359,7 @@ mod tests {
             assert!(result.operations_per_second > 0.0);
         }
 
-        let report = benchmark.generate_report(&results);
+        let report: _ = benchmark.generate_report(&results);
         assert!(report.contains("Concurrent Performance Report"));
         println!("{}", report);
     }

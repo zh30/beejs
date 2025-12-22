@@ -4,101 +4,103 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::HashSet;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 设置Util API
 pub fn setup_util_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
     context: &v8::Local<v8::Context>,
 ) -> Result<()> {
-    let util_obj = v8::Object::new(scope);
+    let util_obj: _ = v8::Object::new(scope);
 
     // inspect
-    let inspect_func = v8::FunctionTemplate::new(scope, util_inspect_callback);
-    let inspect_instance = inspect_func.get_function(scope).unwrap();
-    let inspect_key = v8::String::new(scope, "inspect").unwrap();
+    let inspect_func: _ = v8::FunctionTemplate::new(scope, util_inspect_callback);
+    let inspect_instance: _ = inspect_func.get_function(scope).unwrap();
+    let inspect_key: _ = v8::String::new(scope, "inspect").unwrap();
     util_obj.set(scope, inspect_key.into(), inspect_instance.into());
 
     // format
-    let format_func = v8::FunctionTemplate::new(scope, util_format_callback);
-    let format_instance = format_func.get_function(scope).unwrap();
-    let format_key = v8::String::new(scope, "format").unwrap();
+    let format_func: _ = v8::FunctionTemplate::new(scope, util_format_callback);
+    let format_instance: _ = format_func.get_function(scope).unwrap();
+    let format_key: _ = v8::String::new(scope, "format").unwrap();
     util_obj.set(scope, format_key.into(), format_instance.into());
 
     // types
-    let types_func = v8::FunctionTemplate::new(scope, util_types_callback);
-    let types_instance = types_func.get_function(scope).unwrap();
-    let types_key = v8::String::new(scope, "types").unwrap();
+    let types_func: _ = v8::FunctionTemplate::new(scope, util_types_callback);
+    let types_instance: _ = types_func.get_function(scope).unwrap();
+    let types_key: _ = v8::String::new(scope, "types").unwrap();
     util_obj.set(scope, types_key.into(), types_instance.into());
 
     // isArray
-    let is_array_func = v8::FunctionTemplate::new(scope, util_is_array_callback);
-    let is_array_instance = is_array_func.get_function(scope).unwrap();
-    let is_array_key = v8::String::new(scope, "isArray").unwrap();
+    let is_array_func: _ = v8::FunctionTemplate::new(scope, util_is_array_callback);
+    let is_array_instance: _ = is_array_func.get_function(scope).unwrap();
+    let is_array_key: _ = v8::String::new(scope, "isArray").unwrap();
     util_obj.set(scope, is_array_key.into(), is_array_instance.into());
 
     // isBoolean
-    let is_bool_func = v8::FunctionTemplate::new(scope, util_is_boolean_callback);
-    let is_bool_instance = is_bool_func.get_function(scope).unwrap();
-    let is_bool_key = v8::String::new(scope, "isBoolean").unwrap();
+    let is_bool_func: _ = v8::FunctionTemplate::new(scope, util_is_boolean_callback);
+    let is_bool_instance: _ = is_bool_func.get_function(scope).unwrap();
+    let is_bool_key: _ = v8::String::new(scope, "isBoolean").unwrap();
     util_obj.set(scope, is_bool_key.into(), is_bool_instance.into());
 
     // isNull
-    let is_null_func = v8::FunctionTemplate::new(scope, util_is_null_callback);
-    let is_null_instance = is_null_func.get_function(scope).unwrap();
-    let is_null_key = v8::String::new(scope, "isNull").unwrap();
+    let is_null_func: _ = v8::FunctionTemplate::new(scope, util_is_null_callback);
+    let is_null_instance: _ = is_null_func.get_function(scope).unwrap();
+    let is_null_key: _ = v8::String::new(scope, "isNull").unwrap();
     util_obj.set(scope, is_null_key.into(), is_null_instance.into());
 
     // isNullOrUndefined
-    let is_null_undefined_func = v8::FunctionTemplate::new(scope, util_is_null_undefined_callback);
-    let is_null_undefined_instance = is_null_undefined_func.get_function(scope).unwrap();
-    let is_null_undefined_key = v8::String::new(scope, "isNullOrUndefined").unwrap();
+    let is_null_undefined_func: _ = v8::FunctionTemplate::new(scope, util_is_null_undefined_callback);
+    let is_null_undefined_instance: _ = is_null_undefined_func.get_function(scope).unwrap();
+    let is_null_undefined_key: _ = v8::String::new(scope, "isNullOrUndefined").unwrap();
     util_obj.set(scope, is_null_undefined_key.into(), is_null_undefined_instance.into());
 
     // isNumber
-    let is_number_func = v8::FunctionTemplate::new(scope, util_is_number_callback);
-    let is_number_instance = is_number_func.get_function(scope).unwrap();
-    let is_number_key = v8::String::new(scope, "isNumber").unwrap();
+    let is_number_func: _ = v8::FunctionTemplate::new(scope, util_is_number_callback);
+    let is_number_instance: _ = is_number_func.get_function(scope).unwrap();
+    let is_number_key: _ = v8::String::new(scope, "isNumber").unwrap();
     util_obj.set(scope, is_number_key.into(), is_number_instance.into());
 
     // isString
-    let is_string_func = v8::FunctionTemplate::new(scope, util_is_string_callback);
-    let is_string_instance = is_string_func.get_function(scope).unwrap();
-    let is_string_key = v8::String::new(scope, "isString").unwrap();
+    let is_string_func: _ = v8::FunctionTemplate::new(scope, util_is_string_callback);
+    let is_string_instance: _ = is_string_func.get_function(scope).unwrap();
+    let is_string_key: _ = v8::String::new(scope, "isString").unwrap();
     util_obj.set(scope, is_string_key.into(), is_string_instance.into());
 
     // isUndefined
-    let is_undefined_func = v8::FunctionTemplate::new(scope, util_is_undefined_callback);
-    let is_undefined_instance = is_undefined_func.get_function(scope).unwrap();
-    let is_undefined_key = v8::String::new(scope, "isUndefined").unwrap();
+    let is_undefined_func: _ = v8::FunctionTemplate::new(scope, util_is_undefined_callback);
+    let is_undefined_instance: _ = is_undefined_func.get_function(scope).unwrap();
+    let is_undefined_key: _ = v8::String::new(scope, "isUndefined").unwrap();
     util_obj.set(scope, is_undefined_key.into(), is_undefined_instance.into());
 
     // isObject
-    let is_object_func = v8::FunctionTemplate::new(scope, util_is_object_callback);
-    let is_object_instance = is_object_func.get_function(scope).unwrap();
-    let is_object_key = v8::String::new(scope, "isObject").unwrap();
+    let is_object_func: _ = v8::FunctionTemplate::new(scope, util_is_object_callback);
+    let is_object_instance: _ = is_object_func.get_function(scope).unwrap();
+    let is_object_key: _ = v8::String::new(scope, "isObject").unwrap();
     util_obj.set(scope, is_object_key.into(), is_object_instance.into());
 
     // isFunction
-    let is_function_func = v8::FunctionTemplate::new(scope, util_is_function_callback);
-    let is_function_instance = is_function_func.get_function(scope).unwrap();
-    let is_function_key = v8::String::new(scope, "isFunction").unwrap();
+    let is_function_func: _ = v8::FunctionTemplate::new(scope, util_is_function_callback);
+    let is_function_instance: _ = is_function_func.get_function(scope).unwrap();
+    let is_function_key: _ = v8::String::new(scope, "isFunction").unwrap();
     util_obj.set(scope, is_function_key.into(), is_function_instance.into());
 
     // promisify
-    let promisify_func = v8::FunctionTemplate::new(scope, util_promisify_callback);
-    let promisify_instance = promisify_func.get_function(scope).unwrap();
-    let promisify_key = v8::String::new(scope, "promisify").unwrap();
+    let promisify_func: _ = v8::FunctionTemplate::new(scope, util_promisify_callback);
+    let promisify_instance: _ = promisify_func.get_function(scope).unwrap();
+    let promisify_key: _ = v8::String::new(scope, "promisify").unwrap();
     util_obj.set(scope, promisify_key.into(), promisify_instance.into());
 
     // debuglog
-    let debuglog_func = v8::FunctionTemplate::new(scope, util_debuglog_callback);
-    let debuglog_instance = debuglog_func.get_function(scope).unwrap();
-    let debuglog_key = v8::String::new(scope, "debuglog").unwrap();
+    let debuglog_func: _ = v8::FunctionTemplate::new(scope, util_debuglog_callback);
+    let debuglog_instance: _ = debuglog_func.get_function(scope).unwrap();
+    let debuglog_key: _ = v8::String::new(scope, "debuglog").unwrap();
     util_obj.set(scope, debuglog_key.into(), debuglog_instance.into());
 
     // 设置到全局
-    let global = context.global(scope);
-    let util_key = v8::String::new(scope, "util").unwrap();
+    let global: _ = context.global(scope);
+    let util_key: _ = v8::String::new(scope, "util").unwrap();
     global.set(scope, util_key.into(), util_obj.into());
 
     Ok(())
@@ -109,10 +111,10 @@ fn util_inspect_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let object = args.get(0);
-    let options = args.get(1);
+    let object: _ = args.get(0);
+    let options: _ = args.get(1);
 
-    let _show_hidden = if !options.is_undefined() {
+    let _show_hidden: _ = if !options.is_undefined() {
         let show_hidden_key = v8::String::new(scope, "showHidden").unwrap();
         options.to_object(scope).and_then(|obj| {
             obj.get(scope, show_hidden_key.into())
@@ -121,7 +123,7 @@ fn util_inspect_callback(
         false
     };
 
-    let depth = if !options.is_undefined() {
+    let depth: _ = if !options.is_undefined() {
         let depth_key = v8::String::new(scope, "depth").unwrap();
         options.to_object(scope).and_then(|obj| {
             obj.get(scope, depth_key.into())
@@ -131,7 +133,7 @@ fn util_inspect_callback(
     };
 
     // 简化的inspect实现
-    let result = if object.is_string() {
+    let result: _ = if object.is_string() {
         format!("'{}'", object.to_string(scope).unwrap().to_rust_string_lossy(scope))
     } else if object.is_number() {
         object.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope)
@@ -143,11 +145,11 @@ fn util_inspect_callback(
         "undefined".to_string()
     } else if object.is_array() {
         let arr = v8::Local::<v8::Array>::try_from(object).unwrap();
-        let length = arr.length();
+        let length: _ = arr.length();
         format!("Array({}) [{} items]", length, length)
     } else if object.is_object() {
-        let obj = object.to_object(scope).unwrap();
-        let key_count = get_object_key_count(obj, scope);
+        let obj: _ = object.to_object(scope).unwrap();
+        let key_count: _ = get_object_key_count(obj, scope);
         format!("{{}} {} keys", key_count)
     } else {
         "[Unknown]".to_string()
@@ -161,7 +163,7 @@ fn util_format_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let format_str = args
+    let format_str: _ = args
         .get(0)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
@@ -173,12 +175,12 @@ fn util_format_callback(
     let mut i = 0;
     while i < format_str.len() {
         if format_str.chars().nth(i) == Some('%') && i + 1 < format_str.len() {
-            let format_char = format_str.chars().nth(i + 1).unwrap();
+            let format_char: _ = format_str.chars().nth(i + 1).unwrap();
             match format_char {
                 's' => {
                     if arg_index < args.length() {
-                        let arg = args.get(arg_index);
-                        let arg_str = if arg.is_string() {
+                        let arg: _ = args.get(arg_index);
+                        let arg_str: _ = if arg.is_string() {
                             arg.to_string(scope).unwrap().to_rust_string_lossy(scope)
                         } else if arg.is_number() {
                             arg.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope)
@@ -198,7 +200,7 @@ fn util_format_callback(
                 }
                 'd' | 'i' => {
                     if arg_index < args.length() {
-                        let arg = args.get(arg_index);
+                        let arg: _ = args.get(arg_index);
                         if arg.is_number() {
                             result.push_str(&arg.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope));
                         } else {
@@ -210,7 +212,7 @@ fn util_format_callback(
                 }
                 'f' => {
                     if arg_index < args.length() {
-                        let arg = args.get(arg_index);
+                        let arg: _ = args.get(arg_index);
                         if arg.is_number() {
                             result.push_str(&arg.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope));
                         } else {
@@ -222,7 +224,7 @@ fn util_format_callback(
                 }
                 'j' => {
                     if arg_index < args.length() {
-                        let arg = args.get(arg_index);
+                        let arg: _ = args.get(arg_index);
                         if arg.is_object() {
                             result.push_str("{}");
                         } else {
@@ -253,7 +255,7 @@ fn util_format_callback(
         if !result.is_empty() {
             result.push(' ');
         }
-        let arg = args.get(arg_index);
+        let arg: _ = args.get(arg_index);
         if arg.is_string() {
             result.push_str(&arg.to_string(scope).unwrap().to_rust_string_lossy(scope));
         } else if arg.is_number() {
@@ -274,30 +276,30 @@ fn util_types_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let types_obj = v8::Object::new(scope);
+    let types_obj: _ = v8::Object::new(scope);
 
     // isDate
-    let is_date_func = v8::FunctionTemplate::new(scope, util_is_date_callback);
-    let is_date_instance = is_date_func.get_function(scope).unwrap();
-    let is_date_key = v8::String::new(scope, "isDate").unwrap();
+    let is_date_func: _ = v8::FunctionTemplate::new(scope, util_is_date_callback);
+    let is_date_instance: _ = is_date_func.get_function(scope).unwrap();
+    let is_date_key: _ = v8::String::new(scope, "isDate").unwrap();
     types_obj.set(scope, is_date_key.into(), is_date_instance.into());
 
     // isRegExp
-    let is_regex_func = v8::FunctionTemplate::new(scope, util_is_regex_callback);
-    let is_regex_instance = is_regex_func.get_function(scope).unwrap();
-    let is_regex_key = v8::String::new(scope, "isRegExp").unwrap();
+    let is_regex_func: _ = v8::FunctionTemplate::new(scope, util_is_regex_callback);
+    let is_regex_instance: _ = is_regex_func.get_function(scope).unwrap();
+    let is_regex_key: _ = v8::String::new(scope, "isRegExp").unwrap();
     types_obj.set(scope, is_regex_key.into(), is_regex_instance.into());
 
     // isError
-    let is_error_func = v8::FunctionTemplate::new(scope, util_is_error_callback);
-    let is_error_instance = is_error_func.get_function(scope).unwrap();
-    let is_error_key = v8::String::new(scope, "isError").unwrap();
+    let is_error_func: _ = v8::FunctionTemplate::new(scope, util_is_error_callback);
+    let is_error_instance: _ = is_error_func.get_function(scope).unwrap();
+    let is_error_key: _ = v8::String::new(scope, "isError").unwrap();
     types_obj.set(scope, is_error_key.into(), is_error_instance.into());
 
     // isNativeError
-    let is_native_error_func = v8::FunctionTemplate::new(scope, util_is_native_error_callback);
-    let is_native_error_instance = is_native_error_func.get_function(scope).unwrap();
-    let is_native_error_key = v8::String::new(scope, "isNativeError").unwrap();
+    let is_native_error_func: _ = v8::FunctionTemplate::new(scope, util_is_native_error_callback);
+    let is_native_error_instance: _ = is_native_error_func.get_function(scope).unwrap();
+    let is_native_error_key: _ = v8::String::new(scope, "isNativeError").unwrap();
     types_obj.set(scope, is_native_error_key.into(), is_native_error_instance.into());
 
     retval.set(types_obj.into());
@@ -308,8 +310,8 @@ fn util_is_array_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value = args.get(0);
-    let is_array = value.is_array();
+    let value: _ = args.get(0);
+    let is_array: _ = value.is_array();
     retval.set(v8::Boolean::new(scope, is_array).into());
 }
 
@@ -318,8 +320,8 @@ fn util_is_boolean_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value = args.get(0);
-    let is_boolean = value.is_boolean();
+    let value: _ = args.get(0);
+    let is_boolean: _ = value.is_boolean();
     retval.set(v8::Boolean::new(scope, is_boolean).into());
 }
 
@@ -328,8 +330,8 @@ fn util_is_null_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value = args.get(0);
-    let is_null = value.is_null();
+    let value: _ = args.get(0);
+    let is_null: _ = value.is_null();
     retval.set(v8::Boolean::new(scope, is_null).into());
 }
 
@@ -338,8 +340,8 @@ fn util_is_null_undefined_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value = args.get(0);
-    let is_null_or_undefined = value.is_null() || value.is_undefined();
+    let value: _ = args.get(0);
+    let is_null_or_undefined: _ = value.is_null() || value.is_undefined();
     retval.set(v8::Boolean::new(scope, is_null_or_undefined).into());
 }
 
@@ -348,8 +350,8 @@ fn util_is_number_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value = args.get(0);
-    let is_number = value.is_number();
+    let value: _ = args.get(0);
+    let is_number: _ = value.is_number();
     retval.set(v8::Boolean::new(scope, is_number).into());
 }
 
@@ -358,8 +360,8 @@ fn util_is_string_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value = args.get(0);
-    let is_string = value.is_string();
+    let value: _ = args.get(0);
+    let is_string: _ = value.is_string();
     retval.set(v8::Boolean::new(scope, is_string).into());
 }
 
@@ -368,8 +370,8 @@ fn util_is_undefined_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value = args.get(0);
-    let is_undefined = value.is_undefined();
+    let value: _ = args.get(0);
+    let is_undefined: _ = value.is_undefined();
     retval.set(v8::Boolean::new(scope, is_undefined).into());
 }
 
@@ -378,8 +380,8 @@ fn util_is_object_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value = args.get(0);
-    let is_object = value.is_object() && !value.is_null() && !value.is_array();
+    let value: _ = args.get(0);
+    let is_object: _ = value.is_object() && !value.is_null() && !value.is_array();
     retval.set(v8::Boolean::new(scope, is_object).into());
 }
 
@@ -388,8 +390,8 @@ fn util_is_function_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value = args.get(0);
-    let is_function = value.is_function();
+    let value: _ = args.get(0);
+    let is_function: _ = value.is_function();
     retval.set(v8::Boolean::new(scope, is_function).into());
 }
 
@@ -398,7 +400,7 @@ fn util_promisify_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let original = args.get(0);
+    let original: _ = args.get(0);
 
     if !original.is_function() {
         retval.set(v8::null(scope).into());
@@ -406,11 +408,11 @@ fn util_promisify_callback(
     }
 
     // 创建promisified函数
-    let promisified_func = v8::FunctionTemplate::new(scope, util_promisified_callback);
-    let promisified_instance = promisified_func.get_function(scope).unwrap();
+    let promisified_func: _ = v8::FunctionTemplate::new(scope, util_promisified_callback);
+    let promisified_instance: _ = promisified_func.get_function(scope).unwrap();
 
     // 保存原始函数
-    let original_key = v8::String::new(scope, "_original").unwrap();
+    let original_key: _ = v8::String::new(scope, "_original").unwrap();
     promisified_instance.set(scope, original_key.into(), original);
 
     retval.set(promisified_instance.into());
@@ -422,15 +424,15 @@ fn util_promisified_callback(
     mut retval: v8::ReturnValue,
 ) {
     // 简化的promisify实现 - 返回Promise对象
-    let this = args.this();
-    let original_key = v8::String::new(scope, "_original").unwrap();
-    let _original_func = this.get(scope, original_key.into());
+    let this: _ = args.this();
+    let original_key: _ = v8::String::new(scope, "_original").unwrap();
+    let _original_func: _ = this.get(scope, original_key.into());
 
     // 返回一个模拟的Promise
-    let promise_obj = v8::Object::new(scope);
-    let then_func = v8::FunctionTemplate::new(scope, util_promise_then_callback);
-    let then_instance = then_func.get_function(scope).unwrap();
-    let then_key = v8::String::new(scope, "then").unwrap();
+    let promise_obj: _ = v8::Object::new(scope);
+    let then_func: _ = v8::FunctionTemplate::new(scope, util_promise_then_callback);
+    let then_instance: _ = then_func.get_function(scope).unwrap();
+    let then_key: _ = v8::String::new(scope, "then").unwrap();
     promise_obj.set(scope, then_key.into(), then_instance.into());
 
     retval.set(promise_obj.into());
@@ -441,10 +443,10 @@ fn util_promise_then_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let on_fulfilled = args.get(0);
+    let on_fulfilled: _ = args.get(0);
     if on_fulfilled.is_function() {
         if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
-            let undefined = v8::undefined(scope);
+            let undefined: _ = v8::undefined(scope);
             func.call(scope, undefined.into(), &[]);
         }
     }
@@ -456,19 +458,19 @@ fn util_debuglog_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let section = args
+    let section: _ = args
         .get(0)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
     // 创建debuglog函数
-    let debuglog_func = v8::FunctionTemplate::new(scope, util_debuglog_func_callback);
-    let debuglog_instance = debuglog_func.get_function(scope).unwrap();
+    let debuglog_func: _ = v8::FunctionTemplate::new(scope, util_debuglog_func_callback);
+    let debuglog_instance: _ = debuglog_func.get_function(scope).unwrap();
 
     // 保存section
-    let section_key = v8::String::new(scope, "_section").unwrap();
-    let section_val = v8::String::new(scope, &section).unwrap();
+    let section_key: _ = v8::String::new(scope, "_section").unwrap();
+    let section_val: _ = v8::String::new(scope, &section).unwrap();
     debuglog_instance.set(scope, section_key.into(), section_val.into());
 
     retval.set(debuglog_instance.into());
@@ -479,9 +481,9 @@ fn util_debuglog_func_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let this = args.this();
-    let section_key = v8::String::new(scope, "_section").unwrap();
-    let section = this
+    let this: _ = args.this();
+    let section_key: _ = v8::String::new(scope, "_section").unwrap();
+    let section: _ = this
         .get(scope, section_key.into())
         .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
         .unwrap_or_default();
@@ -491,7 +493,7 @@ fn util_debuglog_func_callback(
         if i > 0 {
             message.push(' ');
         }
-        let arg = args.get(i);
+        let arg: _ = args.get(i);
         if arg.is_string() {
             message.push_str(&arg.to_string(scope).unwrap().to_rust_string_lossy(scope));
         } else if arg.is_number() {
@@ -517,8 +519,8 @@ fn util_is_date_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value = args.get(0);
-    let is_date = false; // 简化实现
+    let value: _ = args.get(0);
+    let is_date: _ = false; // 简化实现
     retval.set(v8::Boolean::new(scope, is_date).into());
 }
 
@@ -527,8 +529,8 @@ fn util_is_regex_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value = args.get(0);
-    let is_regex = false; // 简化实现
+    let value: _ = args.get(0);
+    let is_regex: _ = false; // 简化实现
     retval.set(v8::Boolean::new(scope, is_regex).into());
 }
 
@@ -537,8 +539,8 @@ fn util_is_error_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value = args.get(0);
-    let is_error = false; // 简化实现
+    let value: _ = args.get(0);
+    let is_error: _ = false; // 简化实现
     retval.set(v8::Boolean::new(scope, is_error).into());
 }
 
@@ -547,7 +549,7 @@ fn util_is_native_error_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value = args.get(0);
-    let is_native_error = false; // 简化实现
+    let value: _ = args.get(0);
+    let is_native_error: _ = false; // 简化实现
     retval.set(v8::Boolean::new(scope, is_native_error).into());
 }

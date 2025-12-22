@@ -78,7 +78,7 @@ impl LockFreeTaskScheduler {
     /// 任务开始执行
     pub fn start_task(&self) -> bool {
         // 检查是否有待处理的任务
-        let pending = self.pending_tasks.fetch_sub(1, Ordering::AcqRel);
+        let pending: _ = self.pending_tasks.fetch_sub(1, Ordering::AcqRel);
         if pending > 0 {
             self.active_workers.fetch_add(1, Ordering::Relaxed);
             true
@@ -145,31 +145,31 @@ impl<T> LockFreeQueue<T> {
     /// 创建新的无锁队列
     pub fn new() -> Self {
         // 创建哨兵节点
-        let sentinel = Box::into_raw(Box::new(Node {
+        let sentinel: _ = Box::into_raw(Box::new(Node {
             data: None,
             next: std::ptr::null_mut(),
         }));
 
         Self {
-            head: Arc::new(CachePadded::new(AtomicPtr::new(sentinel as usize))),
-            tail: Arc::new(CachePadded::new(AtomicPtr::new(sentinel as usize))),
+            head: Arc::new(std::sync::Mutex::new(CachePadded::new(AtomicPtr::new(sentinel as usize)))),
+            tail: Arc::new(std::sync::Mutex::new(CachePadded::new(AtomicPtr::new(sentinel as usize)))),
             _phantom: std::marker::PhantomData,
         }
     }
 
     /// 尝试入队
     pub fn try_enqueue(&self, item: T) -> bool {
-        let new_node = Box::into_raw(Box::new(Node {
+        let new_node: _ = Box::into_raw(Box::new(Node {
             data: Some(item),
             next: std::ptr::null_mut(),
         }));
 
         loop {
-            let tail_ptr = self.tail.load(Ordering::Acquire);
-            let tail = unsafe { &*(tail_ptr as *const Node<T>) };
+            let tail_ptr: _ = self.tail.load(Ordering::Acquire);
+            let tail: _ = unsafe { &*(tail_ptr as *const Node<T>) };
 
             // 尝试将新节点链接到尾部
-            let next_ptr = tail.next;
+            let next_ptr: _ = tail.next;
             if !next_ptr.is_null() {
                 // 尾部落后了，尝试推进尾部
                 self.tail.compare_exchange_weak(
@@ -182,7 +182,7 @@ impl<T> LockFreeQueue<T> {
             }
 
             // 尝试将新节点添加到尾部
-            let new_node_ptr = new_node as usize;
+            let new_node_ptr: _ = new_node as usize;
             if unsafe {
                 (&(*tail_ptr as *const Node<T>)).next
             }.is_null() {
@@ -205,17 +205,17 @@ impl<T> LockFreeQueue<T> {
     /// 尝试出队
     pub fn try_dequeue(&self) -> Option<T> {
         loop {
-            let head_ptr = self.head.load(Ordering::Acquire);
-            let head = unsafe { &*(head_ptr as *const Node<T>) };
+            let head_ptr: _ = self.head.load(Ordering::Acquire);
+            let head: _ = unsafe { &*(head_ptr as *const Node<T>) };
 
-            let next_ptr = head.next;
+            let next_ptr: _ = head.next;
             if next_ptr.is_null() {
                 // 队列为空
                 return None;
             }
 
-            let next = unsafe { &*(next_ptr as *const Node<T>) };
-            let data = unsafe { Box::from_raw(next_ptr as *mut Node<T>>).data };
+            let next: _ = unsafe { &*(next_ptr as *const Node<T>) };
+            let data: _ = unsafe { Box::from_raw(next_ptr as *mut Node<T>>).data };
 
             // 尝试推进头部
             if self.head.compare_exchange_weak(
@@ -226,7 +226,7 @@ impl<T> LockFreeQueue<T> {
             ).is_ok() {
                 // 成功出队，清理头部节点
                 unsafe {
-                    let _ = Box::from_raw(head_ptr as *mut Node<T>);
+                    let _: _ = Box::from_raw(head_ptr as *mut Node<T>);
                 }
                 return data;
             }
@@ -240,7 +240,7 @@ impl<T> LockFreeQueue<T> {
 
         unsafe {
             while !current.is_null() {
-                let node = &*(current as *const Node<T>);
+                let node: _ = &*(current as *const Node<T>);
                 if !node.next.is_null() {
                     count += 1;
                 }
@@ -252,9 +252,9 @@ impl<T> LockFreeQueue<T> {
 
     /// 检查队列是否为空
     pub fn is_empty(&self) -> bool {
-        let head_ptr = self.head.load(Ordering::Acquire);
+        let head_ptr: _ = self.head.load(Ordering::Acquire);
         unsafe {
-            let node = &*(head_ptr as *const Node<T>);
+            let node: _ = &*(head_ptr as *const Node<T>);
             node.next.is_null()
         }
     }
@@ -265,9 +265,9 @@ impl<T> Drop for LockFreeQueue<T> {
     fn drop(&mut self) {
         // 清理所有节点
         while let Some(_) = self.try_dequeue() {}
-        let head_ptr = self.head.load(Ordering::Acquire);
+        let head_ptr: _ = self.head.load(Ordering::Acquire);
         unsafe {
-            let _ = Box::from_raw(head_ptr as *mut Node<T>);
+            let _: _ = Box::from_raw(head_ptr as *mut Node<T>);
         }
     }
 }
@@ -300,8 +300,8 @@ impl<T> ShardedLock<T> {
 
     /// 获取分片锁
     pub async fn shard(&self, key: &str) -> tokio::sync::MutexGuard<'_, T> {
-        let hash = self.simple_hash(key);
-        let index = hash % self.shard_count;
+        let hash: _ = self.simple_hash(key);
+        let index: _ = hash % self.shard_count;
         self.shards[index].lock().await
     }
 
@@ -309,7 +309,7 @@ impl<T> ShardedLock<T> {
     fn simple_hash(&self, key: &str) -> usize {
         let mut hash = 0usize;
         for byte in key.bytes() {
-            hash = hash.wrapping_mul(31).wrapping_add(byte as usize);
+            hash = hash.clone();wrapping_mul(31).wrapping_add(byte as usize);
         }
         hash
     }
@@ -417,10 +417,12 @@ impl AtomicStats {
 mod tests {
     use super::*;
     use std::thread;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_lock_free_counter() {
-        let counter = LockFreeCounter::new(0);
+        let counter: _ = LockFreeCounter::new(0);
 
         // 测试递增
         assert_eq!(counter.increment(), 1);
@@ -437,7 +439,7 @@ mod tests {
 
     #[test]
     fn test_task_scheduler() {
-        let scheduler = LockFreeTaskScheduler::new();
+        let scheduler: _ = LockFreeTaskScheduler::new();
 
         // 提交任务
         scheduler.submit_task();
@@ -456,13 +458,13 @@ mod tests {
     #[tokio::test]
     #[ignore] // 暂时忽略此测试，存在Tokio运行时交互问题
     async fn test_sharded_lock() {
-        let sharded_lock = ShardedLock::new(4, 0u64);
+        let sharded_lock: _ = ShardedLock::new(4, 0u64);
 
         // 获取多个分片的锁
-        let guard1 = sharded_lock.shard("key1").await;
-        let guard2 = sharded_lock.shard("key2").await;
-        let guard3 = sharded_lock.shard("key3").await;
-        let guard4 = sharded_lock.shard("key4").await;
+        let guard1: _ = sharded_lock.shard("key1").await;
+        let guard2: _ = sharded_lock.shard("key2").await;
+        let guard3: _ = sharded_lock.shard("key3").await;
+        let guard4: _ = sharded_lock.shard("key4").await;
 
         // 释放锁
         drop(guard1);
@@ -471,8 +473,8 @@ mod tests {
         drop(guard4);
 
         // 相同键应该映射到同一分片
-        let guard5 = sharded_lock.shard("key1").await;
-        let guard6 = sharded_lock.shard("key1").await;
+        let guard5: _ = sharded_lock.shard("key1").await;
+        let guard6: _ = sharded_lock.shard("key1").await;
 
         // 验证值
         assert_eq!(*guard5, 0);
@@ -481,7 +483,7 @@ mod tests {
 
     #[test]
     fn test_lock_free_buffer_pool() {
-        let pool = LockFreeBufferPool::new();
+        let pool: _ = LockFreeBufferPool::new();
 
         assert_eq!(pool.active_count(), 0);
 
@@ -496,13 +498,13 @@ mod tests {
 
     #[test]
     fn test_concurrent_operations() {
-        let counter = Arc::new(LockFreeCounter::new(0));
-        let iterations = 1000;
-        let thread_count = 10;
+        let counter: _ = Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0)));
+        let iterations: _ = 1000;
+        let thread_count: _ = 10;
 
         let handles: Vec<_> = (0..thread_count)
             .map(|_| {
-                let counter = counter.clone();
+                let counter: _ = counter.clone();clone();
                 thread::spawn(move || {
                     for _ in 0..iterations {
                         counter.increment();
@@ -520,7 +522,7 @@ mod tests {
 
     #[test]
     fn test_atomic_stats() {
-        let stats = Arc::new(AtomicStats::new());
+        let stats: _ = Arc::new(std::sync::Mutex::new(AtomicStats::new()));
 
         // 记录一些操作
         stats.record_operation();
@@ -531,7 +533,7 @@ mod tests {
         assert_eq!(stats.cache_line_contention.load(), 1);
 
         // 获取报告
-        let report = stats.get_report();
+        let report: _ = stats.get_report();
         assert!(report.contains("总操作数: 2"));
         assert!(report.contains("缓存行竞争: 1"));
     }
@@ -551,7 +553,7 @@ impl CpuAffinity {
     pub fn new(cpu_id: usize) -> Result<Self, String> {
         #[cfg(target_os = "linux")]
         {
-            let affinity_mask = 1u64 << cpu_id;
+            let affinity_mask: _ = 1u64 << cpu_id;
             // 设置线程亲和性（需要 root 权限或适当权限）
             // unsafe {
             //     libc::sched_setaffinity(
@@ -613,8 +615,8 @@ impl WorkStealingScheduler {
         let mut cpu_affinity = Vec::with_capacity(num_workers);
 
         for i in 0..num_workers {
-            queues.push(Arc::new(LockFreeQueue::new()));
-            stealers.push(Arc::new(AtomicUsize::new(0)));
+            queues.push(Arc::new(std::sync::Mutex::new(LockFreeQueue::new())));
+            stealers.push(Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))));
 
             // 尝试绑定到特定 CPU
             match CpuAffinity::new(i) {
@@ -641,8 +643,8 @@ impl WorkStealingScheduler {
     /// 提交任务
     pub fn submit(&self, task: WorkStealingTask) -> Result<(), String> {
         // 选择队列：轮询或基于 CPU 亲和性
-        let worker_id = self.task_counter.fetch_add(1, Ordering::Relaxed) % self.queues.len();
-        let queue = &self.queues[worker_id];
+        let worker_id: _ = self.task_counter.fetch_add(1, Ordering::Relaxed) % self.queues.len();
+        let queue: _ = &self.queues[worker_id];
 
         if queue.try_enqueue(task) {
             Ok(())
@@ -653,20 +655,20 @@ impl WorkStealingScheduler {
 
     /// 从本地队列获取任务
     pub fn take_local_task(&self, worker_id: usize) -> Option<WorkStealingTask> {
-        let queue = &self.queues[worker_id];
+        let queue: _ = &self.queues[worker_id];
         queue.try_dequeue()
     }
 
     /// 从其他队列窃取任务
     pub fn steal_task(&self, stealer_id: usize) -> Option<WorkStealingTask> {
-        let num_queues = self.queues.len();
+        let num_queues: _ = self.queues.len();
         if num_queues <= 1 {
             return None;
         }
 
         // 尝试从其他队列窃取
         for _ in 0..num_queues {
-            let victim_id = self.stealers[stealer_id].fetch_add(1, Ordering::Relaxed) % num_queues;
+            let victim_id: _ = self.stealers[stealer_id].fetch_add(1, Ordering::Relaxed) % num_queues;
             if victim_id == stealer_id {
                 continue;
             }
@@ -718,11 +720,11 @@ impl ConcurrencyMonitor {
     /// 创建新的并发监控器
     pub fn new() -> Self {
         Self {
-            active_tasks: Arc::new(LockFreeCounter::new(0)),
-            completed_tasks: Arc::new(LockFreeCounter::new(0)),
-            failed_tasks: Arc::new(LockFreeCounter::new(0)),
-            avg_latency_ns: Arc::new(LockFreeCounter::new(0)),
-            throughput_ops: Arc::new(LockFreeCounter::new(0)),
+            active_tasks: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
+            completed_tasks: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
+            failed_tasks: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
+            avg_latency_ns: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
+            throughput_ops: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
             start_time: std::time::Instant::now(),
         }
     }
@@ -748,8 +750,8 @@ impl ConcurrencyMonitor {
 
     /// 获取当前统计
     pub fn get_stats(&self) -> ConcurrencyStatsSnapshot {
-        let elapsed = self.start_time.elapsed();
-        let elapsed_secs = elapsed.as_secs_f64();
+        let elapsed: _ = self.start_time.elapsed();
+        let elapsed_secs: _ = elapsed.as_secs_f64();
 
         ConcurrencyStatsSnapshot {
             active_tasks: self.active_tasks.load(),
@@ -771,7 +773,7 @@ impl ConcurrencyMonitor {
 
     /// 生成性能报告
     pub fn generate_report(&self) -> String {
-        let stats = self.get_stats();
+        let stats: _ = self.get_stats();
         format!(
             "并发性能报告:\n\
              活跃任务: {}\n\

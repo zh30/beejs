@@ -14,6 +14,8 @@ mod tests {
     // V8 isolates are thread-bound, so we need to run tests sequentially
     use serial_test::serial;
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     // =========================================
     // Watch Expression Evaluation Tests
@@ -23,10 +25,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_evaluate_simple_number_expression() {
-        let engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let engine: _ = DebuggerEngine::new_default();
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
-        let result = engine.evaluate_watch_expression("42", &runtime);
+        let result: _ = engine.evaluate_watch_expression("42", &runtime);
 
         assert!(result.success, "Should evaluate simple number successfully");
         let (value, value_type) = result.unwrap();
@@ -38,10 +40,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_evaluate_string_expression() {
-        let engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let engine: _ = DebuggerEngine::new_default();
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
-        let result = engine.evaluate_watch_expression("'hello world'", &runtime);
+        let result: _ = engine.evaluate_watch_expression("'hello world'", &runtime);
 
         assert!(result.success, "Should evaluate string successfully");
         let (value, value_type) = result.unwrap();
@@ -54,10 +56,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_evaluate_boolean_expression() {
-        let engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let engine: _ = DebuggerEngine::new_default();
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
-        let result = engine.evaluate_watch_expression("true", &runtime);
+        let result: _ = engine.evaluate_watch_expression("true", &runtime);
 
         assert!(result.success, "Should evaluate boolean successfully");
         let (value, value_type) = result.unwrap();
@@ -69,10 +71,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_evaluate_arithmetic_expression() {
-        let engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let engine: _ = DebuggerEngine::new_default();
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
-        let result = engine.evaluate_watch_expression("10 + 20", &runtime);
+        let result: _ = engine.evaluate_watch_expression("10 + 20", &runtime);
 
         assert!(result.success, "Should evaluate arithmetic successfully");
         let (value, value_type) = result.unwrap();
@@ -84,10 +86,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_evaluate_undefined_expression() {
-        let engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let engine: _ = DebuggerEngine::new_default();
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
-        let result = engine.evaluate_watch_expression("undefined", &runtime);
+        let result: _ = engine.evaluate_watch_expression("undefined", &runtime);
 
         assert!(result.success, "Should evaluate undefined successfully");
         let (value, value_type) = result.unwrap();
@@ -99,10 +101,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_evaluate_null_expression() {
-        let engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let engine: _ = DebuggerEngine::new_default();
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
-        let result = engine.evaluate_watch_expression("null", &runtime);
+        let result: _ = engine.evaluate_watch_expression("null", &runtime);
 
         assert!(result.success, "Should evaluate null successfully");
         let (value, value_type) = result.unwrap();
@@ -114,10 +116,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_evaluate_invalid_expression() {
-        let engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let engine: _ = DebuggerEngine::new_default();
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
-        let result = engine.evaluate_watch_expression("invalid_variable", &runtime);
+        let result: _ = engine.evaluate_watch_expression("invalid_variable", &runtime);
 
         assert!(!result.success, "Should fail to evaluate undefined variable");
     }
@@ -126,10 +128,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_evaluate_array_expression() {
-        let engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let engine: _ = DebuggerEngine::new_default();
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
-        let result = engine.evaluate_watch_expression("[1, 2, 3]", &runtime);
+        let result: _ = engine.evaluate_watch_expression("[1, 2, 3]", &runtime);
 
         assert!(result.success, "Should evaluate array successfully");
         let (value, value_type) = result.unwrap();
@@ -141,10 +143,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_evaluate_object_expression() {
-        let engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let engine: _ = DebuggerEngine::new_default();
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
-        let result = engine.evaluate_watch_expression("{x: 10, y: 20}", &runtime);
+        let result: _ = engine.evaluate_watch_expression("{x: 10, y: 20}", &runtime);
 
         assert!(result.success, "Should evaluate object successfully");
         let (value, value_type) = result.unwrap();
@@ -157,10 +159,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_evaluate_complex_expression() {
-        let engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let engine: _ = DebuggerEngine::new_default();
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
-        let result = engine.evaluate_watch_expression("(10 + 5) * 2", &runtime);
+        let result: _ = engine.evaluate_watch_expression("(10 + 5) * 2", &runtime);
 
         assert!(result.success, "Should evaluate complex expression successfully");
         let (value, value_type) = result.unwrap();
@@ -173,17 +175,17 @@ mod tests {
     #[serial]
     fn test_evaluate_all_watches() {
         let mut engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
         // Add multiple watches
         engine.add_watch("10 + 5").unwrap();
         engine.add_watch("'test'").unwrap();
         engine.add_watch("true").unwrap();
 
-        let result = engine.evaluate_all_watches(&runtime);
+        let result: _ = engine.evaluate_all_watches(&runtime);
 
         assert!(result.success, "Should evaluate all watches successfully");
-        let watches = result.unwrap();
+        let watches: _ = result.unwrap();
         assert_eq!(watches.len(), 3, "Should have 3 watch results");
 
         // Verify first watch (10 + 5)
@@ -204,17 +206,17 @@ mod tests {
     #[serial]
     fn test_evaluate_watches_with_errors() {
         let mut engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
         // Add valid and invalid watches
         engine.add_watch("42").unwrap();
         engine.add_watch("undefined_variable").unwrap();
         engine.add_watch("'hello'").unwrap();
 
-        let result = engine.evaluate_all_watches(&runtime);
+        let result: _ = engine.evaluate_all_watches(&runtime);
 
         assert!(result.success, "Should evaluate all watches");
-        let watches = result.unwrap();
+        let watches: _ = result.unwrap();
         assert_eq!(watches.len(), 3, "Should have 3 watch results");
 
         // First watch should be valid
@@ -231,10 +233,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_evaluate_float_number() {
-        let engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let engine: _ = DebuggerEngine::new_default();
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
-        let result = engine.evaluate_watch_expression("3.14", &runtime);
+        let result: _ = engine.evaluate_watch_expression("3.14", &runtime);
 
         assert!(result.success, "Should evaluate float successfully");
         let (value, value_type) = result.unwrap();
@@ -246,10 +248,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_evaluate_negative_number() {
-        let engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let engine: _ = DebuggerEngine::new_default();
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
-        let result = engine.evaluate_watch_expression("-42", &runtime);
+        let result: _ = engine.evaluate_watch_expression("-42", &runtime);
 
         assert!(result.success, "Should evaluate negative number successfully");
         let (value, value_type) = result.unwrap();
@@ -261,10 +263,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_evaluate_string_with_quotes() {
-        let engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let engine: _ = DebuggerEngine::new_default();
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
-        let result = engine.evaluate_watch_expression("\"hello 'world'\"", &runtime);
+        let result: _ = engine.evaluate_watch_expression("\"hello 'world'\"", &runtime);
 
         assert!(result.success, "Should evaluate string with quotes successfully");
         let (value, value_type) = result.unwrap();
@@ -276,10 +278,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_evaluate_empty_array() {
-        let engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let engine: _ = DebuggerEngine::new_default();
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
-        let result = engine.evaluate_watch_expression("[]", &runtime);
+        let result: _ = engine.evaluate_watch_expression("[]", &runtime);
 
         assert!(result.success, "Should evaluate empty array successfully");
         let (value, value_type) = result.unwrap();
@@ -291,10 +293,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_evaluate_empty_object() {
-        let engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let engine: _ = DebuggerEngine::new_default();
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
-        let result = engine.evaluate_watch_expression("{}", &runtime);
+        let result: _ = engine.evaluate_watch_expression("{}", &runtime);
 
         assert!(result.success, "Should evaluate empty object successfully");
         let (value, value_type) = result.unwrap();
@@ -308,16 +310,16 @@ mod tests {
     #[serial]
     fn test_multiple_evaluations_update_watch_values() {
         let mut engine = DebuggerEngine::new_default();
-        let runtime = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create RuntimeLite");
 
         // Add a watch
-        let watch = engine.add_watch("counter").unwrap();
-        let watch_id = watch.id.clone();
+        let watch: _ = engine.add_watch("counter").unwrap();
+        let watch_id: _ = watch.id.clone();
 
         // Evaluate once - should have error (undefined variable)
-        let result1 = engine.evaluate_all_watches(&runtime);
+        let result1: _ = engine.evaluate_all_watches(&runtime);
         assert!(result1.success);
-        let watches1 = result1.unwrap();
+        let watches1: _ = result1.unwrap();
         assert!(watches1[0].1.contains("<error:"));
 
         // Note: We can't test changing variable values without executing code first

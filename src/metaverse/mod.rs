@@ -12,6 +12,8 @@ pub use xr_runtime::{XRRuntime, XRConfig, XRMode};
 pub use ray_tracer::{RayTracer, RayTracerConfig, BounceLimit};
 pub use multiuser_renderer::{MultiuserRenderer, UserAvatar, AvatarConfig, SyncMode as MultiuserSyncMode};
 pub use spatial_audio::{SpatialAudioSystem, AudioSource, AudioConfig, HRTFProfile};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 
 /// XR 平台类型

@@ -41,7 +41,7 @@ mod tests {
         use beejs::{WorkStealingScheduler};
 
         // 创建4线程的调度器
-        let scheduler = WorkStealingScheduler::new(4);
+        let scheduler: _ = WorkStealingScheduler::new(4);
 
         // 验证本地队列已初始化
         let distribution: Vec<usize> = scheduler.get_queue_distribution().await;
@@ -51,7 +51,7 @@ mod tests {
         }
 
         // 验证窃取统计已初始化
-        let stats = scheduler.get_steal_stats();
+        let stats: _ = scheduler.get_steal_stats();
         assert_eq!(stats.steal_attempts.load(), 0);
         assert_eq!(stats.successful_steals.load(), 0);
 
@@ -64,10 +64,10 @@ mod tests {
         use beejs::{WorkStealingScheduler, Task};
 
         // 创建2线程的调度器
-        let scheduler = WorkStealingScheduler::new(2);
+        let scheduler: _ = WorkStealingScheduler::new(2);
 
         // 提交3个不同优先级的任务到线程0
-        let tasks = vec![
+        let tasks: _ = vec![
             Task { id: 1, code: "task_1".to_string(), priority: 1, estimated_time_ms: 10 },
             Task { id: 2, code: "task_2".to_string(), priority: 10, estimated_time_ms: 10 },
             Task { id: 3, code: "task_3".to_string(), priority: 5, estimated_time_ms: 10 },
@@ -83,15 +83,15 @@ mod tests {
         assert_eq!(distribution[1], 0);
 
         // 按优先级顺序获取任务（高优先级优先）
-        let task1 = scheduler.get_local_task(0).await.unwrap();
+        let task1: _ = scheduler.get_local_task(0).await.unwrap();
         assert_eq!(task1.id, 2); // 最高优先级
         assert_eq!(task1.priority, 10);
 
-        let task2 = scheduler.get_local_task(0).await.unwrap();
+        let task2: _ = scheduler.get_local_task(0).await.unwrap();
         assert_eq!(task2.id, 3); // 中等优先级
         assert_eq!(task2.priority, 5);
 
-        let task3 = scheduler.get_local_task(0).await.unwrap();
+        let task3: _ = scheduler.get_local_task(0).await.unwrap();
         assert_eq!(task3.id, 1); // 最低优先级
         assert_eq!(task3.priority, 1);
 
@@ -108,11 +108,11 @@ mod tests {
         use beejs::{WorkStealingScheduler, Task};
 
         // 创建2线程的调度器
-        let scheduler = WorkStealingScheduler::new(2);
+        let scheduler: _ = WorkStealingScheduler::new(2);
 
         // 提交50个任务到线程0
         for i in 0..50 {
-            let task = Task {
+            let task: _ = Task {
                 id: i,
                 code: format!("task_{}", i),
                 priority: 1,
@@ -130,14 +130,14 @@ mod tests {
 
         // 模拟工作窃取：线程1尝试窃取任务
         // 由于线程0忙碌，线程1应该能够窃取任务
-        let stolen_task = scheduler.steal_task(1).await;
+        let stolen_task: _ = scheduler.steal_task(1).await;
         assert!(stolen_task.is_some()); // 应该能窃取到任务
 
-        let stolen_task = stolen_task.unwrap();
+        let stolen_task: _ = stolen_task.clone();unwrap();
         assert!(stolen_task.id < 50); // 窃取的任务应该来自线程0
 
         // 验证窃取统计
-        let stats = scheduler.get_steal_stats();
+        let stats: _ = scheduler.get_steal_stats();
         assert_eq!(stats.steal_attempts.load(), 1); // 尝试了1次窃取
         assert_eq!(stats.successful_steals.load(), 1); // 成功1次
 
@@ -160,13 +160,13 @@ mod tests {
         // - 负载均衡工作正常
         // - 没有任务被重复执行
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 创建 4 个线程，每个线程有不同的任务数
-        let _thread_tasks = vec![100, 50, 20, 5]; // 总共 175 个任务
+        let _thread_tasks: _ = vec![100, 50, 20, 5]; // 总共 175 个任务
 
         // TODO: 创建多线程调度器
-        // let scheduler = WorkStealingScheduler::new(4);
+        // let scheduler: _ = WorkStealingScheduler::new(4);
 
         // 并发提交任务
         // let handles: Vec<_> = thread_tasks
@@ -175,7 +175,7 @@ mod tests {
         //     .map(|(thread_id, &task_count)| {
         //         tokio::spawn(async move {
         //             for i in 0..task_count {
-        //                 let task = Task {
+        //                 let task: _ = Task {
         //                     id: thread_id * 1000 + i,
         //                     code: format!("task_{}", i),
         //                     priority: 1,
@@ -193,14 +193,14 @@ mod tests {
         // }
 
         // 等待任务执行完成（带超时）
-        // let timeout = Duration::from_secs(30);
-        // let result = tokio::time::timeout(timeout, async {
+        // let timeout: _ = Duration::from_secs(30);
+        // let result: _ = tokio::time::timeout(timeout, async {
         //     while scheduler.pending_tasks() > 0 {
         //         tokio::time::sleep(Duration::from_millis(10)).await;
         //     }
         // }).await;
 
-        let elapsed = start.elapsed().unwrap();
+        let elapsed: _ = start.elapsed().unwrap();
 
         println!("多线程工作窃取测试:");
         println!("  耗时: {:?}", elapsed);
@@ -248,8 +248,8 @@ mod tests {
         }
 
         // TODO: 执行并收集队列长度统计
-        // let initial_distribution = scheduler.get_queue_distribution();
-        // let final_distribution = scheduler.get_queue_distribution();
+        // let initial_distribution: _ = scheduler.get_queue_distribution();
+        // let final_distribution: _ = scheduler.get_queue_distribution();
 
         // 验证负载均衡
         // assert!(initial_distribution.max() - initial_distribution.min() > 50);
@@ -264,10 +264,10 @@ mod tests {
         use beejs::{WorkStealingScheduler, Task};
 
         // 创建2线程的调度器
-        let scheduler = WorkStealingScheduler::new(2);
+        let scheduler: _ = WorkStealingScheduler::new(2);
 
         // 提交不同优先级的任务（无序提交）
-        let tasks = vec![
+        let tasks: _ = vec![
             Task { id: 1, code: "low_priority".to_string(), priority: 1, estimated_time_ms: 100 },
             Task { id: 2, code: "high_priority".to_string(), priority: 10, estimated_time_ms: 10 },
             Task { id: 3, code: "medium_priority".to_string(), priority: 5, estimated_time_ms: 50 },
@@ -278,15 +278,15 @@ mod tests {
         }
 
         // 按优先级顺序获取任务（高优先级优先）
-        let task1 = scheduler.get_local_task(0).await.unwrap();
+        let task1: _ = scheduler.get_local_task(0).await.unwrap();
         assert_eq!(task1.id, 2); // 最高优先级 (priority: 10)
         assert_eq!(task1.priority, 10);
 
-        let task2 = scheduler.get_local_task(0).await.unwrap();
+        let task2: _ = scheduler.get_local_task(0).await.unwrap();
         assert_eq!(task2.id, 3); // 中等优先级 (priority: 5)
         assert_eq!(task2.priority, 5);
 
-        let task3 = scheduler.get_local_task(0).await.unwrap();
+        let task3: _ = scheduler.get_local_task(0).await.unwrap();
         assert_eq!(task3.id, 1); // 最低优先级 (priority: 1)
         assert_eq!(task3.priority, 1);
 
@@ -326,7 +326,7 @@ mod tests {
         }
 
         // TODO: 执行并验证窃取策略
-        // let stats = scheduler.get_steal_stats();
+        // let stats: _ = scheduler.get_steal_stats();
         // assert!(stats.short_tasks_stolen > stats.long_tasks_stolen);
 
         unimplemented!("WorkStealingScheduler 尚未实现")
@@ -336,6 +336,8 @@ mod tests {
     #[tokio::test]
     async fn test_performance_benchmark() {
         use std::time::Instant;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
         // TODO: 性能基准测试
         // 预期:
@@ -343,24 +345,24 @@ mod tests {
         // - 窃取开销 < 10%
         // - CPU 利用率 > 90%
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let task_count = 1000;
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let task_count: _ = 1000;
 
         // 生成 1000 个中等复杂度任务
         let _tasks: Vec<Task> = (0..task_count)
             .map(|i| Task {
                 id: i,
-                code: format!("(function() {{ let sum = 0; for(let j=0; j<100; j++) {{ sum += j * {}; }} return sum; }})()", i),
+                code: format!("(function() {{ let sum: _ = 0; for(let j=0; j<100; j++) {{ sum += j * {}; }} return sum; }})()", i),
                 priority: 1,
                 estimated_time_ms: 50,
             })
             .collect();
 
         // TODO: 执行任务
-        // let results = scheduler.execute_batch(tasks).await;
+        // let results: _ = scheduler.execute_batch(tasks).await;
 
-        let elapsed = start.elapsed().unwrap();
-        let throughput = task_count as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start.elapsed().unwrap();
+        let throughput: _ = task_count as f64 / elapsed.as_secs_f64();
 
         println!("性能基准测试结果:");
         println!("  任务数: {}", task_count);
@@ -384,7 +386,7 @@ mod tests {
         // - 失败任务被正确记录
         // - 调度器继续正常工作
 
-        let _tasks = vec![
+        let _tasks: _ = vec![
             Task {
                 id: 1,
                 code: "valid_task".to_string(),
@@ -406,7 +408,7 @@ mod tests {
         ];
 
         // TODO: 执行并验证错误处理
-        // let results = scheduler.execute_batch(tasks).await;
+        // let results: _ = scheduler.execute_batch(tasks).await;
         // assert_eq!(results.len(), 3);
         // assert!(results[0].success);
         // assert!(!results[1].success);
@@ -425,8 +427,8 @@ mod tests {
         // - 提升窃取性能
 
         // 创建大任务（1MB 数据）
-        let large_data = "x".repeat(1024 * 1024);
-        let _tasks = vec![Task {
+        let large_data: _ = "x".repeat(1024 * 1024);
+        let _tasks: _ = vec![Task {
             id: 1,
             code: large_data,
             priority: 1,
@@ -434,7 +436,7 @@ mod tests {
         }];
 
         // TODO: 执行并验证零拷贝
-        // let stats = scheduler.get_transfer_stats();
+        // let stats: _ = scheduler.get_transfer_stats();
         // assert!(stats.zero_copy_transfers > 0);
 
         unimplemented!("WorkStealingScheduler 尚未实现")

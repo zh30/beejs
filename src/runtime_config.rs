@@ -215,7 +215,7 @@ impl AutoTuner {
             config_manager,
             is_tuning: false,
             tuning_interval_s,
-            metrics_collector: Arc::new(PerformanceMetricsCollector::new()),
+            metrics_collector: Arc::new(std::sync::Mutex::new(PerformanceMetricsCollector::new())),
         }
     }
 
@@ -245,8 +245,8 @@ impl AutoTuner {
     pub async fn tune(&self) -> Result<TuningResult, Box<dyn std::error::Error>> {
         info!("开始手动调优");
 
-        let config = self.config_manager.get_config().await;
-        let mut tuned_config = config.clone();
+        let config: _ = self.config_manager.get_config().await;
+        let mut tuned_config = config.clone();clone();
         let mut changes = Vec::new();
 
         // 基于性能指标调整 V8 配置
@@ -293,11 +293,11 @@ impl AutoTuner {
 
     /// 计算最优堆大小
     async fn calculate_optimal_heap_size(&self) -> Result<usize, Box<dyn std::error::Error>> {
-        let memory_usage = self.metrics_collector.get_average_memory_usage().await?;
-        let current_config = self.config_manager.get_config().await;
+        let memory_usage: _ = self.metrics_collector.get_average_memory_usage().await?;
+        let current_config: _ = self.config_manager.get_config().await;
 
         // 简单的启发式：根据内存使用率调整
-        let optimal_size = if memory_usage > 200 { 512 } else { 256 };
+        let optimal_size: _ = if memory_usage > 200 { 512 } else { 256 };
         Ok(optimal_size)
     }
 
@@ -308,11 +308,11 @@ impl AutoTuner {
 
     /// 计算最优内存池大小
     async fn calculate_optimal_pool_size(&self) -> Result<usize, Box<dyn std::error::Error>> {
-        let execution_times = self.metrics_collector.get_average_execution_time().await?;
-        let current_config = self.config_manager.get_config().await;
+        let execution_times: _ = self.metrics_collector.get_average_execution_time().await?;
+        let current_config: _ = self.config_manager.get_config().await;
 
         // 简单的启发式：根据执行时间调整
-        let optimal_size = if execution_times > 100 { 256 } else { 128 };
+        let optimal_size: _ = if execution_times > 100 { 256 } else { 128 };
         Ok(optimal_size)
     }
 
@@ -323,11 +323,11 @@ impl AutoTuner {
 
     /// 计算最优并发任务数
     async fn calculate_optimal_concurrent_tasks(&self) -> Result<usize, Box<dyn std::error::Error>> {
-        let cpu_usage = self.metrics_collector.get_average_cpu_usage().await?;
-        let current_config = self.config_manager.get_config().await;
+        let cpu_usage: _ = self.metrics_collector.get_average_cpu_usage().await?;
+        let current_config: _ = self.config_manager.get_config().await;
 
         // 简单的启发式：根据 CPU 使用率调整
-        let optimal_tasks = if cpu_usage > 0.8 { 500 } else { 1000 };
+        let optimal_tasks: _ = if cpu_usage > 0.8 { 500 } else { 1000 };
         Ok(optimal_tasks)
     }
 }
@@ -343,9 +343,9 @@ impl PerformanceMetricsCollector {
     /// 创建新的指标收集器
     pub fn new() -> Self {
         Self {
-            execution_times: Arc::new(RwLock::new(Vec::new())),
-            memory_usage: Arc::new(RwLock::new(Vec::new())),
-            cpu_usage: Arc::new(RwLock::new(Vec::new())),
+            execution_times: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            memory_usage: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            cpu_usage: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         }
     }
 
@@ -384,7 +384,7 @@ impl PerformanceMetricsCollector {
 
     /// 获取平均执行时间
     pub async fn get_average_execution_time(&self) -> Result<u64, Box<dyn std::error::Error>> {
-        let times = self.execution_times.read().await;
+        let times: _ = self.execution_times.read().await;
         if times.is_empty() {
             return Ok(0);
         }
@@ -394,7 +394,7 @@ impl PerformanceMetricsCollector {
 
     /// 获取平均内存使用
     pub async fn get_average_memory_usage(&self) -> Result<usize, Box<dyn std::error::Error>> {
-        let usage = self.memory_usage.read().await;
+        let usage: _ = self.memory_usage.read().await;
         if usage.is_empty() {
             return Ok(0);
         }
@@ -404,7 +404,7 @@ impl PerformanceMetricsCollector {
 
     /// 获取平均 CPU 使用率
     pub async fn get_average_cpu_usage(&self) -> Result<f64, Box<dyn std::error::Error>> {
-        let usage = self.cpu_usage.read().await;
+        let usage: _ = self.cpu_usage.read().await;
         if usage.is_empty() {
             return Ok(0.0);
         }
@@ -422,12 +422,12 @@ impl Default for PerformanceMetricsCollector {
 impl RuntimeConfigManager {
     /// 创建新的配置管理器
     pub fn new() -> Self {
-        let config = RuntimeConfig::default();
+        let config: _ = RuntimeConfig::default();
         Self {
-            config: Arc::new(RwLock::new(config)),
+            config: Arc::new(std::sync::Mutex::new(RwLock::new(config))),
             config_path: None,
             auto_tuner: None,
-            change_callbacks: Arc::new(RwLock::new(Vec::new())),
+            change_callbacks: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         }
     }
 
@@ -435,7 +435,7 @@ impl RuntimeConfigManager {
     pub async fn load_from_file(&mut self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         info!("加载配置文件: {}", path);
 
-        let config_str = fs::read_to_string(path)?;
+        let config_str: _ = fs::read_to_string(path)?;
         let config: RuntimeConfig = serde_json::from_str(&config_str)?;
 
         *self.config.write().await = config;
@@ -448,8 +448,8 @@ impl RuntimeConfigManager {
     /// 保存配置到文件
     pub async fn save_to_file(&self) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(path) = &self.config_path {
-            let config = self.config.read().await;
-            let config_str = serde_json::to_string_pretty(&*config)?;
+            let config: _ = self.config.read().await;
+            let config_str: _ = serde_json::to_string_pretty(&*config)?;
             fs::write(path, config_str)?;
             info!("配置文件已保存: {}", path);
             Ok(())
@@ -460,7 +460,7 @@ impl RuntimeConfigManager {
 
     /// 获取配置快照
     pub async fn get_config_snapshot(&self) -> ConfigSnapshot {
-        let config = self.config.read().await;
+        let config: _ = self.config.read().await;
         ConfigSnapshot {
             config: config.clone(),
             timestamp: std::time::SystemTime::now(),
@@ -481,8 +481,8 @@ impl RuntimeConfigManager {
         update_fn(&mut config);
 
         // 触发变更回调
-        let callbacks = self.change_callbacks.read().await;
-        let config_value = serde_json::to_value(&*config)?;
+        let callbacks: _ = self.change_callbacks.read().await;
+        let config_value: _ = serde_json::to_value(&*config)?;
         for callback in callbacks.iter() {
             callback("runtime_config", &config_value);
         }
@@ -500,56 +500,56 @@ impl RuntimeConfigManager {
         T: Serialize + for<'de> Deserialize<'de> + Clone,
     {
         let mut config = self.config.write().await;
-        let value_json = serde_json::to_value(value)?;
+        let value_json: _ = serde_json::to_value(value)?;
 
         // 路径更新（例如 "v8.max_heap_size_mb"）
         let parts: Vec<&str> = path.split('.').collect();
         if parts.len() >= 2 {
             match parts[0] {
                 "runtime" => {
-                    let section_json = serde_json::to_value(&config.runtime)?;
+                    let section_json: _ = serde_json::to_value(&config.runtime)?;
                     if let Ok(updated) = self.update_json_field(section_json, &parts[1..], value_json) {
                         config.runtime = serde_json::from_value(updated)?;
                     }
                 }
                 "v8" => {
-                    let section_json = serde_json::to_value(&config.v8)?;
+                    let section_json: _ = serde_json::to_value(&config.v8)?;
                     if let Ok(updated) = self.update_json_field(section_json, &parts[1..], value_json) {
                         config.v8 = serde_json::from_value(updated)?;
                     }
                 }
                 "memory" => {
-                    let section_json = serde_json::to_value(&config.memory)?;
+                    let section_json: _ = serde_json::to_value(&config.memory)?;
                     if let Ok(updated) = self.update_json_field(section_json, &parts[1..], value_json) {
                         config.memory = serde_json::from_value(updated)?;
                     }
                 }
                 "performance" => {
-                    let section_json = serde_json::to_value(&config.performance)?;
+                    let section_json: _ = serde_json::to_value(&config.performance)?;
                     if let Ok(updated) = self.update_json_field(section_json, &parts[1..], value_json) {
                         config.performance = serde_json::from_value(updated)?;
                     }
                 }
                 "monitoring" => {
-                    let section_json = serde_json::to_value(&config.monitoring)?;
+                    let section_json: _ = serde_json::to_value(&config.monitoring)?;
                     if let Ok(updated) = self.update_json_field(section_json, &parts[1..], value_json) {
                         config.monitoring = serde_json::from_value(updated)?;
                     }
                 }
                 "logging" => {
-                    let section_json = serde_json::to_value(&config.logging)?;
+                    let section_json: _ = serde_json::to_value(&config.logging)?;
                     if let Ok(updated) = self.update_json_field(section_json, &parts[1..], value_json) {
                         config.logging = serde_json::from_value(updated)?;
                     }
                 }
                 "security" => {
-                    let section_json = serde_json::to_value(&config.security)?;
+                    let section_json: _ = serde_json::to_value(&config.security)?;
                     if let Ok(updated) = self.update_json_field(section_json, &parts[1..], value_json) {
                         config.security = serde_json::from_value(updated)?;
                     }
                 }
                 "network" => {
-                    let section_json = serde_json::to_value(&config.network)?;
+                    let section_json: _ = serde_json::to_value(&config.network)?;
                     if let Ok(updated) = self.update_json_field(section_json, &parts[1..], value_json) {
                         config.network = serde_json::from_value(updated)?;
                     }
@@ -591,11 +591,11 @@ impl RuntimeConfigManager {
     /// 启用自动调优
     pub fn enable_auto_tuning(&mut self) {
         info!("启用配置自动调优");
-        self.auto_tuner = Some(Arc::new(AutoTuner {
-            config_manager: Arc::new(self.clone()),
+        self.auto_tuner = Some(Arc::new(std::sync::Mutex::new(AutoTuner {
+            config_manager: Arc::new(self.clone())),
             is_tuning: false,
             tuning_interval_s: 60,
-            metrics_collector: Arc::new(PerformanceMetricsCollector::new()),
+            metrics_collector: Arc::new(std::sync::Mutex::new(PerformanceMetricsCollector::new())),
         }));
     }
 
@@ -648,8 +648,8 @@ impl RuntimeConfigManager {
 
     /// 根据环境自动调整配置
     pub async fn adapt_for_environment(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let config = self.config.read().await;
-        let environment = config.runtime.environment.clone();
+        let config: _ = self.config.read().await;
+        let environment: _ = config.runtime.environment.clone();
 
         match environment.as_str() {
             "development" => {
@@ -729,7 +729,7 @@ impl RuntimeConfigManager {
 
     /// 验证配置
     pub async fn validate_config(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let config = self.config.read().await;
+        let config: _ = self.config.read().await;
         let mut errors = Vec::new();
 
         // 验证 V8 配置
@@ -833,7 +833,7 @@ impl RuntimeConfigManager {
         }
 
         if !errors.is_empty() {
-            let error_msg = format!("配置验证失败:\n{}", errors.join("\n"));
+            let error_msg: _ = format!("配置验证失败:\n{}", errors.join("\n"));
             error!("{}", error_msg);
             return Err(error_msg.into());
         }
@@ -844,7 +844,7 @@ impl RuntimeConfigManager {
 
     /// 获取配置验证报告
     pub async fn get_validation_report(&self) -> ValidationReport {
-        let config = self.config.read().await;
+        let config: _ = self.config.read().await;
         let mut warnings = Vec::new();
 
         // 生成警告（不会导致失败的检查）
@@ -874,7 +874,7 @@ impl RuntimeConfigManager {
 
     /// 配置项建议
     pub async fn get_config_suggestions(&self) -> Result<Vec<ConfigSuggestion>, Box<dyn std::error::Error>> {
-        let config = self.config.read().await;
+        let config: _ = self.config.read().await;
         let mut suggestions = Vec::new();
 
         // 基于当前配置提供优化建议
@@ -1023,8 +1023,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_runtime_config_manager_creation() {
-        let manager = RuntimeConfigManager::new();
-        let config = manager.get_config().await;
+        let manager: _ = RuntimeConfigManager::new();
+        let config: _ = manager.get_config().await;
 
         assert_eq!(config.v8.max_heap_size_mb, 256);
         assert_eq!(config.memory.pool_size_mb, 128);
@@ -1032,7 +1032,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_config_validation() {
-        let manager = RuntimeConfigManager::new();
+        let manager: _ = RuntimeConfigManager::new();
 
         // 默认配置应该通过验证
         assert!(manager.validate_config().await.is_ok());
@@ -1044,19 +1044,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_config_value() {
-        let manager = RuntimeConfigManager::new();
+        let manager: _ = RuntimeConfigManager::new();
 
         // 更新 V8 最大堆大小
         manager.update_config_value("v8.max_heap_size_mb", 512).await.unwrap();
-        let config = manager.get_config().await;
+        let config: _ = manager.get_config().await;
         assert_eq!(config.v8.max_heap_size_mb, 512);
     }
 
     #[tokio::test]
     async fn test_config_save_and_load() {
         let mut manager = RuntimeConfigManager::new();
-        let temp_dir = std::env::temp_dir();
-        let config_path = temp_dir.join("beejs_config_test.json");
+        let temp_dir: _ = std::env::temp_dir();
+        let config_path: _ = temp_dir.join("beejs_config_test.json");
 
         // 更新配置
         manager.update_config_value("v8.max_heap_size_mb", 1024).await.unwrap();
@@ -1070,23 +1070,23 @@ mod tests {
         new_manager.update_config_value("v8.max_heap_size_mb", 2048).await.unwrap();
 
         // 验证配置更新
-        let config = new_manager.get_config().await;
+        let config: _ = new_manager.get_config().await;
         assert_eq!(config.v8.max_heap_size_mb, 2048);
     }
 
     #[tokio::test]
     async fn test_auto_tuner() {
-        let manager = Arc::new(RuntimeConfigManager::new());
-        let tuner = AutoTuner::new(manager.clone(), 60);
+        let manager: _ = Arc::new(std::sync::Mutex::new(RuntimeConfigManager::new()));
+        let tuner: _ = AutoTuner::new(manager.clone(), 60);
 
         // 测试手动调优
-        let result = tuner.tune().await.unwrap();
+        let result: _ = tuner.tune().await.unwrap();
         assert!(result.applied_changes >= 0);
     }
 
     #[tokio::test]
     async fn test_performance_metrics_collector() {
-        let collector = PerformanceMetricsCollector::new();
+        let collector: _ = PerformanceMetricsCollector::new();
 
         // 记录指标
         collector.record_execution_time(100).await;
@@ -1094,9 +1094,9 @@ mod tests {
         collector.record_cpu_usage(0.5).await;
 
         // 获取平均值
-        let avg_time = collector.get_average_execution_time().await.unwrap();
-        let avg_memory = collector.get_average_memory_usage().await.unwrap();
-        let avg_cpu = collector.get_average_cpu_usage().await.unwrap();
+        let avg_time: _ = collector.get_average_execution_time().await.unwrap();
+        let avg_memory: _ = collector.get_average_memory_usage().await.unwrap();
+        let avg_cpu: _ = collector.get_average_cpu_usage().await.unwrap();
 
         assert_eq!(avg_time, 100);
         assert_eq!(avg_memory, 256);
@@ -1111,33 +1111,33 @@ mod tests {
         manager.update_config_value("runtime.environment", "development").await.unwrap();
         manager.adapt_for_environment().await.unwrap();
 
-        let config = manager.get_config().await;
+        let config: _ = manager.get_config().await;
         assert_eq!(config.logging.log_level, "debug");
 
         // 测试生产环境
         manager.update_config_value("runtime.environment", "production").await.unwrap();
         manager.adapt_for_environment().await.unwrap();
 
-        let config = manager.get_config().await;
+        let config: _ = manager.get_config().await;
         assert!(config.security.enable_sandbox);
         assert!(config.monitoring.enable_prometheus);
     }
 
     #[tokio::test]
     async fn test_config_suggestions() {
-        let manager = RuntimeConfigManager::new();
+        let manager: _ = RuntimeConfigManager::new();
 
         // 设置较小的堆大小以触发建议
         manager.update_config_value("v8.max_heap_size_mb", 64).await.unwrap();
         manager.update_config_value("memory.enable_zero_copy", false).await.unwrap();
 
-        let suggestions = manager.get_config_suggestions().await.unwrap();
+        let suggestions: _ = manager.get_config_suggestions().await.unwrap();
 
         // 应该有关于堆大小和零拷贝的建议
         assert!(!suggestions.is_empty());
-        let has_heap_suggestion = suggestions.iter()
+        let has_heap_suggestion: _ = suggestions.iter()
             .any(|s| s.path == "v8.max_heap_size_mb");
-        let has_zero_copy_suggestion = suggestions.iter()
+        let has_zero_copy_suggestion: _ = suggestions.iter()
             .any(|s| s.path == "memory.enable_zero_copy");
 
         assert!(has_heap_suggestion);
@@ -1146,9 +1146,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_validation_report() {
-        let manager = RuntimeConfigManager::new();
+        let manager: _ = RuntimeConfigManager::new();
 
-        let report = manager.get_validation_report().await;
+        let report: _ = manager.get_validation_report().await;
 
         assert!(report.is_valid);
         assert!(report.errors.is_empty());
@@ -1157,9 +1157,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_config_snapshot() {
-        let manager = RuntimeConfigManager::new();
+        let manager: _ = RuntimeConfigManager::new();
 
-        let snapshot = manager.get_config_snapshot().await;
+        let snapshot: _ = manager.get_config_snapshot().await;
 
         assert_eq!(snapshot.config.v8.max_heap_size_mb, 256);
         assert!(snapshot.timestamp <= std::time::SystemTime::now());
@@ -1167,9 +1167,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_callback_registration() {
-        let manager = RuntimeConfigManager::new();
-        let callback_called = Arc::new(AtomicBool::new(false));
-        let callback_called_clone = Arc::clone(&callback_called);
+        let manager: _ = RuntimeConfigManager::new();
+        let callback_called: _ = Arc::new(std::sync::Mutex::new(AtomicBool::new(false)));
+        let callback_called_clone: _ = Arc::clone(callback_called);
 
         let callback: ConfigChangeCallback = Box::new(move |_path, _value| {
             callback_called_clone.store(true, std::sync::atomic::Ordering::Relaxed);
@@ -1186,23 +1186,23 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_defaults_for_environment() {
-        let dev_config = RuntimeConfigManager::get_defaults_for_environment("development");
+        let dev_config: _ = RuntimeConfigManager::get_defaults_for_environment("development");
         assert_eq!(dev_config.logging.log_level, "debug");
 
-        let prod_config = RuntimeConfigManager::get_defaults_for_environment("production");
+        let prod_config: _ = RuntimeConfigManager::get_defaults_for_environment("production");
         assert!(prod_config.security.enable_sandbox);
         assert!(prod_config.monitoring.enable_prometheus);
 
-        let test_config = RuntimeConfigManager::get_defaults_for_environment("testing");
+        let test_config: _ = RuntimeConfigManager::get_defaults_for_environment("testing");
         assert!(!test_config.monitoring.enable_prometheus);
     }
 
     #[tokio::test]
     async fn test_invalid_config_values() {
-        let manager = RuntimeConfigManager::new();
+        let manager: _ = RuntimeConfigManager::new();
 
         // 测试无效的日志级别
-        let result = manager.update_config_value("logging.log_level", "invalid_level").await;
+        let result: _ = manager.update_config_value("logging.log_level", "invalid_level").await;
         assert!(result.is_ok()); // 更新成功（尽管值无效）
 
         // 验证应该失败
@@ -1211,7 +1211,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_port_conflict() {
-        let manager = RuntimeConfigManager::new();
+        let manager: _ = RuntimeConfigManager::new();
 
         // 设置相同端口
         manager.update_config_value("network.http_port", 8080).await.unwrap();
@@ -1224,3 +1224,5 @@ mod tests {
 
 // 添加 AtomicBool 的导入
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};

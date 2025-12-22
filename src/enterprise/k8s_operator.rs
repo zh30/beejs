@@ -73,7 +73,7 @@ pub struct ClusterConfig {
     /// Enable auto-scaling
     pub auto_scaling: Option<bool>,
     /// Node selector labels
-    pub node_selector: Option<BTreeMap<String, String>>,
+    pub node_selector: Option<BTreeMap<String, String, String, String>>,
     /// Tolerations
     pub tolerations: Option<Vec<Toleration>>,
 }
@@ -282,8 +282,8 @@ pub struct BeejsOperator {
 impl BeejsOperator {
     /// Create a new BeejsOperator
     pub fn new(client: Client, config: OperatorConfig) -> Self {
-        let namespaces = client.clone();
-        let recorder = EventRecorder::new(client.clone(), "beejs-operator".to_string());
+        let namespaces: _ = client.clone();
+        let recorder: _ = EventRecorder::new(client.clone(), "beejs-operator".to_string());
 
         Self {
             client: client.clone(),
@@ -314,11 +314,11 @@ impl BeejsOperator {
     pub async fn run(&self) -> Result<()> {
         info!("Starting Beejs Kubernetes Operator");
 
-        let controller = Controller::new(self.clusters.clone(), ListParams::default())
+        let controller: _ = Controller::new(self.clusters.clone(), ListParams::default())
             .run(
                 self.reconcile(),
                 self.error_policy(),
-                Arc::new(self.clone()),
+                Arc::new(std::sync::Mutex::new(self.clone())),
             )
             .await
             .context("Failed to start controller")?;
@@ -330,23 +330,23 @@ impl BeejsOperator {
 
     /// Reconciliation logic
     fn reconcile(&self) -> Arc<dyn Fn(BeejsCluster) -> Action + Send + Sync + 'static> {
-        Arc::new(move |beejs_cluster: BeejsCluster| {
-            let client = self.client.clone();
-            let clusters = self.clusters.clone();
-            let deployments = self.deployments.clone();
-            let statefulsets = self.statefulsets.clone();
-            let services = self.services.clone();
-            let configmaps = self.configmaps.clone();
-            let recorder = self.recorder.clone();
+        Arc::new(std::sync::Mutex::new(move |beejs_cluster: BeejsCluster| {
+            let client: _ = self.client.clone());
+            let clusters: _ = self.clusters.clone();
+            let deployments: _ = self.deployments.clone();
+            let statefulsets: _ = self.statefulsets.clone();
+            let services: _ = self.services.clone();
+            let configmaps: _ = self.configmaps.clone();
+            let recorder: _ = self.recorder.clone();
 
             async move {
-                let name = beejs_cluster.name_any();
-                let namespace = beejs_cluster.namespace().unwrap_or_default();
+                let name: _ = beejs_cluster.name_any();
+                let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
 
                 info!("Reconciling BeejsCluster: {}/{}", namespace, name);
 
                 // Apply finalizer
-                let finalizer_action = finalizer(
+                let finalizer_action: _ = finalizer(
                     &clusters,
                     "beejs.io/finalizer",
                     beejs_cluster.clone(),
@@ -394,8 +394,8 @@ impl BeejsOperator {
 
     /// Error policy
     fn error_policy(&self) -> Arc<dyn Fn(&kube::Error, &BeejsCluster) -> Action + Send + Sync + 'static> {
-        Arc::new(move |_error, _beejs_cluster| {
-            warn!("Error occurred during reconciliation");
+        Arc::new(std::sync::Mutex::new(move |_error, _beejs_cluster| {
+            warn!("Error occurred during reconciliation"));
             Action::requeue(Duration::from_secs(60))
         })
     }
@@ -410,12 +410,12 @@ impl BeejsOperator {
         configmaps: Api<ConfigMap>,
         recorder: Recorder,
     ) -> Result<Action> {
-        let name = beejs_cluster.name_any();
-        let namespace = beejs_cluster.namespace().unwrap_or_default();
+        let name: _ = beejs_cluster.name_any();
+        let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
 
         // Check if upgrade is needed
-        let status = beejs_cluster.status.clone().unwrap_or_default();
-        let needs_upgrade = Self::check_upgrade_needed(&beejs_cluster, &status);
+        let status: _ = beejs_cluster.status.clone().unwrap_or_default();
+        let needs_upgrade: _ = Self::check_upgrade_needed(&beejs_cluster, &status);
 
         if needs_upgrade {
             info!("Initiating upgrade for BeejsCluster: {}/{}", namespace, name);
@@ -432,7 +432,7 @@ impl BeejsOperator {
         }
 
         // Create or update ConfigMap
-        let configmap = Self::create_configmap(&beejs_cluster)?;
+        let configmap: _ = Self::create_configmap(&beejs_cluster)?;
         configmaps
             .patch(
                 &format!("{}-config", name),
@@ -443,7 +443,7 @@ impl BeejsOperator {
             .context("Failed to patch ConfigMap")?;
 
         // Create or update StatefulSet for the cluster
-        let statefulset = Self::create_statefulset(&beejs_cluster)?;
+        let statefulset: _ = Self::create_statefulset(&beejs_cluster)?;
         statefulsets
             .patch(
                 &name,
@@ -454,7 +454,7 @@ impl BeejsOperator {
             .context("Failed to patch StatefulSet")?;
 
         // Create or update Service
-        let service = Self::create_service(&beejs_cluster)?;
+        let service: _ = Self::create_service(&beejs_cluster)?;
         services
             .patch(
                 &format!("{}-svc", name),
@@ -465,7 +465,7 @@ impl BeejsOperator {
             .context("Failed to patch Service")?;
 
         // Perform health check
-        let health_status = Self::perform_health_check(
+        let health_status: _ = Self::perform_health_check(
             client.clone(),
             &beejs_cluster,
             statefulsets.clone(),
@@ -481,7 +481,7 @@ impl BeejsOperator {
         new_status.health_status = health_status;
         new_status.last_update = Some(Time(Utc::now()));
 
-        let _ = recorder
+        let _: _ = recorder
             .publish(Event::normal(
                 &beejs_cluster,
                 &format!("BeejsCluster {} reconciled successfully", name),
@@ -501,8 +501,8 @@ impl BeejsOperator {
         configmaps: Api<ConfigMap>,
         recorder: Recorder,
     ) -> Result<Action> {
-        let name = beejs_cluster.name_any();
-        let namespace = beejs_cluster.namespace().unwrap_or_default();
+        let name: _ = beejs_cluster.name_any();
+        let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
 
         info!("Cleaning up BeejsCluster: {}/{}", namespace, name);
 
@@ -527,7 +527,7 @@ impl BeejsOperator {
             warn!("Failed to delete ConfigMap: {}", e);
         }
 
-        let _ = recorder
+        let _: _ = recorder
             .publish(Event::normal(
                 &beejs_cluster,
                 &format!("BeejsCluster {} deleted", name),
@@ -539,8 +539,8 @@ impl BeejsOperator {
 
     /// Create ConfigMap for the cluster
     fn create_configmap(beejs_cluster: &BeejsCluster) -> Result<ConfigMap> {
-        let name = beejs_cluster.name_any();
-        let namespace = beejs_cluster.namespace().unwrap_or_default();
+        let name: _ = beejs_cluster.name_any();
+        let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
 
         let mut data = BTreeMap::new();
         data.insert("version".to_string(), beejs_cluster.spec.version.clone());
@@ -563,9 +563,9 @@ impl BeejsOperator {
 
     /// Create StatefulSet for the cluster
     fn create_statefulset(beejs_cluster: &BeejsCluster) -> Result<StatefulSet> {
-        let name = beejs_cluster.name_any();
-        let namespace = beejs_cluster.namespace().unwrap_or_default();
-        let spec = &beejs_cluster.spec;
+        let name: _ = beejs_cluster.name_any();
+        let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
+        let spec: _ = &beejs_cluster.spec;
 
         let mut labels = Self::labels_for_cluster(name);
         labels.insert("app".to_string(), "beejs".to_string());
@@ -617,10 +617,10 @@ impl BeejsOperator {
 
     /// Create Service for the cluster
     fn create_service(beejs_cluster: &BeejsCluster) -> Result<Service> {
-        let name = beejs_cluster.name_any();
-        let namespace = beejs_cluster.namespace().unwrap_or_default();
+        let name: _ = beejs_cluster.name_any();
+        let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
 
-        let labels = Self::labels_for_cluster(name);
+        let labels: _ = Self::labels_for_cluster(name);
 
         Ok(Service {
             metadata: kube::api::ObjectMeta {
@@ -651,7 +651,7 @@ impl BeejsOperator {
     }
 
     /// Generate labels for cluster resources
-    fn labels_for_cluster(name: &str) -> BTreeMap<String, String> {
+    fn labels_for_cluster(name: &str) -> BTreeMap<String, String, String, String> {
         let mut labels = BTreeMap::new();
         labels.insert("beejs.io/cluster".to_string(), name.to_string());
         labels.insert("beejs.io/component".to_string(), "cluster".to_string());
@@ -681,13 +681,13 @@ impl BeejsOperator {
         configmaps: Api<ConfigMap>,
         recorder: Recorder,
     ) -> Result<Action> {
-        let name = beejs_cluster.name_any();
-        let namespace = beejs_cluster.namespace().unwrap_or_default();
+        let name: _ = beejs_cluster.name_any();
+        let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
 
         info!("Starting rolling upgrade for BeejsCluster: {}/{}", namespace, name);
 
         // Get current StatefulSet
-        let current_ss = statefulsets.get(&name).await
+        let current_ss: _ = statefulsets.get(&name).await
             .context("Failed to get StatefulSet for upgrade")?;
 
         // Create new StatefulSet with updated image
@@ -739,7 +739,7 @@ impl BeejsOperator {
             estimated_completion: None,
         });
 
-        let _ = recorder
+        let _: _ = recorder
             .publish(Event::normal(
                 &beejs_cluster,
                 &format!("Started upgrade to version {}", beejs_cluster.spec.version),
@@ -755,8 +755,8 @@ impl BeejsOperator {
         beejs_cluster: &BeejsCluster,
         statefulsets: Api<StatefulSet>,
     ) -> HealthStatus {
-        let name = beejs_cluster.name_any();
-        let namespace = beejs_cluster.namespace().unwrap_or_default();
+        let name: _ = beejs_cluster.name_any();
+        let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
 
         let mut checks = Vec::new();
         let mut healthy_nodes = 0;
@@ -765,8 +765,8 @@ impl BeejsOperator {
         match statefulsets.get(&name).await {
             Ok(ss) => {
                 if let Some(status) = &ss.status {
-                    let ready_replicas = status.ready_replicas.unwrap_or(0);
-                    let replicas = status.replicas.unwrap_or(0);
+                    let ready_replicas: _ = status.ready_replicas.unwrap_or(0);
+                    let replicas: _ = status.replicas.unwrap_or(0);
 
                     checks.push(HealthCheck {
                         name: "StatefulSet Ready".to_string(),
@@ -794,7 +794,7 @@ impl BeejsOperator {
         }
 
         // Determine overall health
-        let overall_status = if healthy_nodes == beejs_cluster.spec.nodes {
+        let overall_status: _ = if healthy_nodes == beejs_cluster.spec.nodes {
             HealthState::Healthy
         } else if healthy_nodes > 0 {
             HealthState::Degraded
@@ -817,19 +817,19 @@ impl BeejsOperator {
         statefulsets: Api<StatefulSet>,
         recorder: Recorder,
     ) -> Result<Action> {
-        let name = beejs_cluster.name_any();
-        let namespace = beejs_cluster.namespace().unwrap_or_default();
+        let name: _ = beejs_cluster.name_any();
+        let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
 
         // Get current StatefulSet
-        let ss = statefulsets.get(&name).await
+        let ss: _ = statefulsets.get(&name).await
             .context("Failed to get StatefulSet for healing")?;
 
         let mut needs_healing = false;
         let mut healing_actions = Vec::new();
 
         if let Some(status) = &ss.status {
-            let ready = status.ready_replicas.unwrap_or(0) as usize;
-            let total = status.replicas.unwrap_or(0) as usize;
+            let ready: _ = status.ready_replicas.unwrap_or(0) as usize;
+            let total: _ = status.replicas.unwrap_or(0) as usize;
 
             if ready < total {
                 info!("Auto-healing triggered for {}/{}: {}/{} pods ready",
@@ -838,7 +838,7 @@ impl BeejsOperator {
                 needs_healing = true;
 
                 // Force restart of failed pods by patching the StatefulSet
-                let mut patched_ss = ss.clone();
+                let mut patched_ss = ss.clone();clone();
                 if let Some(spec) = &mut patched_ss.spec {
                     if let Some(template) = &mut spec.template.spec {
                         // Add annotation to force pod recreation
@@ -867,7 +867,7 @@ impl BeejsOperator {
 
                 healing_actions.push("Restarted failed pods".to_string());
 
-                let _ = recorder
+                let _: _ = recorder
                     .publish(Event::normal(
                         beejs_cluster,
                         &format!("Auto-healed {} pods", total - ready),
@@ -887,10 +887,10 @@ impl BeejsOperator {
     pub async fn get_cluster_metrics(
         &self,
         beejs_cluster: &BeejsCluster,
-    ) -> Result<BTreeMap<String, String>> {
+    ) -> Result<BTreeMap<String, String, String, String>> {
         let mut metrics = BTreeMap::new();
-        let name = beejs_cluster.name_any();
-        let namespace = beejs_cluster.namespace().unwrap_or_default();
+        let name: _ = beejs_cluster.name_any();
+        let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
 
         // Get StatefulSet metrics
         if let Ok(ss) = self.statefulsets.get(&name).await {
@@ -913,23 +913,25 @@ impl BeejsOperator {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_create_operator() {
-        let client = Client::try_default().await.unwrap();
-        let config = OperatorConfig {
+        let client: _ = Client::try_default().await.unwrap();
+        let config: _ = OperatorConfig {
             reconcile_interval: Duration::from_secs(30),
             max_concurrent: 10,
             leader_election: true,
         };
 
-        let operator = BeejsOperator::new(client, config);
+        let operator: _ = BeejsOperator::new(client, config);
         assert_eq!(operator.config.reconcile_interval, Duration::from_secs(30));
     }
 
     #[test]
     fn test_create_configmap() {
-        let cluster = BeejsCluster::new(
+        let cluster: _ = BeejsCluster::new(
             "test-cluster",
             BeejsClusterSpec {
                 version: "v1.0.0".to_string(),
@@ -951,13 +953,13 @@ mod tests {
             },
         );
 
-        let configmap = BeejsOperator::create_configmap(&cluster).unwrap();
+        let configmap: _ = BeejsOperator::create_configmap(&cluster).unwrap();
         assert_eq!(configmap.metadata.name, Some("test-cluster-config".to_string()));
     }
 
     #[test]
     fn test_labels_for_cluster() {
-        let labels = BeejsOperator::labels_for_cluster("test-cluster");
+        let labels: _ = BeejsOperator::labels_for_cluster("test-cluster");
         assert_eq!(
             labels.get("beejs.io/cluster"),
             Some(&"test-cluster".to_string())
@@ -970,7 +972,7 @@ mod tests {
 
     #[test]
     fn test_check_upgrade_needed() {
-        let cluster = BeejsCluster::new(
+        let cluster: _ = BeejsCluster::new(
             "test-cluster",
             BeejsClusterSpec {
                 version: "v2.0.0".to_string(),
@@ -992,7 +994,7 @@ mod tests {
             },
         );
 
-        let old_status = BeejsClusterStatus {
+        let old_status: _ = BeejsClusterStatus {
             phase: ClusterPhase::Running,
             ready_nodes: 3,
             total_nodes: 3,
@@ -1007,7 +1009,7 @@ mod tests {
 
         assert!(BeejsOperator::check_upgrade_needed(&cluster, &old_status));
 
-        let current_status = BeejsClusterStatus {
+        let current_status: _ = BeejsClusterStatus {
             current_version: Some("v2.0.0".to_string()),
             ..old_status
         };
@@ -1017,7 +1019,7 @@ mod tests {
 
     #[test]
     fn test_default_config() {
-        let config = BeejsOperator::default_config();
+        let config: _ = BeejsOperator::default_config();
         assert_eq!(config.reconcile_interval, Duration::from_secs(30));
         assert_eq!(config.max_concurrent, 10);
         assert!(config.leader_election);
@@ -1035,7 +1037,7 @@ mod tests {
             last_check: Some(Time(Utc::now())),
         });
 
-        let health_status = HealthStatus {
+        let health_status: _ = HealthStatus {
             status: HealthState::Healthy,
             last_check: Some(Time(Utc::now())),
             healthy_nodes: 3,

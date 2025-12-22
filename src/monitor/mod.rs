@@ -37,6 +37,8 @@ pub use dashboard::{
 };
 
 pub use profiler::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
     AdvancedProfiler, AdvancedProfilerConfig, PerformanceSummary,
     FunctionTracker, FunctionStats, CallStackAnalyzer, HotspotAnalyzer,
     RealtimeSnapshot, ReportConfig,

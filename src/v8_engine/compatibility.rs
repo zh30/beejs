@@ -56,7 +56,7 @@ pub struct CompatibilityReport {
     pub v8_version: String,
     pub rusty_v8_version: String,
     pub summary: CompatibilitySummary,
-    pub api_map: HashMap<String, APICompatibilityInfo>,
+    pub api_map: HashMap<String, APICompatibilityInfo, std::collections::HashMap<String, APICompatibilityInfo, String, APICompatibilityInfo>>,
     pub deprecated_apis: Vec<DeprecatedAPI>,
     pub migration_plans: Vec<MigrationPlan>,
 }
@@ -66,7 +66,7 @@ pub struct CompatibilityReport {
 pub struct APIUsageReport {
     pub deprecated_apis: Vec<String>,
     pub experimental_apis: Vec<String>,
-    pub usage_count: HashMap<String, usize>,
+    pub usage_count: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>,
 }
 
 /// 迁移计划
@@ -140,7 +140,7 @@ pub struct VerificationReport {
 /// V8 兼容性检查器
 pub struct V8CompatibilityChecker {
     /// API 兼容性映射
-    api_map: HashMap<String, APICompatibilityInfo>,
+    api_map: HashMap<String, APICompatibilityInfo, std::collections::HashMap<String, APICompatibilityInfo, String, APICompatibilityInfo>>,
     /// 已弃用 API 列表
     deprecated_apis: Vec<DeprecatedAPI>,
 }
@@ -159,7 +159,7 @@ impl V8CompatibilityChecker {
     /// 初始化 API 映射
     fn initialize_api_map(&mut self) {
         // ===== 稳定的 V8 API (rusty_v8 0.22) =====
-        let stable_apis = [
+        let stable_apis: _ = [
             "V8Context", "Isolate", "HandleScope", "Local", "Persistent",
             "String", "Number", "Boolean", "Object", "Array", "Function",
             "Value", "Integer", "Uint32", "Int32", "External",
@@ -186,7 +186,7 @@ impl V8CompatibilityChecker {
         }
 
         // ===== 实验性 API (需要特性标志) =====
-        let experimental_apis = [
+        let experimental_apis: _ = [
             "Wasm", "WebAssembly", "JSON", "EvalError",
             "InternalError", "RangeError", "ReferenceError",
             "SyntaxError", "TypeError", "URIError",
@@ -206,7 +206,7 @@ impl V8CompatibilityChecker {
         }
 
         // ===== 内部 API (仅供内部使用) =====
-        let internal_apis = [
+        let internal_apis: _ = [
             "internals", "debug", "profiler", "heap_statistics",
             "gc_profiler", "v8::internal", "v8::FunctionTemplate",
             "v8::ObjectTemplate", "v8::Signature", "v8::Private",
@@ -253,8 +253,8 @@ impl V8CompatibilityChecker {
 
     /// 检查 V8 API 兼容性
     pub async fn check_compatibility(&self) -> Result<CompatibilityReport, anyhow::Error> {
-        let v8_version = self.get_current_v8_version().await?;
-        let rusty_v8_version = self.get_rusty_v8_version();
+        let v8_version: _ = self.get_current_v8_version().await?;
+        let rusty_v8_version: _ = self.get_rusty_v8_version();
 
         // 统计 API 状态
         let mut compatible_count = 0;
@@ -270,14 +270,14 @@ impl V8CompatibilityChecker {
             }
         }
 
-        let total_apis = self.api_map.len();
-        let compatibility_percentage = if total_apis > 0 {
+        let total_apis: _ = self.api_map.len();
+        let compatibility_percentage: _ = if total_apis > 0 {
             (compatible_count as f64 / total_apis as f64) * 100.0
         } else {
             0.0
         };
 
-        let summary = CompatibilitySummary {
+        let summary: _ = CompatibilitySummary {
             total_apis,
             compatible_apis: compatible_count,
             deprecated_apis: deprecated_count,
@@ -331,9 +331,9 @@ impl V8CompatibilityChecker {
 
     /// 获取完整的 V8 信息
     pub async fn get_v8_info(&self) -> Result<V8Info, anyhow::Error> {
-        let v8_version = self.get_current_v8_version().await?;
-        let rusty_v8_version = self.get_rusty_v8_version();
-        let build_config = self.get_build_config()?;
+        let v8_version: _ = self.get_current_v8_version().await?;
+        let rusty_v8_version: _ = self.get_rusty_v8_version();
+        let build_config: _ = self.get_build_config()?;
 
         Ok(V8Info {
             v8_version,
@@ -378,27 +378,27 @@ impl V8CompatibilityChecker {
 
     /// 计算兼容性评分 (0-100)
     pub fn calculate_compatibility_score(&self, report: &CompatibilityReport) -> f64 {
-        let stable_ratio = report.summary.compatible_apis as f64 / report.summary.total_apis as f64;
-        let deprecated_penalty = (report.summary.deprecated_apis as f64 / report.summary.total_apis as f64) * 0.5;
-        let experimental_bonus = (report.summary.experimental_apis as f64 / report.summary.total_apis as f64) * 0.1;
+        let stable_ratio: _ = report.summary.compatible_apis as f64 / report.summary.total_apis as f64;
+        let deprecated_penalty: _ = (report.summary.deprecated_apis as f64 / report.summary.total_apis as f64) * 0.5;
+        let experimental_bonus: _ = (report.summary.experimental_apis as f64 / report.summary.total_apis as f64) * 0.1;
 
-        let base_score = stable_ratio * 100.0;
-        let penalty_score = deprecated_penalty * 100.0;
-        let bonus_score = experimental_bonus * 100.0;
+        let base_score: _ = stable_ratio * 100.0;
+        let penalty_score: _ = deprecated_penalty * 100.0;
+        let bonus_score: _ = experimental_bonus * 100.0;
 
         (base_score - penalty_score + bonus_score).max(0.0).min(100.0)
     }
 
     /// 生成详细的迁移指南
     pub async fn generate_migration_guide(&self) -> Result<MigrationGuide, anyhow::Error> {
-        let report = self.check_compatibility().await?;
-        let usage_report = self.scan_api_usage_in_source().await?;
+        let report: _ = self.check_compatibility().await?;
+        let usage_report: _ = self.scan_api_usage_in_source().await?;
 
         let mut migration_steps = Vec::new();
 
         // 为每个已弃用的 API 生成迁移步骤
         for deprecated in &report.deprecated_apis {
-            let usage_count = usage_report.usage_count.get(&deprecated.api_name).unwrap_or(&0);
+            let usage_count: _ = usage_report.usage_count.get(&deprecated.api_name).unwrap_or(&0);
 
             migration_steps.push(MigrationStep {
                 api_name: deprecated.api_name.clone(),
@@ -501,8 +501,8 @@ impl V8CompatibilityChecker {
 
     /// 检查 rusty_v8 版本兼容性
     pub async fn check_rusty_v8_version(&self) -> Result<bool, anyhow::Error> {
-        let version = self.get_rusty_v8_version();
-        let is_compatible = version.starts_with("0.2"); // 0.22.x 应该兼容
+        let version: _ = self.get_rusty_v8_version();
+        let is_compatible: _ = version.starts_with("0.2"); // 0.22.x 应该兼容
         Ok(is_compatible)
     }
 
@@ -548,17 +548,19 @@ impl Default for V8CompatibilityChecker {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_v8_compatibility_checker_creation() {
-        let checker = V8CompatibilityChecker::new();
+        let checker: _ = V8CompatibilityChecker::new();
         assert!(!checker.api_map.is_empty());
         assert!(checker.api_map.len() > 30); // 确保初始化了足够的 API
     }
 
     #[test]
     fn test_api_map_initialization() {
-        let checker = V8CompatibilityChecker::new();
+        let checker: _ = V8CompatibilityChecker::new();
         assert!(checker.api_map.contains_key("V8Context"));
         assert!(checker.api_map.contains_key("Isolate"));
         assert!(checker.api_map.contains_key("SharedArrayBuffer"));
@@ -566,7 +568,7 @@ mod tests {
 
     #[test]
     fn test_deprecated_apis_initialization() {
-        let checker = V8CompatibilityChecker::new();
+        let checker: _ = V8CompatibilityChecker::new();
         assert!(!checker.deprecated_apis.is_empty());
         assert_eq!(checker.deprecated_apis[0].api_name, "OldContext");
         assert_eq!(checker.deprecated_apis.len(), 3); // 我们添加了 3 个弃用的 API
@@ -574,8 +576,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_compatibility() {
-        let checker = V8CompatibilityChecker::new();
-        let report = checker.check_compatibility().await.unwrap();
+        let checker: _ = V8CompatibilityChecker::new();
+        let report: _ = checker.check_compatibility().await.unwrap();
 
         assert!(!report.v8_version.is_empty());
         assert!(!report.rusty_v8_version.is_empty());
@@ -586,8 +588,8 @@ mod tests {
 
     #[test]
     fn test_compatibility_score_calculation() {
-        let checker = V8CompatibilityChecker::new();
-        let report = CompatibilityReport {
+        let checker: _ = V8CompatibilityChecker::new();
+        let report: _ = CompatibilityReport {
             v8_version: "12.3.0".to_string(),
             rusty_v8_version: "0.22.0".to_string(),
             summary: CompatibilitySummary {
@@ -602,7 +604,7 @@ mod tests {
             migration_plans: Vec::new(),
         };
 
-        let score = checker.calculate_compatibility_score(&report);
+        let score: _ = checker.calculate_compatibility_score(&report);
         assert!(score >= 0.0);
         assert!(score <= 100.0);
         assert!(score > 70.0); // 应该有一个合理的分数
@@ -610,8 +612,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_generate_migration_guide() {
-        let checker = V8CompatibilityChecker::new();
-        let guide = checker.generate_migration_guide().await.unwrap();
+        let checker: _ = V8CompatibilityChecker::new();
+        let guide: _ = checker.generate_migration_guide().await.unwrap();
 
         assert!(guide.total_deprecated > 0);
         assert!(guide.migration_steps.len() > 0);
@@ -620,8 +622,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_auto_fix_compatibility() {
-        let checker = V8CompatibilityChecker::new();
-        let fixes = checker.auto_fix_compatibility().await.unwrap();
+        let checker: _ = V8CompatibilityChecker::new();
+        let fixes: _ = checker.auto_fix_compatibility().await.unwrap();
 
         assert!(!fixes.is_empty());
         assert_eq!(fixes[0].api_name, "HandleScope::Empty");
@@ -631,8 +633,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_verify_fixes() {
-        let checker = V8CompatibilityChecker::new();
-        let fixes = vec![
+        let checker: _ = V8CompatibilityChecker::new();
+        let fixes: _ = vec![
             AutoFixResult {
                 api_name: "API1".to_string(),
                 status: "fixed".to_string(),
@@ -647,7 +649,7 @@ mod tests {
             },
         ];
 
-        let report = checker.verify_fixes(&fixes).await.unwrap();
+        let report: _ = checker.verify_fixes(&fixes).await.unwrap();
         assert_eq!(report.total_fixes, 2);
         assert_eq!(report.passed, 2);
         assert_eq!(report.failed, 0);
@@ -656,8 +658,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_v8_info() {
-        let checker = V8CompatibilityChecker::new();
-        let info = checker.get_v8_info().await.unwrap();
+        let checker: _ = V8CompatibilityChecker::new();
+        let info: _ = checker.get_v8_info().await.unwrap();
 
         assert!(!info.v8_version.is_empty());
         assert!(!info.rusty_v8_version.is_empty());
@@ -666,7 +668,7 @@ mod tests {
 
     #[test]
     fn test_estimate_migration_effort() {
-        let checker = V8CompatibilityChecker::new();
+        let checker: _ = V8CompatibilityChecker::new();
 
         assert_eq!(checker.estimate_migration_effort("OldContext"), "2-3 小时");
         assert_eq!(checker.estimate_migration_effort("HandleScope::Empty"), "1-2 小时");
@@ -676,8 +678,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_rusty_v8_version() {
-        let checker = V8CompatibilityChecker::new();
-        let is_compatible = checker.check_rusty_v8_version().await.unwrap();
+        let checker: _ = V8CompatibilityChecker::new();
+        let is_compatible: _ = checker.check_rusty_v8_version().await.unwrap();
         assert!(is_compatible); // 0.22.0 应该兼容
     }
 }

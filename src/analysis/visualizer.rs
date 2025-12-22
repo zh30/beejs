@@ -380,8 +380,8 @@ impl PerformanceVisualizer {
                 html.push_str(", ");
             }
             // Generate sample data based on the report
-            let variance = (report.max_time_ms - report.min_time_ms) / 2.0;
-            let time = report.average_time_ms + (i as f64 - 10.0) * variance / 10.0;
+            let variance: _ = (report.max_time_ms - report.min_time_ms) / 2.0;
+            let time: _ = report.average_time_ms + (i as f64 - 10.0) * variance / 10.0;
             html.push_str(&format!("{:.2}", time.max(report.min_time_ms).min(report.max_time_ms)));
         }
 
@@ -559,18 +559,20 @@ impl Default for PerformanceVisualizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_visualizer_creation() {
-        let visualizer = PerformanceVisualizer::new();
+        let visualizer: _ = PerformanceVisualizer::new();
         assert_eq!(visualizer.config.width, 800);
         assert_eq!(visualizer.config.height, 600);
     }
 
     #[test]
     fn test_generate_html_report() {
-        let visualizer = PerformanceVisualizer::new();
-        let report = PerformanceReport {
+        let visualizer: _ = PerformanceVisualizer::new();
+        let report: _ = PerformanceReport {
             total_executions: 10,
             average_time_ms: 15.0,
             min_time_ms: 5.0,
@@ -579,7 +581,7 @@ mod tests {
             total_code_executed: 1000,
         };
 
-        let bottlenecks = vec![
+        let bottlenecks: _ = vec![
             crate::analysis::bottleneck_detector::Bottleneck {
                 bottleneck_type: crate::analysis::bottleneck_detector::BottleneckType::SlowExecution,
                 severity: BottleneckSeverity::High,
@@ -590,9 +592,9 @@ mod tests {
             }
         ];
 
-        let suggestions = vec![];
+        let suggestions: _ = vec![];
 
-        let html = visualizer.generate_html_report(&report, &bottlenecks, &suggestions);
+        let html: _ = visualizer.generate_html_report(&report, &bottlenecks, &suggestions);
         assert!(html.contains("<!DOCTYPE html>"));
         assert!(html.contains("Beejs Performance Report"));
         assert!(html.contains("15.00"));
@@ -600,8 +602,8 @@ mod tests {
 
     #[test]
     fn test_generate_markdown_report() {
-        let visualizer = PerformanceVisualizer::new();
-        let report = PerformanceReport {
+        let visualizer: _ = PerformanceVisualizer::new();
+        let report: _ = PerformanceReport {
             total_executions: 10,
             average_time_ms: 15.0,
             min_time_ms: 5.0,
@@ -610,26 +612,26 @@ mod tests {
             total_code_executed: 1000,
         };
 
-        let bottlenecks = vec![];
-        let suggestions = vec![];
+        let bottlenecks: _ = vec![];
+        let suggestions: _ = vec![];
 
-        let md = visualizer.generate_markdown_report(&report, &bottlenecks, &suggestions);
+        let md: _ = visualizer.generate_markdown_report(&report, &bottlenecks, &suggestions);
         assert!(md.contains("# 🚀 Beejs Performance Report"));
         assert!(md.contains("Average Execution Time"));
     }
 
     #[test]
     fn test_save_report() {
-        let visualizer = PerformanceVisualizer::new();
-        let report = "# Test Report\n";
-        let result = visualizer.save_report(report, "/tmp/test_report.html");
+        let visualizer: _ = PerformanceVisualizer::new();
+        let report: _ = "# Test Report\n";
+        let result: _ = visualizer.save_report(report, "/tmp/test_report.html");
 
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_severity_to_string() {
-        let visualizer = PerformanceVisualizer::new();
+        let visualizer: _ = PerformanceVisualizer::new();
 
         assert_eq!(visualizer.severity_to_string(&BottleneckSeverity::Critical), "Critical");
         assert_eq!(visualizer.severity_to_string(&BottleneckSeverity::High), "High");

@@ -15,11 +15,13 @@ use beejs::debugger::{
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// Test 1: BreakpointManager creation
     #[test]
     fn test_breakpoint_manager_creation() {
-        let manager = BreakpointManager::new();
+        let manager: _ = BreakpointManager::new();
         assert_eq!(manager.count(), 0, "Should start with no breakpoints");
     }
 
@@ -28,7 +30,7 @@ mod tests {
     fn test_add_simple_breakpoint() {
         let mut manager = BreakpointManager::new();
 
-        let result = manager.add(
+        let result: _ = manager.add(
             "test.js".to_string(),
             "test.js".to_string(),
             10,
@@ -51,8 +53,8 @@ mod tests {
     fn test_add_conditional_breakpoint() {
         let mut manager = BreakpointManager::new();
 
-        let condition = BreakpointCondition::Expression("x > 10".to_string());
-        let result = manager.add_conditional(
+        let condition: _ = BreakpointCondition::Expression("x > 10".to_string());
+        let result: _ = manager.add_conditional(
             "test.js".to_string(),
             "test.js".to_string(),
             20,
@@ -73,7 +75,7 @@ mod tests {
     fn test_remove_breakpoint() {
         let mut manager = BreakpointManager::new();
 
-        let result = manager.add(
+        let result: _ = manager.add(
             "test fn test_remove_break.js".to_string(),
             "test.js".to_string(),
             10,
@@ -81,9 +83,9 @@ mod tests {
         );
 
         assert!(result.success, "Should add breakpoint");
-        let breakpoint_id = result.data.as_ref().unwrap().id.clone();
+        let breakpoint_id: _ = result.data.as_ref().unwrap().id.clone();
 
-        let remove_result = manager.remove_breakpoint(&breakpoint_id);
+        let remove_result: _ = manager.remove_breakpoint(&breakpoint_id);
         assert!(remove_result.success, "Should remove breakpoint successfully");
         assert_eq!(manager.count(), 0, "Should have no breakpoints");
     }
@@ -93,26 +95,26 @@ mod tests {
     fn test_enable_disable_breakpoint() {
         let mut manager = BreakpointManager::new();
 
-        let result = manager.add(
+        let result: _ = manager.add(
             "test.js".to_string(),
             "test.js".to_string(),
             10,
             0,
         );
-        let breakpoint_id = result.data.as_ref().unwrap().id.clone();
+        let breakpoint_id: _ = result.data.as_ref().unwrap().id.clone();
 
         // Disable breakpoint
-        let disable_result = manager.disable_breakpoint(&breakpoint_id);
+        let disable_result: _ = manager.disable_breakpoint(&breakpoint_id);
         assert!(disable_result.success, "Should disable breakpoint");
 
-        let bp = manager.get_breakpoint(&breakpoint_id).unwrap();
+        let bp: _ = manager.get_breakpoint(&breakpoint_id).unwrap();
         assert!(!bp.enabled, "Should be disabled");
 
         // Enable breakpoint
-        let enable_result = manager.enable_breakpoint(&breakpoint_id);
+        let enable_result: _ = manager.enable_breakpoint(&breakpoint_id);
         assert!(enable_result.success, "Should enable breakpoint");
 
-        let bp = manager.get_breakpoint(&breakpoint_id).unwrap();
+        let bp: _ = manager.get_breakpoint(&breakpoint_id).unwrap();
         assert!(bp.enabled, "Should be enabled");
     }
 
@@ -125,10 +127,10 @@ mod tests {
         manager.add("test.js".to_string(), "test.js".to_string(), 20, 0).unwrap();
         manager.add("other.js".to_string(), "other.js".to_string(), 10, 0).unwrap();
 
-        let found = manager.find_breakpoints("test.js", 10);
+        let found: _ = manager.find_breakpoints("test.js", 10);
         assert_eq!(found.len(), 1, "Should find 1 breakpoint at test.js:10");
 
-        let found = manager.find_script_breakpoints("test.js");
+        let found: _ = manager.find_script_breakpoints("test.js");
         assert_eq!(found.len(), 2, "Should find 2 breakpoints in test.js");
     }
 
@@ -137,21 +139,21 @@ mod tests {
     fn test_increment_hit_count() {
         let mut manager = BreakpointManager::new();
 
-        let result = manager.add("test.js".to_string(), "test.js".to_string(), 10, 0).unwrap();
-        let breakpoint_id = result.id.clone();
+        let result: _ = manager.add("test.js".to_string(), "test.js".to_string(), 10, 0).unwrap();
+        let breakpoint_id: _ = result.id.clone();
 
-        let increment_result = manager.increment_hit_count(&breakpoint_id);
+        let increment_result: _ = manager.increment_hit_count(&breakpoint_id);
         assert!(increment_result.success, "Should increment hit count");
 
-        let bp = manager.get_breakpoint(&breakpoint_id).unwrap();
+        let bp: _ = manager.get_breakpoint(&breakpoint_id).unwrap();
         assert_eq!(bp.hit_count, 1, "Hit count should be 1");
     }
 
     /// Test 8: DebuggerEngine creation
     #[test]
     fn test_debugger_engine_creation() {
-        let config = DebugConfig::default();
-        let engine = DebuggerEngine::new(config);
+        let config: _ = DebugConfig::default();
+        let engine: _ = DebuggerEngine::new(config);
 
         assert_eq!(engine.get_state(), DebugState::Running, "Should start in Running state");
     }
@@ -159,7 +161,7 @@ mod tests {
     /// Test 9: DebuggerEngine with default config
     #[test]
     fn test_debugger_engine_default() {
-        let engine = DebuggerEngine::new_default();
+        let engine: _ = DebuggerEngine::new_default();
         assert_eq!(engine.get_state(), DebugState::Running);
     }
 
@@ -168,7 +170,7 @@ mod tests {
     fn test_debugger_set_breakpoint() {
         let mut engine = DebuggerEngine::new_default();
 
-        let result = engine.set_breakpoint(
+        let result: _ = engine.set_breakpoint(
             "test.js".to_string(),
             "test.js".to_string(),
             10,
@@ -176,10 +178,10 @@ mod tests {
 
         assert!(result.success, "Should set breakpoint successfully");
 
-        let breakpoints = engine.get_all_breakpoints();
+        let breakpoints: _ = engine.get_all_breakpoints();
         assert_eq!(breakpoints.len(), 1, "Should have 1 breakpoint");
 
-        let bp = &breakpoints[0];
+        let bp: _ = &breakpoints[0];
         assert_eq!(bp.line_number, 10);
         assert_eq!(bp.script_name, "test.js");
     }
@@ -189,8 +191,8 @@ mod tests {
     fn test_debugger_set_conditional_breakpoint() {
         let mut engine = DebuggerEngine::new_default();
 
-        let condition = BreakpointCondition::HitCount(5);
-        let result = engine.set_conditional_breakpoint(
+        let condition: _ = BreakpointCondition::HitCount(5);
+        let result: _ = engine.set_conditional_breakpoint(
             "test.js".to_string(),
             "test.js".to_string(),
             20,
@@ -199,10 +201,10 @@ mod tests {
 
         assert!(result.success, "Should set conditional breakpoint");
 
-        let breakpoints = engine.get_all_breakpoints();
+        let breakpoints: _ = engine.get_all_breakpoints();
         assert_eq!(breakpoints.len(), 1, "Should have 1 breakpoint");
 
-        let bp = &breakpoints[0];
+        let bp: _ = &breakpoints[0];
         assert_eq!(bp.condition, condition);
     }
 
@@ -211,17 +213,17 @@ mod tests {
     fn test_debugger_remove_breakpoint() {
         let mut engine = DebuggerEngine::new_default();
 
-        let result = engine.set_breakpoint(
+        let result: _ = engine.set_breakpoint(
             "test.js".to_string(),
             "test.js".to_string(),
             10,
         );
-        let breakpoint_id = result.data.as_ref().unwrap().id.clone();
+        let breakpoint_id: _ = result.data.as_ref().unwrap().id.clone();
 
-        let remove_result = engine.remove_breakpoint(&breakpoint_id);
+        let remove_result: _ = engine.remove_breakpoint(&breakpoint_id);
         assert!(remove_result.success, "Should remove breakpoint");
 
-        let breakpoints = engine.get_all_breakpoints();
+        let breakpoints: _ = engine.get_all_breakpoints();
         assert_eq!(breakpoints.len(), 0, "Should have no breakpoints");
     }
 
@@ -230,40 +232,40 @@ mod tests {
     fn test_debugger_enable_disable_breakpoint() {
         let mut engine = DebuggerEngine::new_default();
 
-        let result = engine.set_breakpoint(
+        let result: _ = engine.set_breakpoint(
             "test.js".to_string(),
             "test.js".to_string(),
             10,
         );
-        let breakpoint_id = result.data.as_ref().unwrap().id.clone();
+        let breakpoint_id: _ = result.data.as_ref().unwrap().id.clone();
 
-        let disable_result = engine.disable_breakpoint(&breakpoint_id);
+        let disable_result: _ = engine.disable_breakpoint(&breakpoint_id);
         assert!(disable_result.success, "Should disable breakpoint");
 
-        let enabled_bps = engine.get_enabled_breakpoints();
+        let enabled_bps: _ = engine.get_enabled_breakpoints();
         assert_eq!(enabled_bps.len(), 0, "Should have no enabled breakpoints");
 
-        let enable_result = engine.enable_breakpoint(&breakpoint_id);
+        let enable_result: _ = engine.enable_breakpoint(&breakpoint_id);
         assert!(enable_result.success, "Should enable breakpoint");
 
-        let enabled_bps = engine.get_enabled_breakpoints();
+        let enabled_bps: _ = engine.get_enabled_breakpoints();
         assert_eq!(enabled_bps.len(), 1, "Should have 1 enabled breakpoint");
     }
 
     /// Test 14: Continue execution
     #[test]
     fn test_continue_execution() {
-        let engine = DebuggerEngine::new_default();
+        let engine: _ = DebuggerEngine::new_default();
 
         // Start in Running state
         assert_eq!(engine.get_state(), DebugState::Running);
 
         // Pause first
-        let _ = engine.pause();
+        let _: _ = engine.pause();
         assert_eq!(engine.get_state(), DebugState::Paused);
 
         // Continue
-        let result = engine.continue_execution();
+        let result: _ = engine.continue_execution();
         assert!(result.success, "Should continue successfully");
         assert_eq!(engine.get_state(), DebugState::Running);
     }
@@ -273,7 +275,7 @@ mod tests {
     fn test_step_over() {
         let mut engine = DebuggerEngine::new_default();
 
-        let result = engine.step_over();
+        let result: _ = engine.step_over();
         assert!(result.success, "Should step over successfully");
         assert_eq!(engine.get_state(), DebugState::Stepping);
     }
@@ -283,7 +285,7 @@ mod tests {
     fn test_step_into() {
         let mut engine = DebuggerEngine::new_default();
 
-        let result = engine.step_into();
+        let result: _ = engine.step_into();
         assert!(result.success, "Should step into successfully");
         assert_eq!(engine.get_state(), DebugState::Stepping);
     }
@@ -293,7 +295,7 @@ mod tests {
     fn test_step_out() {
         let mut engine = DebuggerEngine::new_default();
 
-        let result = engine.step_out();
+        let result: _ = engine.step_out();
         assert!(result.success, "Should step out successfully");
         assert_eq!(engine.get_state(), DebugState::Stepping);
     }
@@ -303,7 +305,7 @@ mod tests {
     fn test_next() {
         let mut engine = DebuggerEngine::new_default();
 
-        let result = engine.next();
+        let result: _ = engine.next();
         assert!(result.success, "Should step next successfully");
         assert_eq!(engine.get_state(), DebugState::Stepping);
     }
@@ -311,9 +313,9 @@ mod tests {
     /// Test 19: Pause execution
     #[test]
     fn test_pause() {
-        let engine = DebuggerEngine::new_default();
+        let engine: _ = DebuggerEngine::new_default();
 
-        let result = engine.pause();
+        let result: _ = engine.pause();
         assert!(result.success, "Should pause successfully");
         assert_eq!(engine.get_state(), DebugState::Paused);
     }
@@ -321,9 +323,9 @@ mod tests {
     /// Test 20: Terminate debugging
     #[test]
     fn test_terminate() {
-        let engine = DebuggerEngine::new_default();
+        let engine: _ = DebuggerEngine::new_default();
 
-        let result = engine.terminate();
+        let result: _ = engine.terminate();
         assert!(result.success, "Should terminate successfully");
         assert_eq!(engine.get_state(), DebugState::Terminated);
     }
@@ -331,20 +333,20 @@ mod tests {
     /// Test 21: Get stack trace
     #[test]
     fn test_get_stack_trace() {
-        let engine = DebuggerEngine::new_default();
+        let engine: _ = DebuggerEngine::new_default();
 
         // Initially no stack trace
-        let stack = engine.get_stack_trace();
+        let stack: _ = engine.get_stack_trace();
         assert!(stack.is_none(), "Should have no stack trace initially");
     }
 
     /// Test 22: Update stack trace
     #[test]
     fn test_update_stack_trace() {
-        let engine = DebuggerEngine::new_default();
+        let engine: _ = DebuggerEngine::new_default();
 
         let mut stack_trace = StackTrace::new();
-        let frame = StackFrame {
+        let frame: _ = StackFrame {
             index: 0,
             script_id: "test.js".to_string(),
             script_name: "test.js".to_string(),
@@ -359,7 +361,7 @@ mod tests {
 
         engine.update_stack_trace(stack_trace.clone());
 
-        let retrieved = engine.get_stack_trace();
+        let retrieved: _ = engine.get_stack_trace();
         assert!(retrieved.is_some(), "Should have stack trace");
         assert_eq!(retrieved.as_ref().unwrap().frames.len(), 1);
     }
@@ -372,7 +374,7 @@ mod tests {
         engine.set_breakpoint("test1.js".to_string(), "test1.js".to_string(), 10).unwrap();
         engine.set_breakpoint("test2.js".to_string(), "test2.js".to_string(), 20).unwrap();
 
-        let all = engine.get_all_breakpoints();
+        let all: _ = engine.get_all_breakpoints();
         assert_eq!(all.len(), 2, "Should have 2 breakpoints");
     }
 
@@ -381,22 +383,22 @@ mod tests {
     fn test_get_enabled_breakpoints() {
         let mut engine = DebuggerEngine::new_default();
 
-        let result1 = engine.set_breakpoint("test1.js".to_string(), "test1.js".to_string(), 10).unwrap();
-        let result2 = engine.set_breakpoint("test2.js".to_string(), "test2.js".to_string(), 20).unwrap();
+        let result1: _ = engine.set_breakpoint("test1.js".to_string(), "test1.js".to_string(), 10).unwrap();
+        let result2: _ = engine.set_breakpoint("test2.js".to_string(), "test2.js".to_string(), 20).unwrap();
 
         // Disable one breakpoint
         engine.disable_breakpoint(&result1.id).unwrap();
 
-        let enabled = engine.get_enabled_breakpoints();
+        let enabled: _ = engine.get_enabled_breakpoints();
         assert_eq!(enabled.len(), 1, "Should have 1 enabled breakpoint");
     }
 
     /// Test 25: Get debug stats
     #[test]
     fn test_get_debug_stats() {
-        let engine = DebuggerEngine::new_default();
+        let engine: _ = DebuggerEngine::new_default();
 
-        let stats = engine.get_stats();
+        let stats: _ = engine.get_stats();
         assert_eq!(stats.breakpoints_set, 0);
         assert_eq!(stats.breakpoints_hit, 0);
         assert_eq!(stats.steps_executed, 0);
@@ -409,36 +411,36 @@ mod tests {
         let mut engine = DebuggerEngine::new_default();
 
         // Set a breakpoint
-        let _ = engine.set_breakpoint(
+        let _: _ = engine.set_breakpoint(
             "test.js".to_string(),
             "test.js".to_string(),
             10,
         );
 
         // Should pause at the breakpoint location
-        let should_pause = engine.should_pause("test.js", 10);
+        let should_pause: _ = engine.should_pause("test.js", 10);
         assert!(should_pause, "Should pause at breakpoint location");
     }
 
     /// Test 27: Is running check
     #[test]
     fn test_is_running() {
-        let engine = DebuggerEngine::new_default();
+        let engine: _ = DebuggerEngine::new_default();
 
         assert!(engine.is_running(), "Should be running initially");
 
-        let _ = engine.pause();
+        let _: _ = engine.pause();
         assert!(!engine.is_running(), "Should not be running after pause");
     }
 
     /// Test 28: Is paused check
     #[test]
     fn test_is_paused() {
-        let engine = DebuggerEngine::new_default();
+        let engine: _ = DebuggerEngine::new_default();
 
         assert!(!engine.is_paused(), "Should not be paused initially");
 
-        let _ = engine.pause();
+        let _: _ = engine.pause();
         assert!(engine.is_paused(), "Should be paused after pause()");
     }
 
@@ -449,24 +451,24 @@ mod tests {
 
         assert!(!engine.is_stepping(), "Should not be stepping initially");
 
-        let _ = engine.step_over();
+        let _: _ = engine.step_over();
         assert!(engine.is_stepping(), "Should be stepping after step_over()");
     }
 
     /// Test 30: SimpleEventListener
     #[test]
     fn test_simple_event_listener() {
-        let listener = SimpleEventListener::new();
+        let listener: _ = SimpleEventListener::new();
 
         assert_eq!(listener.get_events().len(), 0, "Should start with no events");
 
-        let event = DebugEvent::ProgramStarted {
+        let event: _ = DebugEvent::ProgramStarted {
             script_id: "test.js".to_string(),
         };
 
         listener.on_event(&event);
 
-        let events = listener.get_events();
+        let events: _ = listener.get_events();
         assert_eq!(events.len(), 1, "Should have 1 event");
         assert!(matches!(events[0], DebugEvent::ProgramStarted { .. }));
     }
@@ -474,14 +476,14 @@ mod tests {
     /// Test 31: StackTrace creation
     #[test]
     fn test_stack_trace_creation() {
-        let stack = StackTrace::new();
+        let stack: _ = StackTrace::new();
         assert_eq!(stack.frames.len(), 0, "Should start with empty frames");
     }
 
     /// Test 32: StackFrame structure
     #[test]
     fn test_stack_frame_structure() {
-        let frame = StackFrame {
+        let frame: _ = StackFrame {
             index: 0,
             script_id: "test.js".to_string(),
             script_name: "test.js".to_string(),
@@ -504,7 +506,7 @@ mod tests {
     /// Test 33: SourceLocation structure
     #[test]
     fn test_source_location_structure() {
-        let location = SourceLocation {
+        let location: _ = SourceLocation {
             script_id: "script_id".to_string(),
             script_name: "script_name".to_string(),
             line_number: 42,
@@ -520,7 +522,7 @@ mod tests {
     /// Test 34: Breakpoint matches location
     #[test]
     fn test_breakpoint_matches_location() {
-        let breakpoint = Breakpoint {
+        let breakpoint: _ = Breakpoint {
             id: "bp1".to_string(),
             script_id: "test.js".to_string(),
             script_name: "test.js".to_string(),
@@ -577,7 +579,7 @@ mod tests {
         manager.add("test.js".to_string(), "test.js".to_string(), 10, 0).unwrap();
         manager.add("test.js".to_string(), "test.js".to_string(), 10, 0).unwrap();
 
-        let found = manager.find_breakpoints("test.js", 10);
+        let found: _ = manager.find_breakpoints("test.js", 10);
         assert_eq!(found.len(), 2, "Should find 2 breakpoints at same location");
     }
 
@@ -610,7 +612,7 @@ mod tests {
         assert_eq!(manager.enabled_count(), 2);
 
         // Disable one
-        let result = manager.add("test.js".to_string(), "test.js".to_string(), 30, 0).unwrap();
+        let result: _ = manager.add("test.js".to_string(), "test.js".to_string(), 30, 0).unwrap();
         manager.disable_breakpoint(&result.id).unwrap();
 
         assert_eq!(manager.count(), 3);
@@ -622,17 +624,17 @@ mod tests {
     fn test_get_breakpoint_by_id() {
         let mut manager = BreakpointManager::new();
 
-        let result = manager.add("test.js".to_string(), "test.js".to_string(), 10, 0).unwrap();
-        let breakpoint_id = result.id.clone();
+        let result: _ = manager.add("test.js".to_string(), "test.js".to_string(), 10, 0).unwrap();
+        let breakpoint_id: _ = result.id.clone();
 
-        let bp = manager.get_breakpoint(&breakpoint_id);
+        let bp: _ = manager.get_breakpoint(&breakpoint_id);
         assert!(bp.is_some(), "Should find breakpoint by ID");
 
-        let bp = bp.unwrap();
+        let bp: _ = bp.clone();unwrap();
         assert_eq!(bp.line_number, 10);
 
         // Non-existent ID
-        let bp = manager.get_breakpoint("nonexistent");
+        let bp: _ = manager.get_breakpoint("nonexistent");
         assert!(bp.is_none(), "Should not find non-existent breakpoint");
     }
 
@@ -645,19 +647,19 @@ mod tests {
         assert_eq!(engine.get_state(), DebugState::Running);
 
         // Pause
-        let _ = engine.pause();
+        let _: _ = engine.pause();
         assert_eq!(engine.get_state(), DebugState::Paused);
 
         // Step
-        let _ = engine.step_over();
+        let _: _ = engine.step_over();
         assert_eq!(engine.get_state(), DebugState::Stepping);
 
         // Continue
-        let _ = engine.continue_execution();
+        let _: _ = engine.continue_execution();
         assert_eq!(engine.get_state(), DebugState::Running);
 
         // Terminate
-        let _ = engine.terminate();
+        let _: _ = engine.terminate();
         assert_eq!(engine.get_state(), DebugState::Terminated);
     }
 }

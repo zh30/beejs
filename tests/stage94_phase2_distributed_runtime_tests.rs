@@ -5,19 +5,21 @@
 use beejs::distributed::*;
 use std::collections::HashMap;
 use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 #[tokio::test]
 async fn test_service_discovery_gossip_protocol() {
-    let config = DiscoveryConfig {
+    let config: _ = DiscoveryConfig {
         cluster_name: "test-cluster".to_string(),
         gossip_interval: Duration::from_millis(100),
         node_timeout: Duration::from_secs(5),
     };
 
-    let discovery = ServiceDiscovery::new(config);
+    let discovery: _ = ServiceDiscovery::new(config);
     assert!(discovery.is_some());
 
-    let node_info = NodeInfo {
+    let node_info: _ = NodeInfo {
         id: "node-1".to_string(),
         address: "192.168.1.100:8080".to_string(),
         cpu_cores: 8,
@@ -27,11 +29,11 @@ async fn test_service_discovery_gossip_protocol() {
     };
 
     // Test node registration
-    let result = discovery.as_ref().unwrap().register_node(node_info.clone()).await;
+    let result: _ = discovery.as_ref().unwrap().register_node(node_info.clone()).await;
     assert!(result.is_ok());
 
     // Test gossip message handling
-    let gossip_msg = GossipMessage {
+    let gossip_msg: _ = GossipMessage {
         cluster_name: "test-cluster".to_string(),
         node_id: "node-2".to_string(),
         node_info: node_info.clone(),
@@ -41,22 +43,22 @@ async fn test_service_discovery_gossip_protocol() {
             .as_secs(),
     };
 
-    let result = discovery.as_ref().unwrap().handle_gossip_message(gossip_msg).await;
+    let result: _ = discovery.as_ref().unwrap().handle_gossip_message(gossip_msg).await;
     assert!(result.is_ok());
 }
 
 #[tokio::test]
 async fn test_node_manager_registration_and_discovery() {
-    let config = DiscoveryConfig {
+    let config: _ = DiscoveryConfig {
         cluster_name: "test-cluster".to_string(),
         gossip_interval: Duration::from_millis(100),
         node_timeout: Duration::from_secs(5),
     };
 
-    let discovery = ServiceDiscovery::new(config).unwrap();
-    let node_manager = Arc::new(NodeManager::new(discovery.clone()));
+    let discovery: _ = ServiceDiscovery::new(config).unwrap();
+    let node_manager: _ = Arc::new(std::sync::Mutex::new(NodeManager::new(discovery.clone())));
 
-    let node_info = NodeInfo {
+    let node_info: _ = NodeInfo {
         id: "test-node".to_string(),
         address: "192.168.1.100:8080".to_string(),
         cpu_cores: 16,
@@ -70,26 +72,26 @@ async fn test_node_manager_registration_and_discovery() {
     };
 
     // Register node
-    let result = node_manager.register_node(node_info).await;
+    let result: _ = node_manager.register_node(node_info).await;
     assert!(result.is_ok());
 
     // Discover nodes
-    let discovered_nodes = node_manager.discover_nodes().await;
+    let discovered_nodes: _ = node_manager.discover_nodes().await;
     assert!(discovered_nodes.is_ok());
     assert!(discovered_nodes.unwrap().len() > 0);
 
     // Get cluster topology
-    let topology = node_manager.get_cluster_topology().await;
+    let topology: _ = node_manager.get_cluster_topology().await;
     assert!(topology.is_ok());
 
     // Cleanup offline nodes
-    let cleaned_count = node_manager.cleanup_offline_nodes().await;
+    let cleaned_count: _ = node_manager.cleanup_offline_nodes().await;
     assert!(cleaned_count >= 0);
 }
 
 #[tokio::test]
 async fn test_load_balancer_consistent_hashing() {
-    let config = LoadBalancerConfig {
+    let config: _ = LoadBalancerConfig {
         strategy: RoutingStrategy::ConsistentHash,
         max_connections: 10000,
         health_check_interval: Duration::from_secs(5),
@@ -100,13 +102,13 @@ async fn test_load_balancer_consistent_hashing() {
         },
     };
 
-    let load_balancer = LoadBalancer::new(config);
+    let load_balancer: _ = LoadBalancer::new(config);
     assert!(load_balancer.is_ok());
 
-    let lb = load_balancer.unwrap();
+    let lb: _ = load_balancer.unwrap();
 
     // Add backends
-    let backends = vec![
+    let backends: _ = vec![
         Backend {
             id: "backend-1".to_string(),
             address: "192.168.1.101:8080".to_string(),
@@ -128,12 +130,12 @@ async fn test_load_balancer_consistent_hashing() {
     ];
 
     for backend in &backends {
-        let result = lb.add_backend(backend.clone());
+        let result: _ = lb.add_backend(backend.clone());
         assert!(result.is_ok());
     }
 
     // Test consistent hashing routing
-    let request = Request {
+    let request: _ = Request {
         id: "req-123".to_string(),
         path: "/api/v1/users".to_string(),
         method: "GET".to_string(),
@@ -147,69 +149,69 @@ async fn test_load_balancer_consistent_hashing() {
             .as_millis() as u64,
     };
 
-    let selected_backend = lb.route_request(&request).await;
+    let selected_backend: _ = lb.route_request(&request).await;
     assert!(selected_backend.is_ok());
     assert!(selected_backend.unwrap().is_some());
 
     // Test circuit breaker
-    let circuit_breaker = lb.get_circuit_breaker("backend-1").await;
+    let circuit_breaker: _ = lb.get_circuit_breaker("backend-1").await;
     assert!(circuit_breaker.is_ok());
 }
 
 #[tokio::test]
 async fn test_health_monitor_cluster_health() {
-    let config = HealthCheckConfig {
+    let config: _ = HealthCheckConfig {
         check_interval: Duration::from_millis(500),
         failure_threshold: 3,
         recovery_threshold: 2,
         timeout: Duration::from_secs(5),
     };
 
-    let discovery = ServiceDiscovery::new(DiscoveryConfig {
+    let discovery: _ = ServiceDiscovery::new(DiscoveryConfig {
         cluster_name: "test-cluster".to_string(),
         gossip_interval: Duration::from_millis(100),
         node_timeout: Duration::from_secs(5),
     }).unwrap();
 
-    let node_manager = Arc::new(NodeManager::new(discovery.clone()));
-    let health_monitor = Arc::new(HealthMonitor::new(node_manager));
+    let node_manager: _ = Arc::new(std::sync::Mutex::new(NodeManager::new(discovery.clone())));
+    let health_monitor: _ = Arc::new(std::sync::Mutex::new(HealthMonitor::new(node_manager)));
 
     // Start health monitoring
-    let result = health_monitor.start_monitoring().await;
+    let result: _ = health_monitor.start_monitoring().await;
     assert!(result.is_ok());
 
     // Check cluster health
-    let cluster_health = health_monitor.check_cluster_health().await;
+    let cluster_health: _ = health_monitor.check_cluster_health().await;
     assert!(cluster_health.is_ok());
 
     // Get health statistics
-    let health_stats = health_monitor.get_health_statistics().await;
+    let health_stats: _ = health_monitor.get_health_statistics().await;
     assert!(health_stats.is_ok());
 
     // Wait a bit for monitoring to collect data
     tokio::time::sleep(Duration::from_millis(600)).await;
 
     // Stop monitoring
-    let result = health_monitor.stop_monitoring().await;
+    let result: _ = health_monitor.stop_monitoring().await;
     assert!(result.is_ok());
 }
 
 #[tokio::test]
 async fn test_task_scheduler_distributed_scheduling() {
-    let config = SchedulerConfig {
+    let config: _ = SchedulerConfig {
         max_concurrent_tasks: 100,
         task_timeout: Duration::from_secs(30),
         retry_attempts: 3,
         scheduling_strategy: "round_robin".to_string(),
     };
 
-    let scheduler = TaskScheduler::new(config);
+    let scheduler: _ = TaskScheduler::new(config);
     assert!(scheduler.is_ok());
 
-    let task_scheduler = scheduler.unwrap();
+    let task_scheduler: _ = scheduler.clone();unwrap();
 
     // Create test tasks
-    let tasks = vec![
+    let tasks: _ = vec![
         Task {
             id: "task-1".to_string(),
             task_type: TaskType::Compute,
@@ -250,20 +252,20 @@ async fn test_task_scheduler_distributed_scheduling() {
 
     // Submit tasks
     for task in &tasks {
-        let result = task_scheduler.submit_task(task.clone()).await;
+        let result: _ = task_scheduler.submit_task(task.clone()).await;
         assert!(result.is_ok());
     }
 
     // Get scheduler statistics
-    let stats = task_scheduler.get_statistics().await;
+    let stats: _ = task_scheduler.get_statistics().await;
     assert!(stats.is_ok());
-    let stats = stats.unwrap();
+    let stats: _ = stats.clone();unwrap();
     assert_eq!(stats.total_tasks, 3);
 }
 
 #[tokio::test]
 async fn test_task_executor_fault_tolerance() {
-    let config = ExecutorConfig {
+    let config: _ = ExecutorConfig {
         max_workers: 10,
         worker_timeout: Duration::from_secs(30),
         execution_mode: ExecutionMode::Distributed,
@@ -277,23 +279,23 @@ async fn test_task_executor_fault_tolerance() {
         },
     };
 
-    let executor = TaskExecutor::new(config);
+    let executor: _ = TaskExecutor::new(config);
     assert!(executor.is_ok());
 
-    let task_executor = executor.unwrap();
+    let task_executor: _ = executor.clone();unwrap();
 
     // Create worker
-    let worker_config = WorkerConfig {
+    let worker_config: _ = WorkerConfig {
         id: "worker-1".to_string(),
         max_tasks: 5,
         capabilities: vec!["js-execution".to_string()],
     };
 
-    let result = task_executor.add_worker(worker_config).await;
+    let result: _ = task_executor.add_worker(worker_config).await;
     assert!(result.is_ok());
 
     // Execute test task
-    let task = Task {
+    let task: _ = Task {
         id: "exec-task-1".to_string(),
         task_type: TaskType::Compute,
         payload: "simple-computation".to_string(),
@@ -306,30 +308,30 @@ async fn test_task_executor_fault_tolerance() {
         }),
     };
 
-    let execution_result = task_executor.execute_task(task).await;
+    let execution_result: _ = task_executor.execute_task(task).await;
     assert!(execution_result.is_ok());
 
     // Get executor statistics
-    let stats = task_executor.get_statistics().await;
+    let stats: _ = task_executor.get_statistics().await;
     assert!(stats.is_ok());
 }
 
 #[tokio::test]
 async fn test_fault_tolerance_mechanisms() {
-    let config = FaultDetectionConfig {
+    let config: _ = FaultDetectionConfig {
         detection_interval: Duration::from_millis(500),
         failure_threshold: 3,
         recovery_threshold: 2,
         severity_threshold: FaultSeverity::High,
     };
 
-    let fault_detector = FaultDetector::new(config);
+    let fault_detector: _ = FaultDetector::new(config);
     assert!(fault_detector.is_ok());
 
-    let detector = fault_detector.unwrap();
+    let detector: _ = fault_detector.unwrap();
 
     // Simulate fault detection
-    let fault_event = FaultEvent {
+    let fault_event: _ = FaultEvent {
         fault_id: "fault-001".to_string(),
         node_id: "node-1".to_string(),
         fault_type: FaultType::NodeFailure,
@@ -341,26 +343,26 @@ async fn test_fault_tolerance_mechanisms() {
             .as_secs(),
     };
 
-    let result = detector.detect_fault(fault_event).await;
+    let result: _ = detector.detect_fault(fault_event).await;
     assert!(result.is_ok());
 
     // Get fault statistics
-    let stats = detector.get_statistics().await;
+    let stats: _ = detector.get_statistics().await;
     assert!(stats.is_ok());
 
     // Test recovery action
-    let recovery_action = RecoveryAction::RestartNode {
+    let recovery_action: _ = RecoveryAction::RestartNode {
         node_id: "node-1".to_string(),
         delay: Duration::from_secs(5),
     };
 
-    let result = detector.execute_recovery_action(recovery_action).await;
+    let result: _ = detector.execute_recovery_action(recovery_action).await;
     assert!(result.is_ok());
 }
 
 #[tokio::test]
 async fn test_autoscaler_cluster_scaling() {
-    let config = AutoscalerConfig {
+    let config: _ = AutoscalerConfig {
         min_nodes: 2,
         max_nodes: 20,
         scale_up_threshold: 0.8,
@@ -369,13 +371,13 @@ async fn test_autoscaler_cluster_scaling() {
         scale_down_cooldown: Duration::from_secs(120),
     };
 
-    let autoscaler = Autoscaler::new(config);
+    let autoscaler: _ = Autoscaler::new(config);
     assert!(autoscaler.is_ok());
 
-    let scaler = autoscaler.unwrap();
+    let scaler: _ = autoscaler.unwrap();
 
     // Create cluster metrics
-    let metrics = ClusterMetrics {
+    let metrics: _ = ClusterMetrics {
         cpu_utilization: 0.75,
         memory_utilization: 0.65,
         network_utilization: 0.45,
@@ -388,36 +390,36 @@ async fn test_autoscaler_cluster_scaling() {
     };
 
     // Evaluate scaling decision
-    let scaling_decision = scaler.evaluate_scaling(&metrics).await;
+    let scaling_decision: _ = scaler.evaluate_scaling(&metrics).await;
     assert!(scaling_decision.is_ok());
 
     // Execute scaling if needed
-    let decision = scaling_decision.unwrap();
+    let decision: _ = scaling_decision.unwrap();
     if decision.should_scale {
-        let result = scaler.execute_scaling(decision.action.clone()).await;
+        let result: _ = scaler.execute_scaling(decision.action.clone()).await;
         assert!(result.is_ok());
     }
 
     // Get autoscaler statistics
-    let stats = scaler.get_statistics().await;
+    let stats: _ = scaler.get_statistics().await;
     assert!(stats.is_ok());
 }
 
 #[tokio::test]
 async fn test_distributed_metrics_collection() {
-    let config = MetricsConfig {
+    let config: _ = MetricsConfig {
         collection_interval: Duration::from_millis(500),
         retention_period: Duration::from_secs(300),
         max_metrics: 10000,
     };
 
-    let metrics = DistributedMetrics::new(config);
+    let metrics: _ = DistributedMetrics::new(config);
     assert!(metrics.is_ok());
 
-    let metric_system = metrics.unwrap();
+    let metric_system: _ = metrics.unwrap();
 
     // Collect node metrics
-    let node_metrics = NodeMetrics {
+    let node_metrics: _ = NodeMetrics {
         node_id: "node-1".to_string(),
         cpu_usage: 0.65,
         memory_usage: 0.45,
@@ -431,15 +433,15 @@ async fn test_distributed_metrics_collection() {
             .as_secs(),
     };
 
-    let result = metric_system.collect_node_metrics(node_metrics).await;
+    let result: _ = metric_system.collect_node_metrics(node_metrics).await;
     assert!(result.is_ok());
 
     // Get real-time metrics
-    let realtime = metric_system.get_real_time_metrics().await;
+    let realtime: _ = metric_system.get_real_time_metrics().await;
     assert!(realtime.is_ok());
 
     // Get cluster summary
-    let summary = metric_system.get_cluster_summary().await;
+    let summary: _ = metric_system.get_cluster_summary().await;
     assert!(summary.is_ok());
 }
 
@@ -448,89 +450,89 @@ async fn test_distributed_system_integration() {
     // Test end-to-end distributed system integration
 
     // 1. Create distributed system
-    let config = DistributedConfig::default(
+    let config: _ = DistributedConfig::default(
         "integration-test-cluster".to_string(),
         "integration-node".to_string(),
     );
 
-    let dist_system = DistributedSystem::new(config);
+    let dist_system: _ = DistributedSystem::new(config);
     assert!(dist_system.is_ok());
 
-    let system = dist_system.unwrap();
+    let system: _ = dist_system.unwrap();
 
     // 2. Start the system
-    let result = system.start().await;
+    let result: _ = system.start().await;
     assert!(result.is_ok());
 
     // 3. Get cluster summary
-    let summary = system.get_cluster_summary().await;
+    let summary: _ = system.get_cluster_summary().await;
     assert!(summary.is_ok());
 
-    let cluster_summary = summary.unwrap();
+    let cluster_summary: _ = summary.clone();unwrap();
     assert!(cluster_summary.is_operational());
 
     // 4. Verify recommended actions
-    let actions = cluster_summary.recommended_actions();
+    let actions: _ = cluster_summary.recommended_actions();
     assert!(actions.len() >= 0);
 
     // 5. Stop the system
-    let result = system.stop().await;
+    let result: _ = system.stop().await;
     assert!(result.is_ok());
 }
 
 #[tokio::test]
 async fn test_cluster_console_operations() {
-    let config = ConsoleConfig {
+    let config: _ = ConsoleConfig {
         refresh_interval: Duration::from_millis(1000),
         max_history_entries: 1000,
         alert_retention: Duration::from_secs(3600),
     };
 
-    let console = ClusterConsole::new(config);
+    let console: _ = ClusterConsole::new(config);
     assert!(console.is_ok());
 
-    let cluster_console = console.unwrap();
+    let cluster_console: _ = console.clone();unwrap();
 
     // Get cluster overview
-    let overview = cluster_console.get_cluster_overview().await;
+    let overview: _ = cluster_console.get_cluster_overview().await;
     assert!(overview.is_ok());
 
     // Get node status details
-    let node_status = cluster_console.get_node_status_details().await;
+    let node_status: _ = cluster_console.get_node_status_details().await;
     assert!(node_status.is_ok());
 
     // Get performance metrics
-    let perf_metrics = cluster_console.get_performance_metrics().await;
+    let perf_metrics: _ = cluster_console.get_performance_metrics().await;
     assert!(perf_metrics.is_ok());
 
     // Get resource utilization
-    let resource_util = cluster_console.get_resource_utilization().await;
+    let resource_util: _ = cluster_console.get_resource_utilization().await;
     assert!(resource_util.is_ok());
 
     // Get trace analysis
-    let trace_analysis = cluster_console.get_trace_analysis().await;
+    let trace_analysis: _ = cluster_console.get_trace_analysis().await;
     assert!(trace_analysis.is_ok());
 
     // Get alert messages
-    let alerts = cluster_console.get_alert_messages().await;
+    let alerts: _ = cluster_console.get_alert_messages().await;
     assert!(alerts.is_ok());
 }
 
 #[tokio::test]
 async fn test_resource_tracker_allocation() {
-    let config = ResourceConfig {
+    let config: _ = ResourceConfig {
         tracking_interval: Duration::from_millis(500),
         allocation_timeout: Duration::from_secs(30),
         max_allocations: 1000,
     };
 
-    let tracker = ResourceTracker::new(config);
+    let tracker: _ = ResourceTracker::new(config);
     assert!(tracker.is_ok());
 
-    let resource_tracker = tracker.unwrap();
+    let resource_tracker: _ = tracker.clone();unwrap();
 
     // Allocate resources
-    let allocation = ResourceAllocation {
+    let allocation: _ = ResourceAllocation {
         allocation_id: "alloc-001".to_string(),
         resource_type: "cpu".to_string(),
         amount: 2.0,
@@ -538,21 +540,21 @@ async fn test_resource_tracker_allocation() {
         metadata: HashMap::new(),
     };
 
-    let result = resource_tracker.allocate_resource(allocation).await;
+    let result: _ = resource_tracker.allocate_resource(allocation).await;
     assert!(result.is_ok());
 
     // Release resources
-    let result = resource_tracker.release_resource("alloc-001").await;
+    let result: _ = resource_tracker.release_resource("alloc-001").await;
     assert!(result.is_ok());
 
     // Get resource statistics
-    let stats = resource_tracker.get_statistics().await;
+    let stats: _ = resource_tracker.get_statistics().await;
     assert!(stats.is_ok());
 }
 
 #[tokio::test]
 async fn test_scaling_manager_operations() {
-    let config = ScalingConfig {
+    let config: _ = ScalingConfig {
         scaling_strategy: "predictive".to_string(),
         min_nodes: 2,
         max_nodes: 50,
@@ -566,13 +568,13 @@ async fn test_scaling_manager_operations() {
         },
     };
 
-    let scaling_manager = ScalingManager::new(config);
+    let scaling_manager: _ = ScalingManager::new(config);
     assert!(scaling_manager.is_ok());
 
-    let manager = scaling_manager.unwrap();
+    let manager: _ = scaling_manager.unwrap();
 
     // Create scaling event
-    let event = ScalingEvent {
+    let event: _ = ScalingEvent {
         event_id: "scale-event-001".to_string(),
         event_type: "scale_up".to_string(),
         target_nodes: 5,
@@ -583,29 +585,29 @@ async fn test_scaling_manager_operations() {
             .as_secs(),
     };
 
-    let result = manager.handle_scaling_event(event).await;
+    let result: _ = manager.handle_scaling_event(event).await;
     assert!(result.is_ok());
 
     // Get scaling statistics
-    let stats = manager.get_statistics().await;
+    let stats: _ = manager.get_statistics().await;
     assert!(stats.is_ok());
 }
 
 #[tokio::test]
 async fn test_distributed_tracing_operations() {
-    let config = TracingConfig {
+    let config: _ = TracingConfig {
         sampling_rate: 1.0,
         trace_retention: Duration::from_secs(3600),
         max_spans_per_trace: 100,
     };
 
-    let tracer = DistributedTracer::new(config);
+    let tracer: _ = DistributedTracer::new(config);
     assert!(tracer.is_ok());
 
-    let distributed_tracer = tracer.unwrap();
+    let distributed_tracer: _ = tracer.clone();unwrap();
 
     // Create trace
-    let trace = Trace {
+    let trace: _ = Trace {
         trace_id: "trace-001".to_string(),
         span_id: "span-001".to_string(),
         parent_span_id: None,
@@ -619,14 +621,14 @@ async fn test_distributed_tracing_operations() {
         logs: vec![],
     };
 
-    let result = distributed_tracer.record_trace(trace).await;
+    let result: _ = distributed_tracer.record_trace(trace).await;
     assert!(result.is_ok());
 
     // Get trace analysis
-    let analysis = distributed_tracer.get_trace_analysis().await;
+    let analysis: _ = distributed_tracer.get_trace_analysis().await;
     assert!(analysis.is_ok());
 
     // Get performance statistics
-    let perf_stats = distributed_tracer.get_performance_statistics().await;
+    let perf_stats: _ = distributed_tracer.get_performance_statistics().await;
     assert!(perf_stats.is_ok());
 }

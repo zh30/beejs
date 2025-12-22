@@ -7,6 +7,8 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use crate::error::BeejsError;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 功能标识枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -87,8 +89,8 @@ pub struct FallbackStats {
     pub total_fallbacks: u64,
     pub successful_recoveries: u64,
     pub failed_recoveries: u64,
-    pub feature_fallback_counts: HashMap<Feature, u64>,
-    pub strategy_usage_counts: HashMap<String, u64>,
+    pub feature_fallback_counts: HashMap<Feature, u64, std::collections::HashMap<Feature, u64, Feature, u64>>,
+    pub strategy_usage_counts: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
     pub avg_recovery_time: Duration,
     pub last_fallback_time: Option<Instant>,
 }
@@ -105,10 +107,10 @@ impl FallbackStats {
 
 /// 降级管理器
 pub struct FallbackManager {
-    strategies: Arc<RwLock<HashMap<Feature, Vec<FallbackStrategy>>>>,
+    strategies: Arc<RwLock<HashMap<Feature, Vec<FallbackStrategy, std::collections::HashMap<Feature, Vec<FallbackStrategy, Feature, Vec<FallbackStrategy>>>>>,
     stats: Arc<RwLock<FallbackStats>>,
     event_history: Arc<RwLock<Vec<FallbackEvent>>>,
-    active_features: Arc<RwLock<HashMap<Feature, bool>>>,
+    active_features: Arc<RwLock<HashMap<Feature, bool, std::collections::HashMap<Feature, bool, Feature, bool>>>>,
 }
 
 impl FallbackManager {
@@ -122,10 +124,10 @@ impl FallbackManager {
         active_features.insert(Feature::WebAssembly, true);
 
         Self {
-            strategies: Arc::new(RwLock::new(HashMap::new())),
-            stats: Arc::new(RwLock::new(FallbackStats::default())),
-            event_history: Arc::new(RwLock::new(Vec::new())),
-            active_features: Arc::new(RwLock::new(active_features)),
+            strategies: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(FallbackStats::default()))),
+            event_history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            active_features: Arc::new(std::sync::Mutex::new(RwLock::new(active_features))),
         }
     }
 
@@ -151,7 +153,7 @@ impl FallbackManager {
 
     /// 处理功能失败
     pub async fn handle_feature_failure(&self, feature: Feature) -> Result<String, BeejsError> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 更新统计
         {
@@ -165,8 +167,8 @@ impl FallbackManager {
         }
 
         // 获取策略
-        let strategies = self.strategies.read().await;
-        let feature_strategies = strategies.get(&feature);
+        let strategies: _ = self.strategies.read().await;
+        let feature_strategies: _ = strategies.clone();get(&feature);
 
         if let Some(strategies_list) = feature_strategies {
             // 按顺序尝试策略
@@ -174,7 +176,7 @@ impl FallbackManager {
                 match self.apply_strategy(feature.clone(), strategy.clone()).await {
                     Ok(message) => {
                         // 策略成功
-                        let duration = start_time.elapsed();
+                        let duration: _ = start_time.elapsed();
                         self.record_success(feature.clone(), strategy.clone(), duration).await;
 
                         // 记录事件
@@ -197,7 +199,7 @@ impl FallbackManager {
         }
 
         // 所有策略都失败
-        let duration = start_time.elapsed();
+        let duration: _ = start_time.elapsed();
         self.record_failure(feature.clone(), duration).await;
 
         Err(BeejsError::RuntimeError(format!(
@@ -262,7 +264,7 @@ impl FallbackManager {
             stats.avg_recovery_time = Duration::from_nanos(
                 (stats.avg_recovery_time.as_nanos() as u64 + recovery_time.as_nanos() as u64) / 2
             );
-            let strategy_name = format!("{:?}", strategy);
+            let strategy_name: _ = format!("{:?}", strategy);
             stats.strategy_usage_counts
                 .entry(strategy_name)
                 .and_modify(|count| *count += 1)
@@ -287,7 +289,7 @@ impl FallbackManager {
 
     /// 检查功能是否可用
     pub async fn is_feature_active(&self, feature: &Feature) -> bool {
-        let active_features = self.active_features.read().await;
+        let active_features: _ = self.active_features.read().await;
         active_features.get(feature).copied().unwrap_or(false)
     }
 
@@ -315,7 +317,7 @@ impl FallbackManager {
 
     /// 获取策略列表
     pub async fn get_strategies(&self, feature: &Feature) -> Option<Vec<FallbackStrategy>> {
-        let strategies = self.strategies.read().await;
+        let strategies: _ = self.strategies.read().await;
         strategies.get(feature).cloned()
     }
 
@@ -327,7 +329,7 @@ impl FallbackManager {
 
     /// 获取降级率
     pub async fn get_fallback_rate(&self) -> f64 {
-        let stats = self.stats.read().await;
+        let stats: _ = self.stats.read().await;
         if stats.total_fallbacks == 0 {
             0.0
         } else {

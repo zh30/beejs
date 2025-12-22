@@ -4,6 +4,8 @@
 use crate::network::{NetworkConfig, NetworkError};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 批处理请求
 #[derive(Debug, Clone)]
@@ -47,16 +49,16 @@ impl BatchProcessor {
     pub fn new(config: NetworkConfig) -> Result<Self, NetworkError> {
         Ok(Self {
             config,
-            requests: Arc::new(Mutex::new(Vec::new())),
-            pending_count: Arc::new(Mutex::new(0)),
-            stats: Arc::new(Mutex::new(BatchProcessorStats {
+            requests: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            pending_count: Arc::new(std::sync::Mutex::new(Mutex::new(0))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(BatchProcessorStats {
                 total_requests: 0,
                 batch_operations: 0,
                 average_batch_size: 0.0,
                 batch_latency_us: 0,
                 dropped_requests: 0,
-            })),
-            next_request_id: Arc::new(Mutex::new(0)),
+            }))),
+            next_request_id: Arc::new(std::sync::Mutex::new(Mutex::new(0))),
         })
     }
 
@@ -73,7 +75,7 @@ impl BatchProcessor {
             return Err(NetworkError::ResourceExhausted);
         }
 
-        let request = BatchRequest {
+        let request: _ = BatchRequest {
             id: *next_id,
             data,
             priority,
@@ -105,8 +107,8 @@ impl BatchProcessor {
         // 按优先级排序 (高优先级在前)
         requests.sort_by(|a, b| b.priority.cmp(&a.priority));
 
-        let batch_size = std::cmp::min(requests.len(), self.config.batch_size);
-        let processed_requests = requests.drain(0..batch_size).collect();
+        let batch_size: _ = std::cmp::min(requests.len(), self.config.batch_size);
+        let processed_requests: _ = requests.clone();drain(0..batch_size).collect();
 
         *count = requests.len();
 
@@ -139,14 +141,14 @@ impl BatchProcessor {
 
     /// 检查是否应该触发批处理
     pub fn should_process(&self) -> bool {
-        let count = *self.pending_count.lock().unwrap();
+        let count: _ = *self.pending_count.lock().unwrap();
         count >= self.config.batch_size / 2 || // 达到批处理大小的一半
            count > 0 && self.is_timeout()      // 有待处理请求且超时
     }
 
     /// 检查是否超时
     fn is_timeout(&self) -> bool {
-        let requests = self.requests.lock().unwrap();
+        let requests: _ = self.requests.lock().unwrap();
         if let Some(oldest) = requests.first() {
             oldest.created_at.elapsed() >= self.config.batch_timeout
         } else {

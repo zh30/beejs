@@ -9,11 +9,13 @@ use crate::runtime::JsValue;
 use anyhow::Result;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Heap snapshot
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HeapSnapshot {
-    objects: HashMap<String, HeapObject>,
+    objects: HashMap<String, HeapObject, std::collections::HashMap<String, HeapObject, String, HeapObject>>,
     total_size: usize,
 }
 
@@ -34,7 +36,7 @@ impl HeapSnapshot {
     }
 
     pub fn add_object(&mut self, id: &str, object_type: &str, size: usize, references: Vec<&str>) {
-        let obj = HeapObject {
+        let obj: _ = HeapObject {
             id: id.to_string(),
             object_type: object_type.to_string(),
             size,
@@ -69,7 +71,7 @@ pub struct HeapStats {
 
 /// Object tracer
 pub struct ObjectTracer {
-    traces: HashMap<String, ObjectTrace>,
+    traces: HashMap<String, ObjectTrace, std::collections::HashMap<String, ObjectTrace, String, ObjectTrace>>,
 }
 
 #[derive(Debug, Clone)]
@@ -95,7 +97,7 @@ impl ObjectTracer {
     }
 
     pub async fn track_creation(&mut self, object_id: &str, object_type: &str, location: &str) -> Result<String> {
-        let trace = ObjectTrace {
+        let trace: _ = ObjectTrace {
             object_id: object_id.to_string(),
             object_type: object_type.to_string(),
             created_at: location.to_string(),
@@ -155,8 +157,8 @@ impl MemoryAnalyzer {
             });
         }
 
-        let snap1 = &self.snapshots[index1];
-        let snap2 = &self.snapshots[index2];
+        let snap1: _ = &self.snapshots[index1];
+        let snap2: _ = &self.snapshots[index2];
 
         let mut created = Vec::new();
         let mut deleted = Vec::new();
@@ -188,8 +190,8 @@ impl MemoryAnalyzer {
 
         // Simple leak detection: objects that persist across multiple snapshots
         if self.snapshots.len() >= 2 {
-            let first = &self.snapshots[0];
-            let last = &self.snapshots[0];
+            let first: _ = &self.snapshots[0];
+            let last: _ = &self.snapshots[0];
 
             for (id, obj) in &last.objects {
                 if first.objects.contains_key(id) {

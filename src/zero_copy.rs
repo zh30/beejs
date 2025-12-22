@@ -113,7 +113,7 @@ pub struct ZeroCopyFileReader {
 impl ZeroCopyFileReader {
     /// 创建新的零拷贝文件读取器
     pub async fn new(path: &str) -> Result<Self, std::io::Error> {
-        let file = tokio::fs::File::open(path).await?;
+        let file: _ = tokio::fs::File::open(path).await?;
         Ok(Self { file })
     }
 
@@ -121,8 +121,8 @@ impl ZeroCopyFileReader {
     pub async fn read_to_buffer(&mut self) -> Result<ZeroCopyBuffer, std::io::Error> {
         use tokio::io::AsyncReadExt;
 
-        let metadata = self.file.metadata().await?;
-        let size = metadata.len() as usize;
+        let metadata: _ = self.file.metadata().await?;
+        let size: _ = metadata.len() as usize;
         let mut buffer = vec![0u8; size];
 
         self.file.read_exact(&mut buffer).await?;
@@ -154,7 +154,7 @@ pub struct ZeroCopyFileWriter {
 impl ZeroCopyFileWriter {
     /// 创建新的零拷贝文件写入器
     pub async fn new(path: &str) -> Result<Self, std::io::Error> {
-        let file = tokio::fs::File::create(path).await?;
+        let file: _ = tokio::fs::File::create(path).await?;
         Ok(Self { file })
     }
 
@@ -162,7 +162,7 @@ impl ZeroCopyFileWriter {
     pub async fn write_from_buffer(&mut self, buffer: &ZeroCopyBuffer) -> Result<usize, std::io::Error> {
         // TODO: Remove unused import: use tokio::io::AsyncWriteExt;
 
-        let bytes_written = self.file.write(buffer.as_slice()).await?;
+        let bytes_written: _ = self.file.write(buffer.as_slice()).await?;
         self.file.flush().await?;
 
         Ok(bytes_written)
@@ -173,7 +173,7 @@ impl ZeroCopyFileWriter {
         // TODO: Remove unused import: use tokio::io::AsyncWriteExt;
 
         self.file.seek(std::io::SeekFrom::End(0)).await?;
-        let bytes_written = self.file.write(buffer.as_slice()).await?;
+        let bytes_written: _ = self.file.write(buffer.as_slice()).await?;
         self.file.flush().await?;
 
         Ok(bytes_written)
@@ -197,17 +197,17 @@ pub struct MemoryMappedFile {
 impl MemoryMappedFile {
     /// 创建内存映射文件
     pub async fn open(path: &str) -> Result<Self, std::io::Error> {
-        let file = OpenOptions::new()
+        let file: _ = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
             .open(path)
             .await?;
 
-        let mapping = unsafe { memmap2::MmapOptions::new().map(&file)? };
+        let mapping: _ = unsafe { memmap2::MmapOptions::new().map(&file)? };
 
         Ok(Self {
-            mapping: Arc::new(mapping),
+            mapping: Arc::new(std::sync::Mutex::new(mapping)),
             file,
         })
     }
@@ -220,7 +220,7 @@ impl MemoryMappedFile {
     /// 同步内存映射
     pub fn sync(&self) -> Result<(), std::io::Error> {
         // Arc<Mmap> dereference to &Mmap, then call sync
-        let _ = Arc::as_ptr(&self.mapping);
+        let _: _ = Arc::as_ptr(&self.mapping);
         // 简化的实现：内存映射通常自动同步
         Ok(())
     }
@@ -261,7 +261,7 @@ impl ZeroCopyManager {
     pub fn new() -> Self {
         Self {
             buffer_pool: LockFreeBufferPool::new(),
-            channel_stats: Arc::new(AtomicStats::new()),
+            channel_stats: Arc::new(std::sync::Mutex::new(AtomicStats::new())),
         }
     }
 
@@ -387,15 +387,15 @@ impl<T> ZeroCopyRingBuffer<T> {
 
     /// 尝试写入数据
     pub fn try_write(&mut self, item: T) -> bool {
-        let write_pos = self.write_index.load();
-        let read_pos = self.read_index.load();
+        let write_pos: _ = self.write_index.load();
+        let read_pos: _ = self.read_index.load();
 
         // 检查缓冲区是否已满
         if (write_pos + 1) % self.capacity == read_pos % self.capacity {
             return false;
         }
 
-        let index = write_pos % self.capacity;
+        let index: _ = write_pos % self.capacity;
         // 注意：在实际实现中，需要使用原子操作或锁来安全地修改buffer
         self.buffer[index] = Some(item);
         self.write_index.increment();
@@ -405,16 +405,16 @@ impl<T> ZeroCopyRingBuffer<T> {
 
     /// 尝试读取数据
     pub fn try_read(&mut self) -> Option<T> {
-        let write_pos = self.write_index.load();
-        let read_pos = self.read_index.load();
+        let write_pos: _ = self.write_index.load();
+        let read_pos: _ = self.read_index.load();
 
         // 检查缓冲区是否为空
         if write_pos == read_pos {
             return None;
         }
 
-        let index = read_pos % self.capacity;
-        let item = self.buffer[index].take();
+        let index: _ = read_pos % self.capacity;
+        let item: _ = self.buffer[index].take();
         if item.is_some() {
             self.read_index.increment();
         }
@@ -424,9 +424,9 @@ impl<T> ZeroCopyRingBuffer<T> {
 
     /// 获取缓冲区使用率
     pub fn utilization(&self) -> f64 {
-        let write_pos = self.write_index.load();
-        let read_pos = self.read_index.load();
-        let used = (write_pos - read_pos).max(0) as f64;
+        let write_pos: _ = self.write_index.load();
+        let read_pos: _ = self.read_index.load();
+        let used: _ = (write_pos - read_pos).max(0) as f64;
         used / self.capacity as f64
     }
 }
@@ -436,41 +436,43 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
     use std::fs;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_zero_copy_buffer() {
-        let data = vec![1, 2, 3, 4, 5];
-        let buffer = ZeroCopyBuffer::new(data.clone());
+        let data: _ = vec![1, 2, 3, 4, 5];
+        let buffer: _ = ZeroCopyBuffer::new(data.clone());
 
         assert_eq!(buffer.len(), 5);
         assert_eq!(buffer.as_slice(), &data);
 
         // 测试克隆
-        let cloned = buffer.duplicate();
+        let cloned: _ = buffer.duplicate();
         assert_eq!(cloned.as_slice(), &data);
         assert!(Arc::ptr_eq(&buffer.data, &cloned.data));
     }
 
     #[test]
     fn test_zero_copy_channel() {
-        let channel = ZeroCopyChannel::new(10);
+        let channel: _ = ZeroCopyChannel::new(10);
 
         // 发送数据
         channel.send(42).unwrap();
 
         // 接收数据
-        let received = channel.recv().unwrap();
+        let received: _ = channel.recv().unwrap();
         assert_eq!(received, 42);
     }
 
     #[tokio::test]
     async fn test_zero_copy_file_reader() {
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("test.txt");
+        let temp_dir: _ = TempDir::new().unwrap();
+        let file_path: _ = temp_dir.path().join("test.txt");
         fs::write(&file_path, "Hello, World!").unwrap();
 
         let mut reader = ZeroCopyFileReader::new(file_path.to_str().unwrap()).await.unwrap();
-        let buffer = reader.read_to_buffer().await.unwrap();
+        let buffer: _ = reader.read_to_buffer().await.unwrap();
 
         assert_eq!(buffer.len(), 13);
         assert_eq!(buffer.as_slice(), b"Hello, World!");
@@ -478,23 +480,23 @@ mod tests {
 
     #[tokio::test]
     async fn test_zero_copy_file_writer() {
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("output.txt");
-        let buffer = ZeroCopyBuffer::from_slice(b"Test Data");
+        let temp_dir: _ = TempDir::new().unwrap();
+        let file_path: _ = temp_dir.path().join("output.txt");
+        let buffer: _ = ZeroCopyBuffer::from_slice(b"Test Data");
 
         let mut writer = ZeroCopyFileWriter::new(file_path.to_str().unwrap()).await.unwrap();
-        let bytes_written = writer.write_from_buffer(&buffer).await.unwrap();
+        let bytes_written: _ = writer.write_from_buffer(&buffer).await.unwrap();
 
         assert_eq!(bytes_written, 9);
 
         // 验证文件内容
-        let content = fs::read_to_string(file_path).unwrap();
+        let content: _ = fs::read_to_string(file_path).unwrap();
         assert_eq!(content, "Test Data");
     }
 
     #[test]
     fn test_zero_copy_message() {
-        let message = ZeroCopyMessage::new_with_priority("test".to_string(), 5);
+        let message: _ = ZeroCopyMessage::new_with_priority("test".to_string(), 5);
 
         assert_eq!(message.get_metadata().priority, 5);
         assert_eq!(message.get_data(), &"test".to_string());
@@ -519,33 +521,33 @@ mod tests {
 
     #[test]
     fn test_zero_copy_manager() {
-        let manager = ZeroCopyManager::new();
+        let manager: _ = ZeroCopyManager::new();
 
         // 创建缓冲区
-        let buffer = manager.create_buffer(vec![1, 2, 3]);
+        let buffer: _ = manager.create_buffer(vec![1, 2, 3]);
         assert_eq!(buffer.len(), 3);
 
         // 创建通道
-        let channel = manager.create_channel::<i32>(10);
+        let channel: _ = manager.create_channel::<i32>(10);
         assert!(channel.send(42).is_ok());
 
         // 获取统计信息
-        let stats = manager.get_stats();
+        let stats: _ = manager.get_stats();
         assert!(stats.contains("Buffer Pool"));
         assert!(stats.contains("Channel Stats"));
     }
 
     #[test]
     fn test_atomic_operations_performance() {
-        let counter = Arc::new(LockFreeCounter::new(0));
-        let iterations = 100000;
-        let thread_count = 4;
+        let counter: _ = Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0)));
+        let iterations: _ = 100000;
+        let thread_count: _ = 4;
 
-        let start = std::time::Instant::now();
+        let start: _ = std::time::Instant::now();
 
         let handles: Vec<_> = (0..thread_count)
             .map(|_| {
-                let counter = counter.clone();
+                let counter: _ = counter.clone();clone();
                 std::thread::spawn(move || {
                     for _ in 0..iterations {
                         counter.increment();
@@ -558,8 +560,8 @@ mod tests {
             handle.join().unwrap();
         }
 
-        let elapsed = start.elapsed();
-        let total_ops = counter.load();
+        let elapsed: _ = start.elapsed();
+        let total_ops: _ = counter.load();
 
         println!("{} 个线程执行 {} 次原子操作，总计 {} 次，耗时: {:?}",
                  thread_count, iterations, total_ops, elapsed);
@@ -586,17 +588,17 @@ impl ZeroCopyFileCache {
     /// 创建新的文件缓存管理器
     pub fn new(max_entries: usize) -> Self {
         Self {
-            cache: Arc::new(Mutex::new(lru::LruCache::new(
-                std::num::NonZeroUsize::new(max_entries).unwrap()
+            cache: Arc::new(std::sync::Mutex::new(Mutex::new(lru::LruCache::new(
+                std::num::NonZeroUsize::new(max_entries)).unwrap()
             ))),
             max_entries,
-            stats: Arc::new(AtomicStats::new()),
+            stats: Arc::new(std::sync::Mutex::new(AtomicStats::new())),
         }
     }
 
     /// 获取或加载文件到缓存
     pub async fn get_or_load(&self, path: &str) -> Result<Arc<memmap2::Mmap>, std::io::Error> {
-        let path_string = path.to_string();
+        let path_string: _ = path.to_string();
 
         // 首先检查缓存
         {
@@ -608,14 +610,14 @@ impl ZeroCopyFileCache {
         }
 
         // 缓存未命中，加载文件
-        let file = tokio::fs::File::open(path).await?;
-        let mapping = unsafe { memmap2::MmapOptions::new().map(&file)? };
-        let mapping = Arc::new(mapping);
+        let file: _ = tokio::fs::File::open(path).await?;
+        let mapping: _ = unsafe { memmap2::MmapOptions::new().map(&file)? };
+        let mapping: _ = Arc::new(std::sync::Mutex::new(mapping));
 
         // 添加到缓存
         {
             let mut cache = self.cache.lock().unwrap();
-            cache.put(path_string, Arc::clone(&mapping));
+            cache.put(path_string, Arc::clone(mapping));
         }
 
         self.stats.record_operation("cache_miss");
@@ -624,7 +626,7 @@ impl ZeroCopyFileCache {
 
     /// 预加载文件到缓存
     pub async fn preload(&self, path: &str) -> Result<(), std::io::Error> {
-        let _ = self.get_or_load(path).await?;
+        let _: _ = self.get_or_load(path).await?;
         Ok(())
     }
 
@@ -642,7 +644,7 @@ impl ZeroCopyFileCache {
 
     /// 获取缓存统计
     pub fn get_stats(&self) -> String {
-        let cache = self.cache.lock().unwrap();
+        let cache: _ = self.cache.lock().unwrap();
         format!(
             "Zero-copy file cache: {} entries (max: {}), operations: {}",
             cache.len(),
@@ -673,11 +675,11 @@ impl ZeroCopyIoMonitor {
     /// 创建新的 I/O 监控器
     pub fn new() -> Self {
         Self {
-            zero_copy_bytes: Arc::new(AtomicUsize::new(0)),
-            copied_bytes: Arc::new(AtomicUsize::new(0)),
-            file_ops: Arc::new(AtomicUsize::new(0)),
-            cache_hits: Arc::new(AtomicUsize::new(0)),
-            cache_misses: Arc::new(AtomicUsize::new(0)),
+            zero_copy_bytes: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
+            copied_bytes: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
+            file_ops: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
+            cache_hits: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
+            cache_misses: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
         }
     }
 
@@ -705,25 +707,25 @@ impl ZeroCopyIoMonitor {
 
     /// 获取零拷贝比率
     pub fn get_zero_copy_ratio(&self) -> f64 {
-        let zero_copy = self.zero_copy_bytes.load(Ordering::Relaxed) as f64;
-        let total = zero_copy + self.copied_bytes.load(Ordering::Relaxed) as f64;
+        let zero_copy: _ = self.zero_copy_bytes.load(Ordering::Relaxed) as f64;
+        let total: _ = zero_copy + self.copied_bytes.load(Ordering::Relaxed) as f64;
         if total > 0.0 { zero_copy / total } else { 0.0 }
     }
 
     /// 获取缓存命中率
     pub fn get_cache_hit_rate(&self) -> f64 {
-        let hits = self.cache_hits.load(Ordering::Relaxed) as f64;
-        let total = hits + self.cache_misses.load(Ordering::Relaxed) as f64;
+        let hits: _ = self.cache_hits.load(Ordering::Relaxed) as f64;
+        let total: _ = hits + self.cache_misses.load(Ordering::Relaxed) as f64;
         if total > 0.0 { hits / total } else { 0.0 }
     }
 
     /// 获取性能报告
     pub fn get_performance_report(&self) -> String {
-        let zero_copy = self.zero_copy_bytes.load(Ordering::Relaxed);
-        let copied = self.copied_bytes.load(Ordering::Relaxed);
-        let file_ops = self.file_ops.load(Ordering::Relaxed);
-        let cache_hit_rate = self.get_cache_hit_rate();
-        let zero_copy_ratio = self.get_zero_copy_ratio();
+        let zero_copy: _ = self.zero_copy_bytes.load(Ordering::Relaxed);
+        let copied: _ = self.copied_bytes.load(Ordering::Relaxed);
+        let file_ops: _ = self.file_ops.load(Ordering::Relaxed);
+        let cache_hit_rate: _ = self.get_cache_hit_rate();
+        let zero_copy_ratio: _ = self.get_zero_copy_ratio();
 
         format!(
             "Zero-copy I/O Performance Report:\n\

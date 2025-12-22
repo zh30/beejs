@@ -54,7 +54,7 @@ pub struct CallGraphSampler {
 impl Clone for CallGraphSampler {
     fn clone(&self) -> Self {
         Self {
-            samples: Arc::new(Mutex::new(Vec::new())),
+            samples: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
             start_time: Instant::now(),
         }
     }
@@ -110,7 +110,7 @@ pub struct HeapObject {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryReport {
     pub total_size_bytes: usize,
-    pub object_distribution: HashMap<String, usize>,
+    pub object_distribution: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>,
     pub potential_leaks: Vec<MemoryLeak>,
     pub recommendations: Vec<String>,
 }
@@ -135,8 +135,8 @@ impl Profiler {
     /// 创建新的性能分析器
     pub fn new() -> Self {
         Self {
-            sampler: Arc::new(CallGraphSampler::new()),
-            call_graph_analyzer: Arc::new(CallGraphAnalyzer::new()),
+            sampler: Arc::new(std::sync::Mutex::new(CallGraphSampler::new())),
+            call_graph_analyzer: Arc::new(std::sync::Mutex::new(CallGraphAnalyzer::new())),
         }
     }
 
@@ -173,11 +173,11 @@ impl Profiler {
         self.stop_sampling();
 
         // 获取调用样本
-        let samples = self.sampler.get_samples();
-        let call_graph = self.call_graph_analyzer.analyze_samples(&samples)?;
+        let samples: _ = self.sampler.get_samples();
+        let call_graph: _ = self.call_graph_analyzer.analyze_samples(&samples)?;
 
         // 转换为火焰图
-        let flame_graph = self.convert_to_flamegraph(&call_graph);
+        let flame_graph: _ = self.convert_to_flamegraph(&call_graph);
 
         Ok(flame_graph)
     }
@@ -191,14 +191,14 @@ impl Profiler {
         tokio::time::sleep(duration).await;
         self.stop_sampling();
 
-        let samples = self.sampler.get_samples();
-        let call_graph = self.call_graph_analyzer.analyze_samples(&samples)?;
+        let samples: _ = self.sampler.get_samples();
+        let call_graph: _ = self.call_graph_analyzer.analyze_samples(&samples)?;
 
         // 生成热点函数
-        let hot_functions = self.call_graph_analyzer.find_hot_functions(&call_graph);
+        let hot_functions: _ = self.call_graph_analyzer.find_hot_functions(&call_graph);
 
         // 生成建议
-        let recommendations = self.generate_recommendations(&hot_functions);
+        let recommendations: _ = self.generate_recommendations(&hot_functions);
 
         Ok(PerformanceReport {
             total_time_ns: call_graph.total_time_ns,
@@ -222,10 +222,10 @@ impl Profiler {
         }
 
         // 检测潜在泄漏
-        let potential_leaks = self.detect_memory_leaks(heap_snapshot);
+        let potential_leaks: _ = self.detect_memory_leaks(heap_snapshot);
 
         // 生成建议
-        let recommendations = self.generate_memory_recommendations(&potential_leaks);
+        let recommendations: _ = self.generate_memory_recommendations(&potential_leaks);
 
         Ok(MemoryReport {
             total_size_bytes: heap_snapshot.total_size_bytes,
@@ -237,8 +237,8 @@ impl Profiler {
 
     /// 转换调用图为火焰图
     fn convert_to_flamegraph(&self, call_graph: &CallGraph) -> FlameGraph {
-        let root = self.call_node_to_flamegraph_node(&call_graph.root, 0);
-        let max_depth = self.calculate_max_depth(&root);
+        let root: _ = self.call_node_to_flamegraph_node(&call_graph.root, 0);
+        let max_depth: _ = self.calculate_max_depth(&root);
 
         FlameGraph {
             root,
@@ -279,10 +279,10 @@ impl Profiler {
         let mut leaks = Vec::new();
 
         // 简单的泄漏检测：找出大量重复的大对象
-        let mut type_counts: HashMap<String, (usize, usize)> = HashMap::new(); // (count, total_size)
+        let mut type_counts: HashMap<String, (usize, usize), std::collections::HashMap<String, (usize, usize), String, (usize, usize)>> = HashMap::new(); // (count, total_size)
 
         for obj in &heap_snapshot.objects {
-            let entry = type_counts
+            let entry: _ = type_counts
                 .entry(obj.object_type.clone())
                 .or_insert((0, 0));
             entry.0 += 1;
@@ -402,14 +402,14 @@ impl CallGraphAnalyzer {
 
     /// 分析样本并构建调用图
     pub fn analyze_samples(&self, samples: &[CallSample]) -> Result<CallGraph, Box<dyn std::error::Error + Send + Sync>> {
-        let mut call_tree: HashMap<String, CallNode> = HashMap::new();
+        let mut call_tree: HashMap<String, CallNode, std::collections::HashMap<String, CallNode, String, CallNode>> = HashMap::new();
 
         // 聚合调用数据
         for sample in samples {
             if let Some(end_time) = sample.end_time {
-                let duration = end_time.duration_since(sample.start_time).as_nanos() as u64;
+                let duration: _ = end_time.duration_since(sample.start_time).as_nanos() as u64;
 
-                let node = call_tree
+                let node: _ = call_tree
                     .entry(sample.function_name.clone())
                     .or_insert(CallNode {
                         function_name: sample.function_name.clone(),
@@ -434,7 +434,7 @@ impl CallGraphAnalyzer {
         }
 
         // 构建根节点
-        let root = CallNode {
+        let root: _ = CallNode {
             function_name: "<root>".to_string(),
             file_path: "".to_string(),
             line_number: 0,
@@ -444,8 +444,8 @@ impl CallGraphAnalyzer {
             children: call_tree.values().cloned().collect(),
         };
 
-        let root_call_count = root.call_count;
-        let root_total_time = root.total_time_ns;
+        let root_call_count: _ = root.call_count;
+        let root_total_time: _ = root.total_time_ns;
         Ok(CallGraph {
             root,
             total_calls: root_call_count,
@@ -456,10 +456,10 @@ impl CallGraphAnalyzer {
     /// 查找热点函数
     pub fn find_hot_functions(&self, call_graph: &CallGraph) -> Vec<HotFunction> {
         let mut hot_functions = Vec::new();
-        let total_time = call_graph.total_time_ns;
+        let total_time: _ = call_graph.total_time_ns;
 
         for child in &call_graph.root.children {
-            let percentage = (child.total_time_ns as f64 / total_time as f64) * 100.0;
+            let percentage: _ = (child.total_time_ns as f64 / total_time as f64) * 100.0;
 
             hot_functions.push(HotFunction {
                 function_name: child.function_name.clone(),
@@ -488,7 +488,7 @@ impl CallGraphSampler {
     /// 创建新的采样器
     fn new() -> Self {
         Self {
-            samples: Arc::new(Mutex::new(Vec::new())),
+            samples: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
             start_time: Instant::now(),
         }
     }
@@ -512,7 +512,7 @@ impl CallGraphSampler {
         line_number: u32,
     ) -> CallHandle {
         CallHandle {
-            sampler: Arc::new(self.clone()),
+            sampler: Arc::new(std::sync::Mutex::new(self.clone())),
             function_name: function_name.to_string(),
             file_path: file_path.to_string(),
             line_number,
@@ -540,7 +540,7 @@ impl CallGraphSampler {
 
     /// 获取所有样本
     fn get_samples(&self) -> Vec<CallSample> {
-        let samples = self.samples.lock().unwrap();
+        let samples: _ = self.samples.lock().unwrap();
         samples.clone()
     }
 }
@@ -548,24 +548,26 @@ impl CallGraphSampler {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_flamegraph_generation() {
-        let profiler = Profiler::new();
+        let profiler: _ = Profiler::new();
 
         // 模拟一些函数调用
         {
-            let _handle1 = profiler.record_call("func_a", "test.js", 10);
+            let _handle1: _ = profiler.record_call("func_a", "test.js", 10);
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
 
         {
-            let _handle2 = profiler.record_call("func_b", "test.js", 20);
+            let _handle2: _ = profiler.record_call("func_b", "test.js", 20);
             tokio::time::sleep(Duration::from_millis(5)).await;
         }
 
         // 生成火焰图
-        let flamegraph = profiler.generate_flamegraph(Duration::from_millis(100)).await.unwrap();
+        let flamegraph: _ = profiler.generate_flamegraph(Duration::from_millis(100)).await.unwrap();
 
         assert!(flamegraph.total_time_ns > 0);
         assert!(flamegraph.max_depth >= 0);
@@ -573,7 +575,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_leak_detection() {
-        let profiler = Profiler::new();
+        let profiler: _ = Profiler::new();
 
         // 创建堆快照
         let mut objects = Vec::new();
@@ -585,13 +587,13 @@ mod tests {
             });
         }
 
-        let heap_snapshot = HeapSnapshot {
+        let heap_snapshot: _ = HeapSnapshot {
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             total_size_bytes: objects.len() * 1024,
             objects,
         };
 
-        let memory_report = profiler.analyze_memory(&heap_snapshot).await.unwrap();
+        let memory_report: _ = profiler.analyze_memory(&heap_snapshot).await.unwrap();
 
         // 应该检测到潜在泄漏
         assert!(!memory_report.potential_leaks.is_empty());
@@ -600,17 +602,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_performance_analysis() {
-        let profiler = Profiler::new();
+        let profiler: _ = Profiler::new();
 
         // 执行一些性能测试
         {
-            let _handle = profiler.record_call("test_function", "test.js", 1);
+            let _handle: _ = profiler.record_call("test_function", "test.js", 1);
             for i in 0..1000 {
-                let _ = i * i;
+                let _: _ = i * i;
             }
         }
 
-        let report = profiler.analyze_performance(Duration::from_millis(50)).await.unwrap();
+        let report: _ = profiler.analyze_performance(Duration::from_millis(50)).await.unwrap();
 
         assert!(report.total_time_ns > 0);
         assert!(!report.hot_functions.is_empty());

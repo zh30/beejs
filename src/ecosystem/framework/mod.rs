@@ -15,6 +15,8 @@ pub use ssr::*;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 框架类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -55,7 +57,7 @@ pub enum HydrationStrategy {
 pub struct ComponentInfo {
     pub name: String,
     pub path: String,
-    pub props: HashMap<String, PropInfo>,
+    pub props: HashMap<String, PropInfo, std::collections::HashMap<String, PropInfo, String, PropInfo>>,
     pub state: Vec<StateInfo>,
     pub lifecycle_hooks: Vec<String>,
     pub dependencies: Vec<String>,

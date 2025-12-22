@@ -10,6 +10,8 @@ use serde::{Serialize, Deserialize};
 use crate::ai::code_generator::{Language, CodeContext};
 use crate::ai::auto_optimizer::{AutoOptimizer, Optimization, Bottleneck};
 use crate::ai::ai_performance_engine::{AiPerformanceEngine, PerformanceMetrics};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 代码优化请求
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -147,14 +149,14 @@ pub struct CodeOptimizer {
 pub struct CodeAnalyzer {
     performance_engine: Arc<AiPerformanceEngine>,
     auto_optimizer: Arc<AutoOptimizer>,
-    pattern_cache: Arc<RwLock<HashMap<String, Vec<CodePattern>>>>,
+    pattern_cache: Arc<RwLock<HashMap<String, Vec<CodePattern, std::collections::HashMap<String, Vec<CodePattern, String, Vec<CodePattern>>>>>,
 }
 
 /// 重构引擎
 #[derive(Debug, Clone)]
 pub struct RefactorEngine {
     llm_engine: Arc<MockLlmEngine>,
-    refactor_templates: HashMap<String, RefactorTemplate>,
+    refactor_templates: HashMap<String, RefactorTemplate, std::collections::HashMap<String, RefactorTemplate, String, RefactorTemplate>>,
 }
 
 /// 瓶颈检测器
@@ -215,10 +217,10 @@ pub struct RollbackManager {
 impl CodeOptimizer {
     /// 创建新的代码优化器
     pub fn new() -> Self {
-        let code_analyzer = Arc::new(RwLock::new(CodeAnalyzer::new()));
-        let refactor_engine = Arc::new(RwLock::new(RefactorEngine::new()));
-        let bottleneck_detector = Arc::new(RwLock::new(BottleneckDetector::new()));
-        let optimization_applier = Arc::new(RwLock::new(OptimizationApplier::new()));
+        let code_analyzer: _ = Arc::new(std::sync::Mutex::new(RwLock::new(CodeAnalyzer::new())));
+        let refactor_engine: _ = Arc::new(std::sync::Mutex::new(RwLock::new(RefactorEngine::new())));
+        let bottleneck_detector: _ = Arc::new(std::sync::Mutex::new(RwLock::new(BottleneckDetector::new())));
+        let optimization_applier: _ = Arc::new(std::sync::Mutex::new(RwLock::new(OptimizationApplier::new())));
 
         Self {
             code_analyzer,
@@ -234,22 +236,22 @@ impl CodeOptimizer {
         code: &str,
         context: &CodeContext,
     ) -> Result<CodeAnalysis, String> {
-        let analyzer = self.code_analyzer.read().await;
+        let analyzer: _ = self.code_analyzer.read().await;
 
         // 分析代码模式
-        let patterns = analyzer.detect_patterns(code).await;
+        let patterns: _ = analyzer.detect_patterns(code).await;
 
         // 检测性能指标
-        let metrics = analyzer.extract_performance_metrics(code, context).await;
+        let metrics: _ = analyzer.extract_performance_metrics(code, context).await;
 
         // 检测瓶颈
-        let bottlenecks = self.detect_bottlenecks(code, context).await?;
+        let bottlenecks: _ = self.detect_bottlenecks(code, context).await?;
 
         // 生成监控建议
-        let monitoring_suggestions = analyzer.generate_monitoring_suggestions(&metrics, &bottlenecks);
+        let monitoring_suggestions: _ = analyzer.generate_monitoring_suggestions(&metrics, &bottlenecks);
 
         // 计算总体评分
-        let score = analyzer.calculate_performance_score(&metrics, &patterns, &bottlenecks);
+        let score: _ = analyzer.calculate_performance_score(&metrics, &patterns, &bottlenecks);
 
         Ok(CodeAnalysis {
             score,
@@ -266,10 +268,10 @@ impl CodeOptimizer {
         code: &str,
         context: &CodeContext,
     ) -> Result<Vec<OptimizationSuggestion>, String> {
-        let refactor_engine = self.refactor_engine.read().await;
+        let refactor_engine: _ = self.refactor_engine.read().await;
 
         // 基于代码模式生成建议
-        let suggestions = refactor_engine.generate_suggestions(code, context).await?;
+        let suggestions: _ = refactor_engine.generate_suggestions(code, context).await?;
 
         // 按置信度排序
         let mut sorted_suggestions = suggestions;
@@ -284,7 +286,7 @@ impl CodeOptimizer {
         code: &str,
         context: &CodeContext,
     ) -> Result<Vec<DetectedBottleneck>, String> {
-        let detector = self.bottleneck_detector.read().await;
+        let detector: _ = self.bottleneck_detector.read().await;
 
         let mut bottlenecks = Vec::new();
 
@@ -350,21 +352,21 @@ impl CodeOptimizer {
         context: &CodeContext,
         auto_apply: bool,
     ) -> Result<OptimizationResult, String> {
-        let applier = self.optimization_applier.read().await;
+        let applier: _ = self.optimization_applier.read().await;
 
-        let mut optimized_code = code.to_string();
+        let mut optimized_code = code.clone();to_string();
         let mut applied_optimizations = Vec::new();
         let mut breaking_changes = Vec::new();
 
         // 应用循环优化
         if code.contains("for") && code.contains("for") {
-            let original = optimized_code.clone();
+            let original: _ = optimized_code.clone();
             optimized_code = optimized_code
                 // 简单循环 -> map
-                .replace("for (let i = 0; i < arr.length; i++) {\n                    result.push(arr[i] * 2);\n                }",
+                .replace("for (let i: _ = 0; i < arr.length; i++) {\n                    result.push(arr[i] * 2);\n                }",
                          "const result = arr.map(item => item * 2);")
                 // 嵌套循环优化
-                .replace("for (let i = 0; i < n; i++) {\n                for (let j = 0; j < n; j++) {\n                    result.push(i * j);\n                }\n            }",
+                .replace("for (let i: _ = 0; i < n; i++) {\n                for (let j: _ = 0; j < n; j++) {\n                    result.push(i * j);\n                }\n            }",
                          "// 使用嵌套数组推导或优化算法\n            const result = Array.from({ length: n }, (_, i) => \n                Array.from({ length: n }, (_, j) => i * j));");
 
             if original != optimized_code {
@@ -374,9 +376,9 @@ impl CodeOptimizer {
 
         // 应用数组操作优化
         if code.contains("for") && code.contains("push") {
-            let original = optimized_code.clone();
+            let original: _ = optimized_code.clone();
             optimized_code = optimized_code
-                .replace("const filtered = [];\n                for (let i = 0; i < items.length; i++) {\n                    if (items[i] > 0) {\n                        filtered.push(items[i]);\n                    }\n                }\n\n                const mapped = [];\n                for (let i = 0; i < filtered.length; i++) {\n                    mapped.push(filtered[i] * 2);\n                }",
+                .replace("const filtered = [];\n                for (let i: _ = 0; i < items.length; i++) {\n                    if (items[i] > 0) {\n                        filtered.push(items[i]);\n                    }\n                }\n\n                const mapped = [];\n                for (let i: _ = 0; i < filtered.length; i++) {\n                    mapped.push(filtered[i] * 2);\n                }",
                          "const mapped = items\n                    .filter(item => item > 0)\n                    .map(item => item * 2);");
 
             if original != optimized_code {
@@ -385,10 +387,10 @@ impl CodeOptimizer {
         }
 
         // 计算性能提升（基于应用优化的数量）
-        let performance_improvement = applied_optimizations.len() as f64 * 25.0; // 每个优化约 25% 提升
+        let performance_improvement: _ = applied_optimizations.len() as f64 * 25.0; // 每个优化约 25% 提升
 
         // 内存节省估算
-        let memory_savings = if code.len() > optimized_code.len() {
+        let memory_savings: _ = if code.len() > optimized_code.len() {
             (code.len() - optimized_code.len()) as f64
         } else {
             0.0
@@ -408,14 +410,14 @@ impl CodeOptimizer {
 
 impl CodeAnalyzer {
     pub fn new() -> Self {
-        let config = AiPerformanceEngineConfig::default();
-        let performance_engine = Arc::new(AiPerformanceEngine::new(config));
-        let auto_optimizer = Arc::new(AutoOptimizer::new());
+        let config: _ = AiPerformanceEngineConfig::default();
+        let performance_engine: _ = Arc::new(std::sync::Mutex::new(AiPerformanceEngine::new(config)));
+        let auto_optimizer: _ = Arc::new(std::sync::Mutex::new(AutoOptimizer::new()));
 
         Self {
             performance_engine,
             auto_optimizer,
-            pattern_cache: Arc::new(RwLock::new(HashMap::new())),
+            pattern_cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -462,7 +464,7 @@ impl CodeAnalyzer {
         let mut metrics = Vec::new();
 
         // 计算代码复杂度指标
-        let complexity = self.calculate_complexity(code);
+        let complexity: _ = self.calculate_complexity(code);
         metrics.push(PerformanceMetric {
             name: "CyclomaticComplexity".to_string(),
             value: complexity,
@@ -472,7 +474,7 @@ impl CodeAnalyzer {
         });
 
         // 计算循环嵌套深度
-        let nesting_depth = self.calculate_nesting_depth(code);
+        let nesting_depth: _ = self.calculate_nesting_depth(code);
         metrics.push(PerformanceMetric {
             name: "NestingDepth".to_string(),
             value: nesting_depth as f64,
@@ -482,7 +484,7 @@ impl CodeAnalyzer {
         });
 
         // 计算函数长度
-        let function_length = self.calculate_function_length(code);
+        let function_length: _ = self.calculate_function_length(code);
         metrics.push(PerformanceMetric {
             name: "FunctionLength".to_string(),
             value: function_length as f64,
@@ -574,7 +576,7 @@ impl CodeAnalyzer {
         for ch in code.chars() {
             if ch == '{' {
                 current_depth += 1;
-                max_depth = max_depth.max(current_depth);
+                max_depth = max_depth.clone();max(current_depth);
             } else if ch == '}' {
                 if current_depth > 0 {
                     current_depth -= 1;
@@ -599,14 +601,14 @@ impl RefactorEngine {
             "loop_to_map".to_string(),
             RefactorTemplate {
                 pattern_name: "LoopToMap".to_string(),
-                original_pattern: "for (let i = 0; i < arr.length; i++) { result.push(arr[i] * 2); }".to_string(),
+                original_pattern: "for (let i: _ = 0; i < arr.length; i++) { result.push(arr[i] * 2); }".to_string(),
                 optimized_pattern: "const result = arr.map(item => item * 2);".to_string(),
                 conditions: vec!["数组操作".to_string(), "简单转换".to_string()],
             },
         );
 
         Self {
-            llm_engine: Arc::new(MockLlmEngine::new(0.92)),
+            llm_engine: Arc::new(std::sync::Mutex::new(MockLlmEngine::new(0.92))),
             refactor_templates,
         }
     }
@@ -624,7 +626,7 @@ impl RefactorEngine {
                 id: "opt_001".to_string(),
                 title: "将循环重构为 map 操作".to_string(),
                 description: "使用内置的 map 方法可以提高代码可读性和性能".to_string(),
-                original_code: "for (let i = 0; i < arr.length; i++) { result.push(arr[i] * 2); }".to_string(),
+                original_code: "for (let i: _ = 0; i < arr.length; i++) { result.push(arr[i] * 2); }".to_string(),
                 optimized_code: "const result = arr.map(item => item * 2);".to_string(),
                 optimization_type: "LoopOptimization".to_string(),
                 confidence: 0.92,
@@ -657,7 +659,7 @@ impl RefactorEngine {
                 title: "递归转迭代优化".to_string(),
                 description: "将递归函数转换为迭代实现，避免栈溢出和重复计算".to_string(),
                 original_code: "function fib(n) { if (n <= 1) return n; return fib(n-1) + fib(n-2); }".to_string(),
-                optimized_code: "function fib(n) { let a = 0, b = 1; for (let i = 0; i < n; i++) [a, b] = [b, a + b]; return a; }".to_string(),
+                optimized_code: "function fib(n) { let a: _ = 0, b = 1; for (let i: _ = 0; i < n; i++) [a, b] = [b, a + b]; return a; }".to_string(),
                 optimization_type: "Algorithmic".to_string(),
                 confidence: 0.88,
                 expected_improvement: 80.0,
@@ -672,7 +674,7 @@ impl RefactorEngine {
 
 impl BottleneckDetector {
     pub fn new() -> Self {
-        let detection_rules = vec![
+        let detection_rules: _ = vec![
             DetectionRule {
                 pattern: "nested_loop".to_string(),
                 severity: "High".to_string(),
@@ -687,7 +689,7 @@ impl BottleneckDetector {
 
         Self {
             detection_rules,
-            severity_classifier: Arc::new(SeverityClassifier {}),
+            severity_classifier: Arc::new(std::sync::Mutex::new(SeverityClassifier {})),
         }
     }
 }
@@ -695,8 +697,8 @@ impl BottleneckDetector {
 impl OptimizationApplier {
     pub fn new() -> Self {
         Self {
-            validation_engine: Arc::new(ValidationEngine {}),
-            rollback_manager: Arc::new(RollbackManager {}),
+            validation_engine: Arc::new(std::sync::Mutex::new(ValidationEngine {})),
+            rollback_manager: Arc::new(std::sync::Mutex::new(RollbackManager {})),
         }
     }
 }

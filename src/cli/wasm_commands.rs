@@ -7,6 +7,8 @@ use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 use std::time::Duration;
 use serde::{Serialize, Deserialize};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// WebAssembly CLI 子命令
 #[derive(Subcommand, Debug)]

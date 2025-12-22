@@ -18,7 +18,7 @@ pub struct ChartRenderer {
     /// Render configuration
     config: RenderConfig,
     /// Active chart instances
-    charts: Arc<RwLock<HashMap<String, ChartInstance>>>,
+    charts: Arc<RwLock<HashMap<String, ChartInstance, std::collections::HashMap<String, ChartInstance, String, ChartInstance>>>>,
     /// WebSocket clients for real-time updates
     websocket_clients: Arc<RwLock<Vec<Arc<WebSocketClient>>>>,
 }
@@ -106,7 +106,7 @@ pub struct ChartData {
     /// Labels
     pub labels: Vec<String>,
     /// Metadata
-    pub metadata: HashMap<String, Value>,
+    pub metadata: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>,
 }
 
 /// Series data for multi-series charts
@@ -132,7 +132,7 @@ pub struct GraphRenderer {
     /// Render configuration
     config: RenderConfig,
     /// Active graph instances
-    graphs: Arc<RwLock<HashMap<String, GraphInstance>>>,
+    graphs: Arc<RwLock<HashMap<String, GraphInstance, std::collections::HashMap<String, GraphInstance, String, GraphInstance>>>>,
     /// Layout engine
     layout_engine: Arc<LayoutEngine>,
 }
@@ -163,7 +163,7 @@ pub struct GraphNode {
     pub position: Position,
     pub size: Size,
     pub color: String,
-    pub metadata: HashMap<String, Value>,
+    pub metadata: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>,
 }
 
 /// Graph edge
@@ -256,13 +256,13 @@ pub struct WebSocketClient {
     /// WebSocket connection
     pub connection: Arc<tokio::sync::Mutex<Option<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>>>,
     /// Client metadata
-    pub metadata: HashMap<String, Value>,
+    pub metadata: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>,
 }
 
 /// Template Engine - Dynamic content generation
 pub struct TemplateEngine {
     /// Template cache
-    templates: Arc<RwLock<HashMap<String, Template>>>,
+    templates: Arc<RwLock<HashMap<String, Template, std::collections::HashMap<String, Template, String, Template>>>>,
 }
 
 /// Template definition
@@ -275,7 +275,7 @@ pub struct Template {
     /// Template variables
     pub variables: Vec<String>,
     /// Template functions
-    pub functions: HashMap<String, TemplateFunction>,
+    pub functions: HashMap<String, TemplateFunction, std::collections::HashMap<String, TemplateFunction, String, TemplateFunction>>,
 }
 
 /// Template function
@@ -333,8 +333,8 @@ impl ChartRenderer {
         info!("Initializing Chart Renderer...");
 
         Self {
-            charts: Arc::new(RwLock::new(HashMap::new())),
-            websocket_clients: Arc::new(RwLock::new(Vec::new())),
+            charts: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            websocket_clients: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
             config,
         }
     }
@@ -348,7 +348,7 @@ impl ChartRenderer {
     ) -> Result<()> {
         debug!("Creating chart: {} (type: {:?})", id, chart_type);
 
-        let chart = ChartInstance {
+        let chart: _ = ChartInstance {
             id: id.clone(),
             chart_type,
             config,
@@ -384,7 +384,7 @@ impl ChartRenderer {
         debug!("Updating chart data: {}", id);
 
         let mut charts = self.charts.write().await;
-        let chart = charts.get_mut(id)
+        let chart: _ = charts.get_mut(id)
             .ok_or_else(|| anyhow!("Chart not found: {}", id))?;
 
         chart.data = data;
@@ -398,13 +398,13 @@ impl ChartRenderer {
 
     /// Render chart to SVG
     pub async fn render_chart_svg(&self, id: &str) -> Result<String> {
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
-        let charts = self.charts.read().await;
-        let chart = charts.get(id)
+        let charts: _ = self.charts.read().await;
+        let chart: _ = charts.get(id)
             .ok_or_else(|| anyhow!("Chart not found: {}", id))?;
 
-        let svg = match chart.chart_type {
+        let svg: _ = match chart.chart_type {
             ChartType::LineChart => self.render_line_chart(chart).await?,
             ChartType::BarChart => self.render_bar_chart(chart).await?,
             ChartType::PieChart => self.render_pie_chart(chart).await?,
@@ -414,7 +414,7 @@ impl ChartRenderer {
         };
 
         // Update render stats
-        let render_time = start_time.elapsed().as_millis() as f64;
+        let render_time: _ = start_time.elapsed().as_millis() as f64;
         drop(charts);
 
         let mut charts = self.charts.write().await;
@@ -432,8 +432,8 @@ impl ChartRenderer {
 
     /// Render line chart
     async fn render_line_chart(&self, chart: &ChartInstance) -> Result<String> {
-        let config = &chart.config;
-        let data = &chart.data;
+        let config: _ = &chart.config;
+        let data: _ = &chart.data;
 
         let mut svg = String::new();
         svg.push_str(&format!(
@@ -444,8 +444,8 @@ impl ChartRenderer {
         ));
 
         // Calculate scales
-        let max_y = data.y_data.iter().fold(0.0, f64::max);
-        let max_x = data.x_data.len() as f64;
+        let max_y: _ = data.y_data.iter().fold(0.0, f64::max);
+        let max_x: _ = data.x_data.len() as f64;
 
         // Render axes
         svg.push_str(&format!(
@@ -465,12 +465,12 @@ impl ChartRenderer {
         // Render line
         if !data.x_data.is_empty() && !data.y_data.is_empty() {
             let mut path = String::new();
-            let width = config.width as f64 - config.margin.left as f64 - config.margin.right as f64;
-            let height = config.height as f64 - config.margin.top as f64 - config.margin.bottom as f64;
+            let width: _ = config.width as f64 - config.margin.left as f64 - config.margin.right as f64;
+            let height: _ = config.height as f64 - config.margin.top as f64 - config.margin.bottom as f64;
 
             for (i, (x, y)) in data.x_data.iter().zip(data.y_data.iter()).enumerate() {
-                let px = config.margin.left as f64 + (i as f64 / max_x) * width;
-                let py = config.height as f64 - config.margin.bottom as f64 - (y / max_y) * height;
+                let px: _ = config.margin.left as f64 + (i as f64 / max_x) * width;
+                let py: _ = config.height as f64 - config.margin.bottom as f64 - (y / max_y) * height;
 
                 if i == 0 {
                     path.push_str(&format!("M {} {}", px, py));
@@ -488,12 +488,12 @@ impl ChartRenderer {
 
         // Render data points
         if config.data_point.show_points {
-            let width = config.width as f64 - config.margin.left as f64 - config.margin.right as f64;
-            let height = config.height as f64 - config.margin.top as f64 - config.margin.bottom as f64;
+            let width: _ = config.width as f64 - config.margin.left as f64 - config.margin.right as f64;
+            let height: _ = config.height as f64 - config.margin.top as f64 - config.margin.bottom as f64;
 
             for (i, (x, y)) in data.x_data.iter().zip(data.y_data.iter()).enumerate() {
-                let px = config.margin.left as f64 + (i as f64 / max_x) * width;
-                let py = config.height as f64 - config.margin.bottom as f64 - (y / max_y) * height;
+                let px: _ = config.margin.left as f64 + (i as f64 / max_x) * width;
+                let py: _ = config.height as f64 - config.margin.bottom as f64 - (y / max_y) * height;
 
                 svg.push_str(&format!(
                     r#"  <circle cx="{}" cy="{}" r="{}" fill="{}"/>
@@ -510,8 +510,8 @@ impl ChartRenderer {
 
     /// Render bar chart
     async fn render_bar_chart(&self, chart: &ChartInstance) -> Result<String> {
-        let config = &chart.config;
-        let data = &chart.data;
+        let config: _ = &chart.config;
+        let data: _ = &chart.data;
 
         let mut svg = String::new();
         svg.push_str(&format!(
@@ -522,15 +522,15 @@ impl ChartRenderer {
         ));
 
         // Calculate scales
-        let max_y = data.y_data.iter().fold(0.0, f64::max);
-        let bar_width = (config.width as f64 - config.margin.left as f64 - config.margin.right as f64)
+        let max_y: _ = data.y_data.iter().fold(0.0, f64::max);
+        let bar_width: _ = (config.width as f64 - config.margin.left as f64 - config.margin.right as f64)
             / data.y_data.len() as f64;
 
         // Render bars
         for (i, y) in data.y_data.iter().enumerate() {
-            let x = config.margin.left as f64 + i as f64 * bar_width;
-            let bar_height = (y / max_y) * (config.height as f64 - config.margin.top as f64 - config.margin.bottom as f64);
-            let y_pos = config.height as f64 - config.margin.bottom as f64 - bar_height;
+            let x: _ = config.margin.left as f64 + i as f64 * bar_width;
+            let bar_height: _ = (y / max_y) * (config.height as f64 - config.margin.top as f64 - config.margin.bottom as f64);
+            let y_pos: _ = config.height as f64 - config.margin.bottom as f64 - bar_height;
 
             svg.push_str(&format!(
                 r#"  <rect x="{}" y="{}" width="{}" height="{}" fill="{}"/>
@@ -556,13 +556,13 @@ impl ChartRenderer {
 
     /// Render pie chart
     async fn render_pie_chart(&self, chart: &ChartInstance) -> Result<String> {
-        let config = &chart.config;
-        let data = &chart.data;
+        let config: _ = &chart.config;
+        let data: _ = &chart.data;
 
         let total: f64 = data.y_data.iter().sum();
-        let center_x = config.width as f64 / 2.0;
-        let center_y = config.height as f64 / 2.0;
-        let radius = (config.width.min(config.height) as f64 / 2.0) - 20.0;
+        let center_x: _ = config.width as f64 / 2.0;
+        let center_y: _ = config.height as f64 / 2.0;
+        let radius: _ = (config.width.min(config.height) as f64 / 2.0) - 20.0;
 
         let mut svg = String::new();
         svg.push_str(&format!(
@@ -573,7 +573,7 @@ impl ChartRenderer {
         ));
 
         let mut current_angle = 0.0;
-        let colors = vec![
+        let colors: _ = vec![
             &config.colors.primary,
             &config.colors.secondary,
             &config.colors.accent,
@@ -581,17 +581,17 @@ impl ChartRenderer {
         ];
 
         for (i, value) in data.y_data.iter().enumerate() {
-            let slice_angle = (value / total) * std::f64::consts::PI * 2.0;
-            let end_angle = current_angle + slice_angle;
+            let slice_angle: _ = (value / total) * std::f64::consts::PI * 2.0;
+            let end_angle: _ = current_angle + slice_angle;
 
-            let x1 = center_x + radius * current_angle.cos();
-            let y1 = center_y + radius * current_angle.sin();
-            let x2 = center_x + radius * end_angle.cos();
-            let y2 = center_y + radius * end_angle.sin();
+            let x1: _ = center_x + radius * current_angle.cos();
+            let y1: _ = center_y + radius * current_angle.sin();
+            let x2: _ = center_x + radius * end_angle.cos();
+            let y2: _ = center_y + radius * end_angle.sin();
 
-            let large_arc = if slice_angle > std::f64::consts::PI { 1 } else { 0 };
+            let large_arc: _ = if slice_angle > std::f64::consts::PI { 1 } else { 0 };
 
-            let color = colors[i % colors.len()];
+            let color: _ = colors[i % colors.len()];
 
             svg.push_str(&format!(
                 r#"  <path d="M {} {} L {} {} A {} {} 0 {} 1 {} {} Z" fill="{}"/>
@@ -600,9 +600,9 @@ impl ChartRenderer {
             ));
 
             // Add label
-            let label_angle = current_angle + slice_angle / 2.0;
-            let label_x = center_x + (radius * 0.7) * label_angle.cos();
-            let label_y = center_y + (radius * 0.7) * label_angle.sin();
+            let label_angle: _ = current_angle + slice_angle / 2.0;
+            let label_x: _ = center_x + (radius * 0.7) * label_angle.cos();
+            let label_y: _ = center_y + (radius * 0.7) * label_angle.sin();
 
             if config.data_point.show_values {
                 svg.push_str(&format!(
@@ -623,7 +623,7 @@ impl ChartRenderer {
     /// Render heatmap
     async fn render_heatmap(&self, chart: &ChartInstance) -> Result<String> {
         // Simplified heatmap implementation
-        let config = &chart.config;
+        let config: _ = &chart.config;
 
         let mut svg = String::new();
         svg.push_str(&format!(
@@ -642,10 +642,10 @@ impl ChartRenderer {
 
     /// Render stat chart
     async fn render_stat_chart(&self, chart: &ChartInstance) -> Result<String> {
-        let config = &chart.config;
-        let data = &chart.data;
+        let config: _ = &chart.config;
+        let data: _ = &chart.data;
 
-        let value = if !data.y_data.is_empty() {
+        let value: _ = if !data.y_data.is_empty() {
             data.y_data[data.y_data.len() - 1]
         } else {
             0.0
@@ -672,8 +672,8 @@ impl ChartRenderer {
 
     /// Render table
     async fn render_table(&self, chart: &ChartInstance) -> Result<String> {
-        let config = &chart.config;
-        let data = &chart.data;
+        let config: _ = &chart.config;
+        let data: _ = &chart.data;
 
         let mut svg = String::new();
         svg.push_str(&format!(
@@ -692,9 +692,9 @@ impl ChartRenderer {
 
     /// Broadcast chart update to WebSocket clients
     async fn broadcast_chart_update(&self, chart_id: &str, data: &ChartData) -> Result<()> {
-        let clients = self.websocket_clients.read().await;
+        let clients: _ = self.websocket_clients.read().await;
 
-        let update = json!({
+        let update: _ = json!({
             "type": "chart_update",
             "chart_id": chart_id,
             "data": data,
@@ -724,15 +724,15 @@ impl ChartRenderer {
 
     /// Get chart statistics
     pub async fn get_chart_stats(&self, id: &str) -> Result<RenderStats> {
-        let charts = self.charts.read().await;
-        let chart = charts.get(id)
+        let charts: _ = self.charts.read().await;
+        let chart: _ = charts.get(id)
             .ok_or_else(|| anyhow!("Chart not found: {}", id))?;
         Ok(chart.stats.clone())
     }
 
     /// List all charts
     pub async fn list_charts(&self) -> Vec<String> {
-        let charts = self.charts.read().await;
+        let charts: _ = self.charts.read().await;
         charts.keys().cloned().collect()
     }
 
@@ -750,8 +750,8 @@ impl GraphRenderer {
         info!("Initializing Graph Renderer...");
 
         Self {
-            graphs: Arc::new(RwLock::new(HashMap::new())),
-            layout_engine: Arc::new(LayoutEngine::new()),
+            graphs: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            layout_engine: Arc::new(std::sync::Mutex::new(LayoutEngine::new())),
             config,
         }
     }
@@ -766,20 +766,20 @@ impl GraphRenderer {
     ) -> Result<()> {
         debug!("Creating graph: {} (type: {:?})", id, graph_type);
 
-        let layout = LayoutConfig {
+        let layout: _ = LayoutConfig {
             layout_type: LayoutType::ForceDirected,
             spacing: 100.0,
             iterations: 100,
         };
 
-        let interaction = InteractionConfig {
+        let interaction: _ = InteractionConfig {
             drag_enabled: true,
             zoom_enabled: true,
             pan_enabled: true,
             select_enabled: true,
         };
 
-        let graph = GraphInstance {
+        let graph: _ = GraphInstance {
             id: id.clone(),
             graph_type,
             nodes,
@@ -797,11 +797,11 @@ impl GraphRenderer {
 
     /// Render graph to SVG
     pub async fn render_graph_svg(&self, id: &str) -> Result<String> {
-        let graphs = self.graphs.read().await;
-        let graph = graphs.get(id)
+        let graphs: _ = self.graphs.read().await;
+        let graph: _ = graphs.get(id)
             .ok_or_else(|| anyhow!("Graph not found: {}", id))?;
 
-        let svg = match graph.graph_type {
+        let svg: _ = match graph.graph_type {
             GraphType::TopologyGraph => self.render_topology_graph(graph).await?,
             GraphType::DependencyGraph => self.render_dependency_graph(graph).await?,
             GraphType::TraceGraph => self.render_trace_graph(graph).await?,
@@ -837,12 +837,12 @@ impl GraphRenderer {
                 ));
 
                 if edge.style.arrow_head {
-                    let dx = target.position.x - source.position.x;
-                    let dy = target.position.y - source.position.y;
-                    let angle = dy.atan2(dx);
+                    let dx: _ = target.position.x - source.position.x;
+                    let dy: _ = target.position.y - source.position.y;
+                    let angle: _ = dy.atan2(dx);
 
-                    let arrow_x = target.position.x - 10.0 * angle.cos();
-                    let arrow_y = target.position.y - 10.0 * angle.sin();
+                    let arrow_x: _ = target.position.x - 10.0 * angle.cos();
+                    let arrow_y: _ = target.position.y - 10.0 * angle.sin();
 
                     svg.push_str(&format!(
                         r#"  <polygon points="{},{} {},{} {},{}" fill="{}"/>
@@ -858,7 +858,7 @@ impl GraphRenderer {
 
         // Render nodes
         for node in &graph.nodes {
-            let text_element = format!(
+            let text_element: _ = format!(
                 "<text x=\"{}\" y=\"{}\" text-anchor=\"middle\" dy=\".3em\" font-size=\"12\" fill=\"#333\">{}</text>",
                 node.position.x, node.position.y, node.label
             );
@@ -898,7 +898,7 @@ impl GraphRenderer {
     /// Apply layout to graph
     pub async fn apply_layout(&self, id: &str) -> Result<()> {
         let mut graphs = self.graphs.write().await;
-        let graph = graphs.get_mut(id)
+        let graph: _ = graphs.get_mut(id)
             .ok_or_else(|| anyhow!("Graph not found: {}", id))?;
 
         match graph.layout.layout_type {
@@ -921,7 +921,7 @@ impl GraphRenderer {
 
     /// List all graphs
     pub async fn list_graphs(&self) -> Vec<String> {
-        let graphs = self.graphs.read().await;
+        let graphs: _ = self.graphs.read().await;
         graphs.keys().cloned().collect()
     }
 
@@ -955,13 +955,13 @@ impl LayoutEngine {
         // Simplified force-directed layout
         // In a real implementation, this would use more sophisticated physics simulation
 
-        let n = graph.nodes.len();
-        let center_x = self.hierarchical_params.spacing * 3.0;
-        let center_y = self.hierarchical_params.spacing * 3.0;
-        let radius = self.hierarchical_params.spacing * 2.0;
+        let n: _ = graph.nodes.len();
+        let center_x: _ = self.hierarchical_params.spacing * 3.0;
+        let center_y: _ = self.hierarchical_params.spacing * 3.0;
+        let radius: _ = self.hierarchical_params.spacing * 2.0;
 
         for (i, node) in graph.nodes.iter_mut().enumerate() {
-            let angle = (i as f64 / n as f64) * std::f64::consts::PI * 2.0;
+            let angle: _ = (i as f64 / n as f64) * std::f64::consts::PI * 2.0;
             node.position.x = center_x + radius * angle.cos();
             node.position.y = center_y + radius * angle.sin();
         }
@@ -974,12 +974,12 @@ impl LayoutEngine {
         // Simplified hierarchical layout
         // Group nodes by their connections
 
-        let mut levels: HashMap<String, Vec<usize>> = HashMap::new();
+        let mut levels: HashMap<String, Vec<usize, std::collections::HashMap<String, Vec<usize, String, Vec<usize>>> = HashMap::new();
         let mut level_count = 0;
 
         // Find root nodes (nodes with no incoming edges)
         for (i, node) in graph.nodes.iter().enumerate() {
-            let has_incoming = graph.edges.iter().any(|e| e.target == node.id);
+            let has_incoming: _ = graph.edges.iter().any(|e| e.target == node.id);
             if !has_incoming {
                 levels.entry("level_0".to_string()).or_insert_with(Vec::new).push(i);
             }
@@ -991,7 +991,7 @@ impl LayoutEngine {
                 continue;
             }
 
-            let max_source_level = graph.edges
+            let max_source_level: _ = graph.edges
                 .iter()
                 .filter(|e| e.target == node.id)
                 .filter_map(|e| {
@@ -1003,17 +1003,17 @@ impl LayoutEngine {
                 .map(|k| k.parse::<u32>().unwrap_or(0))
                 .unwrap_or(0);
 
-            let level_key = format!("level_{}", max_source_level + 1);
+            let level_key: _ = format!("level_{}", max_source_level + 1);
             levels.entry(level_key).or_insert_with(Vec::new).push(i);
         }
 
         // Position nodes
         for (level_key, node_indices) in levels {
-            let level = level_key.parse::<u32>().unwrap_or(0);
-            let y = level as f64 * self.hierarchical_params.spacing;
+            let level: _ = level_key.parse::<u32>().unwrap_or(0);
+            let y: _ = level as f64 * self.hierarchical_params.spacing;
 
             for (i, node_idx) in node_indices.iter().enumerate() {
-                let x = i as f64 * self.hierarchical_params.node_separation;
+                let x: _ = i as f64 * self.hierarchical_params.node_separation;
                 graph.nodes[*node_idx].position.x = x;
                 graph.nodes[*node_idx].position.y = y;
             }
@@ -1031,13 +1031,13 @@ impl LayoutEngine {
     /// Apply grid layout
     async fn apply_grid(&self, graph: &mut GraphInstance) -> Result<()> {
         // Simplified grid layout
-        let n = graph.nodes.len();
-        let cols = (n as f64).sqrt().ceil() as usize;
-        let spacing = self.hierarchical_params.node_separation;
+        let n: _ = graph.nodes.len();
+        let cols: _ = (n as f64).sqrt().ceil() as usize;
+        let spacing: _ = self.hierarchical_params.node_separation;
 
         for (i, node) in graph.nodes.iter_mut().enumerate() {
-            let row = i / cols;
-            let col = i % cols;
+            let row: _ = i / cols;
+            let col: _ = i % cols;
             node.position.x = col as f64 * spacing;
             node.position.y = row as f64 * spacing;
         }
@@ -1051,7 +1051,7 @@ impl WebSocketClient {
     pub fn new(id: String) -> Self {
         Self {
             id,
-            connection: Arc::new(tokio::sync::Mutex::new(None)),
+            connection: Arc::new(std::sync::Mutex::new(tokio::sync::Mutex::new(None))),
             metadata: HashMap::new(),
         }
     }
@@ -1068,7 +1068,7 @@ impl TemplateEngine {
     /// Create a new template engine
     pub fn new() -> Self {
         Self {
-            templates: Arc::new(RwLock::new(HashMap::new())),
+            templates: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -1080,23 +1080,23 @@ impl TemplateEngine {
     }
 
     /// Render template
-    pub async fn render_template(&self, id: &str, variables: &HashMap<String, Value>) -> Result<String> {
-        let templates = self.templates.read().await;
-        let template = templates.get(id)
+    pub async fn render_template(&self, id: &str, variables: &HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>) -> Result<String> {
+        let templates: _ = self.templates.read().await;
+        let template: _ = templates.get(id)
             .ok_or_else(|| anyhow!("Template not found: {}", id))?;
 
         let mut result = template.content.clone();
 
         // Simple variable substitution
         for (key, value) in variables {
-            let placeholder = format!("{{{}}}", key);
-            let value_str = match value {
+            let placeholder: _ = format!("{{{}}}", key);
+            let value_str: _ = match value {
                 Value::String(s) => s.clone(),
                 Value::Number(n) => n.to_string(),
                 Value::Bool(b) => b.to_string(),
                 _ => format!("{}", value),
             };
-            result = result.replace(&placeholder, &value_str);
+            result = result.clone();replace(&placeholder, &value_str);
         }
 
         Ok(result)
@@ -1106,20 +1106,22 @@ impl TemplateEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_chart_renderer_creation() {
-        let config = RenderConfig::default();
-        let renderer = ChartRenderer::new(config);
+        let config: _ = RenderConfig::default();
+        let renderer: _ = ChartRenderer::new(config);
         assert!(renderer.list_charts().await.is_empty());
     }
 
     #[tokio::test]
     async fn test_create_and_render_chart() {
-        let config = RenderConfig::default();
-        let renderer = ChartRenderer::new(config);
+        let config: _ = RenderConfig::default();
+        let renderer: _ = ChartRenderer::new(config);
 
-        let chart_config = ChartConfig {
+        let chart_config: _ = ChartConfig {
             title: "Test Chart".to_string(),
             width: 800,
             height: 600,
@@ -1142,7 +1144,7 @@ mod tests {
             chart_config
         ).await.unwrap();
 
-        let chart_data = ChartData {
+        let chart_data: _ = ChartData {
             x_data: vec![1.0, 2.0, 3.0, 4.0, 5.0],
             y_data: vec![10.0, 20.0, 15.0, 25.0, 30.0],
             series: Vec::new(),
@@ -1151,7 +1153,7 @@ mod tests {
         };
 
         renderer.update_chart_data("test-chart", chart_data).await.unwrap();
-        let svg = renderer.render_chart_svg("test-chart").await.unwrap();
+        let svg: _ = renderer.render_chart_svg("test-chart").await.unwrap();
 
         assert!(svg.contains("<svg"));
         assert!(svg.contains("Test Chart"));
@@ -1159,10 +1161,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_pie_chart_rendering() {
-        let config = RenderConfig::default();
-        let renderer = ChartRenderer::new(config);
+        let config: _ = RenderConfig::default();
+        let renderer: _ = ChartRenderer::new(config);
 
-        let chart_config = ChartConfig {
+        let chart_config: _ = ChartConfig {
             title: "Test Pie Chart".to_string(),
             width: 600,
             height: 600,
@@ -1185,7 +1187,7 @@ mod tests {
             chart_config
         ).await.unwrap();
 
-        let chart_data = ChartData {
+        let chart_data: _ = ChartData {
             x_data: vec![], // Not used for pie chart
             y_data: vec![30.0, 20.0, 50.0],
             series: Vec::new(),
@@ -1194,7 +1196,7 @@ mod tests {
         };
 
         renderer.update_chart_data("pie-chart", chart_data).await.unwrap();
-        let svg = renderer.render_chart_svg("pie-chart").await.unwrap();
+        let svg: _ = renderer.render_chart_svg("pie-chart").await.unwrap();
 
         assert!(svg.contains("<svg"));
         assert!(svg.contains("path"));
@@ -1202,17 +1204,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_graph_renderer_creation() {
-        let config = RenderConfig::default();
-        let renderer = GraphRenderer::new(config);
+        let config: _ = RenderConfig::default();
+        let renderer: _ = GraphRenderer::new(config);
         assert!(renderer.list_graphs().await.is_empty());
     }
 
     #[tokio::test]
     async fn test_create_and_render_graph() {
-        let config = RenderConfig::default();
-        let renderer = GraphRenderer::new(config);
+        let config: _ = RenderConfig::default();
+        let renderer: _ = GraphRenderer::new(config);
 
-        let nodes = vec![
+        let nodes: _ = vec![
             GraphNode {
                 id: "node1".to_string(),
                 label: "Node 1".to_string(),
@@ -1233,7 +1235,7 @@ mod tests {
             },
         ];
 
-        let edges = vec![
+        let edges: _ = vec![
             GraphEdge {
                 source: "node1".to_string(),
                 target: "node2".to_string(),
@@ -1255,7 +1257,7 @@ mod tests {
             edges
         ).await.unwrap();
 
-        let svg = renderer.render_graph_svg("test-graph").await.unwrap();
+        let svg: _ = renderer.render_graph_svg("test-graph").await.unwrap();
 
         assert!(svg.contains("<svg"));
         assert!(svg.contains("line"));
@@ -1264,7 +1266,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_layout_engine() {
-        let engine = LayoutEngine::new();
+        let engine: _ = LayoutEngine::new();
 
         let mut nodes = vec![
             GraphNode {
@@ -1287,7 +1289,7 @@ mod tests {
             },
         ];
 
-        let edges = vec![
+        let edges: _ = vec![
             GraphEdge {
                 source: "n1".to_string(),
                 target: "n2".to_string(),
@@ -1328,9 +1330,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_template_engine() {
-        let engine = TemplateEngine::new();
+        let engine: _ = TemplateEngine::new();
 
-        let template = Template {
+        let template: _ = Template {
             id: "test".to_string(),
             content: "Hello {name}, you have {count} messages".to_string(),
             variables: vec!["name".to_string(), "count".to_string()],
@@ -1343,16 +1345,16 @@ mod tests {
         variables.insert("name".to_string(), Value::String("World".to_string()));
         variables.insert("count".to_string(), Value::String("5".to_string()));
 
-        let result = engine.render_template("test", &variables).await.unwrap();
+        let result: _ = engine.render_template("test", &variables).await.unwrap();
         assert_eq!(result, "Hello World, you have 5 messages");
     }
 
     #[tokio::test]
     async fn test_chart_stats() {
-        let config = RenderConfig::default();
-        let renderer = ChartRenderer::new(config);
+        let config: _ = RenderConfig::default();
+        let renderer: _ = ChartRenderer::new(config);
 
-        let chart_config = ChartConfig {
+        let chart_config: _ = ChartConfig {
             title: "Stats Test".to_string(),
             width: 800,
             height: 600,
@@ -1375,7 +1377,7 @@ mod tests {
             chart_config
         ).await.unwrap();
 
-        let chart_data = ChartData {
+        let chart_data: _ = ChartData {
             x_data: vec![1.0, 2.0, 3.0],
             y_data: vec![10.0, 20.0, 30.0],
             series: Vec::new(),
@@ -1389,7 +1391,7 @@ mod tests {
         renderer.render_chart_svg("stats-chart").await.unwrap();
         renderer.render_chart_svg("stats-chart").await.unwrap();
 
-        let stats = renderer.get_chart_stats("stats-chart").await.unwrap();
+        let stats: _ = renderer.get_chart_stats("stats-chart").await.unwrap();
         assert!(stats.total_renders > 0);
         assert!(stats.avg_render_time_ms >= 0.0);
     }

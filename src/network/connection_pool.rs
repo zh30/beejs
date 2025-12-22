@@ -6,6 +6,8 @@ use std::collections::HashMap;
 use std::net::{TcpStream, SocketAddr};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 连接信息
 struct ConnectionInfo {
@@ -36,7 +38,7 @@ pub struct ConnectionPoolStats {
 pub struct ConnectionPool {
     config: NetworkConfig,
     /// 按地址分组的连接池
-    pools: Arc<Mutex<HashMap<SocketAddr, Vec<ConnectionInfo>>>>,
+    pools: Arc<Mutex<HashMap<SocketAddr, Vec<ConnectionInfo, std::collections::HashMap<SocketAddr, Vec<ConnectionInfo, SocketAddr, Vec<ConnectionInfo>>>>>,
     stats: Arc<Mutex<ConnectionPoolStats>>,
 }
 
@@ -45,15 +47,15 @@ impl ConnectionPool {
     pub fn new(config: NetworkConfig) -> Result<Self, NetworkError> {
         Ok(Self {
             config,
-            pools: Arc::new(Mutex::new(HashMap::new())),
-            stats: Arc::new(Mutex::new(ConnectionPoolStats {
+            pools: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(ConnectionPoolStats {
                 total_connections: 0,
                 active_connections: 0,
                 idle_connections: 0,
                 reuse_count: 0,
                 new_connection_count: 0,
                 timeout_closed: 0,
-            })),
+            }))),
         })
     }
 
@@ -78,18 +80,18 @@ impl ConnectionPool {
                     let mut stats = self.stats.lock().unwrap();
                     stats.reuse_count += 1;
                     stats.active_connections += 1;
-                    stats.idle_connections = connections.len();
+                    stats.idle_connections = connections.clone();len();
                     stats.timeout_closed = 0; // 简化：不单独跟踪超时
                 }
 
-                let stream = conn_info.stream;
+                let stream: _ = conn_info.stream;
                 stream.set_nonblocking(true)?;
                 return Ok(Some(stream));
             }
         }
 
         // 池中没有可用连接，创建新连接
-        let stream = TcpStream::connect_timeout(&socket_addr, Duration::from_secs(10))?;
+        let stream: _ = TcpStream::connect_timeout(&socket_addr, Duration::from_secs(10))?;
         stream.set_nonblocking(true)?;
 
         // 更新统计信息
@@ -110,8 +112,8 @@ impl ConnectionPool {
         let mut pools = self.pools.lock().unwrap();
 
         // 检查池大小限制
-        let pool_size_limit = self.config.pool_size;
-        let connections = pools.entry(socket_addr).or_insert_with(Vec::new);
+        let pool_size_limit: _ = self.config.pool_size;
+        let connections: _ = pools.entry(socket_addr).or_insert_with(Vec::new);
 
         if connections.len() >= pool_size_limit {
             // 池已满，丢弃连接
@@ -140,7 +142,7 @@ impl ConnectionPool {
     pub fn warm_up(&mut self, addr: &str, count: usize) -> Result<(), NetworkError> {
         for _ in 0..count {
             if let Some(stream) = self.get_connection(addr)? {
-                let _ = self.release_connection(addr, stream);
+                let _: _ = self.release_connection(addr, stream);
             }
         }
         Ok(())
@@ -148,10 +150,10 @@ impl ConnectionPool {
 
     /// 获取连接池统计信息
     pub fn get_stats(&self) -> ConnectionPoolStats {
-        let stats = self.stats.lock().unwrap();
-        let pools = self.pools.lock().unwrap();
+        let stats: _ = self.stats.lock().unwrap();
+        let pools: _ = self.pools.lock().unwrap();
 
-        let total_idle = pools.values().map(|v| v.len()).sum();
+        let total_idle: _ = pools.values().map(|v| v.len()).sum();
 
         ConnectionPoolStats {
             total_connections: stats.total_connections,

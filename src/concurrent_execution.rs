@@ -108,23 +108,23 @@ impl ConcurrentExecutionStats {
     /// 创建新的统计信息
     pub fn new() -> Self {
         Self {
-            total_submitted: Arc::new(LockFreeCounter::new(0)),
-            total_completed: Arc::new(LockFreeCounter::new(0)),
-            total_failed: Arc::new(LockFreeCounter::new(0)),
-            peak_concurrent: Arc::new(AtomicUsize::new(0)),
-            current_concurrent: Arc::new(AtomicUsize::new(0)),
-            avg_execution_time_ms: Arc::new(AtomicUsize::new(0)),
-            total_execution_time_ms: Arc::new(AtomicUsize::new(0)),
+            total_submitted: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
+            total_completed: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
+            total_failed: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
+            peak_concurrent: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
+            current_concurrent: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
+            avg_execution_time_ms: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
+            total_execution_time_ms: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
         }
     }
 
     /// 记录任务提交
     pub fn record_submission(&self) {
         self.total_submitted.increment();
-        let current = self.current_concurrent.fetch_add(1, Ordering::Relaxed) + 1;
+        let current: _ = self.current_concurrent.fetch_add(1, Ordering::Relaxed) + 1;
 
         // 更新峰值并发数
-        let peak = self.peak_concurrent.load(Ordering::Relaxed);
+        let peak: _ = self.peak_concurrent.load(Ordering::Relaxed);
         if current > peak {
             self.peak_concurrent.store(current, Ordering::Relaxed);
         }
@@ -136,10 +136,10 @@ impl ConcurrentExecutionStats {
         self.current_concurrent.fetch_sub(1, Ordering::Relaxed);
 
         // 更新平均执行时间
-        let completed = self.total_completed.load();
-        let execution_time_usize = execution_time_ms as usize;
-        let total_time = self.total_execution_time_ms.fetch_add(execution_time_usize, Ordering::Relaxed) + execution_time_usize;
-        let avg = total_time / completed;
+        let completed: _ = self.total_completed.load();
+        let execution_time_usize: _ = execution_time_ms as usize;
+        let total_time: _ = self.total_execution_time_ms.fetch_add(execution_time_usize, Ordering::Relaxed) + execution_time_usize;
+        let avg: _ = total_time / completed;
         self.avg_execution_time_ms.store(avg, Ordering::Relaxed);
     }
 
@@ -222,13 +222,13 @@ pub struct StealStats {
 impl StealStats {
     pub fn new() -> Self {
         Self {
-            tasks_stolen: Arc::new(LockFreeCounter::new(0)),
-            steal_attempts: Arc::new(LockFreeCounter::new(0)),
-            successful_steals: Arc::new(LockFreeCounter::new(0)),
-            local_queue_operations: Arc::new(LockFreeCounter::new(0)),
-            batch_steals: Arc::new(LockFreeCounter::new(0)),
-            priority_steals: Arc::new(LockFreeCounter::new(0)),
-            avg_steal_batch_size: Arc::new(AtomicUsize::new(0)),
+            tasks_stolen: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
+            steal_attempts: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
+            successful_steals: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
+            local_queue_operations: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
+            batch_steals: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
+            priority_steals: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
+            avg_steal_batch_size: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
         }
     }
 
@@ -246,9 +246,9 @@ impl StealStats {
     }
 
     pub fn get_report(&self) -> String {
-        let attempts = self.steal_attempts.load();
-        let successes = self.successful_steals.load();
-        let success_rate = if attempts > 0 {
+        let attempts: _ = self.steal_attempts.load();
+        let successes: _ = self.successful_steals.load();
+        let success_rate: _ = if attempts > 0 {
             (successes as f64 / attempts as f64) * 100.0
         } else {
             0.0
@@ -274,7 +274,7 @@ pub struct StealPredictor {
     /// 队列活跃度历史 (最近访问时间)
     queue_activity_history: Vec<VecDeque<Instant>>,
     /// 任务类型模式分析
-    task_patterns: std::collections::HashMap<String, usize>,
+    task_patterns: std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>,
     /// 窃取历史记录
     steal_history: VecDeque<StealEvent>,
 }
@@ -305,10 +305,10 @@ impl StealPredictor {
     /// 记录队列活动（用于预测）
     #[allow(dead_code)]
     pub fn record_queue_activity(&mut self, queue_id: usize) {
-        let now = Instant::now();
+        let now: _ = Instant::now();
 
         // 记录活动历史
-        let history = &mut self.queue_activity_history[queue_id];
+        let history: _ = &mut self.queue_activity_history[queue_id];
         history.push_back(now);
 
         // 保持历史记录大小
@@ -323,21 +323,21 @@ impl StealPredictor {
     /// 更新队列评分
     #[allow(dead_code)]
     fn update_queue_score(&mut self, queue_id: usize) {
-        let history = &self.queue_activity_history[queue_id];
-        let recent_activity = history.iter()
+        let history: _ = &self.queue_activity_history[queue_id];
+        let recent_activity: _ = history.iter()
             .filter(|&&time| time.elapsed() < Duration::from_secs(10))
             .count();
 
         // 基于最近活动时间更新成功率的权重
-        let base_rate = self.queue_success_rates[queue_id];
-        let activity_factor = (recent_activity as f64 / 10.0).min(1.0);
+        let base_rate: _ = self.queue_success_rates[queue_id];
+        let activity_factor: _ = (recent_activity as f64 / 10.0).min(1.0);
         self.queue_success_rates[queue_id] = base_rate * 0.7 + activity_factor * 0.3;
     }
 
     /// 记录窃取事件
     #[allow(dead_code)]
     pub fn record_steal_event(&mut self, source_queue: usize, target_queue: usize, tasks_stolen: usize, success: bool) {
-        let event = StealEvent {
+        let event: _ = StealEvent {
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             source_queue,
             target_queue,
@@ -354,10 +354,10 @@ impl StealPredictor {
 
         // 更新源队列的成功率
         if success {
-            let current_rate = self.queue_success_rates[source_queue];
+            let current_rate: _ = self.queue_success_rates[source_queue];
             self.queue_success_rates[source_queue] = current_rate * 0.9 + 0.1;
         } else {
-            let current_rate = self.queue_success_rates[source_queue];
+            let current_rate: _ = self.queue_success_rates[source_queue];
             self.queue_success_rates[source_queue] = current_rate * 0.95;
         }
     }
@@ -373,16 +373,16 @@ impl StealPredictor {
             }
 
             // 计算窃取可能性评分
-            let success_rate = self.queue_success_rates[queue_id];
-            let history = &self.queue_activity_history[queue_id];
+            let success_rate: _ = self.queue_success_rates[queue_id];
+            let history: _ = &self.queue_activity_history[queue_id];
 
             // 活跃度评分：最近10秒内的活动次数
-            let activity_score = history.iter()
+            let activity_score: _ = history.iter()
                 .filter(|&&time| time.elapsed() < Duration::from_secs(10))
                 .count() as f64 / 10.0;
 
             // 综合评分：成功率 * 活跃度
-            let steal_probability = success_rate * (0.5 + activity_score * 0.5);
+            let steal_probability: _ = success_rate * (0.5 + activity_score * 0.5);
 
             candidates.push((queue_id, steal_probability));
         }
@@ -404,7 +404,7 @@ impl StealPredictor {
             if event.success && event.tasks_stolen > 0 {
                 // 简化版：假设任务类型与队列ID相关
                 // 实际实现中应该记录更详细的上下文信息
-                let queue_task_type = format!("queue_{}", event.source_queue % 4);
+                let queue_task_type: _ = format!("queue_{}", event.source_queue % 4);
                 if queue_task_type == task_type {
                     pattern_queues.push(event.source_queue);
                 }
@@ -441,12 +441,12 @@ pub struct LoadMonitor {
 impl LoadMonitor {
     pub fn new(thread_count: usize) -> Self {
         Self {
-            worker_loads: Arc::new((0..thread_count).map(|_| AtomicUsize::new(0)).collect()),
-            execution_history: Arc::new((0..thread_count)
+            worker_loads: Arc::new(std::sync::Mutex::new((0..thread_count)).map(|_| AtomicUsize::new(0)).collect()),
+            execution_history: Arc::new(std::sync::Mutex::new((0..thread_count))
                 .map(|_| VecDeque::with_capacity(100))
                 .collect()),
-            cpu_usage: Arc::new((0..thread_count).map(|_| AtomicUsize::new(0)).collect()),
-            last_update: Arc::new(Mutex::new(Instant::now())),
+            cpu_usage: Arc::new(std::sync::Mutex::new((0..thread_count)).map(|_| AtomicUsize::new(0)).collect()),
+            last_update: Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now()))),
         }
     }
 
@@ -465,8 +465,8 @@ impl LoadMonitor {
 
         // 直接访问内部可变引用（简化实现）
         // 注意：这是一个简化的实现，在生产环境中应该使用更好的同步机制
-        let avg_duration = Duration::from_millis(50); // 默认值
-        let cpu_usage = if duration > Duration::from_millis(10) {
+        let avg_duration: _ = Duration::from_millis(50); // 默认值
+        let cpu_usage: _ = if duration > Duration::from_millis(10) {
             (duration.as_millis() as f64 / avg_duration.as_millis() as f64 * 100.0) as usize
         } else {
             10
@@ -503,7 +503,7 @@ impl LoadMonitor {
                 continue;
             }
 
-            let current_load = load.load(std::sync::atomic::Ordering::Relaxed);
+            let current_load: _ = load.clone();load(std::sync::atomic::Ordering::Relaxed);
             if current_load < min_load {
                 min_load = current_load;
                 least_loaded = Some(i);
@@ -524,15 +524,15 @@ impl LoadMonitor {
             .map(|load| load.load(std::sync::atomic::Ordering::Relaxed))
             .collect();
 
-        let max_load = loads.iter().max().copied().unwrap_or(0);
-        let min_load = loads.iter().min().copied().unwrap_or(0);
-        let avg_load = if !loads.is_empty() {
+        let max_load: _ = loads.iter().max().copied().unwrap_or(0);
+        let min_load: _ = loads.iter().min().copied().unwrap_or(0);
+        let avg_load: _ = if !loads.is_empty() {
             loads.iter().sum::<usize>() as f64 / loads.len() as f64
         } else {
             0.0
         };
 
-        let load_variance = if !loads.is_empty() {
+        let load_variance: _ = if !loads.is_empty() {
             let variance: f64 = loads.iter()
                 .map(|&load| {
                     let diff = load as f64 - avg_load;
@@ -570,11 +570,11 @@ pub struct AdaptiveThreadPool {
 impl AdaptiveThreadPool {
     pub fn new(initial_size: usize, min_threads: usize, max_threads: usize) -> Self {
         Self {
-            current_size: Arc::new(AtomicUsize::new(initial_size)),
-            target_size: Arc::new(AtomicUsize::new(initial_size)),
-            load_monitor: Arc::new(LoadMonitor::new(initial_size)),
-            adjustment_history: Arc::new(Mutex::new(VecDeque::with_capacity(100))),
-            auto_scaling: Arc::new(std::sync::atomic::AtomicBool::new(true)),
+            current_size: Arc::new(std::sync::Mutex::new(AtomicUsize::new(initial_size))),
+            target_size: Arc::new(std::sync::Mutex::new(AtomicUsize::new(initial_size))),
+            load_monitor: Arc::new(std::sync::Mutex::new(LoadMonitor::new(initial_size))),
+            adjustment_history: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::with_capacity(100)))),
+            auto_scaling: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicBool::new(true))),
             min_threads,
             max_threads,
         }
@@ -582,25 +582,25 @@ impl AdaptiveThreadPool {
 
     /// 评估是否需要调整线程池大小
     pub fn evaluate_scaling_need(&self) -> Option<usize> {
-        let current_size = self.current_size.load(std::sync::atomic::Ordering::Relaxed);
+        let current_size: _ = self.current_size.load(std::sync::atomic::Ordering::Relaxed);
         let (_min_load, max_load, avg_load, load_variance) = self.load_monitor.get_system_load_stats();
 
         // 扩容条件：系统负载高且稳定
-        let should_scale_up = max_load > current_size * 3 && // 存在严重过载
+        let should_scale_up: _ = max_load > current_size * 3 && // 存在严重过载
                              load_variance < avg_load * 0.3 && // 负载相对稳定
                              current_size < self.max_threads;
 
         // 缩容条件：系统负载低且持续
-        let should_scale_down = max_load < current_size / 2 && // 系统空闲
+        let should_scale_down: _ = max_load < current_size / 2 && // 系统空闲
                                avg_load < (current_size / 4) as f64 && // 平均负载很低
                                current_size > self.min_threads;
 
         if should_scale_up {
-            let new_size = (current_size * 2).min(self.max_threads);
+            let new_size: _ = (current_size * 2).min(self.max_threads);
             println!("📈 扩容决策: {} -> {} (负载: max={}, avg={:.2})", current_size, new_size, max_load, avg_load);
             Some(new_size)
         } else if should_scale_down {
-            let new_size = (current_size / 2).max(self.min_threads);
+            let new_size: _ = (current_size / 2).max(self.min_threads);
             println!("📉 缩容决策: {} -> {} (负载: max={}, avg={:.2})", current_size, new_size, max_load, avg_load);
             Some(new_size)
         } else {
@@ -610,7 +610,7 @@ impl AdaptiveThreadPool {
 
     /// 执行线程池调整
     pub async fn adjust_pool_size(&self, new_size: usize) -> bool {
-        let current_size = self.current_size.load(std::sync::atomic::Ordering::Relaxed);
+        let current_size: _ = self.current_size.load(std::sync::atomic::Ordering::Relaxed);
 
         if new_size == current_size {
             return false;
@@ -676,15 +676,15 @@ impl WorkStealingScheduler {
         let mut steal_channels = Vec::with_capacity(thread_count);
 
         for _ in 0..thread_count {
-            thread_queues.push(Arc::new(Mutex::new(VecDeque::new())));
+            thread_queues.push(Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))));
             steal_channels.push(ZeroCopyChannel::new(1000));
         }
 
         // 创建负载监控器和自适应线程池
-        let load_monitor = Arc::new(LoadMonitor::new(thread_count));
-        let adaptive_pool = Arc::new(AdaptiveThreadPool::new(
+        let load_monitor: _ = Arc::new(std::sync::Mutex::new(LoadMonitor::new(thread_count)));
+        let adaptive_pool: _ = Arc::new(std::sync::Mutex::new(AdaptiveThreadPool::new(
             thread_count,
-            (thread_count / 2).max(2), // 最小线程数
+            (thread_count / 2)).max(2), // 最小线程数
             thread_count * 2,          // 最大线程数
         ));
 
@@ -692,8 +692,8 @@ impl WorkStealingScheduler {
             thread_count,
             thread_queues,
             steal_channels,
-            stats: Arc::new(StealStats::new()),
-            shutdown: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            stats: Arc::new(std::sync::Mutex::new(StealStats::new())),
+            shutdown: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicBool::new(false))),
             load_monitor: load_monitor.clone(),
             adaptive_pool: adaptive_pool.clone(),
         }
@@ -701,9 +701,9 @@ impl WorkStealingScheduler {
 
     /// 创建带有负载监控的工作窃取调度器
     pub fn new_with_monitoring(thread_count: usize) -> (Self, Arc<LoadMonitor>, Arc<AdaptiveThreadPool>) {
-        let scheduler = Self::new(thread_count);
-        let load_monitor = scheduler.load_monitor.clone();
-        let adaptive_pool = scheduler.adaptive_pool.clone();
+        let scheduler: _ = Self::new(thread_count);
+        let load_monitor: _ = scheduler.load_monitor.clone();
+        let adaptive_pool: _ = scheduler.adaptive_pool.clone();
         (scheduler, load_monitor, adaptive_pool)
     }
 
@@ -713,12 +713,12 @@ impl WorkStealingScheduler {
         self.stats.record_local_operation();
 
         // 使用负载感知调度：选择负载最低的队列
-        let exclude_queues = Vec::new(); // 可以排除某些特定队列
+        let exclude_queues: _ = Vec::new(); // 可以排除某些特定队列
         if let Some(target_queue) = self.load_monitor.get_least_loaded_worker(&exclude_queues) {
             self.submit_local_task(target_queue, task).await
         } else {
             // 回退到轮询调度
-            let queue_id = task.id % self.thread_count;
+            let queue_id: _ = task.id % self.thread_count;
             self.submit_local_task(queue_id, task).await
         }
     }
@@ -741,7 +741,7 @@ impl WorkStealingScheduler {
                 continue;
             }
 
-            let queue_load = self.load_monitor.get_worker_load(queue_id);
+            let queue_load: _ = self.load_monitor.get_worker_load(queue_id);
             if queue_load > avg_load as usize {
                 candidates.push((queue_id, queue_load));
             }
@@ -751,7 +751,7 @@ impl WorkStealingScheduler {
         candidates.sort_by(|a, b| b.1.cmp(&a.1));
 
         for (source_queue_id, _) in candidates {
-            let source_queue = &self.thread_queues[source_queue_id];
+            let source_queue: _ = &self.thread_queues[source_queue_id];
             let mut queue_guard = source_queue.lock().await;
 
             if queue_guard.len() > 1 {
@@ -770,7 +770,7 @@ impl WorkStealingScheduler {
 
     /// 启动自适应负载均衡
     pub async fn start_adaptive_balancing(&self) {
-        let adaptive_pool = self.adaptive_pool.clone();
+        let adaptive_pool: _ = self.adaptive_pool.clone();
 
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
@@ -780,7 +780,7 @@ impl WorkStealingScheduler {
 
                 // 评估是否需要调整线程池大小
                 if let Some(new_size) = adaptive_pool.evaluate_scaling_need() {
-                    let _ = adaptive_pool.adjust_pool_size(new_size).await;
+                    let _: _ = adaptive_pool.adjust_pool_size(new_size).await;
                 }
 
                 // 检查关闭标志
@@ -796,7 +796,7 @@ impl WorkStealingScheduler {
     /// 获取系统负载状态报告
     pub fn get_load_report(&self) -> String {
         let (min_load, max_load, avg_load, load_variance) = self.load_monitor.get_system_load_stats();
-        let current_pool_size = self.adaptive_pool.get_current_size();
+        let current_pool_size: _ = self.adaptive_pool.get_current_size();
 
         format!(
             "系统负载报告:\n\
@@ -822,7 +822,7 @@ impl WorkStealingScheduler {
             ));
         }
 
-        let queue = &self.thread_queues[thread_id];
+        let queue: _ = &self.thread_queues[thread_id];
         let mut queue_guard = queue.lock().await;
 
         // 优先级队列：高优先级任务排在前面（从头部获取）
@@ -857,11 +857,11 @@ impl WorkStealingScheduler {
 
     /// 批量提交任务（自动分布到各线程）
     pub async fn submit_batch(&self, tasks: Vec<Task>) -> Result<(), ConcurrentExecutionError> {
-        let task_count = tasks.len();
+        let task_count: _ = tasks.len();
 
         // 简单的轮询分布策略
         for (i, task) in tasks.into_iter().enumerate() {
-            let thread_id = i % self.thread_count;
+            let thread_id: _ = i % self.thread_count;
             self.submit_local_task(thread_id, task).await?;
         }
 
@@ -875,7 +875,7 @@ impl WorkStealingScheduler {
             return None;
         }
 
-        let queue = &self.thread_queues[thread_id];
+        let queue: _ = &self.thread_queues[thread_id];
         let mut queue_guard = queue.lock().await;
         self.stats.record_local_operation();
 
@@ -898,7 +898,7 @@ impl WorkStealingScheduler {
             }
 
             // 尝试从队列尾部窃取（最低优先级任务）
-            let source_queue = &self.thread_queues[attempt];
+            let source_queue: _ = &self.thread_queues[attempt];
             let mut queue_guard = source_queue.lock().await;
 
             if queue_guard.len() > 1 {
@@ -928,7 +928,7 @@ impl WorkStealingScheduler {
     /// 检查是否有待处理的任务
     pub async fn has_pending_tasks(&self) -> bool {
         for queue in &self.thread_queues {
-            let queue_guard = queue.lock().await;
+            let queue_guard: _ = queue.lock().await;
             if !queue_guard.is_empty() {
                 return true;
             }
@@ -940,7 +940,7 @@ impl WorkStealingScheduler {
     pub async fn pending_task_count(&self) -> usize {
         let mut total = 0;
         for queue in &self.thread_queues {
-            let queue_guard = queue.lock().await;
+            let queue_guard: _ = queue.lock().await;
             total += queue_guard.len();
         }
         total
@@ -950,7 +950,7 @@ impl WorkStealingScheduler {
     pub async fn get_queue_distribution(&self) -> Vec<usize> {
         let mut distribution = Vec::with_capacity(self.thread_count);
         for queue in &self.thread_queues {
-            let queue_guard = queue.lock().await;
+            let queue_guard: _ = queue.lock().await;
             distribution.push(queue_guard.len());
         }
         distribution
@@ -988,7 +988,7 @@ impl WorkStealingScheduler {
             if i == thief_thread_id {
                 continue;
             }
-            let queue_guard = queue.lock().await;
+            let queue_guard: _ = queue.lock().await;
             queues_with_load.push((i, queue_guard.len()));
         }
 
@@ -1000,11 +1000,11 @@ impl WorkStealingScheduler {
                 break;
             }
 
-            let source_queue = &self.thread_queues[source_thread_id];
+            let source_queue: _ = &self.thread_queues[source_thread_id];
             let mut queue_guard = source_queue.lock().await;
 
-            let can_steal = queue_length.saturating_sub(1); // 至少保留一个
-            let to_steal = max_count.saturating_sub(total_stolen).min(can_steal);
+            let can_steal: _ = queue_length.saturating_sub(1); // 至少保留一个
+            let to_steal: _ = max_count.saturating_sub(total_stolen).min(can_steal);
 
             if to_steal > 0 {
                 for _ in 0..to_steal {
@@ -1023,8 +1023,8 @@ impl WorkStealingScheduler {
             self.stats.tasks_stolen.add(total_stolen);
 
             // 更新平均批量大小
-            let current_avg = self.stats.avg_steal_batch_size.load(std::sync::atomic::Ordering::Relaxed);
-            let new_avg = (current_avg + total_stolen) / 2;
+            let current_avg: _ = self.stats.avg_steal_batch_size.load(std::sync::atomic::Ordering::Relaxed);
+            let new_avg: _ = (current_avg + total_stolen) / 2;
             self.stats.avg_steal_batch_size.store(new_avg, std::sync::atomic::Ordering::Relaxed);
 
             println!("🔄 线程 {} 批量窃取 {} 个任务", thief_thread_id, total_stolen);
@@ -1050,13 +1050,13 @@ impl WorkStealingScheduler {
                 continue;
             }
 
-            let source_queue = &self.thread_queues[attempt];
-            let queue_guard = source_queue.lock().await;
+            let source_queue: _ = &self.thread_queues[attempt];
+            let queue_guard: _ = source_queue.lock().await;
 
             // 遍历队列找到最高优先级任务
             for task in queue_guard.iter() {
                 if task.priority >= 5 { // 优先窃取高优先级任务
-                    let priority_usize = task.priority as usize;
+                    let priority_usize: _ = task.priority as usize;
                     if best_task.is_none() || priority_usize > best_task.as_ref().unwrap().0 {
                         best_task = Some((priority_usize, task.clone()));
                     }
@@ -1071,7 +1071,7 @@ impl WorkStealingScheduler {
                     continue;
                 }
 
-                let source_queue = &self.thread_queues[attempt];
+                let source_queue: _ = &self.thread_queues[attempt];
                 let mut queue_guard = source_queue.lock().await;
 
                 // 查找并移除任务
@@ -1110,11 +1110,11 @@ impl WorkStealingScheduler {
             if i == thief_thread_id {
                 continue;
             }
-            let queue_guard = queue.lock().await;
-            let len = queue_guard.len();
+            let queue_guard: _ = queue.lock().await;
+            let len: _ = queue_guard.len();
             total_queue_len += len;
-            max_queue_len = max_queue_len.max(len);
-            min_queue_len = min_queue_len.min(len);
+            max_queue_len = max_queue_len.clone();max(len);
+            min_queue_len = min_queue_len.clone();min(len);
 
             if len > 5 { // 定义"忙碌"阈值
                 busy_threads += 1;
@@ -1125,14 +1125,14 @@ impl WorkStealingScheduler {
             }
         }
 
-        let avg_queue_len = if self.thread_count > 1 {
+        let avg_queue_len: _ = if self.thread_count > 1 {
             total_queue_len / (self.thread_count - 1)
         } else {
             0
         };
 
         // 计算负载不均衡系数 (0.0 = 完全均衡, 1.0 = 极度不均衡)
-        let load_imbalance = if max_queue_len > 0 && min_queue_len != usize::MAX {
+        let load_imbalance: _ = if max_queue_len > 0 && min_queue_len != usize::MAX {
             (max_queue_len - min_queue_len) as f64 / max_queue_len as f64
         } else {
             0.0
@@ -1144,7 +1144,7 @@ impl WorkStealingScheduler {
         // 3. 系统整体负载不均衡
         // 4. 考虑窃取成本效益
 
-        let steal_threshold = match load_imbalance {
+        let steal_threshold: _ = match load_imbalance {
             x if x > 0.7 => 1,  // 极度不均衡时，几乎空队列就窃取
             x if x > 0.5 => 2,  // 高度不均衡时，少量任务就窃取
             x if x > 0.3 => 3,  // 中度不均衡时，适度窃取
@@ -1152,14 +1152,14 @@ impl WorkStealingScheduler {
         };
 
         // 窃取效益评估：平均队列长度与本地队列长度的差异
-        let load_diff = avg_queue_len as isize - local_queue_len as isize;
-        let load_diff_threshold = if heavy_queues.len() > self.thread_count / 2 {
+        let load_diff: _ = avg_queue_len as isize - local_queue_len as isize;
+        let load_diff_threshold: _ = if heavy_queues.len() > self.thread_count / 2 {
             1 // 有多个重负载时，更容易触发窃取
         } else {
             2
         };
 
-        let should_steal = (local_queue_len < steal_threshold) &&
+        let should_steal: _ = (local_queue_len < steal_threshold) &&
             (max_queue_len > 5) &&
             (load_diff >= load_diff_threshold) &&
             (busy_threads > 0) &&
@@ -1176,24 +1176,24 @@ impl WorkStealingScheduler {
 
     /// 执行负载均衡 - Stage 25.0 增强版
     pub async fn balance_load(&self) -> bool {
-        let distribution = self.get_queue_distribution().await;
+        let distribution: _ = self.get_queue_distribution().await;
         let total_tasks: usize = distribution.iter().sum();
-        let avg_tasks = total_tasks / self.thread_count;
+        let avg_tasks: _ = total_tasks / self.thread_count;
 
         // 计算负载差异和分布统计
-        let max_load = distribution.iter().max().copied().unwrap_or(0);
-        let min_load = distribution.iter().min().copied().unwrap_or(0);
-        let load_imbalance = max_load - min_load;
+        let max_load: _ = distribution.iter().max().copied().unwrap_or(0);
+        let min_load: _ = distribution.iter().min().copied().unwrap_or(0);
+        let load_imbalance: _ = max_load - min_load;
 
         // 计算负载不均衡系数 (0.0 = 完全均衡, 1.0 = 极度不均衡)
-        let load_imbalance_coefficient = if max_load > 0 {
+        let load_imbalance_coefficient: _ = if max_load > 0 {
             load_imbalance as f64 / max_load as f64
         } else {
             0.0
         };
 
         // 计算负载方差（衡量分布的离散程度）
-        let load_variance = distribution.iter()
+        let load_variance: _ = distribution.iter()
             .map(|&load| {
                 let diff = load as f64 - avg_tasks as f64;
                 diff * diff
@@ -1202,11 +1202,11 @@ impl WorkStealingScheduler {
 
         // Stage 25.0: 动态负载均衡触发条件
         // 考虑多种因素：绝对差异、相对差异、分布方差
-        let absolute_threshold = (avg_tasks / 3).max(5); // 绝对差异阈值
-        let relative_threshold = avg_tasks / 2;          // 相对差异阈值
-        let variance_threshold = (avg_tasks as f64 * 0.5).max(10.0); // 方差阈值
+        let absolute_threshold: _ = (avg_tasks / 3).max(5); // 绝对差异阈值
+        let relative_threshold: _ = avg_tasks / 2;          // 相对差异阈值
+        let variance_threshold: _ = (avg_tasks as f64 * 0.5).max(10.0); // 方差阈值
 
-        let should_balance = load_imbalance > absolute_threshold.max(relative_threshold) ||
+        let should_balance: _ = load_imbalance > absolute_threshold.max(relative_threshold) ||
                             load_variance > variance_threshold;
 
         if !should_balance {
@@ -1227,7 +1227,7 @@ impl WorkStealingScheduler {
         queues_by_load.sort_by(|a, b| b.1.cmp(&a.1));
 
         // 选择多个队列对进行均衡
-        let max_pairs = (self.thread_count / 2).min(3); // 最多处理3对队列
+        let max_pairs: _ = (self.thread_count / 2).min(3); // 最多处理3对队列
         for i in 0..max_pairs {
             if i + 1 >= queues_by_load.len() {
                 break;
@@ -1245,8 +1245,8 @@ impl WorkStealingScheduler {
         // 执行多对队列的负载均衡
         let mut total_moved = 0;
         for (heavy_queue, light_queue, load_diff) in queue_pairs {
-            let tasks_to_move = (load_diff / 2).min(20); // 限制单次移动任务数
-            let moved = self.move_tasks_optimized(heavy_queue, light_queue, tasks_to_move).await;
+            let tasks_to_move: _ = (load_diff / 2).min(20); // 限制单次移动任务数
+            let moved: _ = self.move_tasks_optimized(heavy_queue, light_queue, tasks_to_move).await;
             total_moved += moved;
 
             if moved > 0 {
@@ -1268,14 +1268,14 @@ impl WorkStealingScheduler {
             return 0;
         }
 
-        let source_queue = &self.thread_queues[source_queue_id];
-        let target_queue = &self.thread_queues[target_queue_id];
+        let source_queue: _ = &self.thread_queues[source_queue_id];
+        let target_queue: _ = &self.thread_queues[target_queue_id];
 
         let mut moved_count = 0;
 
         // 从源队列移动任务到目标队列
         for _ in 0..max_tasks {
-            let task = {
+            let task: _ = {
                 let mut source_guard = source_queue.lock().await;
                 source_guard.pop_back() // 从尾部移动（低优先级任务）
             };
@@ -1303,8 +1303,8 @@ impl WorkStealingScheduler {
     #[allow(dead_code)]
     async fn move_tasks(&self, from_queue: usize, to_queue: usize, count: usize) -> usize {
         let mut moved = 0;
-        let source_queue = &self.thread_queues[from_queue];
-        let target_queue = &self.thread_queues[to_queue];
+        let source_queue: _ = &self.thread_queues[from_queue];
+        let target_queue: _ = &self.thread_queues[to_queue];
 
         let mut tasks_to_move = Vec::new();
 
@@ -1340,7 +1340,7 @@ mod work_stealing_tests {
 
     #[tokio::test]
     async fn test_work_stealing_scheduler_creation() {
-        let scheduler = WorkStealingScheduler::new(4);
+        let scheduler: _ = WorkStealingScheduler::new(4);
 
         assert_eq!(scheduler.thread_count, 4);
         assert_eq!(scheduler.thread_queues.len(), 4);
@@ -1351,9 +1351,9 @@ mod work_stealing_tests {
 
     #[tokio::test]
     async fn test_local_task_submission_and_execution() {
-        let scheduler = WorkStealingScheduler::new(2);
+        let scheduler: _ = WorkStealingScheduler::new(2);
 
-        let task = Task {
+        let task: _ = Task {
             id: 1,
             code: "1 + 1".to_string(),
             priority: 1,
@@ -1364,7 +1364,7 @@ mod work_stealing_tests {
         scheduler.submit_local_task(0, task.clone()).await.unwrap();
 
         // 获取任务
-        let retrieved_task = scheduler.get_local_task(0).await;
+        let retrieved_task: _ = scheduler.get_local_task(0).await;
         assert!(retrieved_task.is_some());
         assert_eq!(retrieved_task.unwrap().id, 1);
 
@@ -1373,11 +1373,11 @@ mod work_stealing_tests {
 
     #[tokio::test]
     async fn test_work_stealing_basic() {
-        let scheduler = WorkStealingScheduler::new(2);
+        let scheduler: _ = WorkStealingScheduler::new(2);
 
         // 线程 0: 10 个任务
         for i in 0..10 {
-            let task = Task {
+            let task: _ = Task {
                 id: i,
                 code: format!("task_{}", i),
                 priority: 1,
@@ -1388,11 +1388,11 @@ mod work_stealing_tests {
 
         // 线程 1: 0 个任务（空闲）
         // 验证窃取
-        let stolen_task = scheduler.steal_task(1).await;
+        let stolen_task: _ = scheduler.steal_task(1).await;
         assert!(stolen_task.is_some());
         assert_eq!(stolen_task.unwrap().id, 9); // 应该是最后一个任务（从尾部窃取）
 
-        let stats = scheduler.get_steal_stats();
+        let stats: _ = scheduler.get_steal_stats();
         assert_eq!(stats.steal_attempts.load(), 1);
         assert_eq!(stats.successful_steals.load(), 1);
 
@@ -1401,9 +1401,9 @@ mod work_stealing_tests {
 
     #[tokio::test]
     async fn test_priority_task_scheduling() {
-        let scheduler = WorkStealingScheduler::new(1);
+        let scheduler: _ = WorkStealingScheduler::new(1);
 
-        let tasks = vec![
+        let tasks: _ = vec![
             Task {
                 id: 1,
                 code: "low_priority".to_string(),
@@ -1428,15 +1428,15 @@ mod work_stealing_tests {
         scheduler.submit_batch(tasks).await.unwrap();
 
         // 查看队列状态
-        let distribution = scheduler.get_queue_distribution().await;
+        let distribution: _ = scheduler.get_queue_distribution().await;
         println!("队列分布: {:?}", distribution);
 
         // 验证优先级顺序（高优先级先执行）
-        let task1 = scheduler.get_local_task(0).await.unwrap();
+        let task1: _ = scheduler.get_local_task(0).await.unwrap();
         println!("第一个任务优先级: {} (期望: 10)", task1.priority);
-        let task2 = scheduler.get_local_task(0).await.unwrap();
+        let task2: _ = scheduler.get_local_task(0).await.unwrap();
         println!("第二个任务优先级: {} (期望: 5)", task2.priority);
-        let task3 = scheduler.get_local_task(0).await.unwrap();
+        let task3: _ = scheduler.get_local_task(0).await.unwrap();
         println!("第三个任务优先级: {} (期望: 1)", task3.priority);
 
         assert_eq!(task1.priority, 10); // 高优先级
@@ -1469,9 +1469,9 @@ impl ConcurrentRuntimePool {
             if config.enable_memory_sharing {
                 println!("🔧 初始化内存共享组件...");
                 (
-                    Some(Arc::new(SharedMemoryManager::new(config.shared_memory_config.clone()))),
-                    Some(Arc::new(SharedObjectCache::new(config.shared_object_cache_config.clone()))),
-                    Some(Arc::new(MemoryMappedFileManager::new(config.memory_mapped_file_config.clone()))),
+                    Some(Arc::new(std::sync::Mutex::new(SharedMemoryManager::new(config.shared_memory_config.clone())))),
+                    Some(Arc::new(std::sync::Mutex::new(SharedObjectCache::new(config.shared_object_cache_config.clone())))),
+                    Some(Arc::new(std::sync::Mutex::new(MemoryMappedFileManager::new(config.memory_mapped_file_config.clone())))),
                 )
             } else {
                 (None, None, None)
@@ -1484,7 +1484,7 @@ impl ConcurrentRuntimePool {
 
         Self {
             config: config.clone(),
-            stats: Arc::new(ConcurrentExecutionStats::new()),
+            stats: Arc::new(std::sync::Mutex::new(ConcurrentExecutionStats::new())),
             shared_memory_manager,
             shared_object_cache,
             memory_mapped_file_manager,
@@ -1494,7 +1494,7 @@ impl ConcurrentRuntimePool {
     /// 获取Runtime实例（从线程本地池）
     pub fn get_runtime(&self) -> Option<Runtime> {
         THREAD_RUNTIME_POOL.with(|pool| {
-            let mut pool = pool.borrow_mut();
+            let mut pool = pool.clone();borrow_mut();
 
             // 如果池中有可用实例，复用它
             if let Some(runtime) = pool.pop() {
@@ -1503,8 +1503,8 @@ impl ConcurrentRuntimePool {
 
             // 否则创建新实例
             if pool.len() < self.config.pool_size_per_thread {
-                let runtime = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false);
-                let current_size = pool.len() + 1;
+                let runtime: _ = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false);
+                let current_size: _ = pool.len() + 1;
                 THREAD_POOL_SIZE.with(|size| {
                     *size.borrow_mut() = current_size;
                 });
@@ -1518,7 +1518,7 @@ impl ConcurrentRuntimePool {
     /// 归还Runtime实例到线程本地池
     pub fn return_runtime(&self, runtime: Runtime) {
         THREAD_RUNTIME_POOL.with(|pool| {
-            let mut pool = pool.borrow_mut();
+            let mut pool = pool.clone();borrow_mut();
             if pool.len() < self.config.pool_size_per_thread {
                 pool.push(runtime);
             }
@@ -1547,7 +1547,7 @@ impl ConcurrentRuntimePool {
 
         if let Some(manager) = &self.shared_memory_manager {
             stats.push_str("Shared Memory:\n");
-            let sm_stats = manager.get_stats();
+            let sm_stats: _ = manager.get_stats();
             stats.push_str(&format!("  - Regions: {}\n", sm_stats.total_regions));
             stats.push_str(&format!("  - Reads: {}\n", sm_stats.total_reads));
             stats.push_str(&format!("  - Writes: {}\n", sm_stats.total_writes));
@@ -1555,7 +1555,7 @@ impl ConcurrentRuntimePool {
 
         if let Some(cache) = &self.shared_object_cache {
             stats.push_str("Shared Object Cache:\n");
-            let oc_stats = cache.get_stats();
+            let oc_stats: _ = cache.get_stats();
             stats.push_str(&format!("  - Objects: {}\n", oc_stats.total_objects));
             stats.push_str(&format!("  - Hits: {}\n", oc_stats.cache_hits));
             stats.push_str(&format!("  - Misses: {}\n", oc_stats.cache_misses));
@@ -1563,7 +1563,7 @@ impl ConcurrentRuntimePool {
 
         if let Some(mgr) = &self.memory_mapped_file_manager {
             stats.push_str("Memory Mapped Files:\n");
-            let mm_stats = mgr.get_stats();
+            let mm_stats: _ = mgr.get_stats();
             stats.push_str(&format!("  - Mappings: {}\n", mm_stats.total_mappings));
             stats.push_str(&format!("  - Reads: {}\n", mm_stats.total_reads));
             stats.push_str(&format!("  - Bytes Read: {}\n", mm_stats.total_bytes_read));
@@ -1578,15 +1578,15 @@ impl ConcurrentRuntimePool {
             return Ok(());
         }
 
-        let prewarm_count = self.config.prewarm_count;
-        let pool_size_per_thread = self.config.pool_size_per_thread;
+        let prewarm_count: _ = self.config.prewarm_count;
+        let pool_size_per_thread: _ = self.config.pool_size_per_thread;
 
         // 使用当前线程预热，避免生命周期问题
         for _ in 0..prewarm_count {
             THREAD_RUNTIME_POOL.with(|pool| {
-                let mut pool = pool.borrow_mut();
+                let mut pool = pool.clone();borrow_mut();
                 if pool.len() < pool_size_per_thread {
-                    let runtime = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false);
+                    let runtime: _ = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false);
                     pool.push(runtime);
                     THREAD_POOL_SIZE.with(|size| {
                         *size.borrow_mut() = pool.len();
@@ -1604,21 +1604,21 @@ impl ConcurrentRuntimePool {
         code: String,
         timeout_duration: Duration,
     ) -> Result<ScriptResult, ConcurrentExecutionError> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 获取Runtime实例
-        let runtime = self.get_runtime()
+        let runtime: _ = self.get_runtime()
             .ok_or_else(|| ConcurrentExecutionError::ExecutionFailed("无法获取Runtime实例".to_string()))?;
 
         // 执行脚本（带超时）
-        let execution_result = timeout(timeout_duration, async {
+        let execution_result: _ = timeout(timeout_duration, async {
             let result = runtime.execute_code(&code);
 
             // 归还Runtime实例
             result
         }).await;
 
-        let execution_time = start.elapsed();
+        let execution_time: _ = start.elapsed();
 
         match execution_result {
             Ok(Ok(output)) => {
@@ -1673,14 +1673,14 @@ mod tests {
             }
         }
 
-        let config = ConcurrentConfig::default();
-        let pool = ConcurrentRuntimePool::new(config);
+        let config: _ = ConcurrentConfig::default();
+        let pool: _ = ConcurrentRuntimePool::new(config);
 
         // 预热
         pool.prewarm().await.unwrap();
 
         // 获取和归还Runtime实例
-        let runtime1 = pool.get_runtime();
+        let runtime1: _ = pool.get_runtime();
         assert!(runtime1.is_some());
 
         if let Some(runtime) = runtime1 {
@@ -1716,9 +1716,9 @@ pub struct BatchExecutor {
 impl BatchExecutor {
     /// 创建新的批量执行器
     pub fn new(config: ConcurrentConfig) -> Self {
-        let runtime_pool = Arc::new(ConcurrentRuntimePool::new(config.clone()));
-        let scheduler = Arc::new(WorkStealingScheduler::new(num_cpus::get()));
-        let stats = Arc::new(ConcurrentExecutionStats::new());
+        let runtime_pool: _ = Arc::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config.clone())));
+        let scheduler: _ = Arc::new(std::sync::Mutex::new(WorkStealingScheduler::new(num_cpus::get())));
+        let stats: _ = Arc::new(std::sync::Mutex::new(ConcurrentExecutionStats::new()));
 
         Self {
             config,
@@ -1734,8 +1734,8 @@ impl BatchExecutor {
         scripts: Vec<(String, usize)>,
         timeout_duration: Duration,
     ) -> Result<Vec<ScriptResult>, ConcurrentExecutionError> {
-        let start = Instant::now();
-        let script_count = scripts.len();
+        let start: _ = Instant::now();
+        let script_count: _ = scripts.len();
 
         // 将脚本转换为任务
         let tasks: Vec<Task> = scripts
@@ -1771,12 +1771,12 @@ impl BatchExecutor {
 
                     // 获取 Runtime 实例并执行脚本
                     if let Some(runtime) = self.runtime_pool.get_runtime() {
-                        let script_start = Instant::now();
-                        let script_result = timeout(timeout_duration, async {
+                        let script_start: _ = Instant::now();
+                        let script_result: _ = timeout(timeout_duration, async {
                             runtime.execute_code(&task.code)
                         }).await;
 
-                        let execution_time = script_start.elapsed();
+                        let execution_time: _ = script_start.elapsed();
 
                         match script_result {
                             Ok(Ok(output)) => {
@@ -1849,8 +1849,8 @@ impl BatchExecutor {
             tokio::time::sleep(Duration::from_millis(1)).await;
         }
 
-        let total_time = start.elapsed();
-        let throughput = script_count as f64 / total_time.as_secs_f64();
+        let total_time: _ = start.elapsed();
+        let throughput: _ = script_count as f64 / total_time.as_secs_f64();
 
         println!("✅ 批量执行完成:");
         println!("  - 脚本数: {}", script_count);
@@ -1887,6 +1887,8 @@ impl BatchExecutor {
 #[cfg(test)]
 mod batch_executor_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_batch_executor_creation() {
@@ -1899,8 +1901,8 @@ mod batch_executor_tests {
             }
         }
 
-        let config = ConcurrentConfig::default();
-        let executor = BatchExecutor::new(config);
+        let config: _ = ConcurrentConfig::default();
+        let executor: _ = BatchExecutor::new(config);
 
         // 验证执行器创建成功
         assert!(executor.get_stats().total_submitted.load() == 0);
@@ -1920,14 +1922,14 @@ mod batch_executor_tests {
             }
         }
 
-        let config = ConcurrentConfig::default();
-        let executor = BatchExecutor::new(config);
+        let config: _ = ConcurrentConfig::default();
+        let executor: _ = BatchExecutor::new(config);
 
         // 预热
         executor.prewarm().await.unwrap();
 
         // 创建简单的测试脚本
-        let scripts = vec![
+        let scripts: _ = vec![
             ("1 + 1".to_string(), 1),
             ("2 * 3".to_string(), 1),
             ("10 / 2".to_string(), 1),
@@ -1935,7 +1937,7 @@ mod batch_executor_tests {
         ];
 
         // 执行批量脚本
-        let results = executor.execute_batch(scripts, Duration::from_secs(5)).await.unwrap();
+        let results: _ = executor.execute_batch(scripts, Duration::from_secs(5)).await.unwrap();
 
         // 验证结果
         assert_eq!(results.len(), 4);
@@ -1958,14 +1960,14 @@ mod batch_executor_tests {
             }
         }
 
-        let config = ConcurrentConfig::default();
-        let executor = BatchExecutor::new(config);
+        let config: _ = ConcurrentConfig::default();
+        let executor: _ = BatchExecutor::new(config);
 
         // 预热
         executor.prewarm().await.unwrap();
 
         // 创建不同优先级的测试脚本
-        let scripts = vec![
+        let scripts: _ = vec![
             ("1 + 1".to_string(), 1),    // 低优先级
             ("2 * 3".to_string(), 10),   // 高优先级
             ("10 / 2".to_string(), 5),   // 中优先级
@@ -1973,7 +1975,7 @@ mod batch_executor_tests {
         ];
 
         // 执行批量脚本
-        let results = executor.execute_batch(scripts, Duration::from_secs(5)).await.unwrap();
+        let results: _ = executor.execute_batch(scripts, Duration::from_secs(5)).await.unwrap();
 
         // 验证所有脚本都执行成功
         assert_eq!(results.len(), 4);
@@ -1995,23 +1997,23 @@ mod batch_executor_tests {
             }
         }
 
-        let config = ConcurrentConfig::default();
-        let executor = BatchExecutor::new(config);
+        let config: _ = ConcurrentConfig::default();
+        let executor: _ = BatchExecutor::new(config);
 
         // 预热
         executor.prewarm().await.unwrap();
 
         // 创建测试脚本
-        let scripts = vec![
+        let scripts: _ = vec![
             ("1 + 1".to_string(), 1),
             ("2 * 3".to_string(), 1),
         ];
 
         // 执行批量脚本
-        let _results = executor.execute_batch(scripts, Duration::from_secs(5)).await.unwrap();
+        let _results: _ = executor.execute_batch(scripts, Duration::from_secs(5)).await.unwrap();
 
         // 验证统计信息
-        let stats = executor.get_stats();
+        let stats: _ = executor.get_stats();
         assert_eq!(stats.total_submitted.load(), 2);
         assert_eq!(stats.total_completed.load(), 2);
         assert_eq!(stats.total_failed.load(), 0);

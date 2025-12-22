@@ -127,8 +127,8 @@ pub struct SyncPolicy {
 pub struct GitOpsEngine {
     git_client: Arc<GitClient>,
     reconciler: Arc<ConfigReconciler>,
-    sync_history: BTreeMap<Uuid, SyncResult>,
-    pending_changes: BTreeMap<Uuid, ConfigChange>,
+    sync_history: BTreeMap<Uuid, SyncResult, Uuid, SyncResult>,
+    pending_changes: BTreeMap<Uuid, ConfigChange, Uuid, ConfigChange>,
 }
 
 impl GitClient {
@@ -200,7 +200,7 @@ impl ConfigReconciler {
         info!("Starting configuration sync from: {}", repo_url);
 
         // 模拟同步过程
-        let sync_result = SyncResult {
+        let sync_result: _ = SyncResult {
             status: SyncStatus::Syncing,
             commit_hash: CommitHash("sync123".to_string()),
             timestamp: SystemTime::now(),
@@ -245,9 +245,9 @@ impl ConfigReconciler {
         // 检查环境特定规则
         self.validate_environment_rules(change, &mut errors, &mut warnings)?;
 
-        let valid = errors.is_empty();
+        let valid: _ = errors.is_empty();
 
-        let result = ValidationResult {
+        let result: _ = ValidationResult {
             valid,
             errors,
             warnings,
@@ -329,8 +329,8 @@ impl GitOpsEngine {
     /// Create a new GitOps engine
     pub fn new(git_client: GitClient, reconciler: ConfigReconciler) -> Self {
         Self {
-            git_client: Arc::new(git_client),
-            reconciler: Arc::new(reconciler),
+            git_client: Arc::new(std::sync::Mutex::new(git_client)),
+            reconciler: Arc::new(std::sync::Mutex::new(reconciler)),
             sync_history: BTreeMap::new(),
             pending_changes: BTreeMap::new(),
         }
@@ -338,8 +338,8 @@ impl GitOpsEngine {
 
     /// Sync configuration from Git repository
     pub async fn sync_configuration(&self, repo_url: &str) -> Result<SyncResult> {
-        let result = self.reconciler.sync_configuration(repo_url).await?;
-        let sync_id = Uuid::new_v4();
+        let result: _ = self.reconciler.sync_configuration(repo_url).await?;
+        let sync_id: _ = Uuid::new_v4();
 
         self.sync_history.insert(sync_id, result.clone());
 
@@ -355,9 +355,9 @@ impl GitOpsEngine {
         change_type: ChangeType,
         target_environment: Environment,
     ) -> Result<Uuid> {
-        let change_id = Uuid::new_v4();
+        let change_id: _ = Uuid::new_v4();
 
-        let change = ConfigChange {
+        let change: _ = ConfigChange {
             id: change_id,
             timestamp: SystemTime::now(),
             author: author.to_string(),
@@ -375,7 +375,7 @@ impl GitOpsEngine {
 
     /// Validate configuration change
     pub async fn validate_change(&self, change_id: Uuid) -> Result<ValidationResult> {
-        let change = self
+        let change: _ = self
             .pending_changes
             .get(&change_id)
             .context("Configuration change not found")?;
@@ -385,13 +385,13 @@ impl GitOpsEngine {
 
     /// Apply configuration change
     pub async fn apply_change(&mut self, change_id: Uuid) -> Result<()> {
-        let change = self
+        let change: _ = self
             .pending_changes
             .get(&change_id)
             .context("Configuration change not found")?;
 
         // 验证变更
-        let validation = self.reconciler.validate_change(change).await?;
+        let validation: _ = self.reconciler.validate_change(change).await?;
         if !validation.valid {
             return Err(anyhow::anyhow!(
                 "Configuration change validation failed: {:?}",
@@ -400,7 +400,7 @@ impl GitOpsEngine {
         }
 
         // 检查是否需要批准
-        let policy = self
+        let policy: _ = self
             .reconciler
             .get_sync_policy(&change.target_environment);
 
@@ -524,10 +524,12 @@ pub fn default_sync_policies() -> Vec<SyncPolicy> {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_git_client_creation() {
-        let client = GitClient::new(
+        let client: _ = GitClient::new(
             RepositoryUrl("https://github.com/example/repo.git".to_string()),
             "/tmp/repo",
             BranchName("main".to_string()),
@@ -538,39 +540,39 @@ mod tests {
 
     #[tokio::test]
     async fn test_gitops_engine_sync() {
-        let git_client = GitClient::new(
+        let git_client: _ = GitClient::new(
             RepositoryUrl("https://github.com/example/repo.git".to_string()),
             "/tmp/repo",
             BranchName("main".to_string()),
         );
 
-        let reconciler = ConfigReconciler::new(
+        let reconciler: _ = ConfigReconciler::new(
             git_client.clone(),
             default_validation_rules(),
             default_sync_policies(),
         );
 
-        let engine = GitOpsEngine::new(git_client, reconciler);
+        let engine: _ = GitOpsEngine::new(git_client, reconciler);
 
-        let result = engine.sync_configuration("https://github.com/example/repo.git").await.unwrap();
+        let result: _ = engine.sync_configuration("https://github.com/example/repo.git").await.unwrap();
         assert!(matches!(result.status, SyncStatus::Success));
     }
 
     #[tokio::test]
     async fn test_validate_change() {
-        let git_client = GitClient::new(
+        let git_client: _ = GitClient::new(
             RepositoryUrl("https://github.com/example/repo.git".to_string()),
             "/tmp/repo",
             BranchName("main".to_string()),
         );
 
-        let reconciler = ConfigReconciler::new(
+        let reconciler: _ = ConfigReconciler::new(
             git_client.clone(),
             default_validation_rules(),
             default_sync_policies(),
         );
 
-        let change = ConfigChange {
+        let change: _ = ConfigChange {
             id: Uuid::new_v4(),
             timestamp: SystemTime::now(),
             author: "test-user".to_string(),
@@ -580,19 +582,19 @@ mod tests {
             target_environment: Environment::Development,
         };
 
-        let result = reconciler.validate_change(&change).await.unwrap();
+        let result: _ = reconciler.validate_change(&change).await.unwrap();
         assert!(result.valid);
     }
 
     #[test]
     fn test_create_change() {
-        let git_client = GitClient::new(
+        let git_client: _ = GitClient::new(
             RepositoryUrl("https://github.com/example/repo.git".to_string()),
             "/tmp/repo",
             BranchName("main".to_string()),
         );
 
-        let reconciler = ConfigReconciler::new(
+        let reconciler: _ = ConfigReconciler::new(
             git_client.clone(),
             default_validation_rules(),
             default_sync_policies(),
@@ -600,7 +602,7 @@ mod tests {
 
         let mut engine = GitOpsEngine::new(git_client, reconciler);
 
-        let change_id = engine
+        let change_id: _ = engine
             .create_change(
                 "test-user",
                 "Test change",

@@ -24,12 +24,12 @@ pub struct PrometheusExporter {
 impl PrometheusExporter {
     /// Create a new Prometheus exporter
     pub fn new() -> Result<Self> {
-        let registry = Registry::new();
+        let registry: _ = Registry::new();
         info!("Prometheus exporter created");
         Ok(Self {
             registry,
             bind_addr: None,
-            running: Arc::new(tokio::sync::Mutex::new(false)),
+            running: Arc::new(std::sync::Mutex::new(tokio::sync::Mutex::new(false))),
         })
     }
 
@@ -39,7 +39,7 @@ impl PrometheusExporter {
         Self {
             registry,
             bind_addr: None,
-            running: Arc::new(tokio::sync::Mutex::new(false)),
+            running: Arc::new(std::sync::Mutex::new(tokio::sync::Mutex::new(false))),
         }
     }
 
@@ -52,7 +52,7 @@ impl PrometheusExporter {
     pub async fn start_server(&mut self, addr: SocketAddr) -> Result<()> {
         info!("Starting Prometheus metrics server on {}", addr);
 
-        let listener = TcpListener::bind(&addr)
+        let listener: _ = TcpListener::bind(&addr)
             .await
             .context("Failed to bind to address")?;
 
@@ -71,8 +71,8 @@ impl PrometheusExporter {
                 }
             };
 
-            let registry = self.registry.clone();
-            let running = self.running.clone();
+            let registry: _ = self.registry.clone();
+            let running: _ = self.running.clone();
 
             // Spawn a task to handle each connection
             tokio::spawn(async move {
@@ -92,10 +92,10 @@ impl PrometheusExporter {
 
     /// Get metrics in Prometheus text format
     pub fn gather_metrics(&self) -> Result<String> {
-        let metric_families = self.registry.gather();
+        let metric_families: _ = self.registry.gather();
 
-        let encoder = TextEncoder::new();
-        let metrics_text = encoder.encode_to_string(&metric_families)
+        let encoder: _ = TextEncoder::new();
+        let metrics_text: _ = encoder.encode_to_string(&metric_families)
             .context("Failed to encode metrics")?;
 
         Ok(metrics_text)
@@ -126,9 +126,9 @@ async fn handle_connection(
 ) -> Result<()> {
     // Read the HTTP request
     let mut buffer = [0; 1024];
-    let _ = stream.read(&mut buffer).await?;
+    let _: _ = stream.read(&mut buffer).await?;
 
-    let request = String::from_utf8_lossy(&buffer);
+    let request: _ = String::from_utf8_lossy(&buffer);
 
     // Check if server is still running
     if !*running.lock().await {
@@ -136,7 +136,7 @@ async fn handle_connection(
     }
 
     // Parse the request path
-    let path = if let Some(first_line) = request.lines().next() {
+    let path: _ = if let Some(first_line) = request.lines().next() {
         first_line.split(' ').nth(1).unwrap_or("/")
     } else {
         "/"
@@ -163,15 +163,15 @@ async fn handle_connection(
 /// Serve metrics in Prometheus format
 async fn serve_metrics(stream: &mut TcpStream, registry: &Registry) -> Result<()> {
     // Gather metrics
-    let metric_families = registry.gather();
+    let metric_families: _ = registry.gather();
 
     // Encode to Prometheus text format
-    let encoder = prometheus::TextEncoder::new();
-    let metrics_text = encoder.encode_to_string(&metric_families)
+    let encoder: _ = prometheus::TextEncoder::new();
+    let metrics_text: _ = encoder.encode_to_string(&metric_families)
         .context("Failed to encode metrics")?;
 
     // Prepare HTTP response
-    let response = format!(
+    let response: _ = format!(
         "HTTP/1.1 200 OK\r\n\
          Content-Type: {}\r\n\
          Content-Length: {}\r\n\
@@ -191,7 +191,7 @@ async fn serve_metrics(stream: &mut TcpStream, registry: &Registry) -> Result<()
 
 /// Serve health check endpoint
 async fn serve_health_check(stream: &mut TcpStream) -> Result<()> {
-    let response = "HTTP/1.1 200 OK\r\n\
+    let response: _ = "HTTP/1.1 200 OK\r\n\
                    Content-Type: application/json\r\n\
                    Connection: close\r\n\
                    \r\n\
@@ -205,7 +205,7 @@ async fn serve_health_check(stream: &mut TcpStream) -> Result<()> {
 
 /// Serve 404 Not Found
 async fn serve_not_found(stream: &mut TcpStream) -> Result<()> {
-    let response = "HTTP/1.1 404 Not Found\r\n\
+    let response: _ = "HTTP/1.1 404 Not Found\r\n\
                    Content-Type: text/plain\r\n\
                    Connection: close\r\n\
                    \r\n\
@@ -221,10 +221,12 @@ async fn serve_not_found(stream: &mut TcpStream) -> Result<()> {
 mod tests {
     use super::*;
     use prometheus::{Counter, Opts};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_prometheus_exporter_creation() {
-        let exporter = PrometheusExporter::new();
+        let exporter: _ = PrometheusExporter::new();
         assert!(exporter.is_ok());
     }
 
@@ -233,23 +235,23 @@ mod tests {
         let mut exporter = PrometheusExporter::new().unwrap();
 
         // Add a test counter
-        let counter_opts = Opts::new("test_counter".to_string(), "Test counter".to_string());
-        let counter = Counter::with_opts(counter_opts).unwrap();
+        let counter_opts: _ = Opts::new("test_counter".to_string(), "Test counter".to_string());
+        let counter: _ = Counter::with_opts(counter_opts).unwrap();
         exporter.registry().register(Box::new(counter.clone())).unwrap();
         counter.inc();
 
-        let metrics = exporter.gather_metrics();
+        let metrics: _ = exporter.gather_metrics();
         assert!(metrics.is_ok());
         assert!(metrics.unwrap().contains("test_counter"));
     }
 
     #[tokio::test]
     async fn test_custom_registry() {
-        let registry = Registry::new();
-        let exporter = PrometheusExporter::new_with_registry(registry);
+        let registry: _ = Registry::new();
+        let exporter: _ = PrometheusExporter::new_with_registry(registry);
         // Just verify the exporter was created successfully
         // Check that registry is valid by verifying gather works (even if empty)
-        let metrics = exporter.registry().gather();
+        let metrics: _ = exporter.registry().gather();
         assert!(metrics.len() >= 0);  // Empty is OK
     }
 }

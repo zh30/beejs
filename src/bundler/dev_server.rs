@@ -34,10 +34,12 @@ impl DevServer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_dev_server_creation() {
-        let server = DevServer::new(3000);
+        let server: _ = DevServer::new(3000);
         assert_eq!(server.port, 3000);
     }
 }

@@ -66,8 +66,8 @@ impl MemoryStats {
 
     /// 获取分配效率
     pub fn allocation_efficiency(&self) -> f64 {
-        let allocated = self.total_allocated.load(Ordering::Relaxed);
-        let freed = self.total_freed.load(Ordering::Relaxed);
+        let allocated: _ = self.total_allocated.load(Ordering::Relaxed);
+        let freed: _ = self.total_freed.load(Ordering::Relaxed);
         if allocated == 0 {
             1.0
         } else {
@@ -98,7 +98,7 @@ pub struct WasmMemoryManager {
     /// 预分配的内存池
     memory_pool: Arc<Mutex<Vec<MemoryBlock>>>,
     /// 大块内存分配器
-    large_allocator: Arc<Mutex<HashMap<usize, MemoryBlock>>>,
+    large_allocator: Arc<Mutex<HashMap<usize, MemoryBlock, std::collections::HashMap<usize, MemoryBlock, usize, MemoryBlock>>>>,
     /// 内存统计
     stats: Arc<MemoryStats>,
     /// 最大池大小
@@ -118,7 +118,7 @@ impl WasmMemoryManager {
     ///
     /// # 示例
     /// ```
-    /// let memory_manager = WasmMemoryManager::new(1024 * 1024)?; // 1MB 池
+    /// let memory_manager: _ = WasmMemoryManager::new(1024 * 1024)?; // 1MB 池
     /// ```
     pub fn new(pool_size: usize) -> Result<Self> {
         let mut memory_pool = Vec::new();
@@ -126,25 +126,25 @@ impl WasmMemoryManager {
 
         // 预分配小块内存
         while pool_size_left > 4096 {
-            let size = pool_size_left.min(64 * 1024); // 64KB 块
-            let layout = Layout::from_size_align(size, 8)
+            let size: _ = pool_size_left.min(64 * 1024); // 64KB 块
+            let layout: _ = Layout::from_size_align(size, 8)
                 .map_err(|e| anyhow!("Invalid layout: {}", e))?;
 
             unsafe {
-                let ptr = System.alloc(layout);
+                let ptr: _ = System.alloc(layout);
                 if ptr.is_null() {
                     return Err(anyhow!("Failed to pre-allocate memory"));
                 }
-                let block = MemoryBlock::new(ptr, size);
+                let block: _ = MemoryBlock::new(ptr, size);
                 memory_pool.push(block);
             }
             pool_size_left -= size;
         }
 
         Ok(WasmMemoryManager {
-            memory_pool: Arc::new(Mutex::new(memory_pool)),
-            large_allocator: Arc::new(Mutex::new(HashMap::new())),
-            stats: Arc::new(MemoryStats::default()),
+            memory_pool: Arc::new(std::sync::Mutex::new(Mutex::new(memory_pool))),
+            large_allocator: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            stats: Arc::new(std::sync::Mutex::new(MemoryStats::default())),
             max_pool_size: pool_size,
             pool_threshold: 4096,
         })
@@ -160,7 +160,7 @@ impl WasmMemoryManager {
     ///
     /// # 示例
     /// ```
-    /// let ptr = memory_manager.allocate(1024)?;
+    /// let ptr: _ = memory_manager.allocate(1024)?;
     /// ```
     pub fn allocate(&self, size: usize) -> Result<*mut u8> {
         if size == 0 {
@@ -226,7 +226,7 @@ impl WasmMemoryManager {
         let mut pointers = Vec::with_capacity(sizes.len());
 
         for &size in sizes {
-            let ptr = self.allocate(size)?;
+            let ptr: _ = self.allocate(size)?;
             pointers.push(ptr);
         }
 
@@ -286,7 +286,7 @@ impl WasmMemoryManager {
 
         // 查找合适大小的块
         if let Some(index) = pool.iter().position(|block| block.size >= size) {
-            let block = pool.remove(index);
+            let block: _ = pool.remove(index);
             self.stats.total_allocated.fetch_add(block.size, Ordering::Relaxed);
             self.stats.active_blocks.fetch_add(1, Ordering::Relaxed);
             Some(block)
@@ -312,16 +312,16 @@ impl WasmMemoryManager {
 
     /// 从系统分配内存
     fn allocate_from_system(&self, size: usize) -> Result<*mut u8> {
-        let layout = Layout::from_size_align(size, 8)
+        let layout: _ = Layout::from_size_align(size, 8)
             .map_err(|e| anyhow!("Invalid layout: {}", e))?;
 
         unsafe {
-            let ptr = System.alloc(layout);
+            let ptr: _ = System.alloc(layout);
             if ptr.is_null() {
                 return Err(anyhow!("System memory allocation failed"));
             }
 
-            let block = MemoryBlock::new(ptr, size);
+            let block: _ = MemoryBlock::new(ptr, size);
             self.stats.total_allocated.fetch_add(size, Ordering::Relaxed);
             self.stats.active_blocks.fetch_add(1, Ordering::Relaxed);
 
@@ -337,7 +337,7 @@ impl WasmMemoryManager {
 
     /// 获取大块内存
     fn get_large_block(&self, ptr: *mut u8) -> Option<MemoryBlock> {
-        let large = self.large_allocator.lock().unwrap();
+        let large: _ = self.large_allocator.lock().unwrap();
         large.get(&(ptr as usize)).cloned()
     }
 
@@ -365,39 +365,41 @@ impl Drop for WasmMemoryManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_memory_manager_creation() {
-        let manager = WasmMemoryManager::new(1024 * 1024);
+        let manager: _ = WasmMemoryManager::new(1024 * 1024);
         assert!(manager.is_ok());
     }
 
     #[test]
     fn test_memory_allocation() {
-        let manager = Arc::new(WasmMemoryManager::new(1024 * 1024).unwrap());
+        let manager: _ = Arc::new(std::sync::Mutex::new(WasmMemoryManager::new(1024 * 1024)).unwrap());
 
-        let ptr = manager.allocate(1024);
+        let ptr: _ = manager.allocate(1024);
         assert!(ptr.is_ok());
         assert!(!ptr.unwrap().is_null());
     }
 
     #[test]
     fn test_memory_deallocation() {
-        let manager = Arc::new(WasmMemoryManager::new(1024 * 1024).unwrap());
+        let manager: _ = Arc::new(std::sync::Mutex::new(WasmMemoryManager::new(1024 * 1024)).unwrap());
 
-        let ptr = manager.allocate(1024).unwrap();
-        let result = manager.deallocate(ptr);
+        let ptr: _ = manager.allocate(1024).unwrap();
+        let result: _ = manager.deallocate(ptr);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_memory_stats() {
-        let manager = Arc::new(WasmMemoryManager::new(1024 * 1024).unwrap());
+        let manager: _ = Arc::new(std::sync::Mutex::new(WasmMemoryManager::new(1024 * 1024)).unwrap());
 
-        let ptr1 = manager.allocate(1024).unwrap();
-        let ptr2 = manager.allocate(2048).unwrap();
+        let ptr1: _ = manager.allocate(1024).unwrap();
+        let ptr2: _ = manager.allocate(2048).unwrap();
 
-        let stats = manager.get_stats();
+        let stats: _ = manager.get_stats();
         assert!(stats.current_usage() > 0);
 
         manager.deallocate(ptr1).unwrap();
@@ -409,40 +411,40 @@ mod tests {
 
     #[test]
     fn test_batch_operations() {
-        let manager = Arc::new(WasmMemoryManager::new(1024 * 1024).unwrap());
+        let manager: _ = Arc::new(std::sync::Mutex::new(WasmMemoryManager::new(1024 * 1024)).unwrap());
 
-        let sizes = vec![1024, 2048, 4096];
-        let pointers = manager.batch_allocate(&sizes);
+        let sizes: _ = vec![1024, 2048, 4096];
+        let pointers: _ = manager.batch_allocate(&sizes);
         assert!(pointers.is_ok());
 
-        let pointers = pointers.unwrap();
+        let pointers: _ = pointers.clone();unwrap();
         assert_eq!(pointers.len(), 3);
 
-        let result = manager.batch_deallocate(&pointers);
+        let result: _ = manager.batch_deallocate(&pointers);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_zero_allocation() {
-        let manager = WasmMemoryManager::new(1024 * 1024).unwrap();
+        let manager: _ = WasmMemoryManager::new(1024 * 1024).unwrap();
 
-        let result = manager.allocate(0);
+        let result: _ = manager.allocate(0);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_null_deallocation() {
-        let manager = WasmMemoryManager::new(1024 * 1024).unwrap();
+        let manager: _ = WasmMemoryManager::new(1024 * 1024).unwrap();
 
-        let result = manager.deallocate(std::ptr::null_mut());
+        let result: _ = manager.deallocate(std::ptr::null_mut());
         assert!(result.is_err());
     }
 
     #[test]
     fn test_memory_leak_detection() {
-        let manager = Arc::new(WasmMemoryManager::new(1024 * 1024).unwrap());
+        let manager: _ = Arc::new(std::sync::Mutex::new(WasmMemoryManager::new(1024 * 1024)).unwrap());
 
-        let ptr = manager.allocate(1024).unwrap();
+        let ptr: _ = manager.allocate(1024).unwrap();
         manager.deallocate(ptr).unwrap();
 
         // 如果正确释放，不应该有泄漏
@@ -451,13 +453,13 @@ mod tests {
 
     #[test]
     fn test_large_allocation() {
-        let manager = Arc::new(WasmMemoryManager::new(1024 * 1024).unwrap());
+        let manager: _ = Arc::new(std::sync::Mutex::new(WasmMemoryManager::new(1024 * 1024)).unwrap());
 
         // 分配 2MB 大块内存
-        let ptr = manager.allocate(2 * 1024 * 1024);
+        let ptr: _ = manager.allocate(2 * 1024 * 1024);
         assert!(ptr.is_ok());
 
-        let stats = manager.get_stats();
+        let stats: _ = manager.get_stats();
         assert!(stats.large_allocations.load(Ordering::Relaxed) > 0);
 
         manager.deallocate(ptr.unwrap()).unwrap();
@@ -465,12 +467,12 @@ mod tests {
 
     #[test]
     fn test_reset() {
-        let manager = Arc::new(WasmMemoryManager::new(1024 * 1024).unwrap());
+        let manager: _ = Arc::new(std::sync::Mutex::new(WasmMemoryManager::new(1024 * 1024)).unwrap());
 
         manager.allocate(1024).unwrap();
         manager.reset();
 
-        let stats = manager.get_stats();
+        let stats: _ = manager.get_stats();
         assert_eq!(stats.current_usage(), 0);
     }
 }

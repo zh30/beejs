@@ -6,16 +6,18 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 #[test]
 fn test_bundle_command_help() {
     // Test that the bundle command is recognized and shows help
-    let output = Command::new("cargo")
+    let output: _ = Command::new("cargo")
         .args(&["run", "--bin", "beejs", "--", "bundle", "--help"])
         .output()
         .expect("Failed to run beejs bundle --help");
 
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr: _ = String::from_utf8_lossy(&output.stderr);
 
     // Check that help output is shown (not an error about unknown command)
     assert!(
@@ -34,21 +36,21 @@ fn test_bundle_command_help() {
 #[test]
 fn test_bundle_basic_functionality() {
     // Create a temporary directory for testing
-    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
-    let temp_path = temp_dir.path();
+    let temp_dir: _ = tempfile::tempdir().expect("Failed to create temp dir");
+    let temp_path: _ = temp_dir.path();
 
     // Create a simple entry file
-    let entry_file = temp_path.join("entry.js");
+    let entry_file: _ = temp_path.join("entry.js");
     fs::write(&entry_file, r#"
         console.log("Hello from bundle");
         export const message = "Hello World";
     "#).expect("Failed to write entry file");
 
     // Create output path
-    let output_file = temp_path.join("bundle.js");
+    let output_file: _ = temp_path.join("bundle.js");
 
     // Run bundle command
-    let output = Command::new("cargo")
+    let output: _ = Command::new("cargo")
         .args(&[
             "run",
             "--bin", "beejs",
@@ -61,7 +63,7 @@ fn test_bundle_basic_functionality() {
         .output()
         .expect("Failed to run beejs bundle");
 
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr: _ = String::from_utf8_lossy(&output.stderr);
 
     // The command should succeed or at least not fail with "unknown command"
     // (bundle may not be fully implemented yet, but CLI should recognize it)
@@ -83,15 +85,15 @@ fn test_bundle_basic_functionality() {
 #[test]
 fn test_bundle_with_minify_flag() {
     // Test that minify flag is recognized
-    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
-    let temp_path = temp_dir.path();
+    let temp_dir: _ = tempfile::tempdir().expect("Failed to create temp dir");
+    let temp_path: _ = temp_dir.path();
 
-    let entry_file = temp_path.join("entry.js");
+    let entry_file: _ = temp_path.join("entry.js");
     fs::write(&entry_file, "console.log('test');").expect("Failed to write entry file");
 
-    let output_file = temp_path.join("bundle.js");
+    let output_file: _ = temp_path.join("bundle.js");
 
-    let output = Command::new("cargo")
+    let output: _ = Command::new("cargo")
         .args(&[
             "run",
             "--bin", "beejs",
@@ -105,7 +107,7 @@ fn test_bundle_with_minify_flag() {
         .output()
         .expect("Failed to run beejs bundle --minify");
 
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr: _ = String::from_utf8_lossy(&output.stderr);
 
     // Should not fail with parsing errors
     assert!(
@@ -118,15 +120,15 @@ fn test_bundle_with_minify_flag() {
 #[test]
 fn test_bundle_with_sourcemap_flag() {
     // Test that sourcemap flag is recognized
-    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
-    let temp_path = temp_dir.path();
+    let temp_dir: _ = tempfile::tempdir().expect("Failed to create temp dir");
+    let temp_path: _ = temp_dir.path();
 
-    let entry_file = temp_path.join("entry.js");
+    let entry_file: _ = temp_path.join("entry.js");
     fs::write(&entry_file, "export const x = 42;").expect("Failed to write entry file");
 
-    let output_file = temp_path.join("bundle.js");
+    let output_file: _ = temp_path.join("bundle.js");
 
-    let output = Command::new("cargo")
+    let output: _ = Command::new("cargo")
         .args(&[
             "run",
             "--bin", "beejs",
@@ -140,7 +142,7 @@ fn test_bundle_with_sourcemap_flag() {
         .output()
         .expect("Failed to run beejs bundle --sourcemap");
 
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr: _ = String::from_utf8_lossy(&output.stderr);
 
     // Should not fail with parsing errors
     assert!(
@@ -153,16 +155,16 @@ fn test_bundle_with_sourcemap_flag() {
 #[test]
 fn test_bundle_tree_shake_flag() {
     // Test that tree-shake flag is recognized
-    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
-    let temp_path = temp_dir.path();
+    let temp_dir: _ = tempfile::tempdir().expect("Failed to create temp dir");
+    let temp_path: _ = temp_dir.path();
 
-    let entry_file = temp_path.join("entry.js");
+    let entry_file: _ = temp_path.join("entry.js");
     fs::write(&entry_file, "export const used = 'hello'; export const unused = 'world';")
         .expect("Failed to write entry file");
 
-    let output_file = temp_path.join("bundle.js");
+    let output_file: _ = temp_path.join("bundle.js");
 
-    let output = Command::new("cargo")
+    let output: _ = Command::new("cargo")
         .args(&[
             "run",
             "--bin", "beejs",
@@ -176,7 +178,7 @@ fn test_bundle_tree_shake_flag() {
         .output()
         .expect("Failed to run beejs bundle --tree-shake");
 
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr: _ = String::from_utf8_lossy(&output.stderr);
 
     // Should not fail with parsing errors
     assert!(
@@ -189,16 +191,16 @@ fn test_bundle_tree_shake_flag() {
 #[test]
 fn test_bundle_target_options() {
     // Test that different target options are accepted
-    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
-    let temp_path = temp_dir.path();
+    let temp_dir: _ = tempfile::tempdir().expect("Failed to create temp dir");
+    let temp_path: _ = temp_dir.path();
 
-    let entry_file = temp_path.join("entry.js");
+    let entry_file: _ = temp_path.join("entry.js");
     fs::write(&entry_file, "console.log('target test');").expect("Failed to write entry file");
 
-    let output_file = temp_path.join("bundle.js");
+    let output_file: _ = temp_path.join("bundle.js");
 
     // Test browser target (default)
-    let output = Command::new("cargo")
+    let output: _ = Command::new("cargo")
         .args(&[
             "run",
             "--bin", "beejs",
@@ -213,7 +215,7 @@ fn test_bundle_target_options() {
         .output()
         .expect("Failed to run beejs bundle --target browser");
 
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr: _ = String::from_utf8_lossy(&output.stderr);
 
     // Should not fail with parsing errors
     assert!(

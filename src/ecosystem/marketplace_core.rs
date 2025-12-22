@@ -29,13 +29,13 @@ pub struct PluginMarketplace {
 #[derive(Debug, Clone)]
 pub struct PluginIndex {
     /// 插件元数据存储
-    plugins: HashMap<PluginId, PluginMetadata>,
+    plugins: HashMap<PluginId, PluginMetadata, std::collections::HashMap<PluginId, PluginMetadata, PluginId, PluginMetadata>>,
     /// 标签索引
-    tag_index: BTreeMap<String, HashSet<PluginId>>,
+    tag_index: BTreeMap<String, HashSet<PluginId, String, HashSet<PluginId>>,
     /// 作者索引
-    author_index: BTreeMap<String, HashSet<PluginId>>,
+    author_index: BTreeMap<String, HashSet<PluginId, String, HashSet<PluginId>>,
     /// 分类索引
-    category_index: BTreeMap<String, HashSet<PluginId>>,
+    category_index: BTreeMap<String, HashSet<PluginId, String, HashSet<PluginId>>,
 }
 
 /// 插件元数据
@@ -138,11 +138,11 @@ pub struct SearchEngine {
 #[derive(Debug, Clone)]
 pub struct SearchIndex {
     /// 全文搜索索引
-    fulltext_index: HashMap<String, HashSet<PluginId>>,
+    fulltext_index: HashMap<String, HashSet<PluginId, std::collections::HashMap<String, HashSet<PluginId, String, HashSet<PluginId>>>,
     /// 标签搜索索引
-    tag_search_index: HashMap<String, HashSet<PluginId>>,
+    tag_search_index: HashMap<String, HashSet<PluginId, std::collections::HashMap<String, HashSet<PluginId, String, HashSet<PluginId>>>,
     /// 作者搜索索引
-    author_search_index: HashMap<String, HashSet<PluginId>>,
+    author_search_index: HashMap<String, HashSet<PluginId, std::collections::HashMap<String, HashSet<PluginId, String, HashSet<PluginId>>>,
 }
 
 /// 排名算法
@@ -287,9 +287,9 @@ pub struct RatingSystem {
 #[derive(Debug, Clone)]
 pub struct RatingStorage {
     /// 用户评分
-    pub user_ratings: HashMap<(PluginId, String), UserRating>,
+    pub user_ratings: HashMap<(PluginId, String), UserRating, std::collections::HashMap<(PluginId, String), UserRating, (PluginId, String), UserRating>>,
     /// 评分聚合
-    pub rating_aggregates: HashMap<PluginId, RatingAggregate>,
+    pub rating_aggregates: HashMap<PluginId, RatingAggregate, std::collections::HashMap<PluginId, RatingAggregate, PluginId, RatingAggregate>>,
 }
 
 /// 用户评分
@@ -328,9 +328,9 @@ pub struct ReviewSystem {
 #[derive(Debug, Clone)]
 pub struct ReviewQueue {
     /// 待审核插件
-    pending_reviews: HashMap<PluginId, ReviewTicket>,
+    pending_reviews: HashMap<PluginId, ReviewTicket, std::collections::HashMap<PluginId, ReviewTicket, PluginId, ReviewTicket>>,
     /// 审核历史
-    review_history: HashMap<PluginId, Vec<ReviewRecord>>,
+    review_history: HashMap<PluginId, Vec<ReviewRecord, std::collections::HashMap<PluginId, Vec<ReviewRecord, PluginId, Vec<ReviewRecord>>>,
 }
 
 /// 审核票据
@@ -402,9 +402,9 @@ pub struct QualityAnalyzer;
 #[derive(Debug, Clone)]
 pub struct MarketplaceCache {
     /// 插件详情缓存
-    pub plugin_cache: HashMap<PluginId, PluginMetadata>,
+    pub plugin_cache: HashMap<PluginId, PluginMetadata, std::collections::HashMap<PluginId, PluginMetadata, PluginId, PluginMetadata>>,
     /// 搜索结果缓存
-    pub search_cache: HashMap<String, SearchResults>,
+    pub search_cache: HashMap<String, SearchResults, std::collections::HashMap<String, SearchResults, String, SearchResults>>,
     /// 缓存统计
     pub stats: CacheStats,
 }
@@ -421,11 +421,11 @@ impl PluginMarketplace {
     /// 创建新的插件市场实例
     pub fn new() -> Self {
         Self {
-            plugin_index: Arc::new(PluginIndex::new()),
-            search_engine: Arc::new(SearchEngine::new()),
-            rating_system: Arc::new(RatingSystem::new()),
-            review_system: Arc::new(ReviewSystem::new()),
-            cache: Arc::new(MarketplaceCache::new()),
+            plugin_index: Arc::new(std::sync::Mutex::new(PluginIndex::new())),
+            search_engine: Arc::new(std::sync::Mutex::new(SearchEngine::new())),
+            rating_system: Arc::new(std::sync::Mutex::new(RatingSystem::new())),
+            review_system: Arc::new(std::sync::Mutex::new(ReviewSystem::new())),
+            cache: Arc::new(std::sync::Mutex::new(MarketplaceCache::new())),
         }
     }
 
@@ -446,20 +446,20 @@ impl PluginMarketplace {
     /// 搜索插件
     pub async fn search_plugins(&mut self, query: &SearchQuery) -> Result<SearchResults> {
         // 检查缓存
-        let cache_key = self.generate_cache_key(query);
+        let cache_key: _ = self.generate_cache_key(query);
         if let Some(cached_results) = self.cache.get_search_results(&cache_key).await {
             return Ok(cached_results);
         }
 
         // 执行搜索
-        let start_time = std::time::Instant::now();
-        let results = self.search_engine.search(query).await?;
-        let took_ms = start_time.elapsed().as_millis() as u64;
+        let start_time: _ = std::time::Instant::now();
+        let results: _ = self.search_engine.search(query).await?;
+        let took_ms: _ = start_time.elapsed().as_millis() as u64;
 
         // 计算分面
-        let facets = self.calculate_facets(&results).await?;
+        let facets: _ = self.calculate_facets(&results).await?;
 
-        let search_results = SearchResults {
+        let search_results: _ = SearchResults {
             plugins: results.clone(),
             total: results.len(),
             took_ms,
@@ -482,7 +482,7 @@ impl PluginMarketplace {
         }
 
         // 从索引获取
-        let plugin = self.plugin_index.get_plugin(plugin_id).await?;
+        let plugin: _ = self.plugin_index.get_plugin(plugin_id).await?;
 
         if let Some(ref plugin_data) = plugin {
             // 缓存插件数据
@@ -537,6 +537,8 @@ impl PluginMarketplace {
     fn generate_cache_key(&self, query: &SearchQuery) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
         let mut hasher = DefaultHasher::new();
         query.query.hash(&mut hasher);
@@ -565,21 +567,21 @@ impl PluginMarketplace {
             }
 
             // 统计作者
-            let author_name = &result.plugin.author.name;
+            let author_name: _ = &result.plugin.author.name;
             *author_counts.entry(author_name.clone()).or_insert(0) += 1;
         }
 
-        let categories = category_counts
+        let categories: _ = category_counts
             .into_iter()
             .map(|(value, count)| FacetCount { value, count })
             .collect();
 
-        let tags = tag_counts
+        let tags: _ = tag_counts
             .into_iter()
             .map(|(value, count)| FacetCount { value, count })
             .collect();
 
-        let authors = author_counts
+        let authors: _ = author_counts
             .into_iter()
             .map(|(value, count)| FacetCount { value, count })
             .collect();
@@ -656,8 +658,8 @@ impl PluginIndex {
 impl SearchEngine {
     pub fn new() -> Self {
         Self {
-            search_index: Arc::new(SearchIndex::new()),
-            ranking_algorithm: Arc::new(RankingAlgorithm::new()),
+            search_index: Arc::new(std::sync::Mutex::new(SearchIndex::new())),
+            ranking_algorithm: Arc::new(std::sync::Mutex::new(RankingAlgorithm::new())),
         }
     }
 
@@ -676,11 +678,11 @@ impl SearchEngine {
         }
 
         // 解析查询词
-        let terms = self.parse_query(&query.query);
+        let terms: _ = self.parse_query(&query.query);
 
         // 执行搜索
         for term in terms {
-            let term_results = self.search_by_term(&term, query).await?;
+            let term_results: _ = self.search_by_term(&term, query).await?;
             results.extend(term_results);
         }
 
@@ -695,9 +697,9 @@ impl SearchEngine {
         results = self.sort_results(results, &query.sort).await?;
 
         // 分页
-        let start = (query.pagination.page - 1) * query.pagination.per_page;
-        let end = start + query.pagination.per_page;
-        let paginated_results = if end <= results.len() {
+        let start: _ = (query.pagination.page - 1) * query.pagination.per_page;
+        let end: _ = start + query.pagination.per_page;
+        let paginated_results: _ = if end <= results.len() {
             results[start..end].to_vec()
         } else {
             results[start..].to_vec()
@@ -723,7 +725,7 @@ impl SearchEngine {
 
         // 演示用：返回模拟结果
         if term.contains("test") {
-            let plugin = PluginMetadata {
+            let plugin: _ = PluginMetadata {
                 plugin_id: PluginId {
                     name: format!("test-plugin-{}", term),
                     version: Version::parse("1.0.0").unwrap(),
@@ -903,8 +905,8 @@ impl RankingAlgorithm {
 impl RatingSystem {
     pub fn new() -> Self {
         Self {
-            ratings: Arc::new(RatingStorage::new()),
-            stats_calculator: Arc::new(RatingStatsCalculator),
+            ratings: Arc::new(std::sync::Mutex::new(RatingStorage::new())),
+            stats_calculator: Arc::new(std::sync::Mutex::new(RatingStatsCalculator)),
         }
     }
 
@@ -945,7 +947,7 @@ impl RatingSystem {
         }
 
         // 创建用户评分记录
-        let user_rating = UserRating {
+        let user_rating: _ = UserRating {
             user_id: user_id.to_string(),
             rating,
             review,
@@ -954,7 +956,7 @@ impl RatingSystem {
         };
 
         // 存储用户评分
-        let rating_key = (plugin_id.clone(), user_id.to_string());
+        let rating_key: _ = (plugin_id.clone(), user_id.to_string());
         if let Some(ratings) = Arc::get_mut(&mut self.ratings) {
             ratings.user_ratings.insert(rating_key, user_rating);
         }
@@ -995,9 +997,9 @@ impl RatingSystem {
             return Ok(());
         }
 
-        let count = plugin_ratings.len() as u64;
+        let count: _ = plugin_ratings.len() as u64;
         let total: u64 = plugin_ratings.iter().map(|r| r.rating as u64).sum();
-        let average = total as f64 / count as f64;
+        let average: _ = total as f64 / count as f64;
 
         // 计算评分分布
         let mut distribution = RatingDistribution {
@@ -1020,7 +1022,7 @@ impl RatingSystem {
         }
 
         // 更新聚合数据
-        let aggregate = RatingAggregate {
+        let aggregate: _ = RatingAggregate {
             average,
             count,
             distribution,
@@ -1040,7 +1042,7 @@ impl RatingSystem {
         plugin_id: &PluginId,
         user_id: &str,
     ) -> Result<Option<UserRating>> {
-        let rating_key = (plugin_id.clone(), user_id.to_string());
+        let rating_key: _ = (plugin_id.clone(), user_id.to_string());
         Ok(self.ratings.user_ratings.get(&rating_key).cloned())
     }
 
@@ -1050,7 +1052,7 @@ impl RatingSystem {
         user_id: &str,
         helpful: bool,
     ) -> Result<()> {
-        let rating_key = (plugin_id.clone(), user_id.to_string());
+        let rating_key: _ = (plugin_id.clone(), user_id.to_string());
         if let Some(ratings) = Arc::get_mut(&mut self.ratings) {
             if let Some(rating) = ratings.user_ratings.get_mut(&rating_key) {
                 if helpful {
@@ -1111,8 +1113,8 @@ impl RatingSystem {
             });
         }
 
-        let total_reviews = plugin_ratings.len() as u64;
-        let reviews_with_comments = plugin_ratings
+        let total_reviews: _ = plugin_ratings.len() as u64;
+        let reviews_with_comments: _ = plugin_ratings
             .iter()
             .filter(|r| r.review.is_some())
             .count() as u64;
@@ -1122,14 +1124,14 @@ impl RatingSystem {
             .iter()
             .filter_map(|r| r.review.as_ref().map(|s| s.len()))
             .sum();
-        let average_review_length = if reviews_with_comments > 0 {
+        let average_review_length: _ = if reviews_with_comments > 0 {
             total_length as f64 / reviews_with_comments as f64
         } else {
             0.0
         };
 
         // 简化的趋势计算（实际中会更复杂）
-        let rating_trend = RatingTrend::Stable;
+        let rating_trend: _ = RatingTrend::Stable;
 
         Ok(RatingStatistics {
             total_reviews,
@@ -1177,8 +1179,8 @@ impl RatingStatsCalculator {
 impl ReviewSystem {
     pub fn new() -> Self {
         Self {
-            review_queue: Arc::new(ReviewQueue::new()),
-            auto_reviewer: Arc::new(AutoReviewer::new()),
+            review_queue: Arc::new(std::sync::Mutex::new(ReviewQueue::new())),
+            auto_reviewer: Arc::new(std::sync::Mutex::new(AutoReviewer::new())),
         }
     }
 }
@@ -1195,8 +1197,8 @@ impl ReviewQueue {
 impl AutoReviewer {
     pub fn new() -> Self {
         Self {
-            security_scanner: Arc::new(SecurityScanner),
-            quality_analyzer: Arc::new(QualityAnalyzer),
+            security_scanner: Arc::new(std::sync::Mutex::new(SecurityScanner)),
+            quality_analyzer: Arc::new(std::sync::Mutex::new(QualityAnalyzer)),
         }
     }
 }

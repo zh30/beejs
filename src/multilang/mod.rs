@@ -25,7 +25,7 @@ impl MultiLanguageRuntime {
         MultiLanguageRuntime {
             python: None,
             go: None,
-            rust: Arc::new(RustOptimizer::new()),
+            rust: Arc::new(std::sync::Mutex::new(RustOptimizer::new())),
         }
     }
 
@@ -64,7 +64,7 @@ impl MultiLanguageRuntime {
             }
             "rust" | "rs" => {
                 // Rust is native, just optimize and execute
-                let optimized = self.rust.optimize_hot_path(code).await?;
+                let optimized: _ = self.rust.optimize_hot_path(code).await?;
                 Ok(optimized.optimized)
             }
             _ => Err(anyhow::anyhow!("Unsupported language: {}", language)),
@@ -75,31 +75,33 @@ impl MultiLanguageRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_multilang_runtime() {
         let mut runtime = MultiLanguageRuntime::new();
 
         // Test Python execution
-        let python_api = Arc::new(go_runtime::BeeAPI {
-            runtime: Arc::new(MockBeeRuntime),
+        let python_api: _ = Arc::new(std::sync::Mutex::new(go_runtime::BeeAPI {
+            runtime: Arc::new(MockBeeRuntime)),
         });
         runtime.init_python(python_api).unwrap();
 
-        let result = runtime.execute("python", "print('Hello Python')").await;
+        let result: _ = runtime.execute("python", "print('Hello Python')").await;
         assert!(result.is_ok());
 
         // Test Go execution
-        let go_api = Arc::new(go_runtime::BeeAPI {
-            runtime: Arc::new(MockBeeRuntime),
+        let go_api: _ = Arc::new(std::sync::Mutex::new(go_runtime::BeeAPI {
+            runtime: Arc::new(MockBeeRuntime)),
         });
         runtime.init_go(go_api).unwrap();
 
-        let result = runtime.execute("go", "fmt.Println('Hello Go')").await;
+        let result: _ = runtime.execute("go", "fmt.Println('Hello Go')").await;
         assert!(result.is_ok());
 
         // Test Rust execution
-        let result = runtime.execute("rust", "fn main() { println!('Hello'); }").await;
+        let result: _ = runtime.execute("rust", "fn main() { println!('Hello'); }").await;
         assert!(result.is_ok());
     }
 

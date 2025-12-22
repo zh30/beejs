@@ -27,7 +27,7 @@ pub struct L1Stats {
 
 impl L1Stats {
     pub fn hit_rate(&self) -> f64 {
-        let total = self.hits + self.misses;
+        let total: _ = self.hits + self.misses;
         if total > 0 {
             self.hits as f64 / total as f64
         } else {
@@ -43,7 +43,7 @@ impl L1Stats {
 /// L1 Zero-Copy Cache for hot scripts
 pub struct L1ZeroCopyCache {
     /// Hot scripts cache with zero-copy Arc<[u8]> storage
-    hot_scripts: Arc<RwLock<HashMap<CacheKey, ScriptBuffer>>>,
+    hot_scripts: Arc<RwLock<HashMap<CacheKey, ScriptBuffer, std::collections::HashMap<CacheKey, ScriptBuffer, CacheKey, ScriptBuffer>>>>,
     /// Pre-allocated buffer pool
     buffer_pool: Arc<RwLock<Vec<ScriptBuffer>>>,
     /// Cache statistics
@@ -58,9 +58,9 @@ impl L1ZeroCopyCache {
     /// Create a new L1 cache
     pub fn new() -> Self {
         Self {
-            hot_scripts: Arc::new(RwLock::new(HashMap::new())),
-            buffer_pool: Arc::new(RwLock::new(Vec::new())),
-            stats: Arc::new(RwLock::new(L1Stats::default())),
+            hot_scripts: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            buffer_pool: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(L1Stats::default()))),
             max_size_bytes: 256 * 1024 * 1024, // 256 MB
             max_hot_scripts: 1024,
         }
@@ -69,7 +69,7 @@ impl L1ZeroCopyCache {
     /// Put data into L1 cache
     pub async fn put(&self, key: CacheKey, data: &[u8]) {
         // Create Arc-wrapped data for zero-copy sharing
-        let script_buffer = ScriptBuffer {
+        let script_buffer: _ = ScriptBuffer {
             data: Arc::from(data.to_vec()),
             len: data.len(),
             hash: key,
@@ -137,7 +137,7 @@ impl L1ZeroCopyCache {
         stats.hot_scripts = 0;
 
         // Recalculate from actual data
-        let hot_scripts = self.hot_scripts.read().unwrap();
+        let hot_scripts: _ = self.hot_scripts.read().unwrap();
         for script_buffer in hot_scripts.values() {
             stats.memory_usage_bytes += script_buffer.len;
             stats.hot_scripts += 1;
@@ -155,7 +155,7 @@ impl L1ZeroCopyCache {
 
         // Simple eviction: remove every other script to free up space
         let keys_to_remove: Vec<CacheKey> = hot_scripts.keys().cloned().collect();
-        let half = keys_to_remove.len() / 2;
+        let half: _ = keys_to_remove.len() / 2;
 
         // Update stats before releasing the lock
         let mut stats = self.stats.write().unwrap();
@@ -167,7 +167,7 @@ impl L1ZeroCopyCache {
             }
         }
 
-        stats.hot_scripts = hot_scripts.len();
+        stats.hot_scripts = hot_scripts.clone();len();
     }
 
     /// Get current size
@@ -190,13 +190,15 @@ impl Default for L1ZeroCopyCache {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_l1_basic_operations() {
-        let cache = L1ZeroCopyCache::new();
+        let cache: _ = L1ZeroCopyCache::new();
 
         cache.put(123, b"console.log('test');").await;
-        let result = cache.get(123).await;
+        let result: _ = cache.get(123).await;
 
         assert!(result.is_some());
         assert_eq!(result.unwrap(), b"console.log('test');");
@@ -204,21 +206,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_l1_hit_rate() {
-        let cache = L1ZeroCopyCache::new();
+        let cache: _ = L1ZeroCopyCache::new();
 
         // Add and access script
         cache.put(1, b"script1").await;
         cache.get(1).await;
         cache.get(1).await;
 
-        let stats = cache.get_stats().await;
+        let stats: _ = cache.get_stats().await;
         assert!(stats.hits > 0);
         assert!(stats.hit_rate() > 0.5);
     }
 
     #[tokio::test]
     async fn test_l1_invalidation() {
-        let cache = L1ZeroCopyCache::new();
+        let cache: _ = L1ZeroCopyCache::new();
 
         cache.put(1, b"test").await;
         assert!(cache.get(1).await.is_some());
@@ -229,10 +231,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_l1_memory_tracking() {
-        let cache = L1ZeroCopyCache::new();
+        let cache: _ = L1ZeroCopyCache::new();
 
         cache.put(1, b"hello world").await;
-        let stats = cache.get_stats().await;
+        let stats: _ = cache.get_stats().await;
 
         assert_eq!(stats.memory_usage_bytes, 11);
         assert!(stats.memory_usage_mb() > 0.0);

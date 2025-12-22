@@ -46,8 +46,8 @@ impl ParallelExecutor {
         }
 
         // Create a shared result vector with thread-safe access
-        let results = Arc::new(Mutex::new(Vec::with_capacity(tests.len())));
-        let results_clone = Arc::clone(&results);
+        let results: _ = Arc::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(tests.len()))));
+        let results_clone: _ = Arc::clone(results);
 
         // Execute tests in parallel using Rayon
         tests.par_iter()
@@ -69,7 +69,7 @@ impl ParallelExecutor {
             });
 
         // Extract results from Arc
-        let locked = results.lock().unwrap();
+        let locked: _ = results.lock().unwrap();
         locked.clone()
     }
 
@@ -97,17 +97,17 @@ impl ParallelExecutor {
 
     /// Run a single test with timeout
     fn run_single_test(&self, suite_name: &str, test: &TestCase, timeout: Duration) -> TestResult {
-        let start = Instant::now();
+        let start: _ = Instant::now();
         let mut result = TestResult::new(suite_name.to_string(), test.name.clone());
 
         if test.skip {
-            let duration = start.elapsed();
+            let duration: _ = start.elapsed();
             result.duration = duration;
             return result;
         }
 
         // Execute test with timeout
-        let test_timeout = if test.timeout > Duration::from_secs(0) {
+        let test_timeout: _ = if test.timeout > Duration::from_secs(0) {
             test.timeout
         } else {
             timeout
@@ -122,7 +122,7 @@ impl ParallelExecutor {
         // 3. Execute V8 test function
         // 4. Collect results
 
-        let duration = start.elapsed();
+        let duration: _ = start.elapsed();
 
         // Check if test exceeded timeout
         if duration > test_timeout {
@@ -159,31 +159,33 @@ impl Default for ThreadPoolConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_parallel_executor_creation() {
-        let config = ParallelConfig::default();
-        let executor = ParallelExecutor::new(config);
+        let config: _ = ParallelConfig::default();
+        let executor: _ = ParallelExecutor::new(config);
         assert!(executor.config.preserve_order);
     }
 
     #[test]
     fn test_run_empty_test_list() {
-        let config = ParallelConfig::default();
-        let executor = ParallelExecutor::new(config);
-        let results = executor.run_tests_parallel("suite", &[], Duration::from_secs(5));
+        let config: _ = ParallelConfig::default();
+        let executor: _ = ParallelExecutor::new(config);
+        let results: _ = executor.run_tests_parallel("suite", &[], Duration::from_secs(5));
         assert!(results.is_empty());
     }
 
     #[test]
     fn test_run_single_test() {
-        let config = ParallelConfig::default();
-        let executor = ParallelExecutor::new(config);
+        let config: _ = ParallelConfig::default();
+        let executor: _ = ParallelExecutor::new(config);
 
         // Note: This test is simplified to avoid V8 API complexity.
         // Full V8 integration tests are in tests/ directory.
 
-        let test_case = TestCase {
+        let test_case: _ = TestCase {
             name: "test_name".to_string(),
             function: unsafe { std::mem::zeroed() }, // Placeholder
             timeout: Duration::from_secs(5),
@@ -191,7 +193,7 @@ mod tests {
             only: false,
         };
 
-        let results = executor.run_tests_parallel(
+        let results: _ = executor.run_tests_parallel(
             "suite_name",
             &[test_case],
             Duration::from_secs(5),
@@ -204,7 +206,7 @@ mod tests {
 
     #[test]
     fn test_thread_pool_config_default() {
-        let config = ThreadPoolConfig::default();
+        let config: _ = ThreadPoolConfig::default();
         assert!(config.size > 0);
         assert!(config.stack_size > 0);
         assert!(config.name_prefix.contains("beejs"));

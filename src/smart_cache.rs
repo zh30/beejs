@@ -61,7 +61,7 @@ impl Default for CacheStats {
 impl CacheStats {
     /// 计算命中率
     pub fn hit_rate(&self) -> f64 {
-        let total = self.hits + self.misses;
+        let total: _ = self.hits + self.misses;
         if total == 0 {
             0.0
         } else {
@@ -108,11 +108,11 @@ impl Default for CacheConfig {
 /// 智能缓存项
 pub struct SmartCache<T> {
     /// 缓存存储
-    cache: Arc<Mutex<HashMap<String, CacheEntry<T>>>>,
+    cache: Arc<Mutex<HashMap<String, CacheEntry<T, std::collections::HashMap<String, CacheEntry<T, String, CacheEntry<T>>>>>,
     /// LRU 队列 (用于快速访问最久未使用的项)
     lru_queue: Arc<Mutex<VecDeque<String>>>,
     /// 访问频率统计
-    access_frequency: Arc<Mutex<HashMap<String, usize>>>,
+    access_frequency: Arc<Mutex<HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>>,
     /// 配置
     config: CacheConfig,
     /// 统计信息
@@ -136,12 +136,12 @@ impl<T> SmartCache<T> {
     /// 创建新的智能缓存
     pub fn new(config: CacheConfig) -> Self {
         Self {
-            cache: Arc::new(Mutex::new(HashMap::new())),
-            lru_queue: Arc::new(Mutex::new(VecDeque::new())),
-            access_frequency: Arc::new(Mutex::new(HashMap::new())),
+            cache: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            lru_queue: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
+            access_frequency: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
             config,
-            stats: Arc::new(Mutex::new(CacheStats::default())),
-            last_cleanup: Arc::new(Mutex::new(Instant::now())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(CacheStats::default()))),
+            last_cleanup: Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now()))),
         }
     }
 
@@ -158,9 +158,9 @@ impl<T> SmartCache<T> {
         // 首先检查缓存是否存在并获取数据
         let (cache_size, data) = {
             let mut cache = self.cache.lock().unwrap();
-            let size = cache.len();
+            let size: _ = cache.len();
 
-            let data = cache.get_mut(key).map(|entry| {
+            let data: _ = cache.get_mut(key).map(|entry| {
                 // 更新访问统计
                 entry.last_accessed = Instant::now();
                 entry.access_count += 1;
@@ -211,8 +211,8 @@ impl<T> SmartCache<T> {
             self.evict_lru_item(&mut cache);
         }
 
-        let now = Instant::now();
-        let entry = CacheEntry {
+        let now: _ = Instant::now();
+        let entry: _ = CacheEntry {
             data,
             created_at: now,
             last_accessed: now,
@@ -244,7 +244,7 @@ impl<T> SmartCache<T> {
     }
 
     /// 批量设置缓存项
-    pub fn set_many(&self, items: HashMap<String, T>) {
+    pub fn set_many(&self, items: HashMap<String, T, std::collections::HashMap<String, T, String, T>>) {
         for (key, data) in items {
             self.set(key, data);
         }
@@ -252,13 +252,13 @@ impl<T> SmartCache<T> {
 
     /// 检查缓存是否存在
     pub fn contains(&self, key: &str) -> bool {
-        let cache = self.cache.lock().unwrap();
+        let cache: _ = self.cache.lock().unwrap();
         cache.contains_key(key)
     }
 
     /// 获取缓存大小
     pub fn len(&self) -> usize {
-        let cache = self.cache.lock().unwrap();
+        let cache: _ = self.cache.lock().unwrap();
         cache.len()
     }
 
@@ -269,14 +269,14 @@ impl<T> SmartCache<T> {
 
     /// 获取统计信息
     pub fn get_stats(&self) -> CacheStats {
-        let stats = self.stats.lock().unwrap();
+        let stats: _ = self.stats.lock().unwrap();
         stats.clone()
     }
 
     /// 获取访问模式分析
     pub fn get_access_pattern(&self, key: &str) -> AccessPattern {
-        let access_freq = self.access_frequency.lock().unwrap();
-        let count = access_freq.get(key).unwrap_or(&0);
+        let access_freq: _ = self.access_frequency.lock().unwrap();
+        let count: _ = access_freq.get(key).unwrap_or(&0);
 
         if *count >= self.config.prewarm_threshold {
             AccessPattern::Hot
@@ -297,7 +297,7 @@ impl<T> SmartCache<T> {
             return;
         }
 
-        let now = Instant::now();
+        let now: _ = Instant::now();
         let keys_to_remove: Vec<String> = cache
             .iter()
             .filter(|(_, entry)| now.duration_since(entry.created_at) > self.config.default_ttl)
@@ -321,10 +321,10 @@ impl<T> SmartCache<T> {
     pub fn prewarm(&self, keys: Vec<String>) {
         // 这里可以实现基于 ML 的预热策略
         // 目前简单基于访问频率
-        let access_freq = self.access_frequency.lock().unwrap();
+        let access_freq: _ = self.access_frequency.lock().unwrap();
 
         for key in keys {
-            let count = access_freq.get(&key).unwrap_or(&0);
+            let count: _ = access_freq.get(&key).unwrap_or(&0);
             if *count >= self.config.prewarm_threshold {
                 // 标记为热点数据，可能进行预编译等操作
                 // 这里只是示例，实际实现可以触发预热逻辑
@@ -352,14 +352,14 @@ impl<T> SmartCache<T> {
 
     /// 获取所有缓存键
     pub fn keys(&self) -> Vec<String> {
-        let cache = self.cache.lock().unwrap();
+        let cache: _ = self.cache.lock().unwrap();
         cache.keys().cloned().collect()
     }
 
     /// 定期维护 (建议定期调用)
     pub fn maintain(&self) {
         // 检查是否需要清理
-        let last_cleanup = *self.last_cleanup.lock().unwrap();
+        let last_cleanup: _ = *self.last_cleanup.lock().unwrap();
         if Instant::now().duration_since(last_cleanup) > self.config.cleanup_interval {
             self.cleanup_expired();
 
@@ -380,7 +380,7 @@ impl<T> SmartCache<T> {
     }
 
     /// 逐出 LRU 项
-    fn evict_lru_item(&self, cache: &mut HashMap<String, CacheEntry<T>>) {
+    fn evict_lru_item(&self, cache: &mut HashMap<String, CacheEntry<T, std::collections::HashMap<String, CacheEntry<T, String, CacheEntry<T>>>) {
         if !self.config.enable_lru {
             return;
         }
@@ -397,9 +397,9 @@ impl<T> SmartCache<T> {
 
     /// 获取缓存效率报告
     pub fn get_efficiency_report(&self) -> String {
-        let stats = self.get_stats();
-        let hit_rate = stats.hit_rate();
-        let efficiency = stats.efficiency_score();
+        let stats: _ = self.get_stats();
+        let hit_rate: _ = stats.hit_rate();
+        let efficiency: _ = stats.efficiency_score();
 
         format!(
             "Cache Efficiency Report:\n\
@@ -422,7 +422,7 @@ impl<T> SmartCache<T> {
 
 /// 创建智能缓存的便捷函数
 pub fn create_smart_cache<T>(max_size: usize, ttl_seconds: u64) -> SmartCache<T> {
-    let config = CacheConfig {
+    let config: _ = CacheConfig {
         max_size,
         default_ttl: Duration::from_secs(ttl_seconds),
         ..Default::default()
@@ -432,7 +432,7 @@ pub fn create_smart_cache<T>(max_size: usize, ttl_seconds: u64) -> SmartCache<T>
 
 /// 创建高性能缓存 (大缓存、短 TTL)
 pub fn create_high_performance_cache<T>(max_size: usize) -> SmartCache<T> {
-    let config = CacheConfig {
+    let config: _ = CacheConfig {
         max_size,
         default_ttl: Duration::from_secs(7200), // 2小时
         prewarm_threshold: 5,
@@ -445,7 +445,7 @@ pub fn create_high_performance_cache<T>(max_size: usize) -> SmartCache<T> {
 
 /// 创建持久缓存 (小缓存、长 TTL)
 pub fn create_persistent_cache<T>(max_size: usize) -> SmartCache<T> {
-    let config = CacheConfig {
+    let config: _ = CacheConfig {
         max_size,
         default_ttl: Duration::from_secs(86400), // 24小时
         cleanup_interval: Duration::from_secs(3600), // 1小时
@@ -460,54 +460,56 @@ pub fn create_persistent_cache<T>(max_size: usize) -> SmartCache<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_cache_creation() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
         assert!(cache.is_empty());
         assert_eq!(cache.len(), 0);
     }
 
     #[test]
     fn test_cache_set_and_get() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
         cache.set("key1".to_string(), "value1".to_string());
 
         assert!(cache.contains("key1"));
         assert_eq!(cache.len(), 1);
 
-        let value = cache.get("key1");
+        let value: _ = cache.get("key1");
         assert!(value.is_some());
         assert_eq!(value.unwrap(), "value1");
     }
 
     #[test]
     fn test_cache_miss() {
-        let cache = SmartCache::<String>::with_default_config();
-        let value = cache.get("nonexistent");
+        let cache: _ = SmartCache::<String>::with_default_config();
+        let value: _ = cache.get("nonexistent");
         assert!(value.is_none());
     }
 
     #[test]
     fn test_cache_stats() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
 
         // 初始统计
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.hits, 0);
         assert_eq!(stats.misses, 1); // 第一次 get 会 miss
 
         // 设置并获取
         cache.set("key".to_string(), "value".to_string());
-        let _ = cache.get("key");
+        let _: _ = cache.get("key");
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.hits, 1);
     }
 
     #[test]
     fn test_cache_clear() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
         cache.set("key1".to_string(), "value1".to_string());
         cache.set("key2".to_string(), "value2".to_string());
 
@@ -519,7 +521,7 @@ mod tests {
 
     #[test]
     fn test_access_pattern() {
-        let cache = SmartCache::<String>::with_default_config();
+        let cache: _ = SmartCache::<String>::with_default_config();
 
         cache.set("hot".to_string(), "value".to_string());
         cache.set("warm".to_string(), "value".to_string());
@@ -527,16 +529,16 @@ mod tests {
 
         // 多次访问 hot 键
         for _ in 0..5 {
-            let _ = cache.get("hot");
+            let _: _ = cache.get("hot");
         }
 
         // 访问 warm 键
         for _ in 0..3 {
-            let _ = cache.get("warm");
+            let _: _ = cache.get("warm");
         }
 
         // 访问 cold 键
-        let _ = cache.get("cold");
+        let _: _ = cache.get("cold");
 
         assert!(matches!(cache.get_access_pattern("hot"), AccessPattern::Hot));
         assert!(matches!(cache.get_access_pattern("warm"), AccessPattern::Warm));

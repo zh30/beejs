@@ -6,6 +6,8 @@ use std::sync::Arc;
 use tokio::sync::{RwLock, mpsc};
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 批处理配置
 #[derive(Debug, Clone)]
@@ -69,30 +71,30 @@ pub struct BatchIoEngine {
 impl BatchIoEngine {
     /// 创建新的批量 I/O 引擎
     pub fn new(config: NetworkConfig) -> Self {
-        let batch_config = BatchConfig::default();
+        let batch_config: _ = BatchConfig::default();
         Self {
             processor_handle: None,
             batch_config,
-            stats: Arc::new(RwLock::new(BatchStats {
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(BatchStats {
                 total_batches_processed: 0,
                 total_operations_batched: 0,
                 average_batch_size: 0.0,
                 batch_processing_time_ns: 0,
                 throughput_mbps: 0.0,
-            })),
-            pending_operations: Arc::new(RwLock::new(VecDeque::new())),
-            operation_counter: Arc::new(RwLock::new(0)),
+            }))),
+            pending_operations: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::new()))),
+            operation_counter: Arc::new(std::sync::Mutex::new(RwLock::new(0))),
             config,
         }
     }
 
     /// 启动批处理器
     pub async fn start(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let pending_operations = Arc::clone(&self.pending_operations);
-        let stats = Arc::clone(&self.stats);
-        let batch_timeout_ms = self.batch_config.batch_timeout_ms;
+        let pending_operations: _ = Arc::clone(&self.pending_operations);
+        let stats: _ = Arc::clone(&self.stats);
+        let batch_timeout_ms: _ = self.batch_config.batch_timeout_ms;
 
-        let handle = tokio::spawn(async move {
+        let handle: _ = tokio::spawn(async move {
             let mut interval = tokio::time::interval(
                 Duration::from_millis(batch_timeout_ms)
             );
@@ -132,8 +134,8 @@ impl BatchIoEngine {
         pending_operations: &Arc<RwLock<VecDeque<BatchOperation>>>,
         stats: &Arc<RwLock<BatchStats>>,
     ) {
-        let start = Instant::now();
-        let max_batch_size = BatchConfig::default().max_batch_size;
+        let start: _ = Instant::now();
+        let max_batch_size: _ = BatchConfig::default().max_batch_size;
 
         // 获取一批操作
         let mut batch = Vec::new();
@@ -159,7 +161,7 @@ impl BatchIoEngine {
         Self::simulate_batch_processing(&batch).await;
 
         // 更新统计
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
         let mut stats_guard = stats.write().await;
         stats_guard.total_batches_processed += 1;
         stats_guard.total_operations_batched += batch.len() as u64;

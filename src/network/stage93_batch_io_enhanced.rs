@@ -7,6 +7,8 @@ use tokio::sync::{RwLock, mpsc};
 use std::collections::{VecDeque, BTreeMap};
 use std::time::{Duration, Instant};
 use std::cmp::Reverse;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 智能批处理配置
 #[derive(Debug, Clone)]
@@ -88,7 +90,7 @@ pub struct Stage93BatchIoEngine {
     stats: Arc<Stage93BatchStats>,
 
     // 优先级队列
-    priority_queues: Arc<RwLock<BTreeMap<Reverse<Stage93BatchPriority>, VecDeque<Stage93BatchOperation>>>>,
+    priority_queues: Arc<RwLock<BTreeMap<Reverse<Stage93BatchPriority, Reverse<Stage93BatchPriority>, VecDeque<Stage93BatchOperation>>>>,
 
     // 智能批处理
     operation_counter: Arc<AtomicU64>,
@@ -102,7 +104,7 @@ pub struct Stage93BatchIoEngine {
 impl Stage93BatchIoEngine {
     /// 创建新的增强批量 I/O 引擎
     pub fn new(config: NetworkConfig) -> Self {
-        let batch_config = Stage93BatchConfig::default();
+        let batch_config: _ = Stage93BatchConfig::default();
 
         // 初始化优先级队列
         let mut priority_queues = BTreeMap::new();
@@ -114,19 +116,19 @@ impl Stage93BatchIoEngine {
 
         Self {
             processor_handles: Vec::new(),
-            adaptive_batch_size: Arc::new(RwLock::new(batch_config.max_batch_size)),
-            adaptive_timeout: Arc::new(RwLock::new(Duration::from_millis(batch_config.batch_timeout_ms))),
+            adaptive_batch_size: Arc::new(std::sync::Mutex::new(RwLock::new(batch_config.max_batch_size))),
+            adaptive_timeout: Arc::new(std::sync::Mutex::new(RwLock::new(Duration::from_millis(batch_config.batch_timeout_ms)))),
             config,
             batch_config,
-            stats: Arc::new(Stage93BatchStats::default()),
-            priority_queues: Arc::new(RwLock::new(priority_queues)),
-            operation_counter: Arc::new(AtomicU64::new(0)),
+            stats: Arc::new(std::sync::Mutex::new(Stage93BatchStats::default())),
+            priority_queues: Arc::new(std::sync::Mutex::new(RwLock::new(priority_queues))),
+            operation_counter: Arc::new(std::sync::Mutex::new(AtomicU64::new(0))),
         }
     }
 
     /// 启动增强批处理器
     pub async fn start(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let num_workers = if self.batch_config.enable_parallel_processing {
+        let num_workers: _ = if self.batch_config.enable_parallel_processing {
             num_cpus::get().min(8) // 最多 8 个工作线程
         } else {
             1
@@ -134,13 +136,13 @@ impl Stage93BatchIoEngine {
 
         // 启动多个工作线程
         for worker_id in 0..num_workers {
-            let priority_queues = Arc::clone(&self.priority_queues);
-            let stats = Arc::clone(&self.stats);
-            let batch_config = self.batch_config.clone();
-            let adaptive_batch_size = Arc::clone(&self.adaptive_batch_size);
-            let adaptive_timeout = Arc::clone(&self.adaptive_timeout);
+            let priority_queues: _ = Arc::clone(&self.priority_queues);
+            let stats: _ = Arc::clone(&self.stats);
+            let batch_config: _ = self.batch_config.clone();
+            let adaptive_batch_size: _ = Arc::clone(&self.adaptive_batch_size);
+            let adaptive_timeout: _ = Arc::clone(&self.adaptive_timeout);
 
-            let handle = tokio::spawn(async move {
+            let handle: _ = tokio::spawn(async move {
                 loop {
                     Self::process_batch_worker(
                         &priority_queues,
@@ -157,11 +159,11 @@ impl Stage93BatchIoEngine {
         }
 
         // 启动自适应调优线程
-        let stats_clone = Arc::clone(&self.stats);
-        let adaptive_batch_size = Arc::clone(&self.adaptive_batch_size);
-        let adaptive_timeout = Arc::clone(&self.adaptive_timeout);
+        let stats_clone: _ = Arc::clone(&self.stats);
+        let adaptive_batch_size: _ = Arc::clone(&self.adaptive_batch_size);
+        let adaptive_timeout: _ = Arc::clone(&self.adaptive_timeout);
 
-        let tuning_handle = tokio::spawn(async move {
+        let tuning_handle: _ = tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(1));
             loop {
                 interval.tick().await;
@@ -180,14 +182,14 @@ impl Stage93BatchIoEngine {
 
     /// 工作线程处理批次
     async fn process_batch_worker(
-        priority_queues: &Arc<RwLock<BTreeMap<Reverse<Stage93BatchPriority>, VecDeque<Stage93BatchOperation>>>>,
+        priority_queues: &Arc<RwLock<BTreeMap<Reverse<Stage93BatchPriority, Reverse<Stage93BatchPriority>, VecDeque<Stage93BatchOperation>>>>,
         stats: &Arc<Stage93BatchStats>,
         batch_config: &Stage93BatchConfig,
         adaptive_batch_size: &Arc<RwLock<usize>>,
         adaptive_timeout: &Arc<RwLock<Duration>>,
         _worker_id: usize,
     ) {
-        let mut priority_queues = priority_queues.write().await;
+        let mut priority_queues = priority_queues.clone();write().await;
 
         // 选择要处理的队列
         let mut selected_queue = None;
@@ -196,7 +198,7 @@ impl Stage93BatchIoEngine {
         for (priority, queue) in priority_queues.iter_mut() {
             if !queue.is_empty() {
                 selected_queue = Some(priority.clone());
-                let batch_size = *adaptive_batch_size.read().await;
+                let batch_size: _ = *adaptive_batch_size.read().await;
 
                 // 智能提取操作
                 while let Some(op) = queue.pop_front() {
@@ -206,7 +208,7 @@ impl Stage93BatchIoEngine {
                     }
 
                     // 检查超时
-                    let timeout = *adaptive_timeout.read().await;
+                    let timeout: _ = *adaptive_timeout.read().await;
                     if let Some(first_op) = selected_ops.first() {
                         if first_op.created_at.elapsed() > timeout {
                             break;
@@ -231,9 +233,9 @@ impl Stage93BatchIoEngine {
         }
 
         // 处理批次
-        let start = Instant::now();
-        let _ = Self::execute_batch(&selected_ops).await;
-        let processing_time = start.elapsed();
+        let start: _ = Instant::now();
+        let _: _ = Self::execute_batch(&selected_ops).await;
+        let processing_time: _ = start.elapsed();
 
         // 更新统计
         stats.total_batches_processed.fetch_add(1, Ordering::Relaxed);
@@ -242,7 +244,7 @@ impl Stage93BatchIoEngine {
 
         // 计算吞吐量
         let total_bytes: usize = selected_ops.iter().map(|op| op.data.len()).sum();
-        let throughput_mbps = (total_bytes as f64 / 1024.0 / 1024.0) / processing_time.as_secs_f64();
+        let throughput_mbps: _ = (total_bytes as f64 / 1024.0 / 1024.0) / processing_time.as_secs_f64();
         stats.throughput_mbps.store(throughput_mbps as u64, Ordering::Relaxed);
     }
 
@@ -266,7 +268,7 @@ impl Stage93BatchIoEngine {
 
         for op in sorted_ops {
             // 检查是否可以合并
-            let can_coalesce = current_target.as_ref() == Some(&op.target)
+            let can_coalesce: _ = current_target.as_ref() == Some(&op.target)
                 && current_total_size + op.data.len() <= 64 * 1024; // 64KB 限制
 
             if can_coalesce && current_batch.len() < 100 {
@@ -295,7 +297,7 @@ impl Stage93BatchIoEngine {
 
     /// 合并操作
     fn merge_operations(operations: Vec<Stage93BatchOperation>) -> Stage93BatchOperation {
-        let first = operations.first().unwrap();
+        let first: _ = operations.first().unwrap();
         let mut merged_data = Vec::new();
 
         for op in &operations {
@@ -341,14 +343,14 @@ impl Stage93BatchIoEngine {
         adaptive_batch_size: &Arc<RwLock<usize>>,
         adaptive_timeout: &Arc<RwLock<Duration>>,
     ) {
-        let total_batches = stats.total_batches_processed.load(Ordering::Relaxed);
+        let total_batches: _ = stats.total_batches_processed.load(Ordering::Relaxed);
         if total_batches < 100 {
             return; // 需要足够的数据才能调优
         }
 
-        let avg_batch_size = stats.average_batch_size.load(Ordering::Relaxed) as usize;
-        let avg_processing_time = stats.batch_processing_time_ns.load(Ordering::Relaxed);
-        let throughput = stats.throughput_mbps.load(Ordering::Relaxed);
+        let avg_batch_size: _ = stats.average_batch_size.load(Ordering::Relaxed) as usize;
+        let avg_processing_time: _ = stats.batch_processing_time_ns.load(Ordering::Relaxed);
+        let throughput: _ = stats.throughput_mbps.load(Ordering::Relaxed);
 
         let mut batch_size = adaptive_batch_size.write().await;
         let mut timeout = adaptive_timeout.write().await;
@@ -382,7 +384,7 @@ impl Stage93BatchIoEngine {
 
     /// 添加操作到队列
     pub async fn add_operation(&self, data: Vec<u8>, target: String, priority: Stage93BatchPriority) {
-        let operation = Stage93BatchOperation {
+        let operation: _ = Stage93BatchOperation {
             id: self.operation_counter.fetch_add(1, Ordering::Relaxed),
             priority,
             created_at: Instant::now(),
@@ -393,7 +395,7 @@ impl Stage93BatchIoEngine {
         };
 
         let mut priority_queues = self.priority_queues.write().await;
-        let queue = priority_queues.get_mut(&Reverse(priority)).unwrap();
+        let queue: _ = priority_queues.get_mut(&Reverse(priority)).unwrap();
         queue.push_back(operation);
     }
 

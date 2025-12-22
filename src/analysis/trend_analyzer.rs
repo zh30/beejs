@@ -77,12 +77,12 @@ impl TrendAnalyzer {
 
     /// Add a performance data point
     pub fn add_data_point(&mut self, report: PerformanceReport, metadata: Option<String>) {
-        let timestamp = SystemTime::now()
+        let timestamp: _ = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
 
-        let data_point = PerformanceDataPoint {
+        let data_point: _ = PerformanceDataPoint {
             timestamp,
             report,
             metadata,
@@ -154,41 +154,41 @@ impl TrendAnalyzer {
         }
 
         // Calculate trend using linear regression
-        let n = values.len() as f64;
+        let n: _ = values.len() as f64;
         let sum_x: f64 = (0..values.len()).map(|i| i as f64).sum();
         let sum_y: f64 = values.iter().sum();
         let sum_xy: f64 = values.iter().enumerate().map(|(i, &y)| i as f64 * y).sum();
         let sum_x2: f64 = (0..values.len()).map(|i| (i as f64).powi(2)).sum();
 
         // Linear regression: y = a + bx
-        let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
-        let intercept = (sum_y - slope * sum_x) / n;
+        let slope: _ = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
+        let intercept: _ = (sum_y - slope * sum_x) / n;
 
         // Calculate R-squared for confidence
-        let y_mean = sum_y / n;
+        let y_mean: _ = sum_y / n;
         let ss_tot: f64 = values.iter().map(|y| (y - y_mean).powi(2)).sum();
         let ss_res: f64 = values.iter().enumerate().map(|(i, &y)| {
-            let predicted = intercept + slope * i as f64;
+            let predicted: _ = intercept + slope * i as f64;
             (y - predicted).powi(2)
         }).sum();
-        let r_squared = if ss_tot > 0.0 {
+        let r_squared: _ = if ss_tot > 0.0 {
             1.0 - (ss_res / ss_tot)
         } else {
             0.0
         };
 
         // Calculate percentage change
-        let first_value = values.first().unwrap();
-        let last_value = values.last().unwrap();
+        let first_value: _ = values.first().unwrap();
+        let last_value: _ = values.last().unwrap();
 
-        let percentage_change = if *first_value != 0.0 {
+        let percentage_change: _ = if *first_value != 0.0 {
             ((last_value - first_value) / first_value) * 100.0
         } else {
             0.0
         };
 
         // Determine direction based on slope and metric type
-        let direction = match metric_name {
+        let direction: _ = match metric_name {
             // For these metrics, higher is better
             "cache_hit_rate" | "total_executions" => {
                 if slope > 0.01 {
@@ -221,7 +221,7 @@ impl TrendAnalyzer {
         };
 
         // Generate prediction
-        let prediction = self.generate_prediction(metric_name, slope, intercept, &values);
+        let prediction: _ = self.generate_prediction(metric_name, slope, intercept, &values);
 
         PerformanceTrend {
             metric_name: metric_name.to_string(),
@@ -239,11 +239,11 @@ impl TrendAnalyzer {
         }
 
         // Predict next value (one step ahead)
-        let next_x = values.len() as f64;
-        let predicted_value = intercept + slope * next_x;
+        let next_x: _ = values.len() as f64;
+        let predicted_value: _ = intercept + slope * next_x;
 
         // Format based on metric type
-        let formatted_value = match metric_name {
+        let formatted_value: _ = match metric_name {
             "average_time_ms" | "min_time_ms" | "max_time_ms" => {
                 format!("{:.2} ms", predicted_value)
             },
@@ -263,7 +263,7 @@ impl TrendAnalyzer {
 
     /// Calculate statistical summary
     pub fn calculate_statistical_summary(&self, metric_name: &str) -> Option<StatisticalSummary> {
-        let values = self.get_metric_values(|dp| match metric_name {
+        let values: _ = self.get_metric_values(|dp| match metric_name {
             "average_time_ms" => dp.report.average_time_ms,
             "cache_hit_rate" => dp.report.cache_hit_rate,
             "total_executions" => dp.report.total_executions as f64,
@@ -276,13 +276,13 @@ impl TrendAnalyzer {
             return None;
         }
 
-        let mut sorted_values = values.clone();
+        let mut sorted_values = values.clone();clone();
         sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
-        let n = sorted_values.len();
-        let mean = sorted_values.iter().sum::<f64>() / n as f64;
+        let n: _ = sorted_values.len();
+        let mean: _ = sorted_values.iter().sum::<f64>() / n as f64;
 
-        let median = if n % 2 == 0 {
+        let median: _ = if n % 2 == 0 {
             (sorted_values[n / 2 - 1] + sorted_values[n / 2]) / 2.0
         } else {
             sorted_values[n / 2]
@@ -291,19 +291,19 @@ impl TrendAnalyzer {
         let variance: f64 = sorted_values.iter()
             .map(|&x| (x - mean).powi(2))
             .sum::<f64>() / n as f64;
-        let std_dev = variance.sqrt();
+        let std_dev: _ = variance.sqrt();
 
-        let min = sorted_values.first().unwrap();
-        let max = sorted_values.last().unwrap();
+        let min: _ = sorted_values.first().unwrap();
+        let max: _ = sorted_values.last().unwrap();
 
-        let percentile = |p: f64| -> f64 {
+        let percentile: _ = |p: f64| -> f64 {
             let index = (p / 100.0) * (n as f64 - 1.0);
-            let lower = index.floor() as usize;
-            let upper = index.ceil() as usize;
+            let lower: _ = index.floor() as usize;
+            let upper: _ = index.ceil() as usize;
             if lower == upper {
                 sorted_values[lower]
             } else {
-                let weight = index - lower as f64;
+                let weight: _ = index - lower as f64;
                 sorted_values[lower] * (1.0 - weight) + sorted_values[upper] * weight
             }
         };
@@ -336,20 +336,20 @@ impl TrendAnalyzer {
             return anomalies;
         }
 
-        let values = self.get_metric_values(|dp| dp.report.average_time_ms);
+        let values: _ = self.get_metric_values(|dp| dp.report.average_time_ms);
 
         // Calculate moving average and standard deviation
-        let window_size = 5;
+        let window_size: _ = 5;
         for i in window_size..values.len() {
-            let window = &values[i - window_size..i];
+            let window: _ = &values[i - window_size..i];
             let mean: f64 = window.iter().sum::<f64>() / window.len() as f64;
             let variance: f64 = window.iter()
                 .map(|&x| (x - mean).powi(2))
                 .sum::<f64>() / window.len() as f64;
-            let std_dev = variance.sqrt();
+            let std_dev: _ = variance.sqrt();
 
-            let current_value = values[i];
-            let deviation = if std_dev > 0.0 {
+            let current_value: _ = values[i];
+            let deviation: _ = if std_dev > 0.0 {
                 (current_value - mean).abs() / std_dev
             } else {
                 0.0
@@ -369,8 +369,8 @@ impl TrendAnalyzer {
             return None;
         }
 
-        let values = self.get_metric_values(|dp| dp.report.average_time_ms);
-        let n = values.len();
+        let values: _ = self.get_metric_values(|dp| dp.report.average_time_ms);
+        let n: _ = values.len();
 
         // Compare recent performance with baseline
         let recent_avg: f64 = values.iter().rev().take(n / 4).sum::<f64>() / (n / 4) as f64;
@@ -387,7 +387,7 @@ impl TrendAnalyzer {
     pub fn get_improvement_suggestions(&self) -> Vec<String> {
         let mut suggestions = Vec::new();
 
-        let trends = self.analyze_trends();
+        let trends: _ = self.analyze_trends();
 
         for trend in trends {
             match trend.direction {
@@ -423,9 +423,9 @@ impl TrendAnalyzer {
 
     /// Get data retention info
     pub fn get_data_retention_info(&self) -> (usize, usize, Duration) {
-        let count = self.historical_data.len();
-        let capacity = self.max_data_points;
-        let age = if let Some(oldest) = self.historical_data.front() {
+        let count: _ = self.historical_data.len();
+        let capacity: _ = self.max_data_points;
+        let age: _ = if let Some(oldest) = self.historical_data.front() {
             let newest = self.historical_data.back().unwrap();
             Duration::from_secs(newest.timestamp - oldest.timestamp)
         } else {
@@ -445,17 +445,19 @@ impl Default for TrendAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_trend_analyzer_creation() {
-        let analyzer = TrendAnalyzer::new();
+        let analyzer: _ = TrendAnalyzer::new();
         assert_eq!(analyzer.historical_data.len(), 0);
     }
 
     #[test]
     fn test_add_data_point() {
         let mut analyzer = TrendAnalyzer::new();
-        let report = PerformanceReport {
+        let report: _ = PerformanceReport {
             total_executions: 10,
             average_time_ms: 15.0,
             min_time_ms: 5.0,
@@ -470,8 +472,8 @@ mod tests {
 
     #[test]
     fn test_analyze_trends_with_insufficient_data() {
-        let analyzer = TrendAnalyzer::new();
-        let trends = analyzer.analyze_trends();
+        let analyzer: _ = TrendAnalyzer::new();
+        let trends: _ = analyzer.analyze_trends();
         assert!(trends.is_empty());
     }
 
@@ -480,7 +482,7 @@ mod tests {
         let mut analyzer = TrendAnalyzer::new();
 
         for i in 0..10 {
-            let report = PerformanceReport {
+            let report: _ = PerformanceReport {
                 total_executions: 10,
                 average_time_ms: 10.0 + i as f64 * 2.0, // Trending up
                 min_time_ms: 5.0,
@@ -491,11 +493,11 @@ mod tests {
             analyzer.add_data_point(report, None);
         }
 
-        let trends = analyzer.analyze_trends();
+        let trends: _ = analyzer.analyze_trends();
         assert!(!trends.is_empty());
 
         // Find the average_time_ms trend
-        let avg_time_trend = trends.iter()
+        let avg_time_trend: _ = trends.iter()
             .find(|t| t.metric_name == "average_time_ms")
             .unwrap();
 
@@ -508,7 +510,7 @@ mod tests {
         let mut analyzer = TrendAnalyzer::new();
 
         for i in 0..10 {
-            let report = PerformanceReport {
+            let report: _ = PerformanceReport {
                 total_executions: 10,
                 average_time_ms: 10.0 + i as f64,
                 min_time_ms: 5.0,
@@ -519,10 +521,10 @@ mod tests {
             analyzer.add_data_point(report, None);
         }
 
-        let summary = analyzer.calculate_statistical_summary("average_time_ms");
+        let summary: _ = analyzer.calculate_statistical_summary("average_time_ms");
         assert!(summary.is_some());
 
-        let summary = summary.unwrap();
+        let summary: _ = summary.clone();unwrap();
         assert!(summary.mean > 0.0);
         assert!(summary.min >= 10.0);
         assert!(summary.max >= 19.0);
@@ -534,8 +536,8 @@ mod tests {
 
         // Add normal data with slight variance
         for i in 0..10 {
-            let variance = (i as f64 * 0.1) - 0.5; // Small variance around 0
-            let report = PerformanceReport {
+            let variance: _ = (i as f64 * 0.1) - 0.5; // Small variance around 0
+            let report: _ = PerformanceReport {
                 total_executions: 10,
                 average_time_ms: 10.0 + variance, // Varying slightly around 10.0
                 min_time_ms: 5.0,
@@ -547,7 +549,7 @@ mod tests {
         }
 
         // Add anomalous data - significantly different from normal
-        let report = PerformanceReport {
+        let report: _ = PerformanceReport {
             total_executions: 10,
             average_time_ms: 50.0, // Clear anomaly (5x normal)
             min_time_ms: 5.0,
@@ -557,7 +559,7 @@ mod tests {
         };
         analyzer.add_data_point(report, None);
 
-        let anomalies = analyzer.detect_anomalies(2.0);
+        let anomalies: _ = analyzer.detect_anomalies(2.0);
         assert!(!anomalies.is_empty(), "Should detect at least one anomaly");
     }
 
@@ -567,7 +569,7 @@ mod tests {
 
         // Add baseline data
         for _ in 0..5 {
-            let report = PerformanceReport {
+            let report: _ = PerformanceReport {
                 total_executions: 10,
                 average_time_ms: 10.0,
                 min_time_ms: 5.0,
@@ -580,7 +582,7 @@ mod tests {
 
         // Add degraded data
         for _ in 0..5 {
-            let report = PerformanceReport {
+            let report: _ = PerformanceReport {
                 total_executions: 10,
                 average_time_ms: 15.0, // 50% degradation
                 min_time_ms: 5.0,
@@ -591,7 +593,7 @@ mod tests {
             analyzer.add_data_point(report, None);
         }
 
-        let degradation_rate = analyzer.calculate_degradation_rate();
+        let degradation_rate: _ = analyzer.calculate_degradation_rate();
         assert!(degradation_rate.is_some());
         assert!(degradation_rate.unwrap() > 40.0);
     }
@@ -602,7 +604,7 @@ mod tests {
 
         // Add degrading data
         for i in 0..10 {
-            let report = PerformanceReport {
+            let report: _ = PerformanceReport {
                 total_executions: 10,
                 average_time_ms: 10.0 + i as f64,
                 min_time_ms: 5.0,
@@ -613,7 +615,7 @@ mod tests {
             analyzer.add_data_point(report, None);
         }
 
-        let suggestions = analyzer.get_improvement_suggestions();
+        let suggestions: _ = analyzer.get_improvement_suggestions();
         assert!(!suggestions.is_empty());
         assert!(suggestions.iter().any(|s| s.contains("degrading")));
     }
@@ -622,7 +624,7 @@ mod tests {
     fn test_clear() {
         let mut analyzer = TrendAnalyzer::new();
 
-        let report = PerformanceReport {
+        let report: _ = PerformanceReport {
             total_executions: 10,
             average_time_ms: 15.0,
             min_time_ms: 5.0,
@@ -640,7 +642,7 @@ mod tests {
 
     #[test]
     fn test_get_data_retention_info() {
-        let analyzer = TrendAnalyzer::new();
+        let analyzer: _ = TrendAnalyzer::new();
         let (count, capacity, age) = analyzer.get_data_retention_info();
 
         assert_eq!(count, 0);

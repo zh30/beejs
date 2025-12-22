@@ -24,7 +24,7 @@ pub struct QueryCondition {
     /// 结束时间
     pub end_time: Option<u64>,
     /// 标签过滤
-    pub tag_filters: HashMap<String, String>,
+    pub tag_filters: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     /// 限制返回数量
     pub limit: Option<usize>,
 }
@@ -61,7 +61,7 @@ pub struct DataStore {
     /// 内存数据缓存
     memory_cache: Arc<Mutex<VecDeque<DataPoint>>>,
     /// 压缩数据存储
-    compressed_storage: Arc<Mutex<HashMap<String, CompressedData>>>,
+    compressed_storage: Arc<Mutex<HashMap<String, CompressedData, std::collections::HashMap<String, CompressedData, String, CompressedData>>>>,
     /// 查询索引
     query_index: Arc<Mutex<QueryIndex>>,
     /// 统计信息
@@ -89,7 +89,7 @@ pub struct QueryIndex {
     /// 按时间排序的索引
     pub time_index: Vec<(u64, MetricType)>,
     /// 按指标类型分组的索引
-    pub type_index: HashMap<MetricType, Vec<u64>>,
+    pub type_index: HashMap<MetricType, Vec<u64, std::collections::HashMap<MetricType, Vec<u64, MetricType, Vec<u64>>>,
     /// 索引最后更新时间
     pub last_update: Instant,
 }
@@ -120,14 +120,14 @@ impl DataStore {
     pub fn new(config: DataStoreConfig) -> Self {
         Self {
             config,
-            memory_cache: Arc::new(Mutex::new(VecDeque::new())),
-            compressed_storage: Arc::new(Mutex::new(HashMap::new())),
-            query_index: Arc::new(Mutex::new(QueryIndex {
-                time_index: Vec::new(),
+            memory_cache: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
+            compressed_storage: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            query_index: Arc::new(std::sync::Mutex::new(Mutex::new(QueryIndex {
+                time_index: Vec::new()),
                 type_index: HashMap::new(),
                 last_update: Instant::now(),
             })),
-            stats: Arc::new(Mutex::new(DataStoreStats {
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(DataStoreStats {
                 total_data_points: 0,
                 memory_cache_size: 0,
                 compressed_storage_size: 0,
@@ -136,13 +136,13 @@ impl DataStore {
                 export_count: 0,
                 last_cleanup: None,
                 disk_usage_bytes: 0,
-            })),
+            }))),
         }
     }
 
     /// 创建默认配置的数据存储
     pub fn with_default_config() -> Self {
-        let config = DataStoreConfig {
+        let config: _ = DataStoreConfig {
             max_memory_bytes: 100 * 1024 * 1024, // 100MB
             compression_threshold: 1000,
             retention_period: Duration::from_secs(86400), // 24小时
@@ -189,8 +189,8 @@ impl DataStore {
         let mut stats = self.stats.lock().map_err(|e| e.to_string())?;
         stats.query_count += 1;
 
-        let memory_cache = self.memory_cache.lock().map_err(|e| e.to_string())?;
-        let compressed_storage = self.compressed_storage.lock().map_err(|e| e.to_string())?;
+        let memory_cache: _ = self.memory_cache.lock().map_err(|e| e.to_string())?;
+        let compressed_storage: _ = self.compressed_storage.lock().map_err(|e| e.to_string())?;
 
         let mut results = Vec::new();
 
@@ -204,7 +204,7 @@ impl DataStore {
         // 从压缩存储查询
         for compressed_data in compressed_storage.values() {
             if self.matches_compressed_condition(compressed_data, &condition) {
-                let decompressed = self.decompress_data(compressed_data)?;
+                let decompressed: _ = self.decompress_data(compressed_data)?;
                 for data_point in decompressed {
                     if self.matches_condition(&data_point.value, &condition) {
                         results.push(data_point.value.clone());
@@ -234,7 +234,7 @@ impl DataStore {
         }
 
         // 按指标类型分组
-        let mut grouped_data: HashMap<MetricType, Vec<DataPoint>> = HashMap::new();
+        let mut grouped_data: HashMap<MetricType, Vec<DataPoint, std::collections::HashMap<MetricType, Vec<DataPoint, MetricType, Vec<DataPoint>>> = HashMap::new();
 
         while let Some(data_point) = memory_cache.pop_front() {
             grouped_data
@@ -253,8 +253,8 @@ impl DataStore {
                 continue;
             }
 
-            let compressed = self.compress_data_points(&data_points)?;
-            let key = Self::generate_storage_key(&metric_type);
+            let compressed: _ = self.compress_data_points(&data_points)?;
+            let key: _ = Self::generate_storage_key(&metric_type);
 
             compressed_storage.insert(key, compressed);
             stats.compression_count += 1;
@@ -270,8 +270,8 @@ impl DataStore {
             return Err("Empty data points".to_string());
         }
 
-        let metric_type = data_points[0].value.metric_type.clone();
-        let time_range = (
+        let metric_type: _ = data_points[0].value.metric_type.clone();
+        let time_range: _ = (
             data_points.iter().map(|dp| dp.value.timestamp).min().unwrap(),
             data_points.iter().map(|dp| dp.value.timestamp).max().unwrap(),
         );
@@ -279,15 +279,15 @@ impl DataStore {
         // 序列化数据
         let mut serialized = Vec::new();
         for data_point in data_points {
-            let json = serde_json::to_string(&data_point.value)
+            let json: _ = serde_json::to_string(&data_point.value)
                 .map_err(|e| format!("JSON serialization failed: {}", e))?;
             serialized.extend_from_slice(json.as_bytes());
             serialized.push(b'\n');
         }
 
         // 使用简单的 RLE 压缩（实际生产中应使用专业压缩库）
-        let compressed = Self::rle_compress(&serialized);
-        let compressed_size = compressed.len();
+        let compressed: _ = Self::rle_compress(&serialized);
+        let compressed_size: _ = compressed.len();
 
         Ok(CompressedData {
             metric_type,
@@ -327,7 +327,7 @@ impl DataStore {
 
     /// 解压数据
     fn decompress_data(&self, compressed_data: &CompressedData) -> Result<Vec<DataPoint>, String> {
-        let decompressed = Self::rle_decompress(&compressed_data.data)?;
+        let decompressed: _ = Self::rle_decompress(&compressed_data.data)?;
         let mut data_points = Vec::new();
 
         for line in decompressed.split(|&b| b == b'\n') {
@@ -356,8 +356,8 @@ impl DataStore {
         let mut i = 0;
 
         while i < compressed.len() {
-            let count = compressed[i] as usize;
-            let byte = compressed[i + 1];
+            let count: _ = compressed[i] as usize;
+            let byte: _ = compressed[i + 1];
 
             if count == 0 {
                 return Err("Invalid RLE count".to_string());
@@ -460,7 +460,7 @@ impl DataStore {
         let mut stats = self.stats.lock().map_err(|e| e.to_string())?;
         stats.export_count += 1;
 
-        let data = self.query(condition)?;
+        let data: _ = self.query(condition)?;
 
         match format {
             ExportFormat::Json => self.export_json(&data),
@@ -471,7 +471,7 @@ impl DataStore {
 
     /// 导出为 JSON 格式
     fn export_json(&self, data: &[MetricValue]) -> Result<String, String> {
-        let json = serde_json::to_string(data)
+        let json: _ = serde_json::to_string(data)
             .map_err(|e| format!("JSON export failed: {}", e))?;
         Ok(json)
     }
@@ -482,7 +482,7 @@ impl DataStore {
         csv.push_str("timestamp,metric_type,value,tags\n");
 
         for metric in data {
-            let tags_str = metric
+            let tags_str: _ = metric
                 .tags
                 .iter()
                 .map(|(k, v)| format!("{}={}", k, v))
@@ -503,7 +503,7 @@ impl DataStore {
         let mut prometheus = String::new();
 
         for metric in data {
-            let metric_name = match &metric.metric_type {
+            let metric_name: _ = match &metric.metric_type {
                 MetricType::CpuUsage => "beejs_cpu_usage_percent",
                 MetricType::MemoryUsage => "beejs_memory_usage_bytes",
                 MetricType::HeapMemory => "beejs_heap_memory_bytes",
@@ -516,7 +516,7 @@ impl DataStore {
                 MetricType::Custom(name) => name,
             };
 
-            let labels = if metric.tags.is_empty() {
+            let labels: _ = if metric.tags.is_empty() {
                 String::new()
             } else {
                 metric
@@ -527,7 +527,7 @@ impl DataStore {
                     .join(",")
             };
 
-            let line = if labels.is_empty() {
+            let line: _ = if labels.is_empty() {
                 format!("{} {} {}\n", metric_name, metric.value, metric.timestamp)
             } else {
                 format!("{}{{{}}} {} {}\n", metric_name, labels, metric.value, metric.timestamp)
@@ -541,7 +541,7 @@ impl DataStore {
 
     /// 获取统计信息
     pub fn get_stats(&self) -> Result<DataStoreStats, String> {
-        let stats = self.stats.lock().map_err(|e| e.to_string())?;
+        let stats: _ = self.stats.lock().map_err(|e| e.to_string())?;
         Ok(stats.clone())
     }
 
@@ -551,7 +551,7 @@ impl DataStore {
         let mut compressed_storage = self.compressed_storage.lock().map_err(|e| e.to_string())?;
         let mut stats = self.stats.lock().map_err(|e| e.to_string())?;
 
-        let cutoff_time = SystemTime::now()
+        let cutoff_time: _ = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             - self.config.retention_period;
@@ -586,14 +586,14 @@ impl DataStore {
 
     /// 获取实时指标
     pub fn get_real_time_metrics(&self) -> Result<Vec<MetricValue>, String> {
-        let memory_cache = self.memory_cache.lock().map_err(|e| e.to_string())?;
+        let memory_cache: _ = self.memory_cache.lock().map_err(|e| e.to_string())?;
 
         // 获取最近几分钟的数据作为实时指标
-        let now = SystemTime::now()
+        let now: _ = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
-        let recent_threshold = now - 300; // 最近5分钟
+        let recent_threshold: _ = now - 300; // 最近5分钟
 
         let mut real_time_metrics = Vec::new();
 
@@ -611,17 +611,19 @@ impl DataStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_data_store_creation() {
-        let store = DataStore::with_default_config();
+        let store: _ = DataStore::with_default_config();
         assert!(store.get_stats().is_ok());
     }
 
     #[test]
     fn test_store_single_data_point() {
-        let store = DataStore::with_default_config();
-        let data_point = DataPoint {
+        let store: _ = DataStore::with_default_config();
+        let data_point: _ = DataPoint {
             value: MetricValue {
                 metric_type: MetricType::CpuUsage,
                 value: 50.0,
@@ -632,14 +634,14 @@ mod tests {
         };
 
         assert!(store.store(data_point).is_ok());
-        let stats = store.get_stats().unwrap();
+        let stats: _ = store.get_stats().unwrap();
         assert_eq!(stats.total_data_points, 1);
     }
 
     #[test]
     fn test_store_batch_data_points() {
-        let store = DataStore::with_default_config();
-        let data_points = vec![
+        let store: _ = DataStore::with_default_config();
+        let data_points: _ = vec![
             DataPoint {
                 value: MetricValue {
                     metric_type: MetricType::CpuUsage,
@@ -661,16 +663,16 @@ mod tests {
         ];
 
         assert!(store.store_batch(data_points).is_ok());
-        let stats = store.get_stats().unwrap();
+        let stats: _ = store.get_stats().unwrap();
         assert_eq!(stats.total_data_points, 2);
     }
 
     #[test]
     fn test_query_data() {
-        let store = DataStore::with_default_config();
+        let store: _ = DataStore::with_default_config();
 
         // 存储数据
-        let data_point = DataPoint {
+        let data_point: _ = DataPoint {
             value: MetricValue {
                 metric_type: MetricType::CpuUsage,
                 value: 50.0,
@@ -682,7 +684,7 @@ mod tests {
         store.store(data_point).unwrap();
 
         // 查询数据
-        let condition = QueryCondition {
+        let condition: _ = QueryCondition {
             metric_type: Some(MetricType::CpuUsage),
             start_time: None,
             end_time: None,
@@ -690,16 +692,16 @@ mod tests {
             limit: None,
         };
 
-        let results = store.query(condition).unwrap();
+        let results: _ = store.query(condition).unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].value, 50.0);
     }
 
     #[test]
     fn test_export_json() {
-        let store = DataStore::with_default_config();
+        let store: _ = DataStore::with_default_config();
 
-        let data_point = DataPoint {
+        let data_point: _ = DataPoint {
             value: MetricValue {
                 metric_type: MetricType::CpuUsage,
                 value: 50.0,
@@ -710,7 +712,7 @@ mod tests {
         };
         store.store(data_point).unwrap();
 
-        let condition = QueryCondition {
+        let condition: _ = QueryCondition {
             metric_type: None,
             start_time: None,
             end_time: None,
@@ -718,15 +720,15 @@ mod tests {
             limit: None,
         };
 
-        let json = store.export(condition, ExportFormat::Json).unwrap();
+        let json: _ = store.export(condition, ExportFormat::Json).unwrap();
         assert!(json.contains("cpu_usage"));
     }
 
     #[test]
     fn test_export_csv() {
-        let store = DataStore::with_default_config();
+        let store: _ = DataStore::with_default_config();
 
-        let data_point = DataPoint {
+        let data_point: _ = DataPoint {
             value: MetricValue {
                 metric_type: MetricType::CpuUsage,
                 value: 50.0,
@@ -737,7 +739,7 @@ mod tests {
         };
         store.store(data_point).unwrap();
 
-        let condition = QueryCondition {
+        let condition: _ = QueryCondition {
             metric_type: None,
             start_time: None,
             end_time: None,
@@ -745,24 +747,24 @@ mod tests {
             limit: None,
         };
 
-        let csv = store.export(condition, ExportFormat::Csv).unwrap();
+        let csv: _ = store.export(condition, ExportFormat::Csv).unwrap();
         assert!(csv.contains("timestamp,metric_type,value,tags"));
     }
 
     #[test]
     fn test_rle_compression() {
-        let data = vec![1, 1, 1, 1, 2, 2, 3, 3, 3];
-        let compressed = DataStore::rle_compress(&data);
-        let decompressed = DataStore::rle_decompress(&compressed).unwrap();
+        let data: _ = vec![1, 1, 1, 1, 2, 2, 3, 3, 3];
+        let compressed: _ = DataStore::rle_compress(&data);
+        let decompressed: _ = DataStore::rle_decompress(&compressed).unwrap();
         assert_eq!(decompressed, data);
     }
 
     #[test]
     fn test_cleanup_expired_data() {
-        let store = DataStore::with_default_config();
+        let store: _ = DataStore::with_default_config();
 
         // 存储数据
-        let data_point = DataPoint {
+        let data_point: _ = DataPoint {
             value: MetricValue {
                 metric_type: MetricType::CpuUsage,
                 value: 50.0,
@@ -774,7 +776,7 @@ mod tests {
         store.store(data_point).unwrap();
 
         // 清理过期数据
-        let cleaned_count = store.cleanup().unwrap();
+        let cleaned_count: _ = store.cleanup().unwrap();
         assert!(cleaned_count > 0);
     }
 }

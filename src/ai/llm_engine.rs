@@ -39,9 +39,9 @@ struct KvCache {
 pub struct AiLlmEngine {
     config: LlmConfig,
     runtime: Arc<tokio::runtime::Runtime>,
-    token_cache: Arc<RwLock<HashMap<String, TokenCacheEntry>>>,
+    token_cache: Arc<RwLock<HashMap<String, TokenCacheEntry, std::collections::HashMap<String, TokenCacheEntry, String, TokenCacheEntry>>>>,
     memory_pool: Arc<Mutex<Vec<Vec<f32>>>>,
-    active_sessions: Arc<Mutex<HashMap<String, SessionInfo>>>,
+    active_sessions: Arc<Mutex<HashMap<String, SessionInfo, std::collections::HashMap<String, SessionInfo, String, SessionInfo>>>>,
 }
 
 /// 会话信息
@@ -65,12 +65,12 @@ pub struct InferenceResult {
 impl AiLlmEngine {
     /// 创建新的 LLM 引擎实例
     pub fn new(runtime: &Arc<tokio::runtime::Runtime>, config: LlmConfig) -> Result<Self, String> {
-        let engine = AiLlmEngine {
+        let engine: _ = AiLlmEngine {
             config: config.clone(),
             runtime: runtime.clone(),
-            token_cache: Arc::new(RwLock::new(HashMap::new())),
-            memory_pool: Arc::new(Mutex::new(Vec::new())),
-            active_sessions: Arc::new(Mutex::new(HashMap::new())),
+            token_cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            memory_pool: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            active_sessions: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
         };
 
         // 预热 KV Cache
@@ -83,7 +83,7 @@ impl AiLlmEngine {
     fn prewarm_kv_cache(&self) -> Result<(), String> {
         // 预分配 KV Cache 空间
         for _ in 0..100 {
-            let kv_cache = KvCache {
+            let kv_cache: _ = KvCache {
                 key_cache: vec![vec![0.0; 4096]; 32],
                 value_cache: vec![vec![0.0; 4096]; 32],
                 sequence_length: 0,
@@ -99,11 +99,11 @@ impl AiLlmEngine {
 
     /// 生成文本
     pub fn generate(&mut self, prompt: &str, max_tokens: usize) -> Result<InferenceResult, String> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 检查缓存
-        let cache_key = format!("{}:{}", prompt, max_tokens);
-        let cache_hit = {
+        let cache_key: _ = format!("{}:{}", prompt, max_tokens);
+        let cache_hit: _ = {
             let cache = self.token_cache.read().unwrap();
             if let Some(entry) = cache.get(&cache_key) {
                 if entry.last_access.elapsed() < Duration::from_secs(300) {
@@ -117,9 +117,9 @@ impl AiLlmEngine {
         };
 
         // 执行推理 (简化：不使用复杂的缓存机制)
-        let generated_tokens = self.inference_with_cache(prompt, max_tokens, None)?;
+        let generated_tokens: _ = self.inference_with_cache(prompt, max_tokens, None)?;
 
-        let processing_time = start_time.elapsed();
+        let processing_time: _ = start_time.elapsed();
 
         // 更新缓存
         if self.config.use_cache {
@@ -144,7 +144,7 @@ impl AiLlmEngine {
 
         // 串行推理 (简化：移除并行推理复杂性)
         for prompt in prompts {
-            let result = self.generate(prompt, max_tokens)?;
+            let result: _ = self.generate(prompt, max_tokens)?;
             results.push(result.generated_text);
         }
 
@@ -159,7 +159,7 @@ impl AiLlmEngine {
         kv_cache: Option<KvCache>,
     ) -> Result<Vec<u32>, String> {
         // 模拟 tokenization
-        let input_tokens = string_to_tokens(prompt);
+        let input_tokens: _ = string_to_tokens(prompt);
 
         // 模拟 KV Cache 检索和更新
         let mut current_kv_cache = if let Some(cache) = kv_cache {
@@ -173,7 +173,7 @@ impl AiLlmEngine {
         // 生成 tokens
         for _ in 0..max_tokens {
             // 模拟前向传播
-            let next_token = self.forward_pass(&generated_tokens, &mut current_kv_cache)?;
+            let next_token: _ = self.forward_pass(&generated_tokens, &mut current_kv_cache)?;
             generated_tokens.push(next_token);
 
             if next_token == 3 {
@@ -208,19 +208,19 @@ impl AiLlmEngine {
         // 模拟 Transformer 层处理
         for layer_idx in 0..kv_cache.num_layers {
             // 更新 key 和 value cache
-            let key = &mut kv_cache.key_cache[layer_idx];
-            let value = &mut kv_cache.value_cache[layer_idx];
+            let key: _ = &mut kv_cache.key_cache[layer_idx];
+            let value: _ = &mut kv_cache.value_cache[layer_idx];
 
             // 模拟注意力计算
             for head_idx in 0..32 {
-                let offset = head_idx * 128;
+                let offset: _ = head_idx * 128;
                 key[offset] = (tokens.len() as f32 * 0.1).sin();
                 value[offset] = (tokens.len() as f32 * 0.1).cos();
             }
         }
 
         // 模拟最终预测（随机选择下一个 token）
-        let next_token = (tokens.len() * 7 + 13) % 50000;
+        let next_token: _ = (tokens.len() * 7 + 13) % 50000;
         Ok(next_token as u32)
     }
 
@@ -230,11 +230,11 @@ impl AiLlmEngine {
         cache_key: &str,
         tokens: &[u32],
     ) -> Result<(), String> {
-        let kv_cache = self.allocate_kv_cache()?;
+        let kv_cache: _ = self.allocate_kv_cache()?;
 
-        let entry = TokenCacheEntry {
+        let entry: _ = TokenCacheEntry {
             tokens: tokens.to_vec(),
-            kv_cache: Arc::new(kv_cache),
+            kv_cache: Arc::new(std::sync::Mutex::new(kv_cache)),
             last_access: Instant::now(),
             access_count: 1,
         };
@@ -244,7 +244,7 @@ impl AiLlmEngine {
 
         // 限制缓存大小
         if cache.len() > 10000 {
-            let oldest_key = cache
+            let oldest_key: _ = cache
                 .iter()
                 .min_by_key(|(_, entry)| entry.last_access)
                 .map(|(key, _)| key.clone())
@@ -261,7 +261,7 @@ impl AiLlmEngine {
         let mut cache = self.token_cache.write().unwrap();
 
         // 清理过期条目
-        let now = Instant::now();
+        let now: _ = Instant::now();
         cache.retain(|_, entry| now.duration_since(entry.last_access) < Duration::from_secs(600));
 
         // 清理低频访问条目
@@ -276,14 +276,14 @@ impl AiLlmEngine {
 
     /// 获取内存使用情况
     pub fn get_memory_usage(&self) -> usize {
-        let cache = self.token_cache.read().unwrap();
+        let cache: _ = self.token_cache.read().unwrap();
         cache.len() * 4096 * 8 // 估算内存使用
     }
 
     /// 获取性能统计
     pub fn get_stats(&self) -> LlmEngineStats {
-        let cache = self.token_cache.read().unwrap();
-        let total_entries = cache.len();
+        let cache: _ = self.token_cache.read().unwrap();
+        let total_entries: _ = cache.len();
         let total_accesses: u64 = cache.values().map(|e| e.access_count).sum();
 
         LlmEngineStats {
@@ -330,12 +330,13 @@ fn string_to_tokens(s: &str) -> Vec<u32> {
 mod tests {
     use super::*;
     use crate::Runtime;
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_llm_engine_creation() {
         // 为测试提供默认参数
-        let runtime = Arc::new(tokio::runtime::Runtime::new().unwrap());
-        let config = LlmConfig {
+        let runtime: _ = Arc::new(std::sync::Mutex::new(tokio::runtime::Runtime::new()).unwrap());
+        let config: _ = LlmConfig {
             model_name: "test-model".to_string(),
             max_tokens: 4096,
             temperature: 0.7,
@@ -343,15 +344,15 @@ mod tests {
             parallel_inference: true,
         };
 
-        let engine = AiLlmEngine::new(&runtime, config);
+        let engine: _ = AiLlmEngine::new(&runtime, config);
         assert!(engine.is_ok());
     }
 
     #[test]
     fn test_text_generation() {
         // 为测试提供默认参数
-        let runtime = Arc::new(tokio::runtime::Runtime::new().unwrap());
-        let config = LlmConfig {
+        let runtime: _ = Arc::new(std::sync::Mutex::new(tokio::runtime::Runtime::new()).unwrap());
+        let config: _ = LlmConfig {
             model_name: "test-model".to_string(),
             max_tokens: 4096,
             temperature: 0.7,
@@ -360,10 +361,10 @@ mod tests {
         };
 
         let mut engine = AiLlmEngine::new(&runtime, config).unwrap();
-        let result = engine.generate("Hello", 10);
+        let result: _ = engine.generate("Hello", 10);
 
         assert!(result.is_ok());
-        let result = result.unwrap();
+        let result: _ = result.clone();unwrap();
         assert!(!result.generated_text.is_empty());
         assert_eq!(result.tokens_used, 10);
     }
@@ -371,8 +372,8 @@ mod tests {
     #[test]
     fn test_batch_generation() {
         // 为测试提供默认参数
-        let runtime = Arc::new(tokio::runtime::Runtime::new().unwrap());
-        let config = LlmConfig {
+        let runtime: _ = Arc::new(std::sync::Mutex::new(tokio::runtime::Runtime::new()).unwrap());
+        let config: _ = LlmConfig {
             model_name: "test-model".to_string(),
             max_tokens: 4096,
             temperature: 0.7,
@@ -381,21 +382,21 @@ mod tests {
         };
 
         let mut engine = AiLlmEngine::new(&runtime, config).unwrap();
-        let prompts = vec![
+        let prompts: _ = vec![
             "Test prompt 1".to_string(),
             "Test prompt 2".to_string(),
             "Test prompt 3".to_string(),
         ];
 
-        let results = engine.batch_generate(&prompts, 10);
+        let results: _ = engine.batch_generate(&prompts, 10);
         assert!(results.is_ok());
         assert_eq!(results.unwrap().len(), 3);
     }
 
     #[test]
     fn test_memory_optimization() {
-        let runtime = Arc::new(tokio::runtime::Runtime::new().unwrap());
-        let config = LlmConfig {
+        let runtime: _ = Arc::new(std::sync::Mutex::new(tokio::runtime::Runtime::new()).unwrap());
+        let config: _ = LlmConfig {
             model_name: "test-model".to_string(),
             max_tokens: 4096,
             temperature: 0.7,
@@ -407,13 +408,13 @@ mod tests {
 
         // 生成大量缓存条目
         for i in 0..100 {
-            let engine_ref = &mut engine.clone();
-            let _ = engine_ref.generate(&format!("Prompt {}", i), 10);
+            let engine_ref: _ = &mut engine.clone();
+            let _: _ = engine_ref.generate(&format!("Prompt {}", i), 10);
         }
 
-        let initial_usage = engine.get_memory_usage();
+        let initial_usage: _ = engine.get_memory_usage();
         engine.optimize_memory();
-        let final_usage = engine.get_memory_usage();
+        let final_usage: _ = engine.get_memory_usage();
 
         println!("Memory before: {}, after: {}", initial_usage, final_usage);
     }

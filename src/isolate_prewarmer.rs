@@ -9,6 +9,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Enhanced Isolate Pre-warming System
 /// Stage 21.3: Integrates V8 snapshots and context preparation for optimal performance
@@ -61,15 +63,15 @@ impl PrewarmStats {
 
     /// Calculate cache hit rate
     pub fn hit_rate(&self) -> f64 {
-        let hits = self.cache_hits.load(Ordering::Relaxed) as f64;
-        let total = hits + self.cache_misses.load(Ordering::Relaxed) as f64;
+        let hits: _ = self.cache_hits.load(Ordering::Relaxed) as f64;
+        let total: _ = hits + self.cache_misses.load(Ordering::Relaxed) as f64;
         if total > 0.0 { hits / total } else { 0.0 }
     }
 
     /// Get average pre-warming time per isolate in microseconds
     pub fn avg_prewarm_time_us(&self) -> f64 {
-        let total = self.total_prewarm_time_us.load(Ordering::Relaxed) as f64;
-        let count = self.total_prewarmed.load(Ordering::Relaxed) as f64;
+        let total: _ = self.total_prewarm_time_us.load(Ordering::Relaxed) as f64;
+        let count: _ = self.total_prewarmed.load(Ordering::Relaxed) as f64;
         if count > 0.0 { total / count } else { 0.0 }
     }
 }
@@ -121,14 +123,14 @@ struct CompiledSnippet {
 impl IsolatePrewarmer {
     /// Create new Isolate Prewarmer
     pub fn new(max_prewarm: usize, config: PrewarmConfig) -> Result<Self> {
-        let snapshot_config = crate::v8_snapshot::SnapshotConfig::default();
-        let snapshot_manager = Arc::new(crate::v8_snapshot::SnapshotManager::new(snapshot_config));
+        let snapshot_config: _ = crate::v8_snapshot::SnapshotConfig::default();
+        let snapshot_manager: _ = Arc::new(std::sync::Mutex::new(crate::v8_snapshot::SnapshotManager::new(snapshot_config)));
 
         Ok(Self {
             snapshot_manager,
-            prewarmed_isolates: Arc::new(Mutex::new(Vec::new())),
-            stats: Arc::new(PrewarmStats::new()),
-            common_snippets: Arc::new(Mutex::new(Vec::new())),
+            prewarmed_isolates: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            stats: Arc::new(std::sync::Mutex::new(PrewarmStats::new())),
+            common_snippets: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
             max_prewarm,
             config,
         })
@@ -136,7 +138,7 @@ impl IsolatePrewarmer {
 
     /// Pre-warm isolates with V8 snapshots and prepared contexts
     pub fn prewarm(&self) -> Result<()> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // Pre-compile common JavaScript snippets
         if self.config.precompile_snippets {
@@ -144,7 +146,7 @@ impl IsolatePrewarmer {
         }
 
         // Determine number of isolates to pre-warm
-        let count = if self.config.aggressive {
+        let count: _ = if self.config.aggressive {
             (self.max_prewarm * 3 / 2).min(32) // Cap at 32 for sanity
         } else {
             self.max_prewarm
@@ -152,19 +154,19 @@ impl IsolatePrewarmer {
 
         // Pre-warm isolates
         for i in 0..count {
-            let isolate_start = Instant::now();
+            let isolate_start: _ = Instant::now();
 
             // Create new isolate
             let mut isolate = v8::Isolate::new(Default::default());
 
             {
                 // Create a context for this isolate
-                let scope = &mut v8::HandleScope::new(&mut isolate);
+                let scope: _ = &mut v8::HandleScope::new(&mut isolate);
 
                 // Create context with template
-                let context = v8::Context::new(scope);
+                let context: _ = v8::Context::new(scope);
 
-                let _context_scope = &mut v8::ContextScope::new(scope, context);
+                let _context_scope: _ = &mut v8::ContextScope::new(scope, context);
 
                 // Note: Console and Node.js API setup would require Runtime struct
                 // For now, we focus on core pre-warming with pre-compilation
@@ -177,7 +179,7 @@ impl IsolatePrewarmer {
                 }
             } // scope is dropped here, releasing the borrow
 
-            let isolate_time = isolate_start.elapsed();
+            let isolate_time: _ = isolate_start.elapsed();
 
             // Store the pre-warmed isolate
             let mut prewarmed = self.prewarmed_isolates.lock().unwrap();
@@ -205,7 +207,7 @@ impl IsolatePrewarmer {
             Ordering::Relaxed
         );
 
-        let total_time = start_time.elapsed();
+        let total_time: _ = start_time.elapsed();
         eprintln!(
             "Isolate Pre-warming completed: {} isolates in {:.2}ms (avg: {:.2}µs per isolate)",
             count,
@@ -218,7 +220,7 @@ impl IsolatePrewarmer {
 
     /// Pre-compile common JavaScript snippets
     fn precompile_common_snippets(&self) -> Result<()> {
-        let common_codes = vec![
+        let common_codes: _ = vec![
             ("hello", "console.log('Hello from Beejs!');"),
             ("simple_arithmetic", "const result = 2 + 2; result;"),
             ("array_ops", "const arr = [1, 2, 3, 4, 5]; arr.map(x => x * 2);"),
@@ -227,20 +229,20 @@ impl IsolatePrewarmer {
         ];
 
         let mut isolate = v8::Isolate::new(Default::default());
-        let scope = &mut v8::HandleScope::new(&mut isolate);
-        let context = v8::Context::new(scope);
-        let context_scope = &mut v8::ContextScope::new(scope, context);
+        let scope: _ = &mut v8::HandleScope::new(&mut isolate);
+        let context: _ = v8::Context::new(scope);
+        let context_scope: _ = &mut v8::ContextScope::new(scope, context);
 
         for (name, code) in common_codes {
-            let code_handle = v8::String::new(context_scope, code)
+            let code_handle: _ = v8::String::new(context_scope, code)
                 .ok_or_else(|| anyhow!("Failed to create code string"))?;
 
-            let script = v8::Script::compile(context_scope, code_handle, None)
+            let script: _ = v8::Script::compile(context_scope, code_handle, None)
                 .ok_or_else(|| anyhow!("Failed to compile snippet: {}", name))?;
 
-            let script_global = v8::Global::new(context_scope, script);
+            let script_global: _ = v8::Global::new(context_scope, script);
 
-            let snippet = CompiledSnippet {
+            let snippet: _ = CompiledSnippet {
                 name: name.to_string(),
                 code: code.to_string(),
                 script: script_global,
@@ -294,7 +296,7 @@ impl IsolatePrewarmer {
 
     /// Print statistics
     pub fn print_stats(&self) {
-        let stats = self.stats();
+        let stats: _ = self.stats();
         println!("=== Isolate Pre-warming Statistics ===");
         println!("Total pre-warmed isolates: {}", stats.total_prewarmed.load(Ordering::Relaxed));
         println!("Snapshots created: {}", stats.snapshots_created.load(Ordering::Relaxed));

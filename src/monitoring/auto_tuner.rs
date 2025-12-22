@@ -38,7 +38,7 @@ pub struct TuningResult {
 
 /// 自动调优引擎
 pub struct AutoTuner {
-    parameters: HashMap<String, TuningParameter>,
+    parameters: HashMap<String, TuningParameter, std::collections::HashMap<String, TuningParameter, String, TuningParameter>>,
     tuning_history: Vec<TuningResult>,
     performance_baseline: f64,
 }
@@ -87,7 +87,7 @@ impl AutoTuner {
         let mut actions = Vec::new();
 
         // 基于性能变化决定调优策略
-        let performance_delta = current_performance - self.performance_baseline;
+        let performance_delta: _ = current_performance - self.performance_baseline;
 
         // 如果性能下降，尝试调优
         if performance_delta < -5.0 {
@@ -121,7 +121,7 @@ impl AutoTuner {
         // 调整 GC 阈值
         if let Some(gc_param) = self.parameters.get_mut("gc_threshold") {
             if gc_param.current_value > gc_param.min_value {
-                let old_value = gc_param.current_value;
+                let old_value: _ = gc_param.current_value;
                 gc_param.current_value -= gc_param.step_size;
 
                 actions.push(TuningAction {
@@ -138,7 +138,7 @@ impl AutoTuner {
         // 调整线程池大小
         if let Some(thread_param) = self.parameters.get_mut("thread_pool_size") {
             if thread_param.current_value < thread_param.max_value {
-                let old_value = thread_param.current_value;
+                let old_value: _ = thread_param.current_value;
                 thread_param.current_value += thread_param.step_size;
 
                 actions.push(TuningAction {
@@ -160,7 +160,7 @@ impl AutoTuner {
 
         // 瓶颈情况下增加缓存大小
         if let Some(cache_param) = self.parameters.get_mut("cache_size") {
-            let old_value = cache_param.current_value;
+            let old_value: _ = cache_param.current_value;
             cache_param.current_value = (cache_param.current_value + cache_param.step_size).min(cache_param.max_value);
 
             actions.push(TuningAction {
@@ -181,7 +181,7 @@ impl AutoTuner {
 
         // 容量不足时增加线程池大小
         if let Some(thread_param) = self.parameters.get_mut("thread_pool_size") {
-            let old_value = thread_param.current_value;
+            let old_value: _ = thread_param.current_value;
             thread_param.current_value = (thread_param.current_value + thread_param.step_size * 2.0).min(thread_param.max_value);
 
             actions.push(TuningAction {
@@ -199,7 +199,7 @@ impl AutoTuner {
 
     async fn apply_action(&mut self, action: TuningAction) {
         // 记录调优结果
-        let result = TuningResult {
+        let result: _ = TuningResult {
             result_id: format!("result_{}", Utc::now().timestamp()),
             action: action.clone(),
             performance_before: self.performance_baseline,
@@ -214,7 +214,7 @@ impl AutoTuner {
         self.performance_baseline = result.performance_after;
     }
 
-    pub fn get_parameters(&self) -> HashMap<String, TuningParameter> {
+    pub fn get_parameters(&self) -> HashMap<String, TuningParameter, std::collections::HashMap<String, TuningParameter, String, TuningParameter>> {
         self.parameters.clone()
     }
 
@@ -230,12 +230,14 @@ impl AutoTuner {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_auto_tuner() {
         let mut tuner = AutoTuner::new();
 
-        let insights = vec![
+        let insights: _ = vec![
             crate::intelligent_analyzer::PerformanceInsight {
                 insight_type: crate::intelligent_analyzer::InsightType::Bottleneck,
                 title: "CPU 瓶颈".to_string(),
@@ -245,10 +247,10 @@ mod tests {
             },
         ];
 
-        let actions = tuner.analyze_and_tune(95.0, &insights);
+        let actions: _ = tuner.analyze_and_tune(95.0, &insights);
         assert!(!actions.is_empty());
 
-        let parameters = tuner.get_parameters();
+        let parameters: _ = tuner.get_parameters();
         assert!(parameters.contains_key("gc_threshold"));
         assert!(parameters.contains_key("thread_pool_size"));
     }

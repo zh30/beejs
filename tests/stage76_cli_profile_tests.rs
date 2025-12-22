@@ -14,7 +14,7 @@ mod tests {
 
         #[test]
         fn test_profile_command_basic() {
-            let cli = CliApp::parse_from(&["beejs", "profile", "test.js"]);
+            let cli: _ = CliApp::parse_from(&["beejs", "profile", "test.js"]);
             match cli.command {
                 Some(SubCommand::Profile(profile)) => {
                     assert_eq!(profile.script, PathBuf::from("test.js"));
@@ -28,7 +28,7 @@ mod tests {
 
         #[test]
         fn test_profile_command_with_detailed() {
-            let cli = CliApp::parse_from(&["beejs", "profile", "test.js", "--detailed"]);
+            let cli: _ = CliApp::parse_from(&["beejs", "profile", "test.js", "--detailed"]);
             match cli.command {
                 Some(SubCommand::Profile(profile)) => {
                     assert!(profile.detailed);
@@ -40,7 +40,7 @@ mod tests {
 
         #[test]
         fn test_profile_command_with_interactive() {
-            let cli = CliApp::parse_from(&["beejs", "profile", "test.js", "--interactive"]);
+            let cli: _ = CliApp::parse_from(&["beejs", "profile", "test.js", "--interactive"]);
             match cli.command {
                 Some(SubCommand::Profile(profile)) => {
                     assert!(profile.interactive);
@@ -52,7 +52,7 @@ mod tests {
 
         #[test]
         fn test_profile_command_with_output_format() {
-            let cli = CliApp::parse_from(&["beejs", "profile", "test.js", "--format", "json"]);
+            let cli: _ = CliApp::parse_from(&["beejs", "profile", "test.js", "--format", "json"]);
             match cli.command {
                 Some(SubCommand::Profile(profile)) => {
                     assert_eq!(profile.output_format, "json");
@@ -64,7 +64,7 @@ mod tests {
 
         #[test]
         fn test_profile_command_with_output_dir() {
-            let cli = CliApp::parse_from(&["beejs", "profile", "test.js", "--dir", "/tmp/profiles"]);
+            let cli: _ = CliApp::parse_from(&["beejs", "profile", "test.js", "--dir", "/tmp/profiles"]);
             match cli.command {
                 Some(SubCommand::Profile(profile)) => {
                     assert_eq!(profile.output_dir, Some(PathBuf::from("/tmp/profiles")));
@@ -76,7 +76,7 @@ mod tests {
 
         #[test]
         fn test_profile_command_with_duration() {
-            let cli = CliApp::parse_from(&["beejs", "profile", "test.js", "--duration", "30"]);
+            let cli: _ = CliApp::parse_from(&["beejs", "profile", "test.js", "--duration", "30"]);
             match cli.command {
                 Some(SubCommand::Profile(profile)) => {
                     assert_eq!(profile.duration, 30);
@@ -88,7 +88,7 @@ mod tests {
 
         #[test]
         fn test_profile_command_with_sampling_rate() {
-            let cli = CliApp::parse_from(&["beejs", "profile", "test.js", "--sampling-rate", "1000"]);
+            let cli: _ = CliApp::parse_from(&["beejs", "profile", "test.js", "--sampling-rate", "1000"]);
             match cli.command {
                 Some(SubCommand::Profile(profile)) => {
                     assert_eq!(profile.sampling_rate, 1000);
@@ -105,7 +105,7 @@ mod tests {
 
         #[test]
         fn test_profile_all_options() {
-            let cli = CliApp::parse_from(&[
+            let cli: _ = CliApp::parse_from(&[
                 "beejs",
                 "profile",
                 "test.js",
@@ -137,10 +137,12 @@ mod tests {
     /// 测试场景：边界条件
     mod profile_edge_cases {
         use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
         #[test]
         fn test_profile_with_zero_sampling_rate() {
-            let cli = CliApp::parse_from(&["beejs", "profile", "test.js", "--sampling-rate", "0"]);
+            let cli: _ = CliApp::parse_from(&["beejs", "profile", "test.js", "--sampling-rate", "0"]);
             match cli.command {
                 Some(SubCommand::Profile(profile)) => {
                     assert_eq!(profile.sampling_rate, 0);
@@ -151,7 +153,7 @@ mod tests {
 
         #[test]
         fn test_profile_with_custom_output_format() {
-            let cli = CliApp::parse_from(&["beejs", "profile", "test.js", "--format", "json"]);
+            let cli: _ = CliApp::parse_from(&["beejs", "profile", "test.js", "--format", "json"]);
             match cli.command {
                 Some(SubCommand::Profile(profile)) => {
                     assert_eq!(profile.output_format, "json");
@@ -162,7 +164,7 @@ mod tests {
 
         #[test]
         fn test_profile_minimal_args() {
-            let cli = CliApp::parse_from(&["beejs", "profile", "test.js"]);
+            let cli: _ = CliApp::parse_from(&["beejs", "profile", "test.js"]);
             match cli.command {
                 Some(SubCommand::Profile(profile)) => {
                     assert_eq!(profile.script, PathBuf::from("test.js"));

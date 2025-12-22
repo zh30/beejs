@@ -30,6 +30,8 @@ pub use batch_processor::BatchProcessor;
 // 内部模块
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 零拷贝 I/O 性能指标
 #[derive(Debug, Clone, Default)]
@@ -63,7 +65,7 @@ impl ZeroCopyMonitor {
     /// 创建新的性能监控器
     pub fn new() -> Self {
         Self {
-            metrics: Arc::new(Mutex::new(ZeroCopyMetrics::default())),
+            metrics: Arc::new(std::sync::Mutex::new(Mutex::new(ZeroCopyMetrics::default()))),
             start_time: Instant::now(),
         }
     }
@@ -76,7 +78,7 @@ impl ZeroCopyMonitor {
         metrics.total_operations += 1;
 
         if duration.as_secs_f64() > 0.0 {
-            let speed = bytes as f64 / duration.as_secs_f64();
+            let speed: _ = bytes as f64 / duration.as_secs_f64();
 
             // 更新平均速度
             if metrics.total_operations == 1 {
@@ -114,7 +116,7 @@ impl ZeroCopyMonitor {
 
     /// 计算零拷贝成功率
     pub fn calculate_success_rate(&self, total_attempts: u64) -> f64 {
-        let metrics = self.metrics.lock().unwrap();
+        let metrics: _ = self.metrics.lock().unwrap();
         if total_attempts > 0 {
             (metrics.total_operations as f64 / total_attempts as f64) * 100.0
         } else {
@@ -124,8 +126,8 @@ impl ZeroCopyMonitor {
 
     /// 生成性能报告
     pub fn generate_report(&self) -> String {
-        let metrics = self.metrics.lock().unwrap();
-        let elapsed = self.start_time.elapsed();
+        let metrics: _ = self.metrics.lock().unwrap();
+        let elapsed: _ = self.start_time.elapsed();
 
         format!(
             r#"

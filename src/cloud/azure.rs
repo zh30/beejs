@@ -2,6 +2,8 @@
 //! TODO: 实现 Azure Functions, AKS, 和 App Service 支持
 
 use crate::cloud::{CloudConfig, CloudFeatures, CloudProvider};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Azure 适配器 (占位符)
 pub struct AzureAdapter {}

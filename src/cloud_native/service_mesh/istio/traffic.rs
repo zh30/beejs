@@ -43,7 +43,7 @@ impl TrafficManager {
             Api::namespaced(self.client.clone(), &self.namespace);
 
         // Create routing rules
-        let routes = vec![
+        let routes: _ = vec![
             // Canary route (header-based)
             HttpRoute {
                 r#match: Some(vec![
@@ -95,14 +95,14 @@ impl TrafficManager {
             },
         ];
 
-        let vs_spec = VirtualServiceSpec {
+        let vs_spec: _ = VirtualServiceSpec {
             hosts: vec![service.to_string()],
             gateways: Some(vec![format!("{}-gateway", service)]),
             http: Some(routes),
         };
 
-        let vs = VirtualService::new(&format!("{}-canary", service), vs_spec);
-        let params = kube::api::PostParams::default();
+        let vs: _ = VirtualService::new(&format!("{}-canary", service), vs_spec);
+        let params: _ = kube::api::PostParams::default();
         virtual_services.create(&params, &vs).await?;
 
         info!("Created canary routing for service: {}", service);
@@ -125,7 +125,7 @@ impl TrafficManager {
         let virtual_services: Api<VirtualService> =
             Api::namespaced(self.client.clone(), &self.namespace);
 
-        let routes = vec![
+        let routes: _ = vec![
             // Version A (header-based)
             HttpRoute {
                 r#match: Some(vec![
@@ -177,14 +177,14 @@ impl TrafficManager {
             },
         ];
 
-        let vs_spec = VirtualServiceSpec {
+        let vs_spec: _ = VirtualServiceSpec {
             hosts: vec![service.to_string()],
             gateways: Some(vec![format!("{}-gateway", service)]),
             http: Some(routes),
         };
 
-        let vs = VirtualService::new(&format!("{}-ab-test", service), vs_spec);
-        let params = kube::api::PostParams::default();
+        let vs: _ = VirtualService::new(&format!("{}-ab-test", service), vs_spec);
+        let params: _ = kube::api::PostParams::default();
         virtual_services.create(&params, &vs).await?;
 
         info!("Created A/B testing routing for service: {}", service);
@@ -207,10 +207,10 @@ impl TrafficManager {
             Api::namespaced(self.client.clone(), &self.namespace);
 
         // Get existing virtual service
-        let vs = virtual_services.get(service).await?;
+        let vs: _ = virtual_services.get(service).await?;
 
         // Build updated spec with fault injection
-        let updated_http = vs.spec.http.map(|routes| {
+        let updated_http: _ = vs.spec.http.map(|routes| {
             routes.into_iter().map(|mut route| {
                 route.fault = Some(HttpFaultInjection {
                     delay: match fault_type {
@@ -233,8 +233,8 @@ impl TrafficManager {
         });
 
         // Update virtual service
-        let params = kube::api::PatchParams::default();
-        let patch = serde_json::json!({
+        let params: _ = kube::api::PatchParams::default();
+        let patch: _ = serde_json::json!({
             "spec": {
                 "http": updated_http
             }
@@ -254,10 +254,10 @@ impl TrafficManager {
             Api::namespaced(self.client.clone(), &self.namespace);
 
         // Get existing virtual service
-        let vs = virtual_services.get(service).await?;
+        let vs: _ = virtual_services.get(service).await?;
 
         // Remove fault injection from HTTP routes
-        let updated_http = vs.spec.http.map(|routes| {
+        let updated_http: _ = vs.spec.http.map(|routes| {
             routes.into_iter().map(|mut route| {
                 route.fault = None;
                 route
@@ -265,8 +265,8 @@ impl TrafficManager {
         });
 
         // Update virtual service
-        let params = kube::api::PatchParams::default();
-        let patch = serde_json::json!({
+        let params: _ = kube::api::PatchParams::default();
+        let patch: _ = serde_json::json!({
             "spec": {
                 "http": updated_http
             }
@@ -293,7 +293,7 @@ impl TrafficManager {
             Api::namespaced(self.client.clone(), &self.namespace);
 
         // Get existing virtual service and log it
-        let _vs = virtual_services.get(service).await?;
+        let _vs: _ = virtual_services.get(service).await?;
 
         // Note: Mirror functionality requires additional types in our local Istio types
         // For now, just verify the service exists
@@ -338,10 +338,12 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_traffic_split_creation() {
-        let split = TrafficSplit {
+        let split: _ = TrafficSplit {
             service: "beejs-api".to_string(),
             splits: vec![
                 ("v1".to_string(), 90),
@@ -359,8 +361,8 @@ mod tests {
 
     #[test]
     fn test_fault_type() {
-        let delay = FaultType::Delay;
-        let abort = FaultType::Abort;
+        let delay: _ = FaultType::Delay;
+        let abort: _ = FaultType::Abort;
 
         assert!(matches!(delay, FaultType::Delay));
         assert!(matches!(abort, FaultType::Abort));

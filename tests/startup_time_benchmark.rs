@@ -8,13 +8,15 @@ use std::time::{Duration, Instant}, SystemTime, UNIX_EPOCH;
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试 1: 空 RuntimeLite 创建时间
     #[test]
     fn test_empty_runtime_lite_creation_time() {
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let runtime = RuntimeLite::new(false);
-        let elapsed = Duration::from_secs(start);
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let runtime: _ = RuntimeLite::new(false);
+        let elapsed: _ = Duration::from_secs(start);
 
         assert!(runtime.is_ok(), "RuntimeLite creation should succeed");
         println!("Empty RuntimeLite 创建时间: {:.2}µs", elapsed.as_secs_f64() * 1_000_000.0);
@@ -28,11 +30,11 @@ mod tests {
     /// 测试 2: 简单脚本执行时间
     #[test]
     fn test_simple_script_execution_time() {
-        let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let result = runtime.execute_code("1 + 1");
-        let elapsed = Duration::from_secs(start);
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let result: _ = runtime.execute_code("1 + 1");
+        let elapsed: _ = Duration::from_secs(start);
 
         assert!(result.is_ok(), "Script execution should succeed");
         println!("简单脚本执行时间: {:.2}µs", elapsed.as_secs_f64() * 1_000_000.0);
@@ -49,9 +51,9 @@ mod tests {
         let mut times = Vec::new();
 
         for i in 0..10 {
-            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-            let runtime = RuntimeLite::new(false);
-            let elapsed = Duration::from_secs(start);
+            let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let runtime: _ = RuntimeLite::new(false);
+            let elapsed: _ = Duration::from_secs(start);
 
             assert!(runtime.is_ok(), "RuntimeLite {} creation should succeed", i);
             times.push(elapsed);
@@ -60,13 +62,13 @@ mod tests {
         }
 
         // 计算平均时间（排除第一次初始化）
-        let subsequent_times = &times[1..];
+        let subsequent_times: _ = &times[1..];
         let avg_time: Duration = subsequent_times.iter().sum::<Duration>() / subsequent_times.len() as u32;
         println!("平均创建时间（排除第一次）: {:.2}µs", avg_time.as_secs_f64() * 1_000_000.0);
 
         // 验证稳定性：后续创建时间应该在平均值 ±50% 范围内
         for (i, time) in subsequent_times.iter().enumerate() {
-            let deviation = ((time.as_secs_f64() - avg_time.as_secs_f64()) / avg_time.as_secs_f64()).abs();
+            let deviation: _ = ((time.as_secs_f64() - avg_time.as_secs_f64()) / avg_time.as_secs_f64()).abs();
             assert!(deviation < 0.5,
                 "第 {} 次创建时间偏差过大: {:.1}%，平均值: {:.2}µs",
                 i + 2, deviation * 100.0, avg_time.as_secs_f64() * 1_000_000.0);
@@ -76,19 +78,19 @@ mod tests {
     /// 测试 4: 复杂脚本执行时间
     #[test]
     fn test_complex_script_execution_time() {
-        let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
 
-        let script = r#"
+        let script: _ = r#"
         let sum = 0;
-        for (let i = 0; i < 1000; i++) {
+        for (let i: _ = 0; i < 1000; i++) {
             sum += i;
         }
         sum
         "#;
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let result = runtime.execute_code(script);
-        let elapsed = Duration::from_secs(start);
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let result: _ = runtime.execute_code(script);
+        let elapsed: _ = Duration::from_secs(start);
 
         assert!(result.is_ok(), "Complex script execution should succeed");
         println!("复杂脚本执行时间: {:.2}µs", elapsed.as_secs_f64() * 1_000_000.0);
@@ -103,15 +105,15 @@ mod tests {
     #[test]
     fn test_cli_startup_time() {
         // 模拟 beejs -e "1+1" 的启动时间
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 创建 runtime
-        let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
 
         // 执行简单代码
-        let result = runtime.execute_code("1 + 1");
+        let result: _ = runtime.execute_code("1 + 1");
 
-        let elapsed = Duration::from_secs(start);
+        let elapsed: _ = Duration::from_secs(start);
 
         assert!(result.is_ok(), "CLI execution should succeed");
         println!("CLI 启动时间 (包含 RuntimeLite): {:.2}µs", elapsed.as_secs_f64() * 1_000_000.0);

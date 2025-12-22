@@ -81,12 +81,12 @@ impl MultiLevelCache {
     /// Create a new multi-level cache
     pub fn new() -> Self {
         Self {
-            l1_cache: Arc::new(l1_zero_copy::L1ZeroCopyCache::new()),
-            l2_cache: Arc::new(RwLock::new(l2_smart::L2SmartCache::new())),
-            l3_cache: Arc::new(l3_mmap::L3MmapCache::new()),
-            prefetcher: Arc::new(Mutex::new(prefetcher::PatternAnalyzer::new())),
-            stats: Arc::new(RwLock::new(CacheStats::new())),
-            prefetch_enabled: Arc::new(RwLock::new(false)),
+            l1_cache: Arc::new(std::sync::Mutex::new(l1_zero_copy::L1ZeroCopyCache::new())),
+            l2_cache: Arc::new(std::sync::Mutex::new(RwLock::new(l2_smart::L2SmartCache::new()))),
+            l3_cache: Arc::new(std::sync::Mutex::new(l3_mmap::L3MmapCache::new())),
+            prefetcher: Arc::new(std::sync::Mutex::new(Mutex::new(prefetcher::PatternAnalyzer::new()))),
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(CacheStats::new()))),
+            prefetch_enabled: Arc::new(std::sync::Mutex::new(RwLock::new(false))),
         }
     }
 
@@ -97,7 +97,7 @@ impl MultiLevelCache {
 
     /// Put a script into the cache
     pub async fn put(&self, key: &str, data: &[u8]) {
-        let cache_key = self.hash_key(key);
+        let cache_key: _ = self.hash_key(key);
 
         // Determine which cache level to use based on data size and access patterns
         if data.len() < 1024 {
@@ -119,7 +119,7 @@ impl MultiLevelCache {
 
     /// Get a script from the cache
     pub async fn get(&self, key: &str) -> Option<Vec<u8>> {
-        let cache_key = self.hash_key(key);
+        let cache_key: _ = self.hash_key(key);
 
         // Try L1 first (fastest)
         if let Some(data) = self.l1_cache.get(cache_key).await {
@@ -154,7 +154,7 @@ impl MultiLevelCache {
 
     /// Invalidate a cached script
     pub async fn invalidate(&self, key: &str) {
-        let cache_key = self.hash_key(key);
+        let cache_key: _ = self.hash_key(key);
         self.l1_cache.invalidate(cache_key).await;
 
         let mut l2 = self.l2_cache.write().unwrap();
@@ -175,20 +175,20 @@ impl MultiLevelCache {
 
     /// Get cache statistics
     pub async fn get_stats(&self) -> CacheStats {
-        let stats = self.stats.read().unwrap();
+        let stats: _ = self.stats.read().unwrap();
         let mut result = stats.clone();
 
         // Get L1 stats
-        let l1_stats = self.l1_cache.get_stats().await;
+        let l1_stats: _ = self.l1_cache.get_stats().await;
         result.memory_usage_mb += l1_stats.memory_usage_mb();
 
         // Get L2 stats
-        let l2 = self.l2_cache.read().unwrap();
-        let l2_stats = l2.get_stats();
+        let l2: _ = self.l2_cache.read().unwrap();
+        let l2_stats: _ = l2.get_stats();
         result.memory_usage_mb += l2_stats.memory_usage_mb();
 
         // Get L3 stats
-        let l3_stats = self.l3_cache.get_stats().await;
+        let l3_stats: _ = self.l3_cache.get_stats().await;
         result.memory_usage_mb += l3_stats.memory_usage_mb();
 
         // Check if prefetch is enabled
@@ -204,7 +204,7 @@ impl MultiLevelCache {
         let mut hash: u64 = 0xcbf29ce484222325;
         for byte in key.bytes() {
             hash ^= byte as u64;
-            hash = hash.wrapping_mul(0x100000001b3);
+            hash = hash.clone();wrapping_mul(0x100000001b3);
         }
         hash
     }
@@ -219,14 +219,16 @@ impl Default for MultiLevelCache {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_basic_cache_operations() {
-        let cache = MultiLevelCache::new();
+        let cache: _ = MultiLevelCache::new();
 
         // Test put and get
         cache.put("test.js", b"console.log('hello');").await;
-        let result = cache.get("test.js").await;
+        let result: _ = cache.get("test.js").await;
 
         assert!(result.is_some());
         assert_eq!(result.unwrap(), b"console.log('hello');");
@@ -234,18 +236,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_cache_stats() {
-        let cache = MultiLevelCache::new();
+        let cache: _ = MultiLevelCache::new();
 
         cache.put("test.js", b"console.log('test');").await;
         cache.get("test.js").await;
 
-        let stats = cache.get_stats().await;
+        let stats: _ = cache.get_stats().await;
         assert!(stats.total_operations > 0);
     }
 
     #[tokio::test]
     async fn test_cache_invalidation() {
-        let cache = MultiLevelCache::new();
+        let cache: _ = MultiLevelCache::new();
 
         cache.put("test.js", b"console.log('test');").await;
         assert!(cache.get("test.js").await.is_some());

@@ -30,11 +30,11 @@ impl V8Snapshot {
         is_compressed: bool,
         builtin_warmup: bool,
     ) -> Self {
-        let size_bytes = snapshot_data.len();
-        let created_at = SystemTime::now();
+        let size_bytes: _ = snapshot_data.len();
+        let created_at: _ = SystemTime::now();
 
         Self {
-            snapshot_data: Arc::new(snapshot_data),
+            snapshot_data: Arc::new(std::sync::Mutex::new(snapshot_data)),
             version,
             created_at,
             size_bytes,
@@ -92,11 +92,13 @@ fn human_file_size(size: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_v8_snapshot_creation() {
-        let data = vec![1, 2, 3, 4, 5];
-        let snapshot = V8Snapshot::new(
+        let data: _ = vec![1, 2, 3, 4, 5];
+        let snapshot: _ = V8Snapshot::new(
             data.clone(),
             "v1.0.0".to_string(),
             false,
@@ -111,7 +113,7 @@ mod tests {
 
     #[test]
     fn test_v8_snapshot_validation() {
-        let empty_snapshot = V8Snapshot::new(
+        let empty_snapshot: _ = V8Snapshot::new(
             vec![],
             "v1.0.0".to_string(),
             false,

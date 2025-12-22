@@ -6,11 +6,13 @@ use std::sync::Arc;
 use chrono::Utc;
 use crate::ecosystem::types::*;
 use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 #[derive(Debug, Clone)]
 pub struct VersionManager {
     registry: Arc<ModuleRegistry>,
-    versions: HashMap<String, Vec<ModuleVersion>>,
+    versions: HashMap<String, Vec<ModuleVersion, std::collections::HashMap<String, Vec<ModuleVersion, String, Vec<ModuleVersion>>>,
 }
 
 impl VersionManager {
@@ -69,7 +71,7 @@ impl VersionManager {
 
     /// 发布新版本
     pub async fn publish_version(&self, version: &ModuleVersion) -> Result<(), Box<dyn std::error::Error>> {
-        let module_name = &format!("module-{}", version.version);
+        let module_name: _ = &format!("module-{}", version.version);
 
         // 在实际实现中，这里会：
         // 1. 验证版本号格式
@@ -102,7 +104,7 @@ impl VersionManager {
         // 2. 配置全球分发节点
         // 3. 返回访问端点
 
-        let endpoints = CDNEndpoints {
+        let endpoints: _ = CDNEndpoints {
             primary: format!("https://cdn.beejs.dev/modules/{}/latest", module.name),
             mirrors: vec![
                 format!("https://cdn-us.beejs.dev/modules/{}/latest", module.name),
@@ -144,19 +146,19 @@ impl VersionManager {
 
     /// 计算版本距离（用于推荐）
     pub fn version_distance(&self, v1: &Version, v2: &Version) -> u32 {
-        let major_diff = if v1.major > v2.major {
+        let major_diff: _ = if v1.major > v2.major {
             v1.major - v2.major
         } else {
             v2.major - v1.major
         };
 
-        let minor_diff = if v1.minor > v2.minor {
+        let minor_diff: _ = if v1.minor > v2.minor {
             v1.minor - v2.minor
         } else {
             v2.minor - v1.minor
         };
 
-        let patch_diff = if v1.patch > v2.patch {
+        let patch_diff: _ = if v1.patch > v2.patch {
             v1.patch - v2.patch
         } else {
             v2.patch - v1.patch

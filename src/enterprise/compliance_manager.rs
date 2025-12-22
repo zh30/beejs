@@ -55,7 +55,7 @@ pub enum ComplianceSeverity {
 /// Compliance frameworks manager
 #[derive(Debug)]
 pub struct ComplianceFrameworks {
-    frameworks: Arc<RwLock<HashMap<String, ComplianceFrameworkConfig>>>,
+    frameworks: Arc<RwLock<HashMap<String, ComplianceFrameworkConfig, std::collections::HashMap<String, ComplianceFrameworkConfig, String, ComplianceFrameworkConfig>>>>,
 }
 
 /// Framework configuration
@@ -70,7 +70,7 @@ struct ComplianceFrameworkConfig {
 /// Policy engine for compliance rules
 #[derive(Debug)]
 pub struct PolicyEngine {
-    policies: Arc<RwLock<HashMap<String, CompliancePolicy>>>,
+    policies: Arc<RwLock<HashMap<String, CompliancePolicy, std::collections::HashMap<String, CompliancePolicy, String, CompliancePolicy>>>>,
 }
 
 /// Compliance policy
@@ -144,7 +144,7 @@ pub struct ComplianceManager {
 /// Compliance checker
 #[derive(Debug)]
 pub struct ComplianceChecker {
-    framework_checks: HashMap<String, Box<dyn FrameworkCheck>>,
+    framework_checks: HashMap<String, Box<dyn FrameworkCheck, std::collections::HashMap<String, Box<dyn FrameworkCheck, String, Box<dyn FrameworkCheck>>>,
 }
 
 /// Framework check trait
@@ -156,14 +156,14 @@ pub trait FrameworkCheck: Send + Sync {
 impl ComplianceFrameworks {
     /// Create a new compliance frameworks manager
     pub fn new() -> Self {
-        let frameworks = Arc::new(RwLock::new(HashMap::new()));
+        let frameworks: _ = Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new())));
         Self { frameworks }
     }
 
     /// Register a compliance framework
     pub async fn register_framework(&self, config: ComplianceFrameworkConfig) -> Result<()> {
         let mut frameworks = self.frameworks.write().await;
-        let framework_name = match &config.framework {
+        let framework_name: _ = match &config.framework {
             ComplianceFramework::GDPR => "GDPR".to_string(),
             ComplianceFramework::HIPAA => "HIPAA".to_string(),
             ComplianceFramework::SOC2 => "SOC2".to_string(),
@@ -181,7 +181,7 @@ impl ComplianceFrameworks {
 
     /// Get framework configuration
     pub async fn get_framework(&self, name: &str) -> Result<ComplianceFrameworkConfig> {
-        let frameworks = self.frameworks.read().await;
+        let frameworks: _ = self.frameworks.read().await;
         frameworks.get(name)
             .cloned()
             .ok_or_else(|| anyhow!("Framework '{}' not found", name))
@@ -189,7 +189,7 @@ impl ComplianceFrameworks {
 
     /// List all registered frameworks
     pub async fn list_frameworks(&self) -> Result<Vec<String>> {
-        let frameworks = self.frameworks.read().await;
+        let frameworks: _ = self.frameworks.read().await;
         Ok(frameworks.keys().cloned().collect())
     }
 }
@@ -204,7 +204,7 @@ impl PolicyEngine {
     /// Create a new policy engine
     pub fn new() -> Self {
         PolicyEngine {
-            policies: Arc::new(RwLock::new(HashMap::new())),
+            policies: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -217,7 +217,7 @@ impl PolicyEngine {
 
     /// Get policy by name
     pub async fn get_policy(&self, name: &str) -> Result<CompliancePolicy> {
-        let policies = self.policies.read().await;
+        let policies: _ = self.policies.read().await;
         policies.get(name)
             .cloned()
             .ok_or_else(|| anyhow!("Policy '{}' not found", name))
@@ -225,7 +225,7 @@ impl PolicyEngine {
 
     /// List all policies
     pub async fn list_policies(&self) -> Result<Vec<String>> {
-        let policies = self.policies.read().await;
+        let policies: _ = self.policies.read().await;
         Ok(policies.keys().cloned().collect())
     }
 }
@@ -269,7 +269,7 @@ impl ComplianceChecker {
 
     /// Check compliance against a framework
     pub fn check(&self, framework: &ComplianceFramework, script: &str) -> Vec<ComplianceViolation> {
-        let framework_name = match framework {
+        let framework_name: _ = match framework {
             ComplianceFramework::GDPR => "GDPR",
             ComplianceFramework::HIPAA => "HIPAA",
             ComplianceFramework::SOC2 => "SOC2",
@@ -395,28 +395,28 @@ impl ComplianceManager {
     /// Create a new compliance manager
     pub fn new() -> Self {
         ComplianceManager {
-            frameworks: Arc::new(ComplianceFrameworks::new()),
-            policies: Arc::new(PolicyEngine::new()),
-            checker: Arc::new(ComplianceChecker::new()),
+            frameworks: Arc::new(std::sync::Mutex::new(ComplianceFrameworks::new())),
+            policies: Arc::new(std::sync::Mutex::new(PolicyEngine::new())),
+            checker: Arc::new(std::sync::Mutex::new(ComplianceChecker::new())),
         }
     }
 
     /// Check compliance for a script
     pub async fn check_compliance(&self, script: &str, framework: ComplianceFramework) -> Result<ComplianceReport> {
-        let violations = self.checker.check(&framework, script);
+        let violations: _ = self.checker.check(&framework, script);
 
-        let score = if violations.is_empty() {
+        let score: _ = if violations.is_empty() {
             1.0
         } else {
             let critical_count = violations.iter().filter(|v| v.severity == ComplianceSeverity::Critical).count();
-            let high_count = violations.iter().filter(|v| v.severity == ComplianceSeverity::High).count();
-            let medium_count = violations.iter().filter(|v| v.severity == ComplianceSeverity::Medium).count();
+            let high_count: _ = violations.iter().filter(|v| v.severity == ComplianceSeverity::High).count();
+            let medium_count: _ = violations.iter().filter(|v| v.severity == ComplianceSeverity::Medium).count();
 
-            let penalty = (critical_count as f64 * 0.3) + (high_count as f64 * 0.2) + (medium_count as f64 * 0.1);
+            let penalty: _ = (critical_count as f64 * 0.3) + (high_count as f64 * 0.2) + (medium_count as f64 * 0.1);
             (1.0 - penalty).max(0.0)
         };
 
-        let status = if score >= 0.95 {
+        let status: _ = if score >= 0.95 {
             ComplianceStatus::Compliant
         } else if score >= 0.7 {
             ComplianceStatus::PartiallyCompliant
@@ -424,11 +424,11 @@ impl ComplianceManager {
             ComplianceStatus::NonCompliant
         };
 
-        let recommendations = violations.iter()
+        let recommendations: _ = violations.iter()
             .map(|v| format!("{}: {}", v.requirement_title, v.remediation))
             .collect();
 
-        let framework_name = match &framework {
+        let framework_name: _ = match &framework {
             ComplianceFramework::GDPR => "GDPR",
             ComplianceFramework::HIPAA => "HIPAA",
             ComplianceFramework::SOC2 => "SOC2",
@@ -471,12 +471,14 @@ impl Default for ComplianceManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_compliance_frameworks() {
-        let manager = ComplianceFrameworks::new();
+        let manager: _ = ComplianceFrameworks::new();
 
-        let config = ComplianceFrameworkConfig {
+        let config: _ = ComplianceFrameworkConfig {
             framework: ComplianceFramework::GDPR,
             requirements: Vec::new(),
             version: "1.0".to_string(),
@@ -485,71 +487,71 @@ mod tests {
 
         manager.register_framework(config).await.unwrap();
 
-        let frameworks = manager.list_frameworks().await.unwrap();
+        let frameworks: _ = manager.list_frameworks().await.unwrap();
         assert!(frameworks.contains(&"GDPR".to_string()));
     }
 
     #[tokio::test]
     async fn test_gdpr_compliance_check() {
-        let checker = ComplianceChecker::new();
-        let framework = ComplianceFramework::GDPR;
+        let checker: _ = ComplianceChecker::new();
+        let framework: _ = ComplianceFramework::GDPR;
 
-        let script = r#"
+        let script: _ = r#"
 localStorage.setItem('user_data', 'sensitive');
 fetch('/api/data');
 "#;
 
-        let violations = checker.check(&framework, script);
+        let violations: _ = checker.check(&framework, script);
         assert!(!violations.is_empty());
         assert!(violations.iter().any(|v| v.requirement_id == "GDPR-001"));
     }
 
     #[tokio::test]
     async fn test_hipaa_compliance_check() {
-        let checker = ComplianceChecker::new();
-        let framework = ComplianceFramework::HIPAA;
+        let checker: _ = ComplianceChecker::new();
+        let framework: _ = ComplianceFramework::HIPAA;
 
-        let script = "const data = 'patient_info';";
-        let violations = checker.check(&framework, script);
+        let script: _ = "const data = 'patient_info';";
+        let violations: _ = checker.check(&framework, script);
         assert!(!violations.is_empty());
         assert!(violations.iter().any(|v| v.requirement_id == "HIPAA-001"));
     }
 
     #[tokio::test]
     async fn test_soc2_compliance_check() {
-        let checker = ComplianceChecker::new();
-        let framework = ComplianceFramework::SOC2;
+        let checker: _ = ComplianceChecker::new();
+        let framework: _ = ComplianceFramework::SOC2;
 
-        let script = "const x = 42;";
-        let violations = checker.check(&framework, script);
+        let script: _ = "const x = 42;";
+        let violations: _ = checker.check(&framework, script);
         assert!(!violations.is_empty());
         assert!(violations.iter().any(|v| v.requirement_id == "SOC2-001"));
     }
 
     #[tokio::test]
     async fn test_compliance_manager() {
-        let manager = ComplianceManager::new();
+        let manager: _ = ComplianceManager::new();
 
-        let script = "console.log('test');";
-        let framework = ComplianceFramework::GDPR;
+        let script: _ = "console.log('test');";
+        let framework: _ = ComplianceFramework::GDPR;
 
-        let report = manager.check_compliance(script, framework).await.unwrap();
+        let report: _ = manager.check_compliance(script, framework).await.unwrap();
         assert!(report.score >= 0.0 && report.score <= 1.0);
         assert!(report.violations.len() >= 0);
     }
 
     #[tokio::test]
     async fn test_compliance_score_calculation() {
-        let manager = ComplianceManager::new();
+        let manager: _ = ComplianceManager::new();
 
         // Compliant script
-        let compliant_script = "";
-        let report = manager.check_compliance(compliant_script, ComplianceFramework::GDPR).await.unwrap();
+        let compliant_script: _ = "";
+        let report: _ = manager.check_compliance(compliant_script, ComplianceFramework::GDPR).await.unwrap();
         assert_eq!(report.status, ComplianceStatus::Compliant);
 
         // Non-compliant script
-        let non_compliant_script = "localStorage.setItem('data', 'value');";
-        let report = manager.check_compliance(non_compliant_script, ComplianceFramework::GDPR).await.unwrap();
+        let non_compliant_script: _ = "localStorage.setItem('data', 'value');";
+        let report: _ = manager.check_compliance(non_compliant_script, ComplianceFramework::GDPR).await.unwrap();
         assert!(report.status != ComplianceStatus::Compliant);
     }
 }

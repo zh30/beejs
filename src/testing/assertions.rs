@@ -177,7 +177,7 @@ where
             }
             ExtendedMatcher::Truthy => {
                 // Check if value is truthy
-                let json = serde_json::to_value(value).unwrap_or(serde_json::Value::Null);
+                let json: _ = serde_json::to_value(value).unwrap_or(serde_json::Value::Null);
                 match json {
                     serde_json::Value::Null => false,
                     serde_json::Value::Bool(b) => b,
@@ -189,7 +189,7 @@ where
             }
             ExtendedMatcher::Falsy => {
                 // Check if value is falsy
-                let json = serde_json::to_value(value).unwrap_or(serde_json::Value::Null);
+                let json: _ = serde_json::to_value(value).unwrap_or(serde_json::Value::Null);
                 match json {
                     serde_json::Value::Null => true,
                     serde_json::Value::Bool(b) => !b,
@@ -238,40 +238,42 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_equal_matcher() {
-        let matcher = ExtendedMatcher::Equal(42);
-        let value = 42;
+        let matcher: _ = ExtendedMatcher::Equal(42);
+        let value: _ = 42;
         assert!(matcher.matches(&value));
         assert!(matcher.message(&value).contains("equal"));
     }
 
     #[test]
     fn test_contains_matcher() {
-        let matcher = ExtendedMatcher::Contains("test".to_string());
-        let value = "this is a test string";
+        let matcher: _ = ExtendedMatcher::Contains("test".to_string());
+        let value: _ = "this is a test string";
         assert!(matcher.matches(&value));
     }
 
     #[test]
     fn test_length_matcher() {
-        let matcher = ExtendedMatcher::Length(5);
-        let value = vec![1, 2, 3, 4, 5];
+        let matcher: _ = ExtendedMatcher::Length(5);
+        let value: _ = vec![1, 2, 3, 4, 5];
         assert!(matcher.matches(&value));
     }
 
     #[test]
     fn test_truthy_matcher() {
-        let matcher = ExtendedMatcher::Truthy;
-        let value = "true";
+        let matcher: _ = ExtendedMatcher::Truthy;
+        let value: _ = "true";
         assert!(matcher.matches(&value));
     }
 
     #[test]
     fn test_falsy_matcher() {
-        let matcher = ExtendedMatcher::Falsy;
-        let value = "";
+        let matcher: _ = ExtendedMatcher::Falsy;
+        let value: _ = "";
         assert!(matcher.matches(&value));
     }
 }

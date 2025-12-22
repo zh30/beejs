@@ -14,6 +14,8 @@ use tokio::time::interval;
 use super::node_manager::NodeManager;
 use super::task_executor::TaskExecutor;
 use super::task_scheduler::TaskScheduler;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 指标类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -70,7 +72,7 @@ pub struct MetricPoint {
     pub metric_type: MetricType,
     pub value: MetricValue,
     pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
-    pub labels: HashMap<String, String>,
+    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub node_id: String,
 }
 
@@ -78,7 +80,7 @@ pub struct MetricPoint {
 #[derive(Debug, Clone)]
 pub struct RealTimeMetrics {
     pub cluster_summary: ClusterMetricsSummary,
-    pub node_metrics: HashMap<String, NodeMetrics>,
+    pub node_metrics: HashMap<String, NodeMetrics, std::collections::HashMap<String, NodeMetrics, String, NodeMetrics>>,
     pub system_metrics: SystemMetrics,
     pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
 }
@@ -145,7 +147,7 @@ pub struct DistributedMetrics {
     task_scheduler: Arc<TaskScheduler>,
     metric_points: Arc<RwLock<Vec<MetricPoint>>>,
     real_time_metrics: Arc<RwLock<Option<RealTimeMetrics>>>,
-    historical_stats: Arc<RwLock<HashMap<MetricType, Vec<MetricPoint>>>>,
+    historical_stats: Arc<RwLock<HashMap<MetricType, Vec<MetricPoint, std::collections::HashMap<MetricType, Vec<MetricPoint, MetricType, Vec<MetricPoint>>>>>,
 }
 
 impl DistributedMetrics {
@@ -161,9 +163,9 @@ impl DistributedMetrics {
             node_manager,
             task_executor,
             task_scheduler,
-            metric_points: Arc::new(RwLock::new(Vec::new())),
-            real_time_metrics: Arc::new(RwLock::new(None)),
-            historical_stats: Arc::new(RwLock::new(HashMap::new())),
+            metric_points: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            real_time_metrics: Arc::new(std::sync::Mutex::new(RwLock::new(None))),
+            historical_stats: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -171,7 +173,7 @@ impl DistributedMetrics {
     pub async fn start(&self) -> Result<(), String> {
         info!("Starting distributed metrics collector...");
 
-        let metrics_collector = self.clone();
+        let metrics_collector: _ = self.clone();
         tokio::spawn(async move {
             let mut interval_timer = interval(metrics_collector.config.collection_interval);
 
@@ -223,10 +225,10 @@ impl DistributedMetrics {
 
     /// 收集集群级别指标
     async fn collect_cluster_metrics(&self) -> Result<(), String> {
-        let cluster_topology = self.node_manager.get_cluster_topology().await;
+        let cluster_topology: _ = self.node_manager.get_cluster_topology().await;
 
         // 节点数量指标
-        let node_count_metric = MetricPoint {
+        let node_count_metric: _ = MetricPoint {
             metric_type: MetricType::Cluster,
             value: MetricValue::Gauge(cluster_topology.total_nodes as f64),
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
@@ -236,8 +238,8 @@ impl DistributedMetrics {
         self.add_metric_point(node_count_metric).await;
 
         // 吞吐量指标（模拟计算）
-        let throughput = self.calculate_cluster_throughput().await;
-        let throughput_metric = MetricPoint {
+        let throughput: _ = self.calculate_cluster_throughput().await;
+        let throughput_metric: _ = MetricPoint {
             metric_type: MetricType::ClusterThroughput,
             value: MetricValue::Gauge(throughput),
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
@@ -247,8 +249,8 @@ impl DistributedMetrics {
         self.add_metric_point(throughput_metric).await;
 
         // 可用性指标
-        let availability = self.calculate_cluster_availability().await;
-        let availability_metric = MetricPoint {
+        let availability: _ = self.calculate_cluster_availability().await;
+        let availability_metric: _ = MetricPoint {
             metric_type: MetricType::ClusterAvailability,
             value: MetricValue::Gauge(availability * 100.0),
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
@@ -262,16 +264,16 @@ impl DistributedMetrics {
 
     /// 收集节点级别指标
     async fn collect_node_metrics(&self) -> Result<(), String> {
-        let cluster_topology = self.node_manager.get_cluster_topology().await;
+        let cluster_topology: _ = self.node_manager.get_cluster_topology().await;
 
         // 生成每个节点的指标
         for region in cluster_topology.regions.values() {
             for i in 0..region.node_count {
-                let node_id = format!("{}-node-{}", region.location, i);
+                let node_id: _ = format!("{}-node-{}", region.location, i);
 
                 // CPU 使用率（模拟数据）
-                let cpu_usage = self.simulate_cpu_usage(&node_id);
-                let cpu_metric = MetricPoint {
+                let cpu_usage: _ = self.simulate_cpu_usage(&node_id);
+                let cpu_metric: _ = MetricPoint {
                     metric_type: MetricType::NodeCpuUsage,
                     value: MetricValue::Gauge(cpu_usage),
                     timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
@@ -281,8 +283,8 @@ impl DistributedMetrics {
                 self.add_metric_point(cpu_metric).await;
 
                 // 内存使用率（模拟数据）
-                let memory_usage = self.simulate_memory_usage(&node_id);
-                let memory_metric = MetricPoint {
+                let memory_usage: _ = self.simulate_memory_usage(&node_id);
+                let memory_metric: _ = MetricPoint {
                     metric_type: MetricType::NodeMemoryUsage,
                     value: MetricValue::Gauge(memory_usage),
                     timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
@@ -292,8 +294,8 @@ impl DistributedMetrics {
                 self.add_metric_point(memory_metric).await;
 
                 // 活跃任务数（模拟数据）
-                let active_tasks = self.simulate_active_tasks(&node_id);
-                let task_metric = MetricPoint {
+                let active_tasks: _ = self.simulate_active_tasks(&node_id);
+                let task_metric: _ = MetricPoint {
                     metric_type: MetricType::NodeActiveTasks,
                     value: MetricValue::Gauge(active_tasks as f64),
                     timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
@@ -310,8 +312,8 @@ impl DistributedMetrics {
     /// 收集任务级别指标
     async fn collect_task_metrics(&self) -> Result<(), String> {
         // 任务执行时间（模拟数据）
-        let execution_times = self.simulate_execution_times();
-        let execution_metric = MetricPoint {
+        let execution_times: _ = self.simulate_execution_times();
+        let execution_metric: _ = MetricPoint {
             metric_type: MetricType::TaskExecutionTime,
             value: MetricValue::Histogram(execution_times),
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
@@ -321,8 +323,8 @@ impl DistributedMetrics {
         self.add_metric_point(execution_metric).await;
 
         // 成功率（模拟数据）
-        let success_rate = self.simulate_success_rate();
-        let success_metric = MetricPoint {
+        let success_rate: _ = self.simulate_success_rate();
+        let success_metric: _ = MetricPoint {
             metric_type: MetricType::TaskSuccessRate,
             value: MetricValue::Gauge(success_rate * 100.0),
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
@@ -337,8 +339,8 @@ impl DistributedMetrics {
     /// 收集系统级别指标
     async fn collect_system_metrics(&self) -> Result<(), String> {
         // 系统负载（模拟数据）
-        let load_average = self.simulate_load_average();
-        let load_metric = MetricPoint {
+        let load_average: _ = self.simulate_load_average();
+        let load_metric: _ = MetricPoint {
             metric_type: MetricType::SystemLoadAverage,
             value: MetricValue::Gauge(load_average),
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
@@ -348,8 +350,8 @@ impl DistributedMetrics {
         self.add_metric_point(load_metric).await;
 
         // 内存压力（模拟数据）
-        let memory_pressure = self.simulate_memory_pressure();
-        let pressure_metric = MetricPoint {
+        let memory_pressure: _ = self.simulate_memory_pressure();
+        let pressure_metric: _ = MetricPoint {
             metric_type: MetricType::SystemMemoryPressure,
             value: MetricValue::Gauge(memory_pressure),
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
@@ -374,13 +376,13 @@ impl DistributedMetrics {
 
     /// 更新实时指标
     async fn update_real_time_metrics(&self) -> Result<(), String> {
-        let cluster_topology = self.node_manager.get_cluster_topology().await;
+        let cluster_topology: _ = self.node_manager.get_cluster_topology().await;
 
         let mut node_metrics = HashMap::new();
         for region in cluster_topology.regions.values() {
             for i in 0..region.node_count {
-                let node_id = format!("{}-node-{}", region.location, i);
-                let node_metric = NodeMetrics {
+                let node_id: _ = format!("{}-node-{}", region.location, i);
+                let node_metric: _ = NodeMetrics {
                     node_id: node_id.clone(),
                     cpu_usage: self.simulate_cpu_usage(&node_id),
                     memory_usage: self.simulate_memory_usage(&node_id),
@@ -399,7 +401,7 @@ impl DistributedMetrics {
             }
         }
 
-        let system_metrics = SystemMetrics {
+        let system_metrics: _ = SystemMetrics {
             load_average: self.simulate_load_average(),
             memory_pressure: self.simulate_memory_pressure(),
             network_latency_ms: self.simulate_network_latency(),
@@ -408,7 +410,7 @@ impl DistributedMetrics {
             jit_compilation_time_ms: self.simulate_jit_time(),
         };
 
-        let cluster_summary = ClusterMetricsSummary {
+        let cluster_summary: _ = ClusterMetricsSummary {
             total_nodes: cluster_topology.total_nodes as u32,
             healthy_nodes: cluster_topology.online_nodes as u32,
             total_tasks: 10000,
@@ -420,7 +422,7 @@ impl DistributedMetrics {
             availability: 0.999,
         };
 
-        let real_time = RealTimeMetrics {
+        let real_time: _ = RealTimeMetrics {
             cluster_summary,
             node_metrics,
             system_metrics,
@@ -435,21 +437,21 @@ impl DistributedMetrics {
 
     /// 获取实时指标
     pub async fn get_real_time_metrics(&self) -> Option<RealTimeMetrics> {
-        let metrics = self.real_time_metrics.read().await;
+        let metrics: _ = self.real_time_metrics.read().await;
         metrics.clone()
     }
 
     /// 获取历史指标
     pub async fn get_historical_metrics(&self, metric_type: MetricType) -> Vec<MetricPoint> {
-        let stats = self.historical_stats.read().await;
+        let stats: _ = self.historical_stats.read().await;
         stats.get(&metric_type).cloned().unwrap_or_default()
     }
 
     /// 聚合指标
     async fn aggregate_metrics(&self) -> Result<(), String> {
-        let points = self.metric_points.read().await;
+        let points: _ = self.metric_points.read().await;
 
-        let mut aggregated: HashMap<MetricType, Vec<MetricPoint>> = HashMap::new();
+        let mut aggregated: HashMap<MetricType, Vec<MetricPoint, std::collections::HashMap<MetricType, Vec<MetricPoint, MetricType, Vec<MetricPoint>>> = HashMap::new();
         for point in points.iter() {
             aggregated.entry(point.metric_type.clone())
                 .or_insert_with(Vec::new)
@@ -464,7 +466,7 @@ impl DistributedMetrics {
 
     /// 清理旧指标
     async fn cleanup_old_metrics(&self) -> Result<(), String> {
-        let cutoff = std::time::SystemTime::now()
+        let cutoff: _ = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs()

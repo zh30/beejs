@@ -79,7 +79,7 @@ impl HealthCheck for SimpleHealthCheck {
     }
 
     fn check(&self) -> HealthCheckResult {
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let (status, message) = (self.check_fn)();
         HealthCheckResult {
             name: self.name.clone(),
@@ -101,7 +101,7 @@ impl HealthManager {
     pub fn new() -> Self {
         Self {
             checks: Vec::new(),
-            ready: Arc::new(AtomicBool::new(false)),
+            ready: Arc::new(std::sync::Mutex::new(AtomicBool::new(false))),
         }
     }
 
@@ -138,7 +138,7 @@ impl HealthManager {
             .map(|c| c.check())
             .collect();
 
-        let overall = if results.iter().any(|r| r.status == HealthStatus::Unhealthy) {
+        let overall: _ = if results.iter().any(|r| r.status == HealthStatus::Unhealthy) {
             HealthStatus::Unhealthy
         } else if results.iter().any(|r| r.status == HealthStatus::Degraded) {
             HealthStatus::Degraded
@@ -211,8 +211,8 @@ impl GracefulShutdown {
     pub fn new() -> Self {
         Self {
             phase: ShutdownPhase::Running,
-            active_connections: Arc::new(AtomicU32::new(0)),
-            shutdown_requested: Arc::new(AtomicBool::new(false)),
+            active_connections: Arc::new(std::sync::Mutex::new(AtomicU32::new(0))),
+            shutdown_requested: Arc::new(std::sync::Mutex::new(AtomicBool::new(false))),
             pre_shutdown_hooks: Vec::new(),
             post_shutdown_hooks: Vec::new(),
             drain_timeout: Duration::from_secs(30),
@@ -258,7 +258,7 @@ impl GracefulShutdown {
 
     /// 执行关闭流程
     pub fn execute_shutdown(&mut self) -> ShutdownResult {
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let mut result = ShutdownResult::default();
 
         // Phase 1: PreShutdown hooks
@@ -270,7 +270,7 @@ impl GracefulShutdown {
 
         // Phase 2: Drain connections
         self.phase = ShutdownPhase::DrainConnections;
-        let drain_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let drain_start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         while self.active_connections.load(Ordering::SeqCst) > 0 {
             if drain_start.elapsed().unwrap() > self.drain_timeout {
                 result.drain_timeout_exceeded = true;
@@ -442,13 +442,13 @@ mod tests {
 
     #[test]
     fn test_health_manager_liveness() {
-        let manager = HealthManager::new();
+        let manager: _ = HealthManager::new();
         assert_eq!(manager.liveness(), HealthStatus::Healthy);
     }
 
     #[test]
     fn test_health_manager_readiness() {
-        let manager = HealthManager::new();
+        let manager: _ = HealthManager::new();
 
         // 初始未就绪
         assert_eq!(manager.readiness(), HealthStatus::Unhealthy);
@@ -482,7 +482,7 @@ mod tests {
             (HealthStatus::Healthy, None)
         })));
 
-        let json = manager.health_json();
+        let json: _ = manager.health_json();
         assert!(json.contains(r#""status":"healthy""#));
         assert!(json.contains(r#""name":"test""#));
     }
@@ -504,16 +504,16 @@ mod tests {
 
     #[test]
     fn test_graceful_shutdown_connection_tracking() {
-        let shutdown = GracefulShutdown::new();
+        let shutdown: _ = GracefulShutdown::new();
 
         assert_eq!(shutdown.active_connections(), 0);
 
         {
-            let handle = shutdown.connection_handle();
+            let handle: _ = shutdown.connection_handle();
             handle.acquire();
             assert_eq!(shutdown.active_connections(), 1);
 
-            let _handle2 = handle.clone();
+            let _handle2: _ = handle.clone();
             assert_eq!(shutdown.active_connections(), 2);
         }
 
@@ -525,11 +525,11 @@ mod tests {
     fn test_graceful_shutdown_hooks() {
         use std::sync::atomic::AtomicBool;
 
-        let pre_called = Arc::new(AtomicBool::new(false));
-        let post_called = Arc::new(AtomicBool::new(false));
+        let pre_called: _ = Arc::new(std::sync::Mutex::new(AtomicBool::new(false)));
+        let post_called: _ = Arc::new(std::sync::Mutex::new(AtomicBool::new(false)));
 
-        let pre_called_clone = Arc::clone(&pre_called);
-        let post_called_clone = Arc::clone(&post_called);
+        let pre_called_clone: _ = Arc::clone(pre_called);
+        let post_called_clone: _ = Arc::clone(post_called);
 
         let mut shutdown = GracefulShutdown::new()
             .with_drain_timeout(Duration::from_millis(100));
@@ -542,7 +542,7 @@ mod tests {
             post_called_clone.store(true, Ordering::SeqCst);
         }));
 
-        let result = shutdown.execute_shutdown();
+        let result: _ = shutdown.execute_shutdown();
 
         assert!(result.is_clean());
         assert!(pre_called.load(Ordering::SeqCst));
@@ -555,10 +555,10 @@ mod tests {
             .with_drain_timeout(Duration::from_millis(50));
 
         // 模拟一个持续的连接
-        let handle = shutdown.connection_handle();
+        let handle: _ = shutdown.connection_handle();
         handle.acquire();
 
-        let result = shutdown.execute_shutdown();
+        let result: _ = shutdown.execute_shutdown();
 
         assert!(result.drain_timeout_exceeded);
         assert!(!result.connections_drained);
@@ -577,7 +577,7 @@ mod tests {
         startup.register_hook("database", || Ok(()));
         startup.register_hook("cache", || Ok(()));
 
-        let success = startup.execute();
+        let success: _ = startup.execute();
 
         assert!(success);
         assert_eq!(startup.phase(), StartupPhase::Ready);
@@ -592,7 +592,7 @@ mod tests {
         startup.register_hook("database", || Err("Connection refused".to_string()));
         startup.register_hook("cache", || Ok(())); // 不会执行
 
-        let success = startup.execute();
+        let success: _ = startup.execute();
 
         assert!(!success);
         assert_eq!(startup.phase(), StartupPhase::Failed);
@@ -637,7 +637,7 @@ fn test_stage_28_3_health_integration() {
     assert_eq!(results.len(), 3);
 
     // JSON 输出
-    let json = manager.health_json();
+    let json: _ = manager.health_json();
     assert!(json.contains("v8_engine"));
     assert!(json.contains("module_cache"));
     assert!(json.contains("memory"));
@@ -648,9 +648,11 @@ fn test_stage_28_3_health_integration() {
 #[test]
 fn test_stage_28_3_lifecycle_integration() {
     use std::sync::atomic::AtomicU32;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
-    let cleanup_counter = Arc::new(AtomicU32::new(0));
-    let cleanup_counter_clone = Arc::clone(&cleanup_counter);
+    let cleanup_counter: _ = Arc::new(std::sync::Mutex::new(AtomicU32::new(0)));
+    let cleanup_counter_clone: _ = Arc::clone(cleanup_counter);
 
     let mut startup = StartupManager::new();
     let mut shutdown = GracefulShutdown::new()
@@ -679,13 +681,13 @@ fn test_stage_28_3_lifecycle_integration() {
 
     // 执行启动
     println!("Starting application...");
-    let started = startup.execute();
+    let started: _ = startup.execute();
     assert!(started);
     assert_eq!(startup.phase(), StartupPhase::Ready);
 
     // 模拟运行中状态
     {
-        let handle = shutdown.connection_handle();
+        let handle: _ = shutdown.connection_handle();
         handle.acquire();
         assert_eq!(shutdown.active_connections(), 1);
     } // 连接结束
@@ -693,7 +695,7 @@ fn test_stage_28_3_lifecycle_integration() {
     // 执行关闭
     println!("Shutting down application...");
     shutdown.request_shutdown();
-    let result = shutdown.execute_shutdown();
+    let result: _ = shutdown.execute_shutdown();
 
     assert!(result.is_clean());
     assert!(result.pre_shutdown_completed);
@@ -717,11 +719,11 @@ fn test_stage_28_3_health_performance() {
         )));
     }
 
-    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     for _ in 0..1000 {
-        let _ = manager.health();
+        let _: _ = manager.health();
     }
-    let duration = start.elapsed().unwrap();
+    let duration: _ = start.elapsed().unwrap();
 
     println!("Health Check Performance:");
     println!("  1000 health checks (10 components each): {:?}", duration);

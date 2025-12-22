@@ -234,7 +234,7 @@ pub struct DeployConfig {
 /// 部署配置生成器
 #[derive(Debug)]
 pub struct ConfigGenerator {
-    configs: HashMap<String, DeployConfig>,
+    configs: HashMap<String, DeployConfig, std::collections::HashMap<String, DeployConfig, String, DeployConfig>>,
 }
 
 impl ConfigGenerator {
@@ -327,10 +327,12 @@ services:
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_single_file_bundler_creation() {
-        let config = BundleConfig {
+        let config: _ = BundleConfig {
             target_os: "linux".to_string(),
             target_arch: "x86_64".to_string(),
             output_path: PathBuf::from("/tmp/beejs"),
@@ -338,13 +340,13 @@ mod tests {
             optimize_level: 3,
         };
 
-        let bundler = SingleFileBundler::new(config);
+        let bundler: _ = SingleFileBundler::new(config);
         assert_eq!(bundler.config.optimize_level, 3);
     }
 
     #[test]
     fn test_bundling_process() {
-        let config = BundleConfig {
+        let config: _ = BundleConfig {
             target_os: "linux".to_string(),
             target_arch: "x86_64".to_string(),
             output_path: PathBuf::from("/tmp/beejs"),
@@ -352,13 +354,13 @@ mod tests {
             optimize_level: 3,
         };
 
-        let bundler = SingleFileBundler::new(config);
-        let sources = vec![
+        let bundler: _ = SingleFileBundler::new(config);
+        let sources: _ = vec![
             PathBuf::from("src/main.rs"),
             PathBuf::from("src/lib.rs"),
         ];
 
-        let result = bundler.bundle(sources);
+        let result: _ = bundler.bundle(sources);
 
         assert!(result.success);
         assert!(result.size_bytes > 0);
@@ -366,7 +368,7 @@ mod tests {
 
     #[test]
     fn test_output_validation() {
-        let config = BundleConfig {
+        let config: _ = BundleConfig {
             target_os: "linux".to_string(),
             target_arch: "x86_64".to_string(),
             output_path: PathBuf::from("/tmp/beejs"),
@@ -374,20 +376,20 @@ mod tests {
             optimize_level: 3,
         };
 
-        let bundler = SingleFileBundler::new(config);
+        let bundler: _ = SingleFileBundler::new(config);
         assert!(bundler.validate_output(Path::new("/tmp/beejs")));
     }
 
     #[test]
     fn test_resource_packer_creation() {
-        let packer = ResourcePacker::new();
+        let packer: _ = ResourcePacker::new();
         assert_eq!(packer.resources.len(), 0);
     }
 
     #[test]
     fn test_add_resource() {
         let mut packer = ResourcePacker::new();
-        let resource = EmbeddedResource {
+        let resource: _ = EmbeddedResource {
             name: "index.html".to_string(),
             content: b"<!DOCTYPE html>".to_vec(),
             mime_type: "text/html".to_string(),
@@ -400,14 +402,14 @@ mod tests {
     #[test]
     fn test_get_resource() {
         let mut packer = ResourcePacker::new();
-        let resource = EmbeddedResource {
+        let resource: _ = EmbeddedResource {
             name: "style.css".to_string(),
             content: b"body { color: red; }".to_vec(),
             mime_type: "text/css".to_string(),
         };
 
         packer.add_resource(resource.clone());
-        let retrieved = packer.get_resource("style.css");
+        let retrieved: _ = packer.get_resource("style.css");
 
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().name, "style.css");
@@ -415,14 +417,14 @@ mod tests {
 
     #[test]
     fn test_cross_compiler_creation() {
-        let compiler = CrossCompiler::new();
+        let compiler: _ = CrossCompiler::new();
         assert_eq!(compiler.targets.len(), 2);
     }
 
     #[test]
     fn test_add_cross_compile_target() {
         let mut compiler = CrossCompiler::new();
-        let target = CrossCompileTarget {
+        let target: _ = CrossCompileTarget {
             os: "windows".to_string(),
             arch: "x86_64".to_string(),
             vendor: "pc".to_string(),
@@ -435,8 +437,8 @@ mod tests {
 
     #[test]
     fn test_list_targets() {
-        let compiler = CrossCompiler::new();
-        let targets = compiler.list_targets();
+        let compiler: _ = CrossCompiler::new();
+        let targets: _ = compiler.list_targets();
 
         assert_eq!(targets.len(), 2);
         assert_eq!(targets[0].os, "linux");
@@ -444,8 +446,8 @@ mod tests {
 
     #[test]
     fn test_cross_compilation() {
-        let compiler = CrossCompiler::new();
-        let target = CrossCompileTarget {
+        let compiler: _ = CrossCompiler::new();
+        let target: _ = CrossCompileTarget {
             os: "linux".to_string(),
             arch: "x86_64".to_string(),
             vendor: "unknown".to_string(),
@@ -457,28 +459,28 @@ mod tests {
 
     #[test]
     fn test_docker_builder_creation() {
-        let config = DockerBuildConfig {
+        let config: _ = DockerBuildConfig {
             image_name: "beejs".to_string(),
             tag: "latest".to_string(),
             dockerfile_path: PathBuf::from("Dockerfile"),
             build_context: PathBuf::from("."),
         };
 
-        let builder = DockerBuilder::new(config);
+        let builder: _ = DockerBuilder::new(config);
         assert_eq!(builder.config.image_name, "beejs");
     }
 
     #[test]
     fn test_docker_build() {
-        let config = DockerBuildConfig {
+        let config: _ = DockerBuildConfig {
             image_name: "beejs".to_string(),
             tag: "latest".to_string(),
             dockerfile_path: PathBuf::from("Dockerfile"),
             build_context: PathBuf::from("."),
         };
 
-        let builder = DockerBuilder::new(config);
-        let result = builder.build();
+        let builder: _ = DockerBuilder::new(config);
+        let result: _ = builder.build();
 
         assert!(result.success);
         assert!(!result.image_id.is_empty());
@@ -486,15 +488,15 @@ mod tests {
 
     #[test]
     fn test_dockerfile_generation() {
-        let config = DockerBuildConfig {
+        let config: _ = DockerBuildConfig {
             image_name: "beejs".to_string(),
             tag: "latest".to_string(),
             dockerfile_path: PathBuf::from("Dockerfile"),
             build_context: PathBuf::from("."),
         };
 
-        let builder = DockerBuilder::new(config);
-        let dockerfile = builder.generate_dockerfile();
+        let builder: _ = DockerBuilder::new(config);
+        let dockerfile: _ = builder.generate_dockerfile();
 
         assert!(dockerfile.contains("FROM"));
         assert!(dockerfile.contains("beejs"));
@@ -502,14 +504,14 @@ mod tests {
 
     #[test]
     fn test_config_generator_creation() {
-        let generator = ConfigGenerator::new();
+        let generator: _ = ConfigGenerator::new();
         assert_eq!(generator.configs.len(), 0);
     }
 
     #[test]
     fn test_add_deploy_config() {
         let mut generator = ConfigGenerator::new();
-        let config = DeployConfig {
+        let config: _ = DeployConfig {
             environment: DeployEnvironment::Production,
             replicas: 3,
             cpu_limit: "1000m".to_string(),
@@ -524,7 +526,7 @@ mod tests {
     #[test]
     fn test_generate_kubernetes_config() {
         let mut generator = ConfigGenerator::new();
-        let config = DeployConfig {
+        let config: _ = DeployConfig {
             environment: DeployEnvironment::Production,
             replicas: 3,
             cpu_limit: "1000m".to_string(),
@@ -533,7 +535,7 @@ mod tests {
         };
 
         generator.add_config("production", config);
-        let k8s = generator.generate_kubernetes("production");
+        let k8s: _ = generator.generate_kubernetes("production");
 
         assert!(k8s.contains("apiVersion: apps/v1"));
         assert!(k8s.contains("Deployment"));
@@ -543,7 +545,7 @@ mod tests {
     #[test]
     fn test_generate_docker_compose_config() {
         let mut generator = ConfigGenerator::new();
-        let config = DeployConfig {
+        let config: _ = DeployConfig {
             environment: DeployEnvironment::Development,
             replicas: 1,
             cpu_limit: "500m".to_string(),
@@ -552,7 +554,7 @@ mod tests {
         };
 
         generator.add_config("development", config);
-        let compose = generator.generate_docker_compose("development");
+        let compose: _ = generator.generate_docker_compose("development");
 
         assert!(compose.contains("version: '3.8'"));
         assert!(compose.contains("development"));
@@ -562,7 +564,7 @@ mod tests {
     #[test]
     fn test_stage_28_5_deploy_integration() {
         // 单文件打包
-        let bundle_config = BundleConfig {
+        let bundle_config: _ = BundleConfig {
             target_os: "linux".to_string(),
             target_arch: "x86_64".to_string(),
             output_path: PathBuf::from("/tmp/beejs"),
@@ -570,8 +572,8 @@ mod tests {
             optimize_level: 3,
         };
 
-        let bundler = SingleFileBundler::new(bundle_config);
-        let bundle_result = bundler.bundle(vec![
+        let bundler: _ = SingleFileBundler::new(bundle_config);
+        let bundle_result: _ = bundler.bundle(vec![
             PathBuf::from("src/main.rs"),
         ]);
         assert!(bundle_result.success);
@@ -583,12 +585,12 @@ mod tests {
             content: b"{}".to_vec(),
             mime_type: "application/json".to_string(),
         });
-        let resources = packer.pack();
+        let resources: _ = packer.pack();
         assert_eq!(resources.len(), 1);
 
         // 交叉编译
-        let compiler = CrossCompiler::new();
-        let target = CrossCompileTarget {
+        let compiler: _ = CrossCompiler::new();
+        let target: _ = CrossCompileTarget {
             os: "linux".to_string(),
             arch: "x86_64".to_string(),
             vendor: "unknown".to_string(),
@@ -597,20 +599,20 @@ mod tests {
         assert!(compiler.compile_for(&target).is_ok());
 
         // Docker 构建
-        let docker_config = DockerBuildConfig {
+        let docker_config: _ = DockerBuildConfig {
             image_name: "beejs".to_string(),
             tag: "latest".to_string(),
             dockerfile_path: PathBuf::from("Dockerfile"),
             build_context: PathBuf::from("."),
         };
 
-        let builder = DockerBuilder::new(docker_config);
-        let build_result = builder.build();
+        let builder: _ = DockerBuilder::new(docker_config);
+        let build_result: _ = builder.build();
         assert!(build_result.success);
 
         // 部署配置生成
         let mut generator = ConfigGenerator::new();
-        let deploy_config = DeployConfig {
+        let deploy_config: _ = DeployConfig {
             environment: DeployEnvironment::Production,
             replicas: 2,
             cpu_limit: "1000m".to_string(),
@@ -619,17 +621,17 @@ mod tests {
         };
 
         generator.add_config("prod", deploy_config);
-        let k8s = generator.generate_kubernetes("prod");
+        let k8s: _ = generator.generate_kubernetes("prod");
         assert!(!k8s.is_empty());
     }
 
     #[test]
     fn test_stage_28_5_deploy_performance() {
-        let start = SystemTime::now();
+        let start: _ = SystemTime::now();
 
         // 执行 100 次打包操作
         for i in 0..100 {
-            let config = BundleConfig {
+            let config: _ = BundleConfig {
                 target_os: "linux".to_string(),
                 target_arch: "x86_64".to_string(),
                 output_path: PathBuf::from(format!("/tmp/beejs_{}", i)),
@@ -637,11 +639,11 @@ mod tests {
                 optimize_level: 3,
             };
 
-            let bundler = SingleFileBundler::new(config);
-            let _ = bundler.bundle(vec![PathBuf::from("src/main.rs")]);
+            let bundler: _ = SingleFileBundler::new(config);
+            let _: _ = bundler.bundle(vec![PathBuf::from("src/main.rs")]);
         }
 
-        let duration = start.elapsed().unwrap();
+        let duration: _ = start.elapsed().unwrap();
 
         // 性能要求: 100次打包 < 100ms
         assert!(duration < std::time::Duration::from_millis(100),

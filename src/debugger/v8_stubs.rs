@@ -5,6 +5,8 @@
 //! These will be replaced with actual V8 integrations in the future.
 
 use rusty_v8 as v8;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Stub for V8 DebugEvent
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

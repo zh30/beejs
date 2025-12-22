@@ -3,6 +3,8 @@
 //! 提供动态优化策略、自动调优和机器学习驱动的性能优化能力
 
 use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 代码特征
 #[derive(Debug, Clone)]
@@ -105,7 +107,7 @@ impl AdaptiveOptimizer {
 
     pub fn auto_tune(&self, code: &WasmCode) -> OptimizedCode {
         let mut optimizations = Vec::new();
-        let features = &code.features;
+        let features: _ = &code.features;
 
         if features.vectorization_potential > 0.7 {
             optimizations.push("SIMD Vectorization".to_string());
@@ -119,7 +121,7 @@ impl AdaptiveOptimizer {
             optimizations.push("Branch Prediction".to_string());
         }
 
-        let performance_improvement = optimizations.len() as f64 * 10.0;
+        let performance_improvement: _ = optimizations.len() as f64 * 10.0;
 
         OptimizedCode {
             original_size: code.size_bytes,
@@ -130,7 +132,7 @@ impl AdaptiveOptimizer {
     }
 
     pub fn ml_optimize(&self, features: &CodeFeatures) -> OptimizationHints {
-        let recommended_policy = if features.vectorization_potential > 0.7 {
+        let recommended_policy: _ = if features.vectorization_potential > 0.7 {
             OptimizationPolicy::Performance
         } else if features.memory_access_pattern == "random" {
             OptimizationPolicy::Memory
@@ -151,7 +153,7 @@ impl AdaptiveOptimizer {
     }
 
     pub fn optimize_code(&mut self, code: &WasmCode) -> Result<OptimizedCode, String> {
-        let result = self.auto_tune(code);
+        let result: _ = self.auto_tune(code);
         self.stats.total_optimizations += 1;
         self.stats.successful_optimizations += result.optimization_applied.len() as u64;
         Ok(result)

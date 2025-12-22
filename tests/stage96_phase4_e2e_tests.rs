@@ -17,13 +17,13 @@ mod debugging_flow_tests {
     async fn test_full_debugging_workflow() {
         println!("🔍 开始完整调试工作流程测试...");
 
-        let runtime = Runtime::new().await.unwrap();
-        let debugger_code = r#"
+        let runtime: _ = Runtime::new().await.unwrap();
+        let debugger_code: _ = r#"
             // 模拟调试会话
             function debugSession() {
                 let breakpoints = new Map();
-                let callStack = [];
-                let variables = new Map();
+                let callStack: _ = [];
+                let variables: _ = new Map();
 
                 // 设置断点
                 function setBreakpoint(line, condition = null) {
@@ -174,7 +174,7 @@ mod debugging_flow_tests {
             };
         "#;
 
-        let result = runtime.execute(debugger_code).await.unwrap();
+        let result: _ = runtime.execute(debugger_code).await.unwrap();
         assert!(result.is_object(), "调试会话应该返回对象");
 
         println!("✅ 完整调试工作流程测试通过");
@@ -185,13 +185,13 @@ mod debugging_flow_tests {
     async fn test_remote_debugging_session() {
         println!("🌐 开始远程调试会话测试...");
 
-        let runtime = Runtime::new().await.unwrap();
-        let remote_debugger_code = r#"
+        let runtime: _ = Runtime::new().await.unwrap();
+        let remote_debugger_code: _ = r#"
             // 模拟远程调试服务器
             function remoteDebugger() {
                 const clients = new Map();
                 const sessions = new Map();
-                let messageQueue = [];
+                let messageQueue: _ = [];
 
                 // 添加客户端
                 function addClient(clientId, connectionInfo) {
@@ -368,7 +368,7 @@ mod debugging_flow_tests {
             };
         "#;
 
-        let result = runtime.execute(remote_debugger_code).await.unwrap();
+        let result: _ = runtime.execute(remote_debugger_code).await.unwrap();
         assert!(result.is_object(), "远程调试应该返回对象");
 
         println!("✅ 远程调试会话测试通过");
@@ -385,8 +385,8 @@ mod ai_pipeline_tests {
     async fn test_ai_inference_pipeline() {
         println!("🤖 开始 AI 推理管道测试...");
 
-        let runtime = Runtime::new().await.unwrap();
-        let ai_pipeline_code = r#"
+        let runtime: _ = Runtime::new().await.unwrap();
+        let ai_pipeline_code: _ = r#"
             // 模拟 AI 推理管道
             function aiInferencePipeline() {
                 const pipeline = {
@@ -600,7 +600,7 @@ mod ai_pipeline_tests {
             };
         "#;
 
-        let result = runtime.execute(ai_pipeline_code).await.unwrap();
+        let result: _ = runtime.execute(ai_pipeline_code).await.unwrap();
         assert!(result.is_object(), "AI 管道应该返回对象");
 
         println!("✅ AI 推理管道测试通过");
@@ -611,8 +611,8 @@ mod ai_pipeline_tests {
     async fn test_batch_ai_inference() {
         println!("📦 开始批处理 AI 推理测试...");
 
-        let runtime = Runtime::new().await.unwrap();
-        let batch_inference_code = r#"
+        let runtime: _ = Runtime::new().await.unwrap();
+        let batch_inference_code: _ = r#"
             // 模拟批处理推理
             function batchInference() {
                 const batchConfig = {
@@ -624,8 +624,8 @@ mod ai_pipeline_tests {
 
                 const queue = [];
                 const results = new Map();
-                let currentBatch = [];
-                let batchStartTime = null;
+                let currentBatch: _ = [];
+                let batchStartTime: _ = null;
 
                 // 添加请求到队列
                 function enqueue(requestId, inputData) {
@@ -748,7 +748,7 @@ mod ai_pipeline_tests {
 
             // 添加请求到队列
             const requestCount = 100;
-            for (let i = 0; i < requestCount; i++) {
+            for (let i: _ = 0; i < requestCount; i++) {
                 const dataSize = Math.floor(Math.random() * 10) + 5;
                 const inputData = new Array(dataSize).fill(0).map(() => Math.random() - 0.5);
                 batchProcessor.enqueue(i, inputData);
@@ -776,7 +776,7 @@ mod ai_pipeline_tests {
             };
         "#;
 
-        let result = runtime.execute(batch_inference_code).await.unwrap();
+        let result: _ = runtime.execute(batch_inference_code).await.unwrap();
         assert!(result.is_object(), "批处理推理应该返回对象");
 
         println!("✅ 批处理 AI 推理测试通过");
@@ -793,8 +793,8 @@ mod enterprise_deployment_tests {
     async fn test_kubernetes_deployment() {
         println!("☸️ 开始 Kubernetes 部署测试...");
 
-        let runtime = Runtime::new().await.unwrap();
-        let k8s_deployment_code = r#"
+        let runtime: _ = Runtime::new().await.unwrap();
+        let k8s_deployment_code: _ = r#"
             // 模拟 Kubernetes 部署
             function kubernetesDeployment() {
                 const cluster = {
@@ -867,7 +867,7 @@ mod enterprise_deployment_tests {
 
                     // 为每个副本创建 Pod
                     const pods = [];
-                    for (let i = 0; i < replicaCount; i++) {
+                    for (let i: _ = 0; i < replicaCount; i++) {
                         const podId = `${deploymentId}-pod-${i}`;
                         const podName = `${deploymentId}-${deploymentId}-${Date.now()}-${i}`;
 
@@ -1082,7 +1082,7 @@ mod enterprise_deployment_tests {
             };
         "#;
 
-        let result = runtime.execute(k8s_deployment_code).await.unwrap();
+        let result: _ = runtime.execute(k8s_deployment_code).await.unwrap();
         assert!(result.is_object(), "K8s 部署应该返回对象");
 
         println!("✅ Kubernetes 部署测试通过");
@@ -1099,8 +1099,8 @@ mod performance_monitoring_tests {
     async fn test_real_time_performance_monitoring() {
         println!("📊 开始实时性能监控测试...");
 
-        let runtime = Runtime::new().await.unwrap();
-        let perf_monitor_code = r#"
+        let runtime: _ = Runtime::new().await.unwrap();
+        let perf_monitor_code: _ = r#"
             // 模拟性能监控系统
             function performanceMonitor() {
                 const monitor = {
@@ -1238,7 +1238,7 @@ mod performance_monitoring_tests {
                     for (const alert of monitor.alerts) {
                         if (!alert.enabled) continue;
 
-                        let shouldTrigger = false;
+                        let shouldTrigger: _ = false;
 
                         // CPU 使用率告警
                         if (alert.condition === 'cpu_usage') {
@@ -1376,7 +1376,7 @@ mod performance_monitoring_tests {
             });
 
             // 收集指标
-            for (let i = 0; i < 10; i++) {
+            for (let i: _ = 0; i < 10; i++) {
                 monitor.collectCpuMetrics();
                 monitor.collectMemoryMetrics();
                 monitor.collectNetworkMetrics();
@@ -1404,7 +1404,7 @@ mod performance_monitoring_tests {
             };
         "#;
 
-        let result = runtime.execute(perf_monitor_code).await.unwrap();
+        let result: _ = runtime.execute(perf_monitor_code).await.unwrap();
         assert!(result.is_object(), "性能监控应该返回对象");
 
         println!("✅ 实时性能监控测试通过");
@@ -1415,14 +1415,16 @@ mod performance_monitoring_tests {
 #[cfg(test)]
 mod integration_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试综合端到端场景
     #[tokio::test]
     async fn test_comprehensive_e2e_scenario() {
         println!("🔄 开始综合端到端场景测试...");
 
-        let runtime = Runtime::new().await.unwrap();
-        let comprehensive_code = r#"
+        let runtime: _ = Runtime::new().await.unwrap();
+        let comprehensive_code: _ = r#"
             // 综合端到端测试场景
             function comprehensiveE2ETest() {
                 const results = {
@@ -1522,15 +1524,15 @@ mod integration_tests {
                     };
 
                     // 执行多个脚本
-                    for (let i = 0; i < 5; i++) {
+                    for (let i: _ = 0; i < 5; i++) {
                         try {
                             const script = {
                                 id: i,
                                 name: `script_${i}.js`,
                                 code: `
                                     // 模拟脚本执行
-                                    let result = 0;
-                                    for (let i = 0; i < 1000; i++) {
+                                    let result: _ = 0;
+                                    for (let i: _ = 0; i < 1000; i++) {
                                         result += Math.sqrt(i) * Math.log(i + 1);
                                     }
                                     result;
@@ -1653,7 +1655,7 @@ mod integration_tests {
             return testResult;
         "#;
 
-        let result = runtime.execute(comprehensive_code).await.unwrap();
+        let result: _ = runtime.execute(comprehensive_code).await.unwrap();
         assert!(result.is_object(), "综合测试应该返回对象");
 
         println!("✅ 综合端到端场景测试通过");

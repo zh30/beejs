@@ -213,13 +213,13 @@ impl IntelligentScheduler {
 
         Self {
             config: config.clone(),
-            ai_engine: Arc::new(AiPerformanceEngine::new(ai_config)),
-            task_queue: Arc::new(RwLock::new(VecDeque::with_capacity(config.max_queue_length))),
-            workers: Arc::new(RwLock::new(workers)),
-            decision_history: Arc::new(RwLock::new(VecDeque::with_capacity(config.prediction_window))),
+            ai_engine: Arc::new(std::sync::Mutex::new(AiPerformanceEngine::new(ai_config))),
+            task_queue: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::with_capacity(config.max_queue_length)))),
+            workers: Arc::new(std::sync::Mutex::new(RwLock::new(workers))),
+            decision_history: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::with_capacity(config.prediction_window)))),
             task_completion_tx,
-            task_completion_rx: Arc::new(Mutex::new(task_completion_rx)),
-            stats: Arc::new(Mutex::new(SchedulerStats::default())),
+            task_completion_rx: Arc::new(std::sync::Mutex::new(Mutex::new(task_completion_rx))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(SchedulerStats::default()))),
         }
     }
 
@@ -250,7 +250,7 @@ impl IntelligentScheduler {
         }
 
         // 使用 AI 预测最佳调度策略
-        let ai_prediction = self.ai_engine.predict_performance().await.unwrap_or_else(|_| {
+        let ai_prediction: _ = self.ai_engine.predict_performance().await.unwrap_or_else(|_| {
             // 如果预测失败，使用默认预测
             crate::ai::ai_performance_engine::PerformancePrediction {
                 predicted_execution_time: 100.0,
@@ -269,7 +269,7 @@ impl IntelligentScheduler {
         for task in tasks {
             if let Some(worker_idx) = self.select_best_worker(&workers, &task, &ai_prediction).await {
                 // 分配任务
-                let decision = self.create_scheduling_decision(&task, worker_idx, &workers[worker_idx]);
+                let decision: _ = self.create_scheduling_decision(&task, worker_idx, &workers[worker_idx]);
 
                 // 更新工作线程状态
                 workers[worker_idx].current_load += self.calculate_task_load(&task);
@@ -294,12 +294,12 @@ impl IntelligentScheduler {
                 println!("任务 {} 已调度到工作线程 {}", task.id, worker_idx);
 
                 // 模拟异步任务执行
-                let completion_tx = self.task_completion_tx.clone();
-                let worker_id = worker_idx;
-                let task_id = task.id.clone();
+                let completion_tx: _ = self.task_completion_tx.clone();
+                let worker_id: _ = worker_idx;
+                let task_id: _ = task.id.clone();
                 tokio::spawn(async move {
                     tokio::time::sleep(Duration::from_millis(task.estimated_duration)).await;
-                    let _ = completion_tx.send((task_id, Ok(())));
+                    let _: _ = completion_tx.send((task_id, Ok(())));
                 });
             } else {
                 // 没有合适的工作线程，重新放回队列
@@ -320,10 +320,10 @@ impl IntelligentScheduler {
 
         for (idx, worker) in workers.iter().enumerate() {
             // 计算负载分数
-            let load_score = 1.0 - worker.current_load;
+            let load_score: _ = 1.0 - worker.current_load;
 
             // 计算资源匹配分数
-            let resource_score = match task.task_type {
+            let resource_score: _ = match task.task_type {
                 TaskType::CpuIntensive => 1.0 - (worker.cpu_usage / 100.0),
                 TaskType::MemoryIntensive => 1.0 - (worker.memory_usage / 1000.0),
                 TaskType::IoIntensive => 0.8, // I/O 密集型任务对资源要求较低
@@ -332,10 +332,10 @@ impl IntelligentScheduler {
             };
 
             // AI 预测影响
-            let ai_score = ai_prediction.confidence;
+            let ai_score: _ = ai_prediction.confidence;
 
             // 综合评分
-            let score = load_score * 0.4 + resource_score * 0.4 + ai_score * 0.2;
+            let score: _ = load_score * 0.4 + resource_score * 0.4 + ai_score * 0.2;
 
             if score > best_score {
                 best_score = score;
@@ -362,9 +362,9 @@ impl IntelligentScheduler {
         worker_idx: usize,
         worker: &WorkerState,
     ) -> SchedulingDecision {
-        let now = chrono::Utc::now().timestamp() as u64;
-        let estimated_start_time = now;
-        let estimated_completion_time = now + task.estimated_duration as u64;
+        let now: _ = chrono::Utc::now().timestamp() as u64;
+        let estimated_start_time: _ = now;
+        let estimated_completion_time: _ = now + task.estimated_duration as u64;
 
         SchedulingDecision {
             task_id: task.id.clone(),
@@ -420,11 +420,11 @@ impl IntelligentScheduler {
 
     /// 自动扩缩容
     pub async fn auto_scaling(&self) {
-        let workers = self.workers.read().await;
-        let queue = self.task_queue.read().await;
+        let workers: _ = self.workers.read().await;
+        let queue: _ = self.task_queue.read().await;
 
         let avg_load: f64 = workers.iter().map(|w| w.current_load).sum::<f64>() / workers.len() as f64;
-        let queue_ratio = queue.len() as f64 / self.config.max_queue_length as f64;
+        let queue_ratio: _ = queue.len() as f64 / self.config.max_queue_length as f64;
 
         drop(workers);
         drop(queue);
@@ -441,20 +441,20 @@ impl IntelligentScheduler {
 
     /// 判断是否可以扩容
     async fn should_scale_up(&self) -> bool {
-        let workers = self.workers.read().await;
+        let workers: _ = self.workers.read().await;
         workers.len() < self.config.max_workers
     }
 
     /// 判断是否可以缩容
     async fn should_scale_down(&self) -> bool {
-        let workers = self.workers.read().await;
+        let workers: _ = self.workers.read().await;
         workers.len() > self.config.min_workers
     }
 
     /// 扩容
     async fn scale_up(&self) {
         let mut workers = self.workers.write().await;
-        let new_worker_id = workers.len();
+        let new_worker_id: _ = workers.len();
 
         workers.push(WorkerState {
             id: new_worker_id,
@@ -479,7 +479,7 @@ impl IntelligentScheduler {
         let mut workers = self.workers.write().await;
 
         // 找到负载最低的工作线程
-        let min_load_idx = workers
+        let min_load_idx: _ = workers
             .iter()
             .enumerate()
             .min_by(|(_, a), (_, b)| a.current_load.partial_cmp(&b.current_load).unwrap())
@@ -503,28 +503,28 @@ impl IntelligentScheduler {
 
     /// 获取队列长度
     pub async fn get_queue_length(&self) -> usize {
-        let queue = self.task_queue.read().await;
+        let queue: _ = self.task_queue.read().await;
         queue.len()
     }
 
     /// 获取工作线程数量
     pub async fn get_worker_count(&self) -> usize {
-        let workers = self.workers.read().await;
+        let workers: _ = self.workers.read().await;
         workers.len()
     }
 
     /// 启动调度器后台任务
     pub fn start_background_tasks(self: Arc<Self>) {
         // TODO: 修复异步任务的 Send 问题
-        let _self_clone = Arc::clone(&self);
+        let _self_clone: _ = Arc::clone(self);
 
         // tokio::spawn(async move {
-        //     let scheduler1 = Arc::clone(&scheduler);
-        //     let scheduler2 = Arc::clone(&scheduler);
+        //     let scheduler1: _ = Arc::clone(scheduler);
+        //     let scheduler2: _ = Arc::clone(scheduler);
 
         //     // 任务完成处理
         //     tokio::spawn(async move {
-        //         let scheduler = Arc::clone(&scheduler1);
+        //         let scheduler: _ = Arc::clone(scheduler1);
         //         loop {
         //             scheduler.process_task_completions().await;
         //             tokio::time::sleep(Duration::from_millis(100)).await;
@@ -533,7 +533,7 @@ impl IntelligentScheduler {
 
         //     // 自动扩缩容
         //     tokio::spawn(async move {
-        //         let scheduler = Arc::clone(&scheduler2);
+        //         let scheduler: _ = Arc::clone(scheduler2);
         //         loop {
         //             scheduler.auto_scaling().await;
         //             tokio::time::sleep(Duration::from_millis(scheduler.config.auto_scaling_interval_ms)).await;
@@ -546,15 +546,17 @@ impl IntelligentScheduler {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_submit_and_schedule_task() {
-        let config = IntelligentSchedulerConfig::default();
-        let ai_config = AiPerformanceEngineConfig::default();
-        let scheduler = Arc::new(IntelligentScheduler::new(config, ai_config));
+        let config: _ = IntelligentSchedulerConfig::default();
+        let ai_config: _ = AiPerformanceEngineConfig::default();
+        let scheduler: _ = Arc::new(std::sync::Mutex::new(IntelligentScheduler::new(config, ai_config)));
 
         // 提交任务
-        let task = Task {
+        let task: _ = Task {
             id: "task-1".to_string(),
             task_type: TaskType::CpuIntensive,
             estimated_duration: 100,
@@ -572,18 +574,18 @@ mod tests {
         scheduler.submit_task(task).await.unwrap();
 
         // 检查队列长度
-        let queue_length = scheduler.get_queue_length().await;
+        let queue_length: _ = scheduler.get_queue_length().await;
         assert!(queue_length > 0);
 
         // 启动后台任务 (克隆一个引用)
-        let scheduler_clone = Arc::clone(&scheduler);
+        let scheduler_clone: _ = Arc::clone(scheduler);
         scheduler_clone.start_background_tasks();
 
         // 等待任务完成
         tokio::time::sleep(Duration::from_millis(200)).await;
 
         // 检查统计
-        let stats = scheduler.get_stats();
+        let stats: _ = scheduler.get_stats();
         println!("调度统计: {:?}", stats);
     }
 }

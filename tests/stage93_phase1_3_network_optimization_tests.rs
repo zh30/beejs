@@ -14,6 +14,8 @@ use std::collections::HashMap;
 #[cfg(test)]
 mod network_optimization_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试智能预取功能
     #[tokio::test]

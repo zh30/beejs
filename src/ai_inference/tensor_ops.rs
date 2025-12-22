@@ -181,7 +181,7 @@ impl Tensor {
             return Err(anyhow::anyhow!("softmax requires 1D tensor"));
         }
 
-        let max_val = self.data.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
+        let max_val: _ = self.data.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
         let exp_sum: f32 = self.data.iter()
             .map(|&x| (x - max_val).exp())
             .sum();
@@ -213,8 +213,8 @@ impl Tensor {
             self.shape[3],
         );
 
-        let out_height = (height - kernel_size) / stride + 1;
-        let out_width = (width - kernel_size) / stride + 1;
+        let out_height: _ = (height - kernel_size) / stride + 1;
+        let out_width: _ = (width - kernel_size) / stride + 1;
 
         let mut result = Vec::new();
         result.resize(batch * channels * out_height * out_width, 0.0);
@@ -226,13 +226,13 @@ impl Tensor {
                         let mut sum = 0.0;
                         for kh in 0..kernel_size {
                             for kw in 0..kernel_size {
-                                let h = oh * stride + kh;
-                                let w = ow * stride + kw;
-                                let input_idx = ((b * channels + c) * height + h) * width + w;
+                                let h: _ = oh * stride + kh;
+                                let w: _ = ow * stride + kw;
+                                let input_idx: _ = ((b * channels + c) * height + h) * width + w;
                                 sum += self.data[input_idx];
                             }
                         }
-                        let output_idx = ((b * channels + c) * out_height + oh) * out_width + ow;
+                        let output_idx: _ = ((b * channels + c) * out_height + oh) * out_width + ow;
                         result[output_idx] = sum / (kernel_size * kernel_size) as f32;
                     }
                 }
@@ -250,7 +250,7 @@ impl Tensor {
     /// 转换为 PyTorch 张量
     #[cfg(feature = "tch")]
     pub fn to_tch_tensor(&self, device: &tch::Device) -> Result<tch::Tensor> {
-        let tensor = tch::Tensor::from(&self.data[..])
+        let tensor: _ = tch::Tensor::from(&self.data[..])
             .reshape(self.shape.as_slice())
             .to_device(device);
         Ok(tensor)
@@ -300,20 +300,22 @@ impl TensorOps {
     /// 创建零张量
     pub fn zeros(shape: Vec<usize>) -> Result<Tensor> {
         let size: usize = shape.iter().product();
-        let data = vec![0.0; size];
+        let data: _ = vec![0.0; size];
         Tensor::new(data, shape)
     }
 
     /// 创建一张量
     pub fn ones(shape: Vec<usize>) -> Result<Tensor> {
         let size: usize = shape.iter().product();
-        let data = vec![1.0; size];
+        let data: _ = vec![1.0; size];
         Tensor::new(data, shape)
     }
 
     /// 创建随机张量
     pub fn random(shape: Vec<usize>) -> Result<Tensor> {
         use rand::Rng;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
         let size: usize = shape.iter().product();
         let mut rng = rand::thread_rng();
         let data: Vec<f32> = (0..size).map(|_| rng.gen::<f32>()).collect();
@@ -335,8 +337,8 @@ impl TensorOps {
             return Err(anyhow::anyhow!("Cannot concat empty tensors"));
         }
 
-        let first_shape = &tensors[0].shape;
-        let ndim = first_shape.len();
+        let first_shape: _ = &tensors[0].shape;
+        let ndim: _ = first_shape.len();
 
         if axis >= ndim {
             return Err(anyhow::anyhow!("Axis out of bounds"));
@@ -373,13 +375,13 @@ impl TensorOps {
 
     /// 分割张量
     pub fn split(tensor: &Tensor, sections: Vec<usize>, axis: usize) -> Result<Vec<Tensor>> {
-        let ndim = tensor.ndim();
+        let ndim: _ = tensor.ndim();
 
         if axis >= ndim {
             return Err(anyhow::anyhow!("Axis out of bounds"));
         }
 
-        let total_size = tensor.shape[axis];
+        let total_size: _ = tensor.shape[axis];
         let sum_sections: usize = sections.iter().sum();
 
         if sum_sections != total_size {
@@ -389,8 +391,8 @@ impl TensorOps {
             ));
         }
 
-        let result = Vec::new();
-        let _start = 0;
+        let result: _ = Vec::new();
+        let _start: _ = 0;
 
         for &section_size in &sections {
             // 这里需要实现复杂的切片逻辑

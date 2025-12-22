@@ -59,7 +59,7 @@ pub struct ProcessPoolConfig {
 
 impl Default for ProcessPoolConfig {
     fn default() -> Self {
-        let cpu_count = num_cpus::get();
+        let cpu_count: _ = num_cpus::get();
         Self {
             max_workers: std::cmp::min(MAX_POOL_SIZE, cpu_count),
             initial_workers: std::cmp::min(DEFAULT_POOL_SIZE, cpu_count),
@@ -148,7 +148,7 @@ impl WorkerMetrics {
         }
 
         // Update average using exponential moving average
-        let alpha = 0.1; // Smoothing factor
+        let alpha: _ = 0.1; // Smoothing factor
         self.avg_execution_time = self.avg_execution_time.mul_f64(1.0 - alpha) + execution_time.mul_f64(alpha);
 
         // Update success rate
@@ -162,9 +162,9 @@ impl WorkerMetrics {
 
         // Calculate scheduling score (lower is better)
         // Factors: average execution time, success rate, task count
-        let time_factor = self.avg_execution_time.as_millis() as f64 / 100.0; // Normalize to 100ms units
-        let reliability_factor = 1.0 / self.success_rate; // Lower is better (inverse of success rate)
-        let experience_factor = (self.task_count as f64 / 1000.0).min(2.0); // Cap at 2x for experience
+        let time_factor: _ = self.avg_execution_time.as_millis() as f64 / 100.0; // Normalize to 100ms units
+        let reliability_factor: _ = 1.0 / self.success_rate; // Lower is better (inverse of success rate)
+        let experience_factor: _ = (self.task_count as f64 / 1000.0).min(2.0); // Cap at 2x for experience
 
         self.scheduling_score = time_factor * reliability_factor * experience_factor;
         self.last_used = Instant::now();
@@ -201,12 +201,12 @@ pub enum TaskComplexity {
 impl TaskComplexity {
     /// Determine task complexity from script
     pub fn from_script(script: &str) -> Self {
-        let len = script.len();
-        let has_loops = script.contains("for") || script.contains("while");
-        let has_conditions = script.contains("if") || script.contains("else");
-        let has_functions = script.contains("function") || script.contains("=>");
+        let len: _ = script.len();
+        let has_loops: _ = script.contains("for") || script.contains("while");
+        let has_conditions: _ = script.contains("if") || script.contains("else");
+        let has_functions: _ = script.contains("function") || script.contains("=>");
 
-        let complexity_score = len / 100 + if has_loops { 2 } else { 0 } +
+        let complexity_score: _ = len / 100 + if has_loops { 2 } else { 0 } +
                               if has_conditions { 1 } else { 0 } + if has_functions { 1 } else { 0 };
 
         match complexity_score {
@@ -237,7 +237,7 @@ pub struct ProcessPoolStats {
     /// Worker utilization percentage
     pub worker_utilization_percent: f64,
     /// Worker metrics for intelligent scheduling
-    pub worker_metrics: HashMap<u32, WorkerMetrics>,
+    pub worker_metrics: HashMap<u32, WorkerMetrics, std::collections::HashMap<u32, WorkerMetrics, u32, WorkerMetrics>>,
 }
 
 impl Default for ProcessPoolStats {
@@ -262,7 +262,7 @@ impl Default for ProcessPoolStats {
 /// The main Process Pool manager
 pub struct ProcessPool {
     config: ProcessPoolConfig,
-    workers: Arc<Mutex<HashMap<u32, WorkerInfo>>>,
+    workers: Arc<Mutex<HashMap<u32, WorkerInfo, std::collections::HashMap<u32, WorkerInfo, u32, WorkerInfo>>>>,
     available_workers: Arc<Mutex<Vec<u32>>>,
     stats: Arc<Mutex<ProcessPoolStats>>,
     worker_counter: AtomicUsize,
@@ -273,22 +273,22 @@ pub struct ProcessPool {
     last_scale_operation: Arc<Mutex<Instant>>,
     /// Worker idle time tracking
     #[allow(dead_code)]
-    worker_idle_times: Arc<Mutex<HashMap<u32, Instant>>>, // Reserved for future idle tracking
+    worker_idle_times: Arc<Mutex<HashMap<u32, Instant, std::collections::HashMap<u32, Instant, u32, Instant>>>>, // Reserved for future idle tracking
 }
 
 impl ProcessPool {
     /// Create a new process pool with the given configuration
     pub fn new(config: ProcessPoolConfig) -> Result<Self> {
-        let pool = Self {
+        let pool: _ = Self {
             config: config.clone(),
-            workers: Arc::new(Mutex::new(HashMap::new())),
-            available_workers: Arc::new(Mutex::new(Vec::new())),
-            stats: Arc::new(Mutex::new(ProcessPoolStats::default())),
+            workers: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            available_workers: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(ProcessPoolStats::default()))),
             worker_counter: AtomicUsize::new(0),
-            shutdown: Arc::new(AtomicBool::new(false)),
-            task_queue: Arc::new(Mutex::new(Vec::new())),
-            last_scale_operation: Arc::new(Mutex::new(Instant::now())),
-            worker_idle_times: Arc::new(Mutex::new(HashMap::new())),
+            shutdown: Arc::new(std::sync::Mutex::new(AtomicBool::new(false))),
+            task_queue: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            last_scale_operation: Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now()))),
+            worker_idle_times: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
         };
 
         // Workers are initialized lazily on first use to avoid async complexity
@@ -298,7 +298,7 @@ impl ProcessPool {
 
     /// Lazy initialization - spawn workers on first use
     fn ensure_initialized(&self) -> Result<()> {
-        let workers_count = {
+        let workers_count: _ = {
             let workers = self.workers.lock().unwrap();
             workers.len()
         };
@@ -306,7 +306,7 @@ impl ProcessPool {
         if workers_count == 0 && self.config.enabled {
             // Spawn initial workers synchronously
             for i in 0..self.config.initial_workers {
-                let _ = self.spawn_worker_blocking(i)?;
+                let _: _ = self.spawn_worker_blocking(i)?;
             }
         }
 
@@ -315,17 +315,17 @@ impl ProcessPool {
 
     /// Spawn worker synchronously (blocking version for initialization)
     fn spawn_worker_blocking(&self, worker_id: usize) -> Result<u32> {
-        let socket_path = format!("{}{}", SOCKET_PATH_PREFIX, worker_id);
+        let socket_path: _ = format!("{}{}", SOCKET_PATH_PREFIX, worker_id);
 
         // Remove old socket if exists
-        let _ = std::fs::remove_file(&socket_path);
+        let _: _ = std::fs::remove_file(&socket_path);
 
         // Create Unix domain socket for IPC
-        let _listener = UnixListener::bind(&socket_path)
+        let _listener: _ = UnixListener::bind(&socket_path)
             .context("Failed to create Unix socket")?;
 
-        let pid = self.worker_counter.fetch_add(1, Ordering::SeqCst) as u32;
-        let worker_info = WorkerInfo {
+        let pid: _ = self.worker_counter.fetch_add(1, Ordering::SeqCst) as u32;
+        let worker_info: _ = WorkerInfo {
             pid,
             state: WorkerState::Starting,
             socket_path: socket_path.clone(),
@@ -341,8 +341,8 @@ impl ProcessPool {
         }
 
         // Spawn the worker process
-        let worker_stdout = Stdio::null();
-        let worker_stderr = Stdio::null();
+        let worker_stdout: _ = Stdio::null();
+        let worker_stderr: _ = Stdio::null();
 
         let mut child = Command::new(std::env::current_exe()?)
             .arg("--worker-mode")
@@ -355,11 +355,11 @@ impl ProcessPool {
             .spawn()
             .context("Failed to spawn worker process")?;
 
-        let child_pid = child.id();
+        let child_pid: _ = child.id();
 
         // Wait for worker to signal readiness synchronously
-        let max_wait = std::time::Duration::from_millis(self.config.init_timeout_ms);
-        let wait_start = Instant::now();
+        let max_wait: _ = std::time::Duration::from_millis(self.config.init_timeout_ms);
+        let wait_start: _ = Instant::now();
 
         while wait_start.elapsed() < max_wait {
             // Check if worker has written the ready message
@@ -405,7 +405,7 @@ impl ProcessPool {
     /// Initialize worker processes (async to allow proper async/await)
     #[allow(dead_code)]
     async fn initialize_workers(&self) -> Result<()> {
-        let initial = self.config.initial_workers;
+        let initial: _ = self.config.initial_workers;
 
         println!("[ProcessPool] Initializing {} worker processes...", initial);
 
@@ -444,7 +444,7 @@ impl ProcessPool {
         // Lazy initialization on first use
         self.ensure_initialized()?;
 
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // Add to task queue for monitoring
         {
@@ -462,20 +462,20 @@ impl ProcessPool {
         }
 
         // Get an available worker
-        let worker_pid = self.acquire_worker().await
+        let worker_pid: _ = self.acquire_worker().await
             .context("No available workers")?;
 
-        let wait_time = start.elapsed();
-        let task_start = Instant::now();
+        let wait_time: _ = start.elapsed();
+        let task_start: _ = Instant::now();
 
         // Determine task complexity for intelligent scheduling
-        let _task_complexity = TaskComplexity::from_script(script);
+        let _task_complexity: _ = TaskComplexity::from_script(script);
 
-        let result = self.execute_on_worker(worker_pid, script).await;
+        let result: _ = self.execute_on_worker(worker_pid, script).await;
 
         // Update worker metrics after execution
-        let execution_time = task_start.elapsed();
-        let success = result.is_ok();
+        let execution_time: _ = task_start.elapsed();
+        let success: _ = result.is_ok();
         self.update_worker_metrics(worker_pid, execution_time, success);
 
         // Release the worker
@@ -494,14 +494,14 @@ impl ProcessPool {
         {
             let mut stats = self.stats.lock().unwrap();
             stats.total_executions += 1;
-            let elapsed = start.elapsed();
-            let avg_time = stats.avg_execution_time_ms;
+            let elapsed: _ = start.elapsed();
+            let avg_time: _ = stats.avg_execution_time_ms;
             stats.avg_execution_time_ms = avg_time * 0.9 + elapsed.as_millis() as f64 * 0.1;
-            let avg_wait = stats.avg_wait_time_ms;
+            let avg_wait: _ = stats.avg_wait_time_ms;
             stats.avg_wait_time_ms = avg_wait * 0.9 + wait_time.as_millis() as f64 * 0.1;
 
             // Update worker utilization
-            let total_workers = stats.total_workers;
+            let total_workers: _ = stats.total_workers;
             if total_workers > 0 {
                 stats.worker_utilization_percent = (stats.busy_workers as f64 / total_workers as f64) * 100.0;
             }
@@ -517,11 +517,11 @@ impl ProcessPool {
 
     /// Acquire an available worker process using intelligent scheduling
     async fn acquire_worker(&self) -> Option<u32> {
-        let available = self.available_workers.lock().unwrap();
+        let available: _ = self.available_workers.lock().unwrap();
 
         if available.is_empty() {
             // No ready workers, try to spawn a new one
-            let workers_count = self.workers.lock().unwrap().len();
+            let workers_count: _ = self.workers.lock().unwrap().len();
             drop(available);
 
             if workers_count < self.config.max_workers {
@@ -533,7 +533,7 @@ impl ProcessPool {
         }
 
         // Intelligent worker selection
-        let task_complexity = TaskComplexity::Simple; // Default for now, will be updated based on actual task
+        let task_complexity: _ = TaskComplexity::Simple; // Default for now, will be updated based on actual task
         self.select_optimal_worker(&available, task_complexity)
     }
 
@@ -543,8 +543,8 @@ impl ProcessPool {
             return None;
         }
 
-        let workers = self.workers.lock().unwrap();
-        let stats = self.stats.lock().unwrap();
+        let workers: _ = self.workers.lock().unwrap();
+        let stats: _ = self.stats.lock().unwrap();
 
         // Collect worker metrics
         let mut worker_candidates: Vec<(u32, f64)> = Vec::new();
@@ -553,7 +553,7 @@ impl ProcessPool {
             if let Some(worker) = workers.get(&pid) {
                 if worker.state == WorkerState::Ready {
                     // Get or create worker metrics
-                    let metrics = stats.worker_metrics.get(&pid)
+                    let metrics: _ = stats.worker_metrics.get(&pid)
                         .cloned()
                         .unwrap_or_else(|| WorkerMetrics {
                             worker_id: pid,
@@ -561,7 +561,7 @@ impl ProcessPool {
                         });
 
                     // Calculate score based on task complexity
-                    let score = metrics.get_score_for_task_type(task_complexity);
+                    let score: _ = metrics.get_score_for_task_type(task_complexity);
                     worker_candidates.push((pid, score));
                 }
             }
@@ -578,8 +578,8 @@ impl ProcessPool {
         worker_candidates.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
 
         // Apply load balancing: randomly select from top 3 workers to avoid always picking the same one
-        let top_k = std::cmp::min(3, worker_candidates.len());
-        let selected_index = if top_k > 1 {
+        let top_k: _ = std::cmp::min(3, worker_candidates.len());
+        let selected_index: _ = if top_k > 1 {
             use std::collections::hash_map::DefaultHasher;
             use std::hash::{Hash, Hasher};
             let mut hasher = DefaultHasher::new();
@@ -596,7 +596,7 @@ impl ProcessPool {
     pub fn update_worker_metrics(&self, worker_pid: u32, execution_time: Duration, success: bool) {
         let mut stats = self.stats.lock().unwrap();
 
-        let metrics = stats.worker_metrics.entry(worker_pid).or_insert_with(|| WorkerMetrics {
+        let metrics: _ = stats.worker_metrics.entry(worker_pid).or_insert_with(|| WorkerMetrics {
             worker_id: worker_pid,
             ..Default::default()
         });
@@ -605,8 +605,8 @@ impl ProcessPool {
     }
 
     /// Get worker metrics for debugging/analysis
-    pub fn get_worker_metrics(&self) -> HashMap<u32, WorkerMetrics> {
-        let stats = self.stats.lock().unwrap();
+    pub fn get_worker_metrics(&self) -> HashMap<u32, WorkerMetrics, std::collections::HashMap<u32, WorkerMetrics, u32, WorkerMetrics>> {
+        let stats: _ = self.stats.lock().unwrap();
         stats.worker_metrics.clone()
     }
 
@@ -628,7 +628,7 @@ impl ProcessPool {
 
     /// Execute script on a specific worker process
     async fn execute_on_worker(&self, worker_pid: u32, script: &str) -> Result<String> {
-        let socket_path = {
+        let socket_path: _ = {
             let workers = self.workers.lock().unwrap();
             workers.get(&worker_pid)
                 .map(|w| w.socket_path.clone())
@@ -668,10 +668,10 @@ impl ProcessPool {
     /// Get process pool statistics
     pub fn get_stats(&self) -> ProcessPoolStats {
         // Ensure initialization for accurate stats
-        let _ = self.ensure_initialized();
+        let _: _ = self.ensure_initialized();
 
-        let stats = self.stats.lock().unwrap().clone();
-        let workers = self.workers.lock().unwrap();
+        let stats: _ = self.stats.lock().unwrap().clone();
+        let workers: _ = self.workers.lock().unwrap();
 
         ProcessPoolStats {
             total_workers: workers.len(),
@@ -695,23 +695,23 @@ impl ProcessPool {
         let avg_wait_time;
 
         {
-            let stats = self.stats.lock().unwrap();
+            let stats: _ = self.stats.lock().unwrap();
             queue_length = stats.current_queue_length;
             avg_wait_time = stats.avg_wait_time_ms;
         }
 
-        let should_scale_up = queue_length >= self.config.scale_up_threshold
+        let should_scale_up: _ = queue_length >= self.config.scale_up_threshold
             || avg_wait_time >= self.config.scale_up_latency_ms as f64;
 
         if should_scale_up {
-            let current_workers = {
+            let current_workers: _ = {
                 let workers = self.workers.lock().unwrap();
                 workers.len()
             };
 
             if current_workers < self.config.max_workers {
                 // Prevent rapid scaling
-                let last_scale = *self.last_scale_operation.lock().unwrap();
+                let last_scale: _ = *self.last_scale_operation.lock().unwrap();
                 if last_scale.elapsed().as_secs() >= 2 {
                     self.scale_up().await;
                 }
@@ -727,13 +727,13 @@ impl ProcessPool {
         let all_idle;
 
         {
-            let workers = self.workers.lock().unwrap();
-            current_workers = workers.len();
+            let workers: _ = self.workers.lock().unwrap();
+            current_workers = workers.clone();len();
             queue_length = self.stats.lock().unwrap().current_queue_length;
             utilization = self.stats.lock().unwrap().worker_utilization_percent;
 
             // Check if workers have been idle
-            let idle_threshold = std::time::Duration::from_secs(self.config.scale_down_idle_seconds);
+            let idle_threshold: _ = std::time::Duration::from_secs(self.config.scale_down_idle_seconds);
             all_idle = workers.values().all(|w| w.last_used.elapsed() >= idle_threshold);
         }
 
@@ -743,7 +743,7 @@ impl ProcessPool {
             && all_idle
             && current_workers > self.config.min_workers
         {
-            let last_scale = *self.last_scale_operation.lock().unwrap();
+            let last_scale: _ = *self.last_scale_operation.lock().unwrap();
             if last_scale.elapsed().as_secs() >= 10 {
                 self.scale_down().await;
             }
@@ -752,12 +752,12 @@ impl ProcessPool {
 
     /// Scale up the process pool
     async fn scale_up(&self) {
-        let current_workers = {
+        let current_workers: _ = {
             let workers = self.workers.lock().unwrap();
             workers.len()
         };
 
-        let workers_to_add = std::cmp::min(
+        let workers_to_add: _ = std::cmp::min(
             self.config.scale_up_step,
             self.config.max_workers - current_workers
         );
@@ -767,7 +767,7 @@ impl ProcessPool {
                      workers_to_add, current_workers);
 
             for _i in 0..workers_to_add {
-                let worker_id = self.worker_counter.fetch_add(1, Ordering::SeqCst);
+                let worker_id: _ = self.worker_counter.fetch_add(1, Ordering::SeqCst);
                 if let Ok(pid) = self.spawn_worker_blocking(worker_id) {
                     println!("[ProcessPool] Scaled up: added worker {} (PID: {})", worker_id, pid);
                 }
@@ -785,12 +785,12 @@ impl ProcessPool {
 
     /// Scale down the process pool
     async fn scale_down(&self) {
-        let current_workers = {
+        let current_workers: _ = {
             let workers = self.workers.lock().unwrap();
             workers.len()
         };
 
-        let workers_to_remove = std::cmp::min(
+        let workers_to_remove: _ = std::cmp::min(
             self.config.scale_down_step,
             current_workers - self.config.min_workers
         );
@@ -800,9 +800,9 @@ impl ProcessPool {
                      workers_to_remove, current_workers);
 
             // Get idle workers to terminate
-            let idle_workers = {
+            let idle_workers: _ = {
                 let workers = self.workers.lock().unwrap();
-                let idle_threshold = std::time::Duration::from_secs(self.config.scale_down_idle_seconds);
+                let idle_threshold: _ = std::time::Duration::from_secs(self.config.scale_down_idle_seconds);
                 workers.iter()
                     .filter(|(_, w)| w.state == WorkerState::Ready && w.last_used.elapsed() > idle_threshold)
                     .map(|(pid, _)| *pid)
@@ -826,7 +826,7 @@ impl ProcessPool {
                 }
 
                 // Terminate the process
-                let _ = std::process::Command::new("kill")
+                let _: _ = std::process::Command::new("kill")
                     .args(&["-TERM", &pid.to_string()])
                     .spawn();
 
@@ -847,10 +847,10 @@ impl ProcessPool {
     pub fn shutdown(&self) {
         self.shutdown.store(true, Ordering::SeqCst);
 
-        let workers = self.workers.lock().unwrap();
+        let workers: _ = self.workers.lock().unwrap();
         for worker in workers.values() {
             // Send shutdown signal to worker
-            let _ = std::fs::remove_file(&worker.socket_path);
+            let _: _ = std::fs::remove_file(&worker.socket_path);
         }
 
         println!("[ProcessPool] Shutdown complete");
@@ -863,13 +863,13 @@ static POOL_CONFIG: std::sync::OnceLock<ProcessPoolConfig> = std::sync::OnceLock
 
 /// Initialize the global process pool
 pub fn initialize_process_pool(config: ProcessPoolConfig) -> Result<()> {
-    let pool = ProcessPool::new(config.clone())
+    let pool: _ = ProcessPool::new(config.clone())
         .context("Failed to initialize process pool")?;
 
     POOL_CONFIG.set(config)
         .map_err(|_| anyhow::anyhow!("Failed to store pool config"))?;
 
-    PROCESS_POOL.set(Arc::new(pool))
+    PROCESS_POOL.set(Arc::new(std::sync::Mutex::new(pool)))
         .map_err(|_| anyhow::anyhow!("Failed to set global process pool"))?;
 
     println!("[ProcessPool] Global process pool initialized");
@@ -894,11 +894,11 @@ pub async fn execute_with_pool(script: &str) -> Result<String> {
 async fn execute_script_in_worker(script: &str) -> Result<String> {
     // Create a Runtime instance for this worker
     // Use default settings optimized for speed
-    let runtime = Runtime::new(67108864, 134217728, false, false) // 64MB stack, 128MB heap, no verbose
+    let runtime: _ = Runtime::new(67108864, 134217728, false, false) // 64MB stack, 128MB heap, no verbose
         .context("Failed to create Runtime in worker")?;
 
     // Execute the script and capture output
-    let result = runtime.execute_code(script)
+    let result: _ = runtime.execute_code(script)
         .context("Worker failed to execute script")?;
 
     Ok(result)
@@ -907,13 +907,13 @@ async fn execute_script_in_worker(script: &str) -> Result<String> {
 /// Worker mode entry point (called by spawned worker processes)
 pub async fn worker_main(worker_id: u32, socket_path: String) -> Result<()> {
     // Create Unix socket listener
-    let listener = UnixListener::bind(&socket_path)
+    let listener: _ = UnixListener::bind(&socket_path)
         .context("Worker failed to bind socket")?;
 
     println!("[Worker-{}] Started and listening on {}", worker_id, socket_path);
 
     // Signal ready to parent
-    let _ = std::fs::write(&socket_path, WORKER_READY_MSG);
+    let _: _ = std::fs::write(&socket_path, WORKER_READY_MSG);
 
     // Accept connections and execute scripts
     loop {
@@ -931,7 +931,7 @@ pub async fn worker_main(worker_id: u32, socket_path: String) -> Result<()> {
                 }
 
                 // Execute the script using Runtime
-                let script_result = match execute_script_in_worker(&buffer).await {
+                let script_result: _ = match execute_script_in_worker(&buffer).await {
                     Ok(output) => format!("{}{}", EXEC_SUCCESS_MSG, output),
                     Err(e) => format!("{}{}", EXEC_ERROR_MSG, e),
                 };
@@ -950,12 +950,14 @@ pub async fn worker_main(worker_id: u32, socket_path: String) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     #[ignore] // Disabled due to async spawn complexity in test environment
     async fn test_process_pool_performance() {
         // Test: Compare process pool vs new process execution
-        let config = ProcessPoolConfig {
+        let config: _ = ProcessPoolConfig {
             max_workers: 2,
             initial_workers: 2,
             min_workers: 1,
@@ -970,33 +972,33 @@ mod tests {
         };
 
         // Initialize process pool
-        let pool = Arc::new(ProcessPool::new(config).expect("Failed to create pool"));
+        let pool: _ = Arc::new(std::sync::Mutex::new(ProcessPool::new(config)).expect("Failed to create pool"));
 
         // Test script - simple computation
-        let test_script = r#"
+        let test_script: _ = r#"
             let sum = 0;
-            for (let i = 0; i < 100; i++) {
+            for (let i: _ = 0; i < 100; i++) {
                 sum += i;
             }
             sum
         "#;
 
         // Execute script multiple times through pool
-        let start = Instant::now();
+        let start: _ = Instant::now();
         for _ in 0..10 {
-            let result = pool.execute_script(test_script).await;
+            let result: _ = pool.execute_script(test_script).await;
             assert!(result.is_ok(), "Pool execution failed");
         }
-        let pool_time = start.elapsed();
+        let pool_time: _ = start.elapsed();
 
         println!("Process pool: 10 executions in {:?}", pool_time);
 
         // Verify results contain expected output
-        let result = pool.execute_script(test_script).await.unwrap();
+        let result: _ = pool.execute_script(test_script).await.unwrap();
         assert!(result.contains("4950"), "Expected result 4950, got: {}", result);
 
         // Test that pool is still functional
-        let stats = pool.get_stats();
+        let stats: _ = pool.get_stats();
         assert!(stats.total_workers > 0, "Pool should have workers");
         assert!(stats.total_executions >= 10, "Should track executions");
 
@@ -1007,7 +1009,7 @@ mod tests {
     #[ignore] // Disabled due to async spawn complexity in test environment
     async fn test_process_pool_concurrent_execution() {
         // Test concurrent script execution
-        let config = ProcessPoolConfig {
+        let config: _ = ProcessPoolConfig {
             max_workers: 4,
             initial_workers: 4,
             min_workers: 1,
@@ -1021,15 +1023,15 @@ mod tests {
             scale_down_step: 1,
         };
 
-        let pool = Arc::new(ProcessPool::new(config).expect("Failed to create pool"));
+        let pool: _ = Arc::new(std::sync::Mutex::new(ProcessPool::new(config)).expect("Failed to create pool"));
 
         // Test multiple concurrent executions
         let mut handles = vec![];
         for i in 0..8 {
-            let pool_clone = Arc::clone(&pool);
-            let script = format!(r#"console.log("Task {}");"#, i);
+            let pool_clone: _ = Arc::clone(pool);
+            let script: _ = format!(r#"console.log("Task {}");"#, i);
 
-            let handle = tokio::spawn(async move {
+            let handle: _ = tokio::spawn(async move {
                 pool_clone.execute_script(&script).await
             });
             handles.push(handle);
@@ -1037,12 +1039,12 @@ mod tests {
 
         // Wait for all tasks to complete
         for (i, handle) in handles.into_iter().enumerate() {
-            let result = handle.await.expect("Task panicked");
+            let result: _ = handle.await.expect("Task panicked");
             assert!(result.is_ok(), "Concurrent execution {} failed", i);
         }
 
         // Verify all executions were tracked
-        let stats = pool.get_stats();
+        let stats: _ = pool.get_stats();
         assert!(stats.total_executions >= 8, "Should track all 8 executions");
 
         println!("Concurrent execution stats: {:?}", stats);
@@ -1050,7 +1052,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_pool_creation() {
-        let config = ProcessPoolConfig {
+        let config: _ = ProcessPoolConfig {
             max_workers: 2,
             initial_workers: 1,
             min_workers: 1,
@@ -1064,14 +1066,14 @@ mod tests {
             scale_down_step: 1,
         };
 
-        let pool = ProcessPool::new(config);
+        let pool: _ = ProcessPool::new(config);
         assert!(pool.is_ok());
     }
 
     #[tokio::test]
     #[ignore] // Disabled due to async spawn complexity in test environment
     async fn test_process_pool_stats() {
-        let config = ProcessPoolConfig {
+        let config: _ = ProcessPoolConfig {
             max_workers: 2,
             initial_workers: 1,
             min_workers: 1,
@@ -1085,12 +1087,12 @@ mod tests {
             scale_down_step: 1,
         };
 
-        let pool = ProcessPool::new(config).unwrap();
+        let pool: _ = ProcessPool::new(config).unwrap();
 
         // Give the worker process time to initialize and signal readiness
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
-        let stats = pool.get_stats();
+        let stats: _ = pool.get_stats();
 
         assert_eq!(stats.total_workers, 1, "Should have 1 worker");
         assert_eq!(stats.ready_workers, 1, "Worker should be ready");

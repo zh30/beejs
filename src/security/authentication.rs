@@ -7,6 +7,8 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 身份验证错误
 #[derive(Error, Debug)]
@@ -90,21 +92,21 @@ impl MultiFactorAuth {
 /// 令牌管理器
 #[derive(Debug)]
 pub struct TokenManager {
-    tokens: Arc<std::sync::Mutex<HashMap<String, Token>>>,
+    tokens: Arc<std::sync::Mutex<HashMap<String, Token, std::collections::HashMap<String, Token, String, Token>>>>,
 }
 
 impl TokenManager {
     pub fn new() -> Self {
         Self {
-            tokens: Arc::new(std::sync::Mutex::new(HashMap::new())),
+            tokens: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(HashMap::new()))),
         }
     }
 
     pub async fn generate_token(&self, user: &User) -> Result<Token, AuthError> {
-        let token_string = format!("beejs-token-{}-{}", user.id, SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
-        let expires_at = SystemTime::now() + Duration::from_secs(3600); // 1小时过期
+        let token_string: _ = format!("beejs-token-{}-{}", user.id, SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
+        let expires_at: _ = SystemTime::now() + Duration::from_secs(3600); // 1小时过期
 
-        let token = Token {
+        let token: _ = Token {
             token: token_string,
             user_id: user.id.clone(),
             expires_at,
@@ -119,7 +121,7 @@ impl TokenManager {
     }
 
     pub async fn validate_token(&self, token_str: &str) -> Result<User, AuthError> {
-        let tokens = self.tokens.lock().unwrap();
+        let tokens: _ = self.tokens.lock().unwrap();
 
         if let Some(token) = tokens.get(token_str) {
             if token.expires_at > SystemTime::now() {
@@ -150,7 +152,7 @@ impl TokenManager {
 pub struct AuthenticationService {
     pub mfa_service: Arc<MultiFactorAuth>,
     pub token_manager: Arc<TokenManager>,
-    users: Arc<std::sync::Mutex<HashMap<String, User>>>,
+    users: Arc<std::sync::Mutex<HashMap<String, User, std::collections::HashMap<String, User, String, User>>>>,
 }
 
 impl AuthenticationService {
@@ -164,22 +166,22 @@ impl AuthenticationService {
         });
 
         Self {
-            mfa_service: Arc::new(MultiFactorAuth::new()),
-            token_manager: Arc::new(TokenManager::new()),
-            users: Arc::new(std::sync::Mutex::new(users)),
+            mfa_service: Arc::new(std::sync::Mutex::new(MultiFactorAuth::new())),
+            token_manager: Arc::new(std::sync::Mutex::new(TokenManager::new())),
+            users: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(users))),
         }
     }
 
     pub async fn authenticate(&self, credentials: &Credentials) -> Result<AuthResult, AuthError> {
         // 验证用户名和密码
-        let users = self.users.lock().unwrap();
+        let users: _ = self.users.lock().unwrap();
         if let Some(user) = users.get(&credentials.username) {
             // 简化的密码验证（生产环境应使用哈希）
             if credentials.password == "password" || credentials.password == "admin" {
                 // 如果启用了 MFA，验证 MFA 代码
                 if user.mfa_enabled {
                     if let Some(mfa_code) = &credentials.mfa_code {
-                        let mfa_valid = self.mfa_service.verify_code(mfa_code).await.map_err(|_| {
+                        let mfa_valid: _ = self.mfa_service.verify_code(mfa_code).await.map_err(|_| {
                             AuthError::AuthenticationFailed("Invalid MFA code".to_string())
                         })?;
 
@@ -204,7 +206,7 @@ impl AuthenticationService {
                 }
 
                 // 生成令牌
-                let token = self.token_manager.generate_token(user).await?;
+                let token: _ = self.token_manager.generate_token(user).await?;
                 return Ok(AuthResult {
                     success: true,
                     token: Some(token.token),
@@ -225,14 +227,14 @@ impl AuthenticationService {
     }
 
     pub async fn verify_mfa(&self, username: &str, code: &str) -> Result<AuthResult, AuthError> {
-        let users = self.users.lock().unwrap();
+        let users: _ = self.users.lock().unwrap();
         if let Some(user) = users.get(username) {
-            let mfa_valid = self.mfa_service.verify_code(code).await.map_err(|_| {
+            let mfa_valid: _ = self.mfa_service.verify_code(code).await.map_err(|_| {
                 AuthError::AuthenticationFailed("Invalid MFA code".to_string())
             })?;
 
             if mfa_valid {
-                let token = self.token_manager.generate_token(user).await?;
+                let token: _ = self.token_manager.generate_token(user).await?;
                 return Ok(AuthResult {
                     success: true,
                     token: Some(token.token),

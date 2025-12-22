@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tokio::sync::RwLock;
 use std::sync::Arc;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// AI Ops configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,9 +116,9 @@ impl AIOpsEngine {
     pub fn new(config: AIOpsConfig) -> Self {
         Self {
             config: config.clone(),
-            status: Arc::new(RwLock::new(EngineStatus::Stopped)),
-            model_manager: Arc::new(ModelManager::new()),
-            data_collector: Arc::new(DataCollector::new(config.collection_interval)),
+            status: Arc::new(std::sync::Mutex::new(RwLock::new(EngineStatus::Stopped))),
+            model_manager: Arc::new(std::sync::Mutex::new(ModelManager::new())),
+            data_collector: Arc::new(std::sync::Mutex::new(DataCollector::new(config.collection_interval))),
         }
     }
 
@@ -178,7 +180,7 @@ impl AIOpsEngine {
     ///
     /// Returns `EngineStatus` indicating current engine state
     pub async fn get_status(&self) -> EngineStatus {
-        let status = self.status.read().await;
+        let status: _ = self.status.read().await;
         status.clone()
     }
 

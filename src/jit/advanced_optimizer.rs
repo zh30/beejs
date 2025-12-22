@@ -35,7 +35,7 @@ pub struct AdvancedInliningOptimizer {
     /// 复杂函数内联阈值
     complex_threshold: usize,
     /// 内联历史统计
-    inlining_history: HashMap<String, InliningStats>,
+    inlining_history: HashMap<String, InliningStats, std::collections::HashMap<String, InliningStats, String, InliningStats>>,
 }
 
 /// 内联统计信息
@@ -82,12 +82,12 @@ impl AdvancedInliningOptimizer {
         // 解析函数定义
         let lines: Vec<&str> = code.lines().collect();
         for line in lines {
-            let line = line.trim();
+            let line: _ = line.clone();trim();
 
             // 检查函数定义
             if let Some(func_info) = self.extract_function_info(line) {
-                let complexity_score = self.calculate_complexity_score(line);
-                let call_sites = self.count_call_sites(code, &func_info.function_name);
+                let complexity_score: _ = self.calculate_complexity_score(line);
+                let call_sites: _ = self.count_call_sites(code, &func_info.function_name);
 
                 candidates.push(InliningCandidate {
                     function_name: func_info.function_name,
@@ -120,12 +120,12 @@ impl AdvancedInliningOptimizer {
         }
 
         // 分析函数复杂度
-        let complexity_score = self.calculate_complexity_score(code);
-        let is_simple = complexity_score < 10.0;
-        let is_medium = complexity_score >= 10.0 && complexity_score < 50.0;
+        let complexity_score: _ = self.calculate_complexity_score(code);
+        let is_simple: _ = complexity_score < 10.0;
+        let is_medium: _ = complexity_score >= 10.0 && complexity_score < 50.0;
 
         // 根据复杂度确定是否内联
-        let should_inline = if is_simple {
+        let should_inline: _ = if is_simple {
             // 简单函数：立即内联
             true
         } else if is_medium {
@@ -137,9 +137,9 @@ impl AdvancedInliningOptimizer {
         };
 
         // 计算收益分数
-        let benefit_score = self.calculate_inline_benefit(code, current_depth);
+        let benefit_score: _ = self.calculate_inline_benefit(code, current_depth);
 
-        let reason = if should_inline {
+        let reason: _ = if should_inline {
             format!(
                 "Aggressive inlining: complexity={:.2}, depth={}, max_depth={}",
                 complexity_score, current_depth, self.max_inline_depth
@@ -162,9 +162,9 @@ impl AdvancedInliningOptimizer {
     /// 计算内联收益
     fn calculate_inline_benefit(&self, code: &str, depth: usize) -> f64 {
         // 收益 = 基础分数 / (1 + 深度) * 复杂度因子
-        let base_score = 100.0;
-        let depth_factor = 1.0 + (depth as f64 / self.max_inline_depth as f64);
-        let complexity_score = self.calculate_complexity_score(code);
+        let base_score: _ = 100.0;
+        let depth_factor: _ = 1.0 + (depth as f64 / self.max_inline_depth as f64);
+        let complexity_score: _ = self.calculate_complexity_score(code);
 
         base_score / depth_factor * (complexity_score / 10.0)
     }
@@ -173,8 +173,8 @@ impl AdvancedInliningOptimizer {
     fn extract_function_info(&self, line: &str) -> Option<FunctionInfo> {
         // 匹配函数声明: function name(params) 或 name = function(params)
         if let Some(name) = self.extract_function_name(line) {
-            let parameters = self.count_parameters(line);
-            let local_vars = self.count_local_variables(line);
+            let parameters: _ = self.count_parameters(line);
+            let local_vars: _ = self.count_local_variables(line);
 
             Some(FunctionInfo {
                 function_name: name,
@@ -190,7 +190,7 @@ impl AdvancedInliningOptimizer {
     fn extract_function_name(&self, line: &str) -> Option<String> {
         // 匹配 function keyword
         if let Some(start) = line.find("function ") {
-            let after_keyword = &line[start + "function ".len()..];
+            let after_keyword: _ = &line[start + "function ".len()..];
             if let Some(end) = after_keyword.find('(') {
                 return Some(after_keyword[..end].trim().to_string());
             }
@@ -198,7 +198,7 @@ impl AdvancedInliningOptimizer {
 
         // 匹配箭头函数
         if let Some(end) = line.find(" =") {
-            let before_eq = &line[..end];
+            let before_eq: _ = &line[..end];
             if before_eq.trim().chars().all(|c| c.is_alphanumeric() || c == '_' || c == '$') {
                 return Some(before_eq.trim().to_string());
             }
@@ -211,7 +211,7 @@ impl AdvancedInliningOptimizer {
     fn count_parameters(&self, line: &str) -> usize {
         if let Some(start) = line.find('(') {
             if let Some(end) = line[start..].find(')') {
-                let params = &line[start + 1..start + end];
+                let params: _ = &line[start + 1..start + end];
                 if params.trim().is_empty() {
                     return 0;
                 }
@@ -227,11 +227,11 @@ impl AdvancedInliningOptimizer {
         let lines: Vec<&str> = code.lines().collect();
 
         for line in lines {
-            let line = line.trim();
+            let line: _ = line.clone();trim();
             // 匹配 let, const, var 声明
             if line.starts_with("let ") || line.starts_with("const ") || line.starts_with("var ") {
                 // 简单计数逗号分隔的变量
-                let after_keyword = if line.starts_with("let ") {
+                let after_keyword: _ = if line.starts_with("let ") {
                     &line[4..]
                 } else if line.starts_with("const ") {
                     &line[6..]
@@ -240,7 +240,7 @@ impl AdvancedInliningOptimizer {
                 };
 
                 if let Some(end) = after_keyword.find('=') {
-                    let vars = &after_keyword[..end];
+                    let vars: _ = &after_keyword[..end];
                     if vars.trim().chars().all(|c| c.is_alphanumeric() || c == '_' || c == '$' || c == ',') {
                         count += vars.split(',').count();
                     }
@@ -256,19 +256,19 @@ impl AdvancedInliningOptimizer {
         let mut score = 0.0;
 
         // 计算循环复杂度
-        let for_loops = code.matches("for(").count();
-        let while_loops = code.matches("while(").count();
-        let do_while = code.matches("do {").count();
+        let for_loops: _ = code.matches("for(").count();
+        let while_loops: _ = code.matches("while(").count();
+        let do_while: _ = code.matches("do {").count();
 
         score += (for_loops as f64) * 3.0;
         score += (while_loops as f64) * 3.0;
         score += (do_while as f64) * 3.0;
 
         // 计算条件复杂度
-        let if_count = code.matches("if(").count();
-        let else_count = code.matches("else").count();
-        let switch_count = code.matches("switch(").count();
-        let case_count = code.matches("case ").count();
+        let if_count: _ = code.matches("if(").count();
+        let else_count: _ = code.matches("else").count();
+        let switch_count: _ = code.matches("switch(").count();
+        let case_count: _ = code.matches("case ").count();
 
         score += (if_count as f64) * 2.0;
         score += (else_count as f64) * 1.0;
@@ -276,11 +276,11 @@ impl AdvancedInliningOptimizer {
         score += (case_count as f64) * 1.0;
 
         // 计算函数调用复杂度
-        let function_calls = self.count_function_calls(code);
+        let function_calls: _ = self.count_function_calls(code);
         score += (function_calls as f64) * 1.5;
 
         // 计算嵌套深度
-        let braces_count = code.matches('{').count() + code.matches('}').count();
+        let braces_count: _ = code.matches('{').count() + code.matches('}').count();
         score += (braces_count as f64) * 0.5;
 
         score
@@ -292,14 +292,14 @@ impl AdvancedInliningOptimizer {
         let lines: Vec<&str> = code.lines().collect();
 
         for line in lines {
-            let line = line.trim();
+            let line: _ = line.clone();trim();
             // 跳过函数定义
             if line.starts_with("function ") || line.contains(" = function(") || line.contains(" =(") {
                 continue;
             }
 
             // 匹配函数调用模式
-            let paren_count = line.matches('(').count();
+            let paren_count: _ = line.matches('(').count();
             count += paren_count;
         }
 
@@ -314,7 +314,7 @@ impl AdvancedInliningOptimizer {
 
     /// 记录内联事件
     pub fn record_inlining(&mut self, function_name: &str, benefit: f64) {
-        let stats = self.inlining_history.entry(function_name.to_string()).or_insert(InliningStats {
+        let stats: _ = self.inlining_history.entry(function_name.to_string()).or_insert(InliningStats {
             inline_count: 0,
             total_benefit: 0.0,
             avg_benefit: 0.0,
@@ -355,13 +355,15 @@ impl Default for AdvancedInliningOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_aggressive_inlining_basic() {
-        let optimizer = AdvancedInliningOptimizer::new();
-        let code = "function add(a, b) { return a + b; }";
+        let optimizer: _ = AdvancedInliningOptimizer::new();
+        let code: _ = "function add(a, b) { return a + b; }";
 
-        let decision = optimizer.make_inlining_decision("add", code, 0);
+        let decision: _ = optimizer.make_inlining_decision("add", code, 0);
 
         assert!(decision.should_inline, "Simple function should be inlined");
         assert_eq!(decision.inline_depth, 1);
@@ -370,45 +372,45 @@ mod tests {
 
     #[test]
     fn test_max_inline_depth_50() {
-        let optimizer = AdvancedInliningOptimizer::new();
-        let code = "function add(a, b) { return a + b; }";
+        let optimizer: _ = AdvancedInliningOptimizer::new();
+        let code: _ = "function add(a, b) { return a + b; }";
 
         // 在最大深度内应该可以内联
-        let decision = optimizer.make_inlining_decision("add", code, 49);
+        let decision: _ = optimizer.make_inlining_decision("add", code, 49);
 
         assert!(decision.should_inline, "Should inline at depth 49");
         assert_eq!(decision.inline_depth, 50);
 
         // 超过最大深度不应该内联
-        let decision = optimizer.make_inlining_decision("add", code, 50);
+        let decision: _ = optimizer.make_inlining_decision("add", code, 50);
 
         assert!(!decision.should_inline, "Should not inline at depth 50");
     }
 
     #[test]
     fn test_custom_inline_depth() {
-        let optimizer = AdvancedInliningOptimizer::with_thresholds(10, 1, 1, 1);
-        let code = "function add(a, b) { return a + b; }";
+        let optimizer: _ = AdvancedInliningOptimizer::with_thresholds(10, 1, 1, 1);
+        let code: _ = "function add(a, b) { return a + b; }";
 
-        let decision = optimizer.make_inlining_decision("add", code, 9);
+        let decision: _ = optimizer.make_inlining_decision("add", code, 9);
 
         assert!(decision.should_inline, "Should inline at depth 9");
         assert_eq!(decision.inline_depth, 10);
 
-        let decision = optimizer.make_inlining_decision("add", code, 10);
+        let decision: _ = optimizer.make_inlining_decision("add", code, 10);
 
         assert!(!decision.should_inline, "Should not inline at depth 10");
     }
 
     #[test]
     fn test_complexity_score() {
-        let optimizer = AdvancedInliningOptimizer::new();
+        let optimizer: _ = AdvancedInliningOptimizer::new();
 
-        let simple_code = "function add(a, b) { return a + b; }";
-        let complex_code = r#"
+        let simple_code: _ = "function add(a, b) { return a + b; }";
+        let complex_code: _ = r#"
             function fib(n) {
                 if (n <= 1) return n;
-                for (let i = 0; i < n; i++) {
+                for (let i: _ = 0; i < n; i++) {
                     if (i > 10) {
                         while (true) {
                             console.log(i);
@@ -419,8 +421,8 @@ mod tests {
             }
         "#;
 
-        let simple_score = optimizer.calculate_complexity_score(simple_code);
-        let complex_score = optimizer.calculate_complexity_score(complex_code);
+        let simple_score: _ = optimizer.calculate_complexity_score(simple_code);
+        let complex_score: _ = optimizer.calculate_complexity_score(complex_code);
 
         assert!(simple_score < complex_score, "Complex code should have higher score");
         assert!(simple_score < 10.0, "Simple code should have low score");
@@ -429,14 +431,14 @@ mod tests {
 
     #[test]
     fn test_inlining_candidates() {
-        let optimizer = AdvancedInliningOptimizer::new();
-        let code = r#"
+        let optimizer: _ = AdvancedInliningOptimizer::new();
+        let code: _ = r#"
             function add(a, b) { return a + b; }
             function multiply(a, b) { return a * b; }
-            let x = 1;
+            let x: _ = 1;
         "#;
 
-        let candidates = optimizer.analyze_inlining_candidates(code);
+        let candidates: _ = optimizer.analyze_inlining_candidates(code);
 
         assert_eq!(candidates.len(), 2, "Should find 2 function candidates");
         assert!(candidates.iter().any(|c| c.function_name == "add"));
@@ -445,11 +447,11 @@ mod tests {
 
     #[test]
     fn test_parameter_counting() {
-        let optimizer = AdvancedInliningOptimizer::new();
+        let optimizer: _ = AdvancedInliningOptimizer::new();
 
-        let no_params = "function foo() { return 1; }";
-        let one_param = "function foo(x) { return x; }";
-        let multi_params = "function foo(a, b, c) { return a + b + c; }";
+        let no_params: _ = "function foo() { return 1; }";
+        let one_param: _ = "function foo(x) { return x; }";
+        let multi_params: _ = "function foo(a, b, c) { return a + b + c; }";
 
         assert_eq!(optimizer.count_parameters(no_params), 0);
         assert_eq!(optimizer.count_parameters(one_param), 1);
@@ -458,11 +460,11 @@ mod tests {
 
     #[test]
     fn test_benefit_calculation() {
-        let optimizer = AdvancedInliningOptimizer::new();
-        let code = "function add(a, b) { return a + b; }";
+        let optimizer: _ = AdvancedInliningOptimizer::new();
+        let code: _ = "function add(a, b) { return a + b; }";
 
-        let benefit_shallow = optimizer.calculate_inline_benefit(code, 0);
-        let benefit_deep = optimizer.calculate_inline_benefit(code, 40);
+        let benefit_shallow: _ = optimizer.calculate_inline_benefit(code, 0);
+        let benefit_deep: _ = optimizer.calculate_inline_benefit(code, 40);
 
         assert!(benefit_shallow > benefit_deep, "Shallow inlining should have higher benefit");
         assert!(benefit_shallow > 50.0, "Should calculate reasonable benefit");
@@ -471,12 +473,12 @@ mod tests {
     #[test]
     fn test_inlining_history() {
         let mut optimizer = AdvancedInliningOptimizer::new();
-        let func_name = "test_func";
+        let func_name: _ = "test_func";
 
         optimizer.record_inlining(func_name, 100.0);
         optimizer.record_inlining(func_name, 200.0);
 
-        let stats = optimizer.get_inlining_stats(func_name).unwrap();
+        let stats: _ = optimizer.get_inlining_stats(func_name).unwrap();
         assert_eq!(stats.inline_count, 2);
         assert_eq!(stats.total_benefit, 300.0);
         assert_eq!(stats.avg_benefit, 150.0);
@@ -487,11 +489,11 @@ mod tests {
 
     #[test]
     fn test_function_name_extraction() {
-        let optimizer = AdvancedInliningOptimizer::new();
+        let optimizer: _ = AdvancedInliningOptimizer::new();
 
-        let named_func = "function myFunction(a, b) { return a + b; }";
-        let arrow_func = "const myFunc = (x) => x * 2;";
-        let anonymous_func = "const anon = function(x) { return x; };";
+        let named_func: _ = "function myFunction(a, b) { return a + b; }";
+        let arrow_func: _ = "const myFunc = (x) => x * 2;";
+        let anonymous_func: _ = "const anon = function(x) { return x; };";
 
         assert_eq!(
             optimizer.extract_function_name(named_func),

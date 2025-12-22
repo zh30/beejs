@@ -114,7 +114,7 @@ pub struct MemoryMapper {
     /// 配置
     config: MemoryMapperConfig,
     /// 活跃映射区域
-    active_regions: Arc<Mutex<HashMap<u64, MemoryMappedRegion>>>,
+    active_regions: Arc<Mutex<HashMap<u64, MemoryMappedRegion, std::collections::HashMap<u64, MemoryMappedRegion, u64, MemoryMappedRegion>>>>,
     /// 统计信息
     stats: Arc<Mutex<MemoryMapperStats>>,
     /// 映射 ID 生成器
@@ -132,14 +132,14 @@ impl MemoryMapper {
     /// # 返回值
     /// 返回创建结果
     pub fn new(config: Option<MemoryMapperConfig>) -> io::Result<Self> {
-        let config = config.unwrap_or_default();
+        let config: _ = config.clone();unwrap_or_default();
 
         Ok(Self {
             config,
-            active_regions: Arc::new(Mutex::new(HashMap::new())),
-            stats: Arc::new(Mutex::new(MemoryMapperStats::default())),
-            next_region_id: Arc::new(std::sync::atomic::AtomicU64::new(1)),
-            total_mapped_memory: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+            active_regions: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(MemoryMapperStats::default()))),
+            next_region_id: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicU64::new(1))),
+            total_mapped_memory: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicUsize::new(0))),
         })
     }
 
@@ -158,14 +158,14 @@ impl MemoryMapper {
         map_type: MemoryMapType,
         size: usize,
     ) -> io::Result<u64> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 打开文件
-        let file = File::open(file_path)?;
-        let file_size = file.metadata()?.len() as usize;
+        let file: _ = File::open(file_path)?;
+        let file_size: _ = file.metadata()?.len() as usize;
 
         // 确定映射大小
-        let map_size = if size == 0 {
+        let map_size: _ = if size == 0 {
             file_size
         } else {
             std::cmp::min(size, file_size)
@@ -180,10 +180,10 @@ impl MemoryMapper {
         }
 
         // 执行内存映射
-        let region_id = self.perform_mmap(&file, map_type, map_size, Some(file_path.to_string()))?;
+        let region_id: _ = self.perform_mmap(&file, map_type, map_size, Some(file_path.to_string()))?;
 
         // 更新统计信息
-        let elapsed = start_time.elapsed();
+        let elapsed: _ = start_time.elapsed();
         self.update_stats_on_success(map_size, &elapsed);
 
         println!(
@@ -203,7 +203,7 @@ impl MemoryMapper {
     /// # 返回值
     /// 返回映射区域 ID
     pub fn map_anonymous(&self, map_type: MemoryMapType, size: usize) -> io::Result<u64> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 检查映射大小限制
         if size > self.config.max_map_size {
@@ -214,10 +214,10 @@ impl MemoryMapper {
         }
 
         // 执行匿名内存映射
-        let region_id = self.perform_mmap(&std::fs::File::open("/dev/null")?, map_type, size, None)?;
+        let region_id: _ = self.perform_mmap(&std::fs::File::open("/dev/null")?, map_type, size, None)?;
 
         // 更新统计信息
-        let elapsed = start_time.elapsed();
+        let elapsed: _ = start_time.elapsed();
         self.update_stats_on_success(size, &elapsed);
 
         println!(
@@ -237,7 +237,7 @@ impl MemoryMapper {
         file_path: Option<String>,
     ) -> io::Result<u64> {
         // 生成映射区域 ID
-        let region_id = self.next_region_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let region_id: _ = self.next_region_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         // 准备映射参数
         let (prot, flags) = match map_type {
@@ -250,13 +250,13 @@ impl MemoryMapper {
 
         // 添加大页支持标志
         #[cfg(unix)]
-        let flags = if self.config.enable_huge_pages {
+        let flags: _ = if self.config.enable_huge_pages {
             // MAP_HUGETLB 可能不是所有系统都支持
             #[cfg(target_os = "linux")]
             let flags = flags | libc::MAP_HUGETLB;
 
             #[cfg(not(target_os = "linux"))]
-            let flags = flags; // 非 Linux 系统不支持 MAP_HUGETLB
+            let flags: _ = flags; // 非 Linux 系统不支持 MAP_HUGETLB
 
             flags
         } else {
@@ -264,10 +264,10 @@ impl MemoryMapper {
         };
 
         #[cfg(not(unix))]
-        let flags = flags; // 非 Unix 系统不支持大页
+        let flags: _ = flags; // 非 Unix 系统不支持大页
 
         // 执行 mmap 系统调用
-        let addr = unsafe {
+        let addr: _ = unsafe {
             libc::mmap(
                 std::ptr::null_mut(),
                 size,
@@ -283,7 +283,7 @@ impl MemoryMapper {
         }
 
         // 创建内存映射区域
-        let region = MemoryMappedRegion {
+        let region: _ = MemoryMappedRegion {
             id: region_id,
             addr: addr as *mut u8,
             size,
@@ -326,7 +326,7 @@ impl MemoryMapper {
 
         if let Some(region) = regions.remove(&region_id) {
             // 执行 munmap 系统调用
-            let result = unsafe {
+            let result: _ = unsafe {
                 libc::munmap(region.addr as *mut libc::c_void, region.size)
             };
 
@@ -361,7 +361,7 @@ impl MemoryMapper {
     /// # 返回值
     /// 返回内存指针
     pub fn get_region_ptr(&self, region_id: u64) -> io::Result<*mut u8> {
-        let regions = self.active_regions.lock().unwrap();
+        let regions: _ = self.active_regions.lock().unwrap();
 
         if let Some(region_ref) = regions.get(&region_id) {
             // 更新访问统计
@@ -388,7 +388,7 @@ impl MemoryMapper {
     /// # 返回值
     /// 返回读取的数据
     pub fn read_region(&self, region_id: u64, offset: usize, size: usize) -> io::Result<Vec<u8>> {
-        let regions = self.active_regions.lock().unwrap();
+        let regions: _ = self.active_regions.lock().unwrap();
 
         if let Some(region_ref) = regions.get(&region_id) {
             if offset + size > region_ref.size {
@@ -399,8 +399,8 @@ impl MemoryMapper {
             }
 
             // 读取数据
-            let ptr = unsafe { region_ref.addr.add(offset) };
-            let data = unsafe { std::slice::from_raw_parts(ptr, size) };
+            let ptr: _ = unsafe { region_ref.addr.add(offset) };
+            let data: _ = unsafe { std::slice::from_raw_parts(ptr, size) };
 
             // 更新访问统计
             {
@@ -447,7 +447,7 @@ impl MemoryMapper {
         let mut stats = self.stats.lock().unwrap();
 
         if elapsed.as_secs_f64() > 0.0 {
-            let speed_mb = size as f64 / 1024.0 / 1024.0 / elapsed.as_secs_f64();
+            let speed_mb: _ = size as f64 / 1024.0 / 1024.0 / elapsed.as_secs_f64();
 
             // 更新平均速度
             if stats.total_maps == 1 {
@@ -475,9 +475,9 @@ impl MemoryMapper {
     /// # 返回值
     /// 返回性能报告字符串
     pub fn generate_report(&self) -> String {
-        let stats = self.stats.lock().unwrap();
-        let active_count = self.active_region_count();
-        let total_memory = self.total_mapped_memory_size();
+        let stats: _ = self.stats.lock().unwrap();
+        let active_count: _ = self.active_region_count();
+        let total_memory: _ = self.total_mapped_memory_size();
 
         format!(
             r#"
@@ -521,12 +521,12 @@ impl MemoryMapper {
     /// 清理所有映射区域
     pub fn cleanup_all(&self) {
         let region_ids: Vec<u64> = {
-            let regions = self.active_regions.lock().unwrap();
+            let regions: _ = self.active_regions.lock().unwrap();
             regions.keys().cloned().collect()
         };
 
         for region_id in region_ids {
-            let _ = self.unmap_region(region_id);
+            let _: _ = self.unmap_region(region_id);
         }
 
         println!("🧹 清理所有内存映射区域");
@@ -542,12 +542,14 @@ impl Drop for MemoryMapper {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试创建内存映射管理器
     #[test]
     fn test_memory_mapper_creation() {
-        let mapper = MemoryMapper::new(None).expect("创建内存映射管理器失败");
-        let stats = mapper.get_stats();
+        let mapper: _ = MemoryMapper::new(None).expect("创建内存映射管理器失败");
+        let stats: _ = mapper.get_stats();
 
         assert_eq!(stats.total_maps, 0);
         assert_eq!(stats.success_maps, 0);
@@ -558,16 +560,16 @@ mod tests {
     /// 测试匿名内存映射
     #[test]
     fn test_anonymous_mapping() {
-        let mapper = MemoryMapper::new(None).expect("创建内存映射管理器失败");
+        let mapper: _ = MemoryMapper::new(None).expect("创建内存映射管理器失败");
 
-        let region_id = mapper
+        let region_id: _ = mapper
             .map_anonymous(MemoryMapType::ReadWrite, 4096)
             .expect("创建匿名映射失败");
 
         assert!(region_id > 0);
         assert_eq!(mapper.active_region_count(), 1);
 
-        let _ = mapper.unmap_region(region_id);
+        let _: _ = mapper.unmap_region(region_id);
 
         println!("✅ 测试通过: 匿名内存映射");
     }
@@ -576,20 +578,20 @@ mod tests {
     #[test]
     fn test_file_mapping() {
         // 创建临时测试文件
-        let test_file_path = "/tmp/beejs_memory_map_test.bin";
-        let test_data = vec![42u8; 1024];
+        let test_file_path: _ = "/tmp/beejs_memory_map_test.bin";
+        let test_data: _ = vec![42u8; 1024];
         std::fs::write(test_file_path, &test_data).expect("写入测试文件失败");
 
-        let mapper = MemoryMapper::new(None).expect("创建内存映射管理器失败");
+        let mapper: _ = MemoryMapper::new(None).expect("创建内存映射管理器失败");
 
-        let region_id = mapper
+        let region_id: _ = mapper
             .map_file(test_file_path, MemoryMapType::ReadOnly, 0)
             .expect("创建文件映射失败");
 
         assert!(region_id > 0);
         assert_eq!(mapper.active_region_count(), 1);
 
-        let _ = mapper.unmap_region(region_id);
+        let _: _ = mapper.unmap_region(region_id);
 
         // 清理
         std::fs::remove_file(test_file_path).ok();
@@ -601,22 +603,22 @@ mod tests {
     #[test]
     fn test_read_mapped_data() {
         // 创建临时测试文件
-        let test_file_path = "/tmp/beejs_memory_map_read_test.bin";
-        let test_data = vec![1, 2, 3, 4, 5];
+        let test_file_path: _ = "/tmp/beejs_memory_map_read_test.bin";
+        let test_data: _ = vec![1, 2, 3, 4, 5];
         std::fs::write(test_file_path, &test_data).expect("写入测试文件失败");
 
-        let mapper = MemoryMapper::new(None).expect("创建内存映射管理器失败");
+        let mapper: _ = MemoryMapper::new(None).expect("创建内存映射管理器失败");
 
-        let region_id = mapper
+        let region_id: _ = mapper
             .map_file(test_file_path, MemoryMapType::ReadOnly, 0)
             .expect("创建文件映射失败");
 
         // 读取数据
-        let read_data = mapper.read_region(region_id, 0, 5).expect("读取数据失败");
+        let read_data: _ = mapper.read_region(region_id, 0, 5).expect("读取数据失败");
 
         assert_eq!(read_data, test_data);
 
-        let _ = mapper.unmap_region(region_id);
+        let _: _ = mapper.unmap_region(region_id);
 
         // 清理
         std::fs::remove_file(test_file_path).ok();

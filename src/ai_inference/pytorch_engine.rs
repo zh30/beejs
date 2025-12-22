@@ -69,17 +69,17 @@ impl TorchEngine {
         model_path: &str,
         options: InferenceOptions,
     ) -> Result<Self> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 记录引擎初始化
         tracing::info!("Initializing PyTorch TorchScript engine for model: {}", model_path);
 
         // 检测可用设备
-        let device = Self::detect_device(&options.engine_type)?;
+        let device: _ = Self::detect_device(&options.engine_type)?;
 
         // 初始化统计信息
-        let stats = Arc::new(RwLock::new(EngineStats {
-            engine_name: "PyTorch-TorchScript".to_string(),
+        let stats: _ = Arc::new(std::sync::Mutex::new(RwLock::new(EngineStats {
+            engine_name: "PyTorch-TorchScript".to_string()),
             total_inferences: 0,
             successful_inferences: 0,
             failed_inferences: 0,
@@ -90,13 +90,13 @@ impl TorchEngine {
             cache_hit_rate: 0.0,
         }));
 
-        let engine = Self {
+        let engine: _ = Self {
             engine_type: options.engine_type,
             stats,
             initialized: true,
         };
 
-        let load_time = start_time.elapsed();
+        let load_time: _ = start_time.elapsed();
         tracing::info!(
             "PyTorch engine initialized in {:.2}ms (device: {:?})",
             load_time.as_secs_f64() * 1000.0,
@@ -151,7 +151,7 @@ impl InferenceEngine for TorchEngine {
         tracing::info!("Loading PyTorch TorchScript model from: {}", model_path);
 
         // 模拟模型加载
-        let session_id = format!("torch_session_{}", uuid::Uuid::new_v4());
+        let session_id: _ = format!("torch_session_{}", uuid::Uuid::new_v4());
 
         Ok(ModelHandle {
             id: session_id,
@@ -174,7 +174,7 @@ impl InferenceEngine for TorchEngine {
         model: &ModelHandle,
         input: &Tensor,
     ) -> Result<InferenceResult> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         tracing::debug!(
             "Executing PyTorch inference (model: {}, input shape: {:?})",
@@ -186,8 +186,8 @@ impl InferenceEngine for TorchEngine {
         tokio::time::sleep(Duration::from_millis(5)).await;
 
         // 创建模拟输出张量
-        let output_data = vec![0.1; 1000]; // 模拟 1000 类分类输出
-        let output_tensor = Tensor::new(output_data, vec![1, 1000])?;
+        let output_data: _ = vec![0.1; 1000]; // 模拟 1000 类分类输出
+        let output_tensor: _ = Tensor::new(output_data, vec![1, 1000])?;
 
         // 更新统计信息
         {
@@ -195,8 +195,8 @@ impl InferenceEngine for TorchEngine {
             stats.total_inferences += 1;
             stats.successful_inferences += 1;
 
-            let latency = start_time.elapsed();
-            let latency_ms = latency.as_secs_f64() * 1000.0;
+            let latency: _ = start_time.elapsed();
+            let latency_ms: _ = latency.as_secs_f64() * 1000.0;
             stats.total_time_ms += latency_ms;
             stats.average_time_ms = stats.total_time_ms / stats.total_inferences as f64;
         }
@@ -216,7 +216,7 @@ impl InferenceEngine for TorchEngine {
         model: &ModelHandle,
         inputs: &[Tensor],
     ) -> Result<Vec<InferenceResult>> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         tracing::info!(
             "Executing PyTorch batch inference ({} inputs)",
@@ -226,7 +226,7 @@ impl InferenceEngine for TorchEngine {
         // 模拟批处理推理
         let mut results = Vec::new();
         for (i, input) in inputs.iter().enumerate() {
-            let result = self.infer(model, input).await?;
+            let result: _ = self.infer(model, input).await?;
             results.push(result);
             tracing::debug!("Processed batch item {}/{}", i + 1, inputs.len());
         }
@@ -237,8 +237,8 @@ impl InferenceEngine for TorchEngine {
             stats.total_inferences += inputs.len() as u64;
             stats.successful_inferences += inputs.len() as u64;
 
-            let latency = start_time.elapsed();
-            let latency_ms = latency.as_secs_f64() * 1000.0;
+            let latency: _ = start_time.elapsed();
+            let latency_ms: _ = latency.as_secs_f64() * 1000.0;
             stats.total_time_ms += latency_ms;
             stats.average_time_ms = stats.total_time_ms / stats.total_inferences as f64;
         }
@@ -253,7 +253,7 @@ impl InferenceEngine for TorchEngine {
     }
 
     async fn get_stats(&self) -> Result<EngineStats> {
-        let stats = self.stats.read().await;
+        let stats: _ = self.stats.read().await;
         Ok(stats.clone())
     }
 
@@ -266,8 +266,8 @@ impl InferenceEngine for TorchEngine {
         let (tx, rx) = tokio::sync::mpsc::channel(16);
 
         // 模拟流式推理
-        let model_id = model.id.clone();
-        let stats = self.stats.clone();
+        let model_id: _ = model.id.clone();
+        let stats: _ = self.stats.clone();
 
         tokio::spawn(async move {
             tracing::debug!("Starting streaming inference for model: {}", model_id);
@@ -278,8 +278,8 @@ impl InferenceEngine for TorchEngine {
                 tokio::time::sleep(Duration::from_millis(2)).await;
 
                 // 创建部分输出张量
-                let chunk_data = vec![0.1 * (chunk_idx + 1) as f32; 250];
-                let chunk_tensor = Tensor::new(chunk_data, vec![1, 250]);
+                let chunk_data: _ = vec![0.1 * (chunk_idx + 1) as f32; 250];
+                let chunk_tensor: _ = Tensor::new(chunk_data, vec![1, 250]);
 
                 if let Ok(tensor) = chunk_tensor {
                     if tx.send(Ok(tensor)).await.is_err() {
@@ -338,11 +338,11 @@ impl InferenceEngine for TorchEngine {
         tracing::info!("Warming up PyTorch model: {}", model.id);
 
         // 创建一个小的虚拟输入进行预热
-        let warmup_input = Tensor::new(vec![0.0_f32; 1 * 3 * 224 * 224], vec![1, 3, 224, 224])?;
+        let warmup_input: _ = Tensor::new(vec![0.0_f32; 1 * 3 * 224 * 224], vec![1, 3, 224, 224])?;
 
         // 运行几次推理来预热 JIT 编译器和缓存
         for i in 0..3 {
-            let _ = self.infer(model, &warmup_input).await;
+            let _: _ = self.infer(model, &warmup_input).await;
             tracing::debug!("Warmup iteration {} completed", i + 1);
         }
 
@@ -365,8 +365,8 @@ impl InferenceEngine for TorchEngine {
     fn clone_engine(&self) -> Box<dyn InferenceEngine> {
         Box::new(TorchEngine {
             engine_type: self.engine_type.clone(),
-            stats: Arc::new(RwLock::new(EngineStats {
-                engine_name: "PyTorch-TorchScript".to_string(),
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(EngineStats {
+                engine_name: "PyTorch-TorchScript".to_string()),
                 total_inferences: 0,
                 successful_inferences: 0,
                 failed_inferences: 0,
@@ -426,7 +426,7 @@ impl TorchOptimizer {
 #[async_trait]
 impl EngineFactory for TorchEngineFactory {
     async fn create(&self, engine_type: EngineType) -> Result<Box<dyn InferenceEngine>> {
-        let engine = TorchEngine::new(
+        let engine: _ = TorchEngine::new(
             "default_model.pt",
             InferenceOptions {
                 engine_type,
@@ -464,10 +464,12 @@ impl TorchEngineFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_torch_engine_creation() {
-        let engine = TorchEngine::new(
+        let engine: _ = TorchEngine::new(
             "test_model.pt",
             InferenceOptions {
                 engine_type: EngineType::CPU,
@@ -480,17 +482,17 @@ mod tests {
         ).await;
 
         assert!(engine.is_ok());
-        let engine = engine.unwrap();
+        let engine: _ = engine.clone();unwrap();
         assert!(engine.is_available());
         assert_eq!(engine.name(), "PyTorch-TorchScript");
     }
 
     #[tokio::test]
     async fn test_gpu_accelerator_creation() {
-        let accelerator = TorchGPUAccelerator::new(EngineType::CUDA).await;
+        let accelerator: _ = TorchGPUAccelerator::new(EngineType::CUDA).await;
         assert!(accelerator.is_ok());
 
-        let accelerator = accelerator.unwrap();
+        let accelerator: _ = accelerator.clone();unwrap();
         assert_eq!(accelerator.device_type, EngineType::CUDA);
         // 注意：在这个模拟实现中，GPU 不可用
         assert!(!accelerator.is_available());
@@ -498,20 +500,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_torch_optimizer_creation() {
-        let optimizer = TorchOptimizer::new(true);
+        let optimizer: _ = TorchOptimizer::new(true);
         assert!(optimizer.graph_optimization);
         assert!(optimizer.constant_folding);
         assert!(optimizer.operator_fusion);
         assert_eq!(optimizer.jit_optimization_level, 2);
 
-        let optimizer_disabled = TorchOptimizer::new(false);
+        let optimizer_disabled: _ = TorchOptimizer::new(false);
         assert!(!optimizer_disabled.graph_optimization);
         assert_eq!(optimizer_disabled.jit_optimization_level, 0);
     }
 
     #[tokio::test]
     async fn test_inference_execution() {
-        let engine = TorchEngine::new(
+        let engine: _ = TorchEngine::new(
             "test_model.pt",
             InferenceOptions {
                 engine_type: EngineType::CPU,
@@ -523,8 +525,8 @@ mod tests {
             }
         ).await.unwrap();
 
-        let input = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]).unwrap();
-        let model_handle = engine.load_model("test_model.pt", InferenceOptions {
+        let input: _ = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]).unwrap();
+        let model_handle: _ = engine.load_model("test_model.pt", InferenceOptions {
             engine_type: EngineType::CPU,
             batch_size: Some(1),
             optimization: true,
@@ -533,16 +535,16 @@ mod tests {
             custom_options: std::collections::HashMap::new(),
         }).await.unwrap();
 
-        let result = engine.infer(&model_handle, &input).await;
+        let result: _ = engine.infer(&model_handle, &input).await;
         assert!(result.is_ok());
 
-        let result = result.unwrap();
+        let result: _ = result.clone();unwrap();
         assert_eq!(*result.output.shape(), vec![1, 1000]);
     }
 
     #[tokio::test]
     async fn test_batch_inference() {
-        let engine = TorchEngine::new(
+        let engine: _ = TorchEngine::new(
             "test_model.pt",
             InferenceOptions {
                 engine_type: EngineType::CPU,
@@ -554,13 +556,13 @@ mod tests {
             }
         ).await.unwrap();
 
-        let inputs = vec![
+        let inputs: _ = vec![
             Tensor::new(vec![1.0, 2.0, 3.0], vec![3]).unwrap(),
             Tensor::new(vec![4.0, 5.0, 6.0], vec![3]).unwrap(),
             Tensor::new(vec![7.0, 8.0, 9.0], vec![3]).unwrap(),
         ];
 
-        let model_handle = engine.load_model("test_model.pt", InferenceOptions {
+        let model_handle: _ = engine.load_model("test_model.pt", InferenceOptions {
             engine_type: EngineType::CPU,
             batch_size: Some(4),
             optimization: true,
@@ -569,10 +571,10 @@ mod tests {
             custom_options: std::collections::HashMap::new(),
         }).await.unwrap();
 
-        let results = engine.batch_infer(&model_handle, &inputs).await;
+        let results: _ = engine.batch_infer(&model_handle, &inputs).await;
         assert!(results.is_ok());
 
-        let results = results.unwrap();
+        let results: _ = results.clone();unwrap();
         assert_eq!(results.len(), 3);
         for result in results {
             assert_eq!(*result.output.shape(), vec![1, 1000]);
@@ -581,7 +583,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_engine_stats() {
-        let engine = TorchEngine::new(
+        let engine: _ = TorchEngine::new(
             "test_model.pt",
             InferenceOptions {
                 engine_type: EngineType::CPU,
@@ -593,19 +595,19 @@ mod tests {
             }
         ).await.unwrap();
 
-        let stats = engine.get_stats().await;
+        let stats: _ = engine.get_stats().await;
         assert!(stats.is_ok());
 
-        let stats = stats.unwrap();
+        let stats: _ = stats.clone();unwrap();
         assert_eq!(stats.total_inferences, 0);
     }
 
     #[tokio::test]
     async fn test_engine_factory() {
-        let factory = TorchEngineFactory::new(EngineType::CPU);
+        let factory: _ = TorchEngineFactory::new(EngineType::CPU);
         assert_eq!(factory.name(), "PyTorch-TorchScript-Factory");
 
-        let formats = factory.supported_formats();
+        let formats: _ = factory.supported_formats();
         assert!(formats.contains(&ModelFormat::PyTorch));
         assert_eq!(formats.len(), 1);
     }

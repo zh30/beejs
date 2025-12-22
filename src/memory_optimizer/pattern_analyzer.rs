@@ -209,7 +209,7 @@ pub enum Severity {
 /// 内存使用模式分析器
 pub struct MemoryPatternAnalyzer {
     allocation_history: Arc<RwLock<VecDeque<AllocationRecord>>>,
-    active_allocations: Arc<RwLock<HashMap<u64, AllocationRecord>>>,
+    active_allocations: Arc<RwLock<HashMap<u64, AllocationRecord, std::collections::HashMap<u64, AllocationRecord, u64, AllocationRecord>>>>,
     statistics: Arc<RwLock<AllocationStatistics>>,
     config: AnalyzerConfig,
     analysis_window: Duration,
@@ -246,9 +246,9 @@ impl MemoryPatternAnalyzer {
     /// 使用配置创建分析器
     pub fn with_config(config: AnalyzerConfig) -> Self {
         Self {
-            allocation_history: Arc::new(RwLock::new(VecDeque::new())),
-            active_allocations: Arc::new(RwLock::new(HashMap::new())),
-            statistics: Arc::new(RwLock::new(AllocationStatistics {
+            allocation_history: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::new()))),
+            active_allocations: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            statistics: Arc::new(std::sync::Mutex::new(RwLock::new(AllocationStatistics {
                 total_allocations: 0,
                 total_deallocations: 0,
                 active_allocations: 0,
@@ -259,7 +259,7 @@ impl MemoryPatternAnalyzer {
                 average_allocation_size: 0.0,
                 allocation_rate: 0.0,
                 deallocation_rate: 0.0,
-            })),
+            }))),
             config,
             analysis_window: Duration::from_secs(60),
         }
@@ -310,12 +310,12 @@ impl MemoryPatternAnalyzer {
     /// 记录内存释放
     pub async fn record_deallocation(&self, allocation_id: u64) {
         // 查找并移除活动分配
-        let allocation_size = {
+        let allocation_size: _ = {
             let mut active = self.active_allocations.write().await;
             if let Some(record) = active.remove(&allocation_id) {
                 // 计算生命周期
-                let lifetime = Utc::now().signed_duration_since(record.timestamp).to_std().ok();
-                let size = record.size;
+                let lifetime: _ = Utc::now().signed_duration_since(record.timestamp).to_std().ok();
+                let size: _ = record.size;
 
                 // 更新历史记录中的生命周期
                 let mut history = self.allocation_history.write().await;
@@ -342,14 +342,14 @@ impl MemoryPatternAnalyzer {
 
     /// 检测内存使用模式
     pub async fn detect_patterns(&self) -> Vec<PatternDetection> {
-        let history = self.allocation_history.read().await;
-        let active = self.active_allocations.read().await;
-        let stats = self.statistics.read().await;
+        let history: _ = self.allocation_history.read().await;
+        let active: _ = self.active_allocations.read().await;
+        let stats: _ = self.statistics.read().await;
 
         let mut patterns = Vec::new();
 
         // 检测短生命周期对象模式
-        let short_lived = self.detect_short_lived_objects(&history).await;
+        let short_lived: _ = self.detect_short_lived_objects(&history).await;
         if !short_lived.is_empty() {
             patterns.push(PatternDetection {
                 pattern_type: PatternType::ShortLivedObjects,
@@ -362,13 +362,13 @@ impl MemoryPatternAnalyzer {
         }
 
         // 检测频繁小对象分配模式
-        let frequent_small = self.detect_frequent_small_allocations(&history, &stats).await;
+        let frequent_small: _ = self.detect_frequent_small_allocations(&history, &stats).await;
         if frequent_small.confidence > self.config.pattern_detection_threshold {
             patterns.push(frequent_small);
         }
 
         // 检测大对象分配模式
-        let large_objects = self.detect_large_object_allocations(&history).await;
+        let large_objects: _ = self.detect_large_object_allocations(&history).await;
         if !large_objects.is_empty() {
             patterns.push(PatternDetection {
                 pattern_type: PatternType::LargeObjectAllocations,
@@ -381,7 +381,7 @@ impl MemoryPatternAnalyzer {
         }
 
         // 检测内存泄漏模式
-        let leaks = self.detect_memory_leaks(&active).await;
+        let leaks: _ = self.detect_memory_leaks(&active).await;
         if !leaks.is_empty() {
             patterns.push(PatternDetection {
                 pattern_type: PatternType::MemoryLeakPattern,
@@ -398,13 +398,13 @@ impl MemoryPatternAnalyzer {
 
     /// 生成内存配置文件
     pub async fn generate_profile(&self, profile_id: String) -> MemoryProfile {
-        let stats = self.statistics.read().await.clone();
-        let patterns = self.detect_patterns().await;
-        let trends = self.analyze_trends().await;
-        let hotspots = self.identify_hotspots().await;
-        let recommendations = self.generate_recommendations(&patterns).await;
+        let stats: _ = self.statistics.read().await.clone();
+        let patterns: _ = self.detect_patterns().await;
+        let trends: _ = self.analyze_trends().await;
+        let hotspots: _ = self.identify_hotspots().await;
+        let recommendations: _ = self.generate_recommendations(&patterns).await;
 
-        let usage_patterns = self.aggregate_patterns(&patterns).await;
+        let usage_patterns: _ = self.aggregate_patterns(&patterns).await;
 
         MemoryProfile {
             profile_id,
@@ -419,21 +419,21 @@ impl MemoryPatternAnalyzer {
 
     /// 分析分配趋势
     async fn analyze_trends(&self) -> Vec<AllocationTrend> {
-        let history = self.allocation_history.read().await;
-        let now = Utc::now();
+        let history: _ = self.allocation_history.read().await;
+        let now: _ = Utc::now();
 
         // 按时间窗口分组
-        let mut time_buckets: BTreeMap<DateTime<Utc>, Vec<&AllocationRecord>> = BTreeMap::new();
+        let mut time_buckets: BTreeMap<DateTime<Utc, DateTime<Utc>, Vec<&AllocationRecord>> = BTreeMap::new();
 
         for record in history.iter() {
-            let bucket_time = record.timestamp.with_second(0).with_nanosecond(0).unwrap();
+            let bucket_time: _ = record.timestamp.with_second(0).with_nanosecond(0).unwrap();
             time_buckets.entry(bucket_time).or_default().push(record);
         }
 
         let mut trends = Vec::new();
 
         for (time, allocations) in time_buckets.iter() {
-            let allocation_rate = allocations.len() as f64 / 60.0; // per second
+            let allocation_rate: _ = allocations.len() as f64 / 60.0; // per second
             let total_size: usize = allocations.iter().map(|a| a.size).sum();
 
             trends.push(AllocationTrend {
@@ -456,13 +456,13 @@ impl MemoryPatternAnalyzer {
 
     /// 识别内存热点
     async fn identify_hotspots(&self) -> Vec<MemoryHotspot> {
-        let history = self.allocation_history.read().await;
+        let history: _ = self.allocation_history.read().await;
 
-        let mut location_counts: HashMap<String, (u64, usize)> = HashMap::new();
+        let mut location_counts: HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize)>> = HashMap::new();
 
         for record in history.iter() {
             if let Some(stack_trace) = &record.stack_trace {
-                let entry = location_counts.entry(stack_trace.clone()).or_insert((0, 0));
+                let entry: _ = location_counts.entry(stack_trace.clone()).or_insert((0, 0));
                 entry.0 += 1;
                 entry.1 += record.size;
             }
@@ -529,7 +529,7 @@ impl MemoryPatternAnalyzer {
 
     /// 检测短生命周期对象
     async fn detect_short_lived_objects(&self, history: &VecDeque<AllocationRecord>) -> Vec<String> {
-        let short_lived_count = history
+        let short_lived_count: _ = history
             .iter()
             .filter(|r| {
                 if let Some(lifetime) = r.lifetime {
@@ -558,7 +558,7 @@ impl MemoryPatternAnalyzer {
             .filter(|r| r.size < 1024) // 小于 1KB
             .collect();
 
-        let confidence = if stats.total_allocations > 0 {
+        let confidence: _ = if stats.total_allocations > 0 {
             small_allocations.len() as f64 / stats.total_allocations as f64
         } else {
             0.0
@@ -599,9 +599,9 @@ impl MemoryPatternAnalyzer {
     }
 
     /// 检测内存泄漏
-    async fn detect_memory_leaks(&self, active: &HashMap<u64, AllocationRecord>) -> Vec<(u64, usize)> {
-        let now = Utc::now();
-        let threshold = self.config.leak_detection_threshold;
+    async fn detect_memory_leaks(&self, active: &HashMap<u64, AllocationRecord, std::collections::HashMap<u64, AllocationRecord, u64, AllocationRecord>>) -> Vec<(u64, usize)> {
+        let now: _ = Utc::now();
+        let threshold: _ = self.config.leak_detection_threshold;
 
         active
             .iter()
@@ -637,13 +637,15 @@ impl MemoryPatternAnalyzer {
 mod tests {
     use super::*;
     use chrono::Utc;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_memory_pattern_analysis() {
-        let analyzer = MemoryPatternAnalyzer::new();
+        let analyzer: _ = MemoryPatternAnalyzer::new();
 
         // 记录分配
-        let record = AllocationRecord {
+        let record: _ = AllocationRecord {
             allocation_id: 1,
             size: 1024,
             allocation_type: AllocationType::Temporary,
@@ -655,10 +657,10 @@ mod tests {
         analyzer.record_allocation(record.clone()).await;
         analyzer.record_deallocation(1).await;
 
-        let patterns = analyzer.detect_patterns().await;
+        let patterns: _ = analyzer.detect_patterns().await;
         assert!(!patterns.is_empty() || patterns.is_empty()); // 可能是空的，这是正常的
 
-        let profile = analyzer.generate_profile("test_profile".to_string()).await;
+        let profile: _ = analyzer.generate_profile("test_profile".to_string()).await;
         assert_eq!(profile.profile_id, "test_profile");
     }
 }

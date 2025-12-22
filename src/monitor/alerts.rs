@@ -24,7 +24,7 @@ pub struct AlertRule {
     /// 是否启用
     pub enabled: bool,
     /// 标签
-    pub tags: HashMap<String, String>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     /// 静默期 (秒)
     pub silence_period: Duration,
 }
@@ -83,7 +83,7 @@ pub struct AlertData {
     /// 指标类型
     pub metric_type: MetricType,
     /// 标签
-    pub tags: HashMap<String, String>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 告警状态
@@ -104,7 +104,7 @@ pub struct NotificationChannel {
     /// 渠道类型
     pub channel_type: NotificationType,
     /// 配置
-    pub config: HashMap<String, String>,
+    pub config: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     /// 是否启用
     pub enabled: bool,
 }
@@ -129,7 +129,7 @@ pub struct NotificationMessage {
     /// 严重程度
     pub severity: AlertSeverity,
     /// 标签
-    pub tags: HashMap<String, String>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     /// 时间戳
     pub timestamp: u64,
 }
@@ -172,15 +172,15 @@ pub struct AlertSystem {
     /// 配置
     config: AlertSystemConfig,
     /// 告警规则
-    rules: Arc<Mutex<HashMap<String, AlertRule>>>,
+    rules: Arc<Mutex<HashMap<String, AlertRule, std::collections::HashMap<String, AlertRule, String, AlertRule>>>>,
     /// 活跃告警
-    active_alerts: Arc<Mutex<HashMap<String, AlertInstance>>>,
+    active_alerts: Arc<Mutex<HashMap<String, AlertInstance, std::collections::HashMap<String, AlertInstance, String, AlertInstance>>>>,
     /// 告警历史
     alert_history: Arc<Mutex<VecDeque<AlertInstance>>>,
     /// 通知渠道
-    notification_channels: Arc<Mutex<HashMap<String, NotificationChannel>>>,
+    notification_channels: Arc<Mutex<HashMap<String, NotificationChannel, std::collections::HashMap<String, NotificationChannel, String, NotificationChannel>>>>,
     /// 静默规则
-    silence_rules: Arc<Mutex<HashMap<String, SilenceRule>>>,
+    silence_rules: Arc<Mutex<HashMap<String, SilenceRule, std::collections::HashMap<String, SilenceRule, String, SilenceRule>>>>,
     /// 统计信息
     stats: Arc<Mutex<AlertStats>>,
 }
@@ -197,7 +197,7 @@ pub struct SilenceRule {
     /// 结束时间
     pub end_time: u64,
     /// 匹配的标签
-    pub match_tags: HashMap<String, String>,
+    pub match_tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     /// 创建时间
     pub created_at: u64,
 }
@@ -218,25 +218,25 @@ impl AlertSystem {
     pub fn new(config: AlertSystemConfig) -> Self {
         Self {
             config,
-            rules: Arc::new(Mutex::new(HashMap::new())),
-            active_alerts: Arc::new(Mutex::new(HashMap::new())),
-            alert_history: Arc::new(Mutex::new(VecDeque::new())),
-            notification_channels: Arc::new(Mutex::new(HashMap::new())),
-            silence_rules: Arc::new(Mutex::new(HashMap::new())),
-            stats: Arc::new(Mutex::new(AlertStats {
+            rules: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            active_alerts: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            alert_history: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
+            notification_channels: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            silence_rules: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(AlertStats {
                 total_alerts: 0,
                 active_alerts: 0,
                 resolved_alerts: 0,
                 silenced_alerts: 0,
                 notification_count: 0,
                 last_alert_at: None,
-            })),
+            }))),
         }
     }
 
     /// 创建默认配置的告警系统
     pub fn with_default_config() -> Self {
-        let config = AlertSystemConfig {
+        let config: _ = AlertSystemConfig {
             max_history: 10000,
             default_silence_period: Duration::from_secs(300), // 5分钟
             enable_notifications: true,
@@ -272,7 +272,7 @@ impl AlertSystem {
 
     /// 获取所有告警规则
     pub fn get_rules(&self) -> Result<Vec<AlertRule>, String> {
-        let rules = self.rules.lock().map_err(|e| e.to_string())?;
+        let rules: _ = self.rules.lock().map_err(|e| e.to_string())?;
         Ok(rules.values().cloned().collect())
     }
 
@@ -291,9 +291,9 @@ impl AlertSystem {
     }
 
     /// 检查是否应该静默
-    fn should_silence(&self, tags: &HashMap<String, String>) -> bool {
-        let silence_rules = self.silence_rules.lock().unwrap();
-        let current_time = SystemTime::now()
+    fn should_silence(&self, tags: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> bool {
+        let silence_rules: _ = self.silence_rules.lock().unwrap();
+        let current_time: _ = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
@@ -321,13 +321,13 @@ impl AlertSystem {
         &self,
         violations: Vec<ThresholdViolation>,
     ) -> Result<Vec<AlertInstance>, String> {
-        let rules = self.rules.lock().map_err(|e| e.to_string())?;
+        let rules: _ = self.rules.lock().map_err(|e| e.to_string())?;
         let mut active_alerts = self.active_alerts.lock().map_err(|e| e.to_string())?;
         let mut alert_history = self.alert_history.lock().map_err(|e| e.to_string())?;
         let mut stats = self.stats.lock().map_err(|e| e.to_string())?;
 
         let mut triggered_alerts = Vec::new();
-        let current_time = SystemTime::now()
+        let current_time: _ = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
@@ -352,10 +352,10 @@ impl AlertSystem {
                 }
 
                 // 生成告警 ID
-                let alert_id = format!("{}_{}", rule.id, current_time);
+                let alert_id: _ = format!("{}_{}", rule.id, current_time);
 
                 // 检查是否已经存在相同规则的活跃告警
-                let existing_alert = active_alerts.values().find(|alert| {
+                let existing_alert: _ = active_alerts.values().find(|alert| {
                     alert.rule_id == rule.id && alert.status == AlertStatus::Firing
                 });
 
@@ -364,7 +364,7 @@ impl AlertSystem {
                 }
 
                 // 创建告警实例
-                let alert_instance = AlertInstance {
+                let alert_instance: _ = AlertInstance {
                     id: alert_id.clone(),
                     rule_id: rule.id.clone(),
                     message: self.generate_alert_message(&rule, violation.current_value),
@@ -463,13 +463,13 @@ impl AlertSystem {
 
     /// 获取活跃告警
     pub fn get_active_alerts(&self) -> Result<Vec<AlertInstance>, String> {
-        let active_alerts = self.active_alerts.lock().map_err(|e| e.to_string())?;
+        let active_alerts: _ = self.active_alerts.lock().map_err(|e| e.to_string())?;
         Ok(active_alerts.values().cloned().collect())
     }
 
     /// 获取告警历史
     pub fn get_alert_history(&self, limit: Option<usize>) -> Result<Vec<AlertInstance>, String> {
-        let alert_history = self.alert_history.lock().map_err(|e| e.to_string())?;
+        let alert_history: _ = self.alert_history.lock().map_err(|e| e.to_string())?;
         let mut history = alert_history.iter().cloned().collect::<Vec<_>>();
 
         history.sort_by(|a, b| b.triggered_at.cmp(&a.triggered_at));
@@ -490,10 +490,10 @@ impl AlertSystem {
 
     /// 发送通知
     fn send_notifications(&self, alert: &AlertInstance) -> Result<(), String> {
-        let notification_channels = self.notification_channels.lock().map_err(|e| e.to_string())?;
+        let notification_channels: _ = self.notification_channels.lock().map_err(|e| e.to_string())?;
         let mut stats = self.stats.lock().map_err(|e| e.to_string())?;
 
-        let message = NotificationMessage {
+        let message: _ = NotificationMessage {
             title: format!("Beejs Alert: {}", alert.severity.as_str()),
             content: alert.message.clone(),
             severity: alert.severity.clone(),
@@ -532,7 +532,7 @@ impl AlertSystem {
 
     /// 获取统计信息
     pub fn get_stats(&self) -> Result<AlertStats, String> {
-        let stats = self.stats.lock().map_err(|e| e.to_string())?;
+        let stats: _ = self.stats.lock().map_err(|e| e.to_string())?;
         Ok(stats.clone())
     }
 
@@ -541,16 +541,16 @@ impl AlertSystem {
         let mut active_alerts = self.active_alerts.lock().map_err(|e| e.to_string())?;
         let mut alert_history = self.alert_history.lock().map_err(|e| e.to_string())?;
 
-        let current_time = SystemTime::now()
+        let current_time: _ = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
-        let silence_period = self.config.default_silence_period.as_secs();
+        let silence_period: _ = self.config.default_silence_period.as_secs();
 
         let mut cleaned_count = 0;
 
         // 清理静默的告警
-        let silence_rule_tags: HashMap<String, String> = HashMap::new();
+        let silence_rule_tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>> = HashMap::new();
         active_alerts.retain(|_, alert| {
             if alert.status == AlertStatus::Silenced {
                 if current_time - alert.triggered_at > silence_period {
@@ -592,17 +592,19 @@ impl AlertSeverity {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_alert_system_creation() {
-        let alert_system = AlertSystem::with_default_config();
+        let alert_system: _ = AlertSystem::with_default_config();
         assert!(alert_system.get_stats().is_ok());
     }
 
     #[test]
     fn test_add_alert_rule() {
-        let alert_system = AlertSystem::with_default_config();
-        let rule = AlertRule {
+        let alert_system: _ = AlertSystem::with_default_config();
+        let rule: _ = AlertRule {
             id: "test_rule".to_string(),
             name: "Test Rule".to_string(),
             description: "Test description".to_string(),
@@ -615,16 +617,16 @@ mod tests {
         };
 
         assert!(alert_system.add_rule(rule).is_ok());
-        let rules = alert_system.get_rules().unwrap();
+        let rules: _ = alert_system.get_rules().unwrap();
         assert_eq!(rules.len(), 1);
     }
 
     #[test]
     fn test_handle_threshold_violations() {
-        let alert_system = AlertSystem::with_default_config();
+        let alert_system: _ = AlertSystem::with_default_config();
 
         // 添加规则
-        let rule = AlertRule {
+        let rule: _ = AlertRule {
             id: "cpu_rule".to_string(),
             name: "CPU High".to_string(),
             description: "CPU usage too high".to_string(),
@@ -638,7 +640,7 @@ mod tests {
         alert_system.add_rule(rule).unwrap();
 
         // 创建阈值违规
-        let violation = ThresholdViolation {
+        let violation: _ = ThresholdViolation {
             metric_type: MetricType::CpuUsage,
             current_value: 95.0,
             threshold_value: 80.0,
@@ -646,7 +648,7 @@ mod tests {
             timestamp: 1234567890,
         };
 
-        let alerts = alert_system
+        let alerts: _ = alert_system
             .handle_threshold_violations(vec![violation])
             .unwrap();
 
@@ -656,10 +658,10 @@ mod tests {
 
     #[test]
     fn test_resolve_alert() {
-        let alert_system = AlertSystem::with_default_config();
+        let alert_system: _ = AlertSystem::with_default_config();
 
         // 添加规则
-        let rule = AlertRule {
+        let rule: _ = AlertRule {
             id: "cpu_rule".to_string(),
             name: "CPU High".to_string(),
             description: "CPU usage too high".to_string(),
@@ -673,7 +675,7 @@ mod tests {
         alert_system.add_rule(rule).unwrap();
 
         // 创建阈值违规
-        let violation = ThresholdViolation {
+        let violation: _ = ThresholdViolation {
             metric_type: MetricType::CpuUsage,
             current_value: 95.0,
             threshold_value: 80.0,
@@ -681,25 +683,25 @@ mod tests {
             timestamp: 1234567890,
         };
 
-        let alerts = alert_system
+        let alerts: _ = alert_system
             .handle_threshold_violations(vec![violation])
             .unwrap();
 
-        let alert_id = &alerts[0].id;
+        let alert_id: _ = &alerts[0].id;
 
         // 解决告警
         assert!(alert_system.resolve_alert(alert_id).is_ok());
 
-        let active_alerts = alert_system.get_active_alerts().unwrap();
+        let active_alerts: _ = alert_system.get_active_alerts().unwrap();
         assert_eq!(active_alerts.len(), 0);
     }
 
     #[test]
     fn test_get_alert_history() {
-        let alert_system = AlertSystem::with_default_config();
+        let alert_system: _ = AlertSystem::with_default_config();
 
         // 添加规则
-        let rule = AlertRule {
+        let rule: _ = AlertRule {
             id: "cpu_rule".to_string(),
             name: "CPU High".to_string(),
             description: "CPU usage too high".to_string(),
@@ -713,7 +715,7 @@ mod tests {
         alert_system.add_rule(rule).unwrap();
 
         // 创建阈值违规
-        let violation = ThresholdViolation {
+        let violation: _ = ThresholdViolation {
             metric_type: MetricType::CpuUsage,
             current_value: 95.0,
             threshold_value: 80.0,
@@ -726,15 +728,15 @@ mod tests {
             .unwrap();
 
         // 获取历史
-        let history = alert_system.get_alert_history(None).unwrap();
+        let history: _ = alert_system.get_alert_history(None).unwrap();
         assert_eq!(history.len(), 1);
     }
 
     #[test]
     fn test_evaluate_condition() {
-        let alert_system = AlertSystem::with_default_config();
+        let alert_system: _ = AlertSystem::with_default_config();
 
-        let conditions = vec![
+        let conditions: _ = vec![
             (AlertCondition::GreaterThan(50.0), 60.0, true),
             (AlertCondition::LessThan(50.0), 40.0, true),
             (AlertCondition::Equals(50.0), 50.0, true),
@@ -751,8 +753,8 @@ mod tests {
 
     #[test]
     fn test_add_silence_rule() {
-        let alert_system = AlertSystem::with_default_config();
-        let silence_rule = SilenceRule {
+        let alert_system: _ = AlertSystem::with_default_config();
+        let silence_rule: _ = SilenceRule {
             id: "silence_1".to_string(),
             name: "Silence Test".to_string(),
             start_time: 1234567890,
@@ -766,8 +768,8 @@ mod tests {
 
     #[test]
     fn test_notification_channel() {
-        let alert_system = AlertSystem::with_default_config();
-        let channel = NotificationChannel {
+        let alert_system: _ = AlertSystem::with_default_config();
+        let channel: _ = NotificationChannel {
             id: "webhook_1".to_string(),
             name: "Webhook".to_string(),
             channel_type: NotificationType::Webhook,

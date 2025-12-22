@@ -8,9 +8,9 @@ mod tests {
 
     #[test]
     fn test_current_startup_time() {
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let _runtime = RuntimeLite::new(false).expect("Failed to create runtime");
-        let elapsed = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let _runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
+        let elapsed: _ = start.elapsed().unwrap();
 
         println!("启动时间: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
 
@@ -27,17 +27,17 @@ mod tests {
         // 注意：由于 V8 Isolate 生命周期限制，我们创建新的实例进行测试
         // 这模拟了实际使用中的场景
 
-        let iterations = 1000;
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let iterations: _ = 1000;
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         for _ in 0..iterations {
-            let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
-            let result = runtime.execute_standard("1 + 1").expect("执行失败");
+            let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
+            let result: _ = runtime.execute_standard("1 + 1").expect("执行失败");
             assert_eq!(result.trim(), "2");
         }
 
-        let elapsed = start.elapsed().unwrap();
-        let per_op = elapsed / iterations;
+        let elapsed: _ = start.elapsed().unwrap();
+        let per_op: _ = elapsed / iterations;
 
         println!("简单执行 ({}-ms): {:.2}μs/次 (包含Isolate创建)", iterations, per_op.as_secs_f64() * 1_000_000.0);
 
@@ -51,16 +51,16 @@ mod tests {
 
     #[test]
     fn test_console_output_performance() {
-        let iterations = 100;
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let iterations: _ = 100;
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         for _ in 0..iterations {
-            let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
-            let _ = runtime.execute_standard("console.log('test')").expect("执行失败");
+            let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
+            let _: _ = runtime.execute_standard("console.log('test')").expect("执行失败");
         }
 
-        let elapsed = start.elapsed().unwrap();
-        let per_op = elapsed / iterations;
+        let elapsed: _ = start.elapsed().unwrap();
+        let per_op: _ = elapsed / iterations;
 
         println!("Console输出 ({}-ms): {:.2}ms/次 (包含Isolate创建)", iterations, per_op.as_secs_f64() * 1000.0);
 
@@ -74,25 +74,25 @@ mod tests {
 
     #[test]
     fn test_complex_code_performance() {
-        let complex_code = r#"
+        let complex_code: _ = r#"
         let sum = 0;
-        for (let i = 0; i < 1000; i++) {
+        for (let i: _ = 0; i < 1000; i++) {
             sum += i;
         }
         sum
         "#;
 
-        let iterations = 100;
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let iterations: _ = 100;
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         for _ in 0..iterations {
-            let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
-            let result = runtime.execute_standard(complex_code).expect("执行失败");
+            let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
+            let result: _ = runtime.execute_standard(complex_code).expect("执行失败");
             assert_eq!(result.trim(), "499500");
         }
 
-        let elapsed = start.elapsed().unwrap();
-        let per_op = elapsed / iterations;
+        let elapsed: _ = start.elapsed().unwrap();
+        let per_op: _ = elapsed / iterations;
 
         println!("复杂代码 ({}-ms): {:.2}ms/次", iterations, per_op.as_secs_f64() * 1000.0);
 
@@ -106,12 +106,12 @@ mod tests {
 
     #[test]
     fn test_fast_path_optimization() {
-        let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
 
         // 测试快路径优化 (常量表达式)
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let result = runtime.execute_code("1 + 1").expect("执行失败");
-        let elapsed = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let result: _ = runtime.execute_code("1 + 1").expect("执行失败");
+        let elapsed: _ = start.elapsed().unwrap();
 
         println!("快路径执行时间: {:.2}μs", elapsed.as_secs_f64() * 1_000_000.0);
         assert_eq!(result.trim(), "2");
@@ -126,9 +126,9 @@ mod tests {
 
     #[test]
     fn test_batch_execution_performance() {
-        let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
+        let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
 
-        let scripts = vec![
+        let scripts: _ = vec![
             "1 + 1",
             "2 * 3",
             "10 - 5",
@@ -136,18 +136,18 @@ mod tests {
             "5 % 3",
         ];
 
-        let iterations = 100;
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let iterations: _ = 100;
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         for _ in 0..iterations {
             for script in &scripts {
-                let _ = runtime.execute_code(script).expect("执行失败");
+                let _: _ = runtime.execute_code(script).expect("执行失败");
             }
         }
 
-        let elapsed = start.elapsed().unwrap();
-        let total_ops = (iterations * scripts.len()) as u32;
-        let per_op = elapsed / total_ops;
+        let elapsed: _ = start.elapsed().unwrap();
+        let total_ops: _ = (iterations * scripts.len()) as u32;
+        let per_op: _ = elapsed / total_ops;
 
         println!("批处理执行 ({}-ms): {:.2}μs/次 ({}个脚本)", total_ops, per_op.as_secs_f64() * 1_000_000.0, scripts.len());
 
@@ -162,16 +162,16 @@ mod tests {
     #[test]
     fn test_memory_efficiency() {
         // 创建多个运行时实例测试内存使用
-        let instances = 10;
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let instances: _ = 10;
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         let mut runtimes = Vec::new();
         for _ in 0..instances {
-            let rt = RuntimeLite::new(false).expect("创建运行时失败");
+            let rt: _ = RuntimeLite::new(false).expect("创建运行时失败");
             runtimes.push(rt);
         }
 
-        let elapsed = start.elapsed().unwrap();
+        let elapsed: _ = start.elapsed().unwrap();
 
         println!("创建{}个运行时实例: {:.2}ms", instances, elapsed.as_secs_f64() * 1000.0);
 
@@ -192,20 +192,20 @@ mod tests {
 
     #[test]
     fn test_nodejs_compatibility_performance() {
-        let nodejs_code = r#"
+        let nodejs_code: _ = r#"
         process.version
         "#;
 
-        let iterations = 100;
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let iterations: _ = 100;
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         for _ in 0..iterations {
-            let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
-            let _ = runtime.execute_standard(nodejs_code).expect("执行失败");
+            let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
+            let _: _ = runtime.execute_standard(nodejs_code).expect("执行失败");
         }
 
-        let elapsed = start.elapsed().unwrap();
-        let per_op = elapsed / iterations;
+        let elapsed: _ = start.elapsed().unwrap();
+        let per_op: _ = elapsed / iterations;
 
         println!("Node.js兼容性 ({}-ms): {:.2}ms/次", iterations, per_op.as_secs_f64() * 1000.0);
 
@@ -221,11 +221,13 @@ mod tests {
     #[ignore = "V8 SnapshotCreator lifecycle issues in test environment"]
     fn test_v8_snapshot_availability() {
         use beejs::{initialize_v8, v8_snapshot::SnapshotManager};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
         // 确保V8已初始化
         initialize_v8();
 
-        let _manager = SnapshotManager::new(beejs::v8_snapshot::SnapshotConfig::default());
+        let _manager: _ = SnapshotManager::new(beejs::v8_snapshot::SnapshotConfig::default());
 
         println!("V8快照管理器创建成功");
         println!("✅ V8快照系统已集成");

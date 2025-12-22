@@ -28,8 +28,8 @@ mod file_type_detection {
 
     /// Enhanced file type detection function
     pub fn detect_file_type(path: &PathBuf) -> FileType {
-        let extension = path.extension().and_then(|ext| ext.to_str());
-        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+        let extension: _ = path.extension().and_then(|ext| ext.to_str());
+        let stem: _ = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
 
         match extension {
             Some("js") => {
@@ -55,61 +55,61 @@ mod file_type_detection {
 
     #[test]
     fn test_detect_javascript_file() {
-        let path = PathBuf::from("script.js");
+        let path: _ = PathBuf::from("script.js");
         assert_eq!(detect_file_type(&path), FileType::JavaScript);
     }
 
     #[test]
     fn test_detect_es_module_file() {
-        let path = PathBuf::from("module.mjs");
+        let path: _ = PathBuf::from("module.mjs");
         assert_eq!(detect_file_type(&path), FileType::EsModule);
     }
 
     #[test]
     fn test_detect_commonjs_file() {
-        let path = PathBuf::from("module.cjs");
+        let path: _ = PathBuf::from("module.cjs");
         assert_eq!(detect_file_type(&path), FileType::CommonJs);
     }
 
     #[test]
     fn test_detect_typescript_file() {
-        let path = PathBuf::from("script.ts");
+        let path: _ = PathBuf::from("script.ts");
         assert_eq!(detect_file_type(&path), FileType::TypeScript);
     }
 
     #[test]
     fn test_detect_tsx_file() {
-        let path = PathBuf::from("component.tsx");
+        let path: _ = PathBuf::from("component.tsx");
         assert_eq!(detect_file_type(&path), FileType::TypeScript);
     }
 
     #[test]
     fn test_detect_json_file() {
-        let path = PathBuf::from("config.json");
+        let path: _ = PathBuf::from("config.json");
         assert_eq!(detect_file_type(&path), FileType::Json);
     }
 
     #[test]
     fn test_detect_unknown_file() {
-        let path = PathBuf::from("readme.md");
+        let path: _ = PathBuf::from("readme.md");
         assert_eq!(detect_file_type(&path), FileType::Unknown);
     }
 
     #[test]
     fn test_detect_nested_path() {
-        let path = PathBuf::from("/home/user/project/src/index.ts");
+        let path: _ = PathBuf::from("/home/user/project/src/index.ts");
         assert_eq!(detect_file_type(&path), FileType::TypeScript);
     }
 
     #[test]
     fn test_detect_mts_file() {
-        let path = PathBuf::from("module.mts");
+        let path: _ = PathBuf::from("module.mts");
         assert_eq!(detect_file_type(&path), FileType::TypeScript);
     }
 
     #[test]
     fn test_detect_cts_file() {
-        let path = PathBuf::from("module.cts");
+        let path: _ = PathBuf::from("module.cts");
         assert_eq!(detect_file_type(&path), FileType::TypeScript);
     }
 }
@@ -136,19 +136,19 @@ mod execution_context {
         /// Command line arguments (process.argv)
         pub argv: Vec<String>,
         /// Environment variables
-        pub env: HashMap<String, String>,
+        pub env: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     }
 
     impl ExecutionContext {
         pub fn new(script_path: PathBuf) -> Self {
-            let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-            let absolute_path = if script_path.is_absolute() {
+            let cwd: _ = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            let absolute_path: _ = if script_path.is_absolute() {
                 script_path.clone()
             } else {
                 cwd.join(&script_path)
             };
 
-            let dirname = absolute_path.parent()
+            let dirname: _ = absolute_path.parent()
                 .map(|p| p.to_path_buf())
                 .unwrap_or_else(|| PathBuf::from("."));
 
@@ -178,26 +178,26 @@ mod execution_context {
 
     #[test]
     fn test_context_creation() {
-        let ctx = ExecutionContext::new(PathBuf::from("test.js"));
+        let ctx: _ = ExecutionContext::new(PathBuf::from("test.js"));
         assert!(ctx.argv.len() >= 2);
         assert_eq!(ctx.argv[0], "beejs");
     }
 
     #[test]
     fn test_dirname_calculation() {
-        let ctx = ExecutionContext::new(PathBuf::from("/home/user/project/script.js"));
+        let ctx: _ = ExecutionContext::new(PathBuf::from("/home/user/project/script.js"));
         assert_eq!(ctx.dirname, PathBuf::from("/home/user/project"));
     }
 
     #[test]
     fn test_filename_is_absolute() {
-        let ctx = ExecutionContext::new(PathBuf::from("script.js"));
+        let ctx: _ = ExecutionContext::new(PathBuf::from("script.js"));
         assert!(ctx.filename.is_absolute());
     }
 
     #[test]
     fn test_argv_with_args() {
-        let ctx = ExecutionContext::new(PathBuf::from("script.js"))
+        let ctx: _ = ExecutionContext::new(PathBuf::from("script.js"))
             .with_args(vec!["--port".to_string(), "3000".to_string()]);
 
         assert_eq!(ctx.argv.len(), 4);
@@ -207,7 +207,7 @@ mod execution_context {
 
     #[test]
     fn test_env_variable_injection() {
-        let ctx = ExecutionContext::new(PathBuf::from("script.js"))
+        let ctx: _ = ExecutionContext::new(PathBuf::from("script.js"))
             .with_env("NODE_ENV", "production")
             .with_env("API_KEY", "secret");
 
@@ -217,7 +217,7 @@ mod execution_context {
 
     #[test]
     fn test_cwd_is_set() {
-        let ctx = ExecutionContext::new(PathBuf::from("script.js"));
+        let ctx: _ = ExecutionContext::new(PathBuf::from("script.js"));
         assert!(ctx.cwd.exists() || ctx.cwd == PathBuf::from("."));
     }
 }
@@ -257,9 +257,9 @@ mod module_resolution {
 
             // Build node_modules search paths
             while current.parent().is_some() {
-                let nm_path = current.join("node_modules");
+                let nm_path: _ = current.join("node_modules");
                 search_paths.push(nm_path);
-                current = current.parent().unwrap().to_path_buf();
+                current = current.clone();parent().unwrap().to_path_buf();
             }
 
             Self {
@@ -282,13 +282,13 @@ mod module_resolution {
 
             // Relative path resolution
             if request.starts_with("./") || request.starts_with("../") {
-                let resolved = parent.parent()
+                let resolved: _ = parent.parent()
                     .map(|p| p.join(request))
                     .unwrap_or_else(|| PathBuf::from(request));
 
                 // Try with extensions
                 for ext in &["", ".js", ".ts", ".json", "/index.js", "/index.ts"] {
-                    let with_ext = PathBuf::from(format!("{}{}", resolved.display(), ext));
+                    let with_ext: _ = PathBuf::from(format!("{}{}", resolved.display(), ext));
                     if with_ext.exists() {
                         return ResolvedModule::File(with_ext);
                     }
@@ -299,13 +299,13 @@ mod module_resolution {
 
             // Package resolution
             for search_path in &self.search_paths {
-                let package_path = search_path.join(request);
+                let package_path: _ = search_path.join(request);
                 if package_path.exists() {
                     // Try package.json main field
-                    let pkg_json = package_path.join("package.json");
+                    let pkg_json: _ = package_path.join("package.json");
                     if pkg_json.exists() {
                         // In real impl, would parse package.json for "main" field
-                        let entry = package_path.join("index.js");
+                        let entry: _ = package_path.join("index.js");
                         return ResolvedModule::Package {
                             name: request.to_string(),
                             entry,
@@ -313,7 +313,7 @@ mod module_resolution {
                     }
 
                     // Try index.js
-                    let index = package_path.join("index.js");
+                    let index: _ = package_path.join("index.js");
                     if index.exists() {
                         return ResolvedModule::File(index);
                     }
@@ -326,42 +326,42 @@ mod module_resolution {
 
     #[test]
     fn test_builtin_module_resolution() {
-        let resolver = ModuleResolver::new(&PathBuf::from("/home/user/project"));
-        let result = resolver.resolve("fs", &PathBuf::from("/home/user/project/index.js"));
+        let resolver: _ = ModuleResolver::new(&PathBuf::from("/home/user/project"));
+        let result: _ = resolver.resolve("fs", &PathBuf::from("/home/user/project/index.js"));
         assert_eq!(result, ResolvedModule::Builtin("fs".to_string()));
     }
 
     #[test]
     fn test_path_builtin() {
-        let resolver = ModuleResolver::new(&PathBuf::from("/home/user/project"));
-        let result = resolver.resolve("path", &PathBuf::from("/home/user/project/index.js"));
+        let resolver: _ = ModuleResolver::new(&PathBuf::from("/home/user/project"));
+        let result: _ = resolver.resolve("path", &PathBuf::from("/home/user/project/index.js"));
         assert_eq!(result, ResolvedModule::Builtin("path".to_string()));
     }
 
     #[test]
     fn test_crypto_builtin() {
-        let resolver = ModuleResolver::new(&PathBuf::from("/home/user/project"));
-        let result = resolver.resolve("crypto", &PathBuf::from("/home/user/project/index.js"));
+        let resolver: _ = ModuleResolver::new(&PathBuf::from("/home/user/project"));
+        let result: _ = resolver.resolve("crypto", &PathBuf::from("/home/user/project/index.js"));
         assert_eq!(result, ResolvedModule::Builtin("crypto".to_string()));
     }
 
     #[test]
     fn test_relative_not_found() {
-        let resolver = ModuleResolver::new(&PathBuf::from("/tmp"));
-        let result = resolver.resolve("./nonexistent", &PathBuf::from("/tmp/index.js"));
+        let resolver: _ = ModuleResolver::new(&PathBuf::from("/tmp"));
+        let result: _ = resolver.resolve("./nonexistent", &PathBuf::from("/tmp/index.js"));
         assert!(matches!(result, ResolvedModule::NotFound(_)));
     }
 
     #[test]
     fn test_package_not_found() {
-        let resolver = ModuleResolver::new(&PathBuf::from("/tmp"));
-        let result = resolver.resolve("nonexistent-package", &PathBuf::from("/tmp/index.js"));
+        let resolver: _ = ModuleResolver::new(&PathBuf::from("/tmp"));
+        let result: _ = resolver.resolve("nonexistent-package", &PathBuf::from("/tmp/index.js"));
         assert!(matches!(result, ResolvedModule::NotFound(_)));
     }
 
     #[test]
     fn test_search_paths_generated() {
-        let resolver = ModuleResolver::new(&PathBuf::from("/home/user/project/src"));
+        let resolver: _ = ModuleResolver::new(&PathBuf::from("/home/user/project/src"));
         assert!(resolver.search_paths.len() >= 1);
         assert!(resolver.search_paths[0].to_string_lossy().contains("node_modules"));
     }
@@ -442,31 +442,31 @@ mod argument_parsing {
 
     #[test]
     fn test_simple_script_path() {
-        let args = vec![
+        let args: _ = vec![
             "beejs".to_string(),
             "script.js".to_string(),
         ];
-        let parsed = ParsedArgs::parse(args);
+        let parsed: _ = ParsedArgs::parse(args);
         assert_eq!(parsed.script_path, Some("script.js".to_string()));
         assert!(parsed.script_args.is_empty());
     }
 
     #[test]
     fn test_script_with_args() {
-        let args = vec![
+        let args: _ = vec![
             "beejs".to_string(),
             "script.js".to_string(),
             "--port".to_string(),
             "3000".to_string(),
         ];
-        let parsed = ParsedArgs::parse(args);
+        let parsed: _ = ParsedArgs::parse(args);
         assert_eq!(parsed.script_path, Some("script.js".to_string()));
         assert_eq!(parsed.script_args, vec!["--port", "3000"]);
     }
 
     #[test]
     fn test_separator_handling() {
-        let args = vec![
+        let args: _ = vec![
             "beejs".to_string(),
             "--verbose".to_string(),
             "script.js".to_string(),
@@ -474,7 +474,7 @@ mod argument_parsing {
             "--script-arg".to_string(),
             "value".to_string(),
         ];
-        let parsed = ParsedArgs::parse(args);
+        let parsed: _ = ParsedArgs::parse(args);
         assert_eq!(parsed.runtime_args, vec!["--verbose"]);
         assert_eq!(parsed.script_path, Some("script.js".to_string()));
         assert_eq!(parsed.script_args, vec!["--script-arg", "value"]);
@@ -482,18 +482,18 @@ mod argument_parsing {
 
     #[test]
     fn test_no_script() {
-        let args = vec![
+        let args: _ = vec![
             "beejs".to_string(),
             "--help".to_string(),
         ];
-        let parsed = ParsedArgs::parse(args);
+        let parsed: _ = ParsedArgs::parse(args);
         assert_eq!(parsed.script_path, None);
         assert_eq!(parsed.runtime_args, vec!["--help"]);
     }
 
     #[test]
     fn test_complex_args() {
-        let args = vec![
+        let args: _ = vec![
             "beejs".to_string(),
             "-v".to_string(),
             "--config".to_string(),
@@ -505,7 +505,7 @@ mod argument_parsing {
             "--port".to_string(),
             "8080".to_string(),
         ];
-        let parsed = ParsedArgs::parse(args);
+        let parsed: _ = ParsedArgs::parse(args);
 
         // Runtime args should include flags before script
         assert!(parsed.runtime_args.contains(&"-v".to_string()));
@@ -529,6 +529,8 @@ mod script_executor {
 
     use super::file_type_detection::FileType;
     use super::execution_context::ExecutionContext;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// Script executor configuration
     #[derive(Debug, Clone)]
@@ -583,7 +585,7 @@ mod script_executor {
                 return Err(format!("Script not found: {}", path.display()));
             }
 
-            let file_type = super::file_type_detection::detect_file_type(path);
+            let file_type: _ = super::file_type_detection::detect_file_type(path);
             match file_type {
                 FileType::JavaScript | FileType::EsModule | FileType::CommonJs => Ok(()),
                 FileType::TypeScript => {
@@ -604,85 +606,85 @@ mod script_executor {
         }
 
         /// Build process.env object
-        pub fn build_process_env(&self, ctx: &ExecutionContext) -> HashMap<String, String> {
+        pub fn build_process_env(&self, ctx: &ExecutionContext) -> HashMap<String, String, std::collections::HashMap<String, String, String, String>> {
             ctx.env.clone()
         }
 
         /// Check if file needs transpilation
         pub fn needs_transpilation(&self, path: &PathBuf) -> bool {
-            let file_type = super::file_type_detection::detect_file_type(path);
+            let file_type: _ = super::file_type_detection::detect_file_type(path);
             matches!(file_type, FileType::TypeScript)
         }
     }
 
     #[test]
     fn test_executor_creation() {
-        let executor = ScriptExecutor::new(ExecutorConfig::default());
+        let executor: _ = ScriptExecutor::new(ExecutorConfig::default());
         assert!(executor.config.transpile_ts);
         assert!(executor.config.source_maps);
     }
 
     #[test]
     fn test_validate_unknown_extension() {
-        let executor = ScriptExecutor::new(ExecutorConfig::default());
-        let result = executor.validate_script(&PathBuf::from("/tmp/nonexistent.xyz"));
+        let executor: _ = ScriptExecutor::new(ExecutorConfig::default());
+        let result: _ = executor.validate_script(&PathBuf::from("/tmp/nonexistent.xyz"));
         assert!(result.is_err());
     }
 
     #[test]
     fn test_typescript_needs_transpilation() {
-        let executor = ScriptExecutor::new(ExecutorConfig::default());
+        let executor: _ = ScriptExecutor::new(ExecutorConfig::default());
         assert!(executor.needs_transpilation(&PathBuf::from("script.ts")));
         assert!(executor.needs_transpilation(&PathBuf::from("component.tsx")));
     }
 
     #[test]
     fn test_javascript_no_transpilation() {
-        let executor = ScriptExecutor::new(ExecutorConfig::default());
+        let executor: _ = ScriptExecutor::new(ExecutorConfig::default());
         assert!(!executor.needs_transpilation(&PathBuf::from("script.js")));
         assert!(!executor.needs_transpilation(&PathBuf::from("module.mjs")));
     }
 
     #[test]
     fn test_build_process_argv() {
-        let executor = ScriptExecutor::new(ExecutorConfig::default());
-        let ctx = ExecutionContext::new(PathBuf::from("script.js"))
+        let executor: _ = ScriptExecutor::new(ExecutorConfig::default());
+        let ctx: _ = ExecutionContext::new(PathBuf::from("script.js"))
             .with_args(vec!["--arg1".to_string(), "value1".to_string()]);
 
-        let argv = executor.build_process_argv(&ctx);
+        let argv: _ = executor.build_process_argv(&ctx);
         assert!(argv.len() >= 4);
         assert_eq!(argv[0], "beejs");
     }
 
     #[test]
     fn test_build_process_env() {
-        let executor = ScriptExecutor::new(ExecutorConfig::default());
-        let ctx = ExecutionContext::new(PathBuf::from("script.js"))
+        let executor: _ = ScriptExecutor::new(ExecutorConfig::default());
+        let ctx: _ = ExecutionContext::new(PathBuf::from("script.js"))
             .with_env("TEST_VAR", "test_value");
 
-        let env = executor.build_process_env(&ctx);
+        let env: _ = executor.build_process_env(&ctx);
         assert_eq!(env.get("TEST_VAR"), Some(&"test_value".to_string()));
     }
 
     #[test]
     fn test_config_hot_reload() {
-        let config = ExecutorConfig {
+        let config: _ = ExecutorConfig {
             hot_reload: true,
             watch: true,
             ..Default::default()
         };
-        let executor = ScriptExecutor::new(config);
+        let executor: _ = ScriptExecutor::new(config);
         assert!(executor.config.hot_reload);
         assert!(executor.config.watch);
     }
 
     #[test]
     fn test_disabled_typescript() {
-        let config = ExecutorConfig {
+        let config: _ = ExecutorConfig {
             transpile_ts: false,
             ..Default::default()
         };
-        let executor = ScriptExecutor::new(config);
+        let executor: _ = ScriptExecutor::new(config);
         // Validation should fail for TS files when transpilation is disabled
         // (but we can't test actual file validation without a real file)
         assert!(!executor.config.transpile_ts);
@@ -698,7 +700,7 @@ mod shebang_detection {
 
     /// Detect shebang from file content
     pub fn detect_shebang(content: &str) -> Option<String> {
-        let first_line = content.lines().next()?;
+        let first_line: _ = content.lines().next()?;
         if first_line.starts_with("#!") {
             Some(first_line[2..].trim().to_string())
         } else {
@@ -716,22 +718,22 @@ mod shebang_detection {
 
     #[test]
     fn test_detect_beejs_shebang() {
-        let content = "#!/usr/bin/env beejs\nconsole.log('hello');";
-        let shebang = detect_shebang(content);
+        let content: _ = "#!/usr/bin/env beejs\nconsole.log('hello');";
+        let shebang: _ = detect_shebang(content);
         assert_eq!(shebang, Some("/usr/bin/env beejs".to_string()));
     }
 
     #[test]
     fn test_detect_node_shebang() {
-        let content = "#!/usr/bin/env node\nconsole.log('hello');";
-        let shebang = detect_shebang(content);
+        let content: _ = "#!/usr/bin/env node\nconsole.log('hello');";
+        let shebang: _ = detect_shebang(content);
         assert!(shebang.is_some());
         assert!(is_beejs_shebang(&shebang.unwrap()));
     }
 
     #[test]
     fn test_no_shebang() {
-        let content = "console.log('hello');";
+        let content: _ = "console.log('hello');";
         assert!(detect_shebang(content).is_none());
     }
 

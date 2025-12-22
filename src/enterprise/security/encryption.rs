@@ -45,7 +45,7 @@ pub struct CryptographicKey {
     pub created_at: std::time::SystemTime,
     pub expires_at: Option<std::time::SystemTime>,
     pub state: KeyState,
-    pub metadata: HashMap<String, String>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// Encryption configuration
@@ -60,7 +60,7 @@ pub struct EncryptionConfig {
 /// Key management service
 #[derive(Debug)]
 pub struct KeyManagementService {
-    keys: Arc<RwLock<HashMap<String, CryptographicKey>>>,
+    keys: Arc<RwLock<HashMap<String, CryptographicKey, std::collections::HashMap<String, CryptographicKey, String, CryptographicKey>>>>,
     config: EncryptionConfig,
 }
 
@@ -89,7 +89,7 @@ impl KeyManagementService {
     pub fn new(config: EncryptionConfig) -> Self {
         info!("Initializing Key Management Service");
         Self {
-            keys: Arc::new(RwLock::new(HashMap::new())),
+            keys: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
             config,
         }
     }
@@ -100,10 +100,10 @@ impl KeyManagementService {
         key_type: KeyType,
         algorithm: EncryptionAlgorithm,
     ) -> Result<CryptographicKey> {
-        let key_id = format!("key_{}", uuid::Uuid::new_v4());
+        let key_id: _ = format!("key_{}", uuid::Uuid::new_v4());
 
         // Generate key material based on type and algorithm
-        let key_data = match (key_type.clone(), algorithm.clone()) {
+        let key_data: _ = match (key_type.clone(), algorithm.clone()) {
             (KeyType::Symmetric, EncryptionAlgorithm::AES256GCM) => {
                 // Generate 256-bit (32 bytes) key
                 vec![0u8; 32]
@@ -123,7 +123,7 @@ impl KeyManagementService {
             _ => return Err(anyhow!("Unsupported key type or algorithm")),
         };
 
-        let key = CryptographicKey {
+        let key: _ = CryptographicKey {
             id: key_id.clone(),
             key_type,
             algorithm,
@@ -151,7 +151,7 @@ impl KeyManagementService {
         key_id: &str,
         plaintext: &[u8],
     ) -> Result<EncryptionResult> {
-        let keys = self.keys.read().await;
+        let keys: _ = self.keys.read().await;
 
         if let Some(key) = keys.get(key_id) {
             if key.state != KeyState::Active {
@@ -169,14 +169,14 @@ impl KeyManagementService {
             match key.algorithm {
                 EncryptionAlgorithm::AES256GCM => {
                     // Generate random IV
-                    let iv = vec![0u8; 12]; // 96-bit IV for GCM
+                    let iv: _ = vec![0u8; 12]; // 96-bit IV for GCM
 
                     // Generate authentication tag
-                    let tag = vec![0u8; 16]; // 128-bit tag
+                    let tag: _ = vec![0u8; 16]; // 128-bit tag
 
                     // In a real implementation, this would use actual encryption
                     // For now, we just return a placeholder
-                    let encrypted = plaintext.to_vec();
+                    let encrypted: _ = plaintext.to_vec();
 
                     info!("Encrypted data using key: {} (AES-256-GCM)", key_id);
 
@@ -218,7 +218,7 @@ impl KeyManagementService {
         iv: &[u8],
         tag: &[u8],
     ) -> Result<DecryptionResult> {
-        let keys = self.keys.read().await;
+        let keys: _ = self.keys.read().await;
 
         if let Some(key) = keys.get(key_id) {
             if key.state != KeyState::Active {
@@ -235,7 +235,7 @@ impl KeyManagementService {
                 EncryptionAlgorithm::AES256GCM => {
                     // In a real implementation, this would use actual decryption
                     // For now, we just return the encrypted data as-is
-                    let decrypted = encrypted_data.to_vec();
+                    let decrypted: _ = encrypted_data.to_vec();
 
                     info!("Decrypted data using key: {} (AES-256-GCM)", key_id);
 
@@ -272,7 +272,7 @@ impl KeyManagementService {
             old_key.state = KeyState::Expired;
 
             // Generate new key with same type and algorithm
-            let new_key = self.generate_key(old_key.key_type.clone(), old_key.algorithm.clone()).await?;
+            let new_key: _ = self.generate_key(old_key.key_type.clone(), old_key.algorithm.clone()).await?;
 
             info!("Rotated key: {} -> {}", key_id, new_key.id);
 
@@ -301,19 +301,19 @@ impl KeyManagementService {
 
     /// Get key information
     pub async fn get_key(&self, key_id: &str) -> Option<CryptographicKey> {
-        let keys = self.keys.read().await;
+        let keys: _ = self.keys.read().await;
         keys.get(key_id).cloned()
     }
 
     /// List all keys
     pub async fn list_keys(&self) -> Vec<CryptographicKey> {
-        let keys = self.keys.read().await;
+        let keys: _ = self.keys.read().await;
         keys.values().cloned().collect()
     }
 
     /// Get key statistics
-    pub async fn get_key_stats(&self) -> HashMap<String, serde_json::Value> {
-        let keys = self.keys.read().await;
+    pub async fn get_key_stats(&self) -> HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>> {
+        let keys: _ = self.keys.read().await;
         let mut stats = HashMap::new();
 
         stats.insert("total_keys".to_string(), serde_json::Value::from(keys.len()));
@@ -321,7 +321,7 @@ impl KeyManagementService {
         // Count keys by state
         let mut state_counts = HashMap::new();
         for key in keys.values() {
-            let state_name = match key.state {
+            let state_name: _ = match key.state {
                 KeyState::Active => "Active",
                 KeyState::Expired => "Expired",
                 KeyState::Revoked => "Revoked",
@@ -334,7 +334,7 @@ impl KeyManagementService {
         // Count keys by algorithm
         let mut algo_counts = HashMap::new();
         for key in keys.values() {
-            let algo_name = match &key.algorithm {
+            let algo_name: _ = match &key.algorithm {
                 EncryptionAlgorithm::AES256GCM => "AES-256-GCM",
                 EncryptionAlgorithm::ChaCha20Poly1305 => "ChaCha20-Poly1305",
                 EncryptionAlgorithm::RSA4096 => "RSA-4096",
@@ -350,7 +350,7 @@ impl KeyManagementService {
     /// Cleanup expired keys
     pub async fn cleanup_expired_keys(&self) -> Result<usize> {
         let mut keys = self.keys.write().await;
-        let now = std::time::SystemTime::now();
+        let now: _ = std::time::SystemTime::now();
         let mut removed_count = 0;
 
         keys.retain(|_, key| {
@@ -375,19 +375,21 @@ impl KeyManagementService {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_key_generation() {
-        let config = EncryptionConfig {
+        let config: _ = EncryptionConfig {
             default_algorithm: EncryptionAlgorithm::AES256GCM,
             key_rotation_interval_days: 90,
             enable_hsm: false,
             backup_keys: true,
         };
 
-        let kms = KeyManagementService::new(config);
+        let kms: _ = KeyManagementService::new(config);
 
-        let key = kms.generate_key(
+        let key: _ = kms.generate_key(
             KeyType::Symmetric,
             EncryptionAlgorithm::AES256GCM,
         ).await.unwrap();
@@ -399,26 +401,26 @@ mod tests {
 
     #[tokio::test]
     async fn test_encryption_decryption() {
-        let config = EncryptionConfig {
+        let config: _ = EncryptionConfig {
             default_algorithm: EncryptionAlgorithm::AES256GCM,
             key_rotation_interval_days: 90,
             enable_hsm: false,
             backup_keys: true,
         };
 
-        let kms = KeyManagementService::new(config);
+        let kms: _ = KeyManagementService::new(config);
 
-        let key = kms.generate_key(
+        let key: _ = kms.generate_key(
             KeyType::Symmetric,
             EncryptionAlgorithm::AES256GCM,
         ).await.unwrap();
 
-        let plaintext = b"Hello, Beejs!";
+        let plaintext: _ = b"Hello, Beejs!";
 
-        let encrypted = kms.encrypt(&key.id, plaintext).await.unwrap();
+        let encrypted: _ = kms.encrypt(&key.id, plaintext).await.unwrap();
         assert!(encrypted.success);
 
-        let decrypted = kms.decrypt(
+        let decrypted: _ = kms.decrypt(
             &key.id,
             encrypted.encrypted_data.as_ref().unwrap(),
             encrypted.iv.as_ref().unwrap(),
@@ -431,21 +433,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_key_rotation() {
-        let config = EncryptionConfig {
+        let config: _ = EncryptionConfig {
             default_algorithm: EncryptionAlgorithm::AES256GCM,
             key_rotation_interval_days: 90,
             enable_hsm: false,
             backup_keys: true,
         };
 
-        let kms = KeyManagementService::new(config);
+        let kms: _ = KeyManagementService::new(config);
 
-        let original_key = kms.generate_key(
+        let original_key: _ = kms.generate_key(
             KeyType::Symmetric,
             EncryptionAlgorithm::AES256GCM,
         ).await.unwrap();
 
-        let new_key = kms.rotate_key(&original_key.id).await.unwrap();
+        let new_key: _ = kms.rotate_key(&original_key.id).await.unwrap();
 
         assert_ne!(original_key.id, new_key.id);
         assert_eq!(new_key.key_type, original_key.key_type);
@@ -454,23 +456,23 @@ mod tests {
 
     #[tokio::test]
     async fn test_key_revoke() {
-        let config = EncryptionConfig {
+        let config: _ = EncryptionConfig {
             default_algorithm: EncryptionAlgorithm::AES256GCM,
             key_rotation_interval_days: 90,
             enable_hsm: false,
             backup_keys: true,
         };
 
-        let kms = KeyManagementService::new(config);
+        let kms: _ = KeyManagementService::new(config);
 
-        let key = kms.generate_key(
+        let key: _ = kms.generate_key(
             KeyType::Symmetric,
             EncryptionAlgorithm::AES256GCM,
         ).await.unwrap();
 
         kms.revoke_key(&key.id, "Security incident").await.unwrap();
 
-        let retrieved_key = kms.get_key(&key.id).await.unwrap();
+        let retrieved_key: _ = kms.get_key(&key.id).await.unwrap();
         assert_eq!(retrieved_key.state, KeyState::Revoked);
     }
 }

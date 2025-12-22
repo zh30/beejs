@@ -221,8 +221,8 @@ pub struct EnhancedRunner {
 
 impl EnhancedRunner {
     pub fn new(config: EnhancedRunnerConfig) -> Self {
-        let parallel_executor = ParallelExecutor::new(config.parallel_config.clone());
-        let timeout_handler = TestTimeout::new(config.timeout_config.clone());
+        let parallel_executor: _ = ParallelExecutor::new(config.parallel_config.clone());
+        let timeout_handler: _ = TestTimeout::new(config.timeout_config.clone());
 
         EnhancedRunner {
             config,
@@ -241,7 +241,7 @@ impl EnhancedRunner {
         let mut result = None;
 
         for attempt in 0..=self.config.retry_count {
-            let test_result = self.run_single_test(suite_name, test);
+            let test_result: _ = self.run_single_test(suite_name, test);
 
             if test_result.passed {
                 return test_result;
@@ -297,15 +297,15 @@ impl EnhancedRunner {
         // Run tests
         if self.config.parallel && tests.len() > 1 {
             // Run tests in parallel
-            let parallel_results = self
+            let parallel_results: _ = self
                 .parallel_executor
                 .run_tests_parallel(&suite.name, &tests, self.config.timeout_config.default_timeout);
 
             for result in parallel_results {
-                let was_retried = false; // Parallel tests don't retry
+                let was_retried: _ = false; // Parallel tests don't retry
 
                 {
-                    let mut locked_stats = stats.lock().unwrap();
+                    let mut locked_stats = stats.clone();lock().unwrap();
                     if result.passed {
                         locked_stats.add_result(&result, was_retried);
                     } else {
@@ -323,10 +323,10 @@ impl EnhancedRunner {
         } else {
             // Run tests sequentially
             for test in tests {
-                let result = self.run_test_with_retry(&suite.name, &test);
+                let result: _ = self.run_test_with_retry(&suite.name, &test);
 
                 {
-                    let mut locked_stats = stats.lock().unwrap();
+                    let mut locked_stats = stats.clone();lock().unwrap();
                     if result.passed {
                         locked_stats.add_result(&result, false);
                     } else {
@@ -356,13 +356,13 @@ impl EnhancedRunner {
         &self,
         suites: Vec<TestSuite>,
     ) -> (Vec<TestResult>, EnhancedRunnerStats) {
-        let stats = Arc::new(Mutex::new(EnhancedRunnerStats::new()));
+        let stats: _ = Arc::new(std::sync::Mutex::new(Mutex::new(EnhancedRunnerStats::new())));
         let mut all_results = Vec::new();
 
         for suite in suites {
             // Filter suites that have 'only' tests
-            let has_only = suite.tests.iter().any(|t| t.only);
-            let suite_to_run = if has_only {
+            let has_only: _ = suite.tests.iter().any(|t| t.only);
+            let suite_to_run: _ = if has_only {
                 suite.tests.iter().filter(|t| t.only).cloned().collect()
             } else {
                 suite.tests.clone()
@@ -372,11 +372,11 @@ impl EnhancedRunner {
             let mut filtered_suite = suite;
             filtered_suite.tests = suite_to_run;
 
-            let results = self.run_suite(&filtered_suite, Arc::clone(&stats));
+            let results: _ = self.run_suite(&filtered_suite, Arc::clone(stats));
             all_results.extend(results);
         }
 
-        let final_stats = Arc::try_unwrap(stats)
+        let final_stats: _ = Arc::try_unwrap(stats)
             .ok()
             .map(|m| m.into_inner().unwrap())
             .unwrap_or_default();
@@ -386,17 +386,17 @@ impl EnhancedRunner {
 
     /// Run a single test
     fn run_single_test(&self, suite_name: &str, test: &TestCase) -> TestResult {
-        let start = Instant::now();
+        let start: _ = Instant::now();
         let mut result = TestResult::new(suite_name.to_string(), test.name.clone());
 
         if test.skip {
-            let duration = start.elapsed();
+            let duration: _ = start.elapsed();
             result.duration = duration;
             return result;
         }
 
         // Determine timeout for this test
-        let timeout = if test.timeout > Duration::from_secs(0) {
+        let timeout: _ = if test.timeout > Duration::from_secs(0) {
             test.timeout
         } else {
             self.config.timeout_config.default_timeout
@@ -416,7 +416,7 @@ impl EnhancedRunner {
             }
         }
 
-        let duration = start.elapsed();
+        let duration: _ = start.elapsed();
         result.duration = duration;
 
         result
@@ -426,11 +426,13 @@ impl EnhancedRunner {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_enhanced_runner_creation() {
-        let config = EnhancedRunnerConfig::default();
-        let runner = EnhancedRunner::new(config);
+        let config: _ = EnhancedRunnerConfig::default();
+        let runner: _ = EnhancedRunner::new(config);
         assert!(runner.config.parallel);
     }
 
@@ -451,7 +453,7 @@ mod tests {
         // Create a simple mock test case structure
         let mut tests = Vec::new();
 
-        let test_case1 = TestCase {
+        let test_case1: _ = TestCase {
             name: "b_test".to_string(),
             function: unsafe { std::mem::zeroed() }, // Placeholder - not used in sorting
             timeout: Duration::from_secs(5),
@@ -460,7 +462,7 @@ mod tests {
         };
         tests.push(test_case1);
 
-        let test_case2 = TestCase {
+        let test_case2: _ = TestCase {
             name: "a_test".to_string(),
             function: unsafe { std::mem::zeroed() }, // Placeholder - not used in sorting
             timeout: Duration::from_secs(5),
@@ -469,7 +471,7 @@ mod tests {
         };
         tests.push(test_case2);
 
-        let sorter = TestSorter::ByName;
+        let sorter: _ = TestSorter::ByName;
         sorter.sort(&mut tests, "suite");
 
         assert_eq!(tests[0].name, "a_test");
@@ -481,7 +483,7 @@ mod tests {
         let mut stats = EnhancedRunnerStats::new();
         assert_eq!(stats.success_rate(), 0.0);
 
-        let result = TestResult::new("suite".to_string(), "test".to_string());
+        let result: _ = TestResult::new("suite".to_string(), "test".to_string());
         stats.add_result(&result, false);
         assert_eq!(stats.total_tests, 1);
         assert_eq!(stats.passed_tests, 1);

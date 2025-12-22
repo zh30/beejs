@@ -70,13 +70,13 @@ impl DmaBufferCache {
             small_buffers: Vec::with_capacity(16),
             medium_buffers: Vec::with_capacity(8),
             large_buffers: Vec::with_capacity(4),
-            stats: Arc::new(AtomicUsize::new(0)),
+            stats: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
         }
     }
 
     fn get_buffer(&mut self, size: usize) -> Option<DmaBuffer> {
         // Determine which pool to check
-        let pool = if size < 64 * 1024 {
+        let pool: _ = if size < 64 * 1024 {
             &mut self.small_buffers
         } else if size < 1024 * 1024 {
             &mut self.medium_buffers
@@ -99,7 +99,7 @@ impl DmaBufferCache {
     fn return_buffer(&mut self, buffer: DmaBuffer) {
         // Only cache buffers up to 1MB
         if buffer.size <= 1024 * 1024 {
-            let pool = if buffer.size < 64 * 1024 {
+            let pool: _ = if buffer.size < 64 * 1024 {
                 &mut self.small_buffers
             } else {
                 &mut self.medium_buffers
@@ -127,11 +127,11 @@ pub struct DmaEngine {
 impl DmaEngine {
     /// Create a new DMA engine
     pub fn new() -> Result<Self> {
-        let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) } as usize;
+        let page_size: _ = unsafe { libc::sysconf(libc::_SC_PAGESIZE) } as usize;
 
         Ok(Self {
-            cache: Arc::new(tokio::sync::Mutex::new(DmaBufferCache::new())),
-            stats: Arc::new(AtomicUsize::new(0)),
+            cache: Arc::new(std::sync::Mutex::new(tokio::sync::Mutex::new(DmaBufferCache::new()))),
+            stats: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
             page_size,
         })
     }
@@ -139,7 +139,7 @@ impl DmaEngine {
     /// Allocate a DMA-accessible buffer
     pub async fn allocate_buffer(&self, size: usize) -> Result<DmaBuffer> {
         // Round up to page size
-        let aligned_size = (size + self.page_size - 1) & !(self.page_size - 1);
+        let aligned_size: _ = (size + self.page_size - 1) & !(self.page_size - 1);
 
         // Try to get from cache first
         {
@@ -151,9 +151,9 @@ impl DmaEngine {
 
         // Allocate new buffer
         let mut addr: *mut c_void = std::ptr::null_mut();
-        let alignment = self.page_size;
+        let alignment: _ = self.page_size;
 
-        let result = unsafe {
+        let result: _ = unsafe {
             posix_memalign(&mut addr as *mut *mut c_void, alignment, aligned_size)
         };
 
@@ -161,7 +161,7 @@ impl DmaEngine {
             return Err(anyhow!("Failed to allocate DMA buffer: out of memory"));
         }
 
-        let non_null_addr = NonNull::new(addr as *mut u8)
+        let non_null_addr: _ = NonNull::new(addr as *mut u8)
             .ok_or_else(|| anyhow!("Invalid DMA buffer address"))?;
 
         self.stats.fetch_add(1, Ordering::Relaxed);
@@ -170,7 +170,7 @@ impl DmaEngine {
             addr: non_null_addr,
             size: aligned_size,
             alignment,
-            ref_count: Arc::new(AtomicUsize::new(1)),
+            ref_count: Arc::new(std::sync::Mutex::new(AtomicUsize::new(1))),
         })
     }
 
@@ -181,7 +181,7 @@ impl DmaEngine {
         dst: &DmaBuffer,
         direction: DmaDirection,
     ) -> Result<usize> {
-        let transfer_size = std::cmp::min(src.size, dst.size);
+        let transfer_size: _ = std::cmp::min(src.size, dst.size);
 
         // For memory-to-memory transfers, we can use memcpy
         // In a real implementation, this would use DMA hardware
@@ -204,7 +204,7 @@ impl DmaEngine {
         #[cfg(target_arch = "x86_64")]
         unsafe {
             // Prefetch hint for read
-            let prefetch_addr = addr as *const c_void;
+            let prefetch_addr: _ = addr as *const c_void;
             libc::syscall(
                 libc::SYS_cachectl,
                 prefetch_addr,
@@ -218,14 +218,14 @@ impl DmaEngine {
 
     /// Map a file for DMA access
     pub async fn map_file_for_dma(&self, path: &std::path::Path) -> Result<Mmap> {
-        let file = std::fs::File::open(path)?;
-        let mmap = unsafe { MmapOptions::new().map(&file)? };
+        let file: _ = std::fs::File::open(path)?;
+        let mmap: _ = unsafe { MmapOptions::new().map(&file)? };
         Ok(mmap)
     }
 
     /// Get DMA engine statistics
     pub async fn get_stats(&self) -> DmaStats {
-        let cache = self.cache.lock().await;
+        let cache: _ = self.cache.lock().await;
         DmaStats {
             total_transfers: self.stats.load(Ordering::Relaxed) as u64,
             total_bytes_transferred: self.stats.load(Ordering::Relaxed) as u64,
@@ -260,7 +260,7 @@ impl DmaBuffer {
 
 impl Drop for DmaBuffer {
     fn drop(&mut self) {
-        let count = self.ref_count.fetch_sub(1, Ordering::Relaxed);
+        let count: _ = self.ref_count.fetch_sub(1, Ordering::Relaxed);
         if count == 1 {
             // Last reference, free the memory
             unsafe {
@@ -273,35 +273,37 @@ impl Drop for DmaBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_allocate_small_buffer() {
-        let engine = DmaEngine::new().unwrap();
-        let buffer = engine.allocate_buffer(1024).await.unwrap();
+        let engine: _ = DmaEngine::new().unwrap();
+        let buffer: _ = engine.allocate_buffer(1024).await.unwrap();
         assert!(buffer.size() >= 1024);
         assert!(buffer.as_ptr() != std::ptr::null_mut());
     }
 
     #[tokio::test]
     async fn test_allocate_large_buffer() {
-        let engine = DmaEngine::new().unwrap();
-        let buffer = engine.allocate_buffer(1024 * 1024).await.unwrap();
+        let engine: _ = DmaEngine::new().unwrap();
+        let buffer: _ = engine.allocate_buffer(1024 * 1024).await.unwrap();
 
         assert!(buffer.size() >= 1024 * 1024);
     }
 
     #[tokio::test]
     async fn test_zero_copy_transfer() {
-        let engine = DmaEngine::new().unwrap();
-        let src = engine.allocate_buffer(1024).await.unwrap();
-        let dst = engine.allocate_buffer(1024).await.unwrap();
+        let engine: _ = DmaEngine::new().unwrap();
+        let src: _ = engine.allocate_buffer(1024).await.unwrap();
+        let dst: _ = engine.allocate_buffer(1024).await.unwrap();
 
         // Fill source with test data
         unsafe {
             std::ptr::write_bytes(src.as_ptr(), 0xAB, 1024);
         }
 
-        let bytes = engine.zero_copy_transfer(&src, &dst, DmaDirection::MemoryToMemory).await.unwrap();
+        let bytes: _ = engine.zero_copy_transfer(&src, &dst, DmaDirection::MemoryToMemory).await.unwrap();
 
         // Note: buffer is page-aligned to system page size (16384 bytes)
         // Both buffers are 16384 bytes, so we transfer 16384 bytes
@@ -318,19 +320,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_prefetch_data() {
-        let engine = DmaEngine::new().unwrap();
-        let buffer = engine.allocate_buffer(4096).await.unwrap();
+        let engine: _ = DmaEngine::new().unwrap();
+        let buffer: _ = engine.allocate_buffer(4096).await.unwrap();
 
-        let result = engine.prefetch_data(buffer.as_ptr() as usize, 4096);
+        let result: _ = engine.prefetch_data(buffer.as_ptr() as usize, 4096);
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_buffer_clone() {
-        let engine = DmaEngine::new().unwrap();
-        let buffer1 = engine.allocate_buffer(1024).await.unwrap();
+        let engine: _ = DmaEngine::new().unwrap();
+        let buffer1: _ = engine.allocate_buffer(1024).await.unwrap();
 
-        let buffer2 = buffer1.clone();
+        let buffer2: _ = buffer1.clone();
 
         assert_eq!(buffer1.size(), buffer2.size());
         assert_eq!(buffer1.as_ptr(), buffer2.as_ptr());
@@ -338,26 +340,26 @@ mod tests {
 
     #[tokio::test]
     async fn test_stats() {
-        let engine = DmaEngine::new().unwrap();
-        let _buffer = engine.allocate_buffer(1024).await.unwrap();
+        let engine: _ = DmaEngine::new().unwrap();
+        let _buffer: _ = engine.allocate_buffer(1024).await.unwrap();
 
-        let stats = engine.get_stats().await;
+        let stats: _ = engine.get_stats().await;
         // stats.total_transfers tracks the number of bytes allocated
         assert!(stats.total_transfers > 0);
     }
 
     #[tokio::test]
     async fn test_buffer_cache() {
-        let engine = DmaEngine::new().unwrap();
+        let engine: _ = DmaEngine::new().unwrap();
 
         // Allocate and return buffer to test cache
         {
-            let _buffer = engine.allocate_buffer(1024).await.unwrap();
+            let _buffer: _ = engine.allocate_buffer(1024).await.unwrap();
             // Buffer is dropped here and should be cached
         }
 
         // Allocate same size again, should hit cache
-        let buffer = engine.allocate_buffer(1024).await.unwrap();
+        let buffer: _ = engine.allocate_buffer(1024).await.unwrap();
         assert!(buffer.size() >= 1024);
     }
 }

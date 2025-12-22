@@ -34,15 +34,15 @@ pub struct HotPath {
 /// Enhanced Hot Path Tracker v2 with dynamic thresholds
 pub struct HotPathTrackerV2 {
     /// Execution counters per path
-    execution_counters: RwLock<HashMap<String, AtomicU64>>,
+    execution_counters: RwLock<HashMap<String, AtomicU64, std::collections::HashMap<String, AtomicU64, String, AtomicU64>>>,
     /// Execution time accumulators
-    execution_times: RwLock<HashMap<String, Duration>>,
+    execution_times: RwLock<HashMap<String, Duration, std::collections::HashMap<String, Duration, String, Duration>>>,
     /// Dynamic threshold (adaptive)
     adaptive_threshold: AtomicU64,
     /// History window for trend analysis
     history_window: RwLock<VecDeque<ExecutionEvent>>,
     /// Detected hot paths
-    hot_paths: RwLock<HashMap<String, HotPath>>,
+    hot_paths: RwLock<HashMap<String, HotPath, std::collections::HashMap<String, HotPath, String, HotPath>>>,
     /// Configuration
     config: TrackerConfig,
     /// Statistics
@@ -100,7 +100,7 @@ impl HotPathTrackerV2 {
 
     /// Create a new tracker with custom configuration
     pub fn with_config(config: TrackerConfig) -> Self {
-        let threshold = config.base_threshold;
+        let threshold: _ = config.base_threshold;
         Self {
             execution_counters: RwLock::new(HashMap::new()),
             execution_times: RwLock::new(HashMap::new()),
@@ -117,7 +117,7 @@ impl HotPathTrackerV2 {
         // Update execution counter
         {
             let mut counters = self.execution_counters.write().unwrap();
-            let counter = counters
+            let counter: _ = counters
                 .entry(path_id.to_string())
                 .or_insert_with(|| AtomicU64::new(0));
             counter.fetch_add(1, Ordering::Relaxed);
@@ -126,7 +126,7 @@ impl HotPathTrackerV2 {
         // Update execution time
         {
             let mut times = self.execution_times.write().unwrap();
-            let total_time = times.entry(path_id.to_string()).or_insert(Duration::ZERO);
+            let total_time: _ = times.entry(path_id.to_string()).or_insert(Duration::ZERO);
             *total_time += execution_time;
         }
 
@@ -153,9 +153,9 @@ impl HotPathTrackerV2 {
 
     /// Check if a path should be marked as hot
     fn check_hot_path(&self, path_id: &str) {
-        let threshold = self.adaptive_threshold.load(Ordering::Relaxed);
+        let threshold: _ = self.adaptive_threshold.load(Ordering::Relaxed);
 
-        let count = {
+        let count: _ = {
             let counters = self.execution_counters.read().unwrap();
             counters
                 .get(path_id)
@@ -166,8 +166,8 @@ impl HotPathTrackerV2 {
         if count >= threshold {
             let mut hot_paths = self.hot_paths.write().unwrap();
             if !hot_paths.contains_key(path_id) {
-                let avg_time = self.get_avg_execution_time(path_id);
-                let hotness_score = self.calculate_hotness_score(path_id);
+                let avg_time: _ = self.get_avg_execution_time(path_id);
+                let hotness_score: _ = self.calculate_hotness_score(path_id);
 
                 hot_paths.insert(
                     path_id.to_string(),
@@ -194,7 +194,7 @@ impl HotPathTrackerV2 {
     fn try_adjust_threshold(&self) {
         // Check cooldown
         {
-            let last = self.stats.last_adjustment.read().unwrap();
+            let last: _ = self.stats.last_adjustment.read().unwrap();
             if let Some(last_time) = *last {
                 if last_time.elapsed() < self.config.adjustment_cooldown {
                     return;
@@ -203,10 +203,10 @@ impl HotPathTrackerV2 {
         }
 
         // Calculate new threshold based on execution distribution
-        let new_threshold = self.calculate_adaptive_threshold();
+        let new_threshold: _ = self.calculate_adaptive_threshold();
 
         // Apply the new threshold
-        let current = self.adaptive_threshold.load(Ordering::Relaxed);
+        let current: _ = self.adaptive_threshold.load(Ordering::Relaxed);
         if new_threshold != current {
             self.adaptive_threshold.store(new_threshold, Ordering::Relaxed);
             self.stats.threshold_adjustments.fetch_add(1, Ordering::Relaxed);
@@ -218,7 +218,7 @@ impl HotPathTrackerV2 {
 
     /// Calculate adaptive threshold based on execution distribution
     fn calculate_adaptive_threshold(&self) -> u64 {
-        let counters = self.execution_counters.read().unwrap();
+        let counters: _ = self.execution_counters.read().unwrap();
         if counters.is_empty() {
             return self.config.base_threshold;
         }
@@ -229,8 +229,8 @@ impl HotPathTrackerV2 {
             .map(|c| c.load(Ordering::Relaxed))
             .collect();
 
-        let mean = counts.iter().sum::<u64>() as f64 / counts.len() as f64;
-        let variance = counts
+        let mean: _ = counts.iter().sum::<u64>() as f64 / counts.len() as f64;
+        let variance: _ = counts
             .iter()
             .map(|&c| {
                 let diff = c as f64 - mean;
@@ -238,10 +238,10 @@ impl HotPathTrackerV2 {
             })
             .sum::<f64>()
             / counts.len() as f64;
-        let std_dev = variance.sqrt();
+        let std_dev: _ = variance.sqrt();
 
         // Threshold = mean + 1.5 * std_dev (top ~7% become hot)
-        let calculated = (mean + 1.5 * std_dev) as u64;
+        let calculated: _ = (mean + 1.5 * std_dev) as u64;
 
         // Clamp to configured range
         calculated.clamp(self.config.min_threshold, self.config.max_threshold)
@@ -249,7 +249,7 @@ impl HotPathTrackerV2 {
 
     /// Calculate hotness score for a path
     fn calculate_hotness_score(&self, path_id: &str) -> f64 {
-        let count = {
+        let count: _ = {
             let counters = self.execution_counters.read().unwrap();
             counters
                 .get(path_id)
@@ -257,11 +257,11 @@ impl HotPathTrackerV2 {
                 .unwrap_or(0)
         };
 
-        let threshold = self.adaptive_threshold.load(Ordering::Relaxed);
-        let base_score = count as f64 / threshold as f64;
+        let threshold: _ = self.adaptive_threshold.load(Ordering::Relaxed);
+        let base_score: _ = count as f64 / threshold as f64;
 
         // Factor in recency from history
-        let recency_factor = self.calculate_recency_factor(path_id);
+        let recency_factor: _ = self.calculate_recency_factor(path_id);
 
         // Final score: execution frequency * recency
         (base_score * recency_factor).min(100.0)
@@ -269,8 +269,8 @@ impl HotPathTrackerV2 {
 
     /// Calculate recency factor based on recent executions
     fn calculate_recency_factor(&self, path_id: &str) -> f64 {
-        let history = self.history_window.read().unwrap();
-        let recent_count = history
+        let history: _ = self.history_window.read().unwrap();
+        let recent_count: _ = history
             .iter()
             .rev()
             .take(100)
@@ -283,7 +283,7 @@ impl HotPathTrackerV2 {
 
     /// Get average execution time for a path
     fn get_avg_execution_time(&self, path_id: &str) -> Duration {
-        let count = {
+        let count: _ = {
             let counters = self.execution_counters.read().unwrap();
             counters
                 .get(path_id)
@@ -291,7 +291,7 @@ impl HotPathTrackerV2 {
                 .unwrap_or(1)
         };
 
-        let total_time = {
+        let total_time: _ = {
             let times = self.execution_times.read().unwrap();
             times.get(path_id).copied().unwrap_or(Duration::ZERO)
         };
@@ -301,7 +301,7 @@ impl HotPathTrackerV2 {
 
     /// Get all detected hot paths
     pub fn get_hot_paths(&self) -> Vec<HotPath> {
-        let hot_paths = self.hot_paths.read().unwrap();
+        let hot_paths: _ = self.hot_paths.read().unwrap();
         hot_paths.values().cloned().collect()
     }
 
@@ -314,7 +314,7 @@ impl HotPathTrackerV2 {
 
     /// Get hotness score for a specific path
     pub fn get_hotness_score(&self, path_id: &str) -> f64 {
-        let hot_paths = self.hot_paths.read().unwrap();
+        let hot_paths: _ = self.hot_paths.read().unwrap();
         hot_paths
             .get(path_id)
             .map(|p| p.hotness_score)
@@ -323,7 +323,7 @@ impl HotPathTrackerV2 {
 
     /// Check if a path is hot
     pub fn is_hot(&self, path_id: &str) -> bool {
-        let hot_paths = self.hot_paths.read().unwrap();
+        let hot_paths: _ = self.hot_paths.read().unwrap();
         hot_paths.contains_key(path_id)
     }
 
@@ -380,17 +380,19 @@ pub struct TrackerStatsSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_tracker_creation() {
-        let tracker = HotPathTrackerV2::new();
+        let tracker: _ = HotPathTrackerV2::new();
         assert_eq!(tracker.get_threshold(), 100);
         assert!(tracker.get_hot_paths().is_empty());
     }
 
     #[test]
     fn test_record_execution() {
-        let tracker = HotPathTrackerV2::with_config(TrackerConfig {
+        let tracker: _ = HotPathTrackerV2::with_config(TrackerConfig {
             base_threshold: 5,
             ..Default::default()
         });
@@ -405,7 +407,7 @@ mod tests {
 
     #[test]
     fn test_adaptive_threshold() {
-        let tracker = HotPathTrackerV2::with_config(TrackerConfig {
+        let tracker: _ = HotPathTrackerV2::with_config(TrackerConfig {
             base_threshold: 10,
             adjustment_cooldown: Duration::from_millis(1),
             ..Default::default()
@@ -413,7 +415,7 @@ mod tests {
 
         // Record varied execution counts
         for i in 0..100 {
-            let path = format!("path_{}", i % 10);
+            let path: _ = format!("path_{}", i % 10);
             for _ in 0..((i % 10) + 1) {
                 tracker.record_execution(&path, Duration::from_micros(100));
             }
@@ -423,13 +425,13 @@ mod tests {
         tracker.try_adjust_threshold();
 
         // Threshold should have been adjusted
-        let stats = tracker.get_stats();
+        let stats: _ = tracker.get_stats();
         assert!(stats.threshold_adjustments > 0 || stats.current_threshold == 10);
     }
 
     #[test]
     fn test_hotness_score() {
-        let tracker = HotPathTrackerV2::with_config(TrackerConfig {
+        let tracker: _ = HotPathTrackerV2::with_config(TrackerConfig {
             base_threshold: 5,
             ..Default::default()
         });
@@ -444,15 +446,15 @@ mod tests {
             tracker.record_execution("warm_path", Duration::from_micros(50));
         }
 
-        let hot_score = tracker.get_hotness_score("hot_path");
-        let warm_score = tracker.get_hotness_score("warm_path");
+        let hot_score: _ = tracker.get_hotness_score("hot_path");
+        let warm_score: _ = tracker.get_hotness_score("warm_path");
 
         assert!(hot_score > warm_score);
     }
 
     #[test]
     fn test_mark_optimized() {
-        let tracker = HotPathTrackerV2::with_config(TrackerConfig {
+        let tracker: _ = HotPathTrackerV2::with_config(TrackerConfig {
             base_threshold: 3,
             min_threshold: 3,
             max_threshold: 3, // Fix threshold to prevent adjustment
@@ -467,14 +469,14 @@ mod tests {
 
         tracker.mark_optimized("opt_path");
 
-        let paths = tracker.get_hot_paths();
-        let opt_path = paths.iter().find(|p| p.path_id == "opt_path").unwrap();
+        let paths: _ = tracker.get_hot_paths();
+        let opt_path: _ = paths.iter().find(|p| p.path_id == "opt_path").unwrap();
         assert!(opt_path.is_optimized);
     }
 
     #[test]
     fn test_reset() {
-        let tracker = HotPathTrackerV2::with_config(TrackerConfig {
+        let tracker: _ = HotPathTrackerV2::with_config(TrackerConfig {
             base_threshold: 3,
             ..Default::default()
         });

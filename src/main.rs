@@ -22,13 +22,13 @@ struct DebugTempCommand {
 
 /// CLI entry point
 fn main() -> Result<()> {
-    let start = Instant::now();
+    let start: _ = Instant::now();
 
     // Parse CLI arguments
-    let app = CliApp::parse();
+    let app: _ = CliApp::parse();
 
     // Initialize runtime (skip if version command)
-    let runtime = if matches!(app.command, Some(SubCommand::Version)) {
+    let runtime: _ = if matches!(app.command, Some(SubCommand::Version)) {
         print_version();
         return Ok(());
     } else {
@@ -41,7 +41,7 @@ fn main() -> Result<()> {
     }
 
     // Execute subcommand
-    let result = match app.command {
+    let result: _ = match app.command {
         Some(SubCommand::Version) => {
             print_version();
             Ok(())
@@ -134,7 +134,7 @@ fn create_runtime(verbose: bool) -> Result<RuntimeLite> {
         println!("🔧 Creating runtime...");
     }
 
-    let runtime = RuntimeLite::new(verbose)
+    let runtime: _ = RuntimeLite::new(verbose)
         .context("Failed to create Beejs runtime")?;
 
     // Stage 64: Initialize V8 Context Pool for optimal performance
@@ -156,19 +156,19 @@ fn run_script(
     cmd: beejs::cli::commands::RunCommand,
     verbose: bool,
 ) -> Result<()> {
-    let script_path = cmd.script;
+    let script_path: _ = cmd.script;
 
     // Create executor with configuration
-    let config = ExecutorConfig {
+    let config: _ = ExecutorConfig {
         transpile_ts: cmd.transpile || script_path.extension().map_or(false, |e| e == "ts" || e == "tsx"),
         hot_reload: cmd.watch || cmd.hot,
         source_maps: true,
         verbose,
     };
-    let executor = ScriptExecutor::new(config);
+    let executor: _ = ScriptExecutor::new(config);
 
     // Validate the script file
-    let file_type = executor.validate_script(&script_path)
+    let file_type: _ = executor.validate_script(&script_path)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     if verbose {
@@ -176,7 +176,7 @@ fn run_script(
     }
 
     // Build execution context
-    let ctx = ExecutionContext::new(script_path.clone())
+    let ctx: _ = ExecutionContext::new(script_path.clone())
         .with_args(cmd.args);
 
     if verbose {
@@ -201,10 +201,10 @@ fn run_script(
     }
 
     // Prepend context setup code
-    let setup_code = ctx.to_setup_code();
+    let setup_code: _ = ctx.to_setup_code();
 
     // Transpile TypeScript if needed
-    let js_code = if file_type == FileType::TypeScript {
+    let js_code: _ = if file_type == FileType::TypeScript {
         if verbose {
             println!("🔄 Transpiling TypeScript to JavaScript...");
         }
@@ -224,7 +224,7 @@ fn run_script(
         code.clone()
     };
 
-    let full_code = format!("{}\n{}", setup_code, js_code);
+    let full_code: _ = format!("{}\n{}", setup_code, js_code);
 
     // Execute based on type
     match file_type {
@@ -295,15 +295,15 @@ fn run_repl(
     }
 
     // Create runtime
-    let runtime = create_runtime(verbose)?;
+    let runtime: _ = create_runtime(verbose)?;
 
     // Create REPL with TypeScript support if enabled
     let mut repl = if cmd.typescript {
         // Note: TypeScript support will be enhanced in future stages
         println!("⚠️  TypeScript mode is experimental in this stage");
-        beejs::cli::Repl::new(std::sync::Arc::new(runtime))
+        beejs::cli::Repl::new(std::sync::Arc::new(std::sync::Mutex::new(runtime)))
     } else {
-        beejs::cli::Repl::new(std::sync::Arc::new(runtime))
+        beejs::cli::Repl::new(std::sync::Arc::new(std::sync::Mutex::new(runtime)))
     };
 
     // Handle --eval flag: execute expression and exit
@@ -312,7 +312,7 @@ fn run_repl(
             println!("🔍 Evaluating expression: {}", expr);
         }
         // Execute the expression
-        let result = repl.runtime().execute_code(expr);
+        let result: _ = repl.runtime().execute_code(expr);
 
         match result {
             Ok(output) => {
@@ -333,11 +333,11 @@ fn run_repl(
         if verbose {
             println!("📂 Loading file: {:?}", file);
         }
-        let code = std::fs::read_to_string(file)
+        let code: _ = std::fs::read_to_string(file)
             .context("Failed to read file")?;
 
         // Execute the file content
-        let result = repl.runtime().execute_code(&code);
+        let result: _ = repl.runtime().execute_code(&code);
 
         match result {
             Ok(output) => {
@@ -354,8 +354,8 @@ fn run_repl(
         }
 
         // Recreate runtime for REPL session (file loaded in isolated context)
-        let runtime = create_runtime(verbose)?;
-        repl = beejs::cli::Repl::new(std::sync::Arc::new(runtime));
+        let runtime: _ = create_runtime(verbose)?;
+        repl = beejs::cli::Repl::new(std::sync::Arc::new(std::sync::Mutex::new(runtime)));
     }
 
     // Start the REPL
@@ -382,11 +382,11 @@ fn run_bundle(
     }
 
     // Read entry file
-    let entry_code = std::fs::read_to_string(&cmd.entry)
+    let entry_code: _ = std::fs::read_to_string(&cmd.entry)
         .with_context(|| format!("Failed to read entry file: {:?}", cmd.entry))?;
 
     // Determine output file
-    let output_file = cmd.outfile.clone()
+    let output_file: _ = cmd.outfile.clone()
         .unwrap_or_else(|| {
             let mut path = cmd.entry.clone();
             path.set_extension("js");
@@ -399,14 +399,14 @@ fn run_bundle(
     }
 
     // Determine module type
-    let module_type = if cmd.entry.extension().and_then(|s| s.to_str()) == Some("ts") {
+    let module_type: _ = if cmd.entry.extension().and_then(|s| s.to_str()) == Some("ts") {
         beejs::bundler::core::ModuleType::TypeScript
     } else {
         beejs::bundler::core::ModuleType::JavaScript
     };
 
     // Create build options
-    let options = beejs::bundler::core::BuildOptions {
+    let options: _ = beejs::bundler::core::BuildOptions {
         minify: cmd.minify,
         sourcemap: cmd.sourcemap,
         target: format!("{:?}", cmd.target).to_lowercase(),
@@ -418,10 +418,10 @@ fn run_bundle(
     };
 
     // Create bundler
-    let bundler = beejs::bundler::core::Bundler::new(options);
+    let bundler: _ = beejs::bundler::core::Bundler::new(options);
 
     // Create module
-    let module = beejs::bundler::core::Module {
+    let module: _ = beejs::bundler::core::Module {
         id: cmd.entry.to_string_lossy().to_string(),
         path: cmd.entry.clone(),
         code: entry_code,
@@ -435,7 +435,7 @@ fn run_bundle(
     bundler.add_module(module)?;
 
     // Get all modules from bundler
-    let modules = bundler.get_modules();
+    let modules: _ = bundler.get_modules();
 
     // Generate bundle code
     let mut bundle_code = String::new();
@@ -463,7 +463,7 @@ fn run_bundle(
     }
 
     // Calculate bundle size
-    let bundle_size = bundle_code.len();
+    let bundle_size: _ = bundle_code.len();
 
     // Write to file
     std::fs::write(&output_file, bundle_code)
@@ -572,22 +572,22 @@ fn run_profile(
     }
 
     // Run the script with profiling
-    let runtime = RuntimeLite::new(verbose)
+    let runtime: _ = RuntimeLite::new(verbose)
         .with_context(|| "Failed to create runtime for profiling")?;
 
     // Validate the script file
-    let executor = ScriptExecutor::new(ExecutorConfig {
+    let executor: _ = ScriptExecutor::new(ExecutorConfig {
         transpile_ts: true,
         hot_reload: false,
         source_maps: true,
         verbose,
     });
 
-    let file_type = executor.validate_script(&cmd.script)
+    let file_type: _ = executor.validate_script(&cmd.script)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     // Build execution context
-    let ctx = ExecutionContext::new(cmd.script.clone())
+    let ctx: _ = ExecutionContext::new(cmd.script.clone())
         .with_args(cmd.args);
 
     // Read script content
@@ -603,10 +603,10 @@ fn run_profile(
     }
 
     // Prepend context setup code
-    let setup_code = ctx.to_setup_code();
+    let setup_code: _ = ctx.to_setup_code();
 
     // Transpile TypeScript if needed
-    let js_code = if file_type == FileType::TypeScript {
+    let js_code: _ = if file_type == FileType::TypeScript {
         if verbose {
             println!("🔄 Transpiling TypeScript to JavaScript...");
         }
@@ -626,10 +626,10 @@ fn run_profile(
         code.clone()
     };
 
-    let full_code = format!("{}\n{}", setup_code, js_code);
+    let full_code: _ = format!("{}\n{}", setup_code, js_code);
 
     // Execute based on type
-    let result = match file_type {
+    let result: _ = match file_type {
         FileType::JavaScript | FileType::EsModule | FileType::CommonJs | FileType::TypeScript => {
             match runtime.execute_code(&full_code) {
                 Ok(_) => {
@@ -653,7 +653,7 @@ fn run_profile(
 
     // Stop profiling and generate report
     profiler.stop();
-    let report = match profiler.generate_report() {
+    let report: _ = match profiler.generate_report() {
         Ok(r) => r,
         Err(e) => {
             eprintln!("Warning: Failed to generate performance report: {}", e);
@@ -670,7 +670,7 @@ fn run_profile(
 
     if verbose {
         println!("📈 Performance snapshot:");
-        let snapshot = profiler.get_realtime_snapshot();
+        let snapshot: _ = profiler.get_realtime_snapshot();
         println!("   Uptime: {:.2}s", snapshot.get_uptime_seconds());
         println!("   Traces per second: {:.2}", snapshot.get_traces_per_second());
         println!("   Total traces: {}", snapshot.total_traces);
@@ -693,10 +693,10 @@ fn run_debug(
 fn run_init(cmd: beejs::cli::commands::InitCommand, verbose: bool) -> Result<()> {
     use beejs::cli::init_command::{InitCommand as InitExecutor, InitConfig, ProjectTemplate};
 
-    let template = ProjectTemplate::from_str(&format!("{:?}", cmd.template).to_lowercase())
+    let template: _ = ProjectTemplate::from_str(&format!("{:?}", cmd.template).to_lowercase())
         .unwrap_or(ProjectTemplate::Basic);
 
-    let config = InitConfig {
+    let config: _ = InitConfig {
         project_dir: cmd.dir.to_string_lossy().to_string(),
         project_name: cmd.name.unwrap_or_else(|| {
             cmd.dir.file_name()
@@ -712,7 +712,7 @@ fn run_init(cmd: beejs::cli::commands::InitCommand, verbose: bool) -> Result<()>
         println!("🔧 Init config: {:?}", config);
     }
 
-    let init_cmd = InitExecutor::new(config);
+    let init_cmd: _ = InitExecutor::new(config);
     init_cmd.execute()?;
     Ok(())
 }
@@ -721,7 +721,7 @@ fn run_init(cmd: beejs::cli::commands::InitCommand, verbose: bool) -> Result<()>
 fn run_info(_cmd: beejs::cli::commands::InfoCommandArgs, verbose: bool) -> Result<()> {
     use beejs::cli::info_command::InfoCommand;
 
-    let info_cmd = InfoCommand::new(verbose);
+    let info_cmd: _ = InfoCommand::new(verbose);
     info_cmd.execute()?;
     Ok(())
 }
@@ -729,6 +729,8 @@ fn run_info(_cmd: beejs::cli::commands::InfoCommandArgs, verbose: bool) -> Resul
 /// Run doctor command - diagnose environment
 fn run_doctor(_cmd: beejs::cli::commands::DoctorCommandArgs, verbose: bool) -> Result<()> {
     use beejs::cli::doctor_command::DoctorCommand;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     let mut doctor = DoctorCommand::new(verbose);
     doctor.execute()?;

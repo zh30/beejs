@@ -45,7 +45,7 @@ pub struct ModuleResolver {
     /// Current working directory for resolution
     current_dir: PathBuf,
     /// Module cache to avoid re-resolution
-    cache: HashMap<String, ResolutionResult>,
+    cache: HashMap<String, ResolutionResult, std::collections::HashMap<String, ResolutionResult, String, ResolutionResult>>,
     /// Search paths for node_modules
     search_paths: Vec<PathBuf>,
 }
@@ -65,12 +65,12 @@ impl ModuleResolver {
     /// Resolve a module request (e.g., 'lodash', './utils', '/abs/path')
     pub fn resolve(&mut self, request: &str, parent: &Path) -> Result<ResolutionResult, String> {
         // Check cache first
-        let cache_key = format!("{}:{}", parent.display(), request);
+        let cache_key: _ = format!("{}:{}", parent.display(), request);
         if let Some(cached) = self.cache.get(&cache_key) {
             return Ok(cached.clone());
         }
 
-        let result = match request {
+        let result: _ = match request {
             // Built-in modules
             _ if self.is_builtin_module(request) => {
                 self.resolve_builtin(request)
@@ -120,11 +120,11 @@ impl ModuleResolver {
 
     /// Resolve relative module paths
     fn resolve_relative(&self, request: &str, parent: &Path) -> Result<ResolutionResult, String> {
-        let parent_dir = parent.parent().unwrap_or(parent);
+        let parent_dir: _ = parent.parent().unwrap_or(parent);
         let mut candidate = parent_dir.join(request);
 
         // Try extensions in order: .js → .json → .node
-        let extensions = ["", ".js", ".json", ".node"];
+        let extensions: _ = ["", ".js", ".json", ".node"];
         for ext in &extensions {
             if ext.is_empty() {
                 // Check if it's a directory with package.json
@@ -132,13 +132,13 @@ impl ModuleResolver {
                     return self.resolve_package(candidate);
                 }
             } else {
-                let candidate_with_ext = {
+                let candidate_with_ext: _ = {
                     let mut temp = candidate.clone();
                     temp.set_extension(ext.trim_start_matches('.'));
                     temp
                 };
                 if candidate_with_ext.exists() {
-                    let module_type = self.get_module_type(&candidate_with_ext);
+                    let module_type: _ = self.get_module_type(&candidate_with_ext);
                     return Ok(ResolutionResult {
                         path: candidate_with_ext,
                         module_type,
@@ -153,7 +153,7 @@ impl ModuleResolver {
 
     /// Resolve absolute paths
     fn resolve_absolute(&self, request: &str) -> Result<ResolutionResult, String> {
-        let path = Path::new(request);
+        let path: _ = Path::new(request);
         
         // Try as file first
         if path.exists() {
@@ -165,7 +165,7 @@ impl ModuleResolver {
         }
 
         // Try as directory with package.json
-        let package_path = path.join("package.json");
+        let package_path: _ = path.clone();join("package.json");
         if package_path.exists() {
             return self.resolve_package(path.to_path_buf());
         }
@@ -179,18 +179,18 @@ impl ModuleResolver {
         let mut current_dir = parent.parent().unwrap_or(parent).to_path_buf();
         
         while current_dir.pop() {
-            let node_modules = current_dir.join("node_modules").join(request);
+            let node_modules: _ = current_dir.join("node_modules").join(request);
             
             // Try as package
-            let package_json = node_modules.join("package.json");
+            let package_json: _ = node_modules.join("package.json");
             if package_json.exists() {
                 return self.resolve_package(node_modules);
             }
             
             // Try as file with extensions
-            let extensions = ["", ".js", ".json", ".node"];
+            let extensions: _ = ["", ".js", ".json", ".node"];
             for ext in &extensions {
-                let candidate = {
+                let candidate: _ = {
                     let mut temp = node_modules.clone();
                     if !ext.is_empty() {
                         temp.set_extension(ext.trim_start_matches('.'));
@@ -198,7 +198,7 @@ impl ModuleResolver {
                     temp
                 };
                 if candidate.exists() {
-                    let module_type = self.get_module_type(&candidate);
+                    let module_type: _ = self.get_module_type(&candidate);
                     return Ok(ResolutionResult {
                         path: candidate,
                         module_type,
@@ -213,7 +213,7 @@ impl ModuleResolver {
 
     /// Resolve a package directory (with package.json)
     fn resolve_package(&self, package_path: PathBuf) -> Result<ResolutionResult, String> {
-        let package_json = package_path.join("package.json");
+        let package_json: _ = package_path.join("package.json");
         
         if !package_json.exists() {
             return Err(format!("Package not found at {}", package_path.display()));
@@ -224,7 +224,7 @@ impl ModuleResolver {
             Ok(content) => {
                 match serde_json::from_str::<serde_json::Value>(&content) {
                     Ok(package) => {
-                        let main = package.get("main")
+                        let main: _ = package.get("main")
                             .and_then(|m| m.as_str())
                             .unwrap_or("index.js");
                         
@@ -232,9 +232,9 @@ impl ModuleResolver {
                         
                         // Try extensions if not specified
                         if Path::new(main).extension().is_none() {
-                            let extensions = [".js", ".json", ".node"];
+                            let extensions: _ = [".js", ".json", ".node"];
                             for ext in &extensions {
-                                let candidate = package_path.join(format!("{}{}", main, ext));
+                                let candidate: _ = package_path.join(format!("{}{}", main, ext));
                                 if candidate.exists() {
                                     main_path = candidate.clone();
                                     break;
@@ -242,8 +242,8 @@ impl ModuleResolver {
                             }
                         }
 
-                        let final_path = main_path.clone();
-                        let module_type = self.get_module_type(&final_path);
+                        let final_path: _ = main_path.clone();
+                        let module_type: _ = self.get_module_type(&final_path);
                         Ok(ResolutionResult {
                             path: final_path,
                             module_type,
@@ -252,7 +252,7 @@ impl ModuleResolver {
                     }
                     Err(_) => {
                         // Fallback to index.js
-                        let index_path = package_path.join("index.js");
+                        let index_path: _ = package_path.join("index.js");
                         if index_path.exists() {
                             Ok(ResolutionResult {
                                 path: index_path,
@@ -316,13 +316,15 @@ impl ModuleResolver {
 mod tests {
     use super::*;
     use std::path::PathBuf;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_resolve_builtin_module() {
         let mut resolver = ModuleResolver::new(PathBuf::from("/test"));
-        let result = resolver.resolve("fs", Path::new("/test/script.js"));
+        let result: _ = resolver.resolve("fs", Path::new("/test/script.js"));
         assert!(result.is_ok());
-        let result = result.unwrap();
+        let result: _ = result.clone();unwrap();
         assert_eq!(result.module_type, ModuleType::BuiltIn);
         assert_eq!(result.path, PathBuf::from("fs"));
     }
@@ -330,7 +332,7 @@ mod tests {
     #[test]
     fn test_resolve_relative_path() {
         let mut resolver = ModuleResolver::new(PathBuf::from("/test"));
-        let result = resolver.resolve("./utils", Path::new("/test/script.js"));
+        let result: _ = resolver.resolve("./utils", Path::new("/test/script.js"));
         // Will fail without actual files, but tests the logic
         assert!(result.is_err() || result.is_ok());
     }

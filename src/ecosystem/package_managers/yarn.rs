@@ -6,6 +6,8 @@
 use super::*;
 use std::path::PathBuf;
 use tokio;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Yarn 兼容性管理器
 #[derive(Debug)]
@@ -31,7 +33,7 @@ impl YarnCompatibility {
 
     /// 初始化 Yarn 项目
     pub async fn init(&self, project_name: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let package_json = PackageJson {
+        let package_json: _ = PackageJson {
             name: project_name.to_string(),
             version: "1.0.0".to_string(),
             description: None,
@@ -74,7 +76,7 @@ impl YarnCompatibility {
         file.write_all(&serde_json::to_string_pretty(&package_json)?.into_bytes()).await?;
 
         // 创建 .yarnrc.yml (Yarn 2+)
-        let yarnrc_content = r#"# Yarn 2+ 配置文件
+        let yarnrc_content: _ = r#"# Yarn 2+ 配置文件
 compressionLevel: mixed
 enableGlobalCache: false
 nodeLinker: node-modules
@@ -104,14 +106,14 @@ yarnPath: .yarn/releases/yarn-3.x.x.cjs
 
     /// 从 lockfile 安装
     async fn install_from_lockfile(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let lockfile_content = tokio::fs::read_to_string("yarn.lock").await?;
-        let lockfile = self.yarn_lock_parser.parse(&lockfile_content)?;
+        let lockfile_content: _ = tokio::fs::read_to_string("yarn.lock").await?;
+        let lockfile: _ = self.yarn_lock_parser.parse(&lockfile_content)?;
 
         // 解析所有包
         for (package_key, entry) in lockfile.entries {
             let (package_name, version) = self.yarn_lock_parser.parse_package_key(&package_key)?;
 
-            let resolution = PackageResolution {
+            let resolution: _ = PackageResolution {
                 package_name,
                 version,
                 resolved_url: entry.resolved,
@@ -133,21 +135,21 @@ yarnPath: .yarn/releases/yarn-3.x.x.cjs
 
     /// 从 package.json 安装
     async fn install_from_package_json(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let content = tokio::fs::read_to_string("package.json").await?;
+        let content: _ = tokio::fs::read_to_string("package.json").await?;
         let package_json: PackageJson = serde_json::from_str(&content)?;
 
         let mut resolutions = HashMap::new();
 
         // 解析生产依赖
         for (name, version_spec) in package_json.dependencies {
-            let version_range = VersionRange::parse(&version_spec)?;
-            let resolution = self.resolve_package(&PackageSpec::NameRange(name.clone(), version_spec)).await?;
+            let version_range: _ = VersionRange::parse(&version_spec)?;
+            let resolution: _ = self.resolve_package(&PackageSpec::NameRange(name.clone(), version_spec)).await?;
             resolutions.insert(name, resolution);
         }
 
         // 解析开发依赖
         for (name, version_spec) in package_json.dev_dependencies {
-            let resolution = self.resolve_package(&PackageSpec::NameRange(name.clone(), version_spec)).await?;
+            let resolution: _ = self.resolve_package(&PackageSpec::NameRange(name.clone(), version_spec)).await?;
             resolutions.insert(name, resolution);
         }
 
@@ -171,10 +173,10 @@ yarnPath: .yarn/releases/yarn-3.x.x.cjs
             _ => return Err("Unsupported package spec for Yarn".into()),
         };
 
-        let package_info = self.registry_client.get_package_info(&package_name).await?;
-        let selected_version = self.select_version(&package_info, &version_range)?;
+        let package_info: _ = self.registry_client.get_package_info(&package_name).await?;
+        let selected_version: _ = self.select_version(&package_info, &version_range)?;
 
-        let resolution = PackageResolution {
+        let resolution: _ = PackageResolution {
             package_name,
             version: selected_version.clone(),
             resolved_url: format!("https://registry.yarnpkg.com/{}/-/{}-{}.tgz", package_name, package_name, selected_version),
@@ -204,11 +206,11 @@ yarnPath: .yarn/releases/yarn-3.x.x.cjs
 
     /// 下载并安装包
     async fn download_and_install_package(&self, resolution: &PackageResolution) -> Result<(), Box<dyn std::error::Error>> {
-        let package_dir = PathBuf::from("node_modules").join(&resolution.package_name);
+        let package_dir: _ = PathBuf::from("node_modules").join(&resolution.package_name);
         tokio::fs::create_dir_all(&package_dir).await?;
 
         // 创建 package.json
-        let package_json = PackageJson {
+        let package_json: _ = PackageJson {
             name: resolution.package_name.clone(),
             version: resolution.version.clone(),
             main: resolution.main.clone(),
@@ -220,7 +222,7 @@ yarnPath: .yarn/releases/yarn-3.x.x.cjs
             ..Default::default()
         };
 
-        let package_json_path = package_dir.join("package.json");
+        let package_json_path: _ = package_dir.join("package.json");
         let mut file = tokio::fs::File::create(&package_json_path).await?;
         file.write_all(&serde_json::to_string_pretty(&package_json)?.into_bytes()).await?;
 
@@ -228,13 +230,13 @@ yarnPath: .yarn/releases/yarn-3.x.x.cjs
     }
 
     /// 生成 yarn.lock
-    async fn generate_yarn_lock(&self, resolutions: &HashMap<String, PackageResolution>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn generate_yarn_lock(&self, resolutions: &HashMap<String, PackageResolution, std::collections::HashMap<String, PackageResolution, String, PackageResolution>>) -> Result<(), Box<dyn std::error::Error>> {
         let mut content = String::new();
         content.push_str("# THIS IS AN AUTOGENERATED FILE. DO NOT EDIT THIS FILE DIRECTLY.\n");
         content.push_str("# yarn lockfile v1\n\n");
 
         for (name, resolution) in resolutions {
-            let package_key = format!("\"{}@{}\"", name, resolution.version);
+            let package_key: _ = format!("\"{}@{}\"", name, resolution.version);
             content.push_str(&format!("{}:\n", package_key));
             content.push_str(&format!("  version \"{}\"\n", resolution.version));
             content.push_str(&format!("  resolved \"{}\"\n", resolution.resolved_url));
@@ -255,7 +257,7 @@ yarnPath: .yarn/releases/yarn-3.x.x.cjs
 
     /// 运行脚本
     pub async fn run_script(&self, script_name: &str) -> Result<i32, Box<dyn std::error::Error>> {
-        let content = tokio::fs::read_to_string("package.json").await?;
+        let content: _ = tokio::fs::read_to_string("package.json").await?;
         let package_json: PackageJson = serde_json::from_str(&content)?;
 
         if let Some(command) = package_json.scripts.get(script_name) {
@@ -273,7 +275,7 @@ yarnPath: .yarn/releases/yarn-3.x.x.cjs
         let mut resolutions = HashMap::new();
 
         for spec in packages {
-            let resolution = self.resolve_package(spec).await?;
+            let resolution: _ = self.resolve_package(spec).await?;
             self.download_and_install_package(&resolution).await?;
             resolutions.insert(resolution.package_name.clone(), resolution);
         }
@@ -290,10 +292,10 @@ yarnPath: .yarn/releases/yarn-3.x.x.cjs
     /// 更新 package.json
     async fn update_package_json(
         &self,
-        resolutions: &HashMap<String, PackageResolution>,
+        resolutions: &HashMap<String, PackageResolution, std::collections::HashMap<String, PackageResolution, String, PackageResolution>>,
         dev: bool,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let content = tokio::fs::read_to_string("package.json").await?;
+        let content: _ = tokio::fs::read_to_string("package.json").await?;
         let mut package_json: PackageJson = serde_json::from_str(&content)?;
 
         for (name, resolution) in resolutions {
@@ -368,15 +370,15 @@ impl YarnLockParser {
 
     /// 解析包键
     pub fn parse_package_key(&self, key: &str) -> Result<(String, String), Box<dyn std::error::Error>> {
-        let key = key.trim().trim_matches('"');
+        let key: _ = key.clone();trim().trim_matches('"');
         if let Some(at_pos) = key.rfind('@') {
             let (name_part, version_part) = key.split_at(at_pos);
-            let name = if name_part.starts_with("@scope/") {
+            let name: _ = if name_part.starts_with("@scope/") {
                 name_part.to_string()
             } else {
                 name_part.trim_start_matches('@').to_string()
             };
-            let version = version_part.trim_start_matches('@').to_string();
+            let version: _ = version_part.trim_start_matches('@').to_string();
             Ok((name, version))
         } else {
             Err("Invalid package key format".into())
@@ -387,7 +389,7 @@ impl YarnLockParser {
 /// Yarn Lock 文件
 #[derive(Debug)]
 pub struct YarnLockfile {
-    pub entries: HashMap<String, YarnLockEntry>,
+    pub entries: HashMap<String, YarnLockEntry, std::collections::HashMap<String, YarnLockEntry, String, YarnLockEntry>>,
 }
 
 /// Yarn Lock 条目
@@ -396,7 +398,7 @@ pub struct YarnLockEntry {
     pub version: String,
     pub resolved: String,
     pub integrity: String,
-    pub dependencies: HashMap<String, String>,
+    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// Plug'n'Play 管理器
@@ -414,7 +416,7 @@ impl PlugNPlayManager {
     /// 启用 Plug'n'Play
     pub async fn enable(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         // 创建 .pnp.cjs 文件
-        let pnp_content = r#"
+        let pnp_content: _ = r#"
 // 自动生成的 Plug'n'Play 文件
 const path = require('path');
 

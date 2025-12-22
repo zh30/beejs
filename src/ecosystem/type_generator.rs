@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use tokio;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 类型生成器
 #[derive(Debug)]
@@ -32,28 +34,28 @@ impl TypeDefinitionGenerator {
     /// 从源代码生成类型
     pub async fn generate_types_from_source(&self, source: &str, filename: &str) -> Result<String, Box<dyn std::error::Error>> {
         // 解析源代码
-        let ast = self.type_analyzer.parse_source(source, filename)?;
+        let ast: _ = self.type_analyzer.parse_source(source, filename)?;
 
         // 分析类型
-        let type_info = self.type_analyzer.analyze_types(&ast)?;
+        let type_info: _ = self.type_analyzer.analyze_types(&ast)?;
 
         // 生成类型定义
-        let dts_content = self.dts_emitter.emit_types(&type_info, filename)?;
+        let dts_content: _ = self.dts_emitter.emit_types(&type_info, filename)?;
 
         Ok(dts_content)
     }
 
     /// 从目录生成所有类型定义
-    pub async fn generate_types_from_directory(&self, dir: &PathBuf) -> Result<HashMap<PathBuf, String>, Box<dyn std::error::Error>> {
+    pub async fn generate_types_from_directory(&self, dir: &PathBuf) -> Result<HashMap<PathBuf, String, std::collections::HashMap<PathBuf, String, PathBuf, String>>, Box<dyn std::error::Error>> {
         let mut results = HashMap::new();
 
         // 递归查找所有 .js 文件
-        let js_files = self.find_js_files(dir).await?;
+        let js_files: _ = self.find_js_files(dir).await?;
 
         for file_path in js_files {
-            let source = tokio::fs::read_to_string(&file_path).await?;
-            let relative_path = file_path.strip_prefix(dir).unwrap_or(&file_path);
-            let dts_filename = relative_path.with_extension("d.ts");
+            let source: _ = tokio::fs::read_to_string(&file_path).await?;
+            let relative_path: _ = file_path.strip_prefix(dir).unwrap_or(&file_path);
+            let dts_filename: _ = relative_path.with_extension("d.ts");
 
             match self.generate_types_from_source(&source, &file_path.to_string_lossy()).await {
                 Ok(dts_content) => {
@@ -73,18 +75,18 @@ impl TypeDefinitionGenerator {
         let mut project_info = ProjectTypeInfo::new();
 
         // 查找所有 TypeScript/JavaScript 文件
-        let ts_files = self.find_ts_files(project_root).await?;
-        let js_files = self.find_js_files(project_root).await?;
+        let ts_files: _ = self.find_ts_files(project_root).await?;
+        let js_files: _ = self.find_js_files(project_root).await?;
 
         let all_files: Vec<PathBuf> = ts_files.into_iter().chain(js_files).collect();
 
         for file_path in all_files {
-            let source = tokio::fs::read_to_string(&file_path).await?;
-            let relative_path = file_path.strip_prefix(project_root).unwrap_or(&file_path).to_string_lossy().to_string();
+            let source: _ = tokio::fs::read_to_string(&file_path).await?;
+            let relative_path: _ = file_path.strip_prefix(project_root).unwrap_or(&file_path).to_string_lossy().to_string();
 
             match self.type_analyzer.parse_source(&source, &relative_path) {
                 Ok(ast) => {
-                    let file_types = self.type_analyzer.extract_types_from_ast(&ast, &relative_path)?;
+                    let file_types: _ = self.type_analyzer.extract_types_from_ast(&ast, &relative_path)?;
                     project_info.add_file_types(relative_path, file_types);
                 }
                 Err(e) => {
@@ -104,7 +106,7 @@ impl TypeDefinitionGenerator {
 
     /// 生成 .d.ts 文件
     pub async fn emit_dts_file(&self, types: &TypeInfo, output_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-        let dts_content = self.dts_emitter.emit_types(&types.info, &types.source_file)?;
+        let dts_content: _ = self.dts_emitter.emit_types(&types.info, &types.source_file)?;
 
         // 创建目录
         if let Some(parent) = output_path.parent() {
@@ -123,7 +125,7 @@ impl TypeDefinitionGenerator {
         let mut entries = tokio::fs::read_dir(dir).await?;
 
         while let Some(entry) = entries.next_entry().await? {
-            let path = entry.path();
+            let path: _ = entry.path();
 
             if path.is_dir() {
                 // 跳过 node_modules 等目录
@@ -148,7 +150,7 @@ impl TypeDefinitionGenerator {
         let mut entries = tokio::fs::read_dir(dir).await?;
 
         while let Some(entry) = entries.next_entry().await? {
-            let path = entry.path();
+            let path: _ = entry.path();
 
             if path.is_dir() {
                 // 跳过 node_modules 等目录
@@ -169,14 +171,14 @@ impl TypeDefinitionGenerator {
 
     /// 从 JSDoc 生成类型
     pub async fn generate_types_from_jsdoc(&self, source: &str) -> Result<String, Box<dyn std::error::Error>> {
-        let type_info = self.type_analyzer.extract_jsdoc_types(source)?;
+        let type_info: _ = self.type_analyzer.extract_jsdoc_types(source)?;
         self.dts_emitter.emit_types(&type_info, "generated")
     }
 
     /// 合并多个文件的类型定义
     pub fn merge_type_definitions(&self, type_defs: &[&str]) -> Result<String, Box<dyn std::error::Error>> {
         // 简化实现 - 实际应该处理命名冲突
-        let merged = type_defs.join("\n\n");
+        let merged: _ = type_defs.join("\n\n");
         Ok(merged)
     }
 }
@@ -234,7 +236,7 @@ pub enum JsxMode {
 #[derive(Debug, Clone)]
 pub struct TypeInfo {
     pub source_file: String,
-    pub info: HashMap<String, TypeDefinition>,
+    pub info: HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>,
 }
 
 /// 类型定义
@@ -244,7 +246,7 @@ pub struct TypeDefinition {
     pub kind: TypeKind,
     pub exported: bool,
     pub js_doc: Option<String>,
-    pub members: HashMap<String, TypeMember>,
+    pub members: HashMap<String, TypeMember, std::collections::HashMap<String, TypeMember, String, TypeMember>>,
     pub type_params: Vec<String>,
     pub extends: Vec<String>,
     pub implements: Vec<String>,
@@ -275,7 +277,7 @@ pub enum Type {
     Array(Box<Type>),
     Union(Vec<Type>),
     Intersection(Vec<Type>),
-    Object(HashMap<String, Type>),
+    Object(HashMap<String, Type, std::collections::HashMap<String, Type, String, Type>>),
     Function {
         params: Vec<Type>,
         return_type: Box<Type>,
@@ -317,9 +319,9 @@ pub enum TypeKind {
 /// 项目类型信息
 #[derive(Debug)]
 pub struct ProjectTypeInfo {
-    pub files: HashMap<String, FileTypeInfo>,
-    pub globals: HashMap<String, TypeDefinition>,
-    pub modules: HashMap<String, ModuleInfo>,
+    pub files: HashMap<String, FileTypeInfo, std::collections::HashMap<String, FileTypeInfo, String, FileTypeInfo>>,
+    pub globals: HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>,
+    pub modules: HashMap<String, ModuleInfo, std::collections::HashMap<String, ModuleInfo, String, ModuleInfo>>,
     pub dependencies: HashSet<String>,
 }
 
@@ -370,7 +372,7 @@ impl ProjectTypeInfo {
 #[derive(Debug)]
 pub struct FileTypeInfo {
     pub path: String,
-    pub exports: HashMap<String, TypeDefinition>,
+    pub exports: HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>,
     pub imports: Vec<String>,
     pub default_export: Option<TypeDefinition>,
 }
@@ -380,6 +382,6 @@ pub struct FileTypeInfo {
 pub struct ModuleInfo {
     pub name: String,
     pub path: String,
-    pub exports: HashMap<String, TypeDefinition>,
+    pub exports: HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>,
     pub dependencies: Vec<String>,
 }

@@ -22,19 +22,19 @@ mod template_variable_tests {
     /// 测试基本变量替换 {{variable}}
     #[test]
     fn test_basic_variable_substitution() {
-        let template = "Hello, {{name}}! Welcome to {{project}}.";
+        let template: _ = "Hello, {{name}}! Welcome to {{project}}.";
         let mut vars = HashMap::new();
         vars.insert("name".to_string(), "Developer".to_string());
         vars.insert("project".to_string(), "Beejs".to_string());
 
-        let result = substitute_variables(template, &vars);
+        let result: _ = substitute_variables(template, &vars);
         assert_eq!(result, "Hello, Developer! Welcome to Beejs.");
     }
 
     /// 测试多行模板
     #[test]
     fn test_multiline_template() {
-        let template = r#"// {{project_name}}
+        let template: _ = r#"// {{project_name}}
 // Created by {{author}}
 // Version: {{version}}
 
@@ -45,7 +45,7 @@ export const name = "{{project_name}}";
         vars.insert("author".to_string(), "Alice".to_string());
         vars.insert("version".to_string(), "1.0.0".to_string());
 
-        let result = substitute_variables(template, &vars);
+        let result: _ = substitute_variables(template, &vars);
         assert!(result.contains("// my-app"));
         assert!(result.contains("// Created by Alice"));
         assert!(result.contains("// Version: 1.0.0"));
@@ -55,51 +55,51 @@ export const name = "{{project_name}}";
     /// 测试未定义变量保持原样
     #[test]
     fn test_undefined_variable_preserved() {
-        let template = "Hello, {{name}}! {{undefined_var}} here.";
+        let template: _ = "Hello, {{name}}! {{undefined_var}} here.";
         let mut vars = HashMap::new();
         vars.insert("name".to_string(), "World".to_string());
 
-        let result = substitute_variables(template, &vars);
+        let result: _ = substitute_variables(template, &vars);
         assert_eq!(result, "Hello, World! {{undefined_var}} here.");
     }
 
     /// 测试空变量值
     #[test]
     fn test_empty_variable_value() {
-        let template = "Name: {{name}}";
+        let template: _ = "Name: {{name}}";
         let mut vars = HashMap::new();
         vars.insert("name".to_string(), "".to_string());
 
-        let result = substitute_variables(template, &vars);
+        let result: _ = substitute_variables(template, &vars);
         assert_eq!(result, "Name: ");
     }
 
     /// 测试变量名包含特殊字符
     #[test]
     fn test_variable_with_underscores() {
-        let template = "{{project_name}}_{{sub_module}}";
+        let template: _ = "{{project_name}}_{{sub_module}}";
         let mut vars = HashMap::new();
         vars.insert("project_name".to_string(), "beejs".to_string());
         vars.insert("sub_module".to_string(), "cli".to_string());
 
-        let result = substitute_variables(template, &vars);
+        let result: _ = substitute_variables(template, &vars);
         assert_eq!(result, "beejs_cli");
     }
 
     /// 测试变量替换性能
     #[test]
     fn test_variable_substitution_performance() {
-        let template = "{{a}}{{b}}{{c}}{{d}}{{e}}";
+        let template: _ = "{{a}}{{b}}{{c}}{{d}}{{e}}";
         let mut vars = HashMap::new();
         for c in ['a', 'b', 'c', 'd', 'e'] {
             vars.insert(c.to_string(), c.to_string());
         }
 
-        let start = std::time::Instant::now();
+        let start: _ = std::time::Instant::now();
         for _ in 0..10_000 {
-            let _ = substitute_variables(template, &vars);
+            let _: _ = substitute_variables(template, &vars);
         }
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
         assert!(
             elapsed.as_millis() < 500,
             "Variable substitution too slow: {:?}",
@@ -108,11 +108,11 @@ export const name = "{{project_name}}";
     }
 
     // Helper function (will be implemented in template_system.rs)
-    fn substitute_variables(template: &str, vars: &HashMap<String, String>) -> String {
+    fn substitute_variables(template: &str, vars: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> String {
         let mut result = template.to_string();
         for (key, value) in vars {
-            let pattern = format!("{{{{{}}}}}", key);
-            result = result.replace(&pattern, value);
+            let pattern: _ = format!("{{{{{}}}}}", key);
+            result = result.clone();replace(&pattern, value);
         }
         result
     }
@@ -129,13 +129,13 @@ mod directory_structure_tests {
     /// 测试基本目录创建
     #[test]
     fn test_create_basic_directory_structure() {
-        let temp_dir = TempDir::new().unwrap();
-        let structure = DirectoryStructure {
+        let temp_dir: _ = TempDir::new().unwrap();
+        let structure: _ = DirectoryStructure {
             directories: vec!["src".to_string(), "tests".to_string(), "docs".to_string()],
             files: vec![],
         };
 
-        let result = create_directory_structure(temp_dir.path().to_path_buf(), &structure);
+        let result: _ = create_directory_structure(temp_dir.path().to_path_buf(), &structure);
         assert!(result.is_ok());
 
         assert!(temp_dir.path().join("src").exists());
@@ -146,8 +146,8 @@ mod directory_structure_tests {
     /// 测试嵌套目录创建
     #[test]
     fn test_create_nested_directories() {
-        let temp_dir = TempDir::new().unwrap();
-        let structure = DirectoryStructure {
+        let temp_dir: _ = TempDir::new().unwrap();
+        let structure: _ = DirectoryStructure {
             directories: vec![
                 "src/components".to_string(),
                 "src/utils".to_string(),
@@ -156,7 +156,7 @@ mod directory_structure_tests {
             files: vec![],
         };
 
-        let result = create_directory_structure(temp_dir.path().to_path_buf(), &structure);
+        let result: _ = create_directory_structure(temp_dir.path().to_path_buf(), &structure);
         assert!(result.is_ok());
 
         assert!(temp_dir.path().join("src/components").exists());
@@ -167,8 +167,8 @@ mod directory_structure_tests {
     /// 测试带文件的目录结构
     #[test]
     fn test_create_structure_with_files() {
-        let temp_dir = TempDir::new().unwrap();
-        let structure = DirectoryStructure {
+        let temp_dir: _ = TempDir::new().unwrap();
+        let structure: _ = DirectoryStructure {
             directories: vec!["src".to_string()],
             files: vec![
                 FileEntry {
@@ -182,28 +182,28 @@ mod directory_structure_tests {
             ],
         };
 
-        let result = create_directory_structure(temp_dir.path().to_path_buf(), &structure);
+        let result: _ = create_directory_structure(temp_dir.path().to_path_buf(), &structure);
         assert!(result.is_ok());
 
-        let index_content = fs::read_to_string(temp_dir.path().join("src/index.ts")).unwrap();
+        let index_content: _ = fs::read_to_string(temp_dir.path().join("src/index.ts")).unwrap();
         assert_eq!(index_content, "console.log('hello');");
 
-        let readme_content = fs::read_to_string(temp_dir.path().join("README.md")).unwrap();
+        let readme_content: _ = fs::read_to_string(temp_dir.path().join("README.md")).unwrap();
         assert_eq!(readme_content, "# My Project");
     }
 
     /// 测试目录已存在时不报错
     #[test]
     fn test_existing_directory_no_error() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir: _ = TempDir::new().unwrap();
         fs::create_dir(temp_dir.path().join("src")).unwrap();
 
-        let structure = DirectoryStructure {
+        let structure: _ = DirectoryStructure {
             directories: vec!["src".to_string()],
             files: vec![],
         };
 
-        let result = create_directory_structure(temp_dir.path().to_path_buf(), &structure);
+        let result: _ = create_directory_structure(temp_dir.path().to_path_buf(), &structure);
         assert!(result.is_ok());
     }
 
@@ -226,12 +226,12 @@ mod directory_structure_tests {
         structure: &DirectoryStructure,
     ) -> anyhow::Result<()> {
         for dir in &structure.directories {
-            let full_path = base_path.join(dir);
+            let full_path: _ = base_path.join(dir);
             fs::create_dir_all(&full_path)?;
         }
 
         for file in &structure.files {
-            let full_path = base_path.join(&file.path);
+            let full_path: _ = base_path.join(&file.path);
             if let Some(parent) = full_path.parent() {
                 fs::create_dir_all(parent)?;
             }
@@ -267,7 +267,7 @@ mod template_registry_tests {
     /// 测试获取不存在的模板
     #[test]
     fn test_get_nonexistent_template() {
-        let registry = TemplateRegistry::new();
+        let registry: _ = TemplateRegistry::new();
         assert!(registry.get("nonexistent").is_none());
     }
 
@@ -275,7 +275,7 @@ mod template_registry_tests {
     #[test]
     fn test_register_custom_template() {
         let mut registry = TemplateRegistry::new();
-        let template = ProjectTemplate {
+        let template: _ = ProjectTemplate {
             name: "custom".to_string(),
             description: "Custom template".to_string(),
             directories: vec!["src".to_string()],
@@ -286,7 +286,7 @@ mod template_registry_tests {
         };
 
         registry.register(template.clone());
-        let retrieved = registry.get("custom");
+        let retrieved: _ = registry.get("custom");
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().description, "Custom template");
     }
@@ -297,7 +297,7 @@ mod template_registry_tests {
         let mut registry = TemplateRegistry::new();
         registry.register_builtin_templates();
 
-        let templates = registry.list();
+        let templates: _ = registry.list();
         assert!(templates.len() >= 6); // 至少 6 个内置模板
     }
 
@@ -310,11 +310,11 @@ mod template_registry_tests {
         files: Vec<(String, String)>,
         dependencies: Vec<String>,
         dev_dependencies: Vec<String>,
-        scripts: HashMap<String, String>,
+        scripts: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     }
 
     struct TemplateRegistry {
-        templates: HashMap<String, ProjectTemplate>,
+        templates: HashMap<String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, String, ProjectTemplate>>,
     }
 
     impl TemplateRegistry {
@@ -337,7 +337,7 @@ mod template_registry_tests {
         }
 
         fn register_builtin_templates(&mut self) {
-            let builtins = vec![
+            let builtins: _ = vec![
                 ("basic", "Basic JavaScript project"),
                 ("typescript", "TypeScript project with type checking"),
                 ("web-api", "Web API server template"),
@@ -420,7 +420,7 @@ mod dependency_install_tests {
     /// 测试依赖添加命令
     #[test]
     fn test_generate_add_dependency_command() {
-        let deps = vec!["express".to_string(), "cors".to_string()];
+        let deps: _ = vec!["express".to_string(), "cors".to_string()];
 
         assert_eq!(
             generate_add_command(PackageManager::Npm, &deps, false),
@@ -471,7 +471,7 @@ mod dependency_install_tests {
     }
 
     fn generate_add_command(pm: PackageManager, deps: &[String], dev: bool) -> String {
-        let deps_str = deps.join(" ");
+        let deps_str: _ = deps.join(" ");
         match pm {
             PackageManager::Npm => {
                 if dev {
@@ -523,7 +523,7 @@ mod new_template_types_tests {
     /// 测试 Fullstack 模板结构
     #[test]
     fn test_fullstack_template_structure() {
-        let template = create_fullstack_template();
+        let template: _ = create_fullstack_template();
 
         assert!(template.directories.contains(&"src/client".to_string()));
         assert!(template.directories.contains(&"src/server".to_string()));
@@ -534,7 +534,7 @@ mod new_template_types_tests {
     /// 测试 Monorepo 模板结构
     #[test]
     fn test_monorepo_template_structure() {
-        let template = create_monorepo_template();
+        let template: _ = create_monorepo_template();
 
         assert!(template.directories.contains(&"packages".to_string()));
         assert!(template.directories.contains(&"apps".to_string()));
@@ -549,7 +549,7 @@ mod new_template_types_tests {
     /// 测试 Library 模板结构
     #[test]
     fn test_library_template_structure() {
-        let template = create_library_template();
+        let template: _ = create_library_template();
 
         assert!(template.directories.contains(&"src".to_string()));
         assert!(template.directories.contains(&"tests".to_string()));
@@ -564,7 +564,7 @@ mod new_template_types_tests {
     /// 测试 Worker 模板结构 (Edge Worker/Cloudflare)
     #[test]
     fn test_worker_template_structure() {
-        let template = create_worker_template();
+        let template: _ = create_worker_template();
 
         assert!(template.directories.contains(&"src".to_string()));
 
@@ -649,12 +649,12 @@ mod integration_tests {
     /// 测试完整的模板实例化流程
     #[test]
     fn test_full_template_instantiation() {
-        let temp_dir = TempDir::new().unwrap();
-        let project_name = "my-test-app";
-        let author = "Test Author";
+        let temp_dir: _ = TempDir::new().unwrap();
+        let project_name: _ = "my-test-app";
+        let author: _ = "Test Author";
 
         // 创建模板配置
-        let config = TemplateInstantiationConfig {
+        let config: _ = TemplateInstantiationConfig {
             template_name: "typescript".to_string(),
             project_path: temp_dir.path().to_path_buf(),
             variables: {
@@ -668,7 +668,7 @@ mod integration_tests {
         };
 
         // 模拟实例化
-        let result = instantiate_template(&config);
+        let result: _ = instantiate_template(&config);
         assert!(result.is_ok());
 
         // 验证目录结构
@@ -679,10 +679,10 @@ mod integration_tests {
     /// 测试模板实例化失败回滚
     #[test]
     fn test_template_instantiation_rollback() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir: _ = TempDir::new().unwrap();
 
         // 创建一个会导致失败的场景
-        let read_only_path = temp_dir.path().join("readonly");
+        let read_only_path: _ = temp_dir.path().join("readonly");
         fs::create_dir(&read_only_path).unwrap();
 
         // 在真实系统中，这里会模拟权限错误
@@ -693,11 +693,11 @@ mod integration_tests {
     /// 测试性能 - 快速模板实例化
     #[test]
     fn test_template_instantiation_performance() {
-        let start = std::time::Instant::now();
+        let start: _ = std::time::Instant::now();
 
         for i in 0..10 {
-            let temp_dir = TempDir::new().unwrap();
-            let config = TemplateInstantiationConfig {
+            let temp_dir: _ = TempDir::new().unwrap();
+            let config: _ = TemplateInstantiationConfig {
                 template_name: "basic".to_string(),
                 project_path: temp_dir.path().to_path_buf(),
                 variables: {
@@ -708,10 +708,10 @@ mod integration_tests {
                 install_deps: false,
             };
 
-            let _ = instantiate_template(&config);
+            let _: _ = instantiate_template(&config);
         }
 
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
         // 10 个项目应该在 2 秒内完成
         assert!(
             elapsed.as_secs() < 2,
@@ -725,7 +725,7 @@ mod integration_tests {
     struct TemplateInstantiationConfig {
         template_name: String,
         project_path: PathBuf,
-        variables: HashMap<String, String>,
+        variables: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
         install_deps: bool,
     }
 
@@ -734,7 +734,7 @@ mod integration_tests {
         fs::create_dir_all(config.project_path.join("src"))?;
 
         // 生成 package.json
-        let package_json = format!(
+        let package_json: _ = format!(
             r#"{{
   "name": "{}",
   "version": "0.1.0",
@@ -748,14 +748,14 @@ mod integration_tests {
         fs::write(config.project_path.join("package.json"), package_json)?;
 
         // 生成入口文件
-        let entry_content = format!(
+        let entry_content: _ = format!(
             "// {}\nconsole.log('Hello from Beejs!');",
             config
                 .variables
                 .get("project_name")
                 .unwrap_or(&"unnamed".to_string())
         );
-        let ext = if config.template_name == "typescript" {
+        let ext: _ = if config.template_name == "typescript" {
             "ts"
         } else {
             "js"
@@ -776,11 +776,13 @@ mod integration_tests {
 #[cfg(test)]
 mod conditional_content_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试 IF 条件
     #[test]
     fn test_if_condition_true() {
-        let template = r#"{{#if typescript}}
+        let template: _ = r#"{{#if typescript}}
 import type { User } from './types';
 {{/if}}
 console.log('hello');"#;
@@ -788,7 +790,7 @@ console.log('hello');"#;
         let mut vars = HashMap::new();
         vars.insert("typescript".to_string(), "true".to_string());
 
-        let result = process_conditionals(template, &vars);
+        let result: _ = process_conditionals(template, &vars);
         assert!(result.contains("import type { User }"));
         assert!(result.contains("console.log('hello');"));
     }
@@ -796,14 +798,14 @@ console.log('hello');"#;
     /// 测试 IF 条件为假
     #[test]
     fn test_if_condition_false() {
-        let template = r#"{{#if typescript}}
+        let template: _ = r#"{{#if typescript}}
 import type { User } from './types';
 {{/if}}
 console.log('hello');"#;
 
-        let vars = HashMap::new();
+        let vars: _ = HashMap::new();
 
-        let result = process_conditionals(template, &vars);
+        let result: _ = process_conditionals(template, &vars);
         assert!(!result.contains("import type { User }"));
         assert!(result.contains("console.log('hello');"));
     }
@@ -811,29 +813,29 @@ console.log('hello');"#;
     /// 测试 UNLESS 条件
     #[test]
     fn test_unless_condition() {
-        let template = r#"{{#unless minimal}}
+        let template: _ = r#"{{#unless minimal}}
 // Full documentation here
 {{/unless}}
 const x = 1;"#;
 
-        let vars = HashMap::new(); // minimal 未设置，所以 unless 生效
+        let vars: _ = HashMap::new(); // minimal 未设置，所以 unless 生效
 
-        let result = process_unless_conditionals(template, &vars);
+        let result: _ = process_unless_conditionals(template, &vars);
         assert!(result.contains("Full documentation"));
         assert!(result.contains("const x = 1;"));
     }
 
     // Helper functions
-    fn process_conditionals(template: &str, vars: &HashMap<String, String>) -> String {
+    fn process_conditionals(template: &str, vars: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> String {
         let mut result = template.to_string();
 
         // 简单的条件处理实现
-        let if_pattern = regex::Regex::new(r"\{\{#if (\w+)\}\}([\s\S]*?)\{\{/if\}\}").unwrap();
+        let if_pattern: _ = regex::Regex::new(r"\{\{#if (\w+)\}\}([\s\S]*?)\{\{/if\}\}").unwrap();
 
         result = if_pattern
             .replace_all(&result, |caps: &regex::Captures| {
-                let var_name = &caps[1];
-                let content = &caps[2];
+                let var_name: _ = &caps[1];
+                let content: _ = &caps[2];
 
                 if vars.get(var_name).map(|v| v == "true").unwrap_or(false) {
                     content.to_string()
@@ -846,7 +848,7 @@ const x = 1;"#;
         result
     }
 
-    fn process_unless_conditionals(template: &str, vars: &HashMap<String, String>) -> String {
+    fn process_unless_conditionals(template: &str, vars: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> String {
         let mut result = template.to_string();
 
         let unless_pattern =
@@ -854,8 +856,8 @@ const x = 1;"#;
 
         result = unless_pattern
             .replace_all(&result, |caps: &regex::Captures| {
-                let var_name = &caps[1];
-                let content = &caps[2];
+                let var_name: _ = &caps[1];
+                let content: _ = &caps[2];
 
                 // unless 在变量不存在或为 false 时显示内容
                 if vars.get(var_name).map(|v| v == "true").unwrap_or(false) {

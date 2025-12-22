@@ -6,12 +6,14 @@ mod tests {
     use super::*;
     use chrono::Utc;
     use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试插件市场初始化
     #[tokio::test]
     async fn test_marketplace_initialization() {
-        let marketplace = PluginMarketplace::new();
-        let result = marketplace.initialize().await;
+        let marketplace: _ = PluginMarketplace::new();
+        let result: _ = marketplace.initialize().await;
 
         assert!(result.is_ok(), "Marketplace initialization should succeed");
     }
@@ -19,9 +21,9 @@ mod tests {
     /// 测试插件搜索功能
     #[tokio::test]
     async fn test_plugin_search_basic() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
-        let query = SearchQuery {
+        let query: _ = SearchQuery {
             query: "test".to_string(),
             filters: SearchFilters {
                 categories: None,
@@ -40,7 +42,7 @@ mod tests {
             },
         };
 
-        let results = marketplace.search_plugins(&query).await.unwrap();
+        let results: _ = marketplace.search_plugins(&query).await.unwrap();
 
         // 验证搜索结果结构
         assert!(results.plugins.len() <= 10, "Should return at most 10 results per page");
@@ -56,10 +58,10 @@ mod tests {
     /// 测试插件搜索过滤器
     #[tokio::test]
     async fn test_plugin_search_filters() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
         // 测试分类过滤器
-        let query = SearchQuery {
+        let query: _ = SearchQuery {
             query: "test".to_string(),
             filters: SearchFilters {
                 categories: Some(vec!["testing".to_string()]),
@@ -78,7 +80,7 @@ mod tests {
             },
         };
 
-        let results = marketplace.search_plugins(&query).await.unwrap();
+        let results: _ = marketplace.search_plugins(&query).await.unwrap();
 
         // 验证过滤器应用
         for result in &results.plugins {
@@ -91,10 +93,10 @@ mod tests {
     /// 测试插件搜索排序
     #[tokio::test]
     async fn test_plugin_search_sorting() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
         // 测试按下载量排序
-        let query = SearchQuery {
+        let query: _ = SearchQuery {
             query: "test".to_string(),
             filters: SearchFilters {
                 categories: None,
@@ -113,7 +115,7 @@ mod tests {
             },
         };
 
-        let results = marketplace.search_plugins(&query).await.unwrap();
+        let results: _ = marketplace.search_plugins(&query).await.unwrap();
 
         // 验证排序（下载量降序）
         if results.plugins.len() > 1 {
@@ -130,14 +132,14 @@ mod tests {
     /// 测试插件详情获取
     #[tokio::test]
     async fn test_get_plugin_details() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
-        let plugin_id = PluginId {
+        let plugin_id: _ = PluginId {
             name: "test-plugin".to_string(),
             version: Version::parse("1.0.0").unwrap(),
         };
 
-        let result = marketplace.get_plugin_details(&plugin_id).await.unwrap();
+        let result: _ = marketplace.get_plugin_details(&plugin_id).await.unwrap();
 
         // 插件可能不存在，返回 None 是正常的
         assert!(result.is_none() || result.is_some());
@@ -146,15 +148,15 @@ mod tests {
     /// 测试插件评分系统
     #[tokio::test]
     async fn test_plugin_rating_system() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
-        let plugin_id = PluginId {
+        let plugin_id: _ = PluginId {
             name: "test-plugin".to_string(),
             version: Version::parse("1.0.0").unwrap(),
         };
 
         // 提交评分
-        let rating_result = marketplace.rate_plugin(
+        let rating_result: _ = marketplace.rate_plugin(
             &plugin_id,
             "test_user",
             5,
@@ -164,7 +166,7 @@ mod tests {
         assert!(rating_result.is_ok(), "Rating submission should succeed");
 
         // 获取评分
-        let rating = marketplace.get_plugin_rating(&plugin_id).await.unwrap();
+        let rating: _ = marketplace.get_plugin_rating(&plugin_id).await.unwrap();
         assert!(rating.count >= 1, "Rating count should be at least 1");
         assert!(rating.average >= 1.0 && rating.average <= 5.0,
                "Average rating should be between 1 and 5");
@@ -179,23 +181,23 @@ mod tests {
     /// 测试评分验证
     #[tokio::test]
     async fn test_rating_validation() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
-        let plugin_id = PluginId {
+        let plugin_id: _ = PluginId {
             name: "test-plugin".to_string(),
             version: Version::parse("1.0.0").unwrap(),
         };
 
         // 测试无效评分（超出范围）
-        let result = marketplace.rate_plugin(&plugin_id, "user", 0, None).await;
+        let result: _ = marketplace.rate_plugin(&plugin_id, "user", 0, None).await;
         assert!(result.is_err(), "Rating 0 should be invalid");
 
-        let result = marketplace.rate_plugin(&plugin_id, "user", 6, None).await;
+        let result: _ = marketplace.rate_plugin(&plugin_id, "user", 6, None).await;
         assert!(result.is_err(), "Rating 6 should be invalid");
 
         // 测试有效评分
         for rating in 1..=5 {
-            let result = marketplace.rate_plugin(&plugin_id, &format!("user{}", rating), rating, None).await;
+            let result: _ = marketplace.rate_plugin(&plugin_id, &format!("user{}", rating), rating, None).await;
             assert!(result.is_ok(), format!("Rating {} should be valid", rating).as_str());
         }
     }
@@ -203,9 +205,9 @@ mod tests {
     /// 测试用户评分查询
     #[tokio::test]
     async fn test_get_user_rating() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
-        let plugin_id = PluginId {
+        let plugin_id: _ = PluginId {
             name: "test-plugin".to_string(),
             version: Version::parse("1.0.0").unwrap(),
         };
@@ -214,10 +216,10 @@ mod tests {
         marketplace.rate_plugin(&plugin_id, "test_user", 4, Some("Good".to_string())).await.unwrap();
 
         // 获取用户评分
-        let user_rating = marketplace.rating_system.get_user_rating(&plugin_id, "test_user").await.unwrap();
+        let user_rating: _ = marketplace.rating_system.get_user_rating(&plugin_id, "test_user").await.unwrap();
         assert!(user_rating.is_some(), "Should find user rating");
 
-        let rating = user_rating.unwrap();
+        let rating: _ = user_rating.unwrap();
         assert_eq!(rating.rating, 4, "User rating should be 4");
         assert_eq!(rating.user_id, "test_user", "User ID should match");
         assert!(rating.review.is_some(), "Should have review");
@@ -226,9 +228,9 @@ mod tests {
     /// 测试评分统计
     #[tokio::test]
     async fn test_rating_statistics() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
-        let plugin_id = PluginId {
+        let plugin_id: _ = PluginId {
             name: "test-plugin".to_string(),
             version: Version::parse("1.0.0").unwrap(),
         };
@@ -244,7 +246,7 @@ mod tests {
         }
 
         // 获取统计信息
-        let stats = marketplace.rating_system.get_rating_statistics(&plugin_id).await.unwrap();
+        let stats: _ = marketplace.rating_system.get_rating_statistics(&plugin_id).await.unwrap();
         assert_eq!(stats.total_reviews, 10, "Should have 10 reviews");
         assert!(stats.reviews_with_comments > 0, "Should have some reviews with comments");
         assert!(stats.helpful_votes_total >= 0, "Helpful votes should be non-negative");
@@ -254,9 +256,9 @@ mod tests {
     /// 测试帮助性投票
     #[tokio::test]
     async fn test_helpful_voting() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
-        let plugin_id = PluginId {
+        let plugin_id: _ = PluginId {
             name: "test-plugin".to_string(),
             version: Version::parse("1.0.0").unwrap(),
         };
@@ -270,11 +272,11 @@ mod tests {
         ).await.unwrap();
 
         // 投票帮助性
-        let result = marketplace.rating_system.vote_helpful(&plugin_id, "user1", true).await;
+        let result: _ = marketplace.rating_system.vote_helpful(&plugin_id, "user1", true).await;
         assert!(result.is_ok(), "Helpful vote should succeed");
 
         // 验证投票生效
-        let user_rating = marketplace.rating_system.get_user_rating(&plugin_id, "user1").await.unwrap();
+        let user_rating: _ = marketplace.rating_system.get_user_rating(&plugin_id, "user1").await.unwrap();
         assert!(user_rating.is_some(), "Should find user rating");
         assert_eq!(user_rating.unwrap().helpful_votes, 1, "Should have 1 helpful vote");
     }
@@ -282,9 +284,9 @@ mod tests {
     /// 测试插件评论获取
     #[tokio::test]
     async fn test_get_plugin_reviews() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
-        let plugin_id = PluginId {
+        let plugin_id: _ = PluginId {
             name: "test-plugin".to_string(),
             version: Version::parse("1.0.0").unwrap(),
         };
@@ -300,7 +302,7 @@ mod tests {
         }
 
         // 获取评论
-        let reviews = marketplace.rating_system.get_plugin_reviews(&plugin_id, 10).await.unwrap();
+        let reviews: _ = marketplace.rating_system.get_plugin_reviews(&plugin_id, 10).await.unwrap();
         assert_eq!(reviews.len(), 5, "Should return all reviews");
 
         // 验证评论按帮助性排序
@@ -315,27 +317,27 @@ mod tests {
     /// 测试热门插件获取
     #[tokio::test]
     async fn test_get_featured_plugins() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
-        let featured = marketplace.get_featured_plugins(5).await.unwrap();
+        let featured: _ = marketplace.get_featured_plugins(5).await.unwrap();
         assert!(featured.len() <= 5, "Should return at most 5 featured plugins");
     }
 
     /// 测试最新插件获取
     #[tokio::test]
     async fn test_get_recent_plugins() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
-        let recent = marketplace.get_recent_plugins(10).await.unwrap();
+        let recent: _ = marketplace.get_recent_plugins(10).await.unwrap();
         assert!(recent.len() <= 10, "Should return at most 10 recent plugins");
     }
 
     /// 测试市场统计信息
     #[tokio::test]
     async fn test_marketplace_stats() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
-        let stats = marketplace.get_plugin_stats().await.unwrap();
+        let stats: _ = marketplace.get_plugin_stats().await.unwrap();
         assert!(stats.total_plugins >= 0, "Total plugins should be non-negative");
         assert!(stats.total_downloads >= 0, "Total downloads should be non-negative");
         assert!(stats.average_rating >= 0.0 && stats.average_rating <= 5.0,
@@ -346,10 +348,10 @@ mod tests {
     /// 测试搜索分页
     #[tokio::test]
     async fn test_search_pagination() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
         // 第一页
-        let query1 = SearchQuery {
+        let query1: _ = SearchQuery {
             query: "test".to_string(),
             filters: SearchFilters {
                 categories: None,
@@ -368,11 +370,11 @@ mod tests {
             },
         };
 
-        let results1 = marketplace.search_plugins(&query1).await.unwrap();
+        let results1: _ = marketplace.search_plugins(&query1).await.unwrap();
         assert!(results1.plugins.len() <= 5, "First page should have at most 5 results");
 
         // 第二页
-        let query2 = SearchQuery {
+        let query2: _ = SearchQuery {
             query: "test".to_string(),
             filters: SearchFilters {
                 categories: None,
@@ -391,7 +393,7 @@ mod tests {
             },
         };
 
-        let results2 = marketplace.search_plugins(&query2).await.unwrap();
+        let results2: _ = marketplace.search_plugins(&query2).await.unwrap();
 
         // 验证分页逻辑
         assert!(results1.plugins.is_empty() || results2.plugins.is_empty() ||
@@ -402,9 +404,9 @@ mod tests {
     /// 测试搜索缓存
     #[tokio::test]
     async fn test_search_caching() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
-        let query = SearchQuery {
+        let query: _ = SearchQuery {
             query: "test".to_string(),
             filters: SearchFilters {
                 categories: None,
@@ -424,14 +426,14 @@ mod tests {
         };
 
         // 第一次搜索
-        let start1 = std::time::Instant::now();
-        let _results1 = marketplace.search_plugins(&query).await.unwrap();
-        let time1 = start1.elapsed();
+        let start1: _ = std::time::Instant::now();
+        let _results1: _ = marketplace.search_plugins(&query).await.unwrap();
+        let time1: _ = start1.elapsed();
 
         // 第二次搜索（应该使用缓存）
-        let start2 = std::time::Instant::now();
-        let _results2 = marketplace.search_plugins(&query).await.unwrap();
-        let time2 = start2.elapsed();
+        let start2: _ = std::time::Instant::now();
+        let _results2: _ = marketplace.search_plugins(&query).await.unwrap();
+        let time2: _ = start2.elapsed();
 
         // 第二次搜索应该更快（使用缓存）
         // 注意：这里我们只是验证功能，实际性能差异取决于实现
@@ -441,9 +443,9 @@ mod tests {
     /// 测试空查询处理
     #[tokio::test]
     async fn test_empty_query() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
-        let query = SearchQuery {
+        let query: _ = SearchQuery {
             query: "".to_string(),
             filters: SearchFilters {
                 categories: None,
@@ -462,21 +464,21 @@ mod tests {
             },
         };
 
-        let results = marketplace.search_plugins(&query).await.unwrap();
+        let results: _ = marketplace.search_plugins(&query).await.unwrap();
         assert!(results.plugins.len() <= 10, "Empty query should return limited results");
     }
 
     /// 测试市场初始化和预热
     #[tokio::test]
     async fn test_marketplace_warmup() {
-        let marketplace = PluginMarketplace::new();
+        let marketplace: _ = PluginMarketplace::new();
 
-        let result = marketplace.initialize().await;
+        let result: _ = marketplace.initialize().await;
         assert!(result.is_ok(), "Initialization should succeed");
 
         // 验证缓存已预热
         // 这里我们只是验证方法可以调用
-        let stats = marketplace.get_plugin_stats().await.unwrap();
+        let stats: _ = marketplace.get_plugin_stats().await.unwrap();
         assert!(stats.total_plugins >= 0, "Should have valid plugin count");
     }
 }

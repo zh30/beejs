@@ -5,22 +5,24 @@
 mod startup_optimization_tests {
     use beejs::{RuntimeLite, profiler::{Profiler, ProfilingMode}};
     use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试 V8 预初始化优化效果
     /// 预期：预初始化后，V8 创建时间应该显著减少
     #[test]
     fn test_v8_pre_initialization_performance() {
         // 第一次初始化（无预初始化）
-        let start = SystemTime::now();
-        let _runtime1 = RuntimeLite::new(false);
-        let time1 = start.elapsed().unwrap();
+        let start: _ = SystemTime::now();
+        let _runtime1: _ = RuntimeLite::new(false);
+        let time1: _ = start.elapsed().unwrap();
 
         // 第二次初始化（有预初始化）
         // 注意：V8 once() 确保只初始化一次
         // 这个测试主要验证 V8 初始化不会重复
-        let start = SystemTime::now();
-        let _runtime2 = RuntimeLite::new(false);
-        let time2 = start.elapsed().unwrap();
+        let start: _ = SystemTime::now();
+        let _runtime2: _ = RuntimeLite::new(false);
+        let time2: _ = start.elapsed().unwrap();
 
         // 第二次应该更快（因为 V8 已初始化）
         // 注意：在测试环境中，V8 可能有生命周期问题
@@ -36,9 +38,9 @@ mod startup_optimization_tests {
     /// 验证快路径优化效果
     #[test]
     fn test_simple_script_execution_performance() {
-        let runtime = RuntimeLite::new(false).expect("RuntimeLite 创建失败");
+        let runtime: _ = RuntimeLite::new(false).expect("RuntimeLite 创建失败");
 
-        let test_cases = vec![
+        let test_cases: _ = vec![
             ("1+1", "2"),
             ("2*3", "6"),
             ("10-5", "5"),
@@ -46,9 +48,9 @@ mod startup_optimization_tests {
         ];
 
         for (code, expected) in test_cases {
-            let start = SystemTime::now();
-            let result = runtime.execute_code(code);
-            let elapsed = start.elapsed().unwrap();
+            let start: _ = SystemTime::now();
+            let result: _ = runtime.execute_code(code);
+            let elapsed: _ = start.elapsed().unwrap();
 
             assert!(result.is_ok(), "代码执行失败: {}", code);
             println!("代码: {}, 结果: {:?}, 耗时: {:?}", code, result, elapsed);
@@ -65,9 +67,9 @@ mod startup_optimization_tests {
     /// 验证 Stage 14 优化效果
     #[test]
     fn test_logical_operators_fast_path_performance() {
-        let runtime = RuntimeLite::new(false).expect("RuntimeLite 创建失败");
+        let runtime: _ = RuntimeLite::new(false).expect("RuntimeLite 创建失败");
 
-        let test_cases = vec![
+        let test_cases: _ = vec![
             ("true && false", "false"),
             ("true || false", "true"),
             ("!true", "false"),
@@ -76,9 +78,9 @@ mod startup_optimization_tests {
         ];
 
         for (code, expected) in test_cases {
-            let start = SystemTime::now();
-            let result = runtime.execute_code(code);
-            let elapsed = start.elapsed().unwrap();
+            let start: _ = SystemTime::now();
+            let result: _ = runtime.execute_code(code);
+            let elapsed: _ = start.elapsed().unwrap();
 
             assert!(result.is_ok(), "逻辑运算执行失败: {}", code);
             println!("逻辑运算: {}, 结果: {:?}, 耗时: {:?}", code, result, elapsed);
@@ -95,18 +97,18 @@ mod startup_optimization_tests {
     /// 验证字符串操作优化
     #[test]
     fn test_string_methods_fast_path_performance() {
-        let runtime = RuntimeLite::new(false).expect("RuntimeLite 创建失败");
+        let runtime: _ = RuntimeLite::new(false).expect("RuntimeLite 创建失败");
 
-        let test_cases = vec![
+        let test_cases: _ = vec![
             ("\"hello\".length", "5"),
             ("\"hello world\".substring(0, 5)", "hello"),
             ("\"hello\".toUpperCase()", "HELLO"),
         ];
 
         for (code, _expected) in test_cases {
-            let start = SystemTime::now();
-            let result = runtime.execute_code(code);
-            let elapsed = start.elapsed().unwrap();
+            let start: _ = SystemTime::now();
+            let result: _ = runtime.execute_code(code);
+            let elapsed: _ = start.elapsed().unwrap();
 
             assert!(result.is_ok(), "字符串方法执行失败: {}", code);
             println!("字符串方法: {}, 结果: {:?}, 耗时: {:?}", code, result, elapsed);
@@ -117,18 +119,18 @@ mod startup_optimization_tests {
     /// 验证数组操作优化
     #[test]
     fn test_array_methods_fast_path_performance() {
-        let runtime = RuntimeLite::new(false).expect("RuntimeLite 创建失败");
+        let runtime: _ = RuntimeLite::new(false).expect("RuntimeLite 创建失败");
 
-        let test_cases = vec![
+        let test_cases: _ = vec![
             ("[1,2,3].length", "3"),
             ("[1,2,3,4,5].slice(1, 3)", "2,3"),
             ("[1,2,3].indexOf(2)", "1"),
         ];
 
         for (code, _expected) in test_cases {
-            let start = SystemTime::now();
-            let result = runtime.execute_code(code);
-            let elapsed = start.elapsed().unwrap();
+            let start: _ = SystemTime::now();
+            let result: _ = runtime.execute_code(code);
+            let elapsed: _ = start.elapsed().unwrap();
 
             assert!(result.is_ok(), "数组方法执行失败: {}", code);
             println!("数组方法: {}, 结果: {:?}, 耗时: {:?}", code, result, elapsed);
@@ -142,18 +144,18 @@ mod startup_optimization_tests {
         let mut profiler = Profiler::new(ProfilingMode::Basic).expect("Profiler 创建失败");
 
         // 执行一些操作
-        let runtime = RuntimeLite::new(false).expect("RuntimeLite 创建失败");
+        let runtime: _ = RuntimeLite::new(false).expect("RuntimeLite 创建失败");
 
         // 开始分析
-        let profile_id = profiler.start_profile(beejs::profiler::ProfileTarget::Runtime)
+        let profile_id: _ = profiler.start_profile(beejs::profiler::ProfileTarget::Runtime)
             .expect("开始分析失败");
 
         if let Ok(result) = runtime.execute_code("1+1") {
             println!("执行结果: {}", result);
         }
 
-        let _result = profiler.stop_profile(profile_id).expect("停止分析失败");
-        let stats = profiler.get_statistics();
+        let _result: _ = profiler.stop_profile(profile_id).expect("停止分析失败");
+        let stats: _ = profiler.get_statistics();
 
         println!("性能统计: {:?}", stats);
         // 由于分析器可能没有收集到数据，我们只验证它不会 panic
@@ -164,14 +166,14 @@ mod startup_optimization_tests {
     /// 验证是否达到 < 5ms 目标
     #[test]
     fn test_startup_time_target() {
-        let target_duration = Duration::from_millis(5);
-        let iterations = 10;
+        let target_duration: _ = Duration::from_millis(5);
+        let iterations: _ = 10;
         let mut total_time = Duration::from_millis(0);
 
         for i in 0..iterations {
-            let start = SystemTime::now();
-            let runtime = RuntimeLite::new(false);
-            let elapsed = start.elapsed().unwrap();
+            let start: _ = SystemTime::now();
+            let runtime: _ = RuntimeLite::new(false);
+            let elapsed: _ = start.elapsed().unwrap();
 
             assert!(runtime.is_ok(), "Runtime 创建失败 (第 {} 次)", i);
             total_time += elapsed;
@@ -179,7 +181,7 @@ mod startup_optimization_tests {
             println!("第 {} 次 Runtime 创建时间: {:?}", i + 1, elapsed);
         }
 
-        let average_time = total_time / iterations;
+        let average_time: _ = total_time / iterations;
         println!("平均 Runtime 创建时间: {:?}", average_time);
 
         // 验证平均时间是否接近目标

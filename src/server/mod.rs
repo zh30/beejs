@@ -43,13 +43,13 @@ impl Server {
     pub fn new(runtime: Runtime) -> Self {
         Self {
             config: ServerConfig::default(),
-            runtime: Arc::new(Mutex::new(runtime)),
+            runtime: Arc::new(std::sync::Mutex::new(Mutex::new(runtime))),
         }
     }
 
     /// Configure server host
     pub fn host(mut self, host: &str) -> Self {
-        self.config.host = host.to_string();
+        self.config.host = host.clone();to_string();
         self
     }
 
@@ -73,8 +73,8 @@ impl Server {
 
     /// Start the server (synchronous - runs on main thread)
     pub async fn run(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let server_url = format!("{}:{}", self.config.host, self.config.port);
-        let server = HttpServer::http(&server_url).map_err(|e| format!("Failed to bind to {}: {}", server_url, e))?;
+        let server_url: _ = format!("{}:{}", self.config.host, self.config.port);
+        let server: _ = HttpServer::http(&server_url).map_err(|e| format!("Failed to bind to {}: {}", server_url, e))?;
 
         info!("🚀 Beejs Server started on http://{}", server_url);
         info!("📊 POST /api/v1/eval - Execute JavaScript code");
@@ -86,7 +86,7 @@ impl Server {
         // Process requests synchronously on the main thread
         // This ensures V8 operations happen on the correct thread
         for request in server.incoming_requests() {
-            let runtime_clone = self.runtime.clone();
+            let runtime_clone: _ = self.runtime.clone();
             if let Err(e) = self.handle_request(runtime_clone, request).await {
                 warn!("Request error: {}", e);
             }
@@ -101,7 +101,7 @@ impl Server {
         runtime: Arc<Mutex<Runtime>>,
         request: Request,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let url = request.url().to_string();
+        let url: _ = request.url().to_string();
 
         match url.as_str() {
             "/api/v1/eval" if request.method() == &tiny_http::Method::Post => {
@@ -114,7 +114,7 @@ impl Server {
                 self.handle_health(request).await
             }
             _ => {
-                let response = Response::from_string("Not Found").with_status_code(404);
+                let response: _ = Response::from_string("Not Found").with_status_code(404);
                 request.respond(response)?;
                 Ok(())
             }
@@ -127,7 +127,7 @@ impl Server {
         runtime: Arc<Mutex<Runtime>>,
         mut request: Request,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
         // Read request body
         let mut body = String::new();
@@ -141,14 +141,14 @@ impl Server {
 
         // Execute code in a blocking context on the main thread
         // This ensures V8 operations happen on the correct thread
-        let result = {
+        let result: _ = {
             let runtime_guard = runtime.lock().map_err(|e| format!("Runtime lock error: {}", e))?;
             runtime_guard.execute_code(&eval_request.code)
         };
 
-        let execution_time_ms = start_time.elapsed().as_millis() as u64;
+        let execution_time_ms: _ = start_time.elapsed().as_millis() as u64;
 
-        let response = match result {
+        let response: _ = match result {
             Ok(output) => {
                 let eval_response = EvalResponse {
                     result: output,
@@ -164,7 +164,7 @@ impl Server {
                     )
             }
             Err(e) => {
-                let eval_response = EvalResponse {
+                let eval_response: _ = EvalResponse {
                     result: String::new(),
                     execution_time_ms,
                     cached: false,
@@ -189,9 +189,9 @@ impl Server {
         _runtime: Arc<Mutex<Runtime>>,
         request: Request,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let stats = ServerStats::default();
+        let stats: _ = ServerStats::default();
 
-        let response = Response::from_string(serde_json::to_string(&stats)?)
+        let response: _ = Response::from_string(serde_json::to_string(&stats)?)
             .with_status_code(200)
             .with_header(
                 tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap()
@@ -206,7 +206,7 @@ impl Server {
         &self,
         request: Request,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let response = Response::from_string("OK")
+        let response: _ = Response::from_string("OK")
             .with_status_code(200)
             .with_header(
                 tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"text/plain"[..]).unwrap()
@@ -247,7 +247,7 @@ pub struct ServerStats {
 
 /// Start the HTTP server
 pub async fn start_server(config: ServerConfig, runtime: Runtime) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let server = Server::new(runtime)
+    let server: _ = Server::new(runtime)
         .host(&config.host)
         .port(config.port)
         .max_connections(config.max_connections)
@@ -259,17 +259,19 @@ pub async fn start_server(config: ServerConfig, runtime: Runtime) -> Result<(), 
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_server_config_default() {
-        let config = ServerConfig::default();
+        let config: _ = ServerConfig::default();
         assert_eq!(config.port, 3000);
         assert_eq!(config.host, "127.0.0.1");
     }
 
     #[test]
     fn test_eval_request_deserialize() {
-        let json = r#"{"code": "1+1", "timeout": 5000, "optimize": "speed"}"#;
+        let json: _ = r#"{"code": "1+1", "timeout": 5000, "optimize": "speed"}"#;
         let request: EvalRequest = serde_json::from_str(json).unwrap();
         assert_eq!(request.code, "1+1");
         assert_eq!(request.timeout, Some(5000));
@@ -277,13 +279,13 @@ mod tests {
 
     #[test]
     fn test_eval_response_serialize() {
-        let response = EvalResponse {
+        let response: _ = EvalResponse {
             result: "2".to_string(),
             execution_time_ms: 5,
             cached: false,
             error: None,
         };
-        let json = serde_json::to_string(&response).unwrap();
+        let json: _ = serde_json::to_string(&response).unwrap();
         let parsed: EvalResponse = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.result, "2");
     }

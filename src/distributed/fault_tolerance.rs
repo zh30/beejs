@@ -56,7 +56,7 @@ pub struct FaultEvent {
     pub target_id: String, // 节点ID或任务ID
     pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
     pub description: String,
-    pub metadata: HashMap<String, String>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 恢复策略
@@ -77,7 +77,7 @@ pub struct RecoveryAction {
     pub action_id: String,
     pub strategy: RecoveryStrategy,
     pub target_id: String,
-    pub parameters: HashMap<String, String>,
+    pub parameters: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub estimated_duration: Duration,
 }
 
@@ -89,9 +89,9 @@ pub struct FaultDetector {
     task_executor: Arc<TaskExecutor>,
     node_manager: Arc<NodeManager>,
     task_scheduler: Arc<TaskScheduler>,
-    active_faults: Arc<RwLock<HashMap<String, FaultEvent>>>,
+    active_faults: Arc<RwLock<HashMap<String, FaultEvent, std::collections::HashMap<String, FaultEvent, String, FaultEvent>>>>,
     fault_history: Arc<RwLock<Vec<FaultEvent>>>,
-    recovery_actions: Arc<RwLock<HashMap<String, RecoveryAction>>>,
+    recovery_actions: Arc<RwLock<HashMap<String, RecoveryAction, std::collections::HashMap<String, RecoveryAction, String, RecoveryAction>>>>,
 }
 
 impl FaultDetector {
@@ -103,19 +103,19 @@ impl FaultDetector {
         node_manager: Arc<NodeManager>,
         task_scheduler: Arc<TaskScheduler>,
     ) -> Self {
-        let detector = Self {
+        let detector: _ = Self {
             config,
             health_monitor,
             task_executor,
             node_manager,
             task_scheduler,
-            active_faults: Arc::new(RwLock::new(HashMap::new())),
-            fault_history: Arc::new(RwLock::new(Vec::new())),
-            recovery_actions: Arc::new(RwLock::new(HashMap::new())),
+            active_faults: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            fault_history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            recovery_actions: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         };
 
         // 启动故障检测任务
-        let detector_clone = detector.clone();
+        let detector_clone: _ = detector.clone();
         tokio::spawn(async move {
             let mut interval = interval(detector_clone.config.detection_interval);
             loop {
@@ -145,10 +145,10 @@ impl FaultDetector {
 
     /// 检测节点故障
     async fn detect_node_faults(&self) {
-        let unhealthy_nodes = self.health_monitor.get_unhealthy_nodes().await;
+        let unhealthy_nodes: _ = self.health_monitor.get_unhealthy_nodes().await;
 
         for node_id in unhealthy_nodes {
-            let fault_event = FaultEvent {
+            let fault_event: _ = FaultEvent {
                 event_id: format!("node-fault-{}", node_id),
                 fault_type: FaultType::NodeFailure,
                 severity: FaultSeverity::High,
@@ -165,10 +165,10 @@ impl FaultDetector {
     /// 检测任务执行故障
     async fn detect_task_faults(&self) {
         // 检查失败的任务
-        let failed_tasks = self.get_failed_tasks().await;
+        let failed_tasks: _ = self.get_failed_tasks().await;
 
         for task in failed_tasks {
-            let fault_event = FaultEvent {
+            let fault_event: _ = FaultEvent {
                 event_id: format!("task-fault-{}", task.id),
                 fault_type: FaultType::TaskExecutionFailure,
                 severity: FaultSeverity::Medium,
@@ -184,11 +184,11 @@ impl FaultDetector {
 
     /// 检测网络分区故障
     async fn detect_network_partition_faults(&self) {
-        let cluster_health = self.health_monitor.check_cluster_health().await;
+        let cluster_health: _ = self.health_monitor.check_cluster_health().await;
 
         match cluster_health {
             super::health_monitor::ClusterHealthStatus::Unhealthy => {
-                let fault_event = FaultEvent {
+                let fault_event: _ = FaultEvent {
                     event_id: format!("network-partition-{:?}", Instant::now()),
                     fault_type: FaultType::NetworkPartition,
                     severity: FaultSeverity::Critical,
@@ -228,8 +228,8 @@ impl FaultDetector {
 
     /// 触发恢复
     async fn trigger_recovery(&self, fault: &FaultEvent) {
-        let recovery_strategy = self.determine_recovery_strategy(fault).await;
-        let recovery_action = self.create_recovery_action(fault, &recovery_strategy).await;
+        let recovery_strategy: _ = self.determine_recovery_strategy(fault).await;
+        let recovery_action: _ = self.create_recovery_action(fault, &recovery_strategy).await;
 
         info!("Triggering recovery for fault {}: {:?}", fault.event_id, recovery_strategy);
 
@@ -270,9 +270,9 @@ impl FaultDetector {
 
     /// 创建恢复动作
     async fn create_recovery_action(&self, fault: &FaultEvent, strategy: &RecoveryStrategy) -> RecoveryAction {
-        let action_id = format!("recovery-{}-{:?}", fault.event_id, Instant::now());
+        let action_id: _ = format!("recovery-{}-{:?}", fault.event_id, Instant::now());
 
-        let parameters = match strategy {
+        let parameters: _ = match strategy {
             RecoveryStrategy::RestartNode => {
                 let mut params = HashMap::new();
                 params.insert("node_id".to_string(), fault.target_id.clone());
@@ -414,19 +414,19 @@ impl FaultDetector {
 
     /// 获取活动故障列表
     pub async fn get_active_faults(&self) -> Vec<FaultEvent> {
-        let active_faults = self.active_faults.read().await;
+        let active_faults: _ = self.active_faults.read().await;
         active_faults.values().cloned().collect()
     }
 
     /// 获取故障历史
     pub async fn get_fault_history(&self) -> Vec<FaultEvent> {
-        let fault_history = self.fault_history.read().await;
+        let fault_history: _ = self.fault_history.read().await;
         fault_history.clone()
     }
 
     /// 获取恢复动作历史
     pub async fn get_recovery_actions(&self) -> Vec<RecoveryAction> {
-        let recovery_actions = self.recovery_actions.read().await;
+        let recovery_actions: _ = self.recovery_actions.read().await;
         recovery_actions.values().cloned().collect()
     }
 
@@ -444,12 +444,12 @@ impl FaultDetector {
 
     /// 获取故障统计信息
     pub async fn get_fault_statistics(&self) -> FaultStatistics {
-        let fault_history = self.fault_history.read().await;
-        let active_faults = self.active_faults.read().await;
+        let fault_history: _ = self.fault_history.read().await;
+        let active_faults: _ = self.active_faults.read().await;
 
         let mut fault_counts = HashMap::new();
         for fault in fault_history.iter() {
-            let count = fault_counts.entry(fault.fault_type.clone()).or_insert(0);
+            let count: _ = fault_counts.entry(fault.fault_type.clone()).or_insert(0);
             *count += 1;
         }
 
@@ -467,7 +467,7 @@ impl FaultDetector {
 pub struct FaultStatistics {
     pub total_faults: usize,
     pub active_faults: usize,
-    pub fault_type_counts: HashMap<FaultType, usize>,
+    pub fault_type_counts: HashMap<FaultType, usize, std::collections::HashMap<FaultType, usize, FaultType, usize>>,
     pub recovery_actions_count: usize,
 }
 
@@ -476,20 +476,22 @@ mod tests {
     use super::*;
     use crate::distributed::service_discovery::{ServiceDiscovery, DiscoveryConfig};
     use crate::distributed::node_manager::NodeManager;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_fault_detection() {
-        let config = DiscoveryConfig {
+        let config: _ = DiscoveryConfig {
             cluster_name: "test-cluster".to_string(),
             gossip_interval: Duration::from_millis(100),
             node_timeout: Duration::from_secs(5),
         };
 
-        let service_discovery = ServiceDiscovery::new(config);
-        let node_manager = Arc::new(NodeManager::new(service_discovery.clone()));
-        let _health_monitor = Arc::new(HealthMonitor::new(node_manager.clone()));
+        let service_discovery: _ = ServiceDiscovery::new(config);
+        let node_manager: _ = Arc::new(std::sync::Mutex::new(NodeManager::new(service_discovery.clone())));
+        let _health_monitor: _ = Arc::new(std::sync::Mutex::new(HealthMonitor::new(node_manager.clone())));
 
-        let _fault_config = FaultDetectionConfig {
+        let _fault_config: _ = FaultDetectionConfig {
             detection_interval: Duration::from_millis(100),
             failure_threshold: 3,
             recovery_threshold: 2,

@@ -5,12 +5,14 @@
 
 use super::*;
 use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 符号解析器
 #[derive(Debug)]
 pub struct SymbolResolver {
-    symbol_table: HashMap<String, SymbolInfo>,
-    import_graph: HashMap<String, HashSet<String>>,
+    symbol_table: HashMap<String, SymbolInfo, std::collections::HashMap<String, SymbolInfo, String, SymbolInfo>>,
+    import_graph: HashMap<String, HashSet<String, std::collections::HashMap<String, HashSet<String, String, HashSet<String>>>,
     config: ResolverConfig,
 }
 
@@ -29,13 +31,13 @@ impl SymbolResolver {
         let mut resolved_symbols = Vec::new();
 
         // 解析 import 语句
-        let imports = self.parse_imports(source)?;
+        let imports: _ = self.parse_imports(source)?;
 
         // 解析 export 语句
-        let exports = self.parse_exports(source)?;
+        let exports: _ = self.parse_exports(source)?;
 
         // 解析符号使用
-        let usages = self.parse_symbol_usages(source)?;
+        let usages: _ = self.parse_symbol_usages(source)?;
 
         // 解决符号引用
         for usage in usages {
@@ -61,7 +63,7 @@ impl SymbolResolver {
         let lines: Vec<&str> = source.lines().collect();
 
         for line in &lines {
-            let trimmed = line.trim();
+            let trimmed: _ = line.trim();
 
             // ES6 import
             if trimmed.starts_with("import ") {
@@ -88,14 +90,14 @@ impl SymbolResolver {
         // import { ... } from 'module'
         if line.contains("from ") {
             if let Some(import_part) = line.split("from ").nth(1) {
-                let module_name = import_part.trim().trim_matches('"').trim_matches('\'');
+                let module_name: _ = import_part.trim().trim_matches('"').trim_matches('\'');
                 // 解析导入的符号
                 if line.contains('{') && line.contains('}') {
-                    let start = line.find('{')? + 1;
-                    let end = line.find('}')?;
-                    let imported_items = &line[start..end];
+                    let start: _ = line.find('{')? + 1;
+                    let end: _ = line.find('}')?;
+                    let imported_items: _ = &line[start..end];
                     for item in imported_items.split(',') {
-                        let symbol = item.trim().split(" as ").next().unwrap_or(item.trim()).trim().to_string();
+                        let symbol: _ = item.trim().split(" as ").next().unwrap_or(item.trim()).trim().to_string();
                         if !symbol.is_empty() {
                             imports.insert(symbol);
                         }
@@ -110,8 +112,8 @@ impl SymbolResolver {
         // import * as name from 'module'
         if line.contains("* as ") {
             if let Some(alias_start) = line.find("* as ") {
-                let alias_end = line.find(" from ").unwrap_or(line.len());
-                let alias = &line[alias_start + 5..alias_end];
+                let alias_end: _ = line.find(" from ").unwrap_or(line.len());
+                let alias: _ = &line[alias_start + 5..alias_end];
                 imports.insert(alias.trim().to_string());
             }
         }
@@ -126,9 +128,9 @@ impl SymbolResolver {
     /// 解析 CommonJS require
     fn parse_require(&self, line: &str) -> Option<String> {
         if let Some(require_start) = line.find("require(") {
-            let require_end = line.find(')', require_start)?;
-            let module_path = &line[require_start + 8..require_end];
-            let module_name = module_path.trim().trim_matches('"').trim_matches('\'');
+            let require_end: _ = line.find(')', require_start)?;
+            let module_path: _ = &line[require_start + 8..require_end];
+            let module_name: _ = module_path.trim().trim_matches('"').trim_matches('\'');
 
             // 从 module path 提取模块名
             if module_name.starts_with('.') {
@@ -149,12 +151,12 @@ impl SymbolResolver {
         let lines: Vec<&str> = source.lines().collect();
 
         for line in &lines {
-            let trimmed = line.trim();
+            let trimmed: _ = line.trim();
 
             // export { ... }
             if trimmed.starts_with("export {") {
                 if let Some(exports_part) = trimmed.strip_prefix("export {") {
-                    let items = exports_part.strip_suffix('}').unwrap_or(exports_part);
+                    let items: _ = exports_part.strip_suffix('}').unwrap_or(exports_part);
                     for item in items.split(',') {
                         exports.insert(item.trim().to_string());
                     }
@@ -195,7 +197,7 @@ impl SymbolResolver {
         let lines: Vec<&str> = source.lines().collect();
 
         for (line_num, line) in lines.iter().enumerate() {
-            let trimmed = line.trim();
+            let trimmed: _ = line.trim();
 
             // 跳过声明语句
             if trimmed.starts_with("import ") || trimmed.starts_with("export ") {
@@ -213,7 +215,7 @@ impl SymbolResolver {
             let words: Vec<&str> = trimmed.split_whitespace().collect();
             for word in words {
                 // 移除标点符号
-                let clean_word = word.trim_matches(|c: char| !c.is_alphanumeric() && c != '_' && c != '$');
+                let clean_word: _ = word.clone();trim_matches(|c: char| !c.is_alphanumeric() && c != '_' && c != '$');
                 if !clean_word.is_empty() && self.is_likely_symbol(clean_word) {
                     usages.push(SymbolUsage {
                         symbol_name: clean_word.to_string(),
@@ -232,8 +234,8 @@ impl SymbolResolver {
     /// 检查是否是可能的符号名
     fn is_likely_symbol(&self, word: &str) -> bool {
         // 排除关键字和内置对象
-        let keywords = ["if", "else", "for", "while", "return", "function", "class", "const", "let", "var", "this", "new", "try", "catch", "throw"];
-        let builtins = ["console", "window", "document", "Math", "JSON", "Object", "Array", "String", "Number", "Boolean", "Date", "Promise"];
+        let keywords: _ = ["if", "else", "for", "while", "return", "function", "class", "const", "let", "var", "this", "new", "try", "catch", "throw"];
+        let builtins: _ = ["console", "window", "document", "Math", "JSON", "Object", "Array", "String", "Number", "Boolean", "Date", "Promise"];
 
         !keywords.contains(&word) && !builtins.contains(&word) && word.len() > 1
     }
@@ -253,7 +255,7 @@ impl SymbolResolver {
         // 在导入的模块中查找
         if let Some(imports) = self.import_graph.get(current_file) {
             for imported_module in imports {
-                let module_symbol_name = format!("{}::{}", imported_module, symbol_name);
+                let module_symbol_name: _ = format!("{}::{}", imported_module, symbol_name);
                 if let Some(symbol) = self.symbol_table.get(&module_symbol_name) {
                     return Some(symbol.clone());
                 }
@@ -264,7 +266,7 @@ impl SymbolResolver {
     }
 
     /// 获取导入图
-    pub fn get_import_graph(&self) -> &HashMap<String, HashSet<String>> {
+    pub fn get_import_graph(&self) -> &HashMap<String, HashSet<String, std::collections::HashMap<String, HashSet<String, String, HashSet<String>>> {
         &self.import_graph
     }
 
@@ -301,7 +303,7 @@ impl SymbolResolver {
                 } else if path.contains(dep) {
                     // 找到循环
                     if let Some(pos) = path.iter().position(|p| p == dep) {
-                        let cycle = path[pos..].to_vec();
+                        let cycle: _ = path[pos..].to_vec();
                         cycles.push(cycle);
                     }
                 }

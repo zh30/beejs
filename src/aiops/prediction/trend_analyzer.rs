@@ -161,15 +161,15 @@ impl LinearTrendAnalyzer {
             return None;
         }
 
-        let n = metrics.len() as f64;
+        let n: _ = metrics.len() as f64;
         let mut sum_x = 0.0;
         let mut sum_y = 0.0;
         let mut sum_xy = 0.0;
         let mut sum_x2 = 0.0;
 
         for (i, metric) in metrics.iter().enumerate() {
-            let x = i as f64;
-            let y = metric.value;
+            let x: _ = i as f64;
+            let y: _ = metric.value;
 
             sum_x += x;
             sum_y += y;
@@ -177,29 +177,29 @@ impl LinearTrendAnalyzer {
             sum_x2 += x * x;
         }
 
-        let denominator = n * sum_x2 - sum_x * sum_x;
+        let denominator: _ = n * sum_x2 - sum_x * sum_x;
         if denominator == 0.0 {
             return None;
         }
 
-        let slope = (n * sum_xy - sum_x * sum_y) / denominator;
-        let intercept = (sum_y - slope * sum_x) / n;
+        let slope: _ = (n * sum_xy - sum_x * sum_y) / denominator;
+        let intercept: _ = (sum_y - slope * sum_x) / n;
 
         // Calculate R-squared
-        let mean_y = sum_y / n;
+        let mean_y: _ = sum_y / n;
         let mut ss_tot = 0.0;
         let mut ss_res = 0.0;
 
         for (i, metric) in metrics.iter().enumerate() {
-            let x = i as f64;
-            let y_pred = slope * x + intercept;
-            let y_actual = metric.value;
+            let x: _ = i as f64;
+            let y_pred: _ = slope * x + intercept;
+            let y_actual: _ = metric.value;
 
             ss_tot += (y_actual - mean_y).powi(2);
             ss_res += (y_actual - y_pred).powi(2);
         }
 
-        let r_squared = if ss_tot == 0.0 {
+        let r_squared: _ = if ss_tot == 0.0 {
             1.0
         } else {
             1.0 - ss_res / ss_tot
@@ -226,7 +226,7 @@ impl LinearTrendAnalyzer {
         }
 
         // Normalize slope by standard deviation and combine with R-squared
-        let normalized_slope = (slope.abs() / std_dev).min(1.0);
+        let normalized_slope: _ = (slope.abs() / std_dev).min(1.0);
         (normalized_slope * 0.7 + r_squared * 0.3).min(1.0)
     }
 
@@ -242,22 +242,22 @@ impl LinearTrendAnalyzer {
             };
         }
 
-        let count = metrics.len();
+        let count: _ = metrics.len();
         let mean: f64 = metrics.iter().map(|m| m.value).sum::<f64>() / count as f64;
 
         let variance: f64 = metrics
             .iter()
             .map(|m| {
-                let diff = m.value - mean;
+                let diff: _ = m.value - mean;
                 diff * diff
             })
             .sum::<f64>()
             / count as f64;
 
-        let std_dev = variance.sqrt();
+        let std_dev: _ = variance.sqrt();
 
-        let min = metrics.iter().map(|m| m.value).fold(f64::MAX, f64::min);
-        let max = metrics.iter().map(|m| m.value).fold(f64::MIN, f64::max);
+        let min: _ = metrics.iter().map(|m| m.value).fold(f64::MAX, f64::min);
+        let max: _ = metrics.iter().map(|m| m.value).fold(f64::MIN, f64::max);
 
         TrendStats {
             mean,
@@ -272,7 +272,7 @@ impl LinearTrendAnalyzer {
     fn predict_values(slope: f64, intercept: f64, start_index: usize, horizon: usize) -> Vec<f64> {
         (1..=horizon)
             .map(|i| {
-                let x = (start_index + i) as f64;
+                let x: _ = (start_index + i) as f64;
                 slope * x + intercept
             })
             .collect()
@@ -285,29 +285,29 @@ impl TrendAnalyzer for LinearTrendAnalyzer {
             return Err(AIOpsError::Config("Insufficient data points".to_string()));
         }
 
-        let stats = Self::calculate_stats(metrics);
-        let time_span = if metrics.len() >= 2 {
+        let stats: _ = Self::calculate_stats(metrics);
+        let time_span: _ = if metrics.len() >= 2 {
             let last = metrics.last().unwrap().timestamp;
-            let first = metrics.first().unwrap().timestamp;
+            let first: _ = metrics.first().unwrap().timestamp;
             last - first
         } else {
             Duration::from_secs(0)
         };
 
         if let Some((slope, intercept, r_squared)) = Self::calculate_linear_regression(metrics) {
-            let direction = Self::determine_direction(slope, self.config.trend_threshold);
-            let strength = Self::calculate_strength(slope, r_squared, stats.std_dev);
+            let direction: _ = Self::determine_direction(slope, self.config.trend_threshold);
+            let strength: _ = Self::calculate_strength(slope, r_squared, stats.std_dev);
 
-            let predicted_next = if self.config.enable_prediction {
+            let predicted_next: _ = if self.config.enable_prediction {
                 let x = metrics.len() as f64;
                 slope * x + intercept
             } else {
                 stats.mean
             };
 
-            let confidence = r_squared.min(1.0);
+            let confidence: _ = r_squared.min(1.0);
 
-            let trend = TrendMetrics {
+            let trend: _ = TrendMetrics {
                 direction,
                 strength,
                 slope,
@@ -324,7 +324,7 @@ impl TrendAnalyzer for LinearTrendAnalyzer {
             })
         } else {
             // Unable to calculate regression
-            let trend = TrendMetrics {
+            let trend: _ = TrendMetrics {
                 direction: TrendDirection::Unknown,
                 strength: 0.0,
                 slope: 0.0,
@@ -348,7 +348,7 @@ impl TrendAnalyzer for LinearTrendAnalyzer {
         }
 
         if let Some((slope, intercept, _)) = Self::calculate_linear_regression(metrics) {
-            let predictions = Self::predict_values(slope, intercept, metrics.len(), horizon);
+            let predictions: _ = Self::predict_values(slope, intercept, metrics.len(), horizon);
             Ok(predictions)
         } else {
             Err(AIOpsError::Config("Unable to calculate regression".to_string()))
@@ -360,23 +360,23 @@ impl TrendAnalyzer for LinearTrendAnalyzer {
             return Ok(false);
         }
 
-        let mid = metrics.len() / 2;
-        let first_half = &metrics[..mid];
-        let second_half = &metrics[mid..];
+        let mid: _ = metrics.len() / 2;
+        let first_half: _ = &metrics[..mid];
+        let second_half: _ = &metrics[mid..];
 
-        let first_result = self.analyze_trend(first_half).await?;
-        let second_result = self.analyze_trend(second_half).await?;
+        let first_result: _ = self.analyze_trend(first_half).await?;
+        let second_result: _ = self.analyze_trend(second_half).await?;
 
         // Detect significant change in trend direction
-        let first_direction = first_result.trend.direction;
-        let second_direction = second_result.trend.direction;
+        let first_direction: _ = first_result.trend.direction;
+        let second_direction: _ = second_result.trend.direction;
 
-        let direction_changed = first_direction != second_direction
+        let direction_changed: _ = first_direction != second_direction
             && first_direction != TrendDirection::Stable
             && second_direction != TrendDirection::Stable;
 
         // Detect significant change in trend strength
-        let strength_change = (first_result.trend.strength - second_result.trend.strength).abs() > 0.3;
+        let strength_change: _ = (first_result.trend.strength - second_result.trend.strength).abs() > 0.3;
 
         Ok(direction_changed || strength_change)
     }
@@ -390,6 +390,8 @@ impl TrendAnalyzer for LinearTrendAnalyzer {
 mod tests {
     use super::*;
     use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     fn create_test_metric(value: f64, timestamp_secs: u64) -> Metric {
         Metric {
@@ -402,11 +404,11 @@ mod tests {
 
     fn create_trending_metrics(upward: bool, count: usize) -> Vec<Metric> {
         let mut metrics = Vec::new();
-        let start_value = if upward { 10.0 } else { 100.0 };
-        let slope = if upward { 2.0 } else { -2.0 };
+        let start_value: _ = if upward { 10.0 } else { 100.0 };
+        let slope: _ = if upward { 2.0 } else { -2.0 };
 
         for i in 0..count {
-            let value = start_value + (slope * i as f64);
+            let value: _ = start_value + (slope * i as f64);
             metrics.push(create_test_metric(value, i as u64));
         }
 
@@ -415,10 +417,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_upward_trend() {
-        let analyzer = LinearTrendAnalyzer::new(TrendAnalyzerConfig::default());
-        let metrics = create_trending_metrics(true, 10);
+        let analyzer: _ = LinearTrendAnalyzer::new(TrendAnalyzerConfig::default());
+        let metrics: _ = create_trending_metrics(true, 10);
 
-        let result = analyzer.analyze_trend(&metrics).await.unwrap();
+        let result: _ = analyzer.analyze_trend(&metrics).await.unwrap();
 
         assert_eq!(result.trend.direction, TrendDirection::Upward);
         assert!(result.trend.strength > 0.5);
@@ -428,10 +430,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_downward_trend() {
-        let analyzer = LinearTrendAnalyzer::new(TrendAnalyzerConfig::default());
-        let metrics = create_trending_metrics(false, 10);
+        let analyzer: _ = LinearTrendAnalyzer::new(TrendAnalyzerConfig::default());
+        let metrics: _ = create_trending_metrics(false, 10);
 
-        let result = analyzer.analyze_trend(&metrics).await.unwrap();
+        let result: _ = analyzer.analyze_trend(&metrics).await.unwrap();
 
         assert_eq!(result.trend.direction, TrendDirection::Downward);
         assert!(result.trend.strength > 0.5);
@@ -441,12 +443,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_stable_metrics() {
-        let analyzer = LinearTrendAnalyzer::new(TrendAnalyzerConfig::default());
+        let analyzer: _ = LinearTrendAnalyzer::new(TrendAnalyzerConfig::default());
         let metrics: Vec<Metric> = (0..10)
             .map(|i| create_test_metric(50.0, i as u64))
             .collect();
 
-        let result = analyzer.analyze_trend(&metrics).await.unwrap();
+        let result: _ = analyzer.analyze_trend(&metrics).await.unwrap();
 
         assert_eq!(result.trend.direction, TrendDirection::Stable);
         assert!(result.trend.strength < 0.3);
@@ -455,12 +457,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_volatile_metrics() {
-        let analyzer = LinearTrendAnalyzer::new(TrendAnalyzerConfig::default());
+        let analyzer: _ = LinearTrendAnalyzer::new(TrendAnalyzerConfig::default());
         let metrics: Vec<Metric> = (0..10)
             .map(|i| create_test_metric((i % 2) as f64 * 100.0, i as u64))
             .collect();
 
-        let result = analyzer.analyze_trend(&metrics).await.unwrap();
+        let result: _ = analyzer.analyze_trend(&metrics).await.unwrap();
 
         assert_eq!(result.trend.direction, TrendDirection::Volatile);
         assert!(result.trend.r_squared < 0.3);
@@ -468,20 +470,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_insufficient_data() {
-        let analyzer = LinearTrendAnalyzer::new(TrendAnalyzerConfig::default());
-        let metrics = create_test_metric(50.0, 0);
+        let analyzer: _ = LinearTrendAnalyzer::new(TrendAnalyzerConfig::default());
+        let metrics: _ = create_test_metric(50.0, 0);
 
-        let result = analyzer.analyze_trend(&[metrics]).await;
+        let result: _ = analyzer.analyze_trend(&[metrics]).await;
 
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_prediction() {
-        let analyzer = LinearTrendAnalyzer::new(TrendAnalyzerConfig::default());
-        let metrics = create_trending_metrics(true, 10);
+        let analyzer: _ = LinearTrendAnalyzer::new(TrendAnalyzerConfig::default());
+        let metrics: _ = create_trending_metrics(true, 10);
 
-        let predictions = analyzer.predict_future(&metrics, 3).await.unwrap();
+        let predictions: _ = analyzer.predict_future(&metrics, 3).await.unwrap();
 
         assert_eq!(predictions.len(), 3);
         // Predictions should follow the upward trend
@@ -491,7 +493,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_trend_change_detection() {
-        let analyzer = LinearTrendAnalyzer::new(TrendAnalyzerConfig::default());
+        let analyzer: _ = LinearTrendAnalyzer::new(TrendAnalyzerConfig::default());
 
         // Create metrics with a trend change in the middle
         let mut metrics = Vec::new();
@@ -506,19 +508,19 @@ mod tests {
             metrics.push(create_test_metric(20.0 - ((i - 5) as f64 * 2.0), i as u64));
         }
 
-        let has_change = analyzer.detect_trend_change(&metrics).await.unwrap();
+        let has_change: _ = analyzer.detect_trend_change(&metrics).await.unwrap();
 
         assert!(has_change);
     }
 
     #[tokio::test]
     async fn test_stats_calculation() {
-        let analyzer = LinearTrendAnalyzer::new(TrendAnalyzerConfig::default());
+        let analyzer: _ = LinearTrendAnalyzer::new(TrendAnalyzerConfig::default());
         let metrics: Vec<Metric> = (0..5)
             .map(|i| create_test_metric(50.0 + (i as f64 * 10.0), i as u64))
             .collect();
 
-        let result = analyzer.analyze_trend(&metrics).await.unwrap();
+        let result: _ = analyzer.analyze_trend(&metrics).await.unwrap();
 
         assert!(result.stats.mean > 0.0);
         assert!(result.stats.std_dev > 0.0);
@@ -532,10 +534,10 @@ mod tests {
         config.min_data_points = 8;
         config.r_squared_threshold = 0.7;
 
-        let analyzer = LinearTrendAnalyzer::new(config);
-        let metrics = create_trending_metrics(true, 10);
+        let analyzer: _ = LinearTrendAnalyzer::new(config);
+        let metrics: _ = create_trending_metrics(true, 10);
 
-        let result = analyzer.analyze_trend(&metrics).await.unwrap();
+        let result: _ = analyzer.analyze_trend(&metrics).await.unwrap();
 
         assert!(result.data_points >= 8);
     }

@@ -8,6 +8,8 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Debug server
 pub struct DebugServer {
@@ -21,12 +23,12 @@ impl DebugServer {
         Ok(Self {
             addr,
             listener: None,
-            running: Arc::new(RwLock::new(false)),
+            running: Arc::new(std::sync::Mutex::new(RwLock::new(false))),
         })
     }
 
     pub async fn start(&mut self) -> Result<()> {
-        let listener = TcpListener::bind(self.addr).await?;
+        let listener: _ = TcpListener::bind(self.addr).await?;
         self.listener = Some(listener);
         *self.running.write().await = true;
         Ok(())
@@ -45,7 +47,7 @@ impl DebugServer {
 
 /// Session manager
 pub struct SessionManager {
-    sessions: std::collections::HashMap<String, Session>,
+    sessions: std::collections::HashMap<String, Session, std::collections::HashMap<String, Session, String, Session>>,
 }
 
 #[derive(Debug, Clone)]
@@ -63,8 +65,8 @@ impl SessionManager {
     }
 
     pub async fn create_session(&mut self, client_name: String) -> Result<String> {
-        let session_id = format!("session_{}", self.sessions.len());
-        let session = Session {
+        let session_id: _ = format!("session_{}", self.sessions.len());
+        let session: _ = Session {
             id: session_id.clone(),
             client_name,
             created_at: "now".to_string(),
@@ -94,7 +96,7 @@ impl WebSocketHandler {
     }
 
     pub async fn serialize_message(&self, message: &DebugProtocol) -> Result<String> {
-        let json = serde_json::to_string(message)?;
+        let json: _ = serde_json::to_string(message)?;
         Ok(json)
     }
 

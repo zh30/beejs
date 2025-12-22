@@ -19,7 +19,7 @@ pub struct EmbeddedBuiltinsManager {
     stats: Arc<BuiltinStats>,
 
     /// 预编译的内置函数缓存
-    builtin_cache: HashMap<String, BuiltinFunction>,
+    builtin_cache: HashMap<String, BuiltinFunction, std::collections::HashMap<String, BuiltinFunction, String, BuiltinFunction>>,
 }
 
 /// 内置函数类型
@@ -91,14 +91,14 @@ impl BuiltinStats {
     }
 
     pub fn hit_rate(&self) -> f64 {
-        let hits = self.cache_hits.load(Ordering::Relaxed) as f64;
-        let total = hits + self.cache_misses.load(Ordering::Relaxed) as f64;
+        let hits: _ = self.cache_hits.load(Ordering::Relaxed) as f64;
+        let total: _ = hits + self.cache_misses.load(Ordering::Relaxed) as f64;
         if total > 0.0 { hits / total } else { 0.0 }
     }
 
     pub fn avg_execution_time_us(&self) -> f64 {
-        let calls = self.total_calls.load(Ordering::Relaxed) as f64;
-        let total_time = self.total_time_ms.load(Ordering::Relaxed) as f64 * 1000.0;
+        let calls: _ = self.total_calls.load(Ordering::Relaxed) as f64;
+        let total_time: _ = self.total_time_ms.load(Ordering::Relaxed) as f64 * 1000.0;
         if calls > 0.0 { total_time / calls } else { 0.0 }
     }
 }
@@ -107,8 +107,8 @@ impl EmbeddedBuiltinsManager {
     /// 创建新的内置函数管理器
     pub fn new() -> Self {
         let mut manager = Self {
-            string_interner: Arc::new(StringInterner::new()),
-            stats: Arc::new(BuiltinStats::new()),
+            string_interner: Arc::new(std::sync::Mutex::new(StringInterner::new())),
+            stats: Arc::new(std::sync::Mutex::new(BuiltinStats::new())),
             builtin_cache: HashMap::new(),
         };
 
@@ -184,17 +184,17 @@ impl EmbeddedBuiltinsManager {
 
     /// 执行内置函数
     pub fn execute_builtin(&self, name: &str, args: &[String]) -> Result<String> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 查找内置函数
-        let builtin = self.builtin_cache.get(name)
+        let builtin: _ = self.builtin_cache.get(name)
             .ok_or_else(|| anyhow!("Unknown builtin function: {}", name))?;
 
         // 执行内置函数
-        let result = (builtin.func)(args)?;
+        let result: _ = (builtin.func)(args)?;
 
         // 记录统计
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
         self.stats.record_call(elapsed.as_micros() as u64);
 
         Ok(result)
@@ -202,11 +202,11 @@ impl EmbeddedBuiltinsManager {
 
     /// 测量内置函数性能
     pub fn measure_builtin_performance(&self, name: &str, iterations: usize) -> Duration {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 执行多次以获得准确测量
         for _ in 0..iterations {
-            let _ = self.execute_builtin(name, &["1".to_string(), "2".to_string()]);
+            let _: _ = self.execute_builtin(name, &["1".to_string(), "2".to_string()]);
         }
 
         start.elapsed()
@@ -256,8 +256,8 @@ fn builtin_string_slice(args: &[String]) -> Result<String> {
         return Err(anyhow!("string_slice requires 3 arguments: string, start, end"));
     }
 
-    let start = args[1].parse::<usize>().unwrap_or(0);
-    let end = args[2].parse::<usize>().unwrap_or(args[0].len());
+    let start: _ = args[1].parse::<usize>().unwrap_or(0);
+    let end: _ = args[2].parse::<usize>().unwrap_or(args[0].len());
 
     Ok(args[0].get(start..end).unwrap_or_default().to_string())
 }
@@ -301,7 +301,7 @@ fn builtin_json_parse(args: &[String]) -> Result<String> {
         return Err(anyhow!("json_parse requires 1 argument"));
     }
     // 验证 JSON 格式（简单验证）
-    let s = &args[0];
+    let s: _ = &args[0];
     if !s.starts_with('{') && !s.starts_with('[') {
         return Err(anyhow!("Invalid JSON"));
     }
@@ -323,7 +323,7 @@ fn builtin_typeof(args: &[String]) -> Result<String> {
         return Err(anyhow!("typeof requires 1 argument"));
     }
 
-    let arg = &args[0];
+    let arg: _ = &args[0];
     let r#type = if arg.parse::<i64>().is_ok() {
         "number"
     } else if arg == "true" || arg == "false" {
@@ -363,7 +363,7 @@ fn builtin_array_length(args: &[String]) -> Result<String> {
         return Err(anyhow!("array_length requires 1 argument"));
     }
     // 简单实现：计算逗号数量 + 1
-    let commas = args[0].matches(',').count();
+    let commas: _ = args[0].matches(',').count();
     Ok((commas + 1).to_string())
 }
 
@@ -382,7 +382,7 @@ fn builtin_base64_decode(args: &[String]) -> Result<String> {
         return Err(anyhow!("base64_decode requires 1 argument"));
     }
     use base64::{Engine as _, engine::general_purpose};
-    let decoded = general_purpose::STANDARD.decode(&args[0])?;
+    let decoded: _ = general_purpose::STANDARD.decode(&args[0])?;
     Ok(String::from_utf8(decoded)?)
 }
 
@@ -392,7 +392,7 @@ fn builtin_hash_md5(args: &[String]) -> Result<String> {
         return Err(anyhow!("hash_md5 requires 1 argument"));
     }
     use md5;
-    let hash = md5::compute(&args[0]);
+    let hash: _ = md5::compute(&args[0]);
     Ok(format!("{:x}", hash))
 }
 
@@ -460,17 +460,19 @@ fn builtin_buffer_length(args: &[String]) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_builtin_registration() {
-        let manager = EmbeddedBuiltinsManager::new();
+        let manager: _ = EmbeddedBuiltinsManager::new();
         assert!(manager.get_builtins_count() >= 20);
     }
 
     #[test]
     fn test_string_concat() {
-        let manager = EmbeddedBuiltinsManager::new();
-        let result = manager.execute_builtin("string_concat", &[
+        let manager: _ = EmbeddedBuiltinsManager::new();
+        let result: _ = manager.execute_builtin("string_concat", &[
             "hello".to_string(),
             " ".to_string(),
             "world".to_string(),
@@ -480,8 +482,8 @@ mod tests {
 
     #[test]
     fn test_json_parse() {
-        let manager = EmbeddedBuiltinsManager::new();
-        let result = manager.execute_builtin("json_parse", &[
+        let manager: _ = EmbeddedBuiltinsManager::new();
+        let result: _ = manager.execute_builtin("json_parse", &[
             "{\"key\":\"value\"}".to_string(),
         ]).unwrap();
         assert_eq!(result, "{\"key\":\"value\"}");
@@ -489,8 +491,8 @@ mod tests {
 
     #[test]
     fn test_builtin_types() {
-        let manager = EmbeddedBuiltinsManager::new();
-        let types = manager.get_builtin_types();
+        let manager: _ = EmbeddedBuiltinsManager::new();
+        let types: _ = manager.get_builtin_types();
         assert!(types.contains(&"string".to_string()));
         assert!(types.contains(&"jsonparse".to_string()) || types.contains(&"json".to_string()));
         assert!(types.contains(&"math".to_string()));
@@ -498,8 +500,8 @@ mod tests {
 
     #[test]
     fn test_base64_encode() {
-        let manager = EmbeddedBuiltinsManager::new();
-        let result = manager.execute_builtin("base64_encode", &[
+        let manager: _ = EmbeddedBuiltinsManager::new();
+        let result: _ = manager.execute_builtin("base64_encode", &[
             "hello".to_string(),
         ]).unwrap();
         assert_eq!(result, "aGVsbG8=");
@@ -507,8 +509,8 @@ mod tests {
 
     #[test]
     fn test_error_handling() {
-        let manager = EmbeddedBuiltinsManager::new();
-        let result = manager.execute_builtin("string_concat", &[]);
+        let manager: _ = EmbeddedBuiltinsManager::new();
+        let result: _ = manager.execute_builtin("string_concat", &[]);
         assert!(result.is_err());
     }
 }

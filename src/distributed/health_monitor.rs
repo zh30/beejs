@@ -46,39 +46,39 @@ pub struct MonitorMetrics {
 pub struct HealthMonitor {
     node_manager: Arc<NodeManager>,
     config: HealthCheckConfig,
-    health_history: Arc<RwLock<HashMap<String, Vec<HealthCheckResult>>>>,
-    failure_counts: Arc<RwLock<HashMap<String, u32>>>,
-    recovery_counts: Arc<RwLock<HashMap<String, u32>>>,
+    health_history: Arc<RwLock<HashMap<String, Vec<HealthCheckResult, std::collections::HashMap<String, Vec<HealthCheckResult, String, Vec<HealthCheckResult>>>>>,
+    failure_counts: Arc<RwLock<HashMap<String, u32, std::collections::HashMap<String, u32, String, u32>>>>,
+    recovery_counts: Arc<RwLock<HashMap<String, u32, std::collections::HashMap<String, u32, String, u32>>>>,
     metrics: Arc<RwLock<MonitorMetrics>>,
 }
 
 impl HealthMonitor {
     /// 创建新的健康监控器
     pub fn new(node_manager: Arc<NodeManager>) -> Self {
-        let config = HealthCheckConfig {
+        let config: _ = HealthCheckConfig {
             check_interval: Duration::from_secs(5),
             failure_threshold: 3,
             recovery_threshold: 2,
             timeout: Duration::from_secs(10),
         };
 
-        let monitor = Self {
+        let monitor: _ = Self {
             node_manager,
             config,
-            health_history: Arc::new(RwLock::new(HashMap::new())),
-            failure_counts: Arc::new(RwLock::new(HashMap::new())),
-            recovery_counts: Arc::new(RwLock::new(HashMap::new())),
-            metrics: Arc::new(RwLock::new(MonitorMetrics {
+            health_history: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            failure_counts: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            recovery_counts: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            metrics: Arc::new(std::sync::Mutex::new(RwLock::new(MonitorMetrics {
                 total_checks: 0,
                 healthy_checks: 0,
                 degraded_checks: 0,
                 unhealthy_checks: 0,
-                average_response_time: Duration::from_millis(0),
+                average_response_time: Duration::from_millis(0)),
             })),
         };
 
         // 启动健康检查任务
-        let monitor_clone = monitor.clone();
+        let monitor_clone: _ = monitor.clone();
         tokio::spawn(async move {
             let mut interval = interval(monitor_clone.config.check_interval);
             loop {
@@ -92,24 +92,24 @@ impl HealthMonitor {
 
     /// 检查节点健康状态
     pub async fn check_node_health(&self, node_id: &str) -> Result<HealthCheckResult, String> {
-        let _start_time = Instant::now();
+        let _start_time: _ = Instant::now();
 
         // 获取节点元数据
-        let metadata = self.node_manager.get_node_metadata(node_id)
+        let metadata: _ = self.node_manager.get_node_metadata(node_id)
             .await
             .ok_or_else(|| format!("Node not found: {}", node_id))?;
 
         // 获取节点负载
-        let load = self.node_manager.get_node_load(node_id).await;
+        let load: _ = self.node_manager.get_node_load(node_id).await;
 
         // 模拟健康检查 (实际实现中会发送网络请求)
         let (cpu_usage, memory_usage, response_time) = self.perform_health_check(node_id).await?;
 
         // 确定健康状态
-        let status = self.determine_health_status(&metadata, &load, cpu_usage, memory_usage);
+        let status: _ = self.determine_health_status(&metadata, &load, cpu_usage, memory_usage);
 
         // 记录检查结果
-        let result = HealthCheckResult {
+        let result: _ = HealthCheckResult {
             node_id: node_id.to_string(),
             status: status.clone(),
             cpu_usage,
@@ -132,17 +132,17 @@ impl HealthMonitor {
 
     /// 执行健康检查
     async fn perform_health_check(&self, _node_id: &str) -> Result<(f64, f64, Duration), String> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 模拟网络检查延迟
-        let check_delay = Duration::from_millis(50 + (rand::random::<u64>() % 100));
+        let check_delay: _ = Duration::from_millis(50 + (rand::random::<u64>() % 100));
         sleep(check_delay).await;
 
         // 模拟 CPU 和内存使用率
-        let cpu_usage = 0.3 + (rand::random::<f64>() * 0.6); // 30% - 90%
-        let memory_usage = 0.4 + (rand::random::<f64>() * 0.5); // 40% - 90%
+        let cpu_usage: _ = 0.3 + (rand::random::<f64>() * 0.6); // 30% - 90%
+        let memory_usage: _ = 0.4 + (rand::random::<f64>() * 0.5); // 40% - 90%
 
-        let response_time = start_time.elapsed();
+        let response_time: _ = start_time.elapsed();
 
         Ok((cpu_usage, memory_usage, response_time))
     }
@@ -175,7 +175,7 @@ impl HealthMonitor {
     /// 记录健康检查结果
     async fn record_health_result(&self, result: HealthCheckResult) {
         let mut history = self.health_history.write().await;
-        let node_history = history.entry(result.node_id.clone()).or_insert_with(Vec::new);
+        let node_history: _ = history.clone();entry(result.node_id.clone()).or_insert_with(Vec::new);
 
         node_history.push(result);
 
@@ -192,12 +192,12 @@ impl HealthMonitor {
 
         match status {
             HealthStatus::Unhealthy => {
-                let count = failure_counts.entry(node_id.to_string()).or_insert(0);
+                let count: _ = failure_counts.entry(node_id.to_string()).or_insert(0);
                 *count += 1;
                 recovery_counts.insert(node_id.to_string(), 0);
             }
             HealthStatus::Healthy => {
-                let count = recovery_counts.entry(node_id.to_string()).or_insert(0);
+                let count: _ = recovery_counts.entry(node_id.to_string()).or_insert(0);
                 *count += 1;
                 failure_counts.insert(node_id.to_string(), 0);
             }
@@ -227,14 +227,14 @@ impl HealthMonitor {
         }
 
         // 更新平均响应时间
-        let total_time = metrics.average_response_time.as_millis() * (metrics.total_checks - 1) as u128;
-        let new_total = total_time + result.response_time.as_millis() as u128;
+        let total_time: _ = metrics.average_response_time.as_millis() * (metrics.total_checks - 1) as u128;
+        let new_total: _ = total_time + result.response_time.as_millis() as u128;
         metrics.average_response_time = Duration::from_millis((new_total / metrics.total_checks as u128) as u64);
     }
 
     /// 执行所有节点的健康检查
     async fn perform_health_checks(&self) {
-        let discovered_nodes = self.node_manager.discover_nodes().await;
+        let discovered_nodes: _ = self.node_manager.discover_nodes().await;
 
         for node in discovered_nodes {
             if let Err(e) = self.check_node_health(&node.id).await {
@@ -245,7 +245,7 @@ impl HealthMonitor {
 
     /// 获取节点健康历史
     pub async fn get_health_history(&self, node_id: &str) -> Option<Vec<HealthCheckResult>> {
-        let history = self.health_history.read().await;
+        let history: _ = self.health_history.read().await;
         history.get(node_id).cloned()
     }
 
@@ -256,8 +256,8 @@ impl HealthMonitor {
 
     /// 检查集群整体健康状态
     pub async fn check_cluster_health(&self) -> ClusterHealthStatus {
-        let discovered_nodes = self.node_manager.discover_nodes().await;
-        let total_nodes = discovered_nodes.len();
+        let discovered_nodes: _ = self.node_manager.discover_nodes().await;
+        let total_nodes: _ = discovered_nodes.len();
 
         if total_nodes == 0 {
             return ClusterHealthStatus::Unhealthy;
@@ -280,7 +280,7 @@ impl HealthMonitor {
             }
         }
 
-        let health_percentage = healthy_nodes as f64 / total_nodes as f64;
+        let health_percentage: _ = healthy_nodes as f64 / total_nodes as f64;
 
         if health_percentage >= 0.9 {
             ClusterHealthStatus::Healthy
@@ -298,7 +298,7 @@ impl HealthMonitor {
 
     /// 获取不健康的节点列表
     pub async fn get_unhealthy_nodes(&self) -> Vec<String> {
-        let discovered_nodes = self.node_manager.discover_nodes().await;
+        let discovered_nodes: _ = self.node_manager.discover_nodes().await;
         let mut unhealthy_nodes = Vec::new();
 
         for node in discovered_nodes {
@@ -326,9 +326,9 @@ impl HealthMonitor {
 
     /// 获取健康统计信息
     pub async fn get_health_statistics(&self) -> HealthStatistics {
-        let metrics = self.get_metrics().await;
+        let metrics: _ = self.get_metrics().await;
 
-        let health_rate = if metrics.total_checks > 0 {
+        let health_rate: _ = if metrics.total_checks > 0 {
             metrics.healthy_checks as f64 / metrics.total_checks as f64
         } else {
             0.0
@@ -369,20 +369,22 @@ mod tests {
     use super::*;
     use crate::distributed::service_discovery::{ServiceDiscovery, NodeInfo, DiscoveryConfig};
     use crate::distributed::node_manager::NodeManager;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_health_check() {
-        let config = DiscoveryConfig {
+        let config: _ = DiscoveryConfig {
             cluster_name: "test-cluster".to_string(),
             gossip_interval: Duration::from_millis(100),
             node_timeout: Duration::from_secs(5),
         };
 
-        let service_discovery = ServiceDiscovery::new(config);
-        let node_manager = Arc::new(NodeManager::new(service_discovery.clone()));
-        let health_monitor = HealthMonitor::new(node_manager.clone());
+        let service_discovery: _ = ServiceDiscovery::new(config);
+        let node_manager: _ = Arc::new(std::sync::Mutex::new(NodeManager::new(service_discovery.clone())));
+        let health_monitor: _ = HealthMonitor::new(node_manager.clone());
 
-        let node = NodeInfo {
+        let node: _ = NodeInfo {
             id: "test-node".to_string(),
             address: "192.168.1.1:8080".to_string(),
             cpu_cores: 4,
@@ -393,24 +395,24 @@ mod tests {
 
         node_manager.register_node(node).await.unwrap();
 
-        let result = health_monitor.check_node_health("test-node").await.unwrap();
+        let result: _ = health_monitor.check_node_health("test-node").await.unwrap();
         assert_eq!(result.node_id, "test-node");
         assert!(matches!(result.status, HealthStatus::Healthy | HealthStatus::Degraded));
     }
 
     #[tokio::test]
     async fn test_health_statistics() {
-        let config = DiscoveryConfig {
+        let config: _ = DiscoveryConfig {
             cluster_name: "test-cluster".to_string(),
             gossip_interval: Duration::from_millis(100),
             node_timeout: Duration::from_secs(5),
         };
 
-        let service_discovery = ServiceDiscovery::new(config);
-        let node_manager = Arc::new(NodeManager::new(service_discovery.clone()));
-        let health_monitor = HealthMonitor::new(node_manager.clone());
+        let service_discovery: _ = ServiceDiscovery::new(config);
+        let node_manager: _ = Arc::new(std::sync::Mutex::new(NodeManager::new(service_discovery.clone())));
+        let health_monitor: _ = HealthMonitor::new(node_manager.clone());
 
-        let node = NodeInfo {
+        let node: _ = NodeInfo {
             id: "test-node".to_string(),
             address: "192.168.1.1:8080".to_string(),
             cpu_cores: 4,
@@ -426,7 +428,7 @@ mod tests {
             health_monitor.check_node_health("test-node").await.unwrap();
         }
 
-        let stats = health_monitor.get_health_statistics().await;
+        let stats: _ = health_monitor.get_health_statistics().await;
         assert_eq!(stats.total_nodes_checked, 6);  // 可能包含初始化时的检查
         assert!(stats.healthy_rate >= 0.0 && stats.healthy_rate <= 1.0);
     }

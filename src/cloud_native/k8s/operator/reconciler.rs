@@ -29,20 +29,20 @@ impl Reconciler {
         &self,
         cluster: Arc<BeejsCluster>,
     ) -> Result<ReconcileResult, super::controller::Error> {
-        let start_time = Instant::now();
-        let name = cluster.name_any();
-        let namespace = cluster.namespace().unwrap_or_default();
+        let start_time: _ = Instant::now();
+        let name: _ = cluster.name_any();
+        let namespace: _ = cluster.namespace().unwrap_or_default();
 
         info!("Starting reconciliation for BeejsCluster: {} in {}", name, namespace);
 
         // Get current state
-        let current_state = self.get_current_state(&cluster).await?;
+        let current_state: _ = self.get_current_state(&cluster).await?;
 
         // Calculate desired state
-        let desired_state = self.calculate_desired_state(&cluster)?;
+        let desired_state: _ = self.calculate_desired_state(&cluster)?;
 
         // Calculate diff
-        let diff = self.calculate_diff(&current_state, &desired_state)?;
+        let diff: _ = self.calculate_diff(&current_state, &desired_state)?;
 
         debug!("Reconciliation diff for {}: {:?}", name, diff);
 
@@ -54,7 +54,7 @@ impl Reconciler {
         // Update status
         self.update_status(&cluster, &current_state).await?;
 
-        let elapsed = start_time.elapsed();
+        let elapsed: _ = start_time.elapsed();
         debug!("Completed reconciliation for {} in {:?}", name, elapsed);
 
         Ok(ReconcileResult {
@@ -68,20 +68,20 @@ impl Reconciler {
         &self,
         workload: Arc<BeejsWorkload>,
     ) -> Result<ReconcileResult, super::controller::Error> {
-        let start_time = Instant::now();
-        let name = workload.name_any();
-        let namespace = workload.namespace().unwrap_or_default();
+        let start_time: _ = Instant::now();
+        let name: _ = workload.name_any();
+        let namespace: _ = workload.namespace().unwrap_or_default();
 
         info!("Starting reconciliation for BeejsWorkload: {} in {}", name, namespace);
 
         // Get current state
-        let current_state = self.get_workload_current_state(&workload).await?;
+        let current_state: _ = self.get_workload_current_state(&workload).await?;
 
         // Calculate desired state
-        let desired_state = self.calculate_workload_desired_state(&workload)?;
+        let desired_state: _ = self.calculate_workload_desired_state(&workload)?;
 
         // Calculate diff
-        let diff = self.calculate_workload_diff(&current_state, &desired_state)?;
+        let diff: _ = self.calculate_workload_diff(&current_state, &desired_state)?;
 
         debug!("Reconciliation diff for {}: {:?}", name, diff);
 
@@ -93,7 +93,7 @@ impl Reconciler {
         // Update status
         self.update_workload_status(&workload, &current_state).await?;
 
-        let elapsed = start_time.elapsed();
+        let elapsed: _ = start_time.elapsed();
         debug!("Completed reconciliation for {} in {:?}", name, elapsed);
 
         Ok(ReconcileResult {
@@ -107,23 +107,23 @@ impl Reconciler {
         &self,
         cluster: &BeejsCluster,
     ) -> Result<ClusterState, super::controller::Error> {
-        let namespace = cluster.namespace().unwrap_or_default();
+        let namespace: _ = cluster.namespace().unwrap_or_default();
 
         // Create API instances
-        let statefulsets = Api::<StatefulSet>::namespaced(self.client.clone(), &namespace);
+        let statefulsets: _ = Api::<StatefulSet>::namespaced(self.client.clone(), &namespace);
 
         // Check StatefulSet status
-        let statefulset = statefulsets.get(&cluster.name_any()).await?;
+        let statefulset: _ = statefulsets.get(&cluster.name_any()).await?;
 
-        let ready_replicas = statefulset.status.as_ref().and_then(|s| s.ready_replicas).unwrap_or(0) as u32;
-        let replicas = statefulset.spec.as_ref().and_then(|s| s.replicas).unwrap_or(0) as u32;
+        let ready_replicas: _ = statefulset.status.as_ref().and_then(|s| s.ready_replicas).unwrap_or(0) as u32;
+        let replicas: _ = statefulset.spec.as_ref().and_then(|s| s.replicas).unwrap_or(0) as u32;
 
         // Check Service status
-        let services = Api::<k8s_openapi::api::core::v1::Service>::namespaced(self.client.clone(), &namespace);
-        let _service = services.get(&cluster.name_any()).await?;
+        let services: _ = Api::<k8s_openapi::api::core::v1::Service>::namespaced(self.client.clone(), &namespace);
+        let _service: _ = services.get(&cluster.name_any()).await?;
 
         // Determine phase based on ready replicas
-        let phase = if ready_replicas == 0 {
+        let phase: _ = if ready_replicas == 0 {
             ClusterPhase::Pending
         } else if ready_replicas < replicas {
             ClusterPhase::Creating
@@ -221,18 +221,18 @@ impl Reconciler {
         &self,
         workload: &BeejsWorkload,
     ) -> Result<WorkloadState, super::controller::Error> {
-        let namespace = workload.namespace().unwrap_or_default();
+        let namespace: _ = workload.namespace().unwrap_or_default();
 
         // Create API instance
-        let deployments = Api::<Deployment>::namespaced(self.client.clone(), &namespace);
+        let deployments: _ = Api::<Deployment>::namespaced(self.client.clone(), &namespace);
 
         // Check Deployment status
-        let deployment = deployments.get(&workload.name_any()).await?;
+        let deployment: _ = deployments.get(&workload.name_any()).await?;
 
-        let ready_replicas = deployment.status.as_ref().and_then(|s| s.ready_replicas).unwrap_or(0) as u32;
-        let replicas = deployment.spec.as_ref().and_then(|s| s.replicas).unwrap_or(0) as u32;
+        let ready_replicas: _ = deployment.status.as_ref().and_then(|s| s.ready_replicas).unwrap_or(0) as u32;
+        let replicas: _ = deployment.spec.as_ref().and_then(|s| s.replicas).unwrap_or(0) as u32;
 
-        let phase = if ready_replicas == 0 {
+        let phase: _ = if ready_replicas == 0 {
             WorkloadPhase::Pending
         } else if ready_replicas < replicas {
             WorkloadPhase::Creating
@@ -357,10 +357,12 @@ pub struct ReconcileResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_cluster_diff_empty() {
-        let diff = ClusterDiff {
+        let diff: _ = ClusterDiff {
             needs_update: false,
             needs_scale: false,
         };
@@ -370,7 +372,7 @@ mod tests {
 
     #[test]
     fn test_cluster_diff_not_empty() {
-        let diff = ClusterDiff {
+        let diff: _ = ClusterDiff {
             needs_update: true,
             needs_scale: false,
         };
@@ -380,7 +382,7 @@ mod tests {
 
     #[test]
     fn test_workload_diff_empty() {
-        let diff = WorkloadDiff {
+        let diff: _ = WorkloadDiff {
             needs_update: false,
             needs_scale: false,
         };

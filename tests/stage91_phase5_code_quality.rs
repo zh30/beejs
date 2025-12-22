@@ -7,6 +7,8 @@ mod tests {
     use std::fs;
     use std::path::Path;
     use tempfile::TempDir;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// ========== 代码格式化测试 ==========
 
@@ -16,7 +18,7 @@ mod tests {
         println!("✓ Rustfmt configuration test");
 
         // 验证 .rustfmt.toml 存在
-        let rustfmt_config = Path::new(".rustfmt.toml");
+        let rustfmt_config: _ = Path::new(".rustfmt.toml");
         if rustfmt_config.exists() {
             println!("✓ .rustfmt.toml found");
         } else {
@@ -61,7 +63,7 @@ mod tests {
         println!("✓ API documentation coverage test");
 
         // 检查公共 API 文档
-        let public_modules = vec!["vm", "runtime", "executor", "cli"];
+        let public_modules: _ = vec!["vm", "runtime", "executor", "cli"];
         for module in public_modules {
             println!("✓ Module '{}' documentation check", module);
         }
@@ -75,14 +77,14 @@ mod tests {
         println!("✓ Code examples documentation test");
 
         // 检查示例代码
-        let examples = vec![
+        let examples: _ = vec![
             "examples/basic_usage.rs",
             "examples/advanced_features.rs",
             "examples/performance_tuning.rs",
         ];
 
         for example in examples {
-            let path = Path::new(example);
+            let path: _ = Path::new(example);
             if path.exists() {
                 println!("✓ Example found: {}", example);
             } else {
@@ -98,10 +100,10 @@ mod tests {
         // 测试 README 文档
         println!("✓ README documentation test");
 
-        let readme = Path::new("README.md");
+        let readme: _ = Path::new("README.md");
         if readme.exists() {
-            let content = fs::read_to_string(readme).unwrap_or_default();
-            let required_sections = vec![
+            let content: _ = fs::read_to_string(readme).unwrap_or_default();
+            let required_sections: _ = vec![
                 "Installation",
                 "Usage",
                 "Features",

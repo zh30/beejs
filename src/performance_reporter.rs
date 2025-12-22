@@ -4,6 +4,8 @@
 use crate::Runtime;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 性能指标枚举
 #[derive(Debug, Clone)]
@@ -70,19 +72,19 @@ impl PerformanceReporter {
     }
 
     /// 收集Beejs性能数据
-    pub fn collect_beejs_metrics(&self) -> HashMap<String, PerformanceMetric> {
+    pub fn collect_beejs_metrics(&self) -> HashMap<String, PerformanceMetric, std::collections::HashMap<String, PerformanceMetric, String, PerformanceMetric>> {
         let mut metrics = HashMap::new();
 
         // 1. 测试启动时间
-        let startup_time = self.measure_startup_time();
+        let startup_time: _ = self.measure_startup_time();
         metrics.insert(
             "startup_time".to_string(),
             PerformanceMetric::StartupTime(startup_time),
         );
 
         // 2. 测试简单执行速度
-        let simple_speed = self.measure_execution_speed(
-            "let sum = 0; for (let i = 0; i < 1000; i++) { sum += i; } sum",
+        let simple_speed: _ = self.measure_execution_speed(
+            "let sum = 0; for (let i: _ = 0; i < 1000; i++) { sum += i; } sum",
             self.config.benchmark_iterations,
         );
         metrics.insert(
@@ -91,21 +93,21 @@ impl PerformanceReporter {
         );
 
         // 3. 测试复杂计算速度
-        let complex_speed = self.measure_complex_calculation();
+        let complex_speed: _ = self.measure_complex_calculation();
         metrics.insert(
             "complex_calculation".to_string(),
             PerformanceMetric::ComplexCalculation(complex_speed),
         );
 
         // 4. 测试内存使用
-        let memory_usage = self.measure_memory_usage();
+        let memory_usage: _ = self.measure_memory_usage();
         metrics.insert(
             "memory_usage".to_string(),
             PerformanceMetric::MemoryUsage(memory_usage),
         );
 
         // 5. 测试并发能力
-        let concurrent_capacity = self.measure_concurrent_capacity();
+        let concurrent_capacity: _ = self.measure_concurrent_capacity();
         metrics.insert(
             "concurrent_capacity".to_string(),
             PerformanceMetric::ConcurrentCapacity(concurrent_capacity),
@@ -115,7 +117,7 @@ impl PerformanceReporter {
     }
 
     /// 模拟获取Bun性能数据（实际实现中可以调用Bun命令行工具）
-    pub fn collect_bun_metrics() -> HashMap<String, PerformanceMetric> {
+    pub fn collect_bun_metrics() -> HashMap<String, PerformanceMetric, std::collections::HashMap<String, PerformanceMetric, String, PerformanceMetric>> {
         let mut metrics = HashMap::new();
 
         // 这些是模拟的Bun性能数据
@@ -146,19 +148,19 @@ impl PerformanceReporter {
 
     /// 生成性能对比报告
     pub fn generate_comparison_report(&self) -> String {
-        let beejs_metrics = self.collect_beejs_metrics();
-        let bun_metrics = Self::collect_bun_metrics();
+        let beejs_metrics: _ = self.collect_beejs_metrics();
+        let bun_metrics: _ = Self::collect_bun_metrics();
 
-        let comparisons = self.create_comparisons(&beejs_metrics, &bun_metrics);
+        let comparisons: _ = self.create_comparisons(&beejs_metrics, &bun_metrics);
         self.format_markdown_report(&comparisons)
     }
 
     /// 生成JSON格式的对比报告
     pub fn generate_json_report(&self) -> String {
-        let beejs_metrics = self.collect_beejs_metrics();
-        let bun_metrics = Self::collect_bun_metrics();
+        let beejs_metrics: _ = self.collect_beejs_metrics();
+        let bun_metrics: _ = Self::collect_bun_metrics();
 
-        let comparisons = self.create_comparisons(&beejs_metrics, &bun_metrics);
+        let comparisons: _ = self.create_comparisons(&beejs_metrics, &bun_metrics);
 
         // 生成JSON格式
         let mut json = String::new();
@@ -194,7 +196,7 @@ impl PerformanceReporter {
 
     /// 保存报告到文件
     pub fn save_report(&self, filename: &str) -> std::io::Result<()> {
-        let report = self.generate_comparison_report();
+        let report: _ = self.generate_comparison_report();
         std::fs::write(filename, report)
     }
 
@@ -202,10 +204,10 @@ impl PerformanceReporter {
 
     /// 测量启动时间
     fn measure_startup_time(&self) -> Duration {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 模拟一个简单的启动过程
-        let test_code = r#"
+        let test_code: _ = r#"
             (function() {
                 const version = "0.1.0";
                 const platform = "高性能JavaScript运行时";
@@ -213,7 +215,7 @@ impl PerformanceReporter {
             })();
         "#;
 
-        let _ = self.runtime.execute_code(test_code);
+        let _: _ = self.runtime.execute_code(test_code);
         start.elapsed()
     }
 
@@ -221,27 +223,27 @@ impl PerformanceReporter {
     fn measure_execution_speed(&self, code: &str, iterations: usize) -> f64 {
         // 预热
         for _ in 0..self.config.warmup_iterations {
-            let _ = self.runtime.execute_code(code);
+            let _: _ = self.runtime.execute_code(code);
         }
 
         // 测量
-        let start = Instant::now();
+        let start: _ = Instant::now();
         for _ in 0..iterations {
-            let _ = self.runtime.execute_code(code);
+            let _: _ = self.runtime.execute_code(code);
         }
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
 
         iterations as f64 / elapsed.as_secs_f64()
     }
 
     /// 测量复杂计算速度
     fn measure_complex_calculation(&self) -> f64 {
-        let complex_code = r#"
+        let complex_code: _ = r#"
             function fib(n) {
                 if (n <= 1) return n;
-                let a = 0, b = 1;
-                for (let i = 2; i <= n; i++) {
-                    let temp = a + b;
+                let a: _ = 0, b = 1;
+                for (let i: _ = 2; i <= n; i++) {
+                    let temp: _ = a + b;
                     a = b;
                     b = temp;
                 }
@@ -250,8 +252,8 @@ impl PerformanceReporter {
 
             function quickSort(arr) {
                 if (arr.length <= 1) return arr;
-                let pivot = arr[Math.floor(arr.length / 2)];
-                let left = [], right = [];
+                let pivot: _ = arr[Math.floor(arr.length / 2)];
+                let left: _ = [], right = [];
                 for (let x of arr) {
                     if (x < pivot) left.push(x);
                     else if (x > pivot) right.push(x);
@@ -260,11 +262,11 @@ impl PerformanceReporter {
             }
 
             // 执行复杂计算
-            let sum = 0;
-            for (let i = 0; i < 100; i++) {
+            let sum: _ = 0;
+            for (let i: _ = 0; i < 100; i++) {
                 sum += fib(30);
             }
-            let sorted = quickSort([64, 34, 25, 12, 22, 11, 90]);
+            let sorted: _ = quickSort([64, 34, 25, 12, 22, 11, 90]);
             sum + sorted.length;
         "#;
 
@@ -273,10 +275,10 @@ impl PerformanceReporter {
 
     /// 测量内存使用
     fn measure_memory_usage(&self) -> u64 {
-        let memory_test_code = r#"
+        let memory_test_code: _ = r#"
             // 创建大量对象测试内存使用
             let objects = [];
-            for (let i = 0; i < 10000; i++) {
+            for (let i: _ = 0; i < 10000; i++) {
                 objects.push({
                     id: i,
                     data: new Array(100).fill(i),
@@ -291,7 +293,7 @@ impl PerformanceReporter {
         "#;
 
         // 执行内存测试
-        let _ = self.runtime.execute_code(memory_test_code);
+        let _: _ = self.runtime.execute_code(memory_test_code);
 
         // 估算内存使用（简化版本）
         // 实际实现中可以使用更精确的方法
@@ -308,8 +310,8 @@ impl PerformanceReporter {
     /// 创建对比结果
     fn create_comparisons(
         &self,
-        beejs_metrics: &HashMap<String, PerformanceMetric>,
-        bun_metrics: &HashMap<String, PerformanceMetric>,
+        beejs_metrics: &HashMap<String, PerformanceMetric, std::collections::HashMap<String, PerformanceMetric, String, PerformanceMetric>>,
+        bun_metrics: &HashMap<String, PerformanceMetric, std::collections::HashMap<String, PerformanceMetric, String, PerformanceMetric>>,
     ) -> Vec<ComparisonResult> {
         let mut comparisons = Vec::new();
 
@@ -318,9 +320,9 @@ impl PerformanceReporter {
             beejs_metrics.get("startup_time"),
             bun_metrics.get("startup_time"),
         ) {
-            let beejs_ms = self.extract_duration_ms(beejs);
-            let bun_ms = self.extract_duration_ms(bun);
-            let improvement = (bun_ms - beejs_ms) / bun_ms * 100.0;
+            let beejs_ms: _ = self.extract_duration_ms(beejs);
+            let bun_ms: _ = self.extract_duration_ms(bun);
+            let improvement: _ = (bun_ms - beejs_ms) / bun_ms * 100.0;
 
             comparisons.push(ComparisonResult {
                 metric_name: "启动时间".to_string(),
@@ -337,9 +339,9 @@ impl PerformanceReporter {
             beejs_metrics.get("simple_execution"),
             bun_metrics.get("simple_execution"),
         ) {
-            let beejs_ops = self.extract_ops_per_sec(beejs);
-            let bun_ops = self.extract_ops_per_sec(bun);
-            let improvement = (beejs_ops - bun_ops) / bun_ops * 100.0;
+            let beejs_ops: _ = self.extract_ops_per_sec(beejs);
+            let bun_ops: _ = self.extract_ops_per_sec(bun);
+            let improvement: _ = (beejs_ops - bun_ops) / bun_ops * 100.0;
 
             comparisons.push(ComparisonResult {
                 metric_name: "简单执行".to_string(),
@@ -356,9 +358,9 @@ impl PerformanceReporter {
             beejs_metrics.get("complex_calculation"),
             bun_metrics.get("complex_calculation"),
         ) {
-            let beejs_ops = self.extract_ops_per_sec(beejs);
-            let bun_ops = self.extract_ops_per_sec(bun);
-            let improvement = (beejs_ops - bun_ops) / bun_ops * 100.0;
+            let beejs_ops: _ = self.extract_ops_per_sec(beejs);
+            let bun_ops: _ = self.extract_ops_per_sec(bun);
+            let improvement: _ = (beejs_ops - bun_ops) / bun_ops * 100.0;
 
             comparisons.push(ComparisonResult {
                 metric_name: "复杂计算".to_string(),
@@ -375,9 +377,9 @@ impl PerformanceReporter {
             beejs_metrics.get("memory_usage"),
             bun_metrics.get("memory_usage"),
         ) {
-            let beejs_mb = self.extract_memory_mb(beejs);
-            let bun_mb = self.extract_memory_mb(bun);
-            let improvement = (bun_mb - beejs_mb) / bun_mb * 100.0; // 负值表示更好
+            let beejs_mb: _ = self.extract_memory_mb(beejs);
+            let bun_mb: _ = self.extract_memory_mb(bun);
+            let improvement: _ = (bun_mb - beejs_mb) / bun_mb * 100.0; // 负值表示更好
 
             comparisons.push(ComparisonResult {
                 metric_name: "内存使用".to_string(),
@@ -394,9 +396,9 @@ impl PerformanceReporter {
             beejs_metrics.get("concurrent_capacity"),
             bun_metrics.get("concurrent_capacity"),
         ) {
-            let beejs_cap = self.extract_concurrent_capacity(beejs);
-            let bun_cap = self.extract_concurrent_capacity(bun);
-            let improvement = (beejs_cap - bun_cap) as f64 / bun_cap as f64 * 100.0;
+            let beejs_cap: _ = self.extract_concurrent_capacity(beejs);
+            let bun_cap: _ = self.extract_concurrent_capacity(bun);
+            let improvement: _ = (beejs_cap - bun_cap) as f64 / bun_cap as f64 * 100.0;
 
             comparisons.push(ComparisonResult {
                 metric_name: "并发执行".to_string(),
@@ -426,8 +428,8 @@ impl PerformanceReporter {
         let avg_improvement: f64 =
             comparisons.iter().map(|r| r.improvement).sum::<f64>() / comparisons.len() as f64;
 
-        let passed_count = comparisons.iter().filter(|r| r.passed).count();
-        let total_count = comparisons.len();
+        let passed_count: _ = comparisons.iter().filter(|r| r.passed).count();
+        let total_count: _ = comparisons.len();
 
         report.push_str(&format!("- **平均性能提升**: {:.2}%\n", avg_improvement));
         report.push_str(&format!(
@@ -437,7 +439,7 @@ impl PerformanceReporter {
             passed_count as f64 / total_count as f64 * 100.0
         ));
 
-        let grade = if avg_improvement >= 30.0 {
+        let grade: _ = if avg_improvement >= 30.0 {
             "A+ (优秀)"
         } else if avg_improvement >= 20.0 {
             "A (良好)"
@@ -464,7 +466,7 @@ impl PerformanceReporter {
                 result.bun_value, result.unit
             ));
 
-            let status = if result.passed {
+            let status: _ = if result.passed {
                 "✅ 通过"
             } else {
                 "❌ 未达标"

@@ -137,8 +137,8 @@ impl LinearRegressionModel {
 
     /// 训练
     pub fn train(&mut self, features: &[f64], target: f64) {
-        let prediction = self.predict(features);
-        let error = target - prediction;
+        let prediction: _ = self.predict(features);
+        let error: _ = target - prediction;
 
         // 更新权重和偏置
         self.bias += self.learning_rate * error;
@@ -198,7 +198,7 @@ pub struct MLLoadBalancer {
 impl MLLoadBalancer {
     /// 创建新的智能负载均衡器
     pub fn new(config: Option<MLLoadBalancerConfig>) -> Self {
-        let config = config.unwrap_or_default();
+        let config: _ = config.clone();unwrap_or_default();
 
         Self {
             config,
@@ -212,8 +212,8 @@ impl MLLoadBalancer {
 
     /// 添加服务端点
     pub fn add_endpoint(&mut self, endpoint: ServiceEndpoint) {
-        let endpoint_id = endpoint.id.clone();
-        let endpoint_region = endpoint.region.clone();
+        let endpoint_id: _ = endpoint.id.clone();
+        let endpoint_region: _ = endpoint.region.clone();
         self.endpoints.push(endpoint);
         self.current_replicas = self.endpoints.len();
         println!("➕ 添加服务端点: {} (区域: {})", endpoint_id, endpoint_region);
@@ -232,7 +232,7 @@ impl MLLoadBalancer {
             return None;
         }
 
-        let selected = match self.config.algorithm {
+        let selected: _ = match self.config.algorithm {
             LoadBalanceAlgorithm::RoundRobin => self.select_round_robin(),
             LoadBalanceAlgorithm::WeightedRoundRobin => self.select_weighted_round_robin(),
             LoadBalanceAlgorithm::LeastConnections => self.select_least_connections(),
@@ -245,10 +245,10 @@ impl MLLoadBalancer {
         // 在释放借用之前处理 selected
         if let Some(endpoint) = selected {
             // 克隆需要的字段以释放借用
-            let endpoint_id = endpoint.id.clone();
-            let endpoint_region = endpoint.region.clone();
-            let endpoint_load = endpoint.current_load;
-            let endpoint_response_time = endpoint.response_time;
+            let endpoint_id: _ = endpoint.id.clone();
+            let endpoint_region: _ = endpoint.region.clone();
+            let endpoint_load: _ = endpoint.current_load;
+            let endpoint_response_time: _ = endpoint.response_time;
 
             println!("🎯 选择服务端点: {} (区域: {}, 负载: {:.2}%, 响应时间: {:.2}ms)",
                      endpoint_id, endpoint_region, endpoint_load * 100.0, endpoint_response_time);
@@ -266,10 +266,10 @@ impl MLLoadBalancer {
 
     /// 轮询算法
     fn select_round_robin(&mut self) -> Option<&ServiceEndpoint> {
-        let total = self.endpoints.len();
+        let total: _ = self.endpoints.len();
         if total == 0 { return None; }
 
-        let index = (self.stats.total_requests as usize) % total;
+        let index: _ = (self.stats.total_requests as usize) % total;
         self.stats.total_requests += 1;
         self.endpoints.get(index)
     }
@@ -287,7 +287,7 @@ impl MLLoadBalancer {
             return self.endpoints.get(0);
         }
 
-        let index = (self.stats.total_requests as usize) % weighted_list.len();
+        let index: _ = (self.stats.total_requests as usize) % weighted_list.len();
         weighted_list.get(index).copied()
     }
 
@@ -311,8 +311,8 @@ impl MLLoadBalancer {
             return None;
         }
 
-        let hash = self.stats.total_requests as usize;
-        let index = hash % self.endpoints.len();
+        let hash: _ = self.stats.total_requests as usize;
+        let index: _ = hash % self.endpoints.len();
         self.endpoints.get(index)
     }
 
@@ -328,7 +328,7 @@ impl MLLoadBalancer {
 
         for (i, endpoint) in self.endpoints.iter().enumerate() {
             // 构建特征向量 [负载, 响应时间, 错误率, 成本, 可用性]
-            let features = [
+            let features: _ = [
                 endpoint.current_load,
                 endpoint.response_time / 1000.0, // 归一化
                 endpoint.error_rate,
@@ -337,10 +337,10 @@ impl MLLoadBalancer {
             ];
 
             // 使用模型预测性能分数
-            let predicted_performance = self.model.predict(&features);
+            let predicted_performance: _ = self.model.predict(&features);
 
             // 计算综合分数 (越高越好)
-            let score = predicted_performance
+            let score: _ = predicted_performance
                 - endpoint.current_load * 0.3  // 负载惩罚
                 - endpoint.response_time / 1000.0 * 0.2  // 响应时间惩罚
                 + endpoint.availability * 0.3  // 可用性奖励
@@ -354,7 +354,7 @@ impl MLLoadBalancer {
 
         // 在释放借用之后训练模型
         if let Some(index) = best_endpoint_index {
-            let _ = &self.endpoints[index];
+            let _: _ = &self.endpoints[index];
         }
         self.train_model();
 
@@ -376,11 +376,11 @@ impl MLLoadBalancer {
         }
 
         // 使用最近的历史数据训练模型
-        let history_sample = &self.load_history[self.load_history.len().saturating_sub(10)..];
+        let history_sample: _ = &self.load_history[self.load_history.len().saturating_sub(10)..];
 
         for history in history_sample {
             // 构建特征 [负载, 响应时间, 请求数, 时间, 随机噪声]
-            let features = [
+            let features: _ = [
                 history.load,
                 history.response_time / 1000.0,
                 history.request_count as f64 / 1000.0,
@@ -389,7 +389,7 @@ impl MLLoadBalancer {
             ];
 
             // 目标值：综合性能分数 (负载越低越好，响应时间越短越好)
-            let target = (1.0 - history.load) * 0.5 + (1000.0 - history.response_time.min(1000.0)) / 1000.0 * 0.5;
+            let target: _ = (1.0 - history.load) * 0.5 + (1000.0 - history.response_time.min(1000.0)) / 1000.0 * 0.5;
 
             self.model.train(&features, target);
         }
@@ -504,11 +504,13 @@ impl MLLoadBalancer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试创建智能负载均衡器
     #[test]
     fn test_ml_load_balancer_creation() {
-        let balancer = MLLoadBalancer::new(None);
+        let balancer: _ = MLLoadBalancer::new(None);
         assert_eq!(balancer.endpoint_count(), 0);
         println!("✅ 测试通过: 智能负载均衡器创建");
     }
@@ -518,7 +520,7 @@ mod tests {
     fn test_add_endpoints() {
         let mut balancer = MLLoadBalancer::new(None);
 
-        let endpoint = ServiceEndpoint {
+        let endpoint: _ = ServiceEndpoint {
             id: "server1".to_string(),
             address: "192.168.1.1".to_string(),
             port: 8080,
@@ -546,7 +548,7 @@ mod tests {
 
         // 添加多个端点
         for i in 1..=3 {
-            let endpoint = ServiceEndpoint {
+            let endpoint: _ = ServiceEndpoint {
                 id: format!("server{}", i),
                 address: format!("192.168.1.{}", i),
                 port: 8080,
@@ -563,9 +565,9 @@ mod tests {
 
         // 测试轮询选择
         for i in 0..6 {
-            let selected = balancer.select_optimal_target();
+            let selected: _ = balancer.select_optimal_target();
             assert!(selected.is_some());
-            let expected_id = format!("server{}", (i % 3) + 1);
+            let expected_id: _ = format!("server{}", (i % 3) + 1);
             assert_eq!(selected.unwrap().id, expected_id);
         }
 
@@ -581,7 +583,7 @@ mod tests {
         }));
 
         // 添加不同负载的端点
-        let endpoint1 = ServiceEndpoint {
+        let endpoint1: _ = ServiceEndpoint {
             id: "server1".to_string(),
             address: "192.168.1.1".to_string(),
             port: 8080,
@@ -594,7 +596,7 @@ mod tests {
             weight: 1,
         };
 
-        let endpoint2 = ServiceEndpoint {
+        let endpoint2: _ = ServiceEndpoint {
             id: "server2".to_string(),
             address: "192.168.1.2".to_string(),
             port: 8080,
@@ -610,7 +612,7 @@ mod tests {
         balancer.add_endpoint(endpoint1);
         balancer.add_endpoint(endpoint2);
 
-        let selected = balancer.select_optimal_target();
+        let selected: _ = balancer.select_optimal_target();
         assert!(selected.is_some());
         assert_eq!(selected.unwrap().id, "server2"); // 应该选择负载最低的
         println!("✅ 测试通过: 最少连接算法");
@@ -623,13 +625,13 @@ mod tests {
         assert_eq!(model.weights.len(), 2);
 
         // 测试预测
-        let features = [0.5, 0.3];
-        let prediction = model.predict(&features);
+        let features: _ = [0.5, 0.3];
+        let prediction: _ = model.predict(&features);
         assert!(prediction.is_finite());
 
         // 测试训练
         model.train(&features, 0.8);
-        let new_prediction = model.predict(&features);
+        let new_prediction: _ = model.predict(&features);
         assert_ne!(prediction, new_prediction);
 
         println!("✅ 测试通过: 机器学习模型");
@@ -648,7 +650,7 @@ mod tests {
 
         // 添加端点
         for i in 1..=3 {
-            let endpoint = ServiceEndpoint {
+            let endpoint: _ = ServiceEndpoint {
                 id: format!("server{}", i),
                 address: format!("192.168.1.{}", i),
                 port: 8080,

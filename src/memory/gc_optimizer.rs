@@ -152,7 +152,7 @@ impl IncrementalGC {
     pub fn new(config: GCConfig) -> Self {
         Self {
             config: config.clone(),
-            state: Arc::new(Mutex::new(GCState::default())),
+            state: Arc::new(std::sync::Mutex::new(Mutex::new(GCState::default()))),
             is_running: AtomicBool::new(false),
             total_allocated: AtomicUsize::new(0),
         }
@@ -163,9 +163,9 @@ impl IncrementalGC {
         self.total_allocated.fetch_add(size, Ordering::Relaxed);
 
         // 检查是否需要触发 GC
-        let current = self.total_allocated.load(Ordering::Relaxed);
+        let current: _ = self.total_allocated.load(Ordering::Relaxed);
         if current >= self.config.gc_threshold {
-            let _ = self.trigger_incremental_gc();
+            let _: _ = self.trigger_incremental_gc();
         }
     }
 
@@ -180,14 +180,14 @@ impl IncrementalGC {
             return Err("GC already running");
         }
 
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
         {
             let mut state = self.state.lock().unwrap();
             state.start_time = Some(start_time);
             state.phase = GCPhase::Mark;
         }
 
-        let result = self.run_incremental_collection();
+        let result: _ = self.run_incremental_collection();
 
         // 更新统计
         {
@@ -195,7 +195,7 @@ impl IncrementalGC {
             state.last_gc_time = Some(Instant::now());
             state.phase = GCPhase::Finished;
 
-            let pause_time = start_time.elapsed();
+            let pause_time: _ = start_time.elapsed();
             state.total_pause_time += pause_time;
         }
 
@@ -211,7 +211,7 @@ impl IncrementalGC {
 
         // 模拟增量收集过程
         let mut steps_completed = 0;
-        let total_steps = self.config.gc_threshold / self.config.incremental_step;
+        let total_steps: _ = self.config.gc_threshold / self.config.incremental_step;
 
         // 标记阶段
         {
@@ -248,7 +248,7 @@ impl IncrementalGC {
 
     /// 运行完整收集
     fn run_full_collection(&self) -> Result<(), &'static str> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 标记阶段
         {
@@ -275,7 +275,7 @@ impl IncrementalGC {
 
         std::thread::sleep(Duration::from_millis(5));
 
-        let collected_bytes = self.simulate_collection();
+        let collected_bytes: _ = self.simulate_collection();
 
         {
             let mut state = self.state.lock().unwrap();
@@ -292,23 +292,23 @@ impl IncrementalGC {
     /// 模拟垃圾收集
     fn simulate_collection(&self) -> usize {
         // 模拟收集一些内存
-        let current_usage = GLOBAL_MEMORY_STATS.get_stats().current_usage;
-        let collected = (current_usage as f64 * 0.3) as usize; // 收集 30% 的内存
+        let current_usage: _ = GLOBAL_MEMORY_STATS.get_stats().current_usage;
+        let collected: _ = (current_usage as f64 * 0.3) as usize; // 收集 30% 的内存
         collected
     }
 
     /// 检查是否应该暂停增量收集
     fn should_pause_incremental(&self) -> bool {
         // 基于内存压力决定是否暂停
-        let current_usage = GLOBAL_MEMORY_STATS.get_stats().current_usage;
-        let pressure = current_usage as f64 / self.config.gc_threshold as f64;
+        let current_usage: _ = GLOBAL_MEMORY_STATS.get_stats().current_usage;
+        let pressure: _ = current_usage as f64 / self.config.gc_threshold as f64;
 
         pressure > self.config.memory_pressure_threshold
     }
 
     /// 获取当前状态
     pub fn get_state(&self) -> GCStateSnapshot {
-        let state = self.state.lock().unwrap();
+        let state: _ = self.state.lock().unwrap();
         GCStateSnapshot {
             phase: state.phase,
             steps_completed: state.steps_completed,
@@ -322,8 +322,8 @@ impl IncrementalGC {
 
     /// 获取统计信息
     pub fn get_stats(&self) -> GCStats {
-        let global_stats = GLOBAL_MEMORY_STATS.get_stats();
-        let state = self.state.lock().unwrap();
+        let global_stats: _ = GLOBAL_MEMORY_STATS.get_stats();
+        let state: _ = self.state.lock().unwrap();
 
         GCStats {
             gc_count: AtomicUsize::new(1),
@@ -339,7 +339,7 @@ impl IncrementalGC {
 
     /// 自适应调优
     pub fn adaptive_tune(&self) -> TuningRecommendation {
-        let stats = self.get_stats();
+        let stats: _ = self.get_stats();
         let mut recommendations = Vec::new();
 
         // 基于内存压力调整阈值
@@ -405,19 +405,21 @@ impl Drop for IncrementalGC {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_incremental_gc_creation() {
-        let config = GCConfig::default();
-        let gc = IncrementalGC::new(config);
-        let state = gc.get_state();
+        let config: _ = GCConfig::default();
+        let gc: _ = IncrementalGC::new(config);
+        let state: _ = gc.get_state();
         assert_eq!(state.phase, GCPhase::Idle);
     }
 
     #[test]
     fn test_record_allocation() {
-        let config = GCConfig::default();
-        let gc = IncrementalGC::new(config);
+        let config: _ = GCConfig::default();
+        let gc: _ = IncrementalGC::new(config);
 
         gc.record_allocation(1024);
         // 测试记录分配（不触发 GC）
@@ -426,35 +428,35 @@ mod tests {
 
     #[test]
     fn test_gc_phases() {
-        let config = GCConfig {
+        let config: _ = GCConfig {
             gc_threshold: 1024,
             ..Default::default()
         };
-        let gc = IncrementalGC::new(config);
+        let gc: _ = IncrementalGC::new(config);
 
         // 触发 GC
-        let _ = gc.trigger_incremental_gc();
+        let _: _ = gc.trigger_incremental_gc();
 
-        let state = gc.get_state();
+        let state: _ = gc.get_state();
         assert_eq!(state.phase, GCPhase::Finished);
     }
 
     #[test]
     fn test_adaptive_tuning() {
-        let config = GCConfig::default();
-        let gc = IncrementalGC::new(config);
+        let config: _ = GCConfig::default();
+        let gc: _ = IncrementalGC::new(config);
 
-        let recommendation = gc.adaptive_tune();
+        let recommendation: _ = gc.adaptive_tune();
         assert!(!recommendation.suggestions.is_empty() || recommendation.suggestions.is_empty());
         assert!(recommendation.confidence >= 0.0 && recommendation.confidence <= 1.0);
     }
 
     #[test]
     fn test_gc_stats() {
-        let config = GCConfig::default();
-        let gc = IncrementalGC::new(config);
+        let config: _ = GCConfig::default();
+        let gc: _ = IncrementalGC::new(config);
 
-        let stats = gc.get_stats();
+        let stats: _ = gc.get_stats();
         assert_eq!(stats.gc_count.load(Ordering::Relaxed), 0);
         assert!(stats.memory_pressure_level >= 0.0);
     }

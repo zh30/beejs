@@ -23,6 +23,8 @@ pub use trend_analyzer::{
 };
 
 pub use failure_predictor::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
     FailurePredictor,
     PredictionResult,
     FailurePrediction,

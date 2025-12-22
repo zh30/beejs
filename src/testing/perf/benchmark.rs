@@ -54,7 +54,7 @@ pub struct BenchmarkRunner {
 
 impl BenchmarkRunner {
     pub fn new(config: BenchmarkConfig, reporter: Box<dyn PerfTestReporter + Send + Sync>) -> Self {
-        let perf_runner = PerfTestRunner::new(config.default_config.clone(), reporter);
+        let perf_runner: _ = PerfTestRunner::new(config.default_config.clone(), reporter);
         BenchmarkRunner {
             config,
             runner: perf_runner,
@@ -66,9 +66,9 @@ impl BenchmarkRunner {
     where
         F: FnOnce() + Send,
     {
-        let result = self.runner.run_test(name, test_fn);
+        let result: _ = self.runner.run_test(name, test_fn);
 
-        let summary = BenchmarkSummary {
+        let summary: _ = BenchmarkSummary {
             total_tests: 1,
             passed_tests: if result.passed { 1 } else { 0 },
             failed_tests: if result.passed { 0 } else { 1 },
@@ -93,7 +93,7 @@ impl BenchmarkRunner {
         let mut total_ops = 0.0;
 
         for (benchmark_name, test_fn) in benchmarks {
-            let result = self.runner.run_test(benchmark_name, || test_fn());
+            let result: _ = self.runner.run_test(benchmark_name, || test_fn());
             results.push(result);
 
             if result.passed {
@@ -122,7 +122,7 @@ impl BenchmarkRunner {
             }
         }
 
-        let summary = BenchmarkSummary {
+        let summary: _ = BenchmarkSummary {
             total_tests: results.len(),
             passed_tests: passed,
             failed_tests: failed,
@@ -206,7 +206,7 @@ macro_rules! benchmark {
 macro_rules! benchmark_group {
     ($runner:expr, $name:expr, $($benchmark_name:expr => $benchmark_block:block),* $(,)?) => {
         {
-            let benchmarks = vec![
+            let benchmarks: _ = vec![
                 $(
                     ($benchmark_name, Box::new(move || $benchmark_block) as Box<dyn Fn() + Send>),
                 )*
@@ -223,7 +223,7 @@ impl BuiltinBenchmarks {
     /// Simple computation benchmark
     pub fn fibonacci_benchmark(n: u32) -> Box<dyn Fn() + Send> {
         Box::new(move || {
-            let _ = Self::fibonacci(n);
+            let _: _ = Self::fibonacci(n);
         })
     }
 
@@ -234,7 +234,7 @@ impl BuiltinBenchmarks {
             for i in 0..iterations {
                 s.push_str(&format!("test{} ", i));
             }
-            let _ = s.trim();
+            let _: _ = s.trim();
         })
     }
 
@@ -263,14 +263,16 @@ impl BuiltinBenchmarks {
 mod tests {
     use super::*;
     use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_benchmark_runner() {
-        let config = BenchmarkConfig::default();
-        let reporter = Box::new(ConsolePerfTestReporter::new(false));
-        let runner = BenchmarkRunner::new(config, reporter);
+        let config: _ = BenchmarkConfig::default();
+        let reporter: _ = Box::new(ConsolePerfTestReporter::new(false));
+        let runner: _ = BenchmarkRunner::new(config, reporter);
 
-        let result = runner.benchmark("test", || {
+        let result: _ = runner.benchmark("test", || {
             std::thread::sleep(std::time::Duration::from_millis(1));
         });
 
@@ -280,11 +282,11 @@ mod tests {
 
     #[test]
     fn test_benchmark_group() {
-        let config = BenchmarkConfig::default();
-        let reporter = Box::new(ConsolePerfTestReporter::new(false));
-        let runner = BenchmarkRunner::new(config, reporter);
+        let config: _ = BenchmarkConfig::default();
+        let reporter: _ = Box::new(ConsolePerfTestReporter::new(false));
+        let runner: _ = BenchmarkRunner::new(config, reporter);
 
-        let result = runner.benchmark_group(
+        let result: _ = runner.benchmark_group(
             "group1",
             vec![
                 ("test1", Box::new(|| std::thread::sleep(std::time::Duration::from_millis(1))) as Box<dyn Fn() + Send>),
@@ -299,29 +301,29 @@ mod tests {
 
     #[test]
     fn test_compare_benchmarks() {
-        let config = BenchmarkConfig::default();
-        let reporter = Box::new(ConsolePerfTestReporter::new(false));
-        let runner = BenchmarkRunner::new(config, reporter);
+        let config: _ = BenchmarkConfig::default();
+        let reporter: _ = Box::new(ConsolePerfTestReporter::new(false));
+        let runner: _ = BenchmarkRunner::new(config, reporter);
 
-        let results = vec![
+        let results: _ = vec![
             runner.benchmark("test1", || std::thread::sleep(std::time::Duration::from_millis(1))),
             runner.benchmark("test2", || std::thread::sleep(std::time::Duration::from_millis(2))),
         ];
 
-        let comparison = runner.compare_benchmarks(&results);
+        let comparison: _ = runner.compare_benchmarks(&results);
         assert!(comparison.contains("test1"));
         assert!(comparison.contains("test2"));
     }
 
     #[test]
     fn test_builtin_benchmarks() {
-        let fib_benchmark = BuiltinBenchmarks::fibonacci_benchmark(20);
+        let fib_benchmark: _ = BuiltinBenchmarks::fibonacci_benchmark(20);
         fib_benchmark();
 
-        let string_benchmark = BuiltinBenchmarks::string_manipulation_benchmark(1000);
+        let string_benchmark: _ = BuiltinBenchmarks::string_manipulation_benchmark(1000);
         string_benchmark();
 
-        let array_benchmark = BuiltinBenchmarks::array_operation_benchmark(10000);
+        let array_benchmark: _ = BuiltinBenchmarks::array_operation_benchmark(10000);
         array_benchmark();
     }
 }

@@ -128,7 +128,7 @@ impl PerformanceSummary {
     pub fn to_json(&self) -> String {
         use serde_json::json;
 
-        let hotspots_json = self
+        let hotspots_json: _ = self
             .hotspots
             .iter()
             .map(|h| {
@@ -143,7 +143,7 @@ impl PerformanceSummary {
             })
             .collect::<Vec<_>>();
 
-        let recommendations_json = self
+        let recommendations_json: _ = self
             .optimization_recommendations
             .iter()
             .map(|r| {
@@ -158,7 +158,7 @@ impl PerformanceSummary {
             })
             .collect::<Vec<_>>();
 
-        let json = json!({
+        let json: _ = json!({
             "generated_at": self.generated_at.to_rfc3339(),
             "total_execution_time_ms": self.total_execution_time.as_millis(),
             "function_count": self.function_count,
@@ -378,34 +378,36 @@ impl Default for PerformanceSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_performance_summary_creation() {
-        let summary = PerformanceSummary::new();
+        let summary: _ = PerformanceSummary::new();
         assert_eq!(summary.function_count, 0);
         assert!(summary.hotspots.is_empty());
     }
 
     #[test]
     fn test_to_json() {
-        let summary = PerformanceSummary::new();
-        let json = summary.to_json();
+        let summary: _ = PerformanceSummary::new();
+        let json: _ = summary.to_json();
         assert!(json.contains("generated_at"));
         assert!(json.contains("function_count"));
     }
 
     #[test]
     fn test_to_text() {
-        let summary = PerformanceSummary::new();
-        let text = summary.to_text();
+        let summary: _ = PerformanceSummary::new();
+        let text: _ = summary.to_text();
         assert!(text.contains("性能分析摘要报告"));
         assert!(text.contains("总执行时间"));
     }
 
     #[test]
     fn test_to_html() {
-        let summary = PerformanceSummary::new();
-        let html = summary.to_html();
+        let summary: _ = PerformanceSummary::new();
+        let html: _ = summary.to_html();
         assert!(html.contains("<!DOCTYPE html>"));
         assert!(html.contains("性能分析报告"));
         assert!(html.contains("</html>"));

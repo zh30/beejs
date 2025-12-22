@@ -28,20 +28,20 @@ impl ComputeWorkload {
     /// 执行工作负载
     pub async fn execute(
         &self,
-        parameters: HashMap<String, serde_json::Value>,
+        parameters: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>,
         concurrency: u32,
     ) -> Result<WorkloadResult> {
         let mut result = WorkloadResult::new(self.workload_type);
         result.start();
 
-        let iterations = get_iterations(&parameters);
-        let operation = get_operation(&parameters);
+        let iterations: _ = get_iterations(&parameters);
+        let operation: _ = get_operation(&parameters);
 
         // 并行执行计算任务
         let handles: Vec<_> = (0..concurrency)
             .map(|_| {
-                let operation = operation.clone();
-                let iterations = iterations;
+                let operation: _ = operation.clone();clone();
+                let iterations: _ = iterations;
                 tokio::spawn(async move {
                     Self::run_compute_tasks(operation, iterations).await
                 })
@@ -65,7 +65,7 @@ impl ComputeWorkload {
         }
 
         // 收集资源使用情况
-        let resource_usage = Self::collect_resource_usage();
+        let resource_usage: _ = Self::collect_resource_usage();
         result.resource_usage = resource_usage;
 
         result.finish(total_iterations);
@@ -134,7 +134,7 @@ impl ComputeWorkload {
             let mut a = 0;
             let mut b = 1;
             for _ in 2..=n {
-                let temp = a + b;
+                let temp: _ = a + b;
                 a = b;
                 b = temp;
             }
@@ -196,8 +196,8 @@ impl ComputeWorkload {
 
     /// 最长公共子序列 (动态规划)
     fn longest_common_subsequence(s1: &str, s2: &str) -> usize {
-        let m = s1.len();
-        let n = s2.len();
+        let m: _ = s1.len();
+        let n: _ = s2.len();
         let mut dp = vec![vec![0; n + 1]; m + 1];
 
         for i in 1..=m {
@@ -224,7 +224,7 @@ impl ComputeWorkload {
             let mut real = 0.0;
             let mut imag = 0.0;
             for j in 0..size {
-                let angle = -2.0 * std::f64::consts::PI * (i * j) as f64 / size as f64;
+                let angle: _ = -2.0 * std::f64::consts::PI * (i * j) as f64 / size as f64;
                 real += data[j] * angle.cos();
                 imag += data[j] * angle.sin();
             }
@@ -290,8 +290,8 @@ impl ComputeWorkload {
             return;
         }
 
-        let left = 2 * index + 1;
-        let right = 2 * index + 2;
+        let left: _ = 2 * index + 1;
+        let right: _ = 2 * index + 2;
 
         Self::inorder_traversal(tree, left, result);
         result.push(tree[index]);
@@ -312,7 +312,7 @@ impl Default for ComputeWorkload {
 }
 
 /// 获取迭代次数
-fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
+fn get_iterations(parameters: &HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>) -> u32 {
     parameters
         .get("iterations")
         .and_then(|v| v.as_u64())
@@ -321,7 +321,7 @@ fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
 }
 
 /// 获取操作类型
-fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
+fn get_operation(parameters: &HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>) -> String {
     parameters
         .get("operation")
         .and_then(|v| v.as_str())
@@ -332,16 +332,18 @@ fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_fibonacci_calculation() {
-        let result = ComputeWorkload::fibonacci(10);
+        let result: _ = ComputeWorkload::fibonacci(10);
         assert_eq!(result, 55);
     }
 
     #[tokio::test]
     async fn test_prime_calculation() {
-        let primes = ComputeWorkload::calculate_primes(30);
+        let primes: _ = ComputeWorkload::calculate_primes(30);
         assert_eq!(primes.len(), 10);
         assert_eq!(primes[0], 2);
         assert_eq!(primes[1], 3);
@@ -350,31 +352,31 @@ mod tests {
 
     #[tokio::test]
     async fn test_sort_array() {
-        let arr = ComputeWorkload::sort_array(100);
+        let arr: _ = ComputeWorkload::sort_array(100);
         assert_eq!(arr.len(), 100);
         assert!(arr.windows(2).all(|w| w[0] <= w[1]));
     }
 
     #[tokio::test]
     async fn test_longest_common_subsequence() {
-        let result = ComputeWorkload::longest_common_subsequence("ABCBDAB", "BDCABA");
+        let result: _ = ComputeWorkload::longest_common_subsequence("ABCBDAB", "BDCABA");
         assert_eq!(result, 4);
     }
 
     #[tokio::test]
     async fn test_pi_calculation() {
-        let pi = ComputeWorkload::calculate_pi(100000);
+        let pi: _ = ComputeWorkload::calculate_pi(100000);
         assert!((pi - 3.14159).abs() < 0.01);
     }
 
     #[tokio::test]
     async fn test_workload_execution() {
-        let workload = ComputeWorkload::new();
+        let workload: _ = ComputeWorkload::new();
         let mut parameters = HashMap::new();
         parameters.insert("iterations".to_string(), serde_json::Value::from(10u64));
         parameters.insert("operation".to_string(), serde_json::Value::from("fibonacci"));
 
-        let result = workload.execute(parameters, 1).await.unwrap();
+        let result: _ = workload.execute(parameters, 1).await.unwrap();
 
         assert_eq!(result.workload_type, super::super::WorkloadType::ComputeIntensive);
         assert_eq!(result.iterations, 10);

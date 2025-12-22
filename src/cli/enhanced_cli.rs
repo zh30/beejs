@@ -17,6 +17,8 @@ use super::repl::Repl;
 use super::package_json::{PackageJson, ScriptExecutor};
 
 use crate::cloud::{CloudAdapter};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Enhanced CLI arguments
 #[derive(Parser, Debug)]
@@ -103,7 +105,7 @@ impl EnhancedArgs {
     /// Execute based on arguments
     pub async fn execute(&self) -> Result<()> {
         // Create runtime
-        let runtime = Arc::new(RuntimeLite::new(self.verbose)
+        let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(self.verbose))
             .context("Failed to create runtime")?);
 
         // Execute based on arguments
@@ -141,21 +143,21 @@ impl EnhancedArgs {
             return Err(anyhow::anyhow!("Script file not found: {:?}", script_path).into());
         }
 
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         if self.verbose {
             println!("📄 Executing script: {:?}", script_path);
         }
 
-        let code = std::fs::read_to_string(script_path)
+        let code: _ = std::fs::read_to_string(script_path)
             .context("Failed to read script file")?;
 
         // Check if this is a TypeScript file and transpile if needed
-        let js_code = if script_path.extension().map_or(false, |ext| ext == "ts" || ext == "tsx") {
+        let js_code: _ = if script_path.extension().map_or(false, |ext| ext == "ts" || ext == "tsx") {
             if self.verbose {
                 println!("🔄 Transpiling TypeScript...");
             }
-            let file_name = script_path.to_string_lossy().to_string();
+            let file_name: _ = script_path.to_string_lossy().to_string();
             match crate::typescript::compile_typescript(&code, &file_name) {
                 Ok(output) => {
                     if self.verbose {
@@ -174,7 +176,7 @@ impl EnhancedArgs {
 
         match runtime.execute_code(&js_code) {
             Ok(result) => {
-                let duration = start.elapsed();
+                let duration: _ = start.elapsed();
 
                 if self.verbose {
                     println!("✅ Script executed successfully in {:.2}ms", duration.as_secs_f64() * 1000.0);
@@ -195,7 +197,7 @@ impl EnhancedArgs {
 
     /// Execute eval code
     async fn execute_eval_code(&self, runtime: Arc<RuntimeLite>, eval_code: &str) -> Result<()> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         if self.verbose {
             println!("🔍 Evaluating code: {}", eval_code);
@@ -203,7 +205,7 @@ impl EnhancedArgs {
 
         match runtime.execute_code(eval_code) {
             Ok(result) => {
-                let duration = start.elapsed();
+                let duration: _ = start.elapsed();
 
                 if self.verbose {
                     println!("✅ Code evaluated successfully in {:.2}ms", duration.as_secs_f64() * 1000.0);
@@ -237,8 +239,8 @@ impl EnhancedArgs {
 
         // Create file watcher
         let (event_sender, mut event_receiver) = mpsc::unbounded_channel();
-        let config = FileWatcherConfig::default();
-        let watcher = FileWatcher::new(
+        let config: _ = FileWatcherConfig::default();
+        let watcher: _ = FileWatcher::new(
             vec![script_path.clone()],
             config,
             event_sender,
@@ -299,7 +301,7 @@ impl EnhancedArgs {
             println!("🧪 Running tests...");
         }
 
-        let output = std::process::Command::new("cargo")
+        let output: _ = std::process::Command::new("cargo")
             .args(&["test", "--lib"])
             .output()
             .context("Failed to run tests")?;
@@ -316,8 +318,8 @@ impl EnhancedArgs {
 
     /// Run package.json script
     async fn run_package_script(&self, script_name: &str) -> Result<()> {
-        let current_dir = std::env::current_dir()?;
-        let package_path = current_dir.join("package.json");
+        let current_dir: _ = std::env::current_dir()?;
+        let package_path: _ = current_dir.join("package.json");
 
         if !package_path.exists() {
             return Err(anyhow::anyhow!("package.json not found in current directory").into());
@@ -327,15 +329,15 @@ impl EnhancedArgs {
             println!("📦 Loading package.json...");
         }
 
-        let package = PackageJson::load(&current_dir)?;
+        let package: _ = PackageJson::load(&current_dir)?;
 
         if let Some(script) = package.get_script(script_name) {
             if self.verbose {
                 println!("🚀 Running script '{}': {}", script_name, script);
             }
 
-            let executor = ScriptExecutor::new(package, current_dir);
-            let exit_status = executor.run_script(script_name).await?;
+            let executor: _ = ScriptExecutor::new(package, current_dir);
+            let exit_status: _ = executor.run_script(script_name).await?;
 
             if !exit_status.success() {
                 return Err(anyhow::anyhow!("Script '{}' failed with exit code: {:?}",
@@ -370,14 +372,14 @@ impl EnhancedArgs {
         if self.verbose {
             println!("🏃 Running benchmarks...");
         }
-        let results = runner.run_all().await?;
+        let results: _ = runner.run_all().await?;
 
         if self.verbose {
             println!("📝 Generating report...");
         }
 
         // Parse format
-        let report_format = match self.format.to_lowercase().as_str() {
+        let report_format: _ = match self.format.to_lowercase().as_str() {
             "html" => crate::performance_comparison::ReportFormat::Html,
             "markdown" => crate::performance_comparison::ReportFormat::Markdown,
             "json" => crate::performance_comparison::ReportFormat::Json,
@@ -385,7 +387,7 @@ impl EnhancedArgs {
         };
 
         // Create report generator
-        let config = crate::performance_comparison::ReportConfig {
+        let config: _ = crate::performance_comparison::ReportConfig {
             format: report_format,
             output_dir: self.output_dir.clone(),
             include_charts: true,
@@ -393,13 +395,13 @@ impl EnhancedArgs {
             template_path: None,
         };
 
-        let report_gen = crate::performance_comparison::ReportGenerator::new_with_config(config);
+        let report_gen: _ = crate::performance_comparison::ReportGenerator::new_with_config(config);
 
         // Create a simple comparison result for standalone benchmarks
         let mut collector = crate::performance_comparison::ResultCollector::new();
 
         for (test_name, result) in results {
-            let comparison = crate::performance_comparison::BenchmarkComparison {
+            let comparison: _ = crate::performance_comparison::BenchmarkComparison {
                 test_name,
                 beejs_result: result.beejs_result,
                 nodejs_result: result.nodejs_result,
@@ -414,10 +416,10 @@ impl EnhancedArgs {
             collector.add_result(comparison);
         }
 
-        let comparison_result = collector.generate_comparison_result();
+        let comparison_result: _ = collector.generate_comparison_result();
 
         // Generate report
-        let report_paths = report_gen.generate_report(&comparison_result)
+        let report_paths: _ = report_gen.generate_report(&comparison_result)
             .map_err(|e| anyhow::anyhow!("Failed to generate report: {}", e))?;
         for path in report_paths {
             println!("✅ Report generated: {}", path.display());
@@ -452,14 +454,14 @@ impl EnhancedArgs {
         if self.verbose {
             println!("🏃 Running performance comparison...");
         }
-        let results = runner.run_all().await?;
+        let results: _ = runner.run_all().await?;
 
         if self.verbose {
             println!("📝 Generating comparison report...");
         }
 
         // Parse format
-        let report_format = match self.format.to_lowercase().as_str() {
+        let report_format: _ = match self.format.to_lowercase().as_str() {
             "html" => crate::performance_comparison::ReportFormat::Html,
             "markdown" => crate::performance_comparison::ReportFormat::Markdown,
             "json" => crate::performance_comparison::ReportFormat::Json,
@@ -467,7 +469,7 @@ impl EnhancedArgs {
         };
 
         // Create report generator
-        let config = crate::performance_comparison::ReportConfig {
+        let config: _ = crate::performance_comparison::ReportConfig {
             format: report_format,
             output_dir: self.output_dir.clone(),
             include_charts: true,
@@ -475,13 +477,13 @@ impl EnhancedArgs {
             template_path: None,
         };
 
-        let report_gen = crate::performance_comparison::ReportGenerator::new_with_config(config);
+        let report_gen: _ = crate::performance_comparison::ReportGenerator::new_with_config(config);
 
         // Create collector and add results
         let mut collector = crate::performance_comparison::ResultCollector::new();
 
         for (test_name, result) in results {
-            let winner = if result.speedup_vs_nodejs > 1.0 && result.speedup_vs_nodejs >= result.speedup_vs_bun {
+            let winner: _ = if result.speedup_vs_nodejs > 1.0 && result.speedup_vs_nodejs >= result.speedup_vs_bun {
                 "beejs".to_string()
             } else if result.speedup_vs_nodejs < 1.0 {
                 "nodejs".to_string()
@@ -489,7 +491,7 @@ impl EnhancedArgs {
                 "bun".to_string()
             };
 
-            let comparison = crate::performance_comparison::BenchmarkComparison {
+            let comparison: _ = crate::performance_comparison::BenchmarkComparison {
                 test_name,
                 beejs_result: result.beejs_result,
                 nodejs_result: result.nodejs_result,
@@ -504,10 +506,10 @@ impl EnhancedArgs {
             collector.add_result(comparison);
         }
 
-        let comparison_result = collector.generate_comparison_result();
+        let comparison_result: _ = collector.generate_comparison_result();
 
         // Generate report
-        let report_paths = report_gen.generate_report(&comparison_result)
+        let report_paths: _ = report_gen.generate_report(&comparison_result)
             .map_err(|e| anyhow::anyhow!("Failed to generate report: {}", e))?;
         for path in report_paths {
             println!("✅ Report generated: {}", path.display());
@@ -541,31 +543,31 @@ impl EnhancedArgs {
 
         // 演示零拷贝发送器
         println!("\n📦 1. 零拷贝发送器 (sendfile/splice)");
-        let sender = crate::network::zero_copy::ZeroCopySender::new(None)?;
+        let sender: _ = crate::network::zero_copy::ZeroCopySender::new(None)?;
         println!("   ✅ 创建零拷贝发送器成功");
         println!("   📊 统计信息: {:?}", sender.get_stats());
 
         // 演示异步零拷贝
         println!("\n⚡ 2. 异步零拷贝操作");
-        let async_zero_copy = crate::network::zero_copy::AsyncZeroCopy::new(None)?;
-        let stats = async_zero_copy.get_stats().await;
+        let async_zero_copy: _ = crate::network::zero_copy::AsyncZeroCopy::new(None)?;
+        let stats: _ = async_zero_copy.get_stats().await;
         println!("   ✅ 异步零拷贝 I/O 实例创建成功");
         println!("   📊 统计信息: {:?}", stats);
 
         // 演示内存映射管理器
         println!("\n🧠 3. 内存映射管理器");
-        let mapper = crate::network::memory_mapper::MemoryMapper::new(None)?;
-        let stats = mapper.get_stats();
+        let mapper: _ = crate::network::memory_mapper::MemoryMapper::new(None)?;
+        let stats: _ = mapper.get_stats();
         println!("   ✅ 内存映射管理器创建成功");
         println!("   📊 统计信息: {:?}", stats);
 
         // 演示智能批处理器
         println!("\n📊 4. 智能批处理器");
-        let batch_processor = crate::network::zero_copy::BatchProcessor::new(None);
+        let batch_processor: _ = crate::network::zero_copy::BatchProcessor::new(None);
         batch_processor.add_item("test_data_1".to_string());
         batch_processor.add_item("test_data_2".to_string());
         batch_processor.add_item("test_data_3".to_string());
-        let stats = batch_processor.get_stats();
+        let stats: _ = batch_processor.get_stats();
         println!("   ✅ 智能批处理器创建成功");
         println!("   📊 队列大小: {}", batch_processor.queue_size());
         println!("   📊 统计信息: {:?}", stats);
@@ -600,10 +602,10 @@ impl EnhancedArgs {
                 println!("\n🚀 部署到 AWS...");
 
                 // 创建 AWS 适配器
-                let adapter = crate::cloud::aws::AwsAdapter::new(self.cloud_region.clone());
+                let adapter: _ = crate::cloud::aws::AwsAdapter::new(self.cloud_region.clone());
 
                 // 部署 Lambda 函数
-                let config = crate::cloud::FunctionConfig {
+                let config: _ = crate::cloud::FunctionConfig {
                     name: "beejs-function".to_string(),
                     code: "module.exports.handler = async (event) => ({ statusCode: 200, body: 'Hello from Beejs!' });".to_string(),
                     runtime: "nodejs18.x".to_string(),
@@ -614,7 +616,7 @@ impl EnhancedArgs {
                     kv_namespace: None,
                 };
 
-                let result = adapter.deploy_function(&config).await
+                let result: _ = adapter.deploy_function(&config).await
                     .map_err(|e| anyhow::anyhow!("部署失败: {:?}", e))?;
                 println!("✅ Lambda 函数部署成功!");
                 println!("   部署 ID: {}", result.deployment_id);
@@ -622,7 +624,7 @@ impl EnhancedArgs {
                 println!("   耗时: {:?}", result.deployment_time);
 
                 // 获取指标
-                let metrics = adapter.get_metrics("beejs-function").await
+                let metrics: _ = adapter.get_metrics("beejs-function").await
                     .map_err(|e| anyhow::anyhow!("获取指标失败: {:?}", e))?;
                 println!("📊 性能指标:");
                 println!("   CPU 使用率: {:.1}%", metrics.cpu_usage);
@@ -633,10 +635,10 @@ impl EnhancedArgs {
                 println!("\n🚀 部署到 Cloudflare...");
 
                 // 创建 Cloudflare 适配器
-                let adapter = crate::cloud::cloudflare::CloudflareAdapter::new("test-account".to_string());
+                let adapter: _ = crate::cloud::cloudflare::CloudflareAdapter::new("test-account".to_string());
 
                 // 部署 Workers 函数
-                let config = crate::cloud::FunctionConfig {
+                let config: _ = crate::cloud::FunctionConfig {
                     name: "beejs-worker".to_string(),
                     code: "addEventListener('fetch', event => event.respondWith(new Response('Hello from Beejs Workers!')))".to_string(),
                     runtime: "javascript".to_string(),
@@ -647,7 +649,7 @@ impl EnhancedArgs {
                     kv_namespace: None,
                 };
 
-                let result = adapter.deploy_function(&config).await
+                let result: _ = adapter.deploy_function(&config).await
                     .map_err(|e| anyhow::anyhow!("部署失败: {:?}", e))?;
                 println!("✅ Workers 函数部署成功!");
                 println!("   部署 ID: {}", result.deployment_id);
@@ -655,7 +657,7 @@ impl EnhancedArgs {
                 println!("   耗时: {:?}", result.deployment_time);
 
                 // 获取边缘节点列表
-                let locations = adapter.get_edge_locations().await
+                let locations: _ = adapter.get_edge_locations().await
                     .map_err(|e| anyhow::anyhow!("获取边缘节点失败: {:?}", e))?;
                 println!("📡 全球边缘节点: {} 个", locations.len());
                 println!("   例如: {:?}...", &locations[0..3]);
@@ -671,7 +673,7 @@ impl EnhancedArgs {
         let mut load_balancer = crate::cloud::load_balancer::MLLoadBalancer::new(None);
 
         // 添加服务端点
-        let endpoint1 = crate::cloud::load_balancer::ServiceEndpoint {
+        let endpoint1: _ = crate::cloud::load_balancer::ServiceEndpoint {
             id: "server1".to_string(),
             address: "192.168.1.1".to_string(),
             port: 8080,
@@ -684,7 +686,7 @@ impl EnhancedArgs {
             weight: 1,
         };
 
-        let endpoint2 = crate::cloud::load_balancer::ServiceEndpoint {
+        let endpoint2: _ = crate::cloud::load_balancer::ServiceEndpoint {
             id: "server2".to_string(),
             address: "192.168.1.2".to_string(),
             port: 8080,
@@ -701,7 +703,7 @@ impl EnhancedArgs {
         load_balancer.add_endpoint(endpoint2);
 
         // 选择最佳服务端点
-        let selected = load_balancer.select_optimal_target();
+        let selected: _ = load_balancer.select_optimal_target();
         if let Some(endpoint) = selected {
             println!("   ✅ 选择的端点: {} (区域: {})", endpoint.id, endpoint.region);
         }
@@ -717,10 +719,10 @@ impl EnhancedArgs {
         cache.set("config:app".to_string(), "app_config".to_string(), None);
 
         // 获取缓存
-        let value = cache.get("user:123");
+        let value: _ = cache.get("user:123");
         println!("   ✅ 缓存获取: {:?}", value);
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         println!("{}", cache.generate_report());
         println!("   📊 命中率: {:.1}%", stats.hit_rate);
 
@@ -738,7 +740,7 @@ impl EnhancedArgs {
 
 /// Initialize enhanced CLI
 pub async fn run_enhanced_cli() -> Result<()> {
-    let args = EnhancedArgs::parse();
+    let args: _ = EnhancedArgs::parse();
 
     // Handle version flag
     if args.version {

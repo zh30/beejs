@@ -22,7 +22,7 @@ pub struct ValidationResult {
 
 impl ValidationResult {
     pub fn format(&self) -> String {
-        let status = if self.passed { "✅ PASS" } else { "❌ FAIL" };
+        let status: _ = if self.passed { "✅ PASS" } else { "❌ FAIL" };
         format!(
             "{}: {} - {:.2}{} (target: {:.2}{})\n  {}",
             self.test_name, status, self.metric, self.unit, self.target, self.unit, self.details
@@ -33,6 +33,8 @@ impl ValidationResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     // ============================================
     // 单一测试：综合性能验证
@@ -41,7 +43,7 @@ mod tests {
     #[test]
     fn test_phase7_comprehensive_validation() {
         // 创建单个Runtime实例用于所有测试
-        let runtime = Runtime::new(67108864, 1073741824, false, false);
+        let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
         println!("\n");
         println!("╔══════════════════════════════════════════════════════════════╗");
@@ -53,14 +55,14 @@ mod tests {
 
         // ========== 测试1: 代码执行速度 ==========
         {
-            let iterations = 100;
-            let warmup = 20;
-            let code = r#"
+            let iterations: _ = 100;
+            let warmup: _ = 20;
+            let code: _ = r#"
                 function fib(n) {
                     if (n <= 1) return n;
-                    let a = 0, b = 1;
-                    for (let i = 2; i <= n; i++) {
-                        let temp = a + b;
+                    let a: _ = 0, b = 1;
+                    for (let i: _ = 2; i <= n; i++) {
+                        let temp: _ = a + b;
                         a = b;
                         b = temp;
                     }
@@ -71,30 +73,30 @@ mod tests {
 
             // 预热
             for _ in 0..warmup {
-                let _ = runtime.execute_code(code);
+                let _: _ = runtime.execute_code(code);
             }
 
             // 测量
             let mut durations = Vec::with_capacity(iterations);
             for _ in 0..iterations {
-                let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-                let _ = runtime.execute_code(code);
+                let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+                let _: _ = runtime.execute_code(code);
                 durations.push(start.elapsed().unwrap());
             }
 
-            let avg_us = durations
+            let avg_us: _ = durations
                 .iter()
                 .map(|d| d.as_secs_f64() * 1_000_000.0)
                 .sum::<f64>()
                 / iterations as f64;
 
-            let target_us = TARGET_EXECUTION_TIME_US * 1.15; // 允许15%的余量
-            let passed = avg_us < target_us;
+            let target_us: _ = TARGET_EXECUTION_TIME_US * 1.15; // 允许15%的余量
+            let passed: _ = avg_us < target_us;
             if !passed {
                 all_passed = false;
             }
 
-            let result = ValidationResult {
+            let result: _ = ValidationResult {
                 test_name: "代码执行速度".to_string(),
                 passed,
                 metric: avg_us,
@@ -108,29 +110,29 @@ mod tests {
 
         // ========== 测试2: 批量脚本执行 ==========
         {
-            let script_count = 500;
-            let code_template = |i: usize| format!("let x{} = {}; x{}", i, i * 2, i);
+            let script_count: _ = 500;
+            let code_template: _ = |i: usize| format!("let x{} = {}; x{}", i, i * 2, i);
 
-            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             let mut success_count = 0;
 
             for i in 0..script_count {
-                let code = code_template(i);
+                let code: _ = code_template(i);
                 if runtime.execute_code(&code).is_ok() {
                     success_count += 1;
                 }
             }
 
-            let elapsed = start.elapsed().unwrap();
-            let scripts_per_sec = success_count as f64 / elapsed.as_secs_f64();
+            let elapsed: _ = start.elapsed().unwrap();
+            let scripts_per_sec: _ = success_count as f64 / elapsed.as_secs_f64();
 
-            let target_scripts_per_sec = 90.0; // 调整为更合理的目标
-            let passed = success_count == script_count && scripts_per_sec > target_scripts_per_sec;
+            let target_scripts_per_sec: _ = 90.0; // 调整为更合理的目标
+            let passed: _ = success_count == script_count && scripts_per_sec > target_scripts_per_sec;
             if !passed {
                 all_passed = false;
             }
 
-            let result = ValidationResult {
+            let result: _ = ValidationResult {
                 test_name: "批量执行".to_string(),
                 passed,
                 metric: scripts_per_sec,
@@ -149,8 +151,8 @@ mod tests {
 
         // ========== 测试3: 复杂代码执行 ==========
         {
-            let iterations = 30;
-            let complex_code = r#"
+            let iterations: _ = 30;
+            let complex_code: _ = r#"
                 function quickSort(arr) {
                     if (arr.length <= 1) return arr;
                     const pivot = arr[Math.floor(arr.length / 2)];
@@ -159,8 +161,8 @@ mod tests {
                     const right = arr.filter(x => x > pivot);
                     return [...quickSort(left), ...middle, ...quickSort(right)];
                 }
-                let arr = [];
-                for (let i = 0; i < 100; i++) {
+                let arr: _ = [];
+                for (let i: _ = 0; i < 100; i++) {
                     arr.push(Math.floor(Math.random() * 1000));
                 }
                 quickSort(arr).length;
@@ -168,23 +170,23 @@ mod tests {
 
             let mut durations = Vec::with_capacity(iterations);
             for _ in 0..iterations {
-                let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-                let _ = runtime.execute_code(complex_code);
+                let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+                let _: _ = runtime.execute_code(complex_code);
                 durations.push(start.elapsed().unwrap());
             }
 
-            let avg_ms = durations
+            let avg_ms: _ = durations
                 .iter()
                 .map(|d| d.as_secs_f64() * 1000.0)
                 .sum::<f64>()
                 / iterations as f64;
 
-            let passed = avg_ms < 100.0;
+            let passed: _ = avg_ms < 100.0;
             if !passed {
                 all_passed = false;
             }
 
-            let result = ValidationResult {
+            let result: _ = ValidationResult {
                 test_name: "复杂代码".to_string(),
                 passed,
                 metric: avg_ms,
@@ -198,7 +200,7 @@ mod tests {
 
         // ========== 测试4: Node.js API 兼容性 ==========
         {
-            let test_cases = vec![
+            let test_cases: _ = vec![
                 ("path.join", "path.join('a', 'b', 'c')"),
                 ("path.resolve", "path.resolve('.')"),
                 ("path.dirname", "path.dirname('/foo/bar/baz')"),
@@ -212,7 +214,7 @@ mod tests {
             ];
 
             let mut api_passed = 0;
-            let total = test_cases.len();
+            let total: _ = test_cases.len();
 
             for (_name, code) in &test_cases {
                 if runtime.execute_code(code).is_ok() {
@@ -220,13 +222,13 @@ mod tests {
                 }
             }
 
-            let compatibility = (api_passed as f64 / total as f64) * 100.0;
-            let passed = compatibility >= 80.0;
+            let compatibility: _ = (api_passed as f64 / total as f64) * 100.0;
+            let passed: _ = compatibility >= 80.0;
             if !passed {
                 all_passed = false;
             }
 
-            let result = ValidationResult {
+            let result: _ = ValidationResult {
                 test_name: "Node.js兼容".to_string(),
                 passed,
                 metric: compatibility,
@@ -240,10 +242,10 @@ mod tests {
 
         // ========== 测试5: 压力测试 ==========
         {
-            let iterations = 1000;
-            let code = "let x = 0; for(let i=0;i<100;i++) x+=i; x";
+            let iterations: _ = 1000;
+            let code: _ = "let x = 0; for(let i=0;i<100;i++) x+=i; x";
 
-            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             let mut successful = 0;
 
             for _ in 0..iterations {
@@ -252,16 +254,16 @@ mod tests {
                 }
             }
 
-            let elapsed = start.elapsed().unwrap();
-            let exec_per_sec = successful as f64 / elapsed.as_secs_f64();
+            let elapsed: _ = start.elapsed().unwrap();
+            let exec_per_sec: _ = successful as f64 / elapsed.as_secs_f64();
 
-            let target_exec_per_sec = 85.0; // 调整为更合理的目标
-            let passed = successful == iterations && exec_per_sec > target_exec_per_sec;
+            let target_exec_per_sec: _ = 85.0; // 调整为更合理的目标
+            let passed: _ = successful == iterations && exec_per_sec > target_exec_per_sec;
             if !passed {
                 all_passed = false;
             }
 
-            let result = ValidationResult {
+            let result: _ = ValidationResult {
                 test_name: "压力测试".to_string(),
                 passed,
                 metric: exec_per_sec,
@@ -280,7 +282,7 @@ mod tests {
 
         // ========== 测试6: 综合性能评分 ==========
         {
-            let tests = vec![
+            let tests: _ = vec![
                 ("简单运算", "1 + 2 * 3 - 4 / 2", 1000),
                 ("循环计算", "let s=0; for(let i=0;i<100;i++)s+=i; s", 500),
                 ("函数调用", "function f(x){return x*2} f(10)", 500),
@@ -291,24 +293,24 @@ mod tests {
             let mut total_score = 0.0;
 
             for (_name, code, iterations) in &tests {
-                let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+                let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
                 for _ in 0..*iterations {
-                    let _ = runtime.execute_code(code);
+                    let _: _ = runtime.execute_code(code);
                 }
-                let elapsed = start.elapsed().unwrap();
-                let ops_per_sec = *iterations as f64 / elapsed.as_secs_f64();
+                let elapsed: _ = start.elapsed().unwrap();
+                let ops_per_sec: _ = *iterations as f64 / elapsed.as_secs_f64();
                 // 调整评分：100 ops/sec = 50分，200 ops/sec = 100分（更符合实际性能）
-                let score = (ops_per_sec / 2.0).min(100.0);
+                let score: _ = (ops_per_sec / 2.0).min(100.0);
                 total_score += score;
             }
 
-            let final_score = total_score / tests.len() as f64;
-            let passed = final_score > 40.0; // 调整通过阈值为 40分（C级）
+            let final_score: _ = total_score / tests.len() as f64;
+            let passed: _ = final_score > 40.0; // 调整通过阈值为 40分（C级）
             if !passed {
                 all_passed = false;
             }
 
-            let grade = if final_score >= 80.0 {
+            let grade: _ = if final_score >= 80.0 {
                 "A"
             } else if final_score >= 60.0 {
                 "B"
@@ -318,7 +320,7 @@ mod tests {
                 "D"
             };
 
-            let result = ValidationResult {
+            let result: _ = ValidationResult {
                 test_name: "综合评分".to_string(),
                 passed,
                 metric: final_score,
@@ -332,8 +334,8 @@ mod tests {
 
         // ========== 最终报告 ==========
         println!("╠══════════════════════════════════════════════════════════════╣");
-        let passed_count = results.iter().filter(|r| r.passed).count();
-        let total_count = results.len();
+        let passed_count: _ = results.iter().filter(|r| r.passed).count();
+        let total_count: _ = results.len();
         println!(
             "║ 总测试: {} | 通过: {} | 失败: {}",
             total_count,
@@ -341,7 +343,7 @@ mod tests {
             total_count - passed_count
         );
 
-        let status = if all_passed {
+        let status: _ = if all_passed {
             "✅ 所有验证通过！Beejs性能目标达成！"
         } else {
             "❌ 部分验证失败，需要进一步优化"

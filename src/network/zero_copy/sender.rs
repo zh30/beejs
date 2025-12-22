@@ -120,12 +120,12 @@ impl ZeroCopySender {
     /// # 返回值
     /// 返回创建结果
     pub fn new(config: Option<ZeroCopySenderConfig>) -> io::Result<Self> {
-        let config = config.unwrap_or_default();
-        let splice = Splice::new();
+        let config: _ = config.clone();unwrap_or_default();
+        let splice: _ = Splice::new();
 
         Ok(Self {
             config,
-            stats: Arc::new(Mutex::new(ZeroCopySenderStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(ZeroCopySenderStats::default()))),
             sendfile: None,
             splice,
             current_pos: 0,
@@ -142,7 +142,7 @@ impl ZeroCopySender {
     /// 返回创建结果
     pub fn from_file(file_path: &str, config: Option<ZeroCopySenderConfig>) -> io::Result<Self> {
         let mut sender = Self::new(config)?;
-        let file = File::open(file_path)?;
+        let file: _ = File::open(file_path)?;
         sender.sendfile = Some(SendFile::new(file)?);
         Ok(sender)
     }
@@ -162,7 +162,7 @@ impl ZeroCopySender {
         socket: &mut W,
         max_bytes: usize,
     ) -> io::Result<u64> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
         let mut total_sent = 0u64;
 
         // 确保 sendfile 已初始化
@@ -173,7 +173,7 @@ impl ZeroCopySender {
             ));
         }
 
-        let sendfile = self.sendfile.as_mut().unwrap();
+        let sendfile: _ = self.sendfile.as_mut().unwrap();
 
         // 设置起始位置
         sendfile.current_pos = self.current_pos;
@@ -215,9 +215,9 @@ impl ZeroCopySender {
         socket: &impl AsRawFd,
         max_bytes: usize,
     ) -> io::Result<u64> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
-        let out_fd = socket.as_raw_fd();
+        let out_fd: _ = socket.as_raw_fd();
 
         // 使用 splice 进行零拷贝传输
         match self.splice.pipe_to_fd(pipe, out_fd, max_bytes) {
@@ -279,7 +279,7 @@ impl ZeroCopySender {
     /// 返回传输进度 (0.0-100.0)
     pub fn progress(&self) -> f64 {
         if let Some(sendfile) = &self.sendfile {
-            let file_size = sendfile.file_size();
+            let file_size: _ = sendfile.file_size();
             if file_size > 0 {
                 return (self.current_pos as f64 / file_size as f64) * 100.0;
             }
@@ -292,7 +292,7 @@ impl ZeroCopySender {
     /// # 返回值
     /// 返回当前传输速度
     pub fn speed(&self) -> f64 {
-        let stats = self.stats.lock().unwrap();
+        let stats: _ = self.stats.lock().unwrap();
         stats.avg_speed
     }
 
@@ -316,11 +316,11 @@ impl ZeroCopySender {
         stats.success_count += 1;
         stats.last_transfer = Some(Instant::now());
 
-        let elapsed = start_time.elapsed();
+        let elapsed: _ = start_time.elapsed();
         stats.total_duration += elapsed;
 
         if elapsed.as_secs_f64() > 0.0 {
-            let current_speed = bytes as f64 / elapsed.as_secs_f64();
+            let current_speed: _ = bytes as f64 / elapsed.as_secs_f64();
             stats.avg_speed = (stats.avg_speed * (stats.success_count - 1) as f64 + current_speed)
                 / stats.success_count as f64;
 
@@ -355,14 +355,16 @@ impl Default for ZeroCopySender {
 mod tests {
     use super::*;
     use std::io::Cursor;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试创建零拷贝发送器
     #[test]
     fn test_zero_copy_sender_creation() {
-        let config = ZeroCopySenderConfig::default();
-        let sender = ZeroCopySender::new(Some(config)).expect("创建发送器失败");
+        let config: _ = ZeroCopySenderConfig::default();
+        let sender: _ = ZeroCopySender::new(Some(config)).expect("创建发送器失败");
 
-        let stats = sender.get_stats();
+        let stats: _ = sender.get_stats();
         assert_eq!(stats.total_bytes, 0);
         assert_eq!(stats.success_count, 0);
         assert_eq!(stats.error_count, 0);
@@ -382,8 +384,8 @@ mod tests {
     #[test]
     fn test_progress_calculation() {
         // 创建临时测试文件
-        let test_file_path = "/tmp/beejs_zero_copy_test.bin";
-        let test_data = vec![42u8; 1024];
+        let test_file_path: _ = "/tmp/beejs_zero_copy_test.bin";
+        let test_data: _ = vec![42u8; 1024];
         std::fs::write(test_file_path, &test_data).expect("写入测试文件失败");
 
         let mut sender =
@@ -391,7 +393,7 @@ mod tests {
 
         // 设置位置为文件中间
         sender.set_position(512);
-        let progress = sender.progress();
+        let progress: _ = sender.progress();
 
         assert!(progress > 0.0 && progress < 100.0);
         println!("进度: {:.1}%", progress);
@@ -405,13 +407,13 @@ mod tests {
     /// 测试传输统计
     #[test]
     fn test_transfer_stats() {
-        let sender = ZeroCopySender::new(None).expect("创建发送器失败");
+        let sender: _ = ZeroCopySender::new(None).expect("创建发送器失败");
 
         // 模拟成功传输
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
         sender.update_stats_on_success(1024, &start_time);
 
-        let stats = sender.get_stats();
+        let stats: _ = sender.get_stats();
         assert_eq!(stats.total_bytes, 1024);
         assert_eq!(stats.success_count, 1);
         assert_eq!(stats.error_count, 0);

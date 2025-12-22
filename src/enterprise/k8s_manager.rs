@@ -103,7 +103,7 @@ impl K8sManager {
         // 4. 配置 Service
         // 5. 设置 HPA
 
-        let handle = ClusterHandle {
+        let handle: _ = ClusterHandle {
             namespace: config.namespace.clone(),
             replicas: config.min_replicas,
             status: ClusterStatus::Running,
@@ -123,7 +123,7 @@ impl K8sManager {
         // 简化的扩缩容逻辑
         // 实际实现中会根据指标和策略进行智能扩缩容
 
-        let current_replicas = self.get_current_replicas().await?;
+        let current_replicas: _ = self.get_current_replicas().await?;
         let mut new_replicas = current_replicas;
 
         // 扩容条件：CPU 或内存使用率超过阈值
@@ -254,28 +254,30 @@ impl K8sManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_create_k8s_manager() {
-        let manager = K8sManager::new("test-namespace".to_string());
+        let manager: _ = K8sManager::new("test-namespace".to_string());
         assert_eq!(manager.namespace, "test-namespace");
     }
 
     #[tokio::test]
     async fn test_deploy_cluster() {
-        let manager = K8sManager::new("beejs".to_string());
-        let config = ClusterConfig::default();
+        let manager: _ = K8sManager::new("beejs".to_string());
+        let config: _ = ClusterConfig::default();
 
-        let handle = manager.deploy_cluster(&config).await.unwrap();
+        let handle: _ = manager.deploy_cluster(&config).await.unwrap();
         assert_eq!(handle.namespace, "beejs");
         assert_eq!(handle.status, ClusterStatus::Running);
     }
 
     #[tokio::test]
     async fn test_auto_scale_up() {
-        let manager = K8sManager::new("beejs".to_string());
+        let manager: _ = K8sManager::new("beejs".to_string());
 
-        let high_load_metrics = ClusterMetrics {
+        let high_load_metrics: _ = ClusterMetrics {
             cpu_usage: 85.0,
             memory_usage: 90.0,
             request_rate: 2000.0,
@@ -283,15 +285,15 @@ mod tests {
             timestamp: std::time::SystemTime::now(),
         };
 
-        let new_replicas = manager.auto_scale(&high_load_metrics).await.unwrap();
+        let new_replicas: _ = manager.auto_scale(&high_load_metrics).await.unwrap();
         assert!(new_replicas > 3); // 应该扩容
     }
 
     #[tokio::test]
     async fn test_auto_scale_down() {
-        let manager = K8sManager::new("beejs".to_string());
+        let manager: _ = K8sManager::new("beejs".to_string());
 
-        let low_load_metrics = ClusterMetrics {
+        let low_load_metrics: _ = ClusterMetrics {
             cpu_usage: 25.0,
             memory_usage: 30.0,
             request_rate: 50.0,
@@ -299,14 +301,14 @@ mod tests {
             timestamp: std::time::SystemTime::now(),
         };
 
-        let new_replicas = manager.auto_scale(&low_load_metrics).await.unwrap();
+        let new_replicas: _ = manager.auto_scale(&low_load_metrics).await.unwrap();
         assert!(new_replicas < 3); // 应该缩容
     }
 
     #[tokio::test]
     async fn test_health_check() {
-        let manager = K8sManager::new("beejs".to_string());
-        let health = manager.check_node_health("beejs-node-1").await.unwrap();
+        let manager: _ = K8sManager::new("beejs".to_string());
+        let health: _ = manager.check_node_health("beejs-node-1").await.unwrap();
 
         match health {
             HealthStatus::Healthy => {}
@@ -316,7 +318,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cluster_config_default() {
-        let config = ClusterConfig::default();
+        let config: _ = ClusterConfig::default();
         assert_eq!(config.min_replicas, 2);
         assert_eq!(config.max_replicas, 10);
         assert_eq!(config.cpu_threshold, 70.0);
@@ -324,8 +326,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_metrics_collection() {
-        let manager = K8sManager::new("beejs".to_string());
-        let metrics = manager.collect_metrics().await.unwrap();
+        let manager: _ = K8sManager::new("beejs".to_string());
+        let metrics: _ = manager.collect_metrics().await.unwrap();
 
         assert!(metrics.cpu_usage >= 0.0 && metrics.cpu_usage <= 100.0);
         assert!(metrics.memory_usage >= 0.0 && metrics.memory_usage <= 100.0);

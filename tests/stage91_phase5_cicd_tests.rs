@@ -6,6 +6,8 @@
 mod tests {
     use std::fs;
     use std::path::Path;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// ========== CI/CD 配置测试 ==========
 
@@ -14,13 +16,13 @@ mod tests {
         // 测试 GitHub Actions 工作流
         println!("✓ GitHub Actions workflow test");
 
-        let workflow_path = Path::new(".github/workflows/ci.yml");
+        let workflow_path: _ = Path::new(".github/workflows/ci.yml");
         if workflow_path.exists() {
             println!("✓ CI workflow file found");
-            let content = fs::read_to_string(workflow_path).unwrap_or_default();
+            let content: _ = fs::read_to_string(workflow_path).unwrap_or_default();
 
             // 检查关键配置
-            let required_elements = vec![
+            let required_elements: _ = vec![
                 "on:",
                 "jobs:",
                 "test:",
@@ -140,9 +142,9 @@ mod tests {
         // 测试语义化版本管理
         println!("✓ Semantic versioning test");
 
-        let cargo_toml = Path::new("Cargo.toml");
+        let cargo_toml: _ = Path::new("Cargo.toml");
         if cargo_toml.exists() {
-            let content = fs::read_to_string(cargo_toml).unwrap_or_default();
+            let content: _ = fs::read_to_string(cargo_toml).unwrap_or_default();
             if content.contains("version = ") {
                 println!("✓ Version defined in Cargo.toml");
             }

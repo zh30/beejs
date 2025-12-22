@@ -25,7 +25,7 @@ impl SnapshotPrettyPrinter {
 
     /// Format value nicely
     fn format_pretty(&self, value: &dyn std::fmt::Display) -> String {
-        let str_value = value.to_string();
+        let str_value: _ = value.clone();to_string();
 
         // Try to parse as JSON and pretty print
         if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&str_value) {
@@ -38,7 +38,7 @@ impl SnapshotPrettyPrinter {
 
     /// Render inline snapshot
     pub fn render_inline(&self, value: &dyn std::fmt::Display) -> String {
-        let rendered = self.render(value);
+        let rendered: _ = self.render(value);
         format!("Snapshot({})", rendered)
     }
 
@@ -167,8 +167,8 @@ impl SnapshotRenderer {
         result.push_str("Snapshot Test Summary\n");
         result.push_str("===================\n\n");
 
-        let matched = comparisons.iter().filter(|c| c.matches).count();
-        let mismatched = comparisons.len() - matched;
+        let matched: _ = comparisons.iter().filter(|c| c.matches).count();
+        let mismatched: _ = comparisons.len() - matched;
 
         result.push_str(&format!("Total: {} snapshots\n", comparisons.len()));
         result.push_str(&format!("Matched: {}\n", matched));
@@ -213,25 +213,27 @@ impl SnapshotRenderer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_pretty_print_json() {
-        let config = SnapshotConfig::default();
-        let printer = SnapshotPrettyPrinter::new(config);
+        let config: _ = SnapshotConfig::default();
+        let printer: _ = SnapshotPrettyPrinter::new(config);
 
-        let value = r#"{"name":"test","value":42}"#;
-        let rendered = printer.render(&value);
+        let value: _ = r#"{"name":"test","value":42}"#;
+        let rendered: _ = printer.render(&value);
 
         assert!(rendered.contains("\"name\": \"test\""));
     }
 
     #[test]
     fn test_render_comparison_match() {
-        let config = SnapshotConfig::default();
-        let renderer = SnapshotRenderer::new(config);
+        let config: _ = SnapshotConfig::default();
+        let renderer: _ = SnapshotRenderer::new(config);
 
-        let comparison = SnapshotComparison::new_match("test".to_string(), "value".to_string());
-        let rendered = renderer.render_test_result("test", &"value", &comparison);
+        let comparison: _ = SnapshotComparison::new_match("test".to_string(), "value".to_string());
+        let rendered: _ = renderer.render_test_result("test", &"value", &comparison);
 
         assert!(rendered.contains("✓"));
         assert!(rendered.contains("test"));
@@ -239,15 +241,15 @@ mod tests {
 
     #[test]
     fn test_render_comparison_mismatch() {
-        let config = SnapshotConfig::default();
-        let renderer = SnapshotRenderer::new(config);
+        let config: _ = SnapshotConfig::default();
+        let renderer: _ = SnapshotRenderer::new(config);
 
-        let comparison = SnapshotComparison::new_mismatch(
+        let comparison: _ = SnapshotComparison::new_mismatch(
             "test".to_string(),
             "new_value".to_string(),
             "old_value".to_string(),
         );
-        let rendered = renderer.render_test_result("test", &"new_value", &comparison);
+        let rendered: _ = renderer.render_test_result("test", &"new_value", &comparison);
 
         assert!(rendered.contains("✗"));
         assert!(rendered.contains("Expected:"));
@@ -256,10 +258,10 @@ mod tests {
 
     #[test]
     fn test_render_summary() {
-        let config = SnapshotConfig::default();
-        let renderer = SnapshotRenderer::new(config);
+        let config: _ = SnapshotConfig::default();
+        let renderer: _ = SnapshotRenderer::new(config);
 
-        let comparisons = vec![
+        let comparisons: _ = vec![
             SnapshotComparison::new_match("test1".to_string(), "value1".to_string()),
             SnapshotComparison::new_match("test2".to_string(), "value2".to_string()),
             SnapshotComparison::new_mismatch(
@@ -269,7 +271,7 @@ mod tests {
             ),
         ];
 
-        let rendered = renderer.render_summary(&comparisons);
+        let rendered: _ = renderer.render_summary(&comparisons);
 
         assert!(rendered.contains("Total: 3"));
         assert!(rendered.contains("Matched: 2"));
@@ -279,10 +281,10 @@ mod tests {
 
     #[test]
     fn test_render_metadata() {
-        let config = SnapshotConfig::default();
-        let printer = SnapshotPrettyPrinter::new(config);
+        let config: _ = SnapshotConfig::default();
+        let printer: _ = SnapshotPrettyPrinter::new(config);
 
-        let metadata = SnapshotMetadata {
+        let metadata: _ = SnapshotMetadata {
             name: "test".to_string(),
             version: "1".to_string(),
             created_at: "1234567890".to_string(),
@@ -291,7 +293,7 @@ mod tests {
             size_bytes: 100,
         };
 
-        let rendered = printer.render_metadata(&metadata);
+        let rendered: _ = printer.render_metadata(&metadata);
 
         assert!(rendered.contains("Snapshot: test"));
         assert!(rendered.contains("Lines: 10"));

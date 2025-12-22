@@ -91,23 +91,23 @@ impl BatchProcessor {
     pub fn new(strategy: BatchStrategy) -> Self {
         BatchProcessor {
             strategy,
-            current_batch: Arc::new(RwLock::new(Vec::new())),
-            stats: Arc::new(Mutex::new(BatchStats {
+            current_batch: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(BatchStats {
                 total_batches: 0,
                 total_items: 0,
                 average_batch_size: 0.0,
                 average_latency_ms: 0.0,
                 throughput: 0.0,
                 gpu_utilization: 0.0,
-            })),
-            processing_task: Arc::new(Mutex::new(None)),
+            }))),
+            processing_task: Arc::new(std::sync::Mutex::new(Mutex::new(None))),
         }
     }
 
     /// 添加推理请求到批处理队列
     pub async fn add_request(&self, model: &ModelHandle, input: Tensor) -> Result<InferenceResult> {
         let (sender, receiver) = tokio::sync::oneshot::channel();
-        let item = BatchItem {
+        let item: _ = BatchItem {
             input,
             sender,
             received_at: Instant::now(),
@@ -128,12 +128,12 @@ impl BatchProcessor {
 
     /// 检查并处理批处理
     async fn check_and_process_batch(&self) -> Result<()> {
-        let batch_size = {
+        let batch_size: _ = {
             let batch = self.current_batch.read().await;
             batch.len()
         };
 
-        let should_process = match &self.strategy {
+        let should_process: _ = match &self.strategy {
             BatchStrategy::Fixed(size) => batch_size >= *size,
             BatchStrategy::Dynamic(config) => {
                 batch_size >= config.min_batch_size ||
@@ -154,9 +154,9 @@ impl BatchProcessor {
 
     /// 检查是否超时
     async fn should_timeout(&self, timeout_ms: u64) -> bool {
-        let batch = self.current_batch.read().await;
+        let batch: _ = self.current_batch.read().await;
         if let Some(first_item) = batch.first() {
-            let elapsed = first_item.received_at.elapsed();
+            let elapsed: _ = first_item.received_at.elapsed();
             elapsed >= Duration::from_millis(timeout_ms)
         } else {
             false
@@ -166,9 +166,9 @@ impl BatchProcessor {
     /// 处理当前批处理
     async fn process_batch(&self) -> Result<()> {
         // 获取批处理项
-        let items = {
+        let items: _ = {
             let mut batch = self.current_batch.write().await;
-            let items = batch.split_off(0);
+            let items: _ = batch.split_off(0);
             items
         };
 
@@ -177,35 +177,35 @@ impl BatchProcessor {
         }
 
         // 启动处理任务
-        let items_count = items.len();
-        let _current_batch = Arc::clone(&self.current_batch);
-        let stats = Arc::clone(&self.stats);
+        let items_count: _ = items.len();
+        let _current_batch: _ = Arc::clone(&self.current_batch);
+        let stats: _ = Arc::clone(&self.stats);
 
-        let handle = tokio::spawn(async move {
+        let handle: _ = tokio::spawn(async move {
             let start = Instant::now();
 
             // 模拟批处理推理
             // 在实际实现中，这里会调用 ONNX Runtime 批处理推理
-            let outputs = simulate_batch_inference(&items).await;
+            let outputs: _ = simulate_batch_inference(&items).await;
 
-            let processing_time = start.elapsed();
+            let processing_time: _ = start.elapsed();
 
             // 发送结果
             for (item, output) in items.into_iter().zip(outputs) {
-                let latency = item.received_at.elapsed();
-                let result = InferenceResult {
+                let latency: _ = item.received_at.elapsed();
+                let result: _ = InferenceResult {
                     output,
                     inference_time_ms: latency.as_secs_f64() * 1000.0,
                     model_id: "batch_model".to_string(),
                     gpu_used: true,
                 };
 
-                let _ = item.sender.send(Ok(result));
+                let _: _ = item.sender.send(Ok(result));
             }
 
             // 更新统计信息
             {
-                let mut stats = stats.lock().unwrap();
+                let mut stats = stats.clone();lock().unwrap();
                 stats.total_batches += 1;
                 stats.total_items += items_count as u64;
                 stats.average_batch_size = stats.total_items as f64 / stats.total_batches as f64;
@@ -230,7 +230,7 @@ impl BatchProcessor {
 
     /// 强制处理当前批处理
     pub async fn flush(&self) -> Result<()> {
-        let has_items = {
+        let has_items: _ = {
             let batch = self.current_batch.read().await;
             !batch.is_empty()
         };
@@ -245,10 +245,10 @@ impl BatchProcessor {
 
 /// 模拟批处理推理
 async fn simulate_batch_inference(items: &[BatchItem]) -> Vec<Tensor> {
-    let batch_size = items.len();
+    let batch_size: _ = items.len();
 
     // 模拟批处理推理时间（应该比单次推理更快）
-    let processing_time = match batch_size {
+    let processing_time: _ = match batch_size {
         1 => Duration::from_millis(15),
         2..=4 => Duration::from_millis(20),
         5..=8 => Duration::from_millis(30),
@@ -260,7 +260,7 @@ async fn simulate_batch_inference(items: &[BatchItem]) -> Vec<Tensor> {
     // 生成输出张量
     let mut outputs = Vec::new();
     for _ in 0..batch_size {
-        let output = Tensor::new(vec![1.0; 1000], vec![1, 1000]).unwrap();
+        let output: _ = Tensor::new(vec![1.0; 1000], vec![1, 1000]).unwrap();
         outputs.push(output);
     }
 
@@ -309,7 +309,7 @@ struct AdaptiveParams {
 impl SmartBatchProcessor {
     /// 创建新的智能批处理器
     pub fn new(initial_batch_size: usize) -> Self {
-        let strategy = BatchStrategy::Adaptive(AdaptiveConfig {
+        let strategy: _ = BatchStrategy::Adaptive(AdaptiveConfig {
             initial_batch_size,
             performance_window: 100,
             latency_threshold_ms: 10.0,
@@ -319,20 +319,20 @@ impl SmartBatchProcessor {
         SmartBatchProcessor {
             processor: BatchProcessor::new(strategy),
             performance_monitor: PerformanceMonitor::new(100),
-            adaptive_params: Arc::new(Mutex::new(AdaptiveParams {
+            adaptive_params: Arc::new(std::sync::Mutex::new(Mutex::new(AdaptiveParams {
                 current_batch_size: initial_batch_size,
                 min_batch_size: 1,
                 max_batch_size: 64,
                 latency_target: 10.0,
                 throughput_target: 1000.0,
                 adjustment_factor: 0.1,
-            })),
+            }))),
         }
     }
 
     /// 添加推理请求
     pub async fn add_request(&self, model: &ModelHandle, input: Tensor) -> Result<InferenceResult> {
-        let result = self.processor.add_request(model, input).await?;
+        let result: _ = self.processor.add_request(model, input).await?;
 
         // 记录性能指标
         self.performance_monitor.record_latency(result.inference_time_ms);
@@ -345,8 +345,8 @@ impl SmartBatchProcessor {
 
     /// 自适应调整批处理大小
     async fn adapt_batch_size(&self) -> Result<()> {
-        let avg_latency = self.performance_monitor.get_average_latency();
-        let current_throughput = self.performance_monitor.get_average_throughput();
+        let avg_latency: _ = self.performance_monitor.get_average_latency();
+        let current_throughput: _ = self.performance_monitor.get_average_throughput();
 
         // 获取自适应参数的锁并更新
         let mut params = self.adaptive_params.lock().unwrap();
@@ -355,14 +355,14 @@ impl SmartBatchProcessor {
         if avg_latency > params.latency_target {
             // 延迟过高，减少批处理大小
             if params.current_batch_size > params.min_batch_size {
-                let new_size = (params.current_batch_size as f64 *
+                let new_size: _ = (params.current_batch_size as f64 *
                     (1.0 - params.adjustment_factor)) as usize;
                 params.current_batch_size = new_size.max(params.min_batch_size);
             }
         } else if current_throughput < params.throughput_target {
             // 吞吐量不足，增加批处理大小
             if params.current_batch_size < params.max_batch_size {
-                let new_size = (params.current_batch_size as f64 *
+                let new_size: _ = (params.current_batch_size as f64 *
                     (1.0 + params.adjustment_factor)) as usize;
                 params.current_batch_size = new_size.min(params.max_batch_size);
             }
@@ -378,7 +378,7 @@ impl SmartBatchProcessor {
 
     /// 获取性能统计
     pub fn get_performance_stats(&self) -> PerformanceStats {
-        let params = self.adaptive_params.lock().unwrap();
+        let params: _ = self.adaptive_params.lock().unwrap();
         PerformanceStats {
             current_batch_size: params.current_batch_size,
             average_latency: self.performance_monitor.get_average_latency(),
@@ -405,8 +405,8 @@ impl PerformanceMonitor {
     /// 创建新的性能监控器
     fn new(window_size: usize) -> Self {
         PerformanceMonitor {
-            latency_history: Arc::new(Mutex::new(Vec::with_capacity(window_size))),
-            throughput_history: Arc::new(Mutex::new(Vec::with_capacity(window_size))),
+            latency_history: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(window_size)))),
+            throughput_history: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(window_size)))),
             window_size,
         }
     }
@@ -431,7 +431,7 @@ impl PerformanceMonitor {
 
     /// 获取平均延迟
     fn get_average_latency(&self) -> f64 {
-        let history = self.latency_history.lock().unwrap();
+        let history: _ = self.latency_history.lock().unwrap();
         if history.is_empty() {
             0.0
         } else {
@@ -441,7 +441,7 @@ impl PerformanceMonitor {
 
     /// 获取平均吞吐量
     fn get_average_throughput(&self) -> f64 {
-        let history = self.throughput_history.lock().unwrap();
+        let history: _ = self.throughput_history.lock().unwrap();
         if history.is_empty() {
             0.0
         } else {
@@ -453,12 +453,14 @@ impl PerformanceMonitor {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_batch_processor_fixed() -> Result<()> {
-        let processor = BatchProcessor::new(BatchStrategy::Fixed(4));
+        let processor: _ = BatchProcessor::new(BatchStrategy::Fixed(4));
 
-        let model = ModelHandle {
+        let model: _ = ModelHandle {
             id: "test".to_string(),
             path: "test.onnx".to_string(),
             format: crate::ai_inference::engine_interface::ModelFormat::ONNX,
@@ -469,11 +471,11 @@ mod tests {
 
         // 添加 4 个请求
         for _ in 0..4 {
-            let input = Tensor::new(vec![1.0; 3 * 224 * 224], vec![1, 3, 224, 224])?;
-            let _ = processor.add_request(&model, input).await?;
+            let input: _ = Tensor::new(vec![1.0; 3 * 224 * 224], vec![1, 3, 224, 224])?;
+            let _: _ = processor.add_request(&model, input).await?;
         }
 
-        let stats = processor.get_stats();
+        let stats: _ = processor.get_stats();
         assert_eq!(stats.total_batches, 1);
         assert_eq!(stats.total_items, 4);
 
@@ -482,16 +484,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_batch_processor_dynamic() -> Result<()> {
-        let config = DynamicConfig {
+        let config: _ = DynamicConfig {
             min_batch_size: 2,
             max_batch_size: 8,
             target_latency_ms: 10.0,
             batch_timeout_ms: 100,
         };
 
-        let processor = BatchProcessor::new(BatchStrategy::Dynamic(config));
+        let processor: _ = BatchProcessor::new(BatchStrategy::Dynamic(config));
 
-        let model = ModelHandle {
+        let model: _ = ModelHandle {
             id: "test".to_string(),
             path: "test.onnx".to_string(),
             format: crate::ai_inference::engine_interface::ModelFormat::ONNX,
@@ -502,11 +504,11 @@ mod tests {
 
         // 添加 2 个请求（触发最小批处理大小）
         for _ in 0..2 {
-            let input = Tensor::new(vec![1.0; 3 * 224 * 224], vec![1, 3, 224, 224])?;
-            let _ = processor.add_request(&model, input).await?;
+            let input: _ = Tensor::new(vec![1.0; 3 * 224 * 224], vec![1, 3, 224, 224])?;
+            let _: _ = processor.add_request(&model, input).await?;
         }
 
-        let stats = processor.get_stats();
+        let stats: _ = processor.get_stats();
         assert_eq!(stats.total_batches, 1);
         assert_eq!(stats.total_items, 2);
 
@@ -515,9 +517,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_smart_batch_processor() -> Result<()> {
-        let processor = SmartBatchProcessor::new(4);
+        let processor: _ = SmartBatchProcessor::new(4);
 
-        let model = ModelHandle {
+        let model: _ = ModelHandle {
             id: "test".to_string(),
             path: "test.onnx".to_string(),
             format: crate::ai_inference::engine_interface::ModelFormat::ONNX,
@@ -528,11 +530,11 @@ mod tests {
 
         // 添加多个请求
         for _ in 0..10 {
-            let input = Tensor::new(vec![1.0; 3 * 224 * 224], vec![1, 3, 224, 224])?;
-            let _ = processor.add_request(&model, input).await?;
+            let input: _ = Tensor::new(vec![1.0; 3 * 224 * 224], vec![1, 3, 224, 224])?;
+            let _: _ = processor.add_request(&model, input).await?;
         }
 
-        let perf_stats = processor.get_performance_stats();
+        let perf_stats: _ = processor.get_performance_stats();
         assert!(perf_stats.current_batch_size >= 1);
         assert!(perf_stats.current_batch_size <= 64);
 

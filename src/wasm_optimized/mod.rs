@@ -11,3 +11,5 @@ pub mod cache_manager;
 
 // 重新导出主要类型
 pub use cache_manager::WasmCacheManager;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};

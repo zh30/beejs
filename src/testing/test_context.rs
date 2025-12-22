@@ -3,6 +3,8 @@
 
 use std::time::Duration;
 use rusty_v8 as v8;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Test case representation
 #[derive(Clone, Debug)]
@@ -122,8 +124,8 @@ pub struct ExecutionContext<'a> {
 
 impl<'a> ExecutionContext<'a> {
     pub fn new(suite: &'a TestSuite) -> Self {
-        let suite_stack = vec![suite];
-        let current = suite;
+        let suite_stack: _ = vec![suite];
+        let current: _ = suite;
 
         // Build suite stack from root to current
         while let Some(parent_name) = &current.parent {

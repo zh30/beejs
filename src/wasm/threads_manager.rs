@@ -29,7 +29,7 @@ pub struct ThreadPoolConfig {
 
 impl Default for ThreadPoolConfig {
     fn default() -> Self {
-        let cpus = num_cpus::get();
+        let cpus: _ = num_cpus::get();
         Self {
             max_threads: cpus,
             min_threads: 1,
@@ -128,11 +128,11 @@ impl SharedMemoryRegion {
     /// 创建新的共享内存区域
     pub fn new(size: usize) -> Self {
         // 页面对齐（4KB）
-        let page_size = 4096;
-        let aligned_size = ((size + page_size - 1) / page_size) * page_size;
+        let page_size: _ = 4096;
+        let aligned_size: _ = ((size + page_size - 1) / page_size) * page_size;
 
         Self {
-            data: Arc::new(RwLock::new(vec![0u8; aligned_size])),
+            data: Arc::new(std::sync::Mutex::new(RwLock::new(vec![0u8; aligned_size]))),
             size: aligned_size,
             alignment: page_size,
         }
@@ -175,7 +175,7 @@ impl SharedMemoryRegion {
             return Err("Read out of bounds".to_string());
         }
 
-        let guard = self.data.read().map_err(|_| "Lock poisoned")?;
+        let guard: _ = self.data.read().map_err(|_| "Lock poisoned")?;
         buffer.copy_from_slice(&guard[offset..offset + buffer.len()]);
         Ok(())
     }
@@ -212,7 +212,7 @@ impl<T> WasmMutex<T> {
 
     /// 锁定
     pub fn lock(&self) -> Result<WasmMutexGuard<'_, T>, String> {
-        let guard = self.inner.lock().map_err(|_| "Lock poisoned")?;
+        let guard: _ = self.inner.lock().map_err(|_| "Lock poisoned")?;
         self.locked.store(true, Ordering::SeqCst);
         Ok(WasmMutexGuard {
             guard,
@@ -319,7 +319,7 @@ pub struct WasmThreadsManager {
     /// 统计信息
     stats: Arc<ManagerStats>,
     /// 线程本地存储
-    thread_local_storage: RwLock<HashMap<String, Box<dyn std::any::Any + Send + Sync>>>,
+    thread_local_storage: RwLock<HashMap<String, Box<dyn std::any::Any + Send + Sync, std::collections::HashMap<String, Box<dyn std::any::Any + Send + Sync, String, Box<dyn std::any::Any + Send + Sync>>>>,
 }
 
 /// 内部统计（可安全跨线程共享）
@@ -347,8 +347,8 @@ impl WasmThreadsManager {
         Self {
             config,
             initialized: true,
-            shutdown: Arc::new(AtomicBool::new(false)),
-            stats: Arc::new(ManagerStats::new()),
+            shutdown: Arc::new(std::sync::Mutex::new(AtomicBool::new(false))),
+            stats: Arc::new(std::sync::Mutex::new(ManagerStats::new())),
             thread_local_storage: RwLock::new(HashMap::new()),
         }
     }
@@ -365,12 +365,12 @@ impl WasmThreadsManager {
 
     /// 获取统计信息
     pub fn get_stats(&self) -> ThreadStats {
-        let total = self.stats.total_tasks.load(Ordering::Relaxed);
-        let completed = self.stats.completed_tasks.load(Ordering::Relaxed);
-        let total_time_ns = self.stats.total_execution_time_ns.load(Ordering::Relaxed);
-        let active = self.stats.active_threads.load(Ordering::Relaxed) as usize;
+        let total: _ = self.stats.total_tasks.load(Ordering::Relaxed);
+        let completed: _ = self.stats.completed_tasks.load(Ordering::Relaxed);
+        let total_time_ns: _ = self.stats.total_execution_time_ns.load(Ordering::Relaxed);
+        let active: _ = self.stats.active_threads.load(Ordering::Relaxed) as usize;
 
-        let avg_time = if completed > 0 {
+        let avg_time: _ = if completed > 0 {
             Duration::from_nanos(total_time_ns / completed)
         } else {
             Duration::default()
@@ -399,14 +399,14 @@ impl WasmThreadsManager {
         self.stats.total_tasks.fetch_add(1, Ordering::Relaxed);
         self.stats.active_threads.fetch_add(1, Ordering::Relaxed);
 
-        let cancelled = Arc::new(AtomicBool::new(false));
-        let cancelled_clone = cancelled.clone();
-        let stats = self.stats.clone();
+        let cancelled: _ = Arc::new(std::sync::Mutex::new(AtomicBool::new(false)));
+        let cancelled_clone: _ = cancelled.clone();
+        let stats: _ = self.stats.clone();
 
-        let handle = thread::spawn(move || {
+        let handle: _ = thread::spawn(move || {
             let start = Instant::now();
-            let result = f();
-            let elapsed = start.elapsed();
+            let result: _ = f();
+            let elapsed: _ = start.elapsed();
 
             stats.completed_tasks.fetch_add(1, Ordering::Relaxed);
             stats.active_threads.fetch_sub(1, Ordering::Relaxed);
@@ -427,7 +427,7 @@ impl WasmThreadsManager {
         F: FnOnce() -> T + Send + 'static,
         T: Send + 'static,
     {
-        let handle = self.spawn(f)?;
+        let handle: _ = self.spawn(f)?;
         Ok(CancellableHandle { inner: handle })
     }
 
@@ -449,7 +449,7 @@ impl WasmThreadsManager {
 
     /// 获取线程本地存储
     pub fn get_thread_local<T: Clone + 'static>(&self, key: &str) -> Option<T> {
-        let storage = self.thread_local_storage.read().unwrap();
+        let storage: _ = self.thread_local_storage.read().unwrap();
         storage
             .get(key)
             .and_then(|v| v.downcast_ref::<T>())
@@ -466,25 +466,27 @@ impl Default for WasmThreadsManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_manager_creation() {
-        let manager = WasmThreadsManager::new(ThreadPoolConfig::default());
+        let manager: _ = WasmThreadsManager::new(ThreadPoolConfig::default());
         assert!(manager.is_initialized());
     }
 
     #[test]
     fn test_simple_task() {
-        let manager = WasmThreadsManager::new(ThreadPoolConfig::default());
-        let handle = manager.spawn(|| 42).unwrap();
-        let result = handle.join().unwrap();
+        let manager: _ = WasmThreadsManager::new(ThreadPoolConfig::default());
+        let handle: _ = manager.spawn(|| 42).unwrap();
+        let result: _ = handle.join().unwrap();
         assert_eq!(result, 42);
     }
 
     #[test]
     fn test_shared_memory() {
-        let manager = WasmThreadsManager::new(ThreadPoolConfig::default());
-        let region = manager.create_shared_memory(1024).unwrap();
+        let manager: _ = WasmThreadsManager::new(ThreadPoolConfig::default());
+        let region: _ = manager.create_shared_memory(1024).unwrap();
         assert_eq!(region.size(), 4096); // 页面对齐
 
         region.write(0, &[1, 2, 3, 4]).unwrap();
@@ -495,7 +497,7 @@ mod tests {
 
     #[test]
     fn test_mutex() {
-        let mutex = WasmMutex::new(0);
+        let mutex: _ = WasmMutex::new(0);
         {
             let mut guard = mutex.lock().unwrap();
             *guard = 42;
@@ -507,7 +509,7 @@ mod tests {
 
     #[test]
     fn test_atomic() {
-        let atomic = WasmAtomic::new(0);
+        let atomic: _ = WasmAtomic::new(0);
         atomic.store(42);
         assert_eq!(atomic.load(), 42);
         assert_eq!(atomic.fetch_add(8), 42);

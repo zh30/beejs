@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 //! 硬件后端实现
 
 /// 内存信息
@@ -56,15 +58,15 @@ impl HardwareBackend {
 
     /// 计算最优批大小
     pub fn optimal_batch_size(&self, model_size: usize) -> usize {
-        let available = self.memory_info().available_memory;
+        let available: _ = self.memory_info().available_memory;
 
         // 保守估计：使用 50% 可用内存
-        let usable = available / 2;
+        let usable: _ = available / 2;
 
         // 每个样本需要的内存（模型大小 + 中间结果）
-        let per_sample = model_size * 4; // 假设需要 4 倍模型大小
+        let per_sample: _ = model_size * 4; // 假设需要 4 倍模型大小
 
-        let batch_size = usable / per_sample;
+        let batch_size: _ = usable / per_sample;
 
         // 限制在合理范围内
         batch_size.max(1).min(1024)

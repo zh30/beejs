@@ -9,6 +9,8 @@ use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
 
 use crate::aiops::anomaly_detection::{AnomalyDetector, Anomaly, BaselineCalculator};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 系统指标类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -33,7 +35,7 @@ pub struct SystemMetric {
     pub metric_type: MetricType,
     pub value: f64,
     pub timestamp: SystemTime,
-    pub labels: HashMap<String, String>,
+    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 时间序列数据点
@@ -91,7 +93,7 @@ pub struct TrendAnalyzer {
 impl TrendAnalyzer {
     pub fn new() -> Self {
         Self {
-            baseline_calculator: Arc::new(BaselineCalculator::new()),
+            baseline_calculator: Arc::new(std::sync::Mutex::new(BaselineCalculator::new())),
         }
     }
 
@@ -105,13 +107,13 @@ impl TrendAnalyzer {
         let (slope, intercept) = self.calculate_linear_regression(time_series)?;
 
         // 计算置信度
-        let confidence = self.calculate_confidence(time_series, slope)?;
+        let confidence: _ = self.calculate_confidence(time_series, slope)?;
 
         // 确定趋势方向
-        let direction = self.determine_direction(slope, confidence)?;
+        let direction: _ = self.determine_direction(slope, confidence)?;
 
         // 预测未来值
-        let predicted_values = self.predict_future_values(time_series, slope, intercept)?;
+        let predicted_values: _ = self.predict_future_values(time_series, slope, intercept)?;
 
         Ok(TrendReport {
             direction,
@@ -122,15 +124,15 @@ impl TrendAnalyzer {
     }
 
     fn calculate_linear_regression(&self, time_series: &[TimeSeriesData]) -> Result<(f64, f64), Box<dyn std::error::Error>> {
-        let n = time_series.len() as f64;
+        let n: _ = time_series.len() as f64;
         let mut sum_x = 0.0;
         let mut sum_y = 0.0;
         let mut sum_xy = 0.0;
         let mut sum_x2 = 0.0;
 
         for (i, data) in time_series.iter().enumerate() {
-            let x = i as f64;
-            let y = data.value;
+            let x: _ = i as f64;
+            let y: _ = data.value;
 
             sum_x += x;
             sum_y += y;
@@ -138,8 +140,8 @@ impl TrendAnalyzer {
             sum_x2 += x * x;
         }
 
-        let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
-        let intercept = (sum_y - slope * sum_x) / n;
+        let slope: _ = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
+        let intercept: _ = (sum_y - slope * sum_x) / n;
 
         Ok((slope, intercept))
     }
@@ -151,13 +153,13 @@ impl TrendAnalyzer {
             .sum::<f64>() / time_series.len() as f64;
 
         // 基于方差计算置信度（方差越小，置信度越高）
-        let confidence = 1.0 / (1.0 + variance);
+        let confidence: _ = 1.0 / (1.0 + variance);
 
         Ok(confidence.min(1.0).max(0.0))
     }
 
     fn determine_direction(&self, slope: f64, confidence: f64) -> Result<TrendDirection, Box<dyn std::error::Error>> {
-        let threshold = 0.1;
+        let threshold: _ = 0.1;
 
         if confidence < 0.5 {
             return Ok(TrendDirection::Volatile);
@@ -173,12 +175,12 @@ impl TrendAnalyzer {
     }
 
     fn predict_future_values(&self, time_series: &[TimeSeriesData], slope: f64, intercept: f64) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
-        let n = time_series.len();
+        let n: _ = time_series.len();
         let mut predictions = Vec::new();
 
         // 预测未来 5 个时间点的值
         for i in n..n + 5 {
-            let predicted_value = slope * i as f64 + intercept;
+            let predicted_value: _ = slope * i as f64 + intercept;
             predictions.push(predicted_value);
         }
 
@@ -201,7 +203,7 @@ pub struct ModelTrainer {
 impl ModelTrainer {
     pub fn new() -> Self {
         Self {
-            historical_data: Arc::new(RwLock::new(Vec::new())),
+            historical_data: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         }
     }
 
@@ -217,11 +219,11 @@ impl ModelTrainer {
     }
 
     /// 计算故障概率
-    pub async fn calculate_failure_probability(&self, metrics: &[SystemMetric]) -> Result<HashMap<MetricType, f64>, Box<dyn std::error::Error>> {
+    pub async fn calculate_failure_probability(&self, metrics: &[SystemMetric]) -> Result<HashMap<MetricType, f64, std::collections::HashMap<MetricType, f64, MetricType, f64>>, Box<dyn std::error::Error>> {
         let mut probabilities = HashMap::new();
 
         for metric in metrics {
-            let probability = match metric.metric_type {
+            let probability: _ = match metric.metric_type {
                 MetricType::CpuUsage => self.calculate_cpu_failure_probability(metric.value),
                 MetricType::MemoryUsage => self.calculate_memory_failure_probability(metric.value),
                 MetricType::DiskUsage => self.calculate_disk_failure_probability(metric.value),
@@ -337,9 +339,9 @@ pub struct PredictionEngine {
 impl PredictionEngine {
     pub fn new() -> Self {
         Self {
-            anomaly_detector: Arc::new(AnomalyDetector::new()),
-            trend_analyzer: Arc::new(TrendAnalyzer::new()),
-            model_trainer: Arc::new(ModelTrainer::new()),
+            anomaly_detector: Arc::new(std::sync::Mutex::new(AnomalyDetector::new())),
+            trend_analyzer: Arc::new(std::sync::Mutex::new(TrendAnalyzer::new())),
+            model_trainer: Arc::new(std::sync::Mutex::new(ModelTrainer::new())),
         }
     }
 
@@ -352,7 +354,7 @@ impl PredictionEngine {
         let mut predictions = Vec::new();
 
         // 按指标类型分组
-        let metrics_by_type = self.group_metrics_by_type(metrics);
+        let metrics_by_type: _ = self.group_metrics_by_type(metrics);
 
         // 对每种指标类型进行预测
         for (metric_type, type_metrics) in metrics_by_type {
@@ -360,19 +362,19 @@ impl PredictionEngine {
             let values: Vec<f64> = type_metrics.iter().map(|m| m.value).collect();
 
             // 检测异常
-            let anomalies = self.anomaly_detector.detect_anomalies(&values).await?;
+            let anomalies: _ = self.anomaly_detector.detect_anomalies(&values).await?;
 
             // 分析趋势
-            let time_series = self.convert_to_time_series(&type_metrics);
-            let trend_report = self.trend_analyzer.analyze_trends(&time_series).await?;
+            let time_series: _ = self.convert_to_time_series(&type_metrics);
+            let trend_report: _ = self.trend_analyzer.analyze_trends(&time_series).await?;
 
             // 计算故障概率
-            let probabilities = self.model_trainer.calculate_failure_probability(&type_metrics).await?;
-            let probability = probabilities.get(&metric_type).unwrap_or(&0.0);
+            let probabilities: _ = self.model_trainer.calculate_failure_probability(&type_metrics).await?;
+            let probability: _ = probabilities.get(&metric_type).unwrap_or(&0.0);
 
             // 生成预测（如果概率超过阈值）
             if *probability > 0.5 {
-                let prediction = self.create_prediction(
+                let prediction: _ = self.create_prediction(
                     metric_type,
                     *probability,
                     &anomalies,
@@ -393,16 +395,16 @@ impl PredictionEngine {
 
     /// 计算故障概率
     pub async fn calculate_failure_probability(&self, system_metrics: &[SystemMetric]) -> Result<f64, Box<dyn std::error::Error>> {
-        let probabilities = self.model_trainer.calculate_failure_probability(system_metrics).await?;
+        let probabilities: _ = self.model_trainer.calculate_failure_probability(system_metrics).await?;
 
         // 计算综合概率（取最大值）
-        let max_probability = probabilities.values()
+        let max_probability: _ = probabilities.values()
             .fold(0.0, |max, &prob| if prob > max { prob } else { max });
 
         Ok(max_probability)
     }
 
-    fn group_metrics_by_type(&self, metrics: &[SystemMetric]) -> HashMap<MetricType, Vec<SystemMetric>> {
+    fn group_metrics_by_type(&self, metrics: &[SystemMetric]) -> HashMap<MetricType, Vec<SystemMetric, std::collections::HashMap<MetricType, Vec<SystemMetric, MetricType, Vec<SystemMetric>>> {
         let mut grouped = HashMap::new();
 
         for metric in metrics {
@@ -431,7 +433,7 @@ impl PredictionEngine {
         anomalies: &[Anomaly],
         trend_report: &TrendReport,
     ) -> Result<Prediction, Box<dyn std::error::Error>> {
-        let severity = if probability > 0.9 {
+        let severity: _ = if probability > 0.9 {
             PredictionSeverity::Critical
         } else if probability > 0.7 {
             PredictionSeverity::High
@@ -441,9 +443,9 @@ impl PredictionEngine {
             PredictionSeverity::Low
         };
 
-        let affected_services = self.identify_affected_services(metric_type);
+        let affected_services: _ = self.identify_affected_services(metric_type);
 
-        let recommendations = self.generate_recommendations(metric_type, probability, anomalies, trend_report)?;
+        let recommendations: _ = self.generate_recommendations(metric_type, probability, anomalies, trend_report)?;
 
         Ok(Prediction {
             metric_type,

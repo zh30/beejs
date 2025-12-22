@@ -46,7 +46,7 @@ pub struct BundleOutput {
     pub chunks: Vec<Chunk>,
     pub total_size: usize,
     pub entry_points: Vec<String>,
-    pub assets: HashMap<String, Vec<u8>>,
+    pub assets: HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>,
 }
 
 /// Build options
@@ -69,12 +69,12 @@ pub struct BuildStats {
     pub build_time_ms: u64,
     pub bundle_size: usize,
     pub throughput_mbps: f64,
-    pub phases: HashMap<String, u64>,
+    pub phases: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
 }
 
 /// High-performance Bundler
 pub struct Bundler {
-    modules: Arc<Mutex<HashMap<String, Module>>>,
+    modules: Arc<Mutex<HashMap<String, Module, std::collections::HashMap<String, Module, String, Module>>>>,
     options: BuildOptions,
     stats: Arc<Mutex<BuildStats>>,
 }
@@ -83,14 +83,14 @@ impl Bundler {
     /// Create new bundler
     pub fn new(options: BuildOptions) -> Self {
         Self {
-            modules: Arc::new(Mutex::new(HashMap::new())),
+            modules: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
             options,
-            stats: Arc::new(Mutex::new(BuildStats {
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(BuildStats {
                 total_modules: 0,
                 build_time_ms: 0,
                 bundle_size: 0,
                 throughput_mbps: 0.0,
-                phases: HashMap::new(),
+                phases: HashMap::new()),
             })),
         }
     }
@@ -104,7 +104,7 @@ impl Bundler {
 
     /// Get all modules (clone the data)
     pub fn get_modules(&self) -> Vec<Module> {
-        let modules = self.modules.lock().unwrap();
+        let modules: _ = self.modules.lock().unwrap();
         modules.values().cloned().collect()
     }
 
@@ -116,12 +116,12 @@ impl Bundler {
             ModuleType::JavaScript | ModuleType::TypeScript | ModuleType::JSX | ModuleType::TSX => {
                 // Parse import statements
                 for line in code.lines() {
-                    let line = line.trim();
+                    let line: _ = line.clone();trim();
 
                     // ES6 imports: import x from 'y'
                     if let Some(start) = line.find("from '") {
                         if let Some(end) = line[start + 6..].find('\'') {
-                            let dep = &line[start + 6..start + 6 + end];
+                            let dep: _ = &line[start + 6..start + 6 + end];
                             dependencies.push(dep.to_string());
                         }
                     }
@@ -129,7 +129,7 @@ impl Bundler {
                     // CommonJS require: require('x')
                     if let Some(start) = line.find("require('") {
                         if let Some(end) = line[start + 9..].find('\'') {
-                            let dep = &line[start + 9..start + 9 + end];
+                            let dep: _ = &line[start + 9..start + 9 + end];
                             dependencies.push(dep.to_string());
                         }
                     }
@@ -148,46 +148,46 @@ impl Bundler {
 
     /// Build bundle
     pub fn build(&self, entry_points: Vec<String>) -> Result<BundleOutput> {
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
         // Phase 1: Dependency resolution
-        let phase1_start = std::time::Instant::now();
-        let resolved_modules = self.resolve_dependencies(entry_points.clone())?;
-        let phase1_time = phase1_start.elapsed().as_millis() as u64;
+        let phase1_start: _ = std::time::Instant::now();
+        let resolved_modules: _ = self.resolve_dependencies(entry_points.clone())?;
+        let phase1_time: _ = phase1_start.elapsed().as_millis() as u64;
 
         // Phase 2: Module transformation
-        let phase2_start = std::time::Instant::now();
-        let transformed_modules = self.transform_modules(resolved_modules)?;
-        let phase2_time = phase2_start.elapsed().as_millis() as u64;
+        let phase2_start: _ = std::time::Instant::now();
+        let transformed_modules: _ = self.transform_modules(resolved_modules)?;
+        let phase2_time: _ = phase2_start.elapsed().as_millis() as u64;
 
         // Phase 3: Code splitting (if enabled)
-        let phase3_start = std::time::Instant::now();
-        let chunks = if self.options.splitting {
+        let phase3_start: _ = std::time::Instant::now();
+        let chunks: _ = if self.options.splitting {
             self.code_splitting(&transformed_modules)?
         } else {
             vec![self.create_single_chunk(&transformed_modules)?]
         };
-        let phase3_time = phase3_start.elapsed().as_millis() as u64;
+        let phase3_time: _ = phase3_start.elapsed().as_millis() as u64;
 
         // Phase 4: Tree shaking (if enabled)
-        let phase4_start = std::time::Instant::now();
-        let final_chunks = if self.options.tree_shaking {
+        let phase4_start: _ = std::time::Instant::now();
+        let final_chunks: _ = if self.options.tree_shaking {
             self.tree_shaking(chunks)?
         } else {
             chunks
         };
-        let phase4_time = phase4_start.elapsed().as_millis() as u64;
+        let phase4_time: _ = phase4_start.elapsed().as_millis() as u64;
 
         // Phase 5: Minification
-        let phase5_start = std::time::Instant::now();
-        let minified_chunks = if self.options.minify {
+        let phase5_start: _ = std::time::Instant::now();
+        let minified_chunks: _ = if self.options.minify {
             self.minify_chunks(&final_chunks)?
         } else {
             final_chunks
         };
-        let phase5_time = phase5_start.elapsed().as_millis() as u64;
+        let phase5_time: _ = phase5_start.elapsed().as_millis() as u64;
 
-        let total_time = start_time.elapsed().as_millis() as u64;
+        let total_time: _ = start_time.elapsed().as_millis() as u64;
         let total_size: usize = minified_chunks.iter().map(|c| c.size).sum();
 
         // Update stats
@@ -214,7 +214,7 @@ impl Bundler {
 
     /// Resolve dependencies
     fn resolve_dependencies(&self, entry_points: Vec<String>) -> Result<Vec<Module>> {
-        let modules = self.modules.lock().unwrap();
+        let modules: _ = self.modules.lock().unwrap();
         let mut resolved = Vec::new();
         let mut visited = HashSet::new();
         let mut queue = entry_points;
@@ -266,15 +266,15 @@ impl Bundler {
         let mut result = code.to_string();
 
         // Remove type annotations (simplified)
-        result = result.replace(": string", "");
-        result = result.replace(": number", "");
-        result = result.replace(": boolean", "");
-        result = result.replace(": any", "");
+        result = result.clone();replace(": string", "");
+        result = result.clone();replace(": number", "");
+        result = result.clone();replace(": boolean", "");
+        result = result.clone();replace(": any", "");
 
         // Convert interfaces (very simplified - remove interface blocks)
         let lines: Vec<&str> = result.lines()
             .filter(|line| {
-                let line = line.trim();
+                let line: _ = line.clone();trim();
                 !line.starts_with("interface") && !line.starts_with("}")
             })
             .collect();
@@ -325,14 +325,14 @@ impl Bundler {
             let mut code = String::new();
 
             for module_id in &chunk.modules {
-                let modules = self.modules.lock().unwrap();
+                let modules: _ = self.modules.lock().unwrap();
                 if let Some(module) = modules.get(module_id) {
                     // Remove single-line comments
                     let lines: Vec<&str> = module.code.lines()
                         .filter(|line| !line.trim_start().starts_with("//"))
                         .collect();
 
-                    let module_code = lines.join("\n");
+                    let module_code: _ = lines.join("\n");
                     code.push_str(&module_code);
                     code.push('\n');
                 }
@@ -358,10 +358,12 @@ impl Bundler {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_bundler_creation() {
-        let options = BuildOptions {
+        let options: _ = BuildOptions {
             minify: false,
             sourcemap: false,
             target: "es2020".to_string(),
@@ -372,14 +374,14 @@ mod tests {
             parallel_jobs: 4,
         };
 
-        let bundler = Bundler::new(options);
+        let bundler: _ = Bundler::new(options);
         assert_eq!(bundler.options.minify, false);
         assert_eq!(bundler.options.parallel_jobs, 4);
     }
 
     #[test]
     fn test_add_module() {
-        let options = BuildOptions {
+        let options: _ = BuildOptions {
             minify: false,
             sourcemap: true,
             target: "es2020".to_string(),
@@ -389,9 +391,9 @@ mod tests {
             optimization_level: 1,
             parallel_jobs: 4,
         };
-        let bundler = Bundler::new(options);
+        let bundler: _ = Bundler::new(options);
 
-        let module = Module {
+        let module: _ = Module {
             id: "test.js".to_string(),
             path: PathBuf::from("test.js"),
             code: "console.log('test');".to_string(),
@@ -406,7 +408,7 @@ mod tests {
 
     #[test]
     fn test_analyze_dependencies() {
-        let options = BuildOptions {
+        let options: _ = BuildOptions {
             minify: false,
             sourcemap: true,
             target: "es2020".to_string(),
@@ -416,15 +418,15 @@ mod tests {
             optimization_level: 1,
             parallel_jobs: 4,
         };
-        let bundler = Bundler::new(options);
+        let bundler: _ = Bundler::new(options);
 
-        let code = r#"
+        let code: _ = r#"
             import fs from 'fs';
             import path from 'path';
             const util = require('util');
         "#;
 
-        let deps = bundler.analyze_dependencies(code, &ModuleType::JavaScript);
+        let deps: _ = bundler.analyze_dependencies(code, &ModuleType::JavaScript);
         assert_eq!(deps.len(), 3);
         assert!(deps.contains(&"fs".to_string()));
         assert!(deps.contains(&"path".to_string()));
@@ -433,7 +435,7 @@ mod tests {
 
     #[test]
     fn test_typescript_to_javascript() {
-        let options = BuildOptions {
+        let options: _ = BuildOptions {
             minify: true,
             sourcemap: false,
             target: "es2020".to_string(),
@@ -443,22 +445,22 @@ mod tests {
             optimization_level: 3,
             parallel_jobs: 1,
         };
-        let bundler = Bundler::new(options);
+        let bundler: _ = Bundler::new(options);
 
-        let ts_code = r#"
+        let ts_code: _ = r#"
             function greet(name: string): string {
                 return `Hello, ${name}`;
             }
         "#;
 
-        let js_code = bundler.typescript_to_javascript(ts_code);
+        let js_code: _ = bundler.typescript_to_javascript(ts_code);
         assert!(!js_code.contains(": string"));
         assert!(js_code.contains("function greet"));
     }
 
     #[test]
     fn test_build_stats() {
-        let options = BuildOptions {
+        let options: _ = BuildOptions {
             minify: true,
             sourcemap: true,
             target: "es2020".to_string(),
@@ -468,9 +470,9 @@ mod tests {
             optimization_level: 3,
             parallel_jobs: 8,
         };
-        let bundler = Bundler::new(options);
+        let bundler: _ = Bundler::new(options);
 
-        let module = Module {
+        let module: _ = Module {
             id: "test.js".to_string(),
             path: PathBuf::from("test.js"),
             code: "console.log('test');".to_string(),
@@ -482,10 +484,10 @@ mod tests {
 
         bundler.add_module(module).unwrap();
 
-        let result = bundler.build(vec!["test.js".to_string()]);
+        let result: _ = bundler.build(vec!["test.js".to_string()]);
         assert!(result.is_ok());
 
-        let stats = bundler.get_stats();
+        let stats: _ = bundler.get_stats();
         assert_eq!(stats.total_modules, 1);
         assert!(stats.build_time_ms >= 0);  // Build time can be 0ms for simple fast builds
         assert!(stats.throughput_mbps >= 0.0);

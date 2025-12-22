@@ -45,7 +45,7 @@ pub struct EnvoyConfig {
 /// Listener manager
 #[derive(Debug)]
 pub struct ListenerManager {
-    listeners: Arc<RwLock<HashMap<String, EnvoyListener>>>,
+    listeners: Arc<RwLock<HashMap<String, EnvoyListener, std::collections::HashMap<String, EnvoyListener, String, EnvoyListener>>>>,
 }
 
 /// Envoy listener
@@ -67,7 +67,7 @@ pub struct EnvoyFilter {
 /// Service discovery
 #[derive(Debug)]
 pub struct ServiceDiscovery {
-    services: Arc<RwLock<HashMap<String, ServiceInfo>>>,
+    services: Arc<RwLock<HashMap<String, ServiceInfo, std::collections::HashMap<String, ServiceInfo, String, ServiceInfo>>>>,
     config: ServiceMeshConfig,
 }
 
@@ -77,7 +77,7 @@ pub struct ServiceInfo {
     pub name: String,
     pub namespace: String,
     pub endpoints: Vec<ServiceEndpoint>,
-    pub labels: HashMap<String, String>,
+    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub mtls_enabled: bool,
 }
 
@@ -158,14 +158,14 @@ pub struct MeshRequest {
     pub service: String,
     pub method: String,
     pub path: String,
-    pub headers: HashMap<String, String>,
+    pub headers: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub body: Option<Vec<u8>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeshResponse {
     pub status_code: u16,
-    pub headers: HashMap<String, String>,
+    pub headers: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub body: Option<Vec<u8>>,
 }
 
@@ -176,7 +176,7 @@ pub struct ServiceMesh {
     proxy: Arc<EnvoyProxy>,
     discovery: Arc<ServiceDiscovery>,
     routes: Arc<RwLock<Vec<TrafficRoute>>>,
-    circuit_breakers: Arc<RwLock<HashMap<String, CircuitBreaker>>>,
+    circuit_breakers: Arc<RwLock<HashMap<String, CircuitBreaker, std::collections::HashMap<String, CircuitBreaker, String, CircuitBreaker>>>>,
 }
 
 impl ServiceMeshConfig {
@@ -209,7 +209,7 @@ impl EnvoyProxy {
     pub fn new(config: EnvoyConfig) -> Self {
         EnvoyProxy {
             config,
-            listener_manager: Arc::new(ListenerManager::new()),
+            listener_manager: Arc::new(std::sync::Mutex::new(ListenerManager::new())),
         }
     }
 
@@ -233,7 +233,7 @@ impl EnvoyProxy {
 impl ListenerManager {
     fn new() -> Self {
         ListenerManager {
-            listeners: Arc::new(RwLock::new(HashMap::new())),
+            listeners: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -254,7 +254,7 @@ impl ServiceDiscovery {
     /// Create a new service discovery
     pub fn new(config: ServiceMeshConfig) -> Self {
         ServiceDiscovery {
-            services: Arc::new(RwLock::new(HashMap::new())),
+            services: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
             config,
         }
     }
@@ -268,7 +268,7 @@ impl ServiceDiscovery {
 
     /// Discover a service
     pub async fn discover_service(&self, name: &str) -> Result<ServiceInfo> {
-        let services = self.services.read().await;
+        let services: _ = self.services.read().await;
         services.get(name)
             .cloned()
             .ok_or_else(|| anyhow!("Service '{}' not found", name))
@@ -276,7 +276,7 @@ impl ServiceDiscovery {
 
     /// List all services
     pub async fn list_services(&self) -> Result<Vec<String>> {
-        let services = self.services.read().await;
+        let services: _ = self.services.read().await;
         Ok(services.keys().cloned().collect())
     }
 
@@ -300,30 +300,30 @@ impl ServiceDiscovery {
 impl ServiceMesh {
     /// Create a new service mesh
     pub fn new(config: ServiceMeshConfig) -> Result<Self> {
-        let proxy = Arc::new(EnvoyProxy::new(EnvoyConfig {
-            address: "0.0.0.0".to_string(),
+        let proxy: _ = Arc::new(std::sync::Mutex::new(EnvoyProxy::new(EnvoyConfig {
+            address: "0.0.0.0".to_string()),
             port: 15001,
             access_log_path: "/var/log/envoy/access.log".to_string(),
         }));
 
-        let discovery = Arc::new(ServiceDiscovery::new(config.clone()));
+        let discovery: _ = Arc::new(std::sync::Mutex::new(ServiceDiscovery::new(config.clone())));
 
         Ok(ServiceMesh {
             mesh_type: config.mesh_type,
             proxy,
             discovery,
-            routes: Arc::new(RwLock::new(Vec::new())),
-            circuit_breakers: Arc::new(RwLock::new(HashMap::new())),
+            routes: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            circuit_breakers: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         })
     }
 
     /// Route a request through the service mesh
     pub async fn route_request(&self, service: &str, request: &MeshRequest) -> Result<MeshResponse> {
         // Discover the service
-        let service_info = self.discovery.discover_service(service).await?;
+        let service_info: _ = self.discovery.discover_service(service).await?;
 
         // Select endpoint based on load balancing
-        let endpoint = self.select_endpoint(&service_info).await?;
+        let endpoint: _ = self.select_endpoint(&service_info).await?;
 
         // Apply circuit breaker
         if self.is_circuit_open(service).await? {
@@ -331,10 +331,10 @@ impl ServiceMesh {
         }
 
         // Apply routing rules
-        let destination = self.apply_routing_rules(request).await?;
+        let destination: _ = self.apply_routing_rules(request).await?;
 
         // Simulate request forwarding
-        let response = MeshResponse {
+        let response: _ = MeshResponse {
             status_code: 200,
             headers: HashMap::new(),
             body: Some(format!("Response from {}", destination).into_bytes()),
@@ -362,7 +362,7 @@ impl ServiceMesh {
 
     /// Apply routing rules to a request
     async fn apply_routing_rules(&self, request: &MeshRequest) -> Result<String> {
-        let routes = self.routes.read().await;
+        let routes: _ = self.routes.read().await;
 
         for route in &*routes {
             if self.matches_route(route, request) {
@@ -424,7 +424,7 @@ impl ServiceMesh {
 
     /// Check if circuit breaker is open
     async fn is_circuit_open(&self, service: &str) -> Result<bool> {
-        let breakers = self.circuit_breakers.read().await;
+        let breakers: _ = self.circuit_breakers.read().await;
         Ok(breakers.contains_key(service))
     }
 
@@ -436,8 +436,8 @@ impl ServiceMesh {
 
     /// Get mesh statistics
     pub async fn get_statistics(&self) -> Result<MeshStatistics> {
-        let services = self.discovery.list_services().await?;
-        let routes = self.routes.read().await;
+        let services: _ = self.discovery.list_services().await?;
+        let routes: _ = self.routes.read().await;
 
         Ok(MeshStatistics {
             mesh_type: self.mesh_type.clone(),
@@ -460,30 +460,32 @@ pub struct MeshStatistics {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_service_mesh_creation() {
-        let config = ServiceMeshConfig::new(
+        let config: _ = ServiceMeshConfig::new(
             ServiceMeshType::Istio,
             "http://istio-control:15010".to_string(),
             "default".to_string(),
         );
 
-        let mesh = ServiceMesh::new(config).unwrap();
+        let mesh: _ = ServiceMesh::new(config).unwrap();
         assert!(matches!(mesh.mesh_type, ServiceMeshType::Istio));
     }
 
     #[tokio::test]
     async fn test_service_registration() {
-        let config = ServiceMeshConfig::new(
+        let config: _ = ServiceMeshConfig::new(
             ServiceMeshType::Linkerd,
             "http://linkerd:8085".to_string(),
             "default".to_string(),
         );
 
-        let discovery = ServiceDiscovery::new(config);
+        let discovery: _ = ServiceDiscovery::new(config);
 
-        let service = ServiceInfo {
+        let service: _ = ServiceInfo {
             name: "test-service".to_string(),
             namespace: "default".to_string(),
             endpoints: vec![
@@ -500,22 +502,22 @@ mod tests {
 
         discovery.register_service(service.clone()).await.unwrap();
 
-        let discovered = discovery.discover_service("test-service").await.unwrap();
+        let discovered: _ = discovery.discover_service("test-service").await.unwrap();
         assert_eq!(discovered.name, "test-service");
     }
 
     #[tokio::test]
     async fn test_request_routing() {
-        let config = ServiceMeshConfig::new(
+        let config: _ = ServiceMeshConfig::new(
             ServiceMeshType::Istio,
             "http://istio:15010".to_string(),
             "default".to_string(),
         );
 
-        let mesh = ServiceMesh::new(config).unwrap();
+        let mesh: _ = ServiceMesh::new(config).unwrap();
 
         // Register a service
-        let service = ServiceInfo {
+        let service: _ = ServiceInfo {
             name: "backend".to_string(),
             namespace: "default".to_string(),
             endpoints: vec![
@@ -533,7 +535,7 @@ mod tests {
         mesh.discovery.register_service(service).await.unwrap();
 
         // Create a request
-        let request = MeshRequest {
+        let request: _ = MeshRequest {
             service: "backend".to_string(),
             method: "GET".to_string(),
             path: "/api/test".to_string(),
@@ -541,21 +543,21 @@ mod tests {
             body: None,
         };
 
-        let response = mesh.route_request("backend", &request).await.unwrap();
+        let response: _ = mesh.route_request("backend", &request).await.unwrap();
         assert_eq!(response.status_code, 200);
     }
 
     #[tokio::test]
     async fn test_traffic_routing() {
-        let config = ServiceMeshConfig::new(
+        let config: _ = ServiceMeshConfig::new(
             ServiceMeshType::Istio,
             "http://istio:15010".to_string(),
             "default".to_string(),
         );
 
-        let mesh = ServiceMesh::new(config).unwrap();
+        let mesh: _ = ServiceMesh::new(config).unwrap();
 
-        let route = TrafficRoute {
+        let route: _ = TrafficRoute {
             name: "api-route".to_string(),
             source_service: "frontend".to_string(),
             destination_service: "backend".to_string(),
@@ -571,21 +573,21 @@ mod tests {
 
         mesh.add_route(route).await.unwrap();
 
-        let routes = mesh.routes.read().await;
+        let routes: _ = mesh.routes.read().await;
         assert_eq!(routes.len(), 1);
     }
 
     #[tokio::test]
     async fn test_circuit_breaker() {
-        let config = ServiceMeshConfig::new(
+        let config: _ = ServiceMeshConfig::new(
             ServiceMeshType::Istio,
             "http://istio:15010".to_string(),
             "default".to_string(),
         );
 
-        let mesh = ServiceMesh::new(config).unwrap();
+        let mesh: _ = ServiceMesh::new(config).unwrap();
 
-        let breaker = CircuitBreaker {
+        let breaker: _ = CircuitBreaker {
             failure_threshold: 5,
             timeout: std::time::Duration::from_secs(60),
             success_threshold: 3,
@@ -593,35 +595,35 @@ mod tests {
 
         mesh.configure_circuit_breaker("test-service", breaker).await.unwrap();
 
-        let is_open = mesh.is_circuit_open("test-service").await.unwrap();
+        let is_open: _ = mesh.is_circuit_open("test-service").await.unwrap();
         assert!(is_open);
     }
 
     #[tokio::test]
     async fn test_mesh_statistics() {
-        let config = ServiceMeshConfig::new(
+        let config: _ = ServiceMeshConfig::new(
             ServiceMeshType::Istio,
             "http://istio:15010".to_string(),
             "default".to_string(),
         );
 
-        let mesh = ServiceMesh::new(config).unwrap();
+        let mesh: _ = ServiceMesh::new(config).unwrap();
 
-        let stats = mesh.get_statistics().await.unwrap();
+        let stats: _ = mesh.get_statistics().await.unwrap();
         assert_eq!(stats.mesh_type, ServiceMeshType::Istio);
     }
 
     #[tokio::test]
     async fn test_envoy_proxy() {
-        let config = EnvoyConfig {
+        let config: _ = EnvoyConfig {
             address: "0.0.0.0".to_string(),
             port: 15001,
             access_log_path: "/var/log/envoy/access.log".to_string(),
         };
 
-        let proxy = EnvoyProxy::new(config);
+        let proxy: _ = EnvoyProxy::new(config);
 
-        let listener = EnvoyListener {
+        let listener: _ = EnvoyListener {
             name: "http-listener".to_string(),
             address: "0.0.0.0".to_string(),
             port: 8080,

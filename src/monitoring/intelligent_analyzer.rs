@@ -68,22 +68,22 @@ impl IntelligentAnalyzer {
     }
 
     pub fn analyze(&mut self, metrics: &[crate::ai_monitor::PerformanceMetrics]) -> AnalysisReport {
-        let report_id = format!("report_{}", Utc::now().timestamp());
-        let timestamp = Utc::now();
+        let report_id: _ = format!("report_{}", Utc::now().timestamp());
+        let timestamp: _ = Utc::now();
 
         // 检测异常
-        let anomalies = self.detect_anomalies(metrics);
+        let anomalies: _ = self.detect_anomalies(metrics);
 
         // 生成洞察
-        let insights = self.generate_insights(metrics);
+        let insights: _ = self.generate_insights(metrics);
 
         // 计算健康分数
-        let overall_health_score = self.calculate_health_score(metrics, &anomalies);
+        let overall_health_score: _ = self.calculate_health_score(metrics, &anomalies);
 
         // 生成建议
-        let recommendations = self.generate_recommendations(&anomalies, &insights);
+        let recommendations: _ = self.generate_recommendations(&anomalies, &insights);
 
-        let report = AnalysisReport {
+        let report: _ = AnalysisReport {
             report_id,
             timestamp,
             overall_health_score,
@@ -100,9 +100,9 @@ impl IntelligentAnalyzer {
         let mut anomalies = Vec::new();
 
         // 按指标类型分组
-        let mut grouped: HashMap<String, Vec<_>> = HashMap::new();
+        let mut grouped: HashMap<String, Vec<_, std::collections::HashMap<String, Vec<_, String, Vec<_>>> = HashMap::new();
         for metric in metrics {
-            let key = format!("{:?}", metric.metric_type);
+            let key: _ = format!("{:?}", metric.metric_type);
             grouped.entry(key).or_insert_with(Vec::new).push(metric);
         }
 
@@ -113,12 +113,12 @@ impl IntelligentAnalyzer {
 
             // 计算平均值和标准差
             let values: Vec<f64> = metric_list.iter().map(|m| m.value).collect();
-            let mean = values.iter().sum::<f64>() / values.len() as f64;
-            let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
-            let std_dev = variance.sqrt();
+            let mean: _ = values.iter().sum::<f64>() / values.len() as f64;
+            let variance: _ = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
+            let std_dev: _ = variance.sqrt();
 
             // 检测尖峰
-            let max_value = values.iter().max().unwrap();
+            let max_value: _ = values.iter().max().unwrap();
             if max_value > mean + 2.0 * std_dev {
                 anomalies.push(AnomalyDetection {
                     anomaly_type: AnomalyType::Spike,
@@ -133,7 +133,7 @@ impl IntelligentAnalyzer {
             if metric_list.len() > 5 {
                 let recent_avg: f64 = values.iter().rev().take(3).sum::<f64>() / 3.0;
                 let older_avg: f64 = values.iter().take(3).sum::<f64>() / 3.0;
-                let change_ratio = (recent_avg - older_avg) / older_avg;
+                let change_ratio: _ = (recent_avg - older_avg) / older_avg;
 
                 if change_ratio.abs() > 0.5 {
                     anomalies.push(AnomalyDetection {
@@ -209,7 +209,7 @@ impl IntelligentAnalyzer {
         let mut count = 0.0;
 
         for metric in metrics {
-            let score = match metric.metric_type {
+            let score: _ = match metric.metric_type {
                 crate::ai_monitor::MetricType::CpuUsage => {
                     // CPU 使用率在 50-70% 之间为最佳
                     let optimal = 60.0;
@@ -217,7 +217,7 @@ impl IntelligentAnalyzer {
                 }
                 crate::ai_monitor::MetricType::MemoryUsage => {
                     // 内存使用率在 60-80% 之间为最佳
-                    let optimal = 70.0;
+                    let optimal: _ = 70.0;
                     100.0 - ((metric.value - optimal).abs() / optimal * 100.0).min(100.0)
                 }
                 crate::ai_monitor::MetricType::ResponseTime => {
@@ -235,10 +235,10 @@ impl IntelligentAnalyzer {
             count += 1.0;
         }
 
-        let base_score = if count > 0 { total_score / count } else { 0.0 };
+        let base_score: _ = if count > 0 { total_score / count } else { 0.0 };
 
         // 根据异常数量降低分数
-        let anomaly_penalty = (anomalies.len() as f64 * 5.0).min(30.0);
+        let anomaly_penalty: _ = (anomalies.len() as f64 * 5.0).min(30.0);
 
         (base_score - anomaly_penalty).max(0.0).min(100.0)
     }
@@ -283,12 +283,14 @@ impl IntelligentAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_intelligent_analyzer() {
         let mut analyzer = IntelligentAnalyzer::new();
 
-        let metrics = vec![
+        let metrics: _ = vec![
             crate::ai_monitor::PerformanceMetrics {
                 timestamp: Utc::now(),
                 metric_type: crate::ai_monitor::MetricType::CpuUsage,
@@ -305,7 +307,7 @@ mod tests {
             },
         ];
 
-        let report = analyzer.analyze(&metrics);
+        let report: _ = analyzer.analyze(&metrics);
         assert!(report.overall_health_score >= 0.0);
         assert!(report.overall_health_score <= 100.0);
     }

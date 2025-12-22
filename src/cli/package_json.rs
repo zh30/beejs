@@ -17,11 +17,11 @@ pub struct PackageJson {
     /// Package description
     pub description: Option<String>,
     /// Scripts to run
-    pub scripts: Option<HashMap<String, String>>,
+    pub scripts: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     /// Dependencies
-    pub dependencies: Option<HashMap<String, String>>,
+    pub dependencies: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     /// Dev dependencies
-    pub dev_dependencies: Option<HashMap<String, String>>,
+    pub dev_dependencies: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     /// Beejs specific configuration
     pub beejs: Option<BeejsConfig>,
 }
@@ -38,7 +38,7 @@ pub struct BeejsConfig {
     /// Watch mode settings
     pub watch: Option<WatchConfig>,
     /// Environment variables
-    pub env: Option<HashMap<String, String>>,
+    pub env: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 /// Watch mode configuration
@@ -57,13 +57,13 @@ pub struct WatchConfig {
 impl PackageJson {
     /// Load package.json from a directory
     pub fn load(dir: &Path) -> anyhow::Result<Self> {
-        let package_path = dir.join("package.json");
+        let package_path: _ = dir.join("package.json");
 
         if !package_path.exists() {
             return Err(anyhow::anyhow!("package.json not found in {:?}", dir).into());
         }
 
-        let content = fs::read_to_string(&package_path)?;
+        let content: _ = fs::read_to_string(&package_path)?;
         let package: PackageJson = serde_json::from_str(&content)?;
 
         Ok(package)
@@ -75,7 +75,7 @@ impl PackageJson {
             return Err(anyhow::anyhow!("package.json not found: {:?}", path).into());
         }
 
-        let content = fs::read_to_string(path)?;
+        let content: _ = fs::read_to_string(path)?;
         let package: PackageJson = serde_json::from_str(&content)?;
 
         Ok(package)
@@ -87,7 +87,7 @@ impl PackageJson {
     }
 
     /// Get all scripts
-    pub fn get_scripts(&self) -> HashMap<String, String> {
+    pub fn get_scripts(&self) -> HashMap<String, String, std::collections::HashMap<String, String, String, String>> {
         self.scripts.as_ref().cloned().unwrap_or_default()
     }
 
@@ -100,9 +100,9 @@ impl PackageJson {
         }
 
         // Default entry points
-        let default_entries = ["src/index.js", "src/index.ts", "index.js", "main.js"];
+        let default_entries: _ = ["src/index.js", "src/index.ts", "index.js", "main.js"];
         for entry in &default_entries {
-            let path = PathBuf::from(entry);
+            let path: _ = PathBuf::from(entry);
             if path.exists() {
                 return Some(path);
             }
@@ -147,7 +147,7 @@ impl PackageJson {
     }
 
     /// Get environment variables
-    pub fn get_env_vars(&self) -> HashMap<String, String> {
+    pub fn get_env_vars(&self) -> HashMap<String, String, std::collections::HashMap<String, String, String, String>> {
         if let Some(beejs_config) = &self.beejs {
             if let Some(env) = &beejs_config.env {
                 return env.clone();
@@ -158,7 +158,7 @@ impl PackageJson {
 
     /// Parse a script command into arguments
     pub fn parse_script_command(&self, script_name: &str) -> anyhow::Result<Vec<String>> {
-        let script = self.get_script(script_name)
+        let script: _ = self.get_script(script_name)
             .ok_or_else(|| anyhow::anyhow!("Script '{}' not found", script_name))?;
 
         // Simple script parsing - split by spaces but respect quotes
@@ -208,14 +208,14 @@ impl PackageJson {
         // Validate beejs configuration
         if let Some(beejs_config) = &self.beejs {
             if let Some(entry) = &beejs_config.entry {
-                let entry_path = Path::new(entry);
+                let entry_path: _ = Path::new(entry);
                 if !entry_path.exists() && !entry_path.is_relative() {
                     return Err(anyhow::anyhow!("beejs.entry file does not exist: {}", entry).into());
                 }
             }
 
             if let Some(optimize) = &beejs_config.optimize {
-                let valid_optimize = ["speed", "size", "auto"].contains(&optimize.as_str());
+                let valid_optimize: _ = ["speed", "size", "auto"].contains(&optimize.as_str());
                 if !valid_optimize {
                     return Err(anyhow::anyhow!(
                         "beejs.optimize must be one of: speed, size, auto, got: {}",
@@ -225,7 +225,7 @@ impl PackageJson {
             }
 
             if let Some(target) = &beejs_config.target {
-                let valid_targets = ["es2015", "es2016", "es2017", "es2018", "es2019", "es2020", "es2021", "es2022"];
+                let valid_targets: _ = ["es2015", "es2016", "es2017", "es2018", "es2019", "es2020", "es2021", "es2022"];
                 if !valid_targets.contains(&target.as_str()) {
                     return Err(anyhow::anyhow!(
                         "beejs.target must be a valid ES version, got: {}",
@@ -245,7 +245,7 @@ impl PackageJson {
 
     /// Save to file
     pub fn save(&self, path: &Path) -> anyhow::Result<()> {
-        let json = self.to_json()?;
+        let json: _ = self.to_json()?;
         fs::write(path, json)?;
         Ok(())
     }
@@ -268,18 +268,18 @@ impl ScriptExecutor {
 
     /// Execute a script
     pub async fn run_script(&self, script_name: &str) -> anyhow::Result<std::process::ExitStatus> {
-        let args = self.package.parse_script_command(script_name)?;
+        let args: _ = self.package.parse_script_command(script_name)?;
 
         if args.is_empty() {
             return Err(anyhow::anyhow!("Script '{}' has no command", script_name).into());
         }
 
         // Resolve the command
-        let cmd = &args[0];
-        let cmd_args = &args[1..];
+        let cmd: _ = &args[0];
+        let cmd_args: _ = &args[1..];
 
         // If it's a beejs command, use current executable
-        let exec_path = if cmd == "beejs" {
+        let exec_path: _ = if cmd == "beejs" {
             std::env::current_exe()?
         } else {
             // For now, only support beejs commands
@@ -313,13 +313,15 @@ impl ScriptExecutor {
 mod tests {
     use super::*;
     use tempfile::tempdir;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_package_json_load() {
-        let temp_dir = tempdir().expect("Failed to create temp dir");
-        let package_json = temp_dir.path().join("package.json");
+        let temp_dir: _ = tempdir().expect("Failed to create temp dir");
+        let package_json: _ = temp_dir.path().join("package.json");
 
-        let content = r#"{
+        let content: _ = r#"{
             "name": "test-app",
             "version": "1.0.0",
             "scripts": {
@@ -330,12 +332,12 @@ mod tests {
 
         std::fs::write(&package_json, content).expect("Failed to write package.json");
 
-        let pkg = PackageJson::load_from_path(&package_json).expect("Failed to load package.json");
+        let pkg: _ = PackageJson::load_from_path(&package_json).expect("Failed to load package.json");
 
         assert_eq!(pkg.name, Some("test-app".to_string()));
         assert_eq!(pkg.version, Some("1.0.0".to_string()));
 
-        let scripts = pkg.get_scripts();
+        let scripts: _ = pkg.get_scripts();
         assert_eq!(scripts.get("start"), Some(&"beejs src/index.js".to_string()));
         assert_eq!(scripts.get("dev"), Some(&"beejs watch src/index.js".to_string()));
 
@@ -344,10 +346,10 @@ mod tests {
 
     #[test]
     fn test_beejs_config() {
-        let temp_dir = tempdir().expect("Failed to create temp dir");
-        let package_json = temp_dir.path().join("package.json");
+        let temp_dir: _ = tempdir().expect("Failed to create temp dir");
+        let package_json: _ = temp_dir.path().join("package.json");
 
-        let content = r#"{
+        let content: _ = r#"{
             "name": "test-app",
             "version": "1.0.0",
             "beejs": {
@@ -359,9 +361,9 @@ mod tests {
 
         std::fs::write(&package_json, content).expect("Failed to write package.json");
 
-        let pkg = PackageJson::load_from_path(&package_json).expect("Failed to load package.json");
+        let pkg: _ = PackageJson::load_from_path(&package_json).expect("Failed to load package.json");
 
-        let config = pkg.get_beejs_config().expect("No beejs config");
+        let config: _ = pkg.get_beejs_config().expect("No beejs config");
         assert_eq!(config.entry, Some("src/index.ts".to_string()));
         assert_eq!(config.optimize, Some("aggressive".to_string()));
         assert_eq!(config.target, Some("es2020".to_string()));
@@ -371,7 +373,7 @@ mod tests {
 
     #[test]
     fn test_script_parsing() {
-        let pkg = PackageJson {
+        let pkg: _ = PackageJson {
             name: Some("test".to_string()),
             version: Some("1.0.0".to_string()),
             description: None,
@@ -381,14 +383,14 @@ mod tests {
             beejs: None,
         };
 
-        let args = pkg.parse_script_command("start").expect("Failed to parse script");
+        let args: _ = pkg.parse_script_command("start").expect("Failed to parse script");
         assert_eq!(args, vec!["beejs", "src/index.js", "--watch"]);
     }
 
     #[test]
     fn test_package_json_validation() {
         // Valid package.json
-        let valid_pkg = PackageJson {
+        let valid_pkg: _ = PackageJson {
             name: Some("test-app".to_string()),
             version: Some("1.0.0".to_string()),
             description: None,
@@ -401,7 +403,7 @@ mod tests {
         assert!(valid_pkg.validate().is_ok());
 
         // Invalid package.json - missing name
-        let invalid_pkg = PackageJson {
+        let invalid_pkg: _ = PackageJson {
             name: None,
             version: Some("1.0.0".to_string()),
             description: None,

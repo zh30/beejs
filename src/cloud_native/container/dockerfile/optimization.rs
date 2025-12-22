@@ -89,7 +89,7 @@ impl Optimizer {
 
     /// Check if Dockerfile has multiple COPY commands
     fn has_multiple_copy_commands(&self, dockerfile: &str) -> bool {
-        let copy_count = dockerfile.matches("COPY").count();
+        let copy_count: _ = dockerfile.matches("COPY").count();
         copy_count > 3
     }
 
@@ -185,7 +185,7 @@ impl OptimizationStrategy for BaseImageOptimizationStrategy {
 
     fn apply(&self, dockerfile: &str) -> Result<String, Error> {
         // Replace base image
-        let result = if self.use_distroless {
+        let result: _ = if self.use_distroless {
             dockerfile
                 .replace("FROM debian:bookworm-slim", "FROM gcr.io/distroless/base-debian12")
                 .replace("FROM ubuntu:", "FROM gcr.io/distroless/base")
@@ -219,7 +219,7 @@ impl OptimizationStrategy for CacheOptimizationStrategy {
                 }
             }
 
-            let result = optimized_lines.join("\n");
+            let result: _ = optimized_lines.join("\n");
             Ok(result)
         } else {
             Ok(dockerfile.to_string())
@@ -292,7 +292,7 @@ impl OptimizationStrategy for SizeOptimizationStrategy {
 
         if self.strip_binaries && dockerfile.contains("cargo build --release") {
             // Add strip command to build
-            result = result.replace(
+            result = result.clone();replace(
                 "cargo build --release",
                 "cargo build --release && strip target/release/beejs"
             );
@@ -300,7 +300,7 @@ impl OptimizationStrategy for SizeOptimizationStrategy {
 
         if self.remove_unnecessary_files {
             // Add cleanup commands
-            let cleanup = r#"
+            let cleanup: _ = r#"
 RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cargo/registry
 "#;
             result.push_str(cleanup);
@@ -362,16 +362,18 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_layer_minimization_strategy() {
-        let strategy = LayerMinimizationStrategy;
-        let dockerfile = r#"RUN apt-get update
+        let strategy: _ = LayerMinimizationStrategy;
+        let dockerfile: _ = r#"RUN apt-get update
 RUN apt-get install -y curl
 RUN apt-get install -y wget
 COPY . ."#;
 
-        let optimized = strategy.apply(dockerfile).unwrap();
+        let optimized: _ = strategy.apply(dockerfile).unwrap();
 
         // Should combine RUN commands
         assert!(optimized.contains("apt-get update && apt-get install -y curl && apt-get install -y wget"));
@@ -379,25 +381,25 @@ COPY . ."#;
 
     #[test]
     fn test_base_image_optimization_strategy() {
-        let strategy = BaseImageOptimizationStrategy {
+        let strategy: _ = BaseImageOptimizationStrategy {
             target_image: "debian:bookworm-slim".to_string(),
             use_distroless: true,
         };
 
-        let dockerfile = "FROM ubuntu:latest\n";
-        let optimized = strategy.apply(dockerfile).unwrap();
+        let dockerfile: _ = "FROM ubuntu:latest\n";
+        let optimized: _ = strategy.apply(dockerfile).unwrap();
 
         assert!(optimized.contains("distroless"));
     }
 
     #[test]
     fn test_cache_optimization_strategy() {
-        let strategy = CacheOptimizationStrategy;
-        let dockerfile = r#"WORKDIR /app
+        let strategy: _ = CacheOptimizationStrategy;
+        let dockerfile: _ = r#"WORKDIR /app
 COPY . .
 RUN cargo build --release"#;
 
-        let optimized = strategy.apply(dockerfile).unwrap();
+        let optimized: _ = strategy.apply(dockerfile).unwrap();
 
         // Should add cargo fetch
         assert!(optimized.contains("cargo fetch"));
@@ -405,14 +407,14 @@ RUN cargo build --release"#;
 
     #[test]
     fn test_security_hardening_strategy() {
-        let strategy = SecurityHardeningStrategy {
+        let strategy: _ = SecurityHardeningStrategy {
             add_non_root_user: true,
             read_only_root: false,
             drop_capabilities: true,
         };
 
-        let dockerfile = "FROM debian:bookworm-slim\n";
-        let optimized = strategy.apply(dockerfile).unwrap();
+        let dockerfile: _ = "FROM debian:bookworm-slim\n";
+        let optimized: _ = strategy.apply(dockerfile).unwrap();
 
         assert!(optimized.contains("adduser"));
         assert!(optimized.contains("USER"));
@@ -421,13 +423,13 @@ RUN cargo build --release"#;
 
     #[test]
     fn test_size_optimization_strategy() {
-        let strategy = SizeOptimizationStrategy {
+        let strategy: _ = SizeOptimizationStrategy {
             strip_binaries: true,
             remove_unnecessary_files: true,
         };
 
-        let dockerfile = "RUN cargo build --release\n";
-        let optimized = strategy.apply(dockerfile).unwrap();
+        let dockerfile: _ = "RUN cargo build --release\n";
+        let optimized: _ = strategy.apply(dockerfile).unwrap();
 
         assert!(optimized.contains("strip"));
         assert!(optimized.contains("rm -rf"));
@@ -435,13 +437,13 @@ RUN cargo build --release"#;
 
     #[test]
     fn test_analyzer_suggestions() {
-        let optimizer = Optimizer::new();
-        let dockerfile = r#"FROM ubuntu:latest
+        let optimizer: _ = Optimizer::new();
+        let dockerfile: _ = r#"FROM ubuntu:latest
 RUN apt-get update && apt-get install -y curl wget vim
 COPY . .
 RUN cargo build --release"#;
 
-        let suggestions = optimizer.analyze(dockerfile);
+        let suggestions: _ = optimizer.analyze(dockerfile);
 
         // Should suggest multiple optimizations
         assert!(!suggestions.is_empty());
@@ -451,7 +453,7 @@ RUN cargo build --release"#;
 
     #[test]
     fn test_impact_level() {
-        let suggestion = OptimizationSuggestion {
+        let suggestion: _ = OptimizationSuggestion {
             name: "test".to_string(),
             description: "Test".to_string(),
             impact: "high".to_string(),

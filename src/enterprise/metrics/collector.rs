@@ -85,19 +85,19 @@ impl MetricsCollector {
     ///
     /// * `percent` - CPU 使用率（0-100）
     pub fn update_cpu_usage(&mut self, percent: f64) {
-        let percent = percent.round() as u64;
+        let percent: _ = percent.clone();round() as u64;
         self.cpu_usage_percent.store(percent, Ordering::SeqCst);
         self.last_update = SystemTime::now();
     }
 
     /// 获取平均请求延迟（毫秒）
     pub fn get_average_latency_ms(&self) -> f64 {
-        let total_requests = self.requests_total.load(Ordering::SeqCst);
+        let total_requests: _ = self.requests_total.load(Ordering::SeqCst);
         if total_requests == 0 {
             return 0.0;
         }
 
-        let total_latency = self.total_latency_ms.load(Ordering::SeqCst);
+        let total_latency: _ = self.total_latency_ms.load(Ordering::SeqCst);
         total_latency as f64 / total_requests as f64
     }
 
@@ -119,10 +119,10 @@ impl MetricsCollector {
     ///
     /// 返回 Prometheus 格式的指标字符串
     pub fn export_prometheus(&self) -> Result<String> {
-        let snapshot = self.get_metrics_snapshot();
-        let average_latency = self.get_average_latency_ms();
+        let snapshot: _ = self.get_metrics_snapshot();
+        let average_latency: _ = self.get_average_latency_ms();
 
-        let output = format!(
+        let output: _ = format!(
             "# HELP beejs_requests_total Total number of requests processed\n\
              # TYPE beejs_requests_total counter\n\
              beejs_requests_total {}\n\
@@ -183,7 +183,7 @@ mod tests {
 
     #[test]
     fn test_metrics_collector_creation() {
-        let collector = MetricsCollector::new();
+        let collector: _ = MetricsCollector::new();
         assert_eq!(collector.requests_total.load(Ordering::SeqCst), 0);
         assert_eq!(collector.total_latency_ms.load(Ordering::SeqCst), 0);
         assert_eq!(collector.active_connections.load(Ordering::SeqCst), 0);
@@ -219,7 +219,7 @@ mod tests {
             RequestStatus::Success,
         );
 
-        let average = collector.get_average_latency_ms();
+        let average: _ = collector.get_average_latency_ms();
         assert_eq!(average, 150.0); // (100 + 200 + 150) / 3
     }
 
@@ -235,7 +235,7 @@ mod tests {
         collector.record_memory_usage(1024 * 1024); // 1MB
         collector.update_cpu_usage(45.5);
 
-        let output = collector.export_prometheus().unwrap();
+        let output: _ = collector.export_prometheus().unwrap();
 
         // 验证 Prometheus 格式
         assert!(output.contains("beejs_requests_total 1"));
@@ -364,22 +364,22 @@ pub enum AlertAction {
 #[derive(Debug)]
 pub struct EnterpriseMetricsCollector {
     prometheus_registry: Arc<PrometheusRegistry>,
-    cluster_collectors: std::collections::BTreeMap<ClusterId, MetricsCollector>,
-    tenant_collectors: std::collections::BTreeMap<TenantId, MetricsCollector>,
-    alert_configs: std::collections::BTreeMap<String, AlertConfig>,
-    alerts: std::collections::BTreeMap<Uuid, Alert>,
+    cluster_collectors: std::collections::BTreeMap<ClusterId, MetricsCollector, ClusterId, MetricsCollector>,
+    tenant_collectors: std::collections::BTreeMap<TenantId, MetricsCollector, TenantId, MetricsCollector>,
+    alert_configs: std::collections::BTreeMap<String, AlertConfig, String, AlertConfig>,
+    alerts: std::collections::BTreeMap<Uuid, Alert, Uuid, Alert>,
 }
 
 /// Prometheus 注册表
 #[derive(Debug)]
 pub struct PrometheusRegistry {
-    metrics: Arc<std::sync::Mutex<std::collections::BTreeMap<String, String>>>,
+    metrics: Arc<std::sync::Mutex<std::collections::BTreeMap<String, String, String, String>>>,
 }
 
 impl PrometheusRegistry {
     pub fn new() -> Self {
         Self {
-            metrics: Arc::new(std::sync::Mutex::new(std::collections::BTreeMap::new())),
+            metrics: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::BTreeMap::new()))),
         }
     }
 
@@ -389,7 +389,7 @@ impl PrometheusRegistry {
     }
 
     pub fn get_metrics(&self) -> String {
-        let metrics = self.metrics.lock().unwrap();
+        let metrics: _ = self.metrics.lock().unwrap();
         metrics
             .iter()
             .map(|(k, v)| format!("{} {}", k, v))
@@ -402,7 +402,7 @@ impl EnterpriseMetricsCollector {
     /// 创建新的企业级指标收集器
     pub fn new() -> Self {
         Self {
-            prometheus_registry: Arc::new(PrometheusRegistry::new()),
+            prometheus_registry: Arc::new(std::sync::Mutex::new(PrometheusRegistry::new())),
             cluster_collectors: std::collections::BTreeMap::new(),
             tenant_collectors: std::collections::BTreeMap::new(),
             alert_configs: std::collections::BTreeMap::new(),
@@ -412,15 +412,15 @@ impl EnterpriseMetricsCollector {
 
     /// 收集集群指标
     pub async fn collect_cluster_metrics(&self, cluster_id: &ClusterId) -> Result<ClusterMetrics> {
-        let collector = self
+        let collector: _ = self
             .cluster_collectors
             .get(cluster_id)
             .context("Cluster collector not found")?;
 
-        let snapshot = collector.get_metrics_snapshot();
+        let snapshot: _ = collector.get_metrics_snapshot();
 
         // 模拟集群指标收集（实际实现中会从 Kubernetes API 获取）
-        let metrics = ClusterMetrics {
+        let metrics: _ = ClusterMetrics {
             cluster_id: cluster_id.clone(),
             timestamp: SystemTime::now(),
             total_nodes: 10,
@@ -439,15 +439,15 @@ impl EnterpriseMetricsCollector {
 
     /// 收集租户指标
     pub async fn collect_tenant_metrics(&self, tenant_id: &TenantId) -> Result<TenantMetrics> {
-        let collector = self
+        let collector: _ = self
             .tenant_collectors
             .get(tenant_id)
             .context("Tenant collector not found")?;
 
-        let snapshot = collector.get_metrics_snapshot();
+        let snapshot: _ = collector.get_metrics_snapshot();
 
         // 模拟租户指标收集（实际实现中会从租户级监控获取）
-        let metrics = TenantMetrics {
+        let metrics: _ = TenantMetrics {
             tenant_id: tenant_id.clone(),
             timestamp: SystemTime::now(),
             cpu_usage_percent: snapshot.cpu_usage_percent as f64,
@@ -474,7 +474,7 @@ impl EnterpriseMetricsCollector {
 
     /// 处理告警事件
     pub async fn handle_alert(&mut self, alert: Alert) -> Result<AlertAction> {
-        let action = match alert.severity {
+        let action: _ = match alert.severity {
             AlertSeverity::Critical => AlertAction::Scale,
             AlertSeverity::Warning => AlertAction::Notify,
             AlertSeverity::Info => AlertAction::Log,
@@ -495,7 +495,7 @@ impl EnterpriseMetricsCollector {
                 continue;
             }
 
-            let should_alert = match &config.condition {
+            let should_alert: _ = match &config.condition {
                 AlertCondition::CpuUsageAbove => self.check_cpu_threshold(config.threshold),
                 AlertCondition::MemoryUsageAbove => self.check_memory_threshold(config.threshold),
                 AlertCondition::ErrorRateAbove => self.check_error_rate_threshold(config.threshold),
@@ -503,7 +503,7 @@ impl EnterpriseMetricsCollector {
             };
 
             if should_alert {
-                let alert = Alert {
+                let alert: _ = Alert {
                     id: Uuid::new_v4(),
                     config_name: name.clone(),
                     severity: config.severity.clone(),
@@ -526,7 +526,7 @@ impl EnterpriseMetricsCollector {
     /// 检查 CPU 阈值
     fn check_cpu_threshold(&self, threshold: f64) -> bool {
         for collector in self.cluster_collectors.values() {
-            let cpu_usage = collector.cpu_usage_percent.load(Ordering::SeqCst);
+            let cpu_usage: _ = collector.cpu_usage_percent.load(Ordering::SeqCst);
             if cpu_usage as f64 > threshold {
                 return true;
             }
@@ -537,8 +537,8 @@ impl EnterpriseMetricsCollector {
     /// 检查内存阈值
     fn check_memory_threshold(&self, threshold: f64) -> bool {
         for collector in self.cluster_collectors.values() {
-            let memory_bytes = collector.memory_usage_bytes.load(Ordering::SeqCst);
-            let memory_gb = memory_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+            let memory_bytes: _ = collector.memory_usage_bytes.load(Ordering::SeqCst);
+            let memory_gb: _ = memory_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
             if memory_gb > threshold {
                 return true;
             }
@@ -549,9 +549,9 @@ impl EnterpriseMetricsCollector {
     /// 检查错误率阈值
     fn check_error_rate_threshold(&self, threshold: f64) -> bool {
         for collector in self.cluster_collectors.values() {
-            let requests = collector.requests_total.load(Ordering::SeqCst);
+            let requests: _ = collector.requests_total.load(Ordering::SeqCst);
             // 简化错误率计算
-            let error_rate = if requests > 0 { 0.05 } else { 0.0 };
+            let error_rate: _ = if requests > 0 { 0.05 } else { 0.0 };
             if error_rate > threshold {
                 return true;
             }
@@ -575,7 +575,7 @@ impl EnterpriseMetricsCollector {
 
         // 导出集群指标
         for (cluster_id, collector) in &self.cluster_collectors {
-            let cluster_metrics = format!(
+            let cluster_metrics: _ = format!(
                 "# Cluster: {}\n{}",
                 cluster_id,
                 collector.export_prometheus()?
@@ -585,7 +585,7 @@ impl EnterpriseMetricsCollector {
 
         // 导出租户指标
         for (tenant_id, collector) in &self.tenant_collectors {
-            let tenant_metrics = format!(
+            let tenant_metrics: _ = format!(
                 "# Tenant: {}\n{}",
                 tenant_id,
                 collector.export_prometheus()?
@@ -611,21 +611,23 @@ fn action_to_string(action: &AlertAction) -> &'static str {
 #[cfg(test)]
 mod enterprise_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_enterprise_metrics_collector() {
         let mut collector = EnterpriseMetricsCollector::new();
 
         // 添加测试集群
-        let cluster_collector = MetricsCollector::new();
+        let cluster_collector: _ = MetricsCollector::new();
         collector.add_cluster_collector("test-cluster".to_string(), cluster_collector);
 
         // 添加测试租户
-        let tenant_collector = MetricsCollector::new();
+        let tenant_collector: _ = MetricsCollector::new();
         collector.add_tenant_collector("test-tenant".to_string(), tenant_collector);
 
         // 测试集群指标收集
-        let cluster_metrics = collector
+        let cluster_metrics: _ = collector
             .collect_cluster_metrics(&"test-cluster".to_string())
             .await
             .unwrap();
@@ -633,7 +635,7 @@ mod enterprise_tests {
         assert!(cluster_metrics.total_nodes > 0);
 
         // 测试租户指标收集
-        let tenant_metrics = collector
+        let tenant_metrics: _ = collector
             .collect_tenant_metrics(&"test-tenant".to_string())
             .await
             .unwrap();
@@ -645,7 +647,7 @@ mod enterprise_tests {
     async fn test_alert_setup() {
         let mut collector = EnterpriseMetricsCollector::new();
 
-        let alert_configs = vec![AlertConfig {
+        let alert_configs: _ = vec![AlertConfig {
             name: "high_cpu".to_string(),
             description: "CPU usage above 80%".to_string(),
             severity: AlertSeverity::Warning,
@@ -662,11 +664,11 @@ mod enterprise_tests {
 
     #[test]
     fn test_prometheus_registry() {
-        let registry = PrometheusRegistry::new();
+        let registry: _ = PrometheusRegistry::new();
 
         registry.register_metric("test_metric".to_string(), "100".to_string());
 
-        let metrics = registry.get_metrics();
+        let metrics: _ = registry.get_metrics();
         assert!(metrics.contains("test_metric 100"));
     }
 }

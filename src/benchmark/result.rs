@@ -11,6 +11,8 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use super::{Runtime, MetricType};
 use bytes::Bytes;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 基准测试结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,7 +36,7 @@ pub struct BenchmarkResult {
     /// 统计数据
     pub statistics: Statistics,
     /// 元数据
-    pub metadata: HashMap<String, String>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     /// 错误信息 (如果有)
     pub error: Option<String>,
     /// 警告信息
@@ -150,8 +152,8 @@ impl BenchmarkResult {
         if baseline.average_duration().as_nanos() == 0 {
             0.0
         } else {
-            let baseline_ns = baseline.average_duration().as_nanos() as f64;
-            let current_ns = self.average_duration().as_nanos() as f64;
+            let baseline_ns: _ = baseline.average_duration().as_nanos() as f64;
+            let current_ns: _ = self.average_duration().as_nanos() as f64;
             ((baseline_ns - current_ns) / baseline_ns) * 100.0
         }
     }
@@ -185,7 +187,7 @@ pub struct PerformanceMetrics {
     /// 缓存命中率
     pub cache_hit_rate: f64,
     /// 自定义指标
-    pub custom_metrics: HashMap<String, serde_json::Value>,
+    pub custom_metrics: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>,
 }
 
 impl PerformanceMetrics {
@@ -347,52 +349,52 @@ impl Statistics {
         let mut values: Vec<u64> = iterations.iter().map(|d| d.as_nanos() as u64).collect();
         values.sort();
 
-        let sample_count = values.len();
+        let sample_count: _ = values.len();
         let sum: u64 = values.iter().sum();
-        let mean_ns = sum / sample_count as u64;
+        let mean_ns: _ = sum / sample_count as u64;
 
         // 计算中位数
-        let median_ns = if sample_count % 2 == 0 {
+        let median_ns: _ = if sample_count % 2 == 0 {
             (values[sample_count / 2 - 1] + values[sample_count / 2]) / 2
         } else {
             values[sample_count / 2]
         };
 
         // 计算最小值和最大值
-        let min_ns = values[0];
-        let max_ns = values[sample_count - 1];
+        let min_ns: _ = values[0];
+        let max_ns: _ = values[sample_count - 1];
 
         // 计算方差和标准差
         let variance_ns: u64 = values.iter()
             .map(|&x| {
-                let diff = x as i128 - mean_ns as i128;
+                let diff: _ = x as i128 - mean_ns as i128;
                 (diff * diff) as u64
             })
             .sum::<u64>() / sample_count as u64;
 
-        let std_dev_ns = (variance_ns as f64).sqrt() as u64;
+        let std_dev_ns: _ = (variance_ns as f64).sqrt() as u64;
 
         // 计算百分位数
-        let p25_ns = calculate_percentile(&values, 25.0);
-        let p75_ns = calculate_percentile(&values, 75.0);
-        let p90_ns = calculate_percentile(&values, 90.0);
-        let p95_ns = calculate_percentile(&values, 95.0);
-        let p99_ns = calculate_percentile(&values, 99.0);
+        let p25_ns: _ = calculate_percentile(&values, 25.0);
+        let p75_ns: _ = calculate_percentile(&values, 75.0);
+        let p90_ns: _ = calculate_percentile(&values, 90.0);
+        let p95_ns: _ = calculate_percentile(&values, 95.0);
+        let p99_ns: _ = calculate_percentile(&values, 99.0);
 
         // 计算四分位距
-        let iqr_ns = p75_ns - p25_ns;
+        let iqr_ns: _ = p75_ns - p25_ns;
 
         // 计算偏度和峰度
         let (skewness, kurtosis) = calculate_higher_moments(&values, mean_ns);
 
         // 计算置信区间 (95%)
-        let confidence_interval = calculate_confidence_interval(std_dev_ns, sample_count);
-        let confidence_interval_lower_ns = if mean_ns > confidence_interval {
+        let confidence_interval: _ = calculate_confidence_interval(std_dev_ns, sample_count);
+        let confidence_interval_lower_ns: _ = if mean_ns > confidence_interval {
             mean_ns - confidence_interval
         } else {
             0
         };
-        let confidence_interval_upper_ns = mean_ns + confidence_interval;
+        let confidence_interval_upper_ns: _ = mean_ns + confidence_interval;
 
         Self {
             sample_count,
@@ -448,14 +450,14 @@ fn calculate_percentile(values: &[u64], percentile: f64) -> u64 {
         return 0;
     }
 
-    let index = (percentile / 100.0) * (values.len() - 1) as f64;
-    let lower = index.floor() as usize;
-    let upper = index.ceil() as usize;
+    let index: _ = (percentile / 100.0) * (values.len() - 1) as f64;
+    let lower: _ = index.floor() as usize;
+    let upper: _ = index.ceil() as usize;
 
     if lower == upper {
         values[lower]
     } else {
-        let weight = index - lower as f64;
+        let weight: _ = index - lower as f64;
         (values[lower] as f64 * (1.0 - weight) + values[upper] as f64 * weight) as u64
     }
 }
@@ -466,29 +468,29 @@ fn calculate_higher_moments(values: &[u64], mean: u64) -> (f64, f64) {
         return (0.0, 0.0);
     }
 
-    let n = values.len() as f64;
-    let mean_f = mean as f64;
+    let n: _ = values.len() as f64;
+    let mean_f: _ = mean as f64;
 
     // 计算三阶中心矩 (偏度)
     let mut m3 = 0.0;
     for &value in values {
-        let diff = value as f64 - mean_f;
+        let diff: _ = value as f64 - mean_f;
         m3 += diff * diff * diff;
     }
     m3 /= n;
-    let m3 = m3 / (mean_f * mean_f * mean_f).max(1.0);
+    let m3: _ = m3 / (mean_f * mean_f * mean_f).max(1.0);
 
     // 计算四阶中心矩 (峰度)
     let mut m4 = 0.0;
     for &value in values {
-        let diff = value as f64 - mean_f;
+        let diff: _ = value as f64 - mean_f;
         m4 += diff * diff * diff * diff;
     }
     m4 /= n;
     m4 = m4 / (mean_f * mean_f * mean_f * mean_f).max(1.0);
 
-    let skewness = m3.signum() * m3.abs().sqrt();
-    let kurtosis = m4 - 3.0;
+    let skewness: _ = m3.signum() * m3.abs().sqrt();
+    let kurtosis: _ = m4 - 3.0;
 
     (skewness, kurtosis)
 }
@@ -500,13 +502,13 @@ fn calculate_confidence_interval(std_dev: u64, sample_size: usize) -> u64 {
     }
 
     // 95% 置信区间的 t 值 (近似)
-    let t_value = if sample_size < 30 {
+    let t_value: _ = if sample_size < 30 {
         2.0
     } else {
         1.96
     };
 
-    let standard_error = std_dev as f64 / (sample_size as f64).sqrt();
+    let standard_error: _ = std_dev as f64 / (sample_size as f64).sqrt();
     (t_value * standard_error) as u64
 }
 
@@ -520,7 +522,7 @@ pub struct BenchmarkResultSet {
     /// 结果列表
     pub results: Vec<BenchmarkResult>,
     /// 全局元数据
-    pub global_metadata: HashMap<String, String>,
+    pub global_metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     /// 环境信息
     pub environment: EnvironmentInfo,
 }
@@ -554,8 +556,8 @@ impl BenchmarkResultSet {
     }
 
     /// 按运行时分组结果
-    pub fn group_by_runtime(&self) -> HashMap<Runtime, Vec<&BenchmarkResult>> {
-        let mut groups: HashMap<Runtime, Vec<&BenchmarkResult>> = HashMap::new();
+    pub fn group_by_runtime(&self) -> HashMap<Runtime, Vec<&BenchmarkResult, std::collections::HashMap<Runtime, Vec<&BenchmarkResult, Runtime, Vec<&BenchmarkResult>>> {
+        let mut groups: HashMap<Runtime, Vec<&BenchmarkResult, std::collections::HashMap<Runtime, Vec<&BenchmarkResult, Runtime, Vec<&BenchmarkResult>>> = HashMap::new();
         for result in &self.results {
             groups.entry(result.runtime).or_insert_with(Vec::new).push(result);
         }
@@ -563,15 +565,15 @@ impl BenchmarkResultSet {
     }
 
     /// 获取所有运行时的平均性能
-    pub fn get_average_performance(&self) -> HashMap<Runtime, Duration> {
-        let groups = self.group_by_runtime();
-        let mut averages: HashMap<Runtime, Duration> = HashMap::new();
+    pub fn get_average_performance(&self) -> HashMap<Runtime, Duration, std::collections::HashMap<Runtime, Duration, Runtime, Duration>> {
+        let groups: _ = self.group_by_runtime();
+        let mut averages: HashMap<Runtime, Duration, std::collections::HashMap<Runtime, Duration, Runtime, Duration>> = HashMap::new();
 
         for (runtime, results) in groups {
             let total_duration: Duration = results.iter()
                 .map(|r| r.average_duration())
                 .sum();
-            let avg_duration = total_duration / results.len() as u32;
+            let avg_duration: _ = total_duration / results.len() as u32;
             averages.insert(runtime, avg_duration);
         }
 
@@ -599,7 +601,7 @@ pub struct EnvironmentInfo {
     /// 编译时间
     pub build_time: String,
     /// 自定义环境变量
-    pub custom_env: HashMap<String, String>,
+    pub custom_env: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 impl EnvironmentInfo {
@@ -610,7 +612,7 @@ impl EnvironmentInfo {
 
     /// 设置操作系统
     pub fn os(mut self, os: &str) -> Self {
-        self.os = os.to_string();
+        self.os = os.clone();to_string();
         self
     }
 
@@ -622,7 +624,7 @@ impl EnvironmentInfo {
 
     /// 设置 CPU 信息
     pub fn cpu(mut self, model: &str, cores: u32) -> Self {
-        self.cpu_model = model.to_string();
+        self.cpu_model = model.clone();to_string();
         self.cpu_cores = cores;
         self
     }
@@ -635,7 +637,7 @@ impl EnvironmentInfo {
 
     /// 设置 Rust 版本
     pub fn rust_version(mut self, version: &str) -> Self {
-        self.rust_version = version.to_string();
+        self.rust_version = version.clone();to_string();
         self
     }
 

@@ -22,13 +22,13 @@ mod tests {
         let mut startup_times = Vec::new();
 
         for i in 0..10 {
-            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-            let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
-            let elapsed = start.elapsed().unwrap();
+            let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
+            let elapsed: _ = start.elapsed().unwrap();
             startup_times.push(elapsed);
 
             // 执行简单操作验证快照可用性
-            let result = runtime.execute_standard("1 + 1").expect("执行失败");
+            let result: _ = runtime.execute_standard("1 + 1").expect("执行失败");
             assert_eq!(result.trim(), "2");
 
             println!("启动 {}: {:.2}ms", i + 1, elapsed.as_secs_f64() * 1000.0);
@@ -36,8 +36,8 @@ mod tests {
 
         // 计算平均启动时间
         let avg_startup: Duration = startup_times.iter().sum::<Duration>() / startup_times.len() as u32;
-        let min_startup = startup_times.iter().min().unwrap();
-        let max_startup = startup_times.iter().max().unwrap();
+        let min_startup: _ = startup_times.iter().min().unwrap();
+        let max_startup: _ = startup_times.iter().max().unwrap();
 
         println!("\n=== V8 快照启动性能统计 ===");
         println!("平均启动时间: {:.2}ms", avg_startup.as_secs_f64() * 1000.0);
@@ -52,9 +52,9 @@ mod tests {
         );
 
         // 验证快照一致性 - 后续启动应比首次快 20%+
-        let first_startup = startup_times[0];
+        let first_startup: _ = startup_times[0];
         let later_startups: Duration = startup_times[1..].iter().sum::<Duration>() / 9;
-        let improvement = (first_startup.as_secs_f64() - later_startups.as_secs_f64()) / first_startup.as_secs_f64() * 100.0;
+        let improvement: _ = (first_startup.as_secs_f64() - later_startups.as_secs_f64()) / first_startup.as_secs_f64() * 100.0;
 
         println!("快照优化效果: {:.1}% 提升", improvement);
         assert!(
@@ -71,17 +71,17 @@ mod tests {
         // 模拟进程池预热性能测试
         // 由于 concurrent_execution 是私有模块，我们测试 RuntimeLite 的创建性能
 
-        let iterations = 100;
-        let prewarm_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let iterations: _ = 100;
+        let prewarm_start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 模拟预热过程 - 多次创建 runtime
         for i in 0..iterations {
-            let _runtime = RuntimeLite::new(false).expect("Failed to create runtime");
+            let _runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
             black_box(i);
         }
 
-        let prewarm_time = prewarm_start.elapsed().unwrap();
-        let per_creation = prewarm_time / iterations;
+        let prewarm_time: _ = prewarm_start.elapsed().unwrap();
+        let per_creation: _ = prewarm_time / iterations;
 
         println!("Runtime 创建预热时间: {:.2}μs/次 ({} 次平均)", per_creation.as_secs_f64() * 1_000_000.0, iterations);
 
@@ -93,18 +93,18 @@ mod tests {
         );
 
         // 测试预热后的执行性能
-        let test_iterations = 50;
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let test_iterations: _ = 50;
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         for i in 0..test_iterations {
             // 使用预热后的 runtime
-            let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
-            let result = runtime.execute_standard(&format!("{}", i)).expect("执行失败");
+            let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
+            let result: _ = runtime.execute_standard(&format!("{}", i)).expect("执行失败");
             assert!(!result.trim().is_empty());
         }
 
-        let elapsed = start.elapsed().unwrap();
-        let per_task = elapsed / test_iterations;
+        let elapsed: _ = start.elapsed().unwrap();
+        let per_task: _ = elapsed / test_iterations;
 
         println!("预热后任务执行时间: {:.2}μs/任务", per_task.as_secs_f64() * 1_000_000.0);
 
@@ -122,7 +122,7 @@ mod tests {
     fn test_fast_path_optimization_expansion() {
         // 快路径优化验证 - 基于执行时间判断是否走快路径
 
-        let test_cases = vec![
+        let test_cases: _ = vec![
             ("1 + 1", "2"),
             ("2 * 3", "6"),
             ("10 - 5", "5"),
@@ -136,14 +136,14 @@ mod tests {
         ];
 
         let mut fast_path_hits = 0;
-        let total_cases = test_cases.len();
+        let total_cases: _ = test_cases.len();
 
         for (code, expected) in &test_cases {
-            let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
-            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
+            let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
-            let result = runtime.execute_standard(code).expect("执行失败");
-            let elapsed = start.elapsed().unwrap();
+            let result: _ = runtime.execute_standard(code).expect("执行失败");
+            let elapsed: _ = start.elapsed().unwrap();
 
             assert_eq!(result.trim(), *expected);
 
@@ -156,7 +156,7 @@ mod tests {
             }
         }
 
-        let fast_path_ratio = fast_path_hits as f64 / total_cases as f64 * 100.0;
+        let fast_path_ratio: _ = fast_path_hits as f64 / total_cases as f64 * 100.0;
 
         println!("\n=== 快路径优化覆盖率 ===");
         println!("快路径命中: {}/{} ({:.1}%)", fast_path_hits, total_cases, fast_path_ratio);
@@ -174,9 +174,11 @@ mod tests {
     #[test]
     fn test_memory_pool_optimization() {
         use beejs::memory_pool::{SmartMemoryPool, PoolConfig};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
-        let _iterations = 1000;
-        let config = PoolConfig {
+        let _iterations: _ = 1000;
+        let config: _ = PoolConfig {
             string_pool_size: 100,
             object_pool_size: 100,
             buffer_timeout: Duration::from_secs(300),
@@ -184,16 +186,16 @@ mod tests {
         };
 
         // 测试内存池预热性能
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 模拟内存池操作（由于 API 限制，我们测试创建时间）
         for i in 0..100 {
-            let _temp_pool = SmartMemoryPool::new(config.clone());
+            let _temp_pool: _ = SmartMemoryPool::new(config.clone());
             black_box(i);
         }
 
-        let pool_creation_time = start.elapsed().unwrap();
-        let per_pool = pool_creation_time / 100;
+        let pool_creation_time: _ = start.elapsed().unwrap();
+        let per_pool: _ = pool_creation_time / 100;
 
         println!("内存池创建性能: {:.2}μs/池 (100 次创建平均)", per_pool.as_secs_f64() * 1_000_000.0);
 
@@ -218,25 +220,25 @@ mod tests {
     fn test_jit_optimization_verification() {
         // JIT 优化验证 - 通过执行复杂代码验证优化效果
 
-        let test_codes = vec![
+        let test_codes: _ = vec![
             ("斐波那契", "function fib(n) { return n <= 1 ? n : fib(n-1) + fib(n-2); } fib(20);"),
-            ("数组求和", "function sum(arr) { let total = 0; for (let i = 0; i < arr.length; i++) { total += arr[i]; } return total; } sum([1,2,3,4,5]);"),
-            ("阶乘计算", "function factorial(n) { let result = 1; for (let i = 2; i <= n; i++) { result *= i; } return result; } factorial(10);"),
+            ("数组求和", "function sum(arr) { let total: _ = 0; for (let i: _ = 0; i < arr.length; i++) { total += arr[i]; } return total; } sum([1,2,3,4,5]);"),
+            ("阶乘计算", "function factorial(n) { let result: _ = 1; for (let i: _ = 2; i <= n; i++) { result *= i; } return result; } factorial(10);"),
         ];
 
         let mut execution_times = Vec::new();
 
         for (name, code) in &test_codes {
-            let iterations = 100;
-            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let iterations: _ = 100;
+            let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
             for _ in 0..iterations {
-                let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
-                let _result = runtime.execute_standard(code).expect("执行失败");
+                let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
+                let _result: _ = runtime.execute_standard(code).expect("执行失败");
             }
 
-            let total_time = start.elapsed().unwrap();
-            let per_execution = total_time / iterations;
+            let total_time: _ = start.elapsed().unwrap();
+            let per_execution: _ = total_time / iterations;
 
             execution_times.push((name, per_execution));
 
@@ -260,7 +262,7 @@ mod tests {
     /// 综合测试所有优化效果
     #[test]
     fn test_end_to_end_performance_benchmark() {
-        let scenarios = vec![
+        let scenarios: _ = vec![
             ("简单计算", "1 + 2 + 3 + 4 + 5"),
             ("字符串操作", "\"hello\" + \" \" + \"world\""),
             ("数组操作", "[1,2,3,4,5].map(x => x * 2).reduce((a, b) => a + b, 0)"),
@@ -272,15 +274,15 @@ mod tests {
 
         for (name, code) in &scenarios {
             let iterations: u32 = 1000;
-            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
             for _ in 0..iterations {
-                let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
-                let _result = runtime.execute_standard(code).expect("执行失败");
+                let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
+                let _result: _ = runtime.execute_standard(code).expect("执行失败");
             }
 
-            let elapsed = start.elapsed().unwrap();
-            let per_op = elapsed / iterations;
+            let elapsed: _ = start.elapsed().unwrap();
+            let per_op: _ = elapsed / iterations;
 
             results.push((name, per_op, iterations));
 
@@ -290,7 +292,7 @@ mod tests {
         // 计算总体性能指标
         let total_ops: u32 = results.iter().map(|(_, _, count)| *count).sum();
         let total_time: Duration = results.iter().map(|(_, time, _)| *time).sum::<Duration>() * results.len() as u32 / results.len() as u32;
-        let avg_per_op = total_time / total_ops;
+        let avg_per_op: _ = total_time / total_ops;
 
         println!("\n=== 端到端性能基准 ===");
         println!("总操作数: {}", total_ops);
@@ -320,14 +322,14 @@ mod tests {
     #[test]
     fn test_bun_performance_comparison() {
         // 测试场景: 简单算术运算
-        let test_code = "1 + 1";
-        let iterations = 1000;
+        let test_code: _ = "1 + 1";
+        let iterations: _ = 1000;
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let mut successful_runs = 0;
 
         for _ in 0..iterations {
-            let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
+            let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
             match runtime.execute_standard(test_code) {
                 Ok(result) if result.trim() == "2" => {
                     successful_runs += 1;
@@ -336,8 +338,8 @@ mod tests {
             }
         }
 
-        let elapsed = start.elapsed().unwrap();
-        let ops_per_sec = (successful_runs as f64 / elapsed.as_secs_f64()) as u64;
+        let elapsed: _ = start.elapsed().unwrap();
+        let ops_per_sec: _ = (successful_runs as f64 / elapsed.as_secs_f64()) as u64;
 
         println!("\n=== 与 Bun 性能对比 (模拟) ===");
         println!("测试代码: {}", test_code);
@@ -346,8 +348,8 @@ mod tests {
 
         // 已知 Bun 速度约 1,373,885 ops/sec (简单执行)
         // Stage 22.0 目标: 达到 Bun 的 10% 性能 (137,388 ops/sec)
-        let target_ops = 137388;
-        let performance_ratio = ops_per_sec as f64 / target_ops as f64;
+        let target_ops: _ = 137388;
+        let performance_ratio: _ = ops_per_sec as f64 / target_ops as f64;
 
         println!("目标性能 (Bun 10%): {} ops/sec", target_ops);
         println!("当前性能比例: {:.1}%", performance_ratio * 100.0);

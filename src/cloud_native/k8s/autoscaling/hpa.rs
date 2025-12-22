@@ -50,7 +50,7 @@ impl HPAController {
             tokio::time::sleep(Duration::from_secs(30)).await;
 
             // Collect metrics
-            let metrics = match self.metrics_collector.collect_metrics().await {
+            let metrics: _ = match self.metrics_collector.collect_metrics().await {
                 Ok(metrics) => metrics,
                 Err(e) => {
                     warn!("Failed to collect metrics: {}", e);
@@ -61,7 +61,7 @@ impl HPAController {
             debug!("Current metrics: {:?}", metrics);
 
             // Calculate scale action
-            let scale_action = self.calculate_scale_action(&metrics).await?;
+            let scale_action: _ = self.calculate_scale_action(&metrics).await?;
 
             if let Some(action) = scale_action {
                 info!("Scale action required: {:?}", action);
@@ -96,10 +96,10 @@ impl HPAController {
         metrics: &Metrics,
     ) -> Result<Option<ScaleAction>, Error> {
         // Get current replica count
-        let current_replicas = metrics.current_replicas;
+        let current_replicas: _ = metrics.current_replicas;
 
         // Calculate desired replicas based on CPU
-        let cpu_desired = self.calculate_desired_replicas(
+        let cpu_desired: _ = self.calculate_desired_replicas(
             current_replicas,
             metrics.cpu_usage_percent,
             self.config.target_cpu_percent,
@@ -107,7 +107,7 @@ impl HPAController {
         )?;
 
         // Calculate desired replicas based on Memory
-        let memory_desired = self.calculate_desired_replicas(
+        let memory_desired: _ = self.calculate_desired_replicas(
             current_replicas,
             metrics.memory_usage_percent,
             self.config.target_memory_percent,
@@ -115,10 +115,10 @@ impl HPAController {
         )?;
 
         // Take the maximum of CPU and Memory based scaling
-        let desired_replicas = cpu_desired.max(memory_desired);
+        let desired_replicas: _ = cpu_desired.max(memory_desired);
 
         // Validate against min/max bounds
-        let final_replicas = self.validate_bounds(desired_replicas)?;
+        let final_replicas: _ = self.validate_bounds(desired_replicas)?;
 
         debug!(
             "Scale calculation: current={}, cpu_desired={}, memory_desired={}, final={}",
@@ -153,8 +153,8 @@ impl HPAController {
 
         // Standard HPA algorithm:
         // desired = ceil(current * (current_usage / target_usage))
-        let ratio = usage_percent / target_percent;
-        let desired = (current_replicas as f64 * ratio).ceil() as u32;
+        let ratio: _ = usage_percent / target_percent;
+        let desired: _ = (current_replicas as f64 * ratio).ceil() as u32;
 
         debug!(
             "Desired replicas calculation: current={}, usage={}%, target={}%, ratio={:.2}, desired={}",
@@ -166,10 +166,10 @@ impl HPAController {
 
     /// Validate replicas against min/max bounds
     fn validate_bounds(&self, replicas: u32) -> Result<u32, Error> {
-        let min_replicas = self.config.min_replicas;
-        let max_replicas = self.config.max_replicas;
+        let min_replicas: _ = self.config.min_replicas;
+        let max_replicas: _ = self.config.max_replicas;
 
-        let validated = replicas.clamp(min_replicas, max_replicas);
+        let validated: _ = replicas.clamp(min_replicas, max_replicas);
 
         if validated != replicas {
             debug!(
@@ -260,13 +260,13 @@ impl MetricsCollector {
         // 3. Calculating percentages
 
         // For now, return mock metrics
-        let metrics = Arc::new(Metrics {
+        let metrics: _ = Arc::new(std::sync::Mutex::new(Metrics {
             current_replicas: 5,
             cpu_usage_percent: 75.0,
             memory_usage_percent: 60.0,
             total_cpu_cores: 10.0,
             total_memory_gb: 20.0,
-            custom_metrics: HashMap::new(),
+            custom_metrics: HashMap::new()),
             timestamp: Instant::now(),
         });
 
@@ -295,7 +295,7 @@ pub struct Metrics {
     pub total_memory_gb: f64,
 
     /// Custom metrics
-    pub custom_metrics: HashMap<String, f64>,
+    pub custom_metrics: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>,
 
     /// Timestamp when metrics were collected
     pub timestamp: Instant,
@@ -375,10 +375,12 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_scale_action_creation() {
-        let action = ScaleAction {
+        let action: _ = ScaleAction {
             current_replicas: 3,
             desired_replicas: 5,
             scale_up: true,
@@ -393,7 +395,7 @@ mod tests {
 
     #[test]
     fn test_scale_action_down() {
-        let action = ScaleAction {
+        let action: _ = ScaleAction {
             current_replicas: 5,
             desired_replicas: 3,
             scale_up: false,
@@ -408,7 +410,7 @@ mod tests {
 
     #[test]
     fn test_desired_replicas_calculation() {
-        let config = HPAConfig {
+        let config: _ = HPAConfig {
             enabled: true,
             min_replicas: 2,
             max_replicas: 20,
@@ -419,10 +421,10 @@ mod tests {
             scale_policy: None,
         };
 
-        let controller = HPAController::new(kube::Client::default(), config);
+        let controller: _ = HPAController::new(kube::Client::default(), config);
 
         // Test scaling up
-        let desired = controller.calculate_desired_replicas(
+        let desired: _ = controller.calculate_desired_replicas(
             3,
             85.0, // 85% CPU usage
             70.0, // 70% target
@@ -432,7 +434,7 @@ mod tests {
         assert_eq!(desired, 4); // ceil(3 * 85/70) = ceil(3.64) = 4
 
         // Test scaling down
-        let desired = controller.calculate_desired_replicas(
+        let desired: _ = controller.calculate_desired_replicas(
             5,
             35.0, // 35% CPU usage
             70.0, // 70% target
@@ -444,7 +446,7 @@ mod tests {
 
     #[test]
     fn test_bounds_validation() {
-        let config = HPAConfig {
+        let config: _ = HPAConfig {
             enabled: true,
             min_replicas: 3,
             max_replicas: 10,
@@ -455,24 +457,24 @@ mod tests {
             scale_policy: None,
         };
 
-        let controller = HPAController::new(kube::Client::default(), config);
+        let controller: _ = HPAController::new(kube::Client::default(), config);
 
         // Test below min
-        let validated = controller.validate_bounds(2).unwrap();
+        let validated: _ = controller.validate_bounds(2).unwrap();
         assert_eq!(validated, 3);
 
         // Test above max
-        let validated = controller.validate_bounds(15).unwrap();
+        let validated: _ = controller.validate_bounds(15).unwrap();
         assert_eq!(validated, 10);
 
         // Test within bounds
-        let validated = controller.validate_bounds(5).unwrap();
+        let validated: _ = controller.validate_bounds(5).unwrap();
         assert_eq!(validated, 5);
     }
 
     #[test]
     fn test_metrics_structure() {
-        let metrics = Metrics {
+        let metrics: _ = Metrics {
             current_replicas: 5,
             cpu_usage_percent: 75.0,
             memory_usage_percent: 60.0,

@@ -23,7 +23,7 @@ pub enum JsValue {
     /// 数组
     Array(Vec<JsValue>),
     /// 对象
-    Object(HashMap<String, JsValue>),
+    Object(HashMap<String, JsValue, std::collections::HashMap<String, JsValue, String, JsValue>>),
     /// 空值
     Null,
     /// 未定义
@@ -133,7 +133,7 @@ pub struct JsWasmInterop {
 #[derive(Debug, Clone)]
 struct FunctionCache {
     /// 函数缓存映射
-    cache: HashMap<String, CachedFunction>,
+    cache: HashMap<String, CachedFunction, std::collections::HashMap<String, CachedFunction, String, CachedFunction>>,
     /// 缓存大小限制
     max_cache_size: usize,
     /// 缓存访问次数
@@ -201,12 +201,12 @@ impl Default for FunctionCache {
 impl Default for CallStats {
     fn default() -> Self {
         Self {
-            total_calls: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
-            successful_calls: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
-            failed_calls: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
-            total_duration: Arc::new(std::sync::atomic::AtomicU64::new(0)),
-            zero_copy_calls: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
-            batch_calls: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+            total_calls: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicUsize::new(0))),
+            successful_calls: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicUsize::new(0))),
+            failed_calls: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicUsize::new(0))),
+            total_duration: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicU64::new(0))),
+            zero_copy_calls: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicUsize::new(0))),
+            batch_calls: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicUsize::new(0))),
         }
     }
 }
@@ -219,12 +219,12 @@ impl JsWasmInterop {
     ///
     /// # 示例
     /// ```
-    /// let interop = JsWasmInterop::new();
+    /// let interop: _ = JsWasmInterop::new();
     /// ```
     pub fn new() -> Self {
         JsWasmInterop {
-            function_cache: Arc::new(Mutex::new(FunctionCache::default())),
-            call_stats: Arc::new(CallStats::default()),
+            function_cache: Arc::new(std::sync::Mutex::new(Mutex::new(FunctionCache::default()))),
+            call_stats: Arc::new(std::sync::Mutex::new(CallStats::default())),
             batch_config: BatchConfig::default(),
         }
     }
@@ -241,7 +241,7 @@ impl JsWasmInterop {
     ///
     /// # 示例
     /// ```
-    /// let result = interop.call_wasm_function(&module, "add", vec![10.into(), 20.into()])?;
+    /// let result: _ = interop.call_wasm_function(&module, "add", vec![10.into(), 20.into()])?;
     /// ```
     pub fn call_wasm_function(
         &self,
@@ -249,20 +249,20 @@ impl JsWasmInterop {
         function_name: &str,
         args: Vec<JsValue>,
     ) -> Result<WasmCallResult> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         self.call_stats.total_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         // 尝试从缓存获取函数
-        let func = self.get_cached_function(module, function_name)?;
+        let func: _ = self.get_cached_function(module, function_name)?;
 
         // 转换参数
-        let wasm_args = self.convert_js_args_to_wasm(&args)?;
+        let wasm_args: _ = self.convert_js_args_to_wasm(&args)?;
 
         // 调用函数
         match func.call(&mut self.create_store(), &wasm_args) {
             Ok(results) => {
-                let duration = start.elapsed();
+                let duration: _ = start.elapsed();
                 self.call_stats.successful_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 self.call_stats.total_duration.fetch_add(
                     duration.as_nanos() as u64,
@@ -270,12 +270,12 @@ impl JsWasmInterop {
                 );
 
                 // 转换结果
-                let result_value = self.convert_wasm_result_to_js(results)?;
+                let result_value: _ = self.convert_wasm_result_to_js(results)?;
 
                 Ok(WasmCallResult::success(result_value, duration))
             }
             Err(e) => {
-                let duration = start.elapsed();
+                let duration: _ = start.elapsed();
                 self.call_stats.failed_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
                 Ok(WasmCallResult::error(
@@ -297,22 +297,22 @@ impl JsWasmInterop {
     ///
     /// # 示例
     /// ```
-    /// let result = interop.zero_copy_call("add", vec![10.into(), 20.into()])?;
+    /// let result: _ = interop.zero_copy_call("add", vec![10.into(), 20.into()])?;
     /// ```
     pub fn zero_copy_call(
         &self,
         function_name: &str,
         args: Vec<JsValue>,
     ) -> Result<JsValue> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         self.call_stats.total_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         self.call_stats.zero_copy_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         // 模拟零拷贝调用
-        let result = self.simulate_zero_copy_call(function_name, &args)?;
+        let result: _ = self.simulate_zero_copy_call(function_name, &args)?;
 
-        let duration = start.elapsed();
+        let duration: _ = start.elapsed();
         self.call_stats.successful_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         self.call_stats.total_duration.fetch_add(
             duration.as_nanos() as u64,
@@ -334,8 +334,8 @@ impl JsWasmInterop {
     ///
     /// # 示例
     /// ```
-    /// let inputs = vec![vec![1.into()], vec![2.into()], vec![3.into()]];
-    /// let result = interop.batch_call(&module, "fibonacci", inputs)?;
+    /// let inputs: _ = vec![vec![1.into()], vec![2.into()], vec![3.into()]];
+    /// let result: _ = interop.batch_call(&module, "fibonacci", inputs)?;
     /// ```
     pub fn batch_call(
         &self,
@@ -343,7 +343,7 @@ impl JsWasmInterop {
         function_name: &str,
         args_list: Vec<JsValue>,
     ) -> Result<BatchCallResult> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         self.call_stats.total_calls.fetch_add(args_list.len(), std::sync::atomic::Ordering::Relaxed);
         self.call_stats.batch_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -353,7 +353,7 @@ impl JsWasmInterop {
         let mut failure_count = 0;
 
         for args in args_list {
-            let result = self.call_wasm_function(module, function_name, vec![args]);
+            let result: _ = self.call_wasm_function(module, function_name, vec![args]);
             match result {
                 Ok(call_result) => {
                     if call_result.success {
@@ -373,7 +373,7 @@ impl JsWasmInterop {
             }
         }
 
-        let total_duration = start.elapsed();
+        let total_duration: _ = start.elapsed();
 
         Ok(BatchCallResult {
             results,
@@ -398,12 +398,12 @@ impl JsWasmInterop {
         function_name: &str,
         args: Vec<JsValue>,
     ) -> Result<tokio::task::JoinHandle<Result<WasmCallResult>>> {
-        let interop = Arc::new(self.clone());
-        let module = module.clone();
-        let function_name = function_name.to_string();
-        let args = args.clone();
+        let interop: _ = Arc::new(std::sync::Mutex::new(self.clone()));
+        let module: _ = module.clone();clone();
+        let function_name: _ = function_name.clone();to_string();
+        let args: _ = args.clone();clone();
 
-        let handle = tokio::spawn(async move {
+        let handle: _ = tokio::spawn(async move {
             interop.call_wasm_function(&module, &function_name, args)
         });
 
@@ -451,7 +451,7 @@ impl JsWasmInterop {
         for func_name in function_names {
             if !cache.cache.contains_key(func_name) {
                 // 模拟获取函数
-                let cached_func = CachedFunction {
+                let cached_func: _ = CachedFunction {
                     name: func_name.to_string(),
                     func: None, // 在实际实现中，这里会获取实际的函数句柄
                     last_access: Instant::now(),
@@ -487,7 +487,7 @@ impl JsWasmInterop {
         }
 
         // 模拟函数获取（在实际实现中，这里会从模块实例中获取函数）
-        // let func = module.instance().get_func(&mut store, function_name)
+        // let func: _ = module.instance().get_func(&mut store, function_name)
         //     .map_err(|e| anyhow!("Function not found: {}", function_name))?;
 
         // 模拟成功返回
@@ -496,7 +496,7 @@ impl JsWasmInterop {
 
     /// 创建 Store 实例
     fn create_store(&self) -> Store<wasmtime_wasi::WasiCtx> {
-        let wasi = wasmtime_wasi::WasiCtxBuilder::new().build();
+        let wasi: _ = wasmtime_wasi::WasiCtxBuilder::new().build();
         Store::new(&crate::wasm::compiler::WasmCompiler::new().unwrap().engine(), wasi)
     }
 
@@ -621,46 +621,48 @@ impl std::fmt::Display for CallStatsSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_interop_creation() {
-        let interop = JsWasmInterop::new();
+        let interop: _ = JsWasmInterop::new();
         assert!(interop.function_cache.lock().unwrap().cache.is_empty());
     }
 
     #[test]
     fn test_zero_copy_call() {
-        let interop = JsWasmInterop::new();
+        let interop: _ = JsWasmInterop::new();
 
-        let result = interop.zero_copy_call("add", vec![10.into(), 20.into()]);
+        let result: _ = interop.zero_copy_call("add", vec![10.into(), 20.into()]);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), JsValue::Number(30));
     }
 
     #[test]
     fn test_zero_copy_concat() {
-        let interop = JsWasmInterop::new();
+        let interop: _ = JsWasmInterop::new();
 
-        let result = interop.zero_copy_call("concat", vec!["Hello".into(), "World".into()]);
+        let result: _ = interop.zero_copy_call("concat", vec!["Hello".into(), "World".into()]);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), JsValue::String("HelloWorld".to_string()));
     }
 
     #[test]
     fn test_invalid_function() {
-        let interop = JsWasmInterop::new();
+        let interop: _ = JsWasmInterop::new();
 
-        let result = interop.zero_copy_call("nonexistent", vec![]);
+        let result: _ = interop.zero_copy_call("nonexistent", vec![]);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_stats() {
-        let interop = JsWasmInterop::new();
+        let interop: _ = JsWasmInterop::new();
 
         interop.zero_copy_call("add", vec![1.into(), 2.into()]).unwrap();
 
-        let stats = interop.get_call_stats();
+        let stats: _ = interop.get_call_stats();
         assert_eq!(stats.total_calls, 1);
         assert_eq!(stats.successful_calls, 1);
         assert_eq!(stats.zero_copy_calls, 1);
@@ -668,8 +670,8 @@ mod tests {
 
     #[test]
     fn test_cache_warmup() {
-        let interop = JsWasmInterop::new();
-        let module = crate::wasm::module_loader::WasmModule {
+        let interop: _ = JsWasmInterop::new();
+        let module: _ = crate::wasm::module_loader::WasmModule {
             instance: wasmtime::Instance::new(
                 &crate::wasm::compiler::WasmCompiler::new().unwrap().engine(),
                 &wasmtime::Module::new(
@@ -683,20 +685,20 @@ mod tests {
             size: 0,
         };
 
-        let result = interop.warmup_cache(&module, vec!["add", "sub"]);
+        let result: _ = interop.warmup_cache(&module, vec!["add", "sub"]);
         assert!(result.is_ok());
 
-        let cache = interop.function_cache.lock().unwrap();
+        let cache: _ = interop.function_cache.lock().unwrap();
         assert_eq!(cache.cache.len(), 2);
     }
 
     #[test]
     fn test_cache_clear() {
-        let interop = JsWasmInterop::new();
+        let interop: _ = JsWasmInterop::new();
 
         interop.clear_cache();
 
-        let cache = interop.function_cache.lock().unwrap();
+        let cache: _ = interop.function_cache.lock().unwrap();
         assert!(cache.cache.is_empty());
         assert_eq!(cache.access_count, 0);
     }

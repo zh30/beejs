@@ -16,14 +16,16 @@ use std::time::{Duration, Instant};
 #[cfg(test)]
 mod stage_27_1_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// Test 1: 嵌入式内置函数数量验证
     /// 验证实现了 20+ 个高频操作的内置函数
     #[test]
     fn test_embedded_builtins_count() {
-        let builtins_manager = EmbeddedBuiltinsManager::new();
+        let builtins_manager: _ = EmbeddedBuiltinsManager::new();
 
-        let count = builtins_manager.get_builtins_count();
+        let count: _ = builtins_manager.get_builtins_count();
 
         assert!(count >= 20,
             "Should have at least 20 embedded builtins, got {}", count);
@@ -35,21 +37,21 @@ mod stage_27_1_tests {
     /// 验证内置函数性能与 JS 实现相当（考虑优化开销）
     #[test]
     fn test_embedded_builtins_performance() {
-        let builtins_manager = EmbeddedBuiltinsManager::new();
+        let builtins_manager: _ = EmbeddedBuiltinsManager::new();
 
         // 测试高频操作：字符串拼接
-        let js_result = test_string_concat_js();
-        let builtin_result = builtins_manager.execute_builtin("string_concat", &["hello", "world"])
+        let js_result: _ = test_string_concat_js();
+        let builtin_result: _ = builtins_manager.execute_builtin("string_concat", &["hello", "world"])
             .expect("Builtin execution should succeed");
 
         assert_eq!(js_result, builtin_result, "Results should match");
 
         // 性能对比（内置函数应该更快或相当，考虑实际优化效果）
-        let js_time = measure_string_concat_js(10000); // 增加迭代次数
-        let builtin_time = builtins_manager.measure_builtin_performance("string_concat", 10000);
+        let js_time: _ = measure_string_concat_js(10000); // 增加迭代次数
+        let builtin_time: _ = builtins_manager.measure_builtin_performance("string_concat", 10000);
 
         // 允许内置函数有 20% 的开销，因为涉及 Result 处理等
-        let threshold = js_time * 120 / 100;
+        let threshold: _ = js_time * 120 / 100;
         assert!(builtin_time <= threshold,
             "Builtin should be comparable to JS. JS: {:?}, Builtin: {:?}, Threshold: {:?}",
             js_time, builtin_time, threshold);
@@ -63,17 +65,17 @@ mod stage_27_1_tests {
     /// 验证快照加载时间 < 1ms
     #[test]
     fn test_v8_snapshot_load_performance() {
-        let snapshot_manager = V8SnapshotOptimizedManager::new();
+        let snapshot_manager: _ = V8SnapshotOptimizedManager::new();
 
         // 创建快照
-        let snapshot_data = snapshot_manager.create_optimized_snapshot();
+        let snapshot_data: _ = snapshot_manager.create_optimized_snapshot();
 
         assert!(snapshot_data.is_ok(), "Snapshot creation should succeed");
 
         // 测试加载性能
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let isolate = snapshot_manager.load_from_snapshot_optimized(snapshot_data.unwrap());
-        let load_time = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let isolate: _ = snapshot_manager.load_from_snapshot_optimized(snapshot_data.unwrap());
+        let load_time: _ = start.elapsed().unwrap();
 
         assert!(isolate.is_ok(), "Isolate creation should succeed");
         assert!(load_time < Duration::from_millis(1),
@@ -86,11 +88,11 @@ mod stage_27_1_tests {
     /// 验证完整启动时间 < 2ms
     #[test]
     fn test_startup_time_performance() {
-        let startup_optimizer = V8StartupOptimizer::new();
+        let startup_optimizer: _ = V8StartupOptimizer::new();
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-        let runtime = startup_optimizer.create_optimized_runtime();
-        let startup_time = start.elapsed().unwrap();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let runtime: _ = startup_optimizer.create_optimized_runtime();
+        let startup_time: _ = start.elapsed().unwrap();
 
         assert!(runtime.is_ok(), "Runtime creation should succeed");
         assert!(startup_time < Duration::from_millis(2),
@@ -103,9 +105,9 @@ mod stage_27_1_tests {
     /// 验证涵盖了所有高频操作类型
     #[test]
     fn test_builtin_types_coverage() {
-        let builtins_manager = EmbeddedBuiltinsManager::new();
+        let builtins_manager: _ = EmbeddedBuiltinsManager::new();
 
-        let types = builtins_manager.get_builtin_types();
+        let types: _ = builtins_manager.get_builtin_types();
 
         // 验证至少包含这些类型
         assert!(types.contains(&"string".to_string()), "Should have string operations");
@@ -122,19 +124,19 @@ mod stage_27_1_tests {
     /// 验证缓存系统工作正常
     #[test]
     fn test_v8_snapshot_cache_hit_rate() {
-        let snapshot_manager = V8SnapshotOptimizedManager::new();
+        let snapshot_manager: _ = V8SnapshotOptimizedManager::new();
 
         // 预加载快照
         snapshot_manager.preload_snapshots(&["v0.1.0", "v0.1.1"]);
 
         // 多次加载相同快照
         for _ in 0..10 {
-            let snapshot_data = snapshot_manager.get_cached_snapshot("v0.1.0");
+            let snapshot_data: _ = snapshot_manager.get_cached_snapshot("v0.1.0");
             assert!(snapshot_data.is_some(), "Should get cached snapshot");
         }
 
-        let stats = snapshot_manager.get_cache_stats();
-        let hit_rate = stats.hit_rate;
+        let stats: _ = snapshot_manager.get_cache_stats();
+        let hit_rate: _ = stats.hit_rate;
 
         assert!(hit_rate > 0.8,
             "Cache hit rate should be > 80%, got {:.2}%", hit_rate * 100.0);
@@ -146,12 +148,12 @@ mod stage_27_1_tests {
     /// 验证内置函数可以安全并发执行
     #[test]
     fn test_embedded_builtins_concurrent_safety() {
-        let builtins_manager = Arc::new(EmbeddedBuiltinsManager::new());
+        let builtins_manager: _ = Arc::new(std::sync::Mutex::new(EmbeddedBuiltinsManager::new()));
 
         let mut handles = vec![];
         for i in 0..10 {
-            let manager = Arc::clone(&builtins_manager);
-            let handle = std::thread::spawn(move || {
+            let manager: _ = Arc::clone(builtins_manager);
+            let handle: _ = std::thread::spawn(move || {
                 let result = manager.execute_builtin("increment", &[&i.to_string()]);
                 result
             });
@@ -160,7 +162,7 @@ mod stage_27_1_tests {
 
         // 验证所有线程都成功执行
         for handle in handles {
-            let result = handle.join().expect("Thread should not panic");
+            let result: _ = handle.join().expect("Thread should not panic");
             assert!(result.is_ok(), "Concurrent execution should succeed");
         }
 
@@ -171,12 +173,12 @@ mod stage_27_1_tests {
     /// 验证快照内存使用 < 5MB
     #[test]
     fn test_v8_snapshot_memory_usage() {
-        let snapshot_manager = V8SnapshotOptimizedManager::new();
+        let snapshot_manager: _ = V8SnapshotOptimizedManager::new();
 
-        let snapshot_data = snapshot_manager.create_optimized_snapshot();
+        let snapshot_data: _ = snapshot_manager.create_optimized_snapshot();
         assert!(snapshot_data.is_ok(), "Snapshot creation should succeed");
 
-        let memory_usage = snapshot_data.unwrap().len();
+        let memory_usage: _ = snapshot_data.unwrap().len();
 
         assert!(memory_usage < 5 * 1024 * 1024,
             "Snapshot memory usage should be < 5MB, got {} bytes", memory_usage);
@@ -188,14 +190,14 @@ mod stage_27_1_tests {
     /// 验证内置函数正确处理错误情况
     #[test]
     fn test_embedded_builtins_error_handling() {
-        let builtins_manager = EmbeddedBuiltinsManager::new();
+        let builtins_manager: _ = EmbeddedBuiltinsManager::new();
 
         // 测试无效参数
-        let result = builtins_manager.execute_builtin("string_concat", &[]);
+        let result: _ = builtins_manager.execute_builtin("string_concat", &[]);
         assert!(result.is_err(), "Should handle missing parameters");
 
         // 测试错误类型
-        let result = builtins_manager.execute_builtin("nonexistent_builtin", &["test"]);
+        let result: _ = builtins_manager.execute_builtin("nonexistent_builtin", &["test"]);
         assert!(result.is_err(), "Should handle unknown builtin");
 
         println!("✓ Builtins Error Handling: Correctly handles invalid inputs");
@@ -205,11 +207,11 @@ mod stage_27_1_tests {
     /// 验证快照版本系统工作正常
     #[test]
     fn test_v8_snapshot_version_compatibility() {
-        let snapshot_manager = V8SnapshotOptimizedManager::new();
+        let snapshot_manager: _ = V8SnapshotOptimizedManager::new();
 
         // 创建多个版本快照
-        let v1 = snapshot_manager.create_versioned_snapshot("v1.0.0");
-        let v2 = snapshot_manager.create_versioned_snapshot("v2.0.0");
+        let v1: _ = snapshot_manager.create_versioned_snapshot("v1.0.0");
+        let v2: _ = snapshot_manager.create_versioned_snapshot("v2.0.0");
 
         assert!(v1.is_ok(), "v1.0.0 snapshot should be created");
         assert!(v2.is_ok(), "v2.0.0 snapshot should be created");
@@ -228,9 +230,9 @@ mod stage_27_1_tests {
     }
 
     fn measure_string_concat_js(iterations: usize) -> Duration {
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for _ in 0..iterations {
-            let _ = test_string_concat_js();
+            let _: _ = test_string_concat_js();
         }
         start.elapsed().unwrap()
     }
@@ -262,9 +264,9 @@ mod stage_27_1_tests {
         }
 
         fn measure_builtin_performance(&self, name: &str, iterations: usize) -> Duration {
-            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             for _ in 0..iterations {
-                let _ = self.execute_builtin(name, &["1", "2"]);
+                let _: _ = self.execute_builtin(name, &["1", "2"]);
             }
             start.elapsed().unwrap()
         }

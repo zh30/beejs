@@ -63,11 +63,11 @@ impl ZeroCopyUdpSocket {
     /// # 返回值
     /// 返回新的 ZeroCopyUdpSocket 实例
     pub fn new(socket: UdpSocket, buffer_size: usize, pool_size: usize) -> Self {
-        let udp_socket = Self {
-            socket: Arc::new(socket),
-            packet_buffers: Arc::new(Mutex::new(Vec::with_capacity(pool_size))),
+        let udp_socket: _ = Self {
+            socket: Arc::new(std::sync::Mutex::new(socket)),
+            packet_buffers: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(pool_size)))),
             buffer_size,
-            stats: Arc::new(Mutex::new(UdpZeroCopyStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(UdpZeroCopyStats::default()))),
         };
 
         // 预分配数据包缓冲区
@@ -87,7 +87,7 @@ impl ZeroCopyUdpSocket {
     /// # 返回值
     /// 返回绑定结果
     pub fn bind(addr: &str) -> std::io::Result<Self> {
-        let socket = UdpSocket::bind(addr)?;
+        let socket: _ = UdpSocket::bind(addr)?;
         Ok(Self::new(socket, 8 * 1024, 10)) // 默认 8KB 缓冲区，10 个预分配
     }
 
@@ -102,8 +102,8 @@ impl ZeroCopyUdpSocket {
     /// 应用 UDP 优化设置
     fn apply_udp_optimizations(&self) {
         // 设置发送和接收超时
-        let _ = self.socket.set_read_timeout(Some(Duration::from_secs(30)));
-        let _ = self.socket.set_write_timeout(Some(Duration::from_secs(30)));
+        let _: _ = self.socket.set_read_timeout(Some(Duration::from_secs(30)));
+        let _: _ = self.socket.set_write_timeout(Some(Duration::from_secs(30)));
     }
 
     /// 获取数据包缓冲区
@@ -150,7 +150,7 @@ impl ZeroCopyUdpSocket {
     /// # 返回值
     /// 返回发送的字节数
     pub fn send_to_zero_copy(&self, data: &[u8], to: SocketAddr) -> std::io::Result<usize> {
-        let sent_bytes = self.socket.send_to(data, to)?;
+        let sent_bytes: _ = self.socket.send_to(data, to)?;
 
         // 更新统计信息
         {
@@ -265,6 +265,8 @@ impl Read for ZeroCopyUdpSocket {
 mod tests {
     #[allow(unused_imports)]
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_zero_copy_udp_socket_basic() {

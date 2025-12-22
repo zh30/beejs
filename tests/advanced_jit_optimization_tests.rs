@@ -59,8 +59,8 @@ pub struct AdvancedOptimizationResult {
 
 impl AdvancedOptimizationResult {
     pub fn new(name: String, baseline: Duration, optimized: Duration) -> Self {
-        let speedup_ratio = baseline.as_secs_f64() / optimized.as_secs_f64();
-        let improvement_percent = (speedup_ratio - 1.0) * 100.0;
+        let speedup_ratio: _ = baseline.as_secs_f64() / optimized.as_secs_f64();
+        let improvement_percent: _ = (speedup_ratio - 1.0) * 100.0;
 
         Self {
             name,
@@ -106,7 +106,7 @@ pub struct AdvancedJITOptimizer {
 
 impl AdvancedJITOptimizer {
     pub fn new(iterations: usize) -> Self {
-        let runtime = Runtime::new(67108864, 1073741824, false, false);
+        let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
         Self {
             runtime,
             iterations,
@@ -116,10 +116,10 @@ impl AdvancedJITOptimizer {
     /// 测试逃逸分析优化
     pub fn test_escape_analysis(&self) -> AdvancedOptimizationResult {
         // 基线测试：不优化的代码（有对象逃逸）
-        let baseline_code = r#"
+        let baseline_code: _ = r#"
             function createObjects(n) {
                 const result = [];
-                for (let i = 0; i < n; i++) {
+                for (let i: _ = 0; i < n; i++) {
                     const obj = { x: i, y: i * 2, z: i * 3 };
                     result.push(obj);
                 }
@@ -129,10 +129,10 @@ impl AdvancedJITOptimizer {
         "#;
 
         // 优化测试：内联和栈分配（无逃逸）
-        let optimized_code = r#"
+        let optimized_code: _ = r#"
             function createObjects(n) {
                 let sum = 0;
-                for (let i = 0; i < n; i++) {
+                for (let i: _ = 0; i < n; i++) {
                     sum += i + i * 2 + i * 3;
                 }
                 return sum;
@@ -146,18 +146,18 @@ impl AdvancedJITOptimizer {
     /// 测试循环展开优化
     pub fn test_loop_unrolling(&self) -> AdvancedOptimizationResult {
         // 基线测试：标准循环
-        let baseline_code = r#"
+        let baseline_code: _ = r#"
             let sum = 0;
-            for (let i = 0; i < 1000; i++) {
+            for (let i: _ = 0; i < 1000; i++) {
                 sum += i * 2;
             }
             sum;
         "#;
 
         // 优化测试：手动循环展开（模拟 V8 优化）
-        let optimized_code = r#"
+        let optimized_code: _ = r#"
             let sum = 0;
-            for (let i = 0; i < 1000; i += 4) {
+            for (let i: _ = 0; i < 1000; i += 4) {
                 sum += i * 2;
                 sum += (i + 1) * 2;
                 sum += (i + 2) * 2;
@@ -172,21 +172,21 @@ impl AdvancedJITOptimizer {
     /// 测试内联优化
     pub fn test_inline_optimization(&self) -> AdvancedOptimizationResult {
         // 基线测试：函数调用
-        let baseline_code = r#"
+        let baseline_code: _ = r#"
             function add(a, b, c) {
                 return a + b + c;
             }
-            let sum = 0;
-            for (let i = 0; i < 1000; i++) {
+            let sum: _ = 0;
+            for (let i: _ = 0; i < 1000; i++) {
                 sum += add(i, i * 2, i * 3);
             }
             sum;
         "#;
 
         // 优化测试：内联后的代码
-        let optimized_code = r#"
+        let optimized_code: _ = r#"
             let sum = 0;
-            for (let i = 0; i < 1000; i++) {
+            for (let i: _ = 0; i < 1000; i++) {
                 sum += i + i * 2 + i * 3;
             }
             sum;
@@ -198,26 +198,26 @@ impl AdvancedJITOptimizer {
     /// 测试内存布局优化
     pub fn test_memory_layout(&self) -> AdvancedOptimizationResult {
         // 基线测试：随机内存访问
-        let baseline_code = r#"
+        let baseline_code: _ = r#"
             const arr = new Array(10000);
-            for (let i = 0; i < arr.length; i++) {
+            for (let i: _ = 0; i < arr.length; i++) {
                 arr[i] = i;
             }
-            let sum = 0;
-            for (let i = 0; i < arr.length; i += 7) {
+            let sum: _ = 0;
+            for (let i: _ = 0; i < arr.length; i += 7) {
                 sum += arr[i];
             }
             sum;
         "#;
 
         // 优化测试：顺序内存访问（缓存友好）
-        let optimized_code = r#"
+        let optimized_code: _ = r#"
             const arr = new Array(10000);
-            for (let i = 0; i < arr.length; i++) {
+            for (let i: _ = 0; i < arr.length; i++) {
                 arr[i] = i;
             }
-            let sum = 0;
-            for (let i = 0; i < arr.length; i++) {
+            let sum: _ = 0;
+            for (let i: _ = 0; i < arr.length; i++) {
                 sum += arr[i];
             }
             sum;
@@ -229,7 +229,7 @@ impl AdvancedJITOptimizer {
     /// 测试复杂计算优化
     pub fn test_complex_calculation(&self) -> AdvancedOptimizationResult {
         // 基线测试：低效的复杂计算
-        let baseline_code = r#"
+        let baseline_code: _ = r#"
             function fibonacci(n) {
                 if (n <= 1) return n;
                 return fibonacci(n - 1) + fibonacci(n - 2);
@@ -238,10 +238,10 @@ impl AdvancedJITOptimizer {
         "#;
 
         // 优化测试：迭代版本（避免重复计算）
-        let optimized_code = r#"
+        let optimized_code: _ = r#"
             function fibonacci(n) {
                 let a = 0, b = 1;
-                for (let i = 0; i < n; i++) {
+                for (let i: _ = 0; i < n; i++) {
                     [a, b] = [b, a + b];
                 }
                 return a;
@@ -255,9 +255,9 @@ impl AdvancedJITOptimizer {
     /// 测试热路径优化
     pub fn test_hot_path_optimization(&self) -> AdvancedOptimizationResult {
         // 基线测试：未被优化的热路径
-        let baseline_code = r#"
+        let baseline_code: _ = r#"
             let count = 0;
-            for (let i = 0; i < 100000; i++) {
+            for (let i: _ = 0; i < 100000; i++) {
                 if (i % 3 === 0 && i % 5 === 0) {
                     count++;
                 }
@@ -266,11 +266,11 @@ impl AdvancedJITOptimizer {
         "#;
 
         // 优化测试：热路径被多次执行，应该被优化
-        let optimized_code = r#"
+        let optimized_code: _ = r#"
             let count = 0;
             // 执行多次，让热路径被识别并优化
-            for (let round = 0; round < 10; round++) {
-                for (let i = 0; i < 100000; i++) {
+            for (let round: _ = 0; round < 10; round++) {
+                for (let i: _ = 0; i < 100000; i++) {
                     if (i % 3 === 0 && i % 5 === 0) {
                         count++;
                     }
@@ -291,29 +291,29 @@ impl AdvancedJITOptimizer {
     ) -> AdvancedOptimizationResult {
         // 预热
         for _ in 0..10 {
-            let _ = self.runtime.execute_code(baseline_code);
-            let _ = self.runtime.execute_code(optimized_code);
+            let _: _ = self.runtime.execute_code(baseline_code);
+            let _: _ = self.runtime.execute_code(optimized_code);
         }
 
         // 基线测试
         let mut baseline_times = Vec::new();
         for _ in 0..self.iterations {
-            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-            let _ = self.runtime.execute_code(baseline_code);
+            let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let _: _ = self.runtime.execute_code(baseline_code);
             baseline_times.push(start.elapsed().unwrap());
         }
         let baseline_duration: Duration = baseline_times.iter().sum();
-        let baseline_avg = baseline_duration / self.iterations as u32;
+        let baseline_avg: _ = baseline_duration / self.iterations as u32;
 
         // 优化测试
         let mut optimized_times = Vec::new();
         for _ in 0..self.iterations {
-            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-            let _ = self.runtime.execute_code(optimized_code);
+            let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let _: _ = self.runtime.execute_code(optimized_code);
             optimized_times.push(start.elapsed().unwrap());
         }
         let optimized_duration: Duration = optimized_times.iter().sum();
-        let optimized_avg = optimized_duration / self.iterations as u32;
+        let optimized_avg: _ = optimized_duration / self.iterations as u32;
 
         AdvancedOptimizationResult::new(name.to_string(), baseline_avg, optimized_avg)
     }
@@ -325,6 +325,8 @@ mod tests {
 
     // Import the V8 requirement macro
     use beejs::is_v8_available;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     // V8 availability check macro
     macro_rules! require_v8 {
@@ -341,15 +343,15 @@ mod tests {
     #[test]
     fn test_advanced_jit_optimizer_creation() {
         require_v8!();
-        let optimizer = AdvancedJITOptimizer::new(10);
+        let optimizer: _ = AdvancedJITOptimizer::new(10);
         assert_eq!(optimizer.iterations, 10);
     }
 
     #[test]
     fn test_escape_analysis_optimization() {
         require_v8!();
-        let optimizer = AdvancedJITOptimizer::new(5);
-        let result = optimizer.test_escape_analysis();
+        let optimizer: _ = AdvancedJITOptimizer::new(5);
+        let result: _ = optimizer.test_escape_analysis();
 
         println!("\n{}", result.format_report());
 
@@ -361,8 +363,8 @@ mod tests {
     #[test]
     fn test_loop_unrolling_optimization() {
         require_v8!();
-        let optimizer = AdvancedJITOptimizer::new(5);
-        let result = optimizer.test_loop_unrolling();
+        let optimizer: _ = AdvancedJITOptimizer::new(5);
+        let result: _ = optimizer.test_loop_unrolling();
 
         println!("\n{}", result.format_report());
 
@@ -374,8 +376,8 @@ mod tests {
     #[test]
     fn test_inline_optimization() {
         require_v8!();
-        let optimizer = AdvancedJITOptimizer::new(5);
-        let result = optimizer.test_inline_optimization();
+        let optimizer: _ = AdvancedJITOptimizer::new(5);
+        let result: _ = optimizer.test_inline_optimization();
 
         println!("\n{}", result.format_report());
 
@@ -387,8 +389,8 @@ mod tests {
     #[test]
     fn test_memory_layout_optimization() {
         require_v8!();
-        let optimizer = AdvancedJITOptimizer::new(5);
-        let result = optimizer.test_memory_layout();
+        let optimizer: _ = AdvancedJITOptimizer::new(5);
+        let result: _ = optimizer.test_memory_layout();
 
         println!("\n{}", result.format_report());
 
@@ -400,8 +402,8 @@ mod tests {
     #[test]
     fn test_complex_calculation_optimization() {
         require_v8!();
-        let optimizer = AdvancedJITOptimizer::new(3); // 减少迭代次数，因为斐波那契计算很慢
-        let result = optimizer.test_complex_calculation();
+        let optimizer: _ = AdvancedJITOptimizer::new(3); // 减少迭代次数，因为斐波那契计算很慢
+        let result: _ = optimizer.test_complex_calculation();
 
         println!("\n{}", result.format_report());
 
@@ -413,8 +415,8 @@ mod tests {
     #[test]
     fn test_hot_path_optimization() {
         require_v8!();
-        let optimizer = AdvancedJITOptimizer::new(3);
-        let result = optimizer.test_hot_path_optimization();
+        let optimizer: _ = AdvancedJITOptimizer::new(3);
+        let result: _ = optimizer.test_hot_path_optimization();
 
         println!("\n{}", result.format_report());
 
@@ -426,11 +428,11 @@ mod tests {
     #[test]
     fn test_all_optimizations() {
         require_v8!();
-        let optimizer = AdvancedJITOptimizer::new(5);
+        let optimizer: _ = AdvancedJITOptimizer::new(5);
 
         println!("\n=== 高级 JIT 优化测试套件 ===");
 
-        let results = vec![
+        let results: _ = vec![
             optimizer.test_escape_analysis(),
             optimizer.test_loop_unrolling(),
             optimizer.test_inline_optimization(),

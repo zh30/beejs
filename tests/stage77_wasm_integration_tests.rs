@@ -6,6 +6,8 @@
 mod stage77_wasm_integration_tests {
     use beejs::wasm_integration::{initialize_wasm, WasmExecutor, WasmStats, WasmModule};
     use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     // ==========================================
     // 基础功能测试 (Tests 1-20)
@@ -16,11 +18,11 @@ mod stage77_wasm_integration_tests {
     fn test_wasm_executor_creation() {
         println!("🚀 测试 1: WasmExecutor 创建");
 
-        let result = initialize_wasm();
+        let result: _ = initialize_wasm();
         assert!(result.is_ok(), "WasmExecutor 创建失败");
 
-        let executor = result.unwrap();
-        let stats = executor.get_stats();
+        let executor: _ = result.unwrap();
+        let stats: _ = executor.get_stats();
 
         println!("   执行器统计: {:?}", stats);
         assert!(stats.total_executions == 0);
@@ -34,10 +36,10 @@ mod stage77_wasm_integration_tests {
     fn test_simple_wasm_module_loading() {
         println!("🚀 测试 2: 简单 WASM 模块加载");
 
-        let executor = initialize_wasm().unwrap();
+        let executor: _ = initialize_wasm().unwrap();
 
         // 创建一个简单的 WASM 模块
-        let wasm_bytes = wat::parse_str(r#"
+        let wasm_bytes: _ = wat::parse_str(r#"
             (module
                 (func (export "add") (param i32 i32) (result i32)
                     local.get 0
@@ -50,10 +52,10 @@ mod stage77_wasm_integration_tests {
             )
         "#).expect("WAT 解析失败");
 
-        let result = executor.load_module("simple_test", wasm_bytes);
+        let result: _ = executor.load_module("simple_test", wasm_bytes);
         assert!(result.is_ok(), "模块加载失败: {:?}", result.err());
 
-        let modules = executor.list_modules();
+        let modules: _ = executor.list_modules();
         assert!(modules.contains(&"simple_test".to_string()));
 
         println!("   已加载模块: {:?}", modules);
@@ -65,10 +67,10 @@ mod stage77_wasm_integration_tests {
     fn test_wasm_module_execution() {
         println!("🚀 测试 3: WASM 模块执行");
 
-        let executor = initialize_wasm().unwrap();
+        let executor: _ = initialize_wasm().unwrap();
 
         // 创建可执行的 WASM 模块
-        let wasm_bytes = wat::parse_str(r#"
+        let wasm_bytes: _ = wat::parse_str(r#"
             (module
                 (func (export "add") (param i32 i32) (result i32)
                     local.get 0
@@ -86,10 +88,10 @@ mod stage77_wasm_integration_tests {
 
         executor.load_module("math_test", wasm_bytes).unwrap();
 
-        let result = executor.execute_module("math_test");
+        let result: _ = executor.execute_module("math_test");
         assert!(result.is_ok(), "模块执行失败: {:?}", result.err());
 
-        let exec_time = result.unwrap();
+        let exec_time: _ = result.unwrap();
         println!("   执行时间: {:?}", exec_time);
         assert!(exec_time > Duration::default());
 
@@ -101,31 +103,31 @@ mod stage77_wasm_integration_tests {
     fn test_multiple_modules() {
         println!("🚀 测试 4: 多模块管理");
 
-        let executor = initialize_wasm().unwrap();
+        let executor: _ = initialize_wasm().unwrap();
 
         // 加载多个模块
-        let modules = vec![
+        let modules: _ = vec![
             ("module1", create_add_module()),
             ("module2", create_multiply_module()),
             ("module3", create_fibonacci_module()),
         ];
 
         for (name, wasm_bytes) in modules {
-            let result = executor.load_module(name, wasm_bytes);
+            let result: _ = executor.load_module(name, wasm_bytes);
             assert!(result.is_ok(), "加载模块 {} 失败", name);
         }
 
-        let loaded_modules = executor.list_modules();
+        let loaded_modules: _ = executor.list_modules();
         // 可能有预加载的模块，所以检查至少 3 个
         assert!(loaded_modules.len() >= 3);
 
         // 执行所有模块
         for name in &loaded_modules {
-            let result = executor.execute_module(name);
+            let result: _ = executor.execute_module(name);
             assert!(result.is_ok(), "执行模块 {} 失败", name);
         }
 
-        let stats = executor.get_stats();
+        let stats: _ = executor.get_stats();
         println!("   执行统计: {:?}", stats);
         assert!(stats.total_executions >= 3);
 
@@ -137,11 +139,11 @@ mod stage77_wasm_integration_tests {
     fn test_invalid_module_validation() {
         println!("🚀 测试 5: 无效模块验证");
 
-        let executor = initialize_wasm().unwrap();
+        let executor: _ = initialize_wasm().unwrap();
 
         // 测试无效的 WASM 字节码
-        let invalid_bytes = vec![0x00, 0x01, 0x02, 0x03];
-        let result = executor.load_module("invalid", invalid_bytes);
+        let invalid_bytes: _ = vec![0x00, 0x01, 0x02, 0x03];
+        let result: _ = executor.load_module("invalid", invalid_bytes);
 
         assert!(result.is_err(), "应该拒绝无效模块");
 
@@ -153,15 +155,15 @@ mod stage77_wasm_integration_tests {
     fn test_module_info() {
         println!("🚀 测试 6: 模块信息获取");
 
-        let executor = initialize_wasm().unwrap();
-        let wasm_bytes = create_add_module();
+        let executor: _ = initialize_wasm().unwrap();
+        let wasm_bytes: _ = create_add_module();
 
         executor.load_module("info_test", wasm_bytes.clone()).unwrap();
 
-        let module_info = executor.get_module_info("info_test");
+        let module_info: _ = executor.get_module_info("info_test");
         assert!(module_info.is_some(), "模块信息不存在");
 
-        let info = module_info.unwrap();
+        let info: _ = module_info.unwrap();
         assert_eq!(info.name, "info_test");
         assert!(info.load_time > Duration::default());
         assert_eq!(info.bytecode.len(), wasm_bytes.len());
@@ -176,19 +178,19 @@ mod stage77_wasm_integration_tests {
     fn test_module_caching() {
         println!("🚀 测试 7: 模块缓存和重用");
 
-        let executor = initialize_wasm().unwrap();
-        let wasm_bytes = create_add_module();
+        let executor: _ = initialize_wasm().unwrap();
+        let wasm_bytes: _ = create_add_module();
 
         // 首次加载
-        let start1 = SystemTime::now();
+        let start1: _ = SystemTime::now();
         executor.load_module("cache_test", wasm_bytes.clone()).unwrap();
-        let load_time1 = start1.elapsed().unwrap();
+        let load_time1: _ = start1.elapsed().unwrap();
 
         // 清除模块后重新加载（测试缓存重建）
         executor.clear_modules();
-        let start2 = SystemTime::now();
+        let start2: _ = SystemTime::now();
         executor.load_module("cache_test", wasm_bytes.clone()).unwrap();
-        let load_time2 = start2.elapsed().unwrap();
+        let load_time2: _ = start2.elapsed().unwrap();
 
         println!("   首次加载时间: {:?}", load_time1);
         println!("   二次加载时间: {:?}", load_time2);
@@ -202,23 +204,23 @@ mod stage77_wasm_integration_tests {
     fn test_concurrent_module_loading() {
         println!("🚀 测试 8: 并发模块加载");
 
-        let executor = initialize_wasm().unwrap();
-        let wasm_bytes = create_add_module();
+        let executor: _ = initialize_wasm().unwrap();
+        let wasm_bytes: _ = create_add_module();
 
         // 使用 Arc 共享 executor
-        let executor = std::sync::Arc::new(executor);
-        let executor_clone = executor.clone();
-        let wasm_bytes_clone = wasm_bytes.clone();
+        let executor: _ = std::sync::Arc::new(std::sync::Mutex::new(executor));
+        let executor_clone: _ = executor.clone();
+        let wasm_bytes_clone: _ = wasm_bytes.clone();
 
-        let handle = std::thread::spawn(move || {
+        let handle: _ = std::thread::spawn(move || {
             let name = "concurrent_test_single".to_string();
             executor_clone.load_module(&name, wasm_bytes_clone)
         });
 
-        let result = handle.join().unwrap();
+        let result: _ = handle.join().unwrap();
         assert!(result.is_ok(), "并发加载失败");
 
-        let modules = executor.list_modules();
+        let modules: _ = executor.list_modules();
         assert!(modules.len() >= 1);
 
         println!("   成功加载模块");
@@ -230,10 +232,10 @@ mod stage77_wasm_integration_tests {
     fn test_fuel_limit() {
         println!("🚀 测试 9: 燃料限制");
 
-        let executor = initialize_wasm().unwrap();
+        let executor: _ = initialize_wasm().unwrap();
 
         // 创建一个有限循环的模块用于测试 (不能用无限循环会卡住测试)
-        let wasm_bytes = wat::parse_str(r#"
+        let wasm_bytes: _ = wat::parse_str(r#"
             (module
                 (func (export "loop_func") (result i32)
                     (local $i i32)
@@ -257,7 +259,7 @@ mod stage77_wasm_integration_tests {
         executor.load_module("fuel_test", wasm_bytes).unwrap();
 
         // 执行模块
-        let result = executor.execute_module("fuel_test");
+        let result: _ = executor.execute_module("fuel_test");
 
         // 验证执行成功完成
         println!("   执行结果: {:?}", result);
@@ -270,16 +272,16 @@ mod stage77_wasm_integration_tests {
     fn test_module_clearing() {
         println!("🚀 测试 10: 模块清除");
 
-        let executor = initialize_wasm().unwrap();
+        let executor: _ = initialize_wasm().unwrap();
 
         // 加载模块
         executor.load_module("clear_test", create_add_module()).unwrap();
-        let modules_before = executor.list_modules();
+        let modules_before: _ = executor.list_modules();
         assert!(!modules_before.is_empty());
 
         // 清除模块
         executor.clear_modules();
-        let modules_after = executor.list_modules();
+        let modules_after: _ = executor.list_modules();
         assert!(modules_after.is_empty());
 
         println!("✅ 测试 10 通过: 模块清除成功");
@@ -294,20 +296,20 @@ mod stage77_wasm_integration_tests {
     fn test_module_load_performance() {
         println!("🚀 测试 11: 模块加载性能基准");
 
-        let executor = initialize_wasm().unwrap();
+        let executor: _ = initialize_wasm().unwrap();
 
         // 创建不同大小的模块进行基准测试（使用有效的 WASM）
-        let test_cases = vec![
+        let test_cases: _ = vec![
             ("small", create_add_module()),
             ("medium", create_multiply_module()),
             ("large", create_fibonacci_module()),
         ];
 
         for (name, wasm_bytes) in test_cases {
-            let size_kb = wasm_bytes.len() / 1024;
-            let start = SystemTime::now();
-            let result = executor.load_module(&format!("perf_{}", name), wasm_bytes);
-            let load_time = start.elapsed().unwrap();
+            let size_kb: _ = wasm_bytes.len() / 1024;
+            let start: _ = SystemTime::now();
+            let result: _ = executor.load_module(&format!("perf_{}", name), wasm_bytes);
+            let load_time: _ = start.elapsed().unwrap();
 
             assert!(result.is_ok(), "加载 {} 模块失败", name);
             println!("   {} 模块 ({} KB): {:?} ({:.2} KB/ms)",
@@ -322,21 +324,21 @@ mod stage77_wasm_integration_tests {
     fn test_function_call_performance() {
         println!("🚀 测试 12: 函数调用性能");
 
-        let executor = initialize_wasm().unwrap();
-        let wasm_bytes = create_compute_intensive_module();
+        let executor: _ = initialize_wasm().unwrap();
+        let wasm_bytes: _ = create_compute_intensive_module();
 
         executor.load_module("perf_call", wasm_bytes).unwrap();
 
         // 执行多次调用测试性能
-        let iterations = 1000;
-        let start = SystemTime::now();
+        let iterations: _ = 1000;
+        let start: _ = SystemTime::now();
 
         for _ in 0..iterations {
-            let _ = executor.execute_module("perf_call");
+            let _: _ = executor.execute_module("perf_call");
         }
 
-        let total_time = start.elapsed().unwrap();
-        let avg_time = Duration::from_nanos(total_time.as_nanos() as u64 / iterations as u64);
+        let total_time: _ = start.elapsed().unwrap();
+        let avg_time: _ = Duration::from_nanos(total_time.as_nanos() as u64 / iterations as u64);
 
         println!("   {} 次调用总时间: {:?}", iterations, total_time);
         println!("   平均调用时间: {:?}", avg_time);
@@ -354,19 +356,19 @@ mod stage77_wasm_integration_tests {
     fn test_memory_efficiency() {
         println!("🚀 测试 13: 内存使用效率");
 
-        let executor = initialize_wasm().unwrap();
+        let executor: _ = initialize_wasm().unwrap();
 
         // 先清除预加载的模块
         executor.clear_modules();
 
         // 加载多个模块测试内存效率
-        let module_count = 10;
+        let module_count: _ = 10;
         for i in 0..module_count {
-            let wasm_bytes = create_add_module();
+            let wasm_bytes: _ = create_add_module();
             executor.load_module(&format!("mem_test_{}", i), wasm_bytes).unwrap();
         }
 
-        let modules = executor.list_modules();
+        let modules: _ = executor.list_modules();
         assert_eq!(modules.len(), module_count,
             "期望 {} 个模块，实际 {} 个", module_count, modules.len());
 
@@ -375,7 +377,7 @@ mod stage77_wasm_integration_tests {
             executor.execute_module(module_name).unwrap();
         }
 
-        let stats = executor.get_stats();
+        let stats: _ = executor.get_stats();
         println!("   执行统计: {:?}", stats);
 
         // 验证统计信息正确
@@ -390,8 +392,8 @@ mod stage77_wasm_integration_tests {
     fn test_cache_hit_rate() {
         println!("🚀 测试 14: 缓存命中率");
 
-        let executor = initialize_wasm().unwrap();
-        let wasm_bytes = create_add_module();
+        let executor: _ = initialize_wasm().unwrap();
+        let wasm_bytes: _ = create_add_module();
 
         // 首次加载
         executor.load_module("cache_hit_test", wasm_bytes.clone()).unwrap();
@@ -402,7 +404,7 @@ mod stage77_wasm_integration_tests {
         executor.load_module("cache_hit_test", wasm_bytes.clone()).unwrap();
         executor.execute_module("cache_hit_test").unwrap();
 
-        let stats = executor.get_stats();
+        let stats: _ = executor.get_stats();
         println!("   统计信息: {:?}", stats);
 
         // 由于实例池优化，重新加载应该很快
@@ -414,13 +416,13 @@ mod stage77_wasm_integration_tests {
     fn test_long_term_stability() {
         println!("🚀 测试 15: 长时间稳定性");
 
-        let executor = initialize_wasm().unwrap();
+        let executor: _ = initialize_wasm().unwrap();
 
         // 执行大量操作测试稳定性
-        let operations = 100;
+        let operations: _ = 100;
         for i in 0..operations {
-            let module_name = format!("stability_test_{}", i % 5);
-            let wasm_bytes = create_add_module();
+            let module_name: _ = format!("stability_test_{}", i % 5);
+            let wasm_bytes: _ = create_add_module();
 
             if i % 5 == 0 {
                 // 定期加载新模块
@@ -433,7 +435,7 @@ mod stage77_wasm_integration_tests {
             }
         }
 
-        let stats = executor.get_stats();
+        let stats: _ = executor.get_stats();
         println!("   最终统计: {:?}", stats);
         assert!(stats.total_executions > 0);
 
@@ -445,24 +447,24 @@ mod stage77_wasm_integration_tests {
     fn test_concurrent_execution_performance() {
         println!("🚀 测试 16: 并发执行性能");
 
-        let executor = initialize_wasm().unwrap();
+        let executor: _ = initialize_wasm().unwrap();
         executor.load_module("concurrent_perf", create_add_module()).unwrap();
 
-        let thread_count = 4;
-        let iterations_per_thread = 100;
+        let thread_count: _ = 4;
+        let iterations_per_thread: _ = 100;
 
         // 使用 Arc 来共享 executor
-        let executor = std::sync::Arc::new(executor);
-        let executor_clone = executor.clone();
+        let executor: _ = std::sync::Arc::new(std::sync::Mutex::new(executor));
+        let executor_clone: _ = executor.clone();
 
-        let handle = std::thread::spawn(move || {
+        let handle: _ = std::thread::spawn(move || {
             for _ in 0..iterations_per_thread {
                 let _ = executor_clone.execute_module("concurrent_perf");
             }
             iterations_per_thread
         });
 
-        let ops = handle.join().unwrap();
+        let ops: _ = handle.join().unwrap();
 
         println!("   执行操作数: {}", ops);
         assert_eq!(ops, iterations_per_thread);
@@ -475,17 +477,17 @@ mod stage77_wasm_integration_tests {
     fn test_error_recovery() {
         println!("🚀 测试 17: 错误恢复能力");
 
-        let executor = initialize_wasm().unwrap();
+        let executor: _ = initialize_wasm().unwrap();
 
         // 测试无效模块加载
-        let invalid_result = executor.load_module("invalid", vec![0x00, 0x01, 0x02, 0x03]);
+        let invalid_result: _ = executor.load_module("invalid", vec![0x00, 0x01, 0x02, 0x03]);
         assert!(invalid_result.is_err());
 
         // 加载有效模块验证错误后系统仍然正常
-        let valid_result = executor.load_module("recovery_test", create_add_module());
+        let valid_result: _ = executor.load_module("recovery_test", create_add_module());
         assert!(valid_result.is_ok());
 
-        let modules = executor.list_modules();
+        let modules: _ = executor.list_modules();
         assert!(modules.contains(&"recovery_test".to_string()));
 
         println!("✅ 测试 17 通过: 错误恢复能力良好");
@@ -496,26 +498,26 @@ mod stage77_wasm_integration_tests {
     fn test_large_scale_module_loading() {
         println!("🚀 测试 18: 大规模模块加载");
 
-        let executor = initialize_wasm().unwrap();
+        let executor: _ = initialize_wasm().unwrap();
 
-        let module_count = 50;
-        let start = SystemTime::now();
+        let module_count: _ = 50;
+        let start: _ = SystemTime::now();
 
         // 批量加载模块
         for i in 0..module_count {
-            let wasm_bytes = create_varied_module(i);
-            let result = executor.load_module(&format!("large_scale_{}", i), wasm_bytes);
+            let wasm_bytes: _ = create_varied_module(i);
+            let result: _ = executor.load_module(&format!("large_scale_{}", i), wasm_bytes);
             assert!(result.is_ok(), "加载模块 {} 失败", i);
         }
 
-        let total_time = start.elapsed().unwrap();
-        let avg_time_per_module = Duration::from_nanos(total_time.as_nanos() as u64 / module_count as u64);
+        let total_time: _ = start.elapsed().unwrap();
+        let avg_time_per_module: _ = Duration::from_nanos(total_time.as_nanos() as u64 / module_count as u64);
 
         println!("   总加载时间: {:?}", total_time);
         println!("   平均每模块: {:?}", avg_time_per_module);
         println!("   每秒加载模块数: {}", module_count as f64 / total_time.as_secs_f64());
 
-        let modules = executor.list_modules();
+        let modules: _ = executor.list_modules();
         // 可能有预加载的模块，所以检查至少加载了 module_count 个
         assert!(modules.len() >= module_count);
 
@@ -527,36 +529,36 @@ mod stage77_wasm_integration_tests {
     fn test_performance_regression_detection() {
         println!("🚀 测试 19: 性能回归检测");
 
-        let executor = initialize_wasm().unwrap();
-        let wasm_bytes = create_add_module();
+        let executor: _ = initialize_wasm().unwrap();
+        let wasm_bytes: _ = create_add_module();
 
         // 基准性能测试
-        let baseline_iterations = 10;
+        let baseline_iterations: _ = 10;
         let mut baseline_times = Vec::new();
 
         for _ in 0..baseline_iterations {
-            let start = SystemTime::now();
+            let start: _ = SystemTime::now();
             executor.load_module("baseline_test", wasm_bytes.clone()).unwrap();
-            let load_time = start.elapsed().unwrap();
+            let load_time: _ = start.elapsed().unwrap();
             baseline_times.push(load_time);
             executor.clear_modules();
         }
 
-        let avg_baseline = Duration::from_nanos(
+        let avg_baseline: _ = Duration::from_nanos(
             baseline_times.iter().sum::<Duration>().as_nanos() as u64 / baseline_iterations as u64
         );
 
         println!("   基准平均加载时间: {:?}", avg_baseline);
 
         // 当前性能测试
-        let current_start = SystemTime::now();
+        let current_start: _ = SystemTime::now();
         executor.load_module("current_test", wasm_bytes.clone()).unwrap();
-        let current_time = current_start.elapsed().unwrap();
+        let current_time: _ = current_start.elapsed().unwrap();
 
         println!("   当前加载时间: {:?}", current_time);
 
         // 性能不应该退化超过 100% (考虑测试环境波动)
-        let regression_threshold = avg_baseline * 200 / 100;
+        let regression_threshold: _ = avg_baseline * 200 / 100;
         assert!(current_time < regression_threshold,
             "检测到性能回归: 当前 {:?} > 基准 {:?} * 2.0",
             current_time, avg_baseline);
@@ -569,11 +571,11 @@ mod stage77_wasm_integration_tests {
     fn test_resource_cleanup() {
         println!("🚀 测试 20: 资源清理验证");
 
-        let executor = initialize_wasm().unwrap();
+        let executor: _ = initialize_wasm().unwrap();
 
         // 加载并执行模块
         for i in 0..10 {
-            let wasm_bytes = create_add_module();
+            let wasm_bytes: _ = create_add_module();
             executor.load_module(&format!("cleanup_test_{}", i), wasm_bytes).unwrap();
             executor.execute_module(&format!("cleanup_test_{}", i)).unwrap();
         }
@@ -581,11 +583,11 @@ mod stage77_wasm_integration_tests {
         // 清理模块
         executor.clear_modules();
 
-        let modules = executor.list_modules();
+        let modules: _ = executor.list_modules();
         assert!(modules.is_empty());
 
         // 验证清理后可以正常加载新模块
-        let result = executor.load_module("post_cleanup", create_add_module());
+        let result: _ = executor.load_module("post_cleanup", create_add_module());
         assert!(result.is_ok());
 
         println!("✅ 测试 20 通过: 资源清理正常");

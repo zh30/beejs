@@ -15,6 +15,8 @@ use super::distributed_tracer::DistributedTracer;
 use super::node_manager::NodeManager;
 use super::health_monitor::HealthMonitor;
 use super::fault_tolerance::FaultDetector;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 告警级别
 #[derive(Debug, Clone, PartialEq)]
@@ -93,7 +95,7 @@ pub struct TraceAnalysis {
     pub total_traces: u64,
     pub slow_traces: Vec<SlowTrace>,
     pub error_traces: Vec<ErrorTrace>,
-    pub operation_performance: HashMap<String, OperationPerformance>,
+    pub operation_performance: HashMap<String, OperationPerformance, std::collections::HashMap<String, OperationPerformance, String, OperationPerformance>>,
 }
 
 /// 慢追踪
@@ -147,7 +149,7 @@ pub struct ClusterConsole {
     health_monitor: Arc<HealthMonitor>,
     fault_detector: Arc<FaultDetector>,
     cluster_overview: Arc<RwLock<Option<ClusterOverview>>>,
-    node_status: Arc<RwLock<HashMap<String, NodeStatusDetail>>>,
+    node_status: Arc<RwLock<HashMap<String, NodeStatusDetail, std::collections::HashMap<String, NodeStatusDetail, String, NodeStatusDetail>>>>,
     performance_metrics: Arc<RwLock<Option<PerformanceMetricsDetail>>>,
     alerts: Arc<RwLock<Vec<AlertMessage>>>,
     trace_analysis: Arc<RwLock<Option<TraceAnalysis>>>,
@@ -170,11 +172,11 @@ impl ClusterConsole {
             node_manager,
             health_monitor,
             fault_detector,
-            cluster_overview: Arc::new(RwLock::new(None)),
-            node_status: Arc::new(RwLock::new(HashMap::new())),
-            performance_metrics: Arc::new(RwLock::new(None)),
-            alerts: Arc::new(RwLock::new(Vec::new())),
-            trace_analysis: Arc::new(RwLock::new(None)),
+            cluster_overview: Arc::new(std::sync::Mutex::new(RwLock::new(None))),
+            node_status: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            performance_metrics: Arc::new(std::sync::Mutex::new(RwLock::new(None))),
+            alerts: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            trace_analysis: Arc::new(std::sync::Mutex::new(RwLock::new(None))),
         }
     }
 
@@ -182,7 +184,7 @@ impl ClusterConsole {
     pub async fn start(&self) -> Result<(), String> {
         info!("Starting cluster console...");
 
-        let console = self.clone();
+        let console: _ = self.clone();
         tokio::spawn(async move {
             let mut interval_timer = interval(console.config.refresh_interval);
 
@@ -221,25 +223,25 @@ impl ClusterConsole {
 
     /// 获取集群概览
     pub async fn get_cluster_overview(&self) -> Option<ClusterOverview> {
-        let overview = self.cluster_overview.read().await;
+        let overview: _ = self.cluster_overview.read().await;
         overview.clone()
     }
 
     /// 获取节点状态
-    pub async fn get_node_status(&self) -> HashMap<String, NodeStatusDetail> {
-        let status = self.node_status.read().await;
+    pub async fn get_node_status(&self) -> HashMap<String, NodeStatusDetail, std::collections::HashMap<String, NodeStatusDetail, String, NodeStatusDetail>> {
+        let status: _ = self.node_status.read().await;
         status.clone()
     }
 
     /// 获取性能指标
     pub async fn get_performance_metrics(&self) -> Option<PerformanceMetricsDetail> {
-        let metrics = self.performance_metrics.read().await;
+        let metrics: _ = self.performance_metrics.read().await;
         metrics.clone()
     }
 
     /// 获取告警
     pub async fn get_alerts(&self) -> Vec<AlertMessage> {
-        let alerts = self.alerts.read().await;
+        let alerts: _ = self.alerts.read().await;
         alerts.clone()
     }
 
@@ -256,16 +258,16 @@ impl ClusterConsole {
 
     /// 获取追踪分析
     pub async fn get_trace_analysis(&self) -> Option<TraceAnalysis> {
-        let analysis = self.trace_analysis.read().await;
+        let analysis: _ = self.trace_analysis.read().await;
         analysis.clone()
     }
 
     /// 更新集群概览
     async fn update_cluster_overview(&self) -> Result<(), String> {
-        let real_time_metrics = self.distributed_metrics.get_real_time_metrics().await;
+        let real_time_metrics: _ = self.distributed_metrics.get_real_time_metrics().await;
 
         if let Some(metrics) = real_time_metrics {
-            let overview = ClusterOverview {
+            let overview: _ = ClusterOverview {
                 cluster_name: "beejs-cluster".to_string(),
                 total_nodes: metrics.cluster_summary.total_nodes,
                 healthy_nodes: metrics.cluster_summary.healthy_nodes,
@@ -288,13 +290,13 @@ impl ClusterConsole {
 
     /// 更新节点状态
     async fn update_node_status(&self) -> Result<(), String> {
-        let real_time_metrics = self.distributed_metrics.get_real_time_metrics().await;
+        let real_time_metrics: _ = self.distributed_metrics.get_real_time_metrics().await;
 
         if let Some(metrics) = real_time_metrics {
             let mut node_status_map = HashMap::new();
 
             for (node_id, node_metrics) in metrics.node_metrics {
-                let status = NodeStatusDetail {
+                let status: _ = NodeStatusDetail {
                     node_id: node_id.clone(),
                     status: if node_metrics.cpu_usage > 90.0 {
                         "Overloaded".to_string()
@@ -327,11 +329,11 @@ impl ClusterConsole {
 
     /// 更新性能指标
     async fn update_performance_metrics(&self) -> Result<(), String> {
-        let real_time_metrics = self.distributed_metrics.get_real_time_metrics().await;
-        let perf_stats = self.distributed_tracer.get_performance_stats().await;
+        let real_time_metrics: _ = self.distributed_metrics.get_real_time_metrics().await;
+        let perf_stats: _ = self.distributed_tracer.get_performance_stats().await;
 
         if let Some(metrics) = real_time_metrics {
-            let perf_detail = PerformanceMetricsDetail {
+            let perf_detail: _ = PerformanceMetricsDetail {
                 throughput: metrics.cluster_summary.average_throughput,
                 latency_p50: self.convert_duration_to_ms(perf_stats.p50_trace_duration),
                 latency_p90: self.convert_duration_to_ms(perf_stats.p90_trace_duration),
@@ -358,8 +360,8 @@ impl ClusterConsole {
 
     /// 更新追踪分析
     async fn update_trace_analysis(&self) -> Result<(), String> {
-        let traces = self.distributed_tracer.get_completed_traces().await;
-        let perf_stats = self.distributed_tracer.get_performance_stats().await;
+        let traces: _ = self.distributed_tracer.get_completed_traces().await;
+        let perf_stats: _ = self.distributed_tracer.get_performance_stats().await;
 
         let mut slow_traces = Vec::new();
         let mut error_traces = Vec::new();
@@ -396,8 +398,8 @@ impl ClusterConsole {
             // 统计操作性能
             for span in trace.spans.values() {
                 if let Some(duration) = span.duration() {
-                    let op_name = span.operation_name.clone();
-                    let entry = operation_performance.entry(op_name).or_insert(OperationPerformance {
+                    let op_name: _ = span.operation_name.clone();
+                    let entry: _ = operation_performance.entry(op_name).or_insert(OperationPerformance {
                         operation_name: span.operation_name.clone(),
                         call_count: 0,
                         average_duration: Duration::from_millis(0),
@@ -411,7 +413,7 @@ impl ClusterConsole {
                     entry.max_duration = entry.max_duration.max(duration);
 
                     // 更新平均持续时间
-                    let total_ms = entry.average_duration.as_millis() as u64 * (entry.call_count - 1);
+                    let total_ms: _ = entry.average_duration.as_millis() as u64 * (entry.call_count - 1);
                     entry.average_duration = Duration::from_millis((total_ms + duration.as_millis() as u64) / entry.call_count);
                 }
             }
@@ -421,7 +423,7 @@ impl ClusterConsole {
         slow_traces.sort_by(|a, b| b.duration.cmp(&a.duration));
         slow_traces.truncate(10);
 
-        let analysis = TraceAnalysis {
+        let analysis: _ = TraceAnalysis {
             total_traces: perf_stats.total_traces,
             slow_traces,
             error_traces,
@@ -436,8 +438,8 @@ impl ClusterConsole {
 
     /// 检查告警
     async fn check_alerts(&self) -> Result<(), String> {
-        let real_time_metrics = self.distributed_metrics.get_real_time_metrics().await;
-        let perf_metrics = self.performance_metrics.read().await;
+        let real_time_metrics: _ = self.distributed_metrics.get_real_time_metrics().await;
+        let perf_metrics: _ = self.performance_metrics.read().await;
 
         if let Some(metrics) = real_time_metrics {
             // 检查 CPU 使用率告警
@@ -479,9 +481,9 @@ impl ClusterConsole {
 
     /// 创建告警
     async fn create_alert(&self, level: AlertLevel, title: String, description: String, source: String) {
-        let alert_id = format!("alert-{:x}", rand::random::<u64>());
+        let alert_id: _ = format!("alert-{:x}", rand::random::<u64>());
 
-        let alert = AlertMessage {
+        let alert: _ = AlertMessage {
             id: alert_id,
             level,
             title,
@@ -502,7 +504,7 @@ impl ClusterConsole {
 
     /// 清理旧告警
     async fn cleanup_old_alerts(&self) -> Result<(), String> {
-        let cutoff = std::time::SystemTime::now()
+        let cutoff: _ = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs()
@@ -516,9 +518,9 @@ impl ClusterConsole {
 
     // 辅助方法
     async fn calculate_performance_score(&self, metrics: &RealTimeMetrics) -> f64 {
-        let cpu_score = (100.0 - metrics.system_metrics.load_average * 10.0).max(0.0);
-        let memory_score = (100.0 - metrics.system_metrics.memory_pressure * 100.0).max(0.0);
-        let availability_score = metrics.cluster_summary.availability * 100.0;
+        let cpu_score: _ = (100.0 - metrics.system_metrics.load_average * 10.0).max(0.0);
+        let memory_score: _ = (100.0 - metrics.system_metrics.memory_pressure * 100.0).max(0.0);
+        let availability_score: _ = metrics.cluster_summary.availability * 100.0;
 
         (cpu_score + memory_score + availability_score) / 3.0
     }

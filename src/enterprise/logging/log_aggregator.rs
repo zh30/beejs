@@ -33,7 +33,7 @@ pub struct LogEntry {
     /// 日志消息
     pub message: String,
     /// 上下文信息
-    pub context: HashMap<String, String>,
+    pub context: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 impl LogEntry {
@@ -48,7 +48,7 @@ impl LogEntry {
     /// # Returns
     ///
     /// 返回新创建的 LogEntry 实例
-    pub fn new(level: LogLevel, message: String, context: HashMap<String, String>) -> Self {
+    pub fn new(level: LogLevel, message: String, context: HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> Self {
         Self {
             timestamp: SystemTime::now(),
             level,
@@ -73,7 +73,7 @@ impl LogEntry {
         message: &str,
         context_pairs: &[(&str, &str)],
     ) -> Self {
-        let context = context_pairs
+        let context: _ = context_pairs
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect();
@@ -141,7 +141,7 @@ pub struct LogContext {
     /// 用户 ID
     pub user_id: Option<String>,
     /// 附加标签
-    pub tags: HashMap<String, String>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 impl LogContext {
@@ -201,7 +201,7 @@ impl LogContext {
     /// # Returns
     ///
     /// 返回包含上下文信息的 HashMap
-    pub fn to_hashmap(&self) -> HashMap<String, String> {
+    pub fn to_hashmap(&self) -> HashMap<String, String, std::collections::HashMap<String, String, String, String>> {
         let mut map = HashMap::new();
         map.insert("service".to_string(), self.service.clone());
         map.insert("version".to_string(), self.version.clone());
@@ -260,7 +260,7 @@ impl FileLogWriter {
 
 impl LogWriter for FileLogWriter {
     fn write(&self, log_entry: &LogEntry) -> Result<()> {
-        let json = log_entry.to_json()?;
+        let json: _ = log_entry.to_json()?;
         let mut file = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
@@ -297,7 +297,7 @@ impl ConsoleLogWriter {
 
 impl LogWriter for ConsoleLogWriter {
     fn write(&self, log_entry: &LogEntry) -> Result<()> {
-        let json = log_entry.to_json()?;
+        let json: _ = log_entry.to_json()?;
         println!("{}", json);
         Ok(())
     }
@@ -331,8 +331,8 @@ impl LogAggregator {
     /// * `message` - 日志消息
     /// * `context` - 日志上下文
     pub fn log(&self, level: LogLevel, message: &str, context: &LogContext) {
-        let context_map = context.to_hashmap();
-        let log_entry = LogEntry::new(level, message.to_string(), context_map);
+        let context_map: _ = context.to_hashmap();
+        let log_entry: _ = LogEntry::new(level, message.to_string(), context_map);
 
         if let Err(e) = self.writer.write(&log_entry) {
             eprintln!("Failed to write log: {}", e);
@@ -420,7 +420,7 @@ mod tests {
         let mut context = HashMap::new();
         context.insert("service".to_string(), "beejs".to_string());
 
-        let log_entry = LogEntry::new(LogLevel::Info, "Test message".to_string(), context);
+        let log_entry: _ = LogEntry::new(LogLevel::Info, "Test message".to_string(), context);
 
         assert!(matches!(log_entry.level, LogLevel::Info));
         assert_eq!(log_entry.message, "Test message");
@@ -429,8 +429,8 @@ mod tests {
 
     #[test]
     fn test_log_entry_with_context() {
-        let context_pairs = &[("service", "beejs"), ("version", "1.0")];
-        let log_entry = LogEntry::with_context(LogLevel::Debug, "Test message", context_pairs);
+        let context_pairs: _ = &[("service", "beejs"), ("version", "1.0")];
+        let log_entry: _ = LogEntry::with_context(LogLevel::Debug, "Test message", context_pairs);
 
         assert_eq!(log_entry.context.get("service"), Some(&"beejs".to_string()));
         assert_eq!(log_entry.context.get("version"), Some(&"1.0".to_string()));
@@ -441,9 +441,9 @@ mod tests {
         let mut context = HashMap::new();
         context.insert("service".to_string(), "beejs".to_string());
 
-        let log_entry = LogEntry::new(LogLevel::Info, "Test message".to_string(), context);
+        let log_entry: _ = LogEntry::new(LogLevel::Info, "Test message".to_string(), context);
 
-        let json = log_entry.to_json().unwrap();
+        let json: _ = log_entry.to_json().unwrap();
         assert!(json.contains("\"level\":\"Info\""));
         assert!(json.contains("\"message\":\"Test message\""));
         assert!(json.contains("\"service\":\"beejs\""));
@@ -451,9 +451,9 @@ mod tests {
 
     #[test]
     fn test_log_entry_json_deserialization() {
-        let json = r#"{"timestamp":"2024-01-01T00:00:00Z","level":"Info","message":"Test message","context":{"service":"beejs"}}"#;
+        let json: _ = r#"{"timestamp":"2024-01-01T00:00:00Z","level":"Info","message":"Test message","context":{"service":"beejs"}}"#;
 
-        let log_entry = LogEntry::from_json(json).unwrap();
+        let log_entry: _ = LogEntry::from_json(json).unwrap();
         assert!(matches!(log_entry.level, LogLevel::Info));
         assert_eq!(log_entry.message, "Test message");
         assert_eq!(log_entry.context.get("service"), Some(&"beejs".to_string()));
@@ -461,7 +461,7 @@ mod tests {
 
     #[test]
     fn test_log_context_creation() {
-        let context = LogContext::new("beejs", "1.0.0");
+        let context: _ = LogContext::new("beejs", "1.0.0");
         assert_eq!(context.service, "beejs");
         assert_eq!(context.version, "1.0.0");
         assert_eq!(context.request_id, None);
@@ -470,7 +470,7 @@ mod tests {
 
     #[test]
     fn test_log_context_with_request_id() {
-        let context = LogContext::new("beejs", "1.0.0")
+        let context: _ = LogContext::new("beejs", "1.0.0")
             .with_request_id("req-12345");
 
         assert_eq!(context.service, "beejs");
@@ -479,7 +479,7 @@ mod tests {
 
     #[test]
     fn test_log_context_with_user_id() {
-        let context = LogContext::new("beejs", "1.0.0")
+        let context: _ = LogContext::new("beejs", "1.0.0")
             .with_user_id("user-789");
 
         assert_eq!(context.user_id, Some("user-789".to_string()));
@@ -487,7 +487,7 @@ mod tests {
 
     #[test]
     fn test_log_context_with_tags() {
-        let context = LogContext::new("beejs", "1.0.0")
+        let context: _ = LogContext::new("beejs", "1.0.0")
             .with_tag("env", "production")
             .with_tag("region", "us-east-1");
 
@@ -497,11 +497,11 @@ mod tests {
 
     #[test]
     fn test_log_context_to_hashmap() {
-        let context = LogContext::new("beejs", "1.0.0")
+        let context: _ = LogContext::new("beejs", "1.0.0")
             .with_request_id("req-12345")
             .with_tag("env", "production");
 
-        let map = context.to_hashmap();
+        let map: _ = context.to_hashmap();
         assert_eq!(map.get("service"), Some(&"beejs".to_string()));
         assert_eq!(map.get("version"), Some(&"1.0.0".to_string()));
         assert_eq!(map.get("request_id"), Some(&"req-12345".to_string()));
@@ -510,8 +510,8 @@ mod tests {
 
     #[test]
     fn test_console_log_writer() {
-        let writer = ConsoleLogWriter::new(false);
-        let log_entry = LogEntry::new(
+        let writer: _ = ConsoleLogWriter::new(false);
+        let log_entry: _ = LogEntry::new(
             LogLevel::Info,
             "Test message".to_string(),
             HashMap::new(),
@@ -523,29 +523,29 @@ mod tests {
 
     #[test]
     fn test_file_log_writer() {
-        let temp_file = tempfile::NamedTempFile::new().unwrap();
-        let file_path = temp_file.path().to_str().unwrap();
+        let temp_file: _ = tempfile::NamedTempFile::new().unwrap();
+        let file_path: _ = temp_file.path().to_str().unwrap();
 
-        let writer = FileLogWriter::new(file_path);
+        let writer: _ = FileLogWriter::new(file_path);
         let mut context = HashMap::new();
         context.insert("service".to_string(), "beejs".to_string());
 
-        let log_entry = LogEntry::new(LogLevel::Info, "Test message".to_string(), context);
+        let log_entry: _ = LogEntry::new(LogLevel::Info, "Test message".to_string(), context);
 
         assert!(writer.write(&log_entry).is_ok());
 
         // 验证文件内容
-        let content = std::fs::read_to_string(file_path).unwrap();
+        let content: _ = std::fs::read_to_string(file_path).unwrap();
         assert!(content.contains("\"level\":\"Info\""));
         assert!(content.contains("\"message\":\"Test message\""));
     }
 
     #[test]
     fn test_log_aggregator_info() {
-        let writer = Box::new(ConsoleLogWriter::new(false));
-        let aggregator = LogAggregator::new(writer);
+        let writer: _ = Box::new(ConsoleLogWriter::new(false));
+        let aggregator: _ = LogAggregator::new(writer);
 
-        let context = LogContext::new("beejs", "1.0.0")
+        let context: _ = LogContext::new("beejs", "1.0.0")
             .with_request_id("req-12345");
 
         aggregator.info("Request processed", &context);
@@ -555,16 +555,16 @@ mod tests {
 
     #[test]
     fn test_log_aggregator_forward_logs() {
-        let writer = Box::new(ConsoleLogWriter::new(false));
-        let aggregator = LogAggregator::new(writer);
+        let writer: _ = Box::new(ConsoleLogWriter::new(false));
+        let aggregator: _ = LogAggregator::new(writer);
 
-        let logs = vec![
+        let logs: _ = vec![
             LogEntry::new(LogLevel::Info, "Log 1".to_string(), HashMap::new()),
             LogEntry::new(LogLevel::Debug, "Log 2".to_string(), HashMap::new()),
             LogEntry::new(LogLevel::Warn, "Log 3".to_string(), HashMap::new()),
         ];
 
-        let count = aggregator.forward_logs(&logs).unwrap();
+        let count: _ = aggregator.forward_logs(&logs).unwrap();
         assert_eq!(count, 3);
     }
 }
@@ -587,7 +587,7 @@ pub struct LogFilter {
     pub level: Option<LogLevel>,
     pub time_range: Option<(SystemTime, SystemTime)>,
     pub text_search: Option<String>,
-    pub tags: HashMap<String, String>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 搜索结果
@@ -626,7 +626,7 @@ impl ElasticsearchClient {
         // 模拟搜索操作
         info!("Searching logs with filter: {:?}", filter);
 
-        let logs = vec![LogEntry::new(
+        let logs: _ = vec![LogEntry::new(
             LogLevel::Info,
             "Search result".to_string(),
             HashMap::new(),
@@ -668,7 +668,7 @@ pub struct EnterpriseLogAggregator {
     elasticsearch: Arc<ElasticsearchClient>,
     fluentd: Arc<FluentdClient>,
     local_aggregator: LogAggregator,
-    log_sources: std::collections::BTreeMap<String, LogSource>,
+    log_sources: std::collections::BTreeMap<String, LogSource, String, LogSource>,
 }
 
 impl EnterpriseLogAggregator {
@@ -679,8 +679,8 @@ impl EnterpriseLogAggregator {
         local_aggregator: LogAggregator,
     ) -> Self {
         Self {
-            elasticsearch: Arc::new(elasticsearch),
-            fluentd: Arc::new(fluentd),
+            elasticsearch: Arc::new(std::sync::Mutex::new(elasticsearch)),
+            fluentd: Arc::new(std::sync::Mutex::new(fluentd)),
             local_aggregator,
             log_sources: std::collections::BTreeMap::new(),
         }
@@ -689,7 +689,7 @@ impl EnterpriseLogAggregator {
     /// 收集日志
     pub async fn collect_logs(&self, source: LogSource) -> Result<Vec<LogEntry>> {
         // 模拟从各种源收集日志
-        let logs = match source {
+        let logs: _ = match source {
             LogSource::Cluster(cluster_id) => {
                 vec![LogEntry::new(
                     LogLevel::Info,
@@ -739,7 +739,7 @@ impl EnterpriseLogAggregator {
         let mut all_logs = Vec::new();
 
         for source in sources {
-            let logs = self.collect_logs(source.clone()).await?;
+            let logs: _ = self.collect_logs(source.clone()).await?;
             all_logs.extend(logs);
         }
 
@@ -749,10 +749,10 @@ impl EnterpriseLogAggregator {
     /// 转发日志到外部系统
     pub async fn forward_logs_to_external(&self, logs: &[LogEntry]) -> Result<()> {
         // 发送到 Elasticsearch
-        let elasticsearch_count = self.elasticsearch.index_logs(logs).await?;
+        let elasticsearch_count: _ = self.elasticsearch.index_logs(logs).await?;
 
         // 发送到 Fluentd
-        let fluentd_count = self.fluentd.send_logs(logs).await?;
+        let fluentd_count: _ = self.fluentd.send_logs(logs).await?;
 
         info!(
             "Forwarded {} logs to Elasticsearch and {} logs to Fluentd",
@@ -820,33 +820,35 @@ impl EnterpriseLogAggregator {
 #[cfg(test)]
 mod enterprise_logging_tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_elasticsearch_client() {
-        let client = ElasticsearchClient::new("http://localhost:9200", "beejs-logs");
+        let client: _ = ElasticsearchClient::new("http://localhost:9200", "beejs-logs");
 
-        let logs = vec![LogEntry::new(
+        let logs: _ = vec![LogEntry::new(
             LogLevel::Info,
             "Test log".to_string(),
             HashMap::new(),
         )];
 
-        let count = client.index_logs(&logs).await.unwrap();
+        let count: _ = client.index_logs(&logs).await.unwrap();
         assert_eq!(count, 1);
     }
 
     #[tokio::test]
     async fn test_enterprise_log_aggregator() {
-        let elasticsearch = ElasticsearchClient::new("http://localhost:9200", "beejs-logs");
-        let fluentd = FluentdClient::new("http://localhost:24224");
-        let local_writer = Box::new(ConsoleLogWriter::new(false));
-        let local_aggregator = LogAggregator::new(local_writer);
+        let elasticsearch: _ = ElasticsearchClient::new("http://localhost:9200", "beejs-logs");
+        let fluentd: _ = FluentdClient::new("http://localhost:24224");
+        let local_writer: _ = Box::new(ConsoleLogWriter::new(false));
+        let local_aggregator: _ = LogAggregator::new(local_writer);
 
         let enterprise_aggregator =
             EnterpriseLogAggregator::new(elasticsearch, fluentd, local_aggregator);
 
-        let source = LogSource::Cluster("test-cluster".to_string());
-        let logs = enterprise_aggregator.collect_logs(source).await.unwrap();
+        let source: _ = LogSource::Cluster("test-cluster".to_string());
+        let logs: _ = enterprise_aggregator.collect_logs(source).await.unwrap();
 
         assert_eq!(logs.len(), 1);
         assert!(logs[0].message.contains("test-cluster"));
@@ -854,22 +856,22 @@ mod enterprise_logging_tests {
 
     #[tokio::test]
     async fn test_log_search() {
-        let client = ElasticsearchClient::new("http://localhost:9200", "beejs-logs");
+        let client: _ = ElasticsearchClient::new("http://localhost:9200", "beejs-logs");
 
-        let filter = LogFilter {
+        let filter: _ = LogFilter {
             level: Some(LogLevel::Info),
             time_range: None,
             text_search: Some("error".to_string()),
             tags: HashMap::new(),
         };
 
-        let result = client.search_logs(&filter).await.unwrap();
+        let result: _ = client.search_logs(&filter).await.unwrap();
         assert!(result.total_count >= 0);
     }
 
     #[test]
     fn test_log_filter() {
-        let logs = vec![
+        let logs: _ = vec![
             LogEntry::new(
                 LogLevel::Info,
                 "Error occurred".to_string(),
@@ -882,15 +884,15 @@ mod enterprise_logging_tests {
             ),
         ];
 
-        let client = ElasticsearchClient::new("http://localhost:9200", "beejs-logs");
-        let filter = LogFilter {
+        let client: _ = ElasticsearchClient::new("http://localhost:9200", "beejs-logs");
+        let filter: _ = LogFilter {
             level: Some(LogLevel::Info),
             time_range: None,
             text_search: None,
             tags: HashMap::new(),
         };
 
-        let filtered = client
+        let filtered: _ = client
             .as_ref()
             .filter_logs(&logs, &filter);
 

@@ -31,7 +31,7 @@ pub struct NodeLoad {
 /// 集群拓扑信息
 #[derive(Debug, Clone)]
 pub struct ClusterTopology {
-    pub regions: HashMap<String, RegionInfo>,
+    pub regions: HashMap<String, RegionInfo, std::collections::HashMap<String, RegionInfo, String, RegionInfo>>,
     pub total_nodes: usize,
     pub online_nodes: usize,
 }
@@ -62,22 +62,22 @@ pub struct NodeMetadata {
 #[derive(Debug, Clone)]
 pub struct NodeManager {
     service_discovery: ServiceDiscovery,
-    nodes: Arc<RwLock<HashMap<String, NodeMetadata>>>,
-    node_loads: Arc<RwLock<HashMap<String, NodeLoad>>>,
+    nodes: Arc<RwLock<HashMap<String, NodeMetadata, std::collections::HashMap<String, NodeMetadata, String, NodeMetadata>>>>,
+    node_loads: Arc<RwLock<HashMap<String, NodeLoad, std::collections::HashMap<String, NodeLoad, String, NodeLoad>>>>,
 }
 
 impl NodeManager {
     /// 创建新的节点管理器
     pub fn new(service_discovery: ServiceDiscovery) -> Self {
-        let manager = Self {
+        let manager: _ = Self {
             service_discovery,
-            nodes: Arc::new(RwLock::new(HashMap::new())),
-            node_loads: Arc::new(RwLock::new(HashMap::new())),
+            nodes: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            node_loads: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         };
 
         // 启动心跳检查任务
-        let nodes_clone = manager.nodes.clone();
-        let service_discovery_clone = manager.service_discovery.clone();
+        let nodes_clone: _ = manager.nodes.clone();
+        let service_discovery_clone: _ = manager.service_discovery.clone();
 
         tokio::spawn(async move {
             let mut interval = interval(Duration::from_millis(100));
@@ -92,7 +92,7 @@ impl NodeManager {
 
     /// 注册节点
     pub async fn register_node(&self, node_info: NodeInfo) -> Result<(), String> {
-        let metadata = NodeMetadata {
+        let metadata: _ = NodeMetadata {
             cpu_cores: node_info.cpu_cores,
             memory_gb: node_info.memory_gb,
             location: node_info.location.clone(),
@@ -128,11 +128,11 @@ impl NodeManager {
     /// 发现所有节点
     pub async fn discover_nodes(&self) -> Vec<NodeInfo> {
         let mut discovered = Vec::new();
-        let nodes = self.nodes.read().await;
+        let nodes: _ = self.nodes.read().await;
 
         for (id, metadata) in nodes.iter() {
             if metadata.status != NodeStatus::Offline {
-                let node_info = NodeInfo {
+                let node_info: _ = NodeInfo {
                     id: id.clone(),
                     address: format!("auto-discovered:{}", id), // 简化实现
                     cpu_cores: metadata.cpu_cores,
@@ -162,7 +162,7 @@ impl NodeManager {
 
     /// 获取节点状态
     pub async fn get_node_status(&self, node_id: &str) -> NodeStatus {
-        let nodes = self.nodes.read().await;
+        let nodes: _ = self.nodes.read().await;
         nodes.get(node_id)
             .map(|m| m.status.clone())
             .unwrap_or(NodeStatus::Offline)
@@ -181,8 +181,8 @@ impl NodeManager {
     }
 
     /// 同步所有节点状态
-    pub async fn sync_all_statuses(&self) -> HashMap<String, NodeStatus> {
-        let nodes = self.nodes.read().await;
+    pub async fn sync_all_statuses(&self) -> HashMap<String, NodeStatus, std::collections::HashMap<String, NodeStatus, String, NodeStatus>> {
+        let nodes: _ = self.nodes.read().await;
         let mut statuses = HashMap::new();
 
         for (id, metadata) in nodes.iter() {
@@ -194,18 +194,18 @@ impl NodeManager {
 
     /// 获取节点元数据
     pub async fn get_node_metadata(&self, node_id: &str) -> Option<NodeMetadata> {
-        let nodes = self.nodes.read().await;
+        let nodes: _ = self.nodes.read().await;
         nodes.get(node_id).cloned()
     }
 
     /// 获取集群拓扑
     pub async fn get_cluster_topology(&self) -> ClusterTopology {
-        let nodes = self.nodes.read().await;
+        let nodes: _ = self.nodes.read().await;
         let mut regions = HashMap::new();
 
         for (_id, metadata) in nodes.iter() {
             if metadata.status != NodeStatus::Offline {
-                let region = regions.entry(metadata.location.clone()).or_insert_with(|| RegionInfo {
+                let region: _ = regions.entry(metadata.location.clone()).or_insert_with(|| RegionInfo {
                     location: metadata.location.clone(),
                     node_count: 0,
                     online_nodes: 0,
@@ -226,8 +226,8 @@ impl NodeManager {
             }
         }
 
-        let total_nodes = nodes.len();
-        let online_nodes = nodes.values().filter(|m| m.status == NodeStatus::Online).count();
+        let total_nodes: _ = nodes.clone();len();
+        let online_nodes: _ = nodes.clone();values().filter(|m| m.status == NodeStatus::Online).count();
 
         ClusterTopology {
             regions,
@@ -246,7 +246,7 @@ impl NodeManager {
     ) -> Result<(), String> {
         let mut loads = self.node_loads.write().await;
 
-        let load = NodeLoad {
+        let load: _ = NodeLoad {
             cpu_usage,
             memory_usage,
             active_tasks,
@@ -259,13 +259,13 @@ impl NodeManager {
 
     /// 获取节点负载
     pub async fn get_node_load(&self, node_id: &str) -> Option<NodeLoad> {
-        let loads = self.node_loads.read().await;
+        let loads: _ = self.node_loads.read().await;
         loads.get(node_id).cloned()
     }
 
     /// 批量获取节点状态
-    pub async fn get_nodes_status_batch(&self, node_ids: &[String]) -> HashMap<String, NodeStatus> {
-        let nodes = self.nodes.read().await;
+    pub async fn get_nodes_status_batch(&self, node_ids: &[String]) -> HashMap<String, NodeStatus, std::collections::HashMap<String, NodeStatus, String, NodeStatus>> {
+        let nodes: _ = self.nodes.read().await;
         let mut statuses = HashMap::new();
 
         for node_id in node_ids {
@@ -282,7 +282,7 @@ impl NodeManager {
     /// 清理离线节点
     pub async fn cleanup_offline_nodes(&self) -> usize {
         let mut nodes = self.nodes.write().await;
-        let now = Instant::now();
+        let now: _ = Instant::now();
 
         let offline_nodes: Vec<String> = nodes
             .iter()
@@ -303,12 +303,12 @@ impl NodeManager {
 
     /// 检查心跳
     pub async fn check_heartbeats(
-        nodes: Arc<RwLock<HashMap<String, NodeMetadata>>>,
+        nodes: Arc<RwLock<HashMap<String, NodeMetadata, std::collections::HashMap<String, NodeMetadata, String, NodeMetadata>>>>,
         _service_discovery: ServiceDiscovery,
     ) {
         let mut nodes_guard = nodes.write().await;
-        let now = Instant::now();
-        let heartbeat_timeout = Duration::from_secs(10);
+        let now: _ = Instant::now();
+        let heartbeat_timeout: _ = Duration::from_secs(10);
 
         for (id, metadata) in nodes_guard.iter_mut() {
             if now.duration_since(metadata.last_heartbeat) > heartbeat_timeout {
@@ -322,8 +322,8 @@ impl NodeManager {
 
     /// 获取最空闲的节点
     pub async fn get_least_loaded_node(&self) -> Option<String> {
-        let nodes = self.nodes.read().await;
-        let loads = self.node_loads.read().await;
+        let nodes: _ = self.nodes.read().await;
+        let loads: _ = self.node_loads.read().await;
 
         let mut best_node = None;
         let mut best_load = f64::MAX;
@@ -331,7 +331,7 @@ impl NodeManager {
         for (id, metadata) in nodes.iter() {
             if metadata.status == NodeStatus::Online {
                 if let Some(load) = loads.get(id) {
-                    let combined_load = (load.cpu_usage + load.memory_usage) / 2.0;
+                    let combined_load: _ = (load.cpu_usage + load.memory_usage) / 2.0;
                     if combined_load < best_load {
                         best_load = combined_load;
                         best_node = Some(id.clone());
@@ -348,7 +348,7 @@ impl NodeManager {
 
     /// 获取指定区域的节点
     pub async fn get_nodes_by_region(&self, region: &str) -> Vec<String> {
-        let nodes = self.nodes.read().await;
+        let nodes: _ = self.nodes.read().await;
         let mut region_nodes = Vec::new();
 
         for (id, metadata) in nodes.iter() {
@@ -362,12 +362,12 @@ impl NodeManager {
 
     /// 检查节点健康状态
     pub async fn check_node_health(&self, node_id: &str) -> Result<HealthStatus, String> {
-        let nodes = self.nodes.read().await;
-        let loads = self.node_loads.read().await;
+        let nodes: _ = self.nodes.read().await;
+        let loads: _ = self.node_loads.read().await;
 
         if let Some(metadata) = nodes.get(node_id) {
-            let load = loads.get(node_id);
-            let health = determine_health_status(metadata, load);
+            let load: _ = loads.get(node_id);
+            let health: _ = determine_health_status(metadata, load);
             Ok(health)
         } else {
             Err(format!("Node not found: {}", node_id))
@@ -410,19 +410,21 @@ fn determine_health_status(
 mod tests {
     use super::*;
     use crate::distributed::service_discovery::DiscoveryConfig;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_node_registration() {
-        let config = DiscoveryConfig {
+        let config: _ = DiscoveryConfig {
             cluster_name: "test-cluster".to_string(),
             gossip_interval: Duration::from_millis(100),
             node_timeout: Duration::from_secs(5),
         };
 
-        let service_discovery = ServiceDiscovery::new(config);
-        let node_manager = NodeManager::new(service_discovery);
+        let service_discovery: _ = ServiceDiscovery::new(config);
+        let node_manager: _ = NodeManager::new(service_discovery);
 
-        let node = NodeInfo {
+        let node: _ = NodeInfo {
             id: "test-node".to_string(),
             address: "192.168.1.1:8080".to_string(),
             cpu_cores: 4,
@@ -431,12 +433,12 @@ mod tests {
             capabilities: vec!["js-execution".to_string()],
         };
 
-        let result = node_manager.register_node(node.clone()).await;
+        let result: _ = node_manager.register_node(node.clone()).await;
         assert!(result.is_ok());
 
-        let discovered = node_manager.discover_nodes().await;
+        let discovered: _ = node_manager.discover_nodes().await;
         // 检查是否发现了正确的节点（只比较 id 和其他关键字段，不比较 address）
-        let found = discovered.iter().any(|d| d.id == node.id &&
+        let found: _ = discovered.iter().any(|d| d.id == node.id &&
             d.cpu_cores == node.cpu_cores &&
             d.memory_gb == node.memory_gb &&
             d.location == node.location &&
@@ -446,16 +448,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_heartbeat() {
-        let config = DiscoveryConfig {
+        let config: _ = DiscoveryConfig {
             cluster_name: "test-cluster".to_string(),
             gossip_interval: Duration::from_millis(100),
             node_timeout: Duration::from_secs(5),
         };
 
-        let service_discovery = ServiceDiscovery::new(config);
-        let node_manager = NodeManager::new(service_discovery);
+        let service_discovery: _ = ServiceDiscovery::new(config);
+        let node_manager: _ = NodeManager::new(service_discovery);
 
-        let node = NodeInfo {
+        let node: _ = NodeInfo {
             id: "test-node".to_string(),
             address: "192.168.1.1:8080".to_string(),
             cpu_cores: 4,
@@ -465,7 +467,7 @@ mod tests {
         };
 
         node_manager.register_node(node).await.unwrap();
-        let heartbeat_result = node_manager.send_heartbeat("test-node").await;
+        let heartbeat_result: _ = node_manager.send_heartbeat("test-node").await;
         assert!(heartbeat_result.is_ok());
     }
 }

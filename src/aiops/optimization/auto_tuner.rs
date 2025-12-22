@@ -122,10 +122,10 @@ impl AutoTuner {
             self.apply_optimization_changes(plan);
 
         // 计算新的性能分数
-        let new_performance_score = plan.current_score * (1.0 + actual_improvement / 100.0);
+        let new_performance_score: _ = plan.current_score * (1.0 + actual_improvement / 100.0);
 
         // 记录优化历史
-        let feedback = OptimizationFeedback {
+        let feedback: _ = OptimizationFeedback {
             applied_optimizations: applied_changes.clone(),
             performance_before: plan.current_score,
             performance_after: new_performance_score,
@@ -156,7 +156,7 @@ impl AutoTuner {
     /// * `feedback` - 优化反馈
     pub fn learn_from_feedback(&mut self, feedback: &OptimizationFeedback) {
         // 基于实际改进调整建议的置信度
-        let actual_improvement = feedback.improvement_percentage;
+        let actual_improvement: _ = feedback.improvement_percentage;
 
         for previous_feedback in &self.optimization_history {
             if previous_feedback.applied_optimizations == feedback.applied_optimizations {
@@ -224,7 +224,7 @@ impl AutoTuner {
 
         for suggestion in &plan.suggestions {
             // 模拟应用优化（实际实现中会调用具体的优化 API）
-            let change = format!(
+            let change: _ = format!(
                 "设置 {} = {} (预期改进: {:.1}%, 置信度: {:.2})",
                 suggestion.parameter,
                 suggestion.recommended_value,
@@ -235,12 +235,12 @@ impl AutoTuner {
             applied_changes.push(change);
 
             // 根据置信度调整实际改进
-            let adjusted_improvement = suggestion.expected_improvement * suggestion.confidence;
+            let adjusted_improvement: _ = suggestion.expected_improvement * suggestion.confidence;
             total_improvement += adjusted_improvement;
         }
 
         // 计算平均改进
-        let avg_improvement = if !plan.suggestions.is_empty() {
+        let avg_improvement: _ = if !plan.suggestions.is_empty() {
             total_improvement / plan.suggestions.len() as f64
         } else {
             0.0
@@ -314,7 +314,7 @@ impl AutoTuner {
         // 移除指定索引之后的所有历史记录
         self.optimization_history.truncate(index + 1);
 
-        let last_feedback = &self.optimization_history[index];
+        let last_feedback: _ = &self.optimization_history[index];
 
         OptimizationResult {
             success: true,
@@ -336,12 +336,14 @@ impl Default for AutoTuner {
 mod tests {
     use super::*;
     use crate::aiops::optimization::performance_analyzer::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
         PerformanceMetric, PerformanceMetricType,
     };
 
     fn create_test_metrics() -> PerformanceMetrics {
         let mut metrics = Vec::new();
-        let start_time = SystemTime::now();
+        let start_time: _ = SystemTime::now();
 
         // CPU 使用率
         for i in 0..10 {
@@ -371,7 +373,7 @@ mod tests {
 
     #[test]
     fn test_auto_tuner_creation() {
-        let tuner = AutoTuner::new();
+        let tuner: _ = AutoTuner::new();
         assert_eq!(tuner.analyzer.window_size, 100);
         assert!(tuner.optimization_history.is_empty());
         assert!(tuner.enable_learning);
@@ -381,7 +383,7 @@ mod tests {
     #[test]
     fn test_apply_optimization_with_empty_plan() {
         let mut tuner = AutoTuner::new();
-        let empty_plan = OptimizationPlan {
+        let empty_plan: _ = OptimizationPlan {
             target: OptimizationTarget::Latency,
             current_score: 50.0,
             target_score: 60.0,
@@ -390,7 +392,7 @@ mod tests {
             risk_level: 0.0,
         };
 
-        let result = tuner.apply_optimization(&empty_plan);
+        let result: _ = tuner.apply_optimization(&empty_plan);
         assert!(!result.success);
         assert!(result.error_message.is_some());
     }
@@ -398,12 +400,12 @@ mod tests {
     #[test]
     fn test_apply_optimization_with_valid_plan() {
         let mut tuner = AutoTuner::new();
-        let metrics = create_test_metrics();
-        let plan = tuner.analyzer.analyze_performance(&metrics);
+        let metrics: _ = create_test_metrics();
+        let plan: _ = tuner.analyzer.analyze_performance(&metrics);
 
         assert!(!plan.suggestions.is_empty());
 
-        let result = tuner.apply_optimization(&plan);
+        let result: _ = tuner.apply_optimization(&plan);
         assert!(result.success);
         assert!(!result.applied_changes.is_empty());
         assert!(result.improvement > 0.0);
@@ -412,7 +414,7 @@ mod tests {
     #[test]
     fn test_learn_from_feedback() {
         let mut tuner = AutoTuner::new();
-        let feedback = OptimizationFeedback {
+        let feedback: _ = OptimizationFeedback {
             applied_optimizations: vec!["test_opt".to_string()],
             performance_before: 50.0,
             performance_after: 60.0,
@@ -420,7 +422,7 @@ mod tests {
             timestamp: SystemTime::now(),
         };
 
-        let initial_rate = tuner.learning_rate;
+        let initial_rate: _ = tuner.learning_rate;
         tuner.learn_from_feedback(&feedback);
 
         // 学习率应该有所调整
@@ -506,12 +508,12 @@ mod tests {
         }
 
         // 回滚到索引 1
-        let result = tuner.rollback_to(1);
+        let result: _ = tuner.rollback_to(1);
         assert!(result.success);
         assert_eq!(tuner.optimization_history.len(), 2);
 
         // 尝试回滚到无效索引
-        let result = tuner.rollback_to(10);
+        let result: _ = tuner.rollback_to(10);
         assert!(!result.success);
     }
 }

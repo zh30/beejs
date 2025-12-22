@@ -24,20 +24,20 @@ impl MemoryWorkload {
     /// 执行工作负载
     pub async fn execute(
         &self,
-        parameters: HashMap<String, serde_json::Value>,
+        parameters: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>,
         concurrency: u32,
     ) -> Result<WorkloadResult> {
         let mut result = WorkloadResult::new(self.workload_type);
         result.start();
 
-        let iterations = get_iterations(&parameters);
-        let operation = get_operation(&parameters);
+        let iterations: _ = get_iterations(&parameters);
+        let operation: _ = get_operation(&parameters);
 
         // 并行执行内存任务
         let handles: Vec<_> = (0..concurrency)
             .map(|_| {
-                let operation = operation.clone();
-                let iterations = iterations;
+                let operation: _ = operation.clone();clone();
+                let iterations: _ = iterations;
                 tokio::spawn(async move {
                     Self::run_memory_tasks(operation, iterations).await
                 })
@@ -61,7 +61,7 @@ impl MemoryWorkload {
         }
 
         // 收集资源使用情况
-        let resource_usage = Self::collect_resource_usage();
+        let resource_usage: _ = Self::collect_resource_usage();
         result.resource_usage = resource_usage;
 
         result.finish(total_iterations);
@@ -102,13 +102,13 @@ impl MemoryWorkload {
 
     /// 大内存分配基准测试
     async fn large_allocation_benchmark() -> Result<(), BenchmarkError> {
-        let _data = vec![0u8; 1024 * 1024]; // 1MB
+        let _data: _ = vec![0u8; 1024 * 1024]; // 1MB
         Ok(())
     }
 
     /// 内存拷贝基准测试
     async fn memory_copy_benchmark() -> Result<(), BenchmarkError> {
-        let src = vec![0u8; 1024 * 1024]; // 1MB
+        let src: _ = vec![0u8; 1024 * 1024]; // 1MB
         let mut dst = vec![0u8; 1024 * 1024];
         dst.copy_from_slice(&src);
         Ok(())
@@ -116,7 +116,7 @@ impl MemoryWorkload {
 
     /// 内存压力基准测试
     async fn memory_pressure_benchmark() -> Result<(), BenchmarkError> {
-        let _data = vec![vec![0u8; 1024 * 100]; 100]; // 100MB
+        let _data: _ = vec![vec![0u8; 1024 * 100]; 100]; // 100MB
         Ok(())
     }
 
@@ -134,7 +134,7 @@ impl Default for MemoryWorkload {
 }
 
 /// 获取迭代次数
-fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
+fn get_iterations(parameters: &HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>) -> u32 {
     parameters
         .get("iterations")
         .and_then(|v| v.as_u64())
@@ -143,7 +143,7 @@ fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
 }
 
 /// 获取操作类型
-fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
+fn get_operation(parameters: &HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>) -> String {
     parameters
         .get("operation")
         .and_then(|v| v.as_str())
@@ -154,14 +154,16 @@ fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_workload_execution() {
-        let workload = MemoryWorkload::new();
+        let workload: _ = MemoryWorkload::new();
         let mut parameters = HashMap::new();
         parameters.insert("iterations".to_string(), serde_json::Value::from(5u64));
 
-        let result = workload.execute(parameters, 1).await.unwrap();
+        let result: _ = workload.execute(parameters, 1).await.unwrap();
 
         assert_eq!(result.workload_type, super::super::WorkloadType::MemoryIntensive);
         assert!(result.success);

@@ -66,10 +66,10 @@ struct AccessPattern {
 /// 模型缓存管理器
 pub struct ModelCache {
     config: ModelCacheConfig,
-    l1_cache: Arc<RwLock<HashMap<String, CacheEntry>>>,
-    l2_cache: Arc<Mutex<HashMap<String, CacheEntry>>>,
-    l3_cache: Arc<Mutex<HashMap<String, CacheEntry>>>,
-    access_patterns: Arc<RwLock<HashMap<String, AccessPattern>>>,
+    l1_cache: Arc<RwLock<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>,
+    l2_cache: Arc<Mutex<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>,
+    l3_cache: Arc<Mutex<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>,
+    access_patterns: Arc<RwLock<HashMap<String, AccessPattern, std::collections::HashMap<String, AccessPattern, String, AccessPattern>>>>,
     stats: Arc<Mutex<CacheStats>>,
 }
 
@@ -100,17 +100,17 @@ impl ModelCache {
         // AI 模型缓存不需要 V8 Runtime，移除运行时依赖
         Ok(ModelCache {
             config: config.clone(),
-            l1_cache: Arc::new(RwLock::new(HashMap::new())),
-            l2_cache: Arc::new(Mutex::new(HashMap::new())),
-            l3_cache: Arc::new(Mutex::new(HashMap::new())),
-            access_patterns: Arc::new(RwLock::new(HashMap::new())),
-            stats: Arc::new(Mutex::new(CacheStats::default())),
+            l1_cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            l2_cache: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            l3_cache: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            access_patterns: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(CacheStats::default()))),
         })
     }
 
     /// 加载模型
     pub fn load_model(&mut self, model_name: String) -> Result<CacheResult, String> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
 
         // 尝试从 L1 缓存获取
         if let Some(entry) = self.get_from_l1(&model_name) {
@@ -150,13 +150,13 @@ impl ModelCache {
         }
 
         // 缓存未命中，从磁盘加载
-        let model_data = self.load_from_disk(&model_name)?;
-        let load_time = start_time.elapsed();
+        let model_data: _ = self.load_from_disk(&model_name)?;
+        let load_time: _ = start_time.elapsed();
 
         // 创建缓存条目
-        let entry = CacheEntry {
+        let entry: _ = CacheEntry {
             model_name: model_name.clone(),
-            model_data: Arc::new(model_data),
+            model_data: Arc::new(std::sync::Mutex::new(model_data)),
             tier: CacheTier::L2Disk,
             last_access: Instant::now(),
             access_count: 1,
@@ -179,7 +179,7 @@ impl ModelCache {
 
     /// 从 L1 缓存获取
     fn get_from_l1(&self, model_name: &str) -> Option<CacheEntry> {
-        let cache = self.l1_cache.read().unwrap();
+        let cache: _ = self.l1_cache.read().unwrap();
         if let Some(entry) = cache.get(model_name).cloned() {
             // 更新访问信息
             drop(cache);
@@ -192,7 +192,7 @@ impl ModelCache {
 
     /// 从 L2 缓存获取
     fn get_from_l2(&self, model_name: &str) -> Option<CacheEntry> {
-        let cache = self.l2_cache.lock().unwrap();
+        let cache: _ = self.l2_cache.lock().unwrap();
         if let Some(entry) = cache.get(model_name).cloned() {
             drop(cache);
             self.record_access(model_name);
@@ -204,7 +204,7 @@ impl ModelCache {
 
     /// 从 L3 缓存获取
     fn get_from_l3(&self, model_name: &str) -> Option<CacheEntry> {
-        let cache = self.l3_cache.lock().unwrap();
+        let cache: _ = self.l3_cache.lock().unwrap();
         if let Some(entry) = cache.get(model_name).cloned() {
             drop(cache);
             self.record_access(model_name);
@@ -250,8 +250,8 @@ impl ModelCache {
     /// 从磁盘加载模型
     fn load_from_disk(&self, model_name: &str) -> Result<ModelData, String> {
         // 模拟从磁盘加载模型数据
-        let weights = vec![0u8; 1024 * 1024]; // 1MB 模拟数据
-        let metadata = ModelMetadata {
+        let weights: _ = vec![0u8; 1024 * 1024]; // 1MB 模拟数据
+        let metadata: _ = ModelMetadata {
             model_name: model_name.to_string(),
             version: "1.0".to_string(),
             size_mb: 1,
@@ -265,11 +265,11 @@ impl ModelCache {
     /// 记录访问
     fn record_access(&self, model_name: &str) {
         let mut patterns = self.access_patterns.write().unwrap();
-        let now = Instant::now();
+        let now: _ = Instant::now();
 
         if let Some(pattern) = patterns.get_mut(model_name) {
             pattern.access_count += 1;
-            let interval = now.duration_since(pattern.last_access);
+            let interval: _ = now.duration_since(pattern.last_access);
             pattern.access_intervals.push(interval);
             pattern.last_access = now;
 
@@ -293,11 +293,11 @@ impl ModelCache {
     /// 预加载模型
     pub fn preload_model(&mut self, model_name: String) -> Result<(), String> {
         // 基于访问模式预测并预加载
-        let patterns = self.access_patterns.read().unwrap();
+        let patterns: _ = self.access_patterns.read().unwrap();
         if let Some(pattern) = patterns.get(&model_name) {
             if pattern.access_count > 10 {
                 drop(patterns);
-                let _ = self.load_model(model_name);
+                let _: _ = self.load_model(model_name);
             }
         }
         Ok(())
@@ -305,20 +305,20 @@ impl ModelCache {
 
     /// 获取预取推荐
     pub fn get_prefetch_recommendations(&self) -> Vec<String> {
-        let patterns = self.access_patterns.read().unwrap();
+        let patterns: _ = self.access_patterns.read().unwrap();
         let mut recommendations = Vec::new();
 
         for (model_name, pattern) in patterns.iter() {
             if pattern.access_count > 20 {
-                let avg_interval = pattern
+                let avg_interval: _ = pattern
                     .access_intervals
                     .iter()
                     .sum::<Duration>()
                     .div_f32(pattern.access_intervals.len() as f32);
 
                 // 如果访问间隔稳定，预测下次访问
-                let now = Instant::now();
-                let time_since_last = now.duration_since(pattern.last_access);
+                let now: _ = Instant::now();
+                let time_since_last: _ = now.duration_since(pattern.last_access);
 
                 if time_since_last < avg_interval {
                     recommendations.push(model_name.clone());
@@ -327,8 +327,8 @@ impl ModelCache {
         }
 
         recommendations.sort_by(|a, b| {
-            let count_a = patterns.get(a).map(|p| p.access_count).unwrap_or(0);
-            let count_b = patterns.get(b).map(|p| p.access_count).unwrap_or(0);
+            let count_a: _ = patterns.get(a).map(|p| p.access_count).unwrap_or(0);
+            let count_b: _ = patterns.get(b).map(|p| p.access_count).unwrap_or(0);
             count_b.cmp(&count_a)
         });
 
@@ -343,7 +343,7 @@ impl ModelCache {
         }
 
         // LRU 淘汰策略
-        let oldest_key = cache
+        let oldest_key: _ = cache
             .iter()
             .min_by_key(|(_, entry)| entry.last_access)
             .map(|(key, _)| key.clone())
@@ -361,7 +361,7 @@ impl ModelCache {
         }
 
         // LFU 淘汰策略
-        let least_frequent_key = cache
+        let least_frequent_key: _ = cache
             .iter()
             .min_by_key(|(_, entry)| entry.access_count)
             .map(|(key, _)| key.clone())
@@ -387,19 +387,19 @@ impl ModelCache {
 
     /// 获取缓存命中率
     pub fn get_hit_rate(&self) -> f64 {
-        let stats = self.stats.lock().unwrap();
+        let stats: _ = self.stats.lock().unwrap();
         if stats.total_requests == 0 {
             return 0.0;
         }
 
-        let hits = stats.l1_hits + stats.l2_hits + stats.l3_hits;
+        let hits: _ = stats.l1_hits + stats.l2_hits + stats.l3_hits;
         hits as f64 / stats.total_requests as f64
     }
 
     /// 获取预取准确率
     pub fn get_prefetch_accuracy(&self) -> f64 {
         // 简化实现：基于访问模式的预测准确率
-        let patterns = self.access_patterns.read().unwrap();
+        let patterns: _ = self.access_patterns.read().unwrap();
         let mut accurate_predictions = 0;
         let mut total_predictions = 0;
 
@@ -419,7 +419,7 @@ impl ModelCache {
 
     /// 获取内存使用情况
     pub fn get_memory_usage(&self) -> usize {
-        let cache = self.l1_cache.read().unwrap();
+        let cache: _ = self.l1_cache.read().unwrap();
         let mut usage = 0;
         for entry in cache.values() {
             usage += entry.size_bytes;
@@ -429,7 +429,7 @@ impl ModelCache {
 
     /// 获取磁盘使用情况
     pub fn get_disk_usage(&self) -> usize {
-        let cache = self.l2_cache.lock().unwrap();
+        let cache: _ = self.l2_cache.lock().unwrap();
         let mut usage = 0;
         for entry in cache.values() {
             usage += entry.size_bytes;
@@ -440,7 +440,7 @@ impl ModelCache {
     /// 优化缓存
     pub fn optimize(&self) {
         // 清理过期条目
-        let now = Instant::now();
+        let now: _ = Instant::now();
 
         let mut l1_cache = self.l1_cache.write().unwrap();
         l1_cache.retain(|_, entry| {
@@ -466,17 +466,18 @@ impl ModelCache {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_cache_creation() {
-        let config = ModelCacheConfig {
+        let config: _ = ModelCacheConfig {
             max_memory_mb: 1024,
             max_disk_gb: 10,
             enable_compression: true,
             enable_prefetch: true,
         };
 
-        let cache = ModelCache::new(config);
+        let cache: _ = ModelCache::new(config);
         assert!(cache.is_ok());
     }
 
@@ -489,7 +490,7 @@ mod tests {
             enable_prefetch: false,
         }).unwrap();
 
-        let result = cache.load_model("test-model".to_string());
+        let result: _ = cache.load_model("test-model".to_string());
         assert!(result.is_ok());
     }
 
@@ -503,14 +504,14 @@ mod tests {
         }).unwrap();
 
         // 首次加载
-        let _ = cache.load_model("model-1".to_string());
+        let _: _ = cache.load_model("model-1".to_string());
 
         // 重复访问
         for _ in 0..10 {
-            let _ = cache.load_model("model-1".to_string());
+            let _: _ = cache.load_model("model-1".to_string());
         }
 
-        let hit_rate = cache.get_hit_rate();
+        let hit_rate: _ = cache.get_hit_rate();
         println!("Hit rate: {}%", hit_rate * 100.0);
         assert!(hit_rate > 0.8);
     }
@@ -526,10 +527,10 @@ mod tests {
 
         // 模拟访问模式
         for _ in 0..30 {
-            let _ = cache.load_model("popular-model".to_string());
+            let _: _ = cache.load_model("popular-model".to_string());
         }
 
-        let recommendations = cache.get_prefetch_recommendations();
+        let recommendations: _ = cache.get_prefetch_recommendations();
         assert!(!recommendations.is_empty());
     }
 }

@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::edge::{NodeId, RouteOptimizer};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Network optimizer
 #[derive(Debug)]
@@ -62,7 +64,7 @@ pub struct BandwidthManager {
 /// Bandwidth allocator
 #[derive(Debug)]
 pub struct BandwidthAllocator {
-    pools: Arc<RwLock<HashMap<String, BandwidthPool>>>,
+    pools: Arc<RwLock<HashMap<String, BandwidthPool, std::collections::HashMap<String, BandwidthPool, String, BandwidthPool>>>>,
 }
 
 /// Bandwidth pool
@@ -133,15 +135,15 @@ pub struct BandwidthMonitor {
 pub struct UsageSample {
     pub timestamp: std::time::SystemTime,
     pub total_usage_mbps: u64,
-    pub per_pool_usage: HashMap<String, u64>,
+    pub per_pool_usage: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
 }
 
 impl NetworkOptimizer {
     /// Create a new network optimizer
     pub async fn new() -> Result<Self> {
-        let optimizer = NetworkOptimizer {
-            latency_monitor: Arc::new(LatencyMonitor::new().await?),
-            routing_optimizer: Arc::new(RouteOptimizer::new().await?),
+        let optimizer: _ = NetworkOptimizer {
+            latency_monitor: Arc::new(std::sync::Mutex::new(LatencyMonitor::new()).await?),
+            routing_optimizer: Arc::new(std::sync::Mutex::new(RouteOptimizer::new()).await?),
         };
 
         println!("Network optimizer initialized");
@@ -150,22 +152,22 @@ impl NetworkOptimizer {
 
     /// Optimize network latency
     pub async fn optimize_latency(&self) -> Result<LatencyOptimization> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         println!("Starting latency optimization...");
 
         // Get latency measurements
-        let measurements = self.latency_monitor.get_recent_measurements().await?;
+        let measurements: _ = self.latency_monitor.get_recent_measurements().await?;
 
         // Analyze latency patterns
-        let analysis = self.analyze_latency_patterns(&measurements).await?;
+        let analysis: _ = self.analyze_latency_patterns(&measurements).await?;
 
         // Optimize routes
-        let optimized_routes = self.routing_optimizer.optimize_routes().await?;
+        let optimized_routes: _ = self.routing_optimizer.optimize_routes().await?;
 
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
 
-        let result = LatencyOptimization {
+        let result: _ = LatencyOptimization {
             average_latency_reduction_percent: analysis.average_reduction,
             routes_optimized: optimized_routes.len(),
             estimated_improvement_ms: analysis.estimated_improvement,
@@ -180,7 +182,7 @@ impl NetworkOptimizer {
 
     /// Select optimal network path
     pub async fn select_optimal_path(&self, destination: &NodeId) -> Result<NetworkPath> {
-        let path = self.routing_optimizer.find_optimal_path(destination).await?;
+        let path: _ = self.routing_optimizer.find_optimal_path(destination).await?;
         Ok(path)
     }
 
@@ -205,7 +207,7 @@ impl NetworkOptimizer {
             .collect();
 
         // Estimate improvement
-        let estimated_improvement = avg_latency / 5; // 20% improvement
+        let estimated_improvement: _ = avg_latency / 5; // 20% improvement
 
         Ok(LatencyAnalysis {
             average_reduction: 20.0,
@@ -226,8 +228,8 @@ struct LatencyAnalysis {
 impl LatencyMonitor {
     /// Create a new latency monitor
     pub async fn new() -> Result<Self> {
-        let monitor = LatencyMonitor {
-            measurements: Arc::new(RwLock::new(Vec::new())),
+        let monitor: _ = LatencyMonitor {
+            measurements: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         };
 
         println!("Latency monitor initialized");
@@ -239,7 +241,7 @@ impl LatencyMonitor {
         // Simulate latency measurement
         tokio::time::sleep(Duration::from_millis(5)).await;
 
-        let measurement = LatencyMeasurement {
+        let measurement: _ = LatencyMeasurement {
             timestamp: std::time::SystemTime::now(),
             source: source.to_string(),
             destination: destination.to_string(),
@@ -264,14 +266,14 @@ impl LatencyMonitor {
 
     /// Get recent measurements
     pub async fn get_recent_measurements(&self) -> Result<Vec<LatencyMeasurement>> {
-        let measurements = self.measurements.read().await;
-        let recent = measurements.iter().rev().take(100).cloned().collect();
+        let measurements: _ = self.measurements.read().await;
+        let recent: _ = measurements.iter().rev().take(100).cloned().collect();
         Ok(recent)
     }
 
     /// Get average latency
     pub async fn get_average_latency(&self) -> Result<u64> {
-        let measurements = self.measurements.read().await;
+        let measurements: _ = self.measurements.read().await;
         if measurements.is_empty() {
             return Ok(0);
         }
@@ -284,8 +286,8 @@ impl LatencyMonitor {
 impl RouteOptimizer {
     /// Create a new route optimizer
     pub async fn new() -> Result<Self> {
-        let optimizer = RouteOptimizer {
-            routes: Arc::new(RwLock::new(HashMap::new())),
+        let optimizer: _ = RouteOptimizer {
+            routes: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         };
 
         println!("Route optimizer initialized");
@@ -297,7 +299,7 @@ impl RouteOptimizer {
         // Simulate path finding
         tokio::time::sleep(Duration::from_millis(10)).await;
 
-        let path = NetworkPath {
+        let path: _ = NetworkPath {
             nodes: vec!["edge-node-1".to_string(), destination.0.clone()],
             total_latency_ms: 45,
             total_bandwidth_mbps: 1000,
@@ -322,9 +324,9 @@ impl RouteOptimizer {
 impl BandwidthManager {
     /// Create a new bandwidth manager
     pub async fn new() -> Result<Self> {
-        let manager = BandwidthManager {
-            allocator: Arc::new(BandwidthAllocator::new().await?),
-            monitor: Arc::new(BandwidthMonitor::new().await?),
+        let manager: _ = BandwidthManager {
+            allocator: Arc::new(std::sync::Mutex::new(BandwidthAllocator::new()).await?),
+            monitor: Arc::new(std::sync::Mutex::new(BandwidthMonitor::new()).await?),
         };
 
         println!("Bandwidth manager initialized");
@@ -333,13 +335,13 @@ impl BandwidthManager {
 
     /// Allocate bandwidth
     pub async fn allocate_bandwidth(&self, request: BandwidthRequest) -> Result<Allocation> {
-        let allocation = self.allocator.allocate(&request).await?;
+        let allocation: _ = self.allocator.allocate(&request).await?;
         Ok(allocation)
     }
 
     /// Monitor bandwidth usage
     pub async fn monitor_usage(&self) -> Result<BandwidthUsage> {
-        let usage = self.monitor.get_usage().await?;
+        let usage: _ = self.monitor.get_usage().await?;
         Ok(usage)
     }
 
@@ -357,8 +359,8 @@ impl BandwidthManager {
 impl BandwidthAllocator {
     /// Create a new bandwidth allocator
     pub async fn new() -> Result<Self> {
-        let allocator = BandwidthAllocator {
-            pools: Arc::new(RwLock::new(HashMap::new())),
+        let allocator: _ = BandwidthAllocator {
+            pools: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         };
 
         // Initialize default pools
@@ -401,14 +403,14 @@ impl BandwidthAllocator {
 
     /// Allocate bandwidth
     pub async fn allocate(&self, request: &BandwidthRequest) -> Result<Allocation> {
-        let pool_name = match request.priority {
+        let pool_name: _ = match request.priority {
             AllocationPriority::Critical | AllocationPriority::High => "high_priority",
             AllocationPriority::Normal => "normal_priority",
             AllocationPriority::Low => "low_priority",
         };
 
         let mut pools = self.pools.write().await;
-        let pool = pools.get_mut(pool_name)
+        let pool: _ = pools.get_mut(pool_name)
             .ok_or_else(|| anyhow::anyhow!("Pool not found: {}", pool_name))?;
 
         // Check if enough bandwidth is available
@@ -417,7 +419,7 @@ impl BandwidthAllocator {
             pool.available_bandwidth_mbps -= request.requested_mbps;
             pool.allocated_bandwidth_mbps += request.requested_mbps;
 
-            let allocation = BandwidthAllocation {
+            let allocation: _ = BandwidthAllocation {
                 id: format!("alloc-{}", uuid::Uuid::new_v4()),
                 requester: request.requester_id.clone(),
                 allocated_mbps: request.requested_mbps,
@@ -454,7 +456,7 @@ impl BandwidthAllocator {
 
         for pool in pools.values_mut() {
             if let Some(index) = pool.active_allocations.iter().position(|a| a.id == allocation_id) {
-                let allocation = pool.active_allocations.remove(index);
+                let allocation: _ = pool.active_allocations.remove(index);
                 pool.available_bandwidth_mbps += allocation.allocated_mbps;
                 pool.allocated_bandwidth_mbps -= allocation.allocated_mbps;
 
@@ -470,7 +472,7 @@ impl BandwidthAllocator {
 
     /// Get pool status
     pub async fn get_pool_status(&self) -> Result<Vec<BandwidthPool>> {
-        let pools = self.pools.read().await;
+        let pools: _ = self.pools.read().await;
         Ok(pools.values().cloned().collect())
     }
 }
@@ -478,8 +480,8 @@ impl BandwidthAllocator {
 impl BandwidthMonitor {
     /// Create a new bandwidth monitor
     pub async fn new() -> Result<Self> {
-        let monitor = BandwidthMonitor {
-            usage_history: Arc::new(RwLock::new(Vec::new())),
+        let monitor: _ = BandwidthMonitor {
+            usage_history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         };
 
         println!("Bandwidth monitor initialized");
@@ -488,7 +490,7 @@ impl BandwidthMonitor {
 
     /// Get current bandwidth usage
     pub async fn get_usage(&self) -> Result<BandwidthUsage> {
-        let usage = BandwidthUsage {
+        let usage: _ = BandwidthUsage {
             total_capacity_mbps: 3500,
             total_allocated_mbps: 2100,
             total_available_mbps: 1400,
@@ -513,7 +515,7 @@ impl BandwidthMonitor {
 
     /// Get usage history
     pub async fn get_usage_history(&self) -> Vec<UsageSample> {
-        let history = self.usage_history.read().await;
+        let history: _ = self.usage_history.read().await;
         history.clone()
     }
 }

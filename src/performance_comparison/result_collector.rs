@@ -7,6 +7,8 @@ use crate::benchmarks::BenchmarkResult;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 单个基准测试的对比结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,7 +63,7 @@ impl TestEnvironment {
 
 /// 结果收集器
 pub struct ResultCollector {
-    results: HashMap<String, BenchmarkComparison>,
+    results: HashMap<String, BenchmarkComparison, std::collections::HashMap<String, BenchmarkComparison, String, BenchmarkComparison>>,
     environment: TestEnvironment,
 }
 
@@ -95,8 +97,8 @@ impl ResultCollector {
     /// 生成完整的对比结果
     pub fn generate_comparison_result(&self) -> ComparisonResult {
         let test_results: Vec<BenchmarkComparison> = self.results.values().cloned().collect();
-        let summary = self.calculate_summary(&test_results);
-        let total_execution_time = self.calculate_total_execution_time(&test_results);
+        let summary: _ = self.calculate_summary(&test_results);
+        let total_execution_time: _ = self.calculate_total_execution_time(&test_results);
 
         ComparisonResult {
             test_results,
@@ -108,7 +110,7 @@ impl ResultCollector {
 
     /// 计算性能摘要
     fn calculate_summary(&self, results: &[BenchmarkComparison]) -> crate::performance_comparison::PerformanceSummary {
-        let total_tests = results.len();
+        let total_tests: _ = results.len();
         let mut beejs_wins = 0;
         let mut nodejs_wins = 0;
         let mut bun_wins = 0;
@@ -130,19 +132,19 @@ impl ResultCollector {
                 (result.memory_savings_vs_nodejs + result.memory_savings_vs_bun) / 2.0;
         }
 
-        let average_speedup_nodejs = if total_tests > 0 {
+        let average_speedup_nodejs: _ = if total_tests > 0 {
             total_speedup_nodejs / total_tests as f64
         } else {
             1.0
         };
 
-        let average_speedup_bun = if total_tests > 0 {
+        let average_speedup_bun: _ = if total_tests > 0 {
             total_speedup_bun / total_tests as f64
         } else {
             1.0
         };
 
-        let memory_efficiency_improvement = if total_tests > 0 {
+        let memory_efficiency_improvement: _ = if total_tests > 0 {
             total_memory_improvement / total_tests as f64
         } else {
             0.0
@@ -200,7 +202,7 @@ impl ResultCollector {
 
     /// 生成性能报告
     pub fn generate_report(&self) -> String {
-        let comparison_result = self.generate_comparison_result();
+        let comparison_result: _ = self.generate_comparison_result();
         let mut report = String::new();
 
         report.push_str("# Performance Comparison Report\n\n");
@@ -252,15 +254,15 @@ pub fn calculate_performance_score(comparison: &BenchmarkComparison) -> f64 {
     let mut score = 0.0;
 
     // 速度评分 (40%)
-    let speed_score = ((comparison.speedup_vs_nodejs + comparison.speedup_vs_bun) / 2.0 - 1.0) * 20.0;
+    let speed_score: _ = ((comparison.speedup_vs_nodejs + comparison.speedup_vs_bun) / 2.0 - 1.0) * 20.0;
     score += speed_score.clamp(0.0, 40.0);
 
     // 内存评分 (30%)
-    let memory_score = ((comparison.memory_savings_vs_nodejs + comparison.memory_savings_vs_bun) / 2.0) * 30.0;
+    let memory_score: _ = ((comparison.memory_savings_vs_nodejs + comparison.memory_savings_vs_bun) / 2.0) * 30.0;
     score += memory_score.clamp(0.0, 30.0);
 
     // 胜率评分 (30%)
-    let win_bonus = match comparison.winner.as_str() {
+    let win_bonus: _ = match comparison.winner.as_str() {
         "beejs" => 30.0,
         "nodejs" => 10.0,
         "bun" => 15.0,
@@ -301,17 +303,17 @@ pub fn determine_winner(
 /// 计算单个运行时的得分
 fn calculate_runtime_score(result: &BenchmarkResult) -> f64 {
     // 基于执行时间计算得分（时间越短得分越高）
-    let time_score = if result.avg_duration.as_secs_f64() > 0.0 {
+    let time_score: _ = if result.avg_duration.as_secs_f64() > 0.0 {
         1.0 / result.avg_duration.as_secs_f64() * 1000000.0
     } else {
         0.0
     };
 
     // 基于每秒操作数计算得分
-    let ops_score = result.operations_per_second;
+    let ops_score: _ = result.operations_per_second;
 
     // 基于内存使用计算得分（内存越少得分越高）
-    let memory_score = if let Some(mem) = &result.memory_stats {
+    let memory_score: _ = if let Some(mem) = &result.memory_stats {
         if mem.current_rss > 0 {
             1000000.0 / mem.current_rss as f64
         } else {

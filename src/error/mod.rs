@@ -78,7 +78,7 @@ impl ErrorHandler {
             Ok(result) => Ok(result),
             Err(original_error) => {
                 // 创建错误上下文
-                let context = ErrorContext::new(
+                let context: _ = ErrorContext::new(
                     original_error,
                     file.to_string(),
                     line,
@@ -110,7 +110,7 @@ impl ErrorHandler {
         match f().await {
             Ok(result) => Ok(result),
             Err(error) => {
-                let context = ErrorContext::new_without_location(error);
+                let context: _ = ErrorContext::new_without_location(error);
                 eprintln!("Execution failed: {}", context);
                 Err(context.error_type)
             }
@@ -138,7 +138,7 @@ macro_rules! beejs_try {
         match $result {
             Ok(value) => value,
             Err(error) => {
-                let context = $crate::error::ErrorContext::new_without_location(
+                let context: _ = $crate::error::ErrorContext::new_without_location(
                     $crate::error::ErrorHandler::convert_error(error)
                 );
                 eprintln!("Error context: {}", context);
@@ -163,7 +163,7 @@ macro_rules! beejs_try_async {
         match $result {
             Ok(value) => value,
             Err(error) => {
-                let context = $crate::error::ErrorContext::new(
+                let context: _ = $crate::error::ErrorContext::new(
                     $crate::error::ErrorHandler::convert_error(error),
                     $file.to_string(),
                     $line,
@@ -179,11 +179,13 @@ macro_rules! beejs_try_async {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_error_context_creation() {
-        let error = BeejsError::V8Error("Test error".to_string());
-        let context = create_error_context(
+        let error: _ = BeejsError::V8Error("Test error".to_string());
+        let context: _ = create_error_context(
             error.clone(),
             "test.rs".to_string(),
             42,
@@ -197,8 +199,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_simple_error_context() {
-        let error = BeejsError::RuntimeError("Simple error".to_string());
-        let context = create_simple_error_context(error.clone());
+        let error: _ = BeejsError::RuntimeError("Simple error".to_string());
+        let context: _ = create_simple_error_context(error.clone());
 
         assert_eq!(context.error_type, error);
         assert!(context.source_location.is_none());
@@ -206,8 +208,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_error_conversion() {
-        let std_error = "Standard error";
-        let beejs_error = ErrorHandler::convert_error(std_error);
+        let std_error: _ = "Standard error";
+        let beejs_error: _ = ErrorHandler::convert_error(std_error);
 
         assert!(matches!(beejs_error, BeejsError::RuntimeError(_)));
     }
@@ -215,14 +217,14 @@ mod tests {
     #[test]
     fn test_beejs_try_macro() {
         let result: Result<i32> = Ok(42);
-        let value = beejs_try!(result);
+        let value: _ = beejs_try!(result);
         assert_eq!(value, 42);
     }
 
     #[test]
     fn test_beejs_try_macro_error() {
         let result: Result<i32> = Err(BeejsError::V8Error("Test".to_string()));
-        let error = beejs_try!(result);
+        let error: _ = beejs_try!(result);
         // 这个测试验证宏能正确传播错误
         assert!(matches!(error, 0)); // 不会执行到这里
     }

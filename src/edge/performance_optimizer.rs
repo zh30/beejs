@@ -8,6 +8,8 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::edge::Task;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Performance optimizer
 #[derive(Debug)]
@@ -165,9 +167,9 @@ pub struct ScheduleChange {
 impl ResourceOptimizer {
     /// Create a new resource optimizer
     pub async fn new() -> Result<Self> {
-        let optimizer = ResourceOptimizer {
-            profiler: Arc::new(ResourceProfiler::new().await?),
-            tuner: Arc::new(AutoTuner::new().await?),
+        let optimizer: _ = ResourceOptimizer {
+            profiler: Arc::new(std::sync::Mutex::new(ResourceProfiler::new()).await?),
+            tuner: Arc::new(std::sync::Mutex::new(AutoTuner::new()).await?),
         };
 
         println!("Resource optimizer initialized");
@@ -176,22 +178,22 @@ impl ResourceOptimizer {
 
     /// Optimize resources
     pub async fn optimize_resources(&self) -> Result<OptimizationResult> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         println!("Starting resource optimization...");
 
         // Profile current resource usage
-        let profile = self.profiler.profile_usage().await?;
+        let profile: _ = self.profiler.profile_usage().await?;
 
         // Tune configuration based on profile
-        let config = self.tuner.tune_config(&profile).await?;
+        let config: _ = self.tuner.tune_config(&profile).await?;
 
         // Apply optimization
-        let changes = self.apply_optimization(&config).await?;
+        let changes: _ = self.apply_optimization(&config).await?;
 
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
 
-        let result = OptimizationResult {
+        let result: _ = OptimizationResult {
             improvement_percent: 15.5, // Simulated improvement
             config_changes: changes,
             execution_time_ms: elapsed.as_millis() as u64,
@@ -206,7 +208,7 @@ impl ResourceOptimizer {
 
     /// Profile resource usage
     pub async fn profile_usage(&self) -> Result<ResourceProfile> {
-        let profile = self.profiler.profile().await?;
+        let profile: _ = self.profiler.profile().await?;
         Ok(profile)
     }
 
@@ -238,9 +240,9 @@ impl ResourceOptimizer {
 impl ResourceProfiler {
     /// Create a new resource profiler
     pub async fn new() -> Result<Self> {
-        let profiler = ResourceProfiler {
-            metrics: Arc::new(RwLock::new(ResourceMetrics {
-                timestamp: std::time::SystemTime::now(),
+        let profiler: _ = ResourceProfiler {
+            metrics: Arc::new(std::sync::Mutex::new(RwLock::new(ResourceMetrics {
+                timestamp: std::time::SystemTime::now()),
                 cpu_usage: 50.0,
                 memory_usage: 1024,
                 disk_usage: 2048,
@@ -260,9 +262,9 @@ impl ResourceProfiler {
 
     /// Profile resource usage
     pub async fn profile(&self) -> Result<ResourceProfile> {
-        let metrics = self.metrics.read().await;
+        let metrics: _ = self.metrics.read().await;
 
-        let profile = ResourceProfile {
+        let profile: _ = ResourceProfile {
             cpu_usage_percent: metrics.cpu_usage,
             memory_usage_mb: metrics.memory_usage,
             memory_usage_percent: (metrics.memory_usage as f64 / 2048.0) * 100.0,
@@ -282,7 +284,7 @@ impl ResourceProfiler {
 
     /// Get current metrics
     pub async fn get_metrics(&self) -> Result<ResourceMetrics> {
-        let metrics = self.metrics.read().await;
+        let metrics: _ = self.metrics.read().await;
         Ok(metrics.clone())
     }
 }
@@ -290,16 +292,16 @@ impl ResourceProfiler {
 impl AutoTuner {
     /// Create a new auto tuner
     pub async fn new() -> Result<Self> {
-        let tuner = AutoTuner {
-            tuning_history: Arc::new(RwLock::new(Vec::new())),
-            current_config: Arc::new(RwLock::new(OptimizationConfig {
+        let tuner: _ = AutoTuner {
+            tuning_history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            current_config: Arc::new(std::sync::Mutex::new(RwLock::new(OptimizationConfig {
                 cpu_limit: 80.0,
                 memory_limit: 1024.0,
                 max_instances: 100,
                 batch_size: 32,
                 cache_size_mb: 256,
                 optimization_level: OptimizationLevel::Moderate,
-            })),
+            }))),
         };
 
         println!("Auto tuner initialized");
@@ -363,7 +365,7 @@ impl AutoTuner {
 
     /// Get tuning history
     pub async fn get_tuning_history(&self) -> Vec<TuningRecord> {
-        let history = self.tuning_history.read().await;
+        let history: _ = self.tuning_history.read().await;
         history.clone()
     }
 }
@@ -371,9 +373,9 @@ impl AutoTuner {
 impl BatteryOptimizer {
     /// Create a new battery optimizer
     pub async fn new() -> Result<Self> {
-        let optimizer = BatteryOptimizer {
-            monitor: Arc::new(BatteryMonitor::new().await?),
-            scheduler: Arc::new(PowerScheduler::new().await?),
+        let optimizer: _ = BatteryOptimizer {
+            monitor: Arc::new(std::sync::Mutex::new(BatteryMonitor::new()).await?),
+            scheduler: Arc::new(std::sync::Mutex::new(PowerScheduler::new()).await?),
         };
 
         println!("Battery optimizer initialized");
@@ -382,22 +384,22 @@ impl BatteryOptimizer {
 
     /// Optimize power usage
     pub async fn optimize_power(&self) -> Result<PowerOptimization> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         println!("Starting power optimization...");
 
         // Get battery status
-        let battery_status = self.monitor.get_status().await?;
+        let battery_status: _ = self.monitor.get_status().await?;
 
         // Schedule tasks based on battery level
-        let schedule_changes = self.scheduler.optimize_schedule(battery_status).await?;
+        let schedule_changes: _ = self.scheduler.optimize_schedule(battery_status).await?;
 
         // Calculate battery saved
-        let battery_saved = self.calculate_battery_saved(&schedule_changes).await?;
+        let battery_saved: _ = self.calculate_battery_saved(&schedule_changes).await?;
 
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
 
-        let result = PowerOptimization {
+        let result: _ = PowerOptimization {
             battery_saved_percent: battery_saved,
             schedule_changes,
             execution_time_ms: elapsed.as_millis() as u64,
@@ -411,14 +413,14 @@ impl BatteryOptimizer {
 
     /// Schedule tasks based on battery
     pub async fn schedule_tasks(&self, tasks: &[Task]) -> Result<Vec<PowerSchedule>> {
-        let schedules = self.scheduler.create_schedules(tasks).await?;
+        let schedules: _ = self.scheduler.create_schedules(tasks).await?;
         Ok(schedules)
     }
 
     /// Calculate battery saved
     async fn calculate_battery_saved(&self, changes: &[ScheduleChange]) -> Result<f64> {
         // Simulate battery savings calculation
-        let total_saved = changes.len() as f64 * 2.5; // 2.5% per change
+        let total_saved: _ = changes.len() as f64 * 2.5; // 2.5% per change
         Ok(total_saved.min(20.0)) // Max 20% savings
     }
 }
@@ -426,10 +428,10 @@ impl BatteryOptimizer {
 impl BatteryMonitor {
     /// Create a new battery monitor
     pub async fn new() -> Result<Self> {
-        let monitor = BatteryMonitor {
-            current_level: Arc::new(RwLock::new(85.0)),
-            is_charging: Arc::new(RwLock::new(false)),
-            health_percent: Arc::new(RwLock::new(95.0)),
+        let monitor: _ = BatteryMonitor {
+            current_level: Arc::new(std::sync::Mutex::new(RwLock::new(85.0))),
+            is_charging: Arc::new(std::sync::Mutex::new(RwLock::new(false))),
+            health_percent: Arc::new(std::sync::Mutex::new(RwLock::new(95.0))),
         };
 
         println!("Battery monitor initialized");
@@ -438,9 +440,9 @@ impl BatteryMonitor {
 
     /// Get battery status
     pub async fn get_status(&self) -> Result<BatteryStatus> {
-        let level = *self.current_level.read().await;
-        let is_charging = *self.is_charging.read().await;
-        let health = *self.health_percent.read().await;
+        let level: _ = *self.current_level.read().await;
+        let is_charging: _ = *self.is_charging.read().await;
+        let health: _ = *self.health_percent.read().await;
 
         Ok(BatteryStatus {
             level_percent: level,
@@ -469,8 +471,8 @@ pub struct BatteryStatus {
 impl PowerScheduler {
     /// Create a new power scheduler
     pub async fn new() -> Result<Self> {
-        let scheduler = PowerScheduler {
-            schedules: Arc::new(RwLock::new(Vec::new())),
+        let scheduler: _ = PowerScheduler {
+            schedules: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         };
 
         println!("Power scheduler initialized");
@@ -482,7 +484,7 @@ impl PowerScheduler {
         let mut schedules = Vec::new();
 
         for task in tasks {
-            let schedule = PowerSchedule {
+            let schedule: _ = PowerSchedule {
                 task_id: task.id.clone(),
                 start_time: std::time::SystemTime::now(),
                 estimated_duration_ms: 1000,

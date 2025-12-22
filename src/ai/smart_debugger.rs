@@ -76,8 +76,8 @@ pub struct SmartDebugger {
 /// 调试知识库
 #[derive(Debug, Clone)]
 pub struct DebugKnowledgeBase {
-    error_patterns: HashMap<String, ErrorPattern>,
-    fix_templates: HashMap<String, Vec<FixTemplate>>,
+    error_patterns: HashMap<String, ErrorPattern, std::collections::HashMap<String, ErrorPattern, String, ErrorPattern>>,
+    fix_templates: HashMap<String, Vec<FixTemplate, std::collections::HashMap<String, Vec<FixTemplate, String, Vec<FixTemplate>>>,
 }
 
 /// 错误模式
@@ -106,15 +106,15 @@ pub struct ErrorPatternMatcher {
 /// 修复生成器
 #[derive(Debug, Clone)]
 pub struct FixGenerator {
-    templates: Arc<RwLock<HashMap<String, Vec<FixTemplate>>>>,
+    templates: Arc<RwLock<HashMap<String, Vec<FixTemplate, std::collections::HashMap<String, Vec<FixTemplate, String, Vec<FixTemplate>>>>>,
 }
 
 impl SmartDebugger {
     /// 创建新的智能调试器
     pub fn new() -> Self {
-        let knowledge_base = Arc::new(RwLock::new(DebugKnowledgeBase::new()));
-        let pattern_matcher = Arc::new(ErrorPatternMatcher::new());
-        let fix_generator = Arc::new(FixGenerator::new());
+        let knowledge_base: _ = Arc::new(std::sync::Mutex::new(RwLock::new(DebugKnowledgeBase::new())));
+        let pattern_matcher: _ = Arc::new(std::sync::Mutex::new(ErrorPatternMatcher::new()));
+        let fix_generator: _ = Arc::new(std::sync::Mutex::new(FixGenerator::new()));
 
         Self {
             knowledge_base,
@@ -127,7 +127,7 @@ impl SmartDebugger {
     pub async fn diagnose_error(&self, error: &ErrorInfo) -> Result<Diagnosis, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
-        let diagnosis = match error.error_type.as_str() {
+        let diagnosis: _ = match error.error_type.as_str() {
             "TypeError" => self.diagnose_type_error(error),
             "ReferenceError" => self.diagnose_reference_error(error),
             "SyntaxError" => self.diagnose_syntax_error(error),
@@ -147,8 +147,8 @@ impl SmartDebugger {
             return Err("栈追踪为空".into());
         }
 
-        let deepest_frame = &stack_trace[0];
-        let root_cause = RootCause {
+        let deepest_frame: _ = &stack_trace[0];
+        let root_cause: _ = RootCause {
             description: format!("错误源于 {}:{} 中的 {}", deepest_frame.file, deepest_frame.line, deepest_frame.function),
             location: format!("{}:{}", deepest_frame.file, deepest_frame.line),
             related_code: Some("相关代码片段".to_string()),
@@ -209,7 +209,7 @@ impl SmartDebugger {
     pub async fn explain_error(&self, error: &ErrorInfo) -> Result<String, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(17)).await;
 
-        let explanation = match error.error_type.as_str() {
+        let explanation: _ = match error.error_type.as_str() {
             "TypeError" => format!("TypeError: {}\n\n这个错误表示尝试对错误类型的值进行操作。", error.message),
             "ReferenceError" => format!("ReferenceError: {}\n\n这个错误表示尝试访问一个不存在的变量。", error.message),
             "SyntaxError" => format!("SyntaxError: {}\n\n这个错误表示代码语法不符合语言规范。", error.message),
@@ -232,7 +232,7 @@ impl SmartDebugger {
             }
         }
 
-        let time_saved = (breakpoints.len() - optimized.len()) * 10;
+        let time_saved: _ = (breakpoints.len() - optimized.len()) * 10;
 
         Ok(DebugPath {
             optimized_breakpoints: optimized,
@@ -386,7 +386,7 @@ impl DebugKnowledgeBase {
 impl ErrorPatternMatcher {
     pub fn new() -> Self {
         Self {
-            patterns: Arc::new(RwLock::new(Vec::new())),
+            patterns: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         }
     }
 }
@@ -394,7 +394,7 @@ impl ErrorPatternMatcher {
 impl FixGenerator {
     pub fn new() -> Self {
         Self {
-            templates: Arc::new(RwLock::new(HashMap::new())),
+            templates: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 }
@@ -402,17 +402,19 @@ impl FixGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_smart_debugger_creation() {
-        let debugger = SmartDebugger::new();
+        let debugger: _ = SmartDebugger::new();
         assert!(debugger.knowledge_base.read().await.error_patterns.len() > 0);
     }
 
     #[tokio::test]
     async fn test_error_diagnosis() {
-        let debugger = SmartDebugger::new();
-        let error = ErrorInfo {
+        let debugger: _ = SmartDebugger::new();
+        let error: _ = ErrorInfo {
             error_type: "TypeError".to_string(),
             message: "Cannot read property 'length' of undefined".to_string(),
             stack_trace: vec![
@@ -425,7 +427,7 @@ mod tests {
             context: Some("数据处理函数".to_string()),
         };
 
-        let diagnosis = debugger.diagnose_error(&error).await.unwrap();
+        let diagnosis: _ = debugger.diagnose_error(&error).await.unwrap();
 
         assert_eq!(diagnosis.error_type, "TypeError");
         assert!(diagnosis.confidence > 0.8);
@@ -434,8 +436,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_root_cause_analysis() {
-        let debugger = SmartDebugger::new();
-        let stack_trace = vec![
+        let debugger: _ = SmartDebugger::new();
+        let stack_trace: _ = vec![
             StackFrame {
                 file: "lib.js".to_string(),
                 line: 25,
@@ -443,7 +445,7 @@ mod tests {
             },
         ];
 
-        let root_cause = debugger.find_root_cause(&stack_trace).await.unwrap();
+        let root_cause: _ = debugger.find_root_cause(&stack_trace).await.unwrap();
 
         assert!(!root_cause.description.is_empty());
         assert!(!root_cause.location.is_empty());
@@ -452,8 +454,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_fix_suggestions() {
-        let debugger = SmartDebugger::new();
-        let diagnosis = Diagnosis {
+        let debugger: _ = SmartDebugger::new();
+        let diagnosis: _ = Diagnosis {
             error_type: "TypeError".to_string(),
             root_cause: RootCause {
                 description: "类型错误".to_string(),
@@ -464,48 +466,48 @@ mod tests {
             confidence: 0.9,
         };
 
-        let suggestions = debugger.suggest_fix(&diagnosis).await.unwrap();
+        let suggestions: _ = debugger.suggest_fix(&diagnosis).await.unwrap();
 
         assert!(!suggestions.is_empty());
-        let first_suggestion = &suggestions[0];
+        let first_suggestion: _ = &suggestions[0];
         assert!(!first_suggestion.title.is_empty());
         assert!(!first_suggestion.fix_code.is_empty());
     }
 
     #[tokio::test]
     async fn test_error_explanation() {
-        let debugger = SmartDebugger::new();
-        let type_error = ErrorInfo {
+        let debugger: _ = SmartDebugger::new();
+        let type_error: _ = ErrorInfo {
             error_type: "TypeError".to_string(),
             message: "Cannot read property 'map' of undefined".to_string(),
             stack_trace: vec![],
             context: None,
         };
 
-        let explanation = debugger.explain_error(&type_error).await.unwrap();
+        let explanation: _ = debugger.explain_error(&type_error).await.unwrap();
         assert!(explanation.contains("TypeError"));
         assert!(explanation.contains("类型"));
     }
 
     #[tokio::test]
     async fn test_empty_stack_trace() {
-        let debugger = SmartDebugger::new();
+        let debugger: _ = SmartDebugger::new();
         let empty_stack: Vec<StackFrame> = vec![];
-        let result = debugger.find_root_cause(&empty_stack).await;
+        let result: _ = debugger.find_root_cause(&empty_stack).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_multiple_error_types() {
-        let debugger = SmartDebugger::new();
-        let error_types = vec![
+        let debugger: _ = SmartDebugger::new();
+        let error_types: _ = vec![
             ("TypeError", "Cannot read property 'x' of undefined"),
             ("ReferenceError", "x is not defined"),
             ("SyntaxError", "Unexpected token"),
         ];
 
         for (error_type, message) in error_types {
-            let error = ErrorInfo {
+            let error: _ = ErrorInfo {
                 error_type: error_type.to_string(),
                 message: message.to_string(),
                 stack_trace: vec![StackFrame {
@@ -516,9 +518,9 @@ mod tests {
                 context: None,
             };
 
-            let diagnosis = debugger.diagnose_error(&error).await.unwrap();
-            let explanation = debugger.explain_error(&error).await.unwrap();
-            let suggestions = debugger.suggest_fix(&diagnosis).await.unwrap();
+            let diagnosis: _ = debugger.diagnose_error(&error).await.unwrap();
+            let explanation: _ = debugger.explain_error(&error).await.unwrap();
+            let suggestions: _ = debugger.suggest_fix(&diagnosis).await.unwrap();
 
             assert_eq!(diagnosis.error_type, error_type);
             assert!(!explanation.is_empty());

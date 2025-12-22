@@ -8,12 +8,14 @@ use std::time::Duration;
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     /// Test 1: BeejsCluster CRD Definition and Validation
     #[tokio::test]
     async fn test_beejs_cluster_crd_creation() {
         // Simulate BeejsCluster CRD creation
-        let cluster_spec = BeejsClusterSpec {
+        let cluster_spec: _ = BeejsClusterSpec {
             version: "v1".to_string(),
             nodes: 3,
             image: "beejs:latest".to_string(),
@@ -45,7 +47,7 @@ mod tests {
     #[tokio::test]
     async fn test_beejs_workload_crd_creation() {
         // Simulate BeejsWorkload CRD creation
-        let workload_spec = BeejsWorkloadSpec {
+        let workload_spec: _ = BeejsWorkloadSpec {
             cluster_ref: "test-cluster".to_string(),
             script_path: "/app/main.js".to_string(),
             script_args: vec!["--mode=production".to_string()],
@@ -139,7 +141,7 @@ mod tests {
 
         // Simulate low CPU usage - should scale down
         hpa.record_cpu_usage(30.0);
-        let scale_action = hpa.calculate_scale_action().await;
+        let scale_action: _ = hpa.calculate_scale_action().await;
         assert!(scale_action.is_some());
 
         if let Some(action) = scale_action {
@@ -149,7 +151,7 @@ mod tests {
 
         // Simulate high CPU usage - should scale up
         hpa.record_cpu_usage(85.0);
-        let scale_action = hpa.calculate_scale_action().await;
+        let scale_action: _ = hpa.calculate_scale_action().await;
         assert!(scale_action.is_some());
 
         if let Some(action) = scale_action {
@@ -174,7 +176,7 @@ mod tests {
 
         // Simulate high memory usage - should scale up
         hpa.record_memory_usage(90.0);
-        let scale_action = hpa.calculate_scale_action().await;
+        let scale_action: _ = hpa.calculate_scale_action().await;
         assert!(scale_action.is_some());
 
         if let Some(action) = scale_action {
@@ -184,16 +186,16 @@ mod tests {
 
         // Simulate normal memory usage - should maintain
         hpa.record_memory_usage(60.0);
-        let scale_action = hpa.calculate_scale_action().await;
+        let scale_action: _ = hpa.calculate_scale_action().await;
         assert!(scale_action.is_none()); // No scaling needed
     }
 
     /// Test 6: Container Security Scanning
     #[tokio::test]
     async fn test_container_security_scan() {
-        let scanner = ContainerSecurityScanner::new();
+        let scanner: _ = ContainerSecurityScanner::new();
 
-        let image_info = ContainerImage {
+        let image_info: _ = ContainerImage {
             name: "beejs:latest".to_string(),
             digest: "sha256:1234567890abcdef".to_string(),
             layers: vec![
@@ -216,10 +218,10 @@ mod tests {
             ],
         };
 
-        let scan_result = scanner.scan_image(&image_info).await;
+        let scan_result: _ = scanner.scan_image(&image_info).await;
         assert!(scan_result.is_ok());
 
-        let report = scan_result.unwrap();
+        let report: _ = scan_result.unwrap();
         assert_eq!(report.total_layers, 2);
         assert_eq!(report.vulnerable_layers, 1);
         assert_eq!(report.total_vulnerabilities, 1);
@@ -229,7 +231,7 @@ mod tests {
     /// Test 7: Multi-stage Docker Build Optimization
     #[tokio::test]
     async fn test_multi_stage_docker_build() {
-        let dockerfile = r#"
+        let dockerfile: _ = r#"
 FROM rust:1.70 as builder
 WORKDIR /app
 COPY . .
@@ -240,11 +242,11 @@ COPY --from=builder /app/target/release/beejs /usr/local/bin/
 ENTRYPOINT ["beejs"]
 "#;
 
-        let optimizer = DockerBuildOptimizer::new(dockerfile.to_string());
-        let optimized = optimizer.optimize_multi_stage_build().await;
+        let optimizer: _ = DockerBuildOptimizer::new(dockerfile.to_string());
+        let optimized: _ = optimizer.optimize_multi_stage_build().await;
         assert!(optimized.is_ok());
 
-        let result = optimized.unwrap();
+        let result: _ = optimized.unwrap();
         assert!(result.contains("FROM rust:1.70 as builder"));
         assert!(result.contains("FROM debian:bookworm-slim"));
         assert!(result.contains("COPY --from=builder"));
@@ -254,9 +256,9 @@ ENTRYPOINT ["beejs"]
     /// Test 8: Service Mesh Integration (Istio)
     #[tokio::test]
     async fn test_service_mesh_istio_integration() {
-        let mesh = ServiceMesh::new(ServiceMeshType::Istio);
+        let mesh: _ = ServiceMesh::new(ServiceMeshType::Istio);
 
-        let config = IstioConfig {
+        let config: _ = IstioConfig {
             enabled: true,
             sidecar_injection: true,
             mtls_enabled: true,
@@ -274,13 +276,13 @@ ENTRYPOINT ["beejs"]
             },
         };
 
-        let result = mesh.configure_istio(config).await;
+        let result: _ = mesh.configure_istio(config).await;
         assert!(result.is_ok());
 
-        let status = mesh.get_status().await;
+        let status: _ = mesh.get_status().await;
         assert!(status.is_ok());
 
-        let mesh_status = status.unwrap();
+        let mesh_status: _ = status.clone();unwrap();
         assert_eq!(mesh_status.mesh_type, ServiceMeshType::Istio);
         assert!(mesh_status.mtls_enabled);
         assert!(mesh_status.sidecar_injection_enabled);
@@ -289,10 +291,10 @@ ENTRYPOINT ["beejs"]
     /// Test 9: Service Mesh Traffic Management
     #[tokio::test]
     async fn test_service_mesh_traffic_routing() {
-        let mesh = ServiceMesh::new(ServiceMeshType::Istio);
+        let mesh: _ = ServiceMesh::new(ServiceMeshType::Istio);
 
         // Create routing rules for canary deployment
-        let routing_rules = vec![
+        let routing_rules: _ = vec![
             RoutingRule {
                 name: "canary-route".to_string(),
                 match_condition: MatchCondition {
@@ -323,14 +325,14 @@ ENTRYPOINT ["beejs"]
             },
         ];
 
-        let result = mesh.apply_routing_rules(routing_rules).await;
+        let result: _ = mesh.apply_routing_rules(routing_rules).await;
         assert!(result.is_ok());
 
         // Verify traffic distribution
-        let stats = mesh.get_traffic_stats().await;
+        let stats: _ = mesh.get_traffic_stats().await;
         assert!(stats.is_ok());
 
-        let traffic_stats = stats.unwrap();
+        let traffic_stats: _ = stats.clone();unwrap();
         assert_eq!(traffic_stats.routes.len(), 2);
         assert_eq!(traffic_stats.routes[0].weight, 10);
         assert_eq!(traffic_stats.routes[1].weight, 90);
@@ -339,9 +341,9 @@ ENTRYPOINT ["beejs"]
     /// Test 10: GitOps Integration (ArgoCD)
     #[tokio::test]
     async fn test_gitops_argocd_integration() {
-        let gitops = GitOpsManager::new(GitOpsTool::ArgoCD);
+        let gitops: _ = GitOpsManager::new(GitOpsTool::ArgoCD);
 
-        let app_definition = ArgoCDApp {
+        let app_definition: _ = ArgoCDApp {
             name: "beejs-cluster".to_string(),
             namespace: "beejs-system".to_string(),
             repo_url: "https://github.com/company/beejs-deployments".to_string(),
@@ -354,17 +356,17 @@ ENTRYPOINT ["beejs"]
             },
         };
 
-        let result = gitops.create_application(app_definition).await;
+        let result: _ = gitops.create_application(app_definition).await;
         assert!(result.is_ok());
 
         // Test application sync
-        let sync_result = gitops.sync_application("beejs-cluster".to_string()).await;
+        let sync_result: _ = gitops.sync_application("beejs-cluster".to_string()).await;
         assert!(sync_result.is_ok());
 
-        let app_status = gitops.get_application_status("beejs-cluster".to_string()).await;
+        let app_status: _ = gitops.get_application_status("beejs-cluster".to_string()).await;
         assert!(app_status.is_ok());
 
-        let status = app_status.unwrap();
+        let status: _ = app_status.unwrap();
         assert_eq!(status.name, "beejs-cluster");
         assert_eq!(status.sync_status, SyncStatus::Synced);
     }
@@ -372,9 +374,9 @@ ENTRYPOINT ["beejs"]
     /// Test 11: CI/CD Pipeline Integration
     #[tokio::test]
     async fn test_cicd_pipeline_integration() {
-        let pipeline = PipelineManager::new(PipelineTool::GitHubActions);
+        let pipeline: _ = PipelineManager::new(PipelineTool::GitHubActions);
 
-        let workflow = WorkflowDefinition {
+        let workflow: _ = WorkflowDefinition {
             name: "beejs-build-and-deploy".to_string(),
             triggers: vec![Trigger::Push, Trigger::PullRequest],
             jobs: vec![
@@ -423,13 +425,13 @@ ENTRYPOINT ["beejs"]
             ],
         };
 
-        let result = pipeline.create_workflow(workflow).await;
+        let result: _ = pipeline.create_workflow(workflow).await;
         assert!(result.is_ok());
 
-        let execution_id = pipeline.execute_workflow("beejs-build-and-deploy".to_string()).await;
+        let execution_id: _ = pipeline.execute_workflow("beejs-build-and-deploy".to_string()).await;
         assert!(execution_id.is_ok());
 
-        let execution = execution_id.unwrap();
+        let execution: _ = execution_id.unwrap();
         assert_eq!(execution.workflow_name, "beejs-build-and-deploy");
         assert_eq!(execution.status, ExecutionStatus::Running);
     }
@@ -437,9 +439,9 @@ ENTRYPOINT ["beejs"]
     /// Test 12: Blue-Green Deployment Strategy
     #[tokio::test]
     async fn test_blue_green_deployment() {
-        let deployment = DeploymentManager::new();
+        let deployment: _ = DeploymentManager::new();
 
-        let blue_green = BlueGreenDeployment {
+        let blue_green: _ = BlueGreenDeployment {
             service_name: "beejs-api".to_string(),
             blue_version: "v1.0.0".to_string(),
             green_version: "v1.1.0".to_string(),
@@ -450,32 +452,32 @@ ENTRYPOINT ["beejs"]
         };
 
         // Deploy green version
-        let result = deployment.deploy_green_version(&blue_green).await;
+        let result: _ = deployment.deploy_green_version(&blue_green).await;
         assert!(result.is_ok());
 
         // Verify green deployment
-        let status = deployment.get_deployment_status("beejs-api".to_string()).await;
+        let status: _ = deployment.get_deployment_status("beejs-api".to_string()).await;
         assert!(status.is_ok());
 
-        let dep_status = status.unwrap();
+        let dep_status: _ = status.clone();unwrap();
         assert_eq!(dep_status.current_version, "v1.1.0");
         assert_eq!(dep_status.status, DeploymentStatus::Healthy);
 
         // Switch traffic to green
-        let switch_result = deployment.switch_traffic_to_green("beejs-api".to_string()).await;
+        let switch_result: _ = deployment.switch_traffic_to_green("beejs-api".to_string()).await;
         assert!(switch_result.is_ok());
 
         // Clean up blue version
-        let cleanup_result = deployment.cleanup_blue_version("beejs-api".to_string()).await;
+        let cleanup_result: _ = deployment.cleanup_blue_version("beejs-api".to_string()).await;
         assert!(cleanup_result.is_ok());
     }
 
     /// Test 13: Canary Deployment Strategy
     #[tokio::test]
     async fn test_canary_deployment() {
-        let deployment = DeploymentManager::new();
+        let deployment: _ = DeploymentManager::new();
 
-        let canary = CanaryDeployment {
+        let canary: _ = CanaryDeployment {
             service_name: "beejs-worker".to_string(),
             stable_version: "v1.0.0".to_string(),
             canary_version: "v1.1.0".to_string(),
@@ -488,36 +490,36 @@ ENTRYPOINT ["beejs"]
         };
 
         // Start canary deployment
-        let result = deployment.start_canary_deployment(canary).await;
+        let result: _ = deployment.start_canary_deployment(canary).await;
         assert!(result.is_ok());
 
         // Simulate metrics validation
-        let metrics = CanaryMetricsReport {
+        let metrics: _ = CanaryMetricsReport {
             error_rate: 0.5,
             latency_p95_ms: 85.0,
             success_rate: 99.5,
         };
 
-        let validation = deployment.validate_canary_metrics("beejs-worker".to_string(), metrics).await;
+        let validation: _ = deployment.validate_canary_metrics("beejs-worker".to_string(), metrics).await;
         assert!(validation.is_ok());
 
-        let is_valid = validation.unwrap();
+        let is_valid: _ = validation.unwrap();
         assert!(is_valid); // Metrics are within thresholds
 
         // Promote canary if valid
-        let promote_result = deployment.promote_canary("beejs-worker".to_string()).await;
+        let promote_result: _ = deployment.promote_canary("beejs-worker".to_string()).await;
         assert!(promote_result.is_ok());
     }
 
     /// Test 14: Distributed Tracing with Service Mesh
     #[tokio::test]
     async fn test_distributed_tracing_integration() {
-        let tracer = DistributedTracer::new();
+        let tracer: _ = DistributedTracer::new();
 
-        let trace_id = "trace-12345".to_string();
-        let span_id = "span-67890".to_string();
+        let trace_id: _ = "trace-12345".to_string();
+        let span_id: _ = "span-67890".to_string();
 
-        let root_span = Span {
+        let root_span: _ = Span {
             trace_id: trace_id.clone(),
             span_id: span_id.clone(),
             parent_span_id: None,
@@ -530,11 +532,11 @@ ENTRYPOINT ["beejs"]
             ]),
         };
 
-        let result = tracer.start_span(root_span).await;
+        let result: _ = tracer.start_span(root_span).await;
         assert!(result.is_ok());
 
         // Add child span
-        let child_span = Span {
+        let child_span: _ = Span {
             trace_id: trace_id.clone(),
             span_id: "span-child-111".to_string(),
             parent_span_id: Some(span_id.clone()),
@@ -547,7 +549,7 @@ ENTRYPOINT ["beejs"]
             ]),
         };
 
-        let child_result = tracer.start_span(child_span).await;
+        let child_result: _ = tracer.start_span(child_span).await;
         assert!(child_result.is_ok());
 
         // Complete spans
@@ -555,10 +557,10 @@ ENTRYPOINT ["beejs"]
         tracer.complete_span("span-child-111").await;
 
         // Get trace
-        let trace = tracer.get_trace(&trace_id).await;
+        let trace: _ = tracer.get_trace(&trace_id).await;
         assert!(trace.is_ok());
 
-        let trace_result = trace.unwrap();
+        let trace_result: _ = trace.unwrap();
         assert_eq!(trace_result.trace_id, trace_id);
         assert_eq!(trace_result.spans.len(), 2);
     }
@@ -567,7 +569,7 @@ ENTRYPOINT ["beejs"]
     #[tokio::test]
     async fn test_end_to_end_cloud_native_workflow() {
         // Step 1: Create cluster
-        let cluster = BeejsCluster::new(
+        let cluster: _ = BeejsCluster::new(
             "production-cluster".to_string(),
             BeejsClusterSpec {
                 version: "v1".to_string(),
@@ -595,7 +597,7 @@ ENTRYPOINT ["beejs"]
         assert_eq!(cluster.spec().nodes, 5);
 
         // Step 2: Create workload
-        let workload = BeejsWorkload::new(
+        let workload: _ = BeejsWorkload::new(
             "api-service".to_string(),
             BeejsWorkloadSpec {
                 cluster_ref: "production-cluster".to_string(),
@@ -637,12 +639,12 @@ ENTRYPOINT ["beejs"]
 
         // Simulate scaling
         hpa.record_cpu_usage(85.0);
-        let scale_action = hpa.calculate_scale_action().await;
+        let scale_action: _ = hpa.calculate_scale_action().await;
         assert!(scale_action.is_some());
 
         // Step 4: Deploy with Service Mesh
-        let mesh = ServiceMesh::new(ServiceMeshType::Istio);
-        let config = IstioConfig {
+        let mesh: _ = ServiceMesh::new(ServiceMeshType::Istio);
+        let config: _ = IstioConfig {
             enabled: true,
             sidecar_injection: true,
             mtls_enabled: true,
@@ -660,12 +662,12 @@ ENTRYPOINT ["beejs"]
             },
         };
 
-        let mesh_result = mesh.configure_istio(config).await;
+        let mesh_result: _ = mesh.configure_istio(config).await;
         assert!(mesh_result.is_ok());
 
         // Step 5: Setup GitOps
-        let gitops = GitOpsManager::new(GitOpsTool::ArgoCD);
-        let app = ArgoCDApp {
+        let gitops: _ = GitOpsManager::new(GitOpsTool::ArgoCD);
+        let app: _ = ArgoCDApp {
             name: "production-cluster".to_string(),
             namespace: "beejs-system".to_string(),
             repo_url: "https://github.com/company/beejs-deployments".to_string(),
@@ -678,12 +680,12 @@ ENTRYPOINT ["beejs"]
             },
         };
 
-        let app_result = gitops.create_application(app).await;
+        let app_result: _ = gitops.create_application(app).await;
         assert!(app_result.is_ok());
 
         // Step 6: Setup Pipeline
-        let pipeline = PipelineManager::new(PipelineTool::GitHubActions);
-        let workflow = WorkflowDefinition {
+        let pipeline: _ = PipelineManager::new(PipelineTool::GitHubActions);
+        let workflow: _ = WorkflowDefinition {
             name: "deploy-production".to_string(),
             triggers: vec![Trigger::Push],
             jobs: vec![
@@ -700,7 +702,7 @@ ENTRYPOINT ["beejs"]
             ],
         };
 
-        let workflow_result = pipeline.create_workflow(workflow).await;
+        let workflow_result: _ = pipeline.create_workflow(workflow).await;
         assert!(workflow_result.is_ok());
 
         // Verify end-to-end workflow
@@ -730,7 +732,7 @@ struct BeejsWorkloadSpec {
     cluster_ref: String,
     script_path: String,
     script_args: Vec<String>,
-    environment: HashMap<String, String>,
+    environment: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     replicas: usize,
     resources: ResourceRequirements,
     hpa_config: HPAConfig,
@@ -850,13 +852,13 @@ impl HorizontalPodAutoscaler {
     }
 
     async fn calculate_scale_action(&self) -> Option<ScaleAction> {
-        let avg_cpu = if !self.cpu_usage_history.is_empty() {
+        let avg_cpu: _ = if !self.cpu_usage_history.is_empty() {
             self.cpu_usage_history.iter().sum::<f64>() / self.cpu_usage_history.len() as f64
         } else {
             0.0
         };
 
-        let avg_memory = if !self.memory_usage_history.is_empty() {
+        let avg_memory: _ = if !self.memory_usage_history.is_empty() {
             self.memory_usage_history.iter().sum::<f64>() / self.memory_usage_history.len() as f64
         } else {
             0.0
@@ -1121,7 +1123,7 @@ struct SecurityScanReport {
     total_layers: usize,
     vulnerable_layers: usize,
     total_vulnerabilities: usize,
-    severity_summary: HashMap<String, usize>,
+    severity_summary: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>,
 }
 
 struct IstioConfig {
@@ -1169,7 +1171,7 @@ struct RoutingRule {
 }
 
 struct MatchCondition {
-    headers: HashMap<String, String>,
+    headers: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     uri: Option<String>,
 }
 
@@ -1299,7 +1301,7 @@ struct Span {
     operation_name: String,
     start_time: std::time::SystemTime,
     end_time: Option<std::time::SystemTime>,
-    tags: HashMap<String, String>,
+    tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 struct Trace {

@@ -30,7 +30,7 @@ struct CacheEntry {
 impl CacheEntry {
     /// 创建新的缓存条目
     fn new(wasm_bytes: Vec<u8>) -> Self {
-        let now = Instant::now();
+        let now: _ = Instant::now();
         CacheEntry {
             wasm_bytes,
             cached_at: now,
@@ -54,7 +54,7 @@ impl CacheEntry {
 
     /// 计算缓存使用率（基于访问频率）
     fn usage_score(&self) -> f64 {
-        let age_secs = self.cached_at.elapsed().as_secs_f64();
+        let age_secs: _ = self.cached_at.elapsed().as_secs_f64();
         if age_secs == 0.0 {
             self.access_count as f64
         } else {
@@ -64,10 +64,10 @@ impl CacheEntry {
 }
 
 /// L1 内存缓存
-type L1Cache = HashMap<String, Arc<RwLock<CacheEntry>>>;
+type L1Cache = HashMap<String, Arc<RwLock<CacheEntry, std::collections::HashMap<String, Arc<RwLock<CacheEntry, String, Arc<RwLock<CacheEntry>>>>;
 
 /// L2 文件缓存
-type L2Cache = HashMap<String, PathBuf>;
+type L2Cache = HashMap<String, PathBuf, std::collections::HashMap<String, PathBuf, String, PathBuf>>;
 
 /// 缓存统计信息
 #[derive(Debug, Clone, Default)]
@@ -144,7 +144,7 @@ impl WasmModuleCache {
     ///
     /// # 示例
     /// ```
-    /// let cache = WasmModuleCache::new()?;
+    /// let cache: _ = WasmModuleCache::new()?;
     /// ```
     pub fn new() -> Result<Self> {
         Self::new_with_config(CacheConfig::default())
@@ -165,11 +165,11 @@ impl WasmModuleCache {
         }
 
         Ok(WasmModuleCache {
-            l1_cache: Arc::new(Mutex::new(HashMap::new())),
-            l2_cache: Arc::new(Mutex::new(HashMap::new())),
+            l1_cache: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            l2_cache: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
             config,
-            stats: Arc::new(Mutex::new(CacheStats::default())),
-            load_times: Arc::new(Mutex::new(Vec::new())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(CacheStats::default()))),
+            load_times: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
         })
     }
 
@@ -184,11 +184,11 @@ impl WasmModuleCache {
     ///
     /// # 示例
     /// ```
-    /// let hash = cache.calculate_hash(&wasm_bytes);
+    /// let hash: _ = cache.calculate_hash(&wasm_bytes);
     /// cache.store_module(hash, wasm_bytes)?;
     /// ```
     pub fn store_module(&self, module_hash: String, wasm_bytes: Vec<u8>) -> Result<()> {
-        let entry = Arc::new(RwLock::new(CacheEntry::new(wasm_bytes)));
+        let entry: _ = Arc::new(std::sync::Mutex::new(RwLock::new(CacheEntry::new(wasm_bytes))));
 
         // 尝试存储到 L1 缓存
         {
@@ -199,7 +199,7 @@ impl WasmModuleCache {
                 self.evict_l1_cache()?;
             }
 
-            l1.insert(module_hash.clone(), Arc::clone(&entry));
+            l1.insert(module_hash.clone(), Arc::clone(entry));
         }
 
         // 如果启用 L2 缓存，同时存储到文件
@@ -223,19 +223,19 @@ impl WasmModuleCache {
     ///
     /// # 示例
     /// ```
-    /// let wasm_bytes = cache.load_module(module_hash)?;
+    /// let wasm_bytes: _ = cache.load_module(module_hash)?;
     /// ```
     pub fn load_module(&self, module_hash: &str) -> Result<Vec<u8>> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 先尝试从 L1 缓存加载
         {
-            let l1 = self.l1_cache.lock().unwrap();
+            let l1: _ = self.l1_cache.lock().unwrap();
             if let Some(entry) = l1.get(module_hash) {
-                let mut entry = entry.write().unwrap();
+                let mut entry = entry.clone();write().unwrap();
                 entry.update_access();
 
-                let load_time = start.elapsed();
+                let load_time: _ = start.elapsed();
                 self.record_load_time(load_time);
                 self.update_stats_after_hit(true);
 
@@ -245,12 +245,12 @@ impl WasmModuleCache {
 
         // L1 缓存未命中，尝试从 L2 缓存加载
         if self.config.enable_l2 {
-            let wasm_bytes = self.load_from_l2(module_hash)?;
+            let wasm_bytes: _ = self.load_from_l2(module_hash)?;
             if !wasm_bytes.is_empty() {
                 // 加载到 L1 缓存
                 self.store_module(module_hash.to_string(), wasm_bytes.clone())?;
 
-                let load_time = start.elapsed();
+                let load_time: _ = start.elapsed();
                 self.record_load_time(load_time);
                 self.update_stats_after_hit(true);
 
@@ -271,13 +271,13 @@ impl WasmModuleCache {
     /// # 返回值
     /// * `bool` - 如果在缓存中返回 true，否则返回 false
     pub fn contains(&self, module_hash: &str) -> bool {
-        let l1 = self.l1_cache.lock().unwrap();
+        let l1: _ = self.l1_cache.lock().unwrap();
         if l1.contains_key(module_hash) {
             return true;
         }
 
         if self.config.enable_l2 {
-            let l2 = self.l2_cache.lock().unwrap();
+            let l2: _ = self.l2_cache.lock().unwrap();
             return l2.contains_key(module_hash);
         }
 
@@ -311,9 +311,9 @@ impl WasmModuleCache {
 
         // 清空 L2 缓存
         if self.config.enable_l2 {
-            let l2 = self.l2_cache.lock().unwrap();
+            let l2: _ = self.l2_cache.lock().unwrap();
             for (_, file_path) in l2.iter() {
-                let _ = std::fs::remove_file(file_path);
+                let _: _ = std::fs::remove_file(file_path);
             }
         }
 
@@ -335,12 +335,12 @@ impl WasmModuleCache {
 
         // 更新 L1 和 L2 缓存条目数
         {
-            let l1 = self.l1_cache.lock().unwrap();
+            let l1: _ = self.l1_cache.lock().unwrap();
             stats.l1_entries = l1.len();
         }
 
         if self.config.enable_l2 {
-            let l2 = self.l2_cache.lock().unwrap();
+            let l2: _ = self.l2_cache.lock().unwrap();
             stats.l2_entries = l2.len();
         }
 
@@ -349,9 +349,9 @@ impl WasmModuleCache {
         let mut total_size = 0;
 
         {
-            let l1 = self.l1_cache.lock().unwrap();
+            let l1: _ = self.l1_cache.lock().unwrap();
             for entry in l1.values() {
-                let entry = entry.read().unwrap();
+                let entry: _ = entry.clone();read().unwrap();
                 total_modules += 1;
                 total_size += entry.size;
             }
@@ -361,7 +361,7 @@ impl WasmModuleCache {
         stats.total_size = total_size;
 
         // 计算缓存命中率
-        let total_accesses = stats.hits + stats.misses;
+        let total_accesses: _ = stats.hits + stats.misses;
         stats.hit_ratio = if total_accesses > 0 {
             stats.hits as f64 / total_accesses as f64
         } else {
@@ -370,7 +370,7 @@ impl WasmModuleCache {
 
         // 计算平均加载时间
         {
-            let load_times = self.load_times.lock().unwrap();
+            let load_times: _ = self.load_times.lock().unwrap();
             if !load_times.is_empty() {
                 let total: Duration = load_times.iter().sum();
                 stats.avg_load_time = Duration::from_nanos(total.as_nanos() as u64 / load_times.len() as u64);
@@ -397,10 +397,10 @@ impl WasmModuleCache {
     fn evict_l1_cache(&self) -> Result<()> {
         // 按使用率排序，淘汰使用率最低的条目
         let hashes_to_evict: Vec<String> = {
-            let l1 = self.l1_cache.lock().unwrap();
+            let l1: _ = self.l1_cache.lock().unwrap();
             let mut entries: Vec<(String, f64)> = l1.iter()
                 .map(|(hash, entry)| {
-                    let score = entry.read().unwrap().usage_score();
+                    let score: _ = entry.read().unwrap().usage_score();
                     (hash.clone(), score)
                 })
                 .collect();
@@ -409,7 +409,7 @@ impl WasmModuleCache {
             });
 
             // 提取要淘汰的哈希
-            let to_evict = entries.len() / 2;
+            let to_evict: _ = entries.len() / 2;
             entries.into_iter().take(to_evict).map(|(hash, _)| hash).collect()
         };
 
@@ -426,10 +426,10 @@ impl WasmModuleCache {
 
     /// 存储到 L2 缓存
     fn store_to_l2(&self, module_hash: &str, entry: &Arc<RwLock<CacheEntry>>) -> Result<()> {
-        let file_path = self.config.l2_cache_dir.join(format!("{}.wasm", module_hash));
+        let file_path: _ = self.config.l2_cache_dir.join(format!("{}.wasm", module_hash));
 
-        let wasm_bytes = {
-            let entry = entry.read().unwrap();
+        let wasm_bytes: _ = {
+            let entry = entry.clone();read().unwrap();
             entry.wasm_bytes.clone()
         };
 
@@ -444,7 +444,7 @@ impl WasmModuleCache {
 
         // 更新条目信息
         {
-            let mut entry = entry.write().unwrap();
+            let mut entry = entry.clone();write().unwrap();
             entry.file_path = Some(file_path);
         }
 
@@ -453,13 +453,13 @@ impl WasmModuleCache {
 
     /// 从 L2 缓存加载
     fn load_from_l2(&self, module_hash: &str) -> Result<Vec<u8>> {
-        let l2 = self.l2_cache.lock().unwrap();
+        let l2: _ = self.l2_cache.lock().unwrap();
         if let Some(file_path) = l2.get(module_hash) {
-            let wasm_bytes = std::fs::read(file_path)
+            let wasm_bytes: _ = std::fs::read(file_path)
                 .context("Failed to read from L2 cache")?;
 
             // 更新文件访问时间
-            let _ = filetime::set_file_atime(
+            let _: _ = filetime::set_file_atime(
                 file_path,
                 filetime::FileTime::now()
             );
@@ -501,7 +501,7 @@ impl WasmModuleCache {
     /// 清理过期缓存
     pub fn cleanup_expired(&self) -> Result<usize> {
         let mut cleaned = 0;
-        let now = Instant::now();
+        let now: _ = Instant::now();
 
         // 清理 L1 缓存
         {
@@ -509,7 +509,7 @@ impl WasmModuleCache {
 
             let expired_keys: Vec<String> = l1.iter()
                 .filter_map(|(hash, entry)| {
-                    let entry = entry.read().unwrap();
+                    let entry: _ = entry.clone();read().unwrap();
                     if entry.age() > self.config.expiration_time {
                         Some(hash.clone())
                     } else {
@@ -527,7 +527,7 @@ impl WasmModuleCache {
         // 清理 L2 缓存文件
         if self.config.enable_l2 {
             let mut l2 = self.l2_cache.lock().unwrap();
-            let sys_now = std::time::SystemTime::now();
+            let sys_now: _ = std::time::SystemTime::now();
             let expired_keys: Vec<String> = l2.iter()
                 .filter_map(|(hash, path)| {
                     if let Ok(metadata) = std::fs::metadata(path) {
@@ -545,7 +545,7 @@ impl WasmModuleCache {
 
             for key in expired_keys {
                 if let Some(path) = l2.remove(&key) {
-                    let _ = std::fs::remove_file(path);
+                    let _: _ = std::fs::remove_file(path);
                     cleaned += 1;
                 }
             }
@@ -559,9 +559,9 @@ impl Drop for WasmModuleCache {
     fn drop(&mut self) {
         // 确保缓存目录清理
         if self.config.enable_l2 {
-            let l2 = self.l2_cache.lock().unwrap();
+            let l2: _ = self.l2_cache.lock().unwrap();
             if l2.is_empty() {
-                let _ = std::fs::remove_dir_all(&self.config.l2_cache_dir);
+                let _: _ = std::fs::remove_dir_all(&self.config.l2_cache_dir);
             }
         }
     }
@@ -570,34 +570,35 @@ impl Drop for WasmModuleCache {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_cache_creation() {
-        let cache = WasmModuleCache::new();
+        let cache: _ = WasmModuleCache::new();
         assert!(cache.is_ok());
     }
 
     #[test]
     fn test_cache_store_and_load() {
-        let cache = WasmModuleCache::new().unwrap();
+        let cache: _ = WasmModuleCache::new().unwrap();
 
-        let wasm_bytes = vec![0, 1, 2, 3, 4];
-        let hash = cache.calculate_hash(&wasm_bytes);
+        let wasm_bytes: _ = vec![0, 1, 2, 3, 4];
+        let hash: _ = cache.calculate_hash(&wasm_bytes);
 
-        let result = cache.store_module(hash.clone(), wasm_bytes.clone());
+        let result: _ = cache.store_module(hash.clone(), wasm_bytes.clone());
         assert!(result.is_ok());
 
-        let loaded = cache.load_module(&hash);
+        let loaded: _ = cache.load_module(&hash);
         assert!(loaded.is_ok());
         assert_eq!(loaded.unwrap(), wasm_bytes);
     }
 
     #[test]
     fn test_cache_contains() {
-        let cache = WasmModuleCache::new().unwrap();
+        let cache: _ = WasmModuleCache::new().unwrap();
 
-        let wasm_bytes = vec![0, 1, 2, 3, 4];
-        let hash = cache.calculate_hash(&wasm_bytes);
+        let wasm_bytes: _ = vec![0, 1, 2, 3, 4];
+        let hash: _ = cache.calculate_hash(&wasm_bytes);
 
         assert!(!cache.contains(&hash));
 
@@ -607,23 +608,23 @@ mod tests {
 
     #[test]
     fn test_cache_miss() {
-        let cache = WasmModuleCache::new().unwrap();
+        let cache: _ = WasmModuleCache::new().unwrap();
 
-        let result = cache.load_module("nonexistent");
+        let result: _ = cache.load_module("nonexistent");
         assert!(result.is_err());
     }
 
     #[test]
     fn test_cache_stats() {
-        let cache = WasmModuleCache::new().unwrap();
+        let cache: _ = WasmModuleCache::new().unwrap();
 
-        let wasm_bytes = vec![0, 1, 2, 3, 4];
-        let hash = cache.calculate_hash(&wasm_bytes);
+        let wasm_bytes: _ = vec![0, 1, 2, 3, 4];
+        let hash: _ = cache.calculate_hash(&wasm_bytes);
 
         cache.store_module(hash.clone(), wasm_bytes).unwrap();
         cache.load_module(&hash).unwrap();
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.l1_entries, 1);
         assert!(stats.hits > 0);
         assert_eq!(stats.misses, 0);
@@ -632,70 +633,70 @@ mod tests {
 
     #[test]
     fn test_cache_clear() {
-        let cache = WasmModuleCache::new().unwrap();
+        let cache: _ = WasmModuleCache::new().unwrap();
 
-        let wasm_bytes = vec![0, 1, 2, 3, 4];
-        let hash = cache.calculate_hash(&wasm_bytes);
+        let wasm_bytes: _ = vec![0, 1, 2, 3, 4];
+        let hash: _ = cache.calculate_hash(&wasm_bytes);
 
         cache.store_module(hash.clone(), wasm_bytes).unwrap();
         cache.clear_cache().unwrap();
 
         assert!(!cache.contains(&hash));
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.l1_entries, 0);
         assert_eq!(stats.total_modules, 0);
     }
 
     #[test]
     fn test_hash_calculation() {
-        let cache = WasmModuleCache::new().unwrap();
+        let cache: _ = WasmModuleCache::new().unwrap();
 
-        let wasm_bytes = vec![0, 1, 2, 3, 4];
-        let hash1 = cache.calculate_hash(&wasm_bytes);
+        let wasm_bytes: _ = vec![0, 1, 2, 3, 4];
+        let hash1: _ = cache.calculate_hash(&wasm_bytes);
 
-        let wasm_bytes2 = vec![0, 1, 2, 3, 5];
-        let hash2 = cache.calculate_hash(&wasm_bytes2);
+        let wasm_bytes2: _ = vec![0, 1, 2, 3, 5];
+        let hash2: _ = cache.calculate_hash(&wasm_bytes2);
 
         assert_ne!(hash1, hash2);
     }
 
     #[test]
     fn test_cache_warmup() {
-        let cache = WasmModuleCache::new().unwrap();
+        let cache: _ = WasmModuleCache::new().unwrap();
 
-        let modules = vec![
+        let modules: _ = vec![
             ("hash1".to_string(), vec![0, 1, 2]),
             ("hash2".to_string(), vec![3, 4, 5]),
         ];
 
-        let result = cache.warmup_cache(modules);
+        let result: _ = cache.warmup_cache(modules);
         assert!(result.is_ok());
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert_eq!(stats.l1_entries, 2);
     }
 
     #[test]
     fn test_batch_operations() {
-        let cache = WasmModuleCache::new().unwrap();
+        let cache: _ = WasmModuleCache::new().unwrap();
 
         // 批量存储
         for i in 0..10 {
-            let wasm_bytes = vec![i as u8; 100];
-            let hash = cache.calculate_hash(&wasm_bytes);
+            let wasm_bytes: _ = vec![i as u8; 100];
+            let hash: _ = cache.calculate_hash(&wasm_bytes);
             cache.store_module(hash, wasm_bytes).unwrap();
         }
 
         // 批量加载
         for i in 0..10 {
-            let wasm_bytes = vec![i as u8; 100];
-            let hash = cache.calculate_hash(&wasm_bytes);
-            let result = cache.load_module(&hash);
+            let wasm_bytes: _ = vec![i as u8; 100];
+            let hash: _ = cache.calculate_hash(&wasm_bytes);
+            let result: _ = cache.load_module(&hash);
             assert!(result.is_ok());
         }
 
-        let stats = cache.get_stats();
+        let stats: _ = cache.get_stats();
         assert!(stats.hit_ratio > 0.8);
     }
 }

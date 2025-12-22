@@ -29,17 +29,19 @@ impl JsPluginApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_js_plugin_api_creation() {
-        let api = JsPluginApi::new();
+        let api: _ = JsPluginApi::new();
         assert_eq!(api.runtime, "Beejs");
     }
 
     #[test]
     fn test_execute_js() {
-        let api = JsPluginApi::new();
-        let result = api.execute_js("console.log('test');").unwrap();
+        let api: _ = JsPluginApi::new();
+        let result: _ = api.execute_js("console.log('test');").unwrap();
         assert_eq!(result, "Executed");
     }
 }

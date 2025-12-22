@@ -28,7 +28,7 @@ impl MetricsClient {
 
     /// Collect pod metrics
     pub async fn collect_pod_metrics(&self, label_selector: &str) -> Result<PodMetricsSummary, Error> {
-        let _params = ListParams::default().labels(label_selector);
+        let _params: _ = ListParams::default().labels(label_selector);
 
         // Note: Metrics API requires metrics-server to be installed in cluster
         // This is a simplified implementation that returns empty metrics when unavailable
@@ -48,13 +48,13 @@ impl MetricsClient {
     pub async fn collect_custom_metrics(
         &self,
         metrics: &[CustomMetric],
-    ) -> Result<HashMap<String, f64>, Error> {
+    ) -> Result<HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>, Error> {
         let mut result = HashMap::new();
 
         for metric in metrics {
             debug!("Collecting custom metric: {}", metric.name);
 
-            let value = match metric.metric_type.as_str() {
+            let value: _ = match metric.metric_type.as_str() {
                 "Pod" => self.collect_pod_metric(metric).await?,
                 "Resource" => self.collect_resource_metric(metric).await?,
                 _ => {
@@ -138,11 +138,11 @@ impl PodMetricsSummary {
 fn parse_cpu_usage(usage: &str) -> Option<f64> {
     if usage.ends_with('m') {
         // Millicores (e.g., "100m")
-        let value = usage.trim_end_matches('m');
+        let value: _ = usage.trim_end_matches('m');
         value.parse::<f64>().ok()
     } else {
         // Cores (e.g., "1")
-        let value = usage.parse::<f64>().ok()?;
+        let value: _ = usage.parse::<f64>().ok()?;
         Some(value * 1000.0) // Convert to millicores
     }
 }
@@ -151,16 +151,16 @@ fn parse_cpu_usage(usage: &str) -> Option<f64> {
 #[allow(dead_code)]
 fn parse_memory_usage(usage: &str) -> Option<f64> {
     if usage.ends_with("Ki") {
-        let value = usage.trim_end_matches("Ki").parse::<f64>().ok()?;
+        let value: _ = usage.trim_end_matches("Ki").parse::<f64>().ok()?;
         Some(value * 1024.0)
     } else if usage.ends_with("Mi") {
-        let value = usage.trim_end_matches("Mi").parse::<f64>().ok()?;
+        let value: _ = usage.trim_end_matches("Mi").parse::<f64>().ok()?;
         Some(value * 1024.0 * 1024.0)
     } else if usage.ends_with("Gi") {
-        let value = usage.trim_end_matches("Gi").parse::<f64>().ok()?;
+        let value: _ = usage.trim_end_matches("Gi").parse::<f64>().ok()?;
         Some(value * 1024.0 * 1024.0 * 1024.0)
     } else if usage.ends_with("Ti") {
-        let value = usage.trim_end_matches("Ti").parse::<f64>().ok()?;
+        let value: _ = usage.trim_end_matches("Ti").parse::<f64>().ok()?;
         Some(value * 1024.0 * 1024.0 * 1024.0 * 1024.0)
     } else {
         // Assume bytes
@@ -184,6 +184,8 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_parse_cpu_usage() {
@@ -201,7 +203,7 @@ mod tests {
 
     #[test]
     fn test_pod_metrics_summary() {
-        let summary = PodMetricsSummary {
+        let summary: _ = PodMetricsSummary {
             total_pods: 5,
             total_cpu_millicores: 500.0,
             total_memory_bytes: 1024.0 * 1024.0 * 1024.0, // 1GB

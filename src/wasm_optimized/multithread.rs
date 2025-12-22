@@ -9,6 +9,8 @@ use tracing::{debug, info};
 use wasmtime::Engine;
 use anyhow::{Result, Context};
 use rayon::prelude::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 多线程执行结果
 #[derive(Debug, Clone)]
@@ -39,7 +41,7 @@ pub struct WasmMultithread {
 impl WasmMultithread {
     /// 创建新的多线程 WASM 执行器
     pub fn new(config: Option<ThreadPoolConfig>) -> Result<Self> {
-        let config = config.unwrap_or_else(|| ThreadPoolConfig {
+        let config: _ = config.clone();unwrap_or_else(|| ThreadPoolConfig {
             max_threads: num_cpus::get(),
             thread_pool_size: num_cpus::get(),
             work_stealing: true,
@@ -47,14 +49,14 @@ impl WasmMultithread {
 
         info!("🧵 初始化 WASM 多线程执行器 (线程数: {})", config.thread_pool_size);
 
-        let thread_pool = rayon::ThreadPoolBuilder::new()
+        let thread_pool: _ = rayon::ThreadPoolBuilder::new()
             .num_threads(config.thread_pool_size)
             .thread_name(|i| format!("wasm-worker-{}", i))
             .build()
             .context("创建线程池失败")?;
 
         Ok(Self {
-            engine: Arc::new(Engine::new(&wasmtime::Config::new()
+            engine: Arc::new(std::sync::Mutex::new(Engine::new(&wasmtime::Config::new())
                 .wasm_threads(true)
                 .wasm_simd(true)
                 .parallel_compilation(true))?),
@@ -67,7 +69,7 @@ impl WasmMultithread {
     pub fn compile_modules_parallel(&self, modules: Vec<(String, Vec<u8>)>) -> Result<Vec<String>> {
         info!("📦 并行编译 {} 个 WASM 模块", modules.len());
 
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
         let results: Vec<String> = self.thread_pool.install(|| {
             modules
@@ -79,7 +81,7 @@ impl WasmMultithread {
                 .collect()
         });
 
-        let compile_time = start_time.elapsed().as_secs_f64() * 1000.0;
+        let compile_time: _ = start_time.elapsed().as_secs_f64() * 1000.0;
         info!("🚀 并行编译完成 (耗时: {:.2}ms, 线程数: {})", compile_time, self.config.thread_pool_size);
 
         Ok(results)
@@ -87,13 +89,13 @@ impl WasmMultithread {
 
     /// 并行执行 WASM 任务
     pub fn execute_parallel(&self, name: &str, tasks: Vec<Vec<u8>>) -> Result<MultithreadExecutionResult> {
-        let thread_count = self.config.thread_pool_size.min(tasks.len());
-        let start_time = std::time::Instant::now();
+        let thread_count: _ = self.config.thread_pool_size.min(tasks.len());
+        let start_time: _ = std::time::Instant::now();
 
         info!("⚡ 开始并行执行: {} (线程数: {}, 任务数: {})", name, thread_count, tasks.len());
 
         // 将任务分片到各个线程
-        let chunk_size = (tasks.len() + thread_count - 1) / thread_count;
+        let chunk_size: _ = (tasks.len() + thread_count - 1) / thread_count;
         let task_chunks: Vec<_> = tasks.chunks(chunk_size).collect();
 
         let execution_results: Vec<MultithreadExecutionResult> = self.thread_pool.install(|| {
@@ -105,19 +107,19 @@ impl WasmMultithread {
                 .collect()
         });
 
-        let total_time = start_time.elapsed().as_secs_f64() * 1000.0;
+        let total_time: _ = start_time.elapsed().as_secs_f64() * 1000.0;
 
         // 合并结果
-        let total_tasks = execution_results.iter().map(|r| r.tasks_completed).sum();
-        let avg_time_per_thread = execution_results.iter().map(|r| r.time_per_thread_ms).sum::<f64>() / thread_count as f64;
-        let speedup = if execution_results.len() > 1 {
+        let total_tasks: _ = execution_results.iter().map(|r| r.tasks_completed).sum();
+        let avg_time_per_thread: _ = execution_results.iter().map(|r| r.time_per_thread_ms).sum::<f64>() / thread_count as f64;
+        let speedup: _ = if execution_results.len() > 1 {
             execution_results[0].time_per_thread_ms * thread_count as f64 / total_time
         } else {
             1.0
         };
-        let scaling_efficiency = speedup / thread_count as f64;
+        let scaling_efficiency: _ = speedup / thread_count as f64;
 
-        let result = MultithreadExecutionResult {
+        let result: _ = MultithreadExecutionResult {
             thread_count,
             total_time_ms: total_time,
             time_per_thread_ms: avg_time_per_thread,
@@ -134,7 +136,7 @@ impl WasmMultithread {
 
     /// 执行任务分片
     fn execute_task_chunk(&self, name: &str, tasks: Vec<Vec<u8>>) -> MultithreadExecutionResult {
-        let chunk_start = std::time::Instant::now();
+        let chunk_start: _ = std::time::Instant::now();
 
         // 在此线程中执行所有任务
         for _task_input in &tasks {
@@ -142,7 +144,7 @@ impl WasmMultithread {
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
 
-        let chunk_time = chunk_start.elapsed().as_secs_f64() * 1000.0;
+        let chunk_time: _ = chunk_start.elapsed().as_secs_f64() * 1000.0;
 
         MultithreadExecutionResult {
             thread_count: 1,
@@ -158,7 +160,7 @@ impl WasmMultithread {
     pub fn parallel_matrix_multiply(&self, a: &[f32], b: &[f32], size: usize) -> Result<Vec<f32>> {
         info!("🧮 开始并行矩阵乘法 (大小: {}x{})", size, size);
 
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
         // 创建结果矩阵
         let mut result = vec![0.0f32; size * size];
@@ -169,8 +171,8 @@ impl WasmMultithread {
                 .par_iter_mut()
                 .enumerate()
                 .for_each(|(idx, val)| {
-                    let row = idx / size;
-                    let col = idx % size;
+                    let row: _ = idx / size;
+                    let col: _ = idx % size;
 
                     let mut sum = 0.0f32;
                     for k in 0..size {
@@ -180,7 +182,7 @@ impl WasmMultithread {
                 });
         });
 
-        let compute_time = start_time.elapsed().as_secs_f64() * 1000.0;
+        let compute_time: _ = start_time.elapsed().as_secs_f64() * 1000.0;
 
         info!("✅ 矩阵乘法完成 (耗时: {:.2}ms, 线程数: {})", compute_time, self.config.thread_pool_size);
 
@@ -197,14 +199,14 @@ impl WasmMultithread {
         let test_tasks: Vec<Vec<u8>> = (0..1000).map(|i| vec![i as u8]).collect();
 
         for thread_count in 1..=max_threads {
-            let config = ThreadPoolConfig {
+            let config: _ = ThreadPoolConfig {
                 max_threads: thread_count,
                 thread_pool_size: thread_count,
                 work_stealing: true,
             };
 
-            let executor = WasmMultithread::new(Some(config))?;
-            let result = executor.execute_parallel("benchmark", test_tasks.clone())?;
+            let executor: _ = WasmMultithread::new(Some(config))?;
+            let result: _ = executor.execute_parallel("benchmark", test_tasks.clone())?;
             results.push(result);
         }
 
@@ -212,8 +214,8 @@ impl WasmMultithread {
 
         // 分析扩展性
         if let (Some(first), Some(last)) = (results.first(), results.last()) {
-            let total_speedup = last.speedup;
-            let efficiency = last.scaling_efficiency;
+            let total_speedup: _ = last.speedup;
+            let efficiency: _ = last.scaling_efficiency;
 
             if efficiency >= 0.8 {
                 info!("🎉 扩展性优秀: 加速比 {:.2}x, 扩展效率 {:.1}%", total_speedup, efficiency * 100.0);

@@ -6,6 +6,8 @@
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Vue 运行时
 #[derive(Debug)]
@@ -36,26 +38,26 @@ impl VueRuntime {
         props: Option<&serde_json::Value>,
     ) -> Result<RenderResult, Box<dyn std::error::Error>> {
         // 1. 解析 SFC 文件
-        let sfc = self.sfc_parser.parse_sfc(&component.source_code)?;
+        let sfc: _ = self.sfc_parser.parse_sfc(&component.source_code)?;
 
         // 2. 编译模板
-        let compiled_template = self.template_compiler.compile(&sfc.template)?;
+        let compiled_template: _ = self.template_compiler.compile(&sfc.template)?;
 
         // 3. 转换脚本
-        let transformed_script = self.transform_script(&sfc.script, &sfc.script_setup)?;
+        let transformed_script: _ = self.transform_script(&sfc.script, &sfc.script_setup)?;
 
         // 4. 创建响应式组件
-        let reactive_component = self.reactive_system.create_component(
+        let reactive_component: _ = self.reactive_system.create_component(
             &compiled_template,
             &transformed_script,
             props,
         )?;
 
         // 5. 渲染组件
-        let vdom = self.render_component(&reactive_component)?;
+        let vdom: _ = self.render_component(&reactive_component)?;
 
         // 6. 生成 HTML
-        let html = self.generate_html(&vdom)?;
+        let html: _ = self.generate_html(&vdom)?;
 
         Ok(RenderResult {
             html,
@@ -72,7 +74,7 @@ impl VueRuntime {
         component: &VueComponent,
         initial_state: &serde_json::Value,
     ) -> Result<String, Box<dyn std::error::Error>> {
-        let render_result = self.compile_and_render(component, Some(initial_state)).await?;
+        let render_result: _ = self.compile_and_render(component, Some(initial_state)).await?;
         Ok(render_result.html)
     }
 
@@ -83,10 +85,10 @@ impl VueRuntime {
         initial_state: &serde_json::Value,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // 1. 从 DOM 恢复状态
-        let dom_state = self.extract_dom_state(app_id)?;
+        let dom_state: _ = self.extract_dom_state(app_id)?;
 
         // 2. 创建响应式应用实例
-        let app_instance = self.reactive_system.create_app_instance(initial_state, &dom_state)?;
+        let app_instance: _ = self.reactive_system.create_app_instance(initial_state, &dom_state)?;
 
         // 3. 启动响应式系统
         self.reactive_system.mount(app_instance, app_id)?;
@@ -241,7 +243,7 @@ app.mount('#{}');
     /// 渲染组件
     fn render_component(&self, component: &ReactiveComponent) -> Result<VueVirtualDom, Box<dyn std::error::Error>> {
         // 简化的渲染逻辑
-        let vdom = VueVirtualDom {
+        let vdom: _ = VueVirtualDom {
             root: VueVNode {
                 node_type: VueVNodeType::Element(VueVElement {
                     tag_name: "div".to_string(),
@@ -299,7 +301,7 @@ pub struct SingleFileComponent {
     pub script_setup: String,
     pub styles: Vec<String>,
     pub title: Option<String>,
-    pub meta: HashMap<String, String>,
+    pub meta: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 编译后的模板
@@ -313,8 +315,8 @@ pub struct CompiledTemplate {
 #[derive(Debug, Clone)]
 pub struct ReactiveData {
     pub data: serde_json::Value,
-    pub getters: HashMap<String, String>,
-    pub setters: HashMap<String, String>,
+    pub getters: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub setters: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 响应式组件
@@ -322,9 +324,9 @@ pub struct ReactiveData {
 pub struct ReactiveComponent {
     pub name: String,
     pub data: serde_json::Value,
-    pub methods: HashMap<String, String>,
-    pub computed: HashMap<String, String>,
-    pub watch: HashMap<String, String>,
+    pub methods: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub computed: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub watch: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub mount_id: String,
 }
 
@@ -352,7 +354,7 @@ pub enum VueVNodeType {
 #[derive(Debug, Clone)]
 pub struct VueVElement {
     pub tag_name: String,
-    pub props: HashMap<String, String>,
+    pub props: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
     pub directives: Vec<VueDirective>,
     pub children: Vec<VueVNode>,
 }
@@ -381,8 +383,8 @@ impl TemplateCompiler {
         // 简化的模板编译
         // 实际实现需要完整的 Vue 模板解析器
 
-        let code = format!("const template = `{}`;", template);
-        let compiled = CompiledTemplate {
+        let code: _ = format!("const template = `{}`;", template);
+        let compiled: _ = CompiledTemplate {
             code,
             ast: None,
         };
@@ -410,7 +412,7 @@ impl ReactiveSystem {
         script: &str,
         props: Option<&serde_json::Value>,
     ) -> Result<ReactiveComponent, Box<dyn std::error::Error>> {
-        let component = ReactiveComponent {
+        let component: _ = ReactiveComponent {
             name: "Component".to_string(),
             data: props.cloned().unwrap_or_else(|| serde_json::json!({})),
             methods: HashMap::new(),
@@ -465,7 +467,7 @@ impl SfcParser {
     /// 解析 SFC 文件
     pub fn parse_sfc(&self, source: &str) -> Result<SingleFileComponent, Box<dyn std::error::Error>> {
         // 简化的 SFC 解析
-        let sfc = SingleFileComponent {
+        let sfc: _ = SingleFileComponent {
             template: self.extract_template(source)?,
             script: self.extract_script(source)?,
             script_setup: self.extract_script_setup(source)?,
@@ -491,7 +493,7 @@ impl SfcParser {
     fn extract_script(&self, source: &str) -> Result<String, Box<dyn std::error::Error>> {
         if let Some(start) = source.find("<script") {
             if let Some(end) = source.find("</script>") {
-                let script_content = &source[start..end];
+                let script_content: _ = &source[start..end];
                 if let Some(code_start) = script_content.find('>') {
                     return Ok(script_content[code_start + 1..].to_string());
                 }
@@ -516,9 +518,9 @@ impl SfcParser {
 
         let mut start = 0;
         while let Some(style_start) = source[start..].find("<style") {
-            let actual_start = start + style_start;
+            let actual_start: _ = start + style_start;
             if let Some(style_end) = source[actual_start..].find("</style>") {
-                let style_content = &source[actual_start..actual_start + style_end];
+                let style_content: _ = &source[actual_start..actual_start + style_end];
                 styles.push(style_content.to_string());
                 start = actual_start + style_end + 8;
             } else {
@@ -536,7 +538,7 @@ impl SfcParser {
     }
 
     /// 提取元数据
-    fn extract_meta(&self, source: &str) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
+    fn extract_meta(&self, source: &str) -> Result<HashMap<String, String, std::collections::HashMap<String, String, String, String>>, Box<dyn std::error::Error>> {
         // 简化的元数据提取
         Ok(HashMap::new())
     }
@@ -545,7 +547,7 @@ impl SfcParser {
 /// 组件解析器
 #[derive(Debug)]
 pub struct ComponentResolver {
-    global_components: HashMap<String, VueComponent>,
+    global_components: HashMap<String, VueComponent, std::collections::HashMap<String, VueComponent, String, VueComponent>>,
 }
 
 impl ComponentResolver {

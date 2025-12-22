@@ -6,6 +6,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use anyhow::{Result, Context};
 use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// AI 推理引擎主结构
 #[derive(Debug)]
@@ -20,16 +22,16 @@ pub struct AIInferenceEngine {
 impl AIInferenceEngine {
     /// 创建新的 AI 推理引擎
     pub async fn new() -> Result<Self> {
-        let model_loader = ModelLoader::new();
-        let gpu_accelerator = GPUSimpleAccelerator::new().await?;
-        let model_cache = ModelCache::new(1000).await?;
+        let model_loader: _ = ModelLoader::new();
+        let gpu_accelerator: _ = GPUSimpleAccelerator::new().await?;
+        let model_cache: _ = ModelCache::new(1000).await?;
 
         Ok(AIInferenceEngine {
             model_loader,
             gpu_accelerator,
             model_cache,
-            inference_count: Arc::new(RwLock::new(0)),
-            total_inference_time: Arc::new(RwLock::new(Duration::from_secs(0))),
+            inference_count: Arc::new(std::sync::Mutex::new(RwLock::new(0))),
+            total_inference_time: Arc::new(std::sync::Mutex::new(RwLock::new(Duration::from_secs(0)))),
         })
     }
 
@@ -39,21 +41,21 @@ impl AIInferenceEngine {
         model_id: &str,
         input: &Tensor,
     ) -> Result<InferenceResult> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 检查缓存
         if let Some(cached_model) = self.model_cache.get(model_id).await? {
             // 使用缓存的模型
-            let gpu_used = self.gpu_accelerator.is_available();
+            let gpu_used: _ = self.gpu_accelerator.is_available();
 
             // 执行推理
-            let output = if gpu_used {
+            let output: _ = if gpu_used {
                 self.gpu_accelerator.compute(&cached_model, input).await?
             } else {
                 cached_model.compute(input)?
             };
 
-            let inference_time = start.elapsed();
+            let inference_time: _ = start.elapsed();
 
             // 更新统计
             {
@@ -73,21 +75,21 @@ impl AIInferenceEngine {
             })
         } else {
             // 加载模型
-            let model = self.model_loader.load(model_id).await
+            let model: _ = self.model_loader.load(model_id).await
                 .context(format!("Failed to load model: {}", model_id))?;
 
             // 缓存模型
             self.model_cache.put(model_id.to_string(), model.clone()).await?;
 
             // 执行推理
-            let gpu_used = self.gpu_accelerator.is_available();
-            let output = if gpu_used {
+            let gpu_used: _ = self.gpu_accelerator.is_available();
+            let output: _ = if gpu_used {
                 self.gpu_accelerator.compute(&model, input).await?
             } else {
                 model.compute(input)?
             };
 
-            let inference_time = start.elapsed();
+            let inference_time: _ = start.elapsed();
 
             // 更新统计
             {
@@ -117,7 +119,7 @@ impl AIInferenceEngine {
         let mut results = Vec::with_capacity(inputs.len());
 
         for input in inputs {
-            let result = self.infer(model_id, input).await?;
+            let result: _ = self.infer(model_id, input).await?;
             results.push(result);
         }
 
@@ -126,10 +128,10 @@ impl AIInferenceEngine {
 
     /// 获取推理统计
     pub async fn get_stats(&self) -> Result<InferenceStats> {
-        let count = *self.inference_count.read().await;
-        let total_time = *self.total_inference_time.read().await;
+        let count: _ = *self.inference_count.read().await;
+        let total_time: _ = *self.total_inference_time.read().await;
 
-        let avg_time_ms = if count > 0 {
+        let avg_time_ms: _ = if count > 0 {
             (total_time.as_secs_f64() * 1000.0) / count as f64
         } else {
             0.0
@@ -146,10 +148,10 @@ impl AIInferenceEngine {
     /// 预热模型
     pub async fn warmup_model(&self, model_id: &str) -> Result<()> {
         // 创建一个虚拟输入来预热模型
-        let warmup_input = Tensor::new(vec![1.0; 100], vec![10, 10])?;
+        let warmup_input: _ = Tensor::new(vec![1.0; 100], vec![10, 10])?;
 
         // 执行一次推理来预热
-        let _ = self.infer(model_id, &warmup_input).await?;
+        let _: _ = self.infer(model_id, &warmup_input).await?;
 
         Ok(())
     }
@@ -170,7 +172,7 @@ pub struct AIModel {
     pub id: String,
     pub input_shape: Vec<usize>,
     pub output_shape: Vec<usize>,
-    pub parameters: std::collections::HashMap<String, Vec<f32>>, // 模型参数
+    pub parameters: std::collections::HashMap<String, Vec<f32, std::collections::HashMap<String, Vec<f32, String, Vec<f32>>>, // 模型参数
 }
 
 impl AIModel {
@@ -189,7 +191,7 @@ impl AIModel {
         id: String,
         input_shape: Vec<usize>,
         output_shape: Vec<usize>,
-        parameters: std::collections::HashMap<String, Vec<f32>>,
+        parameters: std::collections::HashMap<String, Vec<f32, std::collections::HashMap<String, Vec<f32, String, Vec<f32>>>,
     ) -> Self {
         AIModel {
             id,
@@ -224,7 +226,7 @@ impl GPUSimpleAccelerator {
     /// 创建新的 GPU 加速器
     pub async fn new() -> Result<Self> {
         // 简化实现：检查 GPU 可用性
-        let available = false; // 在实际实现中，这里会检查 WebGPU 或 CUDA
+        let available: _ = false; // 在实际实现中，这里会检查 WebGPU 或 CUDA
 
         Ok(GPUSimpleAccelerator {
             available,

@@ -223,7 +223,7 @@ impl V8EngineFlags {
 #[derive(Debug)]
 pub struct V8ConfigManager {
     /// Map of configuration name to flags
-    configs: HashMap<String, V8EngineFlags>,
+    configs: HashMap<String, V8EngineFlags, std::collections::HashMap<String, V8EngineFlags, String, V8EngineFlags>>,
 }
 
 impl V8ConfigManager {
@@ -270,10 +270,12 @@ impl Default for V8ConfigManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_high_performance_config() {
-        let flags = V8EngineFlags::high_performance();
+        let flags: _ = V8EngineFlags::high_performance();
         assert_eq!(flags.turbo_optimization_level, 4);
         assert!(flags.turbo_profiling);
         assert_eq!(flags.max_old_space_mb, 512);
@@ -282,8 +284,8 @@ mod tests {
 
     #[test]
     fn test_v8_flags_conversion() {
-        let flags = V8EngineFlags::high_performance();
-        let v8_flags = flags.to_v8_flags();
+        let flags: _ = V8EngineFlags::high_performance();
+        let v8_flags: _ = flags.clone();to_v8_flags();
         assert!(v8_flags.contains(&"--turbofan".to_string()));
         assert!(v8_flags.iter().any(|f| f.contains("turbo_optimization_level=4")));
         assert!(v8_flags.contains(&"--sparkplug".to_string()));
@@ -291,21 +293,21 @@ mod tests {
 
     #[test]
     fn test_config_manager() {
-        let manager = V8ConfigManager::new();
+        let manager: _ = V8ConfigManager::new();
         assert!(manager.config_names().contains(&"high_performance"));
         assert!(manager.get("high_performance").is_some());
     }
 
     #[test]
     fn test_profile_name() {
-        let flags = V8EngineFlags::high_performance();
+        let flags: _ = V8EngineFlags::high_performance();
         assert_eq!(flags.profile_name(), "high_performance");
     }
 
     #[test]
     fn test_estimated_memory() {
-        let flags = V8EngineFlags::high_performance();
-        let mem = flags.estimated_memory_mb();
+        let flags: _ = V8EngineFlags::high_performance();
+        let mem: _ = flags.estimated_memory_mb();
         assert_eq!(mem, 512 + 64 + 256); // old_space + new_space + code_range
     }
 }

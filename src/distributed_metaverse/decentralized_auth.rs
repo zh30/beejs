@@ -1,6 +1,8 @@
 //! 去中心化认证系统
 
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 认证配置
 #[derive(Debug, Clone)]
@@ -33,7 +35,7 @@ pub struct Identity {
     /// 创建时间
     pub created_at: u64,
     /// 元数据
-    pub metadata: HashMap<String, String>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 /// 凭证
@@ -44,7 +46,7 @@ pub struct Credential {
     /// 颁发者 DID
     pub issuer_did: String,
     /// 声明
-    pub claims: HashMap<String, serde_json::Value>,
+    pub claims: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>,
     /// 证明
     pub proof: Vec<u8>,
 }
@@ -54,7 +56,7 @@ pub struct DecentralizedAuth {
     /// 配置
     config: AuthConfig,
     /// 身份缓存
-    identities: HashMap<String, Identity>,
+    identities: HashMap<String, Identity, std::collections::HashMap<String, Identity, String, Identity>>,
     /// 凭证缓存
     credentials: Vec<Credential>,
 }
@@ -71,8 +73,8 @@ impl DecentralizedAuth {
 
     /// 创建身份
     pub fn create_identity(&mut self, user_id: &str) -> Result<Identity, AuthError> {
-        let did = format!("did:beejs:{}", user_id);
-        let identity = Identity {
+        let did: _ = format!("did:beejs:{}", user_id);
+        let identity: _ = Identity {
             did: did.clone(),
             public_key: vec![0u8; 32], // 简化实现
             created_at: std::time::SystemTime::now()
@@ -112,9 +114,9 @@ impl DecentralizedAuth {
         &mut self,
         holder_did: &str,
         issuer_did: &str,
-        claims: HashMap<String, serde_json::Value>,
+        claims: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>,
     ) -> Result<Credential, AuthError> {
-        let credential = Credential {
+        let credential: _ = Credential {
             holder_did: holder_did.to_string(),
             issuer_did: issuer_did.to_string(),
             claims,

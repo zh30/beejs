@@ -3,11 +3,13 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 
 use beejs::watcher::{FileChangeType, HotReloader, WatcherConfig, WatcherConfigBuilder};
 use std::path::Path;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// Test 1: Verify watcher configuration defaults
 #[test]
 fn test_watcher_config_defaults() {
-    let config = WatcherConfig::default();
+    let config: _ = WatcherConfig::default();
 
     // Check debounce default
     assert_eq!(config.debounce_ms, 100);
@@ -31,7 +33,7 @@ fn test_watcher_config_defaults() {
 /// Test 2: Verify config builder pattern
 #[test]
 fn test_watcher_config_builder() {
-    let config = WatcherConfigBuilder::new()
+    let config: _ = WatcherConfigBuilder::new()
         .debounce_ms(200)
         .add_extension("vue")
         .add_extension("svelte")
@@ -53,7 +55,7 @@ fn test_watcher_config_builder() {
 /// Test 3: Test file filtering by extension
 #[test]
 fn test_should_watch_by_extension() {
-    let reloader = HotReloader::new();
+    let reloader: _ = HotReloader::new();
 
     // Should watch JavaScript/TypeScript files
     assert!(reloader.should_watch(Path::new("app.js")));
@@ -75,7 +77,7 @@ fn test_should_watch_by_extension() {
 /// Test 4: Test file filtering by path (ignore directories)
 #[test]
 fn test_should_watch_ignore_dirs() {
-    let reloader = HotReloader::new();
+    let reloader: _ = HotReloader::new();
 
     // Should NOT watch files in ignored directories
     assert!(!reloader.should_watch(Path::new("node_modules/lodash/index.js")));
@@ -93,10 +95,10 @@ fn test_should_watch_ignore_dirs() {
 /// Test 5: Test watcher statistics tracking
 #[test]
 fn test_watcher_stats_tracking() {
-    let reloader = HotReloader::new();
+    let reloader: _ = HotReloader::new();
 
     // Initial stats should be zero
-    let stats = reloader.get_stats();
+    let stats: _ = reloader.get_stats();
     assert_eq!(stats.total_reloads, 0);
     assert_eq!(stats.successful_reloads, 0);
     assert_eq!(stats.failed_reloads, 0);
@@ -105,7 +107,7 @@ fn test_watcher_stats_tracking() {
     reloader.record_reload(true, 50);
     reloader.record_reload(true, 75);
 
-    let stats = reloader.get_stats();
+    let stats: _ = reloader.get_stats();
     assert_eq!(stats.total_reloads, 2);
     assert_eq!(stats.successful_reloads, 2);
     assert_eq!(stats.failed_reloads, 0);
@@ -114,7 +116,7 @@ fn test_watcher_stats_tracking() {
     // Record a failed reload
     reloader.record_reload(false, 100);
 
-    let stats = reloader.get_stats();
+    let stats: _ = reloader.get_stats();
     assert_eq!(stats.total_reloads, 3);
     assert_eq!(stats.successful_reloads, 2);
     assert_eq!(stats.failed_reloads, 1);
@@ -124,11 +126,11 @@ fn test_watcher_stats_tracking() {
 /// Test 6: Test custom extension configuration
 #[test]
 fn test_custom_extension_config() {
-    let config = WatcherConfigBuilder::new()
+    let config: _ = WatcherConfigBuilder::new()
         .extensions(vec!["vue".to_string(), "svelte".to_string()])
         .build();
 
-    let reloader = HotReloader::with_config(config);
+    let reloader: _ = HotReloader::with_config(config);
 
     // Should watch Vue/Svelte files
     assert!(reloader.should_watch(Path::new("App.vue")));
@@ -142,23 +144,23 @@ fn test_custom_extension_config() {
 /// Test 7: Test HotReloader creation with defaults
 #[test]
 fn test_hot_reloader_creation() {
-    let reloader = HotReloader::new();
+    let reloader: _ = HotReloader::new();
 
     // Should not be running initially
     assert!(!reloader.is_running());
 
     // Stats should be empty
-    let stats = reloader.get_stats();
+    let stats: _ = reloader.get_stats();
     assert_eq!(stats.total_reloads, 0);
 }
 
 /// Test 8: Test file change type enum
 #[test]
 fn test_file_change_type() {
-    let created = FileChangeType::Created;
-    let modified = FileChangeType::Modified;
-    let removed = FileChangeType::Removed;
-    let renamed = FileChangeType::Renamed;
+    let created: _ = FileChangeType::Created;
+    let modified: _ = FileChangeType::Modified;
+    let removed: _ = FileChangeType::Removed;
+    let renamed: _ = FileChangeType::Renamed;
 
     // Test equality
     assert_eq!(created, FileChangeType::Created);
@@ -170,7 +172,7 @@ fn test_file_change_type() {
 /// Test 9: Test watcher stop functionality
 #[test]
 fn test_watcher_stop() {
-    let reloader = HotReloader::new();
+    let reloader: _ = HotReloader::new();
 
     // Initially not running
     assert!(!reloader.is_running());

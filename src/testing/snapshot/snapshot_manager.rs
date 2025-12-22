@@ -11,13 +11,13 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub struct SnapshotManager {
     config: SnapshotConfig,
     snapshots_dir: PathBuf,
-    snapshots_cache: HashMap<String, String>,
+    snapshots_cache: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
 }
 
 impl SnapshotManager {
     /// Create a new snapshot manager
     pub fn new<P: AsRef<Path>>(snapshots_dir: P, config: SnapshotConfig) -> Self {
-        let snapshots_dir = snapshots_dir.as_ref().to_path_buf();
+        let snapshots_dir: _ = snapshots_dir.clone();as_ref().to_path_buf();
 
         // Ensure snapshots directory exists
         if !snapshots_dir.exists() {
@@ -35,7 +35,7 @@ impl SnapshotManager {
 
     /// Get snapshot file path
     fn snapshot_path(&self, name: &str) -> PathBuf {
-        let file_name = format!("{}{}", name, self.config.file_extension);
+        let file_name: _ = format!("{}{}", name, self.config.file_extension);
         self.snapshots_dir.join(file_name)
     }
 
@@ -45,19 +45,19 @@ impl SnapshotManager {
             return Ok(cached.clone());
         }
 
-        let path = self.snapshot_path(name);
+        let path: _ = self.snapshot_path(name);
         if !path.exists() {
             return Err(SnapshotError::FileNotFound(path.to_string_lossy().to_string()));
         }
 
-        let content = fs::read_to_string(&path)?;
+        let content: _ = fs::read_to_string(&path)?;
         self.snapshots_cache.insert(name.to_string(), content.clone());
         Ok(content)
     }
 
     /// Save snapshot to disk
     pub fn save_snapshot(&self, name: &str, content: &str) -> Result<(), SnapshotError> {
-        let path = self.snapshot_path(name);
+        let path: _ = self.snapshot_path(name);
         fs::write(&path, content)?;
         Ok(())
     }
@@ -68,12 +68,12 @@ impl SnapshotManager {
         name: &str,
         received: &dyn std::fmt::Display,
     ) -> Result<SnapshotComparison, SnapshotError> {
-        let serialized_received = self.config.serializer.serialize(received);
+        let serialized_received: _ = self.config.serializer.serialize(received);
 
         // Load existing snapshot
         match self.load_snapshot(name) {
             Ok(expected) => {
-                let matches = serialized_received == expected;
+                let matches: _ = serialized_received == expected;
 
                 if matches {
                     Ok(SnapshotComparison::new_match(name.to_string(), serialized_received))
@@ -86,7 +86,7 @@ impl SnapshotManager {
                             serialized_received,
                         ))
                     } else {
-                        let diff = self.generate_diff(&expected, &serialized_received);
+                        let diff: _ = self.generate_diff(&expected, &serialized_received);
                         Ok(SnapshotComparison::new_mismatch(
                             name.to_string(),
                             serialized_received,
@@ -130,13 +130,13 @@ impl SnapshotManager {
         let old_lines: Vec<&str> = old.lines().collect();
         let new_lines: Vec<&str> = new.lines().collect();
 
-        let max_lines = old_lines.len().max(new_lines.len());
+        let max_lines: _ = old_lines.len().max(new_lines.len());
         let mut added_count = 0;
         let mut removed_count = 0;
 
         for i in 0..max_lines {
-            let old_line = old_lines.get(i).copied();
-            let new_line = new_lines.get(i).copied();
+            let old_line: _ = old_lines.get(i).copied();
+            let new_line: _ = new_lines.get(i).copied();
 
             match (old_line, new_line) {
                 (Some(_), None) => {
@@ -169,7 +169,7 @@ impl SnapshotManager {
 
     /// Remove snapshot
     pub fn remove_snapshot(&mut self, name: &str) -> Result<(), SnapshotError> {
-        let path = self.snapshot_path(name);
+        let path: _ = self.snapshot_path(name);
         if path.exists() {
             fs::remove_file(&path)?;
         }
@@ -179,12 +179,12 @@ impl SnapshotManager {
 
     /// List all snapshots
     pub fn list_snapshots(&self) -> Result<Vec<String>, SnapshotError> {
-        let entries = fs::read_dir(&self.snapshots_dir)?;
+        let entries: _ = fs::read_dir(&self.snapshots_dir)?;
         let mut snapshots = Vec::new();
 
         for entry in entries {
-            let entry = entry?;
-            let path = entry.path();
+            let entry: _ = entry?;
+            let path: _ = entry.path();
 
             if path.is_file() && path.extension().map_or(false, |ext| {
                 ext == self.config.file_extension.trim_start_matches('.')
@@ -199,9 +199,9 @@ impl SnapshotManager {
     }
 
     /// Update all snapshots
-    pub fn update_all_snapshots(&mut self, values: HashMap<String, &dyn std::fmt::Display>) -> Result<(), SnapshotError> {
+    pub fn update_all_snapshots(&mut self, values: HashMap<String, &dyn std::fmt::Display, std::collections::HashMap<String, &dyn std::fmt::Display, String, &dyn std::fmt::Display>>) -> Result<(), SnapshotError> {
         for (name, value) in values {
-            let serialized = self.config.serializer.serialize(value);
+            let serialized: _ = self.config.serializer.serialize(value);
             self.save_snapshot(&name, &serialized)?;
         }
         Ok(())
@@ -209,28 +209,28 @@ impl SnapshotManager {
 
     /// Get snapshot metadata
     pub fn get_snapshot_metadata(&self, name: &str) -> Result<SnapshotMetadata, SnapshotError> {
-        let path = self.snapshot_path(name);
+        let path: _ = self.snapshot_path(name);
 
         if !path.exists() {
             return Err(SnapshotError::FileNotFound(path.to_string_lossy().to_string()));
         }
 
-        let metadata = fs::metadata(&path)?;
-        let created_at = metadata.created()
+        let metadata: _ = fs::metadata(&path)?;
+        let created_at: _ = metadata.created()
             .unwrap_or_else(|_| SystemTime::now())
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
 
-        let updated_at = metadata.modified()
+        let updated_at: _ = metadata.modified()
             .unwrap_or_else(|_| SystemTime::now())
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
 
-        let content = fs::read_to_string(&path)?;
-        let line_count = content.lines().count();
-        let size_bytes = metadata.len() as usize;
+        let content: _ = fs::read_to_string(&path)?;
+        let line_count: _ = content.lines().count();
+        let size_bytes: _ = metadata.len() as usize;
 
         Ok(SnapshotMetadata {
             name: name.to_string(),
@@ -250,10 +250,10 @@ impl SnapshotManager {
     /// Reload snapshots from disk
     pub fn reload_cache(&mut self) -> Result<(), SnapshotError> {
         self.clear_cache();
-        let snapshots = self.list_snapshots()?;
+        let snapshots: _ = self.list_snapshots()?;
 
         for name in snapshots {
-            let _ = self.load_snapshot(&name)?; // Ignore errors
+            let _: _ = self.load_snapshot(&name)?; // Ignore errors
         }
 
         Ok(())
@@ -265,32 +265,34 @@ mod tests {
     use super::*;
     use std::fs::File;
     use std::io::Write;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_snapshot_manager_new() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let config = SnapshotConfig::default();
-        let manager = SnapshotManager::new(temp_dir.path(), config);
+        let temp_dir: _ = tempfile::tempdir().unwrap();
+        let config: _ = SnapshotConfig::default();
+        let manager: _ = SnapshotManager::new(temp_dir.path(), config);
         assert!(manager.snapshots_dir.exists());
     }
 
     #[test]
     fn test_save_and_load_snapshot() {
-        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_dir: _ = tempfile::tempdir().unwrap();
         let mut config = SnapshotConfig::default();
         config.update_snapshots = true;
         let mut manager = SnapshotManager::new(temp_dir.path(), config);
 
-        let result = manager.match_snapshot("test", &"hello world");
+        let result: _ = manager.match_snapshot("test", &"hello world");
         assert!(result.is_ok());
 
-        let comparison = result.unwrap();
+        let comparison: _ = result.unwrap();
         assert!(comparison.matches);
     }
 
     #[test]
     fn test_snapshot_mismatch() {
-        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_dir: _ = tempfile::tempdir().unwrap();
         let mut config = SnapshotConfig::default();
         config.update_snapshots = false;
         let mut manager = SnapshotManager::new(temp_dir.path(), config);
@@ -300,21 +302,21 @@ mod tests {
             let mut update_config = SnapshotConfig::default();
             update_config.update_snapshots = true;
             let mut update_manager = SnapshotManager::new(temp_dir.path(), update_config);
-            let _ = update_manager.match_snapshot("test", &"hello");
+            let _: _ = update_manager.match_snapshot("test", &"hello");
         }
 
         // Try to match with different value
-        let result = manager.match_snapshot("test", &"world");
+        let result: _ = manager.match_snapshot("test", &"world");
         assert!(result.is_ok());
 
-        let comparison = result.unwrap();
+        let comparison: _ = result.unwrap();
         assert!(!comparison.matches);
         assert!(comparison.expected.is_some());
     }
 
     #[test]
     fn test_update_all_snapshots() {
-        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_dir: _ = tempfile::tempdir().unwrap();
         let mut config = SnapshotConfig::default();
         config.update_snapshots = true;
         let mut manager = SnapshotManager::new(temp_dir.path(), config);
@@ -323,11 +325,11 @@ mod tests {
         values.insert("test1".to_string(), &"value1");
         values.insert("test2".to_string(), &"value2");
 
-        let result = manager.update_all_snapshots(values);
+        let result: _ = manager.update_all_snapshots(values);
         assert!(result.is_ok());
 
         // Verify snapshots were created
-        let snapshots = manager.list_snapshots().unwrap();
+        let snapshots: _ = manager.list_snapshots().unwrap();
         assert!(snapshots.contains(&"test1".to_string()));
         assert!(snapshots.contains(&"test2".to_string()));
     }

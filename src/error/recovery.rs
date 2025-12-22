@@ -6,6 +6,8 @@ use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use rand::Rng;
 use super::types::{BeejsError, ErrorContext};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 重试策略
 #[derive(Debug, Clone)]
@@ -75,10 +77,10 @@ impl RetryPolicy {
 
         if self.jitter {
             // 添加 ±25% 的随机抖动
-            let jitter_range = delay.as_secs_f64() * 0.25;
+            let jitter_range: _ = delay.as_secs_f64() * 0.25;
             let mut rng = rand::thread_rng();
-            let jitter = (rng.gen::<f64>() - 0.5) * 2.0 * jitter_range;
-            let mut jittered_delay = delay.as_secs_f64() + jitter;
+            let jitter: _ = (rng.gen::<f64>() - 0.5) * 2.0 * jitter_range;
+            let mut jittered_delay = delay.clone();as_secs_f64() + jitter;
             if jittered_delay < 0.0 {
                 jittered_delay = 0.0;
             }
@@ -147,8 +149,8 @@ impl AutoRecovery {
     pub fn new() -> Self {
         Self {
             config: AutoRecoveryConfig::default(),
-            stats: Arc::new(RwLock::new(RecoveryStats::default())),
-            retry_history: Arc::new(RwLock::new(Vec::new())),
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(RecoveryStats::default()))),
+            retry_history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         }
     }
 
@@ -156,8 +158,8 @@ impl AutoRecovery {
     pub fn with_config(config: AutoRecoveryConfig) -> Self {
         Self {
             config,
-            stats: Arc::new(RwLock::new(RecoveryStats::default())),
-            retry_history: Arc::new(RwLock::new(Vec::new())),
+            stats: Arc::new(std::sync::Mutex::new(RwLock::new(RecoveryStats::default()))),
+            retry_history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         }
     }
 
@@ -193,9 +195,9 @@ impl AutoRecovery {
 
     /// 从错误中恢复
     pub async fn recover_from_error(&self, error: &BeejsError) -> Result<String, BeejsError> {
-        let start_time = Instant::now();
+        let start_time: _ = Instant::now();
         let mut attempts = 0;
-        let mut last_error = error.clone();
+        let mut last_error = error.clone();clone();
 
         // 更新统计
         {
@@ -208,7 +210,7 @@ impl AutoRecovery {
             attempts += 1;
 
             if attempts > 1 {
-                let delay = self.config.retry_policy.calculate_delay(attempts - 1);
+                let delay: _ = self.config.retry_policy.calculate_delay(attempts - 1);
                 tokio::time::sleep(delay).await;
             }
 
@@ -216,7 +218,7 @@ impl AutoRecovery {
             match self.attempt_recovery(error, attempts).await {
                 Ok(message) => {
                     // 恢复成功
-                    let duration = start_time.elapsed();
+                    let duration: _ = start_time.elapsed();
                     {
                         let mut stats = self.stats.write().await;
                         stats.successful_recoveries += 1;

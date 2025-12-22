@@ -52,7 +52,7 @@ pub struct LoopUnrollingOptimizer {
     /// 最小循环次数才展开
     min_iterations: usize,
     /// 分析历史统计
-    analysis_history: HashMap<String, UnrollingStats>,
+    analysis_history: HashMap<String, UnrollingStats, std::collections::HashMap<String, UnrollingStats, String, UnrollingStats>>,
 }
 
 /// 展开统计信息
@@ -92,7 +92,7 @@ impl LoopUnrollingOptimizer {
 
         let mut i = 0;
         while i < lines.len() {
-            let line = lines[i].trim();
+            let line: _ = lines[i].trim();
 
             // 检查 for 循环
             if let Some(loop_info) = self.extract_for_loop(&lines, i) {
@@ -117,29 +117,29 @@ impl LoopUnrollingOptimizer {
     /// 做出循环展开决策
     pub fn make_unrolling_decision(&self, loop_info: &LoopInfo) -> LoopUnrollingDecision {
         // 计算预估迭代次数
-        let estimated_iterations = self.estimate_iterations(loop_info);
+        let estimated_iterations: _ = self.estimate_iterations(loop_info);
 
         // 判断是否应该展开
-        let should_unroll = if loop_info.bounds.is_constant {
+        let should_unroll: _ = if loop_info.bounds.is_constant {
             estimated_iterations >= self.min_iterations
         } else {
             // 对于非常量循环，仍然可以适度展开
             estimated_iterations >= self.min_iterations / 2
         };
 
-        let unroll_factor = if should_unroll {
+        let unroll_factor: _ = if should_unroll {
             self.calculate_unroll_factor(loop_info, estimated_iterations)
         } else {
             1
         };
 
-        let benefit_score = if should_unroll {
+        let benefit_score: _ = if should_unroll {
             self.calculate_benefit_score(loop_info, estimated_iterations, unroll_factor)
         } else {
             0.0
         };
 
-        let reason = if should_unroll {
+        let reason: _ = if should_unroll {
             format!(
                 "Unroll {}x: estimated {} iterations, complexity score {:.2}",
                 unroll_factor,
@@ -165,7 +165,7 @@ impl LoopUnrollingOptimizer {
 
     /// 提取 for 循环信息
     fn extract_for_loop(&self, lines: &[&str], start_idx: usize) -> Option<LoopInfo> {
-        let line = lines[start_idx].trim();
+        let line: _ = lines[start_idx].trim();
 
         if !line.starts_with("for ") {
             return None;
@@ -174,14 +174,14 @@ impl LoopUnrollingOptimizer {
         // 解析 for 循环: for(init; condition; increment)
         if let Some((init, cond, incr)) = self.parse_for_loop(line) {
             let (variable, bounds) = self.parse_for_init(init);
-            let body = self.extract_loop_body(lines, start_idx);
+            let body: _ = self.extract_loop_body(lines, start_idx);
 
             // 找到循环结束位置
             let mut brace_count = 0;
             let mut end_line = start_idx;
 
             for i in start_idx..lines.len() {
-                let line = lines[i];
+                let line: _ = lines[i];
                 brace_count += line.matches('{').count();
                 brace_count -= line.matches('}').count();
 
@@ -206,21 +206,21 @@ impl LoopUnrollingOptimizer {
 
     /// 提取 while 循环信息
     fn extract_while_loop(&self, lines: &[&str], start_idx: usize) -> Option<LoopInfo> {
-        let line = lines[start_idx].trim();
+        let line: _ = lines[start_idx].trim();
 
         if !line.starts_with("while ") {
             return None;
         }
 
-        let condition = self.extract_while_condition(line);
-        let body = self.extract_loop_body(lines, start_idx);
+        let condition: _ = self.extract_while_condition(line);
+        let body: _ = self.extract_loop_body(lines, start_idx);
 
         // 找到循环结束位置
         let mut brace_count = 0;
         let mut end_line = start_idx;
 
         for i in start_idx..lines.len() {
-            let line = lines[i];
+            let line: _ = lines[i];
             brace_count += line.matches('{').count();
             brace_count -= line.matches('}').count();
 
@@ -231,7 +231,7 @@ impl LoopUnrollingOptimizer {
         }
 
         // While 循环的边界很难静态分析
-        let bounds = LoopBounds {
+        let bounds: _ = LoopBounds {
             start_value: None,
             end_value: None,
             increment: None,
@@ -252,7 +252,7 @@ impl LoopUnrollingOptimizer {
     fn parse_for_loop(&self, line: &str) -> Option<(String, String, String)> {
         if let Some(start) = line.find('(') {
             if let Some(end) = line[start..].find(')') {
-                let inside = &line[start + 1..start + end];
+                let inside: _ = &line[start + 1..start + end];
                 let parts: Vec<&str> = inside.split(';').collect();
                 if parts.len() == 3 {
                     return Some((
@@ -268,13 +268,13 @@ impl LoopUnrollingOptimizer {
 
     /// 解析 for 循环初始化部分
     fn parse_for_init(&self, init: &str) -> (String, LoopBounds) {
-        // 格式: let i = 0 或 let i = start
+        // 格式: let i: _ = 0 或 let i = start
         let mut variable = "i".to_string();
         let mut start_value = Some(0i64);
         let mut is_constant = true;
 
         if init.starts_with("let ") || init.starts_with("const ") || init.starts_with("var ") {
-            let after_keyword = if init.starts_with("let ") {
+            let after_keyword: _ = if init.starts_with("let ") {
                 &init[4..]
             } else if init.starts_with("const ") {
                 &init[6..]
@@ -283,8 +283,8 @@ impl LoopUnrollingOptimizer {
             };
 
             if let Some(eq_pos) = after_keyword.find('=') {
-                let var_part = after_keyword[..eq_pos].trim();
-                let val_part = after_keyword[eq_pos + 1..].trim();
+                let var_part: _ = after_keyword[..eq_pos].trim();
+                let val_part: _ = after_keyword[eq_pos + 1..].trim();
 
                 variable = var_part.to_string();
                 start_value = val_part.parse::<i64>().ok();
@@ -323,7 +323,7 @@ impl LoopUnrollingOptimizer {
         // 找到循环体开始
         let mut found_start = false;
         for i in start_idx..lines.len() {
-            let line = lines[i];
+            let line: _ = lines[i];
 
             if !found_start {
                 if line.contains('{') {
@@ -333,7 +333,7 @@ impl LoopUnrollingOptimizer {
 
                     // 如果 { 在同一行，添加大括号后的内容
                     if let Some(pos) = line.find('{') {
-                        let after_brace = &line[pos + 1..];
+                        let after_brace: _ = &line[pos + 1..];
                         if !after_brace.trim().is_empty() {
                             body.push(after_brace.trim().to_string());
                         }
@@ -390,9 +390,9 @@ impl LoopUnrollingOptimizer {
     /// 计算收益分数
     fn calculate_benefit_score(&self, loop_info: &LoopInfo, iterations: usize, unroll_factor: usize) -> f64 {
         // 收益 = 迭代次数 * 展开因子 * 复杂度因子
-        let complexity_score = self.calculate_complexity_score(loop_info);
-        let iteration_factor = iterations as f64 / self.min_iterations as f64;
-        let unroll_benefit = unroll_factor as f64;
+        let complexity_score: _ = self.calculate_complexity_score(loop_info);
+        let iteration_factor: _ = iterations as f64 / self.min_iterations as f64;
+        let unroll_benefit: _ = unroll_factor as f64;
 
         iteration_factor * unroll_benefit * (complexity_score / 10.0)
     }
@@ -412,7 +412,7 @@ impl LoopUnrollingOptimizer {
         }
 
         // 检查嵌套
-        let nested_loops = self.count_nested_loops(&loop_info.body);
+        let nested_loops: _ = self.count_nested_loops(&loop_info.body);
         score += nested_loops as f64 * 15.0;
 
         score
@@ -431,7 +431,7 @@ impl LoopUnrollingOptimizer {
 
     /// 记录展开事件
     pub fn record_unrolling(&mut self, loop_hash: &str, benefit: f64) {
-        let stats = self.analysis_history.entry(loop_hash.to_string()).or_insert(UnrollingStats {
+        let stats: _ = self.analysis_history.entry(loop_hash.to_string()).or_insert(UnrollingStats {
             total_unrolled: 0,
             total_benefit: 0.0,
             avg_benefit: 0.0,
@@ -464,17 +464,19 @@ impl Default for LoopUnrollingOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_simple_for_loop_analysis() {
-        let optimizer = LoopUnrollingOptimizer::new();
-        let code = r#"
+        let optimizer: _ = LoopUnrollingOptimizer::new();
+        let code: _ = r#"
             for (let i = 0; i < 10; i++) {
                 console.log(i);
             }
         "#;
 
-        let loops = optimizer.analyze_loops(code);
+        let loops: _ = optimizer.analyze_loops(code);
 
         assert_eq!(loops.len(), 1);
         assert_eq!(loops[0].loop_type, LoopType::For);
@@ -484,31 +486,31 @@ mod tests {
 
     #[test]
     fn test_for_loop_bounds_extraction() {
-        let optimizer = LoopUnrollingOptimizer::new();
-        let code = r#"
+        let optimizer: _ = LoopUnrollingOptimizer::new();
+        let code: _ = r#"
             for (let i = 1; i < 100; i++) {
                 sum += i;
             }
         "#;
 
-        let loops = optimizer.analyze_loops(code);
+        let loops: _ = optimizer.analyze_loops(code);
 
         assert_eq!(loops.len(), 1);
-        let bounds = &loops[0].bounds;
+        let bounds: _ = &loops[0].bounds;
         assert_eq!(bounds.start_value, Some(1));
         assert!(bounds.is_constant);
     }
 
     #[test]
     fn test_while_loop_analysis() {
-        let optimizer = LoopUnrollingOptimizer::new();
-        let code = r#"
+        let optimizer: _ = LoopUnrollingOptimizer::new();
+        let code: _ = r#"
             while (count < 10) {
                 count++;
             }
         "#;
 
-        let loops = optimizer.analyze_loops(code);
+        let loops: _ = optimizer.analyze_loops(code);
 
         assert_eq!(loops.len(), 1);
         assert_eq!(loops[0].loop_type, LoopType::While);
@@ -516,16 +518,16 @@ mod tests {
 
     #[test]
     fn test_nested_loop_analysis() {
-        let optimizer = LoopUnrollingOptimizer::new();
-        let code = r#"
+        let optimizer: _ = LoopUnrollingOptimizer::new();
+        let code: _ = r#"
             for (let i = 0; i < 10; i++) {
-                for (let j = 0; j < 10; j++) {
+                for (let j: _ = 0; j < 10; j++) {
                     sum += i * j;
                 }
             }
         "#;
 
-        let loops = optimizer.analyze_loops(code);
+        let loops: _ = optimizer.analyze_loops(code);
 
         // 应该检测到两个循环
         assert_eq!(loops.len(), 2);
@@ -534,15 +536,15 @@ mod tests {
 
     #[test]
     fn test_unrolling_decision_simple_loop() {
-        let optimizer = LoopUnrollingOptimizer::new();
-        let code = r#"
+        let optimizer: _ = LoopUnrollingOptimizer::new();
+        let code: _ = r#"
             for (let i = 0; i < 10; i++) {
                 console.log(i);
             }
         "#;
 
-        let loops = optimizer.analyze_loops(code);
-        let decision = optimizer.make_unrolling_decision(&loops[0]);
+        let loops: _ = optimizer.analyze_loops(code);
+        let decision: _ = optimizer.make_unrolling_decision(&loops[0]);
 
         // 10次迭代的循环应该展开
         assert!(decision.should_unroll);
@@ -552,15 +554,15 @@ mod tests {
 
     #[test]
     fn test_unrolling_decision_small_loop() {
-        let optimizer = LoopUnrollingOptimizer::new();
-        let code = r#"
+        let optimizer: _ = LoopUnrollingOptimizer::new();
+        let code: _ = r#"
             for (let i = 0; i < 2; i++) {
                 console.log(i);
             }
         "#;
 
-        let loops = optimizer.analyze_loops(code);
-        let decision = optimizer.make_unrolling_decision(&loops[0]);
+        let loops: _ = optimizer.analyze_loops(code);
+        let decision: _ = optimizer.make_unrolling_decision(&loops[0]);
 
         // 小于最小迭代次数的循环不应该展开
         assert!(!decision.should_unroll || decision.estimated_iterations < optimizer.min_iterations);
@@ -568,10 +570,10 @@ mod tests {
 
     #[test]
     fn test_unroll_factor_calculation() {
-        let optimizer = LoopUnrollingOptimizer::new();
+        let optimizer: _ = LoopUnrollingOptimizer::new();
 
         // 创建一个循环信息
-        let loop_info = LoopInfo {
+        let loop_info: _ = LoopInfo {
             loop_type: LoopType::For,
             start_line: 0,
             end_line: 5,
@@ -585,8 +587,8 @@ mod tests {
             body: vec!["console.log(i);".to_string()],
         };
 
-        let iterations = 1000;
-        let factor = optimizer.calculate_unroll_factor(&loop_info, iterations);
+        let iterations: _ = 1000;
+        let factor: _ = optimizer.calculate_unroll_factor(&loop_info, iterations);
 
         // 大循环应该使用最大展开因子
         assert_eq!(factor, optimizer.max_unroll_factor);
@@ -594,9 +596,9 @@ mod tests {
 
     #[test]
     fn test_complexity_score() {
-        let optimizer = LoopUnrollingOptimizer::new();
+        let optimizer: _ = LoopUnrollingOptimizer::new();
 
-        let simple_loop = LoopInfo {
+        let simple_loop: _ = LoopInfo {
             loop_type: LoopType::For,
             start_line: 0,
             end_line: 3,
@@ -610,7 +612,7 @@ mod tests {
             body: vec!["sum += i;".to_string()],
         };
 
-        let nested_loop = LoopInfo {
+        let nested_loop: _ = LoopInfo {
             loop_type: LoopType::For,
             start_line: 0,
             end_line: 10,
@@ -627,17 +629,17 @@ mod tests {
             ],
         };
 
-        let simple_score = optimizer.calculate_complexity_score(&simple_loop);
-        let nested_score = optimizer.calculate_complexity_score(&nested_loop);
+        let simple_score: _ = optimizer.calculate_complexity_score(&simple_loop);
+        let nested_score: _ = optimizer.calculate_complexity_score(&nested_loop);
 
         assert!(nested_score > simple_score, "Nested loop should have higher complexity");
     }
 
     #[test]
     fn test_iteration_estimation() {
-        let optimizer = LoopUnrollingOptimizer::new();
+        let optimizer: _ = LoopUnrollingOptimizer::new();
 
-        let loop_info = LoopInfo {
+        let loop_info: _ = LoopInfo {
             loop_type: LoopType::For,
             start_line: 0,
             end_line: 5,
@@ -651,19 +653,19 @@ mod tests {
             body: Vec::new(),
         };
 
-        let iterations = optimizer.estimate_iterations(&loop_info);
+        let iterations: _ = optimizer.estimate_iterations(&loop_info);
         assert_eq!(iterations, 100);
     }
 
     #[test]
     fn test_unrolling_history() {
         let mut optimizer = LoopUnrollingOptimizer::new();
-        let loop_hash = "test_loop";
+        let loop_hash: _ = "test_loop";
 
         optimizer.record_unrolling(loop_hash, 100.0);
         optimizer.record_unrolling(loop_hash, 200.0);
 
-        let stats = optimizer.get_unrolling_stats(loop_hash).unwrap();
+        let stats: _ = optimizer.get_unrolling_stats(loop_hash).unwrap();
         assert_eq!(stats.total_unrolled, 2);
         assert_eq!(stats.total_benefit, 300.0);
         assert_eq!(stats.avg_benefit, 150.0);
@@ -674,16 +676,16 @@ mod tests {
 
     #[test]
     fn test_custom_parameters() {
-        let optimizer = LoopUnrollingOptimizer::with_params(2, 8, 10);
+        let optimizer: _ = LoopUnrollingOptimizer::with_params(2, 8, 10);
 
-        let code = r#"
+        let code: _ = r#"
             for (let i = 0; i < 20; i++) {
                 console.log(i);
             }
         "#;
 
-        let loops = optimizer.analyze_loops(code);
-        let decision = optimizer.make_unrolling_decision(&loops[0]);
+        let loops: _ = optimizer.analyze_loops(code);
+        let decision: _ = optimizer.make_unrolling_decision(&loops[0]);
 
         // 使用自定义参数测试
         assert!(decision.should_unroll || decision.estimated_iterations >= 10);

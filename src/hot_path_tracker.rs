@@ -67,7 +67,7 @@ pub struct HotPathStats {
 pub struct HotPathTracker {
     config: HotPathConfig,
     /// 代码路径跟踪信息
-    paths: Arc<std::sync::Mutex<HashMap<String, HotPathInfo>>>,
+    paths: Arc<std::sync::Mutex<HashMap<String, HotPathInfo, std::collections::HashMap<String, HotPathInfo, String, HotPathInfo>>>>,
     /// 全局统计
     stats: Arc<std::sync::Mutex<HotPathStats>>,
 }
@@ -77,8 +77,8 @@ impl HotPathTracker {
     pub fn new(config: HotPathConfig) -> Self {
         Self {
             config,
-            paths: Arc::new(std::sync::Mutex::new(HashMap::new())),
-            stats: Arc::new(std::sync::Mutex::new(HotPathStats::default())),
+            paths: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(HashMap::new()))),
+            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(HotPathStats::default()))),
         }
     }
 
@@ -96,10 +96,10 @@ impl HotPathTracker {
         execution_time: Duration,
     ) -> Vec<String> {
         // 生成代码ID
-        let code_id = self.generate_code_id(code, file_path);
+        let code_id: _ = self.generate_code_id(code, file_path);
 
         // 分析代码复杂度
-        let complexity = CodeAnalyzer::analyze_complexity(code);
+        let complexity: _ = CodeAnalyzer::analyze_complexity(code);
 
         // 更新或创建跟踪信息
         let mut suggestions = Vec::new();
@@ -107,7 +107,7 @@ impl HotPathTracker {
         {
             let mut paths = self.paths.lock().unwrap();
 
-            let path_info = paths.entry(code_id.clone()).or_insert_with(|| {
+            let path_info: _ = paths.entry(code_id.clone()).or_insert_with(|| {
                 // 更新统计
                 {
                     let mut stats = self.stats.lock().unwrap();
@@ -116,9 +116,9 @@ impl HotPathTracker {
 
                 HotPathInfo {
                     code_id: code_id.clone(),
-                    execution_count: Arc::new(AtomicUsize::new(0)),
-                    total_time_ns: Arc::new(AtomicU64::new(0)),
-                    avg_time_ns: Arc::new(AtomicU64::new(0)),
+                    execution_count: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
+                    total_time_ns: Arc::new(std::sync::Mutex::new(AtomicU64::new(0))),
+                    avg_time_ns: Arc::new(std::sync::Mutex::new(AtomicU64::new(0))),
                     first_execution: Instant::now(),
                     last_execution: Instant::now(),
                     complexity,
@@ -128,21 +128,21 @@ impl HotPathTracker {
             });
 
             // 更新执行计数
-            let count = path_info.execution_count.fetch_add(1, Ordering::SeqCst) + 1;
+            let count: _ = path_info.execution_count.fetch_add(1, Ordering::SeqCst) + 1;
 
             // 更新执行时间统计
-            let total_time = path_info
+            let total_time: _ = path_info
                 .total_time_ns
                 .fetch_add(execution_time.as_nanos() as u64, Ordering::SeqCst)
                 + execution_time.as_nanos() as u64;
-            let avg_time = total_time / count as u64;
+            let avg_time: _ = total_time / count as u64;
             path_info.avg_time_ns.store(avg_time, Ordering::SeqCst);
 
             // 更新最后执行时间
             path_info.last_execution = Instant::now();
 
             // 检查是否成为热路径
-            let was_hot = path_info.is_hot_path;
+            let was_hot: _ = path_info.is_hot_path;
             let should_be_hot =
                 self.should_mark_as_hot_path(count, execution_time, &path_info.complexity);
 
@@ -157,7 +157,7 @@ impl HotPathTracker {
 
                 // 生成优化建议
                 suggestions = self.generate_optimization_suggestions(path_info);
-                path_info.optimization_suggestions = suggestions.clone();
+                path_info.optimization_suggestions = suggestions.clone();clone();
             }
 
             // 更新全局统计
@@ -176,7 +176,7 @@ impl HotPathTracker {
 
     /// 获取热路径信息
     pub fn get_hot_paths(&self) -> Vec<HotPathInfo> {
-        let paths = self.paths.lock().unwrap();
+        let paths: _ = self.paths.lock().unwrap();
         paths
             .values()
             .filter(|info| info.is_hot_path)
@@ -187,7 +187,7 @@ impl HotPathTracker {
     /// 获取特定代码的跟踪信息
     #[allow(dead_code)]
     pub fn get_code_info(&self, code_id: &str) -> Option<HotPathInfo> {
-        let paths = self.paths.lock().unwrap();
+        let paths: _ = self.paths.lock().unwrap();
         paths.get(code_id).cloned()
     }
 
@@ -233,13 +233,13 @@ impl HotPathTracker {
         let mut suggestions = Vec::new();
 
         // 基于执行次数的建议
-        let count = info.execution_count.load(Ordering::SeqCst);
+        let count: _ = info.execution_count.load(Ordering::SeqCst);
         if count > 100 {
             suggestions.push("考虑将代码编译为字节码缓存".to_string());
         }
 
         // 基于执行时间的建议
-        let avg_time = info.avg_time_ns.load(Ordering::SeqCst);
+        let avg_time: _ = info.avg_time_ns.load(Ordering::SeqCst);
         if avg_time > 5_000_000 {
             // 5ms
             suggestions.push("执行时间较长，建议优化算法或数据结构".to_string());
@@ -292,13 +292,13 @@ impl HotPathTracker {
     #[allow(dead_code)]
     pub fn cleanup(&self, max_age: Duration, min_executions: usize) {
         let mut paths = self.paths.lock().unwrap();
-        let now = Instant::now();
+        let now: _ = Instant::now();
 
         let to_remove: Vec<String> = paths
             .iter()
             .filter(|(_, info)| {
-                let age = now.duration_since(info.last_execution);
-                let executions = info.execution_count.load(Ordering::SeqCst);
+                let age: _ = now.duration_since(info.last_execution);
+                let executions: _ = info.execution_count.load(Ordering::SeqCst);
                 age > max_age || executions < min_executions
             })
             .map(|(id, _)| id.clone())
@@ -322,17 +322,19 @@ impl HotPathTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_hot_path_identification() {
-        let tracker = HotPathTracker::new_default();
+        let tracker: _ = HotPathTracker::new_default();
 
         // 执行简单代码10次
         for _ in 0..10 {
             tracker.track_execution("const x = 1 + 1;", None, Duration::from_millis(1));
         }
 
-        let hot_paths = tracker.get_hot_paths();
+        let hot_paths: _ = tracker.get_hot_paths();
         assert!(
             !hot_paths.is_empty(),
             "Should identify hot path after threshold"
@@ -341,13 +343,13 @@ mod tests {
 
     #[test]
     fn test_complex_code_hot_path() {
-        let tracker = HotPathTracker::new_default();
+        let tracker: _ = HotPathTracker::new_default();
 
         // 执行复杂代码（应该快速成为热路径）
-        let complex_code = r#"
+        let complex_code: _ = r#"
             function fibonacci(n) {
                 if (n <= 1) return n;
-                for (let i = 2; i <= n; i++) {
+                for (let i: _ = 2; i <= n; i++) {
                     if (i % 2 === 0) {
                         console.log("even");
                     }
@@ -364,7 +366,7 @@ mod tests {
         "#;
 
         // 先分析复杂度
-        let complexity = crate::code_analyzer::CodeAnalyzer::analyze_complexity(complex_code);
+        let complexity: _ = crate::code_analyzer::CodeAnalyzer::analyze_complexity(complex_code);
         println!(
             "Complex code complexity score: {}",
             complexity.complexity_score
@@ -374,7 +376,7 @@ mod tests {
             tracker.track_execution(complex_code, None, Duration::from_millis(2));
         }
 
-        let hot_paths = tracker.get_hot_paths();
+        let hot_paths: _ = tracker.get_hot_paths();
         assert!(
             !hot_paths.is_empty(),
             "Complex code should become hot path quickly"
@@ -383,12 +385,12 @@ mod tests {
 
     #[test]
     fn test_optimization_suggestions() {
-        let tracker = HotPathTracker::new_default();
+        let tracker: _ = HotPathTracker::new_default();
 
-        let complex_code = r#"
+        let complex_code: _ = r#"
             function fibonacci(n) {
                 if (n <= 1) return n;
-                for (let i = 2; i <= n; i++) {
+                for (let i: _ = 2; i <= n; i++) {
                     if (i % 2 === 0) {
                         console.log("even");
                     }
@@ -405,10 +407,10 @@ mod tests {
             tracker.track_execution(complex_code, None, Duration::from_millis(5));
         }
 
-        let hot_paths = tracker.get_hot_paths();
+        let hot_paths: _ = tracker.get_hot_paths();
         assert!(!hot_paths.is_empty());
 
-        let hot_path = &hot_paths[0];
+        let hot_path: _ = &hot_paths[0];
         assert!(!hot_path.optimization_suggestions.is_empty());
         println!(
             "Optimization suggestions: {:?}",
@@ -418,7 +420,7 @@ mod tests {
 
     #[test]
     fn test_code_tracking_with_file_path() {
-        let tracker = HotPathTracker::new_default();
+        let tracker: _ = HotPathTracker::new_default();
 
         tracker.track_execution(
             "const x = 1;",
@@ -435,14 +437,14 @@ mod tests {
             tracker.get_code_info(&tracker.generate_code_id("const x = 1;", Some("/test/file.js")));
         assert!(info.is_some());
 
-        let hot_paths = tracker.get_hot_paths();
+        let hot_paths: _ = tracker.get_hot_paths();
         // 执行2次应该超过默认阈值（10次），所以不是热路径
         assert_eq!(hot_paths.len(), 0);
     }
 
     #[test]
     fn test_cleanup_old_paths() {
-        let tracker = HotPathTracker::new_default();
+        let tracker: _ = HotPathTracker::new_default();
 
         // 执行一次代码
         tracker.track_execution("const x = 1;", None, Duration::from_millis(1));
@@ -450,36 +452,36 @@ mod tests {
         // 清理过期数据
         tracker.cleanup(Duration::from_secs(0), 10);
 
-        let hot_paths = tracker.get_hot_paths();
+        let hot_paths: _ = tracker.get_hot_paths();
         // 执行次数少于10次，应该被清理
         assert_eq!(hot_paths.len(), 0);
     }
 
     #[test]
     fn test_reset_tracker() {
-        let tracker = HotPathTracker::new_default();
+        let tracker: _ = HotPathTracker::new_default();
 
         tracker.track_execution("const x = 1;", None, Duration::from_millis(1));
 
-        let stats_before = tracker.get_stats();
+        let stats_before: _ = tracker.get_stats();
         assert!(stats_before.total_codes_tracked > 0);
 
         tracker.reset();
 
-        let stats_after = tracker.get_stats();
+        let stats_after: _ = tracker.get_stats();
         assert_eq!(stats_after.total_codes_tracked, 0);
     }
 
     #[test]
     fn test_multiple_codes_tracking() {
-        let tracker = HotPathTracker::new_default();
+        let tracker: _ = HotPathTracker::new_default();
 
         // 执行多个不同的代码
         for i in 0..15 {
             tracker.track_execution(&format!("const x = {};", i), None, Duration::from_millis(1));
         }
 
-        let stats = tracker.get_stats();
+        let stats: _ = tracker.get_stats();
         assert_eq!(stats.total_codes_tracked, 15);
 
         // 再执行其中一个代码15次，使其成为热路径
@@ -487,7 +489,7 @@ mod tests {
             tracker.track_execution("const x = 5;", None, Duration::from_millis(1));
         }
 
-        let hot_paths = tracker.get_hot_paths();
+        let hot_paths: _ = tracker.get_hot_paths();
         assert_eq!(hot_paths.len(), 1);
     }
 }

@@ -73,7 +73,7 @@ impl DebugConsole {
 
         loop {
             // Read command
-            let command = self.read_command()?;
+            let command: _ = self.read_command()?;
 
             // Parse and execute
             match self.execute_command(command).await {
@@ -99,7 +99,7 @@ impl DebugConsole {
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
 
-        let command = input.trim().to_string();
+        let command: _ = input.trim().to_string();
         if !command.is_empty() {
             self.history.push(command.clone());
         }
@@ -129,12 +129,12 @@ impl DebugConsole {
                     if parts.len() != 2 {
                         return Err(anyhow::anyhow!("Invalid format. Use file:line"));
                     }
-                    let line = parts[1].parse::<u32>()
+                    let line: _ = parts[1].parse::<u32>()
                         .map_err(|_| anyhow::anyhow!("Invalid line number"))?;
                     Ok(DebugCliCommand::BreakAt(parts[0].to_string(), line))
                 } else if parts[1].parse::<u32>().is_ok() {
                     // Line number
-                    let line = parts[1].parse::<u32>()?;
+                    let line: _ = parts[1].parse::<u32>()?;
                     Ok(DebugCliCommand::Break(line))
                 } else {
                     // Function name
@@ -145,7 +145,7 @@ impl DebugConsole {
                 if parts.len() < 2 {
                     return Err(anyhow::anyhow!("Usage: delete <id>"));
                 }
-                let id = parts[1].parse::<u32>()
+                let id: _ = parts[1].parse::<u32>()
                     .map_err(|_| anyhow::anyhow!("Invalid breakpoint id"))?;
                 Ok(DebugCliCommand::Delete(id))
             }
@@ -184,7 +184,7 @@ impl DebugConsole {
 
     /// Execute a debug command
     async fn execute_command(&mut self, input: String) -> Result<DebugCliCommand> {
-        let command = self.parse_command(&input)?;
+        let command: _ = self.parse_command(&input)?;
 
         // Execute based on command type
         match &command {
@@ -253,7 +253,7 @@ impl DebugConsole {
 
     /// List all breakpoints
     fn list_breakpoints(&self) {
-        let _debugger = self.debugger.lock().unwrap();
+        let _debugger: _ = self.debugger.lock().unwrap();
         println!("\n📍 Breakpoints:");
         // TODO: Implement actual breakpoint listing
         println!("   (No breakpoints set)");
@@ -313,12 +313,14 @@ impl DebugConsole {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_parse_continue_command() {
-        let console = DebugConsole::new(
-            Arc::new(Mutex::new(DebuggerEngine::new(Default::default()))),
-            Arc::new(Mutex::new(RuntimeLite::new(false).unwrap())),
+        let console: _ = DebugConsole::new(
+            Arc::new(std::sync::Mutex::new(Mutex::new(DebuggerEngine::new(Default::default())))),
+            Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false)).unwrap())),
         );
         assert!(matches!(console.parse_command("continue").unwrap(), DebugCliCommand::Continue));
         assert!(matches!(console.parse_command("c").unwrap(), DebugCliCommand::Continue));
@@ -326,9 +328,9 @@ mod tests {
 
     #[test]
     fn test_parse_break_command() {
-        let console = DebugConsole::new(
-            Arc::new(Mutex::new(DebuggerEngine::new(Default::default()))),
-            Arc::new(Mutex::new(RuntimeLite::new(false).unwrap())),
+        let console: _ = DebugConsole::new(
+            Arc::new(std::sync::Mutex::new(Mutex::new(DebuggerEngine::new(Default::default())))),
+            Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false)).unwrap())),
         );
         assert!(matches!(console.parse_command("break 10").unwrap(), DebugCliCommand::Break(10)));
         assert!(matches!(console.parse_command("b 20").unwrap(), DebugCliCommand::Break(20)));
@@ -336,9 +338,9 @@ mod tests {
 
     #[test]
     fn test_parse_print_command() {
-        let console = DebugConsole::new(
-            Arc::new(Mutex::new(DebuggerEngine::new(Default::default()))),
-            Arc::new(Mutex::new(RuntimeLite::new(false).unwrap())),
+        let console: _ = DebugConsole::new(
+            Arc::new(std::sync::Mutex::new(Mutex::new(DebuggerEngine::new(Default::default())))),
+            Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false)).unwrap())),
         );
         if let DebugCliCommand::Print(expr) = console.parse_command("print myVar").unwrap() {
             assert_eq!(expr, "myVar");

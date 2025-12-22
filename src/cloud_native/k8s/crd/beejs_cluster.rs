@@ -37,7 +37,7 @@ pub struct BeejsClusterSpec {
     pub distributed: DistributedConfig,
 
     /// Node selector for scheduling
-    pub node_selector: Option<HashMap<String, String>>,
+    pub node_selector: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 
     /// Tolerations for node taints
     pub tolerations: Option<Vec<Toleration>>,
@@ -212,7 +212,7 @@ pub struct WeightedPodAffinityTerm {
 #[cfg_attr(test, derive(Default))]
 pub struct LabelSelector {
     /// Match labels
-    pub match_labels: Option<HashMap<String, String>>,
+    pub match_labels: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 
     /// Match expressions
     pub match_expressions: Option<Vec<LabelSelectorRequirement>>,
@@ -321,10 +321,12 @@ pub struct ServiceMonitorConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_beejs_cluster_crd_creation() {
-        let cluster = BeejsCluster::new(
+        let cluster: _ = BeejsCluster::new(
             "test-cluster",
             BeejsClusterSpec {
                 version: "v1.0.0".to_string(),
@@ -364,7 +366,7 @@ mod tests {
 
     #[test]
     fn test_resource_requirements() {
-        let resources = ResourceRequirements {
+        let resources: _ = ResourceRequirements {
             cpu: "4".to_string(),
             memory: "8Gi".to_string(),
             disk: "100Gi".to_string(),
@@ -379,7 +381,7 @@ mod tests {
 
     #[test]
     fn test_security_context() {
-        let security_context = SecurityContext {
+        let security_context: _ = SecurityContext {
             run_as_non_root: true,
             run_as_user: Some(1000),
             run_as_group: Some(1000),

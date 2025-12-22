@@ -76,11 +76,11 @@ pub struct MemoryStats {
 #[derive(Debug)]
 pub struct HotspotAnalyzer {
     /// 函数执行时间数据
-    execution_times: HashMap<String, Vec<Duration>>,
+    execution_times: HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration>>>,
     /// 函数内存使用数据
-    memory_usage: HashMap<String, Vec<usize>>,
+    memory_usage: HashMap<String, Vec<usize, std::collections::HashMap<String, Vec<usize, String, Vec<usize>>>,
     /// 函数调用计数
-    call_counts: HashMap<String, u64>,
+    call_counts: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
     /// 热点检测配置
     config: HotspotConfig,
     /// 分析统计
@@ -187,14 +187,14 @@ impl HotspotAnalyzer {
 
     /// 识别性能热点
     pub fn identify_hotspots(&mut self) -> Vec<Hotspot> {
-        let scan_start = std::time::Instant::now();
+        let scan_start: _ = std::time::Instant::now();
         self.stats.scan_count += 1;
 
         let mut hotspots = Vec::new();
 
         // 分析每个函数
         for (function_name, times) in &self.execution_times {
-            let call_count = *self.call_counts.get(function_name).unwrap_or(&0);
+            let call_count: _ = *self.call_counts.get(function_name).unwrap_or(&0);
 
             // 跳过调用次数过少的函数
             if call_count < self.config.min_call_count {
@@ -204,29 +204,29 @@ impl HotspotAnalyzer {
             self.stats.functions_analyzed += 1;
 
             // 计算时间统计
-            let time_stats = self.calculate_time_stats(times);
+            let time_stats: _ = self.calculate_time_stats(times);
 
             // 计算内存统计
-            let memory_stats = self.calculate_memory_stats(
+            let memory_stats: _ = self.calculate_memory_stats(
                 &self.memory_usage.get(function_name).unwrap_or(&Vec::new()),
             );
 
             // 计算热度评分
-            let heat_score = self.calculate_heat_score(
+            let heat_score: _ = self.calculate_heat_score(
                 &time_stats,
                 &memory_stats,
                 call_count,
             );
 
             // 判断热点类型
-            let hotspot_types = self.determine_hotspot_types(
+            let hotspot_types: _ = self.determine_hotspot_types(
                 &time_stats,
                 &memory_stats,
                 call_count,
             );
 
             // 生成优化建议
-            let suggestions = self.generate_optimization_suggestions(
+            let suggestions: _ = self.generate_optimization_suggestions(
                 function_name,
                 &time_stats,
                 &memory_stats,
@@ -274,24 +274,24 @@ impl HotspotAnalyzer {
             };
         }
 
-        let mut sorted_times = times.to_vec();
+        let mut sorted_times = times.clone();to_vec();
         sorted_times.sort();
 
         let total_time: Duration = times.iter().sum();
-        let count = times.len() as u64;
-        let avg_time = Duration::from_nanos(total_time.as_nanos() as u64 / count);
+        let count: _ = times.len() as u64;
+        let avg_time: _ = Duration::from_nanos(total_time.as_nanos() as u64 / count);
 
-        let min_time = sorted_times[0];
-        let max_time = sorted_times[count as usize - 1];
+        let min_time: _ = sorted_times[0];
+        let max_time: _ = sorted_times[count as usize - 1];
 
         // 计算百分位数
-        let p50_time = Self::calculate_percentile(&sorted_times, 0.50);
-        let p95_time = Self::calculate_percentile(&sorted_times, 0.95);
-        let p99_time = Self::calculate_percentile(&sorted_times, 0.99);
+        let p50_time: _ = Self::calculate_percentile(&sorted_times, 0.50);
+        let p95_time: _ = Self::calculate_percentile(&sorted_times, 0.95);
+        let p99_time: _ = Self::calculate_percentile(&sorted_times, 0.99);
 
         // 计算方差
-        let mean_ms = avg_time.as_millis() as f64;
-        let variance = times
+        let mean_ms: _ = avg_time.as_millis() as f64;
+        let variance: _ = times
             .iter()
             .map(|t| {
                 let diff = t.as_millis() as f64 - mean_ms;
@@ -318,8 +318,8 @@ impl HotspotAnalyzer {
             return Duration::from_nanos(0);
         }
 
-        let index = (sorted_times.len() as f64 * percentile).floor() as usize;
-        let index = std::cmp::min(index, sorted_times.len() - 1);
+        let index: _ = (sorted_times.len() as f64 * percentile).floor() as usize;
+        let index: _ = std::cmp::min(index, sorted_times.len() - 1);
         sorted_times[index]
     }
 
@@ -335,19 +335,19 @@ impl HotspotAnalyzer {
             };
         }
 
-        let mut sorted_memory = memory.to_vec();
+        let mut sorted_memory = memory.clone();to_vec();
         sorted_memory.sort();
 
         let total_memory: usize = memory.iter().sum();
-        let count = memory.len() as f64;
-        let avg_memory = total_memory as f64 / count;
+        let count: _ = memory.len() as f64;
+        let avg_memory: _ = total_memory as f64 / count;
 
-        let min_memory = sorted_memory[0];
-        let max_memory = sorted_memory[sorted_memory.len() - 1];
+        let min_memory: _ = sorted_memory[0];
+        let max_memory: _ = sorted_memory[sorted_memory.len() - 1];
 
         // 计算方差
-        let mean = avg_memory;
-        let variance = memory
+        let mean: _ = avg_memory;
+        let variance: _ = memory
             .iter()
             .map(|m| {
                 let diff = *m as f64 - mean;
@@ -373,14 +373,14 @@ impl HotspotAnalyzer {
         call_count: u64,
     ) -> f64 {
         // 归一化分数 (0.0 - 1.0)
-        let time_score = (time_stats.avg_time.as_millis() as f64
+        let time_score: _ = (time_stats.avg_time.as_millis() as f64
             / self.config.time_threshold_ms as f64)
             .min(1.0);
 
-        let memory_score = (memory_stats.avg_memory / self.config.memory_threshold_bytes as f64)
+        let memory_score: _ = (memory_stats.avg_memory / self.config.memory_threshold_bytes as f64)
             .min(1.0);
 
-        let frequency_score = (call_count as f64 / self.config.frequency_threshold as f64)
+        let frequency_score: _ = (call_count as f64 / self.config.frequency_threshold as f64)
             .min(1.0);
 
         // 加权平均
@@ -523,10 +523,12 @@ impl HotspotAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_hotspot_analyzer_creation() {
-        let analyzer = HotspotAnalyzer::with_default_config();
+        let analyzer: _ = HotspotAnalyzer::with_default_config();
         assert_eq!(analyzer.get_stats().functions_analyzed, 0);
     }
 
@@ -537,7 +539,7 @@ mod tests {
         analyzer.record_execution("test_func", Duration::from_millis(10), 1024);
         analyzer.record_execution("test_func", Duration::from_millis(20), 2048);
 
-        let times = analyzer.get_execution_times("test_func").unwrap();
+        let times: _ = analyzer.get_execution_times("test_func").unwrap();
         assert_eq!(times.len(), 2);
         assert_eq!(analyzer.get_call_count("test_func").unwrap(), &2);
     }
@@ -551,8 +553,8 @@ mod tests {
             analyzer.record_execution("slow_func", Duration::from_millis(50), 1024);
         }
 
-        let hotspots = analyzer.identify_hotspots();
-        let has_time_hotspot = hotspots.iter().any(|h| {
+        let hotspots: _ = analyzer.identify_hotspots();
+        let has_time_hotspot: _ = hotspots.iter().any(|h| {
             h.function_name == "slow_func"
                 && h.hotspot_type == HotspotType::TimeHotspot
         });
@@ -569,8 +571,8 @@ mod tests {
             analyzer.record_execution("frequent_func", Duration::from_millis(1), 100);
         }
 
-        let hotspots = analyzer.identify_hotspots();
-        let has_frequency_hotspot = hotspots.iter().any(|h| {
+        let hotspots: _ = analyzer.identify_hotspots();
+        let has_frequency_hotspot: _ = hotspots.iter().any(|h| {
             h.function_name == "frequent_func"
                 && h.hotspot_type == HotspotType::FrequencyHotspot
         });
@@ -587,10 +589,10 @@ mod tests {
             analyzer.record_execution("test_func", Duration::from_millis(5), 512);
         }
 
-        let hotspots = analyzer.identify_hotspots();
+        let hotspots: _ = analyzer.identify_hotspots();
         assert!(!hotspots.is_empty());
 
-        let hotspot = &hotspots[0];
+        let hotspot: _ = &hotspots[0];
         assert!(hotspot.heat_score >= 0.0);
         assert!(hotspot.heat_score <= 1.0);
     }
@@ -604,8 +606,8 @@ mod tests {
             analyzer.record_execution("slow_func", Duration::from_millis(50), 1024);
         }
 
-        let hotspots = analyzer.identify_hotspots();
-        let hotspot = hotspots.iter().find(|h| h.function_name == "slow_func").unwrap();
+        let hotspots: _ = analyzer.identify_hotspots();
+        let hotspot: _ = hotspots.iter().find(|h| h.function_name == "slow_func").unwrap();
 
         assert!(!hotspot.optimization_suggestions.is_empty());
         assert!(hotspot
@@ -623,8 +625,8 @@ mod tests {
             analyzer.record_execution("problem_func", Duration::from_millis(50), 1024 * 1024);
         }
 
-        let hotspots = analyzer.identify_hotspots();
-        let has_composite = hotspots.iter().any(|h| {
+        let hotspots: _ = analyzer.identify_hotspots();
+        let has_composite: _ = hotspots.iter().any(|h| {
             h.function_name == "problem_func"
                 && h.hotspot_type == HotspotType::CompositeHotspot
         });
@@ -639,8 +641,8 @@ mod tests {
         // 记录调用次数少于阈值的函数
         analyzer.record_execution("rare_func", Duration::from_millis(100), 1024);
 
-        let hotspots = analyzer.identify_hotspots();
-        let has_rare = hotspots.iter().any(|h| h.function_name == "rare_func");
+        let hotspots: _ = analyzer.identify_hotspots();
+        let has_rare: _ = hotspots.iter().any(|h| h.function_name == "rare_func");
 
         assert!(!has_rare); // 应该被过滤掉
     }
@@ -658,7 +660,7 @@ mod tests {
 
     #[test]
     fn test_percentile_calculation() {
-        let times = vec![
+        let times: _ = vec![
             Duration::from_millis(1),
             Duration::from_millis(5),
             Duration::from_millis(10),
@@ -666,8 +668,8 @@ mod tests {
             Duration::from_millis(100),
         ];
 
-        let analyzer = HotspotAnalyzer::with_default_config();
-        let time_stats = analyzer.calculate_time_stats(&times);
+        let analyzer: _ = HotspotAnalyzer::with_default_config();
+        let time_stats: _ = analyzer.calculate_time_stats(&times);
 
         assert_eq!(time_stats.p50_time, Duration::from_millis(10));
         assert!(time_stats.p95_time >= Duration::from_millis(10));
@@ -676,8 +678,8 @@ mod tests {
 
     #[test]
     fn test_average_scan_time() {
-        let analyzer = HotspotAnalyzer::with_default_config();
-        let avg_time = analyzer.get_average_scan_time();
+        let analyzer: _ = HotspotAnalyzer::with_default_config();
+        let avg_time: _ = analyzer.get_average_scan_time();
         assert_eq!(avg_time, Duration::from_nanos(0));
     }
 }

@@ -5,6 +5,8 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::sync::{RwLock, Semaphore};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 // use crate::web_api::WebApiRegistry;
 
 /// Web API 延迟加载器
@@ -62,17 +64,17 @@ impl LazyWebAPI {
     /// 创建新的延迟 Web API 加载器
     pub fn new() -> Self {
         Self {
-            initialized_apis: Arc::new(RwLock::new(HashSet::new())),
-            initialization_queue: Arc::new(Mutex::new(Vec::new())),
-            init_semaphore: Arc::new(Semaphore::new(10)), // 最多 10 个并发初始化
-            // web_api_registry: Arc::new(WebApiRegistry::new()),
-            stats: Arc::new(Mutex::new(LazyInitStats::default())),
+            initialized_apis: Arc::new(std::sync::Mutex::new(RwLock::new(HashSet::new()))),
+            initialization_queue: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            init_semaphore: Arc::new(std::sync::Mutex::new(Semaphore::new(10))), // 最多 10 个并发初始化
+            // web_api_registry: Arc::new(std::sync::Mutex::new(WebApiRegistry::new())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(LazyInitStats::default()))),
         }
     }
 
     /// 检查 API 是否已初始化
     pub async fn is_initialized(&self, api_name: &str) -> bool {
-        let initialized = self.initialized_apis.read().await;
+        let initialized: _ = self.initialized_apis.read().await;
         initialized.contains(api_name)
     }
 
@@ -91,19 +93,19 @@ impl LazyWebAPI {
         drop(stats);
 
         // 获取信号量许可
-        let _permit = self.init_semaphore.acquire().await.map_err(|_| "Failed to acquire semaphore")?;
+        let _permit: _ = self.init_semaphore.acquire().await.map_err(|_| "Failed to acquire semaphore")?;
 
         // 双重检查模式
         if self.is_initialized(api_name).await {
             return Ok(());
         }
 
-        let start = Instant::now();
+        let start: _ = Instant::now();
 
         // 执行实际初始化
         self.perform_initialization(api_name).await?;
 
-        let elapsed = start.elapsed();
+        let elapsed: _ = start.elapsed();
 
         // 更新统计
         let mut stats = self.stats.lock().unwrap();
@@ -134,8 +136,8 @@ impl LazyWebAPI {
 
         for &api in apis {
             if !self.is_initialized(api).await {
-                let api = api.to_string();
-                let init_result = self.init_on_demand(&api).await;
+                let api: _ = api.clone();to_string();
+                let init_result: _ = self.init_on_demand(&api).await;
                 if let Err(e) = init_result {
                     return Err(e);
                 }
@@ -206,10 +208,10 @@ impl<T> LazyInitializer<T> {
         F: Fn() -> Result<T, Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static,
     {
         Self {
-            init_fn: Arc::new(init_fn),
-            value: Arc::new(Mutex::new(None)),
-            initialized: Arc::new(Mutex::new(false)),
-            stats: Arc::new(Mutex::new(InitStats::new())),
+            init_fn: Arc::new(std::sync::Mutex::new(init_fn)),
+            value: Arc::new(std::sync::Mutex::new(Mutex::new(None))),
+            initialized: Arc::new(std::sync::Mutex::new(Mutex::new(false))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(InitStats::new()))),
         }
     }
 
@@ -220,9 +222,9 @@ impl<T> LazyInitializer<T> {
     {
         // 检查是否已初始化
         {
-            let initialized = self.initialized.lock().unwrap();
+            let initialized: _ = self.initialized.lock().unwrap();
             if *initialized {
-                let value = self.value.lock().unwrap();
+                let value: _ = self.value.lock().unwrap();
                 if let Some(ref val) = *value {
                     return Ok(val.clone());
                 }
@@ -230,10 +232,10 @@ impl<T> LazyInitializer<T> {
         }
 
         // 执行初始化
-        let start = Instant::now();
-        let init_fn = self.init_fn.clone();
-        let result = init_fn()?;
-        let elapsed = start.elapsed();
+        let start: _ = Instant::now();
+        let init_fn: _ = self.init_fn.clone();
+        let result: _ = init_fn()?;
+        let elapsed: _ = start.elapsed();
 
         // 缓存结果
         {
@@ -285,7 +287,7 @@ impl<T> LazyInitializer<T> {
 /// 按需模块加载器
 pub struct OnDemandLoader {
     /// 已加载的模块
-    loaded_modules: Arc<RwLock<HashMap<String, LoadedModule>>>,
+    loaded_modules: Arc<RwLock<HashMap<String, LoadedModule, std::collections::HashMap<String, LoadedModule, String, LoadedModule>>>>,
     /// 模块工厂
     module_factory: Arc<dyn ModuleFactory + Send + Sync>,
     /// 统计信息
@@ -311,7 +313,7 @@ pub struct SimpleModuleFactory;
 impl ModuleFactory for SimpleModuleFactory {
     fn create_module(&self, name: &str) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
         // 模拟模块加载
-        let module_data = format!("// Module: {}\nconsole.log('{} loaded');", name, name);
+        let module_data: _ = format!("// Module: {}\nconsole.log('{} loaded');", name, name);
         Ok(module_data.into_bytes())
     }
 }
@@ -336,16 +338,16 @@ impl OnDemandLoader {
     /// 使用指定工厂创建加载器
     pub fn with_factory(factory: Box<dyn ModuleFactory + Send + Sync>) -> Self {
         Self {
-            loaded_modules: Arc::new(RwLock::new(HashMap::new())),
+            loaded_modules: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
             module_factory: Arc::from(factory),
-            stats: Arc::new(Mutex::new(LoaderStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(LoaderStats::default()))),
         }
     }
 
     /// 按需加载模块
     pub async fn load_module(&self, name: &str) -> Result<Option<Vec<u8>>, Box<dyn std::error::Error + Send + Sync>> {
         // 先检查缓存
-        let module_data = {
+        let module_data: _ = {
             let modules = self.loaded_modules.read().await;
             modules.get(name).map(|module| module.data.clone())
         };
@@ -369,9 +371,9 @@ impl OnDemandLoader {
         drop(stats);
 
         // 加载模块
-        let start = Instant::now();
-        let data = self.module_factory.create_module(name)?;
-        let elapsed = start.elapsed();
+        let start: _ = Instant::now();
+        let data: _ = self.module_factory.create_module(name)?;
+        let elapsed: _ = start.elapsed();
 
         // 缓存模块
         {
@@ -402,7 +404,7 @@ impl OnDemandLoader {
     /// 清理未使用的模块
     pub async fn cleanup_unused(&self, max_age: Duration) -> usize {
         let mut modules = self.loaded_modules.write().await;
-        let now = Instant::now();
+        let now: _ = Instant::now();
         let mut removed = 0;
 
         modules.retain(|_, module| {
@@ -453,9 +455,9 @@ impl StartupOptimizer {
     /// 创建新的启动优化器
     pub fn new(level: OptimizationLevel) -> Self {
         Self {
-            lazy_web_api: Arc::new(LazyWebAPI::new()),
-            on_demand_loader: Arc::new(OnDemandLoader::new()),
-            startup_time: Arc::new(Mutex::new(None)),
+            lazy_web_api: Arc::new(std::sync::Mutex::new(LazyWebAPI::new())),
+            on_demand_loader: Arc::new(std::sync::Mutex::new(OnDemandLoader::new())),
+            startup_time: Arc::new(std::sync::Mutex::new(Mutex::new(None))),
             optimization_level: level,
         }
     }
@@ -468,7 +470,7 @@ impl StartupOptimizer {
 
     /// 获取启动时间
     pub fn get_startup_time(&self) -> Option<Duration> {
-        let startup_time = self.startup_time.lock().unwrap();
+        let startup_time: _ = self.startup_time.lock().unwrap();
         startup_time.map(|start| start.elapsed())
     }
 
@@ -492,18 +494,18 @@ impl StartupOptimizer {
             }
             OptimizationLevel::Aggressive => {
                 // 预初始化更多 API
-                let apis = &["console", "process", "path", "util", "buffer"];
+                let apis: _ = &["console", "process", "path", "util", "buffer"];
                 self.lazy_web_api.init_multiple(apis).await?;
             }
             OptimizationLevel::Maximum => {
                 // 预初始化所有常用 API 并预加载模块
-                let apis = &["console", "process", "path", "util", "buffer", "fs", "os", "url"];
+                let apis: _ = &["console", "process", "path", "util", "buffer", "fs", "os", "url"];
                 self.lazy_web_api.init_multiple(apis).await?;
 
                 // 预加载常用模块
-                let modules = &["util", "buffer", "events", "stream"];
+                let modules: _ = &["util", "buffer", "events", "stream"];
                 for &module in modules {
-                    let _ = self.on_demand_loader.load_module(module).await;
+                    let _: _ = self.on_demand_loader.load_module(module).await;
                 }
             }
         }

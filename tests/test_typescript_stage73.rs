@@ -5,10 +5,12 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 #[cfg(test)]
 mod tests {
     use beejs::typescript::{compile_typescript, TypeScriptCompiler, TypeScriptCompilerConfig};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_simple_arrow_function() {
-        let code = r#"
+        let code: _ = r#"
 const double = (x: number) => x * 2;
 console.log(double(5));
 "#;
@@ -31,7 +33,7 @@ console.log(double(5));
 
     #[test]
     fn test_multi_param_arrow() {
-        let code = r#"
+        let code: _ = r#"
 const add = (a: number, b: number): number => a + b;
 console.log(add(10, 20));
 "#;
@@ -53,7 +55,7 @@ console.log(add(10, 20));
 
     #[test]
     fn test_no_param_arrow() {
-        let code = r#"
+        let code: _ = r#"
 const getAnswer = () => 42;
 console.log(getAnswer());
 "#;
@@ -72,7 +74,7 @@ console.log(getAnswer());
 
     #[test]
     fn test_function_with_types() {
-        let code = r#"
+        let code: _ = r#"
 function greet(name: string): string {
     return `Hello, ${name}!`;
 }

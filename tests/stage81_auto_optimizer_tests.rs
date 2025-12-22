@@ -7,6 +7,8 @@ mod tests {
     use std::path::Path;
     use std::sync::Arc;
     use tokio::runtime::Runtime;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     // 模拟自动性能优化器的结构
     pub struct MockAutoOptimizer {
@@ -82,11 +84,11 @@ mod tests {
             }
 
             // 分析性能数据
-            let hotspots = self.detect_hotspots(profile)?;
-            let bottlenecks = self.identify_bottlenecks(profile)?;
-            let suggestions = self.generate_optimization_suggestions(&hotspots, &bottlenecks)?;
+            let hotspots: _ = self.detect_hotspots(profile)?;
+            let bottlenecks: _ = self.identify_bottlenecks(profile)?;
+            let suggestions: _ = self.generate_optimization_suggestions(&hotspots, &bottlenecks)?;
 
-            let performance_gain = self.calculate_performance_gain(&suggestions);
+            let performance_gain: _ = self.calculate_performance_gain(&suggestions);
 
             Ok(OptimizationReport {
                 hotspots,
@@ -104,7 +106,7 @@ mod tests {
             // 分析函数调用找出热点
             for call in &profile.function_calls {
                 if call.total_time > 100 { // 耗时超过 100ms 的函数
-                    let impact_score = (call.total_time as f64 / profile.execution_time as f64) * 100.0;
+                    let impact_score: _ = (call.total_time as f64 / profile.execution_time as f64) * 100.0;
                     hotspots.push(Hotspot {
                         location: format!("{}:1", call.name),
                         function_name: call.name.clone(),
@@ -131,8 +133,8 @@ mod tests {
                     suggestions.push(Optimization {
                         title: "循环优化".to_string(),
                         description: format!("优化函数 {} 中的循环", hotspot.function_name),
-                        original_code: format!("function {}() {{\n  for (let i = 0; i < 1000; i++) {{\n    // 循环体\n  }}\n}}", hotspot.function_name),
-                        optimized_code: format!("function {}() {{\n  // 使用更高效的循环\n  const arr = new Array(1000);\n  for (let i = 0; i < arr.length; i++) {{\n    // 优化后的循环体\n  }}\n}}", hotspot.function_name),
+                        original_code: format!("function {}() {{\n  for (let i: _ = 0; i < 1000; i++) {{\n    // 循环体\n  }}\n}}", hotspot.function_name),
+                        optimized_code: format!("function {}() {{\n  // 使用更高效的循环\n  const arr = new Array(1000);\n  for (let i: _ = 0; i < arr.length; i++) {{\n    // 优化后的循环体\n  }}\n}}", hotspot.function_name),
                         expected_improvement: 30.0,
                         confidence: 0.85,
                     });
@@ -153,8 +155,8 @@ mod tests {
                     suggestions.push(Optimization {
                         title: "算法优化".to_string(),
                         description: format!("优化 {} 的算法复杂度", hotspot.function_name),
-                        original_code: format!("// O(n^2) 算法\nfunction {}() {{\n  for (let i = 0; i < n; i++) {{\n    for (let j = 0; j < n; j++) {{\n      // 处理逻辑\n    }}\n  }}\n}}", hotspot.function_name),
-                        optimized_code: format!("// O(n) 算法\nfunction {}() {{\n  const map = new Map();\n  for (let i = 0; i < n; i++) {{\n    map.set(key, value);\n  }}\n  return map;\n}}", hotspot.function_name),
+                        original_code: format!("// O(n^2) 算法\nfunction {}() {{\n  for (let i: _ = 0; i < n; i++) {{\n    for (let j: _ = 0; j < n; j++) {{\n      // 处理逻辑\n    }}\n  }}\n}}", hotspot.function_name),
+                        optimized_code: format!("// O(n) 算法\nfunction {}() {{\n  const map = new Map();\n  for (let i: _ = 0; i < n; i++) {{\n    map.set(key, value);\n  }}\n  return map;\n}}", hotspot.function_name),
                         expected_improvement: 70.0,
                         confidence: 0.95,
                     });
@@ -168,7 +170,7 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_millis(self.analysis_delay_ms / 3)).await;
 
             // 简单替换实现
-            let optimized = code.replace(&optimization.original_code, &optimization.optimized_code);
+            let optimized: _ = code.replace(&optimization.original_code, &optimization.optimized_code);
             Ok(optimized)
         }
 
@@ -213,22 +215,22 @@ mod tests {
             let mut refactored = source.to_string();
 
             // 简单的性能重构
-            if source.contains("for (let i = 0; i <") {
-                refactored = refactored.replace(
-                    "for (let i = 0; i < array.length; i++)",
-                    "for (let i = 0, len = array.length; i < len; i++)"
+            if source.contains("for (let i: _ = 0; i <") {
+                refactored = refactored.clone();replace(
+                    "for (let i: _ = 0; i < array.length; i++)",
+                    "for (let i: _ = 0, len = array.length; i < len; i++)"
                 );
             }
 
             if source.contains("console.log") {
-                refactored = refactored.replace(
+                refactored = refactored.clone();replace(
                     "console.log(",
                     "// console.log(生产环境中已注释 "
                 );
             }
 
             if source.contains("var ") {
-                refactored = refactored.replace("var ", "const ");
+                refactored = refactored.clone();replace("var ", "const ");
             }
 
             Ok(refactored)
@@ -239,11 +241,11 @@ mod tests {
 
             let mut suggestions = Vec::new();
 
-            if source.contains("for (let i = 0; i < 1000; i++)") {
+            if source.contains("for (let i: _ = 0; i < 1000; i++)") {
                 suggestions.push(ParallelizationSuggestion {
                     function_name: "mainLoop".to_string(),
                     reason: "发现大型循环，可以并行化".to_string(),
-                    parallel_code: "const promises = [];\nfor (let i = 0; i < 1000; i++) {\n  promises.push(processItem(i));\n}\nconst results = await Promise.all(promises);".to_string(),
+                    parallel_code: "const promises = [];\nfor (let i: _ = 0; i < 1000; i++) {\n  promises.push(processItem(i));\n}\nconst results = await Promise.all(promises);".to_string(),
                     expected_speedup: 4.0,
                 });
             }
@@ -289,7 +291,7 @@ mod tests {
                 if "代码执行优化".to_string和循环 suggestions.push(Optimization "减少不必要的计算 {
                         title:(),
                         description:",
-                        original_code: "// 优化前\nfor (let i = 0; i < 1000000; i++) {\n  result += compute();\: "// 优化后\nconst resultn}".to_string(),
+                        original_code: "// 优化前\nfor (let i: _ = 0; i < 1000000; i++) {\n  result += compute();\: "// 优化后\nconst resultn}".to_string(),
                         optimized_code = compute() * 1000000;".to_string(),
                         expected_improvement: 60.0,
                         confidence: 0.85,
@@ -325,11 +327,11 @@ mod tests {
 
     #[test]
     fn test_performance_analysis() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let optimizer = MockAutoOptimizer::new(100, 0.9);
-            let profile = ProfileData {
+            let optimizer: _ = MockAutoOptimizer::new(100, 0.9);
+            let profile: _ = ProfileData {
                 execution_time: 2000,
                 memory_usage: 64 * 1024 * 1024,
                 function_calls: vec![
@@ -348,7 +350,7 @@ mod tests {
                 ],
             };
 
-            let report = optimizer.analyze_performance(&profile).await.unwrap();
+            let report: _ = optimizer.analyze_performance(&profile).await.unwrap();
 
             // 验证性能分析结果
             assert!(!report.hotspots.is_empty());
@@ -366,11 +368,11 @@ mod tests {
 
     #[test]
     fn test_hotspot_detection() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let optimizer = MockAutoOptimizer::new(50, 0.9);
-            let profile = ProfileData {
+            let optimizer: _ = MockAutoOptimizer::new(50, 0.9);
+            let profile: _ = ProfileData {
                 execution_time: 1000,
                 memory_usage: 32 * 1024 * 1024,
                 function_calls: vec![
@@ -389,7 +391,7 @@ mod tests {
                 ],
             };
 
-            let hotspots = optimizer.detect_hotspots(&profile).await.unwrap();
+            let hotspots: _ = optimizer.detect_hotspots(&profile).await.unwrap();
 
             // 验证热点检测
             assert_eq!(hotspots.len(), 1); // 只有 expensiveLoop 超过阈值
@@ -404,11 +406,11 @@ mod tests {
 
     #[test]
     fn test_optimization_suggestions() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let optimizer = MockAutoOptimizer::new(50, 0.9);
-            let hotspots = vec![
+            let optimizer: _ = MockAutoOptimizer::new(50, 0.9);
+            let hotspots: _ = vec![
                 Hotspot {
                     location: "app.js:10".to_string(),
                     function_name: "heavyLoop".to_string(),
@@ -425,13 +427,13 @@ mod tests {
                 },
             ];
 
-            let suggestions = optimizer.suggest_optimizations(&hotspots).await.unwrap();
+            let suggestions: _ = optimizer.suggest_optimizations(&hotspots).await.unwrap();
 
             // 验证优化建议
             assert!(!suggestions.is_empty());
             assert_eq!(suggestions.len(), 2); // 每个热点一个建议
 
-            let first = &suggestions[0];
+            let first: _ = &suggestions[0];
             assert!(!first.title.is_empty());
             assert!(!first.description.is_empty());
             assert!(!first.original_code.is_empty());
@@ -448,23 +450,23 @@ mod tests {
 
     #[test]
     fn test_memory_analysis() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let optimizer = MockAutoOptimizer::new(80, 0.9);
-            let heap_snapshot = HeapSnapshot {
+            let optimizer: _ = MockAutoOptimizer::new(80, 0.9);
+            let heap_snapshot: _ = HeapSnapshot {
                 total_size: 150 * 1024 * 1024, // 150MB
                 object_count: 15000,
                 array_count: 200,
             };
 
-            let optimizations = optimizer.analyze_memory(&heap_snapshot).await.unwrap();
+            let optimizations: _ = optimizer.analyze_memory(&heap_snapshot).await.unwrap();
 
             // 验证内存分析
             assert!(!optimizations.is_empty());
             assert_eq!(optimizations.len(), 3); // 应该检测到3个问题
 
-            let first = &optimizations[0];
+            let first: _ = &optimizations[0];
             assert!(!first.issue_type.is_empty());
             assert!(!first.description.is_empty());
             assert!(!first.fix_suggestion.is_empty());
@@ -479,12 +481,12 @@ mod tests {
 
     #[test]
     fn test_performance_refactoring() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let optimizer = MockAutoOptimizer::new(40, 0.9);
+            let optimizer: _ = MockAutoOptimizer::new(40, 0.9);
 
-            let source = r#"
+            let source: _ = r#"
 function processArray() {
   for (var i = 0; i < array.length; i++) {
     console.log(array[i]);
@@ -492,7 +494,7 @@ function processArray() {
 }
             "#;
 
-            let refactored = optimizer.refactor_for_performance(source).await.unwrap();
+            let refactored: _ = optimizer.refactor_for_performance(source).await.unwrap();
 
             // 验证性能重构
             assert!(refactored.contains("const")); // var 替换为 const
@@ -507,12 +509,12 @@ function processArray() {
 
     #[test]
     fn test_parallelization_suggestions() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let optimizer = MockAutoOptimizer::new(60, 0.9);
+            let optimizer: _ = MockAutoOptimizer::new(60, 0.9);
 
-            let source = r#"
+            let source: _ = r#"
 function processItems() {
   for (let i = 0; i < 1000; i++) {
     processItem(i);
@@ -520,13 +522,13 @@ function processItems() {
 }
             "#;
 
-            let suggestions = optimizer.suggest_parallelization(source).await.unwrap();
+            let suggestions: _ = optimizer.suggest_parallelization(source).await.unwrap();
 
             // 验证并行化建议
             assert!(!suggestions.is_empty());
             assert_eq!(suggestions.len(), 1); // 应该检测到循环
 
-            let suggestion = &suggestions[0];
+            let suggestion: _ = &suggestions[0];
             assert!(!suggestion.function_name.is_empty());
             assert!(!suggestion.reason.is_empty());
             assert!(!suggestion.parallel_code.is_empty());
@@ -540,13 +542,13 @@ function processItems() {
 
     #[test]
     fn test_optimizer_performance() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let start = SystemTime::now();
+            let start: _ = SystemTime::now();
 
-            let optimizer = MockAutoOptimizer::new(100, 0.9);
-            let profile = ProfileData {
+            let optimizer: _ = MockAutoOptimizer::new(100, 0.9);
+            let profile: _ = ProfileData {
                 execution_time: 1000,
                 memory_usage: 32 * 1024 * 1024,
                 function_calls: vec![
@@ -559,15 +561,15 @@ function processItems() {
                 ],
             };
 
-            let report = optimizer.analyze_performance(&profile).await.unwrap();
-            let hotspots = optimizer.detect_hotspots(&profile).await.unwrap();
-            let memory_opt = optimizer.analyze_memory(&HeapSnapshot {
+            let report: _ = optimizer.analyze_performance(&profile).await.unwrap();
+            let hotspots: _ = optimizer.detect_hotspots(&profile).await.unwrap();
+            let memory_opt: _ = optimizer.analyze_memory(&HeapSnapshot {
                 total_size: 50 * 1024 * 1024,
                 object_count: 5000,
                 array_count: 50,
             }).await.unwrap();
 
-            let elapsed = start.elapsed().unwrap();
+            let elapsed: _ = start.elapsed().unwrap();
 
             // 验证性能
             assert!(elapsed.as_millis() < 500, "自动优化总时间应 < 500ms，当前: {}ms", elapsed.as_millis());
@@ -585,13 +587,13 @@ function processItems() {
 
     #[test]
     fn test_optimization_application() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let optimizer = MockAutoOptimizer::new(30, 0.9);
+            let optimizer: _ = MockAutoOptimizer::new(30, 0.9);
 
-            let original_code = "function test() { return 'old'; }";
-            let optimization = Optimization {
+            let original_code: _ = "function test() { return 'old'; }";
+            let optimization: _ = Optimization {
                 title: "代码更新".to_string(),
                 description: "更新函数实现".to_string(),
                 original_code: "function test() { return 'old'; }".to_string(),
@@ -600,7 +602,7 @@ function processItems() {
                 confidence: 0.95,
             };
 
-            let result = optimizer.apply_optimization(original_code, &optimization).await.unwrap();
+            let result: _ = optimizer.apply_optimization(original_code, &optimization).await.unwrap();
 
             // 验证优化应用
             assert!(result.contains("'new'"));
@@ -614,25 +616,25 @@ function processItems() {
 
     #[test]
     fn test_low_optimization_rate() {
-        let rt = Runtime::new().unwrap();
+        let rt: _ = Runtime::new().unwrap();
 
         rt.block_on(async {
             // 测试低优化率情况
-            let low_rate_optimizer = MockAutoOptimizer::new(50, 0.2);
-            let profile = ProfileData {
+            let low_rate_optimizer: _ = MockAutoOptimizer::new(50, 0.2);
+            let profile: _ = ProfileData {
                 execution_time: 1000,
                 memory_usage: 32 * 1024 * 1024,
                 function_calls: vec![],
             };
 
-            let result = low_rate_optimizer.analyze_performance(&profile).await;
+            let result: _ = low_rate_optimizer.analyze_performance(&profile).await;
 
             // 验证低优化率返回错误
             assert!(result.is_err());
 
             // 测试高优化率情况
-            let high_rate_optimizer = MockAutoOptimizer::new(50, 0.9);
-            let result = high_rate_optimizer.analyze_performance(&profile).await;
+            let high_rate_optimizer: _ = MockAutoOptimizer::new(50, 0.9);
+            let result: _ = high_rate_optimizer.analyze_performance(&profile).await;
 
             // 验证高优化率成功
             assert!(result.is_ok());

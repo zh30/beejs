@@ -13,18 +13,20 @@ use beejs::ai::{
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 测试 AI 性能分析器
 #[tokio::test]
 async fn test_ai_performance_analyzer() {
-    let optimizer = CodeOptimizer::new();
+    let optimizer: _ = CodeOptimizer::new();
 
     // 创建测试代码
-    let test_code = r#"
+    let test_code: _ = r#"
         function slowFunction(arr) {
             let result = [];
-            for (let i = 0; i < arr.length; i++) {
-                for (let j = 0; j < arr.length; j++) {
+            for (let i: _ = 0; i < arr.length; i++) {
+                for (let j: _ = 0; j < arr.length; j++) {
                     result.push(arr[i] * arr[j]);
                 }
             }
@@ -32,7 +34,7 @@ async fn test_ai_performance_analyzer() {
         }
     "#.to_string();
 
-    let context = CodeContext {
+    let context: _ = CodeContext {
         language: Language::JavaScript,
         file_path: Some("test.js".to_string()),
         surrounding_code: Some(test_code.clone()),
@@ -43,7 +45,7 @@ async fn test_ai_performance_analyzer() {
     };
 
     // 分析代码性能
-    let analysis = optimizer
+    let analysis: _ = optimizer
         .analyze_code_performance(&test_code, &context)
         .await
         .unwrap();
@@ -66,18 +68,18 @@ async fn test_ai_performance_analyzer() {
 /// 测试智能重构建议
 #[tokio::test]
 async fn test_intelligent_refactor_suggestions() {
-    let optimizer = CodeOptimizer::new();
+    let optimizer: _ = CodeOptimizer::new();
 
     // 测试循环优化建议
-    let inefficient_code = r#"
+    let inefficient_code: _ = r#"
         const data = [1, 2, 3, 4, 5];
         const result = [];
-        for (let i = 0; i < data.length; i++) {
+        for (let i: _ = 0; i < data.length; i++) {
             result.push(data[i] * 2);
         }
     "#.to_string();
 
-    let context = CodeContext {
+    let context: _ = CodeContext {
         language: Language::JavaScript,
         file_path: Some("optimize.js".to_string()),
         surrounding_code: Some(inefficient_code.clone()),
@@ -88,7 +90,7 @@ async fn test_intelligent_refactor_suggestions() {
     };
 
     // 生成重构建议
-    let suggestions = optimizer
+    let suggestions: _ = optimizer
         .generate_refactor_suggestions(&inefficient_code, &context)
         .await
         .unwrap();
@@ -99,16 +101,16 @@ async fn test_intelligent_refactor_suggestions() {
     assert!(!suggestions.is_empty(), "应该生成重构建议");
 
     // 验证优化建议准确率 > 80%
-    let valid_suggestions = suggestions.iter()
+    let valid_suggestions: _ = suggestions.clone();iter()
         .filter(|s| s.confidence >= 0.8)
         .count();
 
-    let accuracy = valid_suggestions as f64 / suggestions.len() as f64;
+    let accuracy: _ = valid_suggestions as f64 / suggestions.len() as f64;
     println!("建议准确率: {:.2}%", accuracy * 100.0);
     assert!(accuracy >= 0.8, "优化建议准确率应该 > 80%");
 
     // 验证至少有一个循环优化建议
-    let has_loop_optimization = suggestions.iter().any(|s| {
+    let has_loop_optimization: _ = suggestions.iter().any(|s| {
         s.optimization_type == "LoopOptimization" ||
         s.title.to_lowercase().contains("loop") ||
         s.title.to_lowercase().contains("map")
@@ -120,10 +122,10 @@ async fn test_intelligent_refactor_suggestions() {
 /// 测试性能瓶颈自动检测
 #[tokio::test]
 async fn test_performance_bottleneck_detection() {
-    let optimizer = CodeOptimizer::new();
+    let optimizer: _ = CodeOptimizer::new();
 
     // 创建包含多个性能问题的代码
-    let problematic_code = r#"
+    let problematic_code: _ = r#"
         class DataProcessor {
             constructor(data) {
                 this.data = data;
@@ -132,7 +134,7 @@ async fn test_performance_bottleneck_detection() {
 
             process() {
                 // 重复计算
-                let sum = 0;
+                let sum: _ = 0;
                 for (let item of this.data) {
                     sum += this.calculate(item);
                 }
@@ -141,8 +143,8 @@ async fn test_performance_bottleneck_detection() {
 
             calculate(item) {
                 // 模拟昂贵的计算
-                let result = 0;
-                for (let i = 0; i < 1000; i++) {
+                let result: _ = 0;
+                for (let i: _ = 0; i < 1000; i++) {
                     result += Math.sqrt(i) * item;
                 }
                 return result;
@@ -150,8 +152,8 @@ async fn test_performance_bottleneck_detection() {
 
             findMax() {
                 // 重复遍历
-                let max = this.data[0];
-                for (let i = 1; i < this.data.length; i++) {
+                let max: _ = this.data[0];
+                for (let i: _ = 1; i < this.data.length; i++) {
                     if (this.data[i] > max) {
                         max = this.data[i];
                     }
@@ -161,7 +163,7 @@ async fn test_performance_bottleneck_detection() {
         }
     "#.to_string();
 
-    let context = CodeContext {
+    let context: _ = CodeContext {
         language: Language::JavaScript,
         file_path: Some("processor.js".to_string()),
         surrounding_code: Some(problematic_code.clone()),
@@ -172,7 +174,7 @@ async fn test_performance_bottleneck_detection() {
     };
 
     // 检测瓶颈
-    let bottlenecks = optimizer
+    let bottlenecks: _ = optimizer
         .detect_bottlenecks(&problematic_code, &context)
         .await
         .unwrap();
@@ -191,20 +193,20 @@ async fn test_performance_bottleneck_detection() {
     }
 
     // 验证自动优化成功率 > 85%
-    let optimizable_bottlenecks = bottlenecks.iter()
+    let optimizable_bottlenecks: _ = bottlenecks.clone();iter()
         .filter(|b| b.can_auto_optimize)
         .count();
 
-    let success_rate = optimizable_bottlenecks as f64 / bottlenecks.len() as f64;
+    let success_rate: _ = optimizable_bottlenecks as f64 / bottlenecks.len() as f64;
     println!("可自动优化的瓶颈比例: {:.2}%", success_rate * 100.0);
     assert!(success_rate >= 0.85, "自动优化成功率应该 > 85%");
 
     // 验证零误报率
-    let high_confidence_bottlenecks = bottlenecks.iter()
+    let high_confidence_bottlenecks: _ = bottlenecks.clone();iter()
         .filter(|b| b.confidence >= 0.9)
         .count();
 
-    let false_positive_rate = 1.0 - (high_confidence_bottlenecks as f64 / bottlenecks.len() as f64);
+    let false_positive_rate: _ = 1.0 - (high_confidence_bottlenecks as f64 / bottlenecks.len() as f64);
     println!("误报率: {:.2}%", false_positive_rate * 100.0);
     assert!(false_positive_rate < 0.05, "误报率应该 < 5%");
 }
@@ -212,20 +214,20 @@ async fn test_performance_bottleneck_detection() {
 /// 测试优化建议自动应用
 #[tokio::test]
 async fn test_optimization_auto_application() {
-    let optimizer = CodeOptimizer::new();
+    let optimizer: _ = CodeOptimizer::new();
 
     // 创建可优化的代码
-    let original_code = r#"
+    let original_code: _ = r#"
         function filterAndMap(items) {
             const filtered = [];
-            for (let i = 0; i < items.length; i++) {
+            for (let i: _ = 0; i < items.length; i++) {
                 if (items[i] > 0) {
                     filtered.push(items[i]);
                 }
             }
 
             const mapped = [];
-            for (let i = 0; i < filtered.length; i++) {
+            for (let i: _ = 0; i < filtered.length; i++) {
                 mapped.push(filtered[i] * 2);
             }
 
@@ -233,7 +235,7 @@ async fn test_optimization_auto_application() {
         }
     "#.to_string();
 
-    let context = CodeContext {
+    let context: _ = CodeContext {
         language: Language::JavaScript,
         file_path: Some("filter.js".to_string()),
         surrounding_code: Some(original_code.clone()),
@@ -244,7 +246,7 @@ async fn test_optimization_auto_application() {
     };
 
     // 应用优化
-    let result = optimizer
+    let result: _ = optimizer
         .apply_optimizations(&original_code, &context, true) // auto_apply = true
         .await
         .unwrap();
@@ -265,7 +267,7 @@ async fn test_optimization_auto_application() {
         "应该有零破坏性优化，实际破坏性变更: {:?}", result.breaking_changes);
 
     // 验证优化后代码使用更高效的语法
-    let has_map_filter = result.optimized_code.contains("map") &&
+    let has_map_filter: _ = result.optimized_code.contains("map") &&
                          result.optimized_code.contains("filter");
     assert!(has_map_filter, "优化后应该使用 map/filter 语法");
 }
@@ -273,9 +275,9 @@ async fn test_optimization_auto_application() {
 /// 测试多语言代码优化
 #[tokio::test]
 async fn test_multilingual_code_optimization() {
-    let optimizer = CodeOptimizer::new();
+    let optimizer: _ = CodeOptimizer::new();
 
-    let test_cases = vec![
+    let test_cases: _ = vec![
         (
             Language::JavaScript,
             r#"
@@ -316,7 +318,7 @@ async fn test_multilingual_code_optimization() {
     ];
 
     for (language, code) in test_cases {
-        let context = CodeContext {
+        let context: _ = CodeContext {
             language,
             file_path: Some(format!("test.{}", match language {
                 Language::JavaScript => "js",
@@ -331,7 +333,7 @@ async fn test_multilingual_code_optimization() {
             classes: vec![],
         };
 
-        let result = optimizer
+        let result: _ = optimizer
             .analyze_code_performance(&code, &context)
             .await
             .unwrap();
@@ -347,15 +349,15 @@ async fn test_multilingual_code_optimization() {
 /// 测试集成性能分析
 #[tokio::test]
 async fn test_integrated_performance_analysis() {
-    let optimizer = CodeOptimizer::new();
+    let optimizer: _ = CodeOptimizer::new();
 
     // 创建包含多种性能问题的复杂代码
-    let complex_code = r#"
+    let complex_code: _ = r#"
         // 问题 1: 低效循环
         function inefficientLoop(n) {
             let result = [];
-            for (let i = 0; i < n; i++) {
-                for (let j = 0; j < n; j++) {
+            for (let i: _ = 0; i < n; i++) {
+                for (let j: _ = 0; j < n; j++) {
                     result.push(i * j);
                 }
             }
@@ -371,14 +373,14 @@ async fn test_integrated_performance_analysis() {
         // 问题 3: 内存泄漏风险
         function createHandlers() {
             const handlers = [];
-            for (let i = 0; i < 1000; i++) {
+            for (let i: _ = 0; i < 1000; i++) {
                 handlers.push(() => i);
             }
             return handlers;
         }
     "#.to_string();
 
-    let context = CodeContext {
+    let context: _ = CodeContext {
         language: Language::JavaScript,
         file_path: Some("complex.js".to_string()),
         surrounding_code: Some(complex_code.clone()),
@@ -393,17 +395,17 @@ async fn test_integrated_performance_analysis() {
     };
 
     // 综合分析
-    let analysis = optimizer
+    let analysis: _ = optimizer
         .analyze_code_performance(&complex_code, &context)
         .await
         .unwrap();
 
-    let suggestions = optimizer
+    let suggestions: _ = optimizer
         .generate_refactor_suggestions(&complex_code, &context)
         .await
         .unwrap();
 
-    let bottlenecks = optimizer
+    let bottlenecks: _ = optimizer
         .detect_bottlenecks(&complex_code, &context)
         .await
         .unwrap();
@@ -419,7 +421,7 @@ async fn test_integrated_performance_analysis() {
     assert!(suggestions.len() >= 3, "应该生成至少 3 个优化建议");
 
     // 应用所有优化
-    let optimization_result = optimizer
+    let optimization_result: _ = optimizer
         .apply_optimizations(&complex_code, &context, true)
         .await
         .unwrap();
@@ -434,16 +436,16 @@ async fn test_integrated_performance_analysis() {
 /// 测试优化建议质量评估
 #[tokio::test]
 async fn test_optimization_quality_assessment() {
-    let optimizer = CodeOptimizer::new();
+    let optimizer: _ = CodeOptimizer::new();
 
-    let test_code = r#"
+    let test_code: _ = r#"
         function badCode(arr) {
             let result = arr.sort().filter(x => x > 0).map(x => x * 2);
             return result;
         }
     "#.to_string();
 
-    let context = CodeContext {
+    let context: _ = CodeContext {
         language: Language::JavaScript,
         file_path: Some("quality.js".to_string()),
         surrounding_code: Some(test_code.clone()),
@@ -453,7 +455,7 @@ async fn test_optimization_quality_assessment() {
         classes: vec![],
     };
 
-    let suggestions = optimizer
+    let suggestions: _ = optimizer
         .generate_refactor_suggestions(&test_code, &context)
         .await
         .unwrap();
@@ -481,23 +483,23 @@ async fn test_optimization_quality_assessment() {
 /// 测试性能监控集成
 #[tokio::test]
 async fn test_performance_monitoring_integration() {
-    let optimizer = CodeOptimizer::new();
+    let optimizer: _ = CodeOptimizer::new();
 
-    let code = r#"
+    let code: _ = r#"
         function monitoredFunction() {
             let start = Date.now();
             // 模拟一些工作
-            let sum = 0;
-            for (let i = 0; i < 1000000; i++) {
+            let sum: _ = 0;
+            for (let i: _ = 0; i < 1000000; i++) {
                 sum += i;
             }
-            let end = Date.now();
+            let end: _ = Date.now();
             console.log(`Execution time: ${end - start}ms`);
             return sum;
         }
     "#.to_string();
 
-    let context = CodeContext {
+    let context: _ = CodeContext {
         language: Language::JavaScript,
         file_path: Some("monitored.js".to_string()),
         surrounding_code: Some(code.clone()),
@@ -508,7 +510,7 @@ async fn test_performance_monitoring_integration() {
     };
 
     // 分析并生成监控建议
-    let analysis = optimizer
+    let analysis: _ = optimizer
         .analyze_code_performance(&code, &context)
         .await
         .unwrap();

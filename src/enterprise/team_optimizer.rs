@@ -4,6 +4,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 任务结构
 #[derive(Debug, Clone)]
@@ -84,13 +86,13 @@ pub struct KnowledgeTransferSuggestion {
 /// 技能分析器
 pub struct SkillAnalyzer {
     // 技能数据库
-    skill_database: Arc<RwLock<HashMap<String, HashMap<String, f64>>>>,
+    skill_database: Arc<RwLock<HashMap<String, HashMap<String, f64, std::collections::HashMap<String, HashMap<String, f64, String, HashMap<String, f64>>>>>,
 }
 
 impl SkillAnalyzer {
     pub fn new() -> Self {
         Self {
-            skill_database: Arc::new(RwLock::new(HashMap::new())),
+            skill_database: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -125,13 +127,13 @@ impl SkillAnalyzer {
 /// 工作负载平衡器
 pub struct WorkloadBalancer {
     // 工作负载历史数据
-    workload_history: Arc<RwLock<HashMap<String, Vec<u32>>>>,
+    workload_history: Arc<RwLock<HashMap<String, Vec<u32, std::collections::HashMap<String, Vec<u32, String, Vec<u32>>>>>,
 }
 
 impl WorkloadBalancer {
     pub fn new() -> Self {
         Self {
-            workload_history: Arc::new(RwLock::new(HashMap::new())),
+            workload_history: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -143,9 +145,9 @@ impl WorkloadBalancer {
 
         let workloads: Vec<u32> = team.iter().map(|m| m.current_workload).collect();
         let sum: u32 = workloads.iter().sum();
-        let avg = sum as f64 / workloads.len() as f64;
+        let avg: _ = sum as f64 / workloads.len() as f64;
 
-        let variance = workloads.iter()
+        let variance: _ = workloads.iter()
             .map(|&w| {
                 let diff = w as f64 - avg;
                 diff * diff
@@ -153,8 +155,8 @@ impl WorkloadBalancer {
             .sum::<f64>() / workloads.len() as f64;
 
         // 将方差转换为平衡分数 (0-1)
-        let max_variance = 2500.0; // 假设最大方差
-        let normalized_variance = (variance / max_variance).min(1.0);
+        let max_variance: _ = 2500.0; // 假设最大方差
+        let normalized_variance: _ = (variance / max_variance).min(1.0);
         1.0 - normalized_variance
     }
 
@@ -178,13 +180,13 @@ impl WorkloadBalancer {
 /// 知识追踪器
 pub struct KnowledgeTracker {
     // 知识图谱
-    knowledge_graph: Arc<RwLock<HashMap<String, HashMap<String, u32>>>>,
+    knowledge_graph: Arc<RwLock<HashMap<String, HashMap<String, u32, std::collections::HashMap<String, HashMap<String, u32, String, HashMap<String, u32>>>>>,
 }
 
 impl KnowledgeTracker {
     pub fn new() -> Self {
         Self {
-            knowledge_graph: Arc::new(RwLock::new(HashMap::new())),
+            knowledge_graph: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -198,26 +200,26 @@ impl KnowledgeTracker {
     }
 
     /// 获取知识图谱
-    pub async fn get_knowledge_graph(&self, member_id: &str) -> HashMap<String, u32> {
-        let graph = self.knowledge_graph.read().await;
+    pub async fn get_knowledge_graph(&self, member_id: &str) -> HashMap<String, u32, std::collections::HashMap<String, u32, String, u32>> {
+        let graph: _ = self.knowledge_graph.read().await;
         graph.get(member_id).cloned().unwrap_or_default()
     }
 
     /// 计算知识重叠
     pub async fn calculate_knowledge_overlap(&self, member1: &str, member2: &str) -> f64 {
-        let graph = self.knowledge_graph.read().await;
-        let skills1 = graph.get(member1).cloned().unwrap_or_default();
-        let skills2 = graph.get(member2).cloned().unwrap_or_default();
+        let graph: _ = self.knowledge_graph.read().await;
+        let skills1: _ = graph.get(member1).cloned().unwrap_or_default();
+        let skills2: _ = graph.get(member2).cloned().unwrap_or_default();
 
         if skills1.is_empty() || skills2.is_empty() {
             return 0.0;
         }
 
-        let common_skills = skills1.keys()
+        let common_skills: _ = skills1.keys()
             .filter(|k| skills2.contains_key(*k))
             .count();
 
-        let total_unique_skills = skills1.keys()
+        let total_unique_skills: _ = skills1.keys()
             .chain(skills2.keys())
             .collect::<std::collections::HashSet<_>>()
             .len();
@@ -240,9 +242,9 @@ pub struct TeamCollaborationOptimizer {
 impl TeamCollaborationOptimizer {
     pub fn new() -> Self {
         Self {
-            skill_analyzer: Arc::new(SkillAnalyzer::new()),
-            workload_balancer: Arc::new(WorkloadBalancer::new()),
-            knowledge_tracker: Arc::new(KnowledgeTracker::new()),
+            skill_analyzer: Arc::new(std::sync::Mutex::new(SkillAnalyzer::new())),
+            workload_balancer: Arc::new(std::sync::Mutex::new(WorkloadBalancer::new())),
+            knowledge_tracker: Arc::new(std::sync::Mutex::new(KnowledgeTracker::new())),
         }
     }
 
@@ -262,16 +264,16 @@ impl TeamCollaborationOptimizer {
 
         for member in team_members {
             // 计算技能匹配分数
-            let skill_score = self.skill_analyzer.calculate_skill_match(
+            let skill_score: _ = self.skill_analyzer.calculate_skill_match(
                 &task.required_skills,
                 &member.skills,
             );
 
             // 计算工作负载分数 (可用性越高分数越高)
-            let workload_score = (100 - member.current_workload) as f64 / 100.0;
+            let workload_score: _ = (100 - member.current_workload) as f64 / 100.0;
 
             // 计算综合分数 (技能匹配60% + 工作负载40%)
-            let total_score = skill_score * 0.6 + workload_score * 0.4;
+            let total_score: _ = skill_score * 0.6 + workload_score * 0.4;
 
             scores.push((member.id.clone(), total_score));
 
@@ -281,10 +283,10 @@ impl TeamCollaborationOptimizer {
             }
         }
 
-        let recommended_member_id = best_candidate.ok_or("No suitable candidate found")?;
+        let recommended_member_id: _ = best_candidate.ok_or("No suitable candidate found")?;
 
         // 生成推理说明
-        let reasoning = format!(
+        let reasoning: _ = format!(
             "基于技能匹配({:.1}%)和工作负载({:.1}%)的综合评估",
             best_score * 100.0,
             best_score * 100.0
@@ -316,9 +318,9 @@ impl TeamCollaborationOptimizer {
             return Err("No team members provided".to_string());
         }
 
-        let balance_score = self.workload_balancer.calculate_balance_score(team);
-        let overloaded_members = self.workload_balancer.identify_overloaded_members(team);
-        let underutilized_members = self.workload_balancer.identify_underutilized_members(team);
+        let balance_score: _ = self.workload_balancer.calculate_balance_score(team);
+        let overloaded_members: _ = self.workload_balancer.identify_overloaded_members(team);
+        let underutilized_members: _ = self.workload_balancer.identify_underutilized_members(team);
 
         let mut suggestions = Vec::new();
 
@@ -358,7 +360,7 @@ impl TeamCollaborationOptimizer {
         codebase: &str,
     ) -> Result<CodeOwnershipMap, String> {
         // 模拟代码库分析
-        let files = vec![
+        let files: _ = vec![
             CodeFile {
                 path: format!("{}/src/auth.rs", codebase),
                 owner_id: "DEV-001".to_string(),
@@ -379,7 +381,7 @@ impl TeamCollaborationOptimizer {
             },
         ];
 
-        let owners = vec![
+        let owners: _ = vec![
             CodeOwner {
                 id: "DEV-001".to_string(),
                 name: "Alice".to_string(),
@@ -394,7 +396,7 @@ impl TeamCollaborationOptimizer {
             },
         ];
 
-        let knowledge_gaps = vec![
+        let knowledge_gaps: _ = vec![
             "DevOps".to_string(),
             "Testing".to_string(),
             "Security".to_string(),

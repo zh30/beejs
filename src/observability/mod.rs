@@ -14,7 +14,7 @@
 //! };
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let config = ObservabilityConfig::default();
+//! let config: _ = ObservabilityConfig::default();
 //! let mut observability = ObservableSystem::new(config).await?;
 //!
 //! # Ok(())
@@ -107,7 +107,7 @@ impl ObservableSystem {
             config: config.clone(),
             prometheus_exporter: None,
             structured_logger: None,
-            custom_metrics: Arc::new(RwLock::new(CustomMetrics::new())),
+            custom_metrics: Arc::new(std::sync::Mutex::new(RwLock::new(CustomMetrics::new()))),
             alerting_system: None,
         };
 
@@ -122,8 +122,8 @@ impl ObservableSystem {
 
         // Initialize Prometheus exporter
         if config.enable_prometheus {
-            let exporter = PrometheusExporter::new()?;
-            system.prometheus_exporter = Some(Arc::new(RwLock::new(exporter)));
+            let exporter: _ = PrometheusExporter::new()?;
+            system.prometheus_exporter = Some(Arc::new(std::sync::Mutex::new(RwLock::new(exporter))));
             info!("Prometheus exporter initialized");
         }
 
@@ -165,12 +165,12 @@ impl ObservableSystem {
         success: bool,
     ) {
         // Update metrics
-        let metrics = self.custom_metrics.write().await;
+        let metrics: _ = self.custom_metrics.write().await;
         metrics.record_script_execution(duration, success).await;
 
         // Log event
         if let Some(logger) = &self.structured_logger {
-            let context = HashMap::from([
+            let context: _ = HashMap::from([
                 ("script_name".to_string(), Value::String(script_name.to_string())),
                 ("duration_ms".to_string(), Value::Number(serde_json::Number::from(duration.as_millis() as u64))),
                 ("success".to_string(), Value::Bool(success)),
@@ -186,7 +186,7 @@ impl ObservableSystem {
 
     /// Record memory usage
     pub async fn record_memory_usage(&self, bytes: usize) {
-        let metrics = self.custom_metrics.write().await;
+        let metrics: _ = self.custom_metrics.write().await;
         metrics.record_memory_usage(bytes).await;
     }
 
@@ -197,13 +197,13 @@ impl ObservableSystem {
         bytes: usize,
         duration: std::time::Duration,
     ) {
-        let metrics = self.custom_metrics.write().await;
+        let metrics: _ = self.custom_metrics.write().await;
         metrics.record_network_io(operation, bytes, duration).await;
     }
 
     /// Get current observable metrics
     pub async fn get_metrics(&self) -> ObservableMetrics {
-        let custom_metrics = self.custom_metrics.read().await;
+        let custom_metrics: _ = self.custom_metrics.read().await;
         ObservableMetrics {
             runtime: custom_metrics.runtime_metrics().await.clone(),
             performance: custom_metrics.performance_metrics().await.clone(),
@@ -267,18 +267,20 @@ pub struct BusinessMetricsSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_observability_system_creation() {
-        let config = ObservabilityConfig::default();
-        let system = ObservableSystem::new(config).await;
+        let config: _ = ObservabilityConfig::default();
+        let system: _ = ObservableSystem::new(config).await;
         assert!(system.is_ok());
     }
 
     #[tokio::test]
     async fn test_record_script_execution() {
-        let config = ObservabilityConfig::default();
-        let system = ObservableSystem::new(config).await.unwrap();
+        let config: _ = ObservabilityConfig::default();
+        let system: _ = ObservableSystem::new(config).await.unwrap();
 
         system
             .record_script_execution("test.js", std::time::Duration::from_millis(100), true)

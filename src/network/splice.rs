@@ -55,7 +55,7 @@ impl Splice {
     /// 创建新的 splice 传输器
     pub fn new() -> Self {
         Self {
-            stats: Arc::new(std::sync::Mutex::new(SpliceStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(SpliceStats::default()))),
         }
     }
 
@@ -136,14 +136,14 @@ impl Splice {
         max_bytes: usize,
         _direction: SpliceDirection,
     ) -> io::Result<u64> {
-        let start = Instant::now();
+        let start: _ = Instant::now();
         let mut bytes_sent = 0;
-        let chunk_size = 64 * 1024; // 64KB 块大小
+        let chunk_size: _ = 64 * 1024; // 64KB 块大小
 
         // 分块传输
         let mut remaining = max_bytes;
         while remaining > 0 {
-            let chunk = std::cmp::min(chunk_size, remaining);
+            let chunk: _ = std::cmp::min(chunk_size, remaining);
 
             match self.splice_chunk(fd_in, fd_out, chunk) {
                 Ok(sent) => {
@@ -182,7 +182,7 @@ impl Splice {
             stats.end_time = Some(Instant::now());
             if let Some(end) = stats.end_time {
                 if let Some(start_time) = stats.start_time {
-                    let duration = end.duration_since(start_time);
+                    let duration: _ = end.duration_since(start_time);
                     if duration.as_secs() > 0 {
                         stats.avg_speed = bytes_sent as f64 / duration.as_secs_f64();
                     }
@@ -215,7 +215,7 @@ impl Splice {
         stats.splice_count += 1;
 
         // 计算瞬时速度
-        let elapsed = start.elapsed().as_secs_f64();
+        let elapsed: _ = start.elapsed().as_secs_f64();
         if elapsed > 0.0 {
             stats.instant_speed = bytes as f64 / elapsed;
         }
@@ -255,6 +255,8 @@ enum SpliceDirection {
 mod tests {
     #[allow(unused_imports)]
     use super::*;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_splice_zero_copy_pipe_transfer() {

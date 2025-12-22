@@ -15,6 +15,8 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 阈值管理错误
 #[derive(Error, Debug)]
@@ -62,7 +64,7 @@ pub struct ThresholdRule {
     pub description: String,
     pub enabled: bool,
     pub priority: u8, // 0-255, 数字越大优先级越高
-    pub conditions: HashMap<String, String>, // 额外的条件
+    pub conditions: HashMap<String, String, std::collections::HashMap<String, String, String, String>>, // 额外的条件
 }
 
 /// 阈值配置
@@ -91,8 +93,8 @@ pub struct ThresholdHistory {
 pub struct ThresholdStats {
     pub total_rules: usize,
     pub enabled_rules: usize,
-    pub rules_by_level: HashMap<ThresholdLevel, usize>,
-    pub rules_by_type: HashMap<ThresholdType, usize>,
+    pub rules_by_level: HashMap<ThresholdLevel, usize, std::collections::HashMap<ThresholdLevel, usize, ThresholdLevel, usize>>,
+    pub rules_by_type: HashMap<ThresholdType, usize, std::collections::HashMap<ThresholdType, usize, ThresholdType, usize>>,
     pub auto_calibrated_count: usize,
 }
 
@@ -112,7 +114,7 @@ pub struct ThresholdManager {
     config: ThresholdConfig,
     history: Vec<ThresholdHistory>,
     config_dir: PathBuf,
-    adaptive_cache: HashMap<String, Vec<f64>>, // 用于自适应阈值的缓存
+    adaptive_cache: HashMap<String, Vec<f64, std::collections::HashMap<String, Vec<f64, String, Vec<f64>>>, // 用于自适应阈值的缓存
 }
 
 impl ThresholdManager {
@@ -135,14 +137,14 @@ impl ThresholdManager {
 
     /// 创建默认配置的阈值管理器
     pub fn new_default() -> Self {
-        let config_dir = PathBuf::from("threshold_configs");
-        let config = ThresholdConfig::default();
+        let config_dir: _ = PathBuf::from("threshold_configs");
+        let config: _ = ThresholdConfig::default();
         Self::new(config, config_dir)
     }
 
     /// 从文件加载配置
     pub fn load_config(&mut self) -> Result<(), ThresholdError> {
-        let config_path = self.config_dir.join("thresholds.json");
+        let config_path: _ = self.config_dir.join("thresholds.json");
 
         if !config_path.exists() {
             // 如果配置文件不存在，创建默认配置
@@ -150,7 +152,7 @@ impl ThresholdManager {
             return Ok(());
         }
 
-        let content = fs::read_to_string(&config_path)
+        let content: _ = fs::read_to_string(&config_path)
             .map_err(|e| ThresholdError::LoadError(e.to_string()))?;
 
         self.config = serde_json::from_str(&content)
@@ -161,9 +163,9 @@ impl ThresholdManager {
 
     /// 保存配置到文件
     pub fn save_config(&self) -> Result<(), ThresholdError> {
-        let config_path = self.config_dir.join("thresholds.json");
+        let config_path: _ = self.config_dir.join("thresholds.json");
 
-        let content = serde_json::to_string_pretty(&self.config)
+        let content: _ = serde_json::to_string_pretty(&self.config)
             .map_err(|e| ThresholdError::SaveError(e.to_string()))?;
 
         fs::write(&config_path, content)
@@ -199,7 +201,7 @@ impl ThresholdManager {
         new_value: f64,
         reason: &str,
     ) -> Result<(), ThresholdError> {
-        let timestamp = SystemTime::now()
+        let timestamp: _ = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
@@ -276,7 +278,7 @@ impl ThresholdManager {
         current_regression_percent: f64,
     ) -> Result<f64, ThresholdError> {
         if let Some(rule) = self.config.rules.iter_mut().find(|r| r.name == rule_name) {
-            let adjustment_factor = match severity {
+            let adjustment_factor: _ = match severity {
                 RegressionSeverity::None => 0.0,
                 RegressionSeverity::Minor => 0.05, // 5% 放宽
                 RegressionSeverity::Moderate => 0.10, // 10% 放宽
@@ -284,10 +286,10 @@ impl ThresholdManager {
                 RegressionSeverity::Critical => 0.30, // 30% 放宽
             };
 
-            let adjusted_value = rule.value * (1.0 + adjustment_factor);
+            let adjusted_value: _ = rule.value * (1.0 + adjustment_factor);
 
             // 记录调整历史
-            let timestamp = SystemTime::now()
+            let timestamp: _ = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs();
@@ -312,10 +314,10 @@ impl ThresholdManager {
 
     /// 添加自适应阈值数据点
     pub fn add_adaptive_data(&mut self, metric_name: &str, value: f64) {
-        let cache_key = metric_name.to_string();
+        let cache_key: _ = metric_name.to_string();
 
-        let window_size = self.config.adaptive_threshold_window;
-        let values = self.adaptive_cache.entry(cache_key).or_insert_with(Vec::new);
+        let window_size: _ = self.config.adaptive_threshold_window;
+        let values: _ = self.adaptive_cache.entry(cache_key).or_insert_with(Vec::new);
 
         values.push(value);
 
@@ -331,23 +333,23 @@ impl ThresholdManager {
 
         for rule in &self.config.rules {
             if rule.threshold_type == ThresholdType::Adaptive {
-                let cache_key = &rule.metric_name;
+                let cache_key: _ = &rule.metric_name;
                 if let Some(values) = self.adaptive_cache.get(cache_key) {
                     if values.len() >= 10 { // 至少需要 10 个数据点
                         let mean: f64 = values.iter().sum::<f64>() / values.len() as f64;
                         let variance: f64 = values
                             .iter()
                             .map(|&v| {
-                                let diff = v - mean;
+                                let diff: _ = v - mean;
                                 diff * diff
                             })
                             .sum::<f64>()
                             / values.len() as f64;
-                        let std_dev = variance.sqrt();
+                        let std_dev: _ = variance.sqrt();
 
                         // 使用 95% 置信区间作为建议阈值
-                        let suggested_value = mean + (2.0 * std_dev); // 约 95% 置信区间
-                        let confidence = (values.len() as f64 / self.config.adaptive_threshold_window as f64)
+                        let suggested_value: _ = mean + (2.0 * std_dev); // 约 95% 置信区间
+                        let confidence: _ = (values.len() as f64 / self.config.adaptive_threshold_window as f64)
                             .min(1.0);
 
                         suggestions.push(ThresholdSuggestion {
@@ -416,7 +418,7 @@ impl ThresholdManager {
 
     /// 清理过期历史记录
     pub fn cleanup_history(&mut self, max_age_days: u64) {
-        let cutoff_time = SystemTime::now()
+        let cutoff_time: _ = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs()

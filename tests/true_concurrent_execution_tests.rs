@@ -61,13 +61,13 @@ mod tests {
         let mut config = ConcurrentConfig::default();
         // 在测试中禁用预热以避免V8问题
         config.enable_prewarm = false;
-        let pool = ConcurrentRuntimePool::new(config);
+        let pool: _ = ConcurrentRuntimePool::new(config);
 
         // 跳过预热，直接测试获取
         // pool.prewarm().await.unwrap();
 
         // 获取和归还Runtime实例
-        let runtime1 = pool.get_runtime();
+        let runtime1: _ = pool.get_runtime();
         assert!(runtime1.is_some(), "应该能够获取Runtime实例");
 
         if let Some(runtime) = runtime1 {
@@ -75,11 +75,11 @@ mod tests {
         }
 
         // 验证池大小（即使没有预热，也应该为0）
-        let pool_size = pool.pool_size();
+        let pool_size: _ = pool.pool_size();
         println!("池大小: {}", pool_size);
 
         // 验证可以再次获取（复用）
-        let runtime2 = pool.get_runtime();
+        let runtime2: _ = pool.get_runtime();
         assert!(runtime2.is_some(), "应该能够再次获取Runtime实例（复用）");
 
         if let Some(runtime) = runtime2 {
@@ -95,22 +95,22 @@ mod tests {
         use beejs::{WorkStealingScheduler, Task};
 
         // 创建工作窃取调度器（4个线程）
-        let scheduler = WorkStealingScheduler::new(4);
+        let scheduler: _ = WorkStealingScheduler::new(4);
 
         // 测试 1: 能够提交任务到队列
-        let task1 = Task {
+        let task1: _ = Task {
             id: 1,
             code: "1 + 1".to_string(),
             priority: 1,
             estimated_time_ms: 10,
         };
-        let task2 = Task {
+        let task2: _ = Task {
             id: 2,
             code: "2 * 3".to_string(),
             priority: 2,
             estimated_time_ms: 10,
         };
-        let task3 = Task {
+        let task3: _ = Task {
             id: 3,
             code: "10 / 2".to_string(),
             priority: 0, // 高优先级
@@ -125,8 +125,8 @@ mod tests {
         println!("✅ 成功提交任务到队列");
 
         // 测试 2: 验证任务按优先级执行（高优先级任务先执行）
-        let retrieved_task1 = scheduler.get_local_task(0).await;
-        let retrieved_task2 = scheduler.get_local_task(0).await;
+        let retrieved_task1: _ = scheduler.get_local_task(0).await;
+        let retrieved_task2: _ = scheduler.get_local_task(0).await;
 
         assert!(retrieved_task1.is_some(), "应该能够从队列获取任务");
         assert!(retrieved_task2.is_some(), "应该能够获取第二个任务");
@@ -142,7 +142,7 @@ mod tests {
         println!("✅ 任务按优先级执行正常");
 
         // 测试 3: 工作窃取机制
-        let stolen_task = scheduler.steal_task(3).await; // 尝试从线程3窃取
+        let stolen_task: _ = scheduler.steal_task(3).await; // 尝试从线程3窃取
         if stolen_task.is_some() {
             println!("✅ 工作窃取机制正常");
         } else {
@@ -150,7 +150,7 @@ mod tests {
         }
 
         // 测试 4: 负载均衡验证
-        let stats = scheduler.get_steal_stats();
+        let stats: _ = scheduler.get_steal_stats();
         println!("调度器统计: {:?}", stats);
 
         println!("✅ 工作窃取调度器基本功能测试通过");
@@ -168,11 +168,11 @@ mod tests {
         }
 
         // 创建配置和批处理器
-        let config = ConcurrentConfig::default();
-        let executor = BatchExecutor::new(config);
+        let config: _ = ConcurrentConfig::default();
+        let executor: _ = BatchExecutor::new(config);
 
         // 创建简单测试脚本
-        let scripts = vec![
+        let scripts: _ = vec![
             ("1 + 1".to_string(), 1),
             ("2 * 3".to_string(), 1),
             ("10 / 2".to_string(), 1),
@@ -180,7 +180,7 @@ mod tests {
         ];
 
         // 执行批量脚本
-        let results = executor.execute_batch(scripts, Duration::from_secs(5)).await.unwrap();
+        let results: _ = executor.execute_batch(scripts, Duration::from_secs(5)).await.unwrap();
 
         // 验证结果
         assert_eq!(results.len(), 4, "应该返回4个结果");
@@ -203,7 +203,7 @@ mod tests {
             return;
         }
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 生成 1000 个简单脚本
         let scripts: Vec<String> = (0..1000)
@@ -217,13 +217,13 @@ mod tests {
             .collect();
 
         // 创建批处理器
-        let config = ConcurrentConfig::default();
-        let executor = BatchExecutor::new(config);
+        let config: _ = ConcurrentConfig::default();
+        let executor: _ = BatchExecutor::new(config);
 
         // 使用 BatchExecutor 执行
-        let results = executor.execute_batch(scripts_with_priority, Duration::from_secs(10)).await.unwrap();
+        let results: _ = executor.execute_batch(scripts_with_priority, Duration::from_secs(10)).await.unwrap();
 
-        let elapsed = start.elapsed().unwrap();
+        let elapsed: _ = start.elapsed().unwrap();
 
         // 验证
         assert_eq!(results.len(), 1000, "应该返回1000个结果");
@@ -243,7 +243,7 @@ mod tests {
         // - 内存使用 < 200MB
         // - 吞吐量 > 2000 scripts/sec
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 生成 5000 个脚本
         let _scripts: Vec<String> = (0..5000)
@@ -251,10 +251,10 @@ mod tests {
             .collect();
 
         // TODO: 使用 BatchExecutor 执行
-        let results_count = 5000; // 占位
+        let results_count: _ = 5000; // 占位
 
-        let elapsed = start.elapsed().unwrap();
-        let throughput = results_count as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start.elapsed().unwrap();
+        let throughput: _ = results_count as f64 / elapsed.as_secs_f64();
 
         println!("5000 脚本并发执行:");
         println!("  耗时: {:?}", elapsed);
@@ -280,23 +280,23 @@ mod tests {
         // - 吞吐量 > 5000 scripts/sec
         // - 峰值并发数正确追踪
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 生成 10000 个复杂脚本
         let _scripts: Vec<String> = (0..10000)
             .map(|i| {
                 format!(
-                    "(function() {{ let sum = 0; for(let j=0; j<100; j++) {{ sum += j * {}; }} return sum; }})()",
+                    "(function() {{ let sum: _ = 0; for(let j=0; j<100; j++) {{ sum += j * {}; }} return sum; }})()",
                     i
                 )
             })
             .collect();
 
         // TODO: 使用 BatchExecutor 执行
-        let results_count = 10000; // 占位
+        let results_count: _ = 10000; // 占位
 
-        let elapsed = start.elapsed().unwrap();
-        let throughput = results_count as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start.elapsed().unwrap();
+        let throughput: _ = results_count as f64 / elapsed.as_secs_f64();
 
         println!("10000 脚本并发执行:");
         println!("  耗时: {:?}", elapsed);
@@ -327,7 +327,7 @@ mod tests {
         // 线程 A: 500 个重任务
         for i in 0..500 {
             scripts.push(format!(
-                "(function() {{ let result = 0; for(let j=0; j<1000; j++) {{ result += Math.sqrt({}) * j; }} return result; }})()",
+                "(function() {{ let result: _ = 0; for(let j=0; j<1000; j++) {{ result += Math.sqrt({}) * j; }} return result; }})()",
                 i
             ));
         }
@@ -351,10 +351,10 @@ mod tests {
         // - 使用信号量限制并发数
         // - 系统不会过载
 
-        let _max_concurrent = 1000;
+        let _max_concurrent: _ = 1000;
 
         // TODO: 创建带背压控制的 BatchExecutor
-        // let executor = BatchExecutor::new(max_concurrent);
+        // let executor: _ = BatchExecutor::new(max_concurrent);
 
         // 提交 5000 个任务（超过限制）
         let _scripts: Vec<String> = (0..5000)
@@ -362,7 +362,7 @@ mod tests {
             .collect();
 
         // TODO: 验证背压控制
-        // let results = executor.execute_batch_with_backpressure(scripts).await;
+        // let results: _ = executor.execute_batch_with_backpressure(scripts).await;
         // assert!(results.is_err()); // 应该返回 Overloaded 错误
 
         unimplemented!("背压控制尚未实现")
@@ -378,8 +378,8 @@ mod tests {
         // - 提升传输性能
 
         // 创建大型脚本（1MB）
-        let large_script = "x".repeat(1024 * 1024);
-        let _scripts = vec![large_script; 100];
+        let large_script: _ = "x".repeat(1024 * 1024);
+        let _scripts: _ = vec![large_script; 100];
 
         // TODO: 执行并验证零拷贝优化
 
@@ -405,11 +405,11 @@ mod tests {
         // - peak_concurrent 准确
         // - avg_execution_time 准确
 
-        let scripts = vec!["1 + 1".to_string(); 100];
+        let scripts: _ = vec!["1 + 1".to_string(); 100];
 
         // 创建批处理器
-        let config = ConcurrentConfig::default();
-        let executor = BatchExecutor::new(config);
+        let config: _ = ConcurrentConfig::default();
+        let executor: _ = BatchExecutor::new(config);
 
         // 转换脚本格式并执行
         let scripts_with_priority: Vec<(String, usize)> = scripts
@@ -418,8 +418,8 @@ mod tests {
             .collect();
 
         // 执行并获取统计
-        let _results = executor.execute_batch(scripts_with_priority, Duration::from_secs(10)).await.unwrap();
-        let stats = executor.get_stats();
+        let _results: _ = executor.execute_batch(scripts_with_priority, Duration::from_secs(10)).await.unwrap();
+        let stats: _ = executor.get_stats();
 
         // 验证
         assert_eq!(stats.total_submitted.load(), 100, "应该提交100个任务");
@@ -453,7 +453,7 @@ mod tests {
         // - 错误不影响其他任务
         // - 系统能够继续运行
 
-        let scripts = vec![
+        let scripts: _ = vec![
             ("1 + 1".to_string(), 1),              // 正常
             ("invalid syntax @#$".to_string(), 1), // 语法错误
             ("console.log('test')".to_string(), 1), // 正常
@@ -462,11 +462,11 @@ mod tests {
         ];
 
         // 创建批处理器
-        let config = ConcurrentConfig::default();
-        let executor = BatchExecutor::new(config);
+        let config: _ = ConcurrentConfig::default();
+        let executor: _ = BatchExecutor::new(config);
 
         // 执行并验证错误处理
-        let results = executor.execute_batch(scripts, Duration::from_secs(5)).await.unwrap();
+        let results: _ = executor.execute_batch(scripts, Duration::from_secs(5)).await.unwrap();
 
         // 验证
         assert_eq!(results.len(), 5, "应该返回5个结果");
@@ -506,29 +506,29 @@ mod tests {
         // - Runtime 实例正确释放
         // - 缓冲区正确回收
 
-        let initial_memory = get_memory_usage();
+        let initial_memory: _ = get_memory_usage();
         println!("初始内存使用: {} bytes", initial_memory);
 
         // 创建批处理器
-        let config = ConcurrentConfig::default();
-        let executor = BatchExecutor::new(config);
+        let config: _ = ConcurrentConfig::default();
+        let executor: _ = BatchExecutor::new(config);
 
         // 执行多轮并发执行
         for round in 0..10 {
-            let scripts = vec!["1 + 1".to_string(); 1000];
+            let scripts: _ = vec!["1 + 1".to_string(); 1000];
             let scripts_with_priority: Vec<(String, usize)> = scripts
                 .into_iter()
                 .map(|code| (code, 1))
                 .collect();
 
             // 执行
-            let _results = executor.execute_batch(scripts_with_priority, Duration::from_secs(10)).await.unwrap();
+            let _results: _ = executor.execute_batch(scripts_with_priority, Duration::from_secs(10)).await.unwrap();
 
             // 短暂暂停让内存回收
             sleep(Duration::from_millis(100)).await;
 
-            let current_memory = get_memory_usage();
-            let growth = current_memory - initial_memory;
+            let current_memory: _ = get_memory_usage();
+            let growth: _ = current_memory - initial_memory;
 
             println!("轮次 {}: 内存增长 {} bytes", round, growth);
 
@@ -536,8 +536,8 @@ mod tests {
             assert!(growth < 10 * 1024 * 1024, "轮次 {}: 内存增长过多 ({} bytes)", round, growth);
         }
 
-        let final_memory = get_memory_usage();
-        let total_growth = final_memory - initial_memory;
+        let final_memory: _ = get_memory_usage();
+        let total_growth: _ = final_memory - initial_memory;
         println!("最终内存增长: {} bytes", total_growth);
 
         println!("✅ 内存泄漏检测测试通过");
@@ -593,24 +593,24 @@ mod tests {
         // 性能基准测试
         // 目标: 50,000 scripts/sec
 
-        let scripts = vec!["1 + 1".to_string(); 10000];
+        let scripts: _ = vec!["1 + 1".to_string(); 10000];
         let scripts_with_priority: Vec<(String, usize)> = scripts
             .into_iter()
             .map(|code| (code, 1))
             .collect();
 
         // 创建批处理器
-        let config = ConcurrentConfig::default();
-        let executor = BatchExecutor::new(config);
+        let config: _ = ConcurrentConfig::default();
+        let executor: _ = BatchExecutor::new(config);
 
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 执行
-        let results = executor.execute_batch(scripts_with_priority, Duration::from_secs(30)).await.unwrap();
-        let results_count = results.len();
+        let results: _ = executor.execute_batch(scripts_with_priority, Duration::from_secs(30)).await.unwrap();
+        let results_count: _ = results.len();
 
-        let elapsed = start.elapsed().unwrap();
-        let throughput = results_count as f64 / elapsed.as_secs_f64();
+        let elapsed: _ = start.elapsed().unwrap();
+        let throughput: _ = results_count as f64 / elapsed.as_secs_f64();
 
         println!("\n=== 性能基准测试 ===");
         println!("脚本数量: {}", results_count);
@@ -631,6 +631,8 @@ mod tests {
     #[tokio::test]
     async fn test_linear_scalability() {
         use beejs::{BatchExecutor, ConcurrentConfig, is_v8_available};
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
         // 检查V8是否可用
         if !is_v8_available() {
@@ -643,27 +645,27 @@ mod tests {
         // - 双倍 CPU 核心数 ≈ 双倍吞吐量
         // - 负载与核心数成正比
 
-        let test_cases = vec![1000, 2000, 4000, 8000];
+        let test_cases: _ = vec![1000, 2000, 4000, 8000];
         let mut results = Vec::new();
 
         // 创建批处理器
-        let config = ConcurrentConfig::default();
-        let executor = BatchExecutor::new(config);
+        let config: _ = ConcurrentConfig::default();
+        let executor: _ = BatchExecutor::new(config);
 
         for script_count in test_cases {
-            let scripts = vec!["1 + 1".to_string(); script_count];
+            let scripts: _ = vec!["1 + 1".to_string(); script_count];
             let scripts_with_priority: Vec<(String, usize)> = scripts
                 .into_iter()
                 .map(|code| (code, 1))
                 .collect();
 
-            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
             // 执行
-            let results_batch = executor.execute_batch(scripts_with_priority, Duration::from_secs(30)).await.unwrap();
+            let results_batch: _ = executor.execute_batch(scripts_with_priority, Duration::from_secs(30)).await.unwrap();
 
-            let elapsed = start.elapsed().unwrap();
-            let throughput = script_count as f64 / elapsed.as_secs_f64();
+            let elapsed: _ = start.elapsed().unwrap();
+            let throughput: _ = script_count as f64 / elapsed.as_secs_f64();
 
             results.push((script_count, throughput));
 
@@ -707,10 +709,10 @@ mod tests {
     /// 打印测试结果摘要
     #[allow(dead_code)]
     fn print_test_summary(results: &[ScriptResult]) {
-        let total = results.len();
-        let successful = results.iter().filter(|r| r.result.is_ok()).count();
-        let failed = total - successful;
-        let avg_time = results
+        let total: _ = results.len();
+        let successful: _ = results.iter().filter(|r| r.result.is_ok()).count();
+        let failed: _ = total - successful;
+        let avg_time: _ = results
             .iter()
             .map(|r| r.execution_time.as_millis())
             .sum::<u128>() as f64

@@ -8,5 +8,7 @@ pub use lazy_init::{
     LazyWebAPI, LazyInitializer, OnDemandLoader, StartupOptimizer, OptimizationLevel,
 };
 pub use precompiled_cache::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
     OptimizedPrecompiledCache, OptimizedSnapshot, CacheStrategy,
 };

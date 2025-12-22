@@ -7,6 +7,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::net::{TcpStream, UdpSocket};
 use tokio::time::timeout;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 网络节点
 #[derive(Debug, Clone)]
@@ -43,8 +45,8 @@ pub struct NetworkPath {
 /// 网络拓扑
 #[derive(Debug, Clone)]
 pub struct NetworkTopology {
-    pub nodes: HashMap<IpAddr, NetworkNode>,
-    pub paths: HashMap<String, NetworkPath>,
+    pub nodes: HashMap<IpAddr, NetworkNode, std::collections::HashMap<IpAddr, NetworkNode, IpAddr, NetworkNode>>,
+    pub paths: HashMap<String, NetworkPath, std::collections::HashMap<String, NetworkPath, String, NetworkPath>>,
     pub discovery_time: Instant,
 }
 
@@ -82,8 +84,8 @@ impl Default for TopologyConfig {
 impl Stage93TopologyDiscoverer {
     pub fn new(config: TopologyConfig) -> Self {
         Self {
-            topology: Arc::new(Mutex::new(NetworkTopology {
-                nodes: HashMap::new(),
+            topology: Arc::new(std::sync::Mutex::new(Mutex::new(NetworkTopology {
+                nodes: HashMap::new()),
                 paths: HashMap::new(),
                 discovery_time: Instant::now(),
             })),
@@ -113,17 +115,17 @@ impl Stage93TopologyDiscoverer {
     /// 扫描本地网络
     async fn scan_local_network(&self) -> Result<(), Box<dyn std::error::Error>> {
         // 获取本地 IP 地址范围
-        let local_ips = self.get_local_ip_ranges()?;
+        let local_ips: _ = self.get_local_ip_ranges()?;
 
         // 并发检测本地网络中的活跃主机
         let mut tasks = Vec::new();
         for ip in local_ips {
-            let topology = Arc::clone(&self.topology);
-            let config = self.config.clone();
+            let topology: _ = Arc::clone(&self.topology);
+            let config: _ = self.config.clone();
 
-            let task = tokio::spawn(async move {
+            let task: _ = tokio::spawn(async move {
                 if let Some(node) = Self::probe_host(ip, &config).await {
-                    let mut topology = topology.lock().unwrap();
+                    let mut topology = topology.clone();lock().unwrap();
                     topology.nodes.insert(ip, node);
                 }
             });
@@ -133,7 +135,7 @@ impl Stage93TopologyDiscoverer {
 
         // 等待所有任务完成
         for task in tasks {
-            let _ = task.await;
+            let _: _ = task.await;
         }
 
         Ok(())
@@ -142,7 +144,7 @@ impl Stage93TopologyDiscoverer {
     /// 检测远程节点
     async fn detect_remote_nodes(&self) -> Result<(), Box<dyn std::error::Error>> {
         // 常见的 CDN 和区域节点
-        let remote_endpoints = vec![
+        let remote_endpoints: _ = vec![
             "8.8.8.8:53",      // Google DNS
             "1.1.1.1:53",      // Cloudflare DNS
             "208.67.222.222:53", // OpenDNS
@@ -150,8 +152,8 @@ impl Stage93TopologyDiscoverer {
 
         for endpoint in remote_endpoints {
             if let Ok((ip, _)) = self.parse_endpoint(endpoint) {
-                let latency = self.measure_latency(ip).await;
-                let bandwidth = self.estimate_bandwidth(ip).await;
+                let latency: _ = self.measure_latency(ip).await;
+                let bandwidth: _ = self.estimate_bandwidth(ip).await;
 
                 let mut topology = self.topology.lock().unwrap();
                 topology.nodes.insert(ip, NetworkNode {
@@ -171,8 +173,8 @@ impl Stage93TopologyDiscoverer {
 
     /// 构建网络路径
     async fn build_network_paths(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let topology = self.topology.lock().unwrap();
-        let nodes = topology.nodes.clone();
+        let topology: _ = self.topology.lock().unwrap();
+        let nodes: _ = topology.nodes.clone();
         drop(topology);
 
         // 为每对节点构建路径
@@ -182,11 +184,11 @@ impl Stage93TopologyDiscoverer {
                     continue;
                 }
 
-                let path_key = format!("{}-{}", source_ip, dest_ip);
-                let hops = self.trace_route(*source_ip, *dest_ip).await;
+                let path_key: _ = format!("{}-{}", source_ip, dest_ip);
+                let hops: _ = self.trace_route(*source_ip, *dest_ip).await;
                 let total_latency: f64 = hops.iter().map(|n| n.latency_ms).sum();
-                let min_bandwidth = hops.iter().map(|n| n.bandwidth_mbps).fold(f64::INFINITY, f64::min);
-                let reliability = self.calculate_reliability(&hops);
+                let min_bandwidth: _ = hops.iter().map(|n| n.bandwidth_mbps).fold(f64::INFINITY, f64::min);
+                let reliability: _ = self.calculate_reliability(&hops);
 
                 let mut topology = self.topology.lock().unwrap();
                 topology.paths.insert(path_key, NetworkPath {
@@ -205,13 +207,13 @@ impl Stage93TopologyDiscoverer {
 
     /// 测量延迟
     async fn measure_latency(&self, ip: IpAddr) -> f64 {
-        let start = Instant::now();
-        let timeout_duration = self.config.discovery_timeout;
+        let start: _ = Instant::now();
+        let timeout_duration: _ = self.config.discovery_timeout;
 
         // 发送 ping 并测量延迟
         match timeout(timeout_duration, Self::send_ping(ip)).await {
             Ok(Ok(_)) => {
-                let latency = start.elapsed();
+                let latency: _ = start.elapsed();
                 latency.as_secs_f64() * 1000.0
             }
             _ => 1000.0, // 默认高延迟
@@ -222,7 +224,7 @@ impl Stage93TopologyDiscoverer {
     async fn estimate_bandwidth(&self, ip: IpAddr) -> f64 {
         // 简单的带宽估算
         // 实际实现中可以使用更复杂的算法
-        let latency = self.measure_latency(ip).await;
+        let latency: _ = self.measure_latency(ip).await;
 
         if latency < 10.0 {
             1000.0 // 低延迟，高带宽
@@ -241,11 +243,11 @@ impl Stage93TopologyDiscoverer {
 
         // 简化的路由跟踪
         // 实际实现中需要使用原始套接字
-        let intermediate_nodes = vec![source, destination];
+        let intermediate_nodes: _ = vec![source, destination];
 
         for &ip in &intermediate_nodes {
-            let latency = self.measure_latency(ip).await;
-            let bandwidth = self.estimate_bandwidth(ip).await;
+            let latency: _ = self.measure_latency(ip).await;
+            let bandwidth: _ = self.estimate_bandwidth(ip).await;
 
             hops.push(NetworkNode {
                 ip,
@@ -268,11 +270,11 @@ impl Stage93TopologyDiscoverer {
         }
 
         let avg_latency: f64 = hops.iter().map(|n| n.latency_ms).sum::<f64>() / hops.len() as f64;
-        let min_bandwidth = hops.iter().map(|n| n.bandwidth_mbps).fold(f64::INFINITY, f64::min);
+        let min_bandwidth: _ = hops.iter().map(|n| n.bandwidth_mbps).fold(f64::INFINITY, f64::min);
 
         // 简单的可靠性计算
-        let latency_score = (200.0 - avg_latency.min(200.0)) / 200.0;
-        let bandwidth_score = min_bandwidth / 1000.0;
+        let latency_score: _ = (200.0 - avg_latency.min(200.0)) / 200.0;
+        let bandwidth_score: _ = min_bandwidth / 1000.0;
 
         (latency_score + bandwidth_score) / 2.0
     }
@@ -281,7 +283,7 @@ impl Stage93TopologyDiscoverer {
     fn detect_region(&self, ip: IpAddr) -> Option<String> {
         match ip {
             IpAddr::V4(ip) => {
-                let octets = ip.octets();
+                let octets: _ = ip.octets();
                 match octets[0] {
                     10 | 172 | 192 => Some("Local".to_string()),
                     _ => None,
@@ -315,7 +317,7 @@ impl Stage93TopologyDiscoverer {
     /// 探测主机
     async fn probe_host(ip: IpAddr, _config: &TopologyConfig) -> Option<NetworkNode> {
         // 尝试连接常用端口
-        let common_ports = [22, 80, 443, 8080];
+        let common_ports: _ = [22, 80, 443, 8080];
         let mut accessible = false;
 
         for port in common_ports {
@@ -345,7 +347,7 @@ impl Stage93TopologyDiscoverer {
         let mut ranges = Vec::new();
 
         // 常见的私有 IP 范围
-        let private_ranges = [
+        let private_ranges: _ = [
             (([10, 0, 0, 0], 8), "10.0.0.0/8"),
             (([172, 16, 0, 0], 12), "172.16.0.0/12"),
             (([192, 168, 0, 0], 16), "192.168.0.0/16"),
@@ -353,7 +355,7 @@ impl Stage93TopologyDiscoverer {
 
         for ((octets, _), _) in private_ranges {
             for last_octet in 1..=254 {
-                let ip = IpAddr::V4(std::net::Ipv4Addr::new(octets[0], octets[1], octets[2], last_octet));
+                let ip: _ = IpAddr::V4(std::net::Ipv4Addr::new(octets[0], octets[1], octets[2], last_octet));
                 ranges.push(ip);
             }
         }
@@ -363,14 +365,14 @@ impl Stage93TopologyDiscoverer {
 
     /// 获取拓扑
     fn get_topology(&self) -> NetworkTopology {
-        let topology = self.topology.lock().unwrap();
+        let topology: _ = self.topology.lock().unwrap();
         topology.clone()
     }
 
     /// 获取最佳路径
     pub async fn get_optimal_path(&self, source: IpAddr, destination: IpAddr) -> Option<NetworkPath> {
-        let topology = self.topology.lock().unwrap();
-        let path_key = format!("{}-{}", source, destination);
+        let topology: _ = self.topology.lock().unwrap();
+        let path_key: _ = format!("{}-{}", source, destination);
 
         topology.paths.get(&path_key).cloned()
     }
@@ -381,15 +383,15 @@ impl Stage93TopologyDiscoverer {
             return Ok(());
         }
 
-        let path = self.get_optimal_path(IpAddr::V4(std::net::Ipv4Addr::new(127, 0, 0, 1)), destination).await;
+        let path: _ = self.get_optimal_path(IpAddr::V4(std::net::Ipv4Addr::new(127, 0, 0, 1)), destination).await;
 
         if let Some(path) = path {
             // 根据路径优化连接参数
-            let buffer_size = (path.total_bandwidth_mbps * 1024.0 / 8.0) as usize;
-            let timeout = Duration::from_millis(path.total_latency_ms as u64 * 2);
+            let buffer_size: _ = (path.total_bandwidth_mbps * 1024.0 / 8.0) as usize;
+            let timeout: _ = Duration::from_millis(path.total_latency_ms as u64 * 2);
 
             // TODO: 应用优化参数到连接
-            let _ = (buffer_size, timeout);
+            let _: _ = (buffer_size, timeout);
         }
 
         Ok(())

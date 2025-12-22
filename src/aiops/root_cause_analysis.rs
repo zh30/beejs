@@ -7,6 +7,8 @@ use std::collections::{HashMap, HashSet};
 use std::time::{SystemTime, Duration};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 事件类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -167,8 +169,8 @@ pub struct EventCollector {
 impl EventCollector {
     pub fn new() -> Self {
         Self {
-            incidents: Arc::new(RwLock::new(Vec::new())),
-            changes: Arc::new(RwLock::new(Vec::new())),
+            incidents: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            changes: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         }
     }
 
@@ -188,10 +190,10 @@ impl EventCollector {
 
     /// 获取相关事件
     pub async fn get_related_events(&self, service: &str, timeframe: Duration) -> Result<(Vec<Incident>, Vec<Change>), Box<dyn std::error::Error>> {
-        let cutoff_time = SystemTime::now() - timeframe;
-        let service_str = service.to_string();
-        let incidents = self.incidents.read().await;
-        let changes = self.changes.read().await;
+        let cutoff_time: _ = SystemTime::now() - timeframe;
+        let service_str: _ = service.to_string();
+        let incidents: _ = self.incidents.read().await;
+        let changes: _ = self.changes.read().await;
 
         let related_incidents: Vec<Incident> = incidents
             .iter()
@@ -258,7 +260,7 @@ impl ChangeCorrelator {
                 && self.has_component_overlap(change, incident) {
 
                 // 计算可疑度分数
-                let suspicion_score = self.calculate_suspicion_score(change, incident);
+                let suspicion_score: _ = self.calculate_suspicion_score(change, incident);
 
                 if suspicion_score > 0.5 {
                     suspect_changes.push(change.clone());
@@ -270,7 +272,7 @@ impl ChangeCorrelator {
     }
 
     fn has_temporal_correlation(&self, change: &Change, incident: &Incident, timeframe: &Duration) -> Result<bool, Box<dyn std::error::Error>> {
-        let time_diff = if change.timestamp < incident.timestamp {
+        let time_diff: _ = if change.timestamp < incident.timestamp {
             incident.timestamp.duration_since(change.timestamp).unwrap_or_default()
         } else {
             change.timestamp.duration_since(incident.timestamp).unwrap_or_default()
@@ -310,7 +312,7 @@ impl ChangeCorrelator {
         score += change.risk_level * 0.3;
 
         // 基于时间接近度加分
-        let time_diff = incident.timestamp.duration_since(change.timestamp).unwrap_or_default();
+        let time_diff: _ = incident.timestamp.duration_since(change.timestamp).unwrap_or_default();
         if time_diff.as_secs() < 3600 { // 1小时内
             score += 0.2;
         } else if time_diff.as_secs() < 86400 { // 1天内
@@ -321,8 +323,8 @@ impl ChangeCorrelator {
     }
 
     async fn get_all_events(&self) -> Result<(Vec<Incident>, Vec<Change>), Box<dyn std::error::Error>> {
-        let incidents = self.event_collector.incidents.read().await;
-        let changes = self.event_collector.changes.read().await;
+        let incidents: _ = self.event_collector.incidents.read().await;
+        let changes: _ = self.event_collector.changes.read().await;
         Ok((incidents.clone(), changes.clone()))
     }
 }
@@ -330,13 +332,13 @@ impl ChangeCorrelator {
 /// 因果推断引擎
 #[derive(Debug)]
 pub struct CausalInferenceEngine {
-    causal_graph: Arc<RwLock<HashMap<String, Vec<Causality>>>>,
+    causal_graph: Arc<RwLock<HashMap<String, Vec<Causality, std::collections::HashMap<String, Vec<Causality, String, Vec<Causality>>>>>,
 }
 
 impl CausalInferenceEngine {
     pub fn new() -> Self {
         Self {
-            causal_graph: Arc::new(RwLock::new(HashMap::new())),
+            causal_graph: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
         }
     }
 
@@ -368,10 +370,10 @@ impl CausalInferenceEngine {
             return Ok(None);
         }
 
-        let time_diff = event2.timestamp.duration_since(event1.timestamp).unwrap_or_default();
+        let time_diff: _ = event2.timestamp.duration_since(event1.timestamp).unwrap_or_default();
 
         // 检查组件重叠
-        let overlap = self.calculate_component_overlap(event1, event2);
+        let overlap: _ = self.calculate_component_overlap(event1, event2);
 
         // 如果有时间关系和组件重叠，推断因果关系
         if time_diff.as_secs() < 3600 && overlap > 0.3 { // 1小时内且有组件重叠
@@ -402,8 +404,8 @@ impl CausalInferenceEngine {
             .map(|s| s.as_str())
             .collect();
 
-        let intersection_size = components1.intersection(&components2).count();
-        let union_size = components1.union(&components2).count();
+        let intersection_size: _ = components1.intersection(&components2).count();
+        let union_size: _ = components1.union(&components2).count();
 
         if union_size == 0 {
             0.0
@@ -414,7 +416,7 @@ impl CausalInferenceEngine {
 
     /// 推断根因
     pub async fn infer_root_causes(&self, incident: &Incident) -> Result<Vec<RootCause>, Box<dyn std::error::Error>> {
-        let graph = self.causal_graph.read().await;
+        let graph: _ = self.causal_graph.read().await;
 
         // 查找可能导致此事件的原因
         let mut root_causes = Vec::new();
@@ -454,25 +456,25 @@ pub struct RootCauseAnalyzer {
 
 impl RootCauseAnalyzer {
     pub fn new() -> Self {
-        let event_collector = Arc::new(EventCollector::new());
+        let event_collector: _ = Arc::new(std::sync::Mutex::new(EventCollector::new()));
         Self {
-            event_collector: Arc::new(EventCollector::new()),
-            causal_inference_engine: Arc::new(CausalInferenceEngine::new()),
-            change_correlator: Arc::new(ChangeCorrelator::new(event_collector.clone())),
+            event_collector: Arc::new(std::sync::Mutex::new(EventCollector::new())),
+            causal_inference_engine: Arc::new(std::sync::Mutex::new(CausalInferenceEngine::new())),
+            change_correlator: Arc::new(std::sync::Mutex::new(ChangeCorrelator::new(event_collector.clone()))),
         }
     }
 
     /// 分析根因
     pub async fn analyze_root_cause(&self, incident: &Incident) -> Result<RootCauseAnalysis, Box<dyn std::error::Error>> {
         // 收集相关事件
-        let timeframe = Duration::from_secs(86400); // 24小时
+        let timeframe: _ = Duration::from_secs(86400); // 24小时
         let (related_incidents, related_changes) = self.event_collector.get_related_events(
             &incident.affected_services[0],
             timeframe,
         ).await?;
 
         // 构建因果图
-        let all_events = vec![incident.clone()]
+        let all_events: _ = vec![incident.clone()]
             .into_iter()
             .chain(related_incidents.into_iter())
             .collect::<Vec<_>>();
@@ -480,19 +482,19 @@ impl RootCauseAnalyzer {
         self.causal_inference_engine.build_causal_graph(&all_events).await?;
 
         // 推断根因
-        let root_causes = self.causal_inference_engine.infer_root_causes(incident).await?;
+        let root_causes: _ = self.causal_inference_engine.infer_root_causes(incident).await?;
 
         // 查找促成因素
-        let contributing_factors = self.identify_contributing_factors(incident, &related_changes).await?;
+        let contributing_factors: _ = self.identify_contributing_factors(incident, &related_changes).await?;
 
         // 计算置信度
-        let confidence_score = self.calculate_confidence_score(&root_causes, &contributing_factors)?;
+        let confidence_score: _ = self.calculate_confidence_score(&root_causes, &contributing_factors)?;
 
         // 关联变更
-        let correlated_changes = self.change_correlator.find_suspect_changes(incident, timeframe).await?;
+        let correlated_changes: _ = self.change_correlator.find_suspect_changes(incident, timeframe).await?;
 
         // 生成建议
-        let recommendations = self.generate_recommendations(&root_causes, &contributing_factors)?;
+        let recommendations: _ = self.generate_recommendations(&root_causes, &contributing_factors)?;
 
         Ok(RootCauseAnalysis {
             incident_id: incident.id.clone(),
@@ -561,7 +563,7 @@ impl RootCauseAnalyzer {
             }
         }
 
-        let mitigation_strategies = vec![
+        let mitigation_strategies: _ = vec![
             "在非生产环境充分测试".to_string(),
             "准备快速回滚方案".to_string(),
             "分阶段部署".to_string(),
@@ -606,7 +608,7 @@ impl RootCauseAnalyzer {
             .map(|rc| rc.confidence)
             .sum::<f64>() / root_causes.len() as f64;
 
-        let factor_bonus = (contributing_factors.len() as f64 * 0.1).min(0.3);
+        let factor_bonus: _ = (contributing_factors.len() as f64 * 0.1).min(0.3);
 
         Ok((avg_confidence + factor_bonus).min(1.0))
     }

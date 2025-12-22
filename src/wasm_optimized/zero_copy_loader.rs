@@ -14,6 +14,8 @@ use anyhow::{Result, Context};
 use memmap2::{Mmap, MmapOptions};
 use lru::LruCache;
 use tokio::sync::RwLock;
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
 
 /// 零拷贝加载结果
 #[derive(Debug, Clone)]
@@ -40,7 +42,7 @@ pub struct LoadStats {
 pub struct WasmZeroCopyLoader {
     engine: Arc<Engine>,
     module_cache: Arc<RwLock<LruCache<String, Arc<Module>>>>,
-    memory_maps: Arc<RwLock<HashMap<String, Arc<Mmap>>>>,
+    memory_maps: Arc<RwLock<HashMap<String, Arc<Mmap, std::collections::HashMap<String, Arc<Mmap, String, Arc<Mmap>>>>>,
     load_stats: Arc<RwLock<LoadStats>>,
     cache_size: usize,
     prewarm_enabled: bool,
@@ -59,19 +61,19 @@ impl WasmZeroCopyLoader {
             .wasm_simd(true)
             .parallel_compilation(true);
 
-        let engine = Arc::new(Engine::new(&config)?);
+        let engine: _ = Arc::new(std::sync::Mutex::new(Engine::new(&config))?);
 
-        let loader = Self {
+        let loader: _ = Self {
             engine,
-            module_cache: Arc::new(RwLock::new(LruCache::new(NonZero::new(cache_size).unwrap_or(NonZero::new(100).unwrap())))),
-            memory_maps: Arc::new(RwLock::new(HashMap::new())),
-            load_stats: Arc::new(RwLock::new(LoadStats {
+            module_cache: Arc::new(std::sync::Mutex::new(RwLock::new(LruCache::new(NonZero::new(cache_size)).unwrap_or(NonZero::new(100).unwrap())))),
+            memory_maps: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            load_stats: Arc::new(std::sync::Mutex::new(RwLock::new(LoadStats {
                 total_loads: 0,
                 cache_hits: 0,
                 cache_misses: 0,
                 avg_load_time_ms: 0.0,
                 cache_hit_rate: 0.0,
-            })),
+            }))),
             cache_size,
             prewarm_enabled,
         };
@@ -85,17 +87,17 @@ impl WasmZeroCopyLoader {
 
     /// 零拷贝加载 WASM 模块
     pub async fn load_zero_copy(&self, name: &str, file_path: &Path) -> Result<ZeroCopyLoadResult> {
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
         // 1. 检查缓存
-        let cache_hit = self.check_cache(name).await?;
+        let cache_hit: _ = self.check_cache(name).await?;
         if cache_hit {
-            let load_time = start_time.elapsed().as_secs_f64() * 1000.0;
+            let load_time: _ = start_time.elapsed().as_secs_f64() * 1000.0;
 
             // 更新统计
             self.update_stats(true, load_time).await;
 
-            let result = ZeroCopyLoadResult {
+            let result: _ = ZeroCopyLoadResult {
                 module_name: name.to_string(),
                 load_time_ms: load_time,
                 file_size_bytes: 0,
@@ -109,21 +111,21 @@ impl WasmZeroCopyLoader {
         }
 
         // 2. 内存映射文件
-        let memory_mapped = self.memory_map_file(name, file_path).await?;
+        let memory_mapped: _ = self.memory_map_file(name, file_path).await?;
 
         // 3. 从内存映射创建模块
-        let module = self.create_module_from_memory(name, file_path).await?;
+        let module: _ = self.create_module_from_memory(name, file_path).await?;
 
         // 4. 缓存模块
         self.cache_module(name, module).await?;
 
-        let load_time = start_time.elapsed().as_secs_f64() * 1000.0;
-        let file_size = tokio::fs::metadata(file_path).await?.len();
+        let load_time: _ = start_time.elapsed().as_secs_f64() * 1000.0;
+        let file_size: _ = tokio::fs::metadata(file_path).await?.len();
 
         // 更新统计
         self.update_stats(false, load_time).await;
 
-        let result = ZeroCopyLoadResult {
+        let result: _ = ZeroCopyLoadResult {
             module_name: name.to_string(),
             load_time_ms: load_time,
             file_size_bytes: file_size,
@@ -147,8 +149,8 @@ impl WasmZeroCopyLoader {
 
         info!("🔥 开始预热 {} 个模块", modules.len());
 
-        let start_time = std::time::Instant::now();
-        let module_count = modules.len();
+        let start_time: _ = std::time::Instant::now();
+        let module_count: _ = modules.len();
 
         // 串行预热模块 (简化实现，避免借用检查器问题)
         let mut success_count = 0;
@@ -159,7 +161,7 @@ impl WasmZeroCopyLoader {
             }
         }
 
-        let prewarm_time = start_time.elapsed().as_secs_f64() * 1000.0;
+        let prewarm_time: _ = start_time.elapsed().as_secs_f64() * 1000.0;
 
         info!("✅ 预热完成: {}/{} 成功 (耗时: {:.2}ms)", success_count, module_count, prewarm_time);
 
@@ -168,10 +170,10 @@ impl WasmZeroCopyLoader {
 
     /// 批量加载模块
     pub async fn load_batch(&self, modules: Vec<(String, PathBuf)>) -> Result<Vec<ZeroCopyLoadResult>> {
-        let module_count = modules.len();
+        let module_count: _ = modules.len();
         info!("📦 批量加载 {} 个模块", module_count);
 
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
         // 串行加载 (简化实现，避免借用检查器问题)
         let mut successful_results = Vec::new();
@@ -182,8 +184,8 @@ impl WasmZeroCopyLoader {
             }
         }
 
-        let batch_time = start_time.elapsed().as_secs_f64() * 1000.0;
-        let avg_time = if successful_results.len() > 0 {
+        let batch_time: _ = start_time.elapsed().as_secs_f64() * 1000.0;
+        let avg_time: _ = if successful_results.len() > 0 {
             batch_time / successful_results.len() as f64
         } else {
             0.0
@@ -197,16 +199,16 @@ impl WasmZeroCopyLoader {
 
     /// 检查缓存
     async fn check_cache(&self, name: &str) -> Result<bool> {
-        let cache = self.module_cache.read().await;
+        let cache: _ = self.module_cache.read().await;
         Ok(cache.contains(name))
     }
 
     /// 内存映射文件
     async fn memory_map_file(&self, name: &str, file_path: &Path) -> Result<bool> {
-        let file = tokio::fs::File::open(file_path).await
+        let file: _ = tokio::fs::File::open(file_path).await
             .with_context(|| format!("打开文件失败: {:?}", file_path))?;
 
-        let metadata = file.metadata().await
+        let metadata: _ = file.metadata().await
             .with_context(|| format!("获取文件元数据失败: {:?}", file_path))?;
 
         if metadata.len() < 1024 * 1024 {
@@ -215,7 +217,7 @@ impl WasmZeroCopyLoader {
         }
 
         // 同步内存映射 (简化实现)
-        let mmap = unsafe {
+        let mmap: _ = unsafe {
             MmapOptions::new()
                 .map(&file)
                 .with_context(|| format!("内存映射失败: {:?}", file_path))?
@@ -223,20 +225,20 @@ impl WasmZeroCopyLoader {
 
         // 缓存内存映射
         let mut memory_maps = self.memory_maps.write().await;
-        memory_maps.insert(name.to_string(), Arc::new(mmap));
+        memory_maps.insert(name.to_string(), Arc::new(std::sync::Mutex::new(mmap)));
 
         Ok(true)
     }
 
     /// 从内存创建模块
     async fn create_module_from_memory(&self, name: &str, file_path: &Path) -> Result<Arc<Module>> {
-        let wasm_bytes = tokio::fs::read(file_path).await
+        let wasm_bytes: _ = tokio::fs::read(file_path).await
             .with_context(|| format!("读取文件失败: {:?}", file_path))?;
 
-        let module = Module::from_binary(self.engine.as_ref(), &wasm_bytes)
+        let module: _ = Module::from_binary(self.engine.as_ref(), &wasm_bytes)
             .with_context(|| format!("创建模块失败: {}", name))?;
 
-        Ok(Arc::new(module))
+        Ok(Arc::new(std::sync::Mutex::new(module)))
     }
 
     /// 缓存模块
@@ -259,7 +261,7 @@ impl WasmZeroCopyLoader {
         }
 
         // 更新平均加载时间
-        let total = stats.total_loads as f64;
+        let total: _ = stats.total_loads as f64;
         stats.avg_load_time_ms = (stats.avg_load_time_ms * (total - 1.0) + load_time) / total;
 
         // 更新缓存命中率
@@ -270,7 +272,7 @@ impl WasmZeroCopyLoader {
 
     /// 获取加载统计
     pub async fn get_stats(&self) -> LoadStats {
-        let stats = self.load_stats.read().await;
+        let stats: _ = self.load_stats.read().await;
         stats.clone()
     }
 
@@ -299,15 +301,15 @@ impl WasmZeroCopyLoader {
 
     /// 预编译模块
     pub async fn precompile(&self, wasm_bytes: &[u8]) -> Result<Arc<Module>> {
-        let start_time = std::time::Instant::now();
+        let start_time: _ = std::time::Instant::now();
 
-        let module = Module::from_binary(self.engine.as_ref(), wasm_bytes)
+        let module: _ = Module::from_binary(self.engine.as_ref(), wasm_bytes)
             .context("预编译模块失败")?;
 
-        let compile_time = start_time.elapsed().as_secs_f64() * 1000.0;
+        let compile_time: _ = start_time.elapsed().as_secs_f64() * 1000.0;
         debug!("⚡ 预编译完成 (耗时: {:.2}ms)", compile_time);
 
-        Ok(Arc::new(module))
+        Ok(Arc::new(std::sync::Mutex::new(module)))
     }
 }
 
