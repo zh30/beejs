@@ -6,6 +6,12 @@
 //! - Assertions (expect, toBe, toEqual, etc.)
 //! - Lifecycle hooks (beforeEach, afterEach, beforeAll, afterAll)
 //! - Test discovery and execution
+//!
+//! Stage 93 Phase 3.3 - Enhanced Testing Framework:
+//! - Enhanced test runner with parallel execution
+//! - Timeout control and retry mechanisms
+//! - Test filtering and sorting
+//! - Performance benchmarking
 
 pub mod test_context;
 pub mod assertions;
@@ -13,8 +19,16 @@ pub mod test_runner;
 pub mod test_discoverer;
 pub mod v8_bindings;
 
+// Stage 93 Phase 3.3 - Enhanced features
+pub mod enhanced_runner;
+pub mod parallel_executor;
+pub mod test_timeout;
+
 pub use v8_bindings::*;
 pub use test_context::TestSuite;
+pub use enhanced_runner::{EnhancedRunner, EnhancedRunnerConfig};
+pub use parallel_executor::{ParallelExecutor, ParallelConfig};
+pub use test_timeout::{TestTimeout, TimeoutConfig};
 
 /// Global test registry for collecting test cases during file execution
 use std::sync::{Mutex, OnceLock};
