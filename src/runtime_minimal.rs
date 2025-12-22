@@ -288,6 +288,54 @@ impl MinimalRuntime {
         let clear_interval_key = v8::String::new(scope, "clearInterval").unwrap().into();
         global.set(scope, clear_interval_key, clear_interval_fn.into());
 
+        // Set up global fetch API (simplified implementation)
+        let fetch_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let url = args.get(0);
+                let url_string = if let Some(url_str) = url.to_string(scope) {
+                    url_str.to_rust_string_lossy(scope)
+                } else {
+                    "unknown".to_string()
+                };
+
+                // Create a simple response object
+                let response_obj = v8::Object::new(scope);
+
+                // Add status property
+                let status_key = v8::String::new(scope, "status").unwrap().into();
+                let status_val = v8::Number::new(scope, 200.0);
+                response_obj.set(scope, status_key, status_val.into());
+
+                // Add ok property
+                let ok_key = v8::String::new(scope, "ok").unwrap().into();
+                let ok_val = v8::Boolean::new(scope, true);
+                response_obj.set(scope, ok_key, ok_val.into());
+
+                // Add json method that returns a resolved promise
+                let json_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    // Return a simple mock JSON response
+                    let json_data = v8::String::new(scope, r#"{"message": "Mock response for fetch()", "url": "unknown"}"#).unwrap();
+                    retval.set(json_data.into());
+                }).ok_or_else(|| anyhow::anyhow!("Failed to create json function")).unwrap();
+                let json_key = v8::String::new(scope, "json").unwrap().into();
+                response_obj.set(scope, json_key, json_fn.into());
+
+                // Add text method
+                let text_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    let text_data = v8::String::new(scope, "Mock text response").unwrap();
+                    retval.set(text_data.into());
+                }).ok_or_else(|| anyhow::anyhow!("Failed to create text function")).unwrap();
+                let text_key = v8::String::new(scope, "text").unwrap().into();
+                response_obj.set(scope, text_key, text_fn.into());
+
+                println!("🌐 fetch() called for URL: {}", url_string);
+
+                retval.set(response_obj.into());
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create fetch function"))?;
+        let fetch_key = v8::String::new(scope, "fetch").unwrap().into();
+        global.set(scope, fetch_key, fetch_fn.into());
+
         // Set up global process object (simplified)
         let process_obj = v8::Object::new(scope);
 
@@ -324,12 +372,14 @@ mod tests {
     use super::*;
 
     #[test]
+    #[serial_test::serial]
     fn test_minimal_runtime_creation() {
         let runtime = MinimalRuntime::new();
         assert!(runtime.is_ok());
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_simple_execution() {
         let mut runtime = MinimalRuntime::new().unwrap();
         let result = runtime.execute_code("1 + 1");
@@ -338,6 +388,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_console_log() {
         let mut runtime = MinimalRuntime::new().unwrap();
         let result = runtime.execute_code("console.log('Hello from Beejs!'); 42;");
@@ -346,6 +397,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_console_error() {
         let mut runtime = MinimalRuntime::new().unwrap();
         let result = runtime.execute_code("console.error('Error message'); 100;");

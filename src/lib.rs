@@ -561,12 +561,14 @@ mod tests {
     use super::*;
 
     #[test]
+    #[serial_test::serial]
     fn test_minimal_runtime_creation() {
         let runtime = crate::runtime_minimal::MinimalRuntime::new();
         assert!(runtime.is_ok());
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_minimal_js_execution() {
         let mut runtime = crate::runtime_minimal::MinimalRuntime::new().unwrap();
         let result = runtime.execute_code("1 + 1");
@@ -575,6 +577,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_minimal_js_function() {
         let mut runtime = crate::runtime_minimal::MinimalRuntime::new().unwrap();
         let result = runtime.execute_code("let x = 5; let y = 10; x + y;");
