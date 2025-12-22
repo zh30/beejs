@@ -342,7 +342,7 @@ pub struct PerformanceEvaluation {
 mod tests {
     use super::*;
     use std::collections::HashMap;
-use std::collections::<BTreeMap>;
+use std::collections::{BTreeMap};
     fn create_test_metrics() -> PerformanceMetrics {
         let mut metrics = Vec::new();
         let start_time: _ = SystemTime::now();

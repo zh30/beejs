@@ -812,7 +812,7 @@ impl Default for SimdEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_feature_detection() {
         let features: _ = detect_cpu_features();

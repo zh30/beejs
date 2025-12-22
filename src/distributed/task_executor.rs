@@ -3,14 +3,14 @@
 
 use std::collections::HashMap;
 use std::sync::Ordering;
-use std::time::<Duration, Instant, SystemTime>;
+use std::time::{Duration, Instant, SystemTime};
 
-use std::collections::<BinaryHeap, HashMap>;
+use std::collections::{BinaryHeap, HashMap};
 use std::cmp::Reverse;
-use std::time::<Duration, Instant>;
+use std::time::{Duration, Instant};
 use tracing::warn;
-use super::<Task, TaskType, TaskStatus, TaskResult>;
-use std::collections::<BTreeMap>;
+use super::{Task, TaskType, TaskStatus, TaskResult};
+use std::collections::{BTreeMap};
 // ============================================================================
 // 配置结构体
 // ============================================================================

@@ -7,7 +7,7 @@ pub mod auto_tuner;
 pub mod optimizer;
 // 重新导出主要类型
 
-use std::collections::<BTreeMap, HashMap>;
+use std::collections::{BTreeMap, HashMap};
 
     PerformanceAnalyzer,
     PerformanceMetrics,

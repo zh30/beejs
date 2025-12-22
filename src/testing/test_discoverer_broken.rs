@@ -1,8 +1,8 @@
 //! Test Discoverer
 //! Finds and loads test files
 
-use std::collections::<BTreeMap, HashMap>;
-use std::path::<Path, PathBuf>;
+use std::collections::{BTreeMap, HashMap};
+use std::path::{Path, PathBuf};
 
 /// Test file patterns
 const TEST_FILE_PATTERNS: &[&str] = &[

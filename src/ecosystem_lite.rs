@@ -3,7 +3,7 @@
 //!
 //! 自包含的生态系统集成模块，不依赖可能有问题的其他模块
 
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 /// 包管理器类型

@@ -9,9 +9,9 @@
 //! - 自动化报告分发
 
 use crate::performance_regression::RegressionTestSuite;
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::time::<Duration, SystemTime, UNIX_EPOCH>;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// 报告生成错误
 #[derive(Error, Debug)]

@@ -1,5 +1,5 @@
 
-use std::collections::<BTreeMap, HashMap>;
+use std::collections::{BTreeMap, HashMap};
 
 // 触觉反馈系统
 /// 触觉强度

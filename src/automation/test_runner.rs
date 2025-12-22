@@ -7,10 +7,10 @@
 //! - 测试结果收集
 //! - 错误处理和重试机制
 
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
-use std::time::<Duration, SystemTime, UNIX_EPOCH>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// 测试运行错误
 #[derive(Error, Debug)]

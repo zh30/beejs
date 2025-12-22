@@ -1,9 +1,9 @@
 //! CDN Provider Abstraction Layer
 //! Supports multiple CDN providers with intelligent routing and configuration
 
-use anyhow::<Context, Result>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, Ordering, RwLock>;
+use anyhow::{Context, Result};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, Ordering, RwLock};
 
 /// CDN Provider Type
 #[derive(Debug, Clone, Copy, PartialEq)]

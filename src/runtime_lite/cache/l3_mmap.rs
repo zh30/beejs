@@ -3,10 +3,10 @@
 //! This module provides L3 cache using memory mapping for efficient handling
 //! of large script files and infrequently accessed cold data.
 
-use std::collections::<BTreeMap, HashMap>;
-use std::hash::<Hash, Hasher>;
-use std::io::<Read, Write>;
-use std::sync::<Arc, Mutex, RwLock>;
+use std::collections::{BTreeMap, HashMap};
+use std::hash::{Hash, Hasher};
+use std::io::{Read, Write};
+use std::sync::{Arc, Mutex, RwLock};
 
 /// L3 Cache entry for memory-mapped files
 #[derive(Debug, Clone)]

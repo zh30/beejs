@@ -7,7 +7,7 @@ pub mod trend_analyzer;
 pub mod failure_predictor;
 // Re-exports
 
-use std::collections::<BTreeMap, HashMap>;
+use std::collections::{BTreeMap, HashMap};
 
     AnomalyDetector,
     Anomaly,

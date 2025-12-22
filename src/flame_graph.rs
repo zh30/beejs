@@ -1,8 +1,8 @@
 //! 火焰图分析模块
 //! 用于可视化代码执行路径和热点分析
 
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
 
 /// 火焰图结构体
 pub struct FlameGraph {

@@ -227,7 +227,7 @@ impl BuiltinBenchmarks {
 }
 #[cfg(test)]
 mod tests {
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_benchmark_runner() {
         let config: _ = BenchmarkConfig::default();

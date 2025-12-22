@@ -1,10 +1,10 @@
 //! WebSocket API implementation for Web standard
 //! Provides real WebSocket client with network connectivity
 
-use futures_util::<SinkExt, StreamExt>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, Ordering>;
-use tokio_tungstenite::::<connect_async, tungstenite::protocol::Message>;
+use futures_util::{SinkExt, StreamExt};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, Ordering};
+use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 
 /// WebSocket ready state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

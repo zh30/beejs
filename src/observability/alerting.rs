@@ -3,11 +3,11 @@
 //! This module provides an alerting system that can monitor metrics,
 //! detect anomalies, and send notifications via various channels.
 
-use anyhow::<Context, Result>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
-use tracing::<error, info>;
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
+use tracing::{error, info};
 
 /// Alert severity levels
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

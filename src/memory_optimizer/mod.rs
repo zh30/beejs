@@ -4,7 +4,7 @@ pub mod smart_allocator;
 pub mod adaptive_gc;
 pub mod pattern_analyzer;
 
-use std::collections::<BTreeMap, HashMap>;
+use std::collections::{BTreeMap, HashMap};
 
     SmartMemoryAllocator, AllocationPattern, AllocationStrategy,
     MemoryPool, PoolConfig, AllocationMetrics,

@@ -8,10 +8,10 @@
 //! - CPU 使用率测试
 //! - 系统资源监控
 
-use crate::benchmarks::<BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType>;
-use std::alloc::<GlobalAlloc, Layout, System>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
+use std::alloc::{GlobalAlloc, Layout, System};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// 内存和资源基准测试套件
 pub struct MemoryResourceBenchmark;

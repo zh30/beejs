@@ -2,10 +2,10 @@
 //!
 //! 提供与 Bun、Node.js 等运行时的性能对比功能
 
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::time::<Duration, Instant>;
-use super::<BenchmarkError, BenchmarkResult, BenchmarkResult as Result, Runtime>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::time::{Duration, Instant};
+use super::{BenchmarkError, BenchmarkResult, BenchmarkResult as Result, Runtime};
 
 /// 运行时检测器
 #[derive(Debug)]

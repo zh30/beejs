@@ -4,7 +4,7 @@
 //! 该模块提供 Cloudflare 云平台支持，包括 Workers 和 Pages 服务
 
 use std::collections::HashMap;
-use super::<CloudAdapter, DeploymentResult, FunctionConfig, Metrics>;
+use super::{CloudAdapter, DeploymentResult, FunctionConfig, Metrics};
 /// Cloudflare 适配器
 pub struct CloudflareAdapter {
     account_id: String,
@@ -277,7 +277,7 @@ impl CloudAdapter for CloudflareAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     /// 测试创建 Cloudflare 适配器
     #[tokio::test]
     async fn test_cloudflare_adapter_creation() {

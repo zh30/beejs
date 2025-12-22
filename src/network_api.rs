@@ -2,9 +2,9 @@
 //!
 //! 该模块将零拷贝网络功能暴露给 JavaScript
 
-use crate::network::<ConnectionPool, NetworkStats>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use crate::network::{ConnectionPool, NetworkStats};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// 设置所有零拷贝网络 I/O API
 pub fn setup_network_apis(

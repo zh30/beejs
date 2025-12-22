@@ -1,11 +1,11 @@
 //! 异步I/O优化模块
 //! 提供高性能的非阻塞I/O操作，支持并发文件读取和脚本执行
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
-use std::time::<Duration, Instant>;
-use tokio::io::<AsyncWriteExt, BufWriter>;
-use tokio::time::<Duration, Instant>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
+use std::time::{Duration, Instant};
+use tokio::io::{AsyncWriteExt, BufWriter};
+use tokio::time::{Duration, Instant};
 
 /// 异步I/O管理器
 #[derive(Debug)]

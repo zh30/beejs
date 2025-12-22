@@ -21,16 +21,16 @@ pub mod cli;
 pub mod watch;
 pub mod enhanced;
 
-use breakpoint::<Breakpoint, BreakpointCondition, BreakpointManager>;
-use engine::<DebugState, DebuggerEngine, SimpleEventListener>;
-use stack_trace::<StackFrame, StackFrameInfo, StackTrace>;
-use std::collections::<BTreeMap, HashMap>;
-use std::time::<Duration, Instant>;
-use variable_scope::<ScopeType, VariableInspector, VariableScope>;
-// use watch::<WatchExpression, WatchManager>;
+use breakpoint::{Breakpoint, BreakpointCondition, BreakpointManager};
+use engine::{DebugState, DebuggerEngine, SimpleEventListener};
+use stack_trace::{StackFrame, StackFrameInfo, StackTrace};
+use std::collections::{BTreeMap, HashMap};
+use std::time::{Duration, Instant};
+use variable_scope::{ScopeType, VariableInspector, VariableScope};
+// use watch::::{WatchExpression, WatchManager};
 
 // Stage 93 Phase 3.2: Enhanced debugger exports
-pub use enhanced::<
+pub use enhanced::{
     EnhancedDebugger,
     ConditionalBreakpoint,
     HitCountCondition,
@@ -51,7 +51,7 @@ pub use enhanced::<
     RemoteDebugConfig,
     RemoteDebugSession,
     DebugProtocol,
->;
+};
 /// Debug event types
 #[derive(Debug, Clone, PartialEq)]
 pub enum DebugEvent {

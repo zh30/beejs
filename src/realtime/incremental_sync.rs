@@ -3,13 +3,13 @@
 //! 实现高效的变更检测、压缩传输和同步状态管理
 //! 目标：90%+ 传输压缩率
 
-use anyhow::<Context, Result>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::hash::<Hash, Hasher>;
-use std::sync::<Arc, Mutex>;
-use std::time::<SystemTime, UNIX_EPOCH>;
-use tracing::<debug, info>;
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::hash::{Hash, Hasher};
+use std::sync::{Arc, Mutex};
+use std::time::{SystemTime, UNIX_EPOCH};
+use tracing::{debug, info};
 
 /// 文档变更类型
 #[derive(Debug, Clone, Serialize, Deserialize)]

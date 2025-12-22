@@ -1,8 +1,8 @@
 // V8 快照数据结构
 // 表示一个 V8 引擎快照
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// V8 快照结构体
 #[derive(Debug, Clone)]

@@ -5,10 +5,10 @@ pub mod reconciler;
 pub mod lifecycle;
 // Re-export types for convenience
 
-use controller::<ClusterController, Error as ControllerError>;
-use lifecycle::<ClusterLifecycle, LifecycleError, WorkloadLifecycle>;
-use reconciler::<ClusterDiff, ClusterState, ReconcileResult, WorkloadDiff, WorkloadState>;
-use std::collections::<BTreeMap, HashMap>;
+use controller::{ClusterController, Error as ControllerError};
+use lifecycle::{ClusterLifecycle, LifecycleError, WorkloadLifecycle};
+use reconciler::{ClusterDiff, ClusterState, ReconcileResult, WorkloadDiff, WorkloadState};
+use std::collections::{BTreeMap, HashMap};
 
 #[cfg(test)]
 mod tests {

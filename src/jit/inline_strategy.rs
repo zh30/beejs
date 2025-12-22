@@ -471,7 +471,7 @@ pub enum SystemProfile {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     fn make_function(name: &str, size: usize, calls: u64) -> FunctionInfo {
         FunctionInfo {
             id: name.to_string(),

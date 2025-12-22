@@ -1,10 +1,10 @@
 //! 数据存储模块
 //! 负责高效存储和查询时序性能数据
 
-use crate::monitor::performance_monitor::<MetricType, MetricValue>;
+use crate::monitor::performance_monitor::{MetricType, MetricValue};
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex>;
-use std::time::<Duration, Instant, SystemTime, UNIX_EPOCH>;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 /// 导出格式
 #[derive(Debug, Clone, PartialEq)]

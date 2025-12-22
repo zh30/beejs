@@ -8,10 +8,10 @@
 //! - 依赖安装集成
 use std::collections::HashMap;
 use std::fs;
-use std::path::<Path, PathBuf>;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use regex::Regex;
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use super::output_formatter::OutputFormatter;
 // ============================================================================
 // 核心类型定义
@@ -967,7 +967,7 @@ impl Default for TemplateInstantiator {
 mod tests {
     use super::*;
     use tempfile::TempDir;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_template_engine_basic() {
         let mut engine = TemplateEngine::new();

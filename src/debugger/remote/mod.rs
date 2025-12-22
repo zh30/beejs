@@ -4,6 +4,6 @@
 pub mod server;
 pub mod client;
 
-use client::<ConnectionManager, DebugEvent, DebugState, EventDispatcher, StackFrameInfo, StateSync>;
-use server::<DebugProtocol, DebugServer, SessionId, SessionManager, WebSocketHandler>;
-use std::collections::<BTreeMap, HashMap>;
+use client::{ConnectionManager, DebugEvent, DebugState, EventDispatcher, StackFrameInfo, StateSync};
+use server::{DebugProtocol, DebugServer, SessionId, SessionManager, WebSocketHandler};
+use std::collections::{BTreeMap, HashMap};

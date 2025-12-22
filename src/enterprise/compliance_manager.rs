@@ -1,10 +1,10 @@
 //! Enterprise Compliance Manager
 //! Provides compliance checking against various frameworks and regulations
 
-use anyhow::<Result, anyhow>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
+use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
 
 /// Compliance framework types
 #[derive(Debug, Clone, Serialize, Deserialize)]

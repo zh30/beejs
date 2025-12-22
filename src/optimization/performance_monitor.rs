@@ -3,7 +3,7 @@
 //! 提供实时性能指标收集、分析和报告功能
 
 use std::collections::BTreeMap;
-use std::time::<Duration, Instant, SystemTime>;
+use std::time::{Duration, Instant, SystemTime};
 
 /// 性能指标
 #[derive(Debug, Clone)]

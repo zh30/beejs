@@ -2,20 +2,20 @@
 //! 提供统一的错误处理、自动恢复和错误上下文管理
 pub mod types;
 pub mod recovery;
-pub use types::<
+pub use types::{
     BeejsError,
     ErrorContext,
     SourceLocation,
     StackFrame,
     ErrorSeverity,
->;
-pub use recovery::<
+};
+pub use recovery::{
     AutoRecovery,
     RetryPolicy,
     AutoRecoveryConfig,
     RecoveryStats,
     FallbackStrategyFn,
->;
+};
 /// 创建错误上下文的便捷函数
 pub fn create_error_context(
     error: BeejsError,
@@ -162,7 +162,7 @@ macro_rules! beejs_try_async {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_error_context_creation() {
         let error: _ = BeejsError::V8Error("Test error".to_string());

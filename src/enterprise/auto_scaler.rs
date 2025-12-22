@@ -1,11 +1,11 @@
 //! Intelligent Auto-Scaling System
 //! 实现基于指标的智能扩缩容系统，支持多种扩缩容策略
 
-use anyhow::<Context, Result>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
-use tracing::<debug, error, info, warn>;
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
+use tracing::{debug, error, info, warn};
 
 /// Cluster identifier
 pub type ClusterId = String;

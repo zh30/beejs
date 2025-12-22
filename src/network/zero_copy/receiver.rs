@@ -5,9 +5,9 @@
 //! 该模块提供高性能的零拷贝数据接收功能，通过 splice 系统调用实现
 //! 网络套接字到文件的零拷贝接收，最小化数据拷贝开销。
 
-use std::collections::<BTreeMap, HashMap>;
-use std::io::<Read, Seek, SeekFrom, self>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::io::{Read, Seek, SeekFrom, self};
+use std::sync::{Arc, Mutex};
 
 /// 零拷贝接收配置
 #[derive(Debug, Clone)]

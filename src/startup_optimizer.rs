@@ -1,9 +1,9 @@
 // 启动优化器
 // 优化运行时启动性能，减少首次执行开销
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
-use std::time::<Duration, SystemTime>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime};
 
 /// 内存预分配器
 pub struct MemoryPreallocator {

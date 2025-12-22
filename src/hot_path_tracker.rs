@@ -1,9 +1,9 @@
 
 
-use crate::code_analyzer::<CodeAnalyzer, CodeComplexity>;
-use std::collections::<BTreeMap, HashMap>;
-use std::hash::<Hash, Hasher>;
-use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+use crate::code_analyzer::{CodeAnalyzer, CodeComplexity};
+use std::collections::{BTreeMap, HashMap};
+use std::hash::{Hash, Hasher};
+use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
 
 /// 热路径代码信息
 #[derive(Debug, Clone)]

@@ -3,9 +3,9 @@
 //!
 //! 处理 npm 注册表认证、私有仓库访问等
 use super::*;
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::collections::<BTreeMap>;
+use std::collections::{BTreeMap};
 /// 认证类型
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AuthType {

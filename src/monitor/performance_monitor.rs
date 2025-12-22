@@ -1,10 +1,10 @@
 //! 性能监控器模块
 //! 负责实时收集、聚合和分析性能指标
 
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex, Ordering>;
-use std::time::<Duration, Instant, SystemTime, UNIX_EPOCH>;
+use std::sync::{Arc, Mutex, Ordering};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 /// 性能指标类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

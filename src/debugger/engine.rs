@@ -6,7 +6,7 @@
 
 
 use std::collections::HashMap;
-use std::sync::<Arc, Mutex>;
+use std::sync::{Arc, Mutex};
 
 use crate::debugger::{
     breakpoint::{BreakpointManager, Breakpoint},

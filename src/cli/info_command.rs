@@ -352,7 +352,7 @@ impl InfoCommand {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_system_info_collect() {
         let info: _ = SystemInfo::collect();

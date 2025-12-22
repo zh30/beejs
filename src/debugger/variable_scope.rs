@@ -4,8 +4,8 @@
 //! in JavaScript contexts, including global, local, closure, and catch scopes.
 use std::collections::HashMap;
 use rusty_v8 as v8;
-use crate::debugger::::<DebugResult, config::DebugConfig>;
-use std::collections::<BTreeMap>;
+use crate::debugger::{DebugResult, config::DebugConfig};
+use std::collections::{BTreeMap};
 /// Scope types in JavaScript
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ScopeType {

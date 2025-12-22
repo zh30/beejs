@@ -20,9 +20,9 @@ pub mod performance_predictor;
 pub mod intelligent_scheduler;
 // Re-export 公共 API
 
-use matrix_accelerator::<Matrix, MatrixAccelerator, MatrixAcceleratorStats, MatrixPair, OptimizedMatrix>;
-use std::collections::<BTreeMap, HashMap>;
-use tensor_optimizer::<Gradients, Tensor, TensorData, TensorOptimizer, TensorShape, TensorShard>;
+use matrix_accelerator::{Matrix, MatrixAccelerator, MatrixAcceleratorStats, MatrixPair, OptimizedMatrix};
+use std::collections::{BTreeMap, HashMap};
+use tensor_optimizer::{Gradients, Tensor, TensorData, TensorOptimizer, TensorShape, TensorShard};
 
     AICodeGenerator, CodeContext, CodeCompletion, CompletionItem, GeneratedCode,
     Language, TestType, TestFramework, ProjectInfo, CodeSuggestion, TestFile,

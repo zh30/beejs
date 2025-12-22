@@ -1,9 +1,9 @@
 //! 自动扩缩容器模块
 //! 负责根据集群负载自动调整节点数量
 
-use std::collections::<BTreeMap, HashMap>;
-use std::time::<Duration, Instant, SystemTime>;
-use tracing::<debug, info>;
+use std::collections::{BTreeMap, HashMap};
+use std::time::{Duration, Instant, SystemTime};
+use tracing::{debug, info};
 
 /// 集群指标
 #[derive(Debug, Clone)]

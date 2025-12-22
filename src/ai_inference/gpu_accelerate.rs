@@ -2,7 +2,7 @@
 //! 提供高性能的 GPU 计算能力
 
 use anyhow::Result;
-use std::sync::<Arc, Mutex, RwLock>;
+use std::sync::{Arc, Mutex, RwLock};
 
 /// GPU 设备信息
 #[derive(Debug, Clone)]

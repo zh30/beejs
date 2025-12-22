@@ -2,7 +2,7 @@
 //! 提供完整的错误分类、上下文信息和恢复建议
 
 use std::collections::BTreeMap;
-use std::time::<Duration, Instant>;
+use std::time::{Duration, Instant};
 
 /// 错误类型枚举 - 统一所有可能的错误
 #[derive(Debug, Error, Clone, PartialEq)]

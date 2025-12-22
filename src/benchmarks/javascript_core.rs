@@ -8,9 +8,9 @@
 //! - 模块加载性能测试
 //! - 并发执行性能测试
 
-use crate::benchmarks::<BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// JavaScript 核心基准测试套件
 pub struct JavaScriptCoreBenchmark;

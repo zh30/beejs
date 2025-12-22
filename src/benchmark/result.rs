@@ -6,9 +6,9 @@
 //! - 性能指标计算
 //! - 结果对比和可视化
 
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use super::<MetricType, Runtime>;
+use super::{MetricType, Runtime};
 
 /// 基准测试结果
 #[derive(Debug, Clone, Serialize, Deserialize)]

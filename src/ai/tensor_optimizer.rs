@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
 /// 张量形状
 #[derive(Debug, Clone, PartialEq)]
 pub struct TensorShape {

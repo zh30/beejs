@@ -5,9 +5,9 @@
 
 use std::time::Instant;
 
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tokio::time::<Duration, Instant>;
+use tokio::time::{Duration, Instant};
 /// 资源类型枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ResourceType {
@@ -455,7 +455,7 @@ pub struct OptimizationStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_allocate_resources_basic() {
         let optimizer: _ = ResourceOptimizer::new_with_defaults();

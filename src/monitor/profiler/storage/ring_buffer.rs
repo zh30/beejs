@@ -129,7 +129,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_ring_buffer_creation() {
         let buffer: RingBuffer<i32> = RingBuffer::with_capacity(10);

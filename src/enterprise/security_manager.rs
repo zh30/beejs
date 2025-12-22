@@ -1,10 +1,10 @@
 //! Enterprise Security Manager
 //! Provides security policy enforcement, RBAC, and audit logging
 
-use anyhow::<Result, anyhow>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
+use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
 
 /// User role definition
 #[derive(Debug, Clone, Serialize, Deserialize)]

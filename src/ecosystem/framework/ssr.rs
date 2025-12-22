@@ -3,10 +3,10 @@
 //!
 //! 提供统一的 SSR 支持，包括流式渲染、水合机制、缓存策略等
 
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex>;
-use std::time::<Duration, Instant>;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// SSR 渲染引擎
 #[derive(Debug)]

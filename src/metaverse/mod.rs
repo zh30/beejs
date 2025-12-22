@@ -7,11 +7,11 @@ pub mod ray_tracer;
 pub mod multiuser_renderer;
 pub mod spatial_audio;
 
-use multiuser_renderer::<AvatarConfig, MultiuserRenderer, SyncMode as MultiuserSyncMode, UserAvatar>;
-use ray_tracer::<BounceLimit, RayTracer, RayTracerConfig>;
-use spatial_audio::<AudioConfig, AudioSource, HRTFProfile, SpatialAudioSystem>;
-use std::collections::<BTreeMap, HashMap>;
-use xr_runtime::<XRConfig, XRMode, XRRuntime>;
+use multiuser_renderer::{AvatarConfig, MultiuserRenderer, SyncMode as MultiuserSyncMode, UserAvatar};
+use ray_tracer::{BounceLimit, RayTracer, RayTracerConfig};
+use spatial_audio::{AudioConfig, AudioSource, HRTFProfile, SpatialAudioSystem};
+use std::collections::{BTreeMap, HashMap};
+use xr_runtime::{XRConfig, XRMode, XRRuntime};
 
 /// XR 平台类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

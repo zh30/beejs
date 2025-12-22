@@ -5,10 +5,10 @@
 //! - 数组操作 (排序, 搜索)
 //! - 算法实现 (动态规划, 递归)
 
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::time::<Duration, Instant>;
-use super::<BenchmarkError, BenchmarkResult as Result, ResourceUsage, WorkloadResult>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::time::{Duration, Instant};
+use super::{BenchmarkError, BenchmarkResult as Result, ResourceUsage, WorkloadResult};
 
 /// 计算密集型工作负载
 #[derive(Debug)]

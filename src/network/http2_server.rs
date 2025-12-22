@@ -1,9 +1,9 @@
 //! HTTP/2 服务器实现
 //! 支持 HTTP/2 协议的多路复用特性
 
-use crate::network::<NetworkConfig, NetworkError>;
+use crate::network::{NetworkConfig, NetworkError};
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex>;
+use std::sync::{Arc, Mutex};
 
 /// HTTP/2 路由处理器类型
 pub type Http2Handler = fn(&str, &[u8]) -> Result<Vec<u8>, NetworkError>;

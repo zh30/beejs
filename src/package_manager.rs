@@ -8,11 +8,11 @@
 //! - 包下载和缓存
 //! - node_modules 结构管理
 
-use anyhow::<Result, anyhow>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::path::<Path, PathBuf>;
-use tempfile::<NamedTempFile, TempDir>;
+use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::path::{Path, PathBuf};
+use tempfile::{NamedTempFile, TempDir};
 
 #[allow(unused_imports)]
 /// Package manager configuration

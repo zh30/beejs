@@ -28,14 +28,14 @@ pub mod manager;
 pub mod renderer;
 pub use manager::*;
 pub use renderer::*;
-pub use renderer::<
+pub use renderer::{
     ChartRenderer, GraphRenderer, TemplateEngine, WebSocketClient,
     ChartInstance, ChartConfig, ChartData, SeriesData, RenderStats,
     GraphInstance, GraphNode, GraphEdge, Position, Size, EdgeStyle,
     LayoutConfig, LayoutType, InteractionConfig, LayoutEngine,
     ForceParams, HierarchicalParams, Template, TemplateFunction
->;
-use serde::<Deserialize, Serialize>;
+};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 /// Dashboard panel configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -179,7 +179,7 @@ pub struct VariableOption {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_panel_config_creation() {
         let config: _ = PanelConfig {

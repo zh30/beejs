@@ -2,8 +2,8 @@
 //! Provides lazy initialization for expensive components to reduce startup time
 //! Only initializes modules when they're actually used
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// Lazy loading statistics
 #[derive(Debug, Clone, Default)]

@@ -1,13 +1,13 @@
 //! 预编译模块缓存系统
 //! 预编译常用 Node.js 模块并缓存字节码，提升执行速度
 
-use anyhow::<Context, Result, anyhow>;
-use crate::code_cache::<BytecodeCache, CacheConfig>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::hash::<Hash, Hasher>;
-use std::sync::<Arc, Mutex>;
-use std::time::<Duration, Instant, SystemTime>;
+use anyhow::{Context, Result, anyhow};
+use crate::code_cache::{BytecodeCache, CacheConfig};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::hash::{Hash, Hasher};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant, SystemTime};
 
 /// 预编译模块缓存统计
 #[derive(Debug, Clone, Default)]

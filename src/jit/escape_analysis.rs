@@ -4,7 +4,7 @@
 
 use std::time::Instant;
 
-use std::time::<Duration, Instant>;
+use std::time::{Duration, Instant};
 /// 逃逸分析决策
 #[derive(Debug, Clone, PartialEq)]
 pub struct EscapeAnalysisDecision {
@@ -371,7 +371,7 @@ impl Default for EscapeAnalysisOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<BTreeMap>;
+use std::collections::{BTreeMap};
     #[test]
     fn test_plain_object_escape_analysis() {
         let optimizer: _ = EscapeAnalysisOptimizer::new();

@@ -3,11 +3,11 @@
 //! Orchestrates the interaction between RuntimeLite and DebuggerEngine
 //! to provide a complete debugging experience.
 
-use anyhow::<Context, Result>;
-use crate::<RuntimeLite, debugger>;
+use anyhow::{Context, Result};
+use crate::{RuntimeLite, debugger};
 use crate::debugger::cli::DebugConsole;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// Debug session that manages the runtime and debugger
 pub struct DebugSession {

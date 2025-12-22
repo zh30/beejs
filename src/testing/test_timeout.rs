@@ -1,9 +1,9 @@
 //! Test Timeout Management
 //! Handles test execution timeouts and cancellation
 
-use crossbeam::channel::::<Receiver, Sender, unbounded>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use crossbeam::channel::{Receiver, Sender, unbounded};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// Timeout configuration for tests
 #[derive(Debug, Clone)]

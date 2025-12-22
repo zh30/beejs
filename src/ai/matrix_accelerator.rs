@@ -277,7 +277,7 @@ use std::sync::Ordering;
     fn simd128_vector_dot(&self, a: &[f32], b: &[f32]) -> f32 {
         #[cfg(target_arch = "x86_64")]
         if is_x86_feature_detected!("sse4.2") {
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
             let mut sum = _mm_setzero_ps();
             let len: _ = a.len() / 4;
             for i in 0..len {

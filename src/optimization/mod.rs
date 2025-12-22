@@ -9,9 +9,9 @@ pub mod high_performance_core;
 pub mod zero_copy_io;
 pub mod v8_engine_optimizer;
 
-use adaptive_optimizer::<AdaptiveOptimizer, CodeFeatures, OptimizationHints, OptimizationPolicy, PerformanceHistory>;
-use performance_monitor::<MetricsCollector, OptimizationStats, PerformanceMonitor>;
-use std::collections::<BTreeMap, HashMap>;
+use adaptive_optimizer::{AdaptiveOptimizer, CodeFeatures, OptimizationHints, OptimizationPolicy, PerformanceHistory};
+use performance_monitor::{MetricsCollector, OptimizationStats, PerformanceMonitor};
+use std::collections::{BTreeMap, HashMap};
 
 // Stage 97: Ultra-High-Performance 优化模块
     HighPerformanceMemoryPool,

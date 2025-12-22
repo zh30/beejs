@@ -1,9 +1,9 @@
 //! AI 代码生成器
 //! 提供上下文感知的代码生成、补全和重构功能
 
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Ordering, RwLock>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Ordering, RwLock};
 
 /// 编程语言
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

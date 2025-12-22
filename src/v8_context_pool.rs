@@ -4,8 +4,8 @@
 //!
 //! Stage 64: Performance optimization - Reduce V8 context creation overhead
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// Statistics for context pool performance monitoring
 #[derive(Debug, Clone)]

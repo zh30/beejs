@@ -2,7 +2,7 @@
 //!
 //! 提供 GDPR、SOC 2 等合规性检查功能
 
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 /// 合规性错误

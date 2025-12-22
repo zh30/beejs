@@ -5,8 +5,8 @@ use std::time::SystemTime;
 
 use std::collections::HashMap;
 use std::fs;
-use std::path::<Path, PathBuf>;
-use std::time::<SystemTime, UNIX_EPOCH>;
+use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 /// Snapshot manager for handling snapshot operations
 pub struct SnapshotManager {
     config: SnapshotConfig,
@@ -228,7 +228,7 @@ impl SnapshotManager {
 mod tests {
     use std::fs::File;
     use std::io::Write;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_snapshot_manager_new() {
         let temp_dir: _ = tempfile::tempdir().unwrap();

@@ -3,9 +3,9 @@
 //! This module provides tools to analyze historical performance data,
 //! identify trends, and predict future performance.
 
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::time::<Duration, SystemTime, UNIX_EPOCH>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// A historical performance data point
 #[derive(Debug, Clone, Serialize, Deserialize)]

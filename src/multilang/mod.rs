@@ -4,8 +4,8 @@ pub mod python_runtime;
 pub mod go_runtime;
 pub mod rust_native;
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// Multi-language runtime manager
 #[derive(Debug)]

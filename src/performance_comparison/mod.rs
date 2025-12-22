@@ -9,10 +9,10 @@ pub mod benchmark_runner;
 pub mod result_collector;
 pub mod comparison_report;
 
-use benchmark_runner::<BenchmarkRunner, RuntimeConfig, TestCase>;
-use comparison_report::<ReportConfig, ReportFormat, ReportGenerator>;
-use result_collector::<BenchmarkComparison, ComparisonResult, ResultCollector>;
-use serde::<Deserialize, Serialize>;
+use benchmark_runner::{BenchmarkRunner, RuntimeConfig, TestCase};
+use comparison_report::{ReportConfig, ReportFormat, ReportGenerator};
+use result_collector::{BenchmarkComparison, ComparisonResult, ResultCollector};
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 // use crate::benchmarks;  // Unused import

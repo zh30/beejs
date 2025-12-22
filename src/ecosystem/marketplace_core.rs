@@ -3,12 +3,12 @@
 //!
 //! 提供插件搜索、发现、评分、评论和管理的完整功能
 
-use anyhow::<Context, Result>;
-use chrono::<DateTime, Utc>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap, HashSet>;
-use std::hash::<Hash, Hasher>;
-use std::sync::<Arc, Mutex, Ordering>;
+use anyhow::{Context, Result};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::hash::{Hash, Hasher};
+use std::sync::{Arc, Mutex, Ordering};
 
 /// 插件市场主引擎
 #[derive(Debug, Clone)]

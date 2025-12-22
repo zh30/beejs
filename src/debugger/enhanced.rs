@@ -7,9 +7,9 @@
 //! - 源代码映射支持
 //! - 远程调试协议
 
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 // =========================================
 // Part 1: 高级断点功能

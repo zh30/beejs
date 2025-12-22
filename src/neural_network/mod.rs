@@ -12,9 +12,9 @@ mod model;
 mod optimizer;
 mod hardware;
 
-use hardware::<HardwareBackend, MemoryInfo>;
-use layers::<ActivationLayer, ActivationType, ConvLayer, DenseLayer, Layer>;
-use model::<Model, ModelConfig>;
-use optimizer::<GraphOptimizer, OptimizationLevel>;
-use std::collections::<BTreeMap, HashMap>;
-use tensor::<DType, Tensor, TensorShape>;
+use hardware::{HardwareBackend, MemoryInfo};
+use layers::{ActivationLayer, ActivationType, ConvLayer, DenseLayer, Layer};
+use model::{Model, ModelConfig};
+use optimizer::{GraphOptimizer, OptimizationLevel};
+use std::collections::{BTreeMap, HashMap};
+use tensor::{DType, Tensor, TensorShape};

@@ -1,11 +1,11 @@
 //! Horizontal Pod Autoscaler (HPA) Implementation
 //! Provides automatic scaling for workloads based on metrics
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
-use std::time::<Duration, Instant>;
-use tokio::time::<Duration, Instant>;
-use tracing::<debug, error, info, warn>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+use tokio::time::{Duration, Instant};
+use tracing::{debug, error, info, warn};
 
 /// HPA Controller for managing automatic scaling
 pub struct HPAController {

@@ -1,11 +1,11 @@
 //! 节点管理器模块
 //! 管理集群节点的注册、状态跟踪和元数据
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Duration, Instant, SystemTime>;
-use super::service_discovery::<NodeInfo, ServiceDiscovery>;
-use tracing::<info, warn>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant, SystemTime};
+use super::service_discovery::{NodeInfo, ServiceDiscovery};
+use tracing::{info, warn};
 
 /// 节点状态枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

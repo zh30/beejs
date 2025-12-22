@@ -4,8 +4,8 @@
 
 use std::time::Instant;
 
-use std::time::<Duration, Instant>;
-use std::collections::<HashMap, BTreeMap>;
+use std::time::{Duration, Instant};
+use std::collections::{HashMap, BTreeMap};
 /// 代码特征
 #[derive(Debug, Clone)]
 pub struct CodeFeatures {

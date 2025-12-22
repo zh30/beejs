@@ -9,5 +9,5 @@ pub mod end_to_end_encrypt;
 pub mod permission_audit;
 // 重新导出主要类型
 
-use ot_crdt_sync::<CRDTList, OperationTransformer>;
-use std::collections::<BTreeMap, HashMap>;
+use ot_crdt_sync::{CRDTList, OperationTransformer};
+use std::collections::{BTreeMap, HashMap};

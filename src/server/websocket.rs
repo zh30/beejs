@@ -3,14 +3,14 @@
 //! Separate WebSocket server that runs alongside the HTTP server
 //! to handle real-time code execution and streaming output.
 
-use futures_util::<SinkExt, StreamExt>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
-use std::time::<Duration, Instant>;
-use tokio::net::<TcpListener, TcpStream>;
-use tokio_tungstenite::::<accept_async, tungstenite::Message>;
-use tracing::<error, info, warn>;
+use futures_util::{SinkExt, StreamExt};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+use tokio::net::{TcpListener, TcpStream};
+use tokio_tungstenite::::{accept_async, tungstenite::Message};
+use tracing::{error, info, warn};
 
 /// WebSocket server configuration
 #[derive(Debug, Clone)]

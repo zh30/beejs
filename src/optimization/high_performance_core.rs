@@ -10,8 +10,8 @@
 //! - Zero-copy data structures
 //! - Adaptive JIT compilation strategies
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
 
 /// High-performance memory pool for reducing allocation overhead
 pub struct HighPerformanceMemoryPool {

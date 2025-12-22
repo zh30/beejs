@@ -1,8 +1,8 @@
 //! Edge Deployment Optimizer
 //! Optimizes edge deployments for minimal cold start and maximum throughput
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
 
 /// Edge Deployment Optimizer
 #[derive(Debug)]

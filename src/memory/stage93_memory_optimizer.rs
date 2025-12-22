@@ -1,15 +1,15 @@
 //! Stage 93 Phase 1.2: 内存优化器综合集成
 //! 整合所有内存优化组件，提供统一的内存管理接口
 
-use anyhow::<Result, anyhow>;
-use crate::memory::stage93_adaptive_gc::::<Stage93AdaptiveGC, Stage93GCConfig>;
-use crate::memory::stage93_memory_compression::::<Stage93CompressionConfig, Stage93MemoryCompressor>;
-use crate::memory::stage93_optimized_allocator::::<Stage93AllocatorConfig, Stage93OptimizedAllocator>;
-use crate::memory::stage93_zero_copy_optimizer::::<Stage93OptimizerConfig, Stage93ZeroCopyOptimizer>;
-use crate::memory::zero_copy_enhanced::::<DmaConfig, EnhancedZeroCopy, MmapConfig, PrefetchConfig>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
+use anyhow::{Result, anyhow};
+use crate::memory::stage93_adaptive_gc::::{Stage93AdaptiveGC, Stage93GCConfig};
+use crate::memory::stage93_memory_compression::::{Stage93CompressionConfig, Stage93MemoryCompressor};
+use crate::memory::stage93_optimized_allocator::::{Stage93AllocatorConfig, Stage93OptimizedAllocator};
+use crate::memory::stage93_zero_copy_optimizer::::{Stage93OptimizerConfig, Stage93ZeroCopyOptimizer};
+use crate::memory::zero_copy_enhanced::::{DmaConfig, EnhancedZeroCopy, MmapConfig, PrefetchConfig};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
 
 /// Stage 93 内存优化器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]

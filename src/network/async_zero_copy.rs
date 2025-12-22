@@ -2,11 +2,11 @@
 //! 实现高性能的异步零拷贝数据传输
 
 use std::collections::HashMap;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Duration, Instant>;
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant};
 
-use super::<NetworkConfig, NetworkStats>;
-use memmap2::<Mmap, MmapOptions>;
+use super::{NetworkConfig, NetworkStats};
+use memmap2::{Mmap, MmapOptions};
 /// 零拷贝错误
 #[derive(Debug, thiserror::Error)]
 pub enum ZeroCopyError {

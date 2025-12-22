@@ -7,8 +7,8 @@ pub mod k8s;
 pub mod tenancy;
 pub mod monitoring;
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 // Re-export Stage 96 Phase 2 types
     BeejsCluster, BeejsClusterSpec, BeejsClusterStatus, ClusterPhase,

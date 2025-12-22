@@ -2,7 +2,7 @@
 //! 实现多级缓存系统
 
 use std::collections::HashSet;
-use std::sync::<Arc, Mutex, RwLock>;
+use std::sync::{Arc, Mutex, RwLock};
 
 use std::collections::HashMap;
 
@@ -308,7 +308,7 @@ fn deserialize_package(data: &[u8]) -> Result<Package, Box<dyn std::error::Error
 }
 /// 序列化包 ID
 fn serialize_package_id(id: &PackageId) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     Ok(bincode::serialize(id)?)
 }
 /// 创建模拟包

@@ -4,13 +4,13 @@
 //! 实现 < 10ms 的加载时间和 90%+ 缓存命中率
 
 use std::collections::HashMap;
-use std::sync::<Arc, Mutex, RwLock>;
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::Instant;
 
-use tracing::<debug, info, warn>;
-use wasmtime::<Config, Engine, Module>;
-use anyhow::<Context, Result>;
-use memmap2::<Mmap, MmapOptions>;
+use tracing::{debug, info, warn};
+use wasmtime::{Config, Engine, Module};
+use anyhow::{Context, Result};
+use memmap2::{Mmap, MmapOptions};
 /// 零拷贝加载结果
 #[derive(Debug, Clone)]
 pub struct ZeroCopyLoadResult {

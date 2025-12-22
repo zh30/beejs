@@ -2,12 +2,12 @@
 //! 提供模块分享、协作和社区支持功能
 
 use std::collections::HashMap;
-use std::sync::<Arc, Mutex, Ordering, RwLock>;
+use std::sync::{Arc, Mutex, Ordering, RwLock};
 use std::time::Duration;
 
-use std::collections::<HashMap, HashSet>;
-use serde::<Serialize, Deserialize>;
-use chrono::<DateTime, Utc>;
+use std::collections::{HashMap, HashSet};
+use serde::{Serialize, Deserialize};
+use chrono::{DateTime, Utc};
 use tokio::sync::RwLock;
 use crate::ecosystem::types::*;
 /// 用户 ID
@@ -351,7 +351,7 @@ impl Default for CommunityPortal {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<BTreeMap>;
+use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_share_module() {
         let portal: _ = CommunityPortal::new();

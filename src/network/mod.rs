@@ -27,41 +27,41 @@ pub mod stage93_intelligent_prefetch;
 pub mod stage93_network_topology;
 // 重新导出主要类型
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 // 扩展类型
 // 网络缓冲区和统计类型
 // Stage 92 Phase 3: 导出优化模块
-pub use zero_copy_network::<
+pub use zero_copy_network::{
     ZeroCopySocket, ZeroCopyListener, ZeroCopyStream,
     ZeroCopyConfig, NetworkZeroCopyStats
->;
-pub use batch_io::<
+};
+pub use batch_io::{
     BatchIoEngine, BatchOperation, BatchConfig,
     BatchStats, BatchPriority
->;
-pub use async_zero_copy::<
+};
+pub use async_zero_copy::{
     AsyncZeroCopy, ZeroCopyError, TransferRequest,
     TransferStats, ZeroCopyFuture
->;
-pub use network_buffer::<
+};
+pub use network_buffer::{
     NetworkBuffer, BufferPool, BufferConfig,
     BufferStats, BufferType
->;
-pub use io_uring::<
+};
+pub use io_uring::{
     IoUringEngine, UringSubmission, UringCompletion,
     UringConfig, UringStats
->;
+};
 // Stage 93 Phase 1.3: 导出优化组件
-pub use stage93_intelligent_prefetch::<
+pub use stage93_intelligent_prefetch::{
     Stage93IntelligentPrefetcher, PrefetchConfig, PrefetchStats,
     AccessPattern, AIPrefetchPredictor
->;
-pub use stage93_network_topology::<
+};
+pub use stage93_network_topology::{
     Stage93TopologyDiscoverer, TopologyConfig, NetworkTopology,
     NetworkNode, NetworkPath, NodeType
->;
+};
 /// 网络配置
 #[derive(Debug, Clone)]
 pub struct NetworkConfig {

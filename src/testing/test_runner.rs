@@ -1,9 +1,9 @@
 //! Test Runner
 //! Executes test suites and collects results
 
-use crate::testing::test_context::::<TestCase, TestResult, TestSuite>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use crate::testing::test_context::{TestCase, TestResult, TestSuite};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// Test runner configuration
 #[derive(Debug, Clone)]

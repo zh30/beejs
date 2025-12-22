@@ -1,8 +1,8 @@
 //! TypeScript 编译器实现
 //! 将 TypeScript 代码转译为 JavaScript
 
-use anyhow::<Result, bail>;
-use std::collections::<BTreeMap, HashMap>;
+use anyhow::{Result, bail};
+use std::collections::{BTreeMap, HashMap};
 
 /// TypeScript 编译器配置
 #[derive(Debug, Clone)]

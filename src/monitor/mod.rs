@@ -15,26 +15,26 @@ pub mod dashboard;
 /// 性能分析器（Stage 76 新增）
 pub mod profiler;
 // 重新导出主要类型
-pub use performance_monitor::<
+pub use performance_monitor::{
     MetricType, MetricValue, AggregatedMetric, ThresholdConfig, MonitorConfig,
     PerformanceMonitor, CollectionStats, ThresholdViolation, ThresholdSeverity,
->;
-pub use data_store::<
+};
+pub use data_store::{
     DataStore, DataStoreConfig, DataPoint, QueryCondition, ExportFormat,
     CompressedData, QueryIndex, DataStoreStats,
->;
-pub use alerts::<
+};
+pub use alerts::{
     AlertRule, AlertCondition, AlertSeverity, AlertInstance, AlertData,
     AlertStatus, NotificationChannel, NotificationType, NotificationMessage,
     AlertStats, AlertSystem, AlertSystemConfig, SilenceRule, NotificationResult,
->;
-pub use dashboard::<
+};
+pub use dashboard::{
     DashboardConfig, ChartConfig, ChartType, DashboardLayout, LayoutConfig,
     BreakpointConfig, WebDashboard, ConnectionStats, DashboardData, ApiResponse,
     ExportConfig, ChartData, Dataset,
->;
-pub use profiler::<
+};
+pub use profiler::{
     AdvancedProfiler, AdvancedProfilerConfig, PerformanceSummary,
     FunctionTracker, FunctionStats, CallStackAnalyzer, HotspotAnalyzer,
     RealtimeSnapshot, ReportConfig,
->;
+};

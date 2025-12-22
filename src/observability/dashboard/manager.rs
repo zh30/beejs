@@ -7,14 +7,14 @@
 //! - Template variable support
 
 use std::collections::HashMap;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Duration, SystemTime>;
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, SystemTime};
 
-use anyhow::<Result, Context, anyhow>;
+use anyhow::{Result, Context, anyhow};
 use tokio::sync::RwLock;
-use tracing::<info, warn, error, debug>;
+use tracing::{info, warn, error, debug};
 use reqwest::Client as HttpClient;
-use serde_json::<json, Value>;
+use serde_json::{json, Value};
 /// Dashboard Manager - Main entry point for Grafana integration
 pub struct DashboardManager {
     /// Configuration
@@ -522,7 +522,7 @@ impl MetricsCollector {
 }
 #[cfg(test)]
 mod tests {
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_dashboard_manager_creation() {
         let config: _ = DashboardConfig::default();

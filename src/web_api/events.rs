@@ -1,8 +1,8 @@
 //! EventTarget and Event API implementation for Web standard
 //! Provides addEventListener, removeEventListener, dispatchEvent
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// Event type enum
 #[derive(Debug, Clone)]

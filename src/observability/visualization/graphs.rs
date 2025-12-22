@@ -6,9 +6,9 @@
 //! - TraceGraph: Request flow and distributed tracing visualization
 //! - NetworkGraph: Network topology and connectivity visualization
 
-use anyhow::<Context, Result, anyhow>;
+use anyhow::{Context, Result, anyhow};
 use std::collections::BTreeMap;
-use tracing::<debug, error, warn>;
+use tracing::{debug, error, warn};
 
 /// Graph node with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]

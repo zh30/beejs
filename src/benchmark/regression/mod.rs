@@ -4,11 +4,11 @@
 
 use std::time::SystemTime;
 
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::time::<Duration, SystemTime>;
-use super::<BenchmarkResultSet, BenchmarkResult, Runtime, MetricType>;
+use std::time::{Duration, SystemTime};
+use super::{BenchmarkResultSet, BenchmarkResult, Runtime, MetricType};
 /// 性能历史记录
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceHistory {
@@ -147,7 +147,7 @@ impl RegressionDetector {
         &self,
         history: &PerformanceHistory,
     ) -> Result<(), super::BenchmarkError> {
-        use super::super::utils::<create_dir_if_not_exists, write_file>;
+        use super::super::utils::{create_dir_if_not_exists, write_file};
         create_dir_if_not_exists(&self.history_path)?;
         let filename: _ = format!(
             "{}_{}.json",
@@ -343,7 +343,7 @@ impl RegressionSummary {
 mod tests {
     use super::*;
     use std::time::Duration;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_regression_analysis() {
         let current: _ = super::super::result::BenchmarkResult::new("test", Runtime::Beejs);

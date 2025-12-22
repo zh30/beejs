@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use num_complex::Complex64;
 use super::circuit::QuantumCircuit;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
 /// 变分计算结果
 #[derive(Debug, Clone)]
 pub struct VariationalResult {

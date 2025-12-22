@@ -6,8 +6,8 @@
 use std::collections::HashMap;
 
 use super::*;
-use std::collections::<HashMap, HashSet>;
-use std::collections::<BTreeMap>;
+use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap};
 /// TypeScript 类型分析器
 #[derive(Debug)]
 pub struct TypeAnalyzer {

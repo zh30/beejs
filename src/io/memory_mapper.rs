@@ -3,11 +3,11 @@
 //! This module provides optimized memory mapping for large files and
 //! efficient memory access patterns for zero-copy I/O operations.
 
-use anyhow::<Result, anyhow>;
-use memmap2::<Mmap, MmapOptions>;
-use std::collections::<BTreeMap, HashMap>;
-use std::path::<Path, PathBuf>;
-use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+use anyhow::{Result, anyhow};
+use memmap2::{Mmap, MmapOptions};
+use std::collections::{BTreeMap, HashMap};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
 
 /// Memory mapping options
 #[derive(Debug, Clone, Copy)]

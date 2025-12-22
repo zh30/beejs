@@ -1,8 +1,8 @@
 //! 性能分析器模块
 //! 用于收集和分析运行时性能指标，帮助识别瓶颈
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, Ordering>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, Ordering};
 
 /// 性能分析器
 pub struct Profiler {

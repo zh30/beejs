@@ -10,8 +10,8 @@ pub mod benchmark;
 pub mod regression_detector;
 pub mod perf_analyzer;
 
-use std::collections::<BTreeMap, HashMap>;
-use std::time::<Duration, Instant>;
+use std::collections::{BTreeMap, HashMap};
+use std::time::{Duration, Instant};
 
 /// Performance test result
 #[derive(Debug, Clone)]

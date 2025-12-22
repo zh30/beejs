@@ -2,8 +2,8 @@
 //!
 //! 支持多维数组运算
 
-use std::collections::<BTreeMap, HashMap>;
-use std::ops::<Add, Mul>;
+use std::collections::{BTreeMap, HashMap};
+use std::ops::{Add, Mul};
 
 /// 数据类型
 #[derive(Debug, Clone, Copy, PartialEq)]

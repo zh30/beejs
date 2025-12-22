@@ -1,6 +1,6 @@
 //! 元宇宙分布式网络
 use std::collections::HashMap;
-use std::collections::<BTreeMap>;
+use std::collections::{BTreeMap};
 /// 节点角色
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NodeRole {

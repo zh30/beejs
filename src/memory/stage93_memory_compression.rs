@@ -2,12 +2,12 @@
 //! 实现智能内存压缩，减少内存占用
 //! 目标: 内存使用减少 15%+, 压缩速度 100MB/s+
 
-use anyhow::<Result, anyhow>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::hash::<Hash, Hasher>;
-use std::sync::<Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock>;
-use tokio::sync::<Mutex, RwLock>;
+use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::hash::{Hash, Hasher};
+use std::sync::{Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock};
+use tokio::sync::{Mutex, RwLock};
 
 /// Stage 93 内存压缩配置
 #[derive(Debug, Clone, Serialize, Deserialize)]

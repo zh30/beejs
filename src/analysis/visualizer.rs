@@ -3,10 +3,10 @@
 //! This module provides tools to generate visualizations of performance data,
 //! including charts, graphs, and HTML reports.
 
-use crate::analysis::bottleneck_detector::<Bottleneck, BottleneckSeverity>;
+use crate::analysis::bottleneck_detector::{Bottleneck, BottleneckSeverity};
 use crate::performance_analyzer::PerformanceReport;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
 
 /// Chart types for visualization
 #[derive(Debug, Clone, Serialize, Deserialize)]

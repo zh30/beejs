@@ -470,7 +470,7 @@ mod tests {
 use std::collections::HashMap;
 
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_github_actions_workflow() {
         let mut workflow = GitHubActionsWorkflow::new(

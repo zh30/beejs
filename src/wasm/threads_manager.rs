@@ -2,9 +2,9 @@
 //!
 //! 提供 WebAssembly 线程池管理、共享内存和同步原语支持
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, AtomicBool, AtomicI32, AtomicU64, Mutex, MutexGuard, Ordering, RwLock>;
-use std::thread::<JoinHandle, self>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, AtomicBool, AtomicI32, AtomicU64, Mutex, MutexGuard, Ordering, RwLock};
+use std::thread::{JoinHandle, self};
 // ============================================================================
 // 线程池配置
 // ============================================================================

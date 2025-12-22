@@ -2,14 +2,14 @@
 //! 提供高性能的 ONNX 模型推理能力，支持 CPU 和 GPU 加速
 
 use std::collections::HashMap;
-use std::sync::<Arc, Mutex, RwLock>;
+use std::sync::{Arc, Mutex, RwLock};
 
-use crate::ai_inference::engine_interface::<
+use crate::ai_inference::engine_interface::{
     InferenceEngine, EngineFactory, ModelFormat, EngineType, InferenceOptions,
     ModelHandle, InferenceResult, EngineStats, ModelInfo, TensorInfo
->;
+};
 use crate::ai_inference::tensor_ops::Tensor;
-use anyhow::<Result>;
+use anyhow::{Result};
 
 use tokio::sync::RwLock;
 use async_trait::async_trait;
@@ -416,7 +416,7 @@ impl InferenceEngine for OnnxEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_onnx_engine_creation() -> Result<()> {
         let factory: _ = OnnxEngineFactory::new();

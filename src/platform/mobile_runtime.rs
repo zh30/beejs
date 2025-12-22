@@ -1,10 +1,10 @@
 //! Mobile Platform Runtime
 //! Provides native support for iOS and Android platforms
 
-use anyhow::<Result, anyhow>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
+use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
 
 /// iOS Runtime for native iOS integration
 #[derive(Debug)]

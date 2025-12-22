@@ -24,7 +24,7 @@ pub fn tree_shake(code: &str, exports: &[String]) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_tree_shake() {
         let code: _ = r#"

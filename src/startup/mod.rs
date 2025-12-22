@@ -3,9 +3,9 @@
 pub mod lazy_init;
 pub mod precompiled_cache;
 
-pub use lazy_init::<
+pub use lazy_init::{
     LazyWebAPI, LazyInitializer, OnDemandLoader, StartupOptimizer, OptimizationLevel,
->;
-pub use precompiled_cache::<
+};
+pub use precompiled_cache::{
     OptimizedPrecompiledCache, OptimizedSnapshot, CacheStrategy,
->;
+};

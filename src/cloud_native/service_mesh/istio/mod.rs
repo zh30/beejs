@@ -4,14 +4,14 @@ pub mod types;
 pub mod config;
 pub mod traffic;
 // Re-export Istio types
-pub use config::<
+pub use config::{
     IstioConfigManager, IstioConfig, IstioService, TrafficPolicyConfig,
     LoadBalancerAlgorithm, ConnectionPoolConfig, OutlierDetectionConfig,
     Error as ConfigError,
->;
-pub use traffic::<
+};
+pub use traffic::{
     TrafficManager, FaultType, TrafficSplit, Error as TrafficError,
->;
+};
 /// Unified error type
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -23,7 +23,7 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_module_structure() {
         // Verify that the module structure is correct

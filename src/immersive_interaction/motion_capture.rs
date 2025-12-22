@@ -1,5 +1,5 @@
 
-use std::collections::<BTreeMap, HashMap>;
+use std::collections::{BTreeMap, HashMap};
 
 // 动作捕捉系统
 /// 动作捕捉配置

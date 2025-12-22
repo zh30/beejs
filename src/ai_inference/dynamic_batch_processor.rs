@@ -2,9 +2,9 @@
 //! Stage 35.0 候选特性 - 动态调整批次大小以优化推理性能
 
 use anyhow::Result;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
-use super::<AIInferenceEngine, InferenceResult>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
+use super::{AIInferenceEngine, InferenceResult};
 
 /// 动态批处理配置
 #[derive(Debug, Clone)]

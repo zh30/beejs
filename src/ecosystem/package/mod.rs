@@ -6,4 +6,4 @@ pub mod version_selector;
 pub use dependency_resolver::*;
 pub use cache_manager::*;
 pub use version_selector::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};

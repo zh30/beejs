@@ -2,10 +2,10 @@
 //! 通过批处理多个 I/O 操作来提高网络吞吐量
 
 use std::collections::VecDeque;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Duration, Instant>;
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant};
 
-use super::<NetworkConfig, NetworkStats>;
+use super::{NetworkConfig, NetworkStats};
 /// 批处理配置
 #[derive(Debug, Clone)]
 pub struct BatchConfig {

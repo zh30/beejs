@@ -2,10 +2,10 @@
 //! 实现 Beejs 集群的 Kubernetes Operator，提供自动化集群管理能力
 
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex>;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use anyhow::<Result, Context>;
+use anyhow::{Result, Context};
 use kube::{
     api::{Api, ListParams, PatchParams, Patch},
     client::Client,
@@ -31,15 +31,15 @@ use k8s_openapi::{
     },
     chrono::Utc,
 };
-use serde::<Deserialize, Serialize>;
-use schemars::<JsonSchema>;
-use std::::<
+use serde::{Deserialize, Serialize};
+use schemars::{JsonSchema};
+use std::::{
     collections::BTreeMap,
     sync::Arc,
     time::Duration,
->;
+};
 use tokio::time::sleep;
-use tracing::<info, warn, error, debug>;
+use tracing::{info, warn, error, debug};
 use uuid::Uuid;
 /// Custom Resource Definition for BeejsCluster
 #[derive(CustomResource, Clone, Debug, Deserialize, Serialize, JsonSchema)]
@@ -829,7 +829,7 @@ impl BeejsOperator {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_create_operator() {
         let client: _ = Client::try_default().await.unwrap();

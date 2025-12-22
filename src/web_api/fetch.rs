@@ -1,8 +1,8 @@
 //! Fetch API implementation for Web standard
 //! Provides fetch(), Request, Response, Headers API
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// Fetch API configuration
 #[derive(Debug, Clone)]

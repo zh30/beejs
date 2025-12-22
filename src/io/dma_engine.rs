@@ -3,11 +3,11 @@
 //! This module provides zero-copy memory transfers using DMA (Direct Memory Access)
 //! to bypass CPU and achieve maximum I/O performance for AI workloads.
 
-use anyhow::<Result, anyhow>;
-use libc::<c_void, posix_memalign>;
-use memmap2::<Mmap, MmapOptions>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+use anyhow::{Result, anyhow};
+use libc::{c_void, posix_memalign};
+use memmap2::{Mmap, MmapOptions};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
 
 /// DMA buffer for zero-copy memory operations
 #[derive(Debug)]

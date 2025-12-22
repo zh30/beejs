@@ -1,7 +1,7 @@
 //! 状态同步系统
 use std::collections::HashMap;
 use std::time::SystemTime;
-use std::collections::<BTreeMap>;
+use std::collections::{BTreeMap};
 /// 同步模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SyncMode {

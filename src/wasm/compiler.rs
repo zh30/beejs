@@ -2,11 +2,11 @@
 //!
 //! 提供 Wasmtime 引擎管理和 JavaScript 到 WebAssembly 的编译功能
 
-use anyhow::<Context, Result, anyhow>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
-use wasmtime::<Config, Engine, Module, OptLevel>;
-use wasmtime_wasi::<WasiCtx, WasiCtxBuilder>;
+use anyhow::{Context, Result, anyhow};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
+use wasmtime::{Config, Engine, Module, OptLevel};
+use wasmtime_wasi::{WasiCtx, WasiCtxBuilder};
 
 /// Wasm 编译器结构体
 ///

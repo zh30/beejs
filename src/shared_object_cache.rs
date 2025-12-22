@@ -1,10 +1,10 @@
 //! 共享对象缓存模块
 //! 实现跨V8 Isolate的常用对象共享，减少重复分配
 
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::hash::<Hash, Hasher>;
-use std::sync::<Arc, AtomicBool, AtomicUsize, Mutex, Ordering>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::hash::{Hash, Hasher};
+use std::sync::{Arc, AtomicBool, AtomicUsize, Mutex, Ordering};
 
 /// 共享值类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -10,8 +10,8 @@ pub mod l3_mmap;
 pub mod prefetcher;
 // TODO: Remove unused export: pub use prefetcher::PatternAnalyzer;
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
 
 /// Cache key type - uses FNV-1a hash for fast lookups
 pub type CacheKey = u64;

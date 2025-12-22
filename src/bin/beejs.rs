@@ -1,9 +1,9 @@
 //! Beejs CLI 工具
 //! 提供类似于 Bun 的命令行接口
 
-use beejs::runtime_core::::<CoreRuntime, MinimalRuntime, RuntimeError>;
-use clap::<Parser, Subcommand>;
-use std::io::<Write, self>;
+use beejs::runtime_core::::{CoreRuntime, MinimalRuntime, RuntimeError};
+use clap::{Parser, Subcommand};
+use std::io::{Write, self};
 
 /// CLI 参数结构
 #[derive(Parser)]

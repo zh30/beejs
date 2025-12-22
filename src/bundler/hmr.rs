@@ -1,7 +1,7 @@
 //! Hot Module Replacement (HMR) module
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 pub struct HMRManager {
     watchers: HashMap<String, Box<dyn Fn() + Send + Sync>>,

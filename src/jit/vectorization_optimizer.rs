@@ -3,8 +3,8 @@
 
 use std::collections::HashMap;
 
-use std::collections::<HashMap, HashSet>;
-use serde::<Deserialize, Serialize>;
+use std::collections::{HashMap, HashSet};
+use serde::{Deserialize, Serialize};
 /// SIMD 指令类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SimdInstructionType {
@@ -360,7 +360,7 @@ impl VectorizationOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<BTreeMap>;
+use std::collections::{BTreeMap};
     #[test]
     fn test_vectorization_optimizer_creation() {
         let config: _ = VectorizationConfig::default();

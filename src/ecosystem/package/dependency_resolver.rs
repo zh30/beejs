@@ -1,8 +1,8 @@
 //! 依赖解析器
 //! 负责解析包依赖关系图
 
-use std::collections::<BTreeMap, HashMap, HashSet, VecDeque>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+use std::sync::{Arc, Mutex};
 
 /// 依赖解析器
 #[derive(Debug, Clone)]

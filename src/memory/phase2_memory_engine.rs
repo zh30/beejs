@@ -2,9 +2,9 @@
 //!
 //! 整合 DMA、内存映射、智能预取和 GC 优化，实现极致内存性能
 
-use anyhow::<Result, anyhow>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+use anyhow::{Result, anyhow};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
 
     EnhancedZeroCopy,
     SmartPrefetcher,

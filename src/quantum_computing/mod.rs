@@ -13,10 +13,10 @@ mod simulator;
 mod optimizer;
 mod hybrid;
 
-use circuit::<CircuitResult, QuantumCircuit>;
-use hybrid::<HybridComputing, QaoaResult, VariationalResult>;
-use qubit::<Qubit, QubitState>;
-use std::collections::<BTreeMap, HashMap>;
+use circuit::{CircuitResult, QuantumCircuit};
+use hybrid::{HybridComputing, QaoaResult, VariationalResult};
+use qubit::{Qubit, QubitState};
+use std::collections::{BTreeMap, HashMap};
 
 /// 复数类型别名
 pub type Complex64 = num_complex::Complex64;

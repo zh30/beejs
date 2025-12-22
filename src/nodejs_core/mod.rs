@@ -15,7 +15,7 @@ pub mod querystring;
 pub mod child_process;
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
 /// 设置所有Node.js核心API
 pub fn setup_nodejs_core_apis(
     scope: &mut v8::ContextScope<v8::HandleScope>,

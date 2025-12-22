@@ -1,6 +1,6 @@
 //! 波前传播器实现
 use super::Complex;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
 /// 传播方法
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PropagationMethod {

@@ -2,15 +2,15 @@
 //! 高性能异步任务调度和队列管理系统
 
 use std::collections::HashMap;
-use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
 
-use std::cmp::<Ordering, Reverse>;
-use std::collections::<BinaryHeap, HashMap>;
+use std::cmp::{Ordering, Reverse};
+use std::collections::{BinaryHeap, HashMap};
 use std::sync::{
     atomic::{AtomicUsize, Ordering as AtomicOrdering},
     Arc, Mutex,
 };
-use tokio::sync::<oneshot, Semaphore>;
+use tokio::sync::{oneshot, Semaphore};
 use tokio::task::JoinHandle;
 /// 任务优先级（从低到高排序）
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -470,7 +470,7 @@ pub fn create_low_latency_queue() -> AiAsyncQueue {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<BTreeMap>;
+use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_queue_creation() {
         let queue: _ = AiAsyncQueue::new(QueueConfig::default());

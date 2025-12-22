@@ -6,7 +6,7 @@
 use anyhow::Result;
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use tracing::<debug, error, info>;
+use tracing::{debug, error, info};
 /// Jaeger tracer for distributed tracing
 pub struct JaegerTracer {
     /// Agent address for sending spans
@@ -90,7 +90,7 @@ impl JaegerSpan {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_jaeger_tracer_creation() {
         let addr: _ = "127.0.0.1:6831".parse().unwrap();

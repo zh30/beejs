@@ -6,10 +6,10 @@
 //! - 分代 GC 优化
 //! - 增量 GC 和并行 GC
 
-use anyhow::<Result, anyhow>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock>;
-use tokio::sync::<Mutex, RwLock>;
+use anyhow::{Result, anyhow};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock};
+use tokio::sync::{Mutex, RwLock};
 
 /// GC 配置
 #[derive(Debug, Clone)]

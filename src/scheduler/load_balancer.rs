@@ -1,6 +1,6 @@
 //! 智能负载均衡器 - Stage 90 Phase 5.3
 use std::collections::HashMap;
-use serde::<Serialize, Deserialize>;
+use serde::{Serialize, Deserialize};
 /// 负载均衡策略
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BalancingStrategy {
@@ -105,7 +105,7 @@ impl LoadBalancer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_load_balancer() {
         let mut lb = LoadBalancer::new(BalancingStrategy::AIAdaptive);

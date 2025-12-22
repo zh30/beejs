@@ -11,8 +11,8 @@ mod onnx_runtime;
 mod batch_optimizer;
 mod pytorch_engine;
 pub use pytorch_engine::*;
-pub use ai_inference_engine::<AIInferenceEngine, GPUSimpleAccelerator>;
-pub use engine_interface::<InferenceEngine, InferenceResult, ModelHandle, ModelInfo>;
+pub use ai_inference_engine::{AIInferenceEngine, GPUSimpleAccelerator};
+pub use engine_interface::{InferenceEngine, InferenceResult, ModelHandle, ModelInfo};
 pub use model_loader::ModelLoader;
 pub use tensor_ops::Tensor;
 pub use model_cache::ModelCache;
@@ -21,7 +21,7 @@ pub use batch_optimizer::BatchProcessor;
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_ai_inference_engine_creation() {
         let engine: _ = AIInferenceEngine::new().await;

@@ -28,25 +28,25 @@ pub mod jaeger_tracer;
 pub mod dashboard;
 pub mod visualization;
 
-use metrics::<BusinessMetrics, CustomMetrics, PerformanceMetrics, RuntimeMetrics>;
-use std::collections::<BTreeMap, HashMap>;
-// use std::sync::<Arc, Mutex, RwLock>;
+use metrics::{BusinessMetrics, CustomMetrics, PerformanceMetrics, RuntimeMetrics};
+use std::collections::{BTreeMap, HashMap};
+// use std::sync::::{Arc, Mutex, RwLock};
 use tracing::info;
 
-pub use dashboard::<
+pub use dashboard::{
     DashboardManager, DashboardConfig, Dashboard, PanelConfig,
     GrafanaClient, MetricsCollector, ChartType, GraphType,
     GridPos, QueryTarget, FieldConfig, ThresholdsConfig, PanelOptions,
     LegendConfig, TooltipConfig, TimeRangeConfig, TemplateVariable
->;
-pub use visualization::<
+};
+pub use visualization::{
     LineChart, BarChart, PieChart, TopologyGraph,
     LineChartBuilder, BarChartBuilder, PieChartBuilder, TopologyGraphBuilder,
     VisualizationConfig, DataPoint, DataSeries, ColorPalette, AxisConfig,
     LegendConfig as VizLegendConfig, TooltipConfig as VizTooltipConfig, GridConfig, MarkerConfig, LineStyle,
     Position, Size, GraphNode, GraphEdge, EdgeStyle, LayoutConfig,
     LayoutAlgorithm, ForceLayoutParams, InteractionConfig, FilterConfig
->;
+};
 /// Configuration for observability system
 #[derive(Debug, Clone)]
 pub struct ObservabilityConfig {

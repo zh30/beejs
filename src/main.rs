@@ -1,12 +1,12 @@
 //! Beejs CLI - Stage 56.2
 //! High-performance JavaScript/TypeScript runtime with Bun-compatible CLI
 
-use anyhow::<Context, Result>;
-use beejs::cli::::<ExecutionContext, ExecutorConfig, FileType, ScriptExecutor, shebang>;
-use beejs::cli::commands::::<CliApp, SubCommand>;
-use beejs::cli::init_command::::<InitCommand as InitExecutor, InitConfig, ProjectTemplate>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use anyhow::{Context, Result};
+use beejs::cli::::{ExecutionContext, ExecutorConfig, FileType, ScriptExecutor, shebang};
+use beejs::cli::commands::::{CliApp, SubCommand};
+use beejs::cli::init_command::::{InitCommand as InitExecutor, InitConfig, ProjectTemplate};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 // use beejs::debugger::DebugSession;  // Temporarily disabled - V8 API compatibility issues
 /// Temporary debug command structure

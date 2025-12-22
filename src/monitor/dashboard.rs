@@ -1,12 +1,12 @@
 //! Web 仪表板模块
 //! 提供实时性能监控 Web 界面
 
-use crate::monitor::alerts::<AlertInstance, AlertSystem>;
-use crate::monitor::data_store::<DataStore, ExportFormat, QueryCondition>;
-use crate::monitor::performance_monitor::<MetricType, MetricValue>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
-use std::time::<Duration, Instant, SystemTime>;
+use crate::monitor::alerts::{AlertInstance, AlertSystem};
+use crate::monitor::data_store::{DataStore, ExportFormat, QueryCondition};
+use crate::monitor::performance_monitor::{MetricType, MetricValue};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant, SystemTime};
 
 /// Web 仪表板配置
 #[derive(Debug, Clone)]

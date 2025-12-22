@@ -2,10 +2,10 @@
 //!
 //! 实现 AI 推理相关任务的性能测试
 
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::time::<Duration, Instant>;
-use super::<BenchmarkError, BenchmarkResult as Result, ResourceUsage, WorkloadResult>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::time::{Duration, Instant};
+use super::{BenchmarkError, BenchmarkResult as Result, ResourceUsage, WorkloadResult};
 
 /// AI 工作负载
 #[derive(Debug)]

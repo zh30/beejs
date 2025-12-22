@@ -1,6 +1,6 @@
 //! http polyfill
 use rusty_v8 as v8;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
 pub fn register(scope: &mut v8::HandleScope, global: &v8::Local<v8::Object>) {
     let http_key: _ = v8::String::new(scope, "http").unwrap();
     let http_obj: _ = v8::Object::new(scope);

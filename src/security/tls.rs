@@ -3,13 +3,13 @@
 //! 提供 TLS 1.3 配置和证书管理功能
 
 use std::collections::HashMap;
-use std::sync::<Arc, Mutex, Ordering>;
+use std::sync::{Arc, Mutex, Ordering};
 use std::time::SystemTime;
 
 use std::cmp::Ordering;
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
 /// TLS 错误
 #[derive(Error, Debug)]
 pub enum TlsError {

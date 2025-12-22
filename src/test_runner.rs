@@ -2,9 +2,9 @@
 //! 高性能测试运行器，支持 Jest 风格的测试
 #[allow(unused_imports)]
 
-use anyhow::<Result, anyhow>;
-use std::collections::<BTreeMap, HashMap>;
-use std::path::<Path, PathBuf>;
+use anyhow::{Result, anyhow};
+use std::collections::{BTreeMap, HashMap};
+use std::path::{Path, PathBuf};
 
 /// Test status
 #[derive(Debug, Clone, PartialEq)]

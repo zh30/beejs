@@ -1,11 +1,11 @@
 
 
-use chrono::<DateTime, Utc>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::hash::<Hash, Hasher>;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Duration, Instant, SystemTime>;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::hash::{Hash, Hasher};
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant, SystemTime};
 
 /// JIT编译阈值配置
 #[derive(Debug, Clone)]

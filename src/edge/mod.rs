@@ -22,4 +22,4 @@ pub use intelligent_router::*;
 pub use distributed_coordinator::*;
 pub use performance_optimizer::*;
 pub use network_optimizer::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};

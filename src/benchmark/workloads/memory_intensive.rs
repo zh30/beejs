@@ -2,10 +2,10 @@
 //!
 //! 实现内存密集型任务的性能测试
 
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::time::<Duration, Instant>;
-use super::<BenchmarkError, BenchmarkResult as Result, ResourceUsage, WorkloadResult>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::time::{Duration, Instant};
+use super::{BenchmarkError, BenchmarkResult as Result, ResourceUsage, WorkloadResult};
 
 /// 内存密集型工作负载
 #[derive(Debug)]

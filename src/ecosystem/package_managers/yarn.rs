@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use super::*;
 use std::path::PathBuf;
 use tokio;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
 /// Yarn 兼容性管理器
 #[derive(Debug)]
 pub struct YarnCompatibility {

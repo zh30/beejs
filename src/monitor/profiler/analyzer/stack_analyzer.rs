@@ -2,7 +2,7 @@
 //! 分析函数调用栈，识别热点路径和性能瓶颈
 
 use std::collections::BTreeMap;
-use std::time::<Duration, Instant, SystemTime, UNIX_EPOCH>;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 /// 调用栈帧
 #[derive(Debug, Clone)]

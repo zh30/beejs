@@ -6,9 +6,9 @@
 //! - 并行测试执行
 //! - 测试结果收集
 
-use anyhow::<Context, Result>;
-use crate::benchmarks::<BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType>;
-use crate::performance_comparison::<BenchmarkTestCase, PerformanceComparisonResult>;
+use anyhow::{Context, Result};
+use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
+use crate::performance_comparison::{BenchmarkTestCase, PerformanceComparisonResult};
 use std::collections::BTreeMap;
 
 /// 运行时配置

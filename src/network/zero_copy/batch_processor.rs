@@ -5,8 +5,8 @@
 //! 该模块提供智能批处理功能，通过合并多个小操作为一个大操作，
 //! 显著减少系统调用次数，提升整体性能。
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// 批处理项
 #[derive(Debug, Clone)]

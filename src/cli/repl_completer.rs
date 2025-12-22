@@ -252,7 +252,7 @@ impl Default for ReplCompleter {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_completer_creation() {
         let completer: _ = ReplCompleter::new();

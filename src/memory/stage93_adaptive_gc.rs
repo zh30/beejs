@@ -2,12 +2,12 @@
 //! 在 Stage 92 基础上，进一步优化 GC 性能和暂停时间
 //! 目标: GC 暂停时间减少 30%+, 吞吐量提升 20%+
 
-use anyhow::<Result, anyhow>;
-use crate::memory_optimizer::adaptive_gc::::<AdaptiveGCController, GCStrategy>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, AtomicUsize, Mutex, Ordering, RwLock>;
-use tokio::sync::<Mutex, RwLock>;
+use anyhow::{Result, anyhow};
+use crate::memory_optimizer::adaptive_gc::::{AdaptiveGCController, GCStrategy};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, AtomicUsize, Mutex, Ordering, RwLock};
+use tokio::sync::{Mutex, RwLock};
 
 /// Stage 93 自适应 GC 配置
 #[derive(Debug, Clone, Serialize, Deserialize)]

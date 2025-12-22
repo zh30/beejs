@@ -2,10 +2,10 @@
 //!
 //! 负责高效加载、验证和实例化 WebAssembly 模块
 
-use anyhow::<Context, Result, anyhow>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
-use wasmtime::<Config, Engine, Instance, Linker, Module, Store>;
+use anyhow::{Context, Result, anyhow};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
+use wasmtime::{Config, Engine, Instance, Linker, Module, Store};
 
 /// WebAssembly 模块结构体
 ///

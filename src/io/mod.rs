@@ -8,4 +8,4 @@ pub mod dma_engine;
 pub mod memory_mapper;
 pub use dma_engine::*;
 pub use memory_mapper::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};

@@ -7,11 +7,11 @@ pub mod hologram_generator;
 pub mod volume_capture;
 pub mod holographic_storage;
 
-use hologram_generator::<GeneratorConfig, HologramEncoding, HologramGenerator, HologramType>;
-use holographic_storage::<CompressionMode, HolographicStorage, StorageConfig>;
-use std::collections::<BTreeMap, HashMap>;
-use volume_capture::<CaptureConfig, ColorFormat, VolumeCapture>;
-use wavefront_propagator::<PropagationMethod, WavefrontPropagator>;
+use hologram_generator::{GeneratorConfig, HologramEncoding, HologramGenerator, HologramType};
+use holographic_storage::{CompressionMode, HolographicStorage, StorageConfig};
+use std::collections::{BTreeMap, HashMap};
+use volume_capture::{CaptureConfig, ColorFormat, VolumeCapture};
+use wavefront_propagator::{PropagationMethod, WavefrontPropagator};
 
 /// 复数类型
 #[derive(Debug, Clone, Copy, Default)]

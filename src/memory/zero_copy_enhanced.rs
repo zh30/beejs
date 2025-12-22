@@ -3,11 +3,11 @@
 //! 实现 DMA 直接内存访问、内存映射优化、智能内存预取和垃圾回收优化
 //! 目标：实现 80% 内存使用减少，支持 1000-5000x 性能提升
 
-use anyhow::<Result, anyhow>;
-use libc::<MADV_DONTNEED, MADV_SEQUENTIAL, MADV_WILLNEED, c_void, madvise, mmap, munmap, posix_memalign>;
-use memmap2::<Mmap, MmapOptions>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, AtomicUsize, Mutex, Ordering, RwLock>;
+use anyhow::{Result, anyhow};
+use libc::{MADV_DONTNEED, MADV_SEQUENTIAL, MADV_WILLNEED, c_void, madvise, mmap, munmap, posix_memalign};
+use memmap2::{Mmap, MmapOptions};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, AtomicUsize, Mutex, Ordering, RwLock};
 
 /// DMA 直接内存访问配置
 #[derive(Debug, Clone)]

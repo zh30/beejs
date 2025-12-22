@@ -2,10 +2,10 @@
 //! Implements secure multi-tenancy for Beejs clusters
 
 use std::collections::HashMap;
-use std::sync::<Arc, Mutex, RwLock>;
+use std::sync::{Arc, Mutex, RwLock};
 
 use tokio::sync::RwLock;
-use tracing::<info, warn, error, debug>;
+use tracing::{info, warn, error, debug};
 /// Tenant identifier
 #[derive(Debug, Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct TenantId(pub String);
@@ -307,7 +307,7 @@ impl TenantUpdates {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_create_tenant() {
         let manager: _ = TenancyManager::new();

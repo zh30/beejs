@@ -4,7 +4,7 @@ pub mod ai_scheduler;
 pub mod load_balancer;
 pub mod resource_predictor;
 
-use std::collections::<BTreeMap, HashMap>;
+use std::collections::{BTreeMap, HashMap};
 
     IntelligentTaskScheduler, Task, TaskPriority, SchedulingStrategy,
     TaskExecution, SchedulerMetrics,

@@ -5,18 +5,18 @@
 //! 该模块提供异步零拷贝 I/O 操作，基于 io_uring 和 Tokio 实现高性能的
 //! 异步数据传输，最小化系统调用和上下文切换开销。
 
-use std::collections::<BTreeMap, HashMap>;
-use std::io::<Seek, SeekFrom, self>;
-use std::os::unix::io::<AsRawFd, RawFd>;
-use std::sync::<Arc, Mutex, Ordering>;
-use tokio::io::<AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadBuf>;
-use tokio::net::<TcpListener, TcpStream>;
-use tokio::sync::<Mutex as TokioMutex, Semaphore>;
+use std::collections::{BTreeMap, HashMap};
+use std::io::{Seek, SeekFrom, self};
+use std::os::unix::io::{AsRawFd, RawFd};
+use std::sync::{Arc, Mutex, Ordering};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadBuf};
+use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::{Mutex as TokioMutex, Semaphore};
 
-pub use super::<
+pub use super::{
     ZeroCopyConfig, ZeroCopyError, ZeroCopyMonitor, ZeroCopyMetrics,
     ZeroCopyDirection,
->;
+};
 /// 异步零拷贝传输任务
 #[derive(Debug, Clone)]
 struct AsyncZeroCopyTask {

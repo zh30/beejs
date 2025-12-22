@@ -3,10 +3,10 @@
 //! Analyzes time series data to detect trends, calculate trend strength,
 //! and predict future values.
 
-use crate::core::data_collector::::<Metric, MetricType>;
-use crate::core::error::::<AIOpsError, Result>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
+use crate::core::data_collector::::{Metric, MetricType};
+use crate::core::error::::{AIOpsError, Result};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
 
 /// Trend direction
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

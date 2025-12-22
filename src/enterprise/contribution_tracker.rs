@@ -2,7 +2,7 @@
 //! 提供开发者贡献度分析、生产力评估、团队绩效统计等功能
 
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex, RwLock>;
+use std::sync::{Arc, Mutex, RwLock};
 
 /// 开发者信息
 #[derive(Debug, Clone)]

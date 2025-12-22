@@ -6,9 +6,9 @@
 //! - 工作负载配置文件
 //! - 运行时对比配置
 
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use super::<MetricType, Runtime>;
+use super::{MetricType, Runtime};
 
 /// 基准测试配置
 #[derive(Debug, Clone, Serialize, Deserialize)]

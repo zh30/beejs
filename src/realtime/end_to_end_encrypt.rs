@@ -1,8 +1,8 @@
 //! 端到端加密
 use anyhow::Result;
 use tracing::info;
-use serde::<Serialize, Deserialize>;
-use std::collections::<HashMap, BTreeMap>;
+use serde::{Serialize, Deserialize};
+use std::collections::{HashMap, BTreeMap};
 #[derive(Debug, Clone)]
 pub struct EncryptionKey {
     pub key_id: String,

@@ -2,13 +2,13 @@
 //! Stage 76: 企业级性能分析系统
 //! 提供函数跟踪、热点分析、性能报告等高级功能
 
-use analyzer::<CallStackAnalyzer, Hotspot, HotspotAnalyzer, StackFrame>;
-use analyzer::hotspot::<MemoryStats, TimeStats>;
-use collector::<FunctionStats, FunctionTraceHandle, FunctionTracker, TrackerStats>;
-use report::<Difficulty, OptimizationRecommendation, PerformanceSummary, Priority, RecommendationType>;
-use std::collections::<BTreeMap, HashMap>;
-use std::time::<Instant, SystemTime>;
-// use storage::<PerformanceEvent, PerformanceEventType, RingBuffer, SamplingConfig, SamplingStrategy>;
+use analyzer::{CallStackAnalyzer, Hotspot, HotspotAnalyzer, StackFrame};
+use analyzer::hotspot::{MemoryStats, TimeStats};
+use collector::{FunctionStats, FunctionTraceHandle, FunctionTracker, TrackerStats};
+use report::{Difficulty, OptimizationRecommendation, PerformanceSummary, Priority, RecommendationType};
+use std::collections::{BTreeMap, HashMap};
+use std::time::{Instant, SystemTime};
+// use storage::::{PerformanceEvent, PerformanceEventType, RingBuffer, SamplingConfig, SamplingStrategy};
 
 pub mod collector;
 pub mod analyzer;
@@ -16,9 +16,9 @@ pub mod storage;
 pub mod report;
 // pub mod cli_integration; // TODO: 实现 CLI 集成
 // 重新导出分析器类型
-pub use analyzer::analyzer::<
+pub use analyzer::analyzer::{
     CallStackAnalysis, Bottleneck, BottleneckType, RecursionInfo, DepthStats,
->;
+};
 /// 高级性能分析器配置
 #[derive(Debug, Clone)]
 pub struct AdvancedProfilerConfig {

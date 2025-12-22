@@ -4,8 +4,8 @@
 //!
 //! Implements a proper subcommand-based CLI structure similar to Bun
 
-use clap::<Parser, Subcommand>;
-use std::collections::<BTreeMap, HashMap>;
+use clap::{Parser, Subcommand};
+use std::collections::{BTreeMap, HashMap};
 
 /// Main CLI application
 #[derive(Parser, Debug)]

@@ -1,11 +1,11 @@
 //! GitOps Engine for Configuration Management
 //! 实现基于 Git 的配置管理和自动化部署工作流
 
-use anyhow::<Context, Result>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
-use tracing::<debug, error, info, warn>;
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
+use tracing::{debug, error, info, warn};
 
 /// Repository URL
 #[derive(Debug, Clone, Serialize, Deserialize)]

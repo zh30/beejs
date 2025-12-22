@@ -1,12 +1,12 @@
 //! Intelligent Routing System
 //! AI-powered intelligent routing for distributed edge computing
 
-use crate::edge::<NodeId, NodeStatus, Task, TaskPriority>;
-use serde::<Deserialize, Serialize>;
+use crate::edge::{NodeId, NodeStatus, Task, TaskPriority};
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Duration, Instant, SystemTime>;
-use tokio::time::<Duration, Instant>;
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant, SystemTime};
+use tokio::time::{Duration, Instant};
 
 /// Request for routing
 #[derive(Debug, Clone, Serialize, Deserialize)]

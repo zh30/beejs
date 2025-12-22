@@ -3,9 +3,9 @@
 //! Provides a command-line interface for debugging JavaScript/TypeScript code
 //! with support for breakpoints, stepping, and variable inspection.
 
-use std::collections::<BTreeMap, HashMap>;
-use std::io::<Write, self>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::io::{Write, self};
+use std::sync::{Arc, Mutex};
 
 /// Interactive debug command
 #[derive(Debug, Clone)]

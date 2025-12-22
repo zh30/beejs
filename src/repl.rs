@@ -7,7 +7,7 @@ use std::time::Instant;
 
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::io::<self, Write>;
+use std::io::{self, Write};
 /// REPL configuration
 #[derive(Clone)]
 pub struct ReplConfig {
@@ -380,7 +380,7 @@ impl Repl {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_repl_config_default() {
         let config: _ = ReplConfig::default();

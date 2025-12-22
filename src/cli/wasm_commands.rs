@@ -3,9 +3,9 @@
 //!
 //! 提供完整的 WebAssembly 模块管理、性能分析和执行功能
 
-use clap::<Parser, Subcommand, ValueEnum>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
+use clap::{Parser, Subcommand, ValueEnum};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
 
 /// WebAssembly CLI 子命令
 #[derive(Subcommand, Debug)]

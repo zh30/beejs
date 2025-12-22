@@ -2,6 +2,6 @@
 //!
 //! Provides developer tools and integrations
 
-use std::collections::<BTreeMap, HashMap>;
+use std::collections::{BTreeMap, HashMap};
 
 pub mod debug_adapter;

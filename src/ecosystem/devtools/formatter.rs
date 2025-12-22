@@ -1,9 +1,9 @@
 //! 代码格式化器
 //! 提供极速代码格式化功能
 
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// 格式化配置
 #[derive(Debug, Clone, Serialize, Deserialize)]

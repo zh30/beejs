@@ -3,8 +3,8 @@
 //!
 //! 提供彩色终端输出、进度条、表格格式化等功能
 
-use std::collections::<BTreeMap, HashMap>;
-use std::io::<Write, self>;
+use std::collections::{BTreeMap, HashMap};
+use std::io::{Write, self};
 
 /// ANSI 颜色代码
 pub mod colors {

@@ -4,12 +4,12 @@
 //! 实现 99%+ 缓存命中率和 < 1ms 缓存访问延迟
 
 use std::collections::HashMap;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Duration, Instant, SystemTime>;
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant, SystemTime};
 
-use tracing::<debug, info, warn>;
-use anyhow::<Context, Result>;
-use serde::<Deserialize, Serialize>;
+use tracing::{debug, info, warn};
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 /// 缓存条目
 #[derive(Debug, Clone)]
 pub struct CacheEntry {

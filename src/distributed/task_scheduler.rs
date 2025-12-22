@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::sync::Ordering;
 
-use std::collections::<BinaryHeap, HashMap>;
+use std::collections::{BinaryHeap, HashMap};
 use std::cmp::Reverse;
 /// 任务类型枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -310,7 +310,7 @@ impl TaskDistributor {
             }
             "random" => {
                 use rand::Rng;
-use std::collections::<BTreeMap>;
+use std::collections::{BTreeMap};
                 let mut rng = rand::thread_rng();
                 if compatible_nodes.is_empty() {
                     None

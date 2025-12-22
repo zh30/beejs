@@ -1,12 +1,12 @@
 //! Edge Node Manager
 //! Manages and coordinates edge nodes for distributed JavaScript/TypeScript execution
 
-use anyhow::<Result, anyhow>;
-use serde::<Deserialize, Serialize>;
+use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex, Ordering, RwLock>;
-use std::time::<Duration, Instant, SystemTime>;
-use tokio::time::<Duration, Instant>;
+use std::sync::{Arc, Mutex, Ordering, RwLock};
+use std::time::{Duration, Instant, SystemTime};
+use tokio::time::{Duration, Instant};
 
 /// Unique identifier for an edge node
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

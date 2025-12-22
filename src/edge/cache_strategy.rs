@@ -1,10 +1,10 @@
 //! Edge Caching Strategy
 //! Multi-layer intelligent caching for optimal performance
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Duration, Instant, SystemTime>;
-use tokio::time::<Duration, Instant>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant, SystemTime};
+use tokio::time::{Duration, Instant};
 
 /// Multi-layer edge cache
 #[derive(Debug)]

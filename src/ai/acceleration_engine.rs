@@ -1,8 +1,8 @@
 //! 推理加速引擎
 //! 实现硬件加速和并行推理引擎，包括 GPU 加速、流水线并行和动态批处理
 
-use std::collections::<BTreeMap, HashMap, VecDeque>;
-use std::sync::<Arc, Mutex, Ordering>;
+use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::sync::{Arc, Mutex, Ordering};
 
 /// 加速配置
 #[derive(Debug, Clone)]

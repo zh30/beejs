@@ -3,8 +3,8 @@
 use std::time::Duration;
 
 use std::collections::VecDeque;
-use chrono::<DateTime, Utc>;
-use serde::<Serialize, Deserialize>;
+use chrono::{DateTime, Utc};
+use serde::{Serialize, Deserialize};
 /// 资源指标
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceMetrics {
@@ -105,7 +105,7 @@ impl ResourcePredictor {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_resource_predictor() {
         let mut predictor = ResourcePredictor::new(100);

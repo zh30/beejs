@@ -2,9 +2,9 @@
 //!
 //! 实现基于角色的访问控制 (RBAC) 和权限检查
 
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex>;
+use std::sync::{Arc, Mutex};
 
 /// 权限控制错误
 #[derive(Error, Debug)]

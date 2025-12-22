@@ -1,7 +1,7 @@
 //! 智能性能分析器 - Stage 90 Phase 5.4
 use std::collections::HashMap;
-use chrono::<DateTime, Utc>;
-use serde::<Serialize, Deserialize>;
+use chrono::{DateTime, Utc};
+use serde::{Serialize, Deserialize};
 /// 分析报告
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalysisReport {
@@ -243,7 +243,7 @@ impl IntelligentAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_intelligent_analyzer() {
         let mut analyzer = IntelligentAnalyzer::new();

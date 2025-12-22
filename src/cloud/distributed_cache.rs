@@ -9,7 +9,7 @@
 //! - 布隆过滤器
 
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex>;
+use std::sync::{Arc, Mutex};
 
 /// 缓存条目
 #[derive(Debug, Clone)]

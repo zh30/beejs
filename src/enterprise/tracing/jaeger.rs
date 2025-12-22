@@ -1,12 +1,12 @@
 //! Jaeger Tracing Integration for Beejs
 //! 实现与 Jaeger 分布式追踪系统的集成
 
-use anyhow::<Context, Result>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
-use std::time::<Duration, Instant, SystemTime>;
-use tracing::<debug, error, info, warn>;
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant, SystemTime};
+use tracing::{debug, error, info, warn};
 
 /// Jaeger collector configuration
 #[derive(Debug, Clone)]

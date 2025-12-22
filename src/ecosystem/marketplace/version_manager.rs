@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use chrono::Utc;
 use crate::ecosystem::types::*;
 use super::*;
-use std::collections::<BTreeMap>;
+use std::collections::{BTreeMap};
 #[derive(Debug, Clone)]
 pub struct VersionManager {
     registry: Arc<ModuleRegistry>,

@@ -3,11 +3,11 @@
 //! 提供高性能的 WebAssembly 内存管理，包括零拷贝内存共享、内存池预分配、
 //! V8 与 WASM 内存映射等功能
 
-use anyhow::<Context, Result, anyhow>;
-use std::alloc::<GlobalAlloc, Layout, System>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
-use wasmtime::<Memory, Store>;
+use anyhow::{Context, Result, anyhow};
+use std::alloc::{GlobalAlloc, Layout, System};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
+use wasmtime::{Memory, Store};
 
 /// 内存块结构体
 #[derive(Debug, Clone)]

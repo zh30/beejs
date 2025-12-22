@@ -6,9 +6,9 @@ pub use registry::*;
 pub use version_manager::*;
 use std::collections::HashMap;
 use chrono::Utc;
-use serde::<Serialize, Deserialize>;
+use serde::{Serialize, Deserialize};
 use crate::ecosystem::types::*;
-use std::collections::<BTreeMap>;
+use std::collections::{BTreeMap};
 /// 模块 ID
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct ModuleId {

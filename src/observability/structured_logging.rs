@@ -3,12 +3,12 @@
 //! This module provides structured logging capabilities with JSON formatting,
 //! correlation IDs, and context-aware logging for better observability.
 
-use serde_json::<Value, json>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
-use tracing::<Event, Level, Subscriber>;
-use tracing_subscriber::<EnvFilter, Registry>;
-use tracing_subscriber::fmt::<FormatEvent, FormatFields>;
+use serde_json::{Value, json};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
+use tracing::{Event, Level, Subscriber};
+use tracing_subscriber::{EnvFilter, Registry};
+use tracing_subscriber::fmt::{FormatEvent, FormatFields};
 
 /// Structured logger with JSON formatting and context support
 pub struct StructuredLogger {

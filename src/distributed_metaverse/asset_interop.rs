@@ -1,5 +1,5 @@
 
-use std::collections::<BTreeMap, HashMap>;
+use std::collections::{BTreeMap, HashMap};
 
 // 跨平台资产互通系统
 /// 资产格式

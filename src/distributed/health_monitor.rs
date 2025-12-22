@@ -1,13 +1,13 @@
 //! 健康监控模块
 //! 实现节点健康检查、状态监控和故障检测
 
-use crate::distributed::service_discovery::<DiscoveryConfig, NodeInfo, ServiceDiscovery>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Duration, Instant, SystemTime>;
-use super::node_manager::<HealthStatus, NodeManager, NodeStatus>;
-use tokio::time::<interval, sleep>;
-use tracing::<info, warn>;
+use crate::distributed::service_discovery::{DiscoveryConfig, NodeInfo, ServiceDiscovery};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant, SystemTime};
+use super::node_manager::{HealthStatus, NodeManager, NodeStatus};
+use tokio::time::{interval, sleep};
+use tracing::{info, warn};
 
 /// 健康检查配置
 #[derive(Debug, Clone)]

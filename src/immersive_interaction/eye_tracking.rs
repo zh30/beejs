@@ -1,5 +1,5 @@
 
-use std::collections::<BTreeMap, HashMap>;
+use std::collections::{BTreeMap, HashMap};
 
 // 眼动追踪系统
 /// 眼动追踪配置

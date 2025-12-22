@@ -4,21 +4,21 @@ pub mod gitops;
 pub mod pipeline;
 pub mod deployment;
 /// Re-export GitOps types
-pub use gitops::<
+pub use gitops::{
     GitOpsManager, ArgoCDApplication, FluxHelmRelease, GitOpsSyncPolicy,
     GitOpsConfig, Error as GitOpsError,
->;
+};
 /// Re-export pipeline types
-pub use pipeline::<
+pub use pipeline::{
     PipelineManager, GitHubActionsWorkflow, GitLabCIPipeline, JenkinsPipeline,
     PipelineStage, PipelineStatus, PipelineEvent, PipelineConfig,
     PipelineCache, PipelineArtifact, PipelineSecret, Error as PipelineError,
->;
+};
 /// Re-export deployment types
-pub use deployment::<
+pub use deployment::{
     DeploymentStrategy, BlueGreenDeployment, CanaryDeployment, RollingDeployment,
     DeploymentConfig, DeploymentStatus, Error as DeploymentError,
->;
+};
 /// Unified CI/CD Error type
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -32,7 +32,7 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_module_structure() {
         // Verify that the module structure is correct

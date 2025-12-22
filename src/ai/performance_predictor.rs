@@ -3,8 +3,8 @@
 
 use std::time::Instant;
 
-use serde::<Deserialize, Serialize>;
-use crate::ai::ai_performance_engine::<PerformanceMetrics, PerformancePrediction, OptimizationSuggestion, OptimizationType, AiPerformanceEngineConfig>;
+use serde::{Deserialize, Serialize};
+use crate::ai::ai_performance_engine::{PerformanceMetrics, PerformancePrediction, OptimizationSuggestion, OptimizationType, AiPerformanceEngineConfig};
 /// 特征向量
 #[derive(Debug, Clone)]
 struct FeatureVector {
@@ -285,7 +285,7 @@ impl PerformancePredictor {
 mod tests {
     use super::*;
     use crate::ai::ai_performance_engine::AiPerformanceEngineConfig;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_model_prediction() {
         let config: _ = AiPerformanceEngineConfig::default();

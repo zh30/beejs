@@ -2,11 +2,11 @@
 //! 收集 Beejs 运行时的各种性能指标，支持 Prometheus 导出
 
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex, Ordering>;
+use std::sync::{Arc, Mutex, Ordering};
 
-use anyhow::<Result, Context>;
-use serde::<Deserialize, Serialize>;
-use tracing::<info, warn, error, debug>;
+use anyhow::{Result, Context};
+use serde::{Deserialize, Serialize};
+use tracing::{info, warn, error, debug};
 use uuid::Uuid;
 /// Tenant ID type
 pub type TenantId = String;
@@ -531,7 +531,7 @@ fn action_to_string(action: &AlertAction) -> &'static str {
 }
 #[cfg(test)]
 mod enterprise_tests {
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_enterprise_metrics_collector() {
         let mut collector = EnterpriseMetricsCollector::new();

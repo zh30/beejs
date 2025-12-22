@@ -1,10 +1,10 @@
 //! 零拷贝数据传输优化模块
 //! 通过引用传递和内存映射实现高性能数据传输
 
-use crate::lock_free_temp::<AtomicStats, LockFreeBufferPool, LockFreeCounter>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
-use tokio::io::<AsyncSeekExt, AsyncWriteExt>;
+use crate::lock_free_temp::{AtomicStats, LockFreeBufferPool, LockFreeCounter};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
+use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 
 /// 零拷贝缓冲区
 /// 包装一个字节切片，允许零拷贝传递

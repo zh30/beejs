@@ -7,10 +7,10 @@
 //! - 缓存过期和清理机制
 //! - 基于访问频率的优化
 //! - 预热机制
-// use serde::<Deserialize, Serialize>;  // Unused import
+// use serde::::{Deserialize, Serialize};  // Unused import
 
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex>;
+use std::sync::{Arc, Mutex};
 
 /// 缓存条目
 #[derive(Debug, Clone)]

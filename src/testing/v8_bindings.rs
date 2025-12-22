@@ -1,9 +1,9 @@
 //! V8 Bindings for Testing Framework - Fixed version
 //! Registers test() / describe() / expect() functions in V8 context
 use rusty_v8 as v8;
-use crate::testing::<register_suite, get_all_suites>;
-use crate::testing::test_context::<TestSuite, TestCase>;
-use std::collections::<HashMap, BTreeMap>;
+use crate::testing::{register_suite, get_all_suites};
+use crate::testing::test_context::{TestSuite, TestCase};
+use std::collections::{HashMap, BTreeMap};
 /// Register all testing functions in the V8 global scope
 pub fn register_testing_api(_scope: &mut v8::HandleScope, _global: v8::Local<v8::Object>) {
     // Temporarily disabled due to V8 API complexity

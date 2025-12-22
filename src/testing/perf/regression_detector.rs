@@ -1,8 +1,8 @@
 //! Performance Regression Detector
 //! Detects performance regressions by comparing with historical data
 
-use std::collections::<BTreeMap, HashMap>;
-use std::time::<Duration, Instant, SystemTime>;
+use std::collections::{BTreeMap, HashMap};
+use std::time::{Duration, Instant, SystemTime};
 
 /// Historical performance data
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

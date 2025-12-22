@@ -13,16 +13,16 @@ pub mod async_impl;
 pub mod batch_processor;
 // 重新导出主要类型
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
-pub use sender::<
+pub use sender::{
     ZeroCopySender, ZeroCopySenderConfig, ZeroCopySenderStats,
     ZeroCopyDirection,
->;
-pub use receiver::<
+};
+pub use receiver::{
     ZeroCopyReceiver, ZeroCopyReceiverConfig, ZeroCopyReceiverStats,
->;
+};
 // 内部模块
 
 /// 零拷贝 I/O 性能指标

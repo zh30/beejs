@@ -5,7 +5,7 @@ pub mod intelligent_analyzer;
 pub mod auto_tuner;
 pub mod prometheus_exporter;
 
-use std::collections::<BTreeMap, HashMap>;
+use std::collections::{BTreeMap, HashMap};
 
     RealtimePerformanceMonitor, PerformanceMetrics, MetricType,
     Alert, AlertSeverity,

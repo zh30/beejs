@@ -1,11 +1,11 @@
 //! Python Runtime Integration
 //! Provides seamless integration between Beejs and Python
 
-use anyhow::<Result, anyhow>;
-use pyo3::::<PyObject, PyResult, Python, types::PyDict>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
+use anyhow::{Result, anyhow};
+use pyo3::::{PyObject, PyResult, Python, types::PyDict};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
 
 /// Python GIL (Global Interpreter Lock) manager
 #[derive(Debug)]

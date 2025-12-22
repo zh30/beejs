@@ -2,11 +2,11 @@
 //!
 //! 实现 95%+ 原生性能的 WASM 执行引擎，支持热路径优化和动态优化
 
-use anyhow::<Context, Result>;
+use anyhow::{Context, Result};
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex>;
-use tracing::<debug, info>;
-use wasmtime::<Engine, Instance, Memory, Module, Store>;
+use std::sync::{Arc, Mutex};
+use tracing::{debug, info};
+use wasmtime::{Engine, Instance, Memory, Module, Store};
 
 /// WASM 执行结果
 #[derive(Debug, Clone)]

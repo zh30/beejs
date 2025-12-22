@@ -1,9 +1,9 @@
 //! Parallel Test Executor
 //! Executes tests concurrently using thread pools
 
-use crate::testing::test_context::::<TestCase, TestResult, TestSuite>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use crate::testing::test_context::{TestCase, TestResult, TestSuite};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// Parallel execution configuration
 #[derive(Debug, Clone)]

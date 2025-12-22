@@ -6,8 +6,8 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use tokio::sync::RwLock;
-use serde::<Deserialize, Serialize>;
-use std::collections::<HashMap, BTreeMap>;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, BTreeMap};
 /// Connection manager
 pub struct ConnectionManager {
     connections: std::collections::HashMap<String, Connection>,

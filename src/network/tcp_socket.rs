@@ -6,10 +6,10 @@
 //! - 零拷贝发送缓冲区
 //! - 写时复制 (copy-on-write)
 
-use std::collections::<BTreeMap, HashMap>;
-use std::io::<Read, Write>;
-use std::net::<TcpListener, TcpStream>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::io::{Read, Write};
+use std::net::{TcpListener, TcpStream};
+use std::sync::{Arc, Mutex};
 
 /// 零拷贝 TCP 套接字
 ///

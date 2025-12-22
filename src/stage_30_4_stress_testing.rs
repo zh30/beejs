@@ -1,8 +1,8 @@
 /// Stage 30.4 压力测试模块
 /// 提供高并发、内存压力、网络压力等多种压力测试功能
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, AtomicBool, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, AtomicBool, Mutex};
 
 /// 压力测试配置
 #[derive(Debug, Clone)]

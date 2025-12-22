@@ -7,8 +7,8 @@
 use crate::runtime::JsValue;
 use anyhow::Result;
 use std::collections::HashMap;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap};
 /// Heap snapshot
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HeapSnapshot {

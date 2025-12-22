@@ -7,14 +7,14 @@ use std::time::Duration;
 use std::collections::HashMap;
 use tracing::info;
 use kube::Api;
-use super::types::<
+use super::types::{
     DestinationRule, DestinationRuleSpec, TrafficPolicy, LoadBalancerSettings,
     ConnectionPoolSettings, TcpSettings, OutlierDetection, Subset,
     VirtualService, VirtualServiceSpec, HttpRoute, HttpRouteDestination, Destination, PortSelector,
     Gateway, GatewaySpec, Server, Port,
     PeerAuthentication, PeerAuthenticationSpec, MutualTls,
     AuthorizationPolicy, AuthorizationPolicySpec, WorkloadSelector, AuthorizationRule, Source, Operation,
->;
+};
 /// Istio configuration manager
 pub struct IstioConfigManager {
     /// Istio client
@@ -324,7 +324,7 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_istio_config_creation() {
         let config: _ = IstioConfig {

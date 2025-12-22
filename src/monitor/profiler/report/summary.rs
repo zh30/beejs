@@ -1,6 +1,6 @@
 //! 性能摘要报告生成模块
 use std::time::Duration;
-use chrono::<DateTime, Utc>;
+use chrono::{DateTime, Utc};
 use crate::monitor::profiler::{
     Hotspot, analyzer::stack_analyzer::{Bottleneck, CallStackAnalysis},
 };
@@ -344,7 +344,7 @@ impl Default for PerformanceSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_performance_summary_creation() {
         let summary: _ = PerformanceSummary::new();

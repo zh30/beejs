@@ -1,10 +1,10 @@
 //! V8 事件循环实现
 //! 为 Beejs 提供异步 JavaScript 执行支持
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
-// use std::task::<Context, Poll>; // 未使用的导入
+// use std::task::::{Context, Poll}; // 未使用的导入
 /// 事件循环状态
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(dead_code)]

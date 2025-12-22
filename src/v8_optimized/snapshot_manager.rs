@@ -2,10 +2,10 @@
 //! 实现 < 1ms 的快照加载时间
 //! Stage 27.1: V8 引擎深度优化
 
-use anyhow::<Result, anyhow>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
-use std::time::<Duration, Instant, SystemTime>;
+use anyhow::{Result, anyhow};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
+use std::time::{Duration, Instant, SystemTime};
 
 /// V8 快照优化管理器
 /// Stage 27.1: 实现 < 1ms 快照加载

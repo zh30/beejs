@@ -1,8 +1,8 @@
 //! BeejsWorkload Custom Resource Definition
 //! Defines workload-level configuration for running JavaScript/TypeScript scripts
 use kube::CustomResource;
-use schemars::::<gen::SchemaGenerator, schema::Schema, JsonSchema>;
-use serde::<Deserialize, Serialize>;
+use schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 /// BeejsWorkload is the schema for the beejsworkload API
 #[derive(CustomResource, Debug, Clone, Deserialize, Serialize, JsonSchema)]
@@ -335,7 +335,7 @@ pub struct NetworkPolicyPort {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_beejs_workload_crd_creation() {
         let workload: _ = BeejsWorkload::new(

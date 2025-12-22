@@ -1,10 +1,10 @@
 //! epoll 高性能事件驱动管理器
 //! 支持 100万+ 并发连接
 
-use crate::network::<NetworkConfig, NetworkError>;
+use crate::network::{NetworkConfig, NetworkError};
 use std::collections::BTreeMap;
-use std::net::<TcpListener, TcpStream>;
-use std::sync::<Arc, Mutex>;
+use std::net::{TcpListener, TcpStream};
+use std::sync::{Arc, Mutex};
 
 /// epoll 事件管理器
 pub struct EpollManager {

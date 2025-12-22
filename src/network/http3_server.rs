@@ -1,9 +1,9 @@
 //! HTTP/3 服务器实现
 //! 基于 QUIC 协议的超低延迟 HTTP/3 服务器
 
-use crate::network::<NetworkConfig, NetworkError>;
+use crate::network::{NetworkConfig, NetworkError};
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex>;
+use std::sync::{Arc, Mutex};
 
 /// HTTP/3 路由处理器类型
 pub type Http3Handler = fn(&str, &[u8]) -> Result<Vec<u8>, NetworkError>;

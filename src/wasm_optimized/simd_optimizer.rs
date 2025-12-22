@@ -3,11 +3,11 @@
 //! 实现 WebAssembly SIMD (Single Instruction, Multiple Data) 优化
 //! 支持 128 位向量操作，实现 4x+ 性能提升
 
-use anyhow::<Context, Result>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
-use tracing::<debug, info>;
-use wasmtime::<Config, Module>;
+use anyhow::{Context, Result};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
+use tracing::{debug, info};
+use wasmtime::{Config, Module};
 
 /// SIMD 优化结果
 #[derive(Debug, Clone)]

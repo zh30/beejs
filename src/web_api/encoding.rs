@@ -245,7 +245,7 @@ fn atob_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
     // Use base64 decoding
-    use base64::::<Engine, engine::general_purpose::STANDARD>;
+    use base64::{Engine, engine::general_purpose::STANDARD};
     match STANDARD.decode(&encoded) {
         Ok(bytes) => {
             // Convert bytes to string (treating as Latin-1)
@@ -296,7 +296,7 @@ fn btoa_callback(
 mod tests {
     #[test]
     fn test_base64_encode_decode() {
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
         let original: _ = "Hello, World!";
         let encoded: _ = STANDARD.encode(original);
         let decoded_bytes: _ = STANDARD.decode(&encoded).unwrap();

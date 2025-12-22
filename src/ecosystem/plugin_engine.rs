@@ -1,10 +1,10 @@
 //! Beejs Plugin Engine - Stage 86
 //! 高性能、安全的插件引擎核心实现
 
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, AtomicBool, Mutex, Ordering, RwLock>;
-use std::time::<Duration, Instant>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, AtomicBool, Mutex, Ordering, RwLock};
+use std::time::{Duration, Instant};
 
 // ============================================================================
 // 核心类型定义

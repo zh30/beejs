@@ -1,5 +1,5 @@
 
-use std::collections::<BTreeMap, HashMap>;
+use std::collections::{BTreeMap, HashMap};
 
 // 全息图像生成器
 /// 全息图类型

@@ -4,10 +4,10 @@
 //! Stage 29.7: 分布式监控与调试 - 实时性能指标和监控
 
 use std::collections::HashMap;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Duration, Instant, SystemTime>;
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant, SystemTime};
 
-use tracing::<debug, info, warn>;
+use tracing::{debug, info, warn};
 /// 指标类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum MetricType {

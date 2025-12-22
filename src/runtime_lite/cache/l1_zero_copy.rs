@@ -3,8 +3,8 @@
 //! This module provides the fastest cache level using Arc<[u8]> for zero-copy
 //! data sharing and pre-allocated buffer pools for minimal allocation overhead.
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
 
 /// Zero-copy script buffer using Arc for safe sharing
 #[derive(Debug, Clone)]

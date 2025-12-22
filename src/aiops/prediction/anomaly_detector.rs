@@ -3,10 +3,10 @@
 //! Detects anomalies in system metrics using statistical methods and machine learning.
 //! Supports various types of anomalies including spikes, drops, level shifts, and trends.
 
-use crate::core::data_collector::::<Metric, MetricType>;
-use crate::core::error::::<AIOpsError, Result>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
+use crate::core::data_collector::::{Metric, MetricType};
+use crate::core::error::::{AIOpsError, Result};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
 
 /// Types of anomalies that can be detected
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

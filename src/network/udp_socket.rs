@@ -6,10 +6,10 @@
 //! - 数据包池管理
 //! - 批量发送优化
 
-use std::collections::<BTreeMap, HashMap>;
-use std::io::<Read, Write>;
-use std::net::<SocketAddr, UdpSocket>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::io::{Read, Write};
+use std::net::{SocketAddr, UdpSocket};
+use std::sync::{Arc, Mutex};
 
 /// 零拷贝 UDP 套接字
 ///

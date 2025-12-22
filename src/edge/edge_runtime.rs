@@ -1,12 +1,12 @@
 //! Edge Runtime Management
 //! High-performance edge runtime with minimal cold start times and resource management
 
-use anyhow::<Result, anyhow>;
-use serde::<Deserialize, Serialize>;
+use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Duration, Instant, SystemTime>;
-use tokio::time::<Duration, Instant>;
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant, SystemTime};
+use tokio::time::{Duration, Instant};
 
 /// Edge Runtime instance
 #[derive(Debug)]

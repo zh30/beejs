@@ -1,11 +1,11 @@
 //! 分析数据收集器
 //! 提供使用统计和性能基准功能
 
-use chrono::<DateTime, Duration, Utc>;
-use serde::<Deserialize, Serialize>;
+use chrono::{DateTime, Duration, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Duration, Instant>;
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant};
 
 /// 使用事件
 #[derive(Debug, Clone, Serialize, Deserialize)]

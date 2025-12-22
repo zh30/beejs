@@ -2,10 +2,10 @@
 //!
 //! 该模块利用因果推断、变更关联分析和知识图谱来快速定位系统故障的根本原因。
 
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Duration, SystemTime>;
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, SystemTime};
 
 /// 事件类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

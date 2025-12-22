@@ -2,9 +2,9 @@
 //!
 //! 该模块提供多种异常检测算法，包括统计方法和机器学习方法。
 
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex, RwLock>;
+use std::sync::{Arc, Mutex, RwLock};
 
 /// 异常类型
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

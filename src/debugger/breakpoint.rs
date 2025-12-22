@@ -7,8 +7,8 @@ use std::sync::Ordering;
 use std::time::SystemTime;
 
 use std::collections::HashMap;
-use crate::debugger::<DebugResult, SourceLocation>;
-use std::collections::<BTreeMap>;
+use crate::debugger::{DebugResult, SourceLocation};
+use std::collections::{BTreeMap};
 /// Unique breakpoint ID generator
 static BREAKPOINT_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 /// Breakpoint condition type

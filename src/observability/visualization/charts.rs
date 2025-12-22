@@ -10,9 +10,9 @@
 
 use std::collections::HashMap;
 
-use anyhow::<Result, Context, anyhow>;
+use anyhow::{Result, Context, anyhow};
 use tokio::sync::RwLock;
-use tracing::<debug, warn, error>;
+use tracing::{debug, warn, error};
 /// Line Chart - For time series and continuous data
 pub struct LineChart {
     config: VisualizationConfig,
@@ -900,7 +900,7 @@ impl Default for PieChartBuilder {
 }
 #[cfg(test)]
 mod tests {
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_line_chart_builder() {
         let mut builder = LineChartBuilder::new();

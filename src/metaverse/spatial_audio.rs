@@ -1,6 +1,6 @@
 //! 空间音频系统
 use std::collections::HashMap;
-use std::collections::<BTreeMap>;
+use std::collections::{BTreeMap};
 /// HRTF 配置文件
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HRTFProfile {

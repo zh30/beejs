@@ -7,9 +7,9 @@
 //! - 网络套接字到文件的传输
 //! - 减少内存拷贝和上下文切换
 
-use std::collections::<BTreeMap, HashMap>;
-use std::os::unix::io::<AsRawFd, RawFd>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::os::unix::io::{AsRawFd, RawFd};
+use std::sync::{Arc, Mutex};
 
 /// splice 零拷贝数据传输器
 ///

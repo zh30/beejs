@@ -2,8 +2,8 @@
 //! 提供高效的 AI 模型缓存和管理
 
 use anyhow::Result;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, Ordering, RwLock>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, Ordering, RwLock};
 
 /// 缓存策略
 #[derive(Debug, Clone)]

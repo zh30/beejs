@@ -6,9 +6,9 @@
 //! 该模块实现了一个适配层，允许旧版本的 V8 API 在新版本上运行，
 //! 并提供自动迁移和兼容性检查功能。
 
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
 
 /// API 适配器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]

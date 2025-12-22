@@ -2,7 +2,7 @@
 //! 提供高性能的张量计算和操作
 
 use anyhow::Result;
-use std::collections::<BTreeMap, HashMap>;
+use std::collections::{BTreeMap, HashMap};
 
 /// 张量结构体
 #[derive(Debug, Clone)]

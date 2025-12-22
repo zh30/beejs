@@ -4,7 +4,7 @@
 use super::circuit::QuantumCircuit;
 use super::gates::GateType;
 use std::f64::consts::PI;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
 /// 量子优化器
 pub struct QuantumOptimizer {
     /// 启用门消除优化

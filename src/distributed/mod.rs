@@ -1,7 +1,7 @@
 //! 分布式运行时模块
 //! 提供集群管理、负载均衡、任务调度等分布式功能
 
-use std::sync::<Arc, Mutex>;
+use std::sync::{Arc, Mutex};
 
 pub mod service_discovery;
 pub mod node_manager;
@@ -17,14 +17,14 @@ pub mod distributed_metrics;
 pub mod distributed_tracer;
 pub mod cluster_console;
 
-pub use service_discovery::<
+pub use service_discovery::{
     ServiceDiscovery,
     DiscoveryConfig,
     NodeInfo,
     GossipMessage,
     ClusterStats,
->;
-pub use node_manager::<
+};
+pub use node_manager::{
     NodeManager,
     NodeStatus,
     NodeLoad,
@@ -32,16 +32,16 @@ pub use node_manager::<
     ClusterTopology,
     RegionInfo,
     HealthStatus,
->;
-pub use health_monitor::<
+};
+pub use health_monitor::{
     HealthMonitor,
     HealthCheckConfig,
     HealthCheckResult,
     MonitorMetrics,
     ClusterHealthStatus,
     HealthStatistics,
->;
-pub use load_balancer::<
+};
+pub use load_balancer::{
     ConsistentHashRing,
     HashRingConfig,
     IntelligentRouter,
@@ -57,8 +57,8 @@ pub use load_balancer::<
     LoadBalancerStats,
     Backend,
     Request,
->;
-pub use task_scheduler::<
+};
+pub use task_scheduler::{
     TaskScheduler,
     TaskDistributor,
     ResultAggregator,
@@ -71,8 +71,8 @@ pub use task_scheduler::<
     TaskResult,
     SchedulerNodeInfo,
     SchedulerStats,
->;
-pub use task_executor::<
+};
+pub use task_executor::{
     TaskExecutor,
     ExecutorConfig,
     ExecutionMode,
@@ -97,8 +97,8 @@ pub use task_executor::<
     CheckpointManager,
     RecoveryManager,
     RecoveryConfig,
->;
-pub use autoscaler::<
+};
+pub use autoscaler::{
     Autoscaler,
     AutoscalerConfig,
     ClusterMetrics,
@@ -106,23 +106,23 @@ pub use autoscaler::<
     ScalingAction,
     ScalingPolicy,
     AutoscalerStats,
->;
-pub use scaling_manager::<
+};
+pub use scaling_manager::{
     ScalingManager,
     ScalingConfig,
     ScalingEvent,
     ScalingNode,
     ScalingNodeStatus,
     ScalingStats,
->;
-pub use resource_tracker::<
+};
+pub use resource_tracker::{
     ResourceTracker,
     ResourceConfig,
     ResourceAllocation,
     ResourceUsage,
     ResourceStats,
->;
-pub use fault_tolerance::<
+};
+pub use fault_tolerance::{
     FaultDetector,
     FaultDetectionConfig,
     FaultEvent,
@@ -134,8 +134,8 @@ pub use fault_tolerance::<
     RedundancyConfig,
     ReplicationManager,
     ReplicationStats,
->;
-pub use distributed_metrics::<
+};
+pub use distributed_metrics::{
     DistributedMetrics,
     MetricsCollector,
     MetricsAggregator,
@@ -145,8 +145,8 @@ pub use distributed_metrics::<
     MetricsConfig,
     AggregationStrategy,
     MetricsStorage,
->;
-pub use distributed_tracer::<
+};
+pub use distributed_tracer::{
     DistributedTracer,
     TraceContext,
     Span,
@@ -154,8 +154,8 @@ pub use distributed_tracer::<
     TraceAggregator,
     TraceConfig,
     DistributedTraceStats,
->;
-pub use cluster_console::<
+};
+pub use cluster_console::{
     ClusterConsole,
     ConsoleConfig,
     WebSocketManager,
@@ -164,4 +164,4 @@ pub use cluster_console::<
     ConsoleOutput,
     ClusterVisualization,
     ConsoleStats,
->;
+};

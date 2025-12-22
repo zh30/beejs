@@ -11,14 +11,14 @@ pub mod threads_manager;
 // pub mod compiler;
 // pub mod high_performance_cache;
 
-use module_cache::<CacheStats, WasmModuleCache>;
-use module_loader::<LoaderStats, WasmModule, WasmModuleLoader>;
+use module_cache::{CacheStats, WasmModuleCache};
+use module_loader::{LoaderStats, WasmModule, WasmModuleLoader};
 
-pub use simd_engine::<
+pub use simd_engine::{
     SimdEngine, HardwareFeatures, SimdCapability, VectorOperation,
     VectorWidth, SimdStats, detect_cpu_features,
->;
-pub use threads_manager::<
+};
+pub use threads_manager::{
     WasmThreadsManager, WasmThreadHandle, SharedMemoryRegion,
     WasmMutex, WasmAtomic, ThreadPoolConfig, ThreadStats,
->;
+};

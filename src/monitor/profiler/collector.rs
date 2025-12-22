@@ -1,12 +1,12 @@
 //! 数据采集器模块
 //! 负责收集函数调用、内存分配等性能数据
 
-use std::collections::<BTreeMap, HashMap>;
+use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 
-pub use storage::<
+pub use storage::{
     PerformanceEvent, PerformanceEventType, RingBuffer, SamplingStrategy, SamplingConfig,
->;
+};
 /// 函数调用跟踪句柄
 #[derive(Debug, Clone)]
 pub struct FunctionTraceHandle {

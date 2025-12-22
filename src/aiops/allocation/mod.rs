@@ -7,7 +7,7 @@ pub mod scheduler;
 pub mod load_balancer;
 // 重新导出主要类型
 
-use std::collections::<BTreeMap, HashMap>;
+use std::collections::{BTreeMap, HashMap};
 
     ResourceOptimizer,
     AllocationPlan,

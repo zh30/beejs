@@ -3,7 +3,7 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::HashSet;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
 /// 设置Util API
 pub fn setup_util_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,

@@ -2,10 +2,10 @@
 //!
 //! 提供多因素认证 (MFA) 和 JWT 令牌管理功能
 
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex>;
-use std::time::<Duration, SystemTime, UNIX_EPOCH>;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// 身份验证错误
 #[derive(Error, Debug)]

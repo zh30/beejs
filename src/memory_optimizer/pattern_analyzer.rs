@@ -1,11 +1,11 @@
 //! 内存使用模式分析器 - Stage 90 Phase 5.2
 //! 分析内存分配模式，识别优化机会
 
-use chrono::<DateTime, Utc>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap, VecDeque>;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Duration, Instant>;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant};
 
 /// 内存分配记录
 #[derive(Debug, Clone, Serialize, Deserialize)]

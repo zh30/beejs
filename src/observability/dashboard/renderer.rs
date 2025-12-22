@@ -7,13 +7,13 @@
 //! - WebSocket-based live updates
 
 use std::collections::HashMap;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Instant, SystemTime>;
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Instant, SystemTime};
 
-use anyhow::<Result, Context, anyhow>;
+use anyhow::{Result, Context, anyhow};
 use tokio::sync::RwLock;
-use tracing::<info, debug, warn, error>;
-use serde_json::<json, Value>;
+use tracing::{info, debug, warn, error};
+use serde_json::{json, Value};
 /// Chart Renderer - Handles real-time chart rendering
 pub struct ChartRenderer {
     /// Render configuration
@@ -953,7 +953,7 @@ impl TemplateEngine {
 }
 #[cfg(test)]
 mod tests {
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_chart_renderer_creation() {
         let config: _ = RenderConfig::default();

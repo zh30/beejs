@@ -3,14 +3,14 @@
 //! Stage 91 Phase 4.1 - 开发者体验提升
 //! Stage 91 Phase 4.3 - 快速启动模板系统
 
-use commands::<BundleCommand, CliApp, DoctorCommandArgs, InfoCommandArgs, InitCommand as InitCommandArgs, ProfileCommand, ProjectTemplateArg, ReplCommand, RunCommand, SubCommand, TestCommand, UpgradeCommand>;
-use doctor_command::<CheckStatus, DiagnosticCheck, DoctorCommand>;
-use info_command::<InfoCommand, SystemInfo>;
-use init_command::<InitCommand, InitConfig, ProjectTemplate>;
-use repl_completer::<CompletionCandidate, CompletionContext, CompletionKind, ReplCompleter>;
-use repl_enhanced::<EnhancedRepl, EnhancedReplConfig, EnhancedReplResult, EnhancedReplStats>;
-use repl_highlighter::<HighlightTheme, HighlightedToken, ReplHighlighter, TokenType>;
-use std::collections::<BTreeMap, HashMap>;
+use commands::{BundleCommand, CliApp, DoctorCommandArgs, InfoCommandArgs, InitCommand as InitCommandArgs, ProfileCommand, ProjectTemplateArg, ReplCommand, RunCommand, SubCommand, TestCommand, UpgradeCommand};
+use doctor_command::{CheckStatus, DiagnosticCheck, DoctorCommand};
+use info_command::{InfoCommand, SystemInfo};
+use init_command::{InitCommand, InitConfig, ProjectTemplate};
+use repl_completer::{CompletionCandidate, CompletionContext, CompletionKind, ReplCompleter};
+use repl_enhanced::{EnhancedRepl, EnhancedReplConfig, EnhancedReplResult, EnhancedReplStats};
+use repl_highlighter::{HighlightTheme, HighlightedToken, ReplHighlighter, TokenType};
+use std::collections::{BTreeMap, HashMap};
 
 pub mod file_watcher;
 pub mod repl;
@@ -32,15 +32,15 @@ pub mod repl_enhanced;
 // Stage 91 Phase 4.3: 快速启动模板系统
 pub mod template_system;
 
-pub use script_executor::<
+pub use script_executor::{
     FileType, ModuleSystem, ExecutionContext, ExecutorConfig, ScriptExecutor,
     detect_file_type, shebang, args,
->;
+};
 // Stage 91 Phase 4.1: 导出新命令
 // Stage 91 Phase 4.2: 导出增强 REPL
 // Stage 91 Phase 4.3: 导出模板系统
-pub use template_system::<
+pub use template_system::{
     TemplateEngine, TemplateRegistry, TemplateInstantiator, TemplateInstantiationConfig,
     DirectoryGenerator, DirectoryStructure, FileEntry, DependencyInstaller, PackageManager,
     ProjectTemplate as TemplateDefinition,
->;
+};

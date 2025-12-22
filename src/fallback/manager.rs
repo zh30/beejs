@@ -2,7 +2,7 @@
 //! 提供功能降级策略和自动恢复机制
 
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex, RwLock>;
+use std::sync::{Arc, Mutex, RwLock};
 
 /// 功能标识枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

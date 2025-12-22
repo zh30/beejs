@@ -1,10 +1,10 @@
 //! Service Mesh Integration
 //! Provides service mesh support (Envoy, Istio, Linkerd) for Beejs runtime
 
-use anyhow::<Result, anyhow>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
+use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
 
 /// Service mesh type
 #[derive(Debug, Clone, Serialize, Deserialize)]

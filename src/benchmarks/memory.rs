@@ -8,12 +8,12 @@
 //! - 垃圾回收性能测试
 
 
-use std::sync::<Arc, Mutex>;
+use std::sync::{Arc, Mutex};
 
-use crate::benchmarks::<BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig>;
+use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
 use std::time::Duration;
 use tokio::task;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
 /// 内存使用基准测试套件
 pub struct MemoryBenchmark;
 impl MemoryBenchmark {

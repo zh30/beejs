@@ -2,7 +2,7 @@
 //! Provides simplified tracing implementation for distributed tracing
 
 use std::sync::Ordering;
-use std::time::<Duration, Instant>;
+use std::time::{Duration, Instant};
 
 use std::collections::HashMap;
 /// Global span ID counter
@@ -434,7 +434,7 @@ pub struct MetricsReport {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_span_record() {
         let record: _ = SpanRecord {

@@ -8,8 +8,8 @@
 //! - 批处理推理吞吐量测试
 //! - GPU 加速性能测试
 
-use crate::benchmarks::<BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType>;
-use std::collections::<BTreeMap, HashMap>;
+use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
+use std::collections::{BTreeMap, HashMap};
 
 /// AI 推理性能基准测试套件
 pub struct AIInferenceBenchmark;

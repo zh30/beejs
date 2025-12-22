@@ -2,11 +2,11 @@
 //! Provides advanced test execution features including parallel execution,
 //! timeout control, test filtering, and retry mechanisms
 
-use crate::testing::parallel_executor::::<ParallelConfig, ParallelExecutor>;
-use crate::testing::test_context::::<TestCase, TestResult, TestSuite>;
-use crate::testing::test_timeout::::<TestTimeout, TimeoutConfig>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use crate::testing::parallel_executor::{ParallelConfig, ParallelExecutor};
+use crate::testing::test_context::{TestCase, TestResult, TestSuite};
+use crate::testing::test_timeout::{TestTimeout, TimeoutConfig};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// Enhanced test runner configuration
 #[derive(Debug, Clone)]

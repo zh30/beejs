@@ -1,7 +1,7 @@
 //! Development server module
 use anyhow::Result;
-use std::net::<TcpListener, TcpStream>;
-use std::io::<Read, Write>;
+use std::net::{TcpListener, TcpStream};
+use std::io::{Read, Write};
 pub struct DevServer {
     port: u16,
     host: String,
@@ -28,7 +28,7 @@ impl DevServer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_dev_server_creation() {
         let server: _ = DevServer::new(3000);

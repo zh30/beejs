@@ -4,10 +4,10 @@
 //! 网络套接字，避免用户空间和内核空间之间的数据拷贝，显著提升大文件
 //! 传输性能。
 
-use std::collections::<BTreeMap, HashMap>;
-use std::io::<Write, self>;
-use std::os::unix::io::<AsRawFd, RawFd>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::io::{Write, self};
+use std::os::unix::io::{AsRawFd, RawFd};
+use std::sync::{Arc, Mutex};
 
 /// sendfile 零拷贝文件传输器
 ///

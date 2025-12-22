@@ -3,9 +3,9 @@
 //! This module provides a comprehensive metrics system for monitoring
 //! runtime performance, resource usage, and business metrics.
 
-use prometheus::<Counter, CounterVec, Gauge, HistogramOpts, HistogramVec, Opts, Registry>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
+use prometheus::{Counter, CounterVec, Gauge, HistogramOpts, HistogramVec, Opts, Registry};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
 /// Custom metrics system that manages all runtime metrics

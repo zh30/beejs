@@ -1,10 +1,10 @@
 //! JIT 编译器核心引擎
 //! Stage 92 Phase 4: 多层编译架构统一管理
 
-use crate::jit::optimization::<OptimizationFlag, V8OptimizationConfig>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
+use crate::jit::optimization::{OptimizationFlag, V8OptimizationConfig};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
 
 /// 编译层级
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

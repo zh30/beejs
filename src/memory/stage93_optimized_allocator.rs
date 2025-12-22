@@ -2,11 +2,11 @@
 //! 在 Stage 92 智能分配器基础上，进一步优化分配性能
 //! 目标: 分配性能提升 40%+, 内存利用率提升 20%+
 
-use crate::memory_optimizer::smart_allocator::::<PoolConfig, SmartMemoryAllocator>;
-use serde::<Deserialize, Serialize>;
-use std::alloc::<GlobalAlloc, Layout>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, AtomicUsize, Mutex, Ordering, RwLock>;
+use crate::memory_optimizer::smart_allocator::::{PoolConfig, SmartMemoryAllocator};
+use serde::{Deserialize, Serialize};
+use std::alloc::{GlobalAlloc, Layout};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, AtomicUsize, Mutex, Ordering, RwLock};
 
 /// Stage 93 分配器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]

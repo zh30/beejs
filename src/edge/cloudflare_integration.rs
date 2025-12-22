@@ -1,9 +1,9 @@
 //! Cloudflare Workers Integration
 //! High-performance edge deployment via Cloudflare's global network
 
-use std::collections::<BTreeMap, HashMap>;
-use std::time::<Duration, SystemTime>;
-use super::cdn_provider::::<CdnEndpoint, CdnProvider, CdnProviderType, DeploymentResult, DeploymentStatus, EndpointStatus, ProviderHealth>;
+use std::collections::{BTreeMap, HashMap};
+use std::time::{Duration, SystemTime};
+use super::cdn_provider::::{CdnEndpoint, CdnProvider, CdnProviderType, DeploymentResult, DeploymentStatus, EndpointStatus, ProviderHealth};
 
 /// Cloudflare Workers integration
 #[derive(Debug)]

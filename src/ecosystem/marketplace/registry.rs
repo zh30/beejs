@@ -5,7 +5,7 @@ use std::sync::Ordering;
 
 use std::collections::HashMap;
 use crate::ecosystem::types::*;
-use std::collections::<BTreeMap>;
+use std::collections::{BTreeMap};
 /// 模块注册表
 #[derive(Debug, Clone)]
 pub struct ModuleRegistry {

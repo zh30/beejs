@@ -3,8 +3,8 @@
 pub mod mobile_runtime;
 pub mod wasm_runtime;
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// Unified cross-platform runtime
 #[derive(Debug)]

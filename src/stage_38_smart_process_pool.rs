@@ -11,12 +11,12 @@
 //! - 动态资源分配：根据实时负载动态调整资源分配
 //! - 性能预测：使用历史数据预测性能瓶颈
 
-use anyhow::<Context, Result>;
-use crate::process_pool::<ProcessPoolConfig, ProcessPoolStats, TaskComplexity, WorkerMetrics>;
+use anyhow::{Context, Result};
+use crate::process_pool::{ProcessPoolConfig, ProcessPoolStats, TaskComplexity, WorkerMetrics};
 use std::collections::BTreeMap;
-use std::sync::<Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock>;
-use std::time::<Duration, Instant, SystemTime, UNIX_EPOCH>;
-use tokio::sync::<RwLock, mpsc>;
+use std::sync::{Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use tokio::sync::{RwLock, mpsc};
 
 /// 智能预热策略
 #[derive(Debug, Clone)]

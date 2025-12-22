@@ -1,10 +1,10 @@
 //! 连接池
 //! 管理网络连接的重用，减少连接建立开销
 
-use crate::network::<NetworkConfig, NetworkError>;
+use crate::network::{NetworkConfig, NetworkError};
 use std::collections::BTreeMap;
-use std::net::<SocketAddr, TcpStream>;
-use std::sync::<Arc, Mutex>;
+use std::net::{SocketAddr, TcpStream};
+use std::sync::{Arc, Mutex};
 
 /// 连接信息
 struct ConnectionInfo {

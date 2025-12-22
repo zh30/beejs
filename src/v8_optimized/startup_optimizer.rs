@@ -2,9 +2,9 @@
 //! 实现 < 2ms 的启动时间
 //! Stage 27.1: V8 引擎深度优化
 
-use anyhow::<Result, anyhow>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use anyhow::{Result, anyhow};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// V8 启动优化器
 /// Stage 27.1: 实现 < 2ms 启动时间

@@ -2,14 +2,14 @@
 // 负责快照的生成、加载、缓存和管理
 
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex>;
-use std::time::<Duration, SystemTime>;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime};
 use std::fs;
 use std::io::Write;
-use std::path::<Path, PathBuf>;
-use crate::v8_snapshot::<V8Snapshot, SnapshotConfig>;
+use std::path::{Path, PathBuf};
+use crate::v8_snapshot::{V8Snapshot, SnapshotConfig};
 use rusty_v8 as v8;
-use serde::<Serialize, Deserialize>;
+use serde::{Serialize, Deserialize};
 /// 快照管理器
 pub struct SnapshotManager {
     /// 快照缓存
@@ -356,7 +356,7 @@ mod tests {
     }
     #[test]
     fn test_load_nonexistent_snapshot() {
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
         let dir: _ = tempdir().unwrap();
         let base_dir: _ = dir.path();
         let manager: _ = SnapshotManager::new(SnapshotConfig::default());

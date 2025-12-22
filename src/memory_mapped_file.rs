@@ -1,12 +1,12 @@
 //! 内存映射文件模块
 //! 提供高性能的大文件共享访问机制
 
-use anyhow::<Context, Result>;
-use memmap2::<Mmap, MmapOptions>;
-use std::collections::<BTreeMap, HashMap>;
-use std::fs::<File, OpenOptions>;
-use std::path::<Path, PathBuf>;
-use std::sync::<Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock, Weak>;
+use anyhow::{Context, Result};
+use memmap2::{Mmap, MmapOptions};
+use std::collections::{BTreeMap, HashMap};
+use std::fs::{File, OpenOptions};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock, Weak};
 
 /// 访问模式
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -3,12 +3,12 @@
 //!
 //! 提供完整的 npm 包管理功能兼容
 use super::*;
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tokio::fs;
-use tokio::io::<AsyncReadExt, AsyncWriteExt>;
-use std::collections::<BTreeMap>;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use std::collections::{BTreeMap};
 /// npm 兼容性管理器
 #[derive(Debug)]
 pub struct NpmCompatibility {

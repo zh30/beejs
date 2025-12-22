@@ -1,8 +1,8 @@
 //! Plugin system core
 //! Supports both Rust and JavaScript plugins with sandboxing
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// Plugin metadata
 #[derive(Debug, Clone)]

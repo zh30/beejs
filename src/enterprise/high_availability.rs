@@ -1,12 +1,12 @@
 //! High Availability and Disaster Recovery System
 //! 实现高可用性和灾难恢复功能
 
-use anyhow::<Context, Result>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
-use tokio::time::<Instant, sleep>;
-use tracing::<debug, error, info, warn>;
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
+use tokio::time::{Instant, sleep};
+use tracing::{debug, error, info, warn};
 
 /// HA configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -2,8 +2,8 @@
 //! This module provides tools to measure execution time, cache hit rates,
 //! and other performance metrics.
 
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
 
 /// Performance metrics for a single execution
 #[derive(Debug, Clone)]

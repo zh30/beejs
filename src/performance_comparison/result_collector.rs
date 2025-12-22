@@ -6,10 +6,10 @@
 use std::sync::Ordering;
 
 use crate::benchmarks::BenchmarkResult;
-use serde::<Deserialize, Serialize>;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
-use std::collections::<BTreeMap>;
+use std::collections::{BTreeMap};
 /// 单个基准测试的对比结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkComparison {

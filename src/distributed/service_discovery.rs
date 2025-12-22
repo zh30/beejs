@@ -1,12 +1,12 @@
 //! 服务发现模块
 //! 实现基于 Gossip 协议的集群节点自动发现和注册
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Duration, Instant, SystemTime>;
-use super::node_manager::<NodeMetadata, NodeStatus>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant, SystemTime};
+use super::node_manager::{NodeMetadata, NodeStatus};
 use tokio::time::interval;
-use tracing::<debug, info, warn>;
+use tracing::{debug, info, warn};
 
 /// 服务发现配置
 #[derive(Debug, Clone)]

@@ -1,9 +1,9 @@
 //! 零拷贝 I/O 实现
 //! 使用 sendfile/splice 等系统调用实现零拷贝网络传输
 
-use crate::network::<NetworkConfig, NetworkError>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use crate::network::{NetworkConfig, NetworkError};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// 零拷贝 I/O 统计信息
 #[derive(Debug, Clone)]

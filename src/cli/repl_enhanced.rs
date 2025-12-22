@@ -8,11 +8,11 @@
 //! - Enhanced commands: .inspect, .time, .type, .await, .save
 //! - Multi-line editing with smart indentation
 
-use crate::cli::repl_completer::<CompletionCandidate, ReplCompleter>;
-use crate::cli::repl_highlighter::<HighlightTheme, ReplHighlighter>;
-use rustyline::<Editor, Result>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
+use crate::cli::repl_completer::{CompletionCandidate, ReplCompleter};
+use crate::cli::repl_highlighter::{HighlightTheme, ReplHighlighter};
+use rustyline::{Editor, Result};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 /// Enhanced REPL configuration
 #[derive(Debug, Clone)]

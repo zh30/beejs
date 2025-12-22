@@ -1,8 +1,8 @@
 //! Timer API implementation for Web standard
 //! Provides setTimeout, setInterval, clearTimeout, clearInterval
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, Ordering>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, Ordering};
 
 /// Global timer ID counter
 static TIMER_ID_COUNTER: AtomicU64 = AtomicU64::new(1);

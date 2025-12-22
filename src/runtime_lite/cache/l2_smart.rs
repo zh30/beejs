@@ -3,7 +3,7 @@
 //! This module implements an intelligent cache that combines LRU (Least Recently Used)
 //! and LFU (Least Frequently Used) strategies with adaptive weight adjustment.
 
-use std::collections::<BTreeMap, HashMap, HashSet, VecDeque>;
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 
 /// L2 Cache entry with access tracking
 #[derive(Debug, Clone)]

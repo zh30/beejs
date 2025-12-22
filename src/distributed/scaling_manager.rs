@@ -1,10 +1,10 @@
 //! 扩缩容管理器模块
 //! 负责管理集群的自动扩缩容、资源监控和节点生命周期
 
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex>;
-use std::time::<Duration, Instant, SystemTime>;
-use tracing::<debug, info, warn>;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant, SystemTime};
+use tracing::{debug, info, warn};
 
 pub use super::{
     autoscaler::{Autoscaler, AutoscalerConfig, ClusterMetrics, ScalingAction},

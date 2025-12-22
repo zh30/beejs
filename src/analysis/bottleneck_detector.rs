@@ -4,9 +4,9 @@
 //! in JavaScript/TypeScript execution, identifying slow operations,
 //! memory leaks, and other performance issues.
 
-use crate::performance_analyzer::<ExecutionMetrics, PerformanceReport>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
+use crate::performance_analyzer::{ExecutionMetrics, PerformanceReport};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
 
 /// Types of performance bottlenecks
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

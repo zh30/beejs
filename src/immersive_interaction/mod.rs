@@ -7,9 +7,9 @@ pub mod haptic_feedback;
 pub mod voice_recognition;
 pub mod motion_capture;
 
-use eye_tracking::<EyeTracking, EyeTrackingConfig, FoveatedRegion, GazePoint>;
-use hand_tracking::<Gesture, HandPose, HandTracking, HandTrackingConfig, MockHandData>;
-use haptic_feedback::<HapticConfig, HapticFeedback, HapticIntensity, HapticPattern>;
-use motion_capture::<BodyPose, JointPosition, MotionCapture, MotionConfig>;
-use std::collections::<BTreeMap, HashMap>;
-use voice_recognition::<SpeechResult, VoiceCommand, VoiceConfig, VoiceRecognition>;
+use eye_tracking::{EyeTracking, EyeTrackingConfig, FoveatedRegion, GazePoint};
+use hand_tracking::{Gesture, HandPose, HandTracking, HandTrackingConfig, MockHandData};
+use haptic_feedback::{HapticConfig, HapticFeedback, HapticIntensity, HapticPattern};
+use motion_capture::{BodyPose, JointPosition, MotionCapture, MotionConfig};
+use std::collections::{BTreeMap, HashMap};
+use voice_recognition::{SpeechResult, VoiceCommand, VoiceConfig, VoiceRecognition};

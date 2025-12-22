@@ -1,7 +1,7 @@
 //! 自动调优引擎 - Stage 90 Phase 5.4
 use std::collections::HashMap;
-use chrono::<DateTime, Utc>;
-use serde::<Serialize, Deserialize>;
+use chrono::{DateTime, Utc};
+use serde::{Serialize, Deserialize};
 /// 调优参数
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TuningParameter {
@@ -193,7 +193,7 @@ impl AutoTuner {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_auto_tuner() {
         let mut tuner = AutoTuner::new();

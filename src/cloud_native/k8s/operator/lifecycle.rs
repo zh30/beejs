@@ -1,9 +1,9 @@
 //! Lifecycle management for cluster and workload resources
 //! Handles state transitions and lifecycle events
 
-use std::collections::<BTreeMap, HashMap>;
-use super::super::crd::<ClusterPhase, Condition, ConditionStatus, ConditionType, WorkloadPhase>;
-use tracing::<debug, error, info, warn>;
+use std::collections::{BTreeMap, HashMap};
+use super::super::crd::{ClusterPhase, Condition, ConditionStatus, ConditionType, WorkloadPhase};
+use tracing::{debug, error, info, warn};
 
 /// Cluster lifecycle manager
 pub struct ClusterLifecycle {

@@ -7,8 +7,8 @@
 //! - Interactive REPL
 use anyhow::Result;
 use std::collections::HashMap;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap};
 /// Breakpoint condition types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BreakpointCondition {

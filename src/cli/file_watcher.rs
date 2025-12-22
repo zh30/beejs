@@ -1,9 +1,9 @@
 //! File Watcher Module
 //! Stage 36.0 - 实现文件监控功能
 
-use std::collections::<BTreeMap, HashMap>;
-use std::path::<Path, PathBuf>;
-use std::sync::<Arc, Mutex>;
+use std::collections::{BTreeMap, HashMap};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 /// File change event
 #[derive(Debug, Clone)]

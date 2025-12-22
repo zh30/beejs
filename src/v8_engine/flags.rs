@@ -6,8 +6,8 @@
 //!
 //! Stage 69 Phase 2: V8 Engine Deep Optimization
 
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
 
 /// V8 Engine Flags Configuration
 /// Provides high-performance V8 engine configuration options

@@ -1,11 +1,11 @@
 //! Rust Native Optimizations
 //! Provides zero-copy optimizations and performance enhancements for Rust-Beejs integration
 
-use anyhow::<Result, anyhow>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
-use std::time::<Duration, SystemTime>;
+use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, SystemTime};
 
 /// Shared memory region for zero-copy operations
 #[derive(Debug, Clone, Serialize, Deserialize)]

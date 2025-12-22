@@ -1,13 +1,13 @@
 //! Stage 93 零拷贝网络栈增强版
 //! 在 Stage 92 基础上进一步优化，实现 AI 驱动的智能零拷贝
 
-use memmap2::<Mmap, MmapOptions>;
-use std::collections::<BTreeMap, HashMap>;
-use std::io::<Error, ErrorKind, Result>;
-use std::sync::<Arc, Mutex, Ordering, RwLock>;
-use super::<NetworkConfig, NetworkStats>;
-use tokio::net::<TcpListener, TcpStream>;
-use tokio::sync::<Mutex, RwLock>;
+use memmap2::{Mmap, MmapOptions};
+use std::collections::{BTreeMap, HashMap};
+use std::io::{Error, ErrorKind, Result};
+use std::sync::{Arc, Mutex, Ordering, RwLock};
+use super::{NetworkConfig, NetworkStats};
+use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::{Mutex, RwLock};
 
 /// 智能零拷贝配置
 #[derive(Debug, Clone)]

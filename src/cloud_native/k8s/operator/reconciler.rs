@@ -2,16 +2,16 @@
 //! Handles the actual reconciliation logic for cluster and workload resources
 
 use std::sync::Arc;
-use std::time::<Duration, Instant>;
+use std::time::{Duration, Instant};
 
-use kube::<Client, Api, ResourceExt>;
-use k8s_openapi::api::apps::v1::<StatefulSet, Deployment>;
-use tokio::time::<Duration, Instant>;
-use tracing::<info, warn, debug, error>;
-use super::super::crd::<
+use kube::{Client, Api, ResourceExt};
+use k8s_openapi::api::apps::v1::{StatefulSet, Deployment};
+use tokio::time::{Duration, Instant};
+use tracing::{info, warn, debug, error};
+use super::super::crd::{
     BeejsCluster, BeejsWorkload, ClusterPhase, Condition, ConditionStatus, ConditionType,
     WorkloadPhase,
->;
+};
 /// Reconciler for managing resource reconciliation
 pub struct Reconciler {
     /// Kubernetes client
@@ -305,7 +305,7 @@ pub struct ReconcileResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_cluster_diff_empty() {
         let diff: _ = ClusterDiff {

@@ -21,7 +21,7 @@ pub mod adaptation;
 // pub mod full_workflow;
 // 重新导出主要类型 (已实现)
 
-use std::collections::<BTreeMap, HashMap>;
+use std::collections::{BTreeMap, HashMap};
 
     PredictionEngine,
     Prediction,

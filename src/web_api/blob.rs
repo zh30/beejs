@@ -5,7 +5,7 @@ use std::time::SystemTime;
 
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
 /// Setup Blob and File APIs in V8 context
 pub fn setup_blob_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,

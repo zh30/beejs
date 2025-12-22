@@ -461,7 +461,7 @@ impl HotspotAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_hotspot_analyzer_creation() {
         let analyzer: _ = HotspotAnalyzer::with_default_config();

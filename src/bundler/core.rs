@@ -2,8 +2,8 @@
 //! Designed to exceed esbuild performance (100MB/s+)
 
 use std::collections::BTreeMap;
-use std::path::<Path, PathBuf>;
-use std::sync::<Arc, Mutex>;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 /// Module type
 #[derive(Debug, Clone, PartialEq)]

@@ -2,7 +2,7 @@
 //! HTTP API
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
 /// 设置http API
 pub fn setup_http_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,

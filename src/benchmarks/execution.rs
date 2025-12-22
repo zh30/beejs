@@ -8,7 +8,7 @@
 //! - 数组操作性能测试
 //! - 循环性能测试
 
-use crate::benchmarks::<BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType>;
+use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
 
 /// 执行速度基准测试套件
 pub struct ExecutionBenchmark;

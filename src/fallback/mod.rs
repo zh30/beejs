@@ -4,13 +4,13 @@ pub mod manager;
 
 use std::time::Duration;
 
-pub use manager::<
+pub use manager::{
     FallbackManager,
     FallbackStrategy,
     Feature,
     FallbackEvent,
     FallbackStats,
->;
+};
 /// 创建降级管理器的便捷函数
 pub fn create_fallback_manager() -> FallbackManager {
     FallbackManager::new()
@@ -148,7 +148,7 @@ macro_rules! with_fallback {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_fallback_manager_creation() {
         let manager: _ = create_fallback_manager();

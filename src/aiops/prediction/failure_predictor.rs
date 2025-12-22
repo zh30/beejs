@@ -3,10 +3,10 @@
 //! Predicts potential failures by combining anomaly detection and trend analysis.
 //! Provides early warning signals for system failures.
 
-use crate::core::data_collector::::<Metric, MetricType>;
-use crate::core::error::::<AIOpsError, Result>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
+use crate::core::data_collector::::{Metric, MetricType};
+use crate::core::error::::{AIOpsError, Result};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
 
     AnomalyDetector, StatisticalAnomalyDetector, AnomalyDetectorConfig,
     TrendAnalyzer, LinearTrendAnalyzer, TrendAnalyzerConfig,

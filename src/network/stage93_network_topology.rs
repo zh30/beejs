@@ -2,8 +2,8 @@
 //! 自动检测网络拓扑，优化路由策略和连接管理
 
 use std::collections::BTreeMap;
-use std::sync::<Arc, Mutex>;
-use tokio::net::<TcpStream, UdpSocket>;
+use std::sync::{Arc, Mutex};
+use tokio::net::{TcpStream, UdpSocket};
 
 /// 网络节点
 #[derive(Debug, Clone)]

@@ -181,7 +181,7 @@ impl SnapshotRenderer {
 }
 #[cfg(test)]
 mod tests {
-use std::collections::<HashMap, BTreeMap>;
+use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_pretty_print_json() {
         let config: _ = SnapshotConfig::default();

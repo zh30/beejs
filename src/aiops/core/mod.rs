@@ -7,9 +7,9 @@ pub mod data_collector;
 pub mod aiops_engine;
 // Re-exports
 
-use error::<AIOpsError, Result>;
-use model_manager::<Model, ModelManager, ModelMetadata, ModelType>;
-use std::collections::<BTreeMap, HashMap>;
+use error::{AIOpsError, Result};
+use model_manager::{Model, ModelManager, ModelMetadata, ModelType};
+use std::collections::{BTreeMap, HashMap};
 
     DataCollector,
     Metric,

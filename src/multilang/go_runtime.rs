@@ -1,11 +1,11 @@
 //! Go Runtime Integration
 //! Provides seamless integration between Beejs and Go
 
-use anyhow::<Result, anyhow>;
-use serde::<Deserialize, Serialize>;
-use std::collections::<BTreeMap, HashMap>;
-use std::sync::<Arc, Mutex, RwLock>;
-use tokio::sync::<RwLock, mpsc>;
+use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex, RwLock};
+use tokio::sync::{RwLock, mpsc};
 
 /// Go VM (Virtual Machine) wrapper
 #[derive(Debug)]

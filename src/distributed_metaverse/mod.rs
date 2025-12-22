@@ -7,9 +7,9 @@ pub mod state_sync;
 pub mod asset_interop;
 pub mod decentralized_auth;
 
-use asset_interop::<Asset, AssetFormat, AssetInterop, AssetTransform>;
-use decentralized_auth::<AuthConfig, Credential, DecentralizedAuth, Identity>;
-use edge_computing::<ComputeType, EdgeComputing, EdgeConfig, EdgeResult, EdgeTask>;
-use metaverse_network::<MetaverseNetwork, NetworkConfig, NetworkNode, NodeRole>;
-use state_sync::<ConflictResolution, StateChange, StateSync, SyncConfig, SyncMode>;
-use std::collections::<BTreeMap, HashMap>;
+use asset_interop::{Asset, AssetFormat, AssetInterop, AssetTransform};
+use decentralized_auth::{AuthConfig, Credential, DecentralizedAuth, Identity};
+use edge_computing::{ComputeType, EdgeComputing, EdgeConfig, EdgeResult, EdgeTask};
+use metaverse_network::{MetaverseNetwork, NetworkConfig, NetworkNode, NodeRole};
+use state_sync::{ConflictResolution, StateChange, StateSync, SyncConfig, SyncMode};
+use std::collections::{BTreeMap, HashMap};
