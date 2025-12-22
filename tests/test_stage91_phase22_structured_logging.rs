@@ -83,7 +83,7 @@ async fn test_json_log_format() {
 
 #[tokio::test]
 async fn test_concurrent_logging() {
-    let logger: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(StructuredLogger::new(Level::INFO, "beejs-test".to_string())))));
+    let logger: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(StructuredLogger::new(Level::INFO, "beejs-test".to_string()))))))));
 
     let mut handles = vec![];
     for i in 0..10 {

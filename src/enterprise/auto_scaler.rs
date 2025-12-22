@@ -89,7 +89,7 @@ pub struct K8sClient {
 pub struct AutoScaler {
     metrics_client: Arc<MetricsClient>,
     k8s_client: Arc<K8sClient>,
-    policies: BTreeMap<ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy>,
+    policies: BTreeMap<ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy>,
     decision_history: Vec<ScalingDecision>,
 }
 
@@ -181,8 +181,8 @@ impl AutoScaler {
     /// Create a new auto-scaler
     pub fn new(metrics_client: MetricsClient, k8s_client: K8sClient) -> Self {
         Self {
-            metrics_client: Arc::new(std::sync::Mutex::new(Mutex::new(metrics_client))),
-            k8s_client: Arc::new(std::sync::Mutex::new(Mutex::new(k8s_client))),
+            metrics_client: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(metrics_client))))),
+            k8s_client: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(k8s_client))))),
             policies: BTreeMap::new(),
             decision_history: Vec::new(),
         }

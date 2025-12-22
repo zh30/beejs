@@ -9,7 +9,7 @@ use std::collections::{HashMap, BTreeMap};
 #[tokio::test]
 async fn test_mobile_runtime_ios() {
     let mut runtime = MobileRuntime::new();
-    runtime.init_ios(Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockMobileAPI::new()))))).unwrap();
+    runtime.init_ios(Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockMobileAPI::new())))))))).unwrap();
 
     let result: _ = runtime.execute_mobile("ios", "console.log('Hello iOS')").await;
     assert!(result.is_ok(), "iOS execution should succeed");
@@ -19,7 +19,7 @@ async fn test_mobile_runtime_ios() {
 #[tokio::test]
 async fn test_mobile_runtime_android() {
     let mut runtime = MobileRuntime::new();
-    runtime.init_android(Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockJNIEnv::new()))))).unwrap();
+    runtime.init_android(Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockJNIEnv::new())))))))).unwrap();
 
     let result: _ = runtime.execute_mobile("android", "console.log('Hello Android')").await;
     assert!(result.is_ok(), "Android execution should succeed");
@@ -29,7 +29,7 @@ async fn test_mobile_runtime_android() {
 #[tokio::test]
 async fn test_mobile_background_execution() {
     let mut runtime = MobileRuntime::new();
-    runtime.init_ios(Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockMobileAPI::new()))))).unwrap();
+    runtime.init_ios(Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockMobileAPI::new())))))))).unwrap();
 
     let result: _ = runtime.execute_background("ios", "console.log('Background task')").await;
     assert!(result.is_ok(), "Background execution should succeed");
@@ -37,7 +37,7 @@ async fn test_mobile_background_execution() {
 
 #[tokio::test]
 async fn test_wasm_runtime_creation() {
-    let bee_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockBeeWasmAPI))));
+    let bee_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockBeeWasmAPI)))))));
     let runtime: _ = WASMRuntime::new(bee_api).unwrap();
 
     let modules: _ = runtime.list_modules().await.unwrap();
@@ -46,7 +46,7 @@ async fn test_wasm_runtime_creation() {
 
 #[tokio::test]
 async fn test_wasm_module_loading() {
-    let bee_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockBeeWasmAPI))));
+    let bee_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockBeeWasmAPI)))))));
     let runtime: _ = WASMRuntime::new(bee_api).unwrap();
 
     let wasm_binary: _ = vec![
@@ -78,7 +78,7 @@ async fn test_cross_platform_runtime() {
     assert!(result.is_ok());
 
     // Initialize WASM runtime
-    let bee_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockBeeWasmAPI))));
+    let bee_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockBeeWasmAPI)))))));
     runtime.init_wasm(bee_api).unwrap();
 
     // Test WASM
@@ -98,7 +98,7 @@ async fn test_supported_platforms() {
     assert!(platforms.contains(&"ios".to_string()));
     assert!(platforms.contains(&"android".to_string()));
 
-    let bee_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockBeeWasmAPI))));
+    let bee_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockBeeWasmAPI)))))));
     runtime.init_wasm(bee_api).unwrap();
     let platforms: _ = runtime.supported_platforms();
     assert!(platforms.contains(&"wasm".to_string()));
@@ -115,7 +115,7 @@ async fn test_platform_support_check() {
     assert!(runtime.is_platform_supported("android"));
     assert!(!runtime.is_platform_supported("wasm"));
 
-    let bee_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockBeeWasmAPI))));
+    let bee_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockBeeWasmAPI)))))));
     runtime.init_wasm(bee_api).unwrap();
     assert!(runtime.is_platform_supported("wasm"));
 }

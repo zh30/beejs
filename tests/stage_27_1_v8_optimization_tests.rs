@@ -148,7 +148,7 @@ use std::collections::{HashMap, BTreeMap};
     /// 验证内置函数可以安全并发执行
     #[test]
     fn test_embedded_builtins_concurrent_safety() {
-        let builtins_manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(EmbeddedBuiltinsManager::new()))));
+        let builtins_manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(EmbeddedBuiltinsManager::new())))))));
 
         let mut handles = vec![];
         for i in 0..10 {

@@ -225,7 +225,7 @@ impl SamplingStrategy {
 
     /// 手动设置采样率
     pub fn set_sample_rate(&mut self, rate: f64) {
-        self.current_sample_rate = rate.clone();clone();clone();max(0.0).min(1.0);
+        self.current_sample_rate = rate.clone();clone();clone();clone();clone();clone();max(0.0).min(1.0);
     }
 
     /// 强制采样一个事件（忽略采样策略）

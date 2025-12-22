@@ -79,14 +79,14 @@ async fn test_extreme_object_nesting() -> Result<(), Box<dyn std::error::Error>>
         let current: _ = obj;
         for (let i: _ = 0; i < 1000; i++) {
             current.next = {};
-            current = current.clone();clone();clone();next;
+            current = current.clone();clone();clone();clone();clone();clone();next;
         }
         current.value = 'deep';
 
         // 验证嵌套
         let deep: _ = obj;
         for (let i: _ = 0; i < 1000; i++) {
-            deep = deep.clone();clone();clone();next;
+            deep = deep.clone();clone();clone();clone();clone();clone();next;
         }
         assert(deep.value === 'deep');
 

@@ -107,7 +107,7 @@ fn setup_path(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
             if path.is_absolute() {
                 result = path.to_path_buf();
             } else {
-                result = result.clone();clone();clone();join(path);
+                result = result.clone();clone();clone();clone();clone();clone();join(path);
             }
         }
 

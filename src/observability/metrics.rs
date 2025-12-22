@@ -32,9 +32,9 @@ impl CustomMetrics {
         let registry: _ = Registry::new();
         let mut metric_handles = Vec::new();
 
-        let runtime_metrics: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(RuntimeMetrics::new(&registry, &mut metric_handles)));
-        let performance_metrics: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(PerformanceMetrics::new(&registry, &mut metric_handles)));
-        let business_metrics: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(BusinessMetrics::new(&registry, &mut metric_handles)));
+        let runtime_metrics: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(RuntimeMetrics::new(&registry, &mut metric_handles)))));
+        let performance_metrics: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(PerformanceMetrics::new(&registry, &mut metric_handles)))));
+        let business_metrics: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(BusinessMetrics::new(&registry, &mut metric_handles)))));
 
         debug!("Custom metrics system initialized with {} collectors", metric_handles.len());
 
@@ -180,7 +180,7 @@ impl RuntimeMetrics {
             active_scripts,
             memory_usage_bytes,
             cpu_usage_percent,
-            recent_executions: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(VecDeque::new())),
+            recent_executions: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(VecDeque::new())))),
         }
     }
 

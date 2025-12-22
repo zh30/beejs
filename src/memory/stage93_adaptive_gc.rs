@@ -377,10 +377,10 @@ impl Stage93AdaptiveGC {
         Self {
             base,
             config,
-            predictor: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(GCPredictor::new(config.prediction_window))),
-            incremental_scheduler: Arc::new(std::sync::Mutex::new(Mutex::new(IncrementalGCS::new())),
-            gc_profiler: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(GCProfiler::default())),
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(Stage93GCStats::default())),
+            predictor: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(GCPredictor::new(config.prediction_window))))),
+            incremental_scheduler: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(IncrementalGCS::new())))),
+            gc_profiler: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(GCProfiler::default())))),
+            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Stage93GCStats::default())))),
         }
     }
 

@@ -231,9 +231,9 @@ pub struct AnomalyDetector {
 impl PredictiveScaler {
     /// 创建新的预测性扩展器
     pub fn new() -> Self {
-        let predictor: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(ResourcePredictor::new()));
-        let analyzer: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(TrendAnalyzer::new()));
-        let scaler: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(AutoScaler::new()));
+        let predictor: _ = Arc::new(RwLock::new(ResourcePredictor::new()));
+        let analyzer: _ = Arc::new(RwLock::new(TrendAnalyzer::new()));
+        let scaler: _ = Arc::new(RwLock::new(AutoScaler::new()));
 
         Self {
             predictor,
@@ -388,8 +388,8 @@ impl PredictiveScaler {
 impl ResourcePredictor {
     pub fn new() -> Self {
         Self {
-            model: Arc::new(std::sync::Mutex::new(Mutex::new(PredictionModel::new(ModelType::LinearRegression))),
-            historical_data: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())),
+            model: Arc::new(PredictionModel::new(ModelType::LinearRegression)),
+            historical_data: Arc::new(RwLock::new(Vec::new())),
         }
     }
 
@@ -448,8 +448,8 @@ impl ResourcePredictor {
 impl TrendAnalyzer {
     pub fn new() -> Self {
         Self {
-            patterns: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
-            anomaly_detector: Arc::new(std::sync::Mutex::new(Mutex::new(AnomalyDetector::new(2.0, 50))),
+            patterns: Arc::new(RwLock::new(HashMap::new())),
+            anomaly_detector: Arc::new(AnomalyDetector::new(2.0, 50)),
         }
     }
 
@@ -509,13 +509,13 @@ impl TrendAnalyzer {
 impl AutoScaler {
     pub fn new() -> Self {
         Self {
-            current_capacity: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(ResourceAllocation {
+            current_capacity: Arc::new(RwLock::new(ResourceAllocation {
                 cpu_cores: 2.0,
                 memory_gb: 4.0,
                 storage_gb: 100.0,
                 network_bandwidth_mbps: 1000,
-            }))),
-            scaling_history: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())),
+            })),
+            scaling_history: Arc::new(RwLock::new(Vec::new())),
         }
     }
 

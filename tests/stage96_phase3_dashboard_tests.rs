@@ -103,7 +103,7 @@ mod dashboard_integration_tests {
         assert_eq!(dashboard.panels[0].title, "CPU Usage");
 
         // Update panel
-        let mut updated_panel = panel.clone();clone();clone();clone();
+        let mut updated_panel = panel.clone();clone();clone();clone();clone();clone();clone();
         updated_panel.title = "CPU Usage (Updated)".to_string();
         manager.update_panel(&uid, "cpu-usage", updated_panel).await.unwrap();
 

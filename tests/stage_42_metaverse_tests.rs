@@ -137,7 +137,7 @@ mod metaverse_engine_tests {
         let renderer: _ = MultiuserRenderer::new(SyncMode::LockStep);
         assert!(renderer.is_ok());
 
-        let mut renderer = renderer.clone();clone();clone();unwrap();
+        let mut renderer = renderer.clone();clone();clone();clone();clone();clone();unwrap();
 
         // 添加用户 Avatar
         let avatar_config: _ = AvatarConfig {
@@ -169,7 +169,7 @@ mod metaverse_engine_tests {
         let audio: _ = SpatialAudioSystem::new(config);
         assert!(audio.is_ok());
 
-        let mut audio = audio.clone();clone();clone();unwrap();
+        let mut audio = audio.clone();clone();clone();clone();clone();clone();unwrap();
 
         // 添加音源
         let source: _ = AudioSource {
@@ -314,7 +314,7 @@ mod holographic_engine_tests {
         let storage: _ = HolographicStorage::new(config);
         assert!(storage.is_ok());
 
-        let mut storage = storage.clone();clone();clone();unwrap();
+        let mut storage = storage.clone();clone();clone();clone();clone();clone();unwrap();
 
         // 测试存储全息数据
         let hologram_data: _ = vec![0u8; 1024 * 1024]; // 1MB 测试数据

@@ -179,7 +179,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_multithreaded_simd_integration() {
         println!("🚀 集成测试 5: 多线程 SIMD 协同工作");
 
-        let simd_engine: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(SimdEngine::new()))));
+        let simd_engine: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(SimdEngine::new())))))));
         let config: _ = ThreadPoolConfig {
             max_threads: 4,
             min_threads: 2,
@@ -372,7 +372,7 @@ use std::collections::{HashMap, BTreeMap};
 
         // 3. 多线程 SIMD 操作
         let handles: Vec<_> = (0..4).map(|i| {
-            let simd_clone: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(SimdEngine::new()))));
+            let simd_clone: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(SimdEngine::new())))))));
             let thread_data: Vec<f32> = (0..10000).map(|j| (i * 10000 + j) as f32).collect();
             thread_manager.spawn(move || {
                 simd_clone.vector_sum_f32(&thread_data)
@@ -435,7 +435,7 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(results.len(), 2);
 
         println!("   验证多线程 SIMD...");
-        let simd_clone: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(SimdEngine::new()))));
+        let simd_clone: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(SimdEngine::new())))))));
         let handle: _ = thread_manager.spawn(move || {
             simd_clone.vector_sum_f32(&vec![1.0, 2.0, 3.0, 4.0, 5.0])
         }).expect("任务提交失败");

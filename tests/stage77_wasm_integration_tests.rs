@@ -208,7 +208,7 @@ use std::collections::{HashMap, BTreeMap};
         let wasm_bytes: _ = create_add_module();
 
         // 使用 Arc 共享 executor
-        let executor: _ = std::sync::Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(executor))));
+        let executor: _ = std::sync::Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(executor)))))));
         let executor_clone: _ = executor.clone();
         let wasm_bytes_clone: _ = wasm_bytes.clone();
 
@@ -454,7 +454,7 @@ use std::collections::{HashMap, BTreeMap};
         let iterations_per_thread: _ = 100;
 
         // 使用 Arc 来共享 executor
-        let executor: _ = std::sync::Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(executor))));
+        let executor: _ = std::sync::Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(executor)))))));
         let executor_clone: _ = executor.clone();
 
         let handle: _ = std::thread::spawn(move || {

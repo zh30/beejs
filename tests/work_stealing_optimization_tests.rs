@@ -207,7 +207,7 @@ use std::collections::{HashMap, BTreeMap};
     async fn test_work_stealing_performance() {
         println!("\n=== 测试工作窃取性能 ===");
 
-        let scheduler: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(WorkStealingScheduler::new(8)))));
+        let scheduler: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(WorkStealingScheduler::new(8))))))));
 
         // 创建大量任务进行性能测试
         let task_count: _ = 1000;
@@ -554,7 +554,7 @@ use std::collections::{HashMap, BTreeMap};
         println!("\n🧪 Stage 25.0: 综合性能基准测试...");
 
         let start_time: _ = SystemTime::now();
-        let scheduler: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(WorkStealingScheduler::new(12)))));
+        let scheduler: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(WorkStealingScheduler::new(12))))))));
 
         // 创建极度不均衡的工作负载分布
         // 前4个线程承担80%的任务，后8个线程只有少量任务

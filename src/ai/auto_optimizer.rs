@@ -155,9 +155,9 @@ pub struct ValidationResult {
 impl AutoOptimizer {
     /// 创建新的自动性能优化器
     pub fn new() -> Self {
-        let profiler: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(PerformanceProfiler::new()));
-        let analyzer: _ = Arc::new(std::sync::Mutex::new(Mutex::new(PerformanceAnalyzer::new()));
-        let validator: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OptimizationValidator::new()));
+        let profiler: _ = Arc::new(RwLock::new(PerformanceProfiler::new()));
+        let analyzer: _ = Arc::new(PerformanceAnalyzer::new());
+        let validator: _ = Arc::new(OptimizationValidator::new());
 
         Self {
             profiler,
@@ -449,8 +449,8 @@ impl AutoOptimizer {
 impl PerformanceProfiler {
     pub fn new() -> Self {
         Self {
-            profiles: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())),
-            current_profile: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(None))),
+            profiles: Arc::new(RwLock::new(Vec::new())),
+            current_profile: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -491,11 +491,11 @@ impl PerformanceProfiler {
 impl PerformanceAnalyzer {
     pub fn new() -> Self {
         Self {
-            thresholds: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(OptimizationThresholds {
+            thresholds: Arc::new(RwLock::new(OptimizationThresholds {
                 hotspot_time_threshold: 100,
                 call_count_threshold: 1000,
                 impact_score_threshold: 5.0,
-            }))),
+            })),
         }
     }
 }
@@ -503,7 +503,7 @@ impl PerformanceAnalyzer {
 impl OptimizationValidator {
     pub fn new() -> Self {
         Self {
-            validation_cache: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
+            validation_cache: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 

@@ -79,7 +79,7 @@ impl SendFile {
             fd,
             file_size,
             current_pos: 0,
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(SendFileStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(SendFileStats::default())))),
         })
     }
 

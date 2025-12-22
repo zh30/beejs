@@ -64,10 +64,10 @@ impl ZeroCopyUdpSocket {
     /// 返回新的 ZeroCopyUdpSocket 实例
     pub fn new(socket: UdpSocket, buffer_size: usize, pool_size: usize) -> Self {
         let udp_socket: _ = Self {
-            socket: Arc::new(std::sync::Mutex::new(Mutex::new(socket))),
-            packet_buffers: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(pool_size))),
+            socket: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(socket))))),
+            packet_buffers: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(pool_size))))),
             buffer_size,
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(UdpZeroCopyStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(UdpZeroCopyStats::default())))),
         };
 
         // 预分配数据包缓冲区

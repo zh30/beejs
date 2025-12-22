@@ -652,7 +652,7 @@ impl ClusterController {
     }
 
     /// Get labels for resources
-    fn get_labels(&self, cluster: &BeejsCluster) -> BTreeMap<String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String> {
+    fn get_labels(&self, cluster: &BeejsCluster) -> BTreeMap<String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String> {
         BTreeMap::from([
             ("beejs.io/cluster".to_string(), cluster.name_any()),
             ("beejs.io/version".to_string(), cluster.spec.version.clone()),
@@ -661,7 +661,7 @@ impl ClusterController {
     }
 
     /// Get annotations for resources
-    fn get_annotations(&self, cluster: &BeejsCluster) -> BTreeMap<String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String> {
+    fn get_annotations(&self, cluster: &BeejsCluster) -> BTreeMap<String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String> {
         BTreeMap::from([
             ("beejs.io/created-by".to_string(), "beejs-operator".to_string()),
             ("beejs.io/description".to_string(), "Beejs Cluster".to_string()),

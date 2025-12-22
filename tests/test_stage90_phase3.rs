@@ -17,7 +17,7 @@ use std::collections::{HashMap, BTreeMap};
 /// 测试无锁计数器的性能
 #[tokio::test]
 async fn test_lock_free_counter_performance() {
-    let counter: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LockFreeCounter::new(0)))));
+    let counter: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LockFreeCounter::new(0))))))));
     let num_threads: _ = 10;
     let increments_per_thread: _ = 1000;
 
@@ -47,7 +47,7 @@ async fn test_lock_free_counter_performance() {
 /// 测试无锁队列的基本操作
 #[tokio::test]
 async fn test_lock_free_queue_basic() {
-    let queue: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LockFreeQueue::new()))));
+    let queue: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LockFreeQueue::new())))))));
 
     // 测试单线程入队出队
     assert!(queue.try_enqueue(42));
@@ -76,7 +76,7 @@ async fn test_lock_free_queue_basic() {
     let total_expected: _ = num_threads * items_per_thread;
     let start_time: _ = Instant::now();
 
-    let consumed_items: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LockFreeCounter::new(0)))));
+    let consumed_items: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LockFreeCounter::new(0))))))));
     let consumed_items_clone: _ = Arc::clone(consumed_items);
 
     let consumer: _ = tokio::spawn(async move {
@@ -101,7 +101,7 @@ async fn test_lock_free_queue_basic() {
 /// 测试分片锁的性能
 #[tokio::test]
 async fn test_sharded_lock_performance() {
-    let sharded_lock: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(ShardedLock::new(16, 0u64)))));
+    let sharded_lock: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(ShardedLock::new(16, 0u64))))))));
     let num_threads: _ = 8;
     let operations_per_thread: _ = 5000;
 
@@ -138,7 +138,7 @@ async fn test_sharded_lock_performance() {
 /// 测试无锁任务调度器
 #[tokio::test]
 async fn test_lock_free_task_scheduler() {
-    let scheduler: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LockFreeTaskScheduler::new()))));
+    let scheduler: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LockFreeTaskScheduler::new())))))));
     let num_tasks: _ = 1000;
 
     // 提交任务
@@ -189,7 +189,7 @@ async fn test_lock_free_task_scheduler() {
 /// 测试锁自由缓冲区池
 #[tokio::test]
 async fn test_lock_free_buffer_pool() {
-    let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LockFreeBufferPool::new()))));
+    let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LockFreeBufferPool::new())))))));
     let num_operations: _ = 1000;
 
     let mut handles = Vec::new();
@@ -218,7 +218,7 @@ async fn test_lock_free_buffer_pool() {
 /// 测试原子操作统计
 #[test]
 fn test_atomic_stats() {
-    let stats: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicStats::new()))));
+    let stats: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicStats::new())))))));
 
     // 记录操作
     for _ in 0..100 {
@@ -242,7 +242,7 @@ fn test_atomic_stats() {
 async fn test_concurrent_performance_benchmark() {
     let num_threads: _ = 8;
     let operations_per_thread: _ = 10000;
-    let counter: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LockFreeCounter::new(0)))));
+    let counter: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LockFreeCounter::new(0))))))));
 
     let start_time: _ = Instant::now();
 
@@ -281,8 +281,8 @@ async fn test_concurrent_performance_benchmark() {
 async fn test_high_contention_scenario() {
     let num_threads: _ = 16;
     let operations_per_thread: _ = 5000;
-    let counter: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LockFreeCounter::new(0)))));
-    let stats: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicStats::new()))));
+    let counter: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LockFreeCounter::new(0))))))));
+    let stats: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicStats::new())))))));
 
     let start_time: _ = Instant::now();
 

@@ -111,7 +111,7 @@ impl PerformanceMonitor {
 impl Stage93MemoryOptimizer {
     /// 创建新的 Stage 93 内存优化器
     pub fn new(config: Stage93MemoryOptimizerConfig) -> Self {
-        let performance_monitor: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(PerformanceMonitor::default()));
+        let performance_monitor: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(PerformanceMonitor::default()))));
 
         let zero_copy_optimizer: _ = if config.enable_all_optimizations {
             let base: _ = EnhancedZeroCopy::new(

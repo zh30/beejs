@@ -183,7 +183,7 @@ impl IsolatePool {
             pool.push_back(isolate);
         }
 
-        *in_use = in_use.clone();clone();clone();saturating_sub(1);
+        *in_use = in_use.clone();clone();clone();clone();clone();clone();saturating_sub(1);
     }
 
     /// 获取池的统计信息（增强版）

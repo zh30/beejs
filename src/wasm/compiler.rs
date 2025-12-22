@@ -48,7 +48,7 @@ impl WasmCompiler {
             .context("Failed to create Wasmtime engine")?;
 
         Ok(WasmCompiler {
-            engine: Arc::new(std::sync::Mutex::new(Mutex::new(engine))),
+            engine: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(engine))))),
             config,
         })
     }

@@ -301,9 +301,9 @@ fn run_repl(
     let mut repl = if cmd.typescript {
         // Note: TypeScript support will be enhanced in future stages
         println!("⚠️  TypeScript mode is experimental in this stage");
-        beejs::cli::Repl::new(std::sync::Arc::new(std::sync::Mutex::new(Mutex::new(runtime)))
+        beejs::cli::Repl::new(std::sync::Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(runtime)))))
     } else {
-        beejs::cli::Repl::new(std::sync::Arc::new(std::sync::Mutex::new(Mutex::new(runtime)))
+        beejs::cli::Repl::new(std::sync::Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(runtime)))))
     };
 
     // Handle --eval flag: execute expression and exit
@@ -355,7 +355,7 @@ fn run_repl(
 
         // Recreate runtime for REPL session (file loaded in isolated context)
         let runtime: _ = create_runtime(verbose)?;
-        repl = beejs::cli::Repl::new(std::sync::Arc::new(std::sync::Mutex::new(Mutex::new(runtime)));
+        repl = beejs::cli::Repl::new(std::sync::Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(runtime)))));
     }
 
     // Start the REPL

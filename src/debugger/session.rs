@@ -36,8 +36,8 @@ impl DebugSession {
 
         // Create debugger engine with configuration
         let config: _ = DebugConfig::default();
-        let debugger: _ = Arc::new(std::sync::Mutex::new(Mutex::new(DebuggerEngine::new(config)));
-        let event_listener: _ = Arc::new(std::sync::Mutex::new(Mutex::new(SimpleEventListener::new()));
+        let debugger: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(DebuggerEngine::new(config)))));
+        let event_listener: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(SimpleEventListener::new()))));
 
         Ok(Self {
             runtime,
@@ -113,7 +113,7 @@ impl DebugSession {
         // Create debug console
         let mut console = DebugConsole::new(
             Arc::clone(&self.debugger),
-            Arc::new(std::sync::Mutex::new(Mutex::new(self.runtime.clone())),
+            Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(self.runtime.clone())))),
         );
 
         // Run the console

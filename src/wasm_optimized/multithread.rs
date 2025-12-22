@@ -56,7 +56,7 @@ impl WasmMultithread {
             .context("创建线程池失败")?;
 
         Ok(Self {
-            engine: Arc::new(std::sync::Mutex::new(Mutex::new(Engine::new(&wasmtime::Config::new()))
+            engine: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Engine::new(&wasmtime::Config::new()))))
                 .wasm_threads(true)
                 .wasm_simd(true)
                 .parallel_compilation(true))?),

@@ -107,7 +107,7 @@ impl ObservableSystem {
             config: config.clone(),
             prometheus_exporter: None,
             structured_logger: None,
-            custom_metrics: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(CustomMetrics::new())),
+            custom_metrics: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(CustomMetrics::new())))),
             alerting_system: None,
         };
 
@@ -123,7 +123,7 @@ impl ObservableSystem {
         // Initialize Prometheus exporter
         if config.enable_prometheus {
             let exporter: _ = PrometheusExporter::new()?;
-            system.prometheus_exporter = Some(Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(exporter)));
+            system.prometheus_exporter = Some(Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(exporter)))));
             info!("Prometheus exporter initialized");
         }
 

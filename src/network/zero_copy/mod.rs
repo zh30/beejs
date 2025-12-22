@@ -65,7 +65,7 @@ impl ZeroCopyMonitor {
     /// 创建新的性能监控器
     pub fn new() -> Self {
         Self {
-            metrics: Arc::new(std::sync::Mutex::new(Mutex::new(ZeroCopyMetrics::default())),
+            metrics: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(ZeroCopyMetrics::default())))),
             start_time: Instant::now(),
         }
     }

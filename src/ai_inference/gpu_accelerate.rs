@@ -57,8 +57,8 @@ impl GPUAccelerator {
 
         Ok(GPUAccelerator {
             devices,
-            active_device: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(0))),
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(stats))),
+            active_device: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(0))))),
+            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(stats))))),
         })
     }
 

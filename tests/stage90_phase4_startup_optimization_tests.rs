@@ -56,8 +56,8 @@ use std::collections::{HashMap, BTreeMap};
     /// 测试启动时间优化效果
     #[tokio::test]
     async fn test_startup_time_optimization() {
-        let lazy_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LazyWebAPI::new()))));
-        let loader: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(OnDemandLoader::new()))));
+        let lazy_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LazyWebAPI::new())))))));
+        let loader: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(OnDemandLoader::new())))))));
 
         let start: _ = Instant::now();
 
@@ -192,7 +192,7 @@ use std::collections::{HashMap, BTreeMap};
     /// 测试并发场景下的延迟初始化
     #[tokio::test]
     async fn test_concurrent_lazy_initialization() {
-        let lazy_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LazyWebAPI::new()))));
+        let lazy_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LazyWebAPI::new())))))));
         let mut handles = vec![];
 
         // 并发初始化同一个 API

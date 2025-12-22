@@ -215,7 +215,7 @@ impl AutoTuner {
             config_manager,
             is_tuning: false,
             tuning_interval_s,
-            metrics_collector: Arc::new(std::sync::Mutex::new(Mutex::new(PerformanceMetricsCollector::new())),
+            metrics_collector: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(PerformanceMetricsCollector::new())))),
         }
     }
 
@@ -246,7 +246,7 @@ impl AutoTuner {
         info!("开始手动调优");
 
         let config: _ = self.config_manager.get_config().await;
-        let mut tuned_config = config.clone();clone();clone();clone();
+        let mut tuned_config = config.clone();clone();clone();clone();clone();clone();clone();
         let mut changes = Vec::new();
 
         // 基于性能指标调整 V8 配置
@@ -343,9 +343,9 @@ impl PerformanceMetricsCollector {
     /// 创建新的指标收集器
     pub fn new() -> Self {
         Self {
-            execution_times: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())),
-            memory_usage: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())),
-            cpu_usage: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())),
+            execution_times: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))),
+            memory_usage: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))),
+            cpu_usage: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))),
         }
     }
 
@@ -424,10 +424,10 @@ impl RuntimeConfigManager {
     pub fn new() -> Self {
         let config: _ = RuntimeConfig::default();
         Self {
-            config: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(config))),
+            config: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(config))))),
             config_path: None,
             auto_tuner: None,
-            change_callbacks: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())),
+            change_callbacks: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))),
         }
     }
 
@@ -591,11 +591,11 @@ impl RuntimeConfigManager {
     /// 启用自动调优
     pub fn enable_auto_tuning(&mut self) {
         info!("启用配置自动调优");
-        self.auto_tuner = Some(Arc::new(std::sync::Mutex::new(Mutex::new(AutoTuner {
-            config_manager: Arc::new(self.clone())),
+        self.auto_tuner = Some(Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(AutoTuner {
+            config_manager: Arc::new(self.clone())))),
             is_tuning: false,
             tuning_interval_s: 60,
-            metrics_collector: Arc::new(std::sync::Mutex::new(Mutex::new(PerformanceMetricsCollector::new())),
+            metrics_collector: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(PerformanceMetricsCollector::new())))),
         }));
     }
 
@@ -1076,7 +1076,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_auto_tuner() {
-        let manager: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeConfigManager::new()));
+        let manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RuntimeConfigManager::new()))));
         let tuner: _ = AutoTuner::new(manager.clone(), 60);
 
         // 测试手动调优
@@ -1168,7 +1168,7 @@ mod tests {
     #[tokio::test]
     async fn test_callback_registration() {
         let manager: _ = RuntimeConfigManager::new();
-        let callback_called: _ = Arc::new(std::sync::Mutex::new(Mutex::new(AtomicBool::new(false)));
+        let callback_called: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicBool::new(false)))));
         let callback_called_clone: _ = Arc::clone(callback_called);
 
         let callback: ConfigChangeCallback = Box::new(move |_path, _value| {

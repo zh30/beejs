@@ -14,7 +14,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_completion_for_variables() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Define a variable
@@ -26,7 +26,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_completion_for_object_properties() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Define an object
@@ -38,7 +38,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_completion_for_builtin_objects() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test tab completion for built-in objects like "console."
@@ -52,7 +52,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_highlight_keywords() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test syntax highlighting for keywords like "function", "if", "for"
@@ -61,7 +61,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_highlight_strings() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test syntax highlighting for strings
@@ -70,7 +70,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_highlight_numbers() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test syntax highlighting for numbers
@@ -84,7 +84,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_inspect_command() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Define an object
@@ -96,7 +96,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_time_command() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test .time command for execution time measurement
@@ -105,7 +105,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_type_command() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test .type command for type information display
@@ -114,7 +114,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_await_command() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test .await command for Promise handling
@@ -123,7 +123,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_save_command() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Add some commands to history
@@ -141,7 +141,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_up_arrow_navigation() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Add commands to history
@@ -155,7 +155,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_down_arrow_navigation() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Add commands to history
@@ -173,7 +173,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_completion_config() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test configuration options for tab completion
@@ -182,7 +182,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_highlight_config() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test configuration options for syntax highlighting
@@ -191,7 +191,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_history_size_config() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // TODO: Test configuration for history size
@@ -207,7 +207,7 @@ use std::collections::{HashMap, BTreeMap};
 
         #[tokio::test]
         async fn test_full_repl_session() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Execute various commands
@@ -224,7 +224,7 @@ use std::collections::{HashMap, BTreeMap};
 
         #[tokio::test]
         async fn test_error_handling() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Test error in .inspect command
@@ -239,7 +239,7 @@ use std::collections::{HashMap, BTreeMap};
 
         #[tokio::test]
         async fn test_multiline_with_enhancements() {
-            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false)))).unwrap());
+            let runtime: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RuntimeLite::new(false))))))).unwrap());
             let mut repl = crate::Repl::new(runtime);
 
             // Test multiline input with enhanced features

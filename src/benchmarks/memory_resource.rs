@@ -105,7 +105,7 @@ impl MemoryResourceBenchmark {
                 use std::thread;
 
                 let pool_size: _ = 100;
-                let pool: _ = Arc::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(pool_size)));
+                let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(pool_size)))));
 
                 let mut handles = vec![];
 
@@ -255,7 +255,7 @@ impl MemoryResourceBenchmark {
                 use std::thread;
 
                 let num_threads: _ = num_cpus::get();
-                let results: _ = Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()));
+                let results: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))));
 
                 let mut handles = vec![];
 

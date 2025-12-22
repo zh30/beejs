@@ -70,7 +70,7 @@ impl DmaBufferCache {
             small_buffers: Vec::with_capacity(16),
             medium_buffers: Vec::with_capacity(8),
             large_buffers: Vec::with_capacity(4),
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))),
+            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))))),
         }
     }
 
@@ -130,8 +130,8 @@ impl DmaEngine {
         let page_size: _ = unsafe { libc::sysconf(libc::_SC_PAGESIZE) } as usize;
 
         Ok(Self {
-            cache: Arc::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Mutex::new(DmaBufferCache::new())),
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))),
+            cache: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Mutex::new(DmaBufferCache::new())))),
+            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))))),
             page_size,
         })
     }
@@ -170,7 +170,7 @@ impl DmaEngine {
             addr: non_null_addr,
             size: aligned_size,
             alignment,
-            ref_count: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(1))),
+            ref_count: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(1))))),
         })
     }
 

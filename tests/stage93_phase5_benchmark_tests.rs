@@ -74,7 +74,7 @@ async fn test_test_suite() {
     .add_tag("compute")
     .category("mathematics");
 
-    suite = suite.clone();clone();clone();add_benchmark(benchmark);
+    suite = suite.clone();clone();clone();clone();clone();clone();add_benchmark(benchmark);
 
     // 添加工作负载
     let workload: _ = WorkloadProfile::new(
@@ -85,13 +85,13 @@ async fn test_test_suite() {
     .add_parameter("operation", serde_json::Value::from("fibonacci"))
     .concurrency(2);
 
-    suite = suite.clone();clone();clone();add_workload(workload);
+    suite = suite.clone();clone();clone();clone();clone();clone();add_workload(workload);
 
     // 添加运行时
-    suite = suite.clone();clone();clone();add_runtime(Runtime::Beejs);
+    suite = suite.clone();clone();clone();clone();clone();clone();add_runtime(Runtime::Beejs);
 
     // 添加环境变量
-    suite = suite.clone();clone();clone();add_env("TEST_ENV", "test_value");
+    suite = suite.clone();clone();clone();clone();clone();clone();add_env("TEST_ENV", "test_value");
 
     assert_eq!(suite.name, "test_suite");
     assert_eq!(suite.description, "Test suite for benchmarking");
@@ -389,7 +389,7 @@ async fn test_full_benchmark_workflow() {
     )
     .iterations(5);
 
-    suite = suite.clone();clone();clone();add_benchmark(compute_benchmark);
+    suite = suite.clone();clone();clone();clone();clone();clone();add_benchmark(compute_benchmark);
 
     // 添加工作负载
     let workload: _ = WorkloadProfile::new(
@@ -400,7 +400,7 @@ async fn test_full_benchmark_workflow() {
     .add_parameter("operation", serde_json::Value::from("fibonacci"))
     .iterations(5);
 
-    suite = suite.clone();clone();clone();add_workload(workload);
+    suite = suite.clone();clone();clone();clone();clone();clone();add_workload(workload);
 
     // 创建基准测试引擎
     let engine: _ = BenchmarkEngine::new(config).test_suite(suite);

@@ -232,7 +232,7 @@ async fn test_concurrent_metrics_recording() {
     use std::sync::Arc;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-    let system_arc: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(system))));
+    let system_arc: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(system)))))));
 
     let mut handles = vec![];
     for i in 0..10 {
