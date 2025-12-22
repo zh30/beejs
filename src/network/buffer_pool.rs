@@ -8,7 +8,7 @@
 //! - 内存对齐优化
 
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, Ordering};
+use std::sync::{Arc, Mutex, atomic::Ordering};
 
 /// 网络缓冲区池
 ///

@@ -190,7 +190,7 @@ async fn test_memory_mapping() {
 
     // 创建测试文件
     use std::io::Write;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
     let mut file = std::fs::File::create(test_file).unwrap();
     file.write_all(&vec![0u8; size]).unwrap();

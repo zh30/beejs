@@ -463,7 +463,7 @@ mod dashboard_integration_tests {
     #[tokio::test]
     async fn test_grafana_client_conversion() {
         use beejs::observability::dashboard::manager{DashboardManager, DashboardConfig};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         let config: _ = DashboardConfig::default();

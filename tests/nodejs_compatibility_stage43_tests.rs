@@ -3,7 +3,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 //! 验证新实现的Node.js API兼容性
 
 use beejs::Runtime;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 #[test]

@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, Ordering, RwLock};
+use std::sync::{Arc, Mutex, atomic::Ordering, RwLock};
 
 /// 缓存策略
 #[derive(Debug, Clone)]

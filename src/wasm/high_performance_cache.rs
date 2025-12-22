@@ -10,7 +10,7 @@
 
 use anyhow::{Context, Result, anyhow};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, Ordering, RwLock};
+use std::sync::{Arc, Mutex, atomic::Ordering, RwLock};
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 

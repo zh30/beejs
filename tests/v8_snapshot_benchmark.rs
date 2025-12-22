@@ -9,7 +9,7 @@ use std::time::Instant;
 #[cfg(test)]
 mod v8_snapshot_benchmark_tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     // Initialize V8 before running tests

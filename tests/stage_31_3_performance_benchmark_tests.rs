@@ -17,7 +17,7 @@ mod tests {
         concurrent::{ConcurrentBenchmark, ConcurrentOptimizationSuggestions},
     };
     use std::time::Duration;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// 测试基准测试框架基本功能

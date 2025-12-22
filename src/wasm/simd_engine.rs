@@ -300,7 +300,7 @@ impl SimdEngine {
     #[cfg(target_arch = "x86_64")]
     fn vector_add_f32_avx2(&self, a: &[f32], b: &[f32], result: &mut Vec<f32>) {
 
-use std::sync::Ordering;
+use std::sync::atomic::Ordering;
 
         let len: _ = a.len().min(b.len());
         result.reserve(len);

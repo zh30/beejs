@@ -3,7 +3,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 
 use beejs::watcher{FileChangeType, HotReloader, WatcherConfig, WatcherConfigBuilder};
 use std::path::Path;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 /// Test 1: Verify watcher configuration defaults

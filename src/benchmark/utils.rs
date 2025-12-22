@@ -6,7 +6,7 @@
 //! - 系统信息收集
 //! - 数据处理
 
-use std::sync::Ordering;
+use std::sync::atomic::Ordering;
 use std::time::{Duration, SystemTime};
 
 use serde::{Deserialize, Serialize};

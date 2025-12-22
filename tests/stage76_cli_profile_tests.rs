@@ -137,7 +137,7 @@ mod tests {
     /// 测试场景：边界条件
     mod profile_edge_cases {
         use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         #[test]

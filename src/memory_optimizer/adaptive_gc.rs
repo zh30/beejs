@@ -4,7 +4,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, Ordering, RwLock};
+use std::sync::{Arc, Mutex, atomic::Ordering, RwLock};
 
 /// GC 策略
 #[derive(Debug, Clone, Serialize, Deserialize)]

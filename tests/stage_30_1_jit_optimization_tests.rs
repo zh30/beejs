@@ -506,7 +506,7 @@ mod performance_benchmark_tests {
 #[cfg(test)]
 mod integration_tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// 测试所有优化技术的集成

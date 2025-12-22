@@ -3,7 +3,7 @@
 
 use beejs::platform{CrossPlatformRuntime, MobileRuntime, WASMRuntime, BeeWasmAPI};
 use std::sync::Arc;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 #[tokio::test]

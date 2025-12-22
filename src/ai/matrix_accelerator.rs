@@ -238,7 +238,7 @@ impl MatrixAccelerator {
         #[cfg(target_arch = "x86_64")]
         if is_x86_feature_detected!("avx512f") {
 
-use std::sync::Ordering;
+use std::sync::atomic::Ordering;
 
             let mut sum = _mm512_setzero_ps();
             let len: _ = a.len() / 16;

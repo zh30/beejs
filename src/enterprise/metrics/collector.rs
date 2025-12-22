@@ -2,7 +2,7 @@
 //! 收集 Beejs 运行时的各种性能指标，支持 Prometheus 导出
 
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex, Ordering};
+use std::sync::{Arc, Mutex, atomic::Ordering};
 
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};

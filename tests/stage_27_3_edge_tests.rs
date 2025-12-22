@@ -7,7 +7,7 @@ mod edge_computing_tests {
     use super::*;
     use std::collections::HashMap;
     use std::sync::Arc;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
     
 

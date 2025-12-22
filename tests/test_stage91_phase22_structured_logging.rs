@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::Level;
 use tokio::time{sleep, Duration};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 #[tokio::test]

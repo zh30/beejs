@@ -3,7 +3,7 @@
 //! 实现多人实时协作编辑，支持操作广播和版本管理
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, Ordering, RwLock};
+use std::sync::{Arc, Mutex, atomic::Ordering, RwLock};
 
 use serde::{Deserialize, Serialize};
 use tracing::info;

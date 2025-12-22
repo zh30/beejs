@@ -3,7 +3,7 @@
 //!
 //! 该模块实现性能测试结果的收集、分析和对比功能
 
-use std::sync::Ordering;
+use std::sync::atomic::Ordering;
 
 use crate::benchmarks::BenchmarkResult;
 use serde::{Deserialize, Serialize};

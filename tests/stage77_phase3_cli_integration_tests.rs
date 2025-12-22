@@ -363,7 +363,7 @@ mod stage77_phase3_cli_integration_tests {
         println!("🚀 测试 20: RuntimeLite 自定义 V8 配置下的 WASM 集成");
 
         use beejs::v8_engine::flags::V8EngineFlags;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         let config: _ = V8EngineFlags::high_performance();

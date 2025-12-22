@@ -18,7 +18,7 @@ use super::super::enterprise::high_availability::*;
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// Test Kubernetes Operator functionality

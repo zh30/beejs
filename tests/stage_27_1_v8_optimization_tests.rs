@@ -16,7 +16,7 @@ use std::time{Duration, Instant};
 #[cfg(test)]
 mod stage_27_1_tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// Test 1: 嵌入式内置函数数量验证

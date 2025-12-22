@@ -1,5 +1,5 @@
 use std::time{SystemTime, UNIX_EPOCH, Duration};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 //! Stage 21.5: 零拷贝网络 I/O 优化测试套件
 //!

@@ -6,8 +6,9 @@ use memmap2::{Mmap, MmapOptions};
 use std::collections::{BTreeMap, HashMap};
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::Arc, AtomicBool, , Mutex, , RwLock, Weak;
-use std::sync::Ordering;
+use std::sync::{Arc, Mutex, RwLock};
+use std::sync::atomic::{AtomicBool, Weak};
+use std::sync::atomic::Ordering;
 
 /// 访问模式
 #[derive(Debug, Clone, Copy, PartialEq)]

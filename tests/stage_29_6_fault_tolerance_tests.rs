@@ -15,7 +15,7 @@ use beejs::distributed::node_manager::NodeManager;
 use beejs::distributed::service_discovery{ServiceDiscovery, DiscoveryConfig};
 use std::sync::Arc;
 use std::time::Duration;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 #[tokio::test]

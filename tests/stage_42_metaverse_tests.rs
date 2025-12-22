@@ -871,7 +871,7 @@ mod integration_tests {
     #[test]
     fn test_immersive_interaction_pipeline() {
         use beejs::immersive_interaction{
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
             HandTracking, HandTrackingConfig,
             EyeTracking, EyeTrackingConfig,

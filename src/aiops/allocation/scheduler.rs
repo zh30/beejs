@@ -4,7 +4,7 @@
 //! 和系统状态智能决定任务调度顺序和分配策略。
 
 use std::collections::HashMap;
-use std::sync::Ordering;
+use std::sync::atomic::Ordering;
 use std::time::{Duration, TokioInstant};
 
 use serde::{Deserialize, Serialize};

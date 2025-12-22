@@ -549,7 +549,7 @@ mod benchmark_helpers {
 #[cfg(test)]
 mod integration_benchmark_tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// 综合性能基准测试

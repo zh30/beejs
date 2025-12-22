@@ -1,7 +1,7 @@
 //! 模块注册表
 //! 负责模块存储、索引和分发
 
-use std::sync::Ordering;
+use std::sync::atomic::Ordering;
 
 use std::collections::HashMap;
 use crate::ecosystem::types::*;

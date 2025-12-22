@@ -14,7 +14,7 @@ mod tests {
     // V8 isolates are thread-bound, so we need to run tests sequentially
     use serial_test::serial;
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     // =========================================

@@ -5,8 +5,8 @@
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::atomic::Arc, , Mutex, ;
-use std::sync::Ordering;
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::Ordering;
 
 /// 内存块
 #[derive(Debug)]

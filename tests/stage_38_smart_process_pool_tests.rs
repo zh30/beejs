@@ -10,11 +10,11 @@
 use beejs::stage_38_smart_process_pool::*;
 use beejs{TaskComplexity, ProcessPoolConfig};
 use std::time{Duration, SystemTime, Instant};
-use std::sync{Arc, Mutex};
+use std::sync::{Arc, Mutex};
 use std::sync::atomic{AtomicUsize, Ordering};
 use std::collections::HashMap;
 use tokio::time::sleep;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 #[tokio::test]

@@ -20,7 +20,7 @@ use beejs::benchmark{
 use std::path::PathBuf;
 use std::collections::HashMap;
 use std::time::Duration;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 #[tokio::test]

@@ -6,7 +6,7 @@ mod tests {
     use beejs::edge::local_cache::*;
     use beejs::edge::offline_engine::*;
     use std::path::PathBuf;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     #[tokio::test]

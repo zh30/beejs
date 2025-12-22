@@ -547,7 +547,7 @@ mod tests {
     /// 测试场景：集成测试
     mod integration_tests {
         use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         #[test]

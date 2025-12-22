@@ -297,7 +297,7 @@ pub async fn run_full_benchmark_suite() -> Result<Vec<BenchmarkResult>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     #[tokio::test]

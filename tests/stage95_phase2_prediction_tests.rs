@@ -10,7 +10,7 @@ use beejs::aiops::prediction{
 };
 use beejs::core::data_collector{Metric, MetricType};
 use std::time{Duration, SystemTime, UNIX_EPOCH};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 /// 创建测试指标数据

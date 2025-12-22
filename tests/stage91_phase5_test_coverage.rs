@@ -270,7 +270,7 @@ mod tests {
     fn test_object_operations_performance() {
         // 对象操作性能测试 - 目标: > 15M ops/sec
         use std::collections::HashMap;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         let start: _ = Instant::now();

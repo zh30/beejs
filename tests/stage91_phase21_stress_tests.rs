@@ -5,7 +5,7 @@ use beejs::RuntimeLite;
 use std::sync::Arc;
 use std::time{Duration, Instant};
 use tokio::time::sleep;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 /// 高负载执行器

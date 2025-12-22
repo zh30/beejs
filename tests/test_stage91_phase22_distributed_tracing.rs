@@ -389,7 +389,7 @@ async fn test_long_operation_tracing() {
 #[tokio::test]
 async fn test_high_concurrency_tracing() {
     use std::sync::Arc;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     let addr: SocketAddr = "127.0.0.1:6831".parse().unwrap();

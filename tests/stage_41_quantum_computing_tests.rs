@@ -472,7 +472,7 @@ fn test_quantum_simulation_performance() {
 #[test]
 fn test_circuit_execution_throughput() {
     use std::time::Instant;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     let iterations: _ = 100;

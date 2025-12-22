@@ -3,7 +3,7 @@
 
 use beejs::RuntimeLite;
 use std::time{Duration, Instant};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 /// 测试超大数值操作

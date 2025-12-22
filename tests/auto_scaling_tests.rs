@@ -8,7 +8,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 mod auto_scaling_tests {
     use std::sync::Arc;
     use beejs::process_pool{ProcessPool, ProcessPoolConfig};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     #[tokio::test]

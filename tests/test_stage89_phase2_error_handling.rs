@@ -6,7 +6,7 @@ mod stage89_phase2_error_handling_tests {
     use std::time::Duration;
     use crate::error{BeejsError, ErrorContext, AutoRecovery};
     use crate::fallback{FallbackManager, FallbackStrategy, Feature};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// 测试 1: 错误分类和错误上下文

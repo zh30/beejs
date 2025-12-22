@@ -2,8 +2,8 @@
 //! 为兼容性提供临时定义，避免编译错误
 
 use std::collections::{BTreeMap, HashMap};
-use std::sync::atomic:: ;
-use std::sync::Ordering;
+
+use std::sync::atomic::Ordering;
 
 /// 临时 LockFreeCounter 定义
 #[derive(Debug, Default)]

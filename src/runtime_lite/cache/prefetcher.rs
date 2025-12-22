@@ -3,7 +3,7 @@
 //! This module analyzes access patterns and predicts which scripts to prefetch
 //! based on frequency, timing, and dependency relationships.
 
-use std::sync::Ordering;
+use std::sync::atomic::Ordering;
 
 /// Access pattern for a script
 #[derive(Debug, Clone)]

@@ -2,7 +2,7 @@
 //! 提供任务分发、优先级队列、结果聚合等功能
 
 use std::collections::{HashMap, BinaryHeap};
-use std::sync::Ordering;
+use std::sync::atomic::Ordering;
 use std::cmp::Reverse;
 /// 任务类型枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

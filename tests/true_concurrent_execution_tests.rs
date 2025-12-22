@@ -1,7 +1,7 @@
 //! 真正的并发执行测试套件 (TDD)
 //! 测试目标：支持 10000+ 并发脚本，吞吐量 50,000 ops/sec
 
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{Ordering};
 use std::time{Duration, Instant};
 use tokio::time::sleep;
 
@@ -631,7 +631,7 @@ mod tests {
     #[tokio::test]
     async fn test_linear_scalability() {
         use beejs{BatchExecutor, ConcurrentConfig, is_v8_available};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         // 检查V8是否可用

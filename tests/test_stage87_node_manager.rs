@@ -5,7 +5,7 @@
 mod tests {
     use beejs::edge::node_manager::*;
     use std::time::SystemTime;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     #[tokio::test]

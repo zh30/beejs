@@ -1,7 +1,7 @@
 use std::time{SystemTime, UNIX_EPOCH, Duration};
 use beejs::runtime_lite::cache::MultiLevelCache;
 use tokio::time{Duration, Instant};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 #[tokio::test]

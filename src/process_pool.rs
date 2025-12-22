@@ -14,8 +14,9 @@ use crate::{OptimizeMode, Runtime};
 use std::collections::{BTreeMap, HashMap};
 use std::hash::{Hash, Hasher};
 use std::process::{Command, Stdio};
-use std::sync::atomic::Arc, AtomicBool, , Mutex, ;
-use std::sync::Ordering;
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool};
+use std::sync::atomic::Ordering;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
 

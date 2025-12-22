@@ -5,7 +5,7 @@
 #[cfg(test)]
 mod tests {
     use std::ptr::NonNull;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     #[test]

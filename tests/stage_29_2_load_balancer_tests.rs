@@ -698,7 +698,7 @@ mod performance_tests {
     #[test]
     fn bench_circuit_breaker_operations() {
         use beejs::distributed::load_balancer{CircuitBreaker, CircuitBreakerConfig};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         let config: _ = CircuitBreakerConfig {

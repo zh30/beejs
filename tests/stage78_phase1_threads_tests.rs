@@ -10,7 +10,7 @@ mod stage78_threads_tests {
     };
     use std::sync::Arc;
     use std::time::Duration;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     // ==========================================

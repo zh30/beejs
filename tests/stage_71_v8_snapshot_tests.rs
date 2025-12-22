@@ -8,7 +8,7 @@ mod v8_snapshot_tests {
     use beejs::v8_snapshot{V8Snapshot, SnapshotManager, SnapshotConfig};
     use beejs::startup_optimizer{MemoryPreallocator, JITPrecompiler};
     use std::sync::Arc;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     #[test]

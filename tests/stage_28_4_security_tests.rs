@@ -8,7 +8,7 @@
 //! - 敏感数据过滤
 
 use std::collections::HashMap;
-use std::sync{Arc, Mutex};
+use std::sync::{Arc, Mutex};
 use std::time{Duration, Instant};
 
 // =============================================================================
@@ -219,7 +219,7 @@ impl DataFilter {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     #[test]

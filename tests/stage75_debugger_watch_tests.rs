@@ -257,7 +257,7 @@ mod tests {
     #[test]
     fn test_watch_expression_complex_value() {
         use beejs::debugger::watch::WatchExpression;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         let mut watch = WatchExpression::new("obj.property");

@@ -6,7 +6,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 mod tests {
     use std::sync::Arc;
     use tokio::time{sleep, Duration};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     // 模拟 K8sManager 结构体（待实现）

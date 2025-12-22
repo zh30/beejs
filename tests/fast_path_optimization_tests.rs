@@ -10,7 +10,7 @@ use std::time::Instant;
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// Test 1: Simple object literal execution (via V8)

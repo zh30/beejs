@@ -372,7 +372,7 @@ mod stage84_security_tests {
     #[tokio::test]
     async fn test_escalation() {
         use beejs::security::incident_response{EscalationManager, Incident, IncidentType, IncidentSeverity};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         let escalation_manager: _ = EscalationManager::new();

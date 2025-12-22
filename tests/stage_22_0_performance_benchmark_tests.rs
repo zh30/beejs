@@ -174,7 +174,7 @@ mod tests {
     #[test]
     fn test_memory_pool_optimization() {
         use beejs::memory_pool{SmartMemoryPool, PoolConfig};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         let _iterations: _ = 1000;

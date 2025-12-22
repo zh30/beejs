@@ -325,7 +325,7 @@ mod tests {
 
     // Import the V8 requirement macro
     use beejs::is_v8_available;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     // V8 availability check macro

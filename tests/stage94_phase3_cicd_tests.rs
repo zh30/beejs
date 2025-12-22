@@ -14,7 +14,7 @@ mod cicd_integration_tests {
         PipelineCache, PipelineArtifact, PipelineSecret, Error as PipelineError,
     };
     use beejs::cloud_native::cicd::deployment{
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
         DeploymentStrategy, BlueGreenDeployment, CanaryDeployment, RollingDeployment,
         DeploymentConfig, DeploymentStatus, Error as DeploymentError,

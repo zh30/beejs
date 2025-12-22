@@ -3,7 +3,7 @@
 //! 提供 TLS 1.3 配置和证书管理功能
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, Ordering};
+use std::sync::{Arc, Mutex, atomic::Ordering};
 use std::time::SystemTime;
 
 use std::cmp::Ordering;

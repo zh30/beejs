@@ -2,7 +2,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 use beejs::Runtime;
 use std::io::Write;
 use tempfile::NamedTempFile;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 #[test]

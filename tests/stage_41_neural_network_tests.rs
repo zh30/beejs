@@ -425,7 +425,7 @@ fn test_batch_inference_performance() {
 #[test]
 fn test_tensor_matmul_performance() {
     use std::time::Instant;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     let a: _ = Tensor::randn(&[64, 64]); // 减小矩阵大小

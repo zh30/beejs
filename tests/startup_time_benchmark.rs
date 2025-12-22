@@ -8,7 +8,7 @@ use std::time{Duration, Instant}, SystemTime, UNIX_EPOCH;
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// 测试 1: 空 RuntimeLite 创建时间

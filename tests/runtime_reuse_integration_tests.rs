@@ -6,7 +6,7 @@ mod runtime_reuse_integration_tests {
     use std::fs;
     use std::process::Command;
     use std::time::Instant;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     #[test]

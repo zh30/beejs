@@ -6,8 +6,8 @@
 //! 减少内存拷贝和提升访问速度，特别适用于大文件处理和进程间通信。
 
 use std::collections::{BTreeMap, HashMap};
-use std::sync::atomic::Arc, , Mutex, ;
-use std::sync::Ordering;
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::Ordering;
 
 /// 内存映射类型
 #[derive(Debug, Clone, Copy, PartialEq)]

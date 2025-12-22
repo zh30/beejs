@@ -14,8 +14,9 @@
 use anyhow::{Context, Result};
 use crate::process_pool::{ProcessPoolConfig, ProcessPoolStats, TaskComplexity, WorkerMetrics};
 use std::collections::BTreeMap;
-use std::sync::atomic::Arc, AtomicBool, , Mutex, , RwLock;
-use std::sync::Ordering;
+use std::sync::{Arc, Mutex, RwLock};
+use std::sync::atomic::{AtomicBool};
+use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::{RwLock, mpsc};
 

@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Ordering, RwLock};
+use std::sync::{Arc, atomic::Ordering, RwLock};
 
 /// 编程语言
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

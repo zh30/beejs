@@ -444,7 +444,7 @@ mod tests {
         println!("\n=== Stage 12.3.4 End-to-End Concurrent Performance Benchmark ===\n");
 
         use beejs{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         if !is_v8_available() {

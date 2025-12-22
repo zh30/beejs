@@ -4,7 +4,7 @@
 use beejs::v8_engine::compatibility{V8CompatibilityChecker, V8APIStatus, DeprecatedAPI};
 use beejs::v8_engine::V8EngineFlags;
 use std::collections::HashMap;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 #[tokio::test]

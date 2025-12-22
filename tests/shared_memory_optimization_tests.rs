@@ -519,7 +519,7 @@ mod tests {
     fn test_concurrent_memory_access() {
         use std::thread;
         use std::sync::Arc;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         let config: _ = SharedMemoryConfig::default();

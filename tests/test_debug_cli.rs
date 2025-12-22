@@ -5,7 +5,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 
 use std::process::Command;
 use std::path::PathBuf;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 #[test]

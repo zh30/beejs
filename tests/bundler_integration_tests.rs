@@ -6,7 +6,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 #[test]

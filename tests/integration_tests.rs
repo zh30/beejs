@@ -5,7 +5,7 @@ use tempfile::NamedTempFile;
 
 // Add serial_test to ensure integration tests run serially to avoid concurrency issues
 use serial_test::serial;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 #[test]

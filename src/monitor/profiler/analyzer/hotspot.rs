@@ -1,7 +1,7 @@
 //! 热点分析模块
 //! 识别性能热点函数和性能瓶颈
 
-use std::sync::Ordering;
+use std::sync::atomic::Ordering;
 use std::time::Instant;
 
 use std::collections::HashMap;

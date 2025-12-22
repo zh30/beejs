@@ -5,7 +5,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 #[cfg(test)]
 mod logical_operations_fast_path_tests {
     use beejs::Runtime;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     #[test]

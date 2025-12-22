@@ -8,7 +8,7 @@
 
 use beejs::performance_analyzer{PerformanceAnalyzer, ExecutionMetrics, PerformanceReport};
 use std::time::Duration;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 #[test]

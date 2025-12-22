@@ -528,7 +528,7 @@ async fn test_debugger_error_handling() {
 #[tokio::test]
 async fn test_debug_adapter_protocol() {
     use beejs::tools::debug_adapter::protocol::dap::DebugAdapterProtocol;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     let dap: _ = DebugAdapterProtocol::new();

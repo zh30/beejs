@@ -523,7 +523,7 @@ mod tests {
 
     #[test]
     fn test_graceful_shutdown_hooks() {
-        use std::sync::atomic::AtomicBool;
+        use std::sync::atomic::{AtomicBool};
 
         let pre_called: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicBool::new(false)))))))));
         let post_called: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicBool::new(false)))))))));
@@ -647,8 +647,8 @@ fn test_stage_28_3_health_integration() {
 
 #[test]
 fn test_stage_28_3_lifecycle_integration() {
-    use std::sync::atomic::AtomicU32;
-use std::sync{Arc, Mutex, RwLock};
+    use std::sync::atomic::{AtomicU32};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     let cleanup_counter: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicU32::new(0)))))))));

@@ -33,7 +33,7 @@ use beejs::distributed::cluster_console{
 };
 use std::collections::HashMap;
 use std::time::Duration;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 // ========== 分布式指标测试 ==========

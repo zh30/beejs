@@ -5,7 +5,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 #[cfg(test)]
 mod wasm_optimization_tests {
     use std::collections::HashMap;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
     
     

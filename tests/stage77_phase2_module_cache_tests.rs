@@ -300,7 +300,7 @@ mod stage77_phase2_module_cache_tests {
 
         use std::sync::Arc;
         use std::thread;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         let cache: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(WasmModuleCache::new()))))))).unwrap());

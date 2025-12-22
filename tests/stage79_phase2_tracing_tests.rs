@@ -5,7 +5,7 @@
 mod tests {
     use std::collections::HashMap;
     use std::time::SystemTime;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     // 模拟 DistributedTracer 结构体（待实现）

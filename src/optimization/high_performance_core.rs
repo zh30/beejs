@@ -11,8 +11,8 @@
 //! - Adaptive JIT compilation strategies
 
 use std::collections::{BTreeMap, HashMap};
-use std::sync::atomic::Arc, , Mutex, ;
-use std::sync::Ordering;
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::Ordering;
 
 /// High-performance memory pool for reducing allocation overhead
 pub struct HighPerformanceMemoryPool {

@@ -3,7 +3,7 @@
 //! This module handles the management of breakpoints, including creation,
 //! deletion, enabling/disabling, and condition evaluation.
 
-use std::sync::Ordering;
+use std::sync::atomic::Ordering;
 use std::time::SystemTime;
 
 use std::collections::HashMap;

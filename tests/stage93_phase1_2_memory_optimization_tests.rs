@@ -8,13 +8,13 @@
 //! - 内存压缩实现
 
 use std::time{Duration, Instant};
-use std::sync{Arc, Mutex};
+use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
 #[cfg(test)]
 mod memory_optimization_tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// 测试零拷贝内存映射优化

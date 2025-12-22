@@ -7,7 +7,7 @@ mod tests {
     use std::path::Path;
     use std::sync::Arc;
     use tokio::runtime::Runtime;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     // 模拟 AI 代码生成器的结构

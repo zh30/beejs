@@ -529,7 +529,7 @@ mod script_executor {
 
     use super::file_type_detection::FileType;
     use super::execution_context::ExecutionContext;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// Script executor configuration

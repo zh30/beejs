@@ -148,7 +148,7 @@ mod tests {
 
         // 测试序列化/反序列化
         use bincode;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
         let serialized: _ = bincode::serialize(&package_id).unwrap();
         let deserialized: PackageId = bincode::deserialize(&serialized).unwrap();

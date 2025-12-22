@@ -525,7 +525,7 @@ mod stage85_aiops_tests {
     #[tokio::test]
     async fn test_prediction_performance() {
         use beejs::aiops::prediction_engine::PredictionEngine;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         let engine: _ = PredictionEngine::new();

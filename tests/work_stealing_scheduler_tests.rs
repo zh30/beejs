@@ -336,7 +336,7 @@ mod tests {
     #[tokio::test]
     async fn test_performance_benchmark() {
         use std::time::Instant;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         // TODO: 性能基准测试

@@ -8,7 +8,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
-use std::sync::{Arc, Mutex, Ordering};
+use std::sync::{Arc, Mutex, atomic::Ordering};
 
 /// 插件市场主引擎
 #[derive(Debug, Clone)]

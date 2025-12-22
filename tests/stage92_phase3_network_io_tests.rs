@@ -9,7 +9,7 @@ mod tests {
     };
     use std::net{SocketAddr, IpAddr, Ipv4Addr};
     use tokio;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// 测试零拷贝网络套接字

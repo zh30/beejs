@@ -7,7 +7,7 @@ mod tests {
         CacheType, InlineCache
     };
     use std::time::Duration;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// ========== 操作符缓存测试 ==========

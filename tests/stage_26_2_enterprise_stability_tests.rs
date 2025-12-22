@@ -16,7 +16,7 @@ use std::time{Duration, Instant};
 #[cfg(test)]
 mod stage_26_2_tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// Test 1: Memory Leak Detection

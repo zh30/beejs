@@ -7,7 +7,7 @@
 //! - 自适应优化
 
 use std::time{Duration, Instant};
-use std::sync{Arc, Mutex};
+use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
 #[cfg(test)]
@@ -209,7 +209,7 @@ mod adaptive_optimization_tests {
 #[cfg(test)]
 mod stage93_inline_optimization_tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// 测试智能阈值调整

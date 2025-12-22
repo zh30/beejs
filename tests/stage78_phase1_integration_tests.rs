@@ -14,7 +14,7 @@ mod stage78_phase1_integration_tests {
     };
     use std::sync::Arc;
     use std::time{Duration, Instant};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     // ==========================================

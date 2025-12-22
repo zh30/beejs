@@ -5,7 +5,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 mod tests {
     use beejs::optimization::adaptive_optimizer{AdaptiveOptimizer, CodeFeatures, WasmCode};
     use beejs::optimization::performance_monitor{PerformanceMonitor, AccessType, PerformanceMetrics};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     #[test]

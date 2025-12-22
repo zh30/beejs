@@ -37,7 +37,7 @@ mod tests {
     async fn test_result_collector() {
         use beejs::benchmarks{BenchmarkResult, MetricType};
         use std::time::Duration;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         let mut collector = ResultCollector::new();

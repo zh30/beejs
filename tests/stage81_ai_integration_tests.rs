@@ -7,7 +7,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 mod tests {
     use super::*;
     use beejs::ai::code_generator{
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
         AICodeGenerator, CodeContext, Language, ProjectInfo,
     };

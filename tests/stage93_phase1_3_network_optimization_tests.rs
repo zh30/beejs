@@ -8,13 +8,13 @@
 //! - 网络拓扑感知
 
 use std::time{Duration, Instant};
-use std::sync{Arc, Mutex};
+use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
 #[cfg(test)]
 mod network_optimization_tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// 测试智能预取功能

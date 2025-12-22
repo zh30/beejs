@@ -4,8 +4,9 @@
 //! 目标：低延迟 GC 模式，高吞吐量模式，避免停顿
 
 use std::collections::{BTreeMap, HashMap};
-use std::sync::atomic::Arc, AtomicBool, , Mutex, ;
-use std::sync::Ordering;
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool};
+use std::sync::atomic::Ordering;
 
 /// GC 配置
 #[derive(Debug, Clone)]

@@ -19,7 +19,7 @@ use std::time::Duration;
 mod tests {
     use super::*;
     use serial_test::serial;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// 测试 1: PerformanceMonitor 创建和初始化

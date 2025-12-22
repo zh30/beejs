@@ -4,8 +4,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::hash::{Hash, Hasher};
-use std::sync::atomic::Arc, AtomicBool, , Mutex, ;
-use std::sync::Ordering;
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool};
+use std::sync::atomic::Ordering;
 
 /// 共享值类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

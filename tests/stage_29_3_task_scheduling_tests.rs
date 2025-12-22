@@ -470,7 +470,7 @@ mod result_aggregator_tests {
 
 mod integration_tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// 测试端到端任务调度流程

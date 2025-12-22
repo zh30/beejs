@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod minimal_runtime_tests {
-    use std::sync{Arc, Mutex};
+    use std::sync::{Arc, Mutex};
     use std::thread;
     use std::time::Duration;
 

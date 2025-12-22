@@ -6,7 +6,7 @@ use std::time{SystemTime, UNIX_EPOCH};
 #[cfg(test)]
 mod matrix_accelerator_tests {
     use beejs::ai{Matrix, MatrixAccelerator, MatrixPair, AiHardwareFeatures};
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// 测试硬件特性检测

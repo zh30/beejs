@@ -9,8 +9,8 @@
 
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::atomic::Arc, , Mutex, ;
-use std::sync::Ordering;
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::Ordering;
 use tokio::task::{JoinHandle, self};
 
 /// 并发性能基准测试套件

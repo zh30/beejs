@@ -1,7 +1,7 @@
 //! Distributed tracing for Service Mesh
 //! Provides simplified tracing implementation for distributed tracing
 
-use std::sync::Ordering;
+use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
 use std::collections::HashMap;

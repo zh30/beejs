@@ -9,7 +9,7 @@ mod tests {
 
     // 导入分布式模块
     use beejs::distributed{
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
         scaling_manager::{ScalingManager, ScalingConfig},
         autoscaler::{Autoscaler, AutoscalerConfig, ScalingAction, ClusterMetrics},

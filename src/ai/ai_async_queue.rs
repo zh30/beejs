@@ -2,8 +2,8 @@
 //! 高性能异步任务调度和队列管理系统
 
 use std::collections::HashMap;
-use std::sync::atomic::Arc, , Mutex, ;
-use std::sync::Ordering;
+use std::sync::atomic::{Arc, Mutex};
+use std::sync::atomic::Ordering;
 
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BinaryHeap, HashMap};

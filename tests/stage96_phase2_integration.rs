@@ -2,7 +2,7 @@
 //! Tests the integration of Kubernetes Operator, Multi-tenancy, and Monitoring
 
 use enterprise{
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
     Operator, OperatorConfig, OperatorEvent,
     TenancyManager, TenantId, TenantStatus, ResourceQuota,

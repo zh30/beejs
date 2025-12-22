@@ -6,7 +6,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 #[cfg(test)]
 mod stage78_simd_tests {
     use beejs::wasm::simd_engine{
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
         SimdEngine, HardwareFeatures, SimdCapability, VectorOperation,
         detect_cpu_features, SimdStats, VectorWidth,

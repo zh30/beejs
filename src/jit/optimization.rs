@@ -8,8 +8,7 @@
 //! - Escape analysis optimization
 //! - Dead code elimination
 
-use std::sync::Ordering;
-use std::time::Instant;
+use std::sync::atomic::Ordering;
 
 use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};

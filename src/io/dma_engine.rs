@@ -7,8 +7,8 @@ use anyhow::{Result, anyhow};
 use libc::{c_void, posix_memalign};
 use memmap2::{Mmap, MmapOptions};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::atomic::Arc, , Mutex, ;
-use std::sync::Ordering;
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::Ordering;
 
 /// DMA buffer for zero-copy memory operations
 #[derive(Debug)]

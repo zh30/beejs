@@ -202,7 +202,7 @@ mod tests {
     /// Test Integration
     mod integration_tests {
         use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         #[tokio::test]

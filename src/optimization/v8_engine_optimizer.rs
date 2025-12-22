@@ -11,7 +11,7 @@
 //! - Garbage collection tuning for minimal pause times
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, Ordering};
+use std::sync::{Arc, Mutex, atomic::Ordering};
 use std::time::SystemTime;
 
 use rusty_v8::{Isolate, HandleScope, Local, Value, Object, Function};

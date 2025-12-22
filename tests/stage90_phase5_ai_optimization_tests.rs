@@ -285,7 +285,7 @@ mod tests {
     #[tokio::test]
     async fn test_auto_tuner() {
         use crate::monitoring::auto_tuner::AutoTuner;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
         let mut tuner = AutoTuner::new();

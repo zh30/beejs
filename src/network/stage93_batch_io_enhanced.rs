@@ -2,7 +2,7 @@
 //! 智能批处理算法，动态调整策略，最大化网络吞吐量
 
 use std::collections::{BTreeMap, HashMap, VecDeque};
-use std::sync::{Arc, Mutex, Ordering, RwLock};
+use std::sync::{Arc, Mutex, atomic::Ordering, RwLock};
 use super::{NetworkConfig, NetworkStats};
 use tokio::sync::{RwLock, mpsc};
 

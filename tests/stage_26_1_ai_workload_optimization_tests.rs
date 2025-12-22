@@ -18,7 +18,7 @@ use std::time{Duration, Instant};
 #[cfg(test)]
 mod stage_26_1_tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     /// Test 1: AI Memory Prefetch Optimization

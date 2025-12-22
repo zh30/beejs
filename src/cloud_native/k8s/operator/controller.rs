@@ -16,7 +16,7 @@ use k8s_openapi::ByteString;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::{ObjectMeta, LabelSelector, LabelSelectorRequirement};
 use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
 use std::collections::BTreeMap;
-use tokio::time::Duration as TokioDuration as TokioDuration;
+use tokio::time::Duration as TokioDuration;
 use tracing::{info, warn, error, debug};
 use super::super::crd::{
     BeejsCluster, BeejsClusterSpec, BeejsWorkload, BeejsWorkloadSpec, ClusterPhase,

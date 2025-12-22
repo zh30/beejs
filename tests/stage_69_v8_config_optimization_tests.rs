@@ -225,7 +225,7 @@ mod startup_time_tests {
 #[cfg(test)]
 mod v8_flags_validation_tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     #[test]

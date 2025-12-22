@@ -11,7 +11,7 @@
 //! - JIT compilation efficiency
 
 use std::time{Duration, Instant};
-use std::sync{Arc, Mutex};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::collections::HashMap;
 use tokio::runtime::Runtime;
@@ -423,7 +423,7 @@ pub struct BenchmarkSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
     #[tokio::test]

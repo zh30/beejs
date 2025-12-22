@@ -13,7 +13,7 @@ use beejs::ai{
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use std::sync{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::collections{HashMap, BTreeMap};
 
 /// 测试 AI 性能分析器

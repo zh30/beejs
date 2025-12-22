@@ -2,7 +2,8 @@
 /// 提供高并发、内存压力、网络压力等多种压力测试功能
 
 use std::collections::{BTreeMap, HashMap};
-use std::sync::atomic::Arc, AtomicBool, Mutex;
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool};
 
 /// 压力测试配置
 #[derive(Debug, Clone)]
