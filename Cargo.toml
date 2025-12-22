@@ -163,6 +163,14 @@ path = "tools/benchmark_runner.rs"
 name = "beejs"
 path = "src/main.rs"
 
+[[bin]]
+name = "test_stage95_core"
+path = "test_stage95_core.rs"
+
+[[bin]]
+name = "test_stage95_phase2_prediction"
+path = "test_stage95_phase2_prediction.rs"
+
 [profile.release]
 opt-level = 3
 lto = true
