@@ -55,7 +55,7 @@ pub enum ComplianceSeverity {
 /// Compliance frameworks manager
 #[derive(Debug)]
 pub struct ComplianceFrameworks {
-    frameworks: Arc<RwLock<HashMap<String, ComplianceFrameworkConfig, std::collections::HashMap<String, ComplianceFrameworkConfig, String, ComplianceFrameworkConfig>>>>,
+    frameworks: Arc<RwLock<HashMap<String, ComplianceFrameworkConfig>>,
 }
 
 /// Framework configuration
@@ -70,7 +70,7 @@ struct ComplianceFrameworkConfig {
 /// Policy engine for compliance rules
 #[derive(Debug)]
 pub struct PolicyEngine {
-    policies: Arc<RwLock<HashMap<String, CompliancePolicy, std::collections::HashMap<String, CompliancePolicy, String, CompliancePolicy>>>>,
+    policies: Arc<RwLock<HashMap<String, CompliancePolicy>>,
 }
 
 /// Compliance policy
@@ -144,7 +144,7 @@ pub struct ComplianceManager {
 /// Compliance checker
 #[derive(Debug)]
 pub struct ComplianceChecker {
-    framework_checks: HashMap<String, Box<dyn FrameworkCheck, std::collections::HashMap<String, Box<dyn FrameworkCheck, String, Box<dyn FrameworkCheck>>>,
+    framework_checks: HashMap<String, Box<dyn FrameworkCheck>>,
 }
 
 /// Framework check trait

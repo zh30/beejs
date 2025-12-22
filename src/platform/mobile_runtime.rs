@@ -23,7 +23,7 @@ pub struct AndroidRuntime {
 /// Isolate pool for mobile platforms
 #[derive(Debug)]
 pub struct IsolatePool {
-    isolates: Arc<RwLock<Vec<MobileIsolate>>>,
+    isolates: Arc<RwLock<Vec<MobileIsolate>>,
     max_isolates: usize,
 }
 

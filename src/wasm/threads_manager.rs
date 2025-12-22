@@ -117,7 +117,7 @@ impl<T> CancellableHandle<T> {
 /// 共享内存区域
 pub struct SharedMemoryRegion {
     /// 数据缓冲区
-    data: Arc<RwLock<Vec<u8>>>,
+    data: Arc<RwLock<Vec<u8>>,
     /// 区域大小
     size: usize,
     /// 对齐
@@ -319,7 +319,7 @@ pub struct WasmThreadsManager {
     /// 统计信息
     stats: Arc<ManagerStats>,
     /// 线程本地存储
-    thread_local_storage: RwLock<HashMap<String, Box<dyn std::any::Any + Send + Sync, std::collections::HashMap<String, Box<dyn std::any::Any + Send + Sync, String, Box<dyn std::any::Any + Send + Sync>>>>,
+    thread_local_storage: RwLock<HashMap<String, Box<dyn std::any::Any + Send + Sync>>,
 }
 
 /// 内部统计（可安全跨线程共享）

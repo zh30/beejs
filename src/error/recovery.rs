@@ -141,7 +141,7 @@ impl RecoveryStats {
 pub struct AutoRecovery {
     config: AutoRecoveryConfig,
     stats: Arc<RwLock<RecoveryStats>>,
-    retry_history: Arc<RwLock<Vec<(BeejsError, Instant, Duration)>>>,
+    retry_history: Arc<RwLock<Vec<(BeejsError, Instant, Duration)>>,
 }
 
 impl AutoRecovery {

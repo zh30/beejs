@@ -37,7 +37,7 @@ pub struct CryptoKey {
 /// 密钥管理器
 #[derive(Debug)]
 pub struct KeyManager {
-    keys: Arc<std::sync::Mutex<std::collections::HashMap<String, CryptoKey, std::collections::HashMap<String, CryptoKey, String, CryptoKey>>>>,
+    keys: Arc<std::sync::Mutex<std::collections::HashMap<String, CryptoKey>>,
     active_key_id: Arc<std::sync::Mutex<String>>,
 }
 

@@ -47,7 +47,7 @@ impl DebugServer {
 
 /// Session manager
 pub struct SessionManager {
-    sessions: std::collections::HashMap<String, Session, std::collections::HashMap<String, Session, String, Session>>,
+    sessions: std::collections::HashMap<String, Session>>,
 }
 
 #[derive(Debug, Clone)]

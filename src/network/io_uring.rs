@@ -69,9 +69,9 @@ pub struct IoUringEngine {
     config: NetworkConfig,
     uring_config: UringConfig,
     stats: Arc<RwLock<UringStats>>,
-    active_operations: Arc<RwLock<HashMap<u64, std::time::Instant, std::collections::HashMap<u64, std::time::Instant, u64, std::time::Instant>>>>,
+    active_operations: Arc<RwLock<HashMap<u64, std::time::Instant>>,
     operation_counter: Arc<RwLock<u64>>,
-    completion_queue: Arc<RwLock<Vec<UringCompletion>>>,
+    completion_queue: Arc<RwLock<Vec<UringCompletion>>,
 }
 
 impl IoUringEngine {

@@ -32,7 +32,7 @@ pub struct Http2ServerStats {
 pub struct Http2Server {
     config: NetworkConfig,
     enabled: bool,
-    routes: HashMap<String, Http2Handler, std::collections::HashMap<String, Http2Handler, String, Http2Handler>>,
+    routes: HashMap<String, Http2Handler>>,
     stats: std::sync::Arc<std::sync::Mutex<Http2ServerStats>>,
 }
 

@@ -64,7 +64,7 @@ impl Default for ThresholdConfig {
 /// 基线计算器
 #[derive(Debug)]
 pub struct BaselineCalculator {
-    historical_data: Arc<RwLock<Vec<f64>>>,
+    historical_data: Arc<RwLock<Vec<f64>>,
 }
 
 impl BaselineCalculator {

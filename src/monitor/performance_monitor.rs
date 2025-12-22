@@ -98,9 +98,9 @@ pub struct PerformanceMonitor {
     /// 配置
     config: MonitorConfig,
     /// 原始指标队列
-    raw_metrics: Arc<Mutex<VecDeque<MetricValue>>>,
+    raw_metrics: Arc<Mutex<VecDeque<MetricValue>>,
     /// 聚合指标缓存
-    aggregated_metrics: Arc<Mutex<HashMap<String, _>>>,
+    aggregated_metrics: Arc<Mutex<HashMap<String, _>>,
     /// 指标收集统计
     stats: Arc<Mutex<CollectionStats>>,
 }

@@ -90,12 +90,12 @@ impl Default for BatchConfig {
 /// AI批量处理器
 pub struct AiBatchProcessor {
     config: BatchConfig,
-    pending_tasks: Arc<Mutex<VecDeque<(usize, AiTaskType)>>>,
+    pending_tasks: Arc<Mutex<VecDeque<(usize, AiTaskType)>>,
     active_batches: Arc<Mutex<usize>>,
     batch_semaphore: Arc<Semaphore>,
     next_task_id: Arc<Mutex<usize>>,
     stats: Arc<Mutex<BatchStats>>,
-    results: Arc<Mutex<Vec<(usize, AiTaskResult)>>>,
+    results: Arc<Mutex<Vec<(usize, AiTaskResult)>>,
 }
 
 /// 批处理统计信息
@@ -227,7 +227,7 @@ impl AiBatchProcessor {
 
     /// 运行单个批次
     async fn run_batch(
-        pending_tasks: Arc<Mutex<VecDeque<(usize, AiTaskType)>>>,
+        pending_tasks: Arc<Mutex<VecDeque<(usize, AiTaskType)>>,
         stats: Arc<Mutex<BatchStats>>,
         config: BatchConfig,
     ) -> Vec<(usize, AiTaskResult)> {

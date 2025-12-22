@@ -47,7 +47,7 @@ pub struct FlameGraph {
 /// 性能采样器
 #[derive(Debug)]
 pub struct CallGraphSampler {
-    samples: Arc<Mutex<Vec<CallSample>>>,
+    samples: Arc<Mutex<Vec<CallSample>>,
     start_time: Instant,
 }
 
@@ -110,7 +110,7 @@ pub struct HeapObject {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryReport {
     pub total_size_bytes: usize,
-    pub object_distribution: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>,
+    pub object_distribution: HashMap<String, usize>>,
     pub potential_leaks: Vec<MemoryLeak>,
     pub recommendations: Vec<String>,
 }
@@ -279,7 +279,7 @@ impl Profiler {
         let mut leaks = Vec::new();
 
         // 简单的泄漏检测：找出大量重复的大对象
-        let mut type_counts: HashMap<String, (usize, usize), std::collections::HashMap<String, (usize, usize), String, (usize, usize)>> = HashMap::new(); // (count, total_size)
+        let mut type_counts: HashMap<String, (usize, usize)>> = HashMap::new(); // (count, total_size)
 
         for obj in &heap_snapshot.objects {
             let entry: _ = type_counts
@@ -402,7 +402,7 @@ impl CallGraphAnalyzer {
 
     /// 分析样本并构建调用图
     pub fn analyze_samples(&self, samples: &[CallSample]) -> Result<CallGraph, Box<dyn std::error::Error + Send + Sync>> {
-        let mut call_tree: HashMap<String, CallNode, std::collections::HashMap<String, CallNode, String, CallNode>> = HashMap::new();
+        let mut call_tree: HashMap<String, CallNode>> = HashMap::new();
 
         // 聚合调用数据
         for sample in samples {

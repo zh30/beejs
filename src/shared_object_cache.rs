@@ -19,7 +19,7 @@ pub enum SharedValue {
     Number(f64),
     String(String),
     Array(Vec<SharedValue>),
-    Object(HashMap<String, SharedValue, std::collections::HashMap<String, SharedValue, String, SharedValue>>),
+    Object(HashMap<String, SharedValue>>),
 }
 
 impl Hash for SharedValue {
@@ -165,7 +165,7 @@ struct LruCache<K, V> {
     /// 访问顺序列表（最近访问的在前面）
     order: Vec<K>,
     /// 键值对
-    map: HashMap<K, (V, usize), std::collections::HashMap<K, (V, usize), K, (V, usize)>>,
+    map: HashMap<K, (V, usize)>>,
 }
 
 impl<K: Hash + Eq + Clone, V> LruCache<K, V> {
@@ -249,7 +249,7 @@ pub struct SharedObjectCache {
     /// 字符串缓存（使用StringInterner）
     string_cache: Arc<StringInterner>,
     /// 对象缓存
-    object_cache: Arc<Mutex<LruCache<String, Arc<SharedObject>>>>,
+    object_cache: Arc<Mutex<LruCache<String, Arc<SharedObject>>,
     /// 配置
     config: SharedObjectCacheConfig,
     /// 统计信息

@@ -21,7 +21,7 @@ pub struct DashboardManager {
     /// HTTP client for Grafana API
     http_client: HttpClient,
     /// Active dashboards
-    dashboards: Arc<RwLock<HashMap<String, Dashboard, std::collections::HashMap<String, Dashboard, String, Dashboard>>>>,
+    dashboards: Arc<RwLock<HashMap<String, Dashboard>>,
     /// Grafana client
     grafana_client: Arc<GrafanaClient>,
     /// Metrics collector
@@ -70,7 +70,7 @@ pub struct MetricsCollector {
     /// Collection interval
     interval: std::time::Duration,
     /// Collected metrics
-    metrics: Arc<RwLock<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>>,
+    metrics: Arc<RwLock<HashMap<String, Value>>,
     /// Active collectors
     collectors: Vec<Box<dyn MetricsCollectorTrait + Send + Sync>>,
 }
@@ -78,7 +78,7 @@ pub struct MetricsCollector {
 /// Metrics Collector Trait
 #[async_trait::async_trait]
 pub trait MetricsCollectorTrait {
-    async fn collect(&self) -> Result<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>;
+    async fn collect(&self) -> Result<HashMap<String, Value>>;
     fn name(&self) -> &str;
 }
 
@@ -96,7 +96,7 @@ impl PrometheusCollector {
 
 #[async_trait::async_trait]
 impl MetricsCollectorTrait for PrometheusCollector {
-    async fn collect(&self) -> Result<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>> {
+    async fn collect(&self) -> Result<HashMap<String, Value>> {
         let client: _ = HttpClient::new();
         let response: _ = client
             .get(&format!("{}/api/v1/query", self.endpoint))
@@ -203,7 +203,7 @@ impl DashboardManager {
 
     /// Initialize built-in dashboards
     async fn initialize_builtin_dashboards(
-        dashboards: &Arc<RwLock<HashMap<String, Dashboard, std::collections::HashMap<String, Dashboard, String, Dashboard>>>>
+        dashboards: &Arc<RwLock<HashMap<String, Dashboard>>
     ) -> Result<()> {
         // Create overview dashboard
         let overview_dashboard: _ = Dashboard::new(
@@ -359,7 +359,7 @@ impl DashboardManager {
     }
 
     /// Get dashboard metrics snapshot
-    pub async fn get_metrics_snapshot(&self) -> Result<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>> {
+    pub async fn get_metrics_snapshot(&self) -> Result<HashMap<String, Value>> {
         self.metrics_collector.get_snapshot().await
     }
 
@@ -604,7 +604,7 @@ impl MetricsCollector {
     }
 
     /// Get current metrics snapshot
-    pub async fn get_snapshot(&self) -> Result<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>> {
+    pub async fn get_snapshot(&self) -> Result<HashMap<String, Value>> {
         let metrics: _ = self.metrics.read().await;
         Ok(metrics.clone())
     }

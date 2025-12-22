@@ -101,7 +101,7 @@ pub struct JITPrecompiler {
     /// 创建时间
     created_at: SystemTime,
     /// 预编译的函数
-    precompiled_functions: HashMap<String, PrecompiledFunction, std::collections::HashMap<String, PrecompiledFunction, String, PrecompiledFunction>>,
+    precompiled_functions: HashMap<String, PrecompiledFunction>>,
 }
 
 impl JITPrecompiler {

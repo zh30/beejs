@@ -53,7 +53,7 @@ pub trait CdnProvider: Send + Sync {
     async fn health_check(&self) -> Result<ProviderHealth>;
 
     /// Update CDN configuration
-    async fn update_config(&self, config: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> Result<()>;
+    async fn update_config(&self, config: &HashMap<String, String>>) -> Result<()>;
 }
 
 /// Deployment result
@@ -86,8 +86,8 @@ pub struct ProviderHealth {
 
 /// Smart Router for intelligent CDN selection
 pub struct SmartRouter {
-    providers: Arc<RwLock<Vec<Arc<dyn CdnProvider>>>>,
-    routing_cache: Arc<RwLock<HashMap<String, CdnEndpoint, std::collections::HashMap<String, CdnEndpoint, String, CdnEndpoint>>>>,
+    providers: Arc<RwLock<Vec<Arc<dyn CdnProvider>>,
+    routing_cache: Arc<RwLock<HashMap<String, CdnEndpoint>>,
 }
 
 impl SmartRouter {
@@ -163,13 +163,13 @@ impl SmartRouter {
 /// CDN Configuration Optimizer
 #[derive(Debug)]
 pub struct CdnOptimizer {
-    optimization_history: Arc<RwLock<Vec<OptimizationRecord>>>,
+    optimization_history: Arc<RwLock<Vec<OptimizationRecord>>,
 }
 
 #[derive(Debug, Clone)]
 struct OptimizationRecord {
     timestamp: std::time::SystemTime,
-    config: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    config: HashMap<String, String>>,
     performance_delta: f64,
 }
 
@@ -182,7 +182,7 @@ impl CdnOptimizer {
     }
 
     /// Optimize CDN configuration based on historical data
-    pub async fn optimize(&self, mut config: HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> Result<HashMap<String, String, std::collections::HashMap<String, String, String, String>>> {
+    pub async fn optimize(&self, mut config: HashMap<String, String>>) -> Result<HashMap<String, String>> {
         let history: _ = self.optimization_history.read().await;
 
         // Apply optimization rules based on historical performance
@@ -275,7 +275,7 @@ use std::collections::{HashMap, BTreeMap};
             })
         }
 
-        async fn update_config(&self, _config: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> Result<()> {
+        async fn update_config(&self, _config: &HashMap<String, String>>) -> Result<()> {
             Ok(())
         }
     }

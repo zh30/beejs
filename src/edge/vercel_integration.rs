@@ -120,7 +120,7 @@ impl CdnProvider for VercelIntegration {
     }
 
     /// Update Vercel configuration
-    async fn update_config(&self, config: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> Result<()> {
+    async fn update_config(&self, config: &HashMap<String, String>>) -> Result<()> {
         if let Some(framework) = config.get("framework") {
             println!("Updated Vercel framework to: {}", framework);
         }

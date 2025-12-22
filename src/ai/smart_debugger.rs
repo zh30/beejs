@@ -76,8 +76,8 @@ pub struct SmartDebugger {
 /// 调试知识库
 #[derive(Debug, Clone)]
 pub struct DebugKnowledgeBase {
-    error_patterns: HashMap<String, ErrorPattern, std::collections::HashMap<String, ErrorPattern, String, ErrorPattern>>,
-    fix_templates: HashMap<String, Vec<FixTemplate, std::collections::HashMap<String, Vec<FixTemplate, String, Vec<FixTemplate>>>,
+    error_patterns: HashMap<String, ErrorPattern>>,
+    fix_templates: HashMap<String, Vec<FixTemplate>>,
 }
 
 /// 错误模式
@@ -100,13 +100,13 @@ pub struct FixTemplate {
 /// 错误模式匹配器
 #[derive(Debug, Clone)]
 pub struct ErrorPatternMatcher {
-    patterns: Arc<RwLock<Vec<ErrorPattern>>>,
+    patterns: Arc<RwLock<Vec<ErrorPattern>>,
 }
 
 /// 修复生成器
 #[derive(Debug, Clone)]
 pub struct FixGenerator {
-    templates: Arc<RwLock<HashMap<String, Vec<FixTemplate, std::collections::HashMap<String, Vec<FixTemplate, String, Vec<FixTemplate>>>>>,
+    templates: Arc<RwLock<HashMap<String, Vec<FixTemplate>>>,
 }
 
 impl SmartDebugger {

@@ -39,9 +39,9 @@ struct KvCache {
 pub struct AiLlmEngine {
     config: LlmConfig,
     runtime: Arc<tokio::runtime::Runtime>,
-    token_cache: Arc<RwLock<HashMap<String, TokenCacheEntry, std::collections::HashMap<String, TokenCacheEntry, String, TokenCacheEntry>>>>,
-    memory_pool: Arc<Mutex<Vec<Vec<f32>>>>,
-    active_sessions: Arc<Mutex<HashMap<String, SessionInfo, std::collections::HashMap<String, SessionInfo, String, SessionInfo>>>>,
+    token_cache: Arc<RwLock<HashMap<String, TokenCacheEntry>>,
+    memory_pool: Arc<Mutex<Vec<Vec<f32>>,
+    active_sessions: Arc<Mutex<HashMap<String, SessionInfo>>,
 }
 
 /// 会话信息

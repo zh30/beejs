@@ -69,11 +69,11 @@ pub struct OptimizedSnapshot {
     /// 基础快照指针
     base_snapshot: Option<*const u8>,
     /// 增量快照映射
-    incremental_snapshots: Arc<RwLock<HashMap<String, *const u8, std::collections::HashMap<String, *const u8, String, *const u8>>>>,
+    incremental_snapshots: Arc<RwLock<HashMap<String, *const u8>>,
     /// 缓存策略
     cache_strategy: CacheStrategy,
     /// 缓存数据
-    cache: Arc<AsyncRwLock<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>,
+    cache: Arc<AsyncRwLock<HashMap<String, CacheEntry>>,
     /// 统计信息
     stats: Arc<Mutex<OptimizedCacheStats>>,
 }
@@ -208,7 +208,7 @@ impl OptimizedSnapshot {
     }
 
     /// 获取缓存数据
-    pub async fn get_cached_data(&self, key: &str) -> Result<Option<Vec<u8>>> {
+    pub async fn get_cached_data(&self, key: &str) -> Result<Option<Vec<u8>> {
         let mut cache = self.cache.write().await;
 
         if let Some(entry) = cache.get_mut(key) {
@@ -298,7 +298,7 @@ impl OptimizedSnapshot {
     }
 
     /// 驱逐 LRU 条目
-    async fn evict_lru(&self, cache: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>) {
+    async fn evict_lru(&self, cache: &mut HashMap<String, CacheEntry>>) {
         if cache.is_empty() {
             return;
         }
@@ -333,12 +333,12 @@ pub struct OptimizedPrecompiledCache {
     /// 缓存策略
     strategy: CacheStrategy,
     /// 缓存数据
-    cache: Arc<AsyncRwLock<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>,
+    cache: Arc<AsyncRwLock<HashMap<String, CacheEntry>>,
     /// 统计信息
     stats: Arc<Mutex<OptimizedCacheStats>>,
     /// 压缩线程池
     #[allow(dead_code)]
-    compression_pool: Option<Arc<tokio::task::JoinHandle<()>>>,
+    compression_pool: Option<Arc<tokio::task::JoinHandle<()>>,
 }
 
 impl OptimizedPrecompiledCache {
@@ -363,7 +363,7 @@ impl OptimizedPrecompiledCache {
 
     /// 后台压缩任务
     async fn background_compression(
-        cache: Arc<AsyncRwLock<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>,
+        cache: Arc<AsyncRwLock<HashMap<String, CacheEntry>>,
         stats: Arc<Mutex<OptimizedCacheStats>>,
     ) {
         let mut interval = tokio::time::interval(Duration::from_secs(60)); // 每分钟执行一次
@@ -431,7 +431,7 @@ impl OptimizedPrecompiledCache {
     }
 
     /// 获取缓存数据
-    pub async fn get_cached_data(&self, key: &str) -> Result<Option<Vec<u8>>> {
+    pub async fn get_cached_data(&self, key: &str) -> Result<Option<Vec<u8>> {
         let mut cache = self.cache.write().await;
 
         if let Some(entry) = cache.get_mut(key) {
@@ -483,7 +483,7 @@ impl OptimizedPrecompiledCache {
     }
 
     /// 驱逐条目
-    async fn evict_entry(&self, cache: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>) {
+    async fn evict_entry(&self, cache: &mut HashMap<String, CacheEntry>>) {
         if cache.is_empty() {
             return;
         }

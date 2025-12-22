@@ -65,7 +65,7 @@ pub struct AllocationMetrics {
 
 /// 智能内存分配器
 pub struct SmartMemoryAllocator {
-    pools: Arc<RwLock<Vec<MemoryPool>>>,
+    pools: Arc<RwLock<Vec<MemoryPool>>,
     metrics: Arc<RwLock<AllocationMetrics>>,
     config: PoolConfig,
 }

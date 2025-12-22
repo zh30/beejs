@@ -274,7 +274,7 @@ impl AsyncIoManager {
         let start: _ = Instant::now();
         let path_count: _ = input_paths.len();
 
-        let mut handles: Vec<JoinHandle<Result<String, IoError>>> = Vec::with_capacity(path_count);
+        let mut handles: Vec<JoinHandle<Result<String, IoError>> = Vec::with_capacity(path_count);
 
         for path in input_paths.drain(..) {
             let semaphore: _ = semaphore.clone();clone();

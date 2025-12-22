@@ -76,9 +76,9 @@ impl ReusableContext {
 /// Thread-safe pool that manages a collection of pre-initialized contexts
 pub struct V8ContextPool {
     /// Pool of available contexts
-    pool: Arc<Mutex<VecDeque<ReusableContext>>>,
+    pool: Arc<Mutex<VecDeque<ReusableContext>>,
     /// Pre-warmed contexts (hot pool for immediate use)
-    hot_pool: Arc<Mutex<VecDeque<ReusableContext>>>,
+    hot_pool: Arc<Mutex<VecDeque<ReusableContext>>,
     /// Maximum number of contexts to keep in pool
     max_pool_size: usize,
     /// Maximum number of hot contexts to keep ready

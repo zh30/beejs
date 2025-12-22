@@ -27,7 +27,7 @@ pub struct GenerationalGC {
 #[derive(Debug)]
 struct YoungGeneration {
     /// 活跃对象集合
-    live_objects: HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo>>,
+    live_objects: HashMap<usize, ObjectInfo>>,
     /// 空闲空间
     free_space: usize,
     /// 总空间
@@ -42,7 +42,7 @@ struct YoungGeneration {
 #[derive(Debug)]
 struct OldGeneration {
     /// 活跃对象集合
-    live_objects: HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo>>,
+    live_objects: HashMap<usize, ObjectInfo>>,
     /// 总空间
     total_space: usize,
     /// 压缩统计
@@ -277,7 +277,7 @@ impl GenerationalGC {
     }
 
     /// 标记-清除算法
-    fn mark_and_sweep(&self, objects: &HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo>>) -> (HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo>>, u64) {
+    fn mark_and_sweep(&self, objects: &HashMap<usize, ObjectInfo>>) -> (HashMap<usize, ObjectInfo>>, u64) {
         let mut live_objects = HashMap::new();
         let mut collected_bytes = 0u64;
 
@@ -306,7 +306,7 @@ impl GenerationalGC {
     }
 
     /// 晋升对象到老年代
-    fn promote_objects(&self, young_gen: &mut YoungGeneration, live_objects: &HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo>>) -> usize {
+    fn promote_objects(&self, young_gen: &mut YoungGeneration, live_objects: &HashMap<usize, ObjectInfo>>) -> usize {
         let mut promoted_count = 0;
         let mut old_gen = self.old_gen.write().unwrap();
 

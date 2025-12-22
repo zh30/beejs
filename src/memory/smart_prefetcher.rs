@@ -256,7 +256,7 @@ pub struct SmartPrefetcher {
     /// 零拷贝系统引用
     zero_copy: Arc<EnhancedZeroCopy>,
     /// 预取队列
-    prefetch_queue: Arc<Mutex<Vec<PrefetchTask>>>,
+    prefetch_queue: Arc<Mutex<Vec<PrefetchTask>>,
     /// 预取统计
     stats: Arc<PrefetchStats>,
     /// 是否启用预取
@@ -283,7 +283,7 @@ pub struct PrefetchStats {
     pub successful_prefetches: AtomicUsize,
     pub wasted_prefetches: AtomicUsize,
     pub average_confidence: AtomicUsize,
-    pub pattern_accuracies: HashMap<String, AtomicUsize, std::collections::HashMap<String, AtomicUsize, String, AtomicUsize>>,
+    pub pattern_accuracies: HashMap<String, AtomicUsize>>,
 }
 
 impl SmartPrefetcher {

@@ -17,7 +17,7 @@ pub struct SharedMemoryRegion {
     #[allow(dead_code)]
     id: String,
     /// 内存数据（使用Arc实现共享）
-    data: Arc<Mutex<Vec<u8>>>,
+    data: Arc<Mutex<Vec<u8>>,
     /// 读者计数器
     readers: Arc<AtomicUsize>,
     /// 写者计数器
@@ -89,7 +89,7 @@ pub struct SharedMemoryHandle {
     region: Arc<SharedMemoryRegion>,
     is_writer: bool,
     /// COW 副本数据（仅在写入时创建）
-    cow_copy: Option<Arc<Mutex<Vec<u8>>>>,
+    cow_copy: Option<Arc<Mutex<Vec<u8>>,
 }
 
 /// 访问模式跟踪
@@ -115,7 +115,7 @@ struct PrefetchEntry {
 #[derive(Debug)]
 pub struct SharedMemoryManager {
     /// 活跃区域映射
-    regions: Arc<Mutex<HashMap<String, Weak<SharedMemoryRegion, std::collections::HashMap<String, Weak<SharedMemoryRegion, String, Weak<SharedMemoryRegion>>>>>,
+    regions: Arc<Mutex<HashMap<String, Weak<SharedMemoryRegion>>>,
     /// 配置
     config: SharedMemoryConfig,
     /// 统计信息
@@ -123,9 +123,9 @@ pub struct SharedMemoryManager {
     /// 运行状态
     running: Arc<AtomicBool>,
     /// 访问模式跟踪
-    access_patterns: Arc<Mutex<VecDeque<AccessPattern>>>,
+    access_patterns: Arc<Mutex<VecDeque<AccessPattern>>,
     /// 预取缓存
-    prefetch_cache: Arc<Mutex<HashMap<String, PrefetchEntry, std::collections::HashMap<String, PrefetchEntry, String, PrefetchEntry>>>>,
+    prefetch_cache: Arc<Mutex<HashMap<String, PrefetchEntry>>,
 }
 
 impl SharedMemoryManager {

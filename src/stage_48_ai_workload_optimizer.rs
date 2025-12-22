@@ -147,13 +147,13 @@ impl Default for AIWorkloadOptimizerConfig {
 #[derive(Debug)]
 struct MatrixOptimizer {
     cache: Arc<Mutex<HashMatrixCache>>,
-    memory_pool: Arc<Mutex<Vec<Vec<f32>>>>,
+    memory_pool: Arc<Mutex<Vec<Vec<f32>>,
 }
 
 /// 矩阵缓存
 #[derive(Debug, Default)]
 struct HashMatrixCache {
-    cache: HashMap<String, CachedMatrix, std::collections::HashMap<String, CachedMatrix, String, CachedMatrix>>,
+    cache: HashMap<String, CachedMatrix>>,
     max_size_mb: usize,
     current_size_mb: usize,
 }
@@ -169,7 +169,7 @@ struct CachedMatrix {
 /// 张量运算优化器
 #[derive(Debug)]
 struct TensorOptimizer {
-    cache: Arc<Mutex<HashMap<String, CachedTensor, std::collections::HashMap<String, CachedTensor, String, CachedTensor>>>>,
+    cache: Arc<Mutex<HashMap<String, CachedTensor>>,
     batch_processor: Arc<Mutex<BatchProcessor>>,
 }
 

@@ -151,7 +151,7 @@ impl BenchmarkEngine {
         }
 
         // 并行执行基准测试
-        let mut handles: Vec<JoinHandle<Result<()>>> = Vec::new();
+        let mut handles: Vec<JoinHandle<Result<()>> = Vec::new();
 
         for (index, benchmark) in suite.benchmarks.iter().enumerate() {
             if !benchmark.enabled {
@@ -191,7 +191,7 @@ impl BenchmarkEngine {
     async fn run_single_benchmark(
         config: &BenchmarkConfig,
         benchmark: &BenchmarkTest,
-        suite_env: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+        suite_env: &HashMap<String, String>>,
         results: Arc<Mutex<BenchmarkResultSet>>,
         index: usize,
     ) -> Result<()> {

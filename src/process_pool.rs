@@ -237,7 +237,7 @@ pub struct ProcessPoolStats {
     /// Worker utilization percentage
     pub worker_utilization_percent: f64,
     /// Worker metrics for intelligent scheduling
-    pub worker_metrics: HashMap<u32, WorkerMetrics, std::collections::HashMap<u32, WorkerMetrics, u32, WorkerMetrics>>,
+    pub worker_metrics: HashMap<u32, WorkerMetrics>>,
 }
 
 impl Default for ProcessPoolStats {
@@ -262,18 +262,18 @@ impl Default for ProcessPoolStats {
 /// The main Process Pool manager
 pub struct ProcessPool {
     config: ProcessPoolConfig,
-    workers: Arc<Mutex<HashMap<u32, WorkerInfo, std::collections::HashMap<u32, WorkerInfo, u32, WorkerInfo>>>>,
-    available_workers: Arc<Mutex<Vec<u32>>>,
+    workers: Arc<Mutex<HashMap<u32, WorkerInfo>>,
+    available_workers: Arc<Mutex<Vec<u32>>,
     stats: Arc<Mutex<ProcessPoolStats>>,
     worker_counter: AtomicUsize,
     shutdown: Arc<AtomicBool>,
     /// Task queue for auto-scaling monitoring
-    task_queue: Arc<Mutex<Vec<Instant>>>,
+    task_queue: Arc<Mutex<Vec<Instant>>,
     /// Last scaling operation timestamp
     last_scale_operation: Arc<Mutex<Instant>>,
     /// Worker idle time tracking
     #[allow(dead_code)]
-    worker_idle_times: Arc<Mutex<HashMap<u32, Instant, std::collections::HashMap<u32, Instant, u32, Instant>>>>, // Reserved for future idle tracking
+    worker_idle_times: Arc<Mutex<HashMap<u32, Instant>>, // Reserved for future idle tracking
 }
 
 impl ProcessPool {
@@ -605,7 +605,7 @@ impl ProcessPool {
     }
 
     /// Get worker metrics for debugging/analysis
-    pub fn get_worker_metrics(&self) -> HashMap<u32, WorkerMetrics, std::collections::HashMap<u32, WorkerMetrics, u32, WorkerMetrics>> {
+    pub fn get_worker_metrics(&self) -> HashMap<u32, WorkerMetrics>> {
         let stats: _ = self.stats.lock().unwrap();
         stats.worker_metrics.clone()
     }

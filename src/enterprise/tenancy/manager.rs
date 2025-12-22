@@ -99,13 +99,13 @@ pub struct ExecutionContext {
 /// Multi-tenancy manager
 pub struct TenancyManager {
     /// Active tenants
-    tenants: Arc<RwLock<std::collections::HashMap<TenantId, Tenant, std::collections::HashMap<TenantId, Tenant, TenantId, Tenant>>>>,
+    tenants: Arc<RwLock<std::collections::HashMap<TenantId, Tenant>>,
 
     /// Tenant executions
-    executions: Arc<RwLock<std::collections::HashMap<String, ExecutionContext, std::collections::HashMap<String, ExecutionContext, String, ExecutionContext>>>>,
+    executions: Arc<RwLock<std::collections::HashMap<String, ExecutionContext>>,
 
     /// Resource usage tracker
-    resource_usage: Arc<RwLock<std::collections::HashMap<TenantId, ResourceUsage, std::collections::HashMap<TenantId, ResourceUsage, TenantId, ResourceUsage>>>>,
+    resource_usage: Arc<RwLock<std::collections::HashMap<TenantId, ResourceUsage>>,
 }
 
 /// Resource usage by tenant

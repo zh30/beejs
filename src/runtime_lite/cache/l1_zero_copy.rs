@@ -43,9 +43,9 @@ impl L1Stats {
 /// L1 Zero-Copy Cache for hot scripts
 pub struct L1ZeroCopyCache {
     /// Hot scripts cache with zero-copy Arc<[u8]> storage
-    hot_scripts: Arc<RwLock<HashMap<CacheKey, ScriptBuffer, std::collections::HashMap<CacheKey, ScriptBuffer, CacheKey, ScriptBuffer>>>>,
+    hot_scripts: Arc<RwLock<HashMap<CacheKey, ScriptBuffer>>,
     /// Pre-allocated buffer pool
-    buffer_pool: Arc<RwLock<Vec<ScriptBuffer>>>,
+    buffer_pool: Arc<RwLock<Vec<ScriptBuffer>>,
     /// Cache statistics
     stats: Arc<RwLock<L1Stats>>,
     /// Maximum L1 cache size (256 MB default)

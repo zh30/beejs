@@ -27,8 +27,6 @@ pub use compatibility::{
     VerificationReport,
 };
 pub use api_adapter::{
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
     V8APIAdapter,
     AdapterConfig,
     AdapterItem,

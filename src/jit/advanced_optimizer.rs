@@ -35,7 +35,7 @@ pub struct AdvancedInliningOptimizer {
     /// 复杂函数内联阈值
     complex_threshold: usize,
     /// 内联历史统计
-    inlining_history: HashMap<String, InliningStats, std::collections::HashMap<String, InliningStats, String, InliningStats>>,
+    inlining_history: HashMap<String, InliningStats>>,
 }
 
 /// 内联统计信息

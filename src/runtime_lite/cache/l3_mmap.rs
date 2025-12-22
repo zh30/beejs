@@ -49,7 +49,7 @@ impl L3Stats {
 /// L3 Memory-Mapped Cache
 pub struct L3MmapCache {
     /// Cache storage: key -> entry
-    entries: Arc<RwLock<HashMap<String, L3Entry, std::collections::HashMap<String, L3Entry, String, L3Entry>>>>,
+    entries: Arc<RwLock<HashMap<String, L3Entry>>,
     /// Statistics
     stats: Arc<RwLock<L3Stats>>,
     /// Configuration

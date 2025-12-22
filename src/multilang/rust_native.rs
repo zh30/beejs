@@ -19,14 +19,14 @@ pub struct SharedMemoryRegion {
 /// Zero-copy memory bridge
 #[derive(Debug)]
 pub struct ZeroCopyBridge {
-    shared_memory: Arc<RwLock<HashMap<String, SharedMemoryRegion, std::collections::HashMap<String, SharedMemoryRegion, String, SharedMemoryRegion>>>>,
+    shared_memory: Arc<RwLock<HashMap<String, SharedMemoryRegion>>,
     memory_pool: Arc<MemoryPool>,
 }
 
 /// Memory pool for efficient allocation
 #[derive(Debug)]
 pub struct MemoryPool {
-    pool: Arc<RwLock<Vec<u8>>>,
+    pool: Arc<RwLock<Vec<u8>>,
     block_size: usize,
     max_blocks: usize,
 }
@@ -42,14 +42,14 @@ pub struct OptimizedCode {
 /// JIT compiler for hot path optimization
 #[derive(Debug)]
 pub struct JITCompiler {
-    cache: Arc<RwLock<HashMap<String, OptimizedCode, std::collections::HashMap<String, OptimizedCode, String, OptimizedCode>>>>,
-    hot_paths: Arc<RwLock<Vec<String>>>,
+    cache: Arc<RwLock<HashMap<String, OptimizedCode>>,
+    hot_paths: Arc<RwLock<Vec<String>>,
 }
 
 /// Inline cache for fast lookups
 #[derive(Debug)]
 pub struct InlineCache {
-    cache: Arc<RwLock<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>,
+    cache: Arc<RwLock<HashMap<String, CacheEntry>>,
 }
 
 /// Cache entry for inline cache

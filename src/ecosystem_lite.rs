@@ -32,8 +32,8 @@ pub enum PackageSpec {
 pub struct PackageInfo {
     pub name: String,
     pub version: String,
-    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
-    pub peer_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub dependencies: HashMap<String, String>>,
+    pub peer_dependencies: HashMap<String, String>>,
     pub exports: Option<serde_json::Value>,
     pub types: Option<String>,
     pub main: Option<String>,
@@ -338,7 +338,7 @@ pub struct VsCodeExtensionConfig {
     pub name: String,
     pub version: String,
     pub publisher: String,
-    pub engines: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub engines: HashMap<String, String>>,
     pub categories: Vec<String>,
     pub activation_events: Vec<String>,
 }

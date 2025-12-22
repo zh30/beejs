@@ -18,6 +18,9 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+/// Script cache entry tuple
+type ScriptCacheEntry = (v8::Global<v8::Script>, String, Instant);
+
 /// Lightweight Runtime - minimal V8 runtime for fast startup
 /// Only initializes essential components needed for basic JS execution
 /// Stage 20.3 Optimization: Optimized memory layout for better cache locality
@@ -33,7 +36,7 @@ pub struct RuntimeLite {
 
     /// Cache for pre-compiled scripts to avoid repeated compilation
     /// Stage 65: Enhanced with LRU eviction and expiration
-    script_cache: Arc<std::sync::Mutex<HashMap<String, (v8::Global<v8::Script, String, Instant)>>>,
+    script_cache: Arc<std::sync::Mutex<HashMap<String, ScriptCacheEntry>>,
     /// Maximum cache size (Stage 65: Dynamic based on memory)
     max_cache_size: usize,
     /// Cache expiration time (Stage 65: TTL-based eviction)
@@ -57,7 +60,7 @@ pub struct RuntimeLite {
 
     /// Stage 63: Inline cache for fast property access and function calls
     /// ⚡ Lazy initialized: only created when actually needed (Stage 67 optimization)
-    inline_cache: Arc<OnceCell<std::sync::Mutex<HashMap<CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, CacheKey, CacheEntry>>>>>,
+    inline_cache: Arc<OnceCell<std::sync::Mutex<HashMap<CacheKey, CacheEntry>>,
     cache_stats: Arc<OnceCell<CacheStatistics>>,
 
     /// Stage 64: V8 Context Pool for reusing initialized contexts
@@ -338,7 +341,7 @@ impl RuntimeLite {
     }
 
     /// Get or initialize inline cache (lazy initialization)
-    fn get_inline_cache(&self) -> &std::sync::Mutex<HashMap<CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, CacheKey, CacheEntry>>> {
+    fn get_inline_cache(&self) -> &std::sync::Mutex<HashMap<CacheKey, CacheEntry>> {
         self.inline_cache.get_or_init(|| {
             eprintln!("[LAZY] Initializing inline cache on first use...");
             std::sync::Mutex::new(HashMap::new())
@@ -550,7 +553,7 @@ impl RuntimeLite {
             }
         }
 
-        // Simple arithmetic expressions: numbers with + - * / % & | ^ << >> >>> operators
+        // Simple arithmetic expressions: numbers with + - * / % & | ^ << >> >> operators
         if self.is_simple_arithmetic(trimmed) {
             if let Some(result) = self.evaluate_simple_arithmetic(trimmed) {
                 return Some(result);
@@ -715,7 +718,7 @@ impl RuntimeLite {
     }
 
     /// Evaluate simple arithmetic expression
-    /// Stage 11 Optimization: Support bitwise operations (&, |, ^, <<, >>, >>>)
+    /// Stage 11 Optimization: Support bitwise operations (&, |, ^, <<, >>, >>)
     fn evaluate_simple_arithmetic(&self, code: &str) -> Option<String> {
         // Use Rust's eval for simple expressions
         // For safety, only allow specific patterns
@@ -813,7 +816,7 @@ impl RuntimeLite {
                         return Some((l >> r).to_string());
                     }
                 }
-                ">>>" => { // Right shift (zero-fill)
+                ">>" => { // Right shift (zero-fill)
                     if let (Ok(l), Ok(r)) = (left.parse::<u64>(), right.parse::<u32>()) {
                         return Some((l >> r).to_string());
                     }
@@ -834,7 +837,7 @@ impl RuntimeLite {
     }
 
     /// Parse simple binary operation: "left op right"
-    /// Stage 11 Optimization: Support multi-character operators like <<, >>, >>>
+    /// Stage 11 Optimization: Support multi-character operators like <<, >>, >>
     fn parse_simple_binary_op<'a>(&self, code: &'a str) -> Option<(&'a str, &'a str, &'a str)> {
         let trimmed: _ = code.trim();
 
@@ -850,10 +853,10 @@ impl RuntimeLite {
                 }
                 '<' | '>' => {
                     if paren_depth == 0 {
-                        // Check for << or >> or >>>
+                        // Check for << or >> or >>
                         let next_char: _ = trimmed.chars().nth(i + 1);
                         let operator_len: _ = if next_char == Some(c) {
-                            // Check for >>>
+                            // Check for >>
                             if c == '>' && trimmed.chars().nth(i + 2) == Some('>') {
                                 3
                             } else {

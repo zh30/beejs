@@ -37,7 +37,7 @@ pub struct ConsistentHashRing {
     /// 哈希环: hash_value -> node_id
     ring: RwLock<BTreeMap<u64, String, u64, String>>,
     /// 节点及其虚拟节点数
-    nodes: RwLock<HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>,
+    nodes: RwLock<HashMap<String, usize>>,
 }
 
 impl ConsistentHashRing {
@@ -218,9 +218,9 @@ impl Default for NodeMetrics {
 pub struct IntelligentRouter {
     config: RouterConfig,
     nodes: RwLock<Vec<String>>,
-    metrics: RwLock<HashMap<String, NodeMetrics, std::collections::HashMap<String, NodeMetrics, String, NodeMetrics>>>,
+    metrics: RwLock<HashMap<String, NodeMetrics>>,
     round_robin_index: AtomicUsize,
-    sticky_map: RwLock<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    sticky_map: RwLock<HashMap<String, String>>,
 }
 
 impl IntelligentRouter {
@@ -568,7 +568,7 @@ impl CircuitBreaker {
 #[derive(Debug)]
 pub struct CircuitBreakerRegistry {
     config: CircuitBreakerConfig,
-    breakers: RwLock<HashMap<String, Arc<CircuitBreaker, std::collections::HashMap<String, Arc<CircuitBreaker, String, Arc<CircuitBreaker>>>>,
+    breakers: RwLock<HashMap<String, Arc<CircuitBreaker>>,
 }
 
 impl CircuitBreakerRegistry {
@@ -667,7 +667,7 @@ pub struct LoadBalancer {
     hash_ring: RwLock<ConsistentHashRing>,
     router: IntelligentRouter,
     circuit_breakers: CircuitBreakerRegistry,
-    backends: RwLock<HashMap<String, Backend, std::collections::HashMap<String, Backend, String, Backend>>>,
+    backends: RwLock<HashMap<String, Backend>>,
     request_count: AtomicU64,
     total_latency_ns: AtomicU64,
 }

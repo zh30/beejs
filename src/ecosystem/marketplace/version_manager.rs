@@ -12,7 +12,7 @@ use std::collections::{HashMap, BTreeMap};
 #[derive(Debug, Clone)]
 pub struct VersionManager {
     registry: Arc<ModuleRegistry>,
-    versions: HashMap<String, Vec<ModuleVersion, std::collections::HashMap<String, Vec<ModuleVersion, String, Vec<ModuleVersion>>>,
+    versions: HashMap<String, Vec<ModuleVersion>>,
 }
 
 impl VersionManager {

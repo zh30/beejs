@@ -23,9 +23,9 @@ pub struct EdgeRuntimeInstance {
 /// Edge Runtime Manager with resource management
 #[derive(Debug)]
 pub struct EdgeRuntime {
-    instances: Arc<RwLock<HashMap<String, EdgeRuntimeInstance, std::collections::HashMap<String, EdgeRuntimeInstance, String, EdgeRuntimeInstance>>>>,
-    warm_regions: Arc<RwLock<Vec<String>>>,
-    prewarm_pool: Arc<RwLock<Vec<String>>>,
+    instances: Arc<RwLock<HashMap<String, EdgeRuntimeInstance>>,
+    warm_regions: Arc<RwLock<Vec<String>>,
+    prewarm_pool: Arc<RwLock<Vec<String>>,
     stats: Arc<RwLock<RuntimeStats>>,
     resource_manager: Arc<EdgeResourceManager>,
 }

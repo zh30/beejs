@@ -262,7 +262,7 @@ impl InferenceEngine for TorchEngine {
         &self,
         model: &ModelHandle,
         input: Tensor,
-    ) -> Result<tokio::sync::mpsc::Receiver<Result<Tensor>>> {
+    ) -> Result<tokio::sync::mpsc::Receiver<Result<Tensor>> {
         let (tx, rx) = tokio::sync::mpsc::channel(16);
 
         // 模拟流式推理

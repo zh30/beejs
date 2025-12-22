@@ -373,7 +373,7 @@ pub struct EnterpriseMetricsCollector {
 /// Prometheus 注册表
 #[derive(Debug)]
 pub struct PrometheusRegistry {
-    metrics: Arc<std::sync::Mutex<std::collections::BTreeMap<String, String, String, String>>>,
+    metrics: Arc<std::sync::Mutex<std::collections::BTreeMap<String, String, String, String>>,
 }
 
 impl PrometheusRegistry {

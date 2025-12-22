@@ -19,7 +19,7 @@ pub struct PythonGIL {
 pub struct PythonRuntime {
     gil: Arc<PythonGIL>,
     bee_api: Arc<BeeAPI>,
-    context_pool: Arc<RwLock<Vec<PythonContext>>>,
+    context_pool: Arc<RwLock<Vec<PythonContext>>,
 }
 
 /// Python context for execution

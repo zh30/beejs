@@ -20,7 +20,7 @@ pub struct DeploymentConfig {
     pub next_version: String,
 
     /// Additional parameters
-    pub parameters: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub parameters: std::collections::HashMap<String, String>>,
 }
 
 /// Deployment status

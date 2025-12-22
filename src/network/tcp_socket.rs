@@ -23,7 +23,7 @@ pub struct ZeroCopyTcpSocket {
     stream: Arc<Mutex<TcpStream>>,
 
     /// 零拷贝发送缓冲区
-    send_buffer: Arc<Mutex<Vec<u8>>>,
+    send_buffer: Arc<Mutex<Vec<u8>>,
 
     /// 发送缓冲区大小
     #[allow(dead_code)]

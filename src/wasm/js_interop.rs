@@ -23,7 +23,7 @@ pub enum JsValue {
     /// 数组
     Array(Vec<JsValue>),
     /// 对象
-    Object(HashMap<String, JsValue, std::collections::HashMap<String, JsValue, String, JsValue>>),
+    Object(HashMap<String, JsValue>>),
     /// 空值
     Null,
     /// 未定义
@@ -133,7 +133,7 @@ pub struct JsWasmInterop {
 #[derive(Debug, Clone)]
 struct FunctionCache {
     /// 函数缓存映射
-    cache: HashMap<String, CachedFunction, std::collections::HashMap<String, CachedFunction, String, CachedFunction>>,
+    cache: HashMap<String, CachedFunction>>,
     /// 缓存大小限制
     max_cache_size: usize,
     /// 缓存访问次数
@@ -391,13 +391,13 @@ impl JsWasmInterop {
     /// * `args` - 参数列表
     ///
     /// # 返回值
-    /// * `Result<tokio::task::JoinHandle<Result<WasmCallResult>>>` - 异步任务句柄
+    /// * `Result<tokio::task::JoinHandle<Result<WasmCallResult>>` - 异步任务句柄
     pub async fn call_wasm_function_async(
         &self,
         module: Arc<crate::wasm::module_loader::WasmModule>,
         function_name: &str,
         args: Vec<JsValue>,
-    ) -> Result<tokio::task::JoinHandle<Result<WasmCallResult>>> {
+    ) -> Result<tokio::task::JoinHandle<Result<WasmCallResult>> {
         let interop: _ = Arc::new(std::sync::Mutex::new(self.clone()));
         let module: _ = module.clone();clone();
         let function_name: _ = function_name.clone();to_string();

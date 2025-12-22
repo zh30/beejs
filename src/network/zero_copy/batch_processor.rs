@@ -95,11 +95,11 @@ pub struct BatchProcessor<T> {
     /// 配置
     config: BatchProcessorConfig,
     /// 批处理队列
-    queue: Arc<Mutex<VecDeque<BatchItem<T>>>>,
+    queue: Arc<Mutex<VecDeque<BatchItem<T>>,
     /// 统计信息
     stats: Arc<Mutex<BatchProcessorStats>>,
     /// 性能历史记录
-    performance_history: Arc<Mutex<VecDeque<f64>>>,
+    performance_history: Arc<Mutex<VecDeque<f64>>,
     /// 当前批处理大小
     current_batch_size: usize,
 }

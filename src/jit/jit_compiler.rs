@@ -115,7 +115,7 @@ pub struct JitCompiler {
     config: JitCompilerConfig,
     hot_path_tracker: Arc<HotPathTrackerV2>,
     inline_strategy: Arc<InlineStrategy>,
-    code_cache: Arc<RwLock<HashMap<u64, CompilationResult, std::collections::HashMap<u64, CompilationResult, u64, CompilationResult>>>>,
+    code_cache: Arc<RwLock<HashMap<u64, CompilationResult>>,
     perf_stats: Arc<RwLock<JitPerfStats>>,
 }
 

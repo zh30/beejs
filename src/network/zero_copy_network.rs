@@ -59,7 +59,7 @@ pub struct ZeroCopySocket {
     config: NetworkConfig,
     zero_copy_config: ZeroCopyConfig,
     stats: Arc<RwLock<NetworkZeroCopyStats>>,
-    mmap_pool: Arc<Mutex<Vec<Mmap>>>,
+    mmap_pool: Arc<Mutex<Vec<Mmap>>,
 }
 
 impl ZeroCopySocket {

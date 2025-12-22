@@ -82,8 +82,8 @@ pub enum JITStrategy {
 pub struct JITOptimizer {
     thresholds: JITThresholds,
     strategy: JITStrategy,
-    execution_stats: Arc<Mutex<HashMap<String, ExecutionStat, std::collections::HashMap<String, ExecutionStat, String, ExecutionStat>>>>,
-    compile_history: Arc<Mutex<Vec<CompileEvent>>>,
+    execution_stats: Arc<Mutex<HashMap<String, ExecutionStat>>,
+    compile_history: Arc<Mutex<Vec<CompileEvent>>,
 }
 
 /// 代码执行统计
@@ -557,15 +557,15 @@ pub struct AIDrivenJITExtension {
     /// 自适应编译策略
     pub compilation_strategy: Arc<AdaptiveCompilationStrategy>,
     /// 优化缓存
-    pub optimization_cache: Arc<RwLock<HashMap<String, CompilationStrategy, std::collections::HashMap<String, CompilationStrategy, String, CompilationStrategy>>>>,
+    pub optimization_cache: Arc<RwLock<HashMap<String, CompilationStrategy>>,
     /// 性能指标
-    pub metrics: Arc<RwLock<Vec<JITMetrics>>>,
+    pub metrics: Arc<RwLock<Vec<JITMetrics>>,
 }
 
 /// 代码执行模式分析器
 #[derive(Debug, Clone)]
 pub struct ProfileAnalyzer {
-    profiles: Arc<RwLock<HashMap<String, ExecutionProfile, std::collections::HashMap<String, ExecutionProfile, String, ExecutionProfile>>>>,
+    profiles: Arc<RwLock<HashMap<String, ExecutionProfile>>,
     config: HotspotConfig,
 }
 
@@ -647,7 +647,7 @@ pub enum EffortLevel {
 #[derive(Debug, Clone)]
 pub struct AdaptiveCompilationStrategy {
     config: CompilationStrategyConfig,
-    strategy_cache: Arc<RwLock<HashMap<String, CompilationStrategy, std::collections::HashMap<String, CompilationStrategy, String, CompilationStrategy>>>>,
+    strategy_cache: Arc<RwLock<HashMap<String, CompilationStrategy>>,
 }
 
 /// 编译策略配置

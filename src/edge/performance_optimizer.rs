@@ -27,7 +27,7 @@ pub struct ResourceProfiler {
 /// Auto tuner
 #[derive(Debug)]
 pub struct AutoTuner {
-    tuning_history: Arc<RwLock<Vec<TuningRecord>>>,
+    tuning_history: Arc<RwLock<Vec<TuningRecord>>,
     current_config: Arc<RwLock<OptimizationConfig>>,
 }
 
@@ -126,7 +126,7 @@ pub struct BatteryMonitor {
 /// Power scheduler
 #[derive(Debug)]
 pub struct PowerScheduler {
-    schedules: Arc<RwLock<Vec<PowerSchedule>>>,
+    schedules: Arc<RwLock<Vec<PowerSchedule>>,
 }
 
 /// Power schedule

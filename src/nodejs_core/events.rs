@@ -9,8 +9,8 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 
 thread_local! {
-    static EVENT_LISTENERS: Mutex<HashMap<String, Vec<v8::Global<v8::Function, std::collections::HashMap<String, Vec<v8::Global<v8::Function, String, Vec<v8::Global<v8::Function>>>>> = Mutex::new(HashMap::new());
-    static ONCE_LISTENERS: Mutex<HashMap<String, Vec<v8::Global<v8::Function, std::collections::HashMap<String, Vec<v8::Global<v8::Function, String, Vec<v8::Global<v8::Function>>>>> = Mutex::new(HashMap::new());
+    static EVENT_LISTENERS: Mutex<HashMap<String, Vec<v8::Global<v8::Function>>> = Mutex::new(HashMap::new());
+    static ONCE_LISTENERS: Mutex<HashMap<String, Vec<v8::Global<v8::Function>>> = Mutex::new(HashMap::new());
 }
 
 /// 设置Events API
@@ -138,7 +138,7 @@ fn event_emitter_on_callback(
     let listeners_key: _ = v8::String::new(scope, "_listeners").unwrap();
     let existing_listeners: _ = this.get(scope, listeners_key.into());
 
-    let mut listeners_map: HashMap<String, Vec<v8::Global<v8::Function, std::collections::HashMap<String, Vec<v8::Global<v8::Function, String, Vec<v8::Global<v8::Function>>>> = HashMap::new();
+    let mut listeners_map: HashMap<String, Vec<v8::Global<v8::Function>> = HashMap::new();
 
     if let Some(arr) = existing_listeners.and_then(|v| v.to_object(scope)) {
         // 转换现有的监听器

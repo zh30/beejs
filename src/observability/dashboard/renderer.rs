@@ -18,9 +18,9 @@ pub struct ChartRenderer {
     /// Render configuration
     config: RenderConfig,
     /// Active chart instances
-    charts: Arc<RwLock<HashMap<String, ChartInstance, std::collections::HashMap<String, ChartInstance, String, ChartInstance>>>>,
+    charts: Arc<RwLock<HashMap<String, ChartInstance>>,
     /// WebSocket clients for real-time updates
-    websocket_clients: Arc<RwLock<Vec<Arc<WebSocketClient>>>>,
+    websocket_clients: Arc<RwLock<Vec<Arc<WebSocketClient>>,
 }
 
 /// Chart Instance - Represents a single chart
@@ -106,7 +106,7 @@ pub struct ChartData {
     /// Labels
     pub labels: Vec<String>,
     /// Metadata
-    pub metadata: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>,
+    pub metadata: HashMap<String, Value>>,
 }
 
 /// Series data for multi-series charts
@@ -132,7 +132,7 @@ pub struct GraphRenderer {
     /// Render configuration
     config: RenderConfig,
     /// Active graph instances
-    graphs: Arc<RwLock<HashMap<String, GraphInstance, std::collections::HashMap<String, GraphInstance, String, GraphInstance>>>>,
+    graphs: Arc<RwLock<HashMap<String, GraphInstance>>,
     /// Layout engine
     layout_engine: Arc<LayoutEngine>,
 }
@@ -163,7 +163,7 @@ pub struct GraphNode {
     pub position: Position,
     pub size: Size,
     pub color: String,
-    pub metadata: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>,
+    pub metadata: HashMap<String, Value>>,
 }
 
 /// Graph edge
@@ -254,15 +254,15 @@ pub struct WebSocketClient {
     /// Client ID
     pub id: String,
     /// WebSocket connection
-    pub connection: Arc<tokio::sync::Mutex<Option<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>>>,
+    pub connection: Arc<tokio::sync::Mutex<Option<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>,
     /// Client metadata
-    pub metadata: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>,
+    pub metadata: HashMap<String, Value>>,
 }
 
 /// Template Engine - Dynamic content generation
 pub struct TemplateEngine {
     /// Template cache
-    templates: Arc<RwLock<HashMap<String, Template, std::collections::HashMap<String, Template, String, Template>>>>,
+    templates: Arc<RwLock<HashMap<String, Template>>,
 }
 
 /// Template definition
@@ -275,7 +275,7 @@ pub struct Template {
     /// Template variables
     pub variables: Vec<String>,
     /// Template functions
-    pub functions: HashMap<String, TemplateFunction, std::collections::HashMap<String, TemplateFunction, String, TemplateFunction>>,
+    pub functions: HashMap<String, TemplateFunction>>,
 }
 
 /// Template function
@@ -974,7 +974,7 @@ impl LayoutEngine {
         // Simplified hierarchical layout
         // Group nodes by their connections
 
-        let mut levels: HashMap<String, Vec<usize, std::collections::HashMap<String, Vec<usize, String, Vec<usize>>> = HashMap::new();
+        let mut levels: HashMap<String, Vec<usize>> = HashMap::new();
         let mut level_count = 0;
 
         // Find root nodes (nodes with no incoming edges)
@@ -1080,7 +1080,7 @@ impl TemplateEngine {
     }
 
     /// Render template
-    pub async fn render_template(&self, id: &str, variables: &HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>) -> Result<String> {
+    pub async fn render_template(&self, id: &str, variables: &HashMap<String, Value>>) -> Result<String> {
         let templates: _ = self.templates.read().await;
         let template: _ = templates.get(id)
             .ok_or_else(|| anyhow!("Template not found: {}", id))?;

@@ -22,7 +22,7 @@ pub struct NetworkOptimizer {
 /// Latency monitor
 #[derive(Debug)]
 pub struct LatencyMonitor {
-    measurements: Arc<RwLock<Vec<LatencyMeasurement>>>,
+    measurements: Arc<RwLock<Vec<LatencyMeasurement>>,
 }
 
 /// Latency measurement
@@ -64,7 +64,7 @@ pub struct BandwidthManager {
 /// Bandwidth allocator
 #[derive(Debug)]
 pub struct BandwidthAllocator {
-    pools: Arc<RwLock<HashMap<String, BandwidthPool, std::collections::HashMap<String, BandwidthPool, String, BandwidthPool>>>>,
+    pools: Arc<RwLock<HashMap<String, BandwidthPool>>,
 }
 
 /// Bandwidth pool
@@ -127,7 +127,7 @@ pub struct BandwidthUsage {
 /// Bandwidth monitor
 #[derive(Debug)]
 pub struct BandwidthMonitor {
-    usage_history: Arc<RwLock<Vec<UsageSample>>>,
+    usage_history: Arc<RwLock<Vec<UsageSample>>,
 }
 
 /// Usage sample
@@ -135,7 +135,7 @@ pub struct BandwidthMonitor {
 pub struct UsageSample {
     pub timestamp: std::time::SystemTime,
     pub total_usage_mbps: u64,
-    pub per_pool_usage: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
+    pub per_pool_usage: HashMap<String, u64>>,
 }
 
 impl NetworkOptimizer {

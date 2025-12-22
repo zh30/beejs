@@ -153,7 +153,7 @@ impl std::error::Error for TimeoutError {}
 pub struct TimeoutContext {
     start_time: Instant,
     timeout: Duration,
-    active_tests: Arc<Mutex<Vec<TestTimeoutHandle>>>,
+    active_tests: Arc<Mutex<Vec<TestTimeoutHandle>>,
 }
 
 struct TestTimeoutHandle {
@@ -204,7 +204,7 @@ impl TimeoutContext {
 /// RAII guard for test timeout
 pub struct TestTimeoutGuard {
     test_name: String,
-    active_tests: Arc<Mutex<Vec<TestTimeoutHandle>>>,
+    active_tests: Arc<Mutex<Vec<TestTimeoutHandle>>,
 }
 
 impl Drop for TestTimeoutGuard {

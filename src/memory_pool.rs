@@ -6,9 +6,9 @@ use std::time::{Duration, Instant};
 /// 通过预分配和复用对象来减少GC压力和内存碎片
 pub struct SmartMemoryPool {
     /// 预分配的字符串缓冲区池
-    string_buffers: Arc<Mutex<VecDeque<StringBuffer>>>,
+    string_buffers: Arc<Mutex<VecDeque<StringBuffer>>,
     /// 预分配的对象缓冲区池
-    object_buffers: Arc<Mutex<VecDeque<ObjectBuffer>>>,
+    object_buffers: Arc<Mutex<VecDeque<ObjectBuffer>>,
     /// 池的配置参数
     config: PoolConfig,
     /// 内存统计信息

@@ -116,13 +116,13 @@ pub struct AiPerformanceEngine {
     /// 配置
     config: AiPerformanceEngineConfig,
     /// 性能指标历史
-    metrics_history: Arc<RwLock<VecDeque<PerformanceMetrics>>>,
+    metrics_history: Arc<RwLock<VecDeque<PerformanceMetrics>>,
     /// 性能预测器
     predictor: Arc<Mutex<PerformancePredictor>>,
     /// 张量优化器
     tensor_optimizer: Arc<Mutex<TensorOptimizer>>,
     /// 预测缓存
-    prediction_cache: Arc<Mutex<HashMap<String, PerformancePrediction, std::collections::HashMap<String, PerformancePrediction, String, PerformancePrediction>>>>,
+    prediction_cache: Arc<Mutex<HashMap<String, PerformancePrediction>>,
     /// 是否正在训练
     is_training: Arc<Mutex<bool>>,
     /// 训练进度

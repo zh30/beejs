@@ -295,7 +295,7 @@ pub struct Metrics {
     pub total_memory_gb: f64,
 
     /// Custom metrics
-    pub custom_metrics: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>,
+    pub custom_metrics: HashMap<String, f64>>,
 
     /// Timestamp when metrics were collected
     pub timestamp: Instant,

@@ -89,7 +89,7 @@ pub struct K8sPodInfo {
 #[derive(Debug)]
 pub struct PodManager {
     client: Arc<K8sClient>,
-    active_pods: Arc<RwLock<HashMap<String, K8sPodInfo, std::collections::HashMap<String, K8sPodInfo, String, K8sPodInfo>>>>,
+    active_pods: Arc<RwLock<HashMap<String, K8sPodInfo>>,
 }
 
 /// Kubernetes runtime

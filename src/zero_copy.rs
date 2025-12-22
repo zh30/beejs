@@ -576,7 +576,7 @@ use std::collections::{HashMap, BTreeMap};
 #[allow(dead_code)]
 pub struct ZeroCopyFileCache {
     /// 缓存的文件映射
-    cache: Arc<Mutex<lru::LruCache<String, Arc<memmap2::Mmap>>>>,
+    cache: Arc<Mutex<lru::LruCache<String, Arc<memmap2::Mmap>>,
     /// 最大缓存条目数
     max_entries: usize,
     /// 缓存统计

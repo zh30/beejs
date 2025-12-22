@@ -14,7 +14,7 @@ pub struct PrometheusExporter {
     /// 关联的性能监控器
     monitor: Arc<RealtimePerformanceMonitor>,
     /// 内存统计
-    memory_stats: Arc<tokio::sync::RwLock<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>,
+    memory_stats: Arc<tokio::sync::RwLock<HashMap<String, String>>,
     /// HTTP 服务器句柄
     server_handle: Option<tokio::task::JoinHandle<()>>,
     /// 服务器地址
@@ -79,7 +79,7 @@ impl PrometheusExporter {
     /// 收集并更新指标
     async fn collect_and_update_metrics(
         monitor: &Arc<RealtimePerformanceMonitor>,
-        memory_stats: &Arc<tokio::sync::RwLock<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>,
+        memory_stats: &Arc<tokio::sync::RwLock<HashMap<String, String>>,
     ) {
         // 收集内存指标
         let mem_snapshot: _ = GLOBAL_MEMORY_STATS.get_stats();
@@ -220,7 +220,7 @@ impl PrometheusExporter {
         name: String,
         value: f64,
         metric_type: PrometheusMetricType,
-        labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+        labels: HashMap<String, String>>,
     ) {
         // 这里应该将自定义指标添加到内部存储中
         // 实际实现中，您可能希望将这些指标存储在数据库或缓存中

@@ -97,7 +97,7 @@ impl PolicyEngine {
 /// 角色管理器
 #[derive(Debug)]
 pub struct RoleManager {
-    user_roles: Arc<std::sync::Mutex<HashMap<UserId, Vec<Role, std::collections::HashMap<UserId, Vec<Role, UserId, Vec<Role>>>>>,
+    user_roles: Arc<std::sync::Mutex<HashMap<UserId, Vec<Role>>>,
 }
 
 impl RoleManager {

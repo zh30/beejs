@@ -13,7 +13,7 @@ use std::collections::{HashMap, BTreeMap};
 /// Offline execution engine
 #[derive(Debug)]
 pub struct OfflineExecutionEngine {
-    runtime: Arc<RwLock<Option<OfflineRuntime>>>,
+    runtime: Arc<RwLock<Option<OfflineRuntime>>,
     local_cache: Arc<LocalCodeCache>,
     data_store: Arc<OfflineDataStore>,
     dependency_resolver: Arc<DependencyResolver>,

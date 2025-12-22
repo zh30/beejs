@@ -92,7 +92,7 @@ impl Default for ObservabilityConfig {
 /// Main observability system that manages all observability components
 pub struct ObservableSystem {
     config: ObservabilityConfig,
-    prometheus_exporter: Option<Arc<RwLock<PrometheusExporter>>>,
+    prometheus_exporter: Option<Arc<RwLock<PrometheusExporter>>,
     structured_logger: Option<StructuredLogger>,
     custom_metrics: Arc<RwLock<CustomMetrics>>,
     alerting_system: Option<AlertingSystem>,
@@ -138,7 +138,7 @@ impl ObservableSystem {
     }
 
     /// Get Prometheus exporter reference
-    pub fn prometheus_exporter(&self) -> Option<Arc<RwLock<PrometheusExporter>>> {
+    pub fn prometheus_exporter(&self) -> Option<Arc<RwLock<PrometheusExporter>> {
         self.prometheus_exporter.clone()
     }
 

@@ -100,7 +100,7 @@ impl IntelligentAnalyzer {
         let mut anomalies = Vec::new();
 
         // 按指标类型分组
-        let mut grouped: HashMap<String, Vec<_, std::collections::HashMap<String, Vec<_, String, Vec<_>>> = HashMap::new();
+        let mut grouped: HashMap<String, Vec<_>> = HashMap::new();
         for metric in metrics {
             let key: _ = format!("{:?}", metric.metric_type);
             grouped.entry(key).or_insert_with(Vec::new).push(metric);

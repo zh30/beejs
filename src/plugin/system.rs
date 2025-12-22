@@ -50,7 +50,7 @@ pub struct JsPlugin {
     metadata: PluginMetadata,
     state: PluginState,
     code: String,
-    exports: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    exports: HashMap<String, String>>,
 }
 
 impl JsPlugin {
@@ -111,8 +111,8 @@ impl Plugin for RustPlugin {
 
 /// Plugin manager
 pub struct PluginManager {
-    plugins: Arc<Mutex<HashMap<String, Arc<dyn Plugin, std::collections::HashMap<String, Arc<dyn Plugin, String, Arc<dyn Plugin>>>>>,
-    event_history: Arc<Mutex<Vec<PluginEvent>>>,
+    plugins: Arc<Mutex<HashMap<String, Arc<dyn Plugin>>>,
+    event_history: Arc<Mutex<Vec<PluginEvent>>,
     sandbox_enabled: bool,
 }
 

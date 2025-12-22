@@ -61,8 +61,8 @@ pub struct CacheConfig {
 
 /// WASM 缓存管理器
 pub struct WasmCacheManager {
-    cache: Arc<RwLock<LruCache<String, CacheEntry>>>,
-    access_patterns: Arc<RwLock<HashMap<String, AccessPattern, std::collections::HashMap<String, AccessPattern, String, AccessPattern>>>>,
+    cache: Arc<RwLock<LruCache<String, CacheEntry>>,
+    access_patterns: Arc<RwLock<HashMap<String, AccessPattern>>,
     config: CacheConfig,
     statistics: Arc<RwLock<CacheStatistics>>,
 }
@@ -103,7 +103,7 @@ impl WasmCacheManager {
     }
 
     /// 获取缓存的模块
-    pub async fn get(&self, name: &str) -> Result<Option<Arc<Module>>> {
+    pub async fn get(&self, name: &str) -> Result<Option<Arc<Module>> {
         let start_time: _ = std::time::Instant::now();
 
         let mut cache = self.cache.write().await;
@@ -200,7 +200,7 @@ impl WasmCacheManager {
     }
 
     /// 智能预热 - 基于访问模式
-    pub async fn smart_prewarm(&self, usage_history: &HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>) -> Result<()> {
+    pub async fn smart_prewarm(&self, usage_history: &HashMap<String, usize>>) -> Result<()> {
         info!("🧠 开始智能预热 (基于 {} 个模块的使用历史)", usage_history.len());
 
         let start_time: _ = std::time::Instant::now();

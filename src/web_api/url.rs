@@ -113,7 +113,7 @@ impl Url {
 /// URLSearchParams implementation
 #[derive(Debug, Clone)]
 pub struct UrlSearchParams {
-    params: HashMap<String, Vec<String, std::collections::HashMap<String, Vec<String, String, Vec<String>>>,
+    params: HashMap<String, Vec<String>>,
 }
 
 impl UrlSearchParams {
@@ -121,7 +121,7 @@ impl UrlSearchParams {
         let mut params = HashMap::new();
 
         // Remove leading '?' if present
-        let search: _ = search.clone();trim_start_matches('?');
+        let search: _ = search.trim_start_matches('?');
 
         for pair in search.split('&') {
             if pair.is_empty() {

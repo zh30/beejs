@@ -41,8 +41,8 @@ pub struct LoadStats {
 /// WASM 零拷贝加载器
 pub struct WasmZeroCopyLoader {
     engine: Arc<Engine>,
-    module_cache: Arc<RwLock<LruCache<String, Arc<Module>>>>,
-    memory_maps: Arc<RwLock<HashMap<String, Arc<Mmap, std::collections::HashMap<String, Arc<Mmap, String, Arc<Mmap>>>>>,
+    module_cache: Arc<RwLock<LruCache<String, Arc<Module>>,
+    memory_maps: Arc<RwLock<HashMap<String, Arc<Mmap>>>,
     load_stats: Arc<RwLock<LoadStats>>,
     cache_size: usize,
     prewarm_enabled: bool,

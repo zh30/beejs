@@ -96,9 +96,9 @@ impl MemoryStats {
 /// 提供高性能的 WASM 内存管理功能
 pub struct WasmMemoryManager {
     /// 预分配的内存池
-    memory_pool: Arc<Mutex<Vec<MemoryBlock>>>,
+    memory_pool: Arc<Mutex<Vec<MemoryBlock>>,
     /// 大块内存分配器
-    large_allocator: Arc<Mutex<HashMap<usize, MemoryBlock, std::collections::HashMap<usize, MemoryBlock, usize, MemoryBlock>>>>,
+    large_allocator: Arc<Mutex<HashMap<usize, MemoryBlock>>,
     /// 内存统计
     stats: Arc<MemoryStats>,
     /// 最大池大小

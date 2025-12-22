@@ -47,7 +47,7 @@ pub enum ScalingStrategy {
     /// 复合策略
     Composite {
         strategies: Vec<ScalingStrategy>,
-        weights: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>,
+        weights: HashMap<String, f64>>,
     },
 }
 
@@ -65,7 +65,7 @@ pub struct ScalingDecision {
     pub action: ScalingAction,
     pub reason: String,
     pub confidence: f64,
-    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub metadata: HashMap<String, String>>,
 }
 
 /// 性能指标
@@ -87,7 +87,7 @@ pub struct AutoScaler {
     config: AutoScalingConfig,
     strategy: ScalingStrategy,
     current_replicas: Arc<RwLock<u32>>,
-    metrics_history: Arc<RwLock<Vec<PerformanceMetrics>>>,
+    metrics_history: Arc<RwLock<Vec<PerformanceMetrics>>,
     cloud_manager: CloudManager,
     decision_callback: Option<Box<dyn Fn(ScalingDecision) + Send + Sync>>,
 }
@@ -431,7 +431,7 @@ impl AutoScaler {
 
 /// 负载预测器
 pub struct LoadPredictor {
-    history: Arc<RwLock<Vec<PerformanceMetrics>>>,
+    history: Arc<RwLock<Vec<PerformanceMetrics>>,
 }
 
 impl LoadPredictor {

@@ -77,7 +77,7 @@ pub struct AdaptiveGCController {
     current_strategy: Arc<RwLock<GCStrategy>>,
     tuning: Arc<RwLock<GCTuning>>,
     statistics: Arc<RwLock<GCStatistics>>,
-    recent_events: Arc<RwLock<Vec<GCEvent>>>,
+    recent_events: Arc<RwLock<Vec<GCEvent>>,
     heap_metrics: Arc<RwLock<HeapMetrics>>,
     last_gc: Arc<RwLock<Instant>>,
 }

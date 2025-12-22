@@ -163,9 +163,9 @@ impl HighPerfCacheStats {
 /// - 细粒度锁
 pub struct HighPerformanceWasmCache {
     /// L1 内存缓存 (使用 RwLock 提供更好的并发性能)
-    l1_cache: Arc<RwLock<HashMap<String, Arc<HighPerfCacheEntry, std::collections::HashMap<String, Arc<HighPerfCacheEntry, String, Arc<HighPerfCacheEntry>>>>>,
+    l1_cache: Arc<RwLock<HashMap<String, Arc<HighPerfCacheEntry>>>,
     /// L2 文件缓存
-    l2_cache: Arc<Mutex<HashMap<String, PathBuf, std::collections::HashMap<String, PathBuf, String, PathBuf>>>>,
+    l2_cache: Arc<Mutex<HashMap<String, PathBuf>>,
     /// 缓存配置
     config: HighPerfCacheConfig,
     /// 统计信息
@@ -233,7 +233,7 @@ impl HighPerformanceWasmCache {
     }
 
     /// 高性能加载模块 (零拷贝)
-    pub async fn load_module(&self, module_hash: &str) -> Result<Arc<Vec<u8>>> {
+    pub async fn load_module(&self, module_hash: &str) -> Result<Arc<Vec<u8>> {
         let start: _ = Instant::now();
 
         // 先尝试从 L1 缓存加载 (零拷贝)
@@ -318,7 +318,7 @@ impl HighPerformanceWasmCache {
     pub async fn load_modules_batch(
         &self,
         module_hashes: Vec<String>,
-    ) -> Result<Vec<Result<Arc<Vec<u8>>, anyhow::Error>>> {
+    ) -> Result<Vec<Result<Arc<Vec<u8>>, anyhow::Error>> {
         let mut results = Vec::with_capacity(module_hashes.len());
 
         // 并发加载模块

@@ -48,8 +48,8 @@ pub struct AccelerationEngine {
     runtime: Arc<Runtime>,
     gpu_available: bool,
     npu_available: bool,
-    active_tasks: Arc<Mutex<HashMap<u64, InferenceTask, std::collections::HashMap<u64, InferenceTask, u64, InferenceTask>>>>,
-    batch_queue: Arc<Mutex<VecDeque<InferenceTask>>>,
+    active_tasks: Arc<Mutex<HashMap<u64, InferenceTask>>,
+    batch_queue: Arc<Mutex<VecDeque<InferenceTask>>,
     performance_stats: Arc<Mutex<AccelerationStats>>,
     batch_config: Arc<Mutex<BatchConfig>>,
 }

@@ -18,7 +18,7 @@ pub struct RuntimeConfigManager {
     /// 动态调优器
     auto_tuner: Option<Arc<AutoTuner>>,
     /// 配置变更回调
-    change_callbacks: Arc<RwLock<Vec<ConfigChangeCallback>>>,
+    change_callbacks: Arc<RwLock<Vec<ConfigChangeCallback>>,
 }
 
 /// 运行时配置
@@ -201,11 +201,11 @@ pub struct AutoTuner {
 /// 性能指标收集器
 pub struct PerformanceMetricsCollector {
     /// 执行时间记录
-    execution_times: Arc<RwLock<Vec<u64>>>,
+    execution_times: Arc<RwLock<Vec<u64>>,
     /// 内存使用记录
-    memory_usage: Arc<RwLock<Vec<usize>>>,
+    memory_usage: Arc<RwLock<Vec<usize>>,
     /// CPU 使用率记录
-    cpu_usage: Arc<RwLock<Vec<f64>>>,
+    cpu_usage: Arc<RwLock<Vec<f64>>,
 }
 
 impl AutoTuner {

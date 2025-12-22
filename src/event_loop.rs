@@ -66,9 +66,9 @@ pub struct V8EventLoop {
     /// 配置
     config: EventLoopConfig,
     /// 任务队列
-    task_queue: Arc<Mutex<Vec<EventLoopTask>>>,
+    task_queue: Arc<Mutex<Vec<EventLoopTask>>,
     /// 已完成的任务
-    completed_tasks: Arc<Mutex<Vec<EventLoopTask>>>,
+    completed_tasks: Arc<Mutex<Vec<EventLoopTask>>,
 }
 
 #[allow(dead_code)]

@@ -115,13 +115,13 @@ pub struct Stage93MemoryCompressor {
     /// 配置
     config: Stage93CompressionConfig,
     /// 压缩块池
-    compression_pool: Arc<RwLock<LruCache<usize, Arc<CompressionBlock>>>>,
+    compression_pool: Arc<RwLock<LruCache<usize, Arc<CompressionBlock>>,
     /// 解压缩缓存
-    decompress_cache: Arc<RwLock<LruCache<usize, Vec<u8>>>>,
+    decompress_cache: Arc<RwLock<LruCache<usize, Vec<u8>>,
     /// 压缩统计
     stats: Arc<RwLock<CompressionStats>>,
     /// 压缩工作队列
-    work_queue: Arc<Mutex<Vec<CompressionWorkItem>>>,
+    work_queue: Arc<Mutex<Vec<CompressionWorkItem>>,
     /// 活跃压缩数
     active_compressions: AtomicUsize,
     /// 压缩块 ID 计数器

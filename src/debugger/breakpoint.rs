@@ -111,8 +111,8 @@ impl Breakpoint {
 
 /// Breakpoint manager
 pub struct BreakpointManager {
-    breakpoints: HashMap<String, Breakpoint, std::collections::HashMap<String, Breakpoint, String, Breakpoint>>,
-    script_breakpoints: HashMap<String, Vec<String, std::collections::HashMap<String, Vec<String, String, Vec<String>>>, // script_id -> [breakpoint_ids]
+    breakpoints: HashMap<String, Breakpoint>,
+    script_breakpoints: HashMap<String, Vec<String>>, // script_id -> [breakpoint_ids]
 }
 
 impl BreakpointManager {

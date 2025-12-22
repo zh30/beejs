@@ -31,7 +31,7 @@ pub struct NodeLoad {
 /// 集群拓扑信息
 #[derive(Debug, Clone)]
 pub struct ClusterTopology {
-    pub regions: HashMap<String, RegionInfo, std::collections::HashMap<String, RegionInfo, String, RegionInfo>>,
+    pub regions: HashMap<String, RegionInfo>>,
     pub total_nodes: usize,
     pub online_nodes: usize,
 }
@@ -62,8 +62,8 @@ pub struct NodeMetadata {
 #[derive(Debug, Clone)]
 pub struct NodeManager {
     service_discovery: ServiceDiscovery,
-    nodes: Arc<RwLock<HashMap<String, NodeMetadata, std::collections::HashMap<String, NodeMetadata, String, NodeMetadata>>>>,
-    node_loads: Arc<RwLock<HashMap<String, NodeLoad, std::collections::HashMap<String, NodeLoad, String, NodeLoad>>>>,
+    nodes: Arc<RwLock<HashMap<String, NodeMetadata>>,
+    node_loads: Arc<RwLock<HashMap<String, NodeLoad>>,
 }
 
 impl NodeManager {
@@ -181,7 +181,7 @@ impl NodeManager {
     }
 
     /// 同步所有节点状态
-    pub async fn sync_all_statuses(&self) -> HashMap<String, NodeStatus, std::collections::HashMap<String, NodeStatus, String, NodeStatus>> {
+    pub async fn sync_all_statuses(&self) -> HashMap<String, NodeStatus>> {
         let nodes: _ = self.nodes.read().await;
         let mut statuses = HashMap::new();
 
@@ -264,7 +264,7 @@ impl NodeManager {
     }
 
     /// 批量获取节点状态
-    pub async fn get_nodes_status_batch(&self, node_ids: &[String]) -> HashMap<String, NodeStatus, std::collections::HashMap<String, NodeStatus, String, NodeStatus>> {
+    pub async fn get_nodes_status_batch(&self, node_ids: &[String]) -> HashMap<String, NodeStatus>> {
         let nodes: _ = self.nodes.read().await;
         let mut statuses = HashMap::new();
 
@@ -303,7 +303,7 @@ impl NodeManager {
 
     /// 检查心跳
     pub async fn check_heartbeats(
-        nodes: Arc<RwLock<HashMap<String, NodeMetadata, std::collections::HashMap<String, NodeMetadata, String, NodeMetadata>>>>,
+        nodes: Arc<RwLock<HashMap<String, NodeMetadata>>,
         _service_discovery: ServiceDiscovery,
     ) {
         let mut nodes_guard = nodes.write().await;

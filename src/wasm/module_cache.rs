@@ -64,10 +64,10 @@ impl CacheEntry {
 }
 
 /// L1 内存缓存
-type L1Cache = HashMap<String, Arc<RwLock<CacheEntry, std::collections::HashMap<String, Arc<RwLock<CacheEntry, String, Arc<RwLock<CacheEntry>>>>;
+type L1Cache = HashMap<String, Arc<RwLock<CacheEntry>>;
 
 /// L2 文件缓存
-type L2Cache = HashMap<String, PathBuf, std::collections::HashMap<String, PathBuf, String, PathBuf>>;
+type L2Cache = HashMap<String, PathBuf>>;
 
 /// 缓存统计信息
 #[derive(Debug, Clone, Default)]
@@ -133,7 +133,7 @@ pub struct WasmModuleCache {
     /// 统计信息
     stats: Arc<Mutex<CacheStats>>,
     /// 缓存加载时间追踪
-    load_times: Arc<Mutex<Vec<Duration>>>,
+    load_times: Arc<Mutex<Vec<Duration>>,
 }
 
 impl WasmModuleCache {

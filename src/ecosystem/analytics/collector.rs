@@ -15,7 +15,7 @@ pub struct UsageEvent {
     pub module_id: Option<String>,
     pub user_id: Option<String>,
     pub timestamp: DateTime<Utc>,
-    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub metadata: HashMap<String, String>>,
 }
 
 /// 事件类型
@@ -37,7 +37,7 @@ pub enum EventType {
 pub struct AnalyticsReport {
     pub timeframe: TimeFrame,
     pub total_events: u64,
-    pub event_counts: HashMap<EventType, u64, std::collections::HashMap<EventType, u64, EventType, u64>>,
+    pub event_counts: HashMap<EventType, u64>>,
     pub top_modules: Vec<ModuleUsage>,
     pub usage_trends: Vec<TrendData>,
     pub performance_metrics: PerformanceMetrics,
@@ -102,8 +102,8 @@ pub struct ComparisonResult {
 /// 分析数据收集器
 #[derive(Debug, Clone)]
 pub struct AnalyticsCollector {
-    events: Arc<RwLock<VecDeque<UsageEvent>>>,
-    benchmarks: Arc<RwLock<HashMap<String, Vec<BenchmarkResult, std::collections::HashMap<String, Vec<BenchmarkResult, String, Vec<BenchmarkResult>>>>>,
+    events: Arc<RwLock<VecDeque<UsageEvent>>,
+    benchmarks: Arc<RwLock<HashMap<String, Vec<BenchmarkResult>>>,
     aggregator: Arc<DataAggregator>,
     max_events: usize,
 }
@@ -111,8 +111,8 @@ pub struct AnalyticsCollector {
 /// 数据聚合器
 #[derive(Debug, Clone)]
 pub struct DataAggregator {
-    event_counts: Arc<RwLock<HashMap<EventType, u64, std::collections::HashMap<EventType, u64, EventType, u64>>>>,
-    module_usage: Arc<RwLock<HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>>>,
+    event_counts: Arc<RwLock<HashMap<EventType, u64>>,
+    module_usage: Arc<RwLock<HashMap<String, u64>>,
 }
 
 /// 模块使用统计
@@ -371,7 +371,7 @@ impl AnalyticsCollector {
         let peak_memory_usage: _ = all_results.iter().map(|r| r.memory_usage).max().unwrap_or(0);
 
         // 找出最慢和最快的模块
-        let mut module_times: HashMap<String, std::time::Duration, std::collections::HashMap<String, std::time::Duration, String, std::time::Duration>> = HashMap::new();
+        let mut module_times: HashMap<String, std::time::Duration>> = HashMap::new();
         for result in &all_results {
             let current: _ = module_times.entry(result.module_id.clone()).or_insert(std::time::Duration::from_millis(0));
             *current += result.execution_time;
@@ -458,7 +458,7 @@ pub struct ModulePerformanceReport {
 #[derive(Debug, Clone)]
 pub struct CollectorStats {
     pub total_events: u64,
-    pub event_type_counts: HashMap<EventType, u64, std::collections::HashMap<EventType, u64, EventType, u64>>,
+    pub event_type_counts: HashMap<EventType, u64>>,
     pub total_benchmarks: u64,
     pub memory_usage_estimate: usize,
 }

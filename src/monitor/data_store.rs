@@ -59,9 +59,9 @@ pub struct DataStore {
     /// 配置
     config: DataStoreConfig,
     /// 内存数据缓存
-    memory_cache: Arc<Mutex<VecDeque<DataPoint>>>,
+    memory_cache: Arc<Mutex<VecDeque<DataPoint>>,
     /// 压缩数据存储
-    compressed_storage: Arc<Mutex<HashMap<String, _>>>,
+    compressed_storage: Arc<Mutex<HashMap<String, _>>,
     /// 查询索引
     query_index: Arc<Mutex<QueryIndex>>,
     /// 统计信息

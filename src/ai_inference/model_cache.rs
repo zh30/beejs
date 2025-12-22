@@ -45,7 +45,7 @@ struct CacheEntry {
 /// 模型缓存
 #[derive(Debug)]
 pub struct ModelCache {
-    models: Arc<RwLock<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>,
+    models: Arc<RwLock<HashMap<String, CacheEntry>>,
     max_size: usize,
     strategy: CacheStrategy,
     stats: Arc<RwLock<CacheStats>>,
@@ -272,7 +272,7 @@ use std::collections::{HashMap, BTreeMap};
     }
 
     /// 需要时驱逐模型
-    async fn evict_if_needed(&self, models: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>) -> Result<()> {
+    async fn evict_if_needed(&self, models: &mut HashMap<String, CacheEntry>>) -> Result<()> {
         if models.len() < self.max_size {
             return Ok(());
         }
@@ -289,7 +289,7 @@ use std::collections::{HashMap, BTreeMap};
     }
 
     /// LRU 驱逐
-    async fn evict_lru(&self, models: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>) -> Result<()> {
+    async fn evict_lru(&self, models: &mut HashMap<String, CacheEntry>>) -> Result<()> {
         let lru_key: _ = models
             .iter()
             .min_by_key(|(_, entry)| entry.last_access)
@@ -303,7 +303,7 @@ use std::collections::{HashMap, BTreeMap};
     }
 
     /// LFU 驱逐
-    async fn evict_lfu(&self, models: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>) -> Result<()> {
+    async fn evict_lfu(&self, models: &mut HashMap<String, CacheEntry>>) -> Result<()> {
         let lfu_key: _ = models
             .iter()
             .min_by_key(|(_, entry)| entry.access_count)
@@ -317,7 +317,7 @@ use std::collections::{HashMap, BTreeMap};
     }
 
     /// FIFO 驱逐
-    async fn evict_fifo(&self, models: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>) -> Result<()> {
+    async fn evict_fifo(&self, models: &mut HashMap<String, CacheEntry>>) -> Result<()> {
         let fifo_key: _ = models
             .iter()
             .min_by_key(|(_, entry)| entry.created_at)
@@ -331,7 +331,7 @@ use std::collections::{HashMap, BTreeMap};
     }
 
     /// 智能驱逐
-    async fn evict_smart(&self, models: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>) -> Result<()> {
+    async fn evict_smart(&self, models: &mut HashMap<String, CacheEntry>>) -> Result<()> {
         // 综合考虑访问频率、时间和大小
         let smart_key: _ = models
             .iter()

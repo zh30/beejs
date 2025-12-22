@@ -43,12 +43,12 @@ pub struct WebSocketConnection {
     pub url: String,
     pub ready_state: Arc<Mutex<ReadyState>>,
     pub cmd_tx: mpsc::UnboundedSender<WebSocketCommand>,
-    pub event_rx: Arc<Mutex<mpsc::UnboundedReceiver<WebSocketEvent>>>,
+    pub event_rx: Arc<Mutex<mpsc::UnboundedReceiver<WebSocketEvent>>,
 }
 
 /// Global WebSocket manager
 pub struct WebSocketManager {
-    connections: Arc<Mutex<HashMap<u64, WebSocketConnection, std::collections::HashMap<u64, WebSocketConnection, u64, WebSocketConnection>>>>,
+    connections: Arc<Mutex<HashMap<u64, WebSocketConnection>>,
     next_id: AtomicU64,
     runtime: Arc<Runtime>,
 }

@@ -109,19 +109,19 @@ struct SmartWorker {
     workload_types: Vec<WorkloadType>,
     current_load: Arc<AtomicUsize>,
     total_tasks: Arc<AtomicUsize>,
-    avg_execution_time: Arc<Mutex<Vec<f64>>>,
+    avg_execution_time: Arc<Mutex<Vec<f64>>,
     last_used: Arc<Mutex<Instant>>,
     pre_warmed: bool,
-    jit_cache: Arc<Mutex<HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>>>,
-    memory_pool: Arc<Mutex<Vec<Vec<u8>>>>,
+    jit_cache: Arc<Mutex<HashMap<String, Vec<u8>>>,
+    memory_pool: Arc<Mutex<Vec<Vec<u8>>,
 }
 
 /// 极致优化的进程池
 pub struct OptimizedProcessPool {
     config: OptimizedProcessPoolConfig,
-    workers: Arc<RwLock<Vec<Arc<SmartWorker>>>>,
-    task_queue: Arc<Mutex<Vec<Task>>>,
-    results: Arc<RwLock<HashMap<usize, TaskResult, std::collections::HashMap<usize, TaskResult, usize, TaskResult>>>>,
+    workers: Arc<RwLock<Vec<Arc<SmartWorker>>,
+    task_queue: Arc<Mutex<Vec<Task>>,
+    results: Arc<RwLock<HashMap<usize, TaskResult>>,
     worker_semaphore: Arc<Semaphore>,
     next_task_id: Arc<AtomicUsize>,
     stats: Arc<ProcessPoolStats>,
@@ -290,7 +290,7 @@ impl OptimizedProcessPool {
     }
 
     /// 选择最优工作进程
-    async fn select_best_worker(&self) -> Result<Option<Arc<SmartWorker>>> {
+    async fn select_best_worker(&self) -> Result<Option<Arc<SmartWorker>> {
         let workers: _ = self.workers.read().await;
 
         // 根据工作负载类型选择最优进程

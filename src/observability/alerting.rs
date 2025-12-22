@@ -67,7 +67,7 @@ pub struct AlertRule {
     /// Alert severity
     pub severity: AlertSeverity,
     /// Additional labels
-    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub labels: HashMap<String, String>>,
     /// Description of the alert
     pub description: String,
 }
@@ -88,7 +88,7 @@ pub struct Alert {
     /// When the alert was triggered
     pub triggered_at: SystemTime,
     /// Labels
-    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub labels: HashMap<String, String>>,
     /// Description
     pub description: String,
 }
@@ -104,7 +104,7 @@ pub trait AlertNotifier: Send + Sync {
 /// HTTP webhook notifier
 pub struct HttpWebhookNotifier {
     url: String,
-    headers: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    headers: HashMap<String, String>>,
 }
 
 impl HttpWebhookNotifier {
@@ -175,11 +175,11 @@ impl AlertNotifier for ConsoleNotifier {
 /// Alerting system
 pub struct AlertingSystem {
     /// Alert rules
-    rules: Arc<RwLock<Vec<AlertRule>>>,
+    rules: Arc<RwLock<Vec<AlertRule>>,
     /// Active alerts
-    active_alerts: Arc<RwLock<HashMap<String, Alert, std::collections::HashMap<String, Alert, String, Alert>>>>,
+    active_alerts: Arc<RwLock<HashMap<String, Alert>>,
     /// Alert notifiers
-    notifiers: Arc<RwLock<Vec<Box<dyn AlertNotifier>>>>,
+    notifiers: Arc<RwLock<Vec<Box<dyn AlertNotifier>>,
     /// Check interval
     check_interval: Duration,
     /// Last check time
@@ -336,7 +336,7 @@ impl AlertingSystem {
     }
 
     /// Get active alerts
-    pub async fn get_active_alerts(&self) -> HashMap<String, Alert, std::collections::HashMap<String, Alert, String, Alert>> {
+    pub async fn get_active_alerts(&self) -> HashMap<String, Alert>> {
         self.active_alerts.read().await.clone()
     }
 

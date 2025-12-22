@@ -33,9 +33,9 @@ pub struct WasmModuleMetadata {
 /// 极致性能 WASM 执行器
 pub struct WasmOptimizedExecutor {
     engine: Arc<Engine>,
-    compiled_modules: Arc<std::sync::Mutex<HashMap<String, Module, std::collections::HashMap<String, Module, String, Module>>>>,
-    module_metadata: Arc<std::sync::Mutex<HashMap<String, WasmModuleMetadata, std::collections::HashMap<String, WasmModuleMetadata, String, WasmModuleMetadata>>>>,
-    performance_stats: Arc<std::sync::Mutex<HashMap<String, WasmExecutionResult, std::collections::HashMap<String, WasmExecutionResult, String, WasmExecutionResult>>>>,
+    compiled_modules: Arc<std::sync::Mutex<HashMap<String, Module>>,
+    module_metadata: Arc<std::sync::Mutex<HashMap<String, WasmModuleMetadata>>,
+    performance_stats: Arc<std::sync::Mutex<HashMap<String, WasmExecutionResult>>,
 }
 
 impl WasmOptimizedExecutor {

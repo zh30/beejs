@@ -108,11 +108,11 @@ impl Default for CacheConfig {
 /// 智能缓存项
 pub struct SmartCache<T> {
     /// 缓存存储
-    cache: Arc<Mutex<HashMap<String, CacheEntry<T, std::collections::HashMap<String, CacheEntry<T, String, CacheEntry<T>>>>>,
+    cache: Arc<Mutex<HashMap<String, CacheEntry<T>>,
     /// LRU 队列 (用于快速访问最久未使用的项)
-    lru_queue: Arc<Mutex<VecDeque<String>>>,
+    lru_queue: Arc<Mutex<VecDeque<String>>,
     /// 访问频率统计
-    access_frequency: Arc<Mutex<HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>>,
+    access_frequency: Arc<Mutex<HashMap<String, usize>>,
     /// 配置
     config: CacheConfig,
     /// 统计信息
@@ -244,7 +244,7 @@ impl<T> SmartCache<T> {
     }
 
     /// 批量设置缓存项
-    pub fn set_many(&self, items: HashMap<String, T, std::collections::HashMap<String, T, String, T>>) {
+    pub fn set_many(&self, items: HashMap<String, T>>) {
         for (key, data) in items {
             self.set(key, data);
         }
@@ -380,7 +380,7 @@ impl<T> SmartCache<T> {
     }
 
     /// 逐出 LRU 项
-    fn evict_lru_item(&self, cache: &mut HashMap<String, CacheEntry<T, std::collections::HashMap<String, CacheEntry<T, String, CacheEntry<T>>>) {
+    fn evict_lru_item(&self, cache: &mut HashMap<String, CacheEntry<T>>) {
         if !self.config.enable_lru {
             return;
         }

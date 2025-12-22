@@ -44,8 +44,8 @@ pub struct GossipMessage {
 #[derive(Debug, Clone)]
 pub struct ServiceDiscovery {
     config: DiscoveryConfig,
-    nodes: Arc<RwLock<HashMap<String, NodeMetadata, std::collections::HashMap<String, NodeMetadata, String, NodeMetadata>>>>,
-    gossip_history: Arc<RwLock<Vec<GossipMessage>>>,
+    nodes: Arc<RwLock<HashMap<String, NodeMetadata>>,
+    gossip_history: Arc<RwLock<Vec<GossipMessage>>,
 }
 
 impl ServiceDiscovery {
@@ -159,8 +159,8 @@ impl ServiceDiscovery {
 
     /// Gossip 协议实现
     async fn gossip_protocol(
-        nodes: Arc<RwLock<HashMap<String, NodeMetadata, std::collections::HashMap<String, NodeMetadata, String, NodeMetadata>>>>,
-        _gossip_history: Arc<RwLock<Vec<GossipMessage>>>,
+        nodes: Arc<RwLock<HashMap<String, NodeMetadata>>,
+        _gossip_history: Arc<RwLock<Vec<GossipMessage>>,
         _config: &DiscoveryConfig,
     ) {
         let known_nodes: _ = {

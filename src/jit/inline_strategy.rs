@@ -95,7 +95,7 @@ pub struct InlineStrategy {
     /// Minimum call count threshold
     min_call_threshold: u64,
     /// Inline history and learning
-    inline_history: HashMap<String, Vec<InlineResult, std::collections::HashMap<String, Vec<InlineResult, String, Vec<InlineResult>>>,
+    inline_history: HashMap<String, Vec<InlineResult>>,
     /// Statistics
     stats: InlineStats,
     /// Configuration
@@ -103,9 +103,9 @@ pub struct InlineStrategy {
     /// Stage 93 新增：当前系统负载（用于动态调整）
     current_system_load: f64,
     /// Stage 93 新增：热点函数追踪（结合 HotPathTrackerV2）
-    hot_path_functions: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>, // function_id -> hotness_score
+    hot_path_functions: HashMap<String, f64>>, // function_id -> hotness_score
     /// Stage 93 新增：缓存局部性得分
-    cache_locality_scores: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>,
+    cache_locality_scores: HashMap<String, f64>>,
 }
 
 /// Inline configuration - Stage 93 增强

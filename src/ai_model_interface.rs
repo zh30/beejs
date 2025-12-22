@@ -190,8 +190,8 @@ pub struct AiModel {
 /// AI模型管理器
 #[allow(dead_code)]
 pub struct AiModelManager {
-    models: Arc<Mutex<HashMap<String, AiModel, std::collections::HashMap<String, AiModel, String, AiModel>>>>,
-    default_model_id: Arc<Mutex<Option<String>>>,
+    models: Arc<Mutex<HashMap<String, AiModel>>,
+    default_model_id: Arc<Mutex<Option<String>>,
     routing_strategy: Arc<Mutex<ModelRoutingStrategy>>,
 }
 
@@ -464,7 +464,7 @@ impl AiModelManager {
     }
 
     /// 获取所有模型的汇总指标
-    pub fn get_all_metrics(&self) -> HashMap<String, ModelMetrics, std::collections::HashMap<String, ModelMetrics, String, ModelMetrics>> {
+    pub fn get_all_metrics(&self) -> HashMap<String, ModelMetrics>> {
         let models: _ = self.models.lock().unwrap();
         let mut metrics = HashMap::new();
 
@@ -495,7 +495,7 @@ impl AiModelManager {
     }
 
     /// 健康检查
-    pub async fn health_check(&self) -> HashMap<String, bool, std::collections::HashMap<String, bool, String, bool>> {
+    pub async fn health_check(&self) -> HashMap<String, bool>> {
         let models: _ = self.models.lock().unwrap();
         let mut health_status = HashMap::new();
 

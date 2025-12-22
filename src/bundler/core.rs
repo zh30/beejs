@@ -46,7 +46,7 @@ pub struct BundleOutput {
     pub chunks: Vec<Chunk>,
     pub total_size: usize,
     pub entry_points: Vec<String>,
-    pub assets: HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>,
+    pub assets: HashMap<String, Vec<u8>>,
 }
 
 /// Build options
@@ -69,12 +69,12 @@ pub struct BuildStats {
     pub build_time_ms: u64,
     pub bundle_size: usize,
     pub throughput_mbps: f64,
-    pub phases: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
+    pub phases: HashMap<String, u64>>,
 }
 
 /// High-performance Bundler
 pub struct Bundler {
-    modules: Arc<Mutex<HashMap<String, Module, std::collections::HashMap<String, Module, String, Module>>>>,
+    modules: Arc<Mutex<HashMap<String, Module>>,
     options: BuildOptions,
     stats: Arc<Mutex<BuildStats>>,
 }

@@ -46,9 +46,9 @@ pub struct MonitorMetrics {
 pub struct HealthMonitor {
     node_manager: Arc<NodeManager>,
     config: HealthCheckConfig,
-    health_history: Arc<RwLock<HashMap<String, Vec<HealthCheckResult, std::collections::HashMap<String, Vec<HealthCheckResult, String, Vec<HealthCheckResult>>>>>,
-    failure_counts: Arc<RwLock<HashMap<String, u32, std::collections::HashMap<String, u32, String, u32>>>>,
-    recovery_counts: Arc<RwLock<HashMap<String, u32, std::collections::HashMap<String, u32, String, u32>>>>,
+    health_history: Arc<RwLock<HashMap<String, Vec<HealthCheckResult>>>,
+    failure_counts: Arc<RwLock<HashMap<String, u32>>,
+    recovery_counts: Arc<RwLock<HashMap<String, u32>>,
     metrics: Arc<RwLock<MonitorMetrics>>,
 }
 

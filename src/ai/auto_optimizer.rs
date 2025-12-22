@@ -120,8 +120,8 @@ pub struct AutoOptimizer {
 /// 性能分析器
 #[derive(Debug, Clone)]
 pub struct PerformanceProfiler {
-    profiles: Arc<RwLock<Vec<ProfileData>>>,
-    current_profile: Arc<RwLock<Option<ProfileData>>>,
+    profiles: Arc<RwLock<Vec<ProfileData>>,
+    current_profile: Arc<RwLock<Option<ProfileData>>,
 }
 
 /// 性能分析器
@@ -133,7 +133,7 @@ pub struct PerformanceAnalyzer {
 /// 优化验证器
 #[derive(Debug, Clone)]
 pub struct OptimizationValidator {
-    validation_cache: Arc<RwLock<HashMap<String, ValidationResult, std::collections::HashMap<String, ValidationResult, String, ValidationResult>>>>,
+    validation_cache: Arc<RwLock<HashMap<String, ValidationResult>>,
 }
 
 /// 优化阈值
@@ -149,7 +149,7 @@ pub struct OptimizationThresholds {
 pub struct ValidationResult {
     pub is_valid: bool,
     pub confidence: f64,
-    pub improvements: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>,
+    pub improvements: HashMap<String, f64>>,
 }
 
 impl AutoOptimizer {
@@ -374,7 +374,7 @@ impl AutoOptimizer {
     }
 
     /// 内存优化建议
-    pub async fn suggest_memory_optimizations(&self, heap_snapshot: &HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>) -> Result<Vec<MemoryOptimization>, Box<dyn std::error::Error>> {
+    pub async fn suggest_memory_optimizations(&self, heap_snapshot: &HashMap<String, u64>>) -> Result<Vec<MemoryOptimization>, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         let mut optimizations = Vec::new();

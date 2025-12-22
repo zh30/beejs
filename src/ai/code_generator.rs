@@ -328,7 +328,7 @@ impl MockAiModel {
 /// 模式分析器 - 用于分析代码模式并提供智能补全
 #[derive(Debug, Clone)]
 pub struct PatternAnalyzer {
-    common_patterns: Arc<RwLock<Vec<CommonPattern>>>,
+    common_patterns: Arc<RwLock<Vec<CommonPattern>>,
     language_specific_hints: Arc<RwLock<LanguageHints>>,
 }
 
@@ -582,7 +582,7 @@ impl PatternAnalyzer {
 /// 上下文缓存
 #[derive(Debug, Clone)]
 pub struct ContextCache {
-    pub cache: Arc<RwLock<lru::LruCache<String, CodeContext>>>,
+    pub cache: Arc<RwLock<lru::LruCache<String, CodeContext>>,
 }
 
 impl ContextCache {
@@ -606,7 +606,7 @@ impl ContextCache {
 /// 代码数据库
 #[derive(Debug, Clone)]
 pub struct CodeDatabase {
-    templates: Arc<RwLock<Vec<CodeTemplate>>>,
+    templates: Arc<RwLock<Vec<CodeTemplate>>,
 }
 
 #[derive(Debug, Clone)]

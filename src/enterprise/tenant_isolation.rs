@@ -162,13 +162,13 @@ pub struct UsageMetrics {
 /// Policy engine
 #[derive(Debug)]
 pub struct PolicyEngine {
-    policies: Arc<RwLock<BTreeMap<TenantId, TenantConfig, TenantId, TenantConfig>>>,
+    policies: Arc<RwLock<BTreeMap<TenantId, TenantConfig, TenantId, TenantConfig>>,
 }
 
 /// Tenant manager
 #[derive(Debug)]
 pub struct TenantManager {
-    tenants: Arc<RwLock<BTreeMap<TenantId, Tenant, TenantId, Tenant>>>,
+    tenants: Arc<RwLock<BTreeMap<TenantId, Tenant, TenantId, Tenant>>,
     policy_engine: Arc<PolicyEngine>,
     quota_enforcer: Arc<RwLock<QuotaEnforcer>>,
 }
@@ -176,7 +176,7 @@ pub struct TenantManager {
 /// Quota enforcer
 #[derive(Debug)]
 pub struct QuotaEnforcer {
-    quotas: Arc<RwLock<BTreeMap<TenantId, QuotaStatus, TenantId, QuotaStatus>>>,
+    quotas: Arc<RwLock<BTreeMap<TenantId, QuotaStatus, TenantId, QuotaStatus>>,
 }
 
 /// Tenant isolation manager
@@ -191,19 +191,19 @@ pub struct TenantIsolationManager {
 /// Network isolator
 #[derive(Debug)]
 pub struct NetworkIsolator {
-    namespaces: Arc<RwLock<BTreeMap<TenantId, String, TenantId, String>>>,
+    namespaces: Arc<RwLock<BTreeMap<TenantId, String, TenantId, String>>,
 }
 
 /// Storage isolator
 #[derive(Debug)]
 pub struct StorageIsolator {
-    storage_classes: Arc<RwLock<BTreeMap<TenantId, String, TenantId, String>>>,
+    storage_classes: Arc<RwLock<BTreeMap<TenantId, String, TenantId, String>>,
 }
 
 /// Compute isolator
 #[derive(Debug)]
 pub struct ComputeIsolator {
-    quota_names: Arc<RwLock<BTreeMap<TenantId, String, TenantId, String>>>,
+    quota_names: Arc<RwLock<BTreeMap<TenantId, String, TenantId, String>>,
 }
 
 impl TenantManager {

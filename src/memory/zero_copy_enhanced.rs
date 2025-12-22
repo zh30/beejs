@@ -96,9 +96,9 @@ pub struct EnhancedZeroCopy {
     /// 预取配置
     prefetch_config: PrefetchConfig,
     /// DMA 缓冲区池
-    dma_buffers: Arc<RwLock<Vec<DmaBuffer>>>,
+    dma_buffers: Arc<RwLock<Vec<DmaBuffer>>,
     /// 内存映射缓存
-    mmap_cache: Arc<RwLock<lru::LruCache<String, Arc<Mmap>>>>,
+    mmap_cache: Arc<RwLock<lru::LruCache<String, Arc<Mmap>>,
     /// 预取统计
     prefetch_stats: Arc<PrefetchStats>,
     /// 性能统计

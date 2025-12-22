@@ -240,7 +240,7 @@ pub struct EnhancedGcOptimizer {
     /// GC 统计
     metrics: Arc<GcMetrics>,
     /// GC 事件历史
-    event_history: Arc<Mutex<Vec<GcEvent>>>,
+    event_history: Arc<Mutex<Vec<GcEvent>>,
     /// 是否启用预测性 GC
     predictive_enabled: Arc<AtomicBool>,
     /// 当前 GC 策略

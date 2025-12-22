@@ -21,7 +21,7 @@ pub struct BeejsCluster {
 pub struct ObjectMeta {
     pub name: String,
     pub namespace: String,
-    pub labels: Option<std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub labels: Option<std::collections::HashMap<String, String>>,
 }
 
 /// Specification for BeejsCluster
@@ -109,7 +109,7 @@ pub struct Operator {
     config: OperatorConfig,
 
     /// Active clusters
-    clusters: Arc<RwLock<std::collections::HashMap<String, BeejsCluster, std::collections::HashMap<String, BeejsCluster, String, BeejsCluster>>>>,
+    clusters: Arc<RwLock<std::collections::HashMap<String, BeejsCluster>>,
 
     /// Event sender for broadcasting cluster events
     event_sender: Arc<tokio::sync::mpsc::UnboundedSender<OperatorEvent>>,

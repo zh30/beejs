@@ -206,7 +206,7 @@ use std::collections::{HashMap, BTreeMap};
     }
 
     /// 获取缓存的变更
-    pub async fn get_cached_changes(&self, document_id: &str) -> Result<Option<Vec<Change>>> {
+    pub async fn get_cached_changes(&self, document_id: &str) -> Result<Option<Vec<Change>> {
         let cache_key: _ = format!("changes:{}", document_id);
         self.change_cache.get(&cache_key)
     }

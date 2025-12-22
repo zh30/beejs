@@ -36,7 +36,7 @@ pub struct DebuggerEngine {
     state: Arc<Mutex<DebugState>>,
     breakpoint_manager: BreakpointManager,
     watch_manager: WatchManager,
-    current_stack: Arc<Mutex<Option<StackTrace>>>,
+    current_stack: Arc<Mutex<Option<StackTrace>>,
     stats: Arc<Mutex<DebugStats>>,
     current_breakpoint_id: Option<String>,
     step_type: Option<StepType>,
@@ -53,7 +53,7 @@ pub trait DebugEventListener {
 
 /// Simple event listener implementation
 pub struct SimpleEventListener {
-    pub events: Arc<Mutex<Vec<DebugEvent>>>,
+    pub events: Arc<Mutex<Vec<DebugEvent>>,
 }
 
 impl SimpleEventListener {
@@ -409,7 +409,7 @@ impl DebuggerEngine {
     pub fn get_current_variables(
         &self,
         context: &v8::Global<v8::Context>,
-    ) -> DebugResult<HashMap<crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo, std::collections::HashMap<crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo, crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo>>>> {
+    ) -> DebugResult<HashMap<crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo>> {
         let inspector: _ = VariableInspector::new(self.config.clone());
         // This would build scopes from current execution state
         let scopes: _ = Vec::new();

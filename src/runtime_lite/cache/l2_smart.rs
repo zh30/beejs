@@ -47,7 +47,7 @@ impl L2Stats {
 /// L2 Smart Cache with LRU/LFU hybrid strategy
 pub struct L2SmartCache {
     /// Main storage: key -> entry
-    entries: HashMap<CacheKey, L2Entry, std::collections::HashMap<CacheKey, L2Entry, CacheKey, L2Entry>>,
+    entries: HashMap<CacheKey, L2Entry>>,
     /// LRU tracking: access order
     lru_queue: VecDeque<CacheKey>,
     /// LFU tracking: frequency-based ordering

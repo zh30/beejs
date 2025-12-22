@@ -38,7 +38,7 @@ pub struct BatchProcessorStats {
 /// 批处理器
 pub struct BatchProcessor {
     config: NetworkConfig,
-    requests: Arc<Mutex<Vec<BatchRequest>>>,
+    requests: Arc<Mutex<Vec<BatchRequest>>,
     pending_count: Arc<Mutex<usize>>,
     stats: Arc<Mutex<BatchProcessorStats>>,
     next_request_id: Arc<Mutex<u64>>,

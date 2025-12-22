@@ -41,7 +41,7 @@ pub struct StressTestResult {
     pub average_latency: Duration,
     pub p95_latency: Duration,
     pub p99_latency: Duration,
-    pub errors_by_type: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
+    pub errors_by_type: HashMap<String, u64>>,
     pub throughput_per_second: f64,
     pub memory_peak_mb: f64,
     pub test_duration: Duration,
@@ -60,7 +60,7 @@ struct ExecutionStats {
     successful_executions: u64,
     failed_executions: u64,
     latencies: Vec<std::time::Duration>,
-    errors: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
+    errors: HashMap<String, u64>>,
     memory_samples: Vec<f64>,
 }
 

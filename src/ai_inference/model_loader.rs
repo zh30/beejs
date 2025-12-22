@@ -20,7 +20,7 @@ pub enum ModelFormat {
 /// 模型加载器
 #[derive(Debug)]
 pub struct ModelLoader {
-    loaded_models: HashMap<String, AIModel, std::collections::HashMap<String, AIModel, String, AIModel>>,
+    loaded_models: HashMap<String, AIModel>>,
 }
 
 impl ModelLoader {

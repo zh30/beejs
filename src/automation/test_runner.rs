@@ -108,7 +108,7 @@ pub struct AutomatedTestRunner {
     config: TestPlanConfig,
     framework: BenchmarkFramework,
     regression_detector: Arc<Mutex<PerformanceRegressionDetector>>,
-    execution_results: Arc<Mutex<Vec<TestExecutionResult>>>,
+    execution_results: Arc<Mutex<Vec<TestExecutionResult>>,
 }
 
 /// 自动化测试运行器统计
@@ -353,7 +353,7 @@ impl AutomatedTestRunner {
         tasks: Vec<ScheduledTest>,
     ) -> Result<Vec<TestExecutionResult>, TestRunnerError> {
         let semaphore: _ = Arc::new(std::sync::Mutex::new(tokio::sync::Semaphore::new(self.config.max_concurrent_tests)));
-        let mut handles: Vec<JoinHandle<Result<TestExecutionResult, TestRunnerError>>> = Vec::new();
+        let mut handles: Vec<JoinHandle<Result<TestExecutionResult, TestRunnerError>> = Vec::new();
 
         for task in tasks {
             let semaphore: _ = semaphore.clone();clone();

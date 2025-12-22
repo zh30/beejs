@@ -51,9 +51,9 @@ pub struct DynamicBatchProcessor {
     /// 配置
     config: DynamicBatchConfig,
     /// 待处理的输入队列
-    input_queue: Arc<Mutex<VecDeque<Tensor>>>,
+    input_queue: Arc<Mutex<VecDeque<Tensor>>,
     /// 结果队列
-    result_queue: Arc<Mutex<VecDeque<InferenceResult>>>,
+    result_queue: Arc<Mutex<VecDeque<InferenceResult>>,
     /// 当前批次大小
     current_batch_size: usize,
     /// 性能统计

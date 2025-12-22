@@ -487,7 +487,7 @@ pub enum ASTNode {
     },
     InterfaceDeclaration {
         name: String,
-        properties: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+        properties: HashMap<String, String>>,
     },
     EnumDeclaration {
         name: String,

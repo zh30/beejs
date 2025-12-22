@@ -126,12 +126,12 @@ impl Default for QueueConfig {
 #[allow(dead_code)]
 pub struct AiAsyncQueue {
     config: QueueConfig,
-    tasks: Arc<Mutex<BinaryHeap<Reverse<QueueTask>>>>,
-    running_tasks: Arc<Mutex<HashMap<usize, RunningTaskInfo, std::collections::HashMap<usize, RunningTaskInfo, usize, RunningTaskInfo>>>>,
-    task_results: Arc<Mutex<HashMap<usize, TaskResult, std::collections::HashMap<usize, TaskResult, usize, TaskResult>>>>,
+    tasks: Arc<Mutex<BinaryHeap<Reverse<QueueTask>>,
+    running_tasks: Arc<Mutex<HashMap<usize, RunningTaskInfo>>,
+    task_results: Arc<Mutex<HashMap<usize, TaskResult>>,
     next_task_id: Arc<AtomicUsize>,
     queue_semaphore: Arc<Semaphore>,
-    worker_handles: Arc<Mutex<Vec<JoinHandle<()>>>>,
+    worker_handles: Arc<Mutex<Vec<JoinHandle<()>>,
     stats: Arc<Mutex<QueueStats>>,
 }
 
@@ -387,9 +387,9 @@ impl AiAsyncQueue {
 #[allow(dead_code)]
 async fn worker_loop(
     worker_id: usize,
-    tasks: Arc<Mutex<BinaryHeap<Reverse<QueueTask>>>>,
-    running_tasks: Arc<Mutex<HashMap<usize, RunningTaskInfo, std::collections::HashMap<usize, RunningTaskInfo, usize, RunningTaskInfo>>>>,
-    task_results: Arc<Mutex<HashMap<usize, TaskResult, std::collections::HashMap<usize, TaskResult, usize, TaskResult>>>>,
+    tasks: Arc<Mutex<BinaryHeap<Reverse<QueueTask>>,
+    running_tasks: Arc<Mutex<HashMap<usize, RunningTaskInfo>>,
+    task_results: Arc<Mutex<HashMap<usize, TaskResult>>,
     queue_semaphore: Arc<Semaphore>,
     stats: Arc<Mutex<QueueStats>>,
     _config: QueueConfig,

@@ -89,8 +89,8 @@ pub struct FallbackStats {
     pub total_fallbacks: u64,
     pub successful_recoveries: u64,
     pub failed_recoveries: u64,
-    pub feature_fallback_counts: HashMap<Feature, u64, std::collections::HashMap<Feature, u64, Feature, u64>>,
-    pub strategy_usage_counts: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
+    pub feature_fallback_counts: HashMap<Feature, u64>>,
+    pub strategy_usage_counts: HashMap<String, u64>>,
     pub avg_recovery_time: Duration,
     pub last_fallback_time: Option<Instant>,
 }
@@ -107,10 +107,10 @@ impl FallbackStats {
 
 /// 降级管理器
 pub struct FallbackManager {
-    strategies: Arc<RwLock<HashMap<Feature, Vec<FallbackStrategy, std::collections::HashMap<Feature, Vec<FallbackStrategy, Feature, Vec<FallbackStrategy>>>>>,
+    strategies: Arc<RwLock<HashMap<Feature, Vec<FallbackStrategy>>>,
     stats: Arc<RwLock<FallbackStats>>,
-    event_history: Arc<RwLock<Vec<FallbackEvent>>>,
-    active_features: Arc<RwLock<HashMap<Feature, bool, std::collections::HashMap<Feature, bool, Feature, bool>>>>,
+    event_history: Arc<RwLock<Vec<FallbackEvent>>,
+    active_features: Arc<RwLock<HashMap<Feature, bool>>,
 }
 
 impl FallbackManager {

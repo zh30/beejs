@@ -30,7 +30,7 @@ pub struct WasmStats {
 #[derive(Debug)]
 pub struct WasmExecutor {
     engine: Engine,
-    modules: Arc<std::sync::Mutex<Vec<WasmModule>>>,
+    modules: Arc<std::sync::Mutex<Vec<WasmModule>>,
     stats: Arc<std::sync::Mutex<WasmStats>>,
 }
 

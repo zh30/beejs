@@ -42,14 +42,14 @@ pub struct TrendingModule {
 pub struct CommunityPortal {
     registry: Arc<ModuleRegistry>,
     auth: Arc<AuthManager>,
-    ratings: Arc<RwLock<HashMap<String, Vec<ModuleRating, std::collections::HashMap<String, Vec<ModuleRating, String, Vec<ModuleRating>>>>>,
-    trending: Arc<RwLock<Vec<TrendingModule>>>,
+    ratings: Arc<RwLock<HashMap<String, Vec<ModuleRating>>>,
+    trending: Arc<RwLock<Vec<TrendingModule>>,
 }
 
 /// 模块注册表
 #[derive(Debug, Clone)]
 pub struct ModuleRegistry {
-    modules: Arc<RwLock<HashMap<String, ModuleInfo, std::collections::HashMap<String, ModuleInfo, String, ModuleInfo>>>>,
+    modules: Arc<RwLock<HashMap<String, ModuleInfo>>,
 }
 
 /// 模块信息
@@ -84,8 +84,8 @@ pub enum ModuleCategory {
 /// 认证管理器
 #[derive(Debug, Clone)]
 pub struct AuthManager {
-    users: Arc<RwLock<HashMap<String, UserId, std::collections::HashMap<String, UserId, String, UserId>>>>,
-    sessions: Arc<RwLock<HashMap<String, Session, std::collections::HashMap<String, Session, String, Session>>>>,
+    users: Arc<RwLock<HashMap<String, UserId>>,
+    sessions: Arc<RwLock<HashMap<String, Session>>,
 }
 
 /// 用户会话
@@ -305,7 +305,7 @@ pub struct ModuleRatingSummary {
     pub module_id: String,
     pub total_ratings: usize,
     pub average_rating: f64,
-    pub rating_distribution: HashMap<u8, usize, std::collections::HashMap<u8, usize, u8, usize>>,
+    pub rating_distribution: HashMap<u8, usize>>,
 }
 
 /// 模块搜索结果

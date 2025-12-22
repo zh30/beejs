@@ -79,10 +79,10 @@ pub struct SchedulerMetrics {
 
 /// AI 驱动智能任务调度器
 pub struct IntelligentTaskScheduler {
-    pending_tasks: Arc<RwLock<VecDeque<Task>>>,
-    running_tasks: Arc<RwLock<HashMap<String, TaskExecution, std::collections::HashMap<String, TaskExecution, String, TaskExecution>>>>,
-    completed_tasks: Arc<RwLock<Vec<TaskExecution>>>,
-    workers: Arc<RwLock<HashMap<String, WorkerInfo, std::collections::HashMap<String, WorkerInfo, String, WorkerInfo>>>>,
+    pending_tasks: Arc<RwLock<VecDeque<Task>>,
+    running_tasks: Arc<RwLock<HashMap<String, TaskExecution>>,
+    completed_tasks: Arc<RwLock<Vec<TaskExecution>>,
+    workers: Arc<RwLock<HashMap<String, WorkerInfo>>,
     metrics: Arc<RwLock<SchedulerMetrics>>,
     strategy: Arc<RwLock<SchedulingStrategy>>,
 }

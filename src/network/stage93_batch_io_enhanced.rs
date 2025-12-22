@@ -90,7 +90,7 @@ pub struct Stage93BatchIoEngine {
     stats: Arc<Stage93BatchStats>,
 
     // 优先级队列
-    priority_queues: Arc<RwLock<BTreeMap<Reverse<Stage93BatchPriority, Reverse<Stage93BatchPriority>, VecDeque<Stage93BatchOperation>>>>,
+    priority_queues: Arc<RwLock<BTreeMap<Reverse<Stage93BatchPriority, Reverse<Stage93BatchPriority>, VecDeque<Stage93BatchOperation>>,
 
     // 智能批处理
     operation_counter: Arc<AtomicU64>,
@@ -182,7 +182,7 @@ impl Stage93BatchIoEngine {
 
     /// 工作线程处理批次
     async fn process_batch_worker(
-        priority_queues: &Arc<RwLock<BTreeMap<Reverse<Stage93BatchPriority, Reverse<Stage93BatchPriority>, VecDeque<Stage93BatchOperation>>>>,
+        priority_queues: &Arc<RwLock<BTreeMap<Reverse<Stage93BatchPriority, Reverse<Stage93BatchPriority>, VecDeque<Stage93BatchOperation>>,
         stats: &Arc<Stage93BatchStats>,
         batch_config: &Stage93BatchConfig,
         adaptive_batch_size: &Arc<RwLock<usize>>,

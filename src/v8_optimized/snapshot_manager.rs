@@ -18,11 +18,11 @@ pub struct V8SnapshotOptimizedManager {
     base_manager: V8SnapshotManager,
 
     /// 多级缓存系统
-    l1_cache: Arc<Mutex<HashMap<String, Arc<SnapshotEntry, std::collections::HashMap<String, Arc<SnapshotEntry, String, Arc<SnapshotEntry>>>>>,
-    l2_cache: Arc<Mutex<HashMap<String, Arc<SnapshotEntry, std::collections::HashMap<String, Arc<SnapshotEntry, String, Arc<SnapshotEntry>>>>>,
+    l1_cache: Arc<Mutex<HashMap<String, Arc<SnapshotEntry>>>,
+    l2_cache: Arc<Mutex<HashMap<String, Arc<SnapshotEntry>>>,
 
     /// 预加载快照
-    preloaded_snapshots: Arc<Mutex<Vec<String>>>,
+    preloaded_snapshots: Arc<Mutex<Vec<String>>,
 
     /// 优化统计信息
     stats: Arc<SnapshotOptimizationStats>,

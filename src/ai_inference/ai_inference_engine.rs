@@ -172,7 +172,7 @@ pub struct AIModel {
     pub id: String,
     pub input_shape: Vec<usize>,
     pub output_shape: Vec<usize>,
-    pub parameters: std::collections::HashMap<String, Vec<f32, std::collections::HashMap<String, Vec<f32, String, Vec<f32>>>, // 模型参数
+    pub parameters: std::collections::HashMap<String, Vec<f32>>, // 模型参数
 }
 
 impl AIModel {
@@ -191,7 +191,7 @@ impl AIModel {
         id: String,
         input_shape: Vec<usize>,
         output_shape: Vec<usize>,
-        parameters: std::collections::HashMap<String, Vec<f32, std::collections::HashMap<String, Vec<f32, String, Vec<f32>>>,
+        parameters: std::collections::HashMap<String, Vec<f32>>,
     ) -> Self {
         AIModel {
             id,

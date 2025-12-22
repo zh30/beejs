@@ -43,9 +43,9 @@ pub struct PrefetchStats {
 
 /// AI 预测器
 pub struct AIPrefetchPredictor {
-    history: Arc<RwLock<VecDeque<(Instant, AccessPattern, usize)>>>,
-    pattern_cache: Arc<RwLock<HashMap<String, AccessPattern, std::collections::HashMap<String, AccessPattern, String, AccessPattern>>>>,
-    accuracy_tracker: Arc<RwLock<VecDeque<bool>>>,
+    history: Arc<RwLock<VecDeque<(Instant, AccessPattern, usize)>>,
+    pattern_cache: Arc<RwLock<HashMap<String, AccessPattern>>,
+    accuracy_tracker: Arc<RwLock<VecDeque<bool>>,
 }
 
 impl AIPrefetchPredictor {
@@ -170,7 +170,7 @@ impl AIPrefetchPredictor {
 /// 智能预取器
 pub struct Stage93IntelligentPrefetcher {
     predictor: Arc<AIPrefetchPredictor>,
-    prefetch_queue: Arc<RwLock<VecDeque<PrefetchRequest>>>,
+    prefetch_queue: Arc<RwLock<VecDeque<PrefetchRequest>>,
     stats: Arc<RwLock<PrefetchStats>>,
     config: PrefetchConfig,
 }

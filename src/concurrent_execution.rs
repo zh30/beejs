@@ -274,7 +274,7 @@ pub struct StealPredictor {
     /// 队列活跃度历史 (最近访问时间)
     queue_activity_history: Vec<VecDeque<Instant>>,
     /// 任务类型模式分析
-    task_patterns: std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>,
+    task_patterns: std::collections::HashMap<String, usize>>,
     /// 窃取历史记录
     steal_history: VecDeque<StealEvent>,
 }
@@ -430,7 +430,7 @@ pub struct LoadMonitor {
     /// 每个worker的当前负载
     worker_loads: Arc<Vec<AtomicUsize>>,
     /// 每个worker的任务执行时间历史
-    execution_history: Arc<Vec<VecDeque<Duration>>>,
+    execution_history: Arc<Vec<VecDeque<Duration>>,
     /// 每个worker的CPU使用率估算
     cpu_usage: Arc<Vec<AtomicUsize>>,
     /// 负载更新时间
@@ -558,7 +558,7 @@ pub struct AdaptiveThreadPool {
     /// 负载监控器
     load_monitor: Arc<LoadMonitor>,
     /// 线程池调整历史
-    adjustment_history: Arc<Mutex<VecDeque<(Instant, usize, usize)>>>, // (时间, 旧大小, 新大小)
+    adjustment_history: Arc<Mutex<VecDeque<(Instant, usize, usize)>>, // (时间, 旧大小, 新大小)
     /// 是否启用自动调整
     auto_scaling: Arc<std::sync::atomic::AtomicBool>,
     /// 最小线程数
@@ -655,7 +655,7 @@ pub struct WorkStealingScheduler {
     /// 线程数量
     thread_count: usize,
     /// 每个线程的本地任务队列
-    thread_queues: Vec<Arc<Mutex<VecDeque<Task>>>>,
+    thread_queues: Vec<Arc<Mutex<VecDeque<Task>>,
     /// 工作窃取通道
     #[allow(dead_code)]
     steal_channels: Vec<ZeroCopyChannel<Task>>,

@@ -115,7 +115,7 @@ pub struct JaegerTracer {
     /// Configuration
     config: JaegerConfig,
     /// Span buffer
-    span_buffer: Arc<Mutex<Vec<JaegerSpan>>>,
+    span_buffer: Arc<Mutex<Vec<JaegerSpan>>,
     /// Last flush time
     last_flush: Arc<Mutex<Instant>>,
     /// UDP socket for sending spans
@@ -259,7 +259,7 @@ impl JaegerTracer {
         info!("Flushing {} spans to Jaeger", spans_to_send.len());
 
         // Group spans by operation name
-        let mut spans_by_operation: HashMap<String, Vec<JaegerSpan, std::collections::HashMap<String, Vec<JaegerSpan, String, Vec<JaegerSpan>>> = HashMap::new();
+        let mut spans_by_operation: HashMap<String, Vec<JaegerSpan>> = HashMap::new();
         for span in spans_to_send {
             spans_by_operation
                 .entry(span.operation_name.clone())
@@ -395,7 +395,7 @@ impl JaegerTracer {
     }
 
     /// Get tracer statistics
-    pub fn get_stats(&self) -> HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>> {
+    pub fn get_stats(&self) -> HashMap<String, usize>> {
         let buffer: _ = self.span_buffer.lock().unwrap();
         let last_flush: _ = self.last_flush.lock().unwrap();
 

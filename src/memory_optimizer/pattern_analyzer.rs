@@ -208,8 +208,8 @@ pub enum Severity {
 
 /// 内存使用模式分析器
 pub struct MemoryPatternAnalyzer {
-    allocation_history: Arc<RwLock<VecDeque<AllocationRecord>>>,
-    active_allocations: Arc<RwLock<HashMap<u64, AllocationRecord, std::collections::HashMap<u64, AllocationRecord, u64, AllocationRecord>>>>,
+    allocation_history: Arc<RwLock<VecDeque<AllocationRecord>>,
+    active_allocations: Arc<RwLock<HashMap<u64, AllocationRecord>>,
     statistics: Arc<RwLock<AllocationStatistics>>,
     config: AnalyzerConfig,
     analysis_window: Duration,
@@ -458,7 +458,7 @@ impl MemoryPatternAnalyzer {
     async fn identify_hotspots(&self) -> Vec<MemoryHotspot> {
         let history: _ = self.allocation_history.read().await;
 
-        let mut location_counts: HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize)>> = HashMap::new();
+        let mut location_counts: HashMap<String, (u64, usize)>> = HashMap::new();
 
         for record in history.iter() {
             if let Some(stack_trace) = &record.stack_trace {
@@ -599,7 +599,7 @@ impl MemoryPatternAnalyzer {
     }
 
     /// 检测内存泄漏
-    async fn detect_memory_leaks(&self, active: &HashMap<u64, AllocationRecord, std::collections::HashMap<u64, AllocationRecord, u64, AllocationRecord>>) -> Vec<(u64, usize)> {
+    async fn detect_memory_leaks(&self, active: &HashMap<u64, AllocationRecord>>) -> Vec<(u64, usize)> {
         let now: _ = Utc::now();
         let threshold: _ = self.config.leak_detection_threshold;
 

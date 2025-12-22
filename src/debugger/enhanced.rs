@@ -204,7 +204,7 @@ pub struct ScopeInfo {
     /// 作用域名称
     pub name: Option<String>,
     /// 作用域中的变量
-    pub variables: HashMap<String, VariableInfo, std::collections::HashMap<String, VariableInfo, String, VariableInfo>>,
+    pub variables: HashMap<String, VariableInfo>>,
 }
 
 impl ScopeInfo {
@@ -382,9 +382,9 @@ pub struct DebuggerProfiler {
     /// 采样间隔 (微秒)
     pub sample_interval_us: u32,
     /// 采样点
-    samples: Arc<Mutex<Vec<ProfileSample>>>,
+    samples: Arc<Mutex<Vec<ProfileSample>>,
     /// 热点
-    hot_spots: Arc<Mutex<Vec<HotSpot>>>,
+    hot_spots: Arc<Mutex<Vec<HotSpot>>,
 }
 
 impl Clone for DebuggerProfiler {
@@ -435,7 +435,7 @@ impl DebuggerProfiler {
     /// 分析热点
     pub fn analyze_hot_spots(&self) -> Vec<HotSpot> {
         let samples: _ = self.samples.lock().unwrap();
-        let mut function_times: HashMap<String, (u64, u64), std::collections::HashMap<String, (u64, u64), String, (u64, u64)>> = HashMap::new();
+        let mut function_times: HashMap<String, (u64, u64)>> = HashMap::new();
         let total_time: u64 = samples.iter().map(|s| s.cpu_time_us).sum();
 
         for sample in samples.iter() {
@@ -638,7 +638,7 @@ impl SourceMap {
 #[derive(Debug, Clone, Default)]
 pub struct SourceMapManager {
     /// 文件 -> 源代码映射
-    maps: HashMap<String, SourceMap, std::collections::HashMap<String, SourceMap, String, SourceMap>>,
+    maps: HashMap<String, SourceMap>>,
 }
 
 impl SourceMapManager {

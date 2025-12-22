@@ -9,7 +9,7 @@ use anyhow::Result;
 /// Edge Deployment Optimizer
 #[derive(Debug)]
 pub struct EdgeDeploymentOptimizer {
-    deployment_history: Arc<RwLock<Vec<DeploymentRecord>>>,
+    deployment_history: Arc<RwLock<Vec<DeploymentRecord>>,
     performance_metrics: Arc<RwLock<PerformanceMetrics>>,
 }
 
@@ -47,7 +47,7 @@ impl EdgeDeploymentOptimizer {
     }
 
     /// Optimize deployment configuration for a region
-    pub async fn optimize(&self, region: &str, base_config: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> Result<OptimizedConfig> {
+    pub async fn optimize(&self, region: &str, base_config: &HashMap<String, String>>) -> Result<OptimizedConfig> {
         let mut optimized = base_config.clone();
 
         // Analyze historical performance
@@ -130,7 +130,7 @@ impl EdgeDeploymentOptimizer {
     }
 
     /// Estimate cold start time based on configuration
-    async fn estimate_cold_start(&self, config: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> u64 {
+    async fn estimate_cold_start(&self, config: &HashMap<String, String>>) -> u64 {
         let mut estimate = 45; // Base cold start
 
         if let Some(memory) = config.get("memory") {
@@ -194,7 +194,7 @@ impl EdgeDeploymentOptimizer {
     pub async fn get_best_regions(&self, count: usize) -> Result<Vec<String>> {
         let history: _ = self.deployment_history.read().await;
 
-        let mut region_scores: HashMap<String, (f64, u64), std::collections::HashMap<String, (f64, u64), String, (f64, u64)>> = HashMap::new();
+        let mut region_scores: HashMap<String, (f64, u64)>> = HashMap::new();
 
         for record in history.iter() {
             let score: _ = (100.0 - record.cold_start_time as f64) * record.success_rate;
@@ -221,7 +221,7 @@ impl EdgeDeploymentOptimizer {
 #[derive(Debug, Clone)]
 pub struct OptimizedConfig {
     pub region: String,
-    pub config: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub config: HashMap<String, String>>,
     pub estimated_cold_start: u64,
 }
 

@@ -37,7 +37,7 @@ pub struct OnnxSession {
     /// 输出名称列表
     output_names: Vec<String>,
     /// 会话元数据
-    metadata: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    metadata: std::collections::HashMap<String, String>>,
 }
 
 /// ONNX GPU 加速器
@@ -59,7 +59,7 @@ pub struct GPUMemoryPool {
     /// 内存池大小
     pool_size: usize,
     /// 可用内存块
-    available_blocks: Arc<Mutex<Vec<MemoryBlock>>>,
+    available_blocks: Arc<Mutex<Vec<MemoryBlock>>,
 }
 
 /// 内存块
@@ -77,7 +77,7 @@ pub struct StreamManager {
     /// 并发流数量
     stream_count: usize,
     /// 活跃流
-    active_streams: Arc<Mutex<Vec<ComputeStream>>>,
+    active_streams: Arc<Mutex<Vec<ComputeStream>>,
 }
 
 /// 计算流
@@ -419,7 +419,7 @@ impl InferenceEngine for OnnxEngine {
         &self,
         model: &ModelHandle,
         input: Tensor,
-    ) -> Result<tokio::sync::mpsc::Receiver<Result<Tensor>>> {
+    ) -> Result<tokio::sync::mpsc::Receiver<Result<Tensor>> {
         let (tx, rx) = tokio::sync::mpsc::channel(10);
         let session: _ = Arc::clone(&self.session);
         let gpu_accelerator: _ = self.gpu_accelerator.clone();

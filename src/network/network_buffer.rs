@@ -140,10 +140,10 @@ pub struct BufferStats {
 /// 缓冲区池
 pub struct BufferPool {
     config: BufferConfig,
-    small_pool: Arc<Mutex<VecDeque<NetworkBuffer>>>,
-    medium_pool: Arc<Mutex<VecDeque<NetworkBuffer>>>,
-    large_pool: Arc<Mutex<VecDeque<NetworkBuffer>>>,
-    huge_pool: Arc<Mutex<VecDeque<NetworkBuffer>>>,
+    small_pool: Arc<Mutex<VecDeque<NetworkBuffer>>,
+    medium_pool: Arc<Mutex<VecDeque<NetworkBuffer>>,
+    large_pool: Arc<Mutex<VecDeque<NetworkBuffer>>,
+    huge_pool: Arc<Mutex<VecDeque<NetworkBuffer>>,
     stats: Arc<Mutex<BufferStats>>,
 }
 

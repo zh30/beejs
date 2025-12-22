@@ -132,8 +132,8 @@ struct Node<T> {
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct LockFreeQueue<T> {
-    head: Arc<CachePadded<AtomicPtr<Node<T>>>>,
-    tail: Arc<CachePadded<AtomicPtr<Node<T>>>>,
+    head: Arc<CachePadded<AtomicPtr<Node<T>>,
+    tail: Arc<CachePadded<AtomicPtr<Node<T>>,
     _phantom: std::marker::PhantomData<T>,
 }
 
@@ -276,7 +276,7 @@ impl<T> Drop for LockFreeQueue<T> {
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct ShardedLock<T> {
-    shards: Vec<CachePadded<Mutex<T>>>,
+    shards: Vec<CachePadded<Mutex<T>>,
     shard_count: usize,
 }
 
@@ -599,7 +599,7 @@ pub struct WorkStealingTask {
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct WorkStealingScheduler {
-    queues: Vec<Arc<LockFreeQueue<WorkStealingTask>>>,
+    queues: Vec<Arc<LockFreeQueue<WorkStealingTask>>,
     stealers: Vec<Arc<AtomicUsize>>,
     active_workers: CachePadded<AtomicUsize>,
     cpu_affinity: Vec<Option<CpuAffinity>>,

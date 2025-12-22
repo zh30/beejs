@@ -21,7 +21,7 @@ pub struct EdgeCache {
 #[derive(Debug)]
 struct L1Cache {
     capacity: usize,
-    data: HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>,
+    data: HashMap<String, CacheEntry>>,
     access_order: Vec<String>, // LRU tracking
 }
 
@@ -38,20 +38,20 @@ struct CacheEntry {
 struct L2Cache {
     region: String,
     capacity: usize,
-    data: HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>,
+    data: HashMap<String, CacheEntry>>,
 }
 
 #[derive(Debug)]
 struct L3Cache {
     endpoint: String,
     capacity: usize,
-    data: HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>,
+    data: HashMap<String, CacheEntry>>,
 }
 
 #[derive(Debug)]
 struct CachePredictor {
-    access_patterns: HashMap<String, Vec<String, std::collections::HashMap<String, Vec<String, String, Vec<String>>>,
-    predictions: HashMap<String, Vec<String, std::collections::HashMap<String, Vec<String, String, Vec<String>>>,
+    access_patterns: HashMap<String, Vec<String>>,
+    predictions: HashMap<String, Vec<String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -124,7 +124,7 @@ impl EdgeCache {
     }
 
     /// Get a value from the cache (multi-layer)
-    pub async fn get(&self, key: &str) -> Result<Option<Vec<u8>>> {
+    pub async fn get(&self, key: &str) -> Result<Option<Vec<u8>> {
         let _start: _ = Instant::now();
 
         // Try L1 cache first

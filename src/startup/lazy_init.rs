@@ -12,9 +12,9 @@ use std::collections::{HashMap, BTreeMap};
 /// Web API 延迟加载器
 pub struct LazyWebAPI {
     /// 已初始化的 API 集合
-    initialized_apis: Arc<RwLock<HashSet<String>>>,
+    initialized_apis: Arc<RwLock<HashSet<String>>,
     /// 初始化队列
-    initialization_queue: Arc<Mutex<Vec<ApiInitTask>>>,
+    initialization_queue: Arc<Mutex<Vec<ApiInitTask>>,
     /// 初始化信号量（限制并发数）
     init_semaphore: Arc<Semaphore>,
     /// Web API 注册表
@@ -170,7 +170,7 @@ pub struct LazyInitializer<T> {
     /// 初始化函数
     init_fn: Arc<dyn Fn() -> Result<T, Box<dyn std::error::Error + Send + Sync>> + Send + Sync>,
     /// 缓存的值
-    value: Arc<Mutex<Option<T>>>,
+    value: Arc<Mutex<Option<T>>,
     /// 是否已初始化
     initialized: Arc<Mutex<bool>>,
     /// 统计信息
@@ -287,7 +287,7 @@ impl<T> LazyInitializer<T> {
 /// 按需模块加载器
 pub struct OnDemandLoader {
     /// 已加载的模块
-    loaded_modules: Arc<RwLock<HashMap<String, LoadedModule, std::collections::HashMap<String, LoadedModule, String, LoadedModule>>>>,
+    loaded_modules: Arc<RwLock<HashMap<String, LoadedModule>>,
     /// 模块工厂
     module_factory: Arc<dyn ModuleFactory + Send + Sync>,
     /// 统计信息
@@ -433,7 +433,7 @@ pub struct StartupOptimizer {
     /// 按需加载器
     on_demand_loader: Arc<OnDemandLoader>,
     /// 启动时间记录
-    startup_time: Arc<Mutex<Option<Instant>>>,
+    startup_time: Arc<Mutex<Option<Instant>>,
     /// 优化策略
     optimization_level: OptimizationLevel,
 }

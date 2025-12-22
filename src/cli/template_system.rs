@@ -149,7 +149,7 @@ pub struct ProjectTemplate {
     /// 开发依赖列表
     pub dev_dependencies: Vec<String>,
     /// npm scripts
-    pub scripts: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub scripts: HashMap<String, String>>,
     /// 模板标签
     #[serde(default)]
     pub tags: Vec<String>,
@@ -177,7 +177,7 @@ impl Default for ProjectTemplate {
 /// 模板引擎
 pub struct TemplateEngine {
     /// 变量映射
-    variables: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    variables: HashMap<String, String>>,
 }
 
 impl TemplateEngine {
@@ -195,7 +195,7 @@ impl TemplateEngine {
     }
 
     /// 批量设置变量
-    pub fn set_all(&mut self, vars: HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> &mut Self {
+    pub fn set_all(&mut self, vars: HashMap<String, String>>) -> &mut Self {
         self.variables.extend(vars);
         self
     }
@@ -276,7 +276,7 @@ impl Default for TemplateEngine {
 
 /// 模板注册表
 pub struct TemplateRegistry {
-    templates: HashMap<String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, String, ProjectTemplate>>,
+    templates: HashMap<String, ProjectTemplate>>,
 }
 
 impl TemplateRegistry {
@@ -927,7 +927,7 @@ pub struct TemplateInstantiationConfig {
     /// 项目路径
     pub project_path: PathBuf,
     /// 模板变量
-    pub variables: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub variables: HashMap<String, String>>,
     /// 是否安装依赖
     pub install_deps: bool,
     /// 包管理器
@@ -1033,7 +1033,7 @@ impl TemplateInstantiator {
         });
 
         if !template.dependencies.is_empty() {
-            let deps: HashMap<String, String, std::collections::HashMap<String, String, String, String>> = template
+            let deps: HashMap<String, String>> = template
                 .dependencies
                 .iter()
                 .map(|d| (d.clone(), "*".to_string()))
@@ -1042,7 +1042,7 @@ impl TemplateInstantiator {
         }
 
         if !template.dev_dependencies.is_empty() {
-            let deps: HashMap<String, String, std::collections::HashMap<String, String, String, String>> = template
+            let deps: HashMap<String, String>> = template
                 .dev_dependencies
                 .iter()
                 .map(|d| (d.clone(), "*".to_string()))

@@ -53,7 +53,7 @@ pub struct InferenceOptions {
     /// 内存优化级别
     pub memory_optimization: Option<MemoryOptimization>,
     /// 自定义配置参数
-    pub custom_options: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub custom_options: std::collections::HashMap<String, String>>,
 }
 
 /// 内存优化级别
@@ -105,7 +105,7 @@ pub trait InferenceEngine: Send + Sync {
         &self,
         model: &ModelHandle,
         input: Tensor,
-    ) -> Result<tokio::sync::mpsc::Receiver<Result<Tensor>>>;
+    ) -> Result<tokio::sync::mpsc::Receiver<Result<Tensor>>;
 
     /// 获取模型信息
     async fn get_model_info(&self, model: &ModelHandle) -> Result<ModelInfo>;
@@ -146,7 +146,7 @@ pub struct ModelHandle {
     /// 输出形状
     pub output_shape: Vec<usize>,
     /// 模型元数据
-    pub metadata: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub metadata: std::collections::HashMap<String, String>>,
 }
 
 /// 模型信息
@@ -222,9 +222,9 @@ pub trait EngineFactory: Send + Sync {
 /// 引擎管理器 - 管理多个推理引擎实例
 pub struct EngineManager {
     /// 引擎工厂注册表
-    factories: std::collections::HashMap<String, Box<dyn EngineFactory, std::collections::HashMap<String, Box<dyn EngineFactory, String, Box<dyn EngineFactory>>>,
+    factories: std::collections::HashMap<String, Box<dyn EngineFactory>>,
     /// 活跃的引擎实例
-    active_engines: Arc<RwLock<std::collections::HashMap<String, Box<dyn InferenceEngine, std::collections::HashMap<String, Box<dyn InferenceEngine, String, Box<dyn InferenceEngine>>>>>,
+    active_engines: Arc<RwLock<std::collections::HashMap<String, Box<dyn InferenceEngine>>>,
     /// 默认引擎类型
     default_engine_type: EngineType,
 }
@@ -397,7 +397,7 @@ use std::collections::{HashMap, BTreeMap};
                 &self,
                 _model: &ModelHandle,
                 _input: Tensor,
-            ) -> Result<tokio::sync::mpsc::Receiver<Result<Tensor>>> {
+            ) -> Result<tokio::sync::mpsc::Receiver<Result<Tensor>> {
                 todo!()
             }
 

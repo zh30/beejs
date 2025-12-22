@@ -61,7 +61,7 @@ pub struct EscapePath {
 /// 逃逸分析优化器
 pub struct EscapeAnalysisOptimizer {
     /// 分析历史统计
-    analysis_history: HashMap<String, EscapeStats, std::collections::HashMap<String, EscapeStats, String, EscapeStats>>,
+    analysis_history: HashMap<String, EscapeStats>>,
 }
 
 /// 逃逸分析统计信息

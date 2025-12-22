@@ -162,8 +162,8 @@ pub struct Impact {
 /// 事件收集器
 #[derive(Debug)]
 pub struct EventCollector {
-    incidents: Arc<RwLock<Vec<Incident>>>,
-    changes: Arc<RwLock<Vec<Change>>>,
+    incidents: Arc<RwLock<Vec<Incident>>,
+    changes: Arc<RwLock<Vec<Change>>,
 }
 
 impl EventCollector {
@@ -332,7 +332,7 @@ impl ChangeCorrelator {
 /// 因果推断引擎
 #[derive(Debug)]
 pub struct CausalInferenceEngine {
-    causal_graph: Arc<RwLock<HashMap<String, Vec<Causality, std::collections::HashMap<String, Vec<Causality, String, Vec<Causality>>>>>,
+    causal_graph: Arc<RwLock<HashMap<String, Vec<Causality>>>,
 }
 
 impl CausalInferenceEngine {

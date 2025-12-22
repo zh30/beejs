@@ -21,7 +21,7 @@ pub struct ZeroCopyUdpSocket {
     socket: Arc<UdpSocket>,
 
     /// 预分配数据包缓冲区池
-    packet_buffers: Arc<Mutex<Vec<Vec<u8>>>>,
+    packet_buffers: Arc<Mutex<Vec<Vec<u8>>,
 
     /// 数据包缓冲区大小
     buffer_size: usize,

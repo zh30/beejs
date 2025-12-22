@@ -142,7 +142,7 @@ pub struct RuntimeMetrics {
     /// CPU usage gauge
     cpu_usage_percent: Gauge,
     /// Recent execution durations for P95 calculation
-    recent_executions: Arc<RwLock<VecDeque<Duration>>>,
+    recent_executions: Arc<RwLock<VecDeque<Duration>>,
 }
 
 impl RuntimeMetrics {

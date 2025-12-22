@@ -149,14 +149,14 @@ pub struct CodeOptimizer {
 pub struct CodeAnalyzer {
     performance_engine: Arc<AiPerformanceEngine>,
     auto_optimizer: Arc<AutoOptimizer>,
-    pattern_cache: Arc<RwLock<HashMap<String, Vec<CodePattern, std::collections::HashMap<String, Vec<CodePattern, String, Vec<CodePattern>>>>>,
+    pattern_cache: Arc<RwLock<HashMap<String, Vec<CodePattern>>>,
 }
 
 /// 重构引擎
 #[derive(Debug, Clone)]
 pub struct RefactorEngine {
     llm_engine: Arc<MockLlmEngine>,
-    refactor_templates: HashMap<String, RefactorTemplate, std::collections::HashMap<String, RefactorTemplate, String, RefactorTemplate>>,
+    refactor_templates: HashMap<String, RefactorTemplate>>,
 }
 
 /// 瓶颈检测器

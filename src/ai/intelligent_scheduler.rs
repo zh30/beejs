@@ -143,15 +143,15 @@ pub struct IntelligentScheduler {
     /// AI 性能引擎
     ai_engine: Arc<AiPerformanceEngine>,
     /// 任务队列
-    task_queue: Arc<RwLock<VecDeque<Task>>>,
+    task_queue: Arc<RwLock<VecDeque<Task>>,
     /// 工作线程状态
-    workers: Arc<RwLock<Vec<WorkerState>>>,
+    workers: Arc<RwLock<Vec<WorkerState>>,
     /// 调度决策历史
-    decision_history: Arc<RwLock<VecDeque<SchedulingDecision>>>,
+    decision_history: Arc<RwLock<VecDeque<SchedulingDecision>>,
     /// 任务完成回调
     task_completion_tx: mpsc::UnboundedSender<(String, Result<(), String>)>,
     /// 任务完成接收端
-    task_completion_rx: Arc<Mutex<mpsc::UnboundedReceiver<(String, Result<(), String>)>>>,
+    task_completion_rx: Arc<Mutex<mpsc::UnboundedReceiver<(String, Result<(), String>)>>,
     /// 调度统计
     stats: Arc<Mutex<SchedulerStats>>,
 }

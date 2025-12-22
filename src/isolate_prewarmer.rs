@@ -20,13 +20,13 @@ pub struct IsolatePrewarmer {
     snapshot_manager: Arc<SnapshotManager>,
 
     /// Pre-warmed isolates with prepared contexts
-    prewarmed_isolates: Arc<Mutex<Vec<v8::OwnedIsolate>>>,
+    prewarmed_isolates: Arc<Mutex<Vec<v8::OwnedIsolate>>,
 
     /// Statistics tracking
     stats: Arc<PrewarmStats>,
 
     /// Common JavaScript snippets to pre-compile
-    common_snippets: Arc<Mutex<Vec<CompiledSnippet>>>,
+    common_snippets: Arc<Mutex<Vec<CompiledSnippet>>,
 
     /// Maximum number of isolates to pre-warm
     max_prewarm: usize,

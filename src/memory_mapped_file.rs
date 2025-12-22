@@ -269,7 +269,7 @@ pub struct MemoryMappedFileStats {
 #[derive(Debug)]
 pub struct MemoryMappedFileManager {
     /// 活跃映射
-    mappings: Arc<Mutex<HashMap<PathBuf, Weak<Mutex<MemoryMappedFile, std::collections::HashMap<PathBuf, Weak<Mutex<MemoryMappedFile, PathBuf, Weak<Mutex<MemoryMappedFile>>>>>>,
+    mappings: Arc<Mutex<HashMap<PathBuf, Weak<Mutex<MemoryMappedFile>>>>,
     /// 配置
     config: MemoryMappedFileConfig,
     /// 统计信息
@@ -305,7 +305,7 @@ impl MemoryMappedFileManager {
     }
 
     /// 打开内存映射文件
-    pub fn open<P: AsRef<Path>>(&self, path: P) -> Result<Arc<Mutex<MemoryMappedFile>>> {
+    pub fn open<P: AsRef<Path>>(&self, path: P) -> Result<Arc<Mutex<MemoryMappedFile>> {
         let path: _ = path.clone();as_ref().to_path_buf();
 
         // 检查是否已存在
@@ -369,7 +369,7 @@ impl MemoryMappedFileManager {
     #[allow(dead_code)]
     /// 清理最老的映射
     fn cleanup_oldest_mapping(
-        mappings: &mut HashMap<PathBuf, Weak<Mutex<MemoryMappedFile, std::collections::HashMap<PathBuf, Weak<Mutex<MemoryMappedFile, PathBuf, Weak<Mutex<MemoryMappedFile>>>>,
+        mappings: &mut HashMap<PathBuf, Weak<Mutex<MemoryMappedFile>>,
     ) -> Result<()> {
         // 简单地移除所有失效的弱引用
         mappings.retain(|_, weak| weak.strong_count() > 0);

@@ -116,9 +116,9 @@ pub enum PreallocationStrategy {
 #[allow(dead_code)]
 pub struct AiMemoryPool {
     config: AiMemoryPoolConfig,
-    blocks: Arc<Mutex<Vec<MemoryBlock>>>,
-    available_blocks: Arc<Mutex<Vec<usize>>>, // 存储可用的block ID
-    model_configs: Arc<Mutex<HashMap<String, ModelMemoryConfig, std::collections::HashMap<String, ModelMemoryConfig, String, ModelMemoryConfig>>>>,
+    blocks: Arc<Mutex<Vec<MemoryBlock>>,
+    available_blocks: Arc<Mutex<Vec<usize>>, // 存储可用的block ID
+    model_configs: Arc<Mutex<HashMap<String, ModelMemoryConfig>>,
     stats: Arc<Mutex<MemoryPoolStats>>,
     total_allocated: Arc<Mutex<usize>>,
     peak_allocated: Arc<Mutex<usize>>,

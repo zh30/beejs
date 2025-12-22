@@ -62,11 +62,11 @@ pub struct BatchProcessor {
     /// 优化策略
     strategy: BatchStrategy,
     /// 当前批处理
-    current_batch: Arc<RwLock<Vec<BatchItem>>>,
+    current_batch: Arc<RwLock<Vec<BatchItem>>,
     /// 批处理统计
     stats: Arc<Mutex<BatchStats>>,
     /// 处理任务
-    processing_task: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
+    processing_task: Arc<Mutex<Option<tokio::task::JoinHandle<()>>,
 }
 
 /// 批处理统计信息
@@ -282,9 +282,9 @@ pub struct SmartBatchProcessor {
 #[derive(Debug)]
 struct PerformanceMonitor {
     /// 延迟历史
-    latency_history: Arc<Mutex<Vec<f64>>>,
+    latency_history: Arc<Mutex<Vec<f64>>,
     /// 吞吐量历史
-    throughput_history: Arc<Mutex<Vec<f64>>>,
+    throughput_history: Arc<Mutex<Vec<f64>>,
     /// 窗口大小
     window_size: usize,
 }

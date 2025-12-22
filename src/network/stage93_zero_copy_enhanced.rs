@@ -51,9 +51,9 @@ pub struct Stage93ZeroCopyStats {
 
 /// AI 驱动的访问预测器
 pub struct ZeroCopyAccessPredictor {
-    access_history: Arc<RwLock<VecDeque<(Instant, usize, usize)>>>,
-    size_patterns: Arc<RwLock<HashMap<usize, u32, std::collections::HashMap<usize, u32, usize, u32>>>>,
-    accuracy_tracker: Arc<RwLock<VecDeque<bool>>>,
+    access_history: Arc<RwLock<VecDeque<(Instant, usize, usize)>>,
+    size_patterns: Arc<RwLock<HashMap<usize, u32>>,
+    accuracy_tracker: Arc<RwLock<VecDeque<bool>>,
 }
 
 impl ZeroCopyAccessPredictor {
@@ -142,7 +142,7 @@ pub struct Stage93ZeroCopySocket {
     config: NetworkConfig,
     zero_copy_config: Stage93ZeroCopyConfig,
     stats: Arc<Stage93ZeroCopyStats>,
-    mmap_pool: Arc<RwLock<Vec<Mmap>>>,
+    mmap_pool: Arc<RwLock<Vec<Mmap>>,
     predictor: Arc<ZeroCopyAccessPredictor>,
     adaptive_threshold: Arc<RwLock<usize>>,
 }

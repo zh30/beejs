@@ -35,7 +35,7 @@ pub struct SystemMetric {
     pub metric_type: MetricType,
     pub value: f64,
     pub timestamp: SystemTime,
-    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub labels: HashMap<String, String>>,
 }
 
 /// 时间序列数据点
@@ -197,7 +197,7 @@ impl Default for TrendAnalyzer {
 /// 模型训练器
 #[derive(Debug)]
 pub struct ModelTrainer {
-    historical_data: Arc<RwLock<Vec<SystemMetric>>>,
+    historical_data: Arc<RwLock<Vec<SystemMetric>>,
 }
 
 impl ModelTrainer {
@@ -219,7 +219,7 @@ impl ModelTrainer {
     }
 
     /// 计算故障概率
-    pub async fn calculate_failure_probability(&self, metrics: &[SystemMetric]) -> Result<HashMap<MetricType, f64, std::collections::HashMap<MetricType, f64, MetricType, f64>>, Box<dyn std::error::Error>> {
+    pub async fn calculate_failure_probability(&self, metrics: &[SystemMetric]) -> Result<HashMap<MetricType, f64>>, Box<dyn std::error::Error>> {
         let mut probabilities = HashMap::new();
 
         for metric in metrics {
@@ -404,7 +404,7 @@ impl PredictionEngine {
         Ok(max_probability)
     }
 
-    fn group_metrics_by_type(&self, metrics: &[SystemMetric]) -> HashMap<MetricType, Vec<SystemMetric, std::collections::HashMap<MetricType, Vec<SystemMetric, MetricType, Vec<SystemMetric>>> {
+    fn group_metrics_by_type(&self, metrics: &[SystemMetric]) -> HashMap<MetricType, Vec<SystemMetric>> {
         let mut grouped = HashMap::new();
 
         for metric in metrics {

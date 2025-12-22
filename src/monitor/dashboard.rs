@@ -75,7 +75,7 @@ pub struct LayoutConfig {
     /// 行高
     pub row_height: u32,
     /// 响应式断点
-    pub breakpoints: HashMap<String, BreakpointConfig, std::collections::HashMap<String, BreakpointConfig, String, BreakpointConfig>>,
+    pub breakpoints: HashMap<String, BreakpointConfig>>,
 }
 
 /// 断点配置
@@ -127,7 +127,7 @@ pub struct DashboardData {
     /// 实时指标
     pub real_time_metrics: Vec<MetricValue>,
     /// 聚合指标
-    pub aggregated_metrics: HashMap<MetricType, f64, std::collections::HashMap<MetricType, f64, MetricType, f64>>,
+    pub aggregated_metrics: HashMap<MetricType, f64>>,
     /// 活跃告警
     pub active_alerts: Vec<AlertInstance>,
     /// 连接统计
