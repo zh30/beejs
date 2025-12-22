@@ -137,6 +137,7 @@ pub struct ExecutionConfig {
 #[cfg_attr(test, derive(Default))]
 pub enum ExecutionMode {
     /// Standalone execution (single run)
+    #[default]
     Standalone,
 
     /// Distributed execution (across cluster)

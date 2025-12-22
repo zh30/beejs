@@ -246,20 +246,7 @@ impl TopologyGraph {
 
         let mut svg = String::new();
         svg.push_str(&format!(
-            r#"<svg width="{}" height="{}" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
-    </marker>
-  </defs>
-  <style>
-    .node {{ cursor: pointer; }}
-    .node-label {{ font-family: {}; font-size: {}px; fill: {}; text-anchor: middle; }}
-    .edge {{ stroke: #999; stroke-width: 2; fill: none; }}
-    .edge-label {{ font-family: {}; font-size: {}px; fill: {}; }}
-  </style>
-  <rect width="100%" height="100%" fill="{}"/>
-"#,
+            "<svg width=\"{}\" height=\"{}\" xmlns=\"http://www.w3.org/2000/svg\">\n  <defs>\n    <marker id=\"arrowhead\" markerWidth=\"10\" markerHeight=\"7\" refX=\"9\" refY=\"3.5\" orient=\"auto\">\n      <polygon points=\"0 0, 10 3.5, 0 7\" fill=\"#666\" />\n    </marker>\n  </defs>\n  <style>\n    .node {{ cursor: pointer; }}\n    .node-label {{ font-family: {}; font-size: {}px; fill: {}; text-anchor: middle; }}\n    .edge {{ stroke: #999; stroke-width: 2; fill: none; }}\n    .edge-label {{ font-family: {}; font-size: {}px; fill: {}; }}\n  </style>\n  <rect width=\"100%\" height=\"100%\" fill=\"{}\"/>\n",
             width, height,
             self.config.font_family,
             self.config.font_size,
@@ -336,8 +323,7 @@ impl TopologyGraph {
             let y = node.position.y - node.size.height / 2.0;
 
             svg.push_str(&format!(
-                r#"  <rect x="{}" y="{}" width="{}" height="{}" rx="8" ry="8" fill="{}" stroke="#333" stroke-width="2" class="node"/>
-"#,
+                "  <rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" rx=\"8\" ry=\"8\" fill=\"{}\" stroke=\"#333\" stroke-width=\"2\" class=\"node\"/>\n",
                 x, y, node.size.width, node.size.height, node_color
             ));
 

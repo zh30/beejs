@@ -46,7 +46,7 @@ pub use visualization::{
     LineChart, BarChart, PieChart, TopologyGraph,
     LineChartBuilder, BarChartBuilder, PieChartBuilder, TopologyGraphBuilder,
     VisualizationConfig, DataPoint, DataSeries, ColorPalette, AxisConfig,
-    LegendConfig, TooltipConfig, GridConfig, MarkerConfig, LineStyle,
+    LegendConfig as VizLegendConfig, TooltipConfig as VizTooltipConfig, GridConfig, MarkerConfig, LineStyle,
     Position, Size, GraphNode, GraphEdge, EdgeStyle, LayoutConfig,
     LayoutAlgorithm, ForceLayoutParams, InteractionConfig, FilterConfig
 };

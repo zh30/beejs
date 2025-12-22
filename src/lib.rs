@@ -110,6 +110,7 @@ pub mod holographic;  // Stage 42.0: 全息计算模块
 pub mod immersive_interaction;  // Stage 42.0: 沉浸式交互模块
 pub mod distributed_metaverse;  // Stage 42.0: 分布式元宇宙网络
 pub mod startup;  // Stage 90 Phase 4: 启动时间优化
+pub mod tools;  // Stage 96 Phase 3: Developer tools and integrations
 
 // Stage 43.0: 完整生态系统与极致性能优化
 // pub mod nodejs_core;  // Temporarily disabled for Stage 60

@@ -1,0 +1,63 @@
+{
+  "name": "beejs-debugger",
+  "displayName": "Beejs Debugger",
+  "description": "Debug Beejs JavaScript/TypeScript runtime",
+  "version": "0.1.0",
+  "publisher": "beejs-team",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Debuggers"
+  ],
+  "activationEvents": [
+    "onCommand:beejs.startDebugging",
+    "onCommand:beejs.stopDebugging"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "beejs.startDebugging",
+        "title": "Start Beejs Debugging"
+      },
+      {
+        "command": "beejs.stopDebugging",
+        "title": "Stop Beejs Debugging"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "beejs",
+        "label": "Beejs",
+        "program": "./dist/debugAdapter.js",
+        "args": [],
+        "configurationAttributes": {
+          "launch": {
+            "required": ["program"],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Path to JavaScript/TypeScript file"
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "default": false,
+                "description": "Automatically stop after launch"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.0.0"
+  }
+}
