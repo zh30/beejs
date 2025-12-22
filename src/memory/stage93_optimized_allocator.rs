@@ -6,7 +6,8 @@ use crate::memory_optimizer::smart_allocator::::{PoolConfig, SmartMemoryAllocato
 use serde::{Deserialize, Serialize};
 use std::alloc::{GlobalAlloc, Layout};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, AtomicUsize, Mutex, Ordering, RwLock};
+use std::sync::atomic::Arc, , Mutex, , RwLock;
+use std::sync::Ordering;
 
 /// Stage 93 分配器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]

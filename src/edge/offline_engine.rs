@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant, SystemTime};
 use super::local_cache::::{LocalCodeCache, OfflineDataStore};
-use tokio::time::{Duration, Instant};
+use tokio::time::{TokioDuration, TokioInstant};
 
 /// Offline execution engine
 #[derive(Debug)]

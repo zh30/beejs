@@ -8,7 +8,8 @@
 
 use anyhow::{Result, anyhow};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock};
+use std::sync::atomic::Arc, AtomicBool, , Mutex, , RwLock;
+use std::sync::Ordering;
 use tokio::sync::{Mutex, RwLock};
 
 /// GC 配置

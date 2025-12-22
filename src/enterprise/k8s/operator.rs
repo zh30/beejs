@@ -2,10 +2,10 @@
 //! Implements a production-ready Kubernetes operator for Beejs
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use tokio::sync::RwLock;
+use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{info, warn, error, debug};
 /// BeejsCluster custom resource definition
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

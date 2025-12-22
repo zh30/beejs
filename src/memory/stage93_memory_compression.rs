@@ -6,7 +6,8 @@ use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::hash::{Hash, Hasher};
-use std::sync::{Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock};
+use std::sync::atomic::Arc, AtomicBool, , Mutex, , RwLock;
+use std::sync::Ordering;
 use tokio::sync::{Mutex, RwLock};
 
 /// Stage 93 内存压缩配置

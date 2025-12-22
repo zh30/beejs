@@ -3,7 +3,8 @@
 //! for simple scripts, dramatically reducing startup time.
 
 use std::collections::HashSet;
-use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
+use std::sync::atomic::Arc, , Mutex, ;
+use std::sync::Ordering;
 
 use crate::memory_pool::{PoolConfig, SmartMemoryPool};
 use crate::jit::optimization::{JITOptimizer, HotPathOptimizer, OptimizationPipeline};

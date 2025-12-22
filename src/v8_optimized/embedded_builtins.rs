@@ -3,7 +3,8 @@
 //! Stage 27.1: V8 引擎深度优化
 
 use std::collections::BTreeSet;
-use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
+use std::sync::atomic::Arc, , Mutex, ;
+use std::sync::Ordering;
 
 use crate::string_interner::StringInterner;
 use anyhow::{anyhow, Result};

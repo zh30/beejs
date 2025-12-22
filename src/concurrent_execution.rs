@@ -7,7 +7,8 @@
 //! - BatchExecutor: 批量执行处理器（高层API）
 
 use std::collections::HashMap;
-use std::sync::{Arc, AtomicBool, AtomicUsize, Mutex, Ordering};
+use std::sync::atomic::Arc, AtomicBool, , Mutex, ;
+use std::sync::Ordering;
 use std::time::{Duration, Instant, SystemTime};
 
 use std::cell::RefCell;

@@ -13,7 +13,8 @@ use memmap2::{Mmap, MmapOptions};
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Read, Write, self};
 use std::os::unix::io::{AsRawFd, RawFd};
-use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
+use std::sync::atomic::Arc, , Mutex, ;
+use std::sync::Ordering;
 
 /// Zero-copy file reader using memory mapping
 pub struct ZeroCopyFileReader {

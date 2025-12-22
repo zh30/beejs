@@ -2,11 +2,11 @@
 //! 支持多种 AI 框架和模型格式的通用接口
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 
 use crate::ai_inference::Tensor;
 use anyhow::Result;
-use tokio::sync::RwLock;
+use tokio::sync::RwLock as AsyncRwLock;
 use async_trait::async_trait;
 /// AI 模型格式枚举
 #[derive(Debug, Clone, PartialEq)]

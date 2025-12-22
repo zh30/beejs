@@ -4,7 +4,8 @@
 //! 目标：80% 内存使用减少，支持 1000-5000x 性能提升
 
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{AtomicUsize, Ordering};
+use std::sync::atomic:: ;
+use std::sync::Ordering;
 use std::time::{Duration, Instant};
 
 pub mod zero_copy;

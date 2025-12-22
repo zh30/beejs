@@ -3,8 +3,8 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
-use tokio::time::{Duration, Instant};
+use std::time::{Duration, TokioInstant};
+use tokio::time::{TokioDuration, TokioInstant};
 use tracing::{debug, error, info, warn};
 
 /// HPA Controller for managing automatic scaling

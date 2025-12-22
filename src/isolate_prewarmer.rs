@@ -4,7 +4,8 @@
 
 use anyhow::{Result, anyhow};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
+use std::sync::atomic::Arc, , Mutex, ;
+use std::sync::Ordering;
 use std::time::{Duration, Instant, SystemTime};
 
 /// Enhanced Isolate Pre-warming System

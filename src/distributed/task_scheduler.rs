@@ -1,10 +1,8 @@
 //! 分布式任务调度模块
 //! 提供任务分发、优先级队列、结果聚合等功能
 
-use std::collections::HashMap;
+use std::collections::{HashMap, BinaryHeap};
 use std::sync::Ordering;
-
-use std::collections::{BinaryHeap, HashMap};
 use std::cmp::Reverse;
 /// 任务类型枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

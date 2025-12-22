@@ -2,7 +2,8 @@
 //! 提供高性能的跨V8 Isolate和进程的内存共享机制
 
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock, Weak};
+use std::sync::atomic::Arc, AtomicBool, , Mutex, , RwLock, Weak;
+use std::sync::Ordering;
 use std::time::{Duration, Instant, SystemTime};
 
 /// 共享内存区域

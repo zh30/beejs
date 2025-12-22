@@ -2,11 +2,11 @@
 //! Handles the actual reconciliation logic for cluster and workload resources
 
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::{Duration, TokioInstant};
 
 use kube::{Client, Api, ResourceExt};
 use k8s_openapi::api::apps::v1::{StatefulSet, Deployment};
-use tokio::time::{Duration, Instant};
+use tokio::time::{TokioDuration, TokioInstant};
 use tracing::{info, warn, debug, error};
 use super::super::crd::{
     BeejsCluster, BeejsWorkload, ClusterPhase, Condition, ConditionStatus, ConditionType,

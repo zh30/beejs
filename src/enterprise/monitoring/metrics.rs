@@ -2,10 +2,10 @@
 //! Provides comprehensive monitoring for Beejs enterprise features
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use tokio::sync::RwLock;
+use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{info, warn, error, debug, instrument};
 use chrono::{DateTime, Utc};
 /// Metric types for enterprise monitoring

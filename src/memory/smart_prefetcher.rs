@@ -6,7 +6,8 @@
 use anyhow::{Result, anyhow};
 use crate::memory::zero_copy_enhanced::{AccessPattern, EnhancedZeroCopy};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock};
+use std::sync::atomic::Arc, AtomicBool, , Mutex, , RwLock;
+use std::sync::Ordering;
 use tokio::sync::{Mutex, RwLock};
 
 /// 访问历史条目

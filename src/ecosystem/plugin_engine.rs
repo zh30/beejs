@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, AtomicBool, Mutex, Ordering, RwLock};
+use std::sync::atomic::Arc, AtomicBool, Mutex, Ordering, RwLock;
 use std::time::{Duration, Instant};
 
 // ============================================================================

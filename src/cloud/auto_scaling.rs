@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, SystemTime};
 use tokio::sync::{RwLock, mpsc};
-use tokio::time::{Duration, interval};
+use tokio::time::{TokioDuration, interval};
 
 /// 扩缩容策略
 #[derive(Debug, Clone)]

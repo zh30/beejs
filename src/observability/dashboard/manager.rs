@@ -7,11 +7,11 @@
 //! - Template variable support
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
 use anyhow::{Result, Context, anyhow};
-use tokio::sync::RwLock;
+use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{info, warn, error, debug};
 use reqwest::Client as HttpClient;
 use serde_json::{json, Value};

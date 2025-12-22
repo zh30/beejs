@@ -2,7 +2,8 @@
 
 use std::alloc::{GlobalAlloc, Layout};
 use std::collections::BTreeMap;
-use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
+use std::sync::atomic::Arc, , Mutex, ;
+use std::sync::Ordering;
 use std::time::{Duration, Instant, SystemTime};
 
 /// 零拷贝内存分配器 - 最小化内存复制开销

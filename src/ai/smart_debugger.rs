@@ -2,11 +2,11 @@
 //! 提供 AI 驱动的错误诊断、根因分析和修复建议功能
 
 use std::collections::HashSet;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use std::collections::HashMap;
-use tokio::sync::RwLock;
+use tokio::sync::RwLock as AsyncRwLock;
 use serde::{Serialize, Deserialize};
 /// 错误信息
 #[derive(Debug, Clone, Serialize, Deserialize)]

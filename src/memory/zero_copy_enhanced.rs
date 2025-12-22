@@ -7,7 +7,8 @@ use anyhow::{Result, anyhow};
 use libc::{MADV_DONTNEED, MADV_SEQUENTIAL, MADV_WILLNEED, c_void, madvise, mmap, munmap, posix_memalign};
 use memmap2::{Mmap, MmapOptions};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, AtomicUsize, Mutex, Ordering, RwLock};
+use std::sync::atomic::Arc, , Mutex, , RwLock;
+use std::sync::Ordering;
 
 /// DMA 直接内存访问配置
 #[derive(Debug, Clone)]

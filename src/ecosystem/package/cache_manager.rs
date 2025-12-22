@@ -2,11 +2,11 @@
 //! 实现多级缓存系统
 
 use std::collections::HashSet;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 
 use std::collections::HashMap;
 
-use tokio::sync::RwLock;
+use tokio::sync::RwLock as AsyncRwLock;
 use crate::ecosystem::types::*;
 /// 多级缓存管理器
 #[derive(Debug, Clone)]

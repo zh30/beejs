@@ -3,7 +3,8 @@
 
 use crate::lock_free_temp::{AtomicStats, LockFreeBufferPool, LockFreeCounter};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
+use std::sync::atomic::Arc, , Mutex, ;
+use std::sync::Ordering;
 use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 
 /// 零拷贝缓冲区

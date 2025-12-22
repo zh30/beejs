@@ -6,7 +6,7 @@
 use notify_debouncer_mini::{DebouncedEventKind, new_debouncer};
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, AtomicBool, Mutex, Ordering};
+use std::sync::atomic::Arc, AtomicBool, Mutex, Ordering;
 
 /// File change event types
 #[derive(Debug, Clone, PartialEq, Eq)]

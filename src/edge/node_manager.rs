@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, Ordering, RwLock};
 use std::time::{Duration, Instant, SystemTime};
-use tokio::time::{Duration, Instant};
+use tokio::time::{TokioDuration, TokioInstant};
 
 /// Unique identifier for an edge node
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

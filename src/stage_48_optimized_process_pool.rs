@@ -8,7 +8,8 @@
 //! 5. JIT 缓存 - 复用编译后的代码
 
 use std::collections::HashSet;
-use std::sync::{Arc, AtomicUsize, Mutex, Ordering, RwLock};
+use std::sync::atomic::Arc, , Mutex, , RwLock;
+use std::sync::Ordering;
 
 use anyhow::{Context, Result};
 use std::collections::HashMap;

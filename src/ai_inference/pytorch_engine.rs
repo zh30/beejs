@@ -2,7 +2,7 @@
 //! 为 Beejs 提供原生 PyTorch 支持，支持 TorchScript 模型推理
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 
 use crate::ai_inference::engine_interface::{
     InferenceEngine, EngineFactory, ModelFormat, EngineType, InferenceOptions,
@@ -11,7 +11,7 @@ use crate::ai_inference::engine_interface::{
 use crate::ai_inference::tensor_ops::Tensor;
 use anyhow::{Result};
 
-use tokio::sync::RwLock;
+use tokio::sync::RwLock as AsyncRwLock;
 use async_trait::async_trait;
 /// PyTorch TorchScript 推理引擎
 #[derive(Debug)]

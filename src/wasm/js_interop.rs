@@ -5,7 +5,8 @@
 
 use anyhow::{Context, Result, anyhow};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
+use std::sync::atomic::Arc, , Mutex, ;
+use std::sync::Ordering;
 use std::time::{Duration, Instant};
 use wasmtime::{Func, Instance, Store, Val};
 

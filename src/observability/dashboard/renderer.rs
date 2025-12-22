@@ -7,11 +7,11 @@
 //! - WebSocket-based live updates
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime};
 
 use anyhow::{Result, Context, anyhow};
-use tokio::sync::RwLock;
+use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{info, debug, warn, error};
 use serde_json::{json, Value};
 /// Chart Renderer - Handles real-time chart rendering

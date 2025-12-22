@@ -7,7 +7,8 @@ use anyhow::{Result, anyhow};
 use memmap2::{Mmap, MmapOptions};
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, AtomicUsize, Mutex, Ordering};
+use std::sync::atomic::Arc, , Mutex, ;
+use std::sync::Ordering;
 
 /// Memory mapping options
 #[derive(Debug, Clone, Copy)]

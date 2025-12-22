@@ -2,13 +2,13 @@
 //! 智能批处理算法，动态调整批处理大小，优化推理性能
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
 
 use crate::ai_inference::{engine_interface::{InferenceResult, ModelHandle}, tensor_ops::Tensor};
 use anyhow::Result;
 
-use tokio::sync::RwLock;
+use tokio::sync::RwLock as AsyncRwLock;
 // serde imports removed - unused
 /// 批处理优化策略
 #[derive(Debug, Clone, PartialEq)]

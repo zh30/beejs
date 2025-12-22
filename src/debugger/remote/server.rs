@@ -3,12 +3,12 @@
 //! Provides WebSocket-based remote debugging capabilities
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 use std::net::SocketAddr;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::RwLock;
+use tokio::sync::RwLock as AsyncRwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, BTreeMap};
 /// Debug server

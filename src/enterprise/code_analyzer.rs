@@ -2,11 +2,11 @@
 //! 提供多仓库架构分析、技术债务评估、依赖关系映射等功能
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 
 use std::path::Path;
 use serde::{Serialize, Deserialize};
-use tokio::sync::RwLock;
+use tokio::sync::RwLock as AsyncRwLock;
 use once_cell::sync::Lazy;
 use std::collections::{HashMap, BTreeMap};
 /// 仓库信息
