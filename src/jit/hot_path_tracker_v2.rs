@@ -8,9 +8,9 @@
 //! - Complexity-aware detection
 
 use std::collections::BTreeMap;
-use std::sync::{atomic::Ordering, RwLock};
-use std::time::{Duration, Instant};
+use std::sync::{RwLock};
 use std::sync::atomic::Ordering;
+use std::time::{Duration, Instant};
 
 /// Execution event for history tracking
 #[derive(Debug, Clone)]

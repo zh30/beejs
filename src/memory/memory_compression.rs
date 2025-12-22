@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};
-use std::sync::atomic::{Arc, AtomicUsize, Mutex, Ordering, RwLock};
+std::sync::{Arc, Mutex, RwLock}, atomic::{AtomicUsize, Ordering}};
 
 /// 内存压缩优化器 - 自动压缩冷数据以减少内存占用
 /// 通过智能压缩算法和访问模式分析，实现 30%+ 的内存使用降低

@@ -396,7 +396,7 @@ async fn execute_task(worker: &Arc<SmartWorker>, task: &Task) -> String {
 mod tests {
     use super::*;
 use std::time::{Duration, Instant};
-use std::sync::atomic::{Arc, AtomicUsize, Mutex, Ordering, RwLock};
+std::sync::{Arc, Mutex, RwLock}, atomic::{AtomicUsize, Ordering}};
     #[tokio::test]
     async fn test_optimized_process_pool_creation() {
         let config: _ = OptimizedProcessPoolConfig::default();

@@ -3,9 +3,9 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex, atomic::Ordering};
-use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
+use std::time::{Duration, Instant};
 
 /// 性能指标类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

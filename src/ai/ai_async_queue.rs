@@ -469,7 +469,7 @@ pub fn create_low_latency_queue() -> AiAsyncQueue {
 mod tests {
     use super::*;
 use std::time::{Duration, Instant};
-use std::sync::atomic::{Arc, AtomicUsize, Mutex, Ordering};
+std::sync::{Arc, Mutex}, atomic::{AtomicUsize, Ordering}};
     #[tokio::test]
     async fn test_queue_creation() {
         let queue: _ = AiAsyncQueue::new(QueueConfig::default());

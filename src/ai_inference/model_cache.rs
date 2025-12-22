@@ -3,9 +3,9 @@
 
 use anyhow::Result;
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, atomic::Ordering, RwLock};
-use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex, RwLock};
 use std::sync::atomic::Ordering;
+use std::time::{Duration, Instant};
 
 /// 缓存策略
 #[derive(Debug, Clone)]

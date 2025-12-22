@@ -2,10 +2,10 @@
 //! Provides setTimeout, setInterval, clearTimeout, clearInterval
 
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, atomic::Ordering};
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::Ordering;
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::sync::atomic::Ordering;
 
 /// Global timer ID counter
 static TIMER_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
