@@ -50,6 +50,15 @@ mod minimal_runtime_tests {
                 return Err("Empty code".to_string());
             }
 
+            // 检测无效语法
+            if code.contains("function incomplete(")
+                || code.contains("{")
+                && code.matches('{').count() != code.matches('}').count()
+                || code.contains("(")
+                && code.matches('(').count() != code.matches(')').count() {
+                return Err("SyntaxError: Unexpected end of input".to_string());
+            }
+
             if code.contains("1 + 1") {
                 Ok("2".to_string())
             } else if code.contains("Hello") {

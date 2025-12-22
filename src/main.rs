@@ -9,7 +9,7 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[command(name = "beejs")]
 #[command(about = "High-performance JavaScript/TypeScript runtime (faster than Bun!)")]
-#[command(version = "0.1.3")]
+#[command(version = "0.1.4")]
 struct Cli {
     /// Verbose output
     #[arg(short, long)]
@@ -146,7 +146,7 @@ fn main() -> Result<()> {
             return Ok(());
         }
         Some(Command::Version) => {
-            println!("🐝 Beejs v0.1.3");
+            println!("🐝 Beejs v0.1.4");
             println!("High-performance JavaScript/TypeScript runtime");
             println!("Built with Rust + V8");
             println!("Faster than Bun! 🚀");
