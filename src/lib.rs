@@ -182,8 +182,8 @@ pub use monitor::ThresholdConfig as MonitorThresholdConfig;
 // 重新导出可观测性相关类型
 pub use observability::{
     ObservableSystem, ObservabilityConfig,
-    PrometheusExporter, StructuredLogger, CustomMetrics,
-    AlertingSystem, JaegerTracer,
+    // PrometheusExporter, StructuredLogger, CustomMetrics,
+    // AlertingSystem, JaegerTracer,
 };
 // 重新导出包管理器相关类型
 pub use package_manager::{
@@ -208,7 +208,8 @@ pub use shared_memory::{
 };
 // 重新导出网络相关类型
 pub use network::{
-    NetworkBufferPool, ConnectionPool, NetworkIoStatistics,
+    // NetworkBufferPool, ConnectionPool, NetworkIoStatistics,
+    NetworkConfig, NetworkError,
 };
 // 重新导出进程池相关类型
 pub use process_pool::{
@@ -301,8 +302,9 @@ impl Server {
         self.port
     }
 }
+use tracing::{debug, info, warn, error};
 // 核心运行时
-use anyhow::{Result, Error};
+use anyhow::{Result, Error, anyhow};
 /// Global flag to track V8 initialization state
 static V8_INITIALIZED: std::sync::OnceLock<std::sync::atomic::AtomicBool> = std::sync::OnceLock::new();
 /// Initialize V8 engine (idempotent - safe to call multiple times)

@@ -2,7 +2,6 @@
 //! Provides configuration and management for Istio
 
 use std::time::Duration;
-use std::collections::BTreeMap;
 use std::collections::{BTreeMap, HashMap};
 
 use tracing::info;

@@ -22,8 +22,6 @@ pub mod enhanced_runner;
 pub mod parallel_executor;
 pub mod test_timeout;
 
-use std::sync::Mutex;
-
 pub use v8_bindings::*;
 pub use test_context::TestSuite;
 pub use enhanced_runner::{EnhancedRunner, EnhancedRunnerConfig};

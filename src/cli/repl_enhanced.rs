@@ -10,7 +10,7 @@
 
 use crate::cli::repl_completer::{CompletionCandidate, ReplCompleter};
 use crate::cli::repl_highlighter::{HighlightTheme, ReplHighlighter};
-use rustyline::{Editor, Result};
+use rustyline::Editor;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use anyhow::{Result, Error};

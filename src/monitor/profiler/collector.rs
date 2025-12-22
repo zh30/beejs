@@ -4,7 +4,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 
-pub use storage::{
+pub use super::storage::{
     PerformanceEvent, PerformanceEventType, RingBuffer, SamplingStrategy, SamplingConfig,
 };
 /// 函数调用跟踪句柄

@@ -16,7 +16,7 @@ pub mod storage;
 pub mod report;
 // pub mod cli_integration; // TODO: 实现 CLI 集成
 // 重新导出分析器类型
-pub use analyzer::analyzer::{
+pub use analyzer::{
     CallStackAnalysis, Bottleneck, BottleneckType, RecursionInfo, DepthStats,
 };
 /// 高级性能分析器配置

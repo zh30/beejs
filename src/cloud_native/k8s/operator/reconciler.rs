@@ -6,7 +6,6 @@ use std::time::{Duration, Instant};
 
 use kube::{Client, Api, ResourceExt};
 use k8s_openapi::api::apps::v1::{StatefulSet, Deployment};
-use std::time::Duration;
 use tracing::{info, warn, debug, error};
 use super::super::crd::{
     BeejsCluster, BeejsWorkload, ClusterPhase, Condition, ConditionStatus, ConditionType,

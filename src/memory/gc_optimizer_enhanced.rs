@@ -535,4 +535,4 @@ mod tests {
         assert!(prediction.is_some());
     }
 }
-use tokio::sync::{TokioMutex, TokioRwLock};
+use tokio::sync::{Mutex, RwLock};
