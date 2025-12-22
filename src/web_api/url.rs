@@ -51,7 +51,7 @@ impl Url {
                 } else {
                     (host_part.clone(), "".to_string())
                 };
-                let origin: _ = format!("{}://{}, protocol", host_part);
+                let origin: _ = format!("{}://{} protocol", host_part);
                 (
                     url_str.to_string(),
                     protocol,

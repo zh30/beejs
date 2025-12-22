@@ -199,7 +199,7 @@ impl AiModel for MockAiModel {
     }
     fn explain(&self, code: &str) -> Result<String, Box<dyn std::error::Error>> {
         std::thread::sleep(std::time::Duration::from_millis(self.response_delay_ms / 3));
-        Ok(format!("这段代码实现了: {}", code.lines().take(3).collect::<Vec<_>().join(" ")))
+        Ok(format!("这段代码实现了: {}", code.lines().take(3).collect::<Vec<_>>().join(" ")))
     }
 }
 impl MockAiModel {
@@ -532,7 +532,7 @@ impl ContextCache {
     pub fn new(capacity: usize) -> Self {
         Self {
             cache: Arc::new(RwLock::new(lru::LruCache::new(
-                std::num::NonZeroUsize::new(capacity).unwrap_or(std::num::NonZeroUsize::new(100).unwrap())
+                std::num::NonZeroUsize::new(capacity).unwrap_or(std::num::NonZeroUsize::new(100).unwrap()),
             ))),
         }
     }

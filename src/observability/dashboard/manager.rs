@@ -346,7 +346,7 @@ impl GrafanaClient {
                         "interval": t.interval,
                         "legendFormat": t.legend_format
                     })
-                }).collect::<Vec<_>(),
+                }).collect::<Vec<_>>(),
                 "fieldConfig": {
                     "defaults": {
                         "min": panel.field_config.min,

@@ -332,7 +332,7 @@ impl MemoryOptimizationSuggestions {
                     .iter()
                     .enumerate()
                     .map(|(i, s)| format!("{}. {}", i + 1, s))
-                    .collect::<Vec<_>()
+                    .collect::<Vec<_>>()
                     .join("\n")
             )
         }
