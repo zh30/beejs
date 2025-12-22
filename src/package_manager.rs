@@ -240,7 +240,6 @@ impl PackageManager {
 mod tests {
     use super::*;
     use tempfile::{NamedTempFile, TempDir};
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_package_manager_creation() {

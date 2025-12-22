@@ -3,7 +3,6 @@
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, warn, error};
 /// Encryption algorithm type
@@ -326,7 +325,6 @@ impl KeyManagementService {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_key_generation() {

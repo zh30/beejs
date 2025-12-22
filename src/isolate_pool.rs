@@ -1,8 +1,5 @@
 use rusty_v8 as v8;
 use std::collections::VecDeque;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
-use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
 /// V8 Isolate Pool - 高性能Isolate复用池（优化版）
@@ -306,7 +303,6 @@ pub fn release_isolate(isolate: v8::OwnedIsolate) {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     // 初始化V8以供测试使用
     fn init_v8_for_tests() {

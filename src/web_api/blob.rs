@@ -2,7 +2,6 @@
 //! Provides binary data container with File API support
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// Setup Blob and File APIs in V8 context
 pub fn setup_blob_api(

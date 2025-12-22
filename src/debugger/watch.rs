@@ -162,7 +162,6 @@ impl Default for WatchManager {
 #[cfg(test)]
 mod unit_tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_watch_expression_creation() {

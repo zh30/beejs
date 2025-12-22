@@ -7,7 +7,6 @@
 //! 并提供自动迁移和兼容性检查功能。
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 /// API 适配器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -519,7 +518,6 @@ impl Default for V8APIAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_v8_api_adapter_creation() {

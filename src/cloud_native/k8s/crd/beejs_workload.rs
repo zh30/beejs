@@ -100,12 +100,12 @@ pub struct ExecutionConfig {
     pub memory_limit_mb: Option<u32>,
 }
 /// Execution mode
-#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, Default)]
 #[cfg_attr(test, derive(Default))]
 pub enum ExecutionMode {
     /// Standalone execution (single run)
     #[default]
-    Standalone,
+    Standalone = 0,
     /// Distributed execution (across cluster)
     Distributed,
     /// Batch processing
@@ -335,7 +335,6 @@ pub struct NetworkPolicyPort {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_beejs_workload_crd_creation() {

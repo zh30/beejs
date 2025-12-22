@@ -1,6 +1,5 @@
 //! AI 驱动智能任务调度器 - Stage 90 Phase 5.3
 use std::collections::{HashMap, VecDeque};
-use std::sync::Arc;
 use tokio::sync::{RwLock, Mutex};
 use serde::{Serialize, Deserialize};
 /// 任务
@@ -233,7 +232,6 @@ fn current_timestamp() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_intelligent_task_scheduler() {

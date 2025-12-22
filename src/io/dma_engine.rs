@@ -2,8 +2,6 @@
 //!
 //! This module provides zero-copy memory transfers using DMA (Direct Memory Access)
 //! to bypass CPU and achieve maximum I/O performance for AI workloads.
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::ptr::NonNull;
 use anyhow::{Result, anyhow};
 use libc::{c_void, posix_memalign};
@@ -237,7 +235,6 @@ impl Drop for DmaBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_allocate_small_buffer() {

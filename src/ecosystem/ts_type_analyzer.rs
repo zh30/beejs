@@ -4,7 +4,6 @@
 //! 分析 JavaScript/TypeScript 源代码以提取类型信息
 use super::*;
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// TypeScript 类型分析器
 #[derive(Debug)]

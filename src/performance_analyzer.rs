@@ -3,7 +3,6 @@
 //! and other performance metrics.
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// Performance metrics for a single execution
 #[derive(Debug, Clone)]

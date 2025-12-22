@@ -11,10 +11,8 @@
 use std::io::{self, Read, Write};
 use std::fs::File;
 use std::os::unix::io::{AsRawFd, RawFd};
-use std::sync::Arc;
 use memmap2::{Mmap, MmapOptions};
 use crossbeam::utils::CachePadded;
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 /// Zero-copy file reader using memory mapping
 pub struct ZeroCopyFileReader {
     /// Memory-mapped file
@@ -373,7 +371,6 @@ pub fn initialize_zero_copy_io(buffer_pool_size: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_zero_copy_buffer() {

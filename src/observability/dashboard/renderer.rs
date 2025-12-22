@@ -7,7 +7,6 @@
 //! - WebSocket-based live updates
 use super::*;
 use anyhow::{Result, Context, anyhow};
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, debug, warn, error};
 use serde_json::{json, Value};
@@ -951,7 +950,6 @@ impl TemplateEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_chart_renderer_creation() {

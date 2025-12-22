@@ -274,7 +274,6 @@ impl CloudAdapter for AwsAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     /// 测试创建 AWS 适配器
     #[tokio::test]

@@ -263,7 +263,7 @@ pub struct SimpleModuleFactory;
 impl ModuleFactory for SimpleModuleFactory {
     fn create_module(&self, name: &str) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
         // 模拟模块加载
-        let module_data: _ = format!("// Module: {}\nconsole.log('{} loaded');", name);
+        let module_data: _ = format!("// Module: {}\nconsole.log('{} loaded');", name, name);
         Ok(module_data.into_bytes())
     }
 }

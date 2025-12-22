@@ -2,7 +2,6 @@
 //!
 //! 实现高效的变更检测、压缩传输和同步状态管理
 //! 目标：90%+ 传输压缩率
-use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::{Result, Context};
 use tracing::{debug, info};
@@ -135,7 +134,6 @@ impl IncrementalSync {
         // 简化实现：使用简单的哈希
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
         let mut hasher = DefaultHasher::new();
         document.content.hash(&mut hasher);

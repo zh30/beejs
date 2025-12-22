@@ -6,7 +6,6 @@ use prometheus::{
     IntCounter, IntCounterVec, IntGauge, IntGaugeVec, LinearBuckets, Opts,
     Registry, TextEncoder,
 };
-use std::sync::Arc;
 use tokio::time::{Duration, Instant};
 use tracing::{info, warn, debug};
 /// Prometheus metrics configuration
@@ -622,7 +621,6 @@ impl ClusterMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_prometheus_manager_creation() {

@@ -1,7 +1,6 @@
 //! 智能内存分配器 - Stage 90 Phase 5.2
 //! 基于使用模式预测的智能内存分配器
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
 /// 分配模式
@@ -151,7 +150,6 @@ impl SmartMemoryAllocator {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_smart_allocator() {

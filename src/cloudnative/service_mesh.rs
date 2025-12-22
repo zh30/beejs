@@ -1,6 +1,5 @@
 //! Service Mesh Integration
 //! Provides service mesh support (Envoy, Istio, Linkerd) for Beejs runtime
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
@@ -395,7 +394,6 @@ pub struct MeshStatistics {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_service_mesh_creation() {

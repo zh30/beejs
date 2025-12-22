@@ -3,7 +3,6 @@
 use tracing::{debug, info, warn};
 use std::collections::{HashMap, BTreeMap};
 use std::hash::{Hash, Hasher};
-use std::sync::{Arc, RwLock, atomic::{AtomicU64, AtomicUsize, Ordering}};
 use std::time::{Duration, Instant};
 // ============================================================================
 // 一致性哈希 (Consistent Hashing)
@@ -56,7 +55,7 @@ impl ConsistentHashRing {
         let mut nodes = self.nodes.write().unwrap();
         // 添加虚拟节点
         for i in 0..virtual_count {
-            let virtual_key: _ = format!("{}#{}, node_id", i);
+            let virtual_key: _ = format!("{}#{}, node_id", i, node_id);
             let hash: _ = self.hash(&virtual_key);
             ring.insert(hash, node_id.to_string());
         }
@@ -67,13 +66,14 @@ impl ConsistentHashRing {
     pub fn remove_node(&mut self, node_id: &str) {
         let mut ring = self.ring.write().unwrap();
         let mut nodes = self.nodes.write().unwrap();
-        if let Some(virtual_count) = nodes.remove(node_id) {
-            // 移除所有虚拟节点
+        if let Some(&virtual_count) = nodes.get(node_id) {
+            // 移除虚拟节点
             for i in 0..virtual_count {
-                let virtual_key: _ = format!("{}#{}, node_id", i);
+                let virtual_key: _ = format!("{}#{}, node_id", i, node_id);
                 let hash: _ = self.hash(&virtual_key);
                 ring.remove(&hash);
             }
+            nodes.remove(node_id);
             debug!("Removed node {} with {} virtual nodes", node_id, virtual_count);
         }
     }
@@ -683,7 +683,6 @@ impl LoadBalancer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Mutex};
     #[test]
     fn test_consistent_hash_basic() {
         let config: _ = HashRingConfig::default();

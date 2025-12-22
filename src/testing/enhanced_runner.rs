@@ -360,7 +360,6 @@ impl EnhancedRunner {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_enhanced_runner_creation() {

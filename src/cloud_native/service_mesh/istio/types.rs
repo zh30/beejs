@@ -4,7 +4,6 @@ use kube::CustomResource;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// DestinationRule defines policies for traffic to a service
 #[derive(CustomResource, Clone, Debug, Deserialize, Serialize, JsonSchema)]

@@ -1,12 +1,10 @@
 //! Edge Node Manager
 //! Manages and coordinates edge nodes for distributed JavaScript/TypeScript execution
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::{Duration, Instant};
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
-use std::sync::{Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// Unique identifier for an edge node
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

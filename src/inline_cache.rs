@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::string::String;
-use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 use std::cmp::Reverse;
 /// 使用更快、抗碰撞的哈希算法（FNV-1a变种）

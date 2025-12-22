@@ -4,7 +4,7 @@
 use std::collections::{HashMap, VecDeque};
 
 use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
+use tokio::sync::RwLock as AsyncRwLock;
 use serde::{Deserialize, Serialize};
 use crate::ai::tensor_optimizer::TensorOptimizer;
 use crate::ai::performance_predictor::PerformancePredictor;
@@ -329,8 +329,8 @@ impl AiPerformanceEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
+use std::sync::{Arc, Mutex, RwLock};
     #[tokio::test]
     async fn test_record_and_predict() {
         let config: _ = AiPerformanceEngineConfig::default();

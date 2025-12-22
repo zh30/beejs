@@ -967,7 +967,6 @@ impl Default for TemplateInstantiator {
 mod tests {
     use super::*;
     use tempfile::TempDir;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_template_engine_basic() {

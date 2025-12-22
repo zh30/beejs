@@ -239,7 +239,6 @@ impl Default for BottleneckDetector {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_bottleneck_detector_creation() {

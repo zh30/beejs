@@ -211,7 +211,6 @@ mod tests {
     use tempfile::NamedTempFile;
     // Import the V8 requirement macro
     use crate::require_v8;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_runner_creation() {

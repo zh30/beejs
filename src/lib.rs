@@ -14,22 +14,22 @@
 //! - 自动化 CI/CD 集成
 use rusty_v8 as v8;
 // 模块声明
-// Stage 92: AI 原生性能引擎
-pub mod ai {
-    pub mod ai_performance_engine;
-    pub mod performance_predictor;
-    pub mod intelligent_scheduler;
-    pub mod auto_optimizer;
-    pub mod predictive_scaler;
-    pub mod tensor_optimizer;
-    pub mod llm_engine;
-    pub mod model_manager;
-    pub mod code_generator;
-    pub mod ai_memory_pool;
-    pub mod ai_batch_processor;
-    pub mod ai_async_queue;
-    pub mod model_interface;
-}
+// Stage 92: AI 原生性能引擎 (temporarily disabled)
+// pub mod ai {
+//     pub mod ai_performance_engine;
+//     pub mod performance_predictor;
+//     pub mod intelligent_scheduler;
+//     pub mod auto_optimizer;
+//     pub mod predictive_scaler;
+//     pub mod tensor_optimizer;
+//     pub mod llm_engine;
+//     pub mod model_manager;
+//     pub mod code_generator;
+//     pub mod ai_memory_pool;
+//     pub mod ai_batch_processor;
+//     pub mod ai_async_queue;
+//     pub mod model_interface;
+// }
 pub mod benchmarks;
 pub mod performance_analyzer;
 pub mod performance_reporter;
@@ -87,11 +87,11 @@ pub mod distributed;
 pub mod isolate_prewarmer;
 // pub mod precompiled_cache;  // Moved to startup module
 // pub mod ai;  // Stage 78 Phase 3: AI 工作负载专用优化 (moved to inline mod at line 21-35)
-pub mod optimization;  // Stage 78 Phase 4: 极致性能监控
+// pub mod optimization;  // Stage 78 Phase 4: 极致性能监控 (temporarily disabled)
 // pub mod enterprise;  // Stage 79: 企业级功能增强 (disabled for compilation)
 // pub mod ecosystem;  // Stage 80: 生态系统完善 (moved to Stage 91 Phase 3)
-pub mod profiler;
-pub mod code_cache;
+// pub mod profiler;  // Temporarily disabled due to compilation issues
+// pub mod code_cache;  // Temporarily disabled due to compilation issues
 pub mod stage_38_smart_process_pool;  // Stage 38.0: 智能进程池系统
 pub mod cloud;  // Stage 39.0: 云平台适配层
 pub mod wasm_optimized;  // Stage 40.0: WebAssembly 极致优化
@@ -224,15 +224,15 @@ pub use isolate_prewarmer::{
 pub use runtime_lite::RuntimeLite;
 // 重新导出 V8 简单运行时
 // pub use lib_minimal::Runtime;
-// 重新导出 AI 批处理相关类型
-pub use ai::ai_batch_processor::{
-    AiBatchProcessor, BatchConfig,
-    AiTaskType, AiTaskResult,
-};
-// 重新导出 AI 内存池相关类型
-pub use ai::ai_memory_pool::{
-    AiMemoryPool, ModelMemoryConfig, create_llm_memory_pool,
-};
+// 重新导出 AI 批处理相关类型 (temporarily disabled)
+// pub use ai::ai_batch_processor::{
+//     AiBatchProcessor, BatchConfig,
+//     AiTaskType, AiTaskResult,
+// };
+// 重新导出 AI 内存池相关类型 (temporarily disabled)
+// pub use ai::ai_memory_pool::{
+//     AiMemoryPool, ModelMemoryConfig, create_llm_memory_pool,
+// };
 // 重新导出云原生集成相关类型
 pub use cloud_native::{
     // Kubernetes CRDs
@@ -346,7 +346,6 @@ pub fn is_v8_initialized() -> bool {
 /// Check if V8 is available for use in tests
 /// Returns true if V8 can be safely initialized, false if already poisoned
 pub fn is_v8_available() -> bool {
-    use std::sync::Once;
     static CHECK: Once = Once::new();
     static mut AVAILABLE: bool = true;
     CHECK.call_once(|| {

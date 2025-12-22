@@ -1,12 +1,11 @@
 //! 优化预编译缓存系统
 //! 实现快照优化、智能缓存管理、缓存压缩等启动优化功能
-use crate::code_cache::{BytecodeCache, CacheConfig};
+// use crate::code_cache::{BytecodeCache, CacheConfig};  // Temporarily disabled
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock as AsyncRwLock;
 /// 缓存策略

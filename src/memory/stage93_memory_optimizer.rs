@@ -1,6 +1,5 @@
 //! Stage 93 Phase 1.2: 内存优化器综合集成
 //! 整合所有内存优化组件，提供统一的内存管理接口
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use anyhow::{Result, anyhow};
@@ -288,7 +287,6 @@ pub struct OptimizationSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_memory_optimizer_creation() {

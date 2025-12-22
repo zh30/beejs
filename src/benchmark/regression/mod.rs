@@ -340,7 +340,6 @@ impl RegressionSummary {
 mod tests {
     use super::*;
     use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_regression_analysis() {

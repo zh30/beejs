@@ -140,7 +140,6 @@ impl NetworkBufferPool {
     }
     /// 生成唯一缓冲区 ID
     fn generate_id(&self) -> u64 {
-        use std::sync::atomic::{AtomicU64, Ordering};
         static COUNTER: AtomicU64 = AtomicU64::new(1);
         COUNTER.fetch_add(1, Ordering::SeqCst)
     }
@@ -313,7 +312,6 @@ impl NetworkBufferPool {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_zero_copy_network_buffer_pool_performance() {

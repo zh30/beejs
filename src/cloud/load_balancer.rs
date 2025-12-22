@@ -444,7 +444,6 @@ impl MLLoadBalancer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     /// 测试创建智能负载均衡器
     #[test]

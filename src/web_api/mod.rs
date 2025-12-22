@@ -25,7 +25,6 @@ use performance::setup_performance_api;
 use timers::setup_timer_api;
 use url::setup_url_api;
 use websocket::setup_websocket_api;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 初始化所有 Web API 到 V8 上下文
 pub fn init_web_api(

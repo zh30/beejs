@@ -6,7 +6,6 @@
 use std::fs::File;
 use std::io::{self, Write};
 use std::os::unix::io::{AsRawFd, RawFd};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 /// sendfile 零拷贝文件传输器
 ///
@@ -226,7 +225,6 @@ impl SendFile {
 mod tests {
     use super::*;
     use std::io::Cursor;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_sendfile_zero_copy_file_transfer() {

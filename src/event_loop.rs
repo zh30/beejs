@@ -250,7 +250,6 @@ impl V8EventLoop {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     /// 测试事件循环创建
     #[test]

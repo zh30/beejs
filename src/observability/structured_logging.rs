@@ -8,8 +8,6 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
-use std::sync::Arc;
-use std::sync::Mutex;
 use tokio::sync::RwLock;
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::fmt::format::Writer;
@@ -297,7 +295,6 @@ impl<'a> PerformanceLogger<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_structured_logger_creation() {

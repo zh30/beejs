@@ -10,7 +10,6 @@
 //! - Hot path identification and optimization
 //! - Garbage collection tuning for minimal pause times
 use rusty_v8::{Isolate, HandleScope, Local, Value, Object, Function};
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 use once_cell::sync::Lazy;
 use crossbeam::utils::CachePadded;
@@ -431,7 +430,6 @@ pub fn initialize_v8_engine() {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_memory_layout_optimization() {

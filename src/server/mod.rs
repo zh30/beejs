@@ -222,7 +222,6 @@ pub async fn start_server(config: ServerConfig, runtime: Runtime) -> Result<(), 
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_server_config_default() {

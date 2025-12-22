@@ -457,7 +457,6 @@ impl HotspotAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_hotspot_analyzer_creation() {

@@ -501,7 +501,6 @@ impl<T: Clone> Default for DistributedCache<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
     /// 测试创建分布式缓存
     #[test]

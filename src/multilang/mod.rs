@@ -1,6 +1,5 @@
 //! Multi-language Support Module
 //! Provides seamless integration between Beejs and multiple programming languages
-use std::sync::Arc;
 pub mod python_runtime;
 pub mod go_runtime;
 pub mod rust_native;
@@ -66,7 +65,6 @@ impl MultiLanguageRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_multilang_runtime() {

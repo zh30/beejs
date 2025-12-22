@@ -1,8 +1,6 @@
 //! 性能分析器模块
 //! 用于收集和分析运行时性能指标，帮助识别瓶颈
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 /// 性能分析器
 pub struct Profiler {
@@ -146,7 +144,6 @@ impl Profiler {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_profiler_creation() {

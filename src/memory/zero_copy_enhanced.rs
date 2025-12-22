@@ -2,8 +2,6 @@
 //!
 //! 实现 DMA 直接内存访问、内存映射优化、智能内存预取和垃圾回收优化
 //! 目标：实现 80% 内存使用减少，支持 1000-5000x 性能提升
-use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
-use std::sync::Arc;
 use std::ptr::NonNull;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
@@ -395,7 +393,6 @@ impl PrefetchStatsSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_enhanced_zero_copy_creation() {

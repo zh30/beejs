@@ -2,7 +2,6 @@
 //! Stage 91 Phase 4.2 - Enhanced REPL
 use rustyline::Result;
 use std::collections::HashMap;
-use std::sync::Arc;
 use rusty_v8 as v8;
 /// Auto-completion candidate
 #[derive(Debug, Clone)]
@@ -250,7 +249,6 @@ impl Default for ReplCompleter {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_completer_creation() {

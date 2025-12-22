@@ -115,7 +115,6 @@ impl DebugSession {
 mod tests {
     use super::*;
     use crate::cli::commands::SubCommand;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_debug_session_creation() {

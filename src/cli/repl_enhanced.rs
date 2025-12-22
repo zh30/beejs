@@ -14,7 +14,6 @@ use rustyline::{Editor, Result};
 use rustyline::error::ReadlineError;
 use std::collections::VecDeque;
 use std::io::Write;
-use std::sync::Arc;
 use std::time::Instant;
 use rusty_v8 as v8;
 /// Enhanced REPL configuration
@@ -510,7 +509,6 @@ impl EnhancedReplStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_enhanced_repl_creation() {

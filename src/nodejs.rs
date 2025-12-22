@@ -638,7 +638,6 @@ fn resolve_module_path(scope: &mut v8::HandleScope, module_name: &str) -> Result
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_setup_nodejs_apis() {

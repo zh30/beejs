@@ -364,7 +364,6 @@ impl PerfTestRunner {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_perf_statistics_from_runs() {

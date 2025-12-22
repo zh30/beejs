@@ -5,7 +5,6 @@
 use anyhow::{Context, Result};
 use prometheus::{Registry, TextEncoder};
 use std::net::SocketAddr;
-use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tracing::{error, info};
@@ -184,7 +183,6 @@ async fn serve_not_found(stream: &mut TcpStream) -> Result<()> {
 mod tests {
     use super::*;
     use prometheus::{Counter, Opts};
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_prometheus_exporter_creation() {

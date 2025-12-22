@@ -287,7 +287,6 @@ impl ModuleResolver {
 mod tests {
     use super::*;
     use std::path::PathBuf;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_resolve_builtin_module() {

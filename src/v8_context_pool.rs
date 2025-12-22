@@ -339,7 +339,6 @@ impl Default for V8ContextPool {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_context_pool_creation() {

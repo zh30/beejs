@@ -1,7 +1,6 @@
 //! Edge Caching Strategy
 //! Multi-layer intelligent caching for optimal performance
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::{Duration, Instant};
 use anyhow::Result;
@@ -369,7 +368,6 @@ impl CachePredictor {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_edge_cache_creation() {

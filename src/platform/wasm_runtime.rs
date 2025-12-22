@@ -1,6 +1,5 @@
 //! WebAssembly Runtime
 //! Provides WebAssembly (WASM) support for cross-platform execution
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
@@ -205,7 +204,6 @@ fn generate_minimal_wasm() -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     struct MockBeeWasmAPI;
     impl BeeWasmAPI for MockBeeWasmAPI {

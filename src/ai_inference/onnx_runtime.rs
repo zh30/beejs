@@ -413,7 +413,6 @@ impl InferenceEngine for OnnxEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_onnx_engine_creation() -> Result<()> {

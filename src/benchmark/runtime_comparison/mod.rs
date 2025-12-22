@@ -432,7 +432,6 @@ fn get_command_version(command: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_runtime_detection() {

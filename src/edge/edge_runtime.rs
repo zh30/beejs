@@ -1,12 +1,10 @@
 //! Edge Runtime Management
 //! High-performance edge runtime with minimal cold start times and resource management
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::{Duration, Instant};
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
-use std::sync::{Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// Edge Runtime instance
 #[derive(Debug)]

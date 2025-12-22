@@ -3,7 +3,6 @@
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tracing::{info, warn, error, debug};
 use uuid::Uuid;
@@ -366,7 +365,6 @@ pub fn default_scaling_policy() -> ScalingPolicy {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_calculate_metric_score() {

@@ -227,7 +227,6 @@ mod tests {
     use super::*;
     use std::fs::File;
     use std::io::Write;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_snapshot_manager_new() {

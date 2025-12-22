@@ -12,7 +12,6 @@ pub use adaptive_gc::{
     GCStatistics, HeapMetrics,
 };
 pub use pattern_analyzer::{
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     MemoryPatternAnalyzer, PatternDetection, AllocationTrend,
     MemoryProfile, OptimizationRecommendation,

@@ -1,8 +1,6 @@
 //! Stage 93 Phase 1.2: 零拷贝内存映射优化
 //! 在 Stage 92 极致零拷贝基础上，进一步优化内存访问性能
 //! 目标: 实现 50%+ 内存访问性能提升
-use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
-use std::sync::Arc;
 use std::ptr::NonNull;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
@@ -330,7 +328,6 @@ pub struct Stage93PerformanceReport {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_stage93_optimizer_creation() {

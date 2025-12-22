@@ -526,7 +526,6 @@ pub fn create_image_classification_model(model_id: &str) -> AiModel {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_model_manager_creation() {

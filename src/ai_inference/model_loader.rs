@@ -4,7 +4,6 @@ use super::ai_inference_engine::AIModel;
 use anyhow::{Result, Context};
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// 模型格式类型
 #[derive(Debug, Clone)]

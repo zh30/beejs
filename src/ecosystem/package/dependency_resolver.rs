@@ -1,7 +1,6 @@
 //! 依赖解析器
 //! 负责解析包依赖关系图
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::sync::Arc;
 use crate::ecosystem::types::*;
 /// 依赖解析器
 #[derive(Debug, Clone)]
@@ -146,7 +145,6 @@ impl DependencyResolver {
         packages: &[PackageInfo],
     ) -> Result<Vec<DownloadResult>, Box<dyn std::error::Error>> {
         use tokio::task;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
         // 并发下载
         let mut handles = vec![];

@@ -27,7 +27,6 @@ pub use variable_scope::{VariableScope, ScopeType, VariableInspector};
 pub use session::DebugSession;
 pub use config::DebugConfig;
 pub use watch::{WatchExpression, WatchManager};
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 // Stage 93 Phase 3.2: Enhanced debugger exports
 pub use enhanced::{

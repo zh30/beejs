@@ -1,6 +1,5 @@
 //! Mobile Platform Runtime
 //! Provides native support for iOS and Android platforms
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
@@ -239,7 +238,6 @@ impl MobileRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_ios_runtime() {

@@ -516,7 +516,6 @@ impl DataStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
     #[test]
     fn test_data_store_creation() {

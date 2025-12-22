@@ -287,7 +287,6 @@ impl From<serde_json::Error> for CoverageError {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_coverage_stats_default() {

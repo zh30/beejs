@@ -11,7 +11,6 @@
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -808,7 +807,6 @@ pub async fn worker_main(worker_id: u32, socket_path: String) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     #[ignore] // Disabled due to async spawn complexity in test environment

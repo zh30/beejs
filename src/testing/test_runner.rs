@@ -2,7 +2,6 @@
 //! Executes test suites and collects results
 use crate::testing::test_context::{TestSuite, TestCase, TestResult};
 use std::time::{Duration, Instant};
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// Test runner configuration
 #[derive(Debug, Clone)]

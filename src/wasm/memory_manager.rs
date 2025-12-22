@@ -6,7 +6,6 @@ use anyhow::{Result, Context, anyhow};
 
 use std::collections::HashMap;
 use std::alloc::{GlobalAlloc, Layout, System};
-use std::sync::atomic::{AtomicUsize, Ordering};
 use wasmtime::{Memory, Store};
 use wasmtime_wasi::WasiCtx;
 /// 内存块结构体
@@ -320,7 +319,6 @@ impl Drop for WasmMemoryManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_memory_manager_creation() {

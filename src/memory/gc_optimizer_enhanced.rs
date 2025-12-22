@@ -5,8 +5,6 @@
 //! - 自适应 GC 调优
 //! - 分代 GC 优化
 //! - 增量 GC 和并行 GC
-use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering, AtomicI64};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{RwLock, Mutex};
 use anyhow::{Result, anyhow};
@@ -492,7 +490,6 @@ impl GcMetricsSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_gc_optimizer_creation() {

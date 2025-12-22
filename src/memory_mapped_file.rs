@@ -1,7 +1,5 @@
 //! 内存映射文件模块
 //! 提供高性能的大文件共享访问机制
-use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, Weak};
 use std::time::{Duration, Instant};
 use std::path::{Path, PathBuf};
 use std::fs::{File, OpenOptions};
@@ -394,8 +392,8 @@ mod tests {
     use super::*;
     use std::io::Write;
     use tempfile::NamedTempFile;
-use std::sync::{RwLock};
 use std::collections::{HashMap, BTreeMap};
+use std::sync::{Arc, Mutex, RwLock, Weak};
     #[test]
     fn test_readonly_mapping() {
         let mut file = NamedTempFile::new().unwrap();

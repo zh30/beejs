@@ -366,7 +366,6 @@ impl HighPerformanceWasmCache {
 mod tests {
     use super::*;
     use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_high_performance_cache_creation() {

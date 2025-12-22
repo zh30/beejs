@@ -6,7 +6,6 @@ use std::alloc::{GlobalAlloc, Layout, System};
 use std::collections::VecDeque;
 use std::ptr::NonNull;
 
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 use crate::memory::GLOBAL_MEMORY_STATS;
 /// 内存块
@@ -372,7 +371,6 @@ impl PoolStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_memory_pool_creation() {

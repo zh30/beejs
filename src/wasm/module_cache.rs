@@ -4,7 +4,6 @@
 //! 智能缓存策略、缓存预热和更新机制等
 use anyhow::{Result, Context, anyhow};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Instant, Duration};
 use std::path::{Path, PathBuf};
 use blake3::Hasher;

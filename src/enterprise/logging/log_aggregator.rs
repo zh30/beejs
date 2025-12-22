@@ -4,7 +4,6 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::Write;
-use std::sync::Arc;
 use std::time::SystemTime;
 /// 日志级别
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -712,7 +711,6 @@ impl EnterpriseLogAggregator {
 #[cfg(test)]
 mod enterprise_logging_tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_elasticsearch_client() {

@@ -282,7 +282,6 @@ impl PerformancePredictor {
 mod tests {
     use super::*;
     use crate::ai::ai_performance_engine::AiPerformanceEngineConfig;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_model_prediction() {

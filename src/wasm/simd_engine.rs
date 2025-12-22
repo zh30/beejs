@@ -2,8 +2,6 @@
 //!
 //! 利用 SIMD 指令集（AVX-512/AVX2/SSE4.2）加速向量运算
 //! 为 WebAssembly 模块提供硬件级加速能力
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::OnceLock;
 // ============================================================================
 // 硬件特性检测
 // ============================================================================
@@ -820,7 +818,6 @@ impl Default for SimdEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_feature_detection() {

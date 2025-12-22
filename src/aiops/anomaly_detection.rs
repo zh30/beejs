@@ -1,12 +1,10 @@
 //! 异常检测模块
 //!
 //! 该模块提供多种异常检测算法，包括统计方法和机器学习方法。
-use std::sync::Arc;
 use std::collections::HashMap;
 use std::time::SystemTime;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use std::sync::{Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// 异常类型
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

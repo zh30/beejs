@@ -394,7 +394,6 @@ impl<T> Default for BatchProcessor<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     /// 测试创建智能批处理器
     #[test]

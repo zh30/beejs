@@ -9,7 +9,6 @@
 use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
 use std::time::{Duration, Instant};
 use rusty_v8::Isolate;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 启动时间基准测试套件
 pub struct StartupBenchmark;

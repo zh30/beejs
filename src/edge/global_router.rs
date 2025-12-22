@@ -2,7 +2,6 @@
 //! Intelligent routing across global edge locations
 use super::cdn_provider::{CdnEndpoint, EndpointStatus, CdnProviderType};
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use anyhow::{Result, Context};
 use tokio::time::{Duration, Instant};
@@ -458,7 +457,6 @@ impl GeoDns {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_global_router_initialization() {

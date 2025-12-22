@@ -4,7 +4,6 @@
 use wasmtime::{Engine, Module, Config, OptLevel};
 use wasmtime_wasi::{WasiCtxBuilder, WasiCtx};
 use anyhow::{Result, Context, anyhow};
-use std::sync::Arc;
 /// Wasm 编译器结构体
 ///
 /// 负责管理 Wasmtime 引擎实例，提供 JavaScript 到 WebAssembly 的编译功能
@@ -161,7 +160,6 @@ impl Default for WasmCompiler {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_compiler_creation() {

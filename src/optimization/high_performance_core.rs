@@ -9,8 +9,6 @@
 //! - Memory pooling and pre-allocation
 //! - Zero-copy data structures
 //! - Adaptive JIT compilation strategies
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::sync::Arc;
 use std::collections::VecDeque;
 use once_cell::sync::Lazy;
 use rayon::prelude::*;
@@ -358,7 +356,6 @@ pub fn initialize_high_performance_runtime(config: HighPerformanceConfig) {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_memory_pool_allocation() {

@@ -3,7 +3,6 @@
 //! 提供实时性能监控和仪表板功能
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use super::{BenchmarkResult, Runtime, MetricType};
@@ -364,7 +363,6 @@ fn format_bytes(bytes: u64) -> String {
 mod tests {
     use super::*;
     use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_real_time_monitor() {

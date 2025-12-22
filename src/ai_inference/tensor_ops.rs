@@ -257,7 +257,6 @@ impl TensorOps {
     /// 创建随机张量
     pub fn random(shape: Vec<usize>) -> Result<Tensor> {
         use rand::Rng;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
         let size: usize = shape.iter().product();
         let mut rng = rand::thread_rng();

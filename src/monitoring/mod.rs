@@ -16,7 +16,6 @@ pub use auto_tuner::{
     AutoTuner, TuningAction, TuningParameter, TuningResult,
 };
 pub use prometheus_exporter::{
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     PrometheusExporter, PrometheusMetricType,
 };

@@ -251,7 +251,6 @@ pub struct ServiceMonitorConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_beejs_cluster_crd_creation() {

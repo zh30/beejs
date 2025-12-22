@@ -51,7 +51,7 @@ impl Url {
                 } else {
                     (host_part.clone(), "".to_string())
                 };
-                let origin: _ = format!("{}://{} protocol", host_part);
+                let origin: _ = format!("{}://{} protocol", scheme, host_part);
                 (
                     url_str.to_string(),
                     protocol,
@@ -267,7 +267,6 @@ fn url_search_params_constructor_callback(
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_url_parse_absolute() {

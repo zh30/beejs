@@ -161,7 +161,6 @@ impl TurboFanV2 {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_turbofan_v2_creation() {

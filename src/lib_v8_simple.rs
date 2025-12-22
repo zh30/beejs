@@ -1,9 +1,6 @@
 use std::path::{PathBuf, Path};
 use anyhow::{Result, Context, anyhow};
 use std::fs;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Mutex;
 use rusty_v8 as v8;
 mod typescript;
 mod nodejs_v8;
@@ -435,7 +432,6 @@ mod tests {
     use super::*;
     use tempfile::NamedTempFile;
     use std::io::Write;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_runtime_creation() {

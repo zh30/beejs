@@ -1,6 +1,5 @@
 //! 实时性能监控器 - Stage 90 Phase 5.4
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
@@ -131,7 +130,6 @@ impl RealtimePerformanceMonitor {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_performance_monitor() {

@@ -1,13 +1,11 @@
 //! Intelligent Routing System
 //! AI-powered intelligent routing for distributed edge computing
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::{Duration, Instant};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use crate::edge::{NodeId, NodeStatus, TaskPriority, Task};
-use std::sync::{Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// Request for routing
 #[derive(Debug, Clone, Serialize, Deserialize)]

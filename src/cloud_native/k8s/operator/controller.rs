@@ -12,7 +12,6 @@ use k8s_openapi::ByteString;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::{ObjectMeta, LabelSelector, LabelSelectorRequirement};
 use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
 use std::collections::BTreeMap;
-use std::sync::Arc;
 use tokio::time::Duration;
 use tracing::{info, warn, error, debug};
 use super::super::crd::{
@@ -599,7 +598,6 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_error_type() {

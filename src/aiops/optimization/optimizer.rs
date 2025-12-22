@@ -342,7 +342,6 @@ pub struct PerformanceEvaluation {
 mod tests {
     use super::*;
     use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
     fn create_test_metrics() -> PerformanceMetrics {
         let mut metrics = Vec::new();

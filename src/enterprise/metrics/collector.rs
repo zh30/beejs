@@ -2,8 +2,6 @@
 //! 收集 Beejs 运行时的各种性能指标，支持 Prometheus 导出
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tracing::{info, warn, error, debug};
 use uuid::Uuid;
@@ -532,7 +530,6 @@ fn action_to_string(action: &AlertAction) -> &'static str {
 #[cfg(test)]
 mod enterprise_tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_enterprise_metrics_collector() {

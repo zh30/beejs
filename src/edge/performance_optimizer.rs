@@ -1,12 +1,10 @@
 //! Performance Optimizer
 //! Optimizes resource usage and performance for edge computing
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::{Duration, Instant};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use crate::edge::Task;
-use std::sync::{Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// Performance optimizer
 #[derive(Debug)]

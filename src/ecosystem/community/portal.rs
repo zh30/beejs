@@ -1,6 +1,5 @@
 //! 社区门户
 //! 提供模块分享、协作和社区支持功能
-use std::sync::Arc;
 use std::collections::{HashMap, HashSet};
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
@@ -347,7 +346,6 @@ impl Default for CommunityPortal {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_share_module() {

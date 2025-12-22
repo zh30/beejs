@@ -403,7 +403,6 @@ pub fn create_persistent_cache<T>(max_size: usize) -> SmartCache<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
     #[test]
     fn test_cache_creation() {

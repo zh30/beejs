@@ -467,7 +467,6 @@ pub fn create_low_latency_queue() -> AiAsyncQueue {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_queue_creation() {

@@ -6,7 +6,6 @@ use std::net::IpAddr;
 use std::time::{Duration, Instant};
 use tokio::net::{TcpStream, UdpSocket};
 use tokio::time::timeout;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// 网络节点
 #[derive(Debug, Clone)]
@@ -157,7 +156,7 @@ impl Stage93TopologyDiscoverer {
                 if source_ip == dest_ip {
                     continue;
                 }
-                let path_key: _ = format!("{}-{}, source_ip", dest_ip);
+                let path_key: _ = format!("{}-{}, source_ip", dest_ip, source_ip);
                 let hops: _ = self.trace_route(*source_ip, *dest_ip).await;
                 let total_latency: f64 = hops.iter().map(|n| n.latency_ms).sum();
                 let min_bandwidth: _ = hops.iter().map(|n| n.bandwidth_mbps).fold(f64::INFINITY, f64::min);
@@ -316,7 +315,7 @@ impl Stage93TopologyDiscoverer {
     /// 获取最佳路径
     pub async fn get_optimal_path(&self, source: IpAddr, destination: IpAddr) -> Option<NetworkPath> {
         let topology: _ = self.topology.lock().unwrap();
-        let path_key: _ = format!("{}-{}, source", destination);
+        let path_key: _ = format!("{}-{}, source", destination, source);
         topology.paths.get(&path_key).cloned()
     }
     /// 优化连接

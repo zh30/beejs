@@ -21,7 +21,6 @@ pub use batch_optimizer::BatchProcessor;
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_ai_inference_engine_creation() {

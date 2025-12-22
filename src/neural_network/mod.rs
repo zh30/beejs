@@ -16,5 +16,4 @@ pub use layers::{Layer, DenseLayer, ConvLayer, ActivationLayer, ActivationType};
 pub use model::{Model, ModelConfig};
 pub use optimizer::{GraphOptimizer, OptimizationLevel};
 pub use hardware::{HardwareBackend, MemoryInfo};
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};

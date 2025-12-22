@@ -15,7 +15,6 @@ pub use data_collector::{
     PerformanceSnapshot,
 };
 pub use aiops_engine::{
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     AIOpsEngine,
     AIOpsConfig,

@@ -1,7 +1,6 @@
 //! Edge Deployment Optimizer
 //! Optimizes edge deployments for minimal cold start and maximum throughput
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use anyhow::Result;
 /// Edge Deployment Optimizer
@@ -190,7 +189,6 @@ pub struct OptimizedConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_deployment_optimizer_creation() {

@@ -476,7 +476,6 @@ impl Default for V8CompatibilityChecker {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_v8_compatibility_checker_creation() {

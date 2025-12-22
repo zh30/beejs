@@ -2,7 +2,6 @@
 //! 子进程管理
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 设置child_process API
 pub fn setup_child_process_api(

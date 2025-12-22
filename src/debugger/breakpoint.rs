@@ -3,9 +3,7 @@
 //! This module handles the management of breakpoints, including creation,
 //! deletion, enabling/disabling, and condition evaluation.
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
 use crate::debugger::{DebugResult, SourceLocation};
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// Unique breakpoint ID generator
 static BREAKPOINT_ID_COUNTER: AtomicU64 = AtomicU64::new(0);

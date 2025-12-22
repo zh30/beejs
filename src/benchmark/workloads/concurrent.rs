@@ -91,7 +91,6 @@ fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_workload_execution() {

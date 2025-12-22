@@ -1,6 +1,5 @@
 //! Enterprise Monitoring and Metrics
 //! Provides comprehensive monitoring for Beejs enterprise features
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, warn, error, debug, instrument};
 use chrono::{DateTime, Utc};
@@ -437,7 +436,6 @@ impl MonitoringManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_metric_recording() {

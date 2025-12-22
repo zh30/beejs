@@ -5,5 +5,4 @@ pub mod server;
 pub mod client;
 pub use server::{DebugServer, SessionManager, WebSocketHandler, DebugProtocol, SessionId};
 pub use client::{ConnectionManager, EventDispatcher, StateSync, DebugEvent, DebugState, StackFrameInfo};
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};

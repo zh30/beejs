@@ -307,7 +307,6 @@ impl NetworkIoStatistics {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_zero_copy_network_io_statistics() {

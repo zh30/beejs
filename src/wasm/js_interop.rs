@@ -557,7 +557,6 @@ impl std::fmt::Display for CallStatsSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_interop_creation() {

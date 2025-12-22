@@ -1,7 +1,6 @@
 //! Stage 92 Phase 2: 极致内存优化集成引擎
 //!
 //! 整合 DMA、内存映射、智能预取和 GC 优化，实现极致内存性能
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use anyhow::{Result, anyhow};
@@ -316,7 +315,6 @@ impl Phase2EfficiencyMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_phase2_memory_engine_creation() {

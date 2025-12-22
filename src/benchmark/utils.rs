@@ -195,7 +195,6 @@ pub fn calculate_coefficient_of_variation(values: &[f64]) -> Option<f64> {
 }
 /// 生成唯一 ID
 pub fn generate_unique_id() -> String {
-    use std::sync::atomic::{AtomicU64, Ordering};
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let counter: _ = COUNTER.fetch_add(1, Ordering::SeqCst);
     let timestamp: _ = SystemTime::now()
@@ -389,7 +388,6 @@ pub fn check_dir_writable(path: &PathBuf) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_format_duration() {

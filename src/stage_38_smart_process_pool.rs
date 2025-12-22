@@ -12,7 +12,6 @@
 //! - 性能预测：使用历史数据预测性能瓶颈
 use anyhow::{Context, Result};
 use std::collections::{HashMap, VecDeque};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::{mpsc, RwLock};
@@ -706,7 +705,6 @@ pub struct PerformanceBottleneckPrediction {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_smart_prewarm() {

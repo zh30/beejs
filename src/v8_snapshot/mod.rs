@@ -6,5 +6,4 @@ pub mod manager;
 pub use config::*;
 pub use manager::*;
 pub use snapshot::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};

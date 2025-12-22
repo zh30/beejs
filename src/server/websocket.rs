@@ -10,7 +10,6 @@ use futures_util::{StreamExt, SinkExt};
 use tracing::{info, warn, error};
 use crate::Runtime;
 use super::EvalResponse;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// WebSocket server configuration
 #[derive(Debug, Clone)]

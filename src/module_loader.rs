@@ -276,7 +276,6 @@ impl ModuleLoader {
 mod tests {
     use super::*;
     use tempfile::TempDir;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_module_loader_creation() {

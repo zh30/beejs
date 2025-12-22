@@ -2,7 +2,6 @@
 //! Provides automatic scaling for workloads based on metrics
 use kube::Api;
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::time::{Duration, Instant};
 use tracing::{info, warn, debug, error};
 use super::super::crd::HPAConfig;
@@ -303,7 +302,6 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_scale_action_creation() {

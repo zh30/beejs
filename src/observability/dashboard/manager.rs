@@ -7,7 +7,6 @@
 //! - Template variable support
 use super::*;
 use anyhow::{Result, Context, anyhow};
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, warn, error, debug};
 use reqwest::Client as HttpClient;
@@ -520,7 +519,6 @@ impl MetricsCollector {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_dashboard_manager_creation() {

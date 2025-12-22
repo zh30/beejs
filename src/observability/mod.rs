@@ -50,7 +50,6 @@ use anyhow::Result;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info};
 /// Configuration for observability system
@@ -234,7 +233,6 @@ pub struct BusinessMetricsSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_observability_system_creation() {

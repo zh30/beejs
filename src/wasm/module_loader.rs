@@ -3,7 +3,6 @@
 //! 负责高效加载、验证和实例化 WebAssembly 模块
 use wasmtime::{Engine, Module, Instance, Store, Linker, Config};
 use anyhow::{Result, Context, anyhow};
-use std::sync::Arc;
 use std::time::Instant;
 /// WebAssembly 模块结构体
 ///
@@ -250,7 +249,6 @@ impl std::fmt::Display for LoaderStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_loader_creation() {

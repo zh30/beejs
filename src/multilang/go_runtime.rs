@@ -1,6 +1,5 @@
 //! Go Runtime Integration
 //! Provides seamless integration between Beejs and Go
-use std::sync::Arc;
 use tokio::sync::{RwLock, mpsc};
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
@@ -189,7 +188,6 @@ async fn execute_go_script(script: &str, bee_api: &BeeAPI) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_go_basic_execution() {

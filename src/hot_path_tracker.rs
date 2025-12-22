@@ -1,7 +1,5 @@
 use crate::code_analyzer::{CodeAnalyzer, CodeComplexity};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 /// 热路径代码信息
 #[derive(Debug, Clone)]
@@ -273,7 +271,6 @@ impl HotPathTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_hot_path_identification() {

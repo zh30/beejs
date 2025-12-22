@@ -388,7 +388,6 @@ impl CallStackAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
     #[test]
     fn test_call_stack_analyzer_creation() {

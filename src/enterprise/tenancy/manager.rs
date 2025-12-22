@@ -1,6 +1,5 @@
 //! Multi-tenancy Isolation Manager
 //! Implements secure multi-tenancy for Beejs clusters
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, warn, error, debug};
 /// Tenant identifier
@@ -304,7 +303,6 @@ impl TenantUpdates {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_create_tenant() {

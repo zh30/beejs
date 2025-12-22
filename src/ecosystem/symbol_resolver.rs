@@ -4,7 +4,6 @@
 //! 解析和跟踪代码中的符号引用，解决跨文件依赖
 use super::*;
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// 符号解析器
 #[derive(Debug)]

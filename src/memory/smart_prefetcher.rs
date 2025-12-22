@@ -2,8 +2,6 @@
 //!
 //! 实现基于 AI 的预测性内存预取，根据访问模式自动预测并预取数据
 //! 支持顺序访问、随机访问、循环访问等多种模式
-use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
-use std::sync::Arc;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use std::ptr::NonNull;
@@ -384,7 +382,6 @@ impl SmartPrefetchStatsSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_pattern_recognizer() {

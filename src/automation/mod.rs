@@ -12,5 +12,4 @@ pub mod report_generator;
 pub use test_runner::{AutomatedTestRunner, TestSuiteResults, TestType, TestPlanConfig};
 pub use threshold::{ThresholdManager, ThresholdConfig};
 pub use report_generator::{ReportGenerator, ReportFormat, ReportOutput, ReportType};
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};

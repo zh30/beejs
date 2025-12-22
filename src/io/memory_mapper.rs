@@ -2,8 +2,6 @@
 //!
 //! This module provides optimized memory mapping for large files and
 //! efficient memory access patterns for zero-copy I/O operations.
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::path::{Path, PathBuf};
 use anyhow::{Result, anyhow};
 use memmap2::{Mmap, MmapOptions};
@@ -266,7 +264,6 @@ mod tests {
     use super::*;
     use tempfile::NamedTempFile;
     use std::io::Write;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_map_file() {

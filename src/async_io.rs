@@ -1,7 +1,6 @@
 //! 异步I/O优化模块
 //! 提供高性能的非阻塞I/O操作，支持并发文件读取和脚本执行
 use std::path::Path;
-use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::{AsyncWriteExt, BufWriter};
 use tokio::task::JoinHandle;
@@ -319,7 +318,6 @@ mod tests {
     use super::*;
     use std::fs;
     use tempfile::TempDir;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_async_file_read() {

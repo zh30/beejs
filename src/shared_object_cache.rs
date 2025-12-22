@@ -2,7 +2,6 @@
 //! 实现跨V8 Isolate的常用对象共享，减少重复分配
 use crate::string_interner::StringInterner;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
 
 use std::time::{Duration, Instant};
 use serde::{Serialize, Deserialize};
@@ -412,7 +411,6 @@ pub fn calculate_value_hash(value: &SharedValue) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_shared_object_creation() {

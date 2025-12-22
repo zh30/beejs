@@ -7,8 +7,6 @@
 //! - BatchExecutor: 批量执行处理器（高层API）
 use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use tokio::time::timeout;
@@ -157,7 +155,7 @@ impl ConcurrentExecutionStats {
 // 第一部分: ConcurrentRuntimePool - 线程本地Runtime池
 // ============================================================================
 thread_local! {
-    static THREAD_RUNTIME_POOL: RefCell<Vec<Runtime> = RefCell::new(Vec::new());
+    static THREAD_RUNTIME_POOL: RefCell<Vec<Runtime>> = RefCell::new(Vec::new());
     static THREAD_POOL_SIZE: RefCell<usize> = RefCell::new(0);
 }
 // ============================================================================
@@ -382,10 +380,10 @@ pub struct LoadMonitor {
 impl LoadMonitor {
     pub fn new(thread_count: usize) -> Self {
         Self {
-            worker_loads: Arc::new(Mutex::new((0..thread_count).map(|_| AtomicUsize::new(0)).collect(),
-            execution_history: Arc::new(Mutex::new((0..thread_count).map(|_| VecDeque::with_capacity(100)).collect(),
-            cpu_usage: Arc::new(Mutex::new((0..thread_count).map(|_| AtomicUsize::new(0)).collect(),
-            last_update: Arc::new(Mutex::new(Instant::now(),
+            worker_loads: Arc::new(Mutex::new((0..thread_count).map(|_| AtomicUsize::new(0)).collect())),
+            execution_history: Arc::new(Mutex::new((0..thread_count).map(|_| VecDeque::with_capacity(100)).collect())),
+            cpu_usage: Arc::new(Mutex::new((0..thread_count).map(|_| AtomicUsize::new(0)).collect())),
+            last_update: Arc::new(Mutex::new(Instant::now())),
         }
     }
     /// 更新worker负载
@@ -581,7 +579,7 @@ impl WorkStealingScheduler {
         let mut thread_queues = Vec::with_capacity(thread_count);
         let mut steal_channels = Vec::with_capacity(thread_count);
         for _ in 0..thread_count {
-            thread_queues.push(Arc::new(Mutex::new(VecDeque::new());
+            thread_queues.push(Arc::new(Mutex::new(VecDeque::new())));
             steal_channels.push(ZeroCopyChannel::new(1000));
         }
         // 创建负载监控器和自适应线程池
@@ -595,7 +593,7 @@ impl WorkStealingScheduler {
             thread_count,
             thread_queues,
             steal_channels,
-            stats: Arc::new(Mutex::new(StealStats::new(),
+            stats: Arc::new(Mutex::new(StealStats::new())),
             shutdown: Arc::new(Mutex::new(std::sync::atomic::AtomicBool::new(false))),
             load_monitor: load_monitor.clone(),
             adaptive_pool: adaptive_pool.clone(),
@@ -843,7 +841,7 @@ impl WorkStealingScheduler {
                 continue;
             }
             let queue_guard: _ = queue.lock().await;
-            queues_with_load.push((i, queue_guard.len();
+            queues_with_load.push((i, queue_guard.len()));
         }
         // 按负载排序，从最重的开始窃取
         queues_with_load.sort_by(|a, b| b.1.cmp(&a.1));
@@ -898,7 +896,7 @@ impl WorkStealingScheduler {
                 if task.priority >= 5 { // 优先窃取高优先级任务
                     let priority_usize: _ = task.priority as usize;
                     if best_task.is_none() || priority_usize > best_task.as_ref().unwrap().0 {
-                        best_task = Some((priority_usize, task.clone();
+                        best_task = Some((priority_usize, task.clone()));
                     }
                 }
             }
@@ -1239,9 +1237,9 @@ impl ConcurrentRuntimePool {
             if config.enable_memory_sharing {
                 println!("🔧 初始化内存共享组件...");
                 (
-                    Some(Arc::new(Mutex::new(SharedMemoryManager::new(config.shared_memory_config.clone())),
-                    Some(Arc::new(Mutex::new(SharedObjectCache::new(config.shared_object_cache_config.clone())),
-                    Some(Arc::new(Mutex::new(MemoryMappedFileManager::new(config.memory_mapped_file_config.clone())),
+                    Some(Arc::new(Mutex::new(SharedMemoryManager::new(config.shared_memory_config.clone())))),
+                    Some(Arc::new(Mutex::new(SharedObjectCache::new(config.shared_object_cache_config.clone())))),
+                    Some(Arc::new(Mutex::new(MemoryMappedFileManager::new(config.memory_mapped_file_config.clone())))),
                 );
             } else {
                 (None, None, None)
@@ -1252,7 +1250,7 @@ impl ConcurrentRuntimePool {
         println!("  - 内存映射: {}", memory_mapped_file_manager.is_some());
         Self {
             config: config.clone(),
-            stats: Arc::new(Mutex::new(ConcurrentExecutionStats::new(),
+            stats: Arc::new(Mutex::new(ConcurrentExecutionStats::new())),
             shared_memory_manager,
             shared_object_cache,
             memory_mapped_file_manager,
@@ -1591,7 +1589,6 @@ impl BatchExecutor {
 #[cfg(test)]
 mod batch_executor_tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_batch_executor_creation() {

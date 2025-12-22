@@ -13,8 +13,6 @@ use rusty_v8 as v8;
 use std::cell::OnceCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 /// Script cache entry tuple
 type ScriptCacheEntry = (v8::Global<v8::Script>, String, Instant);
@@ -1109,7 +1107,6 @@ impl RuntimeLite {
     /// Execute a JavaScript file
     pub fn execute_file(&self, file_path: &std::path::Path) -> Result<String> {
         use std::fs;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
         let code: _ = fs::read_to_string(file_path)
             .map_err(|e| anyhow::anyhow!("Failed to read file: {}", e))?;

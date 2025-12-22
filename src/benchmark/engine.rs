@@ -12,7 +12,6 @@ use crate::benchmark::{
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{Mutex, Semaphore};
 use tokio::task::{JoinHandle, spawn_blocking};
@@ -363,7 +362,6 @@ impl BenchmarkRun {
 mod tests {
     use super::*;
     use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_benchmark_engine_creation() {

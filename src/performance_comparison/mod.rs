@@ -15,7 +15,6 @@ pub use comparison_report::{ReportGenerator, ReportFormat, ReportConfig};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// 性能对比结果
 #[derive(Debug, Clone)]

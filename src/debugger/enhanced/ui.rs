@@ -8,7 +8,6 @@
 use anyhow::Result;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// Breakpoint condition types
 #[derive(Debug, Clone, Serialize, Deserialize)]

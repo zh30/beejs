@@ -2,7 +2,6 @@
 //!
 //! Stage 92 Phase 2: 实现极致内存优化，包括 DMA、内存映射、智能预取和 GC 优化
 //! 目标：80% 内存使用减少，支持 1000-5000x 性能提升
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 pub mod zero_copy;
 pub mod gc_optimizer;
@@ -129,7 +128,6 @@ pub static GLOBAL_MEMORY_STATS: MemoryStats = MemoryStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_memory_stats() {

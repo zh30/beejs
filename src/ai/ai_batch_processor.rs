@@ -428,7 +428,6 @@ pub fn create_embedding_processor(max_batch_size: usize) -> AiBatchProcessor {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_add_single_task() {

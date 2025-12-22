@@ -3,7 +3,6 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
 thread_local! {
     static EVENT_LISTENERS: Mutex<HashMap<String, Vec<v8::Global<v8::Function> = Mutex::new(HashMap::new());

@@ -1,6 +1,5 @@
 //! 边缘计算系统
 use std::collections::VecDeque;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 计算类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

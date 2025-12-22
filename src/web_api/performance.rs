@@ -158,7 +158,6 @@ pub fn setup_performance_api(
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_start_time_initialization() {

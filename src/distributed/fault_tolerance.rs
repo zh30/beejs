@@ -3,7 +3,6 @@
 //!
 //! Stage 29.6: 故障检测与恢复 - 提供企业级容错能力
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
 use tokio::sync::RwLock;
@@ -400,7 +399,6 @@ mod tests {
     use super::*;
     use crate::distributed::service_discovery::{ServiceDiscovery, DiscoveryConfig};
     use crate::distributed::node_manager::NodeManager;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_fault_detection() {

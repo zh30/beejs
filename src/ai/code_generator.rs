@@ -1,7 +1,6 @@
 //! AI 代码生成器
 //! 提供上下文感知的代码生成、补全和重构功能
 use std::path::Path;
-use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 use tokio::sync::RwLock;
 /// 编程语言
@@ -976,7 +975,6 @@ struct ContextAnalysis {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_generate_from_prompt() {

@@ -13,7 +13,6 @@ fn random_bytes(scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments
     let size: _ = args.get(0).int32_value(scope).unwrap_or(0) as usize;
     // Use a simple random generator
     use rand::Rng;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     let mut rng = rand::thread_rng();
     // Generate random data directly into a string representation for now

@@ -7,8 +7,6 @@
 //! - Predictive hot path marking
 //! - Complexity-aware detection
 use std::collections::{HashMap, VecDeque};
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::RwLock;
 use std::time::{Duration, Instant};
 /// Execution event for history tracking
 #[derive(Debug, Clone)]
@@ -332,7 +330,6 @@ pub struct TrackerStatsSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
     #[test]
     fn test_tracker_creation() {

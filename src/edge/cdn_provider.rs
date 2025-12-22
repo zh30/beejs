@@ -1,7 +1,6 @@
 //! CDN Provider Abstraction Layer
 //! Supports multiple CDN providers with intelligent routing and configuration
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use anyhow::{Result, Context};
 /// CDN Provider Type
@@ -194,7 +193,6 @@ impl CdnOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     struct MockProvider {
         provider_type: CdnProviderType,

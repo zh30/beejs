@@ -1,6 +1,5 @@
 // V8 快照数据结构
 // 表示一个 V8 引擎快照
-use std::sync::Arc;
 use std::time::SystemTime;
 use crate::v8::CreateParams;
 /// V8 快照结构体
@@ -80,7 +79,6 @@ fn human_file_size(size: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_v8_snapshot_creation() {

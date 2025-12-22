@@ -636,7 +636,6 @@ fn run_info(_cmd: beejs::cli::commands::InfoCommandArgs, verbose: bool) -> Resul
 /// Run doctor command - diagnose environment
 fn run_doctor(_cmd: beejs::cli::commands::DoctorCommandArgs, verbose: bool) -> Result<()> {
     use beejs::cli::doctor_command::DoctorCommand;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     let mut doctor = DoctorCommand::new(verbose);
     doctor.execute()?;

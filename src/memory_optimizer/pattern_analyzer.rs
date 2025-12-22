@@ -1,7 +1,6 @@
 //! 内存使用模式分析器 - Stage 90 Phase 5.2
 //! 分析内存分配模式，识别优化机会
 use std::collections::{HashMap, BTreeMap, VecDeque};
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
@@ -571,7 +570,6 @@ impl MemoryPatternAnalyzer {
 mod tests {
     use super::*;
     use chrono::Utc;
-use std::sync::{Arc, Mutex, RwLock};
 
     #[tokio::test]
     async fn test_memory_pattern_analysis() {

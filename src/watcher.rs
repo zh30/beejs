@@ -3,8 +3,6 @@
 //! This module provides file watching and hot reload capabilities for development.
 //! It monitors JavaScript/TypeScript files for changes and automatically re-executes them.
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebouncedEventKind};
@@ -353,7 +351,6 @@ impl WatcherConfigBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_watcher_config_default() {

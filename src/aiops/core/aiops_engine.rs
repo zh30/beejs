@@ -7,7 +7,6 @@ use crate::core::data_collector::{DataCollector, Metric, PerformanceSnapshot};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tokio::sync::RwLock;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// AI Ops configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

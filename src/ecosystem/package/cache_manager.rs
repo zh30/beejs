@@ -307,7 +307,6 @@ fn deserialize_package(data: &[u8]) -> Result<Package, Box<dyn std::error::Error
 /// 序列化包 ID
 fn serialize_package_id(id: &PackageId) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     use bincode;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     Ok(bincode::serialize(id)?)
 }

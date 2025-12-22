@@ -268,7 +268,6 @@ impl ScriptExecutor {
 mod tests {
     use super::*;
     use tempfile::tempdir;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_package_json_load() {

@@ -1,7 +1,6 @@
 //! 自适应垃圾回收控制器 - Stage 90 Phase 5.2
 //! 基于内存使用模式的自适应垃圾回收
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
@@ -237,7 +236,6 @@ impl AdaptiveGCController {
     }
     /// 生成事件 ID
     fn generate_event_id(&self) -> u64 {
-        use std::sync::atomic::{AtomicU64, Ordering};
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         COUNTER.fetch_add(1, Ordering::SeqCst)
     }
@@ -245,7 +243,6 @@ impl AdaptiveGCController {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_adaptive_gc() {

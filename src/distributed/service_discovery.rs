@@ -1,7 +1,6 @@
 //! 服务发现模块
 //! 实现基于 Gossip 协议的集群节点自动发现和注册
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
 use tokio::sync::RwLock;
@@ -255,7 +254,6 @@ impl ClusterStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_service_discovery_registration() {

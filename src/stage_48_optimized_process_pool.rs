@@ -9,7 +9,6 @@
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 use tokio::sync::{Semaphore, RwLock};
 use rayon::prelude::*;
@@ -394,7 +393,6 @@ async fn execute_task(worker: &Arc<SmartWorker>, task: &Task) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_optimized_process_pool_creation() {

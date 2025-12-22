@@ -3,7 +3,6 @@
 
 use rusty_v8 as v8;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
 /// 运行时错误类型

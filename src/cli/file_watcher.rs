@@ -233,7 +233,6 @@ mod tests {
     use super::*;
     use tempfile::tempdir;
     use tokio::time::sleep;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_file_watcher_basic() {

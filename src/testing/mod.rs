@@ -27,10 +27,9 @@ pub use enhanced_runner::{EnhancedRunner, EnhancedRunnerConfig};
 pub use parallel_executor::{ParallelExecutor, ParallelConfig};
 pub use test_timeout::{TestTimeout, TimeoutConfig};
 /// Global test registry for collecting test cases during file execution
-use std::sync::{OnceLock};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
+use std::sync::{Arc, Mutex, OnceLock, RwLock};
 static TEST_REGISTRY: OnceLock<Mutex<HashMap<String, TestSuite>>> = OnceLock::new();
 /// Register a test suite
 pub fn register_suite(suite: TestSuite) {

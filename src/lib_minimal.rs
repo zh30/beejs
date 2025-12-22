@@ -1,9 +1,6 @@
 use std::path::{PathBuf, Path};
 use anyhow::{Result, Context, anyhow};
 use std::fs;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Mutex;
 use rusty_v8 as v8;
 /// Beejs Runtime - High-performance JavaScript/TypeScript execution engine using V8
 pub struct Runtime {

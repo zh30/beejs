@@ -2,7 +2,6 @@
 //!
 //! This module provides comprehensive performance analysis tools including
 //! bottleneck detection, optimization suggestions, visualization, and trend analysis.
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 pub mod bottleneck_detector;
 pub mod optimizer;

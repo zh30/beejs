@@ -9,7 +9,6 @@
 //! - AreaChart: Cumulative and range data
 use super::*;
 use anyhow::{Result, Context, anyhow};
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, warn, error};
 /// Line Chart - For time series and continuous data
@@ -900,7 +899,6 @@ impl Default for PieChartBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_line_chart_builder() {

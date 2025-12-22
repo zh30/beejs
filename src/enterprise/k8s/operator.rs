@@ -1,6 +1,5 @@
 //! Enterprise Kubernetes Operator
 //! Implements a production-ready Kubernetes operator for Beejs
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, warn, error, debug};
 /// BeejsCluster custom resource definition
@@ -245,7 +244,6 @@ impl Operator {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_operator_creation() {

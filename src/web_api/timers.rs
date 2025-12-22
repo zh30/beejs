@@ -4,7 +4,6 @@ use anyhow::Result;
 use once_cell::sync::Lazy;
 use rusty_v8 as v8;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Global timer ID counter
 static TIMER_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -172,7 +171,6 @@ fn queue_microtask_callback(
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_timer_id_generation() {

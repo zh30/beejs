@@ -1,6 +1,5 @@
 //! 代码检查器
 //! 提供智能代码质量检查和自动修复功能
-use std::sync::Arc;
 use std::collections::{HashMap, HashSet};
 use serde::{Serialize, Deserialize};
 /// 检查规则
@@ -597,7 +596,6 @@ impl Default for Linter {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_lint_syntax_errors() {

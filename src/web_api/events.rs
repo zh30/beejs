@@ -127,7 +127,6 @@ fn event_target_constructor_callback(
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_event_creation() {

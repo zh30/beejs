@@ -324,7 +324,6 @@ pub fn init_logger(config: LogAggregatorConfig) -> Result<Arc<LogAggregator>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_log_entry_creation() {

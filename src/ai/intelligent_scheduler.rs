@@ -479,8 +479,8 @@ impl IntelligentScheduler {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
+use std::sync::{Arc, Mutex, RwLock, RwLock as SyncRwLock};
     #[tokio::test]
     async fn test_submit_and_schedule_task() {
         let config = IntelligentSchedulerConfig::default();

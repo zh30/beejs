@@ -4,7 +4,6 @@ use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::Path;
-use std::sync::Arc;
 use std::time::SystemTime;
 use tracing::{info, warn, error, debug};
 use uuid::Uuid;
@@ -452,7 +451,6 @@ pub fn default_sync_policies() -> Vec<SyncPolicy> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_git_client_creation() {

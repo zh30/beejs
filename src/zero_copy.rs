@@ -2,7 +2,6 @@
 //! 通过引用传递和内存映射实现高性能数据传输
 use crate::lock_free_temp::{LockFreeBufferPool, AtomicStats, LockFreeCounter};
 
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::marker::PhantomData;
 use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 use tokio::fs::File;
@@ -366,7 +365,6 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
     use std::fs;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_zero_copy_buffer() {

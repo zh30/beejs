@@ -489,7 +489,6 @@ impl AIWorkloadOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_matrix_multiplication() {

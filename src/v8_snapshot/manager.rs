@@ -360,7 +360,6 @@ mod tests {
     #[test]
     fn test_load_nonexistent_snapshot() {
         use tempfile::tempdir;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
         let dir: _ = tempdir().unwrap();
         let base_dir: _ = dir.path();

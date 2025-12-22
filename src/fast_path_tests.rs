@@ -4,7 +4,6 @@
 mod tests {
     #[allow(unused_imports)]
 use crate::runtime_lite::RuntimeLite;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_fast_path_constant_execution() {

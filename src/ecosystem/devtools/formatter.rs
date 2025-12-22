@@ -1,6 +1,5 @@
 //! 代码格式化器
 //! 提供极速代码格式化功能
-use std::sync::Arc;
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 /// 格式化配置
@@ -274,7 +273,6 @@ pub struct FormatStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_basic_formatting() {

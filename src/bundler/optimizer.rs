@@ -86,7 +86,6 @@ pub fn optimize_code(code: &str, level: u8) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_optimize_level_0() {

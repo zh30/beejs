@@ -10,5 +10,4 @@ pub mod permission_audit;
 // 重新导出主要类型
 pub use ot_crdt_sync::{OperationTransformer, CRDTList};
 pub use permission_audit::PermissionAudit;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};

@@ -4,7 +4,6 @@ use rusty_v8 as v8;
 use crate::testing::{register_suite, get_all_suites};
 use crate::testing::test_context::{TestSuite, TestCase};
 use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// Register all testing functions in the V8 global scope
 pub fn register_testing_api(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>) {

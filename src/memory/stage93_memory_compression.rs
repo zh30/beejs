@@ -1,8 +1,6 @@
 //! Stage 93 Phase 1.2: 内存压缩
 //! 实现智能内存压缩，减少内存占用
 //! 目标: 内存使用减少 15%+, 压缩速度 100MB/s+
-use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{RwLock, Mutex};
 use serde::{Serialize, Deserialize};
@@ -349,7 +347,6 @@ pub struct Stage93CompressionReport {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_stage93_compressor_creation() {

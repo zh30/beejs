@@ -293,7 +293,6 @@ fn setup_module_system(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_setup_nodejs_apis() {

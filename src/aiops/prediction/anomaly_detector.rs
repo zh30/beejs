@@ -251,7 +251,6 @@ impl AnomalyDetector for StatisticalAnomalyDetector {
 mod tests {
     use super::*;
     use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     fn create_test_metric(value: f64) -> Metric {
         Metric {

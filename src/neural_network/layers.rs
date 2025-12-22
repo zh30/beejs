@@ -1,6 +1,5 @@
 //! 神经网络层 (Layers) 实现
 use super::tensor::Tensor;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 激活函数类型
 #[derive(Debug, Clone, Copy, PartialEq)]

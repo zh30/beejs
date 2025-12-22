@@ -3,7 +3,6 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::env;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 设置OS API
 pub fn setup_os_api(

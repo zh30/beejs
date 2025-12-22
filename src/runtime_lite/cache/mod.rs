@@ -182,7 +182,6 @@ impl Default for MultiLevelCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_basic_cache_operations() {

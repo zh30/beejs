@@ -1,7 +1,6 @@
 //! 节点管理器模块
 //! 管理集群节点的注册、状态跟踪和元数据
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tokio::time::interval;
@@ -348,7 +347,6 @@ fn determine_health_status(
 mod tests {
     use super::*;
     use crate::distributed::service_discovery::DiscoveryConfig;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_node_registration() {

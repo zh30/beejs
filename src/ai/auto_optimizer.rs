@@ -1,7 +1,6 @@
 //! AI 自动性能优化器
 //! 提供实时性能分析、热点检测和自动优化功能
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
@@ -457,7 +456,6 @@ impl OptimizationValidator {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_auto_optimizer_creation() {

@@ -5,7 +5,6 @@ use crate::core::error::{AIOpsError, Result};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// Metric types for monitoring
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

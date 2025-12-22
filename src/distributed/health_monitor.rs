@@ -1,7 +1,6 @@
 //! 健康监控模块
 //! 实现节点健康检查、状态监控和故障检测
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tokio::time::{interval, sleep};
@@ -311,7 +310,6 @@ mod tests {
     use super::*;
     use crate::distributed::service_discovery::{ServiceDiscovery, NodeInfo, DiscoveryConfig};
     use crate::distributed::node_manager::NodeManager;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_health_check() {

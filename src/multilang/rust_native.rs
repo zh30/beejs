@@ -1,6 +1,5 @@
 //! Rust Native Optimizations
 //! Provides zero-copy optimizations and performance enhancements for Rust-Beejs integration
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
@@ -307,7 +306,6 @@ fn calculate_performance_gain(original: &str, optimized: &str) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_zero_copy_performance() {

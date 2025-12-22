@@ -6,7 +6,6 @@ use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 use std::time::{Duration, Instant};
 /// V8 快照优化管理器
@@ -287,7 +286,6 @@ pub struct SnapshotCacheStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_l1_cache() {

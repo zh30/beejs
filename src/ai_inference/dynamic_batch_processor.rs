@@ -4,7 +4,6 @@ use super::{AIInferenceEngine, InferenceResult};
 use super::tensor_ops::Tensor;
 use anyhow::{Result};
 use std::collections::VecDeque;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 /// 动态批处理配置
@@ -198,7 +197,6 @@ impl DynamicBatchProcessor {
 mod tests {
     use super::*;
     use tokio::time::sleep;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_dynamic_batch_processor_creation() {

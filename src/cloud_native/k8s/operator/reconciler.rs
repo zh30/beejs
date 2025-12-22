@@ -2,7 +2,6 @@
 //! Handles the actual reconciliation logic for cluster and workload resources
 use kube::{Client, Api, ResourceExt};
 use k8s_openapi::api::apps::v1::{StatefulSet, Deployment};
-use std::sync::Arc;
 use tokio::time::{Duration, Instant};
 use tracing::{info, warn, debug, error};
 use super::super::crd::{
@@ -302,7 +301,6 @@ pub struct ReconcileResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_cluster_diff_empty() {

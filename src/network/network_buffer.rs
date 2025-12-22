@@ -4,7 +4,6 @@ use super::{NetworkConfig, NetworkStats};
 
 use std::collections::VecDeque;
 use std::ptr::NonNull;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 缓冲区类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

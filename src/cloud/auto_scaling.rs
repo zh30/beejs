@@ -8,11 +8,9 @@
 //! - 负载预测
 //! - 成本优化
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::{RwLock, mpsc};
 use tokio::time::{interval, Duration};
 use crate::cloud::{CloudAdapter, CloudConfig, CloudManager};
-use std::sync::{Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// 扩缩容策略
 #[derive(Debug, Clone)]

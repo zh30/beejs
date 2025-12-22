@@ -2,7 +2,6 @@
 //! 支持多种 AI 框架和模型格式的通用接口
 use crate::ai_inference::Tensor;
 use anyhow::Result;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use async_trait::async_trait;
 /// AI 模型格式枚举
@@ -276,7 +275,6 @@ impl InferenceEngineExt for Box<dyn InferenceEngine> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     /// 测试引擎管理器的基本功能
     #[tokio::test]

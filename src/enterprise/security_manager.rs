@@ -1,7 +1,6 @@
 //! Enterprise Security Manager
 //! Provides security policy enforcement, RBAC, and audit logging
 use std::collections::HashMap;
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use anyhow::{Result, anyhow};
 use tokio::sync::RwLock;
@@ -297,7 +296,6 @@ impl Default for SecurityManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_security_manager_creation() {

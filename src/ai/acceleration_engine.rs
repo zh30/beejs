@@ -305,7 +305,6 @@ impl AccelerationEngine {
     }
     /// 生成任务 ID
     fn generate_task_id(&self) -> u64 {
-        use std::sync::atomic::{AtomicU64, Ordering};
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         COUNTER.fetch_add(1, Ordering::SeqCst)
     }
@@ -352,7 +351,6 @@ fn avg_duration(current_avg: Duration, new_value: Duration, count: u64) -> Durat
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
     #[test]
     fn test_acceleration_engine_creation() {

@@ -5,7 +5,6 @@
 //! variable scopes.
 use rusty_v8 as v8;
 use crate::debugger::{SourceLocation, DebugResult, v8_stubs::DebugExecutionState};
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// Stack frame information
 #[derive(Debug, Clone)]

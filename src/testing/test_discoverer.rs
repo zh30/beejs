@@ -3,7 +3,6 @@
 use std::path::{Path, PathBuf};
 use std::fs;
 use crate::testing::test_context::TestSuite;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// Test file patterns
 const TEST_FILE_PATTERNS: &[&str] = &[

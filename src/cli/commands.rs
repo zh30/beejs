@@ -5,7 +5,6 @@
 //! Implements a proper subcommand-based CLI structure similar to Bun
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// Main CLI application
 #[derive(Parser, Debug)]

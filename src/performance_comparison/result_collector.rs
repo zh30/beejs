@@ -6,7 +6,6 @@ use crate::benchmarks::BenchmarkResult;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// 单个基准测试的对比结果
 #[derive(Debug, Clone, Serialize, Deserialize)]

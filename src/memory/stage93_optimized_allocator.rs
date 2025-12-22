@@ -1,8 +1,6 @@
 //! Stage 93 Phase 1.2: 优化内存分配器
 //! 在 Stage 92 智能分配器基础上，进一步优化分配性能
 //! 目标: 分配性能提升 40%+, 内存利用率提升 20%+
-use std::sync::atomic::{AtomicUsize, AtomicPtr, Ordering};
-use std::sync::Arc;
 use std::alloc::{GlobalAlloc, Layout};
 use std::ptr::NonNull;
 use std::time::{Duration, Instant};
@@ -404,7 +402,6 @@ pub struct Stage93AllocatorReport {
 mod tests {
     use super::*;
     use crate::memory_optimizer::smart_allocator::SmartMemoryAllocator;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_stage93_allocator_creation() {

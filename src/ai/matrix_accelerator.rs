@@ -2,7 +2,6 @@
 //!
 //! 提供 BLAS 优化的矩阵运算，利用 SIMD 指令集加速矩阵乘法
 //! 支持批处理操作和缓存友好的内存布局优化
-use std::sync::atomic::{AtomicU64, Ordering};
 // AiHardwareFeatures 在 mod.rs 中定义
 /// 矩阵结构体
 #[derive(Debug, Clone)]
@@ -278,7 +277,6 @@ impl MatrixAccelerator {
         #[cfg(target_arch = "x86_64")]
         if is_x86_feature_detected!("sse4.2") {
             use std::arch::x86_64::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
             let mut sum = _mm_setzero_ps();
             let len: _ = a.len() / 4;

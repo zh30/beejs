@@ -4,7 +4,6 @@
 //! 将类型分析结果转换为 TypeScript 声明文件
 use super::*;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// .d.ts 文件发射器
 #[derive(Debug)]

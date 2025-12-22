@@ -2,7 +2,6 @@
 //! Stage 36.0 - 实现交互式 REPL 功能
 use std::collections::VecDeque;
 use std::io::{self, Write};
-use std::sync::Arc;
 use std::time::Instant;
 use crate::RuntimeLite;
 /// REPL configuration
@@ -291,7 +290,6 @@ impl ReplStats {
 mod tests {
     use super::*;
     use crate::RuntimeLite;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_repl_basic_execution() {

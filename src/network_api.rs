@@ -4,7 +4,6 @@
 use crate::network::{ConnectionPool, NetworkStats};
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::sync::Arc;
 /// 设置所有零拷贝网络 I/O API
 pub fn setup_network_apis(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -39,7 +38,6 @@ pub fn setup_network_apis(
 #[cfg(test)]
 mod tests {
 
-    use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_setup_network_apis() {

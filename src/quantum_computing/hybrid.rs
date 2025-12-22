@@ -6,7 +6,6 @@
 //! - 数据编码和解码
 use num_complex::Complex64;
 use super::circuit::QuantumCircuit;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 变分计算结果
 #[derive(Debug, Clone)]

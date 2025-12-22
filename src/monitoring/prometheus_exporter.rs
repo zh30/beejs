@@ -4,7 +4,6 @@ use crate::monitoring::ai_monitor::{PerformanceMetrics, MetricType, RealtimePerf
 use crate::monitoring::intelligent_analyzer::{AnalysisReport, AnomalyDetection};
 use crate::memory::GLOBAL_MEMORY_STATS;
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use chrono::{DateTime, Utc};
 /// Prometheus 指标导出器
@@ -201,7 +200,6 @@ pub enum PrometheusMetricType {
 mod tests {
     use super::*;
     use crate::monitoring::ai_monitor::RealtimePerformanceMonitor;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_prometheus_exporter_creation() {

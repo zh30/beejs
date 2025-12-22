@@ -2,7 +2,6 @@
 //! Manages test suites, test cases, and lifecycle hooks
 use std::time::Duration;
 use rusty_v8 as v8;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// Test case representation
 #[derive(Clone, Debug)]

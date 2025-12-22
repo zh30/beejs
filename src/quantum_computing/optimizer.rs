@@ -4,7 +4,6 @@
 use super::circuit::QuantumCircuit;
 use super::gates::GateType;
 use std::f64::consts::PI;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 量子优化器
 pub struct QuantumOptimizer {

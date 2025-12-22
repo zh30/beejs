@@ -55,5 +55,4 @@ pub use intelligent_scheduler::IntelligentScheduler;
 // Re-export HardwareFeatures from wasm::simd_engine for AI operations
 pub use crate::wasm::simd_engine::HardwareFeatures as AiHardwareFeatures;
 use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};

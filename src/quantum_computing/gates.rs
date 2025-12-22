@@ -6,7 +6,6 @@
 use num_complex::Complex64;
 use std::f64::consts::{FRAC_PI_2, PI};
 use super::Qubit;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 量子门操作
 pub struct QuantumGate;

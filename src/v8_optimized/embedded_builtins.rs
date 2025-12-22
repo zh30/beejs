@@ -4,8 +4,6 @@
 use crate::string_interner::StringInterner;
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 /// 嵌入式内置函数管理器
 /// 管理所有高频操作的 Rust 实现
@@ -391,7 +389,6 @@ fn builtin_buffer_length(args: &[String]) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_builtin_registration() {

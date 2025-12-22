@@ -566,7 +566,6 @@ pub fn interactive_init(formatter: &OutputFormatter) -> anyhow::Result<InitConfi
 mod tests {
     use super::*;
     use tempfile::TempDir;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_project_template_from_str() {

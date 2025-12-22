@@ -8,7 +8,6 @@
 //! - 减少内存拷贝和上下文切换
 use std::io;
 use std::os::unix::io::{AsRawFd, RawFd};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 /// splice 零拷贝数据传输器
 ///
@@ -223,7 +222,6 @@ enum SpliceDirection {
 mod tests {
     #[allow(unused_imports)]
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_splice_zero_copy_pipe_transfer() {

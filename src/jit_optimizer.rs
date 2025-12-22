@@ -922,7 +922,6 @@ pub struct OptimizationSummary {
 mod ai_jit_tests {
     use super::*;
     use chrono::Utc;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_ai_driven_jit_extension() {

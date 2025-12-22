@@ -1,7 +1,5 @@
 //! 临时 lock_free 模块
 //! 为兼容性提供临时定义，避免编译错误
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 临时 LockFreeCounter 定义
 #[derive(Debug, Default)]

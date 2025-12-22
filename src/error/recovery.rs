@@ -1,11 +1,9 @@
 //! Stage 89 Phase 2: 自动恢复机制
 //! 提供智能错误恢复、重试策略和自动修复能力
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use rand::Rng;
 use super::types::{BeejsError, ErrorContext};
-use std::sync::{Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 重试策略
 #[derive(Debug, Clone)]

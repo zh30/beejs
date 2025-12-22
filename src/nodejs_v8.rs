@@ -1,7 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::fs;
 use std::env;
-use std::sync::Arc;
 use anyhow::{Result, anyhow};
 use rusty_v8 as v8;
 use crate::module_loader::ModuleLoader;
@@ -354,7 +353,6 @@ fn setup_module_system(scope: &mut v8::ContextScope<v8::HandleScope>, module_loa
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_setup_nodejs_apis() {

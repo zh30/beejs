@@ -5,7 +5,6 @@ use num_complex::Complex64;
 use std::collections::HashMap;
 use super::gates::GateType;
 use super::simulator::QuantumSimulator;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// 量子电路
 #[derive(Debug, Clone)]

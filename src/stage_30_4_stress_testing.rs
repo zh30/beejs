@@ -166,8 +166,6 @@ impl StressTester {
         let mut error_injection_count = 0;
         while execution_count < self.config.concurrent_tasks as u64 {
             // 决定是否注入故障
-            use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
             static RANDOM_CACHE: AtomicBool = AtomicBool::new(false);
             let should_inject_fault: _ = rand::random::<f64>() < self.config.error_injection_rate;

@@ -223,7 +223,6 @@ impl Read for ZeroCopyUdpSocket {
 mod tests {
     #[allow(unused_imports)]
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_zero_copy_udp_socket_basic() {

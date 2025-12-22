@@ -1,8 +1,6 @@
 //! Beejs Plugin Engine - Stage 86
 //! 高性能、安全的插件引擎核心实现
 use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
@@ -670,7 +668,6 @@ impl Default for PluginEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_plugin_engine_new() {

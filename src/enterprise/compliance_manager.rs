@@ -1,6 +1,5 @@
 //! Enterprise Compliance Manager
 //! Provides compliance checking against various frameworks and regulations
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
@@ -406,7 +405,6 @@ impl Default for ComplianceManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_compliance_frameworks() {

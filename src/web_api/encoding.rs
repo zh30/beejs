@@ -298,7 +298,6 @@ mod tests {
     #[test]
     fn test_base64_encode_decode() {
         use base64::{engine::general_purpose::STANDARD};
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
         let original: _ = "Hello, World!";
         let encoded: _ = STANDARD.encode(original);

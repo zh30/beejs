@@ -1,6 +1,5 @@
 //! Enterprise Module
 //! Provides enterprise-grade security, compliance, and governance features
-use std::sync::Arc;
 pub mod security_manager;
 pub mod compliance_manager;
 // Stage 96 Phase 2: Enterprise Features
@@ -94,7 +93,6 @@ pub struct EnterpriseAuditResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_enterprise_manager() {

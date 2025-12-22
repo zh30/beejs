@@ -6,7 +6,6 @@ use anyhow::Result;
 use prometheus::core::Collector;
 use prometheus::{Counter, CounterVec, Gauge, HistogramOpts, HistogramVec, Registry, Opts};
 use std::collections::VecDeque;
-use std::sync::Arc;
 use std::time::{Duration};
 use tokio::sync::RwLock;
 use tracing::debug;
@@ -392,7 +391,6 @@ impl BusinessMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_custom_metrics_creation() {

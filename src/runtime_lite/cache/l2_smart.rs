@@ -300,7 +300,6 @@ impl Default for L2SmartCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 
     #[test]
     fn test_l2_basic_operations() {

@@ -1,6 +1,5 @@
 //! 分析数据收集器
 //! 提供使用统计和性能基准功能
-use std::sync::Arc;
 use std::collections::{HashMap, VecDeque};
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc, Duration};
@@ -419,7 +418,6 @@ impl Default for AnalyticsCollector {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_track_usage() {

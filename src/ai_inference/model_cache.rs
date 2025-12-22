@@ -3,7 +3,6 @@
 use super::ai_inference_engine::AIModel;
 use anyhow::{Result};
 use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use std::time::{Duration, Instant};
 /// 缓存策略
@@ -128,7 +127,6 @@ impl ModelCache {
     /// 预加载模型
     pub async fn preload(&self, model_ids: &[String]) -> Result<()> {
         use crate::ai_inference::ModelLoader;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
         let loader: _ = ModelLoader::new();
         for model_id in model_ids {

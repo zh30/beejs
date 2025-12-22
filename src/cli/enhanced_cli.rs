@@ -1,6 +1,7 @@
 //! Enhanced CLI Module
 //! Stage 36.0 - 集成所有 CLI 增强功能
 use anyhow::{Context, Result};
+use clap::Parser;
 /// Enhanced CLI arguments
 #[derive(Parser, Debug)]
 #[command(name = "beejs")]

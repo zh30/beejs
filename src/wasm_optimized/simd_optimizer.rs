@@ -2,12 +2,10 @@
 //!
 //! 实现 WebAssembly SIMD (Single Instruction, Multiple Data) 优化
 //! 支持 128 位向量操作，实现 4x+ 性能提升
-use std::sync::Arc;
 use wasmtime::{Module, Config};
 use anyhow::{Result, Context};
 use tracing::{debug, info};
 use rayon::prelude::*;
-use std::sync::{Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// SIMD 优化结果
 #[derive(Debug, Clone)]

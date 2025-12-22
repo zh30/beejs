@@ -10,7 +10,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
 use super::{Runtime, MetricType};
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// 基准测试配置
 #[derive(Debug, Clone, Serialize, Deserialize)]

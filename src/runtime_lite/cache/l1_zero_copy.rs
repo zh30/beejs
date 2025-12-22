@@ -159,7 +159,6 @@ impl Default for L1ZeroCopyCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_l1_basic_operations() {

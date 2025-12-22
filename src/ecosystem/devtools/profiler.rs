@@ -472,7 +472,6 @@ impl CallGraphSampler {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_flamegraph_generation() {

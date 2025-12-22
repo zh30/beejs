@@ -231,7 +231,6 @@ impl Default for V8ConfigManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_high_performance_config() {

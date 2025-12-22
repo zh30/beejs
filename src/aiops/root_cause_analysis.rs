@@ -1,12 +1,10 @@
 //! 自动根因分析系统
 //!
 //! 该模块利用因果推断、变更关联分析和知识图谱来快速定位系统故障的根本原因。
-use std::sync::Arc;
 use std::collections::{HashMap, HashSet};
 use std::time::{SystemTime, Duration};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use std::sync::{Mutex, RwLock};
 use std::collections::{BTreeMap};
 /// 事件类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

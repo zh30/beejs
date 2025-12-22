@@ -2,7 +2,6 @@
 //! 文件系统操作
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 设置fs API
 pub fn setup_fs_api(

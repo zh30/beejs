@@ -293,7 +293,6 @@ impl Default for AutoTuner {
 mod tests {
     use super::*;
     use crate::aiops::optimization::performance_analyzer::{
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
         PerformanceMetric, PerformanceMetricType,
     };
