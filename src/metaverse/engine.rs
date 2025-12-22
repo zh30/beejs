@@ -51,7 +51,7 @@ pub struct MetaverseEngine {
     /// 配置
     config: MetaverseConfig,
     /// 场景物体
-    objects: HashMap<String, SceneObject>>>>>>,
+    objects: HashMap<String, SceneObject, std::collections::HashMap<String, SceneObject, String, SceneObject>>>>>>>,
     /// 光源
     lights: Vec<Light>,
     /// 相机

@@ -269,7 +269,7 @@ impl CircuitResult {
     }
 
     /// 获取所有概率分布
-    pub fn probability_distribution(&self) -> HashMap<Vec<u8>>>>>>, f64> {
+    pub fn probability_distribution(&self) -> HashMap<Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8>>>>>>>, f64> {
         let mut dist = HashMap::new();
 
         for (i, amp) in self.state_vector.iter().enumerate() {

@@ -279,10 +279,10 @@ pub struct GitLabCIPipeline {
     pub stages: Vec<String>,
 
     /// Pipeline jobs
-    pub jobs: std::collections::HashMap<String, PipelineJob>>>>>>,
+    pub jobs: std::collections::HashMap<String, PipelineJob, std::collections::HashMap<String, PipelineJob, String, PipelineJob>>>>>>>,
 
     /// Variables
-    pub variables: std::collections::HashMap<String, String>>>>>>,
+    pub variables: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
 
     /// Cache configuration
     pub cache: Option<PipelineCache>,
@@ -406,10 +406,10 @@ pub struct JenkinsPipeline {
     pub post: Vec<String>,
 
     /// Environment variables
-    pub environment: std::collections::HashMap<String, String>>>>>>,
+    pub environment: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
 
     /// Tools configuration
-    pub tools: std::collections::HashMap<String, String>>>>>>,
+    pub tools: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
 
     /// Pipeline status
     pub status: PipelineStatus,

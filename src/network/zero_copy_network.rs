@@ -67,8 +67,8 @@ impl ZeroCopySocket {
     pub fn new(config: NetworkConfig) -> Self {
         Self {
             zero_copy_config: ZeroCopyConfig::default(),
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(NetworkZeroCopyStats::default())))),
-            mmap_pool: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new())))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(NetworkZeroCopyStats::default()))))),
+            mmap_pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
             config,
         }
     }
@@ -79,7 +79,7 @@ impl ZeroCopySocket {
         Ok(ZeroCopyListener {
             listener,
             config: NetworkConfig::default(),
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(NetworkZeroCopyStats::default())))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(NetworkZeroCopyStats::default()))))),
         })
     }
 

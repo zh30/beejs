@@ -46,9 +46,9 @@ pub struct MonitorMetrics {
 pub struct HealthMonitor {
     node_manager: Arc<NodeManager>,
     config: HealthCheckConfig,
-    health_history: Arc<RwLock<HashMap<String, Vec<HealthCheckResult>>>>>>>,
-    failure_counts: Arc<RwLock<HashMap<String, u32>>>>>>,
-    recovery_counts: Arc<RwLock<HashMap<String, u32>>>>>>,
+    health_history: Arc<RwLock<HashMap<String, Vec<HealthCheckResult, std::collections::HashMap<String, Vec<HealthCheckResult, String, Vec<HealthCheckResult>>>>>>>>,
+    failure_counts: Arc<RwLock<HashMap<String, u32, std::collections::HashMap<String, u32, String, u32>>>>>>>,
+    recovery_counts: Arc<RwLock<HashMap<String, u32, std::collections::HashMap<String, u32, String, u32>>>>>>>,
     metrics: Arc<RwLock<MonitorMetrics>>,
 }
 
@@ -65,15 +65,15 @@ impl HealthMonitor {
         let monitor: _ = Self {
             node_manager,
             config,
-            health_history: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))),
-            failure_counts: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))),
-            recovery_counts: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))),
-            metrics: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(MonitorMetrics {
+            health_history: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            failure_counts: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            recovery_counts: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            metrics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(MonitorMetrics {
                 total_checks: 0,
                 healthy_checks: 0,
                 degraded_checks: 0,
                 unhealthy_checks: 0,
-                average_response_time: Duration::from_millis(0))))),
+                average_response_time: Duration::from_millis(0)))))),
             })),
         };
 
@@ -381,7 +381,7 @@ use std::collections::{HashMap, BTreeMap};
         };
 
         let service_discovery: _ = ServiceDiscovery::new(config);
-        let node_manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(NodeManager::new(service_discovery.clone()))));
+        let node_manager: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(NodeManager::new(service_discovery.clone())))));
         let health_monitor: _ = HealthMonitor::new(node_manager.clone());
 
         let node: _ = NodeInfo {
@@ -409,7 +409,7 @@ use std::collections::{HashMap, BTreeMap};
         };
 
         let service_discovery: _ = ServiceDiscovery::new(config);
-        let node_manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(NodeManager::new(service_discovery.clone()))));
+        let node_manager: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(NodeManager::new(service_discovery.clone())))));
         let health_monitor: _ = HealthMonitor::new(node_manager.clone());
 
         let node: _ = NodeInfo {

@@ -59,7 +59,7 @@ pub struct SimpleEventListener {
 impl SimpleEventListener {
     pub fn new() -> Self {
         Self {
-            events: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new())))),
+            events: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
         }
     }
 
@@ -93,11 +93,11 @@ impl DebuggerEngine {
     pub fn new(config: DebugConfig) -> Self {
         Self {
             config,
-            state: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(DebugState::Running))))),
+            state: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(DebugState::Running)))))),
             breakpoint_manager: BreakpointManager::new(),
             watch_manager: WatchManager::new(),
-            current_stack: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(None))))),
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(DebugStats::new())))),
+            current_stack: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(None)))))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(DebugStats::new()))))),
             current_breakpoint_id: None,
             step_type: None,
             event_listeners: Vec::new(),
@@ -409,7 +409,7 @@ impl DebuggerEngine {
     pub fn get_current_variables(
         &self,
         context: &v8::Global<v8::Context>,
-    ) -> DebugResult<HashMap<crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo>>>>>> {
+    ) -> DebugResult<HashMap<crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo, std::collections::HashMap<crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo, crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo>>>>>>> {
         let inspector: _ = VariableInspector::new(self.config.clone());
         // This would build scopes from current execution state
         let scopes: _ = Vec::new();

@@ -29,7 +29,7 @@ impl PrometheusExporter {
         Ok(Self {
             registry,
             bind_addr: None,
-            running: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Mutex::new(false))))),
+            running: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Mutex::new(false)))))),
         })
     }
 
@@ -39,7 +39,7 @@ impl PrometheusExporter {
         Self {
             registry,
             bind_addr: None,
-            running: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Mutex::new(false))))),
+            running: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Mutex::new(false)))))),
         }
     }
 

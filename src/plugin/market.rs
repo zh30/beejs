@@ -14,7 +14,7 @@ pub struct PluginInfo {
 }
 
 pub struct PluginMarket {
-    plugins: HashMap<String, PluginInfo>>>>>>,
+    plugins: HashMap<String, PluginInfo, std::collections::HashMap<String, PluginInfo, String, PluginInfo>>>>>>>,
 }
 
 impl PluginMarket {

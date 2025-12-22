@@ -108,11 +108,11 @@ impl Default for CacheConfig {
 /// 智能缓存项
 pub struct SmartCache<T> {
     /// 缓存存储
-    cache: Arc<Mutex<HashMap<String, CacheEntry<T>>>>>>,
+    cache: Arc<Mutex<HashMap<String, CacheEntry<T, std::collections::HashMap<String, CacheEntry<T, String, CacheEntry<T>>>>>>>,
     /// LRU 队列 (用于快速访问最久未使用的项)
     lru_queue: Arc<Mutex<VecDeque<String>>,
     /// 访问频率统计
-    access_frequency: Arc<Mutex<HashMap<String, usize>>>>>>,
+    access_frequency: Arc<Mutex<HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>>>>>,
     /// 配置
     config: CacheConfig,
     /// 统计信息
@@ -136,12 +136,12 @@ impl<T> SmartCache<T> {
     /// 创建新的智能缓存
     pub fn new(config: CacheConfig) -> Self {
         Self {
-            cache: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new())))),
-            lru_queue: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new())))),
-            access_frequency: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new())))),
+            cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
+            lru_queue: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
+            access_frequency: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
             config,
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(CacheStats::default())))),
-            last_cleanup: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Instant::now())))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CacheStats::default()))))),
+            last_cleanup: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Instant::now()))))),
         }
     }
 
@@ -244,7 +244,7 @@ impl<T> SmartCache<T> {
     }
 
     /// 批量设置缓存项
-    pub fn set_many(&self, items: HashMap<String, T>>>>>>) {
+    pub fn set_many(&self, items: HashMap<String, T, std::collections::HashMap<String, T, String, T>>>>>>>) {
         for (key, data) in items {
             self.set(key, data);
         }
@@ -380,7 +380,7 @@ impl<T> SmartCache<T> {
     }
 
     /// 逐出 LRU 项
-    fn evict_lru_item(&self, cache: &mut HashMap<String, CacheEntry<T>>>>>>) {
+    fn evict_lru_item(&self, cache: &mut HashMap<String, CacheEntry<T, std::collections::HashMap<String, CacheEntry<T, String, CacheEntry<T>>>>>>>) {
         if !self.config.enable_lru {
             return;
         }

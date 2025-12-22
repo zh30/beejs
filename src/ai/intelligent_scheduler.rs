@@ -213,13 +213,13 @@ impl IntelligentScheduler {
 
         Self {
             config: config.clone(),
-            ai_engine: Arc::new(AiPerformanceEngine::new(ai_config)),
-            task_queue: Arc::new(RwLock::new(VecDeque::with_capacity(config.max_queue_length))),
-            workers: Arc::new(RwLock::new(workers)),
-            decision_history: Arc::new(RwLock::new(VecDeque::with_capacity(config.prediction_window))),
+            ai_engine: Arc::new(std::sync::Mutex::new(AiPerformanceEngine::new(ai_config))),
+            task_queue: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::with_capacity(config.max_queue_length)))),
+            workers: Arc::new(std::sync::Mutex::new(RwLock::new(workers))),
+            decision_history: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::with_capacity(config.prediction_window)))),
             task_completion_tx,
-            task_completion_rx: Arc::new(task_completion_rx),
-            stats: Arc::new(Mutex::new(SchedulerStats::default())),
+            task_completion_rx: Arc::new(std::sync::Mutex::new(task_completion_rx)),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(SchedulerStats::default()))),
         }
     }
 
@@ -553,7 +553,7 @@ use std::collections::{HashMap, BTreeMap};
     async fn test_submit_and_schedule_task() {
         let config: _ = IntelligentSchedulerConfig::default();
         let ai_config: _ = AiPerformanceEngineConfig::default();
-        let scheduler: _ = Arc::new(Mutex::new(IntelligentScheduler::new(config, ai_config)));
+        let scheduler: _ = Arc::new(std::sync::Mutex::new(Mutex::new(IntelligentScheduler::new(config, ai_config))));
 
         // 提交任务
         let task: _ = Task {

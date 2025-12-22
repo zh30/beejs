@@ -21,7 +21,7 @@ pub struct GoRoutineId(pub String);
 #[derive(Debug)]
 pub struct GoRuntime {
     vm: Arc<GoVM>,
-    goroutines: Arc<RwLock<HashMap<GoRoutineId, GoRoutine>>>>>>,
+    goroutines: Arc<RwLock<HashMap<GoRoutineId, GoRoutine, std::collections::HashMap<GoRoutineId, GoRoutine, GoRoutineId, GoRoutine>>>>>>>,
     bee_api: Arc<BeeAPI>,
     executor: Arc<GoExecutor>,
 }
@@ -82,10 +82,10 @@ impl GoVM {
 impl GoRuntime {
     /// Create a new Go runtime
     pub fn new(bee_api: Arc<BeeAPI>) -> Result<Self> {
-        let vm: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(GoVM::new()))))?);
-        let goroutines: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))));
-        let executor: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(GoExecutor {
-            bee_runtime: bee_api.runtime.clone())))),
+        let vm: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(GoVM::new())))))?);
+        let goroutines: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))));
+        let executor: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(GoExecutor {
+            bee_runtime: bee_api.runtime.clone()))))),
         });
 
         Ok(GoRuntime {
@@ -227,8 +227,8 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_go_basic_execution() {
-        let bee_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(BeeAPI {
-            runtime: Arc::new(MockBeeRuntime))))),
+        let bee_api: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BeeAPI {
+            runtime: Arc::new(MockBeeRuntime)))))),
         });
 
         let runtime: _ = GoRuntime::new(bee_api).unwrap();
@@ -249,8 +249,8 @@ func main() {
 
     #[tokio::test]
     async fn test_go_goroutine_spawn() {
-        let bee_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(BeeAPI {
-            runtime: Arc::new(MockBeeRuntime))))),
+        let bee_api: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BeeAPI {
+            runtime: Arc::new(MockBeeRuntime)))))),
         });
 
         let runtime: _ = GoRuntime::new(bee_api).unwrap();
@@ -271,15 +271,15 @@ go func() {
 
     #[tokio::test]
     async fn test_go_bee_interop() {
-        let bee_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(BeeAPI {
-            runtime: Arc::new(MockBeeRuntime))))),
+        let bee_api: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BeeAPI {
+            runtime: Arc::new(MockBeeRuntime)))))),
         });
 
         let runtime: _ = GoRuntime::new(bee_api).unwrap();
 
         let bridge: _ = GoBeeBridge::new(
-            Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(MockBeeRuntime))))),
-            Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(GoVM::new())))).unwrap()),
+            Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(MockBeeRuntime)))))),
+            Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(GoVM::new()))))).unwrap()),
         );
 
         let result: _ = bridge.call_bee_from_go("console.log('Hello from Go calling Bee')").await;

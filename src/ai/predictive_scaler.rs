@@ -164,7 +164,7 @@ pub struct ResourceRequirements {
 pub struct Schedule {
     pub tasks: Vec<ScheduledTask>,
     pub total_duration: Duration,
-    pub resource_utilization: HashMap<String, f64>,
+    pub resource_utilization: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>,
 }
 
 /// 已调度的任务
@@ -194,7 +194,7 @@ pub struct ResourcePredictor {
 /// 趋势分析器
 #[derive(Debug, Clone)]
 pub struct TrendAnalyzer {
-    patterns: Arc<RwLock<HashMap<String, SeasonalityPattern>>>,
+    patterns: Arc<RwLock<HashMap<String, SeasonalityPattern, std::collections::HashMap<String, SeasonalityPattern, String, SeasonalityPattern>>>>,
     anomaly_detector: Arc<AnomalyDetector>,
 }
 
@@ -209,7 +209,7 @@ pub struct AutoScaler {
 #[derive(Debug, Clone)]
 pub struct PredictionModel {
     model_type: ModelType,
-    parameters: HashMap<String, f64>,
+    parameters: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>,
 }
 
 /// 模型类型
@@ -231,9 +231,9 @@ pub struct AnomalyDetector {
 impl PredictiveScaler {
     /// 创建新的预测性扩展器
     pub fn new() -> Self {
-        let predictor: _ = Arc::new(RwLock::new(ResourcePredictor::new()));
-        let analyzer: _ = Arc::new(RwLock::new(TrendAnalyzer::new()));
-        let scaler: _ = Arc::new(RwLock::new(AutoScaler::new()));
+        let predictor: _ = Arc::new(std::sync::Mutex::new(RwLock::new(ResourcePredictor::new())));
+        let analyzer: _ = Arc::new(std::sync::Mutex::new(RwLock::new(TrendAnalyzer::new())));
+        let scaler: _ = Arc::new(std::sync::Mutex::new(RwLock::new(AutoScaler::new())));
 
         Self {
             predictor,
@@ -331,7 +331,7 @@ impl PredictiveScaler {
         tokio::time::sleep(std::time::Duration::from_millis(80)).await;
 
         // 简单的调度算法：按优先级排序
-        let mut sorted_tasks = tasks.clone();clone();clone();to_vec();
+        let mut sorted_tasks = tasks.clone();clone();clone();clone();to_vec();
         sorted_tasks.sort_by(|a, b| b.priority.cmp(&a.priority));
 
         let mut scheduled_tasks = Vec::new();
@@ -388,8 +388,8 @@ impl PredictiveScaler {
 impl ResourcePredictor {
     pub fn new() -> Self {
         Self {
-            model: Arc::new(PredictionModel::new(ModelType::LinearRegression)),
-            historical_data: Arc::new(RwLock::new(Vec::new())),
+            model: Arc::new(std::sync::Mutex::new(PredictionModel::new(ModelType::LinearRegression))),
+            historical_data: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         }
     }
 
@@ -448,8 +448,8 @@ impl ResourcePredictor {
 impl TrendAnalyzer {
     pub fn new() -> Self {
         Self {
-            patterns: Arc::new(RwLock::new(HashMap::new())),
-            anomaly_detector: Arc::new(AnomalyDetector::new(2.0, 50)),
+            patterns: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            anomaly_detector: Arc::new(std::sync::Mutex::new(AnomalyDetector::new(2.0, 50))),
         }
     }
 
@@ -509,13 +509,13 @@ impl TrendAnalyzer {
 impl AutoScaler {
     pub fn new() -> Self {
         Self {
-            current_capacity: Arc::new(RwLock::new(ResourceAllocation {
+            current_capacity: Arc::new(std::sync::Mutex::new(RwLock::new(ResourceAllocation {
                 cpu_cores: 2.0,
                 memory_gb: 4.0,
                 storage_gb: 100.0,
                 network_bandwidth_mbps: 1000,
-            })),
-            scaling_history: Arc::new(RwLock::new(Vec::new())),
+            }))),
+            scaling_history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
         }
     }
 

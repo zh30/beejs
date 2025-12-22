@@ -53,7 +53,7 @@ struct ResourceHistory {
 #[derive(Debug)]
 pub struct ResourceTracker {
     config: ResourceConfig,
-    allocations: HashMap<String, ResourceAllocation>>>>>>,
+    allocations: HashMap<String, ResourceAllocation, std::collections::HashMap<String, ResourceAllocation, String, ResourceAllocation>>>>>>>,
     usage_history: Vec<ResourceHistory>,
     max_history: usize,
 }

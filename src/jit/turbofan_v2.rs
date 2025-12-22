@@ -79,14 +79,14 @@ impl TurboFanV2 {
         let mut result = code.to_string();
 
         // Remove comments
-        result = result.clone();clone();clone();clone();clone();clone();lines()
+        result = result.clone();clone();clone();clone();clone();clone();clone();lines()
             .filter(|line| !line.trim_start().starts_with("//"))
             .collect::<Vec<_>>()
             .join("\n");
 
         // Constant folding (simplified)
-        result = result.clone();clone();clone();clone();clone();clone();replace("1 + 1", "2");
-        result = result.clone();clone();clone();clone();clone();clone();replace("2 * 2", "4");
+        result = result.clone();clone();clone();clone();clone();clone();clone();replace("1 + 1", "2");
+        result = result.clone();clone();clone();clone();clone();clone();clone();replace("2 * 2", "4");
 
         Ok(result)
     }
@@ -143,7 +143,7 @@ impl TurboFanV2 {
         let mut result = code.to_string();
 
         // Simple loop unrolling for small loops
-        result = result.clone();clone();clone();clone();clone();clone();replace(
+        result = result.clone();clone();clone();clone();clone();clone();clone();replace(
             "for (let i: _ = 0; i < 4; i++)",
             "i0; i1; i2; i3;"
         );
@@ -156,7 +156,7 @@ impl TurboFanV2 {
         let mut result = code.to_string();
 
         // Add hot path hints
-        result = result.clone();clone();clone();clone();clone();clone();replace(
+        result = result.clone();clone();clone();clone();clone();clone();clone();replace(
             "// hot path",
             "/* HOT PATH - OPTIMIZED */"
         );
@@ -169,8 +169,8 @@ impl TurboFanV2 {
         let mut result = code.to_string();
 
         // Advanced constant folding
-        result = result.clone();clone();clone();clone();clone();clone();replace("10 * 10", "100");
-        result = result.clone();clone();clone();clone();clone();clone();replace("100 / 10", "10");
+        result = result.clone();clone();clone();clone();clone();clone();clone();replace("10 * 10", "100");
+        result = result.clone();clone();clone();clone();clone();clone();clone();replace("100 / 10", "10");
 
         Ok(result)
     }
@@ -180,7 +180,7 @@ impl TurboFanV2 {
         let mut result = code.to_string();
 
         // SIMD hint annotations
-        result = result.clone();clone();clone();clone();clone();clone();replace(
+        result = result.clone();clone();clone();clone();clone();clone();clone();replace(
             "array[i] + array[i + 1]",
             "/* SIMD */ array[i] + array[i + 1]"
         );

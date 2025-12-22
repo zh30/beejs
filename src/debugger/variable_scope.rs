@@ -71,7 +71,7 @@ impl VariableInspector {
     pub fn get_all_scope_variables(
         &self,
         scopes: &[VariableScope],
-    ) -> DebugResult<HashMap<ScopeType, Vec<VariableInfo>>>>>> {
+    ) -> DebugResult<HashMap<ScopeType, Vec<VariableInfo, std::collections::HashMap<ScopeType, Vec<VariableInfo, ScopeType, Vec<VariableInfo>>>>>>> {
         let mut all_vars = HashMap::new();
 
         for scope in scopes {

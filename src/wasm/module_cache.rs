@@ -64,10 +64,10 @@ impl CacheEntry {
 }
 
 /// L1 内存缓存
-type L1Cache = HashMap<String, Arc<RwLock<CacheEntry>>>>>>;
+type L1Cache = HashMap<String, Arc<RwLock<CacheEntry, std::collections::HashMap<String, Arc<RwLock<CacheEntry, String, Arc<RwLock<CacheEntry>>>>>>>;
 
 /// L2 文件缓存
-type L2Cache = HashMap<String, PathBuf>>>>>>;
+type L2Cache = HashMap<String, PathBuf, std::collections::HashMap<String, PathBuf, String, PathBuf>>>>>>>;
 
 /// 缓存统计信息
 #[derive(Debug, Clone, Default)]
@@ -165,11 +165,11 @@ impl WasmModuleCache {
         }
 
         Ok(WasmModuleCache {
-            l1_cache: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new())))),
-            l2_cache: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new())))),
+            l1_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
+            l2_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
             config,
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(CacheStats::default())))),
-            load_times: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new())))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CacheStats::default()))))),
+            load_times: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
         })
     }
 
@@ -188,7 +188,7 @@ impl WasmModuleCache {
     /// cache.store_module(hash, wasm_bytes)?;
     /// ```
     pub fn store_module(&self, module_hash: String, wasm_bytes: Vec<u8>) -> Result<()> {
-        let entry: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(CacheEntry::new(wasm_bytes)))));
+        let entry: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(CacheEntry::new(wasm_bytes))))));
 
         // 尝试存储到 L1 缓存
         {
@@ -232,7 +232,7 @@ impl WasmModuleCache {
         {
             let l1: _ = self.l1_cache.lock().unwrap();
             if let Some(entry) = l1.get(module_hash) {
-                let mut entry = entry.clone();clone();clone();clone();clone();clone();write().unwrap();
+                let mut entry = entry.clone();clone();clone();clone();clone();clone();clone();write().unwrap();
                 entry.update_access();
 
                 let load_time: _ = start.elapsed();
@@ -444,7 +444,7 @@ impl WasmModuleCache {
 
         // 更新条目信息
         {
-            let mut entry = entry.clone();clone();clone();clone();clone();clone();write().unwrap();
+            let mut entry = entry.clone();clone();clone();clone();clone();clone();clone();write().unwrap();
             entry.file_path = Some(file_path);
         }
 

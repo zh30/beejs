@@ -134,7 +134,7 @@ impl AutomatedTestRunner {
             config,
             framework,
             regression_detector,
-            execution_results: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new())))),
+            execution_results: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
         }
     }
 
@@ -352,7 +352,7 @@ impl AutomatedTestRunner {
         &self,
         tasks: Vec<ScheduledTest>,
     ) -> Result<Vec<TestExecutionResult>, TestRunnerError> {
-        let semaphore: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Semaphore::new(self.config.max_concurrent_tests)))));
+        let semaphore: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Semaphore::new(self.config.max_concurrent_tests))))));
         let mut handles: Vec<JoinHandle<Result<TestExecutionResult, TestRunnerError>> = Vec::new();
 
         for task in tasks {

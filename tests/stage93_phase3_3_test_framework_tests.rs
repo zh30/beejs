@@ -525,7 +525,7 @@ fn test_integration_full_flow() {
     suite.add_test(test_case);
 
     // Run suite
-    let stats: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(EnhancedRunnerStats::new()))))))));
+    let stats: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(EnhancedRunnerStats::new())))))))));
     let results: _ = runner.run_suite(&suite, Arc::clone(stats));
 
     assert_eq!(results.len(), 1);

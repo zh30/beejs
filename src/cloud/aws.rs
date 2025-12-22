@@ -29,7 +29,7 @@ pub struct LambdaConfig {
     pub timeout: u32,
     pub runtime: String,
     pub handler: String,
-    pub environment: HashMap<String, String>>>>>>,
+    pub environment: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
     pub layers: Vec<String>,
     pub dead_letter_config: Option<String>,
 }
@@ -72,7 +72,7 @@ pub struct Ec2Config {
     pub key_name: String,
     pub security_groups: Vec<String>,
     pub user_data: Option<String>,
-    pub tags: HashMap<String, String>>>>>>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
 }
 
 impl AwsAdapter {

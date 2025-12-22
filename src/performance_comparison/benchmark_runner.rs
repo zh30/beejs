@@ -273,7 +273,7 @@ impl BenchmarkRunner {
     }
 
     /// 运行所有基准测试
-    pub async fn run_all(&mut self) -> Result<HashMap<String, PerformanceComparisonResult>>>>>> {
+    pub async fn run_all(&mut self) -> Result<HashMap<String, PerformanceComparisonResult, std::collections::HashMap<String, PerformanceComparisonResult, String, PerformanceComparisonResult>>>>>>> {
         if self.test_cases.is_empty() {
             self.add_standard_test_suite();
         }
@@ -460,7 +460,7 @@ impl BenchmarkRunner {
         beejs_result: &Option<BenchmarkResult>,
         nodejs_result: &Option<BenchmarkResult>,
         bun_result: &Option<BenchmarkResult>,
-    ) -> HashMap<String, Duration>>>>>> {
+    ) -> HashMap<String, Duration, std::collections::HashMap<String, Duration, String, Duration>>>>>>> {
         let mut comparison = HashMap::new();
 
         if let Some(result) = beejs_result {
@@ -482,7 +482,7 @@ impl BenchmarkRunner {
         beejs_result: &Option<BenchmarkResult>,
         nodejs_result: &Option<BenchmarkResult>,
         bun_result: &Option<BenchmarkResult>,
-    ) -> HashMap<String, usize>>>>>> {
+    ) -> HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>>>>> {
         let mut comparison = HashMap::new();
 
         if let Some(result) = beejs_result {

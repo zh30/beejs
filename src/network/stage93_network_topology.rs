@@ -45,8 +45,8 @@ pub struct NetworkPath {
 /// 网络拓扑
 #[derive(Debug, Clone)]
 pub struct NetworkTopology {
-    pub nodes: HashMap<IpAddr, NetworkNode>>>>>>,
-    pub paths: HashMap<String, NetworkPath>>>>>>,
+    pub nodes: HashMap<IpAddr, NetworkNode, std::collections::HashMap<IpAddr, NetworkNode, IpAddr, NetworkNode>>>>>>>,
+    pub paths: HashMap<String, NetworkPath, std::collections::HashMap<String, NetworkPath, String, NetworkPath>>>>>>>,
     pub discovery_time: Instant,
 }
 
@@ -84,8 +84,8 @@ impl Default for TopologyConfig {
 impl Stage93TopologyDiscoverer {
     pub fn new(config: TopologyConfig) -> Self {
         Self {
-            topology: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(NetworkTopology {
-                nodes: HashMap::new())))),
+            topology: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(NetworkTopology {
+                nodes: HashMap::new()))))),
                 paths: HashMap::new(),
                 discovery_time: Instant::now(),
             })),
@@ -125,7 +125,7 @@ impl Stage93TopologyDiscoverer {
 
             let task: _ = tokio::spawn(async move {
                 if let Some(node) = Self::probe_host(ip, &config).await {
-                    let mut topology = topology.clone();clone();clone();clone();clone();clone();lock().unwrap();
+                    let mut topology = topology.clone();clone();clone();clone();clone();clone();clone();lock().unwrap();
                     topology.nodes.insert(ip, node);
                 }
             });

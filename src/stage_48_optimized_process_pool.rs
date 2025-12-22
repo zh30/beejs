@@ -112,7 +112,7 @@ struct SmartWorker {
     avg_execution_time: Arc<Mutex<Vec<f64>>,
     last_used: Arc<Mutex<Instant>>,
     pre_warmed: bool,
-    jit_cache: Arc<Mutex<HashMap<String, Vec<u8>>>>>>>,
+    jit_cache: Arc<Mutex<HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>>>>>>,
     memory_pool: Arc<Mutex<Vec<Vec<u8>>,
 }
 
@@ -121,7 +121,7 @@ pub struct OptimizedProcessPool {
     config: OptimizedProcessPoolConfig,
     workers: Arc<RwLock<Vec<Arc<SmartWorker>>,
     task_queue: Arc<Mutex<Vec<Task>>,
-    results: Arc<RwLock<HashMap<usize, TaskResult>>>>>>,
+    results: Arc<RwLock<HashMap<usize, TaskResult, std::collections::HashMap<usize, TaskResult, usize, TaskResult>>>>>>>,
     worker_semaphore: Arc<Semaphore>,
     next_task_id: Arc<AtomicUsize>,
     stats: Arc<ProcessPoolStats>,
@@ -146,14 +146,14 @@ impl OptimizedProcessPool {
     pub async fn new(config: OptimizedProcessPoolConfig) -> Result<Self> {
         let pool: _ = Self {
             config: config.clone(),
-            workers: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))),
-            task_queue: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(config.task_queue_size))))),
-            results: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))),
-            worker_semaphore: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Semaphore::new(config.max_workers))))),
-            next_task_id: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(1))))),
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(ProcessPoolStats::default())))),
-            last_scale_up: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Instant::now())))),
-            last_scale_down: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Instant::now())))),
+            workers: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
+            task_queue: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(config.task_queue_size)))))),
+            results: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            worker_semaphore: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Semaphore::new(config.max_workers)))))),
+            next_task_id: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(1)))))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ProcessPoolStats::default()))))),
+            last_scale_up: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Instant::now()))))),
+            last_scale_down: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Instant::now()))))),
         };
 
         // 预热工作进程
@@ -197,16 +197,16 @@ impl OptimizedProcessPool {
         // 模拟 V8 运行时预热
         let workload_types: _ = self.assign_workload_types(id);
 
-        let worker: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(SmartWorker {
+        let worker: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(SmartWorker {
             id,
             workload_types,
-            current_load: Arc::new(AtomicUsize::new(0))))),
-            total_tasks: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))))),
-            avg_execution_time: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(100))))),
-            last_used: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Instant::now())))),
+            current_load: Arc::new(AtomicUsize::new(0)))))),
+            total_tasks: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0)))))),
+            avg_execution_time: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(100)))))),
+            last_used: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Instant::now()))))),
             pre_warmed: true,
-            jit_cache: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new())))),
-            memory_pool: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new())))),
+            jit_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
+            memory_pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
         });
 
         // 在后台预编译常用代码
@@ -356,7 +356,7 @@ impl OptimizedProcessPool {
                 };
 
                 {
-                    let mut results = results.clone();clone();clone();clone();clone();clone();write().await;
+                    let mut results = results.clone();clone();clone();clone();clone();clone();clone();write().await;
                     results.insert(task.id, task_result);
                 }
 

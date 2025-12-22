@@ -64,11 +64,11 @@ impl LazyWebAPI {
     /// 创建新的延迟 Web API 加载器
     pub fn new() -> Self {
         Self {
-            initialized_apis: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashSet::new())))),
-            initialization_queue: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new())))),
-            init_semaphore: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Semaphore::new(10))))), // 最多 10 个并发初始化
-            // web_api_registry: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(WebApiRegistry::new())))),
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(LazyInitStats::default())))),
+            initialized_apis: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashSet::new()))))),
+            initialization_queue: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
+            init_semaphore: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Semaphore::new(10)))))), // 最多 10 个并发初始化
+            // web_api_registry: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(WebApiRegistry::new()))))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(LazyInitStats::default()))))),
         }
     }
 
@@ -208,10 +208,10 @@ impl<T> LazyInitializer<T> {
         F: Fn() -> Result<T, Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static,
     {
         Self {
-            init_fn: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(init_fn))))),
-            value: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(None))))),
-            initialized: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(false))))),
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(InitStats::new())))),
+            init_fn: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(init_fn)))))),
+            value: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(None)))))),
+            initialized: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(false)))))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(InitStats::new()))))),
         }
     }
 
@@ -287,7 +287,7 @@ impl<T> LazyInitializer<T> {
 /// 按需模块加载器
 pub struct OnDemandLoader {
     /// 已加载的模块
-    loaded_modules: Arc<RwLock<HashMap<String, LoadedModule>>>>>>,
+    loaded_modules: Arc<RwLock<HashMap<String, LoadedModule, std::collections::HashMap<String, LoadedModule, String, LoadedModule>>>>>>>,
     /// 模块工厂
     module_factory: Arc<dyn ModuleFactory + Send + Sync>,
     /// 统计信息
@@ -338,9 +338,9 @@ impl OnDemandLoader {
     /// 使用指定工厂创建加载器
     pub fn with_factory(factory: Box<dyn ModuleFactory + Send + Sync>) -> Self {
         Self {
-            loaded_modules: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))),
+            loaded_modules: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
             module_factory: Arc::from(factory),
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(LoaderStats::default())))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(LoaderStats::default()))))),
         }
     }
 
@@ -455,9 +455,9 @@ impl StartupOptimizer {
     /// 创建新的启动优化器
     pub fn new(level: OptimizationLevel) -> Self {
         Self {
-            lazy_web_api: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(LazyWebAPI::new())))),
-            on_demand_loader: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(OnDemandLoader::new())))),
-            startup_time: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(None))))),
+            lazy_web_api: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(LazyWebAPI::new()))))),
+            on_demand_loader: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(OnDemandLoader::new()))))),
+            startup_time: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(None)))))),
             optimization_level: level,
         }
     }

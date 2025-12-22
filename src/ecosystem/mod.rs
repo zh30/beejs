@@ -160,8 +160,8 @@ use std::collections::{HashMap, BTreeMap};
     pub struct PackageManifest {
         pub name: String,
         pub version: Version,
-        pub dependencies: HashMap<String, VersionConstraint>>>>>>,
-        pub dev_dependencies: HashMap<String, VersionConstraint>>>>>>,
+        pub dependencies: HashMap<String, VersionConstraint, std::collections::HashMap<String, VersionConstraint, String, VersionConstraint>>>>>>>,
+        pub dev_dependencies: HashMap<String, VersionConstraint, std::collections::HashMap<String, VersionConstraint, String, VersionConstraint>>>>>>>,
     }
 
     /// 包 ID
@@ -193,8 +193,8 @@ use std::collections::{HashMap, BTreeMap};
     /// 依赖图
     #[derive(Debug, Clone)]
     pub struct DependencyGraph {
-        pub nodes: HashMap<String, Version>>>>>>,
-        pub edges: HashMap<String, HashSet<String>>>>>>,
+        pub nodes: HashMap<String, Version, std::collections::HashMap<String, Version, String, Version>>>>>>>,
+        pub edges: HashMap<String, HashSet<String, std::collections::HashMap<String, HashSet<String, String, HashSet<String>>>>>>>,
         pub has_circular: bool,
         pub conflicts_resolved: bool,
     }

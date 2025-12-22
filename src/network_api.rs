@@ -56,9 +56,9 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_setup_network_apis() {
         // TODO: 实现真正的缓冲池测试
-        let _buffer_pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new()))));
-        let _connection_pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(ConnectionPool::new(Default::default())))).unwrap());
-        let network_statistics: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(NetworkStats {
+        let _buffer_pool: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new())))));
+        let _connection_pool: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ConnectionPool::new(Default::default()))))).unwrap());
+        let network_statistics: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(NetworkStats {
             total_connections: 0,
             active_connections: 0,
             zero_copy_operations: 0,
@@ -67,7 +67,7 @@ use std::collections::{HashMap, BTreeMap};
             batch_operations: 0,
             average_latency_us: 0,
             memory_usage: 0,
-        })))));
+        }))))));
 
         // 简化的测试，验证网络模块的基本功能
         // TODO: 缓冲池统计信息

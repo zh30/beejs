@@ -42,7 +42,7 @@ pub struct LoadStats {
 pub struct WasmZeroCopyLoader {
     engine: Arc<Engine>,
     module_cache: Arc<RwLock<LruCache<String, Arc<Module>>,
-    memory_maps: Arc<RwLock<HashMap<String, Arc<Mmap>>>>>>>,
+    memory_maps: Arc<RwLock<HashMap<String, Arc<Mmap, std::collections::HashMap<String, Arc<Mmap, String, Arc<Mmap>>>>>>>>,
     load_stats: Arc<RwLock<LoadStats>>,
     cache_size: usize,
     prewarm_enabled: bool,
@@ -61,19 +61,19 @@ impl WasmZeroCopyLoader {
             .wasm_simd(true)
             .parallel_compilation(true);
 
-        let engine: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Engine::new(&config)))))?);
+        let engine: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Engine::new(&config))))))?);
 
         let loader: _ = Self {
             engine,
-            module_cache: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(LruCache::new(NonZero::new(cache_size))))).unwrap_or(NonZero::new(100).unwrap()),
-            memory_maps: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))),
-            load_stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(LoadStats {
+            module_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(LruCache::new(NonZero::new(cache_size)))))).unwrap_or(NonZero::new(100).unwrap()),
+            memory_maps: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            load_stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(LoadStats {
                 total_loads: 0,
                 cache_hits: 0,
                 cache_misses: 0,
                 avg_load_time_ms: 0.0,
                 cache_hit_rate: 0.0,
-            }))))),
+            })))))),
             cache_size,
             prewarm_enabled,
         };
@@ -225,7 +225,7 @@ impl WasmZeroCopyLoader {
 
         // 缓存内存映射
         let mut memory_maps = self.memory_maps.write().await;
-        memory_maps.insert(name.to_string(), Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(mmap)))));
+        memory_maps.insert(name.to_string(), Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(mmap))))));
 
         Ok(true)
     }
@@ -238,7 +238,7 @@ impl WasmZeroCopyLoader {
         let module: _ = Module::from_binary(self.engine.as_ref(), &wasm_bytes)
             .with_context(|| format!("创建模块失败: {}", name))?;
 
-        Ok(Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(module)))))
+        Ok(Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(module))))))
     }
 
     /// 缓存模块
@@ -309,7 +309,7 @@ impl WasmZeroCopyLoader {
         let compile_time: _ = start_time.elapsed().as_secs_f64() * 1000.0;
         debug!("⚡ 预编译完成 (耗时: {:.2}ms)", compile_time);
 
-        Ok(Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(module)))))
+        Ok(Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(module))))))
     }
 }
 

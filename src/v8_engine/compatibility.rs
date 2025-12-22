@@ -56,7 +56,7 @@ pub struct CompatibilityReport {
     pub v8_version: String,
     pub rusty_v8_version: String,
     pub summary: CompatibilitySummary,
-    pub api_map: HashMap<String, APICompatibilityInfo>>>>>>,
+    pub api_map: HashMap<String, APICompatibilityInfo, std::collections::HashMap<String, APICompatibilityInfo, String, APICompatibilityInfo>>>>>>>,
     pub deprecated_apis: Vec<DeprecatedAPI>,
     pub migration_plans: Vec<MigrationPlan>,
 }
@@ -66,7 +66,7 @@ pub struct CompatibilityReport {
 pub struct APIUsageReport {
     pub deprecated_apis: Vec<String>,
     pub experimental_apis: Vec<String>,
-    pub usage_count: HashMap<String, usize>>>>>>,
+    pub usage_count: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>>>>>,
 }
 
 /// 迁移计划
@@ -140,7 +140,7 @@ pub struct VerificationReport {
 /// V8 兼容性检查器
 pub struct V8CompatibilityChecker {
     /// API 兼容性映射
-    api_map: HashMap<String, APICompatibilityInfo>>>>>>,
+    api_map: HashMap<String, APICompatibilityInfo, std::collections::HashMap<String, APICompatibilityInfo, String, APICompatibilityInfo>>>>>>>,
     /// 已弃用 API 列表
     deprecated_apis: Vec<DeprecatedAPI>,
 }

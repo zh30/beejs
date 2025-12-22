@@ -34,7 +34,7 @@ pub struct Http3ServerStats {
 pub struct Http3Server {
     config: NetworkConfig,
     enabled: bool,
-    routes: HashMap<String, Http3Handler>>>>>>,
+    routes: HashMap<String, Http3Handler, std::collections::HashMap<String, Http3Handler, String, Http3Handler>>>>>>>,
     stats: std::sync::Arc<std::sync::Mutex<Http3ServerStats>>,
 }
 
@@ -45,12 +45,12 @@ impl Http3Server {
             enabled: config.enable_http3,
             config,
             routes: HashMap::new(),
-            stats: std::sync::Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(Http3ServerStats {
+            stats: std::sync::Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(Http3ServerStats {
                 total_requests: 0,
                 active_connections: 0,
                 total_connections: 0,
                 zero_rtt_connections: 0,
-            }))))),
+            })))))),
         })
     }
 

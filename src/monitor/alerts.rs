@@ -24,7 +24,7 @@ pub struct AlertRule {
     /// 是否启用
     pub enabled: bool,
     /// 标签
-    pub tags: HashMap<String, String>>>>>>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
     /// 静默期 (秒)
     pub silence_period: Duration,
 }
@@ -83,7 +83,7 @@ pub struct AlertData {
     /// 指标类型
     pub metric_type: MetricType,
     /// 标签
-    pub tags: HashMap<String, String>>>>>>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
 }
 
 /// 告警状态
@@ -104,7 +104,7 @@ pub struct NotificationChannel {
     /// 渠道类型
     pub channel_type: NotificationType,
     /// 配置
-    pub config: HashMap<String, String>>>>>>,
+    pub config: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
     /// 是否启用
     pub enabled: bool,
 }
@@ -129,7 +129,7 @@ pub struct NotificationMessage {
     /// 严重程度
     pub severity: AlertSeverity,
     /// 标签
-    pub tags: HashMap<String, String>>>>>>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
     /// 时间戳
     pub timestamp: u64,
 }
@@ -172,15 +172,15 @@ pub struct AlertSystem {
     /// 配置
     config: AlertSystemConfig,
     /// 告警规则
-    rules: Arc<Mutex<HashMap<String, AlertRule>>>>>>,
+    rules: Arc<Mutex<HashMap<String, AlertRule, std::collections::HashMap<String, AlertRule, String, AlertRule>>>>>>>,
     /// 活跃告警
-    active_alerts: Arc<Mutex<HashMap<String, AlertInstance>>>>>>,
+    active_alerts: Arc<Mutex<HashMap<String, AlertInstance, std::collections::HashMap<String, AlertInstance, String, AlertInstance>>>>>>>,
     /// 告警历史
     alert_history: Arc<Mutex<VecDeque<AlertInstance>>,
     /// 通知渠道
-    notification_channels: Arc<Mutex<HashMap<String, NotificationChannel>>>>>>,
+    notification_channels: Arc<Mutex<HashMap<String, NotificationChannel, std::collections::HashMap<String, NotificationChannel, String, NotificationChannel>>>>>>>,
     /// 静默规则
-    silence_rules: Arc<Mutex<HashMap<String, SilenceRule>>>>>>,
+    silence_rules: Arc<Mutex<HashMap<String, SilenceRule, std::collections::HashMap<String, SilenceRule, String, SilenceRule>>>>>>>,
     /// 统计信息
     stats: Arc<Mutex<AlertStats>>,
 }
@@ -197,7 +197,7 @@ pub struct SilenceRule {
     /// 结束时间
     pub end_time: u64,
     /// 匹配的标签
-    pub match_tags: HashMap<String, String>>>>>>,
+    pub match_tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
     /// 创建时间
     pub created_at: u64,
 }
@@ -218,19 +218,19 @@ impl AlertSystem {
     pub fn new(config: AlertSystemConfig) -> Self {
         Self {
             config,
-            rules: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new())))),
-            active_alerts: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new())))),
-            alert_history: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new())))),
-            notification_channels: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new())))),
-            silence_rules: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new())))),
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(AlertStats {
+            rules: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
+            active_alerts: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
+            alert_history: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
+            notification_channels: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
+            silence_rules: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AlertStats {
                 total_alerts: 0,
                 active_alerts: 0,
                 resolved_alerts: 0,
                 silenced_alerts: 0,
                 notification_count: 0,
                 last_alert_at: None,
-            }))))),
+            })))))),
         }
     }
 
@@ -291,7 +291,7 @@ impl AlertSystem {
     }
 
     /// 检查是否应该静默
-    fn should_silence(&self, tags: &HashMap<String, String>>>>>>) -> bool {
+    fn should_silence(&self, tags: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>) -> bool {
         let silence_rules: _ = self.silence_rules.lock().unwrap();
         let current_time: _ = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -550,7 +550,7 @@ impl AlertSystem {
         let mut cleaned_count = 0;
 
         // 清理静默的告警
-        let silence_rule_tags: HashMap<String, String>>>>>> = HashMap::new();
+        let silence_rule_tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>> = HashMap::new();
         active_alerts.retain(|_, alert| {
             if alert.status == AlertStatus::Silenced {
                 if current_time - alert.triggered_at > silence_period {

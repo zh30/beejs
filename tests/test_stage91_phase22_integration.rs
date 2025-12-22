@@ -311,7 +311,7 @@ async fn test_concurrent_observability_operations() {
         metrics_update_interval: Duration::from_millis(50),
     };
 
-    let system: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(ObservableSystem::new(config))))))).await.unwrap());
+    let system: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(ObservableSystem::new(config)))))))).await.unwrap());
 
     let mut handles = vec![];
 

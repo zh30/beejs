@@ -168,8 +168,8 @@ impl ResourceOptimizer {
     /// Create a new resource optimizer
     pub async fn new() -> Result<Self> {
         let optimizer: _ = ResourceOptimizer {
-            profiler: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(ResourceProfiler::new())))).await?),
-            tuner: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(AutoTuner::new())))).await?),
+            profiler: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ResourceProfiler::new()))))).await?),
+            tuner: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AutoTuner::new()))))).await?),
         };
 
         println!("Resource optimizer initialized");
@@ -241,8 +241,8 @@ impl ResourceProfiler {
     /// Create a new resource profiler
     pub async fn new() -> Result<Self> {
         let profiler: _ = ResourceProfiler {
-            metrics: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(ResourceMetrics {
-                timestamp: std::time::SystemTime::now())))),
+            metrics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(ResourceMetrics {
+                timestamp: std::time::SystemTime::now()))))),
                 cpu_usage: 50.0,
                 memory_usage: 1024,
                 disk_usage: 2048,
@@ -293,15 +293,15 @@ impl AutoTuner {
     /// Create a new auto tuner
     pub async fn new() -> Result<Self> {
         let tuner: _ = AutoTuner {
-            tuning_history: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))),
-            current_config: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(OptimizationConfig {
+            tuning_history: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
+            current_config: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(OptimizationConfig {
                 cpu_limit: 80.0,
                 memory_limit: 1024.0,
                 max_instances: 100,
                 batch_size: 32,
                 cache_size_mb: 256,
                 optimization_level: OptimizationLevel::Moderate,
-            }))))),
+            })))))),
         };
 
         println!("Auto tuner initialized");
@@ -374,8 +374,8 @@ impl BatteryOptimizer {
     /// Create a new battery optimizer
     pub async fn new() -> Result<Self> {
         let optimizer: _ = BatteryOptimizer {
-            monitor: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(BatteryMonitor::new())))).await?),
-            scheduler: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(PowerScheduler::new())))).await?),
+            monitor: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BatteryMonitor::new()))))).await?),
+            scheduler: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(PowerScheduler::new()))))).await?),
         };
 
         println!("Battery optimizer initialized");
@@ -429,9 +429,9 @@ impl BatteryMonitor {
     /// Create a new battery monitor
     pub async fn new() -> Result<Self> {
         let monitor: _ = BatteryMonitor {
-            current_level: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(85.0))))),
-            is_charging: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(false))))),
-            health_percent: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(95.0))))),
+            current_level: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(85.0)))))),
+            is_charging: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(false)))))),
+            health_percent: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(95.0)))))),
         };
 
         println!("Battery monitor initialized");
@@ -472,7 +472,7 @@ impl PowerScheduler {
     /// Create a new power scheduler
     pub async fn new() -> Result<Self> {
         let scheduler: _ = PowerScheduler {
-            schedules: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))),
+            schedules: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
         };
 
         println!("Power scheduler initialized");

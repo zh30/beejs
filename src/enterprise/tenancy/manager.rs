@@ -99,13 +99,13 @@ pub struct ExecutionContext {
 /// Multi-tenancy manager
 pub struct TenancyManager {
     /// Active tenants
-    tenants: Arc<RwLock<std::collections::HashMap<TenantId, Tenant>>>>>>,
+    tenants: Arc<RwLock<std::collections::HashMap<TenantId, Tenant, std::collections::HashMap<TenantId, Tenant, TenantId, Tenant>>>>>>>,
 
     /// Tenant executions
-    executions: Arc<RwLock<std::collections::HashMap<String, ExecutionContext>>>>>>,
+    executions: Arc<RwLock<std::collections::HashMap<String, ExecutionContext, std::collections::HashMap<String, ExecutionContext, String, ExecutionContext>>>>>>>,
 
     /// Resource usage tracker
-    resource_usage: Arc<RwLock<std::collections::HashMap<TenantId, ResourceUsage>>>>>>,
+    resource_usage: Arc<RwLock<std::collections::HashMap<TenantId, ResourceUsage, std::collections::HashMap<TenantId, ResourceUsage, TenantId, ResourceUsage>>>>>>>,
 }
 
 /// Resource usage by tenant
@@ -123,9 +123,9 @@ impl TenancyManager {
     /// Create a new tenancy manager
     pub fn new() -> Self {
         TenancyManager {
-            tenants: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(std::collections::HashMap::new())))),
-            executions: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(std::collections::HashMap::new())))),
-            resource_usage: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(std::collections::HashMap::new())))),
+            tenants: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(std::collections::HashMap::new()))))),
+            executions: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(std::collections::HashMap::new()))))),
+            resource_usage: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(std::collections::HashMap::new()))))),
         }
     }
 

@@ -53,9 +53,9 @@ pub struct FunctionStats {
 #[derive(Debug)]
 pub struct FunctionTracker {
     /// 活跃的函数跟踪
-    active_traces: HashMap<String, FunctionTraceHandle>>>>>>,
+    active_traces: HashMap<String, FunctionTraceHandle, std::collections::HashMap<String, FunctionTraceHandle, String, FunctionTraceHandle>>>>>>>,
     /// 函数统计
-    function_stats: HashMap<String, FunctionStats>>>>>>,
+    function_stats: HashMap<String, FunctionStats, std::collections::HashMap<String, FunctionStats, String, FunctionStats>>>>>>>,
     /// 性能事件缓冲区
     event_buffer: RingBuffer<PerformanceEvent>,
     /// 采样策略
@@ -248,7 +248,7 @@ impl FunctionTracker {
     }
 
     /// 获取所有函数统计
-    pub fn get_all_function_stats(&self) -> HashMap<String, FunctionStats>>>>>> {
+    pub fn get_all_function_stats(&self) -> HashMap<String, FunctionStats, std::collections::HashMap<String, FunctionStats, String, FunctionStats>>>>>>> {
         self.function_stats.clone()
     }
 

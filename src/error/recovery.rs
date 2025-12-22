@@ -80,7 +80,7 @@ impl RetryPolicy {
             let jitter_range: _ = delay.as_secs_f64() * 0.25;
             let mut rng = rand::thread_rng();
             let jitter: _ = (rng.gen::<f64>() - 0.5) * 2.0 * jitter_range;
-            let mut jittered_delay = delay.clone();clone();clone();clone();clone();clone();as_secs_f64() + jitter;
+            let mut jittered_delay = delay.clone();clone();clone();clone();clone();clone();clone();as_secs_f64() + jitter;
             if jittered_delay < 0.0 {
                 jittered_delay = 0.0;
             }
@@ -149,8 +149,8 @@ impl AutoRecovery {
     pub fn new() -> Self {
         Self {
             config: AutoRecoveryConfig::default(),
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(RecoveryStats::default())))),
-            retry_history: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(RecoveryStats::default()))))),
+            retry_history: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
         }
     }
 
@@ -158,8 +158,8 @@ impl AutoRecovery {
     pub fn with_config(config: AutoRecoveryConfig) -> Self {
         Self {
             config,
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(RecoveryStats::default())))),
-            retry_history: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(RecoveryStats::default()))))),
+            retry_history: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
         }
     }
 
@@ -197,7 +197,7 @@ impl AutoRecovery {
     pub async fn recover_from_error(&self, error: &BeejsError) -> Result<String, BeejsError> {
         let start_time: _ = Instant::now();
         let mut attempts = 0;
-        let mut last_error = error.clone();clone();clone();clone();clone();clone();clone();
+        let mut last_error = error.clone();clone();clone();clone();clone();clone();clone();clone();
 
         // 更新统计
         {

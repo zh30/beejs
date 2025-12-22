@@ -276,10 +276,10 @@ impl Stage93ZeroCopyOptimizer {
         Self {
             base,
             config,
-            pattern_analyzer: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(AccessPatternAnalyzer::new(window_size))))),
-            ai_predictor: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(AiAccessPredictor::new())))),
-            dynamic_pool_manager: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(DynamicPoolManager::new(1024))))),
-            performance_metrics: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Stage93PerformanceMetrics::default())))),
+            pattern_analyzer: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(AccessPatternAnalyzer::new(window_size)))))),
+            ai_predictor: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(AiAccessPredictor::new()))))),
+            dynamic_pool_manager: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(DynamicPoolManager::new(1024)))))),
+            performance_metrics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Stage93PerformanceMetrics::default()))))),
         }
     }
 

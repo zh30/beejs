@@ -21,7 +21,7 @@ pub struct BeejsCluster {
 pub struct ObjectMeta {
     pub name: String,
     pub namespace: String,
-    pub labels: Option<std::collections::HashMap<String, String>>>>>>,
+    pub labels: Option<std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
 }
 
 /// Specification for BeejsCluster
@@ -109,7 +109,7 @@ pub struct Operator {
     config: OperatorConfig,
 
     /// Active clusters
-    clusters: Arc<RwLock<std::collections::HashMap<String, BeejsCluster>>>>>>,
+    clusters: Arc<RwLock<std::collections::HashMap<String, BeejsCluster, std::collections::HashMap<String, BeejsCluster, String, BeejsCluster>>>>>>>,
 
     /// Event sender for broadcasting cluster events
     event_sender: Arc<tokio::sync::mpsc::UnboundedSender<OperatorEvent>>,
@@ -139,8 +139,8 @@ impl Operator {
 
         let operator: _ = Operator {
             config,
-            clusters: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(std::collections::HashMap::new())))),
-            event_sender: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(event_sender))))),
+            clusters: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(std::collections::HashMap::new()))))),
+            event_sender: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(event_sender)))))),
         };
 
         (operator, event_receiver)

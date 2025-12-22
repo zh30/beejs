@@ -227,7 +227,7 @@ impl JavaScriptCoreBenchmark {
                 use std::thread;
 
                 let num_threads: _ = 10;
-                let results: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))));
+                let results: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new())))));
 
                 let mut handles = vec![];
 

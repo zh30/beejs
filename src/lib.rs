@@ -574,9 +574,8 @@ pub fn run_performance_suite() -> Result<TestSuiteResults, crate::automation::te
     let _config: _ = crate::PerformanceConfig::default();
 
     // 创建回归检测器
-    let regression_detector: _ = std::sync::Arc::new(std::sync::Mutex::new(Mutex::new(
-        PerformanceRegressionDetector::new_default())));
-
+    let regression_detector: _ = std::sync::Arc::new(Mutex::new(
+        PerformanceRegressionDetector::new_default());
     // 创建自动化测试运行器
     let test_runner: _ = AutomatedTestRunner::new_default(regression_detector);
 
@@ -690,7 +689,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_performance_regression_detector() {
-        let detector: _ = std::sync::Arc::new(std::sync::Mutex::new(Mutex::new(
+        let detector: _ = std::sync::Arc::new(Mutex::new(
             PerformanceRegressionDetector::new_default())));
         let baseline: _ = PerformanceBaseline {
             test_name: "test_baseline".to_string(),

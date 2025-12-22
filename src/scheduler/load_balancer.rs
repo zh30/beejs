@@ -31,7 +31,7 @@ pub struct BalancingDecision {
 
 /// 智能负载均衡器
 pub struct LoadBalancer {
-    workers: HashMap<String, WorkerLoad>>>>>>,
+    workers: HashMap<String, WorkerLoad, std::collections::HashMap<String, WorkerLoad, String, WorkerLoad>>>>>>>,
     strategy: BalancingStrategy,
 }
 

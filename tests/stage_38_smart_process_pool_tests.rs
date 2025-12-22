@@ -79,7 +79,7 @@ async fn test_smart_load_balancer_performance_based() {
     let mut balancer = SmartLoadBalancer {
         strategy: LoadBalancingStrategy::PerformanceBased,
         worker_performance_history: HashMap::new(),
-        global_stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(GlobalPerformanceStats::default())))))))),
+        global_stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(GlobalPerformanceStats::default()))))))))),
     };
 
     // 模拟工作进程1的性能历史（较快）

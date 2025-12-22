@@ -55,8 +55,8 @@ impl PythonGIL {
 impl PythonRuntime {
     /// Create a new Python runtime
     pub fn new(bee_api: Arc<BeeAPI>) -> Result<Self> {
-        let gil: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(PythonGIL::new()))))?);
-        let context_pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))));
+        let gil: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(PythonGIL::new())))))?);
+        let context_pool: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))));
 
         Ok(PythonRuntime {
             gil,
@@ -195,8 +195,8 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_python_basic_execution() {
-        let bee_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(BeeAPI {
-            runtime: Arc::new(MockBeeRuntime))))),
+        let bee_api: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BeeAPI {
+            runtime: Arc::new(MockBeeRuntime)))))),
         });
 
         let runtime: _ = PythonRuntime::new(bee_api).unwrap();
@@ -211,8 +211,8 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_python_function_call() {
-        let bee_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(BeeAPI {
-            runtime: Arc::new(MockBeeRuntime))))),
+        let bee_api: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BeeAPI {
+            runtime: Arc::new(MockBeeRuntime)))))),
         });
 
         let runtime: _ = PythonRuntime::new(bee_api).unwrap();
@@ -229,8 +229,8 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_python_bee_api() {
-        let bee_api: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(BeeAPI {
-            runtime: Arc::new(MockBeeRuntime))))),
+        let bee_api: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BeeAPI {
+            runtime: Arc::new(MockBeeRuntime)))))),
         });
 
         let runtime: _ = PythonRuntime::new(bee_api).unwrap();

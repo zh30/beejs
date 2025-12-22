@@ -12,7 +12,7 @@ pub struct ContainerConfig {
     pub version: String,
     pub replicas: usize,
     pub port: u16,
-    pub env: HashMap<String, String>>>>>>,
+    pub env: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
     pub resource_config: ResourceConfig,
     pub network_config: NetworkConfig,
     pub health_check: Option<HealthCheckConfig>,

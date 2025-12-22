@@ -117,7 +117,7 @@ impl MemoryBenchmark {
             MetricType::MemoryUsage,
             || {
                 // 模拟内存池使用
-                let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::<u8>::new()))));
+                let pool: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::<u8>::new())))));
                 for _ in 0..100 {
                     let _chunk: _ = pool.lock().unwrap();
                     // 保持锁一小段时间来模拟实际使用

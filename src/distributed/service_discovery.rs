@@ -44,7 +44,7 @@ pub struct GossipMessage {
 #[derive(Debug, Clone)]
 pub struct ServiceDiscovery {
     config: DiscoveryConfig,
-    nodes: Arc<RwLock<HashMap<String, NodeMetadata>>>>>>,
+    nodes: Arc<RwLock<HashMap<String, NodeMetadata, std::collections::HashMap<String, NodeMetadata, String, NodeMetadata>>>>>>>,
     gossip_history: Arc<RwLock<Vec<GossipMessage>>,
 }
 
@@ -53,8 +53,8 @@ impl ServiceDiscovery {
     pub fn new(config: DiscoveryConfig) -> Self {
         let discovery: _ = Self {
             config: config.clone(),
-            nodes: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))),
-            gossip_history: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))),
+            nodes: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            gossip_history: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
         };
 
         // 启动后台 gossip 任务
@@ -159,7 +159,7 @@ impl ServiceDiscovery {
 
     /// Gossip 协议实现
     async fn gossip_protocol(
-        nodes: Arc<RwLock<HashMap<String, NodeMetadata>>>>>>,
+        nodes: Arc<RwLock<HashMap<String, NodeMetadata, std::collections::HashMap<String, NodeMetadata, String, NodeMetadata>>>>>>>,
         _gossip_history: Arc<RwLock<Vec<GossipMessage>>,
         _config: &DiscoveryConfig,
     ) {

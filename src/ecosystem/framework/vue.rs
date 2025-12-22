@@ -301,7 +301,7 @@ pub struct SingleFileComponent {
     pub script_setup: String,
     pub styles: Vec<String>,
     pub title: Option<String>,
-    pub meta: HashMap<String, String>>>>>>,
+    pub meta: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
 }
 
 /// 编译后的模板
@@ -315,8 +315,8 @@ pub struct CompiledTemplate {
 #[derive(Debug, Clone)]
 pub struct ReactiveData {
     pub data: serde_json::Value,
-    pub getters: HashMap<String, String>>>>>>,
-    pub setters: HashMap<String, String>>>>>>,
+    pub getters: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub setters: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
 }
 
 /// 响应式组件
@@ -324,9 +324,9 @@ pub struct ReactiveData {
 pub struct ReactiveComponent {
     pub name: String,
     pub data: serde_json::Value,
-    pub methods: HashMap<String, String>>>>>>,
-    pub computed: HashMap<String, String>>>>>>,
-    pub watch: HashMap<String, String>>>>>>,
+    pub methods: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub computed: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub watch: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
     pub mount_id: String,
 }
 
@@ -354,7 +354,7 @@ pub enum VueVNodeType {
 #[derive(Debug, Clone)]
 pub struct VueVElement {
     pub tag_name: String,
-    pub props: HashMap<String, String>>>>>>,
+    pub props: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
     pub directives: Vec<VueDirective>,
     pub children: Vec<VueVNode>,
 }
@@ -538,7 +538,7 @@ impl SfcParser {
     }
 
     /// 提取元数据
-    fn extract_meta(&self, source: &str) -> Result<HashMap<String, String>>>>>>, Box<dyn std::error::Error>> {
+    fn extract_meta(&self, source: &str) -> Result<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>, Box<dyn std::error::Error>> {
         // 简化的元数据提取
         Ok(HashMap::new())
     }
@@ -547,7 +547,7 @@ impl SfcParser {
 /// 组件解析器
 #[derive(Debug)]
 pub struct ComponentResolver {
-    global_components: HashMap<String, VueComponent>>>>>>,
+    global_components: HashMap<String, VueComponent, std::collections::HashMap<String, VueComponent, String, VueComponent>>>>>>>,
 }
 
 impl ComponentResolver {

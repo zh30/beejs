@@ -166,7 +166,7 @@ impl Tensor {
 /// 梯度结构
 #[derive(Debug, Clone)]
 pub struct Gradients {
-    tensors: HashMap<String, Tensor>,
+    tensors: HashMap<String, Tensor, std::collections::HashMap<String, Tensor, String, Tensor>>,
 }
 
 impl Gradients {
@@ -433,7 +433,7 @@ impl TensorOptimizer {
             let mut max_val = f32::NEG_INFINITY;
             for j in 0..cols {
                 if let Some(data) = tensor.f32_data() {
-                    max_val = max_val.clone();clone();clone();max(data[i * cols + j]);
+                    max_val = max_val.clone();clone();clone();clone();max(data[i * cols + j]);
                 }
             }
 

@@ -78,11 +78,11 @@ impl OfflineExecutionEngine {
         data_store: OfflineDataStore,
     ) -> Result<Self> {
         let engine: _ = OfflineExecutionEngine {
-            runtime: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(None))))),
-            local_cache: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(local_cache))))),
-            data_store: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(data_store))))),
-            dependency_resolver: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(DependencyResolver::new())))),
-            sync_manager: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(super::local_cache::SyncManager::new())))).await?),
+            runtime: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(None)))))),
+            local_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(local_cache)))))),
+            data_store: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(data_store)))))),
+            dependency_resolver: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(DependencyResolver::new()))))),
+            sync_manager: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(super::local_cache::SyncManager::new()))))).await?),
         };
 
         // Initialize runtime

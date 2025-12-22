@@ -22,7 +22,7 @@ impl RealTimeMonitor {
     /// 创建新的实时监控器
     pub fn new(config: MonitorConfig) -> Self {
         Self {
-            metrics_collector: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(MetricsCollector::new())))),
+            metrics_collector: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(MetricsCollector::new()))))),
             config,
         }
     }

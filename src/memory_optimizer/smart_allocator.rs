@@ -94,14 +94,14 @@ impl SmartMemoryAllocator {
             .collect();
 
         Self {
-            pools: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(pools))))),
-            metrics: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(AllocationMetrics {
+            pools: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(pools)))))),
+            metrics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(AllocationMetrics {
                 total_allocations: 0,
                 total_deallocations: 0,
                 cache_hits: 0,
                 cache_misses: 0,
                 average_allocation_time_ns: 0,
-            }))))),
+            })))))),
             config,
         }
     }

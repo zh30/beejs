@@ -35,7 +35,7 @@ pub struct Identity {
     /// 创建时间
     pub created_at: u64,
     /// 元数据
-    pub metadata: HashMap<String, String>>>>>>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
 }
 
 /// 凭证
@@ -46,7 +46,7 @@ pub struct Credential {
     /// 颁发者 DID
     pub issuer_did: String,
     /// 声明
-    pub claims: HashMap<String, serde_json::Value>>>>>>,
+    pub claims: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>>>>>,
     /// 证明
     pub proof: Vec<u8>,
 }
@@ -56,7 +56,7 @@ pub struct DecentralizedAuth {
     /// 配置
     config: AuthConfig,
     /// 身份缓存
-    identities: HashMap<String, Identity>>>>>>,
+    identities: HashMap<String, Identity, std::collections::HashMap<String, Identity, String, Identity>>>>>>>,
     /// 凭证缓存
     credentials: Vec<Credential>,
 }
@@ -114,7 +114,7 @@ impl DecentralizedAuth {
         &mut self,
         holder_did: &str,
         issuer_did: &str,
-        claims: HashMap<String, serde_json::Value>>>>>>,
+        claims: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>>>>>,
     ) -> Result<Credential, AuthError> {
         let credential: _ = Credential {
             holder_did: holder_did.to_string(),

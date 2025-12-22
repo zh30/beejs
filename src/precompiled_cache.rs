@@ -36,7 +36,7 @@ pub struct PrecompiledModuleCache {
     /// 缓存目录
     cache_dir: PathBuf,
     /// 内存缓存的模块
-    modules: Arc<Mutex<HashMap<String, PrecompiledModuleEntry>>>>>>,
+    modules: Arc<Mutex<HashMap<String, PrecompiledModuleEntry, std::collections::HashMap<String, PrecompiledModuleEntry, String, PrecompiledModuleEntry>>>>>>>,
     /// 统计信息
     stats: Arc<Mutex<PrecompiledCacheStats>>,
     /// V8 字节码缓存
@@ -62,9 +62,9 @@ impl PrecompiledModuleCache {
 
         Ok(Self {
             cache_dir,
-            modules: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new())))),
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(PrecompiledCacheStats::default())))),
-            bytecode_cache: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(BytecodeCache::new(cache_config))))),
+            modules: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(PrecompiledCacheStats::default()))))),
+            bytecode_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BytecodeCache::new(cache_config)))))),
         })
     }
 

@@ -15,7 +15,7 @@ use std::collections::{HashMap, BTreeMap};
 /// Heap snapshot
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HeapSnapshot {
-    objects: HashMap<String, HeapObject>>>>>>,
+    objects: HashMap<String, HeapObject, std::collections::HashMap<String, HeapObject, String, HeapObject>>>>>>>,
     total_size: usize,
 }
 
@@ -71,7 +71,7 @@ pub struct HeapStats {
 
 /// Object tracer
 pub struct ObjectTracer {
-    traces: HashMap<String, ObjectTrace>>>>>>,
+    traces: HashMap<String, ObjectTrace, std::collections::HashMap<String, ObjectTrace, String, ObjectTrace>>>>>>>,
 }
 
 #[derive(Debug, Clone)]

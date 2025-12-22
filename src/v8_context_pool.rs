@@ -114,14 +114,14 @@ impl V8ContextPool {
     ) -> Self {
         let hot_size: _ = std::cmp::min(4, max_pool_size); // Keep up to 4 hot contexts
         Self {
-            pool: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new())))),
-            hot_pool: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new())))),
+            pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
+            hot_pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
             max_pool_size,
             max_hot_pool_size: hot_size,
             max_context_age,
             optimization_level: OptimizationLevel::Aggressive,
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(ContextPoolStats::default())))),
-            init_time_saved: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Duration::default())))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ContextPoolStats::default()))))),
+            init_time_saved: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Duration::default()))))),
         }
     }
 
@@ -139,14 +139,14 @@ impl V8ContextPool {
         };
 
         Self {
-            pool: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new())))),
-            hot_pool: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new())))),
+            pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
+            hot_pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
             max_pool_size,
             max_hot_pool_size: hot_size,
             max_context_age,
             optimization_level: level,
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(ContextPoolStats::default())))),
-            init_time_saved: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Duration::default())))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ContextPoolStats::default()))))),
+            init_time_saved: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Duration::default()))))),
         }
     }
 

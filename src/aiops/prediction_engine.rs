@@ -35,7 +35,7 @@ pub struct SystemMetric {
     pub metric_type: MetricType,
     pub value: f64,
     pub timestamp: SystemTime,
-    pub labels: HashMap<String, String>>>>>>,
+    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
 }
 
 /// 时间序列数据点
@@ -93,7 +93,7 @@ pub struct TrendAnalyzer {
 impl TrendAnalyzer {
     pub fn new() -> Self {
         Self {
-            baseline_calculator: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(BaselineCalculator::new())))),
+            baseline_calculator: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BaselineCalculator::new()))))),
         }
     }
 
@@ -203,7 +203,7 @@ pub struct ModelTrainer {
 impl ModelTrainer {
     pub fn new() -> Self {
         Self {
-            historical_data: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))),
+            historical_data: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
         }
     }
 
@@ -219,7 +219,7 @@ impl ModelTrainer {
     }
 
     /// 计算故障概率
-    pub async fn calculate_failure_probability(&self, metrics: &[SystemMetric]) -> Result<HashMap<MetricType, f64>>>>>>, Box<dyn std::error::Error>> {
+    pub async fn calculate_failure_probability(&self, metrics: &[SystemMetric]) -> Result<HashMap<MetricType, f64, std::collections::HashMap<MetricType, f64, MetricType, f64>>>>>>>, Box<dyn std::error::Error>> {
         let mut probabilities = HashMap::new();
 
         for metric in metrics {
@@ -339,9 +339,9 @@ pub struct PredictionEngine {
 impl PredictionEngine {
     pub fn new() -> Self {
         Self {
-            anomaly_detector: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(AnomalyDetector::new())))),
-            trend_analyzer: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(TrendAnalyzer::new())))),
-            model_trainer: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(ModelTrainer::new())))),
+            anomaly_detector: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AnomalyDetector::new()))))),
+            trend_analyzer: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(TrendAnalyzer::new()))))),
+            model_trainer: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ModelTrainer::new()))))),
         }
     }
 
@@ -404,7 +404,7 @@ impl PredictionEngine {
         Ok(max_probability)
     }
 
-    fn group_metrics_by_type(&self, metrics: &[SystemMetric]) -> HashMap<MetricType, Vec<SystemMetric>>>>>> {
+    fn group_metrics_by_type(&self, metrics: &[SystemMetric]) -> HashMap<MetricType, Vec<SystemMetric, std::collections::HashMap<MetricType, Vec<SystemMetric, MetricType, Vec<SystemMetric>>>>>>> {
         let mut grouped = HashMap::new();
 
         for metric in metrics {

@@ -101,7 +101,7 @@ impl HealthManager {
     pub fn new() -> Self {
         Self {
             checks: Vec::new(),
-            ready: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicBool::new(false)))))))),
+            ready: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicBool::new(false))))))))),
         }
     }
 
@@ -211,8 +211,8 @@ impl GracefulShutdown {
     pub fn new() -> Self {
         Self {
             phase: ShutdownPhase::Running,
-            active_connections: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicU32::new(0)))))))),
-            shutdown_requested: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicBool::new(false)))))))),
+            active_connections: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicU32::new(0))))))))),
+            shutdown_requested: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicBool::new(false))))))))),
             pre_shutdown_hooks: Vec::new(),
             post_shutdown_hooks: Vec::new(),
             drain_timeout: Duration::from_secs(30),
@@ -525,8 +525,8 @@ mod tests {
     fn test_graceful_shutdown_hooks() {
         use std::sync::atomic::AtomicBool;
 
-        let pre_called: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicBool::new(false))))))));
-        let post_called: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicBool::new(false))))))));
+        let pre_called: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicBool::new(false)))))))));
+        let post_called: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicBool::new(false)))))))));
 
         let pre_called_clone: _ = Arc::clone(pre_called);
         let post_called_clone: _ = Arc::clone(post_called);
@@ -651,7 +651,7 @@ fn test_stage_28_3_lifecycle_integration() {
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 
-    let cleanup_counter: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicU32::new(0))))))));
+    let cleanup_counter: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicU32::new(0)))))))));
     let cleanup_counter_clone: _ = Arc::clone(cleanup_counter);
 
     let mut startup = StartupManager::new();

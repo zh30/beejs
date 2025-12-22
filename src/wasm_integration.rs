@@ -62,10 +62,10 @@ impl WasmExecutor {
 
         Ok(Self {
             engine,
-            modules: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(Vec::new())))),
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(WasmStats {
+            modules: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(Vec::new()))))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(WasmStats {
                 total_executions: 0,
-                total_execution_time: Duration::default())))),
+                total_execution_time: Duration::default()))))),
                 cache_hit_rate: 0.0,
                 avg_execution_time: Duration::default(),
                 wasmtime_config: Some(format!(

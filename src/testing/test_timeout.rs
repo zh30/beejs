@@ -167,7 +167,7 @@ impl TimeoutContext {
         TimeoutContext {
             start_time: Instant::now(),
             timeout,
-            active_tests: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new())))),
+            active_tests: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
         }
     }
 

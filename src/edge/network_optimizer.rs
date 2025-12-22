@@ -64,7 +64,7 @@ pub struct BandwidthManager {
 /// Bandwidth allocator
 #[derive(Debug)]
 pub struct BandwidthAllocator {
-    pools: Arc<RwLock<HashMap<String, BandwidthPool>>>>>>,
+    pools: Arc<RwLock<HashMap<String, BandwidthPool, std::collections::HashMap<String, BandwidthPool, String, BandwidthPool>>>>>>>,
 }
 
 /// Bandwidth pool
@@ -135,15 +135,15 @@ pub struct BandwidthMonitor {
 pub struct UsageSample {
     pub timestamp: std::time::SystemTime,
     pub total_usage_mbps: u64,
-    pub per_pool_usage: HashMap<String, u64>>>>>>,
+    pub per_pool_usage: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>>>>>>,
 }
 
 impl NetworkOptimizer {
     /// Create a new network optimizer
     pub async fn new() -> Result<Self> {
         let optimizer: _ = NetworkOptimizer {
-            latency_monitor: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(LatencyMonitor::new())))).await?),
-            routing_optimizer: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RouteOptimizer::new())))).await?),
+            latency_monitor: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(LatencyMonitor::new()))))).await?),
+            routing_optimizer: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RouteOptimizer::new()))))).await?),
         };
 
         println!("Network optimizer initialized");
@@ -229,7 +229,7 @@ impl LatencyMonitor {
     /// Create a new latency monitor
     pub async fn new() -> Result<Self> {
         let monitor: _ = LatencyMonitor {
-            measurements: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))),
+            measurements: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
         };
 
         println!("Latency monitor initialized");
@@ -287,7 +287,7 @@ impl RouteOptimizer {
     /// Create a new route optimizer
     pub async fn new() -> Result<Self> {
         let optimizer: _ = RouteOptimizer {
-            routes: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))),
+            routes: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
         };
 
         println!("Route optimizer initialized");
@@ -325,8 +325,8 @@ impl BandwidthManager {
     /// Create a new bandwidth manager
     pub async fn new() -> Result<Self> {
         let manager: _ = BandwidthManager {
-            allocator: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(BandwidthAllocator::new())))).await?),
-            monitor: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(BandwidthMonitor::new())))).await?),
+            allocator: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BandwidthAllocator::new()))))).await?),
+            monitor: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BandwidthMonitor::new()))))).await?),
         };
 
         println!("Bandwidth manager initialized");
@@ -360,7 +360,7 @@ impl BandwidthAllocator {
     /// Create a new bandwidth allocator
     pub async fn new() -> Result<Self> {
         let allocator: _ = BandwidthAllocator {
-            pools: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))),
+            pools: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
         };
 
         // Initialize default pools
@@ -481,7 +481,7 @@ impl BandwidthMonitor {
     /// Create a new bandwidth monitor
     pub async fn new() -> Result<Self> {
         let monitor: _ = BandwidthMonitor {
-            usage_history: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))),
+            usage_history: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
         };
 
         println!("Bandwidth monitor initialized");

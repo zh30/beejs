@@ -171,10 +171,10 @@ mod performance_benchmark_tests {
         // Simple computational test: calculate sum of squares
         let mut result: i32 = 0;
         for i in 0..ITERATIONS {
-            result = result.clone();clone();clone();clone();clone();clone();wrapping_add((i * i) as i32);
+            result = result.clone();clone();clone();clone();clone();clone();clone();wrapping_add((i * i) as i32);
             if i % 1_000_000 == 0 {
                 // Prevent compiler from optimizing away the loop
-                result = result.clone();clone();clone();clone();clone();clone();wrapping_add((i % 1000) as i32);
+                result = result.clone();clone();clone();clone();clone();clone();clone();wrapping_add((i % 1000) as i32);
             }
         }
         result

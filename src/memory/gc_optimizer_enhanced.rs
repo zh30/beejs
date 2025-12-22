@@ -265,19 +265,19 @@ impl EnhancedGcOptimizer {
     pub fn new(config: GcConfig) -> Self {
         Self {
             config,
-            heap_info: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HeapInfo {
+            heap_info: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HeapInfo {
                 current_size: 0,
                 used_size: 0,
                 peak_size: 0,
                 object_count: 0,
                 allocation_rate: 0.0,
                 collection_rate: 0.0,
-            }))))),
-            predictor: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(AiGcPredictor::new())))),
-            metrics: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(GcMetrics::default())))),
-            event_history: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new())))),
-            predictive_enabled: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicBool::new(true))))),
-            current_strategy: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(GcStrategy::Standard))))),
+            })))))),
+            predictor: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(AiGcPredictor::new()))))),
+            metrics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(GcMetrics::default()))))),
+            event_history: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
+            predictive_enabled: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicBool::new(true)))))),
+            current_strategy: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(GcStrategy::Standard)))))),
         }
     }
 

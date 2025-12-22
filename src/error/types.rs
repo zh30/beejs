@@ -118,7 +118,7 @@ pub struct ErrorContext {
     pub severity: ErrorSeverity,
     pub timestamp: std::time::Instant,
     pub recovery_suggestions: Vec<String>,
-    pub metadata: HashMap<String, String>>>>>>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
 }
 
 impl ErrorContext {

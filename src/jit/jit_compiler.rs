@@ -115,7 +115,7 @@ pub struct JitCompiler {
     config: JitCompilerConfig,
     hot_path_tracker: Arc<HotPathTrackerV2>,
     inline_strategy: Arc<InlineStrategy>,
-    code_cache: Arc<RwLock<HashMap<u64, CompilationResult>>>>>>,
+    code_cache: Arc<RwLock<HashMap<u64, CompilationResult, std::collections::HashMap<u64, CompilationResult, u64, CompilationResult>>>>>>>,
     perf_stats: Arc<RwLock<JitPerfStats>>,
 }
 
@@ -136,10 +136,10 @@ impl JitCompiler {
     pub fn new(config: JitCompilerConfig) -> Self {
         Self {
             config: config.clone(),
-            hot_path_tracker: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(HotPathTrackerV2::new())))),
-            inline_strategy: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(InlineStrategy::new())))),
-            code_cache: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))),
-            perf_stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(JitPerfStats::default())))),
+            hot_path_tracker: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HotPathTrackerV2::new()))))),
+            inline_strategy: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(InlineStrategy::new()))))),
+            code_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            perf_stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(JitPerfStats::default()))))),
         }
     }
 

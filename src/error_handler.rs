@@ -21,7 +21,7 @@ impl ErrorHandler {
     /// 创建新的错误处理器
     pub fn new(verbose: bool) -> Self {
         Self {
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(ErrorStats::default())))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ErrorStats::default()))))),
             verbose,
         }
     }

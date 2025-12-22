@@ -34,7 +34,7 @@ impl V8Snapshot {
         let created_at: _ = SystemTime::now();
 
         Self {
-            snapshot_data: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(snapshot_data))))),
+            snapshot_data: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(snapshot_data)))))),
             version,
             created_at,
             size_bytes,

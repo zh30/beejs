@@ -85,7 +85,7 @@ impl NpmCompatibility {
         &self,
         packages: &[PackageSpec],
         options: &InstallOptions,
-    ) -> Result<HashMap<String, PackageResolution>>>>>>, Box<dyn std::error::Error>> {
+    ) -> Result<HashMap<String, PackageResolution, std::collections::HashMap<String, PackageResolution, String, PackageResolution>>>>>>>, Box<dyn std::error::Error>> {
         let mut resolutions = HashMap::new();
 
         for spec in packages {
@@ -371,11 +371,11 @@ pub struct NpmPackageInfo {
     pub description: Option<String>,
     pub versions: Vec<String>,
     #[serde(rename = "dist-tags")]
-    pub dist_tags: HashMap<String, String>>>>>>,
-    pub dependencies: HashMap<String, String>>>>>>,
-    pub peer_dependencies: HashMap<String, String>>>>>>,
-    pub optional_dependencies: HashMap<String, String>>>>>>,
-    pub bins: HashMap<String, String>>>>>>,
+    pub dist_tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub peer_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub optional_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub bins: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
     pub main: String,
     pub types: Option<String>,
     pub exports: Option<serde_json::Value>,
@@ -397,23 +397,23 @@ pub struct PackageJson {
     pub version: String,
     pub description: Option<String>,
     pub main: String,
-    pub scripts: HashMap<String, String>>>>>>,
+    pub scripts: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
     pub keywords: Vec<String>,
     pub author: Option<String>,
     pub license: String,
 
-    pub dependencies: HashMap<String, String>>>>>>,
-    pub dev_dependencies: HashMap<String, String>>>>>>,
-    pub peer_dependencies: HashMap<String, String>>>>>>,
-    pub optional_dependencies: HashMap<String, String>>>>>>,
+    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub dev_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub peer_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub optional_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
 
-    pub engines: Option<HashMap<String, String>>>>>>,
+    pub engines: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
     pub os: Vec<String>,
     pub cpu: Vec<String>,
     pub private: bool,
 
     pub workspaces: Option<Vec<String>>,
-    pub publish_config: Option<HashMap<String, String>>>>>>,
+    pub publish_config: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
 
     pub exports: Option<serde_json::Value>,
     pub types: Option<String>,
@@ -421,9 +421,9 @@ pub struct PackageJson {
     pub typings: Option<String>,
 
     pub files: Option<Vec<String>>,
-    pub bin: Option<HashMap<String, String>>>>>>,
+    pub bin: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
     pub man: Option<Vec<String>>,
-    pub directories: Option<HashMap<String, String>>>>>>,
+    pub directories: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
 
     pub repository: Option<serde_json::Value>,
     pub bugs: Option<serde_json::Value>,
@@ -436,5 +436,5 @@ pub struct PackageJson {
     pub bundle_dependencies: Option<Vec<String>>,
     pub deprecated: Option<String>,
 
-    pub description_map: HashMap<String, String>>>>>>,
+    pub description_map: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
 }

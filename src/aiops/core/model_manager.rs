@@ -73,18 +73,18 @@ pub struct Model {
 /// - Model metadata management
 pub struct ModelManager {
     /// Models cache
-    models: Arc<RwLock<HashMap<String, Model>>>>>>,
+    models: Arc<RwLock<HashMap<String, Model, std::collections::HashMap<String, Model, String, Model>>>>>>>,
 
     /// Model metadata
-    metadata: Arc<RwLock<HashMap<String, ModelMetadata>>>>>>,
+    metadata: Arc<RwLock<HashMap<String, ModelMetadata, std::collections::HashMap<String, ModelMetadata, String, ModelMetadata>>>>>>>,
 }
 
 impl ModelManager {
     /// Create a new model manager
     pub fn new() -> Self {
         Self {
-            models: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))),
-            metadata: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))),
+            models: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            metadata: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
         }
     }
 

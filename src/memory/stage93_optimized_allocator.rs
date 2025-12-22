@@ -313,8 +313,8 @@ impl Stage93OptimizedAllocator {
             config,
             arena,
             size_classes,
-            defragmenter: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Defragmenter::new(config.defrag_threshold))))),
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Stage93AllocatorStats::default())))),
+            defragmenter: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Defragmenter::new(config.defrag_threshold)))))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Stage93AllocatorStats::default()))))),
         }
     }
 

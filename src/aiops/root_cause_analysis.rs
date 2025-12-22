@@ -169,8 +169,8 @@ pub struct EventCollector {
 impl EventCollector {
     pub fn new() -> Self {
         Self {
-            incidents: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))),
-            changes: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))),
+            incidents: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
+            changes: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
         }
     }
 
@@ -332,13 +332,13 @@ impl ChangeCorrelator {
 /// 因果推断引擎
 #[derive(Debug)]
 pub struct CausalInferenceEngine {
-    causal_graph: Arc<RwLock<HashMap<String, Vec<Causality>>>>>>>,
+    causal_graph: Arc<RwLock<HashMap<String, Vec<Causality, std::collections::HashMap<String, Vec<Causality, String, Vec<Causality>>>>>>>>,
 }
 
 impl CausalInferenceEngine {
     pub fn new() -> Self {
         Self {
-            causal_graph: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))),
+            causal_graph: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
         }
     }
 
@@ -456,11 +456,11 @@ pub struct RootCauseAnalyzer {
 
 impl RootCauseAnalyzer {
     pub fn new() -> Self {
-        let event_collector: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(EventCollector::new()))));
+        let event_collector: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(EventCollector::new())))));
         Self {
-            event_collector: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(EventCollector::new())))),
-            causal_inference_engine: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(CausalInferenceEngine::new())))),
-            change_correlator: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(ChangeCorrelator::new(event_collector.clone())))),
+            event_collector: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(EventCollector::new()))))),
+            causal_inference_engine: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CausalInferenceEngine::new()))))),
+            change_correlator: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ChangeCorrelator::new(event_collector.clone()))))),
         }
     }
 

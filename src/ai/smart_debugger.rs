@@ -76,8 +76,8 @@ pub struct SmartDebugger {
 /// 调试知识库
 #[derive(Debug, Clone)]
 pub struct DebugKnowledgeBase {
-    error_patterns: HashMap<String, ErrorPattern>>>>>>,
-    fix_templates: HashMap<String, Vec<FixTemplate>>>>>>,
+    error_patterns: HashMap<String, ErrorPattern, std::collections::HashMap<String, ErrorPattern, String, ErrorPattern>>>>>>>,
+    fix_templates: HashMap<String, Vec<FixTemplate, std::collections::HashMap<String, Vec<FixTemplate, String, Vec<FixTemplate>>>>>>>,
 }
 
 /// 错误模式
@@ -106,15 +106,15 @@ pub struct ErrorPatternMatcher {
 /// 修复生成器
 #[derive(Debug, Clone)]
 pub struct FixGenerator {
-    templates: Arc<RwLock<HashMap<String, Vec<FixTemplate>>>>>>>,
+    templates: Arc<RwLock<HashMap<String, Vec<FixTemplate, std::collections::HashMap<String, Vec<FixTemplate, String, Vec<FixTemplate>>>>>>>>,
 }
 
 impl SmartDebugger {
     /// 创建新的智能调试器
     pub fn new() -> Self {
-        let knowledge_base: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(DebugKnowledgeBase::new()))));
-        let pattern_matcher: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(ErrorPatternMatcher::new()))));
-        let fix_generator: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(FixGenerator::new()))));
+        let knowledge_base: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(DebugKnowledgeBase::new())))));
+        let pattern_matcher: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ErrorPatternMatcher::new())))));
+        let fix_generator: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(FixGenerator::new())))));
 
         Self {
             knowledge_base,
@@ -386,7 +386,7 @@ impl DebugKnowledgeBase {
 impl ErrorPatternMatcher {
     pub fn new() -> Self {
         Self {
-            patterns: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())))),
+            patterns: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
         }
     }
 }
@@ -394,7 +394,7 @@ impl ErrorPatternMatcher {
 impl FixGenerator {
     pub fn new() -> Self {
         Self {
-            templates: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))),
+            templates: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
         }
     }
 }

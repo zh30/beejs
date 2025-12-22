@@ -18,9 +18,9 @@ impl CacheManager {
     /// 创建新的缓存管理器
     pub fn new() -> Self {
         Self {
-            l1: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(L1MemoryCache::new())))),
-            l2: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(L2DiskCache::new())))),
-            l3: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(L3DistributedCache::new())))),
+            l1: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(L1MemoryCache::new()))))),
+            l2: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(L2DiskCache::new()))))),
+            l3: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(L3DistributedCache::new()))))),
         }
     }
 
@@ -263,7 +263,7 @@ impl CacheManager {
 /// L1 内存缓存
 #[derive(Debug, Clone)]
 struct L1MemoryCache {
-    cache: HashMap<String, Vec<u8>>>>>>,
+    cache: HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>>>>>,
 }
 
 impl L1MemoryCache {
@@ -292,7 +292,7 @@ impl L1MemoryCache {
 /// L2 磁盘缓存
 #[derive(Debug, Clone)]
 struct L2DiskCache {
-    cache: HashMap<String, Vec<u8>>>>>>,
+    cache: HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>>>>>,
 }
 
 impl L2DiskCache {
@@ -321,7 +321,7 @@ impl L2DiskCache {
 /// L3 分布式缓存
 #[derive(Debug, Clone)]
 struct L3DistributedCache {
-    cache: HashMap<String, Vec<u8>>>>>>,
+    cache: HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>>>>>,
 }
 
 impl L3DistributedCache {

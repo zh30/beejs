@@ -45,7 +45,7 @@ pub struct ModuleResolver {
     /// Current working directory for resolution
     current_dir: PathBuf,
     /// Module cache to avoid re-resolution
-    cache: HashMap<String, ResolutionResult>>>>>>,
+    cache: HashMap<String, ResolutionResult, std::collections::HashMap<String, ResolutionResult, String, ResolutionResult>>>>>>>,
     /// Search paths for node_modules
     search_paths: Vec<PathBuf>,
 }

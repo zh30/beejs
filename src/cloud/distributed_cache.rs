@@ -146,11 +146,11 @@ pub struct DistributedCache<T> {
     /// 配置
     config: CacheConfig,
     /// 缓存存储
-    storage: Arc<Mutex<HashMap<String, CacheEntry<T>>>>>>>,
+    storage: Arc<Mutex<HashMap<String, CacheEntry<T, std::collections::HashMap<String, CacheEntry<T, String, CacheEntry<T>>>>>>>>,
     /// 访问顺序 (LRU/FIFO)
     access_order: Arc<Mutex<VecDeque<String>>,
     /// 访问频率 (LFU)
-    access_frequency: Arc<Mutex<HashMap<String, u64>>>>>>,
+    access_frequency: Arc<Mutex<HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>>>>>>,
     /// 缓存节点
     nodes: Vec<CacheNode>,
     /// 统计信息
@@ -166,12 +166,12 @@ impl<T: Clone> DistributedCache<T> {
 
         Self {
             config,
-            storage: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new())))),
-            access_order: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new())))),
-            access_frequency: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new())))),
+            storage: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
+            access_order: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
+            access_frequency: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
             nodes: Vec::new(),
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(CacheStats::default())))),
-            warmup_queue: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new())))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CacheStats::default()))))),
+            warmup_queue: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
         }
     }
 
@@ -405,9 +405,9 @@ impl<T: Clone> DistributedCache<T> {
     /// 驱逐旧条目
     fn evict_entries(
         &self,
-        storage: &mut HashMap<String, CacheEntry<T>>>>>>,
+        storage: &mut HashMap<String, CacheEntry<T, std::collections::HashMap<String, CacheEntry<T, String, CacheEntry<T>>>>>>>,
         access_order: &mut VecDeque<String>,
-        access_frequency: &mut HashMap<String, u64>>>>>>,
+        access_frequency: &mut HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>>>>>>,
     ) {
         if storage.is_empty() {
             return;

@@ -33,9 +33,9 @@ pub struct WasmModuleMetadata {
 /// 极致性能 WASM 执行器
 pub struct WasmOptimizedExecutor {
     engine: Arc<Engine>,
-    compiled_modules: Arc<std::sync::Mutex<HashMap<String, Module>>>>>>,
-    module_metadata: Arc<std::sync::Mutex<HashMap<String, WasmModuleMetadata>>>>>>,
-    performance_stats: Arc<std::sync::Mutex<HashMap<String, WasmExecutionResult>>>>>>,
+    compiled_modules: Arc<std::sync::Mutex<HashMap<String, Module, std::collections::HashMap<String, Module, String, Module>>>>>>>,
+    module_metadata: Arc<std::sync::Mutex<HashMap<String, WasmModuleMetadata, std::collections::HashMap<String, WasmModuleMetadata, String, WasmModuleMetadata>>>>>>>,
+    performance_stats: Arc<std::sync::Mutex<HashMap<String, WasmExecutionResult, std::collections::HashMap<String, WasmExecutionResult, String, WasmExecutionResult>>>>>>>,
 }
 
 impl WasmOptimizedExecutor {
@@ -51,13 +51,13 @@ impl WasmOptimizedExecutor {
             .wasm_simd(true)
             .parallel_compilation(true);
 
-        let engine: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Engine::new(&config)))))?);
+        let engine: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Engine::new(&config))))))?);
 
         Ok(Self {
             engine,
-            compiled_modules: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(HashMap::new())))),
-            module_metadata: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(HashMap::new())))),
-            performance_stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(HashMap::new())))),
+            compiled_modules: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(HashMap::new()))))),
+            module_metadata: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(HashMap::new()))))),
+            performance_stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(HashMap::new()))))),
         })
     }
 

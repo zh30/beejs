@@ -118,7 +118,7 @@ pub struct AiMemoryPool {
     config: AiMemoryPoolConfig,
     blocks: Arc<Mutex<Vec<MemoryBlock>>,
     available_blocks: Arc<Mutex<Vec<usize>>, // 存储可用的block ID
-    model_configs: Arc<Mutex<HashMap<String, ModelMemoryConfig>>>>>>,
+    model_configs: Arc<Mutex<HashMap<String, ModelMemoryConfig, std::collections::HashMap<String, ModelMemoryConfig, String, ModelMemoryConfig>>>>>>>,
     stats: Arc<Mutex<MemoryPoolStats>>,
     total_allocated: Arc<Mutex<usize>>,
     peak_allocated: Arc<Mutex<usize>>,
@@ -176,12 +176,12 @@ impl AiMemoryPool {
     pub fn new(config: AiMemoryPoolConfig) -> Self {
         let pool: _ = Self {
             config: config.clone(),
-            blocks: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new())))),
-            available_blocks: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new())))),
-            model_configs: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new())))),
-            stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(MemoryPoolStats::default())))),
-            total_allocated: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(0))))),
-            peak_allocated: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(0))))),
+            blocks: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
+            available_blocks: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
+            model_configs: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
+            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(MemoryPoolStats::default()))))),
+            total_allocated: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(0)))))),
+            peak_allocated: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(0)))))),
         };
 
         // 根据策略进行预分配

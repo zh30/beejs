@@ -57,7 +57,7 @@ pub enum HydrationStrategy {
 pub struct ComponentInfo {
     pub name: String,
     pub path: String,
-    pub props: HashMap<String, PropInfo>>>>>>,
+    pub props: HashMap<String, PropInfo, std::collections::HashMap<String, PropInfo, String, PropInfo>>>>>>>,
     pub state: Vec<StateInfo>,
     pub lifecycle_hooks: Vec<String>,
     pub dependencies: Vec<String>,

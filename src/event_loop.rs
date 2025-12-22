@@ -76,10 +76,10 @@ impl V8EventLoop {
     /// 创建新的事件循环
     pub fn new(config: EventLoopConfig) -> Self {
         Self {
-            state: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(EventLoopState::Stopped))))),
+            state: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(EventLoopState::Stopped)))))),
             config,
-            task_queue: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new())))),
-            completed_tasks: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new())))),
+            task_queue: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
+            completed_tasks: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
         }
     }
 

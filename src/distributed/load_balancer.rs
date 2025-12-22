@@ -35,9 +35,9 @@ impl Default for HashRingConfig {
 pub struct ConsistentHashRing {
     config: HashRingConfig,
     /// 哈希环: hash_value -> node_id
-    ring: RwLock<BTreeMap<u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String>>,
+    ring: RwLock<BTreeMap<u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String>>,
     /// 节点及其虚拟节点数
-    nodes: RwLock<HashMap<String, usize>>>>>>,
+    nodes: RwLock<HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>>>>>,
 }
 
 impl ConsistentHashRing {
@@ -218,9 +218,9 @@ impl Default for NodeMetrics {
 pub struct IntelligentRouter {
     config: RouterConfig,
     nodes: RwLock<Vec<String>>,
-    metrics: RwLock<HashMap<String, NodeMetrics>>>>>>,
+    metrics: RwLock<HashMap<String, NodeMetrics, std::collections::HashMap<String, NodeMetrics, String, NodeMetrics>>>>>>>,
     round_robin_index: AtomicUsize,
-    sticky_map: RwLock<HashMap<String, String>>>>>>,
+    sticky_map: RwLock<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
 }
 
 impl IntelligentRouter {
@@ -255,7 +255,7 @@ impl IntelligentRouter {
     pub fn update_node_health(&self, node_id: &str, health: f64) {
         let mut metrics = self.metrics.write().unwrap();
         if let Some(m) = metrics.get_mut(node_id) {
-            m.health = health.clone();clone();clone();clone();clone();clone();clamp(0.0, 1.0);
+            m.health = health.clone();clone();clone();clone();clone();clone();clone();clamp(0.0, 1.0);
             m.last_update = Instant::now();
         }
     }
@@ -263,7 +263,7 @@ impl IntelligentRouter {
     pub fn update_node_load(&self, node_id: &str, load: f64) {
         let mut metrics = self.metrics.write().unwrap();
         if let Some(m) = metrics.get_mut(node_id) {
-            m.load = load.clone();clone();clone();clone();clone();clone();clamp(0.0, 1.0);
+            m.load = load.clone();clone();clone();clone();clone();clone();clone();clamp(0.0, 1.0);
             m.last_update = Instant::now();
         }
     }
@@ -568,7 +568,7 @@ impl CircuitBreaker {
 #[derive(Debug)]
 pub struct CircuitBreakerRegistry {
     config: CircuitBreakerConfig,
-    breakers: RwLock<HashMap<String, Arc<CircuitBreaker>>>>>>,
+    breakers: RwLock<HashMap<String, Arc<CircuitBreaker, std::collections::HashMap<String, Arc<CircuitBreaker, String, Arc<CircuitBreaker>>>>>>>,
 }
 
 impl CircuitBreakerRegistry {
@@ -591,7 +591,7 @@ impl CircuitBreakerRegistry {
         // 不存在则创建
         let mut breakers = self.breakers.write().unwrap();
         breakers.entry(service_name.to_string())
-            .or_insert_with(|| Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(CircuitBreaker::new(service_name, self.config.clone()))))
+            .or_insert_with(|| Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CircuitBreaker::new(service_name, self.config.clone())))))
             .clone()
     }
 
@@ -667,7 +667,7 @@ pub struct LoadBalancer {
     hash_ring: RwLock<ConsistentHashRing>,
     router: IntelligentRouter,
     circuit_breakers: CircuitBreakerRegistry,
-    backends: RwLock<HashMap<String, Backend>>>>>>,
+    backends: RwLock<HashMap<String, Backend, std::collections::HashMap<String, Backend, String, Backend>>>>>>>,
     request_count: AtomicU64,
     total_latency_ns: AtomicU64,
 }

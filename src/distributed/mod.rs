@@ -231,10 +231,10 @@ impl DistributedSystem {
         let service_discovery: _ = ServiceDiscovery::new(config.discovery_config);
 
         // 创建节点管理器
-        let node_manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(NodeManager::new(service_discovery.clone()))));
+        let node_manager: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(NodeManager::new(service_discovery.clone())))));
 
         // 创建健康监控器
-        let health_monitor: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Mutex::new(HealthMonitor::new(node_manager.clone()))));
+        let health_monitor: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HealthMonitor::new(node_manager.clone())))));
 
         Ok(Self {
             service_discovery,

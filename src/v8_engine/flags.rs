@@ -223,7 +223,7 @@ impl V8EngineFlags {
 #[derive(Debug)]
 pub struct V8ConfigManager {
     /// Map of configuration name to flags
-    configs: HashMap<String, V8EngineFlags>>>>>>,
+    configs: HashMap<String, V8EngineFlags, std::collections::HashMap<String, V8EngineFlags, String, V8EngineFlags>>>>>>>,
 }
 
 impl V8ConfigManager {
