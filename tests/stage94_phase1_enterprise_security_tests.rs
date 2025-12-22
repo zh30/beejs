@@ -446,7 +446,7 @@ async fn test_key_lifecycle_management() {
     let key_states: _ = stats.get("key_states").unwrap();
 
     // Should have: 2 active (rotated + key3), 1 expired (key1), 1 revoked (key2)
-    let key_states_map: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>> = serde_json::from_value(key_states.clone()).unwrap();
+    let key_states_map: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize>>> = serde_json::from_value(key_states.clone()).unwrap();
     assert!(key_states_map.get("Active").unwrap() >= &2);
     assert!(key_states_map.contains_key("Expired"));
     assert!(key_states_map.contains_key("Revoked"));

@@ -92,9 +92,9 @@ impl Runtime {
         Ok(Self {
             stack_size,
             max_heap,
-            execution_count: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
+            execution_count: Arc::new(Mutex::new(AtomicUsize::new(0)),
             verbose,
-            isolate: Arc::new(std::sync::Mutex::new(Mutex::new(isolate))),
+            isolate: Arc::new(Mutex::new(isolate)),
             context,
         })
     }
@@ -106,7 +106,7 @@ impl Runtime {
         }
 
         let code: _ = fs::read_to_string(path)
-            .context(format!("Failed to read file: {}", path.display()))?;
+            .context(format!("Failed to read file: {}", path.display())?;
 
         let base_dir: _ = path.parent()
             .unwrap_or_else(|| Path::new("."))
@@ -176,7 +176,7 @@ impl Runtime {
         let script: _ = match v8::Script::compile(scope, source, None) {
             Some(script) => script,
             None => {
-                let exception = scope.exception()
+                let exception: _ = scope.exception()
                     .unwrap_or_else(|| v8::String::new(scope, "Unknown compilation error").unwrap().into());
                 let exception_str: _ = exception.to_string(scope)
                     .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
@@ -189,7 +189,7 @@ impl Runtime {
             Some(result) => result,
             None => {
                 if scope.has_caught() {
-                    let exception = scope.exception()
+                    let exception: _ = scope.exception()
                         .unwrap_or_else(|| v8::String::new(scope, "Unknown runtime error").unwrap().into());
                     let exception_str: _ = exception.to_string(scope)
                         .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
@@ -228,7 +228,7 @@ impl Runtime {
                 "false".to_string()
             }
         } else if result.is_string() {
-            let str_val = result.to_string(scope)
+            let str_val: _ = result.to_string(scope)
                 .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap());
             str_val.to_rust_string_lossy(scope)
         } else {
@@ -275,7 +275,7 @@ impl Runtime {
                     if arg.is_true() { "true".to_string() } else { "false".to_string() }
                 } else {
                     // For objects, arrays, etc., use JSON.stringify equivalent
-                    let json_str = v8::JSON::stringify(scope, arg, None)
+                    let json_str: _ = v8::JSON::stringify(scope, arg, None)
                         .unwrap_or_else(|| v8::String::new(scope, "<unprintable>").unwrap());
                     json_str.to_rust_string_lossy(scope)
                 };
@@ -313,7 +313,7 @@ impl Runtime {
                 } else if arg.is_boolean() {
                     if arg.is_true() { "true".to_string() } else { "false".to_string() }
                 } else {
-                    let json_str = v8::JSON::stringify(scope, arg, None)
+                    let json_str: _ = v8::JSON::stringify(scope, arg, None)
                         .unwrap_or_else(|| v8::String::new(scope, "<unprintable>").unwrap());
                     json_str.to_rust_string_lossy(scope)
                 };
@@ -350,7 +350,7 @@ impl Runtime {
                 } else if arg.is_boolean() {
                     if arg.is_true() { "true".to_string() } else { "false".to_string() }
                 } else {
-                    let json_str = v8::JSON::stringify(scope, arg, None)
+                    let json_str: _ = v8::JSON::stringify(scope, arg, None)
                         .unwrap_or_else(|| v8::String::new(scope, "<unprintable>").unwrap());
                     json_str.to_rust_string_lossy(scope)
                 };
@@ -387,7 +387,7 @@ impl Runtime {
                 } else if arg.is_boolean() {
                     if arg.is_true() { "true".to_string() } else { "false".to_string() }
                 } else {
-                    let json_str = v8::JSON::stringify(scope, arg, None)
+                    let json_str: _ = v8::JSON::stringify(scope, arg, None)
                         .unwrap_or_else(|| v8::String::new(scope, "<unprintable>").unwrap());
                     json_str.to_rust_string_lossy(scope)
                 };
@@ -424,7 +424,7 @@ impl Runtime {
                 } else if arg.is_boolean() {
                     if arg.is_true() { "true".to_string() } else { "false".to_string() }
                 } else {
-                    let json_str = v8::JSON::stringify(scope, arg, None)
+                    let json_str: _ = v8::JSON::stringify(scope, arg, None)
                         .unwrap_or_else(|| v8::String::new(scope, "<unprintable>").unwrap());
                     json_str.to_rust_string_lossy(scope)
                 };

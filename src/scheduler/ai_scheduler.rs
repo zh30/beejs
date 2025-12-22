@@ -80,9 +80,9 @@ pub struct SchedulerMetrics {
 /// AI 驱动智能任务调度器
 pub struct IntelligentTaskScheduler {
     pending_tasks: Arc<RwLock<VecDeque<Task>>,
-    running_tasks: Arc<RwLock<HashMap<String, TaskExecution>>,
+    running_tasks: Arc<RwLock<HashMap<String, TaskExecution, std::collections::HashMap<String, TaskExecution, String, TaskExecution>>>,
     completed_tasks: Arc<RwLock<Vec<TaskExecution>>,
-    workers: Arc<RwLock<HashMap<String, WorkerInfo>>,
+    workers: Arc<RwLock<HashMap<String, WorkerInfo, std::collections::HashMap<String, WorkerInfo, String, WorkerInfo>>>,
     metrics: Arc<RwLock<SchedulerMetrics>>,
     strategy: Arc<RwLock<SchedulingStrategy>>,
 }
@@ -100,19 +100,19 @@ impl IntelligentTaskScheduler {
     /// 创建新的智能任务调度器
     pub fn new() -> Self {
         Self {
-            pending_tasks: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::new()))),
-            running_tasks: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            completed_tasks: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
-            workers: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            metrics: Arc::new(std::sync::Mutex::new(RwLock::new(SchedulerMetrics {
+            pending_tasks: Arc::new(Mutex::new(RwLock::new(VecDeque::new())),
+            running_tasks: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            completed_tasks: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            workers: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            metrics: Arc::new(Mutex::new(RwLock::new(SchedulerMetrics {
                 total_tasks_scheduled: 0,
                 total_tasks_completed: 0,
                 average_wait_time_ms: 0.0,
                 average_execution_time_ms: 0.0,
                 throughput: 0.0,
                 worker_utilization: 0.0,
-            }))),
-            strategy: Arc::new(std::sync::Mutex::new(RwLock::new(SchedulingStrategy::AIIntelligent))),
+            })),
+            strategy: Arc::new(Mutex::new(RwLock::new(SchedulingStrategy::AIIntelligent)),
         }
     }
 

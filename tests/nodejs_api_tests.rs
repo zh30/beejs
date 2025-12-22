@@ -39,7 +39,7 @@ fn test_process_cwd() {
 fn test_process_next_tick() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
     let code: _ = r#"
-        let executed = false;
+        let executed: _ = false;
         process.nextTick(() => {
             executed = true;
         });

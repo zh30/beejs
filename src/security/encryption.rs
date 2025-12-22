@@ -37,7 +37,7 @@ pub struct CryptoKey {
 /// 密钥管理器
 #[derive(Debug)]
 pub struct KeyManager {
-    keys: Arc<std::sync::Mutex<std::collections::HashMap<String, CryptoKey>>,
+    keys: Arc<std::sync::Mutex<std::collections::HashMap<String, CryptoKey, std::collections::HashMap<String, CryptoKey, String, CryptoKey>>>,
     active_key_id: Arc<std::sync::Mutex<String>>,
 }
 
@@ -57,8 +57,8 @@ impl KeyManager {
         });
 
         Self {
-            keys: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(keys))),
-            active_key_id: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(key_id))),
+            keys: Arc::new(Mutex::new(std::sync::Mutex::new(keys)),
+            active_key_id: Arc::new(Mutex::new(std::sync::Mutex::new(key_id)),
         }
     }
 
@@ -73,7 +73,7 @@ impl KeyManager {
         let keys: _ = self.keys.lock().unwrap();
         keys.get(key_id)
             .cloned()
-            .ok_or_else(|| EncryptionError::KeyNotFound(key_id.to_string()))
+            .ok_or_else(|| EncryptionError::KeyNotFound(key_id.to_string())
     }
 
     pub async fn get_active_key(&self) -> Result<CryptoKey, EncryptionError> {
@@ -121,7 +121,7 @@ pub struct EncryptionEngine {
 impl EncryptionEngine {
     pub fn new() -> Self {
         Self {
-            key_manager: Arc::new(std::sync::Mutex::new(KeyManager::new())),
+            key_manager: Arc::new(Mutex::new(KeyManager::new()),
         }
     }
 
@@ -189,7 +189,7 @@ impl EncryptionEngine {
 
         // 验证加密成功
         if encrypted.is_empty() {
-            return Err(EncryptionError::EncryptionFailed("加密失败".to_string()));
+            return Err(EncryptionError::EncryptionFailed("加密失败".to_string());
         }
 
         Ok(bytes_per_second)

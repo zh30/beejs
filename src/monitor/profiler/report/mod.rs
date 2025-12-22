@@ -4,6 +4,8 @@
 pub mod summary;
 
 pub use summary::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
     PerformanceSummary, MemorySummary, OptimizationRecommendation,
     RecommendationType, Priority, Difficulty,
 };

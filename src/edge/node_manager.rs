@@ -94,7 +94,7 @@ pub struct NodeMetrics {
 /// Edge Node Manager
 #[derive(Debug)]
 pub struct EdgeNodeManager {
-    nodes: Arc<RwLock<HashMap<NodeId, EdgeNode>>,
+    nodes: Arc<RwLock<HashMap<NodeId, EdgeNode, std::collections::HashMap<NodeId, EdgeNode, NodeId, EdgeNode>>>,
     load_balancer: Arc<EdgeLoadBalancer>,
     health_checker: Arc<HealthChecker>,
 }
@@ -103,7 +103,7 @@ pub struct EdgeNodeManager {
 #[derive(Debug)]
 pub struct EdgeLoadBalancer {
     strategy: LoadBalancingStrategy,
-    metrics: Arc<RwLock<HashMap<NodeId, NodeMetrics>>,
+    metrics: Arc<RwLock<HashMap<NodeId, NodeMetrics, std::collections::HashMap<NodeId, NodeMetrics, NodeId, NodeMetrics>>>,
 }
 
 /// Health Checker
@@ -126,9 +126,9 @@ impl EdgeNodeManager {
     /// Create a new edge node manager
     pub fn new() -> Self {
         EdgeNodeManager {
-            nodes: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            load_balancer: Arc::new(std::sync::Mutex::new(EdgeLoadBalancer::new(LoadBalancingStrategy::ResourceBased))),
-            health_checker: Arc::new(std::sync::Mutex::new(HealthChecker::new(Duration::from_secs(30)))),
+            nodes: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            load_balancer: Arc::new(Mutex::new(EdgeLoadBalancer::new(LoadBalancingStrategy::ResourceBased)),
+            health_checker: Arc::new(Mutex::new(HealthChecker::new(Duration::from_secs(30))),
         }
     }
 
@@ -142,7 +142,7 @@ impl EdgeNodeManager {
     pub async fn register_node(&self, mut node: EdgeNode) -> Result<NodeId> {
         // Generate unique ID if not provided
         if node.id.0.is_empty() {
-            node.id = NodeId(format!("edge-node-{}", uuid::Uuid::new_v4()));
+            node.id = NodeId(format!("edge-node-{}", uuid::Uuid::new_v4());
         }
 
         node.last_heartbeat = std::time::SystemTime::now();
@@ -215,7 +215,7 @@ impl EdgeNodeManager {
 
         // Simulate task execution
         let start: _ = Instant::now();
-        tokio::time::sleep(Duration::from_millis(task.timeout_ms.min(100))).await;
+        tokio::time::sleep(Duration::from_millis(task.timeout_ms.min(100)).await;
         let execution_time: _ = start.elapsed().as_millis() as u64;
 
         let result: _ = ExecutionResult {
@@ -259,7 +259,7 @@ impl EdgeLoadBalancer {
     pub fn new(strategy: LoadBalancingStrategy) -> Self {
         EdgeLoadBalancer {
             strategy,
-            metrics: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            metrics: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 

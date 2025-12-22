@@ -324,7 +324,7 @@ impl Optimizer {
         if plan.suggestions.is_empty() {
             report.push_str("✅ 当前性能良好，无需优化\n");
         } else {
-            report.push_str(&format!("📋 优化建议 ({} 项):\n\n", plan.suggestions.len()));
+            report.push_str(&format!("📋 优化建议 ({} 项):\n\n", plan.suggestions.len());
 
             for (i, suggestion) in plan.suggestions.iter().enumerate() {
                 report.push_str(&format!(
@@ -348,7 +348,7 @@ impl Optimizer {
         report.push_str(&format!("\n=== 统计信息 ===\n"));
         report.push_str(&format!("总优化次数: {}\n", self.stats.total_optimizations));
         report.push_str(&format!("成功优化次数: {}\n", self.stats.successful_optimizations));
-        report.push_str(&format!("成功率: {:.1}%\n", self.stats.get_success_rate()));
+        report.push_str(&format!("成功率: {:.1}%\n", self.stats.get_success_rate());
         report.push_str(&format!("平均改进: {:.1}%\n", self.stats.average_improvement));
 
         report

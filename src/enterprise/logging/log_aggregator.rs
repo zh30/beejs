@@ -33,7 +33,7 @@ pub struct LogEntry {
     /// 日志消息
     pub message: String,
     /// 上下文信息
-    pub context: HashMap<String, String>>,
+    pub context: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 impl LogEntry {
@@ -48,7 +48,7 @@ impl LogEntry {
     /// # Returns
     ///
     /// 返回新创建的 LogEntry 实例
-    pub fn new(level: LogLevel, message: String, context: HashMap<String, String>>) -> Self {
+    pub fn new(level: LogLevel, message: String, context: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>) -> Self {
         Self {
             timestamp: SystemTime::now(),
             level,
@@ -75,7 +75,7 @@ impl LogEntry {
     ) -> Self {
         let context: _ = context_pairs
             .iter()
-            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .map(|(k, v)| (k.to_string(), v.to_string())
             .collect();
 
         Self::new(level, message.to_string(), context)
@@ -141,7 +141,7 @@ pub struct LogContext {
     /// 用户 ID
     pub user_id: Option<String>,
     /// 附加标签
-    pub tags: HashMap<String, String>>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 impl LogContext {
@@ -201,7 +201,7 @@ impl LogContext {
     /// # Returns
     ///
     /// 返回包含上下文信息的 HashMap
-    pub fn to_hashmap(&self) -> HashMap<String, String>> {
+    pub fn to_hashmap(&self) -> HashMap<String, String, std::collections::HashMap<String, String, String, String>>> {
         let mut map = HashMap::new();
         map.insert("service".to_string(), self.service.clone());
         map.insert("version".to_string(), self.version.clone());
@@ -214,7 +214,7 @@ impl LogContext {
             map.insert("user_id".to_string(), user_id.clone());
         }
 
-        map.extend(self.tags.iter().map(|(k, v)| (k.clone(), v.clone())));
+        map.extend(self.tags.iter().map(|(k, v)| (k.clone(), v.clone());
 
         map
     }
@@ -424,7 +424,7 @@ mod tests {
 
         assert!(matches!(log_entry.level, LogLevel::Info));
         assert_eq!(log_entry.message, "Test message");
-        assert_eq!(log_entry.context.get("service"), Some(&"beejs".to_string()));
+        assert_eq!(log_entry.context.get("service"), Some(&"beejs".to_string());
     }
 
     #[test]
@@ -432,8 +432,8 @@ mod tests {
         let context_pairs: _ = &[("service", "beejs"), ("version", "1.0")];
         let log_entry: _ = LogEntry::with_context(LogLevel::Debug, "Test message", context_pairs);
 
-        assert_eq!(log_entry.context.get("service"), Some(&"beejs".to_string()));
-        assert_eq!(log_entry.context.get("version"), Some(&"1.0".to_string()));
+        assert_eq!(log_entry.context.get("service"), Some(&"beejs".to_string());
+        assert_eq!(log_entry.context.get("version"), Some(&"1.0".to_string());
     }
 
     #[test]
@@ -456,7 +456,7 @@ mod tests {
         let log_entry: _ = LogEntry::from_json(json).unwrap();
         assert!(matches!(log_entry.level, LogLevel::Info));
         assert_eq!(log_entry.message, "Test message");
-        assert_eq!(log_entry.context.get("service"), Some(&"beejs".to_string()));
+        assert_eq!(log_entry.context.get("service"), Some(&"beejs".to_string());
     }
 
     #[test]
@@ -474,7 +474,7 @@ mod tests {
             .with_request_id("req-12345");
 
         assert_eq!(context.service, "beejs");
-        assert_eq!(context.request_id, Some("req-12345".to_string()));
+        assert_eq!(context.request_id, Some("req-12345".to_string());
     }
 
     #[test]
@@ -482,7 +482,7 @@ mod tests {
         let context: _ = LogContext::new("beejs", "1.0.0")
             .with_user_id("user-789");
 
-        assert_eq!(context.user_id, Some("user-789".to_string()));
+        assert_eq!(context.user_id, Some("user-789".to_string());
     }
 
     #[test]
@@ -491,8 +491,8 @@ mod tests {
             .with_tag("env", "production")
             .with_tag("region", "us-east-1");
 
-        assert_eq!(context.tags.get("env"), Some(&"production".to_string()));
-        assert_eq!(context.tags.get("region"), Some(&"us-east-1".to_string()));
+        assert_eq!(context.tags.get("env"), Some(&"production".to_string());
+        assert_eq!(context.tags.get("region"), Some(&"us-east-1".to_string());
     }
 
     #[test]
@@ -502,10 +502,10 @@ mod tests {
             .with_tag("env", "production");
 
         let map: _ = context.to_hashmap();
-        assert_eq!(map.get("service"), Some(&"beejs".to_string()));
-        assert_eq!(map.get("version"), Some(&"1.0.0".to_string()));
-        assert_eq!(map.get("request_id"), Some(&"req-12345".to_string()));
-        assert_eq!(map.get("env"), Some(&"production".to_string()));
+        assert_eq!(map.get("service"), Some(&"beejs".to_string());
+        assert_eq!(map.get("version"), Some(&"1.0.0".to_string());
+        assert_eq!(map.get("request_id"), Some(&"req-12345".to_string());
+        assert_eq!(map.get("env"), Some(&"production".to_string());
     }
 
     #[test]
@@ -587,7 +587,7 @@ pub struct LogFilter {
     pub level: Option<LogLevel>,
     pub time_range: Option<(SystemTime, SystemTime)>,
     pub text_search: Option<String>,
-    pub tags: HashMap<String, String>>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 /// 搜索结果
@@ -668,7 +668,7 @@ pub struct EnterpriseLogAggregator {
     elasticsearch: Arc<ElasticsearchClient>,
     fluentd: Arc<FluentdClient>,
     local_aggregator: LogAggregator,
-    log_sources: std::collections::BTreeMap<String, LogSource, String, LogSource>,
+    log_sources: std::collections::BTreeMap<String, LogSource, String, LogSource, String, LogSource, String, LogSource>,
 }
 
 impl EnterpriseLogAggregator {
@@ -679,8 +679,8 @@ impl EnterpriseLogAggregator {
         local_aggregator: LogAggregator,
     ) -> Self {
         Self {
-            elasticsearch: Arc::new(std::sync::Mutex::new(elasticsearch)),
-            fluentd: Arc::new(std::sync::Mutex::new(fluentd)),
+            elasticsearch: Arc::new(Mutex::new(elasticsearch)),
+            fluentd: Arc::new(Mutex::new(fluentd)),
             local_aggregator,
             log_sources: std::collections::BTreeMap::new(),
         }
@@ -776,7 +776,7 @@ impl EnterpriseLogAggregator {
     pub fn list_log_sources(&self) -> Vec<(String, LogSource)> {
         self.log_sources
             .iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
+            .map(|(k, v)| (k.clone(), v.clone())
             .collect()
     }
 

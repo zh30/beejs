@@ -61,7 +61,7 @@ impl WebSocketServer {
     pub fn new(config: WebSocketConfig, runtime: Runtime) -> Self {
         Self {
             config,
-            runtime: Arc::new(std::sync::Mutex::new(Mutex::new(runtime))),
+            runtime: Arc::new(Mutex::new(runtime)),
         }
     }
 
@@ -115,7 +115,7 @@ impl WebSocketServer {
             ).await;
 
             match message {
-                Ok(Some(Ok(message))) => {
+                Ok(Some(Ok(message)) => {
                     match Self::handle_message_impl(&message, &mut sender, runtime.clone()).await {
                         Ok(should_continue) => connection_alive = should_continue,
                         Err(e) => {
@@ -124,7 +124,7 @@ impl WebSocketServer {
                         }
                     }
                 }
-                Ok(Some(Err(e))) => {
+                Ok(Some(Err(e)) => {
                     warn!("WebSocket receive error: {}", e);
                     break;
                 }
@@ -161,7 +161,7 @@ impl WebSocketServer {
                                 // Execute the code
                                 let start_time: _ = std::time::Instant::now();
                                 let result: _ = {
-                                    let runtime_guard = runtime.lock().map_err(|e| format!("Runtime lock error: {}", e))?;
+                                    let runtime_guard: _ = runtime.lock().map_err(|e| format!("Runtime lock error: {}", e))?;
                                     runtime_guard.execute_code(&code)
                                 };
 
@@ -188,11 +188,11 @@ impl WebSocketServer {
                                 }
                             }
                             WebSocketMessage::Ping => {
-                                let _: _ = sender.send(Message::Text(r#"{"type":"pong"}"#.to_string())).await;
+                                let _: _ = sender.send(Message::Text(r#"{"type":"pong"}"#.to_string()).await;
                             }
                             WebSocketMessage::Pong => {
                                 // Respond to pong with ack
-                                let _: _ = sender.send(Message::Text(r#"{"type":"ack"}"#.to_string())).await;
+                                let _: _ = sender.send(Message::Text(r#"{"type":"ack"}"#.to_string()).await;
                             }
                         }
                     }

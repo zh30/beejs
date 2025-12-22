@@ -111,15 +111,15 @@ impl PerformanceMonitor {
 impl Stage93MemoryOptimizer {
     /// 创建新的 Stage 93 内存优化器
     pub fn new(config: Stage93MemoryOptimizerConfig) -> Self {
-        let performance_monitor: _ = Arc::new(std::sync::Mutex::new(RwLock::new(PerformanceMonitor::default())));
+        let performance_monitor: _ = Arc::new(Mutex::new(RwLock::new(PerformanceMonitor::default()));
 
         let zero_copy_optimizer: _ = if config.enable_all_optimizations {
-            let base = EnhancedZeroCopy::new(
+            let base: _ = EnhancedZeroCopy::new(
                 DmaConfig::default(),
                 MmapConfig::default(),
                 PrefetchConfig::default(),
             );
-            Some(Stage93ZeroCopyOptimizer::new(base, config.zero_copy_config.clone()))
+            Some(Stage93ZeroCopyOptimizer::new(base, config.zero_copy_config.clone())
         } else {
             None
         };
@@ -143,7 +143,7 @@ impl Stage93MemoryOptimizer {
         };
 
         let memory_compressor: _ = if config.enable_all_optimizations {
-            Some(Stage93MemoryCompressor::new(config.compression_config.clone()))
+            Some(Stage93MemoryCompressor::new(config.compression_config.clone())
         } else {
             None
         };

@@ -48,7 +48,7 @@ use std::collections::{HashMap, BTreeMap};
             scale_down_step: 1,
         };
 
-        let pool: _ = Arc::new(std::sync::Mutex::new(ProcessPool::new(config)).expect("Failed to create pool"));
+        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ProcessPool::new(config))).expect("Failed to create pool"));
 
         // Simulate multiple tasks queuing up
         // Note: We can't actually test queue length without executing tasks,

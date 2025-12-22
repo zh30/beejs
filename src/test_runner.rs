@@ -102,11 +102,11 @@ impl TestRunner {
             .count();
         let failed: _ = tests
             .iter()
-            .filter(|t| matches!(t.status, TestStatus::Failed(_)))
+            .filter(|t| matches!(t.status, TestStatus::Failed(_))
             .count();
         let skipped: _ = tests
             .iter()
-            .filter(|t| matches!(t.status, TestStatus::Skipped(_)))
+            .filter(|t| matches!(t.status, TestStatus::Skipped(_))
             .count();
 
         let suite: _ = TestSuite {

@@ -89,7 +89,7 @@ impl WasmModuleLoader {
     /// * `Result<WasmModuleLoader>` - 成功返回加载器，失败返回错误
     pub fn new() -> Result<Self> {
         let config: _ = Config::default();
-        let engine: _ = Arc::new(std::sync::Mutex::new(Engine::new(&config))
+        let engine: _ = Arc::new(Mutex::new(Engine::new(&config))
             .context("Failed to create Wasmtime engine for module loader")?);
 
         Ok(WasmModuleLoader {
@@ -113,7 +113,7 @@ impl WasmModuleLoader {
         enable_parallel: bool,
     ) -> Result<Self> {
         let config: _ = Config::default();
-        let engine: _ = Arc::new(std::sync::Mutex::new(Engine::new(&config))
+        let engine: _ = Arc::new(Mutex::new(Engine::new(&config))
             .context("Failed to create Wasmtime engine")?);
 
         Ok(WasmModuleLoader {

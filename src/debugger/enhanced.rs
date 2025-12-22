@@ -204,7 +204,7 @@ pub struct ScopeInfo {
     /// 作用域名称
     pub name: Option<String>,
     /// 作用域中的变量
-    pub variables: HashMap<String, VariableInfo>>,
+    pub variables: HashMap<String, VariableInfo, std::collections::HashMap<String, VariableInfo, String, VariableInfo>>>,
 }
 
 impl ScopeInfo {
@@ -327,8 +327,7 @@ impl AsyncStackTrace {
             result.push_str(&format!(
                 "    at {} ({})\n",
                 frame.function_name,
-                frame.location_string()
-            ));
+                frame.location_string());
         }
 
         if let Some(ref parent) = self.async_parent {
@@ -392,8 +391,8 @@ impl Clone for DebuggerProfiler {
         Self {
             enabled: self.enabled,
             sample_interval_us: self.sample_interval_us,
-            samples: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
-            hot_spots: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            samples: Arc::new(Mutex::new(Vec::new())),
+            hot_spots: Arc::new(Mutex::new(Vec::new())),
         }
     }
 }
@@ -404,8 +403,8 @@ impl DebuggerProfiler {
         Self {
             enabled: false,
             sample_interval_us,
-            samples: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
-            hot_spots: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            samples: Arc::new(Mutex::new(Vec::new())),
+            hot_spots: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -435,7 +434,7 @@ impl DebuggerProfiler {
     /// 分析热点
     pub fn analyze_hot_spots(&self) -> Vec<HotSpot> {
         let samples: _ = self.samples.lock().unwrap();
-        let mut function_times: HashMap<String, (u64, u64)>> = HashMap::new();
+        let mut function_times: HashMap<String, (u64, u64), std::collections::HashMap<String, (u64, u64), String, (u64, u64)>>> = HashMap::new();
         let total_time: u64 = samples.iter().map(|s| s.cpu_time_us).sum();
 
         for sample in samples.iter() {
@@ -638,7 +637,7 @@ impl SourceMap {
 #[derive(Debug, Clone, Default)]
 pub struct SourceMapManager {
     /// 文件 -> 源代码映射
-    maps: HashMap<String, SourceMap>>,
+    maps: HashMap<String, SourceMap, std::collections::HashMap<String, SourceMap, String, SourceMap>>>,
 }
 
 impl SourceMapManager {

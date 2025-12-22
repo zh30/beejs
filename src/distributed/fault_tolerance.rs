@@ -56,7 +56,7 @@ pub struct FaultEvent {
     pub target_id: String, // 节点ID或任务ID
     pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
     pub description: String,
-    pub metadata: HashMap<String, String>>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 /// 恢复策略
@@ -77,7 +77,7 @@ pub struct RecoveryAction {
     pub action_id: String,
     pub strategy: RecoveryStrategy,
     pub target_id: String,
-    pub parameters: HashMap<String, String>>,
+    pub parameters: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     pub estimated_duration: Duration,
 }
 
@@ -89,9 +89,9 @@ pub struct FaultDetector {
     task_executor: Arc<TaskExecutor>,
     node_manager: Arc<NodeManager>,
     task_scheduler: Arc<TaskScheduler>,
-    active_faults: Arc<RwLock<HashMap<String, FaultEvent>>,
+    active_faults: Arc<RwLock<HashMap<String, FaultEvent, std::collections::HashMap<String, FaultEvent, String, FaultEvent>>>,
     fault_history: Arc<RwLock<Vec<FaultEvent>>,
-    recovery_actions: Arc<RwLock<HashMap<String, RecoveryAction>>,
+    recovery_actions: Arc<RwLock<HashMap<String, RecoveryAction, std::collections::HashMap<String, RecoveryAction, String, RecoveryAction>>>,
 }
 
 impl FaultDetector {
@@ -109,9 +109,9 @@ impl FaultDetector {
             task_executor,
             node_manager,
             task_scheduler,
-            active_faults: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            fault_history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
-            recovery_actions: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            active_faults: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            fault_history: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            recovery_actions: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
         };
 
         // 启动故障检测任务
@@ -467,7 +467,7 @@ impl FaultDetector {
 pub struct FaultStatistics {
     pub total_faults: usize,
     pub active_faults: usize,
-    pub fault_type_counts: HashMap<FaultType, usize>>,
+    pub fault_type_counts: HashMap<FaultType, usize, std::collections::HashMap<FaultType, usize, FaultType, usize>>>,
     pub recovery_actions_count: usize,
 }
 
@@ -488,8 +488,8 @@ use std::collections::{HashMap, BTreeMap};
         };
 
         let service_discovery: _ = ServiceDiscovery::new(config);
-        let node_manager: _ = Arc::new(std::sync::Mutex::new(NodeManager::new(service_discovery.clone())));
-        let _health_monitor: _ = Arc::new(std::sync::Mutex::new(HealthMonitor::new(node_manager.clone())));
+        let node_manager: _ = Arc::new(Mutex::new(NodeManager::new(service_discovery.clone()));
+        let _health_monitor: _ = Arc::new(Mutex::new(HealthMonitor::new(node_manager.clone()));
 
         let _fault_config: _ = FaultDetectionConfig {
             detection_interval: Duration::from_millis(100),

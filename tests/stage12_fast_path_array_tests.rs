@@ -67,7 +67,7 @@ use std::collections::{HashMap, BTreeMap};
         let runtime: _ = RuntimeLite::new(false).unwrap();
 
         // 变量应该回退到V8执行
-        let result: _ = runtime.execute_code(r#"let arr = [1,2,3]; arr.length"#).unwrap();
+        let result: _ = runtime.execute_code(r#"let arr: _ = [1,2,3]; arr.length"#).unwrap();
         assert_eq!(result, "3");
     }
 

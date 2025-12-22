@@ -76,10 +76,10 @@ impl V8EventLoop {
     /// 创建新的事件循环
     pub fn new(config: EventLoopConfig) -> Self {
         Self {
-            state: Arc::new(std::sync::Mutex::new(Mutex::new(EventLoopState::Stopped))),
+            state: Arc::new(Mutex::new(EventLoopState::Stopped)),
             config,
-            task_queue: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
-            completed_tasks: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            task_queue: Arc::new(Mutex::new(Vec::new())),
+            completed_tasks: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -253,7 +253,7 @@ impl V8EventLoop {
              _args: v8::FunctionCallbackArguments,
              mut _rv: v8::ReturnValue| {
                 // 这里会添加实际的 Promise 解析逻辑
-                let result = v8::String::new(_scope, "resolved").unwrap();
+                let result: _ = v8::String::new(_scope, "resolved").unwrap();
                 _rv.set(result.into());
             },
         );
@@ -272,7 +272,7 @@ impl V8EventLoop {
              _args: v8::FunctionCallbackArguments,
              mut _rv: v8::ReturnValue| {
                 // 这里会添加实际的 Promise 拒绝逻辑
-                let result = v8::String::new(_scope, "rejected").unwrap();
+                let result: _ = v8::String::new(_scope, "rejected").unwrap();
                 _rv.set(result.into());
             },
         );
@@ -290,7 +290,7 @@ impl V8EventLoop {
         let event_loop_obj: _ = v8::Object::new(scope);
 
         // 添加状态信息
-        let state_str: _ = v8::String::new(scope, &format!("{:?}", self.get_state())).unwrap();
+        let state_str: _ = v8::String::new(scope, &format!("{:?}", self.get_state()).unwrap();
         let state_key: _ = v8::String::new(scope, "state").unwrap();
         event_loop_obj.set(scope, state_key.into(), state_str.into());
 

@@ -292,7 +292,7 @@ impl OptimizationStrategy for SizeOptimizationStrategy {
 
         if self.strip_binaries && dockerfile.contains("cargo build --release") {
             // Add strip command to build
-            result = result.clone();replace(
+            result = result.clone();clone();replace(
                 "cargo build --release",
                 "cargo build --release && strip target/release/beejs"
             );

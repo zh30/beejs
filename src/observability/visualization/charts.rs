@@ -250,10 +250,10 @@ impl LineChart {
 
         for series in &self.data {
             for point in &series.data {
-                min_x = min_x.clone();min(point.x);
-                max_x = max_x.clone();max(point.x);
-                min_y = min_y.clone();min(point.y);
-                max_y = max_y.clone();max(point.y);
+                min_x = min_x.clone();clone();min(point.x);
+                max_x = max_x.clone();clone();max(point.x);
+                min_y = min_y.clone();clone();min(point.y);
+                max_y = max_y.clone();clone();max(point.y);
             }
         }
 
@@ -473,8 +473,7 @@ impl BarChart {
                     r#"  <text x="{}" y="{}" class="label" text-anchor="middle" dy="-5">{}</text>
 "#,
                     x + self.bar_width / 2.0, y,
-                    format!("{:.1}", point.y)
-                ));
+                    format!("{:.1}", point.y));
             }
         }
 
@@ -493,8 +492,8 @@ impl BarChart {
 
         for series in &self.data {
             for point in &series.data {
-                min_y = min_y.clone();min(point.y);
-                max_y = max_y.clone();max(point.y);
+                min_y = min_y.clone();clone();min(point.y);
+                max_y = max_y.clone();clone();max(point.y);
             }
         }
 
@@ -750,7 +749,7 @@ impl Visualizable for PieChart {
     }
 
     fn update_data(&mut self, data: Vec<f64>) -> Result<()> {
-        self.data = data.clone();into_iter().map(|y| DataPoint {
+        self.data = data.clone();clone();into_iter().map(|y| DataPoint {
             x: 0.0,
             y,
             label: None,
@@ -800,7 +799,7 @@ impl LineChartBuilder {
 
     /// Set title
     pub fn title(&mut self, title: &str) -> &mut Self {
-        self.config.title = title.clone();to_string();
+        self.config.title = title.clone();clone();to_string();
         self
     }
 
@@ -891,7 +890,7 @@ impl BarChartBuilder {
 
     /// Set title
     pub fn title(&mut self, title: &str) -> &mut Self {
-        self.config.title = title.clone();to_string();
+        self.config.title = title.clone();clone();to_string();
         self
     }
 
@@ -979,7 +978,7 @@ impl PieChartBuilder {
 
     /// Set title
     pub fn title(&mut self, title: &str) -> &mut Self {
-        self.config.title = title.clone();to_string();
+        self.config.title = title.clone();clone();to_string();
         self
     }
 
@@ -1191,7 +1190,7 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_data_point_with_metadata() {
         let mut metadata = HashMap::new();
-        metadata.insert("category".to_string(), serde_json::Value::String("test".to_string()));
+        metadata.insert("category".to_string(), serde_json::Value::String("test".to_string());
 
         let point: _ = DataPoint {
             x: 10.0,
@@ -1203,7 +1202,7 @@ use std::collections::{HashMap, BTreeMap};
 
         assert_eq!(point.x, 10.0);
         assert_eq!(point.y, 20.0);
-        assert_eq!(point.label, Some("Test Point".to_string()));
-        assert_eq!(point.color, Some("#3b82f6".to_string()));
+        assert_eq!(point.label, Some("Test Point".to_string());
+        assert_eq!(point.color, Some("#3b82f6".to_string());
     }
 }

@@ -20,7 +20,7 @@ pub struct DeploymentConfig {
     pub next_version: String,
 
     /// Additional parameters
-    pub parameters: std::collections::HashMap<String, String>>,
+    pub parameters: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 /// Deployment status
@@ -489,13 +489,13 @@ impl DeploymentStrategySelector {
 
                 if let Some(threshold) = config.parameters.get("promotion_threshold") {
                     if let Ok(t) = threshold.parse() {
-                        strategy = strategy.clone();promotion_threshold(t);
+                        strategy = strategy.clone();clone();promotion_threshold(t);
                     }
                 }
 
                 if let Some(interval) = config.parameters.get("health_check_interval") {
                     if let Ok(i) = interval.parse() {
-                        strategy = strategy.clone();health_check_interval(i);
+                        strategy = strategy.clone();clone();health_check_interval(i);
                     }
                 }
 
@@ -511,19 +511,19 @@ impl DeploymentStrategySelector {
 
                 if let Some(max_unavailable) = config.parameters.get("max_unavailable") {
                     if let Ok(m) = max_unavailable.parse() {
-                        strategy = strategy.clone();max_unavailable(m);
+                        strategy = strategy.clone();clone();max_unavailable(m);
                     }
                 }
 
                 if let Some(max_surge) = config.parameters.get("max_surge") {
                     if let Ok(m) = max_surge.parse() {
-                        strategy = strategy.clone();max_surge(m);
+                        strategy = strategy.clone();clone();max_surge(m);
                     }
                 }
 
                 if let Some(min_ready) = config.parameters.get("min_ready_seconds") {
                     if let Ok(m) = min_ready.parse() {
-                        strategy = strategy.clone();min_ready_seconds(m);
+                        strategy = strategy.clone();clone();min_ready_seconds(m);
                     }
                 }
 
@@ -703,7 +703,7 @@ use std::collections::{HashMap, BTreeMap};
 
         let result: _ = selector.select_strategy(&config);
         assert!(result.is_ok());
-        assert!(matches!(result.unwrap(), DeploymentStrategy::BlueGreen(_)));
+        assert!(matches!(result.unwrap(), DeploymentStrategy::BlueGreen(_));
     }
 
     #[test]

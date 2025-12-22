@@ -209,7 +209,7 @@ fn test_package_manager_integrator() {
     // Test installing package by name
     let runtime: _ = tokio::runtime::Runtime::new().unwrap();
     let result: _ = runtime.block_on(async {
-        let spec = PackageSpec::Name("lodash".to_string());
+        let spec: _ = PackageSpec::Name("lodash".to_string());
         integrator.install_package(&spec).await
     });
 
@@ -220,7 +220,7 @@ fn test_package_manager_integrator() {
 
     // Test installing package with specific version
     let result: _ = runtime.block_on(async {
-        let spec = PackageSpec::NameVersion("react".to_string(), "18.2.0".to_string());
+        let spec: _ = PackageSpec::NameVersion("react".to_string(), "18.2.0".to_string());
         integrator.install_package(&spec).await
     });
 
@@ -298,7 +298,7 @@ fn test_react_runtime_render() {
 
     let runtime: _ = tokio::runtime::Runtime::new().unwrap();
     let result: _ = runtime.block_on(async {
-        let component_code = r#"<div><h1>Hello World</h1></div>"#;
+        let component_code: _ = r#"<div><h1>Hello World</h1></div>"#;
         react_runtime.render_component(component_code).await
     });
 
@@ -316,7 +316,7 @@ fn test_react_runtime_jsx_transform() {
 
     let runtime: _ = tokio::runtime::Runtime::new().unwrap();
     let result: _ = runtime.block_on(async {
-        let jsx_code = r#"<div className="container"><span>Test</span></div>"#;
+        let jsx_code: _ = r#"<div className="container"><span>Test</span></div>"#;
         react_runtime.transform_jsx(jsx_code).await
     });
 
@@ -484,7 +484,7 @@ fn test_full_package_manager_workflow() {
 
     // Test installing a package
     let result: _ = runtime.block_on(async {
-        let spec = PackageSpec::Name("axios".to_string());
+        let spec: _ = PackageSpec::Name("axios".to_string());
         integrator.install_package(&spec).await
     });
 

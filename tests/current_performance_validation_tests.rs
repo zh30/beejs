@@ -75,7 +75,7 @@ mod tests {
     #[test]
     fn test_complex_code_performance() {
         let complex_code: _ = r#"
-        let sum = 0;
+        let sum: _ = 0;
         for (let i: _ = 0; i < 1000; i++) {
             sum += i;
         }

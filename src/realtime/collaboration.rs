@@ -29,7 +29,7 @@ pub enum Operation {
 pub struct CollaborationSession {
     session_id: String,
     document_id: String,
-    participants: Arc<RwLock<HashMap<String, Participant>>,
+    participants: Arc<RwLock<HashMap<String, Participant, std::collections::HashMap<String, Participant, String, Participant>>>,
     operations: Arc<Mutex<Vec<Operation>>,
     version: Arc<AtomicU64>,
 }
@@ -40,9 +40,9 @@ impl CollaborationSession {
         Self {
             session_id,
             document_id,
-            participants: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            operations: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
-            version: Arc::new(std::sync::Mutex::new(AtomicU64::new(0))),
+            participants: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            operations: Arc::new(Mutex::new(Vec::new())),
+            version: Arc::new(Mutex::new(AtomicU64::new(0)),
         }
     }
 
@@ -71,7 +71,7 @@ impl CollaborationSession {
 }
 
 pub struct RealtimeCollaboration {
-    sessions: HashMap<String, CollaborationSession>>,
+    sessions: HashMap<String, CollaborationSession, std::collections::HashMap<String, CollaborationSession, String, CollaborationSession>>>,
 }
 
 impl RealtimeCollaboration {

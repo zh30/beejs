@@ -103,7 +103,7 @@ mod dashboard_integration_tests {
         assert_eq!(dashboard.panels[0].title, "CPU Usage");
 
         // Update panel
-        let mut updated_panel = panel.clone();clone();
+        let mut updated_panel = panel.clone();clone();clone();
         updated_panel.title = "CPU Usage (Updated)".to_string();
         manager.update_panel(&uid, "cpu-usage", updated_panel).await.unwrap();
 
@@ -690,7 +690,7 @@ use std::collections::{HashMap, BTreeMap};
         for i in 0..10 {
             let manager_ref: _ = &manager;
             let handle: _ = tokio::spawn(async move {
-                let uid = format!("dashboard-{}", i);
+                let uid: _ = format!("dashboard-{}", i);
                 manager_ref.create_dashboard(&uid).await.unwrap();
                 uid
             });

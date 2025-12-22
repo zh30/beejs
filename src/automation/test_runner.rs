@@ -134,7 +134,7 @@ impl AutomatedTestRunner {
             config,
             framework,
             regression_detector,
-            execution_results: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            execution_results: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -352,22 +352,21 @@ impl AutomatedTestRunner {
         &self,
         tasks: Vec<ScheduledTest>,
     ) -> Result<Vec<TestExecutionResult>, TestRunnerError> {
-        let semaphore: _ = Arc::new(std::sync::Mutex::new(tokio::sync::Semaphore::new(self.config.max_concurrent_tests)));
+        let semaphore: _ = Arc::new(Mutex::new(tokio::sync::Semaphore::new(self.config.max_concurrent_tests));
         let mut handles: Vec<JoinHandle<Result<TestExecutionResult, TestRunnerError>> = Vec::new();
 
         for task in tasks {
             let semaphore: _ = semaphore.clone();clone();
 
             let handle: _ = tokio::spawn(async move {
-                let _permit = semaphore.acquire().await.map_err(|e| {
+                let _permit: _ = semaphore.acquire().await.map_err(|e| {
                     TestRunnerError::ExecutionFailed(e.to_string())
                 })?;
 
                 // We can't easily capture self in async block, so we need to refactor
                 // For now, return an error to indicate this needs fixing
                 Err(TestRunnerError::ExecutionFailed(
-                    "Async test execution needs refactoring".to_string()
-                ))
+                    "Async test execution needs refactoring".to_string())
             });
 
             handles.push(handle);
@@ -379,7 +378,7 @@ impl AutomatedTestRunner {
             match handle.await {
                 Ok(result) => results.push(result?),
                 Err(e) => {
-                    return Err(TestRunnerError::ExecutionFailed(e.to_string()));
+                    return Err(TestRunnerError::ExecutionFailed(e.to_string());
                 }
             }
         }
@@ -610,7 +609,7 @@ impl TestSuiteResults {
         report.push_str(&format!("Completed: {}\n", self.stats.completed_tests));
         report.push_str(&format!("Failed: {}\n", self.stats.failed_tests));
         report.push_str(&format!("Skipped: {}\n", self.stats.skipped_tests));
-        report.push_str(&format!("Total Execution Time: {:.2}s\n", self.stats.total_execution_time.as_secs_f64()));
+        report.push_str(&format!("Total Execution Time: {:.2}s\n", self.stats.total_execution_time.as_secs_f64());
         report.push_str(&format!("Average Test Time: {:.2}ms\n", self.stats.average_test_time.as_secs_f64() * 1000.0));
         report.push_str(&format!("Parallel Efficiency: {:.1}%\n\n", self.stats.parallel_efficiency));
 

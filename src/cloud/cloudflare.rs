@@ -30,7 +30,7 @@ pub struct WorkersConfig {
     pub durable_objects: Option<DurableObjectsConfig>,
     pub cron_triggers: Vec<String>,
     pub routes: Vec<String>,
-    pub environment_variables: HashMap<String, String>>,
+    pub environment_variables: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 /// Cloudflare Pages 配置
@@ -39,7 +39,7 @@ pub struct PagesConfig {
     pub project_name: String,
     pub build_command: String,
     pub output_directory: String,
-    pub environment_variables: HashMap<String, String>>,
+    pub environment_variables: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     pub framework: String,
     pub node_version: String,
 }
@@ -358,7 +358,7 @@ use std::collections::{HashMap, BTreeMap};
 
         let config: _ = WorkersConfig {
             name: "test-worker".to_string(),
-            script: "addEventListener('fetch', event => event.respondWith(new Response('Hello Worker')))".to_string(),
+            script: "addEventListener('fetch', event => event.respondWith(new Response('Hello Worker'))".to_string(),
             kv_namespace: None,
             durable_objects: None,
             cron_triggers: vec!["0 0 * * *".to_string()],

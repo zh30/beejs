@@ -23,7 +23,7 @@ pub enum JsValue {
     /// 数组
     Array(Vec<JsValue>),
     /// 对象
-    Object(HashMap<String, JsValue>>),
+    Object(HashMap<String, JsValue, std::collections::HashMap<String, JsValue, String, JsValue>>>),
     /// 空值
     Null,
     /// 未定义
@@ -133,7 +133,7 @@ pub struct JsWasmInterop {
 #[derive(Debug, Clone)]
 struct FunctionCache {
     /// 函数缓存映射
-    cache: HashMap<String, CachedFunction>>,
+    cache: HashMap<String, CachedFunction, std::collections::HashMap<String, CachedFunction, String, CachedFunction>>>,
     /// 缓存大小限制
     max_cache_size: usize,
     /// 缓存访问次数
@@ -201,12 +201,12 @@ impl Default for FunctionCache {
 impl Default for CallStats {
     fn default() -> Self {
         Self {
-            total_calls: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicUsize::new(0))),
-            successful_calls: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicUsize::new(0))),
-            failed_calls: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicUsize::new(0))),
-            total_duration: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicU64::new(0))),
-            zero_copy_calls: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicUsize::new(0))),
-            batch_calls: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicUsize::new(0))),
+            total_calls: Arc::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)),
+            successful_calls: Arc::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)),
+            failed_calls: Arc::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)),
+            total_duration: Arc::new(Mutex::new(std::sync::atomic::AtomicU64::new(0)),
+            zero_copy_calls: Arc::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)),
+            batch_calls: Arc::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)),
         }
     }
 }
@@ -223,8 +223,8 @@ impl JsWasmInterop {
     /// ```
     pub fn new() -> Self {
         JsWasmInterop {
-            function_cache: Arc::new(std::sync::Mutex::new(Mutex::new(FunctionCache::default()))),
-            call_stats: Arc::new(std::sync::Mutex::new(CallStats::default())),
+            function_cache: Arc::new(Mutex::new(FunctionCache::default())),
+            call_stats: Arc::new(Mutex::new(CallStats::default()),
             batch_config: BatchConfig::default(),
         }
     }
@@ -398,7 +398,7 @@ impl JsWasmInterop {
         function_name: &str,
         args: Vec<JsValue>,
     ) -> Result<tokio::task::JoinHandle<Result<WasmCallResult>> {
-        let interop: _ = Arc::new(std::sync::Mutex::new(self.clone()));
+        let interop: _ = Arc::new(Mutex::new(self.clone());
         let module: _ = module.clone();clone();
         let function_name: _ = function_name.clone();to_string();
         let args: _ = args.clone();clone();
@@ -491,7 +491,7 @@ impl JsWasmInterop {
         //     .map_err(|e| anyhow!("Function not found: {}", function_name))?;
 
         // 模拟成功返回
-        Ok(Func::wrap(&self.create_store(), |_| Ok(())))
+        Ok(Func::wrap(&self.create_store(), |_| Ok(())
     }
 
     /// 创建 Store 实例
@@ -546,7 +546,7 @@ impl JsWasmInterop {
         // 模拟快速函数调用
         match function_name {
             "add" => {
-                if let (Some(JsValue::Number(a)), Some(JsValue::Number(b))) =
+                if let (Some(JsValue::Number(a)), Some(JsValue::Number(b)) =
                     (args.get(0), args.get(1))
                 {
                     Ok(JsValue::Number(a + b))
@@ -555,10 +555,10 @@ impl JsWasmInterop {
                 }
             }
             "concat" => {
-                if let (Some(JsValue::String(a)), Some(JsValue::String(b))) =
+                if let (Some(JsValue::String(a)), Some(JsValue::String(b)) =
                     (args.get(0), args.get(1))
                 {
-                    Ok(JsValue::String(format!("{}{}", a, b)))
+                    Ok(JsValue::String(format!("{}{}", a, b))
                 } else {
                     Err(anyhow!("Invalid arguments for concat function"))
                 }
@@ -645,7 +645,7 @@ use std::collections::{HashMap, BTreeMap};
 
         let result: _ = interop.zero_copy_call("concat", vec!["Hello".into(), "World".into()]);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), JsValue::String("HelloWorld".to_string()));
+        assert_eq!(result.unwrap(), JsValue::String("HelloWorld".to_string());
     }
 
     #[test]

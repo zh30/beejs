@@ -83,7 +83,7 @@ impl PerfStatistics {
         let max: _ = durations[count - 1];
 
         let median: _ = if count % 2 == 0 {
-            let mid = count / 2;
+            let mid: _ = count / 2;
             std::time::Duration::from_nanos(
                 (durations[mid - 1].as_nanos() + durations[mid].as_nanos()) as u64 / 2
             )
@@ -330,7 +330,7 @@ impl PerfTestRunner {
         // Check threshold
         let (passed, threshold) = if let Some(ref thr) = self.config.threshold {
             let passes_threshold: _ = self.check_threshold(&statistics, thr);
-            (passes_threshold, Some(thr.clone()))
+            (passes_threshold, Some(thr.clone())
         } else {
             (true, None)
         };

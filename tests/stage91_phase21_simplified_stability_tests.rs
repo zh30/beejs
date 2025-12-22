@@ -104,7 +104,7 @@ fn test_long_running_stability() {
     let iterations: _ = 1000;
 
     for i in 0..iterations {
-        let code: _ = format!("let sum = 0; for(let i: _ = 0; i < 100; i++) {{ sum += i; }} sum");
+        let code: _ = format!("let sum: _ = 0; for(let i: _ = 0; i < 100; i++) {{ sum += i; }} sum");
         let result: _ = runtime.execute_standard(&code);
 
         assert!(result.is_ok(), "Iteration {} failed", i);
@@ -222,7 +222,7 @@ fn test_concurrent_aware_isolation() {
     let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
 
     // 验证每个运行时实例都有独立的 Isolate
-    let result1: _ = runtime.execute_standard("let x = 42; x");
+    let result1: _ = runtime.execute_standard("let x: _ = 42; x");
     let result2: _ = runtime.execute_standard("typeof x");
 
     assert!(result1.is_ok());

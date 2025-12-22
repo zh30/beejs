@@ -148,13 +148,13 @@ use std::collections::{HashMap, BTreeMap};
     /// 验证内置函数可以安全并发执行
     #[test]
     fn test_embedded_builtins_concurrent_safety() {
-        let builtins_manager: _ = Arc::new(std::sync::Mutex::new(EmbeddedBuiltinsManager::new()));
+        let builtins_manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(EmbeddedBuiltinsManager::new())));
 
         let mut handles = vec![];
         for i in 0..10 {
             let manager: _ = Arc::clone(builtins_manager);
             let handle: _ = std::thread::spawn(move || {
-                let result = manager.execute_builtin("increment", &[&i.to_string()]);
+                let result: _ = manager.execute_builtin("increment", &[&i.to_string()]);
                 result
             });
             handles.push(handle);

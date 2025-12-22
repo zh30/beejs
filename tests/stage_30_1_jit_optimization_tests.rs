@@ -102,7 +102,7 @@ mod dead_code_elimination_tests {
     #[test]
     fn test_dead_code_elimination_basic() {
         let code: _ = r#"
-            let unused = "this is never used";
+            let unused: _ = "this is never used";
             let used: _ = "this is used";
             console.log(used);
         "#;
@@ -120,7 +120,7 @@ mod dead_code_elimination_tests {
     fn test_complex_dead_code_elimination() {
         let code: _ = r#"
             function unusedFunction() {
-                let x = 1;
+                let x: _ = 1;
                 return x * 2;
             }
             function usedFunction() {
@@ -146,7 +146,7 @@ mod dead_code_elimination_tests {
     #[test]
     fn test_conditional_dead_code_elimination() {
         let code: _ = r#"
-            let condition = false;
+            let condition: _ = false;
             if (condition) {
                 let deadCode: _ = "never executed";
                 console.log(deadCode);
@@ -175,7 +175,7 @@ mod loop_unrolling_tests {
     #[test]
     fn test_simple_loop_unrolling() {
         let code: _ = r#"
-            let sum = 0;
+            let sum: _ = 0;
             for (let i: _ = 0; i < 4; i++) {
                 sum += i;
             }
@@ -195,7 +195,7 @@ mod loop_unrolling_tests {
     #[test]
     fn test_nested_loop_unrolling() {
         let code: _ = r#"
-            let sum = 0;
+            let sum: _ = 0;
             for (let i: _ = 0; i < 3; i++) {
                 for (let j: _ = 0; j < 3; j++) {
                     sum += i * j;
@@ -217,7 +217,7 @@ mod loop_unrolling_tests {
     #[test]
     fn test_variable_loop_unrolling() {
         let code: _ = r#"
-            let n = 10;
+            let n: _ = 10;
             let sum: _ = 0;
             for (let i: _ = 0; i < n; i++) {
                 sum += i;
@@ -244,7 +244,7 @@ mod escape_analysis_tests {
     fn test_escape_analysis_basic() {
         let code: _ = r#"
             function createObject() {
-                let obj = { value: 42 };
+                let obj: _ = { value: 42 };
                 return obj.value;
             }
             let result: _ = createObject();
@@ -264,7 +264,7 @@ mod escape_analysis_tests {
     #[test]
     fn test_non_escaping_object_optimization() {
         let code: _ = r#"
-            let sum = 0;
+            let sum: _ = 0;
             let obj: _ = { value: 10 };
             sum += obj.value;
             // obj doesn't escape the scope
@@ -285,7 +285,7 @@ mod escape_analysis_tests {
     fn test_closure_escape_analysis() {
         let code: _ = r#"
             function createClosure() {
-                let local = 100;
+                let local: _ = 100;
                 return function() {
                     return local;
                 };
@@ -312,7 +312,7 @@ mod hotspot_code_detection_tests {
     #[test]
     fn test_hotspot_detection_by_frequency() {
         let optimizer: _ = JITOptimizer::new_default();
-        let code: _ = "let x = 1;";
+        let code: _ = "let x: _ = 1;";
 
         // 模拟多次执行
         for _ in 0..10 {
@@ -333,7 +333,7 @@ mod hotspot_code_detection_tests {
     fn test_adaptive_hotspot_detection() {
         let optimizer: _ = JITOptimizer::new_default();
         let hot_code: _ = "console.log('hot');";
-        let cold_code: _ = "let x = 1;";
+        let cold_code: _ = "let x: _ = 1;";
 
         // 热代码执行100次
         for _ in 0..100 {
@@ -418,7 +418,7 @@ mod performance_benchmark_tests {
     fn benchmark_dead_code_elimination_performance() {
         let optimizer: _ = JITOptimizer::new_default();
         let code: _ = r#"
-            let dead1 = "unused";
+            let dead1: _ = "unused";
             let dead2: _ = "also unused";
             let dead3: _ = "never used";
             let live: _ = "used";
@@ -441,7 +441,7 @@ mod performance_benchmark_tests {
     fn benchmark_loop_unrolling_performance() {
         let optimizer: _ = JITOptimizer::new_default();
         let code: _ = r#"
-            let sum = 0;
+            let sum: _ = 0;
             for (let i: _ = 0; i < 100; i++) {
                 sum += i;
             }
@@ -463,7 +463,7 @@ mod performance_benchmark_tests {
     fn benchmark_escape_analysis_performance() {
         let optimizer: _ = JITOptimizer::new_default();
         let code: _ = r#"
-            let obj1 = { value: 1 };
+            let obj1: _ = { value: 1 };
             let obj2: _ = { value: 2 };
             let obj3: _ = { value: 3 };
             console.log(obj1.value + obj2.value + obj3.value);
@@ -484,7 +484,7 @@ mod performance_benchmark_tests {
     #[test]
     fn benchmark_hotspot_detection_performance() {
         let optimizer: _ = JITOptimizer::new_default();
-        let code: _ = "let result = 0;";
+        let code: _ = "let result: _ = 0;";
 
         // 执行1000次以形成热点
         for _ in 0..1000 {
@@ -514,7 +514,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_all_optimizations_integration() {
         let code: _ = r#"
             // 死代码
-            let unused = "dead";
+            let unused: _ = "dead";
             function unusedFunc() { return 1; }
 
             // 逃逸分析
@@ -560,7 +560,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_adaptive_optimization_strategy() {
         let optimizer: _ = JITOptimizer::new(JITThresholds::default(), JITStrategy::Adaptive);
 
-        let simple_code: _ = "let x = 1;";
+        let simple_code: _ = "let x: _ = 1;";
         let complex_code: _ = r#"
             function fib(n) {
                 if (n <= 1) return n;
@@ -592,7 +592,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_performance_optimization_strategy() {
         let optimizer: _ = JITOptimizer::new(JITThresholds::default(), JITStrategy::Performance);
 
-        let code: _ = "let x = 1;";
+        let code: _ = "let x: _ = 1;";
         let decision: _ = optimizer.should_compile(code, CodeComplexity::Simple);
 
         assert!(decision.should_compile, "Performance strategy should compile");

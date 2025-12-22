@@ -305,7 +305,7 @@ impl ScalePolicyType {
         match s.to_lowercase().as_str() {
             "percent" | "percentage" => Ok(ScalePolicyType::Percent),
             "pods" | "pod" => Ok(ScalePolicyType::Pods),
-            _ => Err(Error::Other(format!("Unknown scale policy type: {}", s))),
+            _ => Err(Error::Other(format!("Unknown scale policy type: {}", s)),
         }
     }
 

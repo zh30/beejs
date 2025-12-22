@@ -91,10 +91,10 @@ pub struct PackageResolution {
     pub version: String,
     pub resolved_url: String,
     pub integrity: String,
-    pub dependencies: HashMap<String, String>>,
-    pub peer_dependencies: HashMap<String, String>>,
-    pub optional_dependencies: HashMap<String, String>>,
-    pub bins: HashMap<String, PathBuf>>,
+    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub peer_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub optional_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub bins: HashMap<String, PathBuf, std::collections::HashMap<String, PathBuf, String, PathBuf>>>,
     pub main: String,
     pub types: Option<String>,
     pub exports: Option<serde_json::Value>,
@@ -200,17 +200,17 @@ impl VersionRange {
         }
 
         if let Some(stripped) = s.strip_prefix('^') {
-            return Ok(VersionRange::Compatible(stripped.to_string()));
+            return Ok(VersionRange::Compatible(stripped.to_string());
         }
 
         if let Some(stripped) = s.strip_prefix('~') {
-            return Ok(VersionRange::Approximate(stripped.to_string()));
+            return Ok(VersionRange::Approximate(stripped.to_string());
         }
 
         if s.contains("||") {
             let parts: Vec<VersionRange> = s
                 .split("||")
-                .map(|p| VersionRange::parse(p.trim()))
+                .map(|p| VersionRange::parse(p.trim())
                 .collect::<Result<Vec<_>, _>>()?;
             return Ok(VersionRange::Or(parts));
         }
@@ -218,25 +218,25 @@ impl VersionRange {
         if s.contains(" - ") {
             let parts: Vec<&str> = s.split(" - ").collect();
             if parts.len() == 2 {
-                return Ok(VersionRange::Range(parts[0].to_string(), parts[1].to_string()));
+                return Ok(VersionRange::Range(parts[0].to_string(), parts[1].to_string());
             }
         }
 
         if let Some(stripped) = s.strip_prefix('>') {
             if stripped.starts_with('=') {
-                return Ok(VersionRange::GreaterThanOrEqual(stripped[1..].to_string()));
+                return Ok(VersionRange::GreaterThanOrEqual(stripped[1..].to_string());
             }
-            return Ok(VersionRange::GreaterThan(stripped.to_string()));
+            return Ok(VersionRange::GreaterThan(stripped.to_string());
         }
 
         if let Some(stripped) = s.strip_prefix('<') {
             if stripped.starts_with('=') {
-                return Ok(VersionRange::LessThanOrEqual(stripped[1..].to_string()));
+                return Ok(VersionRange::LessThanOrEqual(stripped[1..].to_string());
             }
-            return Ok(VersionRange::LessThan(stripped.to_string()));
+            return Ok(VersionRange::LessThan(stripped.to_string());
         }
 
-        Ok(VersionRange::Exact(s.to_string()))
+        Ok(VersionRange::Exact(s.to_string())
     }
 
     /// 检查版本是否匹配此范围

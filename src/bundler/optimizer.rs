@@ -13,7 +13,7 @@ pub fn optimize_code(code: &str, level: u8) -> Result<String> {
                     // Find the position of // and remove everything from there
                     if let Some(pos) = line.find("//") {
                         // Check if it's inside a string literal
-                        let before_comment = &line[..pos];
+                        let before_comment: _ = &line[..pos];
                         let mut in_string = false;
                         let mut string_char = '\0';
                         let _inside_string: _ = false;

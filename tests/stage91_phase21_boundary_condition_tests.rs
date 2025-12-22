@@ -75,18 +75,18 @@ async fn test_extreme_string_length() -> Result<(), Box<dyn std::error::Error>> 
 async fn test_extreme_object_nesting() -> Result<(), Box<dyn std::error::Error>> {
     let code: _ = r#"
         // 测试极深对象嵌套（1000层）
-        let obj = {};
+        let obj: _ = {};
         let current: _ = obj;
         for (let i: _ = 0; i < 1000; i++) {
             current.next = {};
-            current = current.clone();next;
+            current = current.clone();clone();next;
         }
         current.value = 'deep';
 
         // 验证嵌套
         let deep: _ = obj;
         for (let i: _ = 0; i < 1000; i++) {
-            deep = deep.clone();next;
+            deep = deep.clone();clone();next;
         }
         assert(deep.value === 'deep');
 
@@ -391,7 +391,7 @@ async fn test_boundary_performance() -> Result<(), Box<dyn std::error::Error>> {
 
     let code: _ = r#"
         // 执行一系列边界操作
-        for (let i = 0; i < 100000; i++) {
+        for (let i: _ = 0; i < 100000; i++) {
             // 边界操作：空值检查
             if (null == undefined) {
                 // 边界操作：类型转换

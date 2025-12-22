@@ -163,9 +163,9 @@ impl EnterpriseCodeAnalyzer {
     /// 创建新的分析器实例
     pub fn new() -> Self {
         Self {
-            metrics_cache: Arc::new(std::sync::Mutex::new(RwLock::new(MetricsCache::new()))),
-            pattern_detector: Arc::new(std::sync::Mutex::new(PatternDetector::new())),
-            debt_analyzer: Arc::new(std::sync::Mutex::new(DebtAnalyzer::new())),
+            metrics_cache: Arc::new(Mutex::new(RwLock::new(MetricsCache::new())),
+            pattern_detector: Arc::new(Mutex::new(PatternDetector::new()),
+            debt_analyzer: Arc::new(Mutex::new(DebtAnalyzer::new()),
         }
     }
 
@@ -452,7 +452,7 @@ impl EnterpriseCodeAnalyzer {
 // 内部辅助结构体
 
 struct MetricsCache {
-    cache: std::collections::HashMap<String, CodebaseMetrics>>,
+    cache: std::collections::HashMap<String, CodebaseMetrics, std::collections::HashMap<String, CodebaseMetrics, String, CodebaseMetrics>>>,
 }
 
 impl MetricsCache {
@@ -479,7 +479,7 @@ impl PatternDetector {
         // 检测微服务架构
         let express_repos: Vec<_> = repositories
             .iter()
-            .filter(|r| r.framework.as_ref().map_or(false, |f| f.contains("Express")))
+            .filter(|r| r.framework.as_ref().map_or(false, |f| f.contains("Express"))
             .collect();
 
         if express_repos.len() >= 2 {
@@ -494,7 +494,7 @@ impl PatternDetector {
         // 检测前端架构
         let react_repos: Vec<_> = repositories
             .iter()
-            .filter(|r| r.framework.as_ref().map_or(false, |f| f.contains("React")))
+            .filter(|r| r.framework.as_ref().map_or(false, |f| f.contains("React"))
             .collect();
 
         if react_repos.len() >= 1 {

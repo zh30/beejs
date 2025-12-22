@@ -433,7 +433,7 @@ use std::collections::{HashMap, BTreeMap};
         };
 
         let action: _ = autoscaler.evaluate_scaling(&high_load_metrics);
-        assert!(matches!(action, ScalingAction::ScaleUp(_)));
+        assert!(matches!(action, ScalingAction::ScaleUp(_));
     }
 
     #[test]
@@ -458,7 +458,7 @@ use std::collections::{HashMap, BTreeMap};
         };
 
         let action: _ = autoscaler.evaluate_scaling(&low_load_metrics);
-        assert!(matches!(action, ScalingAction::ScaleDown(_)));
+        assert!(matches!(action, ScalingAction::ScaleDown(_));
     }
 
     #[test]
@@ -509,7 +509,7 @@ use std::collections::{HashMap, BTreeMap};
 
         // 第一次扩容
         let action: _ = autoscaler.evaluate_scaling(&high_load_metrics);
-        assert!(matches!(action, ScalingAction::ScaleUp(_)));
+        assert!(matches!(action, ScalingAction::ScaleUp(_));
 
         // 冷却期间不应该再次扩容
         let action: _ = autoscaler.evaluate_scaling(&high_load_metrics);

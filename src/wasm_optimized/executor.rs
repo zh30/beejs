@@ -33,9 +33,9 @@ pub struct WasmModuleMetadata {
 /// 极致性能 WASM 执行器
 pub struct WasmOptimizedExecutor {
     engine: Arc<Engine>,
-    compiled_modules: Arc<std::sync::Mutex<HashMap<String, Module>>,
-    module_metadata: Arc<std::sync::Mutex<HashMap<String, WasmModuleMetadata>>,
-    performance_stats: Arc<std::sync::Mutex<HashMap<String, WasmExecutionResult>>,
+    compiled_modules: Arc<std::sync::Mutex<HashMap<String, Module, std::collections::HashMap<String, Module, String, Module>>>,
+    module_metadata: Arc<std::sync::Mutex<HashMap<String, WasmModuleMetadata, std::collections::HashMap<String, WasmModuleMetadata, String, WasmModuleMetadata>>>,
+    performance_stats: Arc<std::sync::Mutex<HashMap<String, WasmExecutionResult, std::collections::HashMap<String, WasmExecutionResult, String, WasmExecutionResult>>>,
 }
 
 impl WasmOptimizedExecutor {
@@ -51,13 +51,13 @@ impl WasmOptimizedExecutor {
             .wasm_simd(true)
             .parallel_compilation(true);
 
-        let engine: _ = Arc::new(std::sync::Mutex::new(Engine::new(&config))?);
+        let engine: _ = Arc::new(Mutex::new(Engine::new(&config))?);
 
         Ok(Self {
             engine,
-            compiled_modules: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(HashMap::new()))),
-            module_metadata: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(HashMap::new()))),
-            performance_stats: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(HashMap::new()))),
+            compiled_modules: Arc::new(Mutex::new(std::sync::Mutex::new(HashMap::new())),
+            module_metadata: Arc::new(Mutex::new(std::sync::Mutex::new(HashMap::new())),
+            performance_stats: Arc::new(Mutex::new(std::sync::Mutex::new(HashMap::new())),
         })
     }
 
@@ -126,7 +126,7 @@ impl WasmOptimizedExecutor {
         // 执行函数 (简化版本)
         let result: _ = if _main_func.is_some() {
             // 获取执行时间
-            let execution_time = start_time.elapsed().as_secs_f64() * 1000.0;
+            let execution_time: _ = start_time.elapsed().as_secs_f64() * 1000.0;
 
             WasmExecutionResult {
                 execution_time_ms: execution_time,

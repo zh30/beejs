@@ -9,7 +9,7 @@ fn test_isolate_pool_optimization() {
 
     // 测试重复执行同一段代码的性能（利用Isolate池化）
     let code: _ = r#"
-        let sum = 0;
+        let sum: _ = 0;
         for (let i: _ = 0; i < 100; i++) {
             sum += i;
         }
@@ -53,7 +53,7 @@ fn test_isolate_pool_concurrent_execution() {
     // 测试多个不同代码段的并发执行
     let codes: _ = vec![
         "1 + 2 + 3",
-        "let x = 10; x * x;",
+        "let x: _ = 10; x * x;",
         "[1, 2, 3, 4, 5].reduce((a, b) => a + b, 0)",
         "Math.random() * 100;",
     ];

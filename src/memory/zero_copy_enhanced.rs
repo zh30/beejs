@@ -166,12 +166,11 @@ impl EnhancedZeroCopy {
             dma_config,
             mmap_config,
             prefetch_config,
-            dma_buffers: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
-            mmap_cache: Arc::new(std::sync::Mutex::new(RwLock::new(lru::LruCache::new(
-                std::num::NonZeroUsize::new(1024)).unwrap()
-            ))),
-            prefetch_stats: Arc::new(std::sync::Mutex::new(PrefetchStats::default())),
-            performance_stats: Arc::new(std::sync::Mutex::new(PerformanceStats::default())),
+            dma_buffers: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            mmap_cache: Arc::new(Mutex::new(RwLock::new(lru::LruCache::new(
+                std::num::NonZeroUsize::new(1024)).unwrap()),
+            prefetch_stats: Arc::new(Mutex::new(PrefetchStats::default()),
+            performance_stats: Arc::new(Mutex::new(PerformanceStats::default()),
         }
     }
 
@@ -208,7 +207,7 @@ impl EnhancedZeroCopy {
             ptr,
             size,
             allocated_at: Instant::now(),
-            ref_count: Arc::new(std::sync::Mutex::new(AtomicUsize::new(1))),
+            ref_count: Arc::new(Mutex::new(AtomicUsize::new(1)),
         };
 
         self.performance_stats.dma_operations.fetch_add(1, Ordering::Relaxed);
@@ -392,7 +391,7 @@ impl EnhancedZeroCopy {
                 .map(&file)?
         };
 
-        Ok(Arc::new(std::sync::Mutex::new(mmap)))
+        Ok(Arc::new(Mutex::new(mmap))
     }
 }
 

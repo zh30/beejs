@@ -107,7 +107,7 @@ impl ObservableSystem {
             config: config.clone(),
             prometheus_exporter: None,
             structured_logger: None,
-            custom_metrics: Arc::new(std::sync::Mutex::new(RwLock::new(CustomMetrics::new()))),
+            custom_metrics: Arc::new(Mutex::new(RwLock::new(CustomMetrics::new())),
             alerting_system: None,
         };
 
@@ -123,7 +123,7 @@ impl ObservableSystem {
         // Initialize Prometheus exporter
         if config.enable_prometheus {
             let exporter: _ = PrometheusExporter::new()?;
-            system.prometheus_exporter = Some(Arc::new(std::sync::Mutex::new(RwLock::new(exporter))));
+            system.prometheus_exporter = Some(Arc::new(Mutex::new(RwLock::new(exporter)));
             info!("Prometheus exporter initialized");
         }
 
@@ -171,8 +171,8 @@ impl ObservableSystem {
         // Log event
         if let Some(logger) = &self.structured_logger {
             let context: _ = HashMap::from([
-                ("script_name".to_string(), Value::String(script_name.to_string())),
-                ("duration_ms".to_string(), Value::Number(serde_json::Number::from(duration.as_millis() as u64))),
+                ("script_name".to_string(), Value::String(script_name.to_string()),
+                ("duration_ms".to_string(), Value::Number(serde_json::Number::from(duration.as_millis() as u64)),
                 ("success".to_string(), Value::Bool(success)),
             ]);
 

@@ -132,7 +132,7 @@ fn url_to_string_callback(
     let href_key: _ = v8::String::new(scope, "href").unwrap();
     let href: _ = this
         .get(scope, href_key.into())
-        .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+        .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
     retval.set(v8::String::new(scope, &href).unwrap().into());
@@ -633,17 +633,17 @@ fn url_format_callback(
     if let Some(obj) = url_obj.to_object(scope) {
         let protocol_key: _ = v8::String::new(scope, "protocol").unwrap();
         let protocol: _ = obj.get(scope, protocol_key.into())
-            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
             .unwrap_or_default();
 
         let hostname_key: _ = v8::String::new(scope, "hostname").unwrap();
         let hostname: _ = obj.get(scope, hostname_key.into())
-            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
             .unwrap_or_default();
 
         let pathname_key: _ = v8::String::new(scope, "pathname").unwrap();
         let pathname: _ = obj.get(scope, pathname_key.into())
-            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
             .unwrap_or_default();
 
         href = format!("{}{}{}", protocol, hostname, pathname);

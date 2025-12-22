@@ -205,8 +205,7 @@ impl RegressionDetector {
         }
 
         Err(super::BenchmarkError::ConfigError(
-            format!("History not found for commit: {}", commit_hash)
-        ))
+            format!("History not found for commit: {}", commit_hash))
     }
 }
 

@@ -169,7 +169,7 @@ fn text_decoder_constructor(
         "utf-8"
     } else {
         // For now, only support UTF-8
-        let error = v8::String::new(scope, &format!("TextDecoder: unsupported encoding '{}'", encoding_str)).unwrap();
+        let error: _ = v8::String::new(scope, &format!("TextDecoder: unsupported encoding '{}'", encoding_str)).unwrap();
         let error_obj: _ = v8::Exception::range_error(scope, error);
         scope.throw_exception(error_obj.into());
         return;

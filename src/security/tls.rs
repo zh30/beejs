@@ -59,7 +59,7 @@ pub struct TlsConfig {
 #[derive(Debug)]
 pub struct CertificateManager {
     // 证书存储
-    certificates: std::collections::HashMap<String, Certificate>>,
+    certificates: std::collections::HashMap<String, Certificate, std::collections::HashMap<String, Certificate, String, Certificate>>>,
 }
 
 impl CertificateManager {
@@ -85,14 +85,14 @@ impl CertificateManager {
 
     pub async fn get_certificate(&self, cert_id: &str) -> Result<&Certificate, TlsError> {
         self.certificates.get(cert_id)
-            .ok_or_else(|| TlsError::CertificateError(format!("Certificate not found: {}", cert_id)))
+            .ok_or_else(|| TlsError::CertificateError(format!("Certificate not found: {}", cert_id))
     }
 
     pub async fn validate_certificate(&self, cert_id: &str) -> Result<bool, TlsError> {
         // 简化的证书验证（生产环境应验证证书链、过期时间等）
         self.certificates.contains_key(cert_id)
             .then(|| true)
-            .ok_or_else(|| TlsError::CertificateError("Invalid certificate".to_string()))
+            .ok_or_else(|| TlsError::CertificateError("Invalid certificate".to_string())
     }
 }
 
@@ -114,7 +114,7 @@ impl TlsConfig {
                 CipherSuite::Chacha20Poly1305,
                 CipherSuite::Aes128Gcm,
             ],
-            cert_manager: Arc::new(std::sync::Mutex::new(CertificateManager::new()).expect("Failed to create certificate manager")),
+            cert_manager: Arc::new(Mutex::new(CertificateManager::new()).expect("Failed to create certificate manager")),
         }
     }
 

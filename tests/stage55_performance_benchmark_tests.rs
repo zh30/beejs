@@ -65,7 +65,7 @@ use std::collections::{HashMap, BTreeMap};
             "test_memory_operation",
             MetricType::MemoryUsage,
             || {
-                let vec = vec![0; 1000];
+                let vec: _ = vec![0; 1000];
                 vec.len()
             },
         );
@@ -211,7 +211,7 @@ use std::collections::{HashMap, BTreeMap};
             MetricType::ExecutionTime,
             || {
                 // 创建一个稍微不一致的操作
-                let val = fastrand::usize(..100);
+                let val: _ = fastrand::usize(..100);
                 std::thread::sleep(Duration::from_micros(val as u64));
                 val
             },

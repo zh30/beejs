@@ -190,7 +190,7 @@ pub struct AiModel {
 /// AI模型管理器
 #[allow(dead_code)]
 pub struct AiModelManager {
-    models: Arc<Mutex<HashMap<String, AiModel>>,
+    models: Arc<Mutex<HashMap<String, AiModel, std::collections::HashMap<String, AiModel, String, AiModel>>>,
     default_model_id: Arc<Mutex<Option<String>>,
     routing_strategy: Arc<Mutex<ModelRoutingStrategy>>,
 }
@@ -216,9 +216,9 @@ impl AiModelManager {
     /// 创建新的模型管理器
     pub fn new() -> Self {
         Self {
-            models: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
-            default_model_id: Arc::new(std::sync::Mutex::new(Mutex::new(None))),
-            routing_strategy: Arc::new(std::sync::Mutex::new(Mutex::new(ModelRoutingStrategy::default()))),
+            models: Arc::new(Mutex::new(HashMap::new())),
+            default_model_id: Arc::new(Mutex::new(None)),
+            routing_strategy: Arc::new(Mutex::new(ModelRoutingStrategy::default())),
         }
     }
 
@@ -251,7 +251,7 @@ impl AiModelManager {
         let start_time: _ = Instant::now();
 
         let need_load: _ = {
-            let models = self.models.lock().unwrap();
+            let models: _ = self.models.lock().unwrap();
             if let Some(model) = models.get(model_id) {
                 !model.is_loaded
             } else {
@@ -285,7 +285,7 @@ impl AiModelManager {
         model_id: &str,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let need_unload: _ = {
-            let models = self.models.lock().unwrap();
+            let models: _ = self.models.lock().unwrap();
             if let Some(model) = models.get(model_id) {
                 model.is_loaded
             } else {
@@ -464,7 +464,7 @@ impl AiModelManager {
     }
 
     /// 获取所有模型的汇总指标
-    pub fn get_all_metrics(&self) -> HashMap<String, ModelMetrics>> {
+    pub fn get_all_metrics(&self) -> HashMap<String, ModelMetrics, std::collections::HashMap<String, ModelMetrics, String, ModelMetrics>>> {
         let models: _ = self.models.lock().unwrap();
         let mut metrics = HashMap::new();
 
@@ -495,7 +495,7 @@ impl AiModelManager {
     }
 
     /// 健康检查
-    pub async fn health_check(&self) -> HashMap<String, bool>> {
+    pub async fn health_check(&self) -> HashMap<String, bool, std::collections::HashMap<String, bool, String, bool>>> {
         let models: _ = self.models.lock().unwrap();
         let mut health_status = HashMap::new();
 
@@ -551,7 +551,7 @@ pub fn create_text_generation_model(model_id: &str) -> AiModel {
         config,
         is_loaded: false,
         load_time: None,
-        metrics: Arc::new(std::sync::Mutex::new(Mutex::new(ModelMetrics::default()))),
+        metrics: Arc::new(Mutex::new(ModelMetrics::default())),
     }
 }
 
@@ -576,7 +576,7 @@ pub fn create_image_classification_model(model_id: &str) -> AiModel {
         config,
         is_loaded: false,
         load_time: None,
-        metrics: Arc::new(std::sync::Mutex::new(Mutex::new(ModelMetrics::default()))),
+        metrics: Arc::new(Mutex::new(ModelMetrics::default())),
     }
 }
 

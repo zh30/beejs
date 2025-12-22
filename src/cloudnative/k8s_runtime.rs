@@ -89,7 +89,7 @@ pub struct K8sPodInfo {
 #[derive(Debug)]
 pub struct PodManager {
     client: Arc<K8sClient>,
-    active_pods: Arc<RwLock<HashMap<String, K8sPodInfo>>,
+    active_pods: Arc<RwLock<HashMap<String, K8sPodInfo, std::collections::HashMap<String, K8sPodInfo, String, K8sPodInfo>>>,
 }
 
 /// Kubernetes runtime
@@ -144,7 +144,7 @@ impl PodManager {
     pub fn new(client: Arc<K8sClient>) -> Self {
         PodManager {
             client,
-            active_pods: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            active_pods: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -223,8 +223,8 @@ impl PodManager {
 impl K8sRuntime {
     /// Create a new Kubernetes runtime
     pub fn new(config: K8sConfig) -> Result<Self> {
-        let client: _ = Arc::new(std::sync::Mutex::new(K8sClient::new(config.clone()), Arc::new(std::sync::Mutex::new(MockK8sClient::new(config.clone())))));
-        let pod_manager: _ = Arc::new(std::sync::Mutex::new(PodManager::new(client.clone())));
+        let client: _ = Arc::new(Mutex::new(K8sClient::new(config.clone()), Arc::new(Mutex::new(MockK8sClient::new(config.clone())));
+        let pod_manager: _ = Arc::new(Mutex::new(PodManager::new(client.clone()));
 
         Ok(K8sRuntime {
             client,
@@ -295,7 +295,7 @@ impl K8sRuntime {
         for i in 0..replicas {
             let pod_name: _ = format!("beejs-pod-{}-{}", i, uuid::Uuid::new_v4());
             let result: _ = self.pod_manager.execute_in_pod(&pod_name, &["node", "-e", script]).await;
-            results.push(result.unwrap_or_else(|_| "Error".to_string()));
+            results.push(result.unwrap_or_else(|_| "Error".to_string());
         }
 
         Ok(results)
@@ -371,7 +371,7 @@ impl K8sClientInterface for MockK8sClient {
     }
 
     fn execute_command(&self, _pod_name: &str, command: &[String]) -> Result<String> {
-        Ok(format!("Executed: {}", command.join(" ")))
+        Ok(format!("Executed: {}", command.join(" "))
     }
 }
 
@@ -384,7 +384,7 @@ use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_k8s_client_creation() {
         let config: _ = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
-        let client: _ = Arc::new(std::sync::Mutex::new(MockK8sClient::new(config.clone())));
+        let client: _ = Arc::new(Mutex::new(MockK8sClient::new(config.clone()));
         let k8s_client: _ = K8sClient::new(config, client);
 
         assert_eq!(k8s_client.config().cluster_url, "https://localhost:6443");
@@ -394,7 +394,7 @@ use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_pod_creation() {
         let config: _ = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
-        let client: _ = Arc::new(std::sync::Mutex::new(K8sClient::new(config, Arc::new(MockK8sClient::new(config.clone())))));
+        let client: _ = Arc::new(Mutex::new(K8sClient::new(config, Arc::new(MockK8sClient::new(config.clone())));
         let manager: _ = PodManager::new(client);
 
         let spec: _ = K8sPodSpec {

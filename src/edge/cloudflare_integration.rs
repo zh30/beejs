@@ -37,7 +37,7 @@ impl CloudflareIntegration {
     async fn create_worker(&self, name: &str, code: &[u8]) -> Result<String> {
         // In a real implementation, this would use Cloudflare's API
         // For now, return a mock deployment ID
-        Ok(format!("worker-{}-{}", name, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()))
+        Ok(format!("worker-{}-{}", name, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs())
     }
 
     /// Publish a Worker to a route
@@ -129,7 +129,7 @@ impl CdnProvider for CloudflareIntegration {
     }
 
     /// Update Cloudflare configuration
-    async fn update_config(&self, config: &HashMap<String, String>>) -> Result<()> {
+    async fn update_config(&self, config: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>>) -> Result<()> {
         // Update Workers KV, environment variables, etc.
         if let Some(tier) = config.get("tier") {
             println!("Updated Cloudflare tier to: {}", tier);
@@ -201,8 +201,8 @@ pub struct RealtimeMetrics {
 /// Cloudflare Workers Environment Configuration
 #[derive(Debug)]
 pub struct WorkerEnvironment {
-    pub variables: HashMap<String, String>>,
-    pub secrets: HashMap<String, String>>,
+    pub variables: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub secrets: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     pub kv_namespaces: Vec<String>,
     pub durable_objects: Vec<String>,
 }

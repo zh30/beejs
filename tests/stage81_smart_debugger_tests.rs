@@ -528,7 +528,7 @@ use std::collections::{HashMap, BTreeMap};
             let code: _ = r#"
 function processData(data) {
     if (data) {
-        for (let i = 0; i < data.length; i++) {
+        for (let i: _ = 0; i < data.length; i++) {
             try {
                 const result = data[i].process();
                 console.log(result);

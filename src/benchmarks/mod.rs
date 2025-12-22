@@ -43,7 +43,7 @@ pub struct MetricDataPoint {
     pub timestamp: u64, // 使用 Unix 时间戳替代 Instant
     pub value: f64,
     pub unit: String,
-    pub metadata: HashMap<String, String>>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 /// 基准测试结果
@@ -60,7 +60,7 @@ pub struct BenchmarkResult {
     pub operations_per_second: f64,
     pub memory_stats: Option<MemoryStats>,
     pub data_points: Vec<MetricDataPoint>,
-    pub metadata: HashMap<String, String>>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 /// 内存统计数据
@@ -109,7 +109,7 @@ impl Default for BenchmarkConfig {
 #[derive(Clone)]
 pub struct BenchmarkFramework {
     config: BenchmarkConfig,
-    baseline_results: HashMap<String, BenchmarkResult>>,
+    baseline_results: HashMap<String, BenchmarkResult, std::collections::HashMap<String, BenchmarkResult, String, BenchmarkResult>>>,
 }
 
 impl BenchmarkFramework {
@@ -179,7 +179,7 @@ impl BenchmarkFramework {
         let variance: _ = durations
             .iter()
             .map(|d| {
-                let diff = d.as_secs_f64() - mean;
+                let diff: _ = d.as_secs_f64() - mean;
                 diff * diff
             })
             .sum::<f64>()
@@ -248,7 +248,7 @@ impl BenchmarkFramework {
         let variance: _ = durations
             .iter()
             .map(|d| {
-                let diff = d.as_secs_f64() - mean;
+                let diff: _ = d.as_secs_f64() - mean;
                 diff * diff
             })
             .sum::<f64>()
@@ -327,7 +327,7 @@ impl BenchmarkFramework {
     }
 
     /// 获取所有基线结果
-    pub fn get_baselines(&self) -> &HashMap<String, BenchmarkResult>> {
+    pub fn get_baselines(&self) -> &HashMap<String, BenchmarkResult, std::collections::HashMap<String, BenchmarkResult, String, BenchmarkResult>>> {
         &self.baseline_results
     }
 }

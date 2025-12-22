@@ -38,7 +38,7 @@ pub struct TuningResult {
 
 /// 自动调优引擎
 pub struct AutoTuner {
-    parameters: HashMap<String, TuningParameter>>,
+    parameters: HashMap<String, TuningParameter, std::collections::HashMap<String, TuningParameter, String, TuningParameter>>>,
     tuning_history: Vec<TuningResult>,
     performance_baseline: f64,
 }
@@ -214,7 +214,7 @@ impl AutoTuner {
         self.performance_baseline = result.performance_after;
     }
 
-    pub fn get_parameters(&self) -> HashMap<String, TuningParameter>> {
+    pub fn get_parameters(&self) -> HashMap<String, TuningParameter, std::collections::HashMap<String, TuningParameter, String, TuningParameter>>> {
         self.parameters.clone()
     }
 

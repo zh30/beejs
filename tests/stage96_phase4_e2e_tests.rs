@@ -21,7 +21,7 @@ mod debugging_flow_tests {
         let debugger_code: _ = r#"
             // 模拟调试会话
             function debugSession() {
-                let breakpoints = new Map();
+                let breakpoints: _ = new Map();
                 let callStack: _ = [];
                 let variables: _ = new Map();
 

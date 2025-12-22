@@ -18,7 +18,7 @@ pub struct ChartRenderer {
     /// Render configuration
     config: RenderConfig,
     /// Active chart instances
-    charts: Arc<RwLock<HashMap<String, ChartInstance>>,
+    charts: Arc<RwLock<HashMap<String, ChartInstance, std::collections::HashMap<String, ChartInstance, String, ChartInstance>>>,
     /// WebSocket clients for real-time updates
     websocket_clients: Arc<RwLock<Vec<Arc<WebSocketClient>>,
 }
@@ -106,7 +106,7 @@ pub struct ChartData {
     /// Labels
     pub labels: Vec<String>,
     /// Metadata
-    pub metadata: HashMap<String, Value>>,
+    pub metadata: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>,
 }
 
 /// Series data for multi-series charts
@@ -132,7 +132,7 @@ pub struct GraphRenderer {
     /// Render configuration
     config: RenderConfig,
     /// Active graph instances
-    graphs: Arc<RwLock<HashMap<String, GraphInstance>>,
+    graphs: Arc<RwLock<HashMap<String, GraphInstance, std::collections::HashMap<String, GraphInstance, String, GraphInstance>>>,
     /// Layout engine
     layout_engine: Arc<LayoutEngine>,
 }
@@ -163,7 +163,7 @@ pub struct GraphNode {
     pub position: Position,
     pub size: Size,
     pub color: String,
-    pub metadata: HashMap<String, Value>>,
+    pub metadata: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>,
 }
 
 /// Graph edge
@@ -256,13 +256,13 @@ pub struct WebSocketClient {
     /// WebSocket connection
     pub connection: Arc<tokio::sync::Mutex<Option<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>,
     /// Client metadata
-    pub metadata: HashMap<String, Value>>,
+    pub metadata: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>,
 }
 
 /// Template Engine - Dynamic content generation
 pub struct TemplateEngine {
     /// Template cache
-    templates: Arc<RwLock<HashMap<String, Template>>,
+    templates: Arc<RwLock<HashMap<String, Template, std::collections::HashMap<String, Template, String, Template>>>,
 }
 
 /// Template definition
@@ -275,7 +275,7 @@ pub struct Template {
     /// Template variables
     pub variables: Vec<String>,
     /// Template functions
-    pub functions: HashMap<String, TemplateFunction>>,
+    pub functions: HashMap<String, TemplateFunction, std::collections::HashMap<String, TemplateFunction, String, TemplateFunction>>>,
 }
 
 /// Template function
@@ -333,8 +333,8 @@ impl ChartRenderer {
         info!("Initializing Chart Renderer...");
 
         Self {
-            charts: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            websocket_clients: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            charts: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            websocket_clients: Arc::new(Mutex::new(RwLock::new(Vec::new())),
             config,
         }
     }
@@ -545,8 +545,7 @@ impl ChartRenderer {
 "#,
                     x + bar_width / 2.0, y_pos - 5.0,
                     config.colors.text,
-                    format!("{}", y)
-                ));
+                    format!("{}", y));
             }
         }
 
@@ -609,8 +608,7 @@ impl ChartRenderer {
                     r#"  <text x="{}" y="{}" fill="white" text-anchor="middle" font-size="14" font-weight="bold">{}</text>
 "#,
                     label_x, label_y,
-                    format!("{:.1}%", (value / total) * 100.0)
-                ));
+                    format!("{:.1}%", (value / total) * 100.0));
             }
 
             current_angle = end_angle;
@@ -750,8 +748,8 @@ impl GraphRenderer {
         info!("Initializing Graph Renderer...");
 
         Self {
-            graphs: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            layout_engine: Arc::new(std::sync::Mutex::new(LayoutEngine::new())),
+            graphs: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            layout_engine: Arc::new(Mutex::new(LayoutEngine::new()),
             config,
         }
     }
@@ -850,8 +848,7 @@ impl GraphRenderer {
                         target.position.x, target.position.y,
                         arrow_x - 5.0 * (angle + 0.3).cos(), arrow_y - 5.0 * (angle + 0.3).sin(),
                         arrow_x - 5.0 * (angle - 0.3).cos(), arrow_y - 5.0 * (angle - 0.3).sin(),
-                        edge.color.as_deref().unwrap_or("#999999")
-                    ));
+                        edge.color.as_deref().unwrap_or("#999999"));
                 }
             }
         }
@@ -974,7 +971,7 @@ impl LayoutEngine {
         // Simplified hierarchical layout
         // Group nodes by their connections
 
-        let mut levels: HashMap<String, Vec<usize>> = HashMap::new();
+        let mut levels: HashMap<String, Vec<usize, std::collections::HashMap<String, Vec<usize, String, Vec<usize>>> = HashMap::new();
         let mut level_count = 0;
 
         // Find root nodes (nodes with no incoming edges)
@@ -997,7 +994,7 @@ impl LayoutEngine {
                 .filter_map(|e| {
                     graph.nodes.iter().position(|n| n.id == e.source)
                 })
-                .filter_map(|idx| levels.iter().find(|(_, v)| v.contains(&idx)))
+                .filter_map(|idx| levels.iter().find(|(_, v)| v.contains(&idx))
                 .map(|(k, _)| k)
                 .max()
                 .map(|k| k.parse::<u32>().unwrap_or(0))
@@ -1051,7 +1048,7 @@ impl WebSocketClient {
     pub fn new(id: String) -> Self {
         Self {
             id,
-            connection: Arc::new(std::sync::Mutex::new(tokio::sync::Mutex::new(None))),
+            connection: Arc::new(Mutex::new(tokio::sync::Mutex::new(None)),
             metadata: HashMap::new(),
         }
     }
@@ -1068,7 +1065,7 @@ impl TemplateEngine {
     /// Create a new template engine
     pub fn new() -> Self {
         Self {
-            templates: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            templates: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -1080,7 +1077,7 @@ impl TemplateEngine {
     }
 
     /// Render template
-    pub async fn render_template(&self, id: &str, variables: &HashMap<String, Value>>) -> Result<String> {
+    pub async fn render_template(&self, id: &str, variables: &HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>) -> Result<String> {
         let templates: _ = self.templates.read().await;
         let template: _ = templates.get(id)
             .ok_or_else(|| anyhow!("Template not found: {}", id))?;
@@ -1096,7 +1093,7 @@ impl TemplateEngine {
                 Value::Bool(b) => b.to_string(),
                 _ => format!("{}", value),
             };
-            result = result.clone();replace(&placeholder, &value_str);
+            result = result.clone();clone();replace(&placeholder, &value_str);
         }
 
         Ok(result)
@@ -1342,8 +1339,8 @@ use std::collections::{HashMap, BTreeMap};
         engine.add_template(template).await.unwrap();
 
         let mut variables = HashMap::new();
-        variables.insert("name".to_string(), Value::String("World".to_string()));
-        variables.insert("count".to_string(), Value::String("5".to_string()));
+        variables.insert("name".to_string(), Value::String("World".to_string());
+        variables.insert("count".to_string(), Value::String("5".to_string());
 
         let result: _ = engine.render_template("test", &variables).await.unwrap();
         assert_eq!(result, "Hello World, you have 5 messages");

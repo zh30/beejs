@@ -211,7 +211,7 @@ use std::collections::{HashMap, BTreeMap};
         let std_error: _ = "Standard error";
         let beejs_error: _ = ErrorHandler::convert_error(std_error);
 
-        assert!(matches!(beejs_error, BeejsError::RuntimeError(_)));
+        assert!(matches!(beejs_error, BeejsError::RuntimeError(_));
     }
 
     #[test]
@@ -223,7 +223,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_beejs_try_macro_error() {
-        let result: Result<i32> = Err(BeejsError::V8Error("Test".to_string()));
+        let result: Result<i32> = Err(BeejsError::V8Error("Test".to_string());
         let error: _ = beejs_try!(result);
         // 这个测试验证宏能正确传播错误
         assert!(matches!(error, 0)); // 不会执行到这里

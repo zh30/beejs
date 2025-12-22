@@ -109,9 +109,9 @@ impl MemoryMappedFile {
             size,
             access_mode,
             created_at: Instant::now(),
-            last_accessed: Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now()))),
-            access_count: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
-            ref_count: Arc::new(std::sync::Mutex::new(AtomicUsize::new(1))),
+            last_accessed: Arc::new(Mutex::new(Instant::now())),
+            access_count: Arc::new(Mutex::new(AtomicUsize::new(0)),
+            ref_count: Arc::new(Mutex::new(AtomicUsize::new(1)),
         })
     }
 
@@ -134,9 +134,9 @@ impl MemoryMappedFile {
             size,
             access_mode,
             created_at: Instant::now(),
-            last_accessed: Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now()))),
-            access_count: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
-            ref_count: Arc::new(std::sync::Mutex::new(AtomicUsize::new(1))),
+            last_accessed: Arc::new(Mutex::new(Instant::now())),
+            access_count: Arc::new(Mutex::new(AtomicUsize::new(0)),
+            ref_count: Arc::new(Mutex::new(AtomicUsize::new(1)),
         })
     }
 
@@ -269,7 +269,7 @@ pub struct MemoryMappedFileStats {
 #[derive(Debug)]
 pub struct MemoryMappedFileManager {
     /// 活跃映射
-    mappings: Arc<Mutex<HashMap<PathBuf, Weak<Mutex<MemoryMappedFile>>>>,
+    mappings: Arc<Mutex<HashMap<PathBuf, Weak<Mutex<MemoryMappedFile, std::collections::HashMap<PathBuf, Weak<Mutex<MemoryMappedFile, PathBuf, Weak<Mutex<MemoryMappedFile>>>>>,
     /// 配置
     config: MemoryMappedFileConfig,
     /// 统计信息
@@ -292,10 +292,10 @@ impl MemoryMappedFileManager {
     /// 创建新的内存映射文件管理器
     pub fn new(config: MemoryMappedFileConfig) -> Self {
         let manager: _ = Self {
-            mappings: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            mappings: Arc::new(Mutex::new(HashMap::new())),
             config,
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(MemoryMappedFileStats::default()))),
-            running: Arc::new(std::sync::Mutex::new(AtomicBool::new(true))),
+            stats: Arc::new(Mutex::new(MemoryMappedFileStats::default())),
+            running: Arc::new(Mutex::new(AtomicBool::new(true)),
         };
 
         // 启动GC线程
@@ -338,7 +338,7 @@ impl MemoryMappedFileManager {
         }
 
         // 创建新的内存映射
-        let file: _ = Arc::new(std::sync::Mutex::new(Mutex::new(MemoryMappedFile::open_readonly(&path))?));
+        let file: _ = Arc::new(Mutex::new(MemoryMappedFile::open_readonly(&path))?));
 
         // 注册到管理器
         {
@@ -369,7 +369,7 @@ impl MemoryMappedFileManager {
     #[allow(dead_code)]
     /// 清理最老的映射
     fn cleanup_oldest_mapping(
-        mappings: &mut HashMap<PathBuf, Weak<Mutex<MemoryMappedFile>>,
+        mappings: &mut HashMap<PathBuf, Weak<Mutex<MemoryMappedFile, std::collections::HashMap<PathBuf, Weak<Mutex<MemoryMappedFile, PathBuf, Weak<Mutex<MemoryMappedFile>>>,
     ) -> Result<()> {
         // 简单地移除所有失效的弱引用
         mappings.retain(|_, weak| weak.strong_count() > 0);
@@ -433,7 +433,7 @@ impl MemoryMappedFileManager {
                 std::thread::sleep(Duration::from_secs(60));
 
                 if let Some(mappings) = mappings.upgrade() {
-                    let mut mappings = mappings.clone();lock().unwrap();
+                    let mut mappings = mappings.clone();clone();lock().unwrap();
 
                     // 简单清理：移除所有弱引用已失效的条目
                     mappings.retain(|_, weak_wrapper| weak_wrapper.strong_count() > 0);

@@ -118,9 +118,9 @@ impl<T> BatchProcessor<T> {
 
         Self {
             config,
-            queue: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(BatchProcessorStats::default()))),
-            performance_history: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
+            queue: Arc::new(Mutex::new(VecDeque::new())),
+            stats: Arc::new(Mutex::new(BatchProcessorStats::default())),
+            performance_history: Arc::new(Mutex::new(VecDeque::new())),
             current_batch_size: max_batch_size / 2, // 从中等大小开始
         }
     }
@@ -289,7 +289,7 @@ impl<T> BatchProcessor<T> {
         match self.config.strategy {
             BatchStrategy::SizeBased => {
                 // 基于大小的批处理
-                Ok(std::cmp::min(self.current_batch_size, queue.len()))
+                Ok(std::cmp::min(self.current_batch_size, queue.len())
             }
             BatchStrategy::TimeBased => {
                 // 基于时间的批处理
@@ -338,7 +338,7 @@ impl<T> BatchProcessor<T> {
                     .any(|item| item.priority >= 5);
 
                 if size_ok || time_ok || priority_ok {
-                    Ok(std::cmp::min(self.current_batch_size, queue.len()))
+                    Ok(std::cmp::min(self.current_batch_size, queue.len())
                 } else {
                     Ok(0)
                 }

@@ -202,7 +202,7 @@ mod stage85_aiops_tests {
         use beejs::aiops::knowledge_graph::{KnowledgeGraph, InferenceEngine};
 
         let graph: _ = KnowledgeGraph::new();
-        let inference_engine: _ = InferenceEngine::new(Arc::new(std::sync::Mutex::new(graph)));
+        let inference_engine: _ = InferenceEngine::new(Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(graph))));
 
         // 添加已知关系
         add_sample_data(&inference_engine.graph).await;
@@ -671,7 +671,7 @@ pub struct SystemMetric {
     pub metric_type: MetricType,
     pub value: f64,
     pub timestamp: SystemTime,
-    pub labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -712,7 +712,7 @@ pub struct Alert {
     pub source: String,
     pub message: String,
     pub timestamp: SystemTime,
-    pub labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -24,7 +24,7 @@ pub struct QueryCondition {
     /// 结束时间
     pub end_time: Option<u64>,
     /// 标签过滤
-    pub tag_filters: HashMap<String, _>,
+    pub tag_filters: HashMap<String, _, std::collections::HashMap<String, _, String, _>>,
     /// 限制返回数量
     pub limit: Option<usize>,
 }
@@ -61,7 +61,7 @@ pub struct DataStore {
     /// 内存数据缓存
     memory_cache: Arc<Mutex<VecDeque<DataPoint>>,
     /// 压缩数据存储
-    compressed_storage: Arc<Mutex<HashMap<String, _>>,
+    compressed_storage: Arc<Mutex<HashMap<String, _, std::collections::HashMap<String, _, String, _>>>,
     /// 查询索引
     query_index: Arc<Mutex<QueryIndex>>,
     /// 统计信息
@@ -89,7 +89,7 @@ pub struct QueryIndex {
     /// 按时间排序的索引
     pub time_index: Vec<(u64, MetricType)>,
     /// 按指标类型分组的索引
-    pub type_index: HashMap<String, _>,
+    pub type_index: HashMap<String, _, std::collections::HashMap<String, _, String, _>>,
     /// 索引最后更新时间
     pub last_update: Instant,
 }
@@ -120,14 +120,14 @@ impl DataStore {
     pub fn new(config: DataStoreConfig) -> Self {
         Self {
             config,
-            memory_cache: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
-            compressed_storage: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
-            query_index: Arc::new(std::sync::Mutex::new(Mutex::new(QueryIndex {
-                time_index: Vec::new(),
+            memory_cache: Arc::new(Mutex::new(VecDeque::new())),
+            compressed_storage: Arc::new(Mutex::new(HashMap::new())),
+            query_index: Arc::new(Mutex::new(QueryIndex {
+                time_index: Vec::new()),
                 type_index: HashMap::new(),
                 last_update: Instant::now(),
-            }))),
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(DataStoreStats {
+            })),
+            stats: Arc::new(Mutex::new(DataStoreStats {
                 total_data_points: 0,
                 memory_cache_size: 0,
                 compressed_storage_size: 0,
@@ -136,7 +136,7 @@ impl DataStore {
                 export_count: 0,
                 last_cleanup: None,
                 disk_usage_bytes: 0,
-            }))),
+            })),
         }
     }
 
@@ -234,7 +234,7 @@ impl DataStore {
         }
 
         // 按指标类型分组
-        let mut grouped_data: HashMap<String, _> = HashMap::new();
+        let mut grouped_data: HashMap<String, _, std::collections::HashMap<String, _, String, _>> = HashMap::new();
 
         while let Some(data_point) = memory_cache.pop_front() {
             grouped_data
@@ -430,7 +430,7 @@ impl DataStore {
     /// 更新查询索引
     fn update_index(&self, metric: &MetricValue) -> Result<(), String> {
         let mut query_index = self.query_index.lock().map_err(|e| e.to_string())?;
-        query_index.time_index.push((metric.timestamp, metric.metric_type.clone()));
+        query_index.time_index.push((metric.timestamp, metric.metric_type.clone());
         query_index.type_index
             .entry(metric.metric_type.clone())
             .or_insert_with(Vec::new)

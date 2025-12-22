@@ -219,7 +219,7 @@ use std::collections::{HashMap, BTreeMap};
         let initial_count: _ = runtime.execution_count();
 
         // 执行一些代码
-        let result: _ = runtime.execute_code("let sum = 0; for(let i: _ = 0; i < 10; i++) sum += i; sum");
+        let result: _ = runtime.execute_code("let sum: _ = 0; for(let i: _ = 0; i < 10; i++) sum += i; sum");
         assert!(result.is_ok());
 
         // 验证执行计数已更新

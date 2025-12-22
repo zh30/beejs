@@ -122,7 +122,7 @@ impl ClusterController {
             self.add_finalizer(&cluster).await?;
         }
 
-        Ok(Action::requeue(Duration::from_secs(30)))
+        Ok(Action::requeue(Duration::from_secs(30))
     }
 
     /// Handle cleanup when resource is deleted
@@ -194,11 +194,11 @@ impl ClusterController {
     async fn update_phase(&self, cluster: &BeejsCluster, phase: ClusterPhase) -> Result<(), Error> {
         let is_ready: _ = matches!(phase, ClusterPhase::Running);
         let mut condition = serde_json::Map::new();
-        condition.insert("type".to_string(), serde_json::Value::String("Ready".to_string()));
-        condition.insert("status".to_string(), serde_json::Value::String(is_ready.to_string()));
+        condition.insert("type".to_string(), serde_json::Value::String("Ready".to_string());
+        condition.insert("status".to_string(), serde_json::Value::String(is_ready.to_string());
 
         let mut status = serde_json::Map::new();
-        status.insert("phase".to_string(), serde_json::Value::String(phase.as_str().to_string()));
+        status.insert("phase".to_string(), serde_json::Value::String(phase.as_str().to_string());
         status.insert("conditions".to_string(), serde_json::Value::Array(vec![serde_json::Value::Object(condition)]));
 
         let mut patch_map = serde_json::Map::new();
@@ -333,7 +333,7 @@ impl ClusterController {
         let name: _ = cluster.name_any();
         let mut data = BTreeMap::new();
         let encoded: _ = base64::encode("dummy-token");
-        data.insert("token".to_string(), ByteString(encoded.into_bytes()));
+        data.insert("token".to_string(), ByteString(encoded.into_bytes());
 
         let secret: _ = k8s_openapi::api::core::v1::Secret {
             metadata: k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
@@ -579,12 +579,12 @@ impl ClusterController {
                 env_from: None,
                 resources: Some(k8s_openapi::api::core::v1::ResourceRequirements {
                     requests: Some(BTreeMap::from([
-                        ("cpu".to_string(), Quantity(cluster.spec.resources.cpu.clone())),
-                        ("memory".to_string(), Quantity(cluster.spec.resources.memory.clone())),
+                        ("cpu".to_string(), Quantity(cluster.spec.resources.cpu.clone()),
+                        ("memory".to_string(), Quantity(cluster.spec.resources.memory.clone()),
                     ])),
                     limits: Some(BTreeMap::from([
-                        ("cpu".to_string(), Quantity(cluster.spec.resources.cpu.clone())),
-                        ("memory".to_string(), Quantity(cluster.spec.resources.memory.clone())),
+                        ("cpu".to_string(), Quantity(cluster.spec.resources.cpu.clone()),
+                        ("memory".to_string(), Quantity(cluster.spec.resources.memory.clone()),
                     ])),
                     claims: None,
                 }),
@@ -624,14 +624,14 @@ impl ClusterController {
         if !cluster.spec.resources.disk.is_empty() {
             let pvc: _ = k8s_openapi::api::core::v1::PersistentVolumeClaim {
                 metadata: k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
-                    name: Some(format!("{}-data", cluster.name_any())),
+                    name: Some(format!("{}-data", cluster.name_any()),
                     ..Default::default()
                 },
                 spec: Some(k8s_openapi::api::core::v1::PersistentVolumeClaimSpec {
                     access_modes: Some(vec!["ReadWriteOnce".to_string()]),
                     resources: Some(k8s_openapi::api::core::v1::ResourceRequirements {
                         requests: Some(BTreeMap::from([
-                            ("storage".to_string(), Quantity(cluster.spec.resources.disk.clone())),
+                            ("storage".to_string(), Quantity(cluster.spec.resources.disk.clone()),
                         ])),
                         limits: None,
                         claims: None,
@@ -652,7 +652,7 @@ impl ClusterController {
     }
 
     /// Get labels for resources
-    fn get_labels(&self, cluster: &BeejsCluster) -> BTreeMap<String, String, String, String> {
+    fn get_labels(&self, cluster: &BeejsCluster) -> BTreeMap<String, String, String, String, String, String, String, String> {
         BTreeMap::from([
             ("beejs.io/cluster".to_string(), cluster.name_any()),
             ("beejs.io/version".to_string(), cluster.spec.version.clone()),
@@ -661,7 +661,7 @@ impl ClusterController {
     }
 
     /// Get annotations for resources
-    fn get_annotations(&self, cluster: &BeejsCluster) -> BTreeMap<String, String, String, String> {
+    fn get_annotations(&self, cluster: &BeejsCluster) -> BTreeMap<String, String, String, String, String, String, String, String> {
         BTreeMap::from([
             ("beejs.io/created-by".to_string(), "beejs-operator".to_string()),
             ("beejs.io/description".to_string(), "Beejs Cluster".to_string()),

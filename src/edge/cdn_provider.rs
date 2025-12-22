@@ -53,7 +53,7 @@ pub trait CdnProvider: Send + Sync {
     async fn health_check(&self) -> Result<ProviderHealth>;
 
     /// Update CDN configuration
-    async fn update_config(&self, config: &HashMap<String, String>>) -> Result<()>;
+    async fn update_config(&self, config: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>>) -> Result<()>;
 }
 
 /// Deployment result
@@ -87,15 +87,15 @@ pub struct ProviderHealth {
 /// Smart Router for intelligent CDN selection
 pub struct SmartRouter {
     providers: Arc<RwLock<Vec<Arc<dyn CdnProvider>>,
-    routing_cache: Arc<RwLock<HashMap<String, CdnEndpoint>>,
+    routing_cache: Arc<RwLock<HashMap<String, CdnEndpoint, std::collections::HashMap<String, CdnEndpoint, String, CdnEndpoint>>>,
 }
 
 impl SmartRouter {
     /// Create a new smart router
     pub fn new() -> Self {
         SmartRouter {
-            providers: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
-            routing_cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            providers: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            routing_cache: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -138,7 +138,7 @@ impl SmartRouter {
         let best: _ = candidates
             .into_iter()
             .min_by(|a, b| {
-                let score_a = a.clone();latency + (a.current_load * 100.0);
+                let score_a: _ = a.clone();clone();latency + (a.current_load * 100.0);
                 let score_b: _ = b.clone();latency + (b.current_load * 100.0);
                 score_a.partial_cmp(&score_b).unwrap_or(std::cmp::Ordering::Equal)
             })
@@ -169,7 +169,7 @@ pub struct CdnOptimizer {
 #[derive(Debug, Clone)]
 struct OptimizationRecord {
     timestamp: std::time::SystemTime,
-    config: HashMap<String, String>>,
+    config: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     performance_delta: f64,
 }
 
@@ -177,12 +177,12 @@ impl CdnOptimizer {
     /// Create a new CDN optimizer
     pub fn new() -> Self {
         CdnOptimizer {
-            optimization_history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            optimization_history: Arc::new(Mutex::new(RwLock::new(Vec::new())),
         }
     }
 
     /// Optimize CDN configuration based on historical data
-    pub async fn optimize(&self, mut config: HashMap<String, String>>) -> Result<HashMap<String, String>> {
+    pub async fn optimize(&self, mut config: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>) -> Result<HashMap<String, String, std::collections::HashMap<String, String, String, String>>> {
         let history: _ = self.optimization_history.read().await;
 
         // Apply optimization rules based on historical performance
@@ -275,7 +275,7 @@ use std::collections::{HashMap, BTreeMap};
             })
         }
 
-        async fn update_config(&self, _config: &HashMap<String, String>>) -> Result<()> {
+        async fn update_config(&self, _config: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>>) -> Result<()> {
             Ok(())
         }
     }
@@ -283,7 +283,7 @@ use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_smart_router_registration() {
         let router: _ = SmartRouter::new();
-        let provider: _ = Arc::new(std::sync::Mutex::new(MockProvider { provider_type: CdnProviderType::Cloudflare }));
+        let provider: _ = Arc::new(Mutex::new(MockProvider { provider_type: CdnProviderType::Cloudflare }));
         router.register_provider(provider).await;
 
         let providers: _ = router.providers.read().await;
@@ -293,8 +293,8 @@ use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_smart_router_selection() {
         let router: _ = SmartRouter::new();
-        let cloudflare: _ = Arc::new(std::sync::Mutex::new(MockProvider { provider_type: CdnProviderType::Cloudflare }));
-        let vercel: _ = Arc::new(std::sync::Mutex::new(MockProvider { provider_type: CdnProviderType::Vercel }));
+        let cloudflare: _ = Arc::new(Mutex::new(MockProvider { provider_type: CdnProviderType::Cloudflare }));
+        let vercel: _ = Arc::new(Mutex::new(MockProvider { provider_type: CdnProviderType::Vercel }));
 
         router.register_provider(cloudflare).await;
         router.register_provider(vercel).await;
@@ -313,7 +313,7 @@ use std::collections::{HashMap, BTreeMap};
         assert!(optimized.is_ok());
         let result: _ = optimized.unwrap();
 
-        assert_eq!(result.get("cache_level"), Some(&"aggressive".to_string()));
-        assert_eq!(result.get("enable_http3"), Some(&"true".to_string()));
+        assert_eq!(result.get("cache_level"), Some(&"aggressive".to_string());
+        assert_eq!(result.get("enable_http3"), Some(&"true".to_string());
     }
 }

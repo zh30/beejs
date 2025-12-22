@@ -75,15 +75,15 @@ impl BatchIoEngine {
         Self {
             processor_handle: None,
             batch_config,
-            stats: Arc::new(std::sync::Mutex::new(RwLock::new(BatchStats {
+            stats: Arc::new(Mutex::new(RwLock::new(BatchStats {
                 total_batches_processed: 0,
                 total_operations_batched: 0,
                 average_batch_size: 0.0,
                 batch_processing_time_ns: 0,
                 throughput_mbps: 0.0,
-            }))),
-            pending_operations: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::new()))),
-            operation_counter: Arc::new(std::sync::Mutex::new(RwLock::new(0))),
+            })),
+            pending_operations: Arc::new(Mutex::new(RwLock::new(VecDeque::new())),
+            operation_counter: Arc::new(Mutex::new(RwLock::new(0)),
             config,
         }
     }

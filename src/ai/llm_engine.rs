@@ -39,9 +39,9 @@ struct KvCache {
 pub struct AiLlmEngine {
     config: LlmConfig,
     runtime: Arc<tokio::runtime::Runtime>,
-    token_cache: Arc<RwLock<HashMap<String, TokenCacheEntry>>,
+    token_cache: Arc<RwLock<HashMap<String, TokenCacheEntry, std::collections::HashMap<String, TokenCacheEntry, String, TokenCacheEntry>>>,
     memory_pool: Arc<Mutex<Vec<Vec<f32>>,
-    active_sessions: Arc<Mutex<HashMap<String, SessionInfo>>,
+    active_sessions: Arc<Mutex<HashMap<String, SessionInfo, std::collections::HashMap<String, SessionInfo, String, SessionInfo>>>,
 }
 
 /// 会话信息
@@ -68,9 +68,9 @@ impl AiLlmEngine {
         let engine: _ = AiLlmEngine {
             config: config.clone(),
             runtime: runtime.clone(),
-            token_cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            memory_pool: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
-            active_sessions: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            token_cache: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            memory_pool: Arc::new(Mutex::new(Vec::new())),
+            active_sessions: Arc::new(Mutex::new(HashMap::new())),
         };
 
         // 预热 KV Cache
@@ -104,7 +104,7 @@ impl AiLlmEngine {
         // 检查缓存
         let cache_key: _ = format!("{}:{}", prompt, max_tokens);
         let cache_hit: _ = {
-            let cache = self.token_cache.read().unwrap();
+            let cache: _ = self.token_cache.read().unwrap();
             if let Some(entry) = cache.get(&cache_key) {
                 if entry.last_access.elapsed() < Duration::from_secs(300) {
                     Some(entry.kv_cache.clone())
@@ -234,7 +234,7 @@ impl AiLlmEngine {
 
         let entry: _ = TokenCacheEntry {
             tokens: tokens.to_vec(),
-            kv_cache: Arc::new(std::sync::Mutex::new(kv_cache)),
+            kv_cache: Arc::new(Mutex::new(kv_cache)),
             last_access: Instant::now(),
             access_count: 1,
         };
@@ -335,7 +335,7 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_llm_engine_creation() {
         // 为测试提供默认参数
-        let runtime: _ = Arc::new(std::sync::Mutex::new(tokio::runtime::Runtime::new()).unwrap());
+        let runtime: _ = Arc::new(Mutex::new(tokio::runtime::Runtime::new()).unwrap());
         let config: _ = LlmConfig {
             model_name: "test-model".to_string(),
             max_tokens: 4096,
@@ -351,7 +351,7 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_text_generation() {
         // 为测试提供默认参数
-        let runtime: _ = Arc::new(std::sync::Mutex::new(tokio::runtime::Runtime::new()).unwrap());
+        let runtime: _ = Arc::new(Mutex::new(tokio::runtime::Runtime::new()).unwrap());
         let config: _ = LlmConfig {
             model_name: "test-model".to_string(),
             max_tokens: 4096,
@@ -372,7 +372,7 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_batch_generation() {
         // 为测试提供默认参数
-        let runtime: _ = Arc::new(std::sync::Mutex::new(tokio::runtime::Runtime::new()).unwrap());
+        let runtime: _ = Arc::new(Mutex::new(tokio::runtime::Runtime::new()).unwrap());
         let config: _ = LlmConfig {
             model_name: "test-model".to_string(),
             max_tokens: 4096,
@@ -395,7 +395,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_memory_optimization() {
-        let runtime: _ = Arc::new(std::sync::Mutex::new(tokio::runtime::Runtime::new()).unwrap());
+        let runtime: _ = Arc::new(Mutex::new(tokio::runtime::Runtime::new()).unwrap());
         let config: _ = LlmConfig {
             model_name: "test-model".to_string(),
             max_tokens: 4096,

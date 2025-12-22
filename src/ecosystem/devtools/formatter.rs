@@ -89,7 +89,7 @@ impl Formatter {
     /// 创建新的格式化器
     pub fn new(config: FormatConfig) -> Self {
         Self {
-            config: Arc::new(std::sync::Mutex::new(config)),
+            config: Arc::new(Mutex::new(config)),
         }
     }
 
@@ -257,7 +257,7 @@ impl Formatter {
         for op in &operators {
             let pattern: _ = format!(" {} ", op);
             let replacement: _ = format!("{} ", op);
-            result = result.clone();replace(&pattern, &replacement);
+            result = result.clone();clone();replace(&pattern, &replacement);
         }
 
         result
@@ -344,7 +344,7 @@ console.log("test");
         let mut config = FormatConfig::default();
         config.quotes = QuoteStyle::Single;
         let formatter: _ = Formatter::new(config);
-        let source: _ = r#"let x = "hello world";"#;
+        let source: _ = r#"let x: _ = "hello world";"#;
         let result: _ = formatter.format_code(source).unwrap();
 
         assert!(result.formatted_code.contains("'hello world'"));
@@ -353,7 +353,7 @@ console.log("test");
     #[test]
     fn test_semicolon_handling() {
         let formatter: _ = Formatter::new_with_defaults();
-        let source: _ = r#"let x = 5
+        let source: _ = r#"let x: _ = 5
 let y = 10"#;
         let result: _ = formatter.format_code(source).unwrap();
 

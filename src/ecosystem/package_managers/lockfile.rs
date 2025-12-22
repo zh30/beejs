@@ -25,14 +25,14 @@ pub struct LockfileEntry {
     pub version: String,
     pub resolved: String,
     pub integrity: String,
-    pub requires: HashMap<String, String>>,
-    pub dependencies: HashMap<String, String>>,
+    pub requires: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     pub dev: bool,
     pub optional: bool,
     pub bundled: bool,
     pub license: Option<String>,
-    pub bin: Option<HashMap<String, String>>,
-    pub engines: Option<HashMap<String, String>>,
+    pub bin: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub engines: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     pub os: Option<Vec<String>>,
     pub cpu: Option<Vec<String>>,
 }
@@ -41,7 +41,7 @@ pub struct LockfileEntry {
 #[derive(Debug)]
 pub struct LockfileManager {
     lockfile_type: LockfileType,
-    entries: HashMap<String, LockfileEntry>>,
+    entries: HashMap<String, LockfileEntry, std::collections::HashMap<String, LockfileEntry, String, LockfileEntry>>>,
 }
 
 impl LockfileManager {
@@ -96,13 +96,13 @@ impl LockfileManager {
                         requires: value.get("requires")
                             .and_then(|r| r.as_object())
                             .map(|m| m.iter()
-                                .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string()))
+                                .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string())
                                 .collect())
                             .unwrap_or_default(),
                         dependencies: value.get("dependencies")
                             .and_then(|d| d.as_object())
                             .map(|m| m.iter()
-                                .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string()))
+                                .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string())
                                 .collect())
                             .unwrap_or_default(),
                         dev: value.get("dev").unwrap().as_bool().unwrap_or(false),
@@ -111,19 +111,19 @@ impl LockfileManager {
                         license: value.get("license").and_then(|l| l.as_str()).map(|s| s.to_string()),
                         bin: value.get("bin").and_then(|b| b.as_object())
                             .map(|m| m.iter()
-                                .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string()))
+                                .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string())
                                 .collect()),
                         engines: value.get("engines").and_then(|e| e.as_object())
                             .map(|m| m.iter()
-                                .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string()))
+                                .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string())
                                 .collect()),
                         os: value.get("os").and_then(|o| o.as_array())
                             .map(|arr| arr.iter()
-                                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                .filter_map(|v| v.as_str().map(|s| s.to_string())
                                 .collect()),
                         cpu: value.get("cpu").and_then(|c| c.as_array())
                             .map(|arr| arr.iter()
-                                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                .filter_map(|v| v.as_str().map(|s| s.to_string())
                                 .collect()),
                     };
 
@@ -290,25 +290,25 @@ impl LockfileManager {
     /// 保存 package-lock.json
     async fn save_package_lock(&self, path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         let mut package_lock = serde_json::Map::new();
-        package_lock.insert("name".to_string(), serde_json::Value::String("beejs-project".to_string()));
-        package_lock.insert("version".to_string(), serde_json::Value::String("1.0.0".to_string()));
-        package_lock.insert("lockfileVersion".to_string(), serde_json::Value::Number(serde_json::Number::from(3)));
+        package_lock.insert("name".to_string(), serde_json::Value::String("beejs-project".to_string());
+        package_lock.insert("version".to_string(), serde_json::Value::String("1.0.0".to_string());
+        package_lock.insert("lockfileVersion".to_string(), serde_json::Value::Number(serde_json::Number::from(3));
 
         let mut packages = serde_json::Map::new();
-        packages.insert("".to_string(), serde_json::Value::Object(serde_json::Map::new()));
+        packages.insert("".to_string(), serde_json::Value::Object(serde_json::Map::new());
 
         for (name, entry) in &self.entries {
             let mut package_obj = serde_json::Map::new();
-            package_obj.insert("version".to_string(), serde_json::Value::String(entry.version.clone()));
-            package_obj.insert("resolved".to_string(), serde_json::Value::String(entry.resolved.clone()));
-            package_obj.insert("integrity".to_string(), serde_json::Value::String(entry.integrity.clone()));
+            package_obj.insert("version".to_string(), serde_json::Value::String(entry.version.clone());
+            package_obj.insert("resolved".to_string(), serde_json::Value::String(entry.resolved.clone());
+            package_obj.insert("integrity".to_string(), serde_json::Value::String(entry.integrity.clone());
             package_obj.insert("dev".to_string(), serde_json::Value::Bool(entry.dev));
             package_obj.insert("optional".to_string(), serde_json::Value::Bool(entry.optional));
 
             if !entry.requires.is_empty() {
                 let requires: _ = serde_json::Value::Object(
                     entry.requires.iter()
-                        .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
+                        .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())
                         .collect(),
                 );
                 package_obj.insert("requires".to_string(), requires);
@@ -317,7 +317,7 @@ impl LockfileManager {
             if !entry.dependencies.is_empty() {
                 let dependencies: _ = serde_json::Value::Object(
                     entry.dependencies.iter()
-                        .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
+                        .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())
                         .collect(),
                 );
                 package_obj.insert("dependencies".to_string(), dependencies);
@@ -402,7 +402,7 @@ impl LockfileManager {
     /// 更新 lockfile
     pub async fn update_lockfile(
         &mut self,
-        resolutions: &HashMap<String, PackageResolution>>,
+        resolutions: &HashMap<String, PackageResolution, std::collections::HashMap<String, PackageResolution, String, PackageResolution>>>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         for (name, resolution) in resolutions {
             let entry: _ = LockfileEntry {
@@ -428,7 +428,7 @@ impl LockfileManager {
     }
 
     /// 获取所有条目
-    pub fn get_entries(&self) -> &HashMap<String, LockfileEntry>> {
+    pub fn get_entries(&self) -> &HashMap<String, LockfileEntry, std::collections::HashMap<String, LockfileEntry, String, LockfileEntry>>> {
         &self.entries
     }
 

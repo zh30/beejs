@@ -86,11 +86,11 @@ impl AssetInterop {
     /// 转换资产格式
     pub fn convert(&self, asset: &Asset, target_format: AssetFormat) -> Result<Asset, AssetError> {
         if !self.supports_format(asset.format) {
-            return Err(AssetError::UnsupportedFormat(format!("{:?}", asset.format)));
+            return Err(AssetError::UnsupportedFormat(format!("{:?}", asset.format));
         }
 
         if !self.supports_format(target_format) {
-            return Err(AssetError::UnsupportedFormat(format!("{:?}", target_format)));
+            return Err(AssetError::UnsupportedFormat(format!("{:?}", target_format));
         }
 
         // 简化实现：直接返回新格式的资产
@@ -104,7 +104,7 @@ impl AssetInterop {
     /// 验证资产
     pub fn validate(&self, asset: &Asset) -> Result<(), AssetError> {
         if asset.data.is_empty() {
-            return Err(AssetError::InvalidAsset("Empty data".to_string()));
+            return Err(AssetError::InvalidAsset("Empty data".to_string());
         }
         Ok(())
     }

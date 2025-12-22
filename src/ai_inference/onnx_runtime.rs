@@ -37,7 +37,7 @@ pub struct OnnxSession {
     /// 输出名称列表
     output_names: Vec<String>,
     /// 会话元数据
-    metadata: std::collections::HashMap<String, String>>,
+    metadata: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 /// ONNX GPU 加速器
@@ -140,7 +140,7 @@ impl EngineFactory for OnnxEngineFactory {
         let optimizer: _ = Some(OnnxOptimizer::new());
 
         // 创建引擎统计
-        let stats: _ = Arc::new(std::sync::Mutex::new(RwLock::new(EngineStats {
+        let stats: _ = Arc::new(Mutex::new(RwLock::new(EngineStats {
             engine_name: "ONNXRuntime".to_string()),
             total_inferences: 0,
             successful_inferences: 0,
@@ -153,7 +153,7 @@ impl EngineFactory for OnnxEngineFactory {
         }));
 
         let engine: _ = OnnxEngine {
-            session: Arc::new(std::sync::Mutex::new(session)),
+            session: Arc::new(Mutex::new(session)),
             gpu_accelerator,
             optimizer,
             stats,
@@ -253,7 +253,7 @@ impl GPUMemoryPool {
     fn new(pool_size: usize) -> Result<Self> {
         Ok(GPUMemoryPool {
             pool_size,
-            available_blocks: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            available_blocks: Arc::new(Mutex::new(Vec::new())),
         })
     }
 
@@ -287,7 +287,7 @@ impl StreamManager {
 
         Ok(StreamManager {
             stream_count,
-            active_streams: Arc::new(std::sync::Mutex::new(Mutex::new(streams))),
+            active_streams: Arc::new(Mutex::new(streams)),
         })
     }
 

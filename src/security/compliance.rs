@@ -185,14 +185,14 @@ impl Soc2ComplianceChecker {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompliancePolicy {
     pub name: String,
-    pub rules: HashMap<String, bool>>,
+    pub rules: HashMap<String, bool, std::collections::HashMap<String, bool, String, bool>>>,
     pub threshold: f64,
 }
 
 /// 自定义策略检查器
 #[derive(Debug)]
 pub struct CustomPolicyChecker {
-    policies: HashMap<String, CompliancePolicy>>,
+    policies: HashMap<String, CompliancePolicy, std::collections::HashMap<String, CompliancePolicy, String, CompliancePolicy>>>,
 }
 
 impl CustomPolicyChecker {
@@ -219,7 +219,7 @@ impl CustomPolicyChecker {
 
     pub fn check_policy(&self, name: &str) -> Result<bool, ComplianceError> {
         let policy: _ = self.policies.get(name)
-            .ok_or_else(|| ComplianceError::InvalidPolicy(name.to_string()))?;
+            .ok_or_else(|| ComplianceError::InvalidPolicy(name.to_string())?;
 
         let total_rules: _ = policy.rules.len();
         let passed_rules: _ = policy.rules.values().filter(|&&v| v).count();

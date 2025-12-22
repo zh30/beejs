@@ -26,7 +26,7 @@ mod ai_workload_tests {
         let code: _ = r#"
             // 模拟张量操作
             function tensorMul(a, b, size) {
-                let result = new Array(size);
+                let result: _ = new Array(size);
                 for (let i: _ = 0; i < size; i++) {
                     result[i] = new Array(size);
                     for (let j: _ = 0; j < size; j++) {
@@ -128,7 +128,7 @@ mod ai_workload_tests {
         let code: _ = r#"
             // 模拟内存优化的数据处理
             function processData(iterations) {
-                let total = 0;
+                let total: _ = 0;
                 for (let i: _ = 0; i < iterations; i++) {
                     // 使用对象池模式避免频繁分配
                     const data = new Array(1000);
@@ -232,7 +232,7 @@ mod enterprise_benchmark_tests {
             let runtime_clone: _ = runtime.clone();
             let code: _ = format!(r#"
                 function handleRequest(ops) {{
-                    let result = 0;
+                    let result: _ = 0;
                     for (let i: _ = 0; i < ops; i++) {{
                         result += Math.sqrt(Math.random() * 1000);
                     }}
@@ -278,7 +278,7 @@ mod enterprise_benchmark_tests {
         while start_time.elapsed() < duration {
             let code: _ = format!(r#"
                 // 稳定性测试工作负载
-                let result = 0;
+                let result: _ = 0;
                 for (let i: _ = 0; i < 1000; i++) {{
                     result += Math.sin(i) * Math.cos(i);
                     // 模拟内存分配和释放
@@ -336,7 +336,7 @@ mod concurrent_load_tests {
         // 单线程基线测试
         let single_thread_code: _ = format!(r#"
             function doWork(count) {{
-                let result = 0;
+                let result: _ = 0;
                 for (let i: _ = 0; i < count; i++) {{
                     result += Math.sqrt(i) * Math.log(i + 1);
                 }}
@@ -357,7 +357,7 @@ mod concurrent_load_tests {
             let runtime_clone: _ = runtime.clone();
             let code: _ = format!(r#"
                 function doWork(count) {{
-                    let result = 0;
+                    let result: _ = 0;
                     for (let i: _ = 0; i < count; i++) {{
                         result += Math.sqrt(i) * Math.log(i + 1);
                     }}
@@ -408,7 +408,7 @@ mod concurrent_load_tests {
             let runtime_clone: _ = runtime.clone();
             let code: _ = format!(r#"
                 // 模拟需要同步的操作
-                let sharedCounter = 0;
+                let sharedCounter: _ = 0;
 
                 function incrementWithSync(count) {{
                     for (let i: _ = 0; i < count; i++) {{
@@ -466,7 +466,7 @@ mod concurrent_load_tests {
             let code: _ = format!(r#"
                 // 模拟CPU密集型任务
                 function cpuIntensiveTask(id) {{
-                    let result = 0;
+                    let result: _ = 0;
                     for (let i: _ = 0; i < 100000; i++) {{
                         result += Math.sqrt(i) * Math.sin(i);
                     }}

@@ -81,7 +81,7 @@ use std::collections::{HashMap, BTreeMap};
         let runtime: _ = RuntimeLite::new(false).expect("Failed to create runtime");
 
         let script: _ = r#"
-        let sum = 0;
+        let sum: _ = 0;
         for (let i: _ = 0; i < 1000; i++) {
             sum += i;
         }

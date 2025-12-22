@@ -95,7 +95,7 @@ pub struct TraceAnalysis {
     pub total_traces: u64,
     pub slow_traces: Vec<SlowTrace>,
     pub error_traces: Vec<ErrorTrace>,
-    pub operation_performance: HashMap<String, OperationPerformance>>,
+    pub operation_performance: HashMap<String, OperationPerformance, std::collections::HashMap<String, OperationPerformance, String, OperationPerformance>>>,
 }
 
 /// 慢追踪
@@ -149,7 +149,7 @@ pub struct ClusterConsole {
     health_monitor: Arc<HealthMonitor>,
     fault_detector: Arc<FaultDetector>,
     cluster_overview: Arc<RwLock<Option<ClusterOverview>>,
-    node_status: Arc<RwLock<HashMap<String, NodeStatusDetail>>,
+    node_status: Arc<RwLock<HashMap<String, NodeStatusDetail, std::collections::HashMap<String, NodeStatusDetail, String, NodeStatusDetail>>>,
     performance_metrics: Arc<RwLock<Option<PerformanceMetricsDetail>>,
     alerts: Arc<RwLock<Vec<AlertMessage>>,
     trace_analysis: Arc<RwLock<Option<TraceAnalysis>>,
@@ -172,11 +172,11 @@ impl ClusterConsole {
             node_manager,
             health_monitor,
             fault_detector,
-            cluster_overview: Arc::new(std::sync::Mutex::new(RwLock::new(None))),
-            node_status: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            performance_metrics: Arc::new(std::sync::Mutex::new(RwLock::new(None))),
-            alerts: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
-            trace_analysis: Arc::new(std::sync::Mutex::new(RwLock::new(None))),
+            cluster_overview: Arc::new(Mutex::new(RwLock::new(None)),
+            node_status: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            performance_metrics: Arc::new(Mutex::new(RwLock::new(None)),
+            alerts: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            trace_analysis: Arc::new(Mutex::new(RwLock::new(None)),
         }
     }
 
@@ -228,7 +228,7 @@ impl ClusterConsole {
     }
 
     /// 获取节点状态
-    pub async fn get_node_status(&self) -> HashMap<String, NodeStatusDetail>> {
+    pub async fn get_node_status(&self) -> HashMap<String, NodeStatusDetail, std::collections::HashMap<String, NodeStatusDetail, String, NodeStatusDetail>>> {
         let status: _ = self.node_status.read().await;
         status.clone()
     }

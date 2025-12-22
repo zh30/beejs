@@ -89,8 +89,8 @@ pub struct FallbackStats {
     pub total_fallbacks: u64,
     pub successful_recoveries: u64,
     pub failed_recoveries: u64,
-    pub feature_fallback_counts: HashMap<Feature, u64>>,
-    pub strategy_usage_counts: HashMap<String, u64>>,
+    pub feature_fallback_counts: HashMap<Feature, u64, std::collections::HashMap<Feature, u64, Feature, u64>>>,
+    pub strategy_usage_counts: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>>,
     pub avg_recovery_time: Duration,
     pub last_fallback_time: Option<Instant>,
 }
@@ -107,10 +107,10 @@ impl FallbackStats {
 
 /// 降级管理器
 pub struct FallbackManager {
-    strategies: Arc<RwLock<HashMap<Feature, Vec<FallbackStrategy>>>,
+    strategies: Arc<RwLock<HashMap<Feature, Vec<FallbackStrategy, std::collections::HashMap<Feature, Vec<FallbackStrategy, Feature, Vec<FallbackStrategy>>>>,
     stats: Arc<RwLock<FallbackStats>>,
     event_history: Arc<RwLock<Vec<FallbackEvent>>,
-    active_features: Arc<RwLock<HashMap<Feature, bool>>,
+    active_features: Arc<RwLock<HashMap<Feature, bool, std::collections::HashMap<Feature, bool, Feature, bool>>>,
 }
 
 impl FallbackManager {
@@ -124,10 +124,10 @@ impl FallbackManager {
         active_features.insert(Feature::WebAssembly, true);
 
         Self {
-            strategies: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            stats: Arc::new(std::sync::Mutex::new(RwLock::new(FallbackStats::default()))),
-            event_history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
-            active_features: Arc::new(std::sync::Mutex::new(RwLock::new(active_features))),
+            strategies: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            stats: Arc::new(Mutex::new(RwLock::new(FallbackStats::default())),
+            event_history: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            active_features: Arc::new(Mutex::new(RwLock::new(active_features)),
         }
     }
 
@@ -205,7 +205,7 @@ impl FallbackManager {
         Err(BeejsError::RuntimeError(format!(
             "All fallback strategies failed for feature: {}",
             feature
-        )))
+        ))
     }
 
     /// 应用降级策略

@@ -61,7 +61,7 @@ pub struct EscapePath {
 /// 逃逸分析优化器
 pub struct EscapeAnalysisOptimizer {
     /// 分析历史统计
-    analysis_history: HashMap<String, EscapeStats>>,
+    analysis_history: HashMap<String, EscapeStats, std::collections::HashMap<String, EscapeStats, String, EscapeStats>>>,
 }
 
 /// 逃逸分析统计信息
@@ -149,7 +149,7 @@ impl EscapeAnalysisOptimizer {
 
         // 检查对象字面量: let obj: _ = { ... }
         if trimmed.starts_with("let ") || trimmed.starts_with("const ") || trimmed.starts_with("var ") {
-            let after_keyword = if trimmed.starts_with("let ") {
+            let after_keyword: _ = if trimmed.starts_with("let ") {
                 &trimmed[4..]
             } else if trimmed.starts_with("const ") {
                 &trimmed[6..]
@@ -429,7 +429,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_plain_object_escape_analysis() {
         let optimizer: _ = EscapeAnalysisOptimizer::new();
         let code: _ = r#"
-            let obj = { value: 42 };
+            let obj: _ = { value: 42 };
             console.log(obj.value);
         "#;
 
@@ -446,7 +446,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_global_escape_detection() {
         let optimizer: _ = EscapeAnalysisOptimizer::new();
         let code: _ = r#"
-            let obj = { value: 42 };
+            let obj: _ = { value: 42 };
             global.obj = obj;
         "#;
 
@@ -461,7 +461,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_argument_escape_detection() {
         let optimizer: _ = EscapeAnalysisOptimizer::new();
         let code: _ = r#"
-            let obj = { value: 42 };
+            let obj: _ = { value: 42 };
             console.log(obj);
         "#;
 
@@ -477,7 +477,7 @@ use std::collections::{HashMap, BTreeMap};
         let optimizer: _ = EscapeAnalysisOptimizer::new();
         let code: _ = r#"
             function createObj() {
-                let obj = { value: 42 };
+                let obj: _ = { value: 42 };
                 return obj;
             }
         "#;
@@ -500,7 +500,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_no_escape_object() {
         let optimizer: _ = EscapeAnalysisOptimizer::new();
         let code: _ = r#"
-            let obj = { value: 42 };
+            let obj: _ = { value: 42 };
             let _x: _ = obj.value;
             let _y: _ = obj.value * 2;
         "#;
@@ -515,7 +515,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_array_escape_analysis() {
         let optimizer: _ = EscapeAnalysisOptimizer::new();
         let code: _ = r#"
-            let arr = [1, 2, 3];
+            let arr: _ = [1, 2, 3];
             arr.push(4);
         "#;
 
@@ -630,16 +630,13 @@ use std::collections::{HashMap, BTreeMap};
 
         assert_eq!(
             optimizer.extract_called_function("console.log(obj)"),
-            Some("console.log".to_string())
-        );
+            Some("console.log".to_string());
         assert_eq!(
             optimizer.extract_called_function("Math.random()"),
-            Some("Math.random".to_string())
-        );
+            Some("Math.random".to_string());
         assert_eq!(
             optimizer.extract_called_function("obj.method()"),
-            Some("obj.method".to_string())
-        );
+            Some("obj.method".to_string());
     }
 
     #[test]
@@ -677,7 +674,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_complex_escape_scenario() {
         let optimizer: _ = EscapeAnalysisOptimizer::new();
         let code: _ = r#"
-            let obj1 = { value: 1 };
+            let obj1: _ = { value: 1 };
             let obj2: _ = { value: 2 };
             obj1.prop = obj2;
             global.shared = obj1;

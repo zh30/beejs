@@ -155,7 +155,7 @@ async fn test_cache_performance_10m_iterations() {
     let cache: _ = MultiLevelCache::new();
 
     // 创建测试脚本
-    let test_script: _ = "let sum = 0; for(let i: _ = 0; i < 1000; i++) { sum += i; }";
+    let test_script: _ = "let sum: _ = 0; for(let i: _ = 0; i < 1000; i++) { sum += i; }";
     cache.put("benchmark.js", test_script.as_bytes()).await;
 
     let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();

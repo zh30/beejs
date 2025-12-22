@@ -162,8 +162,7 @@ impl StackTrace {
             if self.is_truncated {
                 result.push_str(&format!(
                     "  ... and {} more frames\n",
-                    self.total_frames - self.frames.len()
-                ));
+                    self.total_frames - self.frames.len());
             }
 
             result

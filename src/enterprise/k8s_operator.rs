@@ -73,7 +73,7 @@ pub struct ClusterConfig {
     /// Enable auto-scaling
     pub auto_scaling: Option<bool>,
     /// Node selector labels
-    pub node_selector: Option<BTreeMap<String, String, String, String>>,
+    pub node_selector: Option<BTreeMap<String, String, String, String, String, String, String, String>>,
     /// Tolerations
     pub tolerations: Option<Vec<Toleration>>,
 }
@@ -318,7 +318,7 @@ impl BeejsOperator {
             .run(
                 self.reconcile(),
                 self.error_policy(),
-                Arc::new(std::sync::Mutex::new(self.clone())),
+                Arc::new(Mutex::new(self.clone()),
             )
             .await
             .context("Failed to start controller")?;
@@ -330,7 +330,7 @@ impl BeejsOperator {
 
     /// Reconciliation logic
     fn reconcile(&self) -> Arc<dyn Fn(BeejsCluster) -> Action + Send + Sync + 'static> {
-        Arc::new(std::sync::Mutex::new(move |beejs_cluster: BeejsCluster| {
+        Arc::new(Mutex::new(move |beejs_cluster: BeejsCluster| {
             let client: _ = self.client.clone());
             let clusters: _ = self.clusters.clone();
             let deployments: _ = self.deployments.clone();
@@ -394,7 +394,7 @@ impl BeejsOperator {
 
     /// Error policy
     fn error_policy(&self) -> Arc<dyn Fn(&kube::Error, &BeejsCluster) -> Action + Send + Sync + 'static> {
-        Arc::new(std::sync::Mutex::new(move |_error, _beejs_cluster| {
+        Arc::new(Mutex::new(move |_error, _beejs_cluster| {
             warn!("Error occurred during reconciliation"));
             Action::requeue(Duration::from_secs(60))
         })
@@ -479,7 +479,7 @@ impl BeejsOperator {
         new_status.total_nodes = beejs_cluster.spec.nodes;
         new_status.current_version = Some(beejs_cluster.spec.version.clone());
         new_status.health_status = health_status;
-        new_status.last_update = Some(Time(Utc::now()));
+        new_status.last_update = Some(Time(Utc::now());
 
         let _: _ = recorder
             .publish(Event::normal(
@@ -488,7 +488,7 @@ impl BeejsOperator {
             ))
             .await;
 
-        Ok(Action::requeue(Duration::from_secs(30)))
+        Ok(Action::requeue(Duration::from_secs(30))
     }
 
     /// Cleanup reconciliation
@@ -599,8 +599,8 @@ impl BeejsOperator {
                             }]),
                             resources: Some(k8s_openapi::api::core::v1::ResourceRequirements {
                                 requests: Some(BTreeMap::from([
-                                    ("cpu".to_string(), Quantity(spec.resources.cpu.clone().unwrap_or_default())),
-                                    ("memory".to_string(), Quantity(spec.resources.memory.clone().unwrap_or_default())),
+                                    ("cpu".to_string(), Quantity(spec.resources.cpu.clone().unwrap_or_default()),
+                                    ("memory".to_string(), Quantity(spec.resources.memory.clone().unwrap_or_default()),
                                 ])),
                                 ..Default::default()
                             }),
@@ -651,7 +651,7 @@ impl BeejsOperator {
     }
 
     /// Generate labels for cluster resources
-    fn labels_for_cluster(name: &str) -> BTreeMap<String, String, String, String> {
+    fn labels_for_cluster(name: &str) -> BTreeMap<String, String, String, String, String, String, String, String> {
         let mut labels = BTreeMap::new();
         labels.insert("beejs.io/cluster".to_string(), name.to_string());
         labels.insert("beejs.io/component".to_string(), "cluster".to_string());
@@ -735,7 +735,7 @@ impl BeejsOperator {
             current_step: "Starting upgrade".to_string(),
             total_steps: beejs_cluster.spec.nodes,
             percentage: 0,
-            started_at: Some(Time(Utc::now())),
+            started_at: Some(Time(Utc::now()),
             estimated_completion: None,
         });
 
@@ -746,7 +746,7 @@ impl BeejsOperator {
             ))
             .await;
 
-        Ok(Action::requeue(Duration::from_secs(10)))
+        Ok(Action::requeue(Duration::from_secs(10))
     }
 
     /// Perform health check on cluster
@@ -777,7 +777,7 @@ impl BeejsOperator {
                             replicas,
                             status.available_replicas.unwrap_or(0)
                         ),
-                        last_check: Some(Time(Utc::now())),
+                        last_check: Some(Time(Utc::now()),
                     });
 
                     healthy_nodes = ready_replicas as usize;
@@ -788,7 +788,7 @@ impl BeejsOperator {
                     name: "StatefulSet Status".to_string(),
                     status: false,
                     message: format!("Failed to get StatefulSet: {}", e),
-                    last_check: Some(Time(Utc::now())),
+                    last_check: Some(Time(Utc::now()),
                 });
             }
         }
@@ -804,7 +804,7 @@ impl BeejsOperator {
 
         HealthStatus {
             status: overall_status,
-            last_check: Some(Time(Utc::now())),
+            last_check: Some(Time(Utc::now()),
             healthy_nodes,
             checks,
         }
@@ -838,7 +838,7 @@ impl BeejsOperator {
                 needs_healing = true;
 
                 // Force restart of failed pods by patching the StatefulSet
-                let mut patched_ss = ss.clone();clone();
+                let mut patched_ss = ss.clone();clone();clone();
                 if let Some(spec) = &mut patched_ss.spec {
                     if let Some(template) = &mut spec.template.spec {
                         // Add annotation to force pod recreation
@@ -877,9 +877,9 @@ impl BeejsOperator {
         }
 
         if needs_healing {
-            Ok(Action::requeue(Duration::from_secs(30)))
+            Ok(Action::requeue(Duration::from_secs(30))
         } else {
-            Ok(Action::requeue(Duration::from_secs(60)))
+            Ok(Action::requeue(Duration::from_secs(60))
         }
     }
 
@@ -887,7 +887,7 @@ impl BeejsOperator {
     pub async fn get_cluster_metrics(
         &self,
         beejs_cluster: &BeejsCluster,
-    ) -> Result<BTreeMap<String, String, String, String>> {
+    ) -> Result<BTreeMap<String, String, String, String, String, String, String, String>> {
         let mut metrics = BTreeMap::new();
         let name: _ = beejs_cluster.name_any();
         let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
@@ -954,7 +954,7 @@ use std::collections::{HashMap, BTreeMap};
         );
 
         let configmap: _ = BeejsOperator::create_configmap(&cluster).unwrap();
-        assert_eq!(configmap.metadata.name, Some("test-cluster-config".to_string()));
+        assert_eq!(configmap.metadata.name, Some("test-cluster-config".to_string());
     }
 
     #[test]
@@ -962,12 +962,10 @@ use std::collections::{HashMap, BTreeMap};
         let labels: _ = BeejsOperator::labels_for_cluster("test-cluster");
         assert_eq!(
             labels.get("beejs.io/cluster"),
-            Some(&"test-cluster".to_string())
-        );
+            Some(&"test-cluster".to_string());
         assert_eq!(
             labels.get("beejs.io/component"),
-            Some(&"cluster".to_string())
-        );
+            Some(&"cluster".to_string());
     }
 
     #[test]
@@ -998,7 +996,7 @@ use std::collections::{HashMap, BTreeMap};
             phase: ClusterPhase::Running,
             ready_nodes: 3,
             total_nodes: 3,
-            last_update: Some(Time(Utc::now())),
+            last_update: Some(Time(Utc::now()),
             conditions: vec![],
             current_version: Some("v1.0.0".to_string()),
             target_version: None,
@@ -1034,12 +1032,12 @@ use std::collections::{HashMap, BTreeMap};
             name: "Ready".to_string(),
             status: true,
             message: "All pods ready".to_string(),
-            last_check: Some(Time(Utc::now())),
+            last_check: Some(Time(Utc::now()),
         });
 
         let health_status: _ = HealthStatus {
             status: HealthState::Healthy,
-            last_check: Some(Time(Utc::now())),
+            last_check: Some(Time(Utc::now()),
             healthy_nodes: 3,
             checks,
         };

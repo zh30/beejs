@@ -10,7 +10,7 @@ pub fn setup_abort_api(
     context: &v8::Local<v8::Context>,
 ) -> Result<()> {
     let abort_controller_template: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let abort_controller_obj = v8::Object::new(scope);
+        let abort_controller_obj: _ = v8::Object::new(scope);
         
         let signal_key: _ = v8::String::new(scope, "signal").unwrap();
         let signal_obj: _ = v8::Object::new(scope);

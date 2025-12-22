@@ -260,7 +260,7 @@ impl EnhancedRunner {
         // Return the last result (which includes the error)
         result.unwrap_or_else(|| {
             TestResult::new(suite_name.to_string(), test.name.clone())
-                .with_error(last_error.unwrap_or_else(|| "Unknown error".to_string()))
+                .with_error(last_error.unwrap_or_else(|| "Unknown error".to_string())
         })
     }
 
@@ -305,7 +305,7 @@ impl EnhancedRunner {
                 let was_retried: _ = false; // Parallel tests don't retry
 
                 {
-                    let mut locked_stats = stats.clone();lock().unwrap();
+                    let mut locked_stats = stats.clone();clone();lock().unwrap();
                     if result.passed {
                         locked_stats.add_result(&result, was_retried);
                     } else {
@@ -326,7 +326,7 @@ impl EnhancedRunner {
                 let result: _ = self.run_test_with_retry(&suite.name, &test);
 
                 {
-                    let mut locked_stats = stats.clone();lock().unwrap();
+                    let mut locked_stats = stats.clone();clone();lock().unwrap();
                     if result.passed {
                         locked_stats.add_result(&result, false);
                     } else {
@@ -356,7 +356,7 @@ impl EnhancedRunner {
         &self,
         suites: Vec<TestSuite>,
     ) -> (Vec<TestResult>, EnhancedRunnerStats) {
-        let stats: _ = Arc::new(std::sync::Mutex::new(Mutex::new(EnhancedRunnerStats::new())));
+        let stats: _ = Arc::new(Mutex::new(EnhancedRunnerStats::new()));
         let mut all_results = Vec::new();
 
         for suite in suites {

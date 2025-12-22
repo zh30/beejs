@@ -32,8 +32,8 @@ pub struct PerformanceComparisonResult {
     pub speedup_vs_bun: f64,
     pub memory_savings_vs_nodejs: f64,
     pub memory_savings_vs_bun: f64,
-    pub execution_time_comparison: HashMap<String, Duration>>,
-    pub memory_usage_comparison: HashMap<String, usize>>,
+    pub execution_time_comparison: HashMap<String, Duration, std::collections::HashMap<String, Duration, String, Duration>>>,
+    pub memory_usage_comparison: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>,
 }
 
 /// 性能对比摘要
@@ -165,7 +165,7 @@ impl BenchmarkTestCase {
             }
             BenchmarkTestCase::ConcurrentPerformance => {
                 // 并发性能测试代码
-                "Promise.all(Array.from({length: 100}, (_, i) => Promise.resolve(i)));".to_string()
+                "Promise.all(Array.from({length: 100}, (_, i) => Promise.resolve(i));".to_string()
             }
             BenchmarkTestCase::Fibonacci { n } => {
                 format!(
@@ -188,7 +188,7 @@ impl BenchmarkTestCase {
             }
             BenchmarkTestCase::HttpRequests { request_count } => {
                 format!(
-                    "Promise.all(Array.from({{length: {}}}, (_, i) => fetch('https://httpbin.org/get?id=' + i)));",
+                    "Promise.all(Array.from({{length: {}}}, (_, i) => fetch('https://httpbin.org/get?id=' + i));",
                     request_count
                 )
             }

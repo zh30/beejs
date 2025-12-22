@@ -53,7 +53,7 @@ impl DistributedTracer {
     pub fn start_span_with_context(
         &self,
         operation: &str,
-        context: &HashMap<String, String>>,
+        context: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     ) -> Span {
         let trace_id: _ = context
             .get("trace-id")
@@ -72,7 +72,7 @@ impl DistributedTracer {
     /// * `span` - 要注入的 Span
     /// * `headers` - 目标 headers
     ///
-    pub fn inject_context(&self, span: &Span, headers: &mut HashMap<String, String>>) {
+    pub fn inject_context(&self, span: &Span, headers: &mut HashMap<String, String, std::collections::HashMap<String, String, String, String>>>) {
         headers.insert("trace-id".to_string(), span.trace_id.clone());
         headers.insert("span-id".to_string(), span.span_id.clone());
         if let Some(ref parent_id) = span.parent_span_id {
@@ -89,7 +89,7 @@ impl DistributedTracer {
     /// # Returns
     ///
     /// 返回追踪上下文
-    pub fn extract_context(&self, headers: &HashMap<String, String>>) -> Option<TraceContext> {
+    pub fn extract_context(&self, headers: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>>) -> Option<TraceContext> {
         let trace_id: _ = headers.get("trace-id")?.clone();
         let span_id: _ = headers.get("span-id")?.clone();
         let baggage: _ = HashMap::new();
@@ -116,7 +116,7 @@ pub struct Span {
     /// 开始时间
     pub start_time: SystemTime,
     /// 标签
-    pub tags: HashMap<String, String>>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     /// 日志
     pub logs: Vec<String>,
 }
@@ -210,7 +210,7 @@ pub struct TraceContext {
     /// Span ID
     pub span_id: String,
     /// 附加信息
-    pub baggage: HashMap<String, String>>,
+    pub baggage: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 impl TraceContext {
@@ -331,7 +331,7 @@ use std::collections::{HashMap, BTreeMap};
         let child_span: _ = tracer.start_span_with_context("child_operation", &headers);
 
         assert_eq!(child_span.trace_id, "parent-trace");
-        assert_eq!(child_span.parent_span_id, Some("parent-span".to_string()));
+        assert_eq!(child_span.parent_span_id, Some("parent-span".to_string());
         assert_eq!(child_span.operation_name, "child_operation");
     }
 
@@ -343,8 +343,8 @@ use std::collections::{HashMap, BTreeMap};
         span.add_tag("user_id", "12345");
         span.add_tag("auth_method", "oauth");
 
-        assert_eq!(span.tags.get("user_id"), Some(&"12345".to_string()));
-        assert_eq!(span.tags.get("auth_method"), Some(&"oauth".to_string()));
+        assert_eq!(span.tags.get("user_id"), Some(&"12345".to_string());
+        assert_eq!(span.tags.get("auth_method"), Some(&"oauth".to_string());
     }
 
     #[test]
@@ -356,8 +356,8 @@ use std::collections::{HashMap, BTreeMap};
         span.log_event("response_sent");
 
         assert_eq!(span.logs.len(), 2);
-        assert!(span.logs.contains(&"request_received".to_string()));
-        assert!(span.logs.contains(&"response_sent".to_string()));
+        assert!(span.logs.contains(&"request_received".to_string());
+        assert!(span.logs.contains(&"response_sent".to_string());
     }
 
     #[test]
@@ -367,8 +367,8 @@ use std::collections::{HashMap, BTreeMap};
         context.add_baggage("user_id", "12345");
         context.add_baggage("tenant", "acme");
 
-        assert_eq!(context.get_baggage("user_id"), Some(&"12345".to_string()));
-        assert_eq!(context.get_baggage("tenant"), Some(&"acme".to_string()));
+        assert_eq!(context.get_baggage("user_id"), Some(&"12345".to_string());
+        assert_eq!(context.get_baggage("tenant"), Some(&"acme".to_string());
     }
 
     #[test]

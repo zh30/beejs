@@ -72,7 +72,7 @@ impl PerformanceReporter {
     }
 
     /// 收集Beejs性能数据
-    pub fn collect_beejs_metrics(&self) -> HashMap<String, PerformanceMetric>> {
+    pub fn collect_beejs_metrics(&self) -> HashMap<String, PerformanceMetric, std::collections::HashMap<String, PerformanceMetric, String, PerformanceMetric>>> {
         let mut metrics = HashMap::new();
 
         // 1. 测试启动时间
@@ -84,7 +84,7 @@ impl PerformanceReporter {
 
         // 2. 测试简单执行速度
         let simple_speed: _ = self.measure_execution_speed(
-            "let sum = 0; for (let i: _ = 0; i < 1000; i++) { sum += i; } sum",
+            "let sum: _ = 0; for (let i: _ = 0; i < 1000; i++) { sum += i; } sum",
             self.config.benchmark_iterations,
         );
         metrics.insert(
@@ -117,7 +117,7 @@ impl PerformanceReporter {
     }
 
     /// 模拟获取Bun性能数据（实际实现中可以调用Bun命令行工具）
-    pub fn collect_bun_metrics() -> HashMap<String, PerformanceMetric>> {
+    pub fn collect_bun_metrics() -> HashMap<String, PerformanceMetric, std::collections::HashMap<String, PerformanceMetric, String, PerformanceMetric>>> {
         let mut metrics = HashMap::new();
 
         // 这些是模拟的Bun性能数据
@@ -277,7 +277,7 @@ impl PerformanceReporter {
     fn measure_memory_usage(&self) -> u64 {
         let memory_test_code: _ = r#"
             // 创建大量对象测试内存使用
-            let objects = [];
+            let objects: _ = [];
             for (let i: _ = 0; i < 10000; i++) {
                 objects.push({
                     id: i,
@@ -310,8 +310,8 @@ impl PerformanceReporter {
     /// 创建对比结果
     fn create_comparisons(
         &self,
-        beejs_metrics: &HashMap<String, PerformanceMetric>>,
-        bun_metrics: &HashMap<String, PerformanceMetric>>,
+        beejs_metrics: &HashMap<String, PerformanceMetric, std::collections::HashMap<String, PerformanceMetric, String, PerformanceMetric>>>,
+        bun_metrics: &HashMap<String, PerformanceMetric, std::collections::HashMap<String, PerformanceMetric, String, PerformanceMetric>>>,
     ) -> Vec<ComparisonResult> {
         let mut comparisons = Vec::new();
 

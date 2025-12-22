@@ -134,10 +134,10 @@ impl PnpmCompatibility {
         let mut lockfile = PnpmLockfile::new();
 
         // 安装所有依赖
-        let all_deps: HashMap<String, String>> = package_json.dependencies
+        let all_deps: HashMap<String, String, std::collections::HashMap<String, String, String, String>>> = package_json.dependencies
             .iter()
             .chain(package_json.dev_dependencies.iter())
-            .map(|(k, v)| (k.clone(), v.clone()))
+            .map(|(k, v)| (k.clone(), v.clone())
             .collect();
 
         for (name, version_spec) in all_deps {
@@ -165,7 +165,7 @@ impl PnpmCompatibility {
     async fn resolve_package(&self, spec: &PackageSpec) -> Result<PackageResolution, Box<dyn std::error::Error>> {
         let (package_name, version_range) = match spec {
             PackageSpec::Name(name) => (name.clone(), VersionRange::Wildcard),
-            PackageSpec::NameVersion(name, version) => (name.clone(), VersionRange::Exact(version.clone())),
+            PackageSpec::NameVersion(name, version) => (name.clone(), VersionRange::Exact(version.clone()),
             PackageSpec::NameRange(name, range) => (name.clone(), VersionRange::parse(range)?),
             _ => return Err("Unsupported package spec for pnpm".into()),
         };
@@ -398,7 +398,7 @@ impl Default for LinkStrategy {
 #[derive(Debug, Default)]
 pub struct PnpmLockfile {
     pub lockfile_version: String,
-    pub packages: HashMap<String, PnpmLockEntry>>,
+    pub packages: HashMap<String, PnpmLockEntry, std::collections::HashMap<String, PnpmLockEntry, String, PnpmLockEntry>>>,
 }
 
 impl PnpmLockfile {
@@ -492,6 +492,6 @@ impl PnpmLockfile {
 #[derive(Debug, Clone)]
 pub struct PnpmLockEntry {
     pub version: String,
-    pub requires: HashMap<String, String>>,
+    pub requires: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     pub dev: bool,
 }

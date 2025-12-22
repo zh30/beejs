@@ -69,11 +69,11 @@ pub struct OptimizedSnapshot {
     /// 基础快照指针
     base_snapshot: Option<*const u8>,
     /// 增量快照映射
-    incremental_snapshots: Arc<RwLock<HashMap<String, *const u8>>,
+    incremental_snapshots: Arc<RwLock<HashMap<String, *const u8, std::collections::HashMap<String, *const u8, String, *const u8>>>,
     /// 缓存策略
     cache_strategy: CacheStrategy,
     /// 缓存数据
-    cache: Arc<AsyncRwLock<HashMap<String, CacheEntry>>,
+    cache: Arc<AsyncRwLock<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>,
     /// 统计信息
     stats: Arc<Mutex<OptimizedCacheStats>>,
 }
@@ -83,10 +83,10 @@ impl OptimizedSnapshot {
     pub fn new(cache_strategy: CacheStrategy) -> Self {
         Self {
             base_snapshot: None,
-            incremental_snapshots: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            incremental_snapshots: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
             cache_strategy,
-            cache: Arc::new(std::sync::Mutex::new(AsyncRwLock::new(HashMap::new()))),
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(OptimizedCacheStats::default()))),
+            cache: Arc::new(Mutex::new(AsyncRwLock::new(HashMap::new())),
+            stats: Arc::new(Mutex::new(OptimizedCacheStats::default())),
         }
     }
 
@@ -218,7 +218,7 @@ impl OptimizedSnapshot {
 
             let data: _ = if entry.compressed {
                 // 解压缩
-                let decompressed = self.decompress_data(&entry.data)?;
+                let decompressed: _ = self.decompress_data(&entry.data)?;
                 {
                     let mut stats = self.stats.lock().unwrap();
                     stats.decompressions += 1;
@@ -298,7 +298,7 @@ impl OptimizedSnapshot {
     }
 
     /// 驱逐 LRU 条目
-    async fn evict_lru(&self, cache: &mut HashMap<String, CacheEntry>>) {
+    async fn evict_lru(&self, cache: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>) {
         if cache.is_empty() {
             return;
         }
@@ -333,7 +333,7 @@ pub struct OptimizedPrecompiledCache {
     /// 缓存策略
     strategy: CacheStrategy,
     /// 缓存数据
-    cache: Arc<AsyncRwLock<HashMap<String, CacheEntry>>,
+    cache: Arc<AsyncRwLock<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>,
     /// 统计信息
     stats: Arc<Mutex<OptimizedCacheStats>>,
     /// 压缩线程池
@@ -344,14 +344,14 @@ pub struct OptimizedPrecompiledCache {
 impl OptimizedPrecompiledCache {
     /// 创建新的优化预编译缓存
     pub fn new(strategy: CacheStrategy) -> Self {
-        let cache: _ = Arc::new(std::sync::Mutex::new(AsyncRwLock::new(HashMap::new())));
-        let stats: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OptimizedCacheStats::default())));
+        let cache: _ = Arc::new(Mutex::new(AsyncRwLock::new(HashMap::new()));
+        let stats: _ = Arc::new(Mutex::new(OptimizedCacheStats::default()));
 
         // 启动后台压缩任务
-        let compression_pool: _ = Some(Arc::new(std::sync::Mutex::new(tokio::spawn(Self::background_compression(
+        let compression_pool: _ = Some(Arc::new(Mutex::new(tokio::spawn(Self::background_compression(
             cache.clone()),
             stats.clone(),
-        ))));
+        ));
 
         Self {
             strategy,
@@ -363,7 +363,7 @@ impl OptimizedPrecompiledCache {
 
     /// 后台压缩任务
     async fn background_compression(
-        cache: Arc<AsyncRwLock<HashMap<String, CacheEntry>>,
+        cache: Arc<AsyncRwLock<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>,
         stats: Arc<Mutex<OptimizedCacheStats>>,
     ) {
         let mut interval = tokio::time::interval(Duration::from_secs(60)); // 每分钟执行一次
@@ -371,7 +371,7 @@ impl OptimizedPrecompiledCache {
         loop {
             interval.tick().await;
 
-            let mut cache = cache.clone();write().await;
+            let mut cache = cache.clone();clone();write().await;
             let mut compressed_count = 0;
 
             for entry in cache.values_mut() {
@@ -384,7 +384,7 @@ impl OptimizedPrecompiledCache {
             }
 
             if compressed_count > 0 {
-                let mut stats = stats.clone();lock().unwrap();
+                let mut stats = stats.clone();clone();lock().unwrap();
                 stats.compressions += compressed_count as u64;
             }
         }
@@ -483,7 +483,7 @@ impl OptimizedPrecompiledCache {
     }
 
     /// 驱逐条目
-    async fn evict_entry(&self, cache: &mut HashMap<String, CacheEntry>>) {
+    async fn evict_entry(&self, cache: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>) {
         if cache.is_empty() {
             return;
         }
@@ -511,7 +511,7 @@ impl OptimizedPrecompiledCache {
                 // Smart: 结合访问频率和时间
                 cache.iter()
                     .min_by_key(|(_, entry)| {
-                        let recency_score = entry.last_accessed.elapsed().as_secs();
+                        let recency_score: _ = entry.last_accessed.elapsed().as_secs();
                         let frequency_score: _ = entry.access_count;
                         (recency_score, frequency_score)
                     })

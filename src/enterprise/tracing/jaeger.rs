@@ -143,9 +143,9 @@ impl JaegerTracer {
 
         Ok(Self {
             config,
-            span_buffer: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
-            last_flush: Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now()))),
-            udp_socket: Arc::new(std::sync::Mutex::new(udp_socket)),
+            span_buffer: Arc::new(Mutex::new(Vec::new())),
+            last_flush: Arc::new(Mutex::new(Instant::now())),
+            udp_socket: Arc::new(Mutex::new(udp_socket)),
         })
     }
 
@@ -259,7 +259,7 @@ impl JaegerTracer {
         info!("Flushing {} spans to Jaeger", spans_to_send.len());
 
         // Group spans by operation name
-        let mut spans_by_operation: HashMap<String, Vec<JaegerSpan>> = HashMap::new();
+        let mut spans_by_operation: HashMap<String, Vec<JaegerSpan, std::collections::HashMap<String, Vec<JaegerSpan, String, Vec<JaegerSpan>>> = HashMap::new();
         for span in spans_to_send {
             spans_by_operation
                 .entry(span.operation_name.clone())
@@ -372,13 +372,13 @@ impl JaegerTracer {
                 sleep(flush_interval).await;
 
                 let should_flush: _ = {
-                    let last = *last_flush.lock().unwrap();
+                    let last: _ = *last_flush.lock().unwrap();
                     last.elapsed() >= flush_interval
                 };
 
                 if should_flush {
                     let buffer_len: _ = {
-                        let buffer = span_buffer.lock().unwrap();
+                        let buffer: _ = span_buffer.lock().unwrap();
                         buffer.len()
                     };
 
@@ -395,7 +395,7 @@ impl JaegerTracer {
     }
 
     /// Get tracer statistics
-    pub fn get_stats(&self) -> HashMap<String, usize>> {
+    pub fn get_stats(&self) -> HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>> {
         let buffer: _ = self.span_buffer.lock().unwrap();
         let last_flush: _ = self.last_flush.lock().unwrap();
 
@@ -491,9 +491,9 @@ use std::collections::{HashMap, BTreeMap};
         tracer.add_numeric_tag(&mut span, "duration_ms", 123.45);
         tracer.add_boolean_tag(&mut span, "success", true);
 
-        assert_eq!(span.inner.tags.get("key1"), Some(&"value1".to_string()));
-        assert_eq!(span.inner.tags.get("duration_ms"), Some(&"123.45".to_string()));
-        assert_eq!(span.inner.tags.get("success"), Some(&"true".to_string()));
+        assert_eq!(span.inner.tags.get("key1"), Some(&"value1".to_string());
+        assert_eq!(span.inner.tags.get("duration_ms"), Some(&"123.45".to_string());
+        assert_eq!(span.inner.tags.get("success"), Some(&"true".to_string());
     }
 
     #[test]

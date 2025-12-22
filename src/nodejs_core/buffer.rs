@@ -105,7 +105,7 @@ pub fn setup_buffer_api(
 
     // length 属性 - 使用 Accessor
     let length_getter: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _rv: v8::ReturnValue| {
-        let this = args.this();
+        let this: _ = args.this();
         let length_key: _ = v8::String::new(scope, "_length").unwrap();
         let length: _ = this.get(scope, length_key.into()).unwrap_or(v8::Integer::new(scope, 0).into());
         _rv.set(length.into());
@@ -363,7 +363,7 @@ fn buffer_to_string_callback(
     let length_key: _ = v8::String::new(scope, "_length").unwrap();
     let buffer_length: _ = this
         .get(scope, length_key.into())
-        .and_then(|v| v.to_integer(scope).map(|i| i.value()))
+        .and_then(|v| v.to_integer(scope).map(|i| i.value())
         .unwrap_or(0);
 
     let actual_end: usize = if end == -1 { buffer_length as usize } else { (end.min(buffer_length)) as usize };
@@ -389,7 +389,7 @@ fn buffer_to_json_callback(
     let length_key: _ = v8::String::new(scope, "_length").unwrap();
     let buffer_length: _ = this
         .get(scope, length_key.into())
-        .and_then(|v| v.to_integer(scope).map(|i| i.value()))
+        .and_then(|v| v.to_integer(scope).map(|i| i.value())
         .unwrap_or(0);
 
     // Fixed: Simplified implementation for rusty_v8 0.22
@@ -423,7 +423,7 @@ fn buffer_fill_callback(
     let length_key: _ = v8::String::new(scope, "_length").unwrap();
     let buffer_length: _ = this
         .get(scope, length_key.into())
-        .and_then(|v| v.to_integer(scope).map(|i| i.value()))
+        .and_then(|v| v.to_integer(scope).map(|i| i.value())
         .unwrap_or(0);
 
     let actual_end: usize = if end == -1 { buffer_length as usize } else { (end.min(buffer_length)) as usize };
@@ -432,7 +432,7 @@ fn buffer_fill_callback(
     let fill_value: _ = if value.is_number() {
         value.to_integer(scope).unwrap().value() as u8
     } else if value.is_string() {
-        let string = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+        let string: _ = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
         string.chars().next().unwrap_or('\0') as u8
     } else {
         0
@@ -465,7 +465,7 @@ fn buffer_slice_callback(
     let length_key: _ = v8::String::new(scope, "_length").unwrap();
     let buffer_length: _ = this
         .get(scope, length_key.into())
-        .and_then(|v| v.to_integer(scope).map(|i| i.value()))
+        .and_then(|v| v.to_integer(scope).map(|i| i.value())
         .unwrap_or(0);
 
     let actual_end: usize = if end == -1 { buffer_length as usize } else { (end.min(buffer_length)) as usize };

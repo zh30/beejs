@@ -382,7 +382,7 @@ impl PerformanceVisualizer {
             // Generate sample data based on the report
             let variance: _ = (report.max_time_ms - report.min_time_ms) / 2.0;
             let time: _ = report.average_time_ms + (i as f64 - 10.0) * variance / 10.0;
-            html.push_str(&format!("{:.2}", time.max(report.min_time_ms).min(report.max_time_ms)));
+            html.push_str(&format!("{:.2}", time.max(report.min_time_ms).min(report.max_time_ms));
         }
 
         html.push_str(r#"],
@@ -458,7 +458,7 @@ impl PerformanceVisualizer {
 
         // Title
         md.push_str("# 🚀 Beejs Performance Report\n\n");
-        md.push_str(&format!("**Generated at:** {}\n\n", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")));
+        md.push_str(&format!("**Generated at:** {}\n\n", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"));
 
         // Key Metrics
         md.push_str("## 📊 Key Metrics\n\n");

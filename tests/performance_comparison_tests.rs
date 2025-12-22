@@ -86,7 +86,7 @@ use std::collections::{HashMap, BTreeMap};
 
         // 测试2: 执行速度测量
         let iterations: _ = 1000;
-        let test_code: _ = "let sum = 0; for (let i: _ = 0; i < 1000; i++) { sum += i; } sum";
+        let test_code: _ = "let sum: _ = 0; for (let i: _ = 0; i < 1000; i++) { sum += i; } sum";
 
         let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for _ in 0..iterations {

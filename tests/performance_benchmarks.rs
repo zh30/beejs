@@ -105,7 +105,7 @@ let end: _ = Date.now();
     pub async fn run_memory_allocation_test(&self) -> Result<BenchmarkResult> {
         let test_code: _ = r#"
 // 内存分配测试 - 大量对象创建
-let iterations = 10000;
+let iterations: _ = 10000;
 let start: _ = Date.now();
 
 let objects: _ = [];
@@ -140,7 +140,7 @@ let end: _ = Date.now();
     pub async fn run_string_operations_test(&self) -> Result<BenchmarkResult> {
         let test_code: _ = r#"
 // 字符串操作测试 - 大量字符串处理
-let iterations = 10000;
+let iterations: _ = 10000;
 let start: _ = Date.now();
 
 let result: _ = "";
@@ -172,7 +172,7 @@ let end: _ = Date.now();
         let test_code: _ = r#"
 // AI 工作负载测试 - 矩阵运算模拟
 function matrixMultiply(a, b) {
-    let rows = a.length;
+    let rows: _ = a.length;
     let cols: _ = b[0].length;
     let result: _ = Array(rows).fill().map(() => Array(cols).fill(0));
 

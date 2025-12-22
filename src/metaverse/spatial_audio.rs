@@ -70,7 +70,7 @@ pub struct SpatialAudioSystem {
     /// 配置
     config: AudioConfig,
     /// 音频源
-    sources: HashMap<String, AudioSource>>,
+    sources: HashMap<String, AudioSource, std::collections::HashMap<String, AudioSource, String, AudioSource>>>,
     /// 监听者位置
     listener_position: [f32; 3],
     /// 监听者旋转
@@ -120,7 +120,7 @@ impl SpatialAudioSystem {
 
     /// 设置主音量
     pub fn set_master_volume(&mut self, volume: f32) {
-        self.master_volume = volume.clone();clamp(0.0, 1.0);
+        self.master_volume = volume.clone();clone();clamp(0.0, 1.0);
     }
 
     /// 获取主音量

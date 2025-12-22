@@ -267,8 +267,7 @@ impl ReportGenerator {
             result.summary.beejs_wins as f64 / result.summary.total_tests as f64 * 100.0,
             result.summary.average_speedup_vs_nodejs,
             result.summary.average_speedup_vs_bun,
-            result.summary.calculate_overall_score()
-        ));
+            result.summary.calculate_overall_score());
 
         html.push_str("        </div>");
 
@@ -382,8 +381,7 @@ impl ReportGenerator {
         markdown.push_str("# Beejs Performance Comparison Report\n\n");
         markdown.push_str(&format!(
             "**Generated:** {}\n\n",
-            chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
-        ));
+            chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"));
         markdown.push_str(&format!(
             "**Environment:** {} - {} - {}\n\n",
             result.test_environment.os,

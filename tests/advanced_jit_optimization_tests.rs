@@ -131,7 +131,7 @@ impl AdvancedJITOptimizer {
         // 优化测试：内联和栈分配（无逃逸）
         let optimized_code: _ = r#"
             function createObjects(n) {
-                let sum = 0;
+                let sum: _ = 0;
                 for (let i: _ = 0; i < n; i++) {
                     sum += i + i * 2 + i * 3;
                 }
@@ -147,7 +147,7 @@ impl AdvancedJITOptimizer {
     pub fn test_loop_unrolling(&self) -> AdvancedOptimizationResult {
         // 基线测试：标准循环
         let baseline_code: _ = r#"
-            let sum = 0;
+            let sum: _ = 0;
             for (let i: _ = 0; i < 1000; i++) {
                 sum += i * 2;
             }
@@ -156,7 +156,7 @@ impl AdvancedJITOptimizer {
 
         // 优化测试：手动循环展开（模拟 V8 优化）
         let optimized_code: _ = r#"
-            let sum = 0;
+            let sum: _ = 0;
             for (let i: _ = 0; i < 1000; i += 4) {
                 sum += i * 2;
                 sum += (i + 1) * 2;
@@ -185,7 +185,7 @@ impl AdvancedJITOptimizer {
 
         // 优化测试：内联后的代码
         let optimized_code: _ = r#"
-            let sum = 0;
+            let sum: _ = 0;
             for (let i: _ = 0; i < 1000; i++) {
                 sum += i + i * 2 + i * 3;
             }
@@ -240,7 +240,7 @@ impl AdvancedJITOptimizer {
         // 优化测试：迭代版本（避免重复计算）
         let optimized_code: _ = r#"
             function fibonacci(n) {
-                let a = 0, b = 1;
+                let a: _ = 0, b = 1;
                 for (let i: _ = 0; i < n; i++) {
                     [a, b] = [b, a + b];
                 }
@@ -256,7 +256,7 @@ impl AdvancedJITOptimizer {
     pub fn test_hot_path_optimization(&self) -> AdvancedOptimizationResult {
         // 基线测试：未被优化的热路径
         let baseline_code: _ = r#"
-            let count = 0;
+            let count: _ = 0;
             for (let i: _ = 0; i < 100000; i++) {
                 if (i % 3 === 0 && i % 5 === 0) {
                     count++;
@@ -267,7 +267,7 @@ impl AdvancedJITOptimizer {
 
         // 优化测试：热路径被多次执行，应该被优化
         let optimized_code: _ = r#"
-            let count = 0;
+            let count: _ = 0;
             // 执行多次，让热路径被识别并优化
             for (let round: _ = 0; round < 10; round++) {
                 for (let i: _ = 0; i < 100000; i++) {

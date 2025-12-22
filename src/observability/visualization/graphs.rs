@@ -33,7 +33,7 @@ pub struct GraphNode {
     /// Tooltip text
     pub tooltip: Option<String>,
     /// Custom metadata
-    pub metadata: HashMap<String, serde_json::Value>>,
+    pub metadata: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>,
 }
 
 /// Graph edge with metadata
@@ -56,7 +56,7 @@ pub struct GraphEdge {
     /// Bidirectional edge
     pub bidirectional: bool,
     /// Custom metadata
-    pub metadata: HashMap<String, serde_json::Value>>,
+    pub metadata: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>,
 }
 
 /// Position in 2D space
@@ -425,7 +425,7 @@ impl TopologyGraph {
     /// Apply hierarchical layout
     async fn apply_hierarchical_layout(&mut self) -> Result<()> {
         // Simple hierarchical layout based on graph structure
-        let mut levels: HashMap<String, Vec<usize>> = HashMap::new();
+        let mut levels: HashMap<String, Vec<usize, std::collections::HashMap<String, Vec<usize, String, Vec<usize>>> = HashMap::new();
         let mut level_count = 0;
 
         // Find root nodes (nodes with no incoming edges)
@@ -448,7 +448,7 @@ impl TopologyGraph {
                 .filter_map(|e| {
                     self.nodes.iter().position(|n| n.id == e.source)
                 })
-                .filter_map(|idx| levels.iter().find(|(_, v)| v.contains(&idx)))
+                .filter_map(|idx| levels.iter().find(|(_, v)| v.contains(&idx))
                 .map(|(k, _)| k)
                 .max()
                 .map(|k| k.parse::<u32>().unwrap_or(0))
@@ -603,7 +603,7 @@ impl TopologyGraph {
         let center_y: _ = self.config.height as f64 / 2.0;
 
         // Calculate depth for each node
-        let mut depths: HashMap<String, u32>> = HashMap::new();
+        let mut depths: HashMap<String, u32, std::collections::HashMap<String, u32, String, u32>>> = HashMap::new();
         let mut queue = VecDeque::new();
 
         // Start with nodes that have no incoming edges
@@ -630,7 +630,7 @@ impl TopologyGraph {
         }
 
         // Group nodes by depth
-        let mut depth_groups: HashMap<u32, Vec<&GraphNode>> = HashMap::new();
+        let mut depth_groups: HashMap<u32, Vec<&GraphNode, std::collections::HashMap<u32, Vec<&GraphNode, u32, Vec<&GraphNode>>> = HashMap::new();
         for node in &self.nodes {
             let depth: _ = *depths.get(&node.id).unwrap_or(&0);
             depth_groups.entry(depth).or_insert_with(Vec::new).push(node);
@@ -717,7 +717,7 @@ impl TopologyGraphBuilder {
 
     /// Set title
     pub fn title(&mut self, title: &str) -> &mut Self {
-        self.config.title = title.clone();to_string();
+        self.config.title = title.clone();clone();to_string();
         self
     }
 
@@ -859,8 +859,8 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_node_with_metadata() {
         let mut metadata = HashMap::new();
-        metadata.insert("version".to_string(), serde_json::Value::String("1.0".to_string()));
-        metadata.insert("instances".to_string(), serde_json::Value::Number(serde_json::Number::from(3)));
+        metadata.insert("version".to_string(), serde_json::Value::String("1.0".to_string());
+        metadata.insert("instances".to_string(), serde_json::Value::Number(serde_json::Number::from(3));
 
         let node: _ = GraphNode {
             id: "test-node".to_string(),
@@ -876,7 +876,7 @@ use std::collections::{HashMap, BTreeMap};
         };
 
         assert_eq!(node.id, "test-node");
-        assert_eq!(node.icon, Some("⚡".to_string()));
+        assert_eq!(node.icon, Some("⚡".to_string());
         assert_eq!(node.metadata.get("version").unwrap(), "1.0");
     }
 

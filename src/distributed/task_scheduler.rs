@@ -33,7 +33,7 @@ pub struct Task {
     pub priority: u8,
     pub created_at: Instant,
     pub timeout: Duration,
-    pub metadata: HashMap<String, String>>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 /// 任务结果
@@ -135,9 +135,9 @@ pub struct SchedulerStats {
 pub struct TaskScheduler {
     config: SchedulerConfig,
     pending_tasks: BinaryHeap<Reverse<TaskWrapper>>,
-    running_tasks: HashMap<String, Task>>,
-    completed_tasks: HashMap<String, TaskResult>>,
-    failed_tasks: HashMap<String, Task>>,
+    running_tasks: HashMap<String, Task, std::collections::HashMap<String, Task, String, Task>>>,
+    completed_tasks: HashMap<String, TaskResult, std::collections::HashMap<String, TaskResult, String, TaskResult>>>,
+    failed_tasks: HashMap<String, Task, std::collections::HashMap<String, Task, String, Task>>>,
     stats: SchedulerStats,
 }
 
@@ -306,7 +306,7 @@ impl TaskScheduler {
 #[derive(Debug)]
 pub struct TaskDistributor {
     config: DistributorConfig,
-    nodes: HashMap<String, SchedulerNodeInfo>>,
+    nodes: HashMap<String, SchedulerNodeInfo, std::collections::HashMap<String, SchedulerNodeInfo, String, SchedulerNodeInfo>>>,
 }
 
 impl TaskDistributor {
@@ -402,7 +402,7 @@ use std::collections::{HashMap, BTreeMap};
 #[derive(Debug)]
 pub struct ResultAggregator {
     config: AggregatorConfig,
-    batches: HashMap<String, BatchResults>>,
+    batches: HashMap<String, BatchResults, std::collections::HashMap<String, BatchResults, String, BatchResults>>>,
 }
 
 /// 批量结果

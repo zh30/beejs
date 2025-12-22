@@ -48,7 +48,7 @@ pub struct WebSocketConnection {
 
 /// Global WebSocket manager
 pub struct WebSocketManager {
-    connections: Arc<Mutex<HashMap<u64, WebSocketConnection>>,
+    connections: Arc<Mutex<HashMap<u64, WebSocketConnection, std::collections::HashMap<u64, WebSocketConnection, u64, WebSocketConnection>>>,
     next_id: AtomicU64,
     runtime: Arc<Runtime>,
 }
@@ -57,16 +57,16 @@ impl WebSocketManager {
     pub fn new() -> Self {
         let runtime: _ = Runtime::new().expect("Failed to create tokio runtime");
         Self {
-            connections: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            connections: Arc::new(Mutex::new(HashMap::new())),
             next_id: AtomicU64::new(1),
-            runtime: Arc::new(std::sync::Mutex::new(runtime)),
+            runtime: Arc::new(Mutex::new(runtime)),
         }
     }
 
     /// Create a new WebSocket connection
     pub fn connect(&self, url: String) -> Result<u64> {
         let id: _ = self.next_id.fetch_add(1, Ordering::SeqCst);
-        let ready_state: _ = Arc::new(std::sync::Mutex::new(Mutex::new(ReadyState::Connecting)));
+        let ready_state: _ = Arc::new(Mutex::new(ReadyState::Connecting));
         let ready_state_clone: _ = ready_state.clone();
 
         let (cmd_tx, mut cmd_rx) = mpsc::unbounded_channel::<WebSocketCommand>();
@@ -96,14 +96,14 @@ impl WebSocketManager {
                         while let Some(msg) = read.next().await {
                             match msg {
                                 Ok(Message::Text(text)) => {
-                                    let _ = event_tx_clone.send(WebSocketEvent::Message(text));
+                                    let _: _ = event_tx_clone.send(WebSocketEvent::Message(text));
                                 }
                                 Ok(Message::Binary(data)) => {
                                     let _: _ = event_tx_clone.send(WebSocketEvent::Binary(data));
                                 }
                                 Ok(Message::Close(frame)) => {
                                     let (code, reason) = if let Some(f) = frame {
-                                        (Some(f.code.into()), Some(f.reason.to_string()))
+                                        (Some(f.code.into()), Some(f.reason.to_string())
                                     } else {
                                         (None, None)
                                     };
@@ -117,7 +117,7 @@ impl WebSocketManager {
                                     // Ignore raw frames
                                 }
                                 Err(e) => {
-                                    let _: _ = event_tx_clone.send(WebSocketEvent::Error(e.to_string()));
+                                    let _: _ = event_tx_clone.send(WebSocketEvent::Error(e.to_string());
                                     break;
                                 }
                             }
@@ -133,13 +133,13 @@ impl WebSocketManager {
                         match cmd {
                             WebSocketCommand::Send(text) => {
                                 if let Err(e) = write.send(Message::Text(text)).await {
-                                    let _: _ = event_tx.send(WebSocketEvent::Error(e.to_string()));
+                                    let _: _ = event_tx.send(WebSocketEvent::Error(e.to_string());
                                     break;
                                 }
                             }
                             WebSocketCommand::SendBinary(data) => {
                                 if let Err(e) = write.send(Message::Binary(data)).await {
-                                    let _: _ = event_tx.send(WebSocketEvent::Error(e.to_string()));
+                                    let _: _ = event_tx.send(WebSocketEvent::Error(e.to_string());
                                     break;
                                 }
                             }
@@ -168,7 +168,7 @@ impl WebSocketManager {
                     read_task.abort();
                 }
                 Err(e) => {
-                    let _: _ = event_tx.send(WebSocketEvent::Error(format!("Connection failed: {}", e)));
+                    let _: _ = event_tx.send(WebSocketEvent::Error(format!("Connection failed: {}", e));
                     {
                         let mut state = ready_state_clone.lock().unwrap();
                         *state = ReadyState::Closed;
@@ -182,7 +182,7 @@ impl WebSocketManager {
             url,
             ready_state,
             cmd_tx,
-            event_rx: Arc::new(std::sync::Mutex::new(Mutex::new(event_rx))),
+            event_rx: Arc::new(Mutex::new(event_rx)),
         };
 
         self.connections.lock().unwrap().insert(id, connection);
@@ -290,7 +290,7 @@ fn websocket_constructor_callback(
     let url: _ = if args.length() > 0 {
         args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope)
     } else {
-        let error = v8::String::new(scope, "WebSocket URL required").unwrap();
+        let error: _ = v8::String::new(scope, "WebSocket URL required").unwrap();
         let error_obj: _ = v8::Exception::error(scope, error);
         scope.throw_exception(error_obj.into());
         return;
@@ -308,7 +308,7 @@ fn websocket_constructor_callback(
     let ws_id: _ = match WS_MANAGER.connect(url.clone()) {
         Ok(id) => id,
         Err(e) => {
-            let error = v8::String::new(scope, &format!("WebSocket connection failed: {}", e)).unwrap();
+            let error: _ = v8::String::new(scope, &format!("WebSocket connection failed: {}", e)).unwrap();
             let error_obj: _ = v8::Exception::error(scope, error);
             scope.throw_exception(error_obj.into());
             return;
@@ -421,7 +421,7 @@ fn websocket_send_callback(
     let ws_id: _ = match get_ws_id(scope, this) {
         Some(id) => id,
         None => {
-            let error = v8::String::new(scope, "Invalid WebSocket object").unwrap();
+            let error: _ = v8::String::new(scope, "Invalid WebSocket object").unwrap();
             let error_obj: _ = v8::Exception::error(scope, error); scope.throw_exception(error_obj.into());
             return;
         }
@@ -446,7 +446,7 @@ fn websocket_close_callback(
     let ws_id: _ = match get_ws_id(scope, this) {
         Some(id) => id,
         None => {
-            let error = v8::String::new(scope, "Invalid WebSocket object").unwrap();
+            let error: _ = v8::String::new(scope, "Invalid WebSocket object").unwrap();
             let error_obj: _ = v8::Exception::error(scope, error); scope.throw_exception(error_obj.into());
             return;
         }

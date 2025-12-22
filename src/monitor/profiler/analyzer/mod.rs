@@ -9,5 +9,7 @@ pub use stack_analyzer::{
     BottleneckType, RecursionInfo, DepthStats, AnalyzerStats as StackAnalyzerStats,
 };
 pub use hotspot::{
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
     HotspotAnalyzer, Hotspot, HotspotType, TimeStats, MemoryStats, AnalyzerStats as HotspotAnalyzerStats,
 };

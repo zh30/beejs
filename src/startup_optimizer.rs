@@ -22,7 +22,7 @@ impl MemoryPreallocator {
     pub fn new(prealloc_size: usize) -> Self {
         Self {
             prealloc_size,
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(MemoryStats::new()))),
+            stats: Arc::new(Mutex::new(MemoryStats::new())),
             created_at: SystemTime::now(),
         }
     }
@@ -101,14 +101,14 @@ pub struct JITPrecompiler {
     /// 创建时间
     created_at: SystemTime,
     /// 预编译的函数
-    precompiled_functions: HashMap<String, PrecompiledFunction>>,
+    precompiled_functions: HashMap<String, PrecompiledFunction, std::collections::HashMap<String, PrecompiledFunction, String, PrecompiledFunction>>>,
 }
 
 impl JITPrecompiler {
     /// 创建新的 JIT 预编译器
     pub fn new() -> Self {
         Self {
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(JITStats::new()))),
+            stats: Arc::new(Mutex::new(JITStats::new())),
             created_at: SystemTime::now(),
             precompiled_functions: HashMap::new(),
         }

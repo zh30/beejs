@@ -329,7 +329,7 @@ use std::collections::{HashMap, BTreeMap};
 
         let code: _ = r#"
             (function() {
-                let sum = 0;
+                let sum: _ = 0;
                 for (let i: _ = 0; i < 1000; i++) {
                     sum += i;
                 }
@@ -389,7 +389,7 @@ use std::collections::{HashMap, BTreeMap};
         let runner: _ = BenchmarkRunner::new(10, 2);
 
         let code: _ = r#"
-            let result = 0;
+            let result: _ = 0;
             for (let i: _ = 0; i < 100; i++) {
                 result += i * 2 - 1;
             }

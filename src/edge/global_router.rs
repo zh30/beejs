@@ -12,7 +12,7 @@ use tokio::time::{Duration, Instant};
 #[derive(Debug)]
 pub struct GlobalRouter {
     edge_nodes: Arc<RwLock<Vec<EdgeNode>>,
-    geo_mapping: Arc<RwLock<HashMap<String, String>>, // IP to region mapping
+    geo_mapping: Arc<RwLock<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>, // IP to region mapping
     routing_rules: Arc<RwLock<Vec<RoutingRule>>,
 }
 
@@ -117,9 +117,9 @@ impl GlobalRouter {
         ];
 
         GlobalRouter {
-            edge_nodes: Arc::new(std::sync::Mutex::new(RwLock::new(default_nodes))),
-            geo_mapping: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            routing_rules: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            edge_nodes: Arc::new(Mutex::new(RwLock::new(default_nodes)),
+            geo_mapping: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            routing_rules: Arc::new(Mutex::new(RwLock::new(Vec::new())),
         }
     }
 
@@ -183,7 +183,7 @@ impl GlobalRouter {
         let best_node: _ = nodes.iter()
             .filter(|node| node.region == region && node.status == NodeStatus::Online)
             .min_by(|a, b| {
-                let score_a = a.clone();latency + (a.current_load * 100.0);
+                let score_a: _ = a.clone();clone();latency + (a.current_load * 100.0);
                 let score_b: _ = b.clone();latency + (b.current_load * 100.0);
                 score_a.partial_cmp(&score_b).unwrap_or(std::cmp::Ordering::Equal)
             })
@@ -222,7 +222,7 @@ impl GlobalRouter {
     }
 
     /// Check health of all edge nodes
-    pub async fn check_node_health(&self) -> Result<HashMap<String, bool>> {
+    pub async fn check_node_health(&self) -> Result<HashMap<String, bool, std::collections::HashMap<String, bool, String, bool>>> {
         let mut nodes = self.edge_nodes.write().await;
         let mut health_status = HashMap::new();
 

@@ -52,7 +52,7 @@ async fn test_dma_buffer_allocation() {
 /// 测试智能预取器
 #[tokio::test]
 async fn test_smart_prefetcher() {
-    let zero_copy: _ = Arc::new(std::sync::Mutex::new(EnhancedZeroCopy::default()));
+    let zero_copy: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(EnhancedZeroCopy::default())));
     let prefetcher: _ = SmartPrefetcher::new(
         zero_copy.clone(),
         PrefetchStrategy::default(),
@@ -144,7 +144,7 @@ async fn test_phase2_memory_engine_integration() {
 /// 测试并发内存分配
 #[tokio::test]
 async fn test_concurrent_memory_allocation() {
-    let engine: _ = Arc::new(std::sync::Mutex::new(Phase2MemoryEngine::default()));
+    let engine: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(Phase2MemoryEngine::default())));
     let num_tasks: _ = 100;
 
     let start: _ = Instant::now();
@@ -156,7 +156,7 @@ async fn test_concurrent_memory_allocation() {
         let size: _ = 1024 + i * 10;
 
         let handle: _ = tokio::spawn(async move {
-            let ptr = engine_clone.allocate(size).await.unwrap();
+            let ptr: _ = engine_clone.allocate(size).await.unwrap();
             tokio::time::sleep(Duration::from_millis(10)).await;
             engine_clone.deallocate(ptr, size).await.unwrap();
         });

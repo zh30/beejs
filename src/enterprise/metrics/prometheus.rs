@@ -392,12 +392,12 @@ impl RuntimeMetrics {
         .context("Failed to create cpu_usage metric")?;
 
         // Register metrics
-        registry.register(Box::new(process_start_time.clone()))?;
-        registry.register(Box::new(active_isolates.clone()))?;
-        registry.register(Box::new(total_executions.clone()))?;
-        registry.register(Box::new(execution_errors.clone()))?;
-        registry.register(Box::new(memory_usage_bytes.clone()))?;
-        registry.register(Box::new(cpu_usage_percent.clone()))?;
+        registry.register(Box::new(process_start_time.clone())?;
+        registry.register(Box::new(active_isolates.clone())?;
+        registry.register(Box::new(total_executions.clone())?;
+        registry.register(Box::new(execution_errors.clone())?;
+        registry.register(Box::new(memory_usage_bytes.clone())?;
+        registry.register(Box::new(cpu_usage_percent.clone())?;
 
         Ok(Self {
             process_start_time,
@@ -471,12 +471,12 @@ impl PerformanceMetrics {
         .context("Failed to create gc_frequency metric")?;
 
         // Register metrics
-        registry.register(Box::new(execution_duration.clone()))?;
-        registry.register(Box::new(jit_compilation_time.clone()))?;
-        registry.register(Box::new(jit_cache_hit_rate.clone()))?;
-        registry.register(Box::new(memory_allocation_rate.clone()))?;
-        registry.register(Box::new(gc_pause_time.clone()))?;
-        registry.register(Box::new(gc_frequency.clone()))?;
+        registry.register(Box::new(execution_duration.clone())?;
+        registry.register(Box::new(jit_compilation_time.clone())?;
+        registry.register(Box::new(jit_cache_hit_rate.clone())?;
+        registry.register(Box::new(memory_allocation_rate.clone())?;
+        registry.register(Box::new(gc_pause_time.clone())?;
+        registry.register(Box::new(gc_frequency.clone())?;
 
         Ok(Self {
             execution_duration,
@@ -540,11 +540,11 @@ impl NetworkMetrics {
         .context("Failed to create network_throughput metric")?;
 
         // Register metrics
-        registry.register(Box::new(network_requests_total.clone()))?;
-        registry.register(Box::new(network_request_duration.clone()))?;
-        registry.register(Box::new(network_errors.clone()))?;
-        registry.register(Box::new(active_connections.clone()))?;
-        registry.register(Box::new(network_throughput.clone()))?;
+        registry.register(Box::new(network_requests_total.clone())?;
+        registry.register(Box::new(network_request_duration.clone())?;
+        registry.register(Box::new(network_errors.clone())?;
+        registry.register(Box::new(active_connections.clone())?;
+        registry.register(Box::new(network_throughput.clone())?;
 
         Ok(Self {
             network_requests_total,
@@ -610,12 +610,12 @@ impl BusinessMetrics {
         .context("Failed to create uptime_seconds metric")?;
 
         // Register metrics
-        registry.register(Box::new(requests_per_second.clone()))?;
-        registry.register(Box::new(response_time_p50.clone()))?;
-        registry.register(Box::new(response_time_p95.clone()))?;
-        registry.register(Box::new(response_time_p99.clone()))?;
-        registry.register(Box::new(error_rate.clone()))?;
-        registry.register(Box::new(uptime_seconds.clone()))?;
+        registry.register(Box::new(requests_per_second.clone())?;
+        registry.register(Box::new(response_time_p50.clone())?;
+        registry.register(Box::new(response_time_p95.clone())?;
+        registry.register(Box::new(response_time_p99.clone())?;
+        registry.register(Box::new(error_rate.clone())?;
+        registry.register(Box::new(uptime_seconds.clone())?;
 
         Ok(Self {
             requests_per_second,
@@ -686,12 +686,12 @@ impl ClusterMetrics {
         .context("Failed to create upgrade_progress metric")?;
 
         // Register metrics
-        registry.register(Box::new(cluster_nodes_total.clone()))?;
-        registry.register(Box::new(cluster_nodes_ready.clone()))?;
-        registry.register(Box::new(cluster_cpu_usage.clone()))?;
-        registry.register(Box::new(cluster_memory_usage.clone()))?;
-        registry.register(Box::new(pod_restarts.clone()))?;
-        registry.register(Box::new(upgrade_progress.clone()))?;
+        registry.register(Box::new(cluster_nodes_total.clone())?;
+        registry.register(Box::new(cluster_nodes_ready.clone())?;
+        registry.register(Box::new(cluster_cpu_usage.clone())?;
+        registry.register(Box::new(cluster_memory_usage.clone())?;
+        registry.register(Box::new(pod_restarts.clone())?;
+        registry.register(Box::new(upgrade_progress.clone())?;
 
         Ok(Self {
             cluster_nodes_total,

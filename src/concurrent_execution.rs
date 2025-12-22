@@ -108,13 +108,13 @@ impl ConcurrentExecutionStats {
     /// 创建新的统计信息
     pub fn new() -> Self {
         Self {
-            total_submitted: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
-            total_completed: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
-            total_failed: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
-            peak_concurrent: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
-            current_concurrent: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
-            avg_execution_time_ms: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
-            total_execution_time_ms: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
+            total_submitted: Arc::new(Mutex::new(LockFreeCounter::new(0)),
+            total_completed: Arc::new(Mutex::new(LockFreeCounter::new(0)),
+            total_failed: Arc::new(Mutex::new(LockFreeCounter::new(0)),
+            peak_concurrent: Arc::new(Mutex::new(AtomicUsize::new(0)),
+            current_concurrent: Arc::new(Mutex::new(AtomicUsize::new(0)),
+            avg_execution_time_ms: Arc::new(Mutex::new(AtomicUsize::new(0)),
+            total_execution_time_ms: Arc::new(Mutex::new(AtomicUsize::new(0)),
         }
     }
 
@@ -222,13 +222,13 @@ pub struct StealStats {
 impl StealStats {
     pub fn new() -> Self {
         Self {
-            tasks_stolen: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
-            steal_attempts: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
-            successful_steals: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
-            local_queue_operations: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
-            batch_steals: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
-            priority_steals: Arc::new(std::sync::Mutex::new(LockFreeCounter::new(0))),
-            avg_steal_batch_size: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
+            tasks_stolen: Arc::new(Mutex::new(LockFreeCounter::new(0)),
+            steal_attempts: Arc::new(Mutex::new(LockFreeCounter::new(0)),
+            successful_steals: Arc::new(Mutex::new(LockFreeCounter::new(0)),
+            local_queue_operations: Arc::new(Mutex::new(LockFreeCounter::new(0)),
+            batch_steals: Arc::new(Mutex::new(LockFreeCounter::new(0)),
+            priority_steals: Arc::new(Mutex::new(LockFreeCounter::new(0)),
+            avg_steal_batch_size: Arc::new(Mutex::new(AtomicUsize::new(0)),
         }
     }
 
@@ -274,7 +274,7 @@ pub struct StealPredictor {
     /// 队列活跃度历史 (最近访问时间)
     queue_activity_history: Vec<VecDeque<Instant>>,
     /// 任务类型模式分析
-    task_patterns: std::collections::HashMap<String, usize>>,
+    task_patterns: std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>,
     /// 窃取历史记录
     steal_history: VecDeque<StealEvent>,
 }
@@ -441,12 +441,12 @@ pub struct LoadMonitor {
 impl LoadMonitor {
     pub fn new(thread_count: usize) -> Self {
         Self {
-            worker_loads: Arc::new(std::sync::Mutex::new((0..thread_count)).map(|_| AtomicUsize::new(0)).collect()),
-            execution_history: Arc::new(std::sync::Mutex::new((0..thread_count))
+            worker_loads: Arc::new(Mutex::new(0..thread_count)).map(|_| AtomicUsize::new(0)).collect()),
+            execution_history: Arc::new(Mutex::new(0..thread_count))
                 .map(|_| VecDeque::with_capacity(100))
                 .collect()),
-            cpu_usage: Arc::new(std::sync::Mutex::new((0..thread_count)).map(|_| AtomicUsize::new(0)).collect()),
-            last_update: Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now()))),
+            cpu_usage: Arc::new(Mutex::new(0..thread_count)).map(|_| AtomicUsize::new(0)).collect()),
+            last_update: Arc::new(Mutex::new(Instant::now())),
         }
     }
 
@@ -535,7 +535,7 @@ impl LoadMonitor {
         let load_variance: _ = if !loads.is_empty() {
             let variance: f64 = loads.iter()
                 .map(|&load| {
-                    let diff = load as f64 - avg_load;
+                    let diff: _ = load as f64 - avg_load;
                     diff * diff
                 })
                 .sum::<f64>() / loads.len() as f64;
@@ -570,11 +570,11 @@ pub struct AdaptiveThreadPool {
 impl AdaptiveThreadPool {
     pub fn new(initial_size: usize, min_threads: usize, max_threads: usize) -> Self {
         Self {
-            current_size: Arc::new(std::sync::Mutex::new(AtomicUsize::new(initial_size))),
-            target_size: Arc::new(std::sync::Mutex::new(AtomicUsize::new(initial_size))),
-            load_monitor: Arc::new(std::sync::Mutex::new(LoadMonitor::new(initial_size))),
-            adjustment_history: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::with_capacity(100)))),
-            auto_scaling: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicBool::new(true))),
+            current_size: Arc::new(Mutex::new(AtomicUsize::new(initial_size)),
+            target_size: Arc::new(Mutex::new(AtomicUsize::new(initial_size)),
+            load_monitor: Arc::new(Mutex::new(LoadMonitor::new(initial_size)),
+            adjustment_history: Arc::new(Mutex::new(VecDeque::with_capacity(100))),
+            auto_scaling: Arc::new(Mutex::new(std::sync::atomic::AtomicBool::new(true)),
             min_threads,
             max_threads,
         }
@@ -676,13 +676,13 @@ impl WorkStealingScheduler {
         let mut steal_channels = Vec::with_capacity(thread_count);
 
         for _ in 0..thread_count {
-            thread_queues.push(Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))));
+            thread_queues.push(Arc::new(Mutex::new(VecDeque::new()));
             steal_channels.push(ZeroCopyChannel::new(1000));
         }
 
         // 创建负载监控器和自适应线程池
-        let load_monitor: _ = Arc::new(std::sync::Mutex::new(LoadMonitor::new(thread_count)));
-        let adaptive_pool: _ = Arc::new(std::sync::Mutex::new(AdaptiveThreadPool::new(
+        let load_monitor: _ = Arc::new(Mutex::new(LoadMonitor::new(thread_count));
+        let adaptive_pool: _ = Arc::new(Mutex::new(AdaptiveThreadPool::new(
             thread_count,
             (thread_count / 2)).max(2), // 最小线程数
             thread_count * 2,          // 最大线程数
@@ -692,8 +692,8 @@ impl WorkStealingScheduler {
             thread_count,
             thread_queues,
             steal_channels,
-            stats: Arc::new(std::sync::Mutex::new(StealStats::new())),
-            shutdown: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicBool::new(false))),
+            stats: Arc::new(Mutex::new(StealStats::new()),
+            shutdown: Arc::new(Mutex::new(std::sync::atomic::AtomicBool::new(false)),
             load_monitor: load_monitor.clone(),
             adaptive_pool: adaptive_pool.clone(),
         }
@@ -818,8 +818,7 @@ impl WorkStealingScheduler {
     pub async fn submit_local_task(&self, thread_id: usize, task: Task) -> Result<(), ConcurrentExecutionError> {
         if thread_id >= self.thread_count {
             return Err(ConcurrentExecutionError::SubmissionFailed(
-                format!("线程ID {} 超出范围 (0-{})", thread_id, self.thread_count - 1)
-            ));
+                format!("线程ID {} 超出范围 (0-{})", thread_id, self.thread_count - 1));
         }
 
         let queue: _ = &self.thread_queues[thread_id];
@@ -989,7 +988,7 @@ impl WorkStealingScheduler {
                 continue;
             }
             let queue_guard: _ = queue.lock().await;
-            queues_with_load.push((i, queue_guard.len()));
+            queues_with_load.push((i, queue_guard.len());
         }
 
         // 按负载排序，从最重的开始窃取
@@ -1058,7 +1057,7 @@ impl WorkStealingScheduler {
                 if task.priority >= 5 { // 优先窃取高优先级任务
                     let priority_usize: _ = task.priority as usize;
                     if best_task.is_none() || priority_usize > best_task.as_ref().unwrap().0 {
-                        best_task = Some((priority_usize, task.clone()));
+                        best_task = Some((priority_usize, task.clone());
                     }
                 }
             }
@@ -1113,8 +1112,8 @@ impl WorkStealingScheduler {
             let queue_guard: _ = queue.lock().await;
             let len: _ = queue_guard.len();
             total_queue_len += len;
-            max_queue_len = max_queue_len.clone();max(len);
-            min_queue_len = min_queue_len.clone();min(len);
+            max_queue_len = max_queue_len.clone();clone();max(len);
+            min_queue_len = min_queue_len.clone();clone();min(len);
 
             if len > 5 { // 定义"忙碌"阈值
                 busy_threads += 1;
@@ -1195,7 +1194,7 @@ impl WorkStealingScheduler {
         // 计算负载方差（衡量分布的离散程度）
         let load_variance: _ = distribution.iter()
             .map(|&load| {
-                let diff = load as f64 - avg_tasks as f64;
+                let diff: _ = load as f64 - avg_tasks as f64;
                 diff * diff
             })
             .sum::<f64>() / self.thread_count as f64;
@@ -1469,9 +1468,9 @@ impl ConcurrentRuntimePool {
             if config.enable_memory_sharing {
                 println!("🔧 初始化内存共享组件...");
                 (
-                    Some(Arc::new(std::sync::Mutex::new(SharedMemoryManager::new(config.shared_memory_config.clone())))),
-                    Some(Arc::new(std::sync::Mutex::new(SharedObjectCache::new(config.shared_object_cache_config.clone())))),
-                    Some(Arc::new(std::sync::Mutex::new(MemoryMappedFileManager::new(config.memory_mapped_file_config.clone())))),
+                    Some(Arc::new(Mutex::new(SharedMemoryManager::new(config.shared_memory_config.clone())),
+                    Some(Arc::new(Mutex::new(SharedObjectCache::new(config.shared_object_cache_config.clone())),
+                    Some(Arc::new(Mutex::new(MemoryMappedFileManager::new(config.memory_mapped_file_config.clone())),
                 )
             } else {
                 (None, None, None)
@@ -1484,7 +1483,7 @@ impl ConcurrentRuntimePool {
 
         Self {
             config: config.clone(),
-            stats: Arc::new(std::sync::Mutex::new(ConcurrentExecutionStats::new())),
+            stats: Arc::new(Mutex::new(ConcurrentExecutionStats::new()),
             shared_memory_manager,
             shared_object_cache,
             memory_mapped_file_manager,
@@ -1494,7 +1493,7 @@ impl ConcurrentRuntimePool {
     /// 获取Runtime实例（从线程本地池）
     pub fn get_runtime(&self) -> Option<Runtime> {
         THREAD_RUNTIME_POOL.with(|pool| {
-            let mut pool = pool.clone();borrow_mut();
+            let mut pool = pool.clone();clone();borrow_mut();
 
             // 如果池中有可用实例，复用它
             if let Some(runtime) = pool.pop() {
@@ -1518,7 +1517,7 @@ impl ConcurrentRuntimePool {
     /// 归还Runtime实例到线程本地池
     pub fn return_runtime(&self, runtime: Runtime) {
         THREAD_RUNTIME_POOL.with(|pool| {
-            let mut pool = pool.clone();borrow_mut();
+            let mut pool = pool.clone();clone();borrow_mut();
             if pool.len() < self.config.pool_size_per_thread {
                 pool.push(runtime);
             }
@@ -1584,7 +1583,7 @@ impl ConcurrentRuntimePool {
         // 使用当前线程预热，避免生命周期问题
         for _ in 0..prewarm_count {
             THREAD_RUNTIME_POOL.with(|pool| {
-                let mut pool = pool.clone();borrow_mut();
+                let mut pool = pool.clone();clone();borrow_mut();
                 if pool.len() < pool_size_per_thread {
                     let runtime: _ = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false);
                     pool.push(runtime);
@@ -1608,11 +1607,11 @@ impl ConcurrentRuntimePool {
 
         // 获取Runtime实例
         let runtime: _ = self.get_runtime()
-            .ok_or_else(|| ConcurrentExecutionError::ExecutionFailed("无法获取Runtime实例".to_string()))?;
+            .ok_or_else(|| ConcurrentExecutionError::ExecutionFailed("无法获取Runtime实例".to_string())?;
 
         // 执行脚本（带超时）
         let execution_result: _ = timeout(timeout_duration, async {
-            let result = runtime.execute_code(&code);
+            let result: _ = runtime.execute_code(&code);
 
             // 归还Runtime实例
             result
@@ -1636,7 +1635,7 @@ impl ConcurrentRuntimePool {
                 // 归还Runtime实例
                 self.return_runtime(runtime);
                 self.stats.record_failure();
-                Err(ConcurrentExecutionError::ExecutionFailed(e.to_string()))
+                Err(ConcurrentExecutionError::ExecutionFailed(e.to_string())
             }
             Err(_) => {
                 // 归还Runtime实例
@@ -1716,9 +1715,9 @@ pub struct BatchExecutor {
 impl BatchExecutor {
     /// 创建新的批量执行器
     pub fn new(config: ConcurrentConfig) -> Self {
-        let runtime_pool: _ = Arc::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config.clone())));
-        let scheduler: _ = Arc::new(std::sync::Mutex::new(WorkStealingScheduler::new(num_cpus::get())));
-        let stats: _ = Arc::new(std::sync::Mutex::new(ConcurrentExecutionStats::new()));
+        let runtime_pool: _ = Arc::new(Mutex::new(ConcurrentRuntimePool::new(config.clone()));
+        let scheduler: _ = Arc::new(Mutex::new(WorkStealingScheduler::new(num_cpus::get()));
+        let stats: _ = Arc::new(Mutex::new(ConcurrentExecutionStats::new());
 
         Self {
             config,

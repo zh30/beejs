@@ -50,7 +50,7 @@ pub struct JsPlugin {
     metadata: PluginMetadata,
     state: PluginState,
     code: String,
-    exports: HashMap<String, String>>,
+    exports: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 impl JsPlugin {
@@ -111,7 +111,7 @@ impl Plugin for RustPlugin {
 
 /// Plugin manager
 pub struct PluginManager {
-    plugins: Arc<Mutex<HashMap<String, Arc<dyn Plugin>>>,
+    plugins: Arc<Mutex<HashMap<String, Arc<dyn Plugin, std::collections::HashMap<String, Arc<dyn Plugin, String, Arc<dyn Plugin>>>>,
     event_history: Arc<Mutex<Vec<PluginEvent>>,
     sandbox_enabled: bool,
 }
@@ -120,8 +120,8 @@ impl PluginManager {
     /// Create new plugin manager
     pub fn new(sandbox_enabled: bool) -> Self {
         Self {
-            plugins: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
-            event_history: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            plugins: Arc::new(Mutex::new(HashMap::new())),
+            event_history: Arc::new(Mutex::new(Vec::new())),
             sandbox_enabled,
         }
     }
@@ -143,7 +143,7 @@ impl PluginManager {
     /// Register JavaScript plugin
     pub fn register_js_plugin(&self, plugin: JsPlugin) -> Result<()> {
         let name: _ = plugin.metadata().name.clone();
-        let arc_plugin: Arc<dyn Plugin> = Arc::new(std::sync::Mutex::new(plugin));
+        let arc_plugin: Arc<dyn Plugin> = Arc::new(Mutex::new(plugin));
 
         {
             let mut plugins = self.plugins.lock().unwrap();
@@ -349,7 +349,7 @@ use std::collections::{HashMap, BTreeMap};
 
         let plugins: _ = manager.list_plugins();
         assert_eq!(plugins.len(), 1);
-        assert!(plugins.contains(&"test-rust-plugin".to_string()));
+        assert!(plugins.contains(&"test-rust-plugin".to_string());
     }
 
     #[test]

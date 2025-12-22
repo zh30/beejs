@@ -34,15 +34,15 @@ pub struct HotPath {
 /// Enhanced Hot Path Tracker v2 with dynamic thresholds
 pub struct HotPathTrackerV2 {
     /// Execution counters per path
-    execution_counters: RwLock<HashMap<String, AtomicU64>>,
+    execution_counters: RwLock<HashMap<String, AtomicU64, std::collections::HashMap<String, AtomicU64, String, AtomicU64>>>,
     /// Execution time accumulators
-    execution_times: RwLock<HashMap<String, Duration>>,
+    execution_times: RwLock<HashMap<String, Duration, std::collections::HashMap<String, Duration, String, Duration>>>,
     /// Dynamic threshold (adaptive)
     adaptive_threshold: AtomicU64,
     /// History window for trend analysis
     history_window: RwLock<VecDeque<ExecutionEvent>>,
     /// Detected hot paths
-    hot_paths: RwLock<HashMap<String, HotPath>>,
+    hot_paths: RwLock<HashMap<String, HotPath, std::collections::HashMap<String, HotPath, String, HotPath>>>,
     /// Configuration
     config: TrackerConfig,
     /// Statistics
@@ -156,7 +156,7 @@ impl HotPathTrackerV2 {
         let threshold: _ = self.adaptive_threshold.load(Ordering::Relaxed);
 
         let count: _ = {
-            let counters = self.execution_counters.read().unwrap();
+            let counters: _ = self.execution_counters.read().unwrap();
             counters
                 .get(path_id)
                 .map(|c| c.load(Ordering::Relaxed))
@@ -233,7 +233,7 @@ impl HotPathTrackerV2 {
         let variance: _ = counts
             .iter()
             .map(|&c| {
-                let diff = c as f64 - mean;
+                let diff: _ = c as f64 - mean;
                 diff * diff
             })
             .sum::<f64>()
@@ -250,7 +250,7 @@ impl HotPathTrackerV2 {
     /// Calculate hotness score for a path
     fn calculate_hotness_score(&self, path_id: &str) -> f64 {
         let count: _ = {
-            let counters = self.execution_counters.read().unwrap();
+            let counters: _ = self.execution_counters.read().unwrap();
             counters
                 .get(path_id)
                 .map(|c| c.load(Ordering::Relaxed))
@@ -284,7 +284,7 @@ impl HotPathTrackerV2 {
     /// Get average execution time for a path
     fn get_avg_execution_time(&self, path_id: &str) -> Duration {
         let count: _ = {
-            let counters = self.execution_counters.read().unwrap();
+            let counters: _ = self.execution_counters.read().unwrap();
             counters
                 .get(path_id)
                 .map(|c| c.load(Ordering::Relaxed))
@@ -292,7 +292,7 @@ impl HotPathTrackerV2 {
         };
 
         let total_time: _ = {
-            let times = self.execution_times.read().unwrap();
+            let times: _ = self.execution_times.read().unwrap();
             times.get(path_id).copied().unwrap_or(Duration::ZERO)
         };
 

@@ -131,7 +131,7 @@ impl TestDiscoverer {
     pub fn load_test_file(&self, path: &Path) -> std::io::Result<Vec<TestSuite>> {
         // Read the test file content
         let _code: _ = std::fs::read_to_string(path)
-            .map_err(|e| std::io::Error::new(e.kind(), format!("Failed to read test file: {}", e)))?;
+            .map_err(|e| std::io::Error::new(e.kind(), format!("Failed to read test file: {}", e))?;
 
         // For now, create a basic test suite from the file
         // TODO: Use V8 to parse and extract actual test suites

@@ -136,8 +136,8 @@ impl HotReloader {
     pub fn with_config(config: WatcherConfig) -> Self {
         Self {
             config,
-            stats: Arc::new(std::sync::Mutex::new(WatcherStats::new())),
-            running: Arc::new(std::sync::Mutex::new(AtomicBool::new(false))),
+            stats: Arc::new(Mutex::new(WatcherStats::new()),
+            running: Arc::new(Mutex::new(AtomicBool::new(false)),
         }
     }
 
@@ -416,9 +416,9 @@ use std::collections::{HashMap, BTreeMap};
     fn test_watcher_config_default() {
         let config: _ = WatcherConfig::default();
         assert_eq!(config.debounce_ms, 100);
-        assert!(config.extensions.contains(&"js".to_string()));
-        assert!(config.extensions.contains(&"ts".to_string()));
-        assert!(config.ignore_dirs.contains(&"node_modules".to_string()));
+        assert!(config.extensions.contains(&"js".to_string());
+        assert!(config.extensions.contains(&"ts".to_string());
+        assert!(config.ignore_dirs.contains(&"node_modules".to_string());
         assert!(config.recursive);
     }
 
@@ -427,17 +427,17 @@ use std::collections::{HashMap, BTreeMap};
         let reloader: _ = HotReloader::new();
 
         // Should watch JS/TS files
-        assert!(reloader.should_watch(Path::new("test.js")));
-        assert!(reloader.should_watch(Path::new("test.ts")));
-        assert!(reloader.should_watch(Path::new("test.tsx")));
+        assert!(reloader.should_watch(Path::new("test.js"));
+        assert!(reloader.should_watch(Path::new("test.ts"));
+        assert!(reloader.should_watch(Path::new("test.tsx"));
 
         // Should not watch non-JS files
-        assert!(!reloader.should_watch(Path::new("test.txt")));
-        assert!(!reloader.should_watch(Path::new("test.rs")));
+        assert!(!reloader.should_watch(Path::new("test.txt"));
+        assert!(!reloader.should_watch(Path::new("test.rs"));
 
         // Should not watch files in ignored directories
-        assert!(!reloader.should_watch(Path::new("node_modules/test.js")));
-        assert!(!reloader.should_watch(Path::new(".git/test.js")));
+        assert!(!reloader.should_watch(Path::new("node_modules/test.js"));
+        assert!(!reloader.should_watch(Path::new(".git/test.js"));
     }
 
     #[test]
@@ -464,8 +464,8 @@ use std::collections::{HashMap, BTreeMap};
             .build();
 
         assert_eq!(config.debounce_ms, 200);
-        assert!(config.extensions.contains(&"vue".to_string()));
-        assert!(config.ignore_dirs.contains(&"vendor".to_string()));
+        assert!(config.extensions.contains(&"vue".to_string());
+        assert!(config.ignore_dirs.contains(&"vendor".to_string());
         assert!(!config.recursive);
     }
 }

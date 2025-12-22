@@ -90,11 +90,11 @@ async fn test_performance_aware_completion() {
     use beejs::ai::code_generator::{ContextCache, CodeDatabase};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-    let model: _ = Arc::new(std::sync::Mutex::new(MockAiModel::new(50, 0.95)));
+    let model: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(MockAiModel::new(50, 0.95))));
     let generator: _ = AICodeGenerator::new_with_performance_aware(
         model,
-        Arc::new(std::sync::Mutex::new(RwLock::new(ContextCache::new(100)))),
-        Arc::new(std::sync::Mutex::new(CodeDatabase::new())),
+        Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(RwLock::new(ContextCache::new(100))))),
+        Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(CodeDatabase::new()))),
         perf_config,
     );
 

@@ -16,8 +16,8 @@ impl DependencyResolver {
     /// 创建新的依赖解析器
     pub fn new() -> Self {
         Self {
-            registry: Arc::new(std::sync::Mutex::new(ModuleRegistry::new())),
-            cache: Arc::new(std::sync::Mutex::new(DependencyCache::new())),
+            registry: Arc::new(Mutex::new(ModuleRegistry::new()),
+            cache: Arc::new(Mutex::new(DependencyCache::new()),
         }
     }
 
@@ -225,7 +225,7 @@ use std::collections::{HashMap, BTreeMap};
 /// 模块注册表
 #[derive(Debug, Clone)]
 struct ModuleRegistry {
-    packages: HashMap<String, Vec<PackageInfo>>,
+    packages: HashMap<String, Vec<PackageInfo, std::collections::HashMap<String, Vec<PackageInfo, String, Vec<PackageInfo>>>,
 }
 
 impl ModuleRegistry {
@@ -319,14 +319,14 @@ impl ModuleRegistry {
         &self,
         name: &str,
     ) -> Result<Option<PackageInfo>, Box<dyn std::error::Error>> {
-        Ok(self.packages.get(name).and_then(|v| v.first().cloned()))
+        Ok(self.packages.get(name).and_then(|v| v.first().cloned())
     }
 }
 
 /// 依赖缓存
 #[derive(Debug, Clone)]
 struct DependencyCache {
-    cache: HashMap<String, DependencyGraph>>,
+    cache: HashMap<String, DependencyGraph, std::collections::HashMap<String, DependencyGraph, String, DependencyGraph>>>,
 }
 
 impl DependencyCache {

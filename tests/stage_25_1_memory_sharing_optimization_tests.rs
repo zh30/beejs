@@ -165,8 +165,8 @@ use std::collections::{HashMap, BTreeMap};
 
         // 并发读取性能测试
         let start: _ = SystemTime::now();
-        let read_count: _ = Arc::new(std::sync::Mutex::new(AtomicUsize::new(0)));
-        let manager_arc: _ = Arc::new(std::sync::Mutex::new(manager));
+        let read_count: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicUsize::new(0))));
+        let manager_arc: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(manager)));
 
         let mut handles = vec![];
         for handle in reader_handles {
@@ -174,7 +174,7 @@ use std::collections::{HashMap, BTreeMap};
             let manager_ref: _ = manager_arc.clone();
             let h: _ = tokio::spawn(async move {
                 for _ in 0..100 {
-                    let _ = manager_ref.read(&handle, 0, 8192).unwrap();
+                    let _: _ = manager_ref.read(&handle, 0, 8192).unwrap();
                     read_count.fetch_add(1, Ordering::SeqCst);
                 }
             });

@@ -61,7 +61,7 @@ impl RiskLevel {
 /// 风险评估器
 #[derive(Debug)]
 pub struct RiskAssessor {
-    factors: HashMap<String, RiskFactor>>,
+    factors: HashMap<String, RiskFactor, std::collections::HashMap<String, RiskFactor, String, RiskFactor>>>,
 }
 
 impl RiskAssessor {
@@ -117,7 +117,7 @@ impl RiskAssessor {
             factor.value = value;
             Ok(())
         } else {
-            Err(RiskAssessmentError::InvalidRiskFactor(name.to_string()))
+            Err(RiskAssessmentError::InvalidRiskFactor(name.to_string())
         }
     }
 

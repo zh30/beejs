@@ -1,119 +1,88 @@
 #!/usr/bin/env python3
 """
-修复剩余的语法解析错误
+修复剩余的语法错误
 """
 
 import re
+import os
 from pathlib import Path
 
-def fix_generic_syntax_errors(content):
-    """修复泛型语法错误"""
-    # 修复类似 Vec<_>> 的错误
-    patterns = [
-        (r'Vec<[^>]*>>', r'Vec<_>'),
-        (r'HashMap<[^>]*>>', r'HashMap<String, _>'),
-        (r'BTreeMap<[^>]*>>', r'BTreeMap<String, _>'),
-    ]
-
-    for pattern, replacement in patterns:
-        content = re.sub(pattern, replacement, content)
-
-    return content
-
-def fix_mod_declaration_errors(content):
-    """修复模块声明错误"""
-    # 修复 mod {} 块内的语法
-    lines = content.split('\n')
-    fixed_lines = []
-    in_mod_block = False
-    brace_count = 0
-
-    for line in lines:
-        if 'mod {' in line and 'pub mod' not in line:
-            in_mod_block = True
-            brace_count = 0
-
-        if in_mod_block:
-            # 跳过空的 use 语句
-            if line.strip().startswith('use std::'):
-                continue
-            # 修复不正确的语法
-            if 'use std::' in line and not line.strip().endswith(';'):
-                line = line.rstrip(',') + ';'
-            if 'pub use std::' in line and not line.strip().endswith(';'):
-                line = line.rstrip(',') + ';'
-
-        fixed_lines.append(line)
-
-        # 统计大括号
-        brace_count += line.count('{') - line.count('}')
-        if brace_count == 0 and in_mod_block:
-            in_mod_block = False
-
-    return '\n'.join(fixed_lines)
-
-def fix_bracket_mismatch(content):
-    """修复括号不匹配"""
-    # 简单的括号匹配修复
-    lines = content.split('\n')
-    fixed_lines = []
-    for line in lines:
-        # 修复不匹配的括号
-        line = line.replace('{,', '{')
-        line = line.replace(',}', '}')
-        # 修复多余的分号
-        if 'pub mod {' in line and line.strip().endswith(';'):
-            line = line.rstrip(';')
-        fixed_lines.append(line)
-
-    return '\n'.join(fixed_lines)
-
-def process_file(filepath):
-    """处理单个文件"""
+def fix_syntax_errors(file_path):
+    """修复语法错误"""
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        original_content = content
+        original = content
 
-        # 应用修复
-        content = fix_generic_syntax_errors(content)
-        content = fix_mod_declaration_errors(content)
-        content = fix_bracket_mismatch(content)
-
-        if content != original_content:
-            with open(filepath, 'w', encoding='utf-8') as f:
+        # 修复多余的 Mutex 包装
+        content = re.sub(r'Mutex::new\(Mutex::new\(', 'Mutex::new(', content)
+        content = re.sub(r'Arc::new\(Arc::new\(', 'Arc::new(', content)
+        
+        # 修复括号不匹配
+        content = re.sub(r',\s*\)\)\)\s*,', ')),', content)
+        
+        # 修复缺少闭合括号的结构体初始化
+        lines = content.split('\n')
+        fixed_lines = []
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            
+            # 检查是否是 QueryIndex 初始化
+            if 'QueryIndex {' in line and 'time_index: Vec::new()' in line:
+                # 查找对应的闭合括号
+                brace_count = 0
+                j = i
+                while j < len(lines):
+                    current = lines[j]
+                    brace_count += current.count('{') - current.count('}')
+                    if brace_count == 0:
+                        break
+                    j += 1
+                
+                # 重新构造这个结构体
+                if j < len(lines):
+                    # 找到所有字段
+                    fields = []
+                    for k in range(i, j+1):
+                        if ':' in lines[k] and not lines[k].strip().startswith('//'):
+                            fields.append(lines[k].strip())
+                    
+                    # 重新构造
+                    indent = '            '
+                    fixed_lines.append(f'{indent}query_index: Arc::new(Mutex::new(QueryIndex {{')
+                    for field in fields:
+                        fixed_lines.append(f'{indent}    {field},')
+                    fixed_lines.append(f'{indent}}})),')
+                    i = j + 1
+                    continue
+            
+            fixed_lines.append(line)
+            i += 1
+        
+        content = '\n'.join(fixed_lines)
+        
+        if content != original:
+            with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)
-            print(f"✅ 修复语法错误: {filepath}")
+            print(f"Fixed syntax: {file_path}")
             return True
+        return False
 
     except Exception as e:
-        print(f"❌ 处理失败 {filepath}: {e}")
-
-    return False
+        print(f"Error: {e}")
+        return False
 
 def main():
-    """主函数"""
-    print("🔧 修复剩余语法错误...")
+    src_dir = Path('src')
+    fixed = 0
+    
+    for rust_file in src_dir.rglob('*.rs'):
+        if fix_syntax_errors(rust_file):
+            fixed += 1
+    
+    print(f"\nFixed {fixed} files with syntax errors")
 
-    # 修复关键文件
-    key_files = [
-        "src/ai/model_interface.rs",
-        "src/automation/threshold.rs",
-        "src/analysis/mod.rs",
-        "src/analysis/optimizer.rs",
-        "src/monitor/mod.rs",
-        "src/monitor/performance_monitor.rs",
-        "src/monitor/data_store.rs",
-    ]
-
-    fixed_count = 0
-    for file_path in key_files:
-        if Path(file_path).exists():
-            if process_file(file_path):
-                fixed_count += 1
-
-    print(f"\n🎉 语法修复完成! 共修复 {fixed_count} 个文件")
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

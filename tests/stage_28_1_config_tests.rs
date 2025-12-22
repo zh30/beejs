@@ -22,7 +22,7 @@ pub enum ConfigValue {
     Float(f64),
     Boolean(bool),
     Array(Vec<ConfigValue>),
-    Object(HashMap<String, ConfigValue, std::collections::HashMap<String, ConfigValue, String, ConfigValue>>),
+    Object(HashMap<String, ConfigValue, std::collections::HashMap<String, ConfigValue, String, ConfigValue, std::collections::HashMap<String, ConfigValue, std::collections::HashMap<String, ConfigValue, String, ConfigValue, String, ConfigValue, std::collections::HashMap<String, ConfigValue, String, ConfigValue>>>),
     Null,
 }
 
@@ -69,8 +69,8 @@ pub struct ConfigEntry {
 /// 配置管理器
 #[derive(Debug, Default)]
 pub struct ConfigManager {
-    entries: HashMap<String, ConfigEntry, std::collections::HashMap<String, ConfigEntry, String, ConfigEntry>>,
-    defaults: HashMap<String, ConfigValue, std::collections::HashMap<String, ConfigValue, String, ConfigValue>>,
+    entries: HashMap<String, ConfigEntry, std::collections::HashMap<String, ConfigEntry, String, ConfigEntry, std::collections::HashMap<String, ConfigEntry, std::collections::HashMap<String, ConfigEntry, String, ConfigEntry, String, ConfigEntry, std::collections::HashMap<String, ConfigEntry, String, ConfigEntry>>>,
+    defaults: HashMap<String, ConfigValue, std::collections::HashMap<String, ConfigValue, String, ConfigValue, std::collections::HashMap<String, ConfigValue, std::collections::HashMap<String, ConfigValue, String, ConfigValue, String, ConfigValue, std::collections::HashMap<String, ConfigValue, String, ConfigValue>>>,
 }
 
 impl ConfigManager {
@@ -218,7 +218,7 @@ impl ConfigManager {
     }
 
     /// 导出配置 (隐藏敏感值)
-    pub fn export_safe(&self) -> HashMap<String, String, std::collections::HashMap<String, String, String, String>> {
+    pub fn export_safe(&self) -> HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>> {
         let mut result = HashMap::new();
         for (key, entry) in &self.entries {
             let value: _ = if entry.sensitive {

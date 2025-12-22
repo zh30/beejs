@@ -282,12 +282,12 @@ impl LinearTrendAnalyzer {
 impl TrendAnalyzer for LinearTrendAnalyzer {
     async fn analyze_trend(&self, metrics: &[Metric]) -> Result<TrendResult> {
         if metrics.len() < self.config.min_data_points {
-            return Err(AIOpsError::Config("Insufficient data points".to_string()));
+            return Err(AIOpsError::Config("Insufficient data points".to_string());
         }
 
         let stats: _ = Self::calculate_stats(metrics);
         let time_span: _ = if metrics.len() >= 2 {
-            let last = metrics.last().unwrap().timestamp;
+            let last: _ = metrics.last().unwrap().timestamp;
             let first: _ = metrics.first().unwrap().timestamp;
             last - first
         } else {
@@ -299,7 +299,7 @@ impl TrendAnalyzer for LinearTrendAnalyzer {
             let strength: _ = Self::calculate_strength(slope, r_squared, stats.std_dev);
 
             let predicted_next: _ = if self.config.enable_prediction {
-                let x = metrics.len() as f64;
+                let x: _ = metrics.len() as f64;
                 slope * x + intercept
             } else {
                 stats.mean
@@ -344,14 +344,14 @@ impl TrendAnalyzer for LinearTrendAnalyzer {
 
     async fn predict_future(&self, metrics: &[Metric], horizon: usize) -> Result<Vec<f64>> {
         if metrics.len() < self.config.min_data_points {
-            return Err(AIOpsError::Config("Insufficient data points".to_string()));
+            return Err(AIOpsError::Config("Insufficient data points".to_string());
         }
 
         if let Some((slope, intercept, _)) = Self::calculate_linear_regression(metrics) {
             let predictions: _ = Self::predict_values(slope, intercept, metrics.len(), horizon);
             Ok(predictions)
         } else {
-            Err(AIOpsError::Config("Unable to calculate regression".to_string()))
+            Err(AIOpsError::Config("Unable to calculate regression".to_string())
         }
     }
 

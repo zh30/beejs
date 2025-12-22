@@ -127,7 +127,7 @@ pub struct FluxHelmRelease {
     pub chart_version: Option<String>,
 
     /// Values
-    pub values: std::collections::HashMap<String, String>>,
+    pub values: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 
     /// Wait for jobs
     pub wait_for_jobs: bool,

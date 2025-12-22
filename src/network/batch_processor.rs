@@ -49,16 +49,16 @@ impl BatchProcessor {
     pub fn new(config: NetworkConfig) -> Result<Self, NetworkError> {
         Ok(Self {
             config,
-            requests: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
-            pending_count: Arc::new(std::sync::Mutex::new(Mutex::new(0))),
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(BatchProcessorStats {
+            requests: Arc::new(Mutex::new(Vec::new())),
+            pending_count: Arc::new(Mutex::new(0)),
+            stats: Arc::new(Mutex::new(BatchProcessorStats {
                 total_requests: 0,
                 batch_operations: 0,
                 average_batch_size: 0.0,
                 batch_latency_us: 0,
                 dropped_requests: 0,
-            }))),
-            next_request_id: Arc::new(std::sync::Mutex::new(Mutex::new(0))),
+            })),
+            next_request_id: Arc::new(Mutex::new(0)),
         })
     }
 

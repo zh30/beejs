@@ -66,7 +66,7 @@ impl Future for ZeroCopyFuture {
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match Pin::new(&mut self.receiver).poll(cx) {
-            Poll::Ready(result) => Poll::Ready(result.unwrap_or(Err(ZeroCopyError::Cancelled))),
+            Poll::Ready(result) => Poll::Ready(result.unwrap_or(Err(ZeroCopyError::Cancelled)),
             Poll::Pending => Poll::Pending,
         }
     }
@@ -76,7 +76,7 @@ impl Future for ZeroCopyFuture {
 pub struct AsyncZeroCopy {
     config: NetworkConfig,
     stats: Arc<RwLock<TransferStats>>,
-    active_transfers: Arc<RwLock<std::collections::HashMap<u64, TransferRequest>>,
+    active_transfers: Arc<RwLock<std::collections::HashMap<u64, TransferRequest, std::collections::HashMap<u64, TransferRequest, u64, TransferRequest>>>,
     transfer_counter: Arc<RwLock<u64>>,
 }
 
@@ -84,16 +84,16 @@ impl AsyncZeroCopy {
     /// 创建新的异步零拷贝引擎
     pub fn new(config: NetworkConfig) -> Self {
         Self {
-            stats: Arc::new(std::sync::Mutex::new(RwLock::new(TransferStats {
+            stats: Arc::new(Mutex::new(RwLock::new(TransferStats {
                 total_transfers: 0,
                 successful_transfers: 0,
                 failed_transfers: 0,
                 total_bytes_transferred: 0,
                 average_transfer_time_ns: 0,
                 zero_copy_ratio: 0.0,
-            }))),
-            active_transfers: Arc::new(std::sync::Mutex::new(RwLock::new(std::collections::HashMap::new()))),
-            transfer_counter: Arc::new(std::sync::Mutex::new(RwLock::new(0))),
+            })),
+            active_transfers: Arc::new(Mutex::new(RwLock::new(std::collections::HashMap::new())),
+            transfer_counter: Arc::new(Mutex::new(RwLock::new(0)),
             config,
         }
     }
@@ -169,7 +169,7 @@ impl AsyncZeroCopy {
     fn create_memory_map(data: &[u8]) -> Result<Mmap, ZeroCopyError> {
         // 创建临时文件
         let temp_file: _ = std::env::temp_dir()
-            .join(format!("beejs_async_zero_copy_{}", std::process::id()));
+            .join(format!("beejs_async_zero_copy_{}", std::process::id());
 
         let file: _ = std::fs::OpenOptions::new()
             .read(true)
@@ -184,7 +184,7 @@ impl AsyncZeroCopy {
         unsafe {
             let mmap: _ = MmapOptions::new()
                 .map(&file)
-                .map_err(|e| ZeroCopyError::Mmap(e.to_string()))?;
+                .map_err(|e| ZeroCopyError::Mmap(e.to_string())?;
 
             // 复制数据到映射内存
             std::ptr::copy_nonoverlapping(
@@ -219,7 +219,7 @@ impl Drop for AsyncZeroCopy {
     fn drop(&mut self) {
         // 清理临时文件
         let temp_file: _ = std::env::temp_dir()
-            .join(format!("beejs_async_zero_copy_{}", std::process::id()));
+            .join(format!("beejs_async_zero_copy_{}", std::process::id());
         let _: _ = std::fs::remove_file(temp_file);
     }
 }

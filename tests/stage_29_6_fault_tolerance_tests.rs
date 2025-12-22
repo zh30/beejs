@@ -27,8 +27,8 @@ async fn test_fault_detector_creation() {
     };
 
     let service_discovery: _ = ServiceDiscovery::new(config);
-    let node_manager: _ = Arc::new(std::sync::Mutex::new(NodeManager::new(service_discovery.clone())));
-    let _health_monitor: _ = Arc::new(std::sync::Mutex::new(HealthMonitor::new(node_manager.clone())));
+    let node_manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(NodeManager::new(service_discovery.clone()))));
+    let _health_monitor: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(HealthMonitor::new(node_manager.clone()))));
 
     let _fault_config: _ = FaultDetectionConfig {
         detection_interval: Duration::from_millis(100),

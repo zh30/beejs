@@ -14,7 +14,7 @@ use serde::{Serialize, Deserialize};
 /// 快照管理器
 pub struct SnapshotManager {
     /// 快照缓存
-    pub snapshot_cache: Arc<Mutex<std::collections::BTreeMap<String, V8Snapshot, String, V8Snapshot>>,
+    pub snapshot_cache: Arc<Mutex<std::collections::BTreeMap<String, V8Snapshot, String, V8Snapshot, String, V8Snapshot, String, V8Snapshot>>,
     /// 快照配置
     pub config: SnapshotConfig,
     /// 快照统计
@@ -29,9 +29,9 @@ impl SnapshotManager {
         let cache: _ = std::collections::BTreeMap::new();
 
         Self {
-            snapshot_cache: Arc::new(std::sync::Mutex::new(Mutex::new(cache))),
+            snapshot_cache: Arc::new(Mutex::new(cache)),
             config,
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(SnapshotStats::new()))),
+            stats: Arc::new(Mutex::new(SnapshotStats::new())),
             created_at: SystemTime::now(),
         }
     }
@@ -65,7 +65,7 @@ impl SnapshotManager {
     pub fn load_snapshot(&self, _runtime: &mut RuntimeLite, snapshot_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // 从缓存获取快照
         let snapshot: _ = {
-            let cache = self.snapshot_cache.lock().unwrap();
+            let cache: _ = self.snapshot_cache.lock().unwrap();
             cache.get(snapshot_id).cloned()
         };
 

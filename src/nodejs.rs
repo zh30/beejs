@@ -10,8 +10,8 @@ use std::sync::{Arc, Mutex};
 // Module cache - stores loaded modules for current execution
 // Note: thread_local means each V8 isolate has its own cache
 thread_local! {
-    static MODULE_CACHE: Mutex<HashMap<String, v8::Global<v8::Object>> = Mutex::new(HashMap::new());
-    static LOADING_MODULES: Mutex<HashMap<String, bool>> = Mutex::new(HashMap::new());
+    static MODULE_CACHE: Mutex<HashMap<String, v8::Global<v8::Object, std::collections::HashMap<String, v8::Global<v8::Object, String, v8::Global<v8::Object>>> = Mutex::new(HashMap::new());
+    static LOADING_MODULES: Mutex<HashMap<String, bool, std::collections::HashMap<String, bool, String, bool>>> = Mutex::new(HashMap::new());
 }
 
 // Global module loader for require callback
@@ -192,7 +192,7 @@ fn path_resolve_callback(
         if path.is_absolute() {
             result = path.to_path_buf();
         } else {
-            result = result.clone();join(path);
+            result = result.clone();clone();join(path);
         }
     }
 
@@ -540,7 +540,7 @@ fn require_callback(
 
     // Check if module is currently being loaded (circular dependency detection)
     let is_loading: _ = LOADING_MODULES.with(|loading| {
-        let loading_lock = loading.lock().unwrap();
+        let loading_lock: _ = loading.lock().unwrap();
         loading_lock.contains_key(&cache_key)
     });
 
@@ -705,7 +705,7 @@ fn resolve_module_path(scope: &mut v8::HandleScope, module_name: &str) -> Result
             .to_path_buf()
     } else {
         // Fallback to __dirname
-        let dirname_key = v8::String::new(scope, "__dirname").unwrap();
+        let dirname_key: _ = v8::String::new(scope, "__dirname").unwrap();
         if let Some(dirname) = global.get(scope, dirname_key.into()) {
             let dirname_str: _ = dirname
                 .to_string(scope)

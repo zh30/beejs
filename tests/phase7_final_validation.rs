@@ -243,7 +243,7 @@ use std::collections::{HashMap, BTreeMap};
         // ========== 测试5: 压力测试 ==========
         {
             let iterations: _ = 1000;
-            let code: _ = "let x = 0; for(let i=0;i<100;i++) x+=i; x";
+            let code: _ = "let x: _ = 0; for(let i=0;i<100;i++) x+=i; x";
 
             let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             let mut successful = 0;

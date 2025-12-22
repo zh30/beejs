@@ -239,17 +239,17 @@ impl DoctorCommand {
         // Check npm
         let npm_status: _ = match Command::new("npm").arg("--version").output() {
             Ok(output) if output.status.success() => {
-                let version = String::from_utf8_lossy(&output.stdout);
-                (CheckStatus::Pass, Some(format!("npm {}", version.trim())))
+                let version: _ = String::from_utf8_lossy(&output.stdout);
+                (CheckStatus::Pass, Some(format!("npm {}", version.trim())
             }
-            _ => (CheckStatus::Skip, Some("npm not found".to_string())),
+            _ => (CheckStatus::Skip, Some("npm not found".to_string()),
         };
 
         // Check yarn
         let yarn_status: _ = match Command::new("yarn").arg("--version").output() {
             Ok(output) if output.status.success() => {
-                let version = String::from_utf8_lossy(&output.stdout);
-                (CheckStatus::Pass, Some(format!("yarn {}", version.trim())))
+                let version: _ = String::from_utf8_lossy(&output.stdout);
+                (CheckStatus::Pass, Some(format!("yarn {}", version.trim())
             }
             _ => (CheckStatus::Skip, None),
         };
@@ -257,8 +257,8 @@ impl DoctorCommand {
         // Check pnpm
         let pnpm_status: _ = match Command::new("pnpm").arg("--version").output() {
             Ok(output) if output.status.success() => {
-                let version = String::from_utf8_lossy(&output.stdout);
-                (CheckStatus::Pass, Some(format!("pnpm {}", version.trim())))
+                let version: _ = String::from_utf8_lossy(&output.stdout);
+                (CheckStatus::Pass, Some(format!("pnpm {}", version.trim())
             }
             _ => (CheckStatus::Skip, None),
         };

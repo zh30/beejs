@@ -85,7 +85,7 @@ impl NpmCompatibility {
         &self,
         packages: &[PackageSpec],
         options: &InstallOptions,
-    ) -> Result<HashMap<String, PackageResolution>>, Box<dyn std::error::Error>> {
+    ) -> Result<HashMap<String, PackageResolution, std::collections::HashMap<String, PackageResolution, String, PackageResolution>>>, Box<dyn std::error::Error>> {
         let mut resolutions = HashMap::new();
 
         for spec in packages {
@@ -106,7 +106,7 @@ impl NpmCompatibility {
     pub async fn resolve_package(&self, spec: &PackageSpec) -> Result<PackageResolution, Box<dyn std::error::Error>> {
         let (package_name, version_range) = match spec {
             PackageSpec::Name(name) => (name.clone(), VersionRange::Wildcard),
-            PackageSpec::NameVersion(name, version) => (name.clone(), VersionRange::Exact(version.clone())),
+            PackageSpec::NameVersion(name, version) => (name.clone(), VersionRange::Exact(version.clone()),
             PackageSpec::NameRange(name, range) => (name.clone(), VersionRange::parse(range)?),
             PackageSpec::Git(url) => return self.resolve_git_package(url).await,
             PackageSpec::Local(path) => return self.resolve_local_package(path).await,
@@ -255,7 +255,7 @@ impl NpmCompatibility {
             for (bin_name, bin_path) in &resolution.bins {
                 let bin_link: _ = bin_dir.join(bin_name);
                 // 在实际实现中，这里应该创建符号链接或复制文件
-                let _: _ = tokio::fs::write(&bin_link, format!("#!/bin/sh\nnode \"{}\"\n", bin_path.display()));
+                let _: _ = tokio::fs::write(&bin_link, format!("#!/bin/sh\nnode \"{}\"\n", bin_path.display());
             }
         }
 
@@ -354,7 +354,7 @@ impl NpmCompatibility {
             // 重新安装
             let mut specs = Vec::new();
             for (name, version) in &package_json.dependencies {
-                specs.push(PackageSpec::NameVersion(name.clone(), version.clone()));
+                specs.push(PackageSpec::NameVersion(name.clone(), version.clone());
             }
 
             self.install_packages(&specs, &InstallOptions::default()).await?;
@@ -371,11 +371,11 @@ pub struct NpmPackageInfo {
     pub description: Option<String>,
     pub versions: Vec<String>,
     #[serde(rename = "dist-tags")]
-    pub dist_tags: HashMap<String, String>>,
-    pub dependencies: HashMap<String, String>>,
-    pub peer_dependencies: HashMap<String, String>>,
-    pub optional_dependencies: HashMap<String, String>>,
-    pub bins: HashMap<String, String>>,
+    pub dist_tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub peer_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub optional_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub bins: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     pub main: String,
     pub types: Option<String>,
     pub exports: Option<serde_json::Value>,
@@ -397,23 +397,23 @@ pub struct PackageJson {
     pub version: String,
     pub description: Option<String>,
     pub main: String,
-    pub scripts: HashMap<String, String>>,
+    pub scripts: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     pub keywords: Vec<String>,
     pub author: Option<String>,
     pub license: String,
 
-    pub dependencies: HashMap<String, String>>,
-    pub dev_dependencies: HashMap<String, String>>,
-    pub peer_dependencies: HashMap<String, String>>,
-    pub optional_dependencies: HashMap<String, String>>,
+    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub dev_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub peer_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub optional_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 
-    pub engines: Option<HashMap<String, String>>,
+    pub engines: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     pub os: Vec<String>,
     pub cpu: Vec<String>,
     pub private: bool,
 
     pub workspaces: Option<Vec<String>>,
-    pub publish_config: Option<HashMap<String, String>>,
+    pub publish_config: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 
     pub exports: Option<serde_json::Value>,
     pub types: Option<String>,
@@ -421,9 +421,9 @@ pub struct PackageJson {
     pub typings: Option<String>,
 
     pub files: Option<Vec<String>>,
-    pub bin: Option<HashMap<String, String>>,
+    pub bin: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     pub man: Option<Vec<String>>,
-    pub directories: Option<HashMap<String, String>>,
+    pub directories: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 
     pub repository: Option<serde_json::Value>,
     pub bugs: Option<serde_json::Value>,
@@ -436,5 +436,5 @@ pub struct PackageJson {
     pub bundle_dependencies: Option<Vec<String>>,
     pub deprecated: Option<String>,
 
-    pub description_map: HashMap<String, String>>,
+    pub description_map: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }

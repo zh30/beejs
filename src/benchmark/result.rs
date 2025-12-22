@@ -36,7 +36,7 @@ pub struct BenchmarkResult {
     /// 统计数据
     pub statistics: Statistics,
     /// 元数据
-    pub metadata: HashMap<String, String>>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     /// 错误信息 (如果有)
     pub error: Option<String>,
     /// 警告信息
@@ -187,7 +187,7 @@ pub struct PerformanceMetrics {
     /// 缓存命中率
     pub cache_hit_rate: f64,
     /// 自定义指标
-    pub custom_metrics: HashMap<String, serde_json::Value>>,
+    pub custom_metrics: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>,
 }
 
 impl PerformanceMetrics {
@@ -522,7 +522,7 @@ pub struct BenchmarkResultSet {
     /// 结果列表
     pub results: Vec<BenchmarkResult>,
     /// 全局元数据
-    pub global_metadata: HashMap<String, String>>,
+    pub global_metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     /// 环境信息
     pub environment: EnvironmentInfo,
 }
@@ -556,8 +556,8 @@ impl BenchmarkResultSet {
     }
 
     /// 按运行时分组结果
-    pub fn group_by_runtime(&self) -> HashMap<Runtime, Vec<&BenchmarkResult>> {
-        let mut groups: HashMap<Runtime, Vec<&BenchmarkResult>> = HashMap::new();
+    pub fn group_by_runtime(&self) -> HashMap<Runtime, Vec<&BenchmarkResult, std::collections::HashMap<Runtime, Vec<&BenchmarkResult, Runtime, Vec<&BenchmarkResult>>> {
+        let mut groups: HashMap<Runtime, Vec<&BenchmarkResult, std::collections::HashMap<Runtime, Vec<&BenchmarkResult, Runtime, Vec<&BenchmarkResult>>> = HashMap::new();
         for result in &self.results {
             groups.entry(result.runtime).or_insert_with(Vec::new).push(result);
         }
@@ -565,9 +565,9 @@ impl BenchmarkResultSet {
     }
 
     /// 获取所有运行时的平均性能
-    pub fn get_average_performance(&self) -> HashMap<Runtime, Duration>> {
+    pub fn get_average_performance(&self) -> HashMap<Runtime, Duration, std::collections::HashMap<Runtime, Duration, Runtime, Duration>>> {
         let groups: _ = self.group_by_runtime();
-        let mut averages: HashMap<Runtime, Duration>> = HashMap::new();
+        let mut averages: HashMap<Runtime, Duration, std::collections::HashMap<Runtime, Duration, Runtime, Duration>>> = HashMap::new();
 
         for (runtime, results) in groups {
             let total_duration: Duration = results.iter()
@@ -601,7 +601,7 @@ pub struct EnvironmentInfo {
     /// 编译时间
     pub build_time: String,
     /// 自定义环境变量
-    pub custom_env: HashMap<String, String>>,
+    pub custom_env: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 impl EnvironmentInfo {
@@ -612,7 +612,7 @@ impl EnvironmentInfo {
 
     /// 设置操作系统
     pub fn os(mut self, os: &str) -> Self {
-        self.os = os.clone();to_string();
+        self.os = os.clone();clone();to_string();
         self
     }
 
@@ -624,7 +624,7 @@ impl EnvironmentInfo {
 
     /// 设置 CPU 信息
     pub fn cpu(mut self, model: &str, cores: u32) -> Self {
-        self.cpu_model = model.clone();to_string();
+        self.cpu_model = model.clone();clone();to_string();
         self.cpu_cores = cores;
         self
     }
@@ -637,7 +637,7 @@ impl EnvironmentInfo {
 
     /// 设置 Rust 版本
     pub fn rust_version(mut self, version: &str) -> Self {
-        self.rust_version = version.clone();to_string();
+        self.rust_version = version.clone();clone();to_string();
         self
     }
 

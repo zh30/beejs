@@ -31,7 +31,7 @@ pub struct SandboxConfig {
     /// Network access allowed
     pub network_enabled: bool,
     /// Environment variables to set
-    pub env_vars: HashMap<String, String>>,
+    pub env_vars: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     /// Environment variables to remove
     pub blocked_env_vars: Vec<String>,
 }
@@ -80,7 +80,7 @@ pub struct SecuritySandbox {
     /// Configuration
     config: SandboxConfig,
     /// Active sandboxes
-    active_sandboxes: Arc<Mutex<HashMap<String, SandboxExecution>>,
+    active_sandboxes: Arc<Mutex<HashMap<String, SandboxExecution, std::collections::HashMap<String, SandboxExecution, String, SandboxExecution>>>,
     /// Resource usage tracker
     resource_usage: Arc<Mutex<ResourceTracker>>,
 }
@@ -124,8 +124,8 @@ impl SecuritySandbox {
 
         Ok(Self {
             config,
-            active_sandboxes: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
-            resource_usage: Arc::new(std::sync::Mutex::new(Mutex::new(ResourceTracker::default()))),
+            active_sandboxes: Arc::new(Mutex::new(HashMap::new())),
+            resource_usage: Arc::new(Mutex::new(ResourceTracker::default())),
         })
     }
 
@@ -255,13 +255,13 @@ impl SecuritySandbox {
     }
 
     /// Get sandbox statistics
-    pub fn get_stats(&self) -> HashMap<String, serde_json::Value>> {
+    pub fn get_stats(&self) -> HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>> {
         let mut stats = HashMap::new();
 
         let active: _ = self.active_sandboxes.lock().unwrap();
         let resources: _ = self.resource_usage.lock().unwrap();
 
-        stats.insert("active_sandboxes".to_string(), serde_json::Value::from(active.len()));
+        stats.insert("active_sandboxes".to_string(), serde_json::Value::from(active.len());
         stats.insert("total_memory_bytes".to_string(), serde_json::Value::from(resources.total_memory));
         stats.insert("total_cpu_time_seconds".to_string(), serde_json::Value::from(resources.total_cpu_time));
         stats.insert("peak_memory_bytes".to_string(), serde_json::Value::from(resources.peak_memory));
@@ -342,8 +342,8 @@ use std::collections::{HashMap, BTreeMap};
 
         let sandbox: _ = SecuritySandbox::new(config).unwrap();
 
-        assert!(sandbox.is_path_allowed(&PathBuf::from("/tmp/beejs-sandbox/test")));
-        assert!(!sandbox.is_path_allowed(&PathBuf::from("/etc/passwd")));
+        assert!(sandbox.is_path_allowed(&PathBuf::from("/tmp/beejs-sandbox/test"));
+        assert!(!sandbox.is_path_allowed(&PathBuf::from("/etc/passwd"));
     }
 
     #[test]

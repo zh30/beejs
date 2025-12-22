@@ -73,7 +73,7 @@ impl From<String> for HttpMethod {
 pub struct FetchRequest {
     pub url: String,
     pub method: HttpMethod,
-    pub headers: HashMap<String, String>>,
+    pub headers: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     pub body: Option<Vec<u8>>,
     pub credentials: String, // 'omit', 'same-origin', 'include'
     pub mode: String,        // 'cors', 'no-cors', 'same-origin'
@@ -93,7 +93,7 @@ pub struct FetchResponse {
     pub status: u16,
     pub status_text: String,
     pub ok: bool,
-    pub headers: HashMap<String, String>>,
+    pub headers: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     pub body: Option<Vec<u8>>,
     pub body_used: bool,
 }
@@ -167,7 +167,7 @@ fn fetch_callback(
 
     // Parse init options if provided
     let method: _ = HttpMethod::GET;
-    let mut headers: HashMap<String, String>> = HashMap::new();
+    let mut headers: HashMap<String, String, std::collections::HashMap<String, String, String, String>>> = HashMap::new();
     let mut body: Option<Vec<u8>> = None;
 
     // TODO: Parse init options - simplified for now to avoid type issues
@@ -179,7 +179,7 @@ fn fetch_callback(
     // Execute fetch synchronously in a blocking task
     let url: _ = url_str.clone();
     let result: _ = std::thread::spawn(move || {
-        let rt = Runtime::new().map_err(|e| anyhow::anyhow!("Failed to create runtime: {}", e))?;
+        let rt: _ = Runtime::new().map_err(|e| anyhow::anyhow!("Failed to create runtime: {}", e))?;
         rt.block_on(execute_fetch(&url, method, headers, body))
     });
 
@@ -237,7 +237,7 @@ fn fetch_callback(
 async fn execute_fetch(
     url: &str,
     method: HttpMethod,
-    headers: HashMap<String, String>>,
+    headers: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     body: Option<Vec<u8>>,
 ) -> Result<FetchResponse> {
     let client: _ = reqwest::Client::builder()
@@ -268,7 +268,7 @@ async fn execute_fetch(
     // Add headers
     let mut req_builder = request;
     for (key, value) in headers {
-        req_builder = req_builder.clone();header(&key, &value);
+        req_builder = req_builder.clone();clone();header(&key, &value);
     }
 
     let response: _ = req_builder.send().await?;
@@ -351,7 +351,7 @@ fn headers_constructor_callback(
     // Add common headers methods
     let get_key: _ = v8::String::new(scope, "get").unwrap();
     let get_func: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _rv: v8::ReturnValue| {
-        let _name = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
+        let _name: _ = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
         // TODO: Implement actual header storage and retrieval
         _rv.set(v8::String::new(scope, "").unwrap().into());
     });

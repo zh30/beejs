@@ -125,7 +125,7 @@ impl ZeroCopySender {
 
         Ok(Self {
             config,
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(ZeroCopySenderStats::default()))),
+            stats: Arc::new(Mutex::new(ZeroCopySenderStats::default())),
             sendfile: None,
             splice,
             current_pos: 0,

@@ -45,16 +45,16 @@ pub struct ProductivityReport {
 /// 贡献度跟踪器
 pub struct ContributionTracker {
     // 贡献数据存储
-    contribution_data: Arc<RwLock<HashMap<String, Vec<ContributionMetrics>>>,
+    contribution_data: Arc<RwLock<HashMap<String, Vec<ContributionMetrics, std::collections::HashMap<String, Vec<ContributionMetrics, String, Vec<ContributionMetrics>>>>,
     // 开发者档案
-    developer_profiles: Arc<RwLock<HashMap<String, Developer>>,
+    developer_profiles: Arc<RwLock<HashMap<String, Developer, std::collections::HashMap<String, Developer, String, Developer>>>,
 }
 
 impl ContributionTracker {
     pub fn new() -> Self {
         Self {
-            contribution_data: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            developer_profiles: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            contribution_data: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            developer_profiles: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 

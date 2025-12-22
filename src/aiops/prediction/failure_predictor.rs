@@ -280,7 +280,7 @@ impl MLFailurePredictor {
             let time_units: _ = remaining / slope.abs();
 
             // Assume each unit is 1 second (simplified)
-            Some(Duration::from_secs_f64(time_units.max(0.0)))
+            Some(Duration::from_secs_f64(time_units.max(0.0))
         } else {
             None
         }
@@ -415,7 +415,7 @@ impl FailurePredictor for MLFailurePredictor {
         let is_predicted: _ = risk_score > self.config.risk_threshold;
 
         let prediction: _ = if is_predicted {
-            let failure_type = self.determine_failure_type(metrics, &trend_result, anomaly_count);
+            let failure_type: _ = self.determine_failure_type(metrics, &trend_result, anomaly_count);
             let probability: _ = risk_score;
             let confidence: _ = self.determine_confidence(probability);
             let time_to_failure: _ = self.estimate_time_to_failure(&trend_result);

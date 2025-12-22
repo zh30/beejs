@@ -11,7 +11,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub struct SnapshotManager {
     config: SnapshotConfig,
     snapshots_dir: PathBuf,
-    snapshots_cache: HashMap<String, String>>,
+    snapshots_cache: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 impl SnapshotManager {
@@ -47,7 +47,7 @@ impl SnapshotManager {
 
         let path: _ = self.snapshot_path(name);
         if !path.exists() {
-            return Err(SnapshotError::FileNotFound(path.to_string_lossy().to_string()));
+            return Err(SnapshotError::FileNotFound(path.to_string_lossy().to_string());
         }
 
         let content: _ = fs::read_to_string(&path)?;
@@ -141,11 +141,11 @@ impl SnapshotManager {
             match (old_line, new_line) {
                 (Some(_), None) => {
                     removed_count += 1;
-                    diff.push_str(&format!("- {}\n", old_line.unwrap()));
+                    diff.push_str(&format!("- {}\n", old_line.unwrap());
                 }
                 (None, Some(_)) => {
                     added_count += 1;
-                    diff.push_str(&format!("+ {}\n", new_line.unwrap()));
+                    diff.push_str(&format!("+ {}\n", new_line.unwrap());
                 }
                 (Some(old_l), Some(new_l)) => {
                     if old_l != new_l {
@@ -199,7 +199,7 @@ impl SnapshotManager {
     }
 
     /// Update all snapshots
-    pub fn update_all_snapshots(&mut self, values: HashMap<String, &dyn std::fmt::Display>>) -> Result<(), SnapshotError> {
+    pub fn update_all_snapshots(&mut self, values: HashMap<String, &dyn std::fmt::Display, std::collections::HashMap<String, &dyn std::fmt::Display, String, &dyn std::fmt::Display>>>) -> Result<(), SnapshotError> {
         for (name, value) in values {
             let serialized: _ = self.config.serializer.serialize(value);
             self.save_snapshot(&name, &serialized)?;
@@ -212,7 +212,7 @@ impl SnapshotManager {
         let path: _ = self.snapshot_path(name);
 
         if !path.exists() {
-            return Err(SnapshotError::FileNotFound(path.to_string_lossy().to_string()));
+            return Err(SnapshotError::FileNotFound(path.to_string_lossy().to_string());
         }
 
         let metadata: _ = fs::metadata(&path)?;
@@ -330,7 +330,7 @@ use std::collections::{HashMap, BTreeMap};
 
         // Verify snapshots were created
         let snapshots: _ = manager.list_snapshots().unwrap();
-        assert!(snapshots.contains(&"test1".to_string()));
-        assert!(snapshots.contains(&"test2".to_string()));
+        assert!(snapshots.contains(&"test1".to_string());
+        assert!(snapshots.contains(&"test2".to_string());
     }
 }

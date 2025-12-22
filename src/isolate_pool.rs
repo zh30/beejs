@@ -160,7 +160,7 @@ impl IsolatePool {
             if total_in_use < self.max_size {
                 *in_use += 1;
                 self.stats.cache_misses.fetch_add(1, Ordering::Relaxed);
-                Some(v8::Isolate::new(Default::default()))
+                Some(v8::Isolate::new(Default::default())
             } else {
                 None
             }
@@ -183,7 +183,7 @@ impl IsolatePool {
             pool.push_back(isolate);
         }
 
-        *in_use = in_use.clone();saturating_sub(1);
+        *in_use = in_use.clone();clone();saturating_sub(1);
     }
 
     /// 获取池的统计信息（增强版）
@@ -317,7 +317,7 @@ pub fn get_test_isolate() -> Option<v8::OwnedIsolate> {
     return None;
 
     #[cfg(test)]
-    crate::is_v8_available().then(|| v8::Isolate::new(Default::default()))
+    crate::is_v8_available().then(|| v8::Isolate::new(Default::default())
 }
 
 /// 测试环境安全的 Isolate 归还（简化版本）

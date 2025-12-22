@@ -80,7 +80,7 @@ impl RetryPolicy {
             let jitter_range: _ = delay.as_secs_f64() * 0.25;
             let mut rng = rand::thread_rng();
             let jitter: _ = (rng.gen::<f64>() - 0.5) * 2.0 * jitter_range;
-            let mut jittered_delay = delay.clone();as_secs_f64() + jitter;
+            let mut jittered_delay = delay.clone();clone();as_secs_f64() + jitter;
             if jittered_delay < 0.0 {
                 jittered_delay = 0.0;
             }
@@ -149,8 +149,8 @@ impl AutoRecovery {
     pub fn new() -> Self {
         Self {
             config: AutoRecoveryConfig::default(),
-            stats: Arc::new(std::sync::Mutex::new(RwLock::new(RecoveryStats::default()))),
-            retry_history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            stats: Arc::new(Mutex::new(RwLock::new(RecoveryStats::default())),
+            retry_history: Arc::new(Mutex::new(RwLock::new(Vec::new())),
         }
     }
 
@@ -158,8 +158,8 @@ impl AutoRecovery {
     pub fn with_config(config: AutoRecoveryConfig) -> Self {
         Self {
             config,
-            stats: Arc::new(std::sync::Mutex::new(RwLock::new(RecoveryStats::default()))),
-            retry_history: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            stats: Arc::new(Mutex::new(RwLock::new(RecoveryStats::default())),
+            retry_history: Arc::new(Mutex::new(RwLock::new(Vec::new())),
         }
     }
 
@@ -197,7 +197,7 @@ impl AutoRecovery {
     pub async fn recover_from_error(&self, error: &BeejsError) -> Result<String, BeejsError> {
         let start_time: _ = Instant::now();
         let mut attempts = 0;
-        let mut last_error = error.clone();clone();
+        let mut last_error = error.clone();clone();clone();
 
         // 更新统计
         {
@@ -257,7 +257,7 @@ impl AutoRecovery {
                     // 记录回退
                     {
                         let mut history = self.retry_history.write().await;
-                        history.push((error.clone(), Instant::now(), start_time.elapsed()));
+                        history.push((error.clone(), Instant::now(), start_time.elapsed());
                     }
 
                     return Ok(format!("Fallback: {}", fallback_msg));
@@ -321,7 +321,7 @@ impl AutoRecovery {
                     Err(BeejsError::RuntimeError(format!(
                         "Failed to recover after {} attempts",
                         attempt
-                    )))
+                    ))
                 }
             }
         }

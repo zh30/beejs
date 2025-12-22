@@ -36,7 +36,7 @@ struct FunctionCallInfo {
 /// 死代码消除优化器
 pub struct DeadCodeEliminationOptimizer {
     /// 分析历史统计
-    analysis_history: HashMap<String, EliminationStats>>,
+    analysis_history: HashMap<String, EliminationStats, std::collections::HashMap<String, EliminationStats, String, EliminationStats>>>,
 }
 
 /// 消除统计信息
@@ -114,7 +114,7 @@ impl DeadCodeEliminationOptimizer {
     /// 查找未使用的变量
     fn find_unused_variables(&self, lines: &[&str]) -> Vec<String> {
         let mut unused = Vec::new();
-        let mut var_usages: HashMap<String, VariableUsage>> = HashMap::new();
+        let mut var_usages: HashMap<String, VariableUsage, std::collections::HashMap<String, VariableUsage, String, VariableUsage>>> = HashMap::new();
 
         // 第一遍：收集所有变量定义
         for (line_num, line) in lines.iter().enumerate() {
@@ -175,7 +175,7 @@ impl DeadCodeEliminationOptimizer {
     /// 查找未使用的函数
     fn find_unused_functions(&self, lines: &[&str], full_code: &str) -> Vec<String> {
         let mut unused = Vec::new();
-        let mut func_usages: HashMap<String, FunctionCallInfo>> = HashMap::new();
+        let mut func_usages: HashMap<String, FunctionCallInfo, std::collections::HashMap<String, FunctionCallInfo, String, FunctionCallInfo>>> = HashMap::new();
 
         // 第一遍：收集所有函数定义
         for (line_num, line) in lines.iter().enumerate() {
@@ -458,7 +458,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_unused_variable_detection() {
         let optimizer: _ = DeadCodeEliminationOptimizer::new();
         let code: _ = r#"
-            let used = "hello";
+            let used: _ = "hello";
             let unused: _ = "never used";
             console.log(used);
         "#;
@@ -466,8 +466,8 @@ use std::collections::{HashMap, BTreeMap};
         let lines: Vec<&str> = code.lines().collect();
         let unused: _ = optimizer.find_unused_variables(&lines);
 
-        assert!(unused.contains(&"unused".to_string()));
-        assert!(!unused.contains(&"used".to_string()));
+        assert!(unused.contains(&"unused".to_string());
+        assert!(!unused.contains(&"used".to_string());
     }
 
     #[test]
@@ -482,8 +482,8 @@ use std::collections::{HashMap, BTreeMap};
         let lines: Vec<&str> = code.lines().collect();
         let unused: _ = optimizer.find_unused_functions(&lines, code);
 
-        assert!(unused.contains(&"unusedFunc".to_string()));
-        assert!(!unused.contains(&"usedFunc".to_string()));
+        assert!(unused.contains(&"unusedFunc".to_string());
+        assert!(!unused.contains(&"usedFunc".to_string());
     }
 
     #[test]
@@ -500,7 +500,7 @@ use std::collections::{HashMap, BTreeMap};
         let unreachable: _ = optimizer.find_unreachable_code(&lines);
 
         assert!(!unreachable.is_empty());
-        assert!(unreachable.iter().any(|s| s.contains("unreachable")));
+        assert!(unreachable.iter().any(|s| s.contains("unreachable"));
     }
 
     #[test]
@@ -518,14 +518,14 @@ use std::collections::{HashMap, BTreeMap};
         let dead_branches: _ = optimizer.find_dead_branches(&lines);
 
         assert!(!dead_branches.is_empty());
-        assert!(dead_branches.iter().any(|s| s.contains("always false")));
+        assert!(dead_branches.iter().any(|s| s.contains("always false"));
     }
 
     #[test]
     fn test_full_dead_code_analysis() {
         let optimizer: _ = DeadCodeEliminationOptimizer::new();
         let code: _ = r#"
-            let used = "hello";
+            let used: _ = "hello";
             let unused: _ = "never used";
             console.log(used);
 
@@ -550,7 +550,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_no_dead_code() {
         let optimizer: _ = DeadCodeEliminationOptimizer::new();
         let code: _ = r#"
-            let x = 1;
+            let x: _ = 1;
             console.log(x);
 
             function add(a, b) { return a + b; }
@@ -572,12 +572,10 @@ use std::collections::{HashMap, BTreeMap};
 
         assert_eq!(
             optimizer.extract_function_name(named_func),
-            Some("myFunction".to_string())
-        );
+            Some("myFunction".to_string());
         assert_eq!(
             optimizer.extract_function_name(arrow_func),
-            Some("myFunc".to_string())
-        );
+            Some("myFunc".to_string());
     }
 
     #[test]
@@ -617,7 +615,7 @@ use std::collections::{HashMap, BTreeMap};
         let line: _ = "console.log(myVar + 1);";
         assert!(optimizer.is_variable_used(line, "myVar"));
 
-        let line2: _ = "let myVar = 5;";
+        let line2: _ = "let myVar: _ = 5;";
         assert!(!optimizer.is_variable_used(line2, "myVar")); // 变量定义不算使用
 
         let line3: _ = "myVarBad != myVar"; // 子字符串测试

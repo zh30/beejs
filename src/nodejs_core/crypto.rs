@@ -121,7 +121,7 @@ fn hash_digest_callback(
     let algo_key: _ = v8::String::new(scope, "_algorithm").unwrap();
     let algorithm: _ = this
         .get(scope, algo_key.into())
-        .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+        .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
     // 获取数据
@@ -140,7 +140,7 @@ fn hash_digest_callback(
     // 计算哈希
     let digest_result: _ = match algorithm.as_str() {
         "sha256" => {
-            let digest = digest::digest(&digest::SHA256, combined_data.as_bytes());
+            let digest: _ = digest::digest(&digest::SHA256, combined_data.as_bytes());
             match encoding.as_str() {
                 "hex" => hex::encode(digest.as_ref()),
                 "base64" => base64::encode(digest.as_ref()),
@@ -151,10 +151,10 @@ fn hash_digest_callback(
         "sha1" => {
             // 简化实现
             match encoding.as_str() {
-                "hex" => format!("{:x}", md5::compute(combined_data.as_bytes())),
+                "hex" => format!("{:x}", md5::compute(combined_data.as_bytes()),
                 "base64" => base64::encode(&md5::compute(combined_data.as_bytes()).0),
                 "latin1" => String::from_utf8_lossy(&md5::compute(combined_data.as_bytes()).0).to_string(),
-                _ => format!("{:x}", md5::compute(combined_data.as_bytes())),
+                _ => format!("{:x}", md5::compute(combined_data.as_bytes()),
             }
         }
         "md5" => {
@@ -264,13 +264,13 @@ fn hmac_digest_callback(
     let algo_key: _ = v8::String::new(scope, "_algorithm").unwrap();
     let algorithm: _ = this
         .get(scope, algo_key.into())
-        .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+        .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
     let key_key: _ = v8::String::new(scope, "_key").unwrap();
     let key: _ = this
         .get(scope, key_key.into())
-        .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+        .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
     let data_key: _ = v8::String::new(scope, "_data").unwrap();
@@ -288,7 +288,7 @@ fn hmac_digest_callback(
 
     let digest_result: _ = match (algorithm.as_str(), key.as_bytes()) {
         ("sha256", key_bytes) => {
-            let signing_key = hmac::Key::new(hmac::HMAC_SHA256, key_bytes);
+            let signing_key: _ = hmac::Key::new(hmac::HMAC_SHA256, key_bytes);
             let hmac: _ = hmac::sign(&signing_key, combined_data.as_bytes());
             match encoding.as_str() {
                 "hex" => hex::encode(hmac.as_ref()),

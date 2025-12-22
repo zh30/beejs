@@ -377,17 +377,17 @@ impl Stage93AdaptiveGC {
         Self {
             base,
             config,
-            predictor: Arc::new(std::sync::Mutex::new(RwLock::new(GCPredictor::new(config.prediction_window)))),
-            incremental_scheduler: Arc::new(std::sync::Mutex::new(Mutex::new(IncrementalGCS::new()))),
-            gc_profiler: Arc::new(std::sync::Mutex::new(RwLock::new(GCProfiler::default()))),
-            stats: Arc::new(std::sync::Mutex::new(Stage93GCStats::default())),
+            predictor: Arc::new(Mutex::new(RwLock::new(GCPredictor::new(config.prediction_window))),
+            incremental_scheduler: Arc::new(Mutex::new(IncrementalGCS::new())),
+            gc_profiler: Arc::new(Mutex::new(RwLock::new(GCProfiler::default())),
+            stats: Arc::new(Mutex::new(Stage93GCStats::default()),
         }
     }
 
     /// 执行预测性 GC
     pub async fn predictive_gc(&self) -> Result<()> {
         let prediction: _ = {
-            let predictor = self.predictor.read().await;
+            let predictor: _ = self.predictor.read().await;
             predictor.predict_next_gc()
         };
 

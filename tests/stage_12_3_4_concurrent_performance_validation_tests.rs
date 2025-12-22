@@ -37,7 +37,7 @@ mod tests {
         // Create pool with default config
         let mut config = ConcurrentConfig::default();
         config.enable_prewarm = false; // Avoid V8 issues in tests
-        let pool: _ = Arc::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config)));
+        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config))));
 
         // Submit 15,000 concurrent tasks
         let mut handles = Vec::with_capacity(concurrent_scripts);
@@ -47,7 +47,7 @@ mod tests {
 
             let handle: _ = task::spawn(async move {
                 if let Some(runtime) = pool_clone.get_runtime() {
-                    let result = runtime.execute_code(&script);
+                    let result: _ = runtime.execute_code(&script);
                     pool_clone.return_runtime(runtime);
                     result.is_ok()
                 } else {
@@ -91,7 +91,7 @@ mod tests {
         let tasks_per_type: _ = 500;
         let mut config = ConcurrentConfig::default();
         config.enable_prewarm = false;
-        let pool: _ = Arc::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config)));
+        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config))));
 
         let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
@@ -104,7 +104,7 @@ mod tests {
             let pool_clone: _ = Arc::clone(pool);
             let handle: _ = task::spawn(async move {
                 if let Some(runtime) = pool_clone.get_runtime() {
-                    let result = runtime.execute_code(&script);
+                    let result: _ = runtime.execute_code(&script);
                     pool_clone.return_runtime(runtime);
                     result.is_ok()
                 } else {
@@ -117,7 +117,7 @@ mod tests {
         // Medium tasks (100-500 chars, with loops)
         for i in 0..tasks_per_type {
             let script: _ = format!(r#"
-                let sum = 0;
+                let sum: _ = 0;
                 for (let j: _ = 0; j < 10; j++) {{
                     sum += {} + j;
                 }}
@@ -126,7 +126,7 @@ mod tests {
             let pool_clone: _ = Arc::clone(pool);
             let handle: _ = task::spawn(async move {
                 if let Some(runtime) = pool_clone.get_runtime() {
-                    let result = runtime.execute_code(&script);
+                    let result: _ = runtime.execute_code(&script);
                     pool_clone.return_runtime(runtime);
                     result.is_ok()
                 } else {
@@ -152,7 +152,7 @@ mod tests {
             let pool_clone: _ = Arc::clone(pool);
             let handle: _ = task::spawn(async move {
                 if let Some(runtime) = pool_clone.get_runtime() {
-                    let result = runtime.execute_code(&script);
+                    let result: _ = runtime.execute_code(&script);
                     pool_clone.return_runtime(runtime);
                     result.is_ok()
                 } else {
@@ -194,7 +194,7 @@ mod tests {
         let tasks_per_worker: _ = 200;
         let mut config = ConcurrentConfig::default();
         config.enable_prewarm = false;
-        let pool: _ = Arc::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config)));
+        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config))));
 
         let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
@@ -209,11 +209,11 @@ mod tests {
             };
 
             for i in 0..task_count {
-                let script: _ = format!("let sum = 0; for (let j: _ = 0; j < 10; j++) {{ sum += {} * j; }} sum;", i);
+                let script: _ = format!("let sum: _ = 0; for (let j: _ = 0; j < 10; j++) {{ sum += {} * j; }} sum;", i);
                 let pool_clone: _ = Arc::clone(pool);
                 let _: _ = task::spawn(async move {
                     if let Some(runtime) = pool_clone.get_runtime() {
-                        let _ = runtime.execute_code(&script);
+                        let _: _ = runtime.execute_code(&script);
                         pool_clone.return_runtime(runtime);
                     }
                 });
@@ -242,7 +242,7 @@ mod tests {
         let operations_per_region: _ = 20; // Reduced for testing
         let mut config = ConcurrentConfig::default();
         config.enable_prewarm = false;
-        let pool: _ = Arc::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config)));
+        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config))));
 
         // Submit tasks that simulate shared memory access
         let mut handles = Vec::new();
@@ -262,7 +262,7 @@ mod tests {
                 let pool_clone: _ = Arc::clone(pool);
                 let handle: _ = task::spawn(async move {
                     if let Some(runtime) = pool_clone.get_runtime() {
-                        let result = runtime.execute_code(&script);
+                        let result: _ = runtime.execute_code(&script);
                         pool_clone.return_runtime(runtime);
                         result.is_ok()
                     } else {
@@ -298,7 +298,7 @@ mod tests {
         use beejs::string_interner::GlobalInterner;
 
         // Test string interning
-        let interner: _ = Arc::new(std::sync::Mutex::new(GlobalInterner::new()));
+        let interner: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(GlobalInterner::new())));
 
         // Pre-populate cache with common objects
         for i in 0..100 {
@@ -314,7 +314,7 @@ mod tests {
             let handle: _ = task::spawn(async move {
                 // Access common strings
                 for j in 0..10 {
-                    let value = format!("common_string_{}", j % 100);
+                    let value: _ = format!("common_string_{}", j % 100);
                     let _: _ = interner_clone.intern(&value);
                 }
                 // Add some new strings
@@ -346,17 +346,17 @@ mod tests {
         let total_tasks: _ = 5000;
         let mut config = ConcurrentConfig::default();
         config.enable_prewarm = false;
-        let pool: _ = Arc::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config)));
+        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config))));
 
         let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // Submit tasks with varying priorities
         for i in 0..total_tasks {
-            let script: _ = format!("let result = 0; for (let j: _ = 0; j < 5; j++) {{ result += {} * j; }} result;", i);
+            let script: _ = format!("let result: _ = 0; for (let j: _ = 0; j < 5; j++) {{ result += {} * j; }} result;", i);
             let pool_clone: _ = Arc::clone(pool);
             let _: _ = task::spawn(async move {
                 if let Some(runtime) = pool_clone.get_runtime() {
-                    let _ = runtime.execute_code(&script);
+                    let _: _ = runtime.execute_code(&script);
                     pool_clone.return_runtime(runtime);
                 }
             });
@@ -389,7 +389,7 @@ mod tests {
         for iteration in 0..test_iterations {
             let mut config = ConcurrentConfig::default();
             config.enable_prewarm = false;
-            let pool: _ = Arc::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config)));
+            let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config))));
             let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
             // Submit tasks
@@ -399,7 +399,7 @@ mod tests {
                 let pool_clone: _ = Arc::clone(pool);
                 let handle: _ = task::spawn(async move {
                     if let Some(runtime) = pool_clone.get_runtime() {
-                        let result = runtime.execute_code(&script);
+                        let result: _ = runtime.execute_code(&script);
                         pool_clone.return_runtime(runtime);
                         result.is_ok()
                     } else {
@@ -457,7 +457,7 @@ use std::collections::{HashMap, BTreeMap};
         let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let mut config = ConcurrentConfig::default();
         config.enable_prewarm = false;
-        let pool: _ = Arc::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config)));
+        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config))));
 
         let mut handles = Vec::new();
         for i in 0..10000 {
@@ -481,7 +481,7 @@ use std::collections::{HashMap, BTreeMap};
             let pool_clone: _ = Arc::clone(pool);
             let handle: _ = task::spawn(async move {
                 if let Some(runtime) = pool_clone.get_runtime() {
-                    let result = runtime.execute_code(&script);
+                    let result: _ = runtime.execute_code(&script);
                     pool_clone.return_runtime(runtime);
                     result.is_ok()
                 } else {
@@ -511,7 +511,7 @@ use std::collections::{HashMap, BTreeMap};
         let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let mut config2 = ConcurrentConfig::default();
         config2.enable_prewarm = false;
-        let pool2: _ = Arc::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config2)));
+        let pool2: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config2))));
 
         let mut handles2 = Vec::new();
         for i in 0..5000 {
@@ -524,7 +524,7 @@ use std::collections::{HashMap, BTreeMap};
             let pool_clone: _ = Arc::clone(pool2);
             let handle: _ = task::spawn(async move {
                 if let Some(runtime) = pool_clone.get_runtime() {
-                    let result = runtime.execute_code(&script);
+                    let result: _ = runtime.execute_code(&script);
                     pool_clone.return_runtime(runtime);
                     result.is_ok()
                 } else {
@@ -553,7 +553,7 @@ use std::collections::{HashMap, BTreeMap};
         let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let mut config3 = ConcurrentConfig::default();
         config3.enable_prewarm = false;
-        let pool3: _ = Arc::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config3)));
+        let pool3: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config3))));
 
         let mut handles3 = Vec::new();
         for i in 0..2000 {
@@ -567,7 +567,7 @@ use std::collections::{HashMap, BTreeMap};
             let pool_clone: _ = Arc::clone(pool3);
             let handle: _ = task::spawn(async move {
                 if let Some(runtime) = pool_clone.get_runtime() {
-                    let result = runtime.execute_code(&script);
+                    let result: _ = runtime.execute_code(&script);
                     pool_clone.return_runtime(runtime);
                     result.is_ok()
                 } else {

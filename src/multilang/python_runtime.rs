@@ -55,8 +55,8 @@ impl PythonGIL {
 impl PythonRuntime {
     /// Create a new Python runtime
     pub fn new(bee_api: Arc<BeeAPI>) -> Result<Self> {
-        let gil: _ = Arc::new(std::sync::Mutex::new(PythonGIL::new())?);
-        let context_pool: _ = Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new())));
+        let gil: _ = Arc::new(Mutex::new(PythonGIL::new())?);
+        let context_pool: _ = Arc::new(Mutex::new(RwLock::new(Vec::new()));
 
         Ok(PythonRuntime {
             gil,
@@ -91,7 +91,7 @@ impl PythonRuntime {
         let context: _ = self.get_context().await?;
 
         let result: _ = Python::with_gil(|py| {
-            let result = py.run(code, Some(context.globals.clone()), Some(context.locals.clone()));
+            let result: _ = py.run(code, Some(context.globals.clone()), Some(context.locals.clone());
 
             match result {
                 Ok(_) => {
@@ -135,7 +135,7 @@ impl PythonRuntime {
 
         let result: _ = Python::with_gil(|py| {
             // Inject Bee API into the global scope
-            let bee_module = PyModule::create(py, "bee_runtime")?;
+            let bee_module: _ = PyModule::create(py, "bee_runtime")?;
             bee_module.add_function(wrap_pyfunction!(bee_get_variable, bee_module)?)?;
             bee_module.add_function(wrap_pyfunction!(bee_set_variable, bee_module)?)?;
             bee_module.add_function(wrap_pyfunction!(bee_execute, bee_module)?)?;
@@ -144,7 +144,7 @@ impl PythonRuntime {
             context.globals.set_item(py, "bee", bee_api_obj)?;
 
             // Execute the user code
-            let result: _ = py.run(code, Some(context.globals.clone()), Some(context.locals.clone()));
+            let result: _ = py.run(code, Some(context.globals.clone()), Some(context.locals.clone());
 
             match result {
                 Ok(_) => {
@@ -195,7 +195,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_python_basic_execution() {
-        let bee_api: _ = Arc::new(std::sync::Mutex::new(BeeAPI {
+        let bee_api: _ = Arc::new(Mutex::new(BeeAPI {
             runtime: Arc::new(MockBeeRuntime)),
         });
 
@@ -211,7 +211,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_python_function_call() {
-        let bee_api: _ = Arc::new(std::sync::Mutex::new(BeeAPI {
+        let bee_api: _ = Arc::new(Mutex::new(BeeAPI {
             runtime: Arc::new(MockBeeRuntime)),
         });
 
@@ -229,7 +229,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_python_bee_api() {
-        let bee_api: _ = Arc::new(std::sync::Mutex::new(BeeAPI {
+        let bee_api: _ = Arc::new(Mutex::new(BeeAPI {
             runtime: Arc::new(MockBeeRuntime)),
         });
 

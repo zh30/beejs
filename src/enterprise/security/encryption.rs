@@ -45,7 +45,7 @@ pub struct CryptographicKey {
     pub created_at: std::time::SystemTime,
     pub expires_at: Option<std::time::SystemTime>,
     pub state: KeyState,
-    pub metadata: HashMap<String, String>>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 /// Encryption configuration
@@ -60,7 +60,7 @@ pub struct EncryptionConfig {
 /// Key management service
 #[derive(Debug)]
 pub struct KeyManagementService {
-    keys: Arc<RwLock<HashMap<String, CryptographicKey>>,
+    keys: Arc<RwLock<HashMap<String, CryptographicKey, std::collections::HashMap<String, CryptographicKey, String, CryptographicKey>>>,
     config: EncryptionConfig,
 }
 
@@ -89,7 +89,7 @@ impl KeyManagementService {
     pub fn new(config: EncryptionConfig) -> Self {
         info!("Initializing Key Management Service");
         Self {
-            keys: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            keys: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
             config,
         }
     }
@@ -289,7 +289,7 @@ impl KeyManagementService {
         if let Some(key) = keys.get_mut(key_id) {
             key.state = KeyState::Revoked;
             key.metadata.insert("revocation_reason".to_string(), reason.to_string());
-            key.metadata.insert("revoked_at".to_string(), format!("{:?}", std::time::SystemTime::now()));
+            key.metadata.insert("revoked_at".to_string(), format!("{:?}", std::time::SystemTime::now());
 
             warn!("Revoked key: {} (reason: {})", key_id, reason);
 
@@ -312,11 +312,11 @@ impl KeyManagementService {
     }
 
     /// Get key statistics
-    pub async fn get_key_stats(&self) -> HashMap<String, serde_json::Value>> {
+    pub async fn get_key_stats(&self) -> HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>> {
         let keys: _ = self.keys.read().await;
         let mut stats = HashMap::new();
 
-        stats.insert("total_keys".to_string(), serde_json::Value::from(keys.len()));
+        stats.insert("total_keys".to_string(), serde_json::Value::from(keys.len());
 
         // Count keys by state
         let mut state_counts = HashMap::new();

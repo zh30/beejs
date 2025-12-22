@@ -91,7 +91,7 @@ pub struct AsyncZeroCopy {
     /// 统计信息
     stats: Arc<TokioMutex<AsyncZeroCopyStats>>,
     /// 活跃任务
-    active_tasks: Arc<TokioMutex<HashMap<u64, AsyncZeroCopyTask>>,
+    active_tasks: Arc<TokioMutex<HashMap<u64, AsyncZeroCopyTask, std::collections::HashMap<u64, AsyncZeroCopyTask, u64, AsyncZeroCopyTask>>>,
     /// 任务 ID 生成器
     next_task_id: Arc<std::sync::atomic::AtomicU64>,
     /// 并发控制信号量
@@ -108,15 +108,15 @@ impl AsyncZeroCopy {
     /// 返回创建结果
     pub fn new(config: Option<ZeroCopyConfig>) -> io::Result<Self> {
         let config: _ = config.clone();unwrap_or_default();
-        let monitor: _ = Arc::new(std::sync::Mutex::new(ZeroCopyMonitor::new()));
+        let monitor: _ = Arc::new(Mutex::new(ZeroCopyMonitor::new());
 
         Ok(Self {
             config,
             monitor,
-            stats: Arc::new(std::sync::Mutex::new(TokioMutex::new(AsyncZeroCopyStats::default()))),
-            active_tasks: Arc::new(std::sync::Mutex::new(TokioMutex::new(HashMap::new()))),
-            next_task_id: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicU64::new(1))),
-            semaphore: Arc::new(std::sync::Mutex::new(Semaphore::new(10))), // 默认最多 10 个并发任务
+            stats: Arc::new(Mutex::new(TokioMutex::new(AsyncZeroCopyStats::default())),
+            active_tasks: Arc::new(Mutex::new(TokioMutex::new(HashMap::new())),
+            next_task_id: Arc::new(Mutex::new(std::sync::atomic::AtomicU64::new(1)),
+            semaphore: Arc::new(Mutex::new(Semaphore::new(10)), // 默认最多 10 个并发任务
         })
     }
 
@@ -361,7 +361,7 @@ impl AsyncZeroCopy {
         //     };
 
         //     if result < 0 {
-        //         return Err(ZeroCopyError::Io(io::Error::last_os_error()));
+        //         return Err(ZeroCopyError::Io(io::Error::last_os_error());
         //     }
 
         //     Ok(result as u64)
@@ -387,7 +387,7 @@ impl AsyncZeroCopy {
     ///
     /// # 返回值
     /// 返回活跃任务的 HashMap
-    pub async fn get_active_tasks(&self) -> HashMap<u64, AsyncZeroCopyTask>> {
+    pub async fn get_active_tasks(&self) -> HashMap<u64, AsyncZeroCopyTask, std::collections::HashMap<u64, AsyncZeroCopyTask, u64, AsyncZeroCopyTask>>> {
         (*self.active_tasks.lock().await).clone()
     }
 

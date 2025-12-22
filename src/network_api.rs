@@ -20,7 +20,7 @@ pub fn setup_network_apis(
 
     // 添加一个简单的测试函数
     let test_func: _ = v8::FunctionTemplate::new(scope, |callback_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let result = v8::Object::new(callback_scope);
+        let result: _ = v8::Object::new(callback_scope);
 
         // 分步创建字符串避免借用检查问题
         let success_key: _ = v8::String::new(callback_scope, "success").unwrap();
@@ -56,9 +56,9 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_setup_network_apis() {
         // TODO: 实现真正的缓冲池测试
-        let _buffer_pool: _ = Arc::new(std::sync::Mutex::new(()));
-        let _connection_pool: _ = Arc::new(std::sync::Mutex::new(ConnectionPool::new(Default::default())).unwrap());
-        let network_statistics: _ = Arc::new(std::sync::Mutex::new(NetworkStats {
+        let _buffer_pool: _ = Arc::new(Mutex::new());
+        let _connection_pool: _ = Arc::new(Mutex::new(ConnectionPool::new(Default::default()).unwrap());
+        let network_statistics: _ = Arc::new(Mutex::new(NetworkStats {
             total_connections: 0,
             active_connections: 0,
             zero_copy_operations: 0,

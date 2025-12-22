@@ -170,7 +170,7 @@ impl SnapshotRenderer {
         let matched: _ = comparisons.iter().filter(|c| c.matches).count();
         let mismatched: _ = comparisons.len() - matched;
 
-        result.push_str(&format!("Total: {} snapshots\n", comparisons.len()));
+        result.push_str(&format!("Total: {} snapshots\n", comparisons.len());
         result.push_str(&format!("Matched: {}\n", matched));
         result.push_str(&format!("Mismatched: {}\n", mismatched));
 

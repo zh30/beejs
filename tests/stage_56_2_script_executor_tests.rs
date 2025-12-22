@@ -136,7 +136,7 @@ mod execution_context {
         /// Command line arguments (process.argv)
         pub argv: Vec<String>,
         /// Environment variables
-        pub env: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+        pub env: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>,
     }
 
     impl ExecutionContext {
@@ -259,7 +259,7 @@ mod module_resolution {
             while current.parent().is_some() {
                 let nm_path: _ = current.join("node_modules");
                 search_paths.push(nm_path);
-                current = current.clone();parent().unwrap().to_path_buf();
+                current = current.clone();clone();parent().unwrap().to_path_buf();
             }
 
             Self {
@@ -606,7 +606,7 @@ use std::collections::{HashMap, BTreeMap};
         }
 
         /// Build process.env object
-        pub fn build_process_env(&self, ctx: &ExecutionContext) -> HashMap<String, String, std::collections::HashMap<String, String, String, String>> {
+        pub fn build_process_env(&self, ctx: &ExecutionContext) -> HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>> {
             ctx.env.clone()
         }
 

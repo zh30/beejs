@@ -52,7 +52,7 @@ pub struct LoopUnrollingOptimizer {
     /// 最小循环次数才展开
     min_iterations: usize,
     /// 分析历史统计
-    analysis_history: HashMap<String, UnrollingStats>>,
+    analysis_history: HashMap<String, UnrollingStats, std::collections::HashMap<String, UnrollingStats, String, UnrollingStats>>>,
 }
 
 /// 展开统计信息
@@ -268,7 +268,7 @@ impl LoopUnrollingOptimizer {
 
     /// 解析 for 循环初始化部分
     fn parse_for_init(&self, init: &str) -> (String, LoopBounds) {
-        // 格式: let i: _ = 0 或 let i = start
+        // 格式: let i: _ = 0 或 let i: _ = start
         let mut variable = "i".to_string();
         let mut start_value = Some(0i64);
         let mut is_constant = true;
@@ -471,7 +471,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_simple_for_loop_analysis() {
         let optimizer: _ = LoopUnrollingOptimizer::new();
         let code: _ = r#"
-            for (let i = 0; i < 10; i++) {
+            for (let i: _ = 0; i < 10; i++) {
                 console.log(i);
             }
         "#;
@@ -488,7 +488,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_for_loop_bounds_extraction() {
         let optimizer: _ = LoopUnrollingOptimizer::new();
         let code: _ = r#"
-            for (let i = 1; i < 100; i++) {
+            for (let i: _ = 1; i < 100; i++) {
                 sum += i;
             }
         "#;
@@ -520,7 +520,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_nested_loop_analysis() {
         let optimizer: _ = LoopUnrollingOptimizer::new();
         let code: _ = r#"
-            for (let i = 0; i < 10; i++) {
+            for (let i: _ = 0; i < 10; i++) {
                 for (let j: _ = 0; j < 10; j++) {
                     sum += i * j;
                 }
@@ -538,7 +538,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_unrolling_decision_simple_loop() {
         let optimizer: _ = LoopUnrollingOptimizer::new();
         let code: _ = r#"
-            for (let i = 0; i < 10; i++) {
+            for (let i: _ = 0; i < 10; i++) {
                 console.log(i);
             }
         "#;
@@ -556,7 +556,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_unrolling_decision_small_loop() {
         let optimizer: _ = LoopUnrollingOptimizer::new();
         let code: _ = r#"
-            for (let i = 0; i < 2; i++) {
+            for (let i: _ = 0; i < 2; i++) {
                 console.log(i);
             }
         "#;
@@ -624,7 +624,7 @@ use std::collections::{HashMap, BTreeMap};
                 is_constant: true,
             },
             body: vec![
-                "for (let j = 0; j < 10; j++)".to_string(),
+                "for (let j: _ = 0; j < 10; j++)".to_string(),
                 "sum += i * j;".to_string(),
             ],
         };
@@ -679,7 +679,7 @@ use std::collections::{HashMap, BTreeMap};
         let optimizer: _ = LoopUnrollingOptimizer::with_params(2, 8, 10);
 
         let code: _ = r#"
-            for (let i = 0; i < 20; i++) {
+            for (let i: _ = 0; i < 20; i++) {
                 console.log(i);
             }
         "#;

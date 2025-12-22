@@ -145,12 +145,12 @@ impl AiBatchProcessor {
         let max_concurrent_batches: _ = config.max_concurrent_batches;
         Self {
             config,
-            pending_tasks: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
-            active_batches: Arc::new(std::sync::Mutex::new(Mutex::new(0))),
-            batch_semaphore: Arc::new(std::sync::Mutex::new(Semaphore::new(max_concurrent_batches))),
-            next_task_id: Arc::new(std::sync::Mutex::new(Mutex::new(0))),
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(BatchStats::default()))),
-            results: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            pending_tasks: Arc::new(Mutex::new(VecDeque::new())),
+            active_batches: Arc::new(Mutex::new(0)),
+            batch_semaphore: Arc::new(Mutex::new(Semaphore::new(max_concurrent_batches)),
+            next_task_id: Arc::new(Mutex::new(0)),
+            stats: Arc::new(Mutex::new(BatchStats::default())),
+            results: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -217,7 +217,7 @@ impl AiBatchProcessor {
 
             // 将批次结果添加到全局结果集合
             {
-                let mut all_results = results.clone();lock().unwrap();
+                let mut all_results = results.clone();clone();lock().unwrap();
                 all_results.extend(batch_results);
             }
 
@@ -392,7 +392,7 @@ impl AiBatchProcessor {
 
         // 收集所有结果
         let all_results: _ = {
-            let results = self.results.lock().unwrap();
+            let results: _ = self.results.lock().unwrap();
             results.clone()
         };
 
@@ -424,14 +424,14 @@ impl AiBatchProcessor {
 
             // 异步处理批次
             let handle: _ = tokio::spawn(async move {
-                let _permit = permit;
+                let _permit: _ = permit;
                 *active_batches.lock().unwrap() += 1;
 
                 let batch_results: _ = Self::run_batch(pending_tasks, stats, config).await;
 
                 // 将批次结果添加到全局结果集合
                 {
-                    let mut all_results = results.clone();lock().unwrap();
+                    let mut all_results = results.clone();clone();lock().unwrap();
                     all_results.extend(batch_results);
                 }
 

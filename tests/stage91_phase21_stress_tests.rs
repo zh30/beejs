@@ -40,7 +40,7 @@ impl StressTestRunner {
                     let code: _ = format!(
                         r#"
                         // 压力测试任务 {}
-                        let sum = 0;
+                        let sum: _ = 0;
                         for (let i: _ = 0; i < 1000; i++) {{
                             sum += Math.sqrt(i) * Math.random();
                         }}
@@ -256,7 +256,7 @@ async fn test_long_running_stability() -> Result<(), Box<dyn std::error::Error>>
     while start.elapsed() < Duration::from_secs(60) {
         let code: _ = r#"
             // 综合压力测试
-            let result = 0;
+            let result: _ = 0;
             for (let i: _ = 0; i < 10000; i++) {
                 result += Math.sqrt(i) + Math.log(i + 1);
             }
@@ -319,7 +319,7 @@ async fn test_peak_load_handling() -> Result<(), Box<dyn std::error::Error>> {
         let mut handles = Vec::new();
         for _ in 0..200 {
             let handle: _ = tokio::spawn(async {
-                let code = r#"
+                let code: _ = r#"
                     // 计算密集型任务
                     let sum = 0;
                     for (let i: _ = 0; i < 10000; i++) {
@@ -421,7 +421,7 @@ async fn test_error_recovery_under_stress() -> Result<(), Box<dyn std::error::Er
         // 执行可能出错的操作
         let code: _ = r#"
             // 故意触发一些错误
-            let result = 0;
+            let result: _ = 0;
             for (let i: _ = 0; i < 100; i++) {
                 try {
                     if (Math.random() > 0.9) {

@@ -78,7 +78,7 @@ impl TorchEngine {
         let device: _ = Self::detect_device(&options.engine_type)?;
 
         // 初始化统计信息
-        let stats: _ = Arc::new(std::sync::Mutex::new(RwLock::new(EngineStats {
+        let stats: _ = Arc::new(Mutex::new(RwLock::new(EngineStats {
             engine_name: "PyTorch-TorchScript".to_string()),
             total_inferences: 0,
             successful_inferences: 0,
@@ -365,7 +365,7 @@ impl InferenceEngine for TorchEngine {
     fn clone_engine(&self) -> Box<dyn InferenceEngine> {
         Box::new(TorchEngine {
             engine_type: self.engine_type.clone(),
-            stats: Arc::new(std::sync::Mutex::new(RwLock::new(EngineStats {
+            stats: Arc::new(Mutex::new(RwLock::new(EngineStats {
                 engine_name: "PyTorch-TorchScript".to_string()),
                 total_inferences: 0,
                 successful_inferences: 0,

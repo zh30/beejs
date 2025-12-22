@@ -51,7 +51,7 @@ impl WasmSimdOptimizer {
         let optimizer: _ = Self {
             simd_enabled,
             vector_width,
-            optimizations_applied: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new()))),
+            optimizations_applied: Arc::new(Mutex::new(std::sync::Mutex::new(Vec::new())),
         };
 
         if simd_enabled {

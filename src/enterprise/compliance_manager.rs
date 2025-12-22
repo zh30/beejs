@@ -55,7 +55,7 @@ pub enum ComplianceSeverity {
 /// Compliance frameworks manager
 #[derive(Debug)]
 pub struct ComplianceFrameworks {
-    frameworks: Arc<RwLock<HashMap<String, ComplianceFrameworkConfig>>,
+    frameworks: Arc<RwLock<HashMap<String, ComplianceFrameworkConfig, std::collections::HashMap<String, ComplianceFrameworkConfig, String, ComplianceFrameworkConfig>>>,
 }
 
 /// Framework configuration
@@ -70,7 +70,7 @@ struct ComplianceFrameworkConfig {
 /// Policy engine for compliance rules
 #[derive(Debug)]
 pub struct PolicyEngine {
-    policies: Arc<RwLock<HashMap<String, CompliancePolicy>>,
+    policies: Arc<RwLock<HashMap<String, CompliancePolicy, std::collections::HashMap<String, CompliancePolicy, String, CompliancePolicy>>>,
 }
 
 /// Compliance policy
@@ -144,7 +144,7 @@ pub struct ComplianceManager {
 /// Compliance checker
 #[derive(Debug)]
 pub struct ComplianceChecker {
-    framework_checks: HashMap<String, Box<dyn FrameworkCheck>>,
+    framework_checks: HashMap<String, Box<dyn FrameworkCheck, std::collections::HashMap<String, Box<dyn FrameworkCheck, String, Box<dyn FrameworkCheck>>>,
 }
 
 /// Framework check trait
@@ -156,7 +156,7 @@ pub trait FrameworkCheck: Send + Sync {
 impl ComplianceFrameworks {
     /// Create a new compliance frameworks manager
     pub fn new() -> Self {
-        let frameworks: _ = Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new())));
+        let frameworks: _ = Arc::new(Mutex::new(RwLock::new(HashMap::new()));
         Self { frameworks }
     }
 
@@ -204,7 +204,7 @@ impl PolicyEngine {
     /// Create a new policy engine
     pub fn new() -> Self {
         PolicyEngine {
-            policies: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            policies: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -395,9 +395,9 @@ impl ComplianceManager {
     /// Create a new compliance manager
     pub fn new() -> Self {
         ComplianceManager {
-            frameworks: Arc::new(std::sync::Mutex::new(ComplianceFrameworks::new())),
-            policies: Arc::new(std::sync::Mutex::new(PolicyEngine::new())),
-            checker: Arc::new(std::sync::Mutex::new(ComplianceChecker::new())),
+            frameworks: Arc::new(Mutex::new(ComplianceFrameworks::new()),
+            policies: Arc::new(Mutex::new(PolicyEngine::new()),
+            checker: Arc::new(Mutex::new(ComplianceChecker::new()),
         }
     }
 
@@ -408,7 +408,7 @@ impl ComplianceManager {
         let score: _ = if violations.is_empty() {
             1.0
         } else {
-            let critical_count = violations.iter().filter(|v| v.severity == ComplianceSeverity::Critical).count();
+            let critical_count: _ = violations.iter().filter(|v| v.severity == ComplianceSeverity::Critical).count();
             let high_count: _ = violations.iter().filter(|v| v.severity == ComplianceSeverity::High).count();
             let medium_count: _ = violations.iter().filter(|v| v.severity == ComplianceSeverity::Medium).count();
 
@@ -488,7 +488,7 @@ use std::collections::{HashMap, BTreeMap};
         manager.register_framework(config).await.unwrap();
 
         let frameworks: _ = manager.list_frameworks().await.unwrap();
-        assert!(frameworks.contains(&"GDPR".to_string()));
+        assert!(frameworks.contains(&"GDPR".to_string());
     }
 
     #[tokio::test]

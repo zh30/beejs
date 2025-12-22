@@ -124,13 +124,13 @@ impl IsolatePrewarmer {
     /// Create new Isolate Prewarmer
     pub fn new(max_prewarm: usize, config: PrewarmConfig) -> Result<Self> {
         let snapshot_config: _ = crate::v8_snapshot::SnapshotConfig::default();
-        let snapshot_manager: _ = Arc::new(std::sync::Mutex::new(crate::v8_snapshot::SnapshotManager::new(snapshot_config)));
+        let snapshot_manager: _ = Arc::new(Mutex::new(crate::v8_snapshot::SnapshotManager::new(snapshot_config));
 
         Ok(Self {
             snapshot_manager,
-            prewarmed_isolates: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
-            stats: Arc::new(std::sync::Mutex::new(PrewarmStats::new())),
-            common_snippets: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            prewarmed_isolates: Arc::new(Mutex::new(Vec::new())),
+            stats: Arc::new(Mutex::new(PrewarmStats::new()),
+            common_snippets: Arc::new(Mutex::new(Vec::new())),
             max_prewarm,
             config,
         })

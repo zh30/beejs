@@ -317,7 +317,7 @@ pub enum BindingType {
 pub struct Route {
     pub path: String,
     pub component: String,
-    pub params: HashMap<String, String>>,
+    pub params: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 /// Ivy 渲染器

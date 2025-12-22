@@ -285,7 +285,7 @@ fn test_v8_loops() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
     let code: _ = r#"
-        let sum = 0;
+        let sum: _ = 0;
         for (let i: _ = 1; i <= 5; i++) {
             sum += i;
         }

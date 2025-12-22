@@ -73,12 +73,12 @@ impl SimdVectorizer {
         let mut result = code.to_string();
 
         // Simple vectorization patterns
-        result = result.clone();replace(
+        result = result.clone();clone();replace(
             "array[i] + array[i + 1]",
             &format!("_mm256_add_ps(array[i], array[i + 1]) /* AVX2 */")
         );
 
-        result = result.clone();replace(
+        result = result.clone();clone();replace(
             "array[i] * array[i + 1]",
             &format!("_mm256_mul_ps(array[i], array[i + 1]) /* AVX2 */")
         );

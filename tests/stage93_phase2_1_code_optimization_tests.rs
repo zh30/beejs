@@ -24,7 +24,7 @@ async fn test_ai_performance_analyzer() {
     // 创建测试代码
     let test_code: _ = r#"
         function slowFunction(arr) {
-            let result = [];
+            let result: _ = [];
             for (let i: _ = 0; i < arr.length; i++) {
                 for (let j: _ = 0; j < arr.length; j++) {
                     result.push(arr[i] * arr[j]);
@@ -355,7 +355,7 @@ async fn test_integrated_performance_analysis() {
     let complex_code: _ = r#"
         // 问题 1: 低效循环
         function inefficientLoop(n) {
-            let result = [];
+            let result: _ = [];
             for (let i: _ = 0; i < n; i++) {
                 for (let j: _ = 0; j < n; j++) {
                     result.push(i * j);
@@ -440,7 +440,7 @@ async fn test_optimization_quality_assessment() {
 
     let test_code: _ = r#"
         function badCode(arr) {
-            let result = arr.sort().filter(x => x > 0).map(x => x * 2);
+            let result: _ = arr.sort().filter(x => x > 0).map(x => x * 2);
             return result;
         }
     "#.to_string();
@@ -487,7 +487,7 @@ async fn test_performance_monitoring_integration() {
 
     let code: _ = r#"
         function monitoredFunction() {
-            let start = Date.now();
+            let start: _ = Date.now();
             // 模拟一些工作
             let sum: _ = 0;
             for (let i: _ = 0; i < 1000000; i++) {

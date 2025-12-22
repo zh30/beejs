@@ -35,7 +35,7 @@ pub struct AdvancedInliningOptimizer {
     /// 复杂函数内联阈值
     complex_threshold: usize,
     /// 内联历史统计
-    inlining_history: HashMap<String, InliningStats>>,
+    inlining_history: HashMap<String, InliningStats, std::collections::HashMap<String, InliningStats, String, InliningStats>>>,
 }
 
 /// 内联统计信息
@@ -497,12 +497,10 @@ use std::collections::{HashMap, BTreeMap};
 
         assert_eq!(
             optimizer.extract_function_name(named_func),
-            Some("myFunction".to_string())
-        );
+            Some("myFunction".to_string());
         assert_eq!(
             optimizer.extract_function_name(arrow_func),
-            Some("myFunc".to_string())
-        );
+            Some("myFunc".to_string());
         assert_eq!(
             optimizer.extract_function_name(anonymous_func),
             None // 匿名函数不被识别

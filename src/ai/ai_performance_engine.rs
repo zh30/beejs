@@ -114,15 +114,15 @@ impl Default for AiPerformanceEngineConfig {
 /// AI 性能引擎
 pub struct AiPerformanceEngine {
     /// 配置
-    config: AiPerformanceEngineConfig,
+    pub config: AiPerformanceEngineConfig,
     /// 性能指标历史
-    metrics_history: Arc<RwLock<VecDeque<PerformanceMetrics>>,
+    pub metrics_history: Arc<RwLock<VecDeque<PerformanceMetrics>>>,
     /// 性能预测器
-    predictor: Arc<Mutex<PerformancePredictor>>,
+    pub predictor: Arc<Mutex<PerformancePredictor>>,
     /// 张量优化器
-    tensor_optimizer: Arc<Mutex<TensorOptimizer>>,
+    pub tensor_optimizer: Arc<Mutex<TensorOptimizer>>,
     /// 预测缓存
-    prediction_cache: Arc<Mutex<HashMap<String, PerformancePrediction>>,
+    pub prediction_cache: Arc<Mutex<HashMap<String, PerformancePrediction>>>,
     /// 是否正在训练
     is_training: Arc<Mutex<bool>>,
     /// 训练进度
@@ -134,12 +134,12 @@ impl AiPerformanceEngine {
     pub fn new(config: AiPerformanceEngineConfig) -> Self {
         Self {
             config: config.clone(),
-            metrics_history: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::with_capacity(config.prediction_window)))),
-            predictor: Arc::new(std::sync::Mutex::new(Mutex::new(PerformancePredictor::new(config.clone())))),
-            tensor_optimizer: Arc::new(std::sync::Mutex::new(Mutex::new(TensorOptimizer::new()))),
-            prediction_cache: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
-            is_training: Arc::new(std::sync::Mutex::new(Mutex::new(false))),
-            training_progress: Arc::new(std::sync::Mutex::new(Mutex::new(0.0))),
+            metrics_history: Arc::new(Mutex::new(RwLock::new(VecDeque::with_capacity(config.prediction_window)))),
+            predictor: Arc::new(Mutex::new(PerformancePredictor::new(config.clone()))),
+            tensor_optimizer: Arc::new(Mutex::new(TensorOptimizer::new())),
+            prediction_cache: Arc::new(Mutex::new(HashMap::new())),
+            is_training: Arc::new(Mutex::new(false)),
+            training_progress: Arc::new(Mutex::new(0.0)),
         }
     }
 
@@ -264,7 +264,7 @@ impl AiPerformanceEngine {
         // tokio::spawn(async move {
         //     // 训练预测器
         //     {
-        //         let mut predictor = predictor.clone();lock().unwrap();
+        //         let mut predictor = predictor.clone();clone();lock().unwrap();
         //         predictor.train(&history_data).await;
         //     }
 

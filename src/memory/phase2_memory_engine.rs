@@ -88,18 +88,18 @@ pub struct Phase2MemoryStats {
 impl Phase2MemoryEngine {
     /// 创建 Phase 2 内存引擎
     pub fn new(config: Phase2MemoryConfig) -> Self {
-        let zero_copy: _ = Arc::new(std::sync::Mutex::new(EnhancedZeroCopy::new(
+        let zero_copy: _ = Arc::new(Mutex::new(EnhancedZeroCopy::new(
             config.dma_config.clone()),
             config.mmap_config.clone(),
             config.prefetch_config.clone(),
         ));
 
-        let prefetcher: _ = Arc::new(std::sync::Mutex::new(SmartPrefetcher::new(
+        let prefetcher: _ = Arc::new(Mutex::new(SmartPrefetcher::new(
             zero_copy.clone()),
             config.prefetch_strategy.clone(),
         ));
 
-        let gc_optimizer: _ = Arc::new(std::sync::Mutex::new(EnhancedGcOptimizer::new(
+        let gc_optimizer: _ = Arc::new(Mutex::new(EnhancedGcOptimizer::new(
             config.gc_config.clone()),
         ));
 
@@ -111,7 +111,7 @@ impl Phase2MemoryEngine {
             zero_copy,
             prefetcher,
             gc_optimizer,
-            stats: Arc::new(std::sync::Mutex::new(Phase2MemoryStats::default())),
+            stats: Arc::new(Mutex::new(Phase2MemoryStats::default()),
             started_at: Instant::now(),
         }
     }
@@ -130,7 +130,7 @@ impl Phase2MemoryEngine {
         // 检查是否应该使用 DMA
         let result: _ = if size >= self.config.dma_config.dma_threshold {
             // 使用 DMA 分配
-            let buffer = self.zero_copy.allocate_dma(size).await.map_err(|_| "DMA allocation failed")?;
+            let buffer: _ = self.zero_copy.allocate_dma(size).await.map_err(|_| "DMA allocation failed")?;
             self.stats.dma_operations.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             Ok(buffer.ptr)
         } else {

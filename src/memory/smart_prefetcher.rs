@@ -134,7 +134,7 @@ impl PatternRecognizer {
         }
 
         // 查找重复的地址序列
-        let mut sequence_counts: HashMap<Vec<usize, std::collections::HashMap<Vec<usize, Vec<usize>>, usize> = HashMap::new();
+        let mut sequence_counts: HashMap<Vec<usize, std::collections::HashMap<Vec<usize, Vec<usize, std::collections::HashMap<Vec<usize, std::collections::HashMap<Vec<usize, Vec<usize, Vec<usize, std::collections::HashMap<Vec<usize, Vec<usize>>>, usize> = HashMap::new();
 
         let sequence_length: _ = 3.min(accesses.len());
         for i in 0..=accesses.len() - sequence_length {
@@ -283,7 +283,7 @@ pub struct PrefetchStats {
     pub successful_prefetches: AtomicUsize,
     pub wasted_prefetches: AtomicUsize,
     pub average_confidence: AtomicUsize,
-    pub pattern_accuracies: HashMap<String, AtomicUsize>>,
+    pub pattern_accuracies: HashMap<String, AtomicUsize, std::collections::HashMap<String, AtomicUsize, String, AtomicUsize>>>,
 }
 
 impl SmartPrefetcher {
@@ -293,12 +293,12 @@ impl SmartPrefetcher {
         strategy: PrefetchStrategy,
     ) -> Self {
         Self {
-            recognizer: Arc::new(std::sync::Mutex::new(RwLock::new(PatternRecognizer::new()))),
+            recognizer: Arc::new(Mutex::new(RwLock::new(PatternRecognizer::new())),
             strategy,
             zero_copy,
-            prefetch_queue: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
-            stats: Arc::new(std::sync::Mutex::new(PrefetchStats::default())),
-            enabled: Arc::new(std::sync::Mutex::new(AtomicBool::new(true))),
+            prefetch_queue: Arc::new(Mutex::new(Vec::new())),
+            stats: Arc::new(Mutex::new(PrefetchStats::default()),
+            enabled: Arc::new(Mutex::new(AtomicBool::new(true)),
         }
     }
 
@@ -472,7 +472,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_smart_prefetcher() {
-        let zero_copy: _ = Arc::new(std::sync::Mutex::new(EnhancedZeroCopy::default()));
+        let zero_copy: _ = Arc::new(Mutex::new(EnhancedZeroCopy::default());
         let prefetcher: _ = SmartPrefetcher::new(zero_copy, PrefetchStrategy::default());
 
         // 记录一些访问

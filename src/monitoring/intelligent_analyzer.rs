@@ -100,7 +100,7 @@ impl IntelligentAnalyzer {
         let mut anomalies = Vec::new();
 
         // 按指标类型分组
-        let mut grouped: HashMap<String, Vec<_>> = HashMap::new();
+        let mut grouped: HashMap<String, Vec<_, std::collections::HashMap<String, Vec<_, String, Vec<_>>> = HashMap::new();
         for metric in metrics {
             let key: _ = format!("{:?}", metric.metric_type);
             grouped.entry(key).or_insert_with(Vec::new).push(metric);
@@ -212,7 +212,7 @@ impl IntelligentAnalyzer {
             let score: _ = match metric.metric_type {
                 crate::ai_monitor::MetricType::CpuUsage => {
                     // CPU 使用率在 50-70% 之间为最佳
-                    let optimal = 60.0;
+                    let optimal: _ = 60.0;
                     100.0 - ((metric.value - optimal).abs() / optimal * 100.0).min(100.0)
                 }
                 crate::ai_monitor::MetricType::MemoryUsage => {

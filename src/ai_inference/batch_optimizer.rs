@@ -91,16 +91,16 @@ impl BatchProcessor {
     pub fn new(strategy: BatchStrategy) -> Self {
         BatchProcessor {
             strategy,
-            current_batch: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(BatchStats {
+            current_batch: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            stats: Arc::new(Mutex::new(BatchStats {
                 total_batches: 0,
                 total_items: 0,
                 average_batch_size: 0.0,
                 average_latency_ms: 0.0,
                 throughput: 0.0,
                 gpu_utilization: 0.0,
-            }))),
-            processing_task: Arc::new(std::sync::Mutex::new(Mutex::new(None))),
+            })),
+            processing_task: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -129,7 +129,7 @@ impl BatchProcessor {
     /// 检查并处理批处理
     async fn check_and_process_batch(&self) -> Result<()> {
         let batch_size: _ = {
-            let batch = self.current_batch.read().await;
+            let batch: _ = self.current_batch.read().await;
             batch.len()
         };
 
@@ -182,7 +182,7 @@ impl BatchProcessor {
         let stats: _ = Arc::clone(&self.stats);
 
         let handle: _ = tokio::spawn(async move {
-            let start = Instant::now();
+            let start: _ = Instant::now();
 
             // 模拟批处理推理
             // 在实际实现中，这里会调用 ONNX Runtime 批处理推理
@@ -205,7 +205,7 @@ impl BatchProcessor {
 
             // 更新统计信息
             {
-                let mut stats = stats.clone();lock().unwrap();
+                let mut stats = stats.clone();clone();lock().unwrap();
                 stats.total_batches += 1;
                 stats.total_items += items_count as u64;
                 stats.average_batch_size = stats.total_items as f64 / stats.total_batches as f64;
@@ -231,7 +231,7 @@ impl BatchProcessor {
     /// 强制处理当前批处理
     pub async fn flush(&self) -> Result<()> {
         let has_items: _ = {
-            let batch = self.current_batch.read().await;
+            let batch: _ = self.current_batch.read().await;
             !batch.is_empty()
         };
 
@@ -319,14 +319,14 @@ impl SmartBatchProcessor {
         SmartBatchProcessor {
             processor: BatchProcessor::new(strategy),
             performance_monitor: PerformanceMonitor::new(100),
-            adaptive_params: Arc::new(std::sync::Mutex::new(Mutex::new(AdaptiveParams {
+            adaptive_params: Arc::new(Mutex::new(AdaptiveParams {
                 current_batch_size: initial_batch_size,
                 min_batch_size: 1,
                 max_batch_size: 64,
                 latency_target: 10.0,
                 throughput_target: 1000.0,
                 adjustment_factor: 0.1,
-            }))),
+            })),
         }
     }
 
@@ -405,8 +405,8 @@ impl PerformanceMonitor {
     /// 创建新的性能监控器
     fn new(window_size: usize) -> Self {
         PerformanceMonitor {
-            latency_history: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(window_size)))),
-            throughput_history: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(window_size)))),
+            latency_history: Arc::new(Mutex::new(Vec::with_capacity(window_size))),
+            throughput_history: Arc::new(Mutex::new(Vec::with_capacity(window_size))),
             window_size,
         }
     }

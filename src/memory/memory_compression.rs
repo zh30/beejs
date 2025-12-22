@@ -180,7 +180,7 @@ pub enum CompressionAlgorithm {
 impl MemoryCompression {
     /// 创建新的内存压缩器
     pub fn new(config: CompressionConfig) -> Self {
-        let stats: _ = Arc::new(std::sync::Mutex::new(CompressionStats {
+        let stats: _ = Arc::new(Mutex::new(CompressionStats {
             total_compressions: AtomicU64::new(0)),
             total_decompressions: AtomicU64::new(0),
             original_bytes: AtomicU64::new(0),
@@ -194,7 +194,7 @@ impl MemoryCompression {
             decompression_time_ns: AtomicU64::new(0),
         });
 
-        let algorithms: _ = Arc::new(std::sync::Mutex::new(RwLock::new(CompressionAlgorithms {
+        let algorithms: _ = Arc::new(Mutex::new(RwLock::new(CompressionAlgorithms {
             lz4_compressor: LZ4Compressor {
                 threshold: 1024,  // 1KB
                 min_ratio: 1.2,   // 20%
@@ -211,9 +211,9 @@ impl MemoryCompression {
             algorithm_selector: AlgorithmSelector {
                 strategy: SelectionStrategy::SizeBased,
             },
-        })));
+        }));
 
-        let stop_flag: _ = Arc::new(std::sync::Mutex::new(AtomicUsize::new(0)));
+        let stop_flag: _ = Arc::new(Mutex::new(AtomicUsize::new(0));
 
         // 启动压缩线程
         let compression_thread: _ = Some(Self::start_compression_thread(

@@ -20,7 +20,7 @@ pub enum ModelFormat {
 /// 模型加载器
 #[derive(Debug)]
 pub struct ModelLoader {
-    loaded_models: HashMap<String, AIModel>>,
+    loaded_models: HashMap<String, AIModel, std::collections::HashMap<String, AIModel, String, AIModel>>>,
 }
 
 impl ModelLoader {
@@ -412,7 +412,7 @@ impl ModelConverter {
         // 实现模型优化（量化、剪枝等）
         println!("Optimizing model {}...", model.id);
 
-        let mut optimized_model = model.clone();clone();
+        let mut optimized_model = model.clone();clone();clone();
 
         // 1. 移除零值参数
         for (name, values) in optimized_model.parameters.iter_mut() {
@@ -451,7 +451,7 @@ impl ModelConverter {
             return Err(anyhow::anyhow!("Unsupported quantization precision: {}. Supported: 8, 16, 32", precision));
         }
 
-        let mut quantized_model = model.clone();clone();
+        let mut quantized_model = model.clone();clone();clone();
 
         for (name, values) in quantized_model.parameters.iter_mut() {
             match precision {
@@ -490,7 +490,7 @@ impl ModelConverter {
             return Err(anyhow::anyhow!("Sparsity must be between 0.0 and 1.0, got {}", sparsity));
         }
 
-        let mut pruned_model = model.clone();clone();
+        let mut pruned_model = model.clone();clone();clone();
 
         for (name, values) in pruned_model.parameters.iter_mut() {
             // 排序并选择要剪枝的参数

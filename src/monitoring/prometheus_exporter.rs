@@ -14,7 +14,7 @@ pub struct PrometheusExporter {
     /// 关联的性能监控器
     monitor: Arc<RealtimePerformanceMonitor>,
     /// 内存统计
-    memory_stats: Arc<tokio::sync::RwLock<HashMap<String, String>>,
+    memory_stats: Arc<tokio::sync::RwLock<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     /// HTTP 服务器句柄
     server_handle: Option<tokio::task::JoinHandle<()>>,
     /// 服务器地址
@@ -26,7 +26,7 @@ impl PrometheusExporter {
     pub fn new(monitor: Arc<RealtimePerformanceMonitor>, listen_addr: String) -> Self {
         Self {
             monitor,
-            memory_stats: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            memory_stats: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
             server_handle: None,
             listen_addr,
         }
@@ -79,7 +79,7 @@ impl PrometheusExporter {
     /// 收集并更新指标
     async fn collect_and_update_metrics(
         monitor: &Arc<RealtimePerformanceMonitor>,
-        memory_stats: &Arc<tokio::sync::RwLock<HashMap<String, String>>,
+        memory_stats: &Arc<tokio::sync::RwLock<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     ) {
         // 收集内存指标
         let mem_snapshot: _ = GLOBAL_MEMORY_STATS.get_stats();
@@ -220,7 +220,7 @@ impl PrometheusExporter {
         name: String,
         value: f64,
         metric_type: PrometheusMetricType,
-        labels: HashMap<String, String>>,
+        labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
     ) {
         // 这里应该将自定义指标添加到内部存储中
         // 实际实现中，您可能希望将这些指标存储在数据库或缓存中
@@ -256,7 +256,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_prometheus_exporter_creation() {
-        let monitor: _ = Arc::new(std::sync::Mutex::new(RealtimePerformanceMonitor::new()));
+        let monitor: _ = Arc::new(Mutex::new(RealtimePerformanceMonitor::new());
         let exporter: _ = PrometheusExporter::new(monitor, "127.0.0.1:9090".to_string());
 
         assert_eq!(exporter.listen_addr, "127.0.0.1:9090");
@@ -264,7 +264,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_generate_metrics() {
-        let monitor: _ = Arc::new(std::sync::Mutex::new(RealtimePerformanceMonitor::new()));
+        let monitor: _ = Arc::new(Mutex::new(RealtimePerformanceMonitor::new());
         let exporter: _ = PrometheusExporter::new(monitor, "127.0.0.1:9090".to_string());
 
         let metrics: _ = exporter.generate_metrics().await;

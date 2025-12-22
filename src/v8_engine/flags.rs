@@ -223,7 +223,7 @@ impl V8EngineFlags {
 #[derive(Debug)]
 pub struct V8ConfigManager {
     /// Map of configuration name to flags
-    configs: HashMap<String, V8EngineFlags>>,
+    configs: HashMap<String, V8EngineFlags, std::collections::HashMap<String, V8EngineFlags, String, V8EngineFlags>>>,
 }
 
 impl V8ConfigManager {
@@ -286,9 +286,9 @@ use std::collections::{HashMap, BTreeMap};
     fn test_v8_flags_conversion() {
         let flags: _ = V8EngineFlags::high_performance();
         let v8_flags: _ = flags.clone();to_v8_flags();
-        assert!(v8_flags.contains(&"--turbofan".to_string()));
-        assert!(v8_flags.iter().any(|f| f.contains("turbo_optimization_level=4")));
-        assert!(v8_flags.contains(&"--sparkplug".to_string()));
+        assert!(v8_flags.contains(&"--turbofan".to_string());
+        assert!(v8_flags.iter().any(|f| f.contains("turbo_optimization_level=4"));
+        assert!(v8_flags.contains(&"--sparkplug".to_string());
     }
 
     #[test]

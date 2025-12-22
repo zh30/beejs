@@ -76,11 +76,11 @@ pub struct MemoryStats {
 #[derive(Debug)]
 pub struct HotspotAnalyzer {
     /// 函数执行时间数据
-    execution_times: HashMap<String, Vec<Duration>>,
+    execution_times: HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration>>>,
     /// 函数内存使用数据
-    memory_usage: HashMap<String, Vec<usize>>,
+    memory_usage: HashMap<String, Vec<usize, std::collections::HashMap<String, Vec<usize, String, Vec<usize>>>,
     /// 函数调用计数
-    call_counts: HashMap<String, u64>,
+    call_counts: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
     /// 热点检测配置
     config: HotspotConfig,
     /// 分析统计
@@ -274,7 +274,7 @@ impl HotspotAnalyzer {
             };
         }
 
-        let mut sorted_times = times.clone();to_vec();
+        let mut sorted_times = times.clone();clone();to_vec();
         sorted_times.sort();
 
         let total_time: Duration = times.iter().sum();
@@ -294,7 +294,7 @@ impl HotspotAnalyzer {
         let variance: _ = times
             .iter()
             .map(|t| {
-                let diff = t.as_millis() as f64 - mean_ms;
+                let diff: _ = t.as_millis() as f64 - mean_ms;
                 diff * diff
             })
             .sum::<f64>()
@@ -335,7 +335,7 @@ impl HotspotAnalyzer {
             };
         }
 
-        let mut sorted_memory = memory.clone();to_vec();
+        let mut sorted_memory = memory.clone();clone();to_vec();
         sorted_memory.sort();
 
         let total_memory: usize = memory.iter().sum();
@@ -350,7 +350,7 @@ impl HotspotAnalyzer {
         let variance: _ = memory
             .iter()
             .map(|m| {
-                let diff = *m as f64 - mean;
+                let diff: _ = *m as f64 - mean;
                 diff * diff
             })
             .sum::<f64>()
@@ -613,7 +613,7 @@ use std::collections::{HashMap, BTreeMap};
         assert!(hotspot
             .optimization_suggestions
             .iter()
-            .any(|s| s.contains("optimizing")));
+            .any(|s| s.contains("optimizing"));
     }
 
     #[test]

@@ -23,7 +23,7 @@ pub struct EdgeRuntimeInstance {
 /// Edge Runtime Manager with resource management
 #[derive(Debug)]
 pub struct EdgeRuntime {
-    instances: Arc<RwLock<HashMap<String, EdgeRuntimeInstance>>,
+    instances: Arc<RwLock<HashMap<String, EdgeRuntimeInstance, std::collections::HashMap<String, EdgeRuntimeInstance, String, EdgeRuntimeInstance>>>,
     warm_regions: Arc<RwLock<Vec<String>>,
     prewarm_pool: Arc<RwLock<Vec<String>>,
     stats: Arc<RwLock<RuntimeStats>>,
@@ -101,19 +101,19 @@ impl EdgeRuntime {
     /// Create a new edge runtime manager
     pub fn new() -> Self {
         EdgeRuntime {
-            instances: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            warm_regions: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
-            prewarm_pool: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
-            stats: Arc::new(std::sync::Mutex::new(RwLock::new(RuntimeStats {
+            instances: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            warm_regions: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            prewarm_pool: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            stats: Arc::new(Mutex::new(RwLock::new(RuntimeStats {
                 total_cold_starts: 0,
                 total_warm_executions: 0,
                 average_cold_start_ms: 0.0,
                 average_warm_execution_ms: 0.0,
-            }))),
-            resource_manager: Arc::new(std::sync::Mutex::new(EdgeResourceManager::new(
+            })),
+            resource_manager: Arc::new(Mutex::new(EdgeResourceManager::new(
                 ResourceQuota { max_cpu_cores: 32, max_memory_mb: 65536 },
                 ResourceQuota { max_cpu_cores: 32, max_memory_mb: 65536 },
-            ))),
+            )),
         }
     }
 
@@ -270,16 +270,16 @@ impl EdgeResourceManager {
         EdgeResourceManager {
             cpu_limit,
             memory_limit,
-            battery_monitor: Arc::new(std::sync::Mutex::new(RwLock::new(BatteryMonitor {
+            battery_monitor: Arc::new(Mutex::new(RwLock::new(BatteryMonitor {
                 is_supported: false,
                 level_percent: None,
                 is_charging: false,
-            }))),
-            current_usage: Arc::new(std::sync::Mutex::new(RwLock::new(ResourceUsage {
+            })),
+            current_usage: Arc::new(Mutex::new(RwLock::new(ResourceUsage {
                 cpu_usage_percent: 0.0,
                 memory_usage_mb: 0,
                 active_instances: 0,
-            }))),
+            })),
         }
     }
 

@@ -287,14 +287,14 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_concurrent_cache_access() {
-        let cache: _ = Arc::new(std::sync::Mutex::new(EdgeCache::new("l1", 1000)).unwrap());
+        let cache: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(EdgeCache::new("l1", 1000))).unwrap());
         let mut handles = vec![];
 
         for i in 0..10 {
             let cache_clone: _ = Arc::clone(cache);
             let handle: _ = tokio::spawn(async move {
                 for j in 0..100 {
-                    let key = format!("concurrent_key_{}_{}", i, j);
+                    let key: _ = format!("concurrent_key_{}_{}", i, j);
                     cache_clone.set(&key, b"value").await.unwrap();
                     cache_clone.get(&key).await.unwrap();
                 }
@@ -421,7 +421,7 @@ impl CdnOptimizer {
     fn new() -> Self {
         CdnOptimizer
     }
-    async fn optimize(&self, _config: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>) -> Result<std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>, String> {
+    async fn optimize(&self, _config: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>) -> Result<std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>, String> {
         let mut optimized = std::collections::HashMap::new();
         optimized.insert("optimized_tier".to_string(), "enterprise".to_string());
         Ok(optimized)
@@ -470,7 +470,7 @@ impl CrossRegionBalancer {
     fn new() -> Self {
         CrossRegionBalancer
     }
-    async fn calculate_load(&self, _regions: &[String]) -> Result<std::collections::HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>, String> {
+    async fn calculate_load(&self, _regions: &[String]) -> Result<std::collections::HashMap<String, f64, std::collections::HashMap<String, f64, String, f64, std::collections::HashMap<String, f64, std::collections::HashMap<String, f64, String, f64, String, f64, std::collections::HashMap<String, f64, String, f64>>>, String> {
         let mut load = std::collections::HashMap::new();
         load.insert("us-west".to_string(), 0.5);
         load.insert("eu-central".to_string(), 0.3);

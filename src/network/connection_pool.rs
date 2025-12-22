@@ -38,7 +38,7 @@ pub struct ConnectionPoolStats {
 pub struct ConnectionPool {
     config: NetworkConfig,
     /// 按地址分组的连接池
-    pools: Arc<Mutex<HashMap<SocketAddr, Vec<ConnectionInfo>>>,
+    pools: Arc<Mutex<HashMap<SocketAddr, Vec<ConnectionInfo, std::collections::HashMap<SocketAddr, Vec<ConnectionInfo, SocketAddr, Vec<ConnectionInfo>>>>,
     stats: Arc<Mutex<ConnectionPoolStats>>,
 }
 
@@ -47,22 +47,22 @@ impl ConnectionPool {
     pub fn new(config: NetworkConfig) -> Result<Self, NetworkError> {
         Ok(Self {
             config,
-            pools: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(ConnectionPoolStats {
+            pools: Arc::new(Mutex::new(HashMap::new())),
+            stats: Arc::new(Mutex::new(ConnectionPoolStats {
                 total_connections: 0,
                 active_connections: 0,
                 idle_connections: 0,
                 reuse_count: 0,
                 new_connection_count: 0,
                 timeout_closed: 0,
-            }))),
+            })),
         })
     }
 
     /// 获取连接 (从池中重用或创建新连接)
     pub fn get_connection(&mut self, addr: &str) -> Result<Option<TcpStream>, NetworkError> {
         let socket_addr: SocketAddr = addr.parse()
-            .map_err(|_| NetworkError::Connection(format!("Invalid address: {}", addr)))?;
+            .map_err(|_| NetworkError::Connection(format!("Invalid address: {}", addr))?;
 
         let mut pools = self.pools.lock().unwrap();
 
@@ -80,7 +80,7 @@ impl ConnectionPool {
                     let mut stats = self.stats.lock().unwrap();
                     stats.reuse_count += 1;
                     stats.active_connections += 1;
-                    stats.idle_connections = connections.clone();len();
+                    stats.idle_connections = connections.clone();clone();len();
                     stats.timeout_closed = 0; // 简化：不单独跟踪超时
                 }
 
@@ -107,7 +107,7 @@ impl ConnectionPool {
     /// 释放连接 (将连接返回池中)
     pub fn release_connection(&mut self, addr: &str, conn: TcpStream) -> Result<(), NetworkError> {
         let socket_addr: SocketAddr = addr.parse()
-            .map_err(|_| NetworkError::Connection(format!("Invalid address: {}", addr)))?;
+            .map_err(|_| NetworkError::Connection(format!("Invalid address: {}", addr))?;
 
         let mut pools = self.pools.lock().unwrap();
 

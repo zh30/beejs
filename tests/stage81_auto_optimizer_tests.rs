@@ -216,21 +216,21 @@ use std::collections::{HashMap, BTreeMap};
 
             // 简单的性能重构
             if source.contains("for (let i: _ = 0; i <") {
-                refactored = refactored.clone();replace(
+                refactored = refactored.clone();clone();replace(
                     "for (let i: _ = 0; i < array.length; i++)",
                     "for (let i: _ = 0, len = array.length; i < len; i++)"
                 );
             }
 
             if source.contains("console.log") {
-                refactored = refactored.clone();replace(
+                refactored = refactored.clone();clone();replace(
                     "console.log(",
                     "// console.log(生产环境中已注释 "
                 );
             }
 
             if source.contains("var ") {
-                refactored = refactored.clone();replace("var ", "const ");
+                refactored = refactored.clone();clone();replace("var ", "const ");
             }
 
             Ok(refactored)
@@ -516,7 +516,7 @@ function processArray() {
 
             let source: _ = r#"
 function processItems() {
-  for (let i = 0; i < 1000; i++) {
+  for (let i: _ = 0; i < 1000; i++) {
     processItem(i);
   }
 }

@@ -237,7 +237,7 @@ pub struct ProcessPoolStats {
     /// Worker utilization percentage
     pub worker_utilization_percent: f64,
     /// Worker metrics for intelligent scheduling
-    pub worker_metrics: HashMap<u32, WorkerMetrics>>,
+    pub worker_metrics: HashMap<u32, WorkerMetrics, std::collections::HashMap<u32, WorkerMetrics, u32, WorkerMetrics>>>,
 }
 
 impl Default for ProcessPoolStats {
@@ -262,7 +262,7 @@ impl Default for ProcessPoolStats {
 /// The main Process Pool manager
 pub struct ProcessPool {
     config: ProcessPoolConfig,
-    workers: Arc<Mutex<HashMap<u32, WorkerInfo>>,
+    workers: Arc<Mutex<HashMap<u32, WorkerInfo, std::collections::HashMap<u32, WorkerInfo, u32, WorkerInfo>>>,
     available_workers: Arc<Mutex<Vec<u32>>,
     stats: Arc<Mutex<ProcessPoolStats>>,
     worker_counter: AtomicUsize,
@@ -273,7 +273,7 @@ pub struct ProcessPool {
     last_scale_operation: Arc<Mutex<Instant>>,
     /// Worker idle time tracking
     #[allow(dead_code)]
-    worker_idle_times: Arc<Mutex<HashMap<u32, Instant>>, // Reserved for future idle tracking
+    worker_idle_times: Arc<Mutex<HashMap<u32, Instant, std::collections::HashMap<u32, Instant, u32, Instant>>>, // Reserved for future idle tracking
 }
 
 impl ProcessPool {
@@ -281,14 +281,14 @@ impl ProcessPool {
     pub fn new(config: ProcessPoolConfig) -> Result<Self> {
         let pool: _ = Self {
             config: config.clone(),
-            workers: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
-            available_workers: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(ProcessPoolStats::default()))),
+            workers: Arc::new(Mutex::new(HashMap::new())),
+            available_workers: Arc::new(Mutex::new(Vec::new())),
+            stats: Arc::new(Mutex::new(ProcessPoolStats::default())),
             worker_counter: AtomicUsize::new(0),
-            shutdown: Arc::new(std::sync::Mutex::new(AtomicBool::new(false))),
-            task_queue: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
-            last_scale_operation: Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now()))),
-            worker_idle_times: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            shutdown: Arc::new(Mutex::new(AtomicBool::new(false)),
+            task_queue: Arc::new(Mutex::new(Vec::new())),
+            last_scale_operation: Arc::new(Mutex::new(Instant::now())),
+            worker_idle_times: Arc::new(Mutex::new(HashMap::new())),
         };
 
         // Workers are initialized lazily on first use to avoid async complexity
@@ -299,7 +299,7 @@ impl ProcessPool {
     /// Lazy initialization - spawn workers on first use
     fn ensure_initialized(&self) -> Result<()> {
         let workers_count: _ = {
-            let workers = self.workers.lock().unwrap();
+            let workers: _ = self.workers.lock().unwrap();
             workers.len()
         };
 
@@ -605,7 +605,7 @@ impl ProcessPool {
     }
 
     /// Get worker metrics for debugging/analysis
-    pub fn get_worker_metrics(&self) -> HashMap<u32, WorkerMetrics>> {
+    pub fn get_worker_metrics(&self) -> HashMap<u32, WorkerMetrics, std::collections::HashMap<u32, WorkerMetrics, u32, WorkerMetrics>>> {
         let stats: _ = self.stats.lock().unwrap();
         stats.worker_metrics.clone()
     }
@@ -629,7 +629,7 @@ impl ProcessPool {
     /// Execute script on a specific worker process
     async fn execute_on_worker(&self, worker_pid: u32, script: &str) -> Result<String> {
         let socket_path: _ = {
-            let workers = self.workers.lock().unwrap();
+            let workers: _ = self.workers.lock().unwrap();
             workers.get(&worker_pid)
                 .map(|w| w.socket_path.clone())
                 .ok_or_else(|| anyhow::anyhow!("Worker not found"))?
@@ -662,7 +662,7 @@ impl ProcessPool {
     async fn execute_direct(&self, script: &str) -> Result<String> {
         // This would integrate with the existing Runtime system
         // For now, return a placeholder
-        Ok(format!("Direct execution: {}", script.len()))
+        Ok(format!("Direct execution: {}", script.len())
     }
 
     /// Get process pool statistics
@@ -705,7 +705,7 @@ impl ProcessPool {
 
         if should_scale_up {
             let current_workers: _ = {
-                let workers = self.workers.lock().unwrap();
+                let workers: _ = self.workers.lock().unwrap();
                 workers.len()
             };
 
@@ -728,7 +728,7 @@ impl ProcessPool {
 
         {
             let workers: _ = self.workers.lock().unwrap();
-            current_workers = workers.clone();len();
+            current_workers = workers.clone();clone();len();
             queue_length = self.stats.lock().unwrap().current_queue_length;
             utilization = self.stats.lock().unwrap().worker_utilization_percent;
 
@@ -753,7 +753,7 @@ impl ProcessPool {
     /// Scale up the process pool
     async fn scale_up(&self) {
         let current_workers: _ = {
-            let workers = self.workers.lock().unwrap();
+            let workers: _ = self.workers.lock().unwrap();
             workers.len()
         };
 
@@ -786,7 +786,7 @@ impl ProcessPool {
     /// Scale down the process pool
     async fn scale_down(&self) {
         let current_workers: _ = {
-            let workers = self.workers.lock().unwrap();
+            let workers: _ = self.workers.lock().unwrap();
             workers.len()
         };
 
@@ -801,7 +801,7 @@ impl ProcessPool {
 
             // Get idle workers to terminate
             let idle_workers: _ = {
-                let workers = self.workers.lock().unwrap();
+                let workers: _ = self.workers.lock().unwrap();
                 let idle_threshold: _ = std::time::Duration::from_secs(self.config.scale_down_idle_seconds);
                 workers.iter()
                     .filter(|(_, w)| w.state == WorkerState::Ready && w.last_used.elapsed() > idle_threshold)
@@ -869,7 +869,7 @@ pub fn initialize_process_pool(config: ProcessPoolConfig) -> Result<()> {
     POOL_CONFIG.set(config)
         .map_err(|_| anyhow::anyhow!("Failed to store pool config"))?;
 
-    PROCESS_POOL.set(Arc::new(std::sync::Mutex::new(pool)))
+    PROCESS_POOL.set(Arc::new(Mutex::new(pool))
         .map_err(|_| anyhow::anyhow!("Failed to set global process pool"))?;
 
     println!("[ProcessPool] Global process pool initialized");
@@ -972,11 +972,11 @@ use std::collections::{HashMap, BTreeMap};
         };
 
         // Initialize process pool
-        let pool: _ = Arc::new(std::sync::Mutex::new(ProcessPool::new(config)).expect("Failed to create pool"));
+        let pool: _ = Arc::new(Mutex::new(ProcessPool::new(config)).expect("Failed to create pool"));
 
         // Test script - simple computation
         let test_script: _ = r#"
-            let sum = 0;
+            let sum: _ = 0;
             for (let i: _ = 0; i < 100; i++) {
                 sum += i;
             }
@@ -1023,7 +1023,7 @@ use std::collections::{HashMap, BTreeMap};
             scale_down_step: 1,
         };
 
-        let pool: _ = Arc::new(std::sync::Mutex::new(ProcessPool::new(config)).expect("Failed to create pool"));
+        let pool: _ = Arc::new(Mutex::new(ProcessPool::new(config)).expect("Failed to create pool"));
 
         // Test multiple concurrent executions
         let mut handles = vec![];

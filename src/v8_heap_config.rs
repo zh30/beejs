@@ -366,7 +366,7 @@ use std::collections::{HashMap, BTreeMap};
         let builder: _ = V8CreateParamsBuilder::with_preset(V8HeapPreset::Small);
         let flags: _ = builder.recommended_flags();
 
-        assert!(flags.iter().any(|f| f.contains("max-old-space-size")));
+        assert!(flags.iter().any(|f| f.contains("max-old-space-size"));
     }
 
     #[test]

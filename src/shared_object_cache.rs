@@ -19,7 +19,7 @@ pub enum SharedValue {
     Number(f64),
     String(String),
     Array(Vec<SharedValue>),
-    Object(HashMap<String, SharedValue>>),
+    Object(HashMap<String, SharedValue, std::collections::HashMap<String, SharedValue, String, SharedValue>>>),
 }
 
 impl Hash for SharedValue {
@@ -57,9 +57,9 @@ impl SharedObject {
         Self {
             value,
             created_at: Instant::now(),
-            last_accessed: Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now()))),
-            access_count: Arc::new(std::sync::Mutex::new(AtomicUsize::new(0))),
-            ref_count: Arc::new(std::sync::Mutex::new(AtomicUsize::new(1))),
+            last_accessed: Arc::new(Mutex::new(Instant::now())),
+            access_count: Arc::new(Mutex::new(AtomicUsize::new(0)),
+            ref_count: Arc::new(Mutex::new(AtomicUsize::new(1)),
         }
     }
 
@@ -165,7 +165,7 @@ struct LruCache<K, V> {
     /// 访问顺序列表（最近访问的在前面）
     order: Vec<K>,
     /// 键值对
-    map: HashMap<K, (V, usize)>>,
+    map: HashMap<K, (V, usize), std::collections::HashMap<K, (V, usize), K, (V, usize)>>>,
 }
 
 impl<K: Hash + Eq + Clone, V> LruCache<K, V> {
@@ -270,11 +270,11 @@ impl SharedObjectCache {
     /// 创建新的共享对象缓存
     pub fn new(config: SharedObjectCacheConfig) -> Self {
         let cache: _ = Self {
-            string_cache: Arc::new(std::sync::Mutex::new(StringInterner::new())),
-            object_cache: Arc::new(std::sync::Mutex::new(Mutex::new(LruCache::new(config.max_objects)))),
+            string_cache: Arc::new(Mutex::new(StringInterner::new()),
+            object_cache: Arc::new(Mutex::new(LruCache::new(config.max_objects))),
             config: config.clone(),
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(SharedObjectCacheStats::default()))),
-            running: Arc::new(std::sync::Mutex::new(AtomicBool::new(true))),
+            stats: Arc::new(Mutex::new(SharedObjectCacheStats::default())),
+            running: Arc::new(Mutex::new(AtomicBool::new(true)),
         };
 
         // 启动GC线程
@@ -314,7 +314,7 @@ impl SharedObjectCache {
 
     /// 存储共享对象
     pub fn insert(&self, key: String, value: SharedValue) -> Arc<SharedObject> {
-        let obj: _ = Arc::new(std::sync::Mutex::new(SharedObject::new(value)));
+        let obj: _ = Arc::new(Mutex::new(SharedObject::new(value));
 
         {
             let mut cache = self.object_cache.lock().unwrap();
@@ -364,7 +364,7 @@ impl SharedObjectCache {
 
         for s in &common_strings {
             let key: _ = format!("string:{}", s);
-            self.insert(key, SharedValue::String(s.to_string()));
+            self.insert(key, SharedValue::String(s.to_string());
         }
 
         // 预加载常用数字
@@ -555,8 +555,8 @@ use std::collections::{HashMap, BTreeMap};
         let cache: _ = SharedObjectCache::new(config);
 
         // 测试插入字符串值
-        cache.insert("str1".to_string(), SharedValue::String("hello".to_string()));
-        cache.insert("str2".to_string(), SharedValue::String("world".to_string()));
+        cache.insert("str1".to_string(), SharedValue::String("hello".to_string());
+        cache.insert("str2".to_string(), SharedValue::String("world".to_string());
 
         // 验证字符串缓存正常工作 - 检查缓存是否工作
         let value1: _ = cache.get(&"str1".to_string());

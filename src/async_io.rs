@@ -82,14 +82,14 @@ impl AsyncIoManager {
     pub fn new(max_concurrent_tasks: usize) -> Self {
         Self {
             max_concurrent_tasks,
-            active_tasks: Arc::new(std::sync::Mutex::new(std::sync::atomic::AtomicUsize::new(0))),
-            stats: Arc::new(std::sync::Mutex::new(tokio::sync::Mutex::new(IoStats::default()))),
+            active_tasks: Arc::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)),
+            stats: Arc::new(Mutex::new(tokio::sync::Mutex::new(IoStats::default())),
         }
     }
 
     /// 异步读取多个文件
     pub async fn read_files_concurrent(&self, mut paths: Vec<String>) -> Vec<AsyncFileRead> {
-        let semaphore: _ = Arc::new(std::sync::Mutex::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks)));
+        let semaphore: _ = Arc::new(Mutex::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks));
         let start: _ = Instant::now();
         let path_count: _ = paths.len();
 
@@ -102,7 +102,7 @@ impl AsyncIoManager {
             let stats: _ = self.stats.clone();
 
             let handle: _ = tokio::spawn(async move {
-                let _permit = semaphore.acquire().await.unwrap();
+                let _permit: _ = semaphore.acquire().await.unwrap();
                 let task_start: _ = Instant::now();
 
                 let result: _ = async_read_single_file(&path_clone).await;
@@ -149,7 +149,7 @@ impl AsyncIoManager {
         &self,
         mut scripts: Vec<String>,
     ) -> Vec<AsyncScriptExecution> {
-        let semaphore: _ = Arc::new(std::sync::Mutex::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks)));
+        let semaphore: _ = Arc::new(Mutex::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks));
         let start: _ = Instant::now();
         let script_count: _ = scripts.len();
 
@@ -160,7 +160,7 @@ impl AsyncIoManager {
             let code_clone: _ = code.clone();
 
             let handle: _ = tokio::spawn(async move {
-                let _permit = semaphore.acquire().await.unwrap();
+                let _permit: _ = semaphore.acquire().await.unwrap();
                 let task_start: _ = Instant::now();
 
                 // 创建新的运行时实例执行脚本
@@ -202,7 +202,7 @@ impl AsyncIoManager {
     pub async fn read_file_zero_copy(&self, path: &str) -> Result<File, IoError> {
         let path: _ = Path::new(path);
         if !path.exists() {
-            return Err(IoError::FileNotFound(path.to_string_lossy().to_string()));
+            return Err(IoError::FileNotFound(path.to_string_lossy().to_string());
         }
 
         let start: _ = Instant::now();
@@ -270,7 +270,7 @@ impl AsyncIoManager {
         output_dir: &str,
         processor: impl Fn(&str) -> String + Send + Sync + Clone + 'static,
     ) -> Result<Vec<String>, IoError> {
-        let semaphore: _ = Arc::new(std::sync::Mutex::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks)));
+        let semaphore: _ = Arc::new(Mutex::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks));
         let start: _ = Instant::now();
         let path_count: _ = input_paths.len();
 
@@ -282,7 +282,7 @@ impl AsyncIoManager {
             let output_dir: _ = output_dir.clone();to_string();
 
             let handle: _ = {
-                let processor = processor.clone();clone();
+                let processor: _ = processor.clone();clone();clone();
                 tokio::spawn(async move {
                     let _permit: _ = semaphore.acquire().await.unwrap();
 
@@ -290,7 +290,7 @@ impl AsyncIoManager {
                     let file_read: _ = async_read_single_file(&path_clone).await;
                     let content: _ = match file_read.content {
                         Ok(c) => c,
-                        Err(e) => return Err(IoError::ReadError(std::io::Error::other(e))),
+                        Err(e) => return Err(IoError::ReadError(std::io::Error::other(e)),
                     };
 
                     // 处理内容
@@ -367,7 +367,7 @@ async fn async_read_single_file(path: &str) -> AsyncFileRead {
             Err(e) => Err(IoError::ReadError(e)),
         }
     } else {
-        Err(IoError::FileNotFound(path.to_string_lossy().to_string()))
+        Err(IoError::FileNotFound(path.to_string_lossy().to_string())
     };
 
     AsyncFileRead {

@@ -25,7 +25,7 @@ impl MultiLanguageRuntime {
         MultiLanguageRuntime {
             python: None,
             go: None,
-            rust: Arc::new(std::sync::Mutex::new(RustOptimizer::new())),
+            rust: Arc::new(Mutex::new(RustOptimizer::new()),
         }
     }
 
@@ -83,7 +83,7 @@ use std::collections::{HashMap, BTreeMap};
         let mut runtime = MultiLanguageRuntime::new();
 
         // Test Python execution
-        let python_api: _ = Arc::new(std::sync::Mutex::new(go_runtime::BeeAPI {
+        let python_api: _ = Arc::new(Mutex::new(go_runtime::BeeAPI {
             runtime: Arc::new(MockBeeRuntime)),
         });
         runtime.init_python(python_api).unwrap();
@@ -92,7 +92,7 @@ use std::collections::{HashMap, BTreeMap};
         assert!(result.is_ok());
 
         // Test Go execution
-        let go_api: _ = Arc::new(std::sync::Mutex::new(go_runtime::BeeAPI {
+        let go_api: _ = Arc::new(Mutex::new(go_runtime::BeeAPI {
             runtime: Arc::new(MockBeeRuntime)),
         });
         runtime.init_go(go_api).unwrap();

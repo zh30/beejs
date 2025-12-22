@@ -596,7 +596,7 @@ use std::collections::{HashMap, BTreeMap};
             // 相同的 workload
             let workload: _ = |profiler: &mut Profiler| {
                 for _ in 0..100 {
-                    let id = profiler.start_profile(ProfileTarget::Runtime).unwrap();
+                    let id: _ = profiler.start_profile(ProfileTarget::Runtime).unwrap();
                     std::thread::sleep(Duration::from_millis(1));
                     profiler.stop_profile(id).unwrap();
                 }

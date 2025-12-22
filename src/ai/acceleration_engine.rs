@@ -48,7 +48,7 @@ pub struct AccelerationEngine {
     runtime: Arc<Runtime>,
     gpu_available: bool,
     npu_available: bool,
-    active_tasks: Arc<Mutex<HashMap<u64, InferenceTask>>,
+    active_tasks: Arc<Mutex<HashMap<u64, InferenceTask, std::collections::HashMap<u64, InferenceTask, u64, InferenceTask>>>,
     batch_queue: Arc<Mutex<VecDeque<InferenceTask>>,
     performance_stats: Arc<Mutex<AccelerationStats>>,
     batch_config: Arc<Mutex<BatchConfig>>,
@@ -90,14 +90,14 @@ impl AccelerationEngine {
             runtime: runtime.clone(),
             gpu_available,
             npu_available,
-            active_tasks: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
-            batch_queue: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
-            performance_stats: Arc::new(std::sync::Mutex::new(Mutex::new(AccelerationStats::default()))),
-            batch_config: Arc::new(std::sync::Mutex::new(Mutex::new(BatchConfig {
+            active_tasks: Arc::new(Mutex::new(HashMap::new())),
+            batch_queue: Arc::new(Mutex::new(VecDeque::new())),
+            performance_stats: Arc::new(Mutex::new(AccelerationStats::default())),
+            batch_config: Arc::new(Mutex::new(BatchConfig {
                 dynamic_batching: false,
                 max_batch_size: 32,
                 batch_timeout_ms: 10,
-            }))),
+            })),
         })
     }
 
@@ -214,7 +214,7 @@ impl AccelerationEngine {
         // 并行处理批量输入
         let outputs: Result<Vec<_>, _> = inputs
             .iter()
-            .map(|input| self.simulate_inference(input, hardware_type.clone()))
+            .map(|input| self.simulate_inference(input, hardware_type.clone())
             .collect();
 
         let outputs: _ = outputs?;
@@ -263,7 +263,7 @@ impl AccelerationEngine {
 
         // 检查是否达到批处理大小
         let should_process: _ = {
-            let batch_config = self.batch_config.lock().unwrap();
+            let batch_config: _ = self.batch_config.lock().unwrap();
             let queue: _ = self.batch_queue.lock().unwrap();
             queue.len() >= batch_config.max_batch_size
                 || (queue.len() > 0 && self.should_timeout(&queue, batch_config.batch_timeout_ms))
@@ -274,7 +274,7 @@ impl AccelerationEngine {
         } else {
             // 等待批处理
             let timeout_ms: _ = {
-                let batch_config = self.batch_config.lock().unwrap();
+                let batch_config: _ = self.batch_config.lock().unwrap();
                 batch_config.batch_timeout_ms
             };
             std::thread::sleep(Duration::from_millis(timeout_ms));
@@ -293,7 +293,7 @@ impl AccelerationEngine {
 
             // 收集批次
             let batch_size: _ = {
-                let batch_config = self.batch_config.lock().unwrap();
+                let batch_config: _ = self.batch_config.lock().unwrap();
                 batch_config.max_batch_size.min(queue.len())
             };
             let tasks: Vec<_> = queue.drain(..batch_size).collect();
@@ -423,7 +423,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_acceleration_engine_creation() {
-        let runtime: _ = Arc::new(std::sync::Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)));
+        let runtime: _ = Arc::new(Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
         let config: _ = AccelerationConfig {
             use_gpu: true,
             use_npu: false,
@@ -437,7 +437,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_cpu_inference() {
-        let runtime: _ = Arc::new(std::sync::Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)));
+        let runtime: _ = Arc::new(Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
         let config: _ = AccelerationConfig {
             use_gpu: false,
             use_npu: false,
@@ -455,7 +455,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_gpu_inference() {
-        let runtime: _ = Arc::new(std::sync::Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)));
+        let runtime: _ = Arc::new(Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
         let config: _ = AccelerationConfig {
             use_gpu: true,
             use_npu: false,
@@ -472,7 +472,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_batch_inference() {
-        let runtime: _ = Arc::new(std::sync::Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)));
+        let runtime: _ = Arc::new(Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
         let config: _ = AccelerationConfig {
             use_gpu: false,
             use_npu: false,
@@ -494,7 +494,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_pipeline_inference() {
-        let runtime: _ = Arc::new(std::sync::Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)));
+        let runtime: _ = Arc::new(Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
         let config: _ = AccelerationConfig {
             use_gpu: false,
             use_npu: false,
@@ -517,7 +517,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_dynamic_batching() {
-        let runtime: _ = Arc::new(std::sync::Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)));
+        let runtime: _ = Arc::new(Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
         let config: _ = AccelerationConfig {
             use_gpu: false,
             use_npu: false,

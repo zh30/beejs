@@ -48,7 +48,7 @@ pub struct RegressionDetection {
 /// Performance regression detector
 pub struct RegressionDetector {
     config: RegressionConfig,
-    history_cache: HashMap<String, Vec<HistoricalData>>,
+    history_cache: HashMap<String, Vec<HistoricalData, std::collections::HashMap<String, Vec<HistoricalData, String, Vec<HistoricalData>>>,
 }
 
 impl RegressionDetector {
@@ -169,7 +169,7 @@ impl RegressionDetector {
         }
 
         let content: _ = fs::read_to_string(file_path)?;
-        let history_data: HashMap<String, Vec<HistoricalData>> = serde_json::from_str(&content)?;
+        let history_data: HashMap<String, Vec<HistoricalData, std::collections::HashMap<String, Vec<HistoricalData, String, Vec<HistoricalData>>> = serde_json::from_str(&content)?;
 
         self.history_cache = history_data;
         Ok(())
@@ -205,7 +205,7 @@ impl RegressionDetector {
 
         for (benchmark_name, history) in &self.history_cache {
             summary.push_str(&format!("{}:\n", benchmark_name));
-            summary.push_str(&format!("  Entries: {}\n", history.len()));
+            summary.push_str(&format!("  Entries: {}\n", history.len());
 
             if !history.is_empty() {
                 let latest: _ = &history[history.len() - 1];

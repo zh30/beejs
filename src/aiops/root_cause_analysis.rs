@@ -169,8 +169,8 @@ pub struct EventCollector {
 impl EventCollector {
     pub fn new() -> Self {
         Self {
-            incidents: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
-            changes: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            incidents: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            changes: Arc::new(Mutex::new(RwLock::new(Vec::new())),
         }
     }
 
@@ -197,13 +197,13 @@ impl EventCollector {
 
         let related_incidents: Vec<Incident> = incidents
             .iter()
-            .filter(|i| i.timestamp > cutoff_time && (i.affected_services.contains(&service_str) || i.affected_components.contains(&service_str)))
+            .filter(|i| i.timestamp > cutoff_time && (i.affected_services.contains(&service_str) || i.affected_components.contains(&service_str))
             .cloned()
             .collect();
 
         let related_changes: Vec<Change> = changes
             .iter()
-            .filter(|c| c.timestamp > cutoff_time && (c.affected_services.contains(&service_str) || c.affected_components.contains(&service_str)))
+            .filter(|c| c.timestamp > cutoff_time && (c.affected_services.contains(&service_str) || c.affected_components.contains(&service_str))
             .cloned()
             .collect();
 
@@ -239,7 +239,7 @@ impl ChangeCorrelator {
                 // 检查时间和组件重叠
                 if self.has_temporal_correlation(change, incident, &timeframe)?
                     && self.has_component_overlap(change, incident) {
-                    correlations.push((change.clone(), incident.clone()));
+                    correlations.push((change.clone(), incident.clone());
                 }
             }
         }
@@ -325,20 +325,20 @@ impl ChangeCorrelator {
     async fn get_all_events(&self) -> Result<(Vec<Incident>, Vec<Change>), Box<dyn std::error::Error>> {
         let incidents: _ = self.event_collector.incidents.read().await;
         let changes: _ = self.event_collector.changes.read().await;
-        Ok((incidents.clone(), changes.clone()))
+        Ok((incidents.clone(), changes.clone())
     }
 }
 
 /// 因果推断引擎
 #[derive(Debug)]
 pub struct CausalInferenceEngine {
-    causal_graph: Arc<RwLock<HashMap<String, Vec<Causality>>>,
+    causal_graph: Arc<RwLock<HashMap<String, Vec<Causality, std::collections::HashMap<String, Vec<Causality, String, Vec<Causality>>>>,
 }
 
 impl CausalInferenceEngine {
     pub fn new() -> Self {
         Self {
-            causal_graph: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            causal_graph: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -456,11 +456,11 @@ pub struct RootCauseAnalyzer {
 
 impl RootCauseAnalyzer {
     pub fn new() -> Self {
-        let event_collector: _ = Arc::new(std::sync::Mutex::new(EventCollector::new()));
+        let event_collector: _ = Arc::new(Mutex::new(EventCollector::new());
         Self {
-            event_collector: Arc::new(std::sync::Mutex::new(EventCollector::new())),
-            causal_inference_engine: Arc::new(std::sync::Mutex::new(CausalInferenceEngine::new())),
-            change_correlator: Arc::new(std::sync::Mutex::new(ChangeCorrelator::new(event_collector.clone()))),
+            event_collector: Arc::new(Mutex::new(EventCollector::new()),
+            causal_inference_engine: Arc::new(Mutex::new(CausalInferenceEngine::new()),
+            change_correlator: Arc::new(Mutex::new(ChangeCorrelator::new(event_collector.clone())),
         }
     }
 

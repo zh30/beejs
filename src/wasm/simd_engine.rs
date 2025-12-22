@@ -117,7 +117,7 @@ pub fn detect_cpu_features() -> HardwareFeatures {
             detect_arm_features()
         }
 
-        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64"))]
         {
             HardwareFeatures::default()
         }

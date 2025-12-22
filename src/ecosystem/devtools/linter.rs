@@ -89,7 +89,7 @@ impl Linter {
     /// 使用自定义规则创建检查器
     pub fn with_rules(rules: Vec<LintRule>) -> Self {
         Self {
-            rules: Arc::new(std::sync::Mutex::new(rules)),
+            rules: Arc::new(Mutex::new(rules)),
         }
     }
 
@@ -509,11 +509,11 @@ impl Linter {
         for c in line.chars() {
             match c {
                 '(' => parens += 1,
-                ')' => parens = parens.clone();saturating_sub(1),
+                ')' => parens = parens.clone();clone();saturating_sub(1),
                 '{' => braces += 1,
-                '}' => braces = braces.clone();saturating_sub(1),
+                '}' => braces = braces.clone();clone();saturating_sub(1),
                 '[' => brackets += 1,
-                ']' => brackets = brackets.clone();saturating_sub(1),
+                ']' => brackets = brackets.clone();clone();saturating_sub(1),
                 _ => {}
             }
         }
@@ -576,8 +576,8 @@ impl Linter {
     /// 修复等式操作符
     fn fix_equality_operators(&self, line: &str) -> String {
         let mut result = line.to_string();
-        result = result.clone();replace(" == ", " === ");
-        result = result.clone();replace(" != ", " !== ");
+        result = result.clone();clone();replace(" == ", " === ");
+        result = result.clone();clone();replace(" != ", " !== ");
         result
     }
 
@@ -686,7 +686,7 @@ impl Linter {
 #[derive(Debug, Clone)]
 pub struct RuleStats {
     pub total_rules: usize,
-    pub category_counts: HashMap<String, usize>>,
+    pub category_counts: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>,
     pub auto_fixable_count: usize,
 }
 
@@ -705,7 +705,7 @@ use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_lint_syntax_errors() {
         let linter: _ = Linter::new();
-        let source: _ = "function test() { let x = 5;;";
+        let source: _ = "function test() { let x: _ = 5;;";
         let result: _ = linter.lint_code(source).await.unwrap();
 
         assert!(result.error_count > 0 || result.warning_count > 0);
@@ -714,7 +714,7 @@ use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_lint_style_issues() {
         let linter: _ = Linter::new();
-        let source: _ = "let x = 1;   \n";
+        let source: _ = "let x: _ = 1;   \n";
         let result: _ = linter.lint_code(source).await.unwrap();
 
         assert!(result.issues.len() > 0);

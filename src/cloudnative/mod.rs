@@ -142,8 +142,8 @@ use std::collections::{HashMap, BTreeMap};
 
         // Check supported features
         let features: _ = runtime.supported_features();
-        assert!(features.contains(&"kubernetes".to_string()));
-        assert!(features.contains(&"service_mesh".to_string()));
+        assert!(features.contains(&"kubernetes".to_string());
+        assert!(features.contains(&"service_mesh".to_string());
 
         // Get statistics
         let stats: _ = runtime.get_stats().await.unwrap();

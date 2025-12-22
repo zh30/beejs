@@ -46,14 +46,14 @@ impl Event {
 /// EventTarget structure
 #[derive(Clone)]
 pub struct EventTarget {
-    listeners: Arc<Mutex<HashMap<String, Vec<Box<dyn Fn(&Event) + Send + Sync>>,
+    listeners: Arc<Mutex<HashMap<String, Vec<Box<dyn Fn(&Event) + Send + Sync, std::collections::HashMap<String, Vec<Box<dyn Fn(&Event) + Send + Sync, String, Vec<Box<dyn Fn(&Event) + Send + Sync>>>,
 }
 
 impl EventTarget {
     /// Create new EventTarget
     pub fn new() -> Self {
         Self {
-            listeners: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            listeners: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -121,7 +121,7 @@ fn event_target_constructor_callback(
     // Add prototype methods to instance
     let add_event_key: _ = v8::String::new(scope, "addEventListener").unwrap();
     let add_event_func: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-        let event_type = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
+        let event_type: _ = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
         println!("addEventListener: {}", event_type);
     });
     let add_event_func_instance: _ = add_event_func.get_function(scope).unwrap();
@@ -130,7 +130,7 @@ fn event_target_constructor_callback(
 
     let remove_event_key: _ = v8::String::new(scope, "removeEventListener").unwrap();
     let remove_event_func: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-        let event_type = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
+        let event_type: _ = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
         println!("removeEventListener: {}", event_type);
     });
     let remove_event_func_instance: _ = remove_event_func.get_function(scope).unwrap();
@@ -171,7 +171,7 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_event_listener_management() {
         let target: _ = EventTarget::new();
-        let event_called: _ = std::sync::Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(false)));
+        let event_called: _ = std::sync::Arc::new(Mutex::new(std::sync::Mutex::new(false));
         let event_called_clone: _ = event_called.clone();
 
         let listener: _ = Box::new(move |event: &Event| {

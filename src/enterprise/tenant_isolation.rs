@@ -162,13 +162,13 @@ pub struct UsageMetrics {
 /// Policy engine
 #[derive(Debug)]
 pub struct PolicyEngine {
-    policies: Arc<RwLock<BTreeMap<TenantId, TenantConfig, TenantId, TenantConfig>>,
+    policies: Arc<RwLock<BTreeMap<TenantId, TenantConfig, TenantId, TenantConfig, TenantId, TenantConfig, TenantId, TenantConfig>>,
 }
 
 /// Tenant manager
 #[derive(Debug)]
 pub struct TenantManager {
-    tenants: Arc<RwLock<BTreeMap<TenantId, Tenant, TenantId, Tenant>>,
+    tenants: Arc<RwLock<BTreeMap<TenantId, Tenant, TenantId, Tenant, TenantId, Tenant, TenantId, Tenant>>,
     policy_engine: Arc<PolicyEngine>,
     quota_enforcer: Arc<RwLock<QuotaEnforcer>>,
 }
@@ -176,7 +176,7 @@ pub struct TenantManager {
 /// Quota enforcer
 #[derive(Debug)]
 pub struct QuotaEnforcer {
-    quotas: Arc<RwLock<BTreeMap<TenantId, QuotaStatus, TenantId, QuotaStatus>>,
+    quotas: Arc<RwLock<BTreeMap<TenantId, QuotaStatus, TenantId, QuotaStatus, TenantId, QuotaStatus, TenantId, QuotaStatus>>,
 }
 
 /// Tenant isolation manager
@@ -191,28 +191,28 @@ pub struct TenantIsolationManager {
 /// Network isolator
 #[derive(Debug)]
 pub struct NetworkIsolator {
-    namespaces: Arc<RwLock<BTreeMap<TenantId, String, TenantId, String>>,
+    namespaces: Arc<RwLock<BTreeMap<TenantId, String, TenantId, String, TenantId, String, TenantId, String>>,
 }
 
 /// Storage isolator
 #[derive(Debug)]
 pub struct StorageIsolator {
-    storage_classes: Arc<RwLock<BTreeMap<TenantId, String, TenantId, String>>,
+    storage_classes: Arc<RwLock<BTreeMap<TenantId, String, TenantId, String, TenantId, String, TenantId, String>>,
 }
 
 /// Compute isolator
 #[derive(Debug)]
 pub struct ComputeIsolator {
-    quota_names: Arc<RwLock<BTreeMap<TenantId, String, TenantId, String>>,
+    quota_names: Arc<RwLock<BTreeMap<TenantId, String, TenantId, String, TenantId, String, TenantId, String>>,
 }
 
 impl TenantManager {
     /// Create a new tenant manager
     pub fn new() -> Self {
         Self {
-            tenants: Arc::new(std::sync::Mutex::new(RwLock::new(BTreeMap::new()))),
-            policy_engine: Arc::new(std::sync::Mutex::new(PolicyEngine::new())),
-            quota_enforcer: Arc::new(std::sync::Mutex::new(RwLock::new(QuotaEnforcer::new()))),
+            tenants: Arc::new(Mutex::new(RwLock::new(BTreeMap::new())),
+            policy_engine: Arc::new(Mutex::new(PolicyEngine::new()),
+            quota_enforcer: Arc::new(Mutex::new(RwLock::new(QuotaEnforcer::new())),
         }
     }
 
@@ -335,10 +335,10 @@ impl TenantIsolationManager {
     /// Create a new tenant isolation manager
     pub fn new() -> Self {
         Self {
-            tenant_manager: Arc::new(std::sync::Mutex::new(TenantManager::new())),
-            network_isolator: Arc::new(std::sync::Mutex::new(NetworkIsolator::new())),
-            storage_isolator: Arc::new(std::sync::Mutex::new(StorageIsolator::new())),
-            compute_isolator: Arc::new(std::sync::Mutex::new(ComputeIsolator::new())),
+            tenant_manager: Arc::new(Mutex::new(TenantManager::new()),
+            network_isolator: Arc::new(Mutex::new(NetworkIsolator::new()),
+            storage_isolator: Arc::new(Mutex::new(StorageIsolator::new()),
+            compute_isolator: Arc::new(Mutex::new(ComputeIsolator::new()),
         }
     }
 
@@ -396,7 +396,7 @@ impl TenantIsolationManager {
 impl PolicyEngine {
     pub fn new() -> Self {
         Self {
-            policies: Arc::new(std::sync::Mutex::new(RwLock::new(BTreeMap::new()))),
+            policies: Arc::new(Mutex::new(RwLock::new(BTreeMap::new())),
         }
     }
 
@@ -429,7 +429,7 @@ impl PolicyEngine {
 impl QuotaEnforcer {
     pub fn new() -> Self {
         Self {
-            quotas: Arc::new(std::sync::Mutex::new(RwLock::new(BTreeMap::new()))),
+            quotas: Arc::new(Mutex::new(RwLock::new(BTreeMap::new())),
         }
     }
 
@@ -467,7 +467,7 @@ impl QuotaEnforcer {
 impl NetworkIsolator {
     pub fn new() -> Self {
         Self {
-            namespaces: Arc::new(std::sync::Mutex::new(RwLock::new(BTreeMap::new()))),
+            namespaces: Arc::new(Mutex::new(RwLock::new(BTreeMap::new())),
         }
     }
 
@@ -494,7 +494,7 @@ impl NetworkIsolator {
 impl StorageIsolator {
     pub fn new() -> Self {
         Self {
-            storage_classes: Arc::new(std::sync::Mutex::new(RwLock::new(BTreeMap::new()))),
+            storage_classes: Arc::new(Mutex::new(RwLock::new(BTreeMap::new())),
         }
     }
 
@@ -521,7 +521,7 @@ impl StorageIsolator {
 impl ComputeIsolator {
     pub fn new() -> Self {
         Self {
-            quota_names: Arc::new(std::sync::Mutex::new(RwLock::new(BTreeMap::new()))),
+            quota_names: Arc::new(Mutex::new(RwLock::new(BTreeMap::new())),
         }
     }
 

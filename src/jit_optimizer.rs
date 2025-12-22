@@ -82,7 +82,7 @@ pub enum JITStrategy {
 pub struct JITOptimizer {
     thresholds: JITThresholds,
     strategy: JITStrategy,
-    execution_stats: Arc<Mutex<HashMap<String, ExecutionStat>>,
+    execution_stats: Arc<Mutex<HashMap<String, ExecutionStat, std::collections::HashMap<String, ExecutionStat, String, ExecutionStat>>>,
     compile_history: Arc<Mutex<Vec<CompileEvent>>,
 }
 
@@ -118,8 +118,8 @@ impl JITOptimizer {
         Self {
             thresholds,
             strategy,
-            execution_stats: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
-            compile_history: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            execution_stats: Arc::new(Mutex::new(HashMap::new())),
+            compile_history: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -453,7 +453,7 @@ mod tests {
 
     #[test]
     fn test_code_complexity_analysis() {
-        let simple_code: _ = "let x = 1; let y: _ = 2;";
+        let simple_code: _ = "let x: _ = 1; let y: _ = 2;";
         let complex_code =
             "function fib(n) { for(let i=0; i<n; i++) { if(i > 10) { while(true) {}}} }";
 
@@ -471,7 +471,7 @@ mod tests {
     #[test]
     fn test_jit_decision_making() {
         let optimizer: _ = JITOptimizer::new_default();
-        let code: _ = "let x = 1;";
+        let code: _ = "let x: _ = 1;";
         let code_hash: _ = "test_code";
 
         // 第一次决策：不编译
@@ -530,7 +530,7 @@ mod tests {
     fn test_execution_stats_update() {
         let optimizer: _ = JITOptimizer::new_default();
         let code_hash: _ = "test_code";
-        let code: _ = "let x = 1; let y: _ = 2;";
+        let code: _ = "let x: _ = 1; let y: _ = 2;";
         let exec_time: _ = Duration::from_millis(10);
 
         optimizer.update_execution_stats(code_hash, code, exec_time);
@@ -557,7 +557,7 @@ pub struct AIDrivenJITExtension {
     /// 自适应编译策略
     pub compilation_strategy: Arc<AdaptiveCompilationStrategy>,
     /// 优化缓存
-    pub optimization_cache: Arc<RwLock<HashMap<String, CompilationStrategy>>,
+    pub optimization_cache: Arc<RwLock<HashMap<String, CompilationStrategy, std::collections::HashMap<String, CompilationStrategy, String, CompilationStrategy>>>,
     /// 性能指标
     pub metrics: Arc<RwLock<Vec<JITMetrics>>,
 }
@@ -565,7 +565,7 @@ pub struct AIDrivenJITExtension {
 /// 代码执行模式分析器
 #[derive(Debug, Clone)]
 pub struct ProfileAnalyzer {
-    profiles: Arc<RwLock<HashMap<String, ExecutionProfile>>,
+    profiles: Arc<RwLock<HashMap<String, ExecutionProfile, std::collections::HashMap<String, ExecutionProfile, String, ExecutionProfile>>>,
     config: HotspotConfig,
 }
 
@@ -647,7 +647,7 @@ pub enum EffortLevel {
 #[derive(Debug, Clone)]
 pub struct AdaptiveCompilationStrategy {
     config: CompilationStrategyConfig,
-    strategy_cache: Arc<RwLock<HashMap<String, CompilationStrategy>>,
+    strategy_cache: Arc<RwLock<HashMap<String, CompilationStrategy, std::collections::HashMap<String, CompilationStrategy, String, CompilationStrategy>>>,
 }
 
 /// 编译策略配置
@@ -755,10 +755,10 @@ impl AIDrivenJITExtension {
     /// 创建新的 AI 驱动 JIT 扩展
     pub fn new() -> Self {
         Self {
-            profile_analyzer: Arc::new(std::sync::Mutex::new(ProfileAnalyzer::new())),
-            compilation_strategy: Arc::new(std::sync::Mutex::new(AdaptiveCompilationStrategy::new())),
-            optimization_cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            metrics: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            profile_analyzer: Arc::new(Mutex::new(ProfileAnalyzer::new()),
+            compilation_strategy: Arc::new(Mutex::new(AdaptiveCompilationStrategy::new()),
+            optimization_cache: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            metrics: Arc::new(Mutex::new(RwLock::new(Vec::new())),
         }
     }
 
@@ -867,7 +867,7 @@ impl AIDrivenJITExtension {
 impl ProfileAnalyzer {
     pub fn new() -> Self {
         Self {
-            profiles: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            profiles: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
             config: HotspotConfig::default(),
         }
     }
@@ -926,7 +926,7 @@ impl AdaptiveCompilationStrategy {
     pub fn new() -> Self {
         Self {
             config: CompilationStrategyConfig::default(),
-            strategy_cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            strategy_cache: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 

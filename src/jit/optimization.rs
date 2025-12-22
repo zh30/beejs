@@ -68,8 +68,8 @@ pub enum OptimizationFlag {
 /// Hot path optimizer for critical code paths
 #[derive(Debug)]
 pub struct HotPathOptimizer {
-    hot_paths: HashMap<String, HotPathInfo>>,
-    execution_counters: HashMap<String, u64>>,
+    hot_paths: HashMap<String, HotPathInfo, std::collections::HashMap<String, HotPathInfo, String, HotPathInfo>>>,
+    execution_counters: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>>,
     optimization_threshold: u64,
 }
 
@@ -153,7 +153,7 @@ pub struct HotPathStats {
 #[derive(Debug)]
 pub struct FunctionInliner {
     max_inline_depth: usize,
-    inline_candidates: HashMap<String, InlineCandidate>>,
+    inline_candidates: HashMap<String, InlineCandidate, std::collections::HashMap<String, InlineCandidate, String, InlineCandidate>>>,
     inlined_functions: HashSet<String>,
 }
 
@@ -251,7 +251,7 @@ impl FunctionInliner {
 /// Escape analysis for stack allocation opportunities
 #[derive(Debug)]
 pub struct EscapeAnalyzer {
-    escape_graph: HashMap<String, EscapeInfo>>,
+    escape_graph: HashMap<String, EscapeInfo, std::collections::HashMap<String, EscapeInfo, String, EscapeInfo>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -306,7 +306,7 @@ impl EscapeAnalyzer {
 
     /// Extract variable name from declaration
     fn extract_variable_name(&self, line: &str) -> Option<String> {
-        if let Some(start) = line.find("let ").or_else(|| line.find("const ").or_else(|| line.find("var "))) {
+        if let Some(start) = line.find("let ").or_else(|| line.find("const ").or_else(|| line.find("var ")) {
             let after_keyword: _ = &line[start + 4..];
             if let Some(end) = after_keyword.find('=') {
                 let name: _ = after_keyword[..end].trim();
@@ -608,7 +608,7 @@ use std::collections::{HashMap, BTreeMap};
         let mut analyzer = EscapeAnalyzer::new();
         let code: _ = r#"
             function createObject() {
-                let obj = { value: 42 };
+                let obj: _ = { value: 42 };
                 return obj;
             }
         "#;
@@ -623,7 +623,7 @@ use std::collections::{HashMap, BTreeMap};
         let mut eliminator = DeadCodeEliminator::new();
         let code: _ = r#"
             function test() {
-                let x = 1 + 1;
+                let x: _ = 1 + 1;
                 return x;
             }
         "#;
@@ -639,7 +639,7 @@ use std::collections::{HashMap, BTreeMap};
         let mut pipeline = OptimizationPipeline::new();
         let code: _ = r#"
             function compute(a, b) {
-                let result = a + b;
+                let result: _ = a + b;
                 return result;
             }
         "#;
@@ -655,7 +655,7 @@ use std::collections::{HashMap, BTreeMap};
         let mut jit = JITOptimizer::new();
         jit.set_optimization_level(OptimizationLevel::Aggressive);
 
-        let code: _ = "function test() { let x = 1 + 1; return x; }";
+        let code: _ = "function test() { let x: _ = 1 + 1; return x; }";
         let optimized: _ = jit.optimize(code);
 
         assert!(!optimized.is_empty());

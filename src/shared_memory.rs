@@ -115,7 +115,7 @@ struct PrefetchEntry {
 #[derive(Debug)]
 pub struct SharedMemoryManager {
     /// 活跃区域映射
-    regions: Arc<Mutex<HashMap<String, Weak<SharedMemoryRegion>>>,
+    regions: Arc<Mutex<HashMap<String, Weak<SharedMemoryRegion, std::collections::HashMap<String, Weak<SharedMemoryRegion, String, Weak<SharedMemoryRegion>>>>,
     /// 配置
     config: SharedMemoryConfig,
     /// 统计信息
@@ -125,19 +125,19 @@ pub struct SharedMemoryManager {
     /// 访问模式跟踪
     access_patterns: Arc<Mutex<VecDeque<AccessPattern>>,
     /// 预取缓存
-    prefetch_cache: Arc<Mutex<HashMap<String, PrefetchEntry>>,
+    prefetch_cache: Arc<Mutex<HashMap<String, PrefetchEntry, std::collections::HashMap<String, PrefetchEntry, String, PrefetchEntry>>>,
 }
 
 impl SharedMemoryManager {
     /// 创建新的共享内存管理器
     pub fn new(config: SharedMemoryConfig) -> Self {
         let manager: _ = Self {
-            regions: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            regions: Arc::new(Mutex::new(HashMap::new())),
             config,
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(SharedMemoryStats::default()))),
-            running: Arc::new(std::sync::Mutex::new(AtomicBool::new(true))),
-            access_patterns: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
-            prefetch_cache: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
+            stats: Arc::new(Mutex::new(SharedMemoryStats::default())),
+            running: Arc::new(Mutex::new(AtomicBool::new(true)),
+            access_patterns: Arc::new(Mutex::new(VecDeque::new())),
+            prefetch_cache: Arc::new(Mutex::new(HashMap::new())),
         };
 
         // 启动GC线程和预取线程
@@ -164,12 +164,12 @@ impl SharedMemoryManager {
         }
 
         // 创建新的内存区域
-        let data: _ = Arc::new(std::sync::Mutex::new(Mutex::new(vec![0u8; size])));
-        let readers: _ = Arc::new(std::sync::Mutex::new(AtomicUsize::new(0)));
-        let writers: _ = Arc::new(std::sync::Mutex::new(AtomicUsize::new(1))); // 创建者是写者
-        let last_accessed: _ = Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now())));
+        let data: _ = Arc::new(Mutex::new(vec![0u8; size]));
+        let readers: _ = Arc::new(Mutex::new(AtomicUsize::new(0));
+        let writers: _ = Arc::new(Mutex::new(AtomicUsize::new(1)); // 创建者是写者
+        let last_accessed: _ = Arc::new(Mutex::new(Instant::now()));
 
-        let region: _ = Arc::new(std::sync::Mutex::new(SharedMemoryRegion {
+        let region: _ = Arc::new(Mutex::new(SharedMemoryRegion {
             id: id.clone()),
             data,
             readers,
@@ -209,7 +209,7 @@ impl SharedMemoryManager {
     ) -> Result<SharedMemoryHandle> {
         // 尝试获取现有区域
         let existing: _ = {
-            let regions = self.regions.lock().unwrap();
+            let regions: _ = self.regions.lock().unwrap();
             regions.get(&id).and_then(|weak| weak.upgrade())
         };
 
@@ -266,7 +266,7 @@ impl SharedMemoryManager {
 
         // 读取数据（从 COW 副本或原始数据）
         let data: _ = if let Some(cow_copy) = &handle.cow_copy {
-            let cow_data = cow_copy.lock().unwrap();
+            let cow_data: _ = cow_copy.lock().unwrap();
             cow_data[offset..offset + size].to_vec()
         } else {
             let region_data: _ = handle.region.data.lock().unwrap();
@@ -312,10 +312,10 @@ impl SharedMemoryManager {
         if !handle.is_writer && handle.cow_copy.is_none() {
             // 创建 COW 副本
             let original_data: _ = {
-                let region_data = handle.region.data.lock().unwrap();
+                let region_data: _ = handle.region.data.lock().unwrap();
                 region_data.clone()
             };
-            handle.cow_copy = Some(Arc::new(std::sync::Mutex::new(Mutex::new(original_data))));
+            handle.cow_copy = Some(Arc::new(Mutex::new(original_data)));
         }
 
         // 写入数据（到 COW 副本或原始数据）
@@ -361,10 +361,10 @@ impl SharedMemoryManager {
 
         // 创建 COW 副本
         let original_data: _ = {
-            let region_data = handle.region.data.lock().unwrap();
+            let region_data: _ = handle.region.data.lock().unwrap();
             region_data.clone()
         };
-        handle.cow_copy = Some(Arc::new(std::sync::Mutex::new(Mutex::new(original_data))));
+        handle.cow_copy = Some(Arc::new(Mutex::new(original_data)));
 
         Ok(())
     }
@@ -449,7 +449,7 @@ impl SharedMemoryManager {
                 std::thread::sleep(config.gc_interval);
 
                 if let Some(regions) = regions.upgrade() {
-                    let mut regions = regions.clone();lock().unwrap();
+                    let mut regions = regions.clone();clone();lock().unwrap();
                     let now: _ = Instant::now();
                     let mut cleaned = 0;
 
@@ -534,7 +534,7 @@ impl SharedMemoryManager {
         if let Some(weak_region) = regions.get(region_id) {
             if let Some(region) = weak_region.upgrade() {
                 let data: _ = {
-                    let region_data = region.data.lock().unwrap();
+                    let region_data: _ = region.data.lock().unwrap();
                     if offset + size > region_data.len() {
                         return Err(anyhow::anyhow!("Prefetch would exceed region size"));
                     }

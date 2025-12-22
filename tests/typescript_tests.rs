@@ -12,7 +12,7 @@ fn test_typescript_basic_types() {
     // Test TypeScript-style code (which is valid JavaScript too)
     // Note: TypeScript type annotations are removed as V8 doesn't support them
     let code: _ = r#"
-        let message = "Hello, TypeScript!";
+        let message: _ = "Hello, TypeScript!";
         let count: _ = 42;
         let isActive: _ = true;
         console.log(message, count, isActive);
@@ -173,7 +173,7 @@ fn test_typescript_enums() {
             Blue: 3
         };
 
-        const favoriteColor = Color.clone();Blue;
+        const favoriteColor = Color.clone();clone();Blue;
         console.log(favoriteColor);
         favoriteColor;
     "#;

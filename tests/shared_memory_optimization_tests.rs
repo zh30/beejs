@@ -523,7 +523,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 
         let config: _ = SharedMemoryConfig::default();
-        let manager: _ = Arc::new(std::sync::Mutex::new(SharedMemoryManager::new(config)));
+        let manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(SharedMemoryManager::new(config))));
 
         let _handle: _ = manager.create_region("concurrent_test".to_string(), Some(1024)).unwrap();
 

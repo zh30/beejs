@@ -73,7 +73,7 @@ pub struct LogEntry {
     /// Message
     pub message: String,
     /// Additional fields
-    pub fields: HashMap<String, serde_json::Value>>,
+    pub fields: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>,
     /// Source file
     pub file: Option<String>,
     /// Source line
@@ -215,7 +215,7 @@ impl LogAggregator {
 
         // Spawn async log processor
         let log_dir: _ = config.log_dir.clone();
-        let current_file: _ = Arc::new(std::sync::Mutex::new(Mutex::new(None)));
+        let current_file: _ = Arc::new(Mutex::new(None));
         let current_file_clone: _ = current_file.clone();
 
         tokio::spawn(async move {
@@ -231,7 +231,7 @@ impl LogAggregator {
         Ok(Self {
             config,
             current_file,
-            log_queue: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            log_queue: Arc::new(Mutex::new(Vec::new())),
             log_sender,
         })
     }
@@ -282,7 +282,7 @@ impl LogAggregator {
         );
 
         // Add thread ID
-        log_entry.thread_id(&format!("{:?}", std::thread::current().id()));
+        log_entry.thread_id(&format!("{:?}", std::thread::current().id());
 
         // Send to log channel
         self.log_sender.send(log_entry)
@@ -299,7 +299,7 @@ impl LogAggregator {
     }
 
     /// Get log statistics
-    pub fn get_stats(&self) -> HashMap<String, usize>> {
+    pub fn get_stats(&self) -> HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>> {
         let queue: _ = self.log_queue.lock().unwrap();
         let mut stats = HashMap::new();
         stats.insert("buffered_logs".to_string(), queue.len());
@@ -330,7 +330,7 @@ async fn process_log_entry(
             log_entry.level.as_str(),
             log_entry.message)
     } else {
-        let json = log_entry.to_json()?;
+        let json: _ = log_entry.to_json()?;
         format!("[{}] {}: {} | {}",
             log_entry.timestamp.format("%Y-%m-%d %H:%M:%S%.3f"),
             log_entry.level.as_str(),
@@ -355,7 +355,7 @@ async fn process_log_entry(
 
 /// Initialize global logger
 pub fn init_logger(config: LogAggregatorConfig) -> Result<Arc<LogAggregator>> {
-    let aggregator: _ = Arc::new(std::sync::Mutex::new(LogAggregator::new(config))?);
+    let aggregator: _ = Arc::new(Mutex::new(LogAggregator::new(config))?);
 
     // Set up tracing subscriber
     tracing_subscriber::fmt()
@@ -401,8 +401,8 @@ use std::collections::{HashMap, BTreeMap};
             .field("action", "login")
             .unwrap();
 
-        assert_eq!(entry.fields.get("user_id"), Some(&serde_json::Value::from(12345)));
-        assert_eq!(entry.fields.get("action"), Some(&serde_json::Value::from("login")));
+        assert_eq!(entry.fields.get("user_id"), Some(&serde_json::Value::from(12345));
+        assert_eq!(entry.fields.get("action"), Some(&serde_json::Value::from("login"));
     }
 
     #[test]

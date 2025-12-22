@@ -77,7 +77,7 @@ use std::collections::{HashMap, BTreeMap};
         // 简化测试，只验证能成功执行
         let output1: _ = Command::new("./target/release/beejs")
             .arg("--eval")
-            .arg("let x = 10; let y: _ = 20; x + y")
+            .arg("let x: _ = 10; let y: _ = 20; x + y")
             .output()
             .expect("Failed to execute beejs");
 
@@ -86,7 +86,7 @@ use std::collections::{HashMap, BTreeMap};
         // 再次执行（复用 Runtime）
         let output2: _ = Command::new("./target/release/beejs")
             .arg("--eval")
-            .arg("let a = 5; let b: _ = 15; a * b")
+            .arg("let a: _ = 5; let b: _ = 15; a * b")
             .output()
             .expect("Failed to execute beejs");
 
@@ -244,7 +244,7 @@ path.join("/tmp", "test.js");"#)
         for i in 0..iterations {
             let output: _ = Command::new("./target/release/beejs")
                 .arg("--eval")
-                .arg(&format!("let x = {}; x * 2", i))
+                .arg(&format!("let x: _ = {}; x * 2", i))
                 .output()
                 .expect("Failed to execute beejs");
 
@@ -268,7 +268,7 @@ path.join("/tmp", "test.js");"#)
         // 第一次执行定义变量
         let output1: _ = Command::new("./target/release/beejs")
             .arg("--eval")
-            .arg("let testVar = 100; testVar")
+            .arg("let testVar: _ = 100; testVar")
             .output()
             .expect("Failed to execute beejs");
         assert!(output1.status.success());

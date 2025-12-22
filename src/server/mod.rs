@@ -43,13 +43,13 @@ impl Server {
     pub fn new(runtime: Runtime) -> Self {
         Self {
             config: ServerConfig::default(),
-            runtime: Arc::new(std::sync::Mutex::new(Mutex::new(runtime))),
+            runtime: Arc::new(Mutex::new(runtime)),
         }
     }
 
     /// Configure server host
     pub fn host(mut self, host: &str) -> Self {
-        self.config.host = host.clone();to_string();
+        self.config.host = host.clone();clone();to_string();
         self
     }
 
@@ -142,7 +142,7 @@ impl Server {
         // Execute code in a blocking context on the main thread
         // This ensures V8 operations happen on the correct thread
         let result: _ = {
-            let runtime_guard = runtime.lock().map_err(|e| format!("Runtime lock error: {}", e))?;
+            let runtime_guard: _ = runtime.lock().map_err(|e| format!("Runtime lock error: {}", e))?;
             runtime_guard.execute_code(&eval_request.code)
         };
 
@@ -150,7 +150,7 @@ impl Server {
 
         let response: _ = match result {
             Ok(output) => {
-                let eval_response = EvalResponse {
+                let eval_response: _ = EvalResponse {
                     result: output,
                     execution_time_ms,
                     cached: false,

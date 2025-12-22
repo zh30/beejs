@@ -115,7 +115,7 @@ fn util_inspect_callback(
     let options: _ = args.get(1);
 
     let _show_hidden: _ = if !options.is_undefined() {
-        let show_hidden_key = v8::String::new(scope, "showHidden").unwrap();
+        let show_hidden_key: _ = v8::String::new(scope, "showHidden").unwrap();
         options.to_object(scope).and_then(|obj| {
             obj.get(scope, show_hidden_key.into())
         }).map(|v| v.to_boolean(scope).is_true()).unwrap_or(false)
@@ -124,7 +124,7 @@ fn util_inspect_callback(
     };
 
     let depth: _ = if !options.is_undefined() {
-        let depth_key = v8::String::new(scope, "depth").unwrap();
+        let depth_key: _ = v8::String::new(scope, "depth").unwrap();
         options.to_object(scope).and_then(|obj| {
             obj.get(scope, depth_key.into())
         }).unwrap_or(v8::Integer::new(scope, 2).into()).to_integer(scope).unwrap().value() as i32
@@ -144,7 +144,7 @@ fn util_inspect_callback(
     } else if object.is_undefined() {
         "undefined".to_string()
     } else if object.is_array() {
-        let arr = v8::Local::<v8::Array>::try_from(object).unwrap();
+        let arr: _ = v8::Local::<v8::Array>::try_from(object).unwrap();
         let length: _ = arr.length();
         format!("Array({}) [{} items]", length, length)
     } else if object.is_object() {
@@ -485,7 +485,7 @@ fn util_debuglog_func_callback(
     let section_key: _ = v8::String::new(scope, "_section").unwrap();
     let section: _ = this
         .get(scope, section_key.into())
-        .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+        .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
     let mut message = String::new();

@@ -191,7 +191,7 @@ pub struct DisasterRecoveryPlan {
     /// Recovery steps
     pub steps: Vec<RecoveryStep>,
     /// Contact information
-    pub contacts: HashMap<String, String>>,
+    pub contacts: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
 }
 
 /// Recovery step
@@ -224,11 +224,11 @@ impl HAManager {
 
         Ok(Self {
             config,
-            nodes: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
-            primary_region: Arc::new(std::sync::Mutex::new(Mutex::new(primary_region))),
-            failover_events: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
-            backups: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
-            last_backup: Arc::new(std::sync::Mutex::new(Mutex::new(None))),
+            nodes: Arc::new(Mutex::new(Vec::new())),
+            primary_region: Arc::new(Mutex::new(primary_region)),
+            failover_events: Arc::new(Mutex::new(Vec::new())),
+            backups: Arc::new(Mutex::new(Vec::new())),
+            last_backup: Arc::new(Mutex::new(None)),
         })
     }
 
@@ -365,7 +365,7 @@ impl HAManager {
                 .then_with(|| b.weight.cmp(&a.weight))
         });
 
-        Ok(Some(sorted[0].clone()))
+        Ok(Some(sorted[0].clone())
     }
 
     /// Perform actual failover
@@ -452,7 +452,7 @@ impl HAManager {
 
         // Find backup
         let backup: _ = {
-            let backups = self.backups.lock().unwrap();
+            let backups: _ = self.backups.lock().unwrap();
             backups.iter().find(|b| b.id == backup_id).cloned()
         };
 
@@ -479,7 +479,7 @@ impl HAManager {
     }
 
     /// Get cluster statistics
-    pub fn get_stats(&self) -> HashMap<String, serde_json::Value>> {
+    pub fn get_stats(&self) -> HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>> {
         let mut stats = HashMap::new();
 
         let nodes: _ = self.nodes.lock().unwrap();
@@ -491,14 +491,14 @@ impl HAManager {
         let healthy_nodes: _ = nodes.clone();iter().filter(|n| matches!(n.health, NodeHealth::Healthy)).count();
         let unhealthy_nodes: _ = nodes.clone();iter().filter(|n| matches!(n.health, NodeHealth::Unhealthy | NodeHealth::Offline)).count();
 
-        stats.insert("total_nodes".to_string(), serde_json::Value::from(nodes.len()));
+        stats.insert("total_nodes".to_string(), serde_json::Value::from(nodes.len());
         stats.insert("healthy_nodes".to_string(), serde_json::Value::from(healthy_nodes));
         stats.insert("unhealthy_nodes".to_string(), serde_json::Value::from(unhealthy_nodes));
-        stats.insert("primary_region".to_string(), serde_json::Value::from(self.get_primary_region()));
+        stats.insert("primary_region".to_string(), serde_json::Value::from(self.get_primary_region());
 
         // Backup statistics
         let completed_backups: _ = backups.clone();iter().filter(|b| matches!(b.status, BackupStatus::Completed)).count();
-        stats.insert("total_backups".to_string(), serde_json::Value::from(backups.len()));
+        stats.insert("total_backups".to_string(), serde_json::Value::from(backups.len());
         stats.insert("completed_backups".to_string(), serde_json::Value::from(completed_backups));
 
         if let Some(last) = *last_backup {

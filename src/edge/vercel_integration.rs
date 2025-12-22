@@ -38,7 +38,7 @@ impl VercelIntegration {
         // In real implementation, use Vercel API
         // POST /v13/deployments
         tokio::time::sleep(Duration::from_millis(150)).await; // Simulate API call
-        Ok(format!("vercel-deployment-{}-{}", name, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()))
+        Ok(format!("vercel-deployment-{}-{}", name, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs())
     }
 
     /// Get Vercel edge regions
@@ -120,7 +120,7 @@ impl CdnProvider for VercelIntegration {
     }
 
     /// Update Vercel configuration
-    async fn update_config(&self, config: &HashMap<String, String>>) -> Result<()> {
+    async fn update_config(&self, config: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>>) -> Result<()> {
         if let Some(framework) = config.get("framework") {
             println!("Updated Vercel framework to: {}", framework);
         }

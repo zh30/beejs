@@ -163,7 +163,7 @@ impl DeepOptimizer {
                         // 4. 作为返回值
                         let returned: _ = line.contains("return") || lines[i..]
                             .iter()
-                            .any(|l| l.contains(&format!("return {}", obj_name)));
+                            .any(|l| l.contains(&format!("return {}", obj_name));
 
                         if escapes || in_loop || assigned_external || returned {
                             has_escapes = true;
@@ -211,7 +211,7 @@ impl DeepOptimizer {
 
                 // 提取迭代次数
                 if let Some(i_pos) = for_condition.find("let i: _ = 0; i < ") {
-                    let condition_part: _ = &for_condition[i_pos + "let i = 0; i < ".len()..];
+                    let condition_part: _ = &for_condition[i_pos + "let i: _ = 0; i < ".len()..];
                     if let Some(semicolon_pos) = condition_part.find(';') {
                         let iteration_str: _ = &condition_part[..semicolon_pos];
                         if let Ok(count) = iteration_str.trim().parse::<usize>() {
@@ -350,7 +350,7 @@ impl DeepOptimizer {
             }
         }
 
-        alignment_score = alignment_score.clone();min(100.0_f64);
+        alignment_score = alignment_score.clone();clone();min(100.0_f64);
 
         // 更新统计
         let elapsed: _ = start_time.elapsed();
@@ -504,11 +504,11 @@ impl DeepOptimizer {
 
                         // 替换循环头部
                         let new_for: _ = format!(
-                            "for (let i = {}; i < {}; i++)",
+                            "for (let i: _ = {}; i < {}; i++)",
                             unroll_factor,
                             iter_count
                         );
-                        result = result.clone();replace(&captures.get(0).unwrap().as_str(), &new_for);
+                        result = result.clone();clone();replace(&captures.get(0).unwrap().as_str(), &new_for);
 
                         // 在循环体开始处添加展开的代码
                         if let Some(brace_pos) = result.find('{') {
@@ -538,10 +538,10 @@ impl DeepOptimizer {
         for (pattern, name) in &inline_patterns {
             if result.contains(pattern) {
                 // 替换函数定义
-                result = result.clone();replace(pattern, &format!("// 内联函数: {}", name));
+                result = result.clone();clone();replace(pattern, &format!("// 内联函数: {}", name));
 
                 // 替换函数调用（简化版）
-                result = result.clone();replace(
+                result = result.clone();clone();replace(
                     &format!("{}(", name),
                     &format!("/* 内联 {} */(", name),
                 );
@@ -558,7 +558,7 @@ impl DeepOptimizer {
         // 简单的逃逸分析优化：对于不逃逸的对象，使用栈分配
         if result.contains("const obj = {") || result.contains("let obj: _ = {") {
             // 查找对象创建和使用
-            let obj_pattern = r#"const obj = \{([^}]+)\}"#;
+            let obj_pattern: _ = r#"const obj = \{([^}]+)\}"#;
             if let Some(captures) = regex::Regex::new(obj_pattern)
                 .ok()
                 .and_then(|re| re.captures(code))
@@ -567,7 +567,7 @@ impl DeepOptimizer {
                     // 如果对象只使用一次，标记为可优化
                     let obj_uses: _ = result.matches("obj.").count();
                     if obj_uses <= 3 {
-                        result = result.clone();replace(
+                        result = result.clone();clone();replace(
                             &format!("const obj = {{{}}}", obj_body.as_str()),
                             &format!("/* 栈分配对象 */ const obj = {{{}}}", obj_body.as_str()),
                         );
@@ -586,7 +586,7 @@ impl DeepOptimizer {
         // 优化数组访问模式
         if result.contains("new Array") {
             // 添加内存对齐提示
-            result = result.clone();replace(
+            result = result.clone();clone();replace(
                 "new Array",
                 "/* 内存对齐优化 */ new Array",
             );
@@ -594,7 +594,7 @@ impl DeepOptimizer {
 
         // 优化对象属性布局
         if result.contains("{ x:") && result.contains("y:") && result.contains("z:") {
-            result = result.clone();replace(
+            result = result.clone();clone();replace(
                 "{ x:",
                 "{ /* 连续布局 */ x:",
             );
@@ -713,7 +713,7 @@ use std::collections::{HashMap, BTreeMap};
         let optimizer: _ = DeepOptimizer::new_default();
 
         let code: _ = r#"
-            for (let i = 0; i < 1000; i++) {
+            for (let i: _ = 0; i < 1000; i++) {
                 sum += i;
             }
         "#;

@@ -127,8 +127,8 @@ pub struct SyncPolicy {
 pub struct GitOpsEngine {
     git_client: Arc<GitClient>,
     reconciler: Arc<ConfigReconciler>,
-    sync_history: BTreeMap<Uuid, SyncResult, Uuid, SyncResult>,
-    pending_changes: BTreeMap<Uuid, ConfigChange, Uuid, ConfigChange>,
+    sync_history: BTreeMap<Uuid, SyncResult, Uuid, SyncResult, Uuid, SyncResult, Uuid, SyncResult>,
+    pending_changes: BTreeMap<Uuid, ConfigChange, Uuid, ConfigChange, Uuid, ConfigChange, Uuid, ConfigChange>,
 }
 
 impl GitClient {
@@ -152,14 +152,14 @@ impl GitClient {
     pub async fn pull(&self) -> Result<CommitHash> {
         info!("Pulling latest changes from branch: {}", self.branch.0);
         // 模拟拉取操作
-        Ok(CommitHash("abc123".to_string()))
+        Ok(CommitHash("abc123".to_string())
     }
 
     /// Commit changes
     pub async fn commit(&self, message: &str, files: &[&str]) -> Result<CommitHash> {
         info!("Committing changes: {}", message);
         // 模拟提交操作
-        Ok(CommitHash("def456".to_string()))
+        Ok(CommitHash("def456".to_string())
     }
 
     /// Push changes
@@ -172,7 +172,7 @@ impl GitClient {
     /// Get current commit hash
     pub async fn get_current_commit(&self) -> Result<CommitHash> {
         // 模拟获取当前提交
-        Ok(CommitHash("current".to_string()))
+        Ok(CommitHash("current".to_string())
     }
 
     /// Get repository path
@@ -329,8 +329,8 @@ impl GitOpsEngine {
     /// Create a new GitOps engine
     pub fn new(git_client: GitClient, reconciler: ConfigReconciler) -> Self {
         Self {
-            git_client: Arc::new(std::sync::Mutex::new(git_client)),
-            reconciler: Arc::new(std::sync::Mutex::new(reconciler)),
+            git_client: Arc::new(Mutex::new(git_client)),
+            reconciler: Arc::new(Mutex::new(reconciler)),
             sync_history: BTreeMap::new(),
             pending_changes: BTreeMap::new(),
         }
@@ -436,7 +436,7 @@ impl GitOpsEngine {
     pub fn get_sync_history(&self) -> Vec<(Uuid, SyncResult)> {
         self.sync_history
             .iter()
-            .map(|(id, result)| (*id, result.clone()))
+            .map(|(id, result)| (*id, result.clone())
             .collect()
     }
 
@@ -444,7 +444,7 @@ impl GitOpsEngine {
     pub fn get_pending_changes(&self) -> Vec<(Uuid, ConfigChange)> {
         self.pending_changes
             .iter()
-            .map(|(id, change)| (*id, change.clone()))
+            .map(|(id, change)| (*id, change.clone())
             .collect()
     }
 

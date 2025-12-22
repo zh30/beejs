@@ -47,9 +47,9 @@ pub struct Workload {
     /// 资源需求
     pub resource_requirements: Vec<ResourceRequest>,
     /// 当前分配的资源
-    pub allocated_resources: HashMap<ResourceType, f64>>,
+    pub allocated_resources: HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>>,
     /// 性能要求 (QPS, 延迟等)
-    pub performance_requirements: HashMap<String, f64>>,
+    pub performance_requirements: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>>,
     /// 重要性等级
     pub importance: u8,
 }
@@ -77,9 +77,9 @@ pub struct Cluster {
     /// 集群名称
     pub name: String,
     /// 总资源容量
-    pub total_resources: HashMap<ResourceType, f64>>,
+    pub total_resources: HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>>,
     /// 当前资源使用情况
-    pub current_usage: HashMap<ResourceType, f64>>,
+    pub current_usage: HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>>,
     /// 工作负载列表
     pub workloads: Vec<Workload>,
     /// 集群健康状态
@@ -105,7 +105,7 @@ pub struct AllocationPlan {
     /// 工作负载 ID
     pub workload_id: String,
     /// 资源分配详情
-    pub allocations: HashMap<ResourceType, f64>>,
+    pub allocations: HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>>,
     /// 预期性能提升
     pub expected_improvement: f64,
     /// 置信度 (0.0-1.0)
@@ -135,7 +135,7 @@ pub struct RebalanceResult {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ResourceForecast {
     /// 预测的资源需求
-    pub predicted_demand: HashMap<ResourceType, f64>>,
+    pub predicted_demand: HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>>,
     /// 预测时间范围 (分钟)
     pub forecast_horizon_minutes: u64,
     /// 置信区间
@@ -285,7 +285,7 @@ impl ResourceOptimizer {
         let mut predicted_demand = HashMap::new();
 
         // 按资源类型分组
-        let mut usage_by_type: HashMap<ResourceType, Vec<&ResourceUsage>> = HashMap::new();
+        let mut usage_by_type: HashMap<ResourceType, Vec<&ResourceUsage, std::collections::HashMap<ResourceType, Vec<&ResourceUsage, ResourceType, Vec<&ResourceUsage>>> = HashMap::new();
         for usage in history {
             usage_by_type
                 .entry(usage.resource_type.clone())
@@ -336,7 +336,7 @@ impl ResourceOptimizer {
     fn calculate_expected_improvement(
         &self,
         workload: &Workload,
-        allocations: &HashMap<ResourceType, f64>>,
+        allocations: &HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>>,
     ) -> f64 {
         // 基于资源分配和性能需求计算预期改进
         let mut total_score = 0.0;
@@ -366,7 +366,7 @@ impl ResourceOptimizer {
     }
 
     /// 计算分配置信度
-    fn calculate_confidence(&self, allocations: &HashMap<ResourceType, f64>>) -> f64 {
+    fn calculate_confidence(&self, allocations: &HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>>) -> f64 {
         // 基于分配合理性计算置信度
         let mut confidence = 1.0;
 
@@ -382,7 +382,7 @@ impl ResourceOptimizer {
     }
 
     /// 计算集群利用率
-    fn calculate_cluster_utilization(&self, cluster: &Cluster) -> HashMap<ResourceType, f64>> {
+    fn calculate_cluster_utilization(&self, cluster: &Cluster) -> HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>> {
         let mut utilization = HashMap::new();
 
         for (resource_type, &total) in &cluster.total_resources {
@@ -408,7 +408,7 @@ impl ResourceOptimizer {
     fn identify_workloads_to_rebalance(
         &self,
         cluster: &Cluster,
-        utilization: &HashMap<ResourceType, f64>>,
+        utilization: &HashMap<ResourceType, f64, std::collections::HashMap<ResourceType, f64, ResourceType, f64>>>,
     ) -> Vec<Workload> {
         let mut workloads_to_rebalance = Vec::new();
 

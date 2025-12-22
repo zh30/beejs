@@ -57,7 +57,7 @@ impl TestTimeout {
 
         // Spawn a thread to execute the function
         let handle: _ = std::thread::spawn(move || {
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(func));
+            let result: _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(func));
             match result {
                 Ok(value) => sender.send(Ok(value)).unwrap(),
                 Err(_) => sender
@@ -167,7 +167,7 @@ impl TimeoutContext {
         TimeoutContext {
             start_time: Instant::now(),
             timeout,
-            active_tests: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            active_tests: Arc::new(Mutex::new(Vec::new())),
         }
     }
 

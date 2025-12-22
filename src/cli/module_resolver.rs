@@ -45,7 +45,7 @@ pub struct ModuleResolver {
     /// Current working directory for resolution
     current_dir: PathBuf,
     /// Module cache to avoid re-resolution
-    cache: HashMap<String, ResolutionResult>>,
+    cache: HashMap<String, ResolutionResult, std::collections::HashMap<String, ResolutionResult, String, ResolutionResult>>>,
     /// Search paths for node_modules
     search_paths: Vec<PathBuf>,
 }
@@ -148,7 +148,7 @@ impl ModuleResolver {
             }
         }
 
-        Err(format!("Cannot find module '{}' from '{}'", request, parent.display()))
+        Err(format!("Cannot find module '{}' from '{}'", request, parent.display())
     }
 
     /// Resolve absolute paths
@@ -216,7 +216,7 @@ impl ModuleResolver {
         let package_json: _ = package_path.join("package.json");
         
         if !package_json.exists() {
-            return Err(format!("Package not found at {}", package_path.display()));
+            return Err(format!("Package not found at {}", package_path.display());
         }
 
         // Read package.json to find main entry point
@@ -260,12 +260,12 @@ impl ModuleResolver {
                                 is_package: true,
                             })
                         } else {
-                            Err(format!("Invalid package.json in {}", package_path.display()))
+                            Err(format!("Invalid package.json in {}", package_path.display())
                         }
                     }
                 }
             }
-            Err(_) => Err(format!("Cannot read package.json at {}", package_json.display())),
+            Err(_) => Err(format!("Cannot read package.json at {}", package_json.display()),
         }
     }
 

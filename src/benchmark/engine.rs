@@ -39,8 +39,8 @@ pub struct BenchmarkEngine {
 impl BenchmarkEngine {
     /// 创建新的基准测试引擎
     pub fn new(config: BenchmarkConfig) -> Self {
-        let semaphore: _ = Arc::new(std::sync::Mutex::new(Semaphore::new(config.workers as usize)));
-        let results: _ = Arc::new(std::sync::Mutex::new(Mutex::new(BenchmarkResultSet::new(&config.name))));
+        let semaphore: _ = Arc::new(Mutex::new(Semaphore::new(config.workers as usize));
+        let results: _ = Arc::new(Mutex::new(BenchmarkResultSet::new(&config.name)));
 
         Self {
             config,
@@ -69,7 +69,7 @@ impl BenchmarkEngine {
     where
         F: Fn(ProgressInfo) + Send + Sync + 'static,
     {
-        self.progress_callback = Some(Arc::new(std::sync::Mutex::new(callback)));
+        self.progress_callback = Some(Arc::new(Mutex::new(callback));
         self
     }
 
@@ -97,8 +97,7 @@ impl BenchmarkEngine {
             self.run_test_suite(suite).await?;
         } else {
             return Err(BenchmarkError::ConfigError(
-                "No test suite configured".to_string()
-            ));
+                "No test suite configured".to_string());
         }
 
         // 收集结果
@@ -112,20 +111,17 @@ impl BenchmarkEngine {
     fn validate_config(&self) -> Result<()> {
         if self.config.iterations == 0 {
             return Err(BenchmarkError::ConfigError(
-                "Iterations must be greater than 0".to_string()
-            ));
+                "Iterations must be greater than 0".to_string());
         }
 
         if self.config.workers == 0 {
             return Err(BenchmarkError::ConfigError(
-                "Workers must be greater than 0".to_string()
-            ));
+                "Workers must be greater than 0".to_string());
         }
 
         if self.config.timeout == Duration::from_secs(0) {
             return Err(BenchmarkError::ConfigError(
-                "Timeout must be greater than 0".to_string()
-            ));
+                "Timeout must be greater than 0".to_string());
         }
 
         Ok(())
@@ -165,7 +161,7 @@ impl BenchmarkEngine {
 
             let handle: _ = spawn(async move {
                 // 获取并发许可
-                let _permit = semaphore.acquire().await.unwrap();
+                let _permit: _ = semaphore.acquire().await.unwrap();
 
                 // 执行基准测试
                 Self::run_single_benchmark(&config, &benchmark, &suite_env, results, index).await
@@ -191,7 +187,7 @@ impl BenchmarkEngine {
     async fn run_single_benchmark(
         config: &BenchmarkConfig,
         benchmark: &BenchmarkTest,
-        suite_env: &HashMap<String, String>>,
+        suite_env: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
         results: Arc<Mutex<BenchmarkResultSet>>,
         index: usize,
     ) -> Result<()> {
@@ -253,7 +249,7 @@ impl BenchmarkEngine {
 
         // 保存结果
         {
-            let mut results = results.clone();lock().await;
+            let mut results = results.clone();clone();lock().await;
             results.add_result(result);
         }
 

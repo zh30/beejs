@@ -59,7 +59,7 @@ pub struct SimpleEventListener {
 impl SimpleEventListener {
     pub fn new() -> Self {
         Self {
-            events: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            events: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -93,11 +93,11 @@ impl DebuggerEngine {
     pub fn new(config: DebugConfig) -> Self {
         Self {
             config,
-            state: Arc::new(std::sync::Mutex::new(Mutex::new(DebugState::Running))),
+            state: Arc::new(Mutex::new(DebugState::Running)),
             breakpoint_manager: BreakpointManager::new(),
             watch_manager: WatchManager::new(),
-            current_stack: Arc::new(std::sync::Mutex::new(Mutex::new(None))),
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(DebugStats::new()))),
+            current_stack: Arc::new(Mutex::new(None)),
+            stats: Arc::new(Mutex::new(DebugStats::new())),
             current_breakpoint_id: None,
             step_type: None,
             event_listeners: Vec::new(),
@@ -133,7 +133,7 @@ impl DebuggerEngine {
             }
             result
         } else {
-            DebugResult::err(result.error.unwrap_or_else(|| "Unknown error".to_string()))
+            DebugResult::err(result.error.unwrap_or_else(|| "Unknown error".to_string())
         }
     }
 
@@ -159,7 +159,7 @@ impl DebuggerEngine {
             }
             result
         } else {
-            DebugResult::err(result.error.unwrap_or_else(|| "Unknown error".to_string()))
+            DebugResult::err(result.error.unwrap_or_else(|| "Unknown error".to_string())
         }
     }
 
@@ -401,7 +401,7 @@ impl DebuggerEngine {
                 DebugResult::err("No data returned".to_string())
             }
         } else {
-            DebugResult::err(result.error.unwrap_or_else(|| "Unknown error".to_string()))
+            DebugResult::err(result.error.unwrap_or_else(|| "Unknown error".to_string())
         }
     }
 
@@ -409,7 +409,7 @@ impl DebuggerEngine {
     pub fn get_current_variables(
         &self,
         context: &v8::Global<v8::Context>,
-    ) -> DebugResult<HashMap<crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo>> {
+    ) -> DebugResult<HashMap<crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo, std::collections::HashMap<crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo, crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo>>> {
         let inspector: _ = VariableInspector::new(self.config.clone());
         // This would build scopes from current execution state
         let scopes: _ = Vec::new();
@@ -421,7 +421,7 @@ impl DebuggerEngine {
                 DebugResult::err("No data returned".to_string())
             }
         } else {
-            DebugResult::err(result.error.unwrap_or_else(|| "Unknown error".to_string()))
+            DebugResult::err(result.error.unwrap_or_else(|| "Unknown error".to_string())
         }
     }
 
@@ -556,7 +556,7 @@ impl DebuggerEngine {
         let watches: _ = self.watch_manager.list();
         let watch_data: Vec<(String, String)> = watches
             .into_iter()
-            .map(|watch| (watch.id.clone(), watch.expression.clone()))
+            .map(|watch| (watch.id.clone(), watch.expression.clone())
             .collect();
 
         // Evaluate each expression
@@ -580,7 +580,7 @@ impl DebuggerEngine {
                     eprintln!("Warning: Failed to set error on watch {}: {:?}", watch_id, e);
                 }
 
-                results.push((watch_id, format!("<error: {}>", error_msg), "error".to_string()));
+                results.push((watch_id, format!("<error: {}>", error_msg), "error".to_string());
             }
         }
 

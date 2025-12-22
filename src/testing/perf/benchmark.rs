@@ -289,8 +289,8 @@ use std::collections::{HashMap, BTreeMap};
         let result: _ = runner.benchmark_group(
             "group1",
             vec![
-                ("test1", Box::new(|| std::thread::sleep(std::time::Duration::from_millis(1))) as Box<dyn Fn() + Send>),
-                ("test2", Box::new(|| std::thread::sleep(std::time::Duration::from_millis(2))) as Box<dyn Fn() + Send>),
+                ("test1", Box::new(|| std::thread::sleep(std::time::Duration::from_millis(1)) as Box<dyn Fn() + Send>),
+                ("test2", Box::new(|| std::thread::sleep(std::time::Duration::from_millis(2)) as Box<dyn Fn() + Send>),
             ],
         );
 
@@ -306,8 +306,8 @@ use std::collections::{HashMap, BTreeMap};
         let runner: _ = BenchmarkRunner::new(config, reporter);
 
         let results: _ = vec![
-            runner.benchmark("test1", || std::thread::sleep(std::time::Duration::from_millis(1))),
-            runner.benchmark("test2", || std::thread::sleep(std::time::Duration::from_millis(2))),
+            runner.benchmark("test1", || std::thread::sleep(std::time::Duration::from_millis(1)),
+            runner.benchmark("test2", || std::thread::sleep(std::time::Duration::from_millis(2)),
         ];
 
         let comparison: _ = runner.compare_benchmarks(&results);

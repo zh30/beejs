@@ -71,7 +71,7 @@ impl VariableInspector {
     pub fn get_all_scope_variables(
         &self,
         scopes: &[VariableScope],
-    ) -> DebugResult<HashMap<ScopeType, Vec<VariableInfo>> {
+    ) -> DebugResult<HashMap<ScopeType, Vec<VariableInfo, std::collections::HashMap<ScopeType, Vec<VariableInfo, ScopeType, Vec<VariableInfo>>> {
         let mut all_vars = HashMap::new();
 
         for scope in scopes {
@@ -174,7 +174,7 @@ impl VariableInspector {
             }
             let variables: _ = variables_result.data.unwrap_or_default();
             if let Some(var) = variables.iter().find(|v| v.name == var_name) {
-                return Some((scope.scope_type.clone(), var.clone()));
+                return Some((scope.scope_type.clone(), var.clone());
             }
         }
         None
@@ -195,7 +195,7 @@ impl VariableInspector {
                 DebugResult::ok(None)
             }
         } else {
-            DebugResult::err(variables_result.error.unwrap_or_else(|| "Unknown error".to_string()))
+            DebugResult::err(variables_result.error.unwrap_or_else(|| "Unknown error".to_string())
         }
     }
 

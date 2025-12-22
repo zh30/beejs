@@ -56,7 +56,7 @@ async fn test_node_manager_registration_and_discovery() {
     };
 
     let discovery: _ = ServiceDiscovery::new(config).unwrap();
-    let node_manager: _ = Arc::new(std::sync::Mutex::new(NodeManager::new(discovery.clone())));
+    let node_manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(NodeManager::new(discovery.clone()))));
 
     let node_info: _ = NodeInfo {
         id: "test-node".to_string(),
@@ -173,8 +173,8 @@ async fn test_health_monitor_cluster_health() {
         node_timeout: Duration::from_secs(5),
     }).unwrap();
 
-    let node_manager: _ = Arc::new(std::sync::Mutex::new(NodeManager::new(discovery.clone())));
-    let health_monitor: _ = Arc::new(std::sync::Mutex::new(HealthMonitor::new(node_manager)));
+    let node_manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(NodeManager::new(discovery.clone()))));
+    let health_monitor: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(HealthMonitor::new(node_manager))));
 
     // Start health monitoring
     let result: _ = health_monitor.start_monitoring().await;

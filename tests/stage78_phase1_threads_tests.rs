@@ -190,12 +190,12 @@ use std::collections::{HashMap, BTreeMap};
         println!("🚀 测试 8: 跨线程共享内存访问");
 
         let manager: _ = WasmThreadsManager::new(ThreadPoolConfig::default());
-        let region: _ = Arc::new(std::sync::Mutex::new(manager.create_shared_memory(256)).expect("共享内存创建失败"));
+        let region: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(manager.create_shared_memory(256))).expect("共享内存创建失败"));
 
         // 在一个线程中写入
         let region_clone: _ = region.clone();
         let write_handle: _ = manager.spawn(move || {
-            let data = [42u8; 8];
+            let data: _ = [42u8; 8];
             region_clone.write(0, &data).expect("写入失败");
         }).expect("任务提交失败");
 
@@ -295,7 +295,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_mutex_data_protection() {
         println!("🚀 测试 12: 互斥锁数据保护");
 
-        let mutex: _ = Arc::new(std::sync::Mutex::new(WasmMutex::new(0i32)));
+        let mutex: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(WasmMutex::new(0i32))));
         let manager: _ = WasmThreadsManager::new(ThreadPoolConfig::default());
 
         let handles: Vec<_> = (0..10).map(|_| {
@@ -349,7 +349,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_concurrent_atomic_operations() {
         println!("🚀 测试 14: 并发原子操作");
 
-        let atomic: _ = Arc::new(std::sync::Mutex::new(WasmAtomic::new(0i32)));
+        let atomic: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(WasmAtomic::new(0i32))));
         let manager: _ = WasmThreadsManager::new(ThreadPoolConfig::default());
 
         let handles: Vec<_> = (0..100).map(|_| {
@@ -474,7 +474,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_thread_local_storage() {
         println!("🚀 测试 19: 线程本地存储");
 
-        let manager: _ = Arc::new(std::sync::Mutex::new(WasmThreadsManager::new(ThreadPoolConfig::default())));
+        let manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(WasmThreadsManager::new(ThreadPoolConfig::default()))));
 
         let handles: Vec<_> = (0..4).map(|i| {
             let manager_clone: _ = Arc::clone(manager);

@@ -42,14 +42,14 @@ pub struct TrendingModule {
 pub struct CommunityPortal {
     registry: Arc<ModuleRegistry>,
     auth: Arc<AuthManager>,
-    ratings: Arc<RwLock<HashMap<String, Vec<ModuleRating>>>,
+    ratings: Arc<RwLock<HashMap<String, Vec<ModuleRating, std::collections::HashMap<String, Vec<ModuleRating, String, Vec<ModuleRating>>>>,
     trending: Arc<RwLock<Vec<TrendingModule>>,
 }
 
 /// 模块注册表
 #[derive(Debug, Clone)]
 pub struct ModuleRegistry {
-    modules: Arc<RwLock<HashMap<String, ModuleInfo>>,
+    modules: Arc<RwLock<HashMap<String, ModuleInfo, std::collections::HashMap<String, ModuleInfo, String, ModuleInfo>>>,
 }
 
 /// 模块信息
@@ -84,8 +84,8 @@ pub enum ModuleCategory {
 /// 认证管理器
 #[derive(Debug, Clone)]
 pub struct AuthManager {
-    users: Arc<RwLock<HashMap<String, UserId>>,
-    sessions: Arc<RwLock<HashMap<String, Session>>,
+    users: Arc<RwLock<HashMap<String, UserId, std::collections::HashMap<String, UserId, String, UserId>>>,
+    sessions: Arc<RwLock<HashMap<String, Session, std::collections::HashMap<String, Session, String, Session>>>,
 }
 
 /// 用户会话
@@ -101,10 +101,10 @@ impl CommunityPortal {
     /// 创建新的社区门户
     pub fn new() -> Self {
         Self {
-            registry: Arc::new(std::sync::Mutex::new(ModuleRegistry::new())),
-            auth: Arc::new(std::sync::Mutex::new(AuthManager::new())),
-            ratings: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            trending: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            registry: Arc::new(Mutex::new(ModuleRegistry::new()),
+            auth: Arc::new(Mutex::new(AuthManager::new()),
+            ratings: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            trending: Arc::new(Mutex::new(RwLock::new(Vec::new())),
         }
     }
 
@@ -305,7 +305,7 @@ pub struct ModuleRatingSummary {
     pub module_id: String,
     pub total_ratings: usize,
     pub average_rating: f64,
-    pub rating_distribution: HashMap<u8, usize>>,
+    pub rating_distribution: HashMap<u8, usize, std::collections::HashMap<u8, usize, u8, usize>>>,
 }
 
 /// 模块搜索结果
@@ -330,7 +330,7 @@ pub struct ModuleStats {
 impl ModuleRegistry {
     pub fn new() -> Self {
         Self {
-            modules: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            modules: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -375,8 +375,8 @@ impl ModuleRegistry {
 impl AuthManager {
     pub fn new() -> Self {
         Self {
-            users: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            sessions: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            users: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            sessions: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 

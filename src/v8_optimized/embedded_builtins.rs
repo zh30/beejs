@@ -19,7 +19,7 @@ pub struct EmbeddedBuiltinsManager {
     stats: Arc<BuiltinStats>,
 
     /// 预编译的内置函数缓存
-    builtin_cache: HashMap<String, BuiltinFunction>>,
+    builtin_cache: HashMap<String, BuiltinFunction, std::collections::HashMap<String, BuiltinFunction, String, BuiltinFunction>>>,
 }
 
 /// 内置函数类型
@@ -107,8 +107,8 @@ impl EmbeddedBuiltinsManager {
     /// 创建新的内置函数管理器
     pub fn new() -> Self {
         let mut manager = Self {
-            string_interner: Arc::new(std::sync::Mutex::new(StringInterner::new())),
-            stats: Arc::new(std::sync::Mutex::new(BuiltinStats::new())),
+            string_interner: Arc::new(Mutex::new(StringInterner::new()),
+            stats: Arc::new(Mutex::new(BuiltinStats::new()),
             builtin_cache: HashMap::new(),
         };
 
@@ -239,7 +239,7 @@ fn builtin_string_concat(args: &[String]) -> Result<String> {
     if args.len() < 2 {
         return Err(anyhow!("string_concat requires at least 2 arguments"));
     }
-    Ok(args.iter().fold(String::new(), |acc, s| acc + s.as_str()))
+    Ok(args.iter().fold(String::new(), |acc, s| acc + s.as_str())
 }
 
 /// 字符串长度
@@ -446,7 +446,7 @@ fn builtin_buffer_from(args: &[String]) -> Result<String> {
     if args.is_empty() {
         return Err(anyhow!("buffer_from requires 1 argument"));
     }
-    Ok(format!("Buffer[{}]", args[0].len()))
+    Ok(format!("Buffer[{}]", args[0].len())
 }
 
 /// 缓冲区长度
@@ -493,9 +493,9 @@ use std::collections::{HashMap, BTreeMap};
     fn test_builtin_types() {
         let manager: _ = EmbeddedBuiltinsManager::new();
         let types: _ = manager.get_builtin_types();
-        assert!(types.contains(&"string".to_string()));
-        assert!(types.contains(&"jsonparse".to_string()) || types.contains(&"json".to_string()));
-        assert!(types.contains(&"math".to_string()));
+        assert!(types.contains(&"string".to_string());
+        assert!(types.contains(&"jsonparse".to_string()) || types.contains(&"json".to_string());
+        assert!(types.contains(&"math".to_string());
     }
 
     #[test]

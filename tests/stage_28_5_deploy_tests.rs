@@ -234,7 +234,7 @@ pub struct DeployConfig {
 /// 部署配置生成器
 #[derive(Debug)]
 pub struct ConfigGenerator {
-    configs: HashMap<String, DeployConfig, std::collections::HashMap<String, DeployConfig, String, DeployConfig>>,
+    configs: HashMap<String, DeployConfig, std::collections::HashMap<String, DeployConfig, String, DeployConfig, std::collections::HashMap<String, DeployConfig, std::collections::HashMap<String, DeployConfig, String, DeployConfig, String, DeployConfig, std::collections::HashMap<String, DeployConfig, String, DeployConfig>>>,
 }
 
 impl ConfigGenerator {

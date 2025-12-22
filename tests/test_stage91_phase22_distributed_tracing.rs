@@ -194,13 +194,13 @@ async fn test_nested_spans() {
 #[tokio::test]
 async fn test_concurrent_spans() {
     let addr: SocketAddr = "127.0.0.1:6831".parse().unwrap();
-    let tracer: _ = Arc::new(std::sync::Mutex::new(JaegerTracer::new(addr)).unwrap());
+    let tracer: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(JaegerTracer::new(addr))).unwrap());
 
     let mut handles = vec![];
     for i in 0..10 {
         let tracer_clone: _ = Arc::clone(tracer);
         let handle: _ = tokio::spawn(async move {
-            let span = tracer_clone.create_span(&format!("concurrent_operation_{}", i));
+            let span: _ = tracer_clone.create_span(&format!("concurrent_operation_{}", i));
 
             // Simulate some work
             sleep(Duration::from_millis(10)).await;
@@ -393,13 +393,13 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 
     let addr: SocketAddr = "127.0.0.1:6831".parse().unwrap();
-    let tracer: _ = Arc::new(std::sync::Mutex::new(JaegerTracer::new(addr)).unwrap());
+    let tracer: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(JaegerTracer::new(addr))).unwrap());
 
     let mut handles = vec![];
     for batch in 0..5 {
         let tracer_clone: _ = Arc::clone(tracer);
         let handle: _ = tokio::spawn(async move {
-            let batch_span = tracer_clone.create_span(&format!("batch_{}", batch));
+            let batch_span: _ = tracer_clone.create_span(&format!("batch_{}", batch));
 
             let mut batch_handles = vec![];
             for i in 0..10 {

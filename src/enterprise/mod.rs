@@ -44,8 +44,8 @@ impl EnterpriseManager {
     /// Create a new enterprise manager
     pub fn new() -> Self {
         EnterpriseManager {
-            security: Arc::new(std::sync::Mutex::new(SecurityManager::new())),
-            compliance: Arc::new(std::sync::Mutex::new(ComplianceManager::new())),
+            security: Arc::new(Mutex::new(SecurityManager::new()),
+            compliance: Arc::new(Mutex::new(ComplianceManager::new()),
         }
     }
 

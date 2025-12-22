@@ -105,7 +105,7 @@ impl EnhancedArgs {
     /// Execute based on arguments
     pub async fn execute(&self) -> Result<()> {
         // Create runtime
-        let runtime: _ = Arc::new(std::sync::Mutex::new(RuntimeLite::new(self.verbose))
+        let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(self.verbose))
             .context("Failed to create runtime")?);
 
         // Execute based on arguments
@@ -640,7 +640,7 @@ impl EnhancedArgs {
                 // 部署 Workers 函数
                 let config: _ = crate::cloud::FunctionConfig {
                     name: "beejs-worker".to_string(),
-                    code: "addEventListener('fetch', event => event.respondWith(new Response('Hello from Beejs Workers!')))".to_string(),
+                    code: "addEventListener('fetch', event => event.respondWith(new Response('Hello from Beejs Workers!'))".to_string(),
                     runtime: "javascript".to_string(),
                     handler: "fetch".to_string(),
                     memory_size: Some(128),

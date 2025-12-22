@@ -69,7 +69,7 @@ pub struct IoUringEngine {
     config: NetworkConfig,
     uring_config: UringConfig,
     stats: Arc<RwLock<UringStats>>,
-    active_operations: Arc<RwLock<HashMap<u64, std::time::Instant>>,
+    active_operations: Arc<RwLock<HashMap<u64, std::time::Instant, std::collections::HashMap<u64, std::time::Instant, u64, std::time::Instant>>>,
     operation_counter: Arc<RwLock<u64>>,
     completion_queue: Arc<RwLock<Vec<UringCompletion>>,
 }
@@ -80,16 +80,16 @@ impl IoUringEngine {
         let uring_config: _ = UringConfig::default();
 
         Self {
-            stats: Arc::new(std::sync::Mutex::new(RwLock::new(UringStats {
+            stats: Arc::new(Mutex::new(RwLock::new(UringStats {
                 submissions: 0,
                 completions: 0,
                 average_latency_ns: 0,
                 peak_qps: 0,
                 queue_utilization: 0.0,
-            }))),
-            active_operations: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            operation_counter: Arc::new(std::sync::Mutex::new(RwLock::new(0))),
-            completion_queue: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
+            })),
+            active_operations: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            operation_counter: Arc::new(Mutex::new(RwLock::new(0)),
+            completion_queue: Arc::new(Mutex::new(RwLock::new(Vec::new())),
             config,
             uring_config,
         }
@@ -261,7 +261,7 @@ impl Drop for IoUringEngine {
     fn drop(&mut self) {
         // 清理资源
         let temp_file: _ = std::env::temp_dir()
-            .join(format!("beejs_io_uring_{}", std::process::id()));
+            .join(format!("beejs_io_uring_{}", std::process::id());
         let _: _ = std::fs::remove_file(temp_file);
     }
 }

@@ -22,27 +22,27 @@ pub async fn create_fallback_manager_with_strategies() -> FallbackManager {
 
     // V8 优化降级策略
     manager.register_strategies(vec![
-        (Feature::V8Optimization, FallbackStrategy::RetryLater(std::time::Duration::from_millis(100))),
+        (Feature::V8Optimization, FallbackStrategy::RetryLater(std::time::Duration::from_millis(100)),
         (Feature::V8Optimization, FallbackStrategy::DegradeToBasic),
         (Feature::V8Optimization, FallbackStrategy::DisableFeature),
     ]).await;
 
     // Python 运行时降级策略
     manager.register_strategies(vec![
-        (Feature::PythonRuntime, FallbackStrategy::UseAlternative("Python subprocess".to_string())),
+        (Feature::PythonRuntime, FallbackStrategy::UseAlternative("Python subprocess".to_string()),
         (Feature::PythonRuntime, FallbackStrategy::Ignore),
     ]).await;
 
     // Go 运行时降级策略
     manager.register_strategies(vec![
-        (Feature::GoRuntime, FallbackStrategy::SwitchToBackup("Go subprocess".to_string())),
+        (Feature::GoRuntime, FallbackStrategy::SwitchToBackup("Go subprocess".to_string()),
         (Feature::GoRuntime, FallbackStrategy::LogAndContinue),
     ]).await;
 
     // WebAssembly 降级策略
     manager.register_strategies(vec![
-        (Feature::WebAssembly, FallbackStrategy::RetryLater(std::time::Duration::from_millis(200))),
-        (Feature::WebAssembly, FallbackStrategy::UseAlternative("V8 interpretation".to_string())),
+        (Feature::WebAssembly, FallbackStrategy::RetryLater(std::time::Duration::from_millis(200)),
+        (Feature::WebAssembly, FallbackStrategy::UseAlternative("V8 interpretation".to_string()),
     ]).await;
 
     // 企业级功能降级策略
@@ -200,13 +200,13 @@ use std::collections::{HashMap, BTreeMap};
         assert!(matches!(v8_strategy, FallbackStrategy::DegradeToBasic));
 
         let python_strategy: _ = FallbackUtils::get_default_strategy(&Feature::PythonRuntime);
-        assert!(matches!(python_strategy, FallbackStrategy::UseAlternative(_)));
+        assert!(matches!(python_strategy, FallbackStrategy::UseAlternative(_));
     }
 
     #[test]
     fn test_fallback_suggestions() {
         let suggestions: _ = FallbackUtils::create_fallback_suggestions(&Feature::V8Optimization);
         assert!(!suggestions.is_empty());
-        assert!(suggestions.iter().any(|s| s.contains("V8")));
+        assert!(suggestions.iter().any(|s| s.contains("V8"));
     }
 }

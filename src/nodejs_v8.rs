@@ -52,7 +52,7 @@ fn setup_process(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
 
     // process.cwd()
     let cwd_func: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let result = match env::current_dir() {
+        let result: _ = match env::current_dir() {
             Ok(path) => path.to_string_lossy().to_string(),
             Err(_) => ".".to_string(),
         };
@@ -127,7 +127,7 @@ fn setup_path(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
             if path.is_absolute() {
                 result = path.to_path_buf();
             } else {
-                result = result.clone();join(path);
+                result = result.clone();clone();join(path);
             }
         }
 
@@ -144,7 +144,7 @@ fn setup_path(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
 
     // path.dirname()
     let dirname_func: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let arg = args.get(0);
+        let arg: _ = args.get(0);
         let arg_str: _ = arg.to_string(scope)
             .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
             .to_rust_string_lossy(scope);
@@ -161,7 +161,7 @@ fn setup_path(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
 
     // path.basename()
     let basename_func: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let arg = args.get(0);
+        let arg: _ = args.get(0);
         let arg_str: _ = arg.to_string(scope)
             .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
             .to_rust_string_lossy(scope);
@@ -177,14 +177,14 @@ fn setup_path(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
 
     // path.extname()
     let extname_func: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let arg = args.get(0);
+        let arg: _ = args.get(0);
         let arg_str: _ = arg.to_string(scope)
             .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
             .to_rust_string_lossy(scope);
         let path: _ = Path::new(&arg_str);
         let result: _ = path.extension()
             .and_then(|s| {
-                let ext = s.to_str()?;
+                let ext: _ = s.to_str()?;
                 Some(format!(".{}", ext))
             })
             .unwrap_or_else(|| "".to_string());
@@ -209,7 +209,7 @@ fn setup_fs(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
 
     // fs.readFileSync()
     let read_file_sync: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let path = args.get(0);
+        let path: _ = args.get(0);
         let _encoding: _ = args.get(1); // Not used in simple implementation
 
         let path_str: _ = path.to_string(scope)
@@ -228,7 +228,7 @@ fn setup_fs(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
 
     // fs.writeFileSync()
     let write_file_sync: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let path = args.get(0);
+        let path: _ = args.get(0);
         let data: _ = args.get(1);
         let _encoding: _ = args.get(2); // Not used in simple implementation
 
@@ -249,7 +249,7 @@ fn setup_fs(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
 
     // fs.existsSync()
     let exists_sync: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let path = args.get(0);
+        let path: _ = args.get(0);
         let path_str: _ = path.to_string(scope)
             .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
             .to_rust_string_lossy(scope);
@@ -262,7 +262,7 @@ fn setup_fs(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
 
     // fs.mkdirSync()
     let mkdir_sync: _ = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let path = args.get(0);
+        let path: _ = args.get(0);
         let path_str: _ = path.to_string(_scope)
             .unwrap_or_else(|| v8::String::new(_scope, "<error>").unwrap())
             .to_rust_string_lossy(_scope);
@@ -276,7 +276,7 @@ fn setup_fs(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
 
     // fs.readdirSync()
     let readdir_sync: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let path = args.get(0);
+        let path: _ = args.get(0);
         let path_str: _ = path.to_string(scope)
             .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
             .to_rust_string_lossy(scope);
@@ -305,7 +305,7 @@ fn setup_fs(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
 
     // fs.statSync()
     let stat_sync: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let path = args.get(0);
+        let path: _ = args.get(0);
         let path_str: _ = path.to_string(scope)
             .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
             .to_rust_string_lossy(scope);
@@ -330,7 +330,7 @@ fn setup_fs(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
 fn setup_module_system(scope: &mut v8::ContextScope<v8::HandleScope>, module_loader: Option<Arc<ModuleLoader>>) -> Result<()> {
     // Global require function - now with real module loading
     let require_func: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let module_name = args.get(0);
+        let module_name: _ = args.get(0);
         let module_name_str: _ = module_name.to_string(scope)
             .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
             .to_rust_string_lossy(scope);
@@ -354,7 +354,7 @@ fn setup_module_system(scope: &mut v8::ContextScope<v8::HandleScope>, module_loa
                             serde_json::Value::Bool(b) => v8::Boolean::new(scope, *b).into(),
                             serde_json::Value::Null => v8::null(scope).into(),
                             serde_json::Value::Array(arr) => {
-                                let v8_arr = v8::Array::new(scope, arr.len() as i32);
+                                let v8_arr: _ = v8::Array::new(scope, arr.len() as i32);
                                 for (i, item) in arr.iter().enumerate() {
                                     let v8_item: _ = match item {
                                         serde_json::Value::String(s) => v8::String::new(scope, s).unwrap().into(),

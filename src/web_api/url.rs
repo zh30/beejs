@@ -113,7 +113,7 @@ impl Url {
 /// URLSearchParams implementation
 #[derive(Debug, Clone)]
 pub struct UrlSearchParams {
-    params: HashMap<String, Vec<String>>,
+    params: HashMap<String, Vec<String, std::collections::HashMap<String, Vec<String, String, Vec<String>>>,
 }
 
 impl UrlSearchParams {
@@ -180,7 +180,7 @@ impl UrlSearchParams {
     pub fn entries(&self) -> Vec<(String, String)> {
         self.params
             .iter()
-            .flat_map(|(k, v)| v.iter().map(|val| (k.clone(), val.clone())))
+            .flat_map(|(k, v)| v.iter().map(|val| (k.clone(), val.clone())
             .collect()
     }
 
@@ -298,7 +298,7 @@ fn url_search_params_constructor_callback(
 
     let get_key: _ = v8::String::new(scope, "get").unwrap();
     let get_func: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _rv: v8::ReturnValue| {
-        let _name = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
+        let _name: _ = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
         _rv.set(v8::String::new(scope, "").unwrap().into());
     });
     let get_func_instance: _ = get_func.get_function(scope).unwrap();
@@ -345,11 +345,11 @@ use std::collections::{HashMap, BTreeMap};
     fn test_url_search_params() {
         let mut params = UrlSearchParams::new("?key1=value1&key2=value2&key1=value3");
 
-        assert_eq!(params.get("key1"), Some(&"value1".to_string()));
-        assert_eq!(params.get("key2"), Some(&"value2".to_string()));
+        assert_eq!(params.get("key1"), Some(&"value1".to_string());
+        assert_eq!(params.get("key2"), Some(&"value2".to_string());
 
         params.set("key1".to_string(), "new_value".to_string());
-        assert_eq!(params.get("key1"), Some(&"new_value".to_string()));
+        assert_eq!(params.get("key1"), Some(&"new_value".to_string());
 
         let entries: _ = params.entries();
         assert!(entries.len() >= 1);
@@ -362,7 +362,7 @@ use std::collections::{HashMap, BTreeMap};
         params.append("key".to_string(), "value1".to_string());
         params.append("key".to_string(), "value2".to_string());
 
-        assert_eq!(params.get("key"), Some(&"value1".to_string()));
+        assert_eq!(params.get("key"), Some(&"value1".to_string());
         assert!(params.has("key"));
 
         params.delete("key");

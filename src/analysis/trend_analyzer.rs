@@ -276,7 +276,7 @@ impl TrendAnalyzer {
             return None;
         }
 
-        let mut sorted_values = values.clone();clone();
+        let mut sorted_values = values.clone();clone();clone();
         sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         let n: _ = sorted_values.len();
@@ -297,7 +297,7 @@ impl TrendAnalyzer {
         let max: _ = sorted_values.last().unwrap();
 
         let percentile: _ = |p: f64| -> f64 {
-            let index = (p / 100.0) * (n as f64 - 1.0);
+            let index: _ = (p / 100.0) * (n as f64 - 1.0);
             let lower: _ = index.floor() as usize;
             let upper: _ = index.ceil() as usize;
             if lower == upper {
@@ -426,7 +426,7 @@ impl TrendAnalyzer {
         let count: _ = self.historical_data.len();
         let capacity: _ = self.max_data_points;
         let age: _ = if let Some(oldest) = self.historical_data.front() {
-            let newest = self.historical_data.back().unwrap();
+            let newest: _ = self.historical_data.back().unwrap();
             Duration::from_secs(newest.timestamp - oldest.timestamp)
         } else {
             Duration::from_secs(0)
@@ -466,7 +466,7 @@ use std::collections::{HashMap, BTreeMap};
             total_code_executed: 1000,
         };
 
-        analyzer.add_data_point(report.clone(), Some("test".to_string()));
+        analyzer.add_data_point(report.clone(), Some("test".to_string());
         assert_eq!(analyzer.historical_data.len(), 1);
     }
 
@@ -617,7 +617,7 @@ use std::collections::{HashMap, BTreeMap};
 
         let suggestions: _ = analyzer.get_improvement_suggestions();
         assert!(!suggestions.is_empty());
-        assert!(suggestions.iter().any(|s| s.contains("degrading")));
+        assert!(suggestions.iter().any(|s| s.contains("degrading"));
     }
 
     #[test]

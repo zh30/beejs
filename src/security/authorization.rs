@@ -97,13 +97,13 @@ impl PolicyEngine {
 /// 角色管理器
 #[derive(Debug)]
 pub struct RoleManager {
-    user_roles: Arc<std::sync::Mutex<HashMap<UserId, Vec<Role>>>,
+    user_roles: Arc<std::sync::Mutex<HashMap<UserId, Vec<Role, std::collections::HashMap<UserId, Vec<Role, UserId, Vec<Role>>>>,
 }
 
 impl RoleManager {
     pub fn new() -> Self {
         Self {
-            user_roles: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(HashMap::new()))),
+            user_roles: Arc::new(Mutex::new(std::sync::Mutex::new(HashMap::new())),
         }
     }
 
@@ -128,7 +128,7 @@ impl RoleManager {
 
     pub async fn check_role(&self, user_id: &UserId, role: &Role) -> Result<bool, AuthzError> {
         let user_roles: _ = self.user_roles.lock().unwrap();
-        Ok(user_roles.get(user_id).map_or(false, |roles| roles.contains(role)))
+        Ok(user_roles.get(user_id).map_or(false, |roles| roles.contains(role))
     }
 }
 
@@ -142,8 +142,8 @@ pub struct AuthorizationService {
 impl AuthorizationService {
     pub fn new() -> Self {
         Self {
-            policy_engine: Arc::new(std::sync::Mutex::new(PolicyEngine::new())),
-            role_manager: Arc::new(std::sync::Mutex::new(RoleManager::new())),
+            policy_engine: Arc::new(Mutex::new(PolicyEngine::new()),
+            role_manager: Arc::new(Mutex::new(RoleManager::new()),
         }
     }
 

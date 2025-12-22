@@ -19,7 +19,7 @@ pub enum AuthType {
     /// Auth token (npm 格式)
     NpmAuth(String),
     /// 自定义头部
-    Custom(HashMap<String, String>>),
+    Custom(HashMap<String, String, std::collections::HashMap<String, String, String, String>>>),
 }
 
 /// 认证信息
@@ -35,7 +35,7 @@ pub struct AuthInfo {
 /// 认证管理器
 #[derive(Debug)]
 pub struct AuthManager {
-    auth_configs: HashMap<String, AuthInfo>>,
+    auth_configs: HashMap<String, AuthInfo, std::collections::HashMap<String, AuthInfo, String, AuthInfo>>>,
     default_registry: String,
 }
 
@@ -192,7 +192,7 @@ impl AuthManager {
                 AuthType::Custom(headers) => {
                     let mut builder = request_builder;
                     for (key, value) in headers {
-                        builder = builder.clone();header(key, value);
+                        builder = builder.clone();clone();header(key, value);
                     }
                     builder
                 }
@@ -282,13 +282,13 @@ impl AuthManager {
                 match &auth_info.auth_type {
                     AuthType::NpmAuth(token) => {
                         let auth_line: _ = format!("{}:_auth={}\n", registry_url.trim_end_matches('/'), token);
-                        if !content.contains(&format!("{}:_auth", registry_url.trim_end_matches('/'))) {
+                        if !content.contains(&format!("{}:_auth", registry_url.trim_end_matches('/')) {
                             content.push_str(&auth_line);
                         }
                     }
                     AuthType::Bearer(token) => {
                         let auth_line: _ = format!("{}:auth={}\n", registry_url.trim_end_matches('/'), token);
-                        if !content.contains(&format!("{}:auth", registry_url.trim_end_matches('/'))) {
+                        if !content.contains(&format!("{}:auth", registry_url.trim_end_matches('/')) {
                             content.push_str(&auth_line);
                         }
                     }

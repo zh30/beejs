@@ -310,7 +310,7 @@ fn blob_slice(
     };
 
     let content_type: _ = if args.length() > 2 && !args.get(2).is_undefined() {
-        let type_val = args.get(2);
+        let type_val: _ = args.get(2);
         if type_val.is_string() {
             type_val.to_string(scope).unwrap().to_rust_string_lossy(scope)
         } else {
@@ -336,7 +336,7 @@ fn blob_slice(
 
     let sliced_string: _ = if let Some(data) = data_val {
         if data.is_string() {
-            let data_str = data.to_string(scope).unwrap().to_rust_string_lossy(scope);
+            let data_str: _ = data.to_string(scope).unwrap().to_rust_string_lossy(scope);
             let len: _ = data_str.len() as i64;
 
             let start_usize: _ = if start < 0 {

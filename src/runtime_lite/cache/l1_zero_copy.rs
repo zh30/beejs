@@ -43,7 +43,7 @@ impl L1Stats {
 /// L1 Zero-Copy Cache for hot scripts
 pub struct L1ZeroCopyCache {
     /// Hot scripts cache with zero-copy Arc<[u8]> storage
-    hot_scripts: Arc<RwLock<HashMap<CacheKey, ScriptBuffer>>,
+    hot_scripts: Arc<RwLock<HashMap<CacheKey, ScriptBuffer, std::collections::HashMap<CacheKey, ScriptBuffer, CacheKey, ScriptBuffer>>>,
     /// Pre-allocated buffer pool
     buffer_pool: Arc<RwLock<Vec<ScriptBuffer>>,
     /// Cache statistics
@@ -58,9 +58,9 @@ impl L1ZeroCopyCache {
     /// Create a new L1 cache
     pub fn new() -> Self {
         Self {
-            hot_scripts: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            buffer_pool: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
-            stats: Arc::new(std::sync::Mutex::new(RwLock::new(L1Stats::default()))),
+            hot_scripts: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            buffer_pool: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            stats: Arc::new(Mutex::new(RwLock::new(L1Stats::default())),
             max_size_bytes: 256 * 1024 * 1024, // 256 MB
             max_hot_scripts: 1024,
         }
@@ -167,7 +167,7 @@ impl L1ZeroCopyCache {
             }
         }
 
-        stats.hot_scripts = hot_scripts.clone();len();
+        stats.hot_scripts = hot_scripts.clone();clone();len();
     }
 
     /// Get current size

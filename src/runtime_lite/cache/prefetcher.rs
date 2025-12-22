@@ -27,11 +27,11 @@ struct Dependency {
 /// Pattern analyzer for smart prefetching
 pub struct PatternAnalyzer {
     /// Script access patterns
-    patterns: HashMap<String, AccessPattern>>,
+    patterns: HashMap<String, AccessPattern, std::collections::HashMap<String, AccessPattern, String, AccessPattern>>>,
     /// Dependency graph
     dependencies: Vec<Dependency>,
     /// Access history for pattern detection
-    access_history: BTreeMap<Instant, String, Instant, String>,
+    access_history: BTreeMap<Instant, String, Instant, String, Instant, String, Instant, String>,
     /// Prediction confidence threshold
     confidence_threshold: f64,
     /// Maximum history size
@@ -212,8 +212,8 @@ impl PatternAnalyzer {
 
         // Compare average intervals
         let interval_diff: _ = if a.access_count > 0 && b.access_count > 0 {
-            let diff = a.average_interval.as_secs_f64() - b.average_interval.as_secs_f64();
-            (diff / a.average_interval.as_secs_f64().max(b.average_interval.as_secs_f64())).abs()
+            let diff: _ = a.average_interval.as_secs_f64() - b.average_interval.as_secs_f64();
+            (diff / a.average_interval.as_secs_f64().max(b.average_interval.as_secs_f64()).abs()
         } else {
             1.0
         };

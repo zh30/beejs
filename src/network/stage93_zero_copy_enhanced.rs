@@ -52,16 +52,16 @@ pub struct Stage93ZeroCopyStats {
 /// AI 驱动的访问预测器
 pub struct ZeroCopyAccessPredictor {
     access_history: Arc<RwLock<VecDeque<(Instant, usize, usize)>>,
-    size_patterns: Arc<RwLock<HashMap<usize, u32>>,
+    size_patterns: Arc<RwLock<HashMap<usize, u32, std::collections::HashMap<usize, u32, usize, u32>>>,
     accuracy_tracker: Arc<RwLock<VecDeque<bool>>,
 }
 
 impl ZeroCopyAccessPredictor {
     pub fn new() -> Self {
         Self {
-            access_history: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::with_capacity(10000)))),
-            size_patterns: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            accuracy_tracker: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::with_capacity(1000)))),
+            access_history: Arc::new(Mutex::new(RwLock::new(VecDeque::with_capacity(10000))),
+            size_patterns: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            accuracy_tracker: Arc::new(Mutex::new(RwLock::new(VecDeque::with_capacity(1000))),
         }
     }
 
@@ -89,7 +89,7 @@ impl ZeroCopyAccessPredictor {
         let avg_size: usize = recent_sizes.iter().sum::<usize>() / recent_sizes.len().max(1);
         let size_variance: _ = recent_sizes.iter()
             .map(|&s| {
-                let diff = (s as isize - avg_size as isize).abs();
+                let diff: _ = (s as isize - avg_size as isize).abs();
                 (diff * diff) as usize
             })
             .sum::<usize>() / recent_sizes.len().max(1);
@@ -153,10 +153,10 @@ impl Stage93ZeroCopySocket {
         let zero_copy_config: _ = Stage93ZeroCopyConfig::default();
         Self {
             zero_copy_config,
-            stats: Arc::new(std::sync::Mutex::new(Stage93ZeroCopyStats::default())),
-            mmap_pool: Arc::new(std::sync::Mutex::new(RwLock::new(Vec::new()))),
-            predictor: Arc::new(std::sync::Mutex::new(ZeroCopyAccessPredictor::new())),
-            adaptive_threshold: Arc::new(std::sync::Mutex::new(RwLock::new(zero_copy_config.zero_copy_threshold))),
+            stats: Arc::new(Mutex::new(Stage93ZeroCopyStats::default()),
+            mmap_pool: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            predictor: Arc::new(Mutex::new(ZeroCopyAccessPredictor::new()),
+            adaptive_threshold: Arc::new(Mutex::new(RwLock::new(zero_copy_config.zero_copy_threshold)),
             config,
         }
     }
@@ -317,7 +317,7 @@ impl Stage93ZeroCopyListener {
         Ok(Self {
             listener,
             config: NetworkConfig::default(),
-            stats: Arc::new(std::sync::Mutex::new(Stage93ZeroCopyStats::default())),
+            stats: Arc::new(Mutex::new(Stage93ZeroCopyStats::default()),
         })
     }
 

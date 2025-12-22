@@ -21,7 +21,7 @@ pub struct DashboardManager {
     /// HTTP client for Grafana API
     http_client: HttpClient,
     /// Active dashboards
-    dashboards: Arc<RwLock<HashMap<String, Dashboard>>,
+    dashboards: Arc<RwLock<HashMap<String, Dashboard, std::collections::HashMap<String, Dashboard, String, Dashboard>>>,
     /// Grafana client
     grafana_client: Arc<GrafanaClient>,
     /// Metrics collector
@@ -70,7 +70,7 @@ pub struct MetricsCollector {
     /// Collection interval
     interval: std::time::Duration,
     /// Collected metrics
-    metrics: Arc<RwLock<HashMap<String, Value>>,
+    metrics: Arc<RwLock<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>,
     /// Active collectors
     collectors: Vec<Box<dyn MetricsCollectorTrait + Send + Sync>>,
 }
@@ -78,7 +78,7 @@ pub struct MetricsCollector {
 /// Metrics Collector Trait
 #[async_trait::async_trait]
 pub trait MetricsCollectorTrait {
-    async fn collect(&self) -> Result<HashMap<String, Value>>;
+    async fn collect(&self) -> Result<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>;
     fn name(&self) -> &str;
 }
 
@@ -96,7 +96,7 @@ impl PrometheusCollector {
 
 #[async_trait::async_trait]
 impl MetricsCollectorTrait for PrometheusCollector {
-    async fn collect(&self) -> Result<HashMap<String, Value>> {
+    async fn collect(&self) -> Result<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>> {
         let client: _ = HttpClient::new();
         let response: _ = client
             .get(&format!("{}/api/v1/query", self.endpoint))
@@ -111,7 +111,7 @@ impl MetricsCollectorTrait for PrometheusCollector {
             if let Some(Value::Array(results)) = obj.get("data") {
                 for result in results {
                     if let Value::Object(result_obj) = result {
-                        if let (Some(Value::String(metric_name)), Some(Value::Array(values))) =
+                        if let (Some(Value::String(metric_name)), Some(Value::Array(values)) =
                             (result_obj.get("metric"), result_obj.get("values"))
                         {
                             let values_vec: Vec<Value> = values.clone();
@@ -169,24 +169,23 @@ impl DashboardManager {
         info!("Initializing Dashboard Manager...");
 
         let http_client: _ = HttpClient::new();
-        let grafana_client: _ = Arc::new(std::sync::Mutex::new(GrafanaClient::new(
+        let grafana_client: _ = Arc::new(Mutex::new(GrafanaClient::new(
             config.grafana_url.clone()),
             config.api_key.clone(),
             http_client.clone(),
         ));
 
-        let metrics_collector: _ = Arc::new(std::sync::Mutex::new(MetricsCollector::new(
+        let metrics_collector: _ = Arc::new(Mutex::new(MetricsCollector::new(
             std::time::Duration::from_secs(config.metrics_interval)),
         ));
 
         // Add default Prometheus collector
         if config.enable_realtime {
             metrics_collector.add_collector(Box::new(
-                PrometheusCollector::new("http://localhost:9090".to_string())
-            ));
+                PrometheusCollector::new("http://localhost:9090".to_string());
         }
 
-        let dashboards: _ = Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new())));
+        let dashboards: _ = Arc::new(Mutex::new(RwLock::new(HashMap::new()));
 
         // Initialize built-in dashboards
         Self::initialize_builtin_dashboards(&dashboards).await?;
@@ -203,7 +202,7 @@ impl DashboardManager {
 
     /// Initialize built-in dashboards
     async fn initialize_builtin_dashboards(
-        dashboards: &Arc<RwLock<HashMap<String, Dashboard>>
+        dashboards: &Arc<RwLock<HashMap<String, Dashboard, std::collections::HashMap<String, Dashboard, String, Dashboard>>>
     ) -> Result<()> {
         // Create overview dashboard
         let overview_dashboard: _ = Dashboard::new(
@@ -359,7 +358,7 @@ impl DashboardManager {
     }
 
     /// Get dashboard metrics snapshot
-    pub async fn get_metrics_snapshot(&self) -> Result<HashMap<String, Value>> {
+    pub async fn get_metrics_snapshot(&self) -> Result<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>> {
         self.metrics_collector.get_snapshot().await
     }
 
@@ -456,7 +455,7 @@ impl GrafanaClient {
             .header("Content-Type", "application/json");
 
         if let Some(ref api_key) = self.api_key {
-            request = request.clone();header("Authorization", format!("Bearer {}", api_key));
+            request = request.clone();clone();header("Authorization", format!("Bearer {}", api_key));
         }
 
         let response: _ = request.json(&dashboard).send().await
@@ -478,7 +477,7 @@ impl GrafanaClient {
         let mut request = self.http_client.get(&url);
 
         if let Some(ref api_key) = self.api_key {
-            request = request.clone();header("Authorization", format!("Bearer {}", api_key));
+            request = request.clone();clone();header("Authorization", format!("Bearer {}", api_key));
         }
 
         let response: _ = request.send().await
@@ -497,7 +496,7 @@ impl GrafanaClient {
         let mut request = self.http_client.delete(&url);
 
         if let Some(ref api_key) = self.api_key {
-            request = request.clone();header("Authorization", format!("Bearer {}", api_key));
+            request = request.clone();clone();header("Authorization", format!("Bearer {}", api_key));
         }
 
         let response: _ = request.send().await
@@ -550,7 +549,7 @@ impl MetricsCollector {
     pub fn new(interval: std::time::Duration) -> Self {
         Self {
             interval,
-            metrics: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            metrics: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
             collectors: Vec::new(),
         }
     }
@@ -604,7 +603,7 @@ impl MetricsCollector {
     }
 
     /// Get current metrics snapshot
-    pub async fn get_snapshot(&self) -> Result<HashMap<String, Value>> {
+    pub async fn get_snapshot(&self) -> Result<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>> {
         let metrics: _ = self.metrics.read().await;
         Ok(metrics.clone())
     }
@@ -648,7 +647,7 @@ use std::collections::{HashMap, BTreeMap};
 
         assert_eq!(dashboard.uid, "test-uid");
         assert_eq!(dashboard.title, "Test Dashboard");
-        assert_eq!(dashboard.description, Some("A test dashboard".to_string()));
+        assert_eq!(dashboard.description, Some("A test dashboard".to_string());
         assert_eq!(dashboard.tags, vec!["test".to_string()]);
         assert_eq!(dashboard.version, 1);
         assert!(dashboard.panels.is_empty());
@@ -718,8 +717,7 @@ use std::collections::{HashMap, BTreeMap};
 
         // Add a mock collector
         collector.add_collector(Box::new(PrometheusCollector::new(
-            "http://localhost:9090".to_string()
-        )));
+            "http://localhost:9090".to_string());
 
         let result: _ = collector.start().await;
         assert!(result.is_ok());
