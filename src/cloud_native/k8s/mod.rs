@@ -22,8 +22,14 @@ pub use operator::{
 /// Operator controller for managing resources
 pub mod operator;
 
-// TODO: Add HPA autoscaling
-// pub mod autoscaling;
+/// HPA autoscaling module
+pub mod autoscaling;
+
+/// Re-export autoscaling types
+pub use autoscaling::{
+    HPAController, Metrics, MetricsClient, Scaler, ScalingResult, ResourceType,
+    ScalePolicyType, HPAError, MetricsError, ScalerError,
+};
 
 // TODO: Add StatefulSet management
 // pub mod statefulset;
