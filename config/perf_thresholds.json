@@ -1,0 +1,83 @@
+{
+  "thresholds": {
+    "simple_arithmetic": {
+      "regression_threshold": 0.05,
+      "critical_threshold": 0.10,
+      "min_samples": 100,
+      "unit": "ops/sec"
+    },
+    "string_operations": {
+      "regression_threshold": 0.05,
+      "critical_threshold": 0.10,
+      "min_samples": 100,
+      "unit": "ops/sec"
+    },
+    "array_operations": {
+      "regression_threshold": 0.05,
+      "critical_threshold": 0.10,
+      "min_samples": 100,
+      "unit": "ops/sec"
+    },
+    "object_operations": {
+      "regression_threshold": 0.05,
+      "critical_threshold": 0.10,
+      "min_samples": 100,
+      "unit": "ops/sec"
+    },
+    "tensor_operations": {
+      "regression_threshold": 0.08,
+      "critical_threshold": 0.15,
+      "min_samples": 50,
+      "unit": "GFLOPS"
+    },
+    "batch_inference": {
+      "regression_threshold": 0.06,
+      "critical_threshold": 0.12,
+      "min_samples": 50,
+      "unit": "samples/sec"
+    },
+    "multi_tenant_isolation": {
+      "regression_threshold": 0.07,
+      "critical_threshold": 0.14,
+      "min_samples": 30,
+      "unit": "req/sec"
+    },
+    "concurrent_execution": {
+      "regression_threshold": 0.05,
+      "critical_threshold": 0.10,
+      "min_samples": 100,
+      "unit": "ops/sec"
+    },
+    "memory_management": {
+      "regression_threshold": 0.06,
+      "critical_threshold": 0.12,
+      "min_samples": 100,
+      "unit": "MB/s"
+    },
+    "startup_time": {
+      "regression_threshold": 0.10,
+      "critical_threshold": 0.20,
+      "min_samples": 50,
+      "unit": "ms"
+    }
+  },
+  "global": {
+    "confidence_level": 0.95,
+    "min_samples": 50,
+    "statistical_test": "welch_t_test",
+    "significance_level": 0.05
+  },
+  "alerting": {
+    "enabled": true,
+    "slack_webhook": "${SLACK_WEBHOOK_URL}",
+    "email_notifications": true,
+    "github_issues": true,
+    "critical_threshold_multiplier": 2.0
+  },
+  "baseline": {
+    "auto_update": false,
+    "update_frequency": "weekly",
+    "validation_required": true,
+    "rollback_on_regression": true
+  }
+}

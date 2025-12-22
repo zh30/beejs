@@ -1,0 +1,88 @@
+{
+  "platforms": {
+    "linux": {
+      "enabled": true,
+      "features": {
+        "epoll": true,
+        "inotify": true,
+        "unix_sockets": true,
+        "signals": true,
+        "shared_memory": true
+      },
+      "tests": [
+        "linux_epoll_event_loop",
+        "linux_inotify_file_watching",
+        "linux_unix_domain_sockets",
+        "linux_process_signals",
+        "linux_shared_memory"
+      ]
+    },
+    "macos": {
+      "enabled": true,
+      "features": {
+        "kqueue": true,
+        "fsevents": true,
+        "xpc": true,
+        "grand_central_dispatch": true
+      },
+      "tests": [
+        "macos_kqueue_event_loop",
+        "macos_fsevents_file_watching",
+        "macos_xpc_inter_process",
+        "macos_grand_central_dispatch"
+      ]
+    },
+    "windows": {
+      "enabled": true,
+      "features": {
+        "iocp": true,
+        "named_pipes": true,
+        "overlapped_io": true,
+        "windows_security": true
+      },
+      "tests": [
+        "windows_iocp_event_loop",
+        "windows_named_pipes",
+        "windows_overlapped_io",
+        "windows_security_attributes"
+      ]
+    }
+  },
+  "common_tests": [
+    "basic_js_execution",
+    "file_io_operations",
+    "network_tcp_udp",
+    "process_creation",
+    "threading_support",
+    "memory_management"
+  ],
+  "test_options": {
+    "timeout": 300,
+    "parallel": false,
+    "retry_count": 3,
+    "retry_delay": 1000,
+    "verbose": true
+  },
+  "performance": {
+    "cpu_thresholds": {
+      "idle": 5.0,
+      "normal": 50.0,
+      "high": 80.0
+    },
+    "memory_thresholds": {
+      "warning": 80.0,
+      "critical": 95.0
+    },
+    "disk_io_thresholds": {
+      "read_mb_s": 100.0,
+      "write_mb_s": 100.0
+    }
+  },
+  "reporting": {
+    "format": "both",
+    "output_directory": "reports/platform",
+    "include_screenshots": true,
+    "include_logs": true,
+    "compress_results": true
+  }
+}
