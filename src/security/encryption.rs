@@ -2,14 +2,12 @@
 //!
 //! 提供 AES-256 数据加密和解密功能
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime};
 
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::collections::{BTreeMap, HashMap};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use std::collections::{HashMap, BTreeMap};
 /// 加密错误
 #[derive(Error, Debug)]
 pub enum EncryptionError {

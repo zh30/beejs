@@ -567,6 +567,7 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 use std::collections::{HashMap, BTreeMap};
+use anyhow::{Result, Error};
     #[test]
     fn test_project_template_from_str() {
         assert_eq!(

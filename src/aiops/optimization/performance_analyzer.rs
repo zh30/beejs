@@ -5,8 +5,8 @@
 
 use std::time::SystemTime;
 
-use std::collections::HashMap;
 use std::time::{Duration, SystemTime};
+use std::collections::{BTreeMap, HashMap};
 /// 性能指标类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PerformanceMetricType {
@@ -405,7 +405,6 @@ impl Default for PerformanceAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_performance_analyzer_creation() {
         let analyzer: _ = PerformanceAnalyzer::new();

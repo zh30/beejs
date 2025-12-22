@@ -4,8 +4,8 @@
 //! It allows tracking the execution of scripts, network operations,
 //! and other runtime activities across service boundaries.
 use anyhow::Result;
-use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::collections::{BTreeMap, HashMap};
 use tracing::{debug, error, info};
 /// Jaeger tracer for distributed tracing
 pub struct JaegerTracer {
@@ -90,7 +90,6 @@ impl JaegerSpan {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_jaeger_tracer_creation() {
         let addr: _ = "127.0.0.1:6831".parse().unwrap();

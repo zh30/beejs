@@ -4,6 +4,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use anyhow::{Result, Error};
 
 /// Lazy loading statistics
 #[derive(Debug, Clone, Default)]

@@ -1,10 +1,10 @@
 //! Istio Service Mesh integration
 //! Provides configuration and management for Istio
 
-use std::collections::BTreeMap;
 use std::time::Duration;
+use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
-use std::collections::HashMap;
 use tracing::info;
 use kube::Api;
 use super::types::{
@@ -324,7 +324,6 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_istio_config_creation() {
         let config: _ = IstioConfig {

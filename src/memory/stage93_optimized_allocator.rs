@@ -8,6 +8,7 @@ use std::alloc::{GlobalAlloc, Layout};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{Arc, Mutex, RwLock};
 use std::sync::atomic::Ordering;
+use anyhow::{Result, Error};
 
 /// Stage 93 分配器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -5,11 +5,8 @@
 
 use anyhow::{Result, anyhow};
 use crate::memory::zero_copy_enhanced::{AccessPattern, EnhancedZeroCopy};
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, RwLock};
 use std::sync::atomic::{AtomicBool};
 use std::sync::atomic::Ordering;
-use tokio::sync::{Mutex, RwLock};
 
 /// 访问历史条目
 #[derive(Debug, Clone)]
@@ -412,3 +409,4 @@ mod tests {
         assert!(strategy.min_confidence > 0.0);
     }
 }
+use tokio::sync::{TokioMutex, TokioRwLock};

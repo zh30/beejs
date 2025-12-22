@@ -7,7 +7,6 @@
 //! - Built-in module detection
 //! - Package.json "main" field support
 //! - Relative and absolute path resolution
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use crate::cli::script_executor::ModuleSystem;
@@ -287,7 +286,7 @@ impl ModuleResolver {
 mod tests {
     use super::*;
     use std::path::PathBuf;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap, HashMap};
     #[test]
     fn test_resolve_builtin_module() {
         let mut resolver = ModuleResolver::new(PathBuf::from("/test"));

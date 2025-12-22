@@ -13,6 +13,7 @@ use crate::cli::repl_highlighter::{HighlightTheme, ReplHighlighter};
 use rustyline::{Editor, Result};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use anyhow::{Result, Error};
 
 /// Enhanced REPL configuration
 #[derive(Debug, Clone)]

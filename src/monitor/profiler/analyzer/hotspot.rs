@@ -4,8 +4,8 @@
 use std::sync::atomic::Ordering;
 use std::time::Instant;
 
-use std::collections::HashMap;
 use std::time::Duration;
+use std::collections::{BTreeMap, HashMap};
 /// 热点函数
 #[derive(Debug, Clone)]
 pub struct Hotspot {
@@ -461,7 +461,6 @@ impl HotspotAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_hotspot_analyzer_creation() {
         let analyzer: _ = HotspotAnalyzer::with_default_config();

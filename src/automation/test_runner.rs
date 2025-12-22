@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use thiserror::Error;
 
 /// 测试运行错误
 #[derive(Error, Debug)]

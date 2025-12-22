@@ -1,7 +1,6 @@
 //! Metrics collection for HPA
 //! Gathers resource usage metrics from Kubernetes
 use kube::api::ListParams;
-use std::collections::HashMap;
 use tracing::{debug, warn};
 use super::super::crd::CustomMetric;
 /// Metrics client for collecting pod and resource metrics
@@ -155,7 +154,6 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_parse_cpu_usage() {
         assert_eq!(parse_cpu_usage("100m"), Some(100.0));
@@ -184,3 +182,4 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(summary.memory_gb(), 1.0);
     }
 }
+use std::collections::{BTreeMap, HashMap};

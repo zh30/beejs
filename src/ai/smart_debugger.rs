@@ -1,12 +1,10 @@
 //! AI 智能调试器
 //! 提供 AI 驱动的错误诊断、根因分析和修复建议功能
 
-use std::collections::HashSet;
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use std::collections::HashSet;
+use std::collections::{BTreeMap, HashMap};
 
-use std::collections::HashMap;
-use tokio::sync::RwLock as AsyncRwLock;
 use serde::{Serialize, Deserialize};
 /// 错误信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -353,7 +351,6 @@ impl FixGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_smart_debugger_creation() {
         let debugger: _ = SmartDebugger::new();

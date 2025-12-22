@@ -6,7 +6,6 @@
 //! - 目录结构生成器
 //! - 模板注册表
 //! - 依赖安装集成
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -706,6 +705,7 @@ impl DirectoryGenerator {
             #[cfg(unix)]
             if file.executable {
                 use std::os::unix::fs::PermissionsExt;
+use std::collections::{BTreeMap, HashMap};
                 let mut perms = fs::metadata(&full_path)?.permissions();
                 perms.set_mode(0o755);
                 fs::set_permissions(&full_path, perms)?;
@@ -967,7 +967,7 @@ impl Default for TemplateInstantiator {
 mod tests {
     use super::*;
     use tempfile::TempDir;
-use std::collections::{HashMap, BTreeMap};
+use anyhow::{Result, Error};
     #[test]
     fn test_template_engine_basic() {
         let mut engine = TemplateEngine::new();

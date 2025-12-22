@@ -98,6 +98,7 @@ pub struct CloudNativeStats {
 mod tests {
     use super::*;
 use std::collections::{HashMap, BTreeMap};
+use anyhow::{Result, Error};
     #[tokio::test]
     async fn test_cloud_native_runtime() {
         let mut runtime = CloudNativeRuntime::new();

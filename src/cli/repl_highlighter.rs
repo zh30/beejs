@@ -2,7 +2,6 @@
 //! Stage 91 Phase 4.2 - Enhanced REPL
 //! Uses syntect for syntax highlighting
 use colored::Colorize;
-use std::collections::HashMap;
 /// Syntax highlighting theme
 #[derive(Debug, Clone)]
 pub struct HighlightTheme {
@@ -350,7 +349,6 @@ impl Default for ReplHighlighter {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_highlighter_creation() {
         let highlighter: _ = ReplHighlighter::new();
@@ -436,3 +434,4 @@ use std::collections::{HashMap, BTreeMap};
         }
     }
 }
+use std::collections::{BTreeMap, HashMap};

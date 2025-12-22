@@ -6,12 +6,10 @@
 //! - Template engine for dynamic content
 //! - WebSocket-based live updates
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime};
+use std::collections::{BTreeMap, HashMap};
 
 use anyhow::{Result, Context, anyhow};
-use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{info, debug, warn, error};
 use serde_json::{json, Value};
 /// Chart Renderer - Handles real-time chart rendering
@@ -953,7 +951,6 @@ impl TemplateEngine {
 }
 #[cfg(test)]
 mod tests {
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_chart_renderer_creation() {
         let config: _ = RenderConfig::default();

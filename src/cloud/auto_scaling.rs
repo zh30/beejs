@@ -9,10 +9,7 @@
 //! - 成本优化
 
 use crate::cloud::{CloudAdapter, CloudConfig, CloudManager};
-use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, SystemTime};
-use tokio::sync::{RwLock, mpsc};
 use tokio::time::{TokioDuration, interval};
 
 /// 扩缩容策略

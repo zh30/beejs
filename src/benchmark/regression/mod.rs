@@ -5,7 +5,6 @@
 use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 use super::{BenchmarkResultSet, BenchmarkResult, Runtime, MetricType};
@@ -343,7 +342,7 @@ impl RegressionSummary {
 mod tests {
     use super::*;
     use std::time::Duration;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap, HashMap};
     #[test]
     fn test_regression_analysis() {
         let current: _ = super::super::result::BenchmarkResult::new("test", Runtime::Beejs);

@@ -2,6 +2,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use anyhow::{Result, Error};
 
 /// 错误处理统计
 #[derive(Debug, Clone, Default)]

@@ -3,7 +3,6 @@
 //! Provides functionality for monitoring variable values during debugging sessions.
 //! Watch expressions are evaluated each time execution pauses, allowing developers
 //! to track how values change over time.
-use std::collections::HashMap;
 use uuid::Uuid;
 /// A watch expression being monitored
 #[derive(Debug, Clone)]
@@ -162,7 +161,6 @@ impl Default for WatchManager {
 #[cfg(test)]
 mod unit_tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_watch_expression_creation() {
         let watch: _ = WatchExpression::new("x + 1");
@@ -195,3 +193,4 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(list[2].expression, "third");
     }
 }
+use std::collections::{BTreeMap, HashMap};

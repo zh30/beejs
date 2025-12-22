@@ -5,6 +5,7 @@ pub mod wasm_runtime;
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use anyhow::{Result, Error};
 
 /// Unified cross-platform runtime
 #[derive(Debug)]

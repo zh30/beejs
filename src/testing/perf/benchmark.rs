@@ -3,7 +3,6 @@
 
 use std::time::Duration;
 
-use std::collections::HashMap;
 /// Benchmark result
 #[derive(Debug, Clone)]
 pub struct BenchmarkResult {
@@ -152,6 +151,7 @@ impl BenchmarkRunner {
     /// Save results to file
     pub fn save_results(&self, results: &[BenchmarkResult], file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
         use std::io::Write;
+use std::collections::{BTreeMap, HashMap};
         let mut file = std::fs::File::create(file_path)?;
         writeln!(file, "Benchmark Results")?;
         writeln!(file, "=================")?;
@@ -227,7 +227,6 @@ impl BuiltinBenchmarks {
 }
 #[cfg(test)]
 mod tests {
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_benchmark_runner() {
         let config: _ = BenchmarkConfig::default();

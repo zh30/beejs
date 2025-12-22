@@ -5,6 +5,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
+use thiserror::Error;
 
 /// 权限控制错误
 #[derive(Error, Debug)]

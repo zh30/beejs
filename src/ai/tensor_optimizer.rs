@@ -3,9 +3,7 @@
 //! 提供多维张量操作、自动微分优化和分布式张量计算能力
 //! 专为 AI 工作负载设计，支持各种张量运算和梯度计算
 
-use std::collections::HashMap;
 
-use std::collections::{HashMap, BTreeMap};
 /// 张量形状
 #[derive(Debug, Clone, PartialEq)]
 pub struct TensorShape {
@@ -406,3 +404,4 @@ impl Default for TensorOptimizer {
         Self::new()
     }
 }
+use std::collections::{BTreeMap, HashMap};

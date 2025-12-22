@@ -3,7 +3,6 @@
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 /// 分布式追踪器
 #[derive(Debug, Clone)]
 pub struct DistributedTracer {
@@ -248,7 +247,6 @@ fn generate_span_id() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_tracer_creation() {
         let tracer: _ = DistributedTracer::new("beejs-service".to_string());
@@ -352,3 +350,4 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(span1.span_id.len(), 16);
     }
 }
+use std::collections::{BTreeMap, HashMap};

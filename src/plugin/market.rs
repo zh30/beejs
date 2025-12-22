@@ -1,6 +1,5 @@
 //! Plugin market module
 use anyhow::Result;
-use std::collections::HashMap;
 #[derive(Debug, Clone)]
 pub struct PluginInfo {
     pub name: String,
@@ -66,7 +65,6 @@ impl PluginMarket {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_plugin_market_creation() {
         let market: _ = PluginMarket::new();
@@ -86,3 +84,4 @@ use std::collections::{HashMap, BTreeMap};
         assert!(result.contains("Installed"));
     }
 }
+use std::collections::{BTreeMap, HashMap};

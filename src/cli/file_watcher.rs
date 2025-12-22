@@ -4,6 +4,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use anyhow::{Result, Error};
 
 /// File change event
 #[derive(Debug, Clone)]

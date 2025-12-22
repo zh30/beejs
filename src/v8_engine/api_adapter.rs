@@ -9,6 +9,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
+use anyhow::{Result, Error};
 
 /// API 适配器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -2,7 +2,6 @@
 //! Provides URL, URLSearchParams API
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::collections::HashMap;
 /// URL class implementation
 #[derive(Debug, Clone)]
 pub struct Url {
@@ -267,7 +266,6 @@ fn url_search_params_constructor_callback(
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_url_parse_absolute() {
         let url: _ = Url::parse("https://example.com:8080/path/to/page?query=value#hash", None).unwrap();
@@ -306,3 +304,4 @@ use std::collections::{HashMap, BTreeMap};
         assert!(!params.has("key"));
     }
 }
+use std::collections::{BTreeMap, HashMap};

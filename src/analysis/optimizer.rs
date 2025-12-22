@@ -7,7 +7,6 @@ use crate::analysis::bottleneck_detector::{
 };
 use crate::performance_analyzer::PerformanceReport;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 /// Optimization priority levels
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum OptimizationPriority {
@@ -453,7 +452,6 @@ impl Default for PerformanceOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_optimizer_creation() {
         let optimizer: _ = PerformanceOptimizer::new();
@@ -555,3 +553,4 @@ use std::collections::{HashMap, BTreeMap};
         assert!(matches!(suggestions[0].priority, OptimizationPriority::Critical));
     }
 }
+use std::collections::{BTreeMap, HashMap};

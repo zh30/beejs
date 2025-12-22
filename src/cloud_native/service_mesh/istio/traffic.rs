@@ -1,6 +1,5 @@
 //! Traffic management for Istio
 //! Provides routing, load balancing, and traffic splitting capabilities
-use std::collections::HashMap;
 use kube::Api;
 use tracing::info;
 use super::types::{
@@ -295,7 +294,6 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_traffic_split_creation() {
         let split: _ = TrafficSplit {
@@ -320,3 +318,4 @@ use std::collections::{HashMap, BTreeMap};
         assert!(matches!(abort, FaultType::Abort));
     }
 }
+use std::collections::{BTreeMap, HashMap};

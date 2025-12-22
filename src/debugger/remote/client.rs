@@ -2,12 +2,9 @@
 //!
 //! Provides client-side remote debugging capabilities
 
-use std::collections::HashMap;
 
 use anyhow::Result;
-use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, BTreeMap};
 /// Connection manager
 pub struct ConnectionManager {
     connections: std::collections::HashMap<String, Connection>,
@@ -97,3 +94,4 @@ pub struct StackFrameInfo {
     pub file: String,
     pub line: u32,
 }
+use std::collections::{BTreeMap, HashMap};

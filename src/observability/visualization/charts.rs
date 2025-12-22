@@ -8,10 +8,8 @@
 //! - ScatterPlot: Correlation and distribution analysis
 //! - AreaChart: Cumulative and range data
 
-use std::collections::HashMap;
 
 use anyhow::{Result, Context, anyhow};
-use tokio::sync::RwLock;
 use tracing::{debug, warn, error};
 /// Line Chart - For time series and continuous data
 pub struct LineChart {
@@ -900,7 +898,6 @@ impl Default for PieChartBuilder {
 }
 #[cfg(test)]
 mod tests {
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_line_chart_builder() {
         let mut builder = LineChartBuilder::new();
@@ -1052,3 +1049,4 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(point.color, Some("#3b82f6".to_string()));
     }
 }
+use std::collections::{BTreeMap, HashMap};

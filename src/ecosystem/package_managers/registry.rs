@@ -3,12 +3,11 @@
 //!
 //! 处理包的查询、下载和验证
 
-use std::collections::HashMap;
 
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap, HashMap};
 /// 注册表客户端
 #[derive(Debug)]
 pub struct RegistryClient {

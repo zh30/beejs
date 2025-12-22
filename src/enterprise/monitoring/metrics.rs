@@ -1,11 +1,9 @@
 //! Enterprise Monitoring and Metrics
 //! Provides comprehensive monitoring for Beejs enterprise features
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use std::collections::{BTreeMap, HashMap};
 
-use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{info, warn, error, debug, instrument};
 use chrono::{DateTime, Utc};
 /// Metric types for enterprise monitoring
@@ -441,7 +439,6 @@ impl MonitoringManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_metric_recording() {
         let config: _ = MonitoringConfig {

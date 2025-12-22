@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::{EnvFilter, Registry};
 use tracing_subscriber::fmt::{FormatEvent, FormatFields};
+use anyhow::{Result, Error};
 
 /// Structured logger with JSON formatting and context support
 pub struct StructuredLogger {

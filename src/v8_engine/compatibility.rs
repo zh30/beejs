@@ -5,6 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
+use anyhow::{Result, Error};
 
 /// V8 API 状态枚举
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

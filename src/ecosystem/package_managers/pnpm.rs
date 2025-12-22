@@ -3,12 +3,11 @@
 //!
 //! 支持 pnpm 的硬链接/符号链接存储机制
 
-use std::collections::HashMap;
 
 use super::*;
 use std::path::PathBuf;
+use std::collections::{BTreeMap, HashMap};
 use tokio;
-use std::collections::{HashMap, BTreeMap};
 /// pnpm 兼容性管理器
 #[derive(Debug)]
 pub struct PnpmCompatibility {

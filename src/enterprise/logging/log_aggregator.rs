@@ -1,14 +1,13 @@
 //! 日志聚合器
 //! 提供结构化日志记录、日志转发和集中式日志管理功能
 
-use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::io::Write;
 use std::time::SystemTime;
+use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 /// 日志级别
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum LogLevel {
@@ -713,7 +712,6 @@ impl EnterpriseLogAggregator {
 }
 #[cfg(test)]
 mod enterprise_logging_tests {
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_elasticsearch_client() {
         let client: _ = ElasticsearchClient::new("http://localhost:9200", "beejs-logs");

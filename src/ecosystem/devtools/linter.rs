@@ -1,10 +1,7 @@
 //! 代码检查器
 //! 提供智能代码质量检查和自动修复功能
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
-use std::collections::{HashMap, HashSet};
 use serde::{Serialize, Deserialize};
 /// 检查规则
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -600,7 +597,6 @@ impl Default for Linter {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_lint_syntax_errors() {
         let linter: _ = Linter::new();
@@ -670,3 +666,5 @@ use std::collections::{BTreeMap};
         assert!(stats.auto_fixable_count > 0);
     }
 }
+use std::collections::{BTreeMap};
+use std::collections::{HashMap, HashSet};

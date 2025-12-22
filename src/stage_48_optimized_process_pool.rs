@@ -7,14 +7,11 @@
 //! 4. 内存池复用 - 减少内存分配开销
 //! 5. JIT 缓存 - 复用编译后的代码
 
-use std::collections::HashSet;
 use std::sync::atomic::{Arc, Mutex, RwLock};
 use std::sync::atomic::Ordering;
 
 use anyhow::{Context, Result};
-use std::collections::HashMap;
 
-use tokio::sync::{Semaphore, RwLock};
 use rayon::prelude::*;
 use once_cell::sync::Lazy;
 const MAX_WORKER_PROCESSES: usize = 32;
@@ -376,8 +373,10 @@ impl OptimizedProcessPool {
     }
     /// 计算代码哈希
     fn hash_code(&self, code: &str) -> String {
-        use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
+use std::collections::HashSet;
+use std::collections::hash_map::DefaultHasher;
+use std::collections::{BTreeMap, HashMap};
         let mut hasher = DefaultHasher::new();
         code.hash(&mut hasher);
         format!("{:x}", hasher.finish())
@@ -397,7 +396,6 @@ async fn execute_task(worker: &Arc<SmartWorker>, task: &Task) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_optimized_process_pool_creation() {
         let config: _ = OptimizedProcessPoolConfig::default();

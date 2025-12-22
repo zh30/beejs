@@ -2,8 +2,6 @@
 //! This module provides a minimal runtime that only initializes essential components
 //! for simple scripts, dramatically reducing startup time.
 
-use std::collections::HashSet;
-use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
 
 use crate::memory_pool::{PoolConfig, SmartMemoryPool};
@@ -16,7 +14,6 @@ use crate::wasm::{WasmModuleCache, WasmModuleLoader, WasmModule};
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::cell::OnceCell;
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 /// Script cache entry tuple
 type ScriptCacheEntry = (v8::Global<v8::Script>, String, Instant);
@@ -1111,7 +1108,8 @@ impl RuntimeLite {
     /// Execute a JavaScript file
     pub fn execute_file(&self, file_path: &std::path::Path) -> Result<String> {
         use std::fs;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::HashSet;
+use std::collections::{BTreeMap, HashMap};
         let code: _ = fs::read_to_string(file_path)
             .map_err(|e| anyhow::anyhow!("Failed to read file: {}", e))?;
         self.execute_code(&code)

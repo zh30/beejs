@@ -5,6 +5,7 @@ use futures_util::{SinkExt, StreamExt};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, atomic::Ordering};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
+use anyhow::{Result, Error};
 
 /// WebSocket ready state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

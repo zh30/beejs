@@ -1,7 +1,6 @@
 //! Package management system
 //! npm/yarn/pnpm compatible package manager
 use anyhow::Result;
-use std::collections::HashMap;
 /// Package info
 #[derive(Debug, Clone)]
 pub struct PackageInfo {
@@ -78,7 +77,6 @@ impl PackageManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_package_manager_creation() {
         let manager: _ = PackageManager::new(
@@ -100,3 +98,4 @@ use std::collections::{HashMap, BTreeMap};
         assert!(!packages.is_empty());
     }
 }
+use std::collections::{BTreeMap, HashMap};

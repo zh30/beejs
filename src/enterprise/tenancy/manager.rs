@@ -1,10 +1,7 @@
 //! Multi-tenancy Isolation Manager
 //! Implements secure multi-tenancy for Beejs clusters
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
-use tokio::sync::RwLock as AsyncRwLock;
 use tracing::{info, warn, error, debug};
 /// Tenant identifier
 #[derive(Debug, Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -307,7 +304,6 @@ impl TenantUpdates {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_create_tenant() {
         let manager: _ = TenancyManager::new();
@@ -362,3 +358,4 @@ use std::collections::{HashMap, BTreeMap};
         assert!(result.is_err());
     }
 }
+use std::collections::{BTreeMap, HashMap};

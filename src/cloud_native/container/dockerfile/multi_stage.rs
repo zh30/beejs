@@ -1,6 +1,5 @@
 //! Multi-stage Dockerfile builder for Beejs
 //! Generates optimized multi-stage Docker builds
-use std::collections::HashMap;
 /// Multi-stage Dockerfile generator
 pub struct MultiStageBuilder {
     /// Builder stage configuration
@@ -317,7 +316,6 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_basic_dockerfile_generation() {
         let builder: _ = MultiStageBuilder::new();
@@ -391,3 +389,4 @@ use std::collections::{HashMap, BTreeMap};
         assert!(optimized.contains("linux/arm64"));
     }
 }
+use std::collections::{BTreeMap, HashMap};

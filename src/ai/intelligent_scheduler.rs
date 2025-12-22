@@ -1,12 +1,8 @@
 //! 智能调度器
 //! AI 驱动的任务调度系统，实现动态负载均衡和预测性资源分配
 
-use std::collections::VecDeque;
-use std::sync::{Arc, Mutex, RwLock};
 
-use std::collections::{HashMap, VecDeque};
 
-use tokio::sync::{RwLock, mpsc};
 use serde::{Deserialize, Serialize};
 use crate::ai::ai_performance_engine::{PerformanceMetrics, AiPerformanceEngine, AiPerformanceEngineConfig};
 /// 任务
@@ -482,8 +478,6 @@ impl IntelligentScheduler {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{BTreeMap};
-use std::sync::{Arc, Mutex, RwLock, RwLock as SyncRwLock};
     #[tokio::test]
     async fn test_submit_and_schedule_task() {
         let config = IntelligentSchedulerConfig::default();

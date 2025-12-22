@@ -7,8 +7,8 @@
 //! - Module resolution (ES Modules and CommonJS)
 //! - Environment variable handling
 //! - Shebang detection
-use std::collections::HashMap;
 use std::path::PathBuf;
+use std::collections::{BTreeMap, HashMap};
 /// File type enumeration for script detection
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileType {
@@ -346,7 +346,6 @@ pub mod args {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_file_type_detection() {
         assert_eq!(detect_file_type(&PathBuf::from("test.js")), FileType::JavaScript);

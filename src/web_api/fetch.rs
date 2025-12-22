@@ -3,6 +3,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use anyhow::{Result, Error};
 
 /// Fetch API configuration
 #[derive(Debug, Clone)]

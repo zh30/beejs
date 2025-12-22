@@ -6,15 +6,13 @@
 //! - WorkStealingScheduler: 工作窃取调度器（负载均衡）
 //! - BatchExecutor: 批量执行处理器（高层API）
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool};
 use std::sync::atomic::Ordering;
 
 use std::cell::RefCell;
-use std::collections::VecDeque;
 use std::time::{Duration, Instant};
-use tokio::sync::Mutex as TokioMutex;
+use std::collections::VecDeque;
+use std::collections::{BTreeMap, HashMap};
 use tokio::time::timeout;
 use crate::Runtime;
 use crate::lock_free_temp::LockFreeCounter;
@@ -1592,7 +1590,6 @@ impl BatchExecutor {
 }
 #[cfg(test)]
 mod batch_executor_tests {
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_batch_executor_creation() {
         // 在测试环境中跳过如果 V8 不可用

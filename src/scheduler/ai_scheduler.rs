@@ -1,9 +1,6 @@
 //! AI 驱动智能任务调度器 - Stage 90 Phase 5.3
 
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex, RwLock};
-use tokio::sync::{Mutex, RwLock};
 
 /// 任务
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -269,3 +266,4 @@ mod tests {
         assert_eq!(status, Some(ExecutionStatus::Completed));
     }
 }
+use tokio::sync::{TokioMutex, TokioRwLock};

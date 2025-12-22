@@ -3,12 +3,11 @@
 //!
 //! 支持 Yarn 1.x (Classic) 和 Yarn 2+ (Berry)
 
-use std::collections::HashMap;
 
 use super::*;
 use std::path::PathBuf;
+use std::collections::{BTreeMap, HashMap};
 use tokio;
-use std::collections::{HashMap, BTreeMap};
 /// Yarn 兼容性管理器
 #[derive(Debug)]
 pub struct YarnCompatibility {

@@ -8,8 +8,8 @@
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::time::{Duration, Instant};
+use std::collections::{BTreeMap, HashMap};
 use super::{WorkloadResult, ResourceUsage, BenchmarkError, BenchmarkResult as Result};
 /// I/O 密集型工作负载
 #[derive(Debug)]
@@ -155,7 +155,6 @@ fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_workload_execution() {
         let workload: _ = IOWorkload::new();

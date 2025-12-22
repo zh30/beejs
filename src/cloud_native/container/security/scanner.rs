@@ -3,8 +3,8 @@
 
 use std::time::SystemTime;
 
-use std::collections::HashMap;
 use std::path::Path;
+use std::collections::{BTreeMap, HashMap};
 use tracing::info;
 /// Security scanner for container images
 pub struct SecurityScanner {
@@ -480,7 +480,6 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_vulnerability_severity_ordering() {
         assert!(VulnerabilitySeverity::Critical > VulnerabilitySeverity::High);

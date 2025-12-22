@@ -7,11 +7,8 @@
 //! - 增量 GC 和并行 GC
 
 use anyhow::{Result, anyhow};
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, RwLock};
 use std::sync::atomic::{AtomicBool};
 use std::sync::atomic::Ordering;
-use tokio::sync::{Mutex, RwLock};
 
 /// GC 配置
 #[derive(Debug, Clone)]
@@ -538,3 +535,4 @@ mod tests {
         assert!(prediction.is_some());
     }
 }
+use tokio::sync::{TokioMutex, TokioRwLock};

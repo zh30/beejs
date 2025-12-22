@@ -1,12 +1,9 @@
 //! 锁竞争减少优化模块
 //! 使用无锁数据结构和原子操作减少并发场景下的锁竞争
 
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, RwLock};
 use std::sync::atomic::{AtomicBool};
 use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
-use tokio::sync::{Mutex, RwLock};
 
 /// 无锁计数器 - 使用原子操作实现高性能计数
 #[derive(Debug, Default)]
@@ -264,7 +261,6 @@ impl<T> ShardedLock<T> {
         }
     }
     /// 获取分片锁
-    pub async fn shard(&self, key: &str) -> tokio::sync::MutexGuard<'_, T> {
         let hash: _ = self.simple_hash(key);
         let index: _ = hash % self.shard_count;
         self.shards[index].lock().await
@@ -692,3 +688,4 @@ pub struct ConcurrencyStatsSnapshot {
     pub throughput_ops_per_sec: f64,
     pub uptime: std::time::Duration,
 }
+use tokio::sync::{TokioMutex, TokioRwLock};

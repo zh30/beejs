@@ -8,6 +8,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
+use anyhow::{Result, Error};
 
 /// File change event types
 #[derive(Debug, Clone, PartialEq, Eq)]

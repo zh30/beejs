@@ -1,6 +1,5 @@
 //! Dockerfile optimization strategies
 //! Provides various optimization techniques for container builds
-use std::collections::HashMap;
 /// Dockerfile optimizer
 pub struct Optimizer {
     /// Optimization strategies
@@ -298,7 +297,6 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_layer_minimization_strategy() {
         let strategy: _ = LayerMinimizationStrategy;
@@ -378,3 +376,4 @@ RUN cargo build --release"#;
         assert_eq!(suggestion.impact_level(), ImpactLevel::High);
     }
 }
+use std::collections::{BTreeMap, HashMap};

@@ -1,5 +1,4 @@
 //! 智能性能分析器 - Stage 90 Phase 5.4
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 /// 分析报告
@@ -243,7 +242,6 @@ impl IntelligentAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_intelligent_analyzer() {
         let mut analyzer = IntelligentAnalyzer::new();
@@ -268,3 +266,4 @@ use std::collections::{HashMap, BTreeMap};
         assert!(report.overall_health_score <= 100.0);
     }
 }
+use std::collections::{BTreeMap, HashMap};

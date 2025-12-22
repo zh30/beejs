@@ -3,7 +3,6 @@
 use kube::CustomResource;
 use schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 /// BeejsCluster is the schema for the beejscluster API
 #[derive(CustomResource, Debug, Clone, Deserialize, Serialize, JsonSchema)]
 #[kube(
@@ -251,7 +250,6 @@ pub struct ServiceMonitorConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_beejs_cluster_crd_creation() {
         let cluster: _ = BeejsCluster::new(
@@ -318,3 +316,4 @@ use std::collections::{HashMap, BTreeMap};
         assert!(!security_context.allow_privilege_escalation);
     }
 }
+use std::collections::{BTreeMap, HashMap};

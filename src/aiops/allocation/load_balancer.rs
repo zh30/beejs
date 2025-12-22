@@ -5,9 +5,9 @@
 
 use std::sync::atomic::Ordering;
 use std::time::{Instant, SystemTime};
+use std::collections::{BTreeMap, HashMap};
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use tokio::time::{Duration, Instant};
 /// 请求结构
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -663,7 +663,6 @@ pub struct LoadBalancerStatistics {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_add_backend() {
         let mut lb = LoadBalancer::new_with_defaults();

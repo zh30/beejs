@@ -36,7 +36,6 @@ pub use renderer::{
     ForceParams, HierarchicalParams, Template, TemplateFunction
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 /// Dashboard panel configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PanelConfig {
@@ -179,7 +178,6 @@ pub struct VariableOption {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_panel_config_creation() {
         let config: _ = PanelConfig {
@@ -225,3 +223,4 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(thresholds.steps[1].color, "yellow");
     }
 }
+use std::collections::{BTreeMap, HashMap};

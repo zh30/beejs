@@ -3,11 +3,8 @@
 //!
 //! 分析 JavaScript/TypeScript 源代码以提取类型信息
 
-use std::collections::HashMap;
 
 use super::*;
-use std::collections::{HashMap, HashSet};
-use std::collections::{BTreeMap};
 /// TypeScript 类型分析器
 #[derive(Debug)]
 pub struct TypeAnalyzer {
@@ -584,3 +581,5 @@ pub struct ReturnsInfo {
 pub struct TypeInfo {
     pub type_name: String,
 }
+use std::collections::{BTreeMap};
+use std::collections::{HashMap, HashSet};
