@@ -1,3 +1,4 @@
+// Module: examples/basics/hello_world.js
 // Hello World example for Beejs runtime
 console.log("Hello from Beejs!");
 console.log("This is a high-performance JavaScript/TypeScript runtime");
@@ -27,3 +28,5 @@ console.log("User:", user);
 const numbers = [1, 2, 3, 4, 5];
 console.log("Numbers:", numbers);
 console.log("Sum of numbers:", numbers.reduce((sum, n) => sum + n, 0));
+
+

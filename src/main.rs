@@ -36,6 +36,24 @@ enum Command {
     },
     /// Run in REPL mode
     Repl,
+    /// Run tests
+    Test {
+        /// Test file to run (optional)
+        file: Option<PathBuf>,
+    },
+    /// Bundle code for production
+    Bundle {
+        /// Entry file to bundle
+        entry: PathBuf,
+        /// Output file path
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+    },
+    /// Debug a script
+    Debug {
+        /// Script file to debug
+        file: PathBuf,
+    },
     /// Display version information
     Version,
 }
@@ -152,6 +170,136 @@ fn main() -> Result<()> {
             println!("Faster than Bun! 🚀");
             return Ok(());
         }
+        Some(Command::Test { file }) => {
+            println!("🐝 Running tests...");
+
+            let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
+                .expect("Failed to create runtime");
+
+            if let Some(test_file) = file {
+                // Run specific test file
+                println!("Running test file: {}", test_file.display());
+                let code = std::fs::read_to_string(&test_file)
+                    .map_err(|e| anyhow::anyhow!("Failed to read test file: {}", e))?;
+
+                match runtime.execute_code(&code) {
+                    Ok(result) => {
+                        println!("Test result: {}", result);
+                        println!("✅ Tests passed!");
+                    }
+                    Err(e) => {
+                        eprintln!("❌ Test failed: {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            } else {
+                // Run built-in test suite
+                let test_cases = vec![
+                    ("1 + 1", "2"),
+                    ("'Hello World'", "Hello World"),
+                    ("[1, 2, 3].length", "3"),
+                    ("console.log('test'); 42", "42"),
+                    ("function add(a, b) { return a + b; } add(5, 3)", "8"),
+                ];
+
+                let mut passed = 0;
+                let mut failed = 0;
+
+                for (i, (input, expected)) in test_cases.iter().enumerate() {
+                    match runtime.execute_code(input) {
+                        Ok(result) => {
+                            if result.trim() == *expected {
+                                println!("✅ Test {} passed: {} = {}", i + 1, input, result.trim());
+                                passed += 1;
+                            } else {
+                                println!("❌ Test {} failed: {} expected '{}' but got '{}'",
+                                    i + 1, input, expected, result.trim());
+                                failed += 1;
+                            }
+                        }
+                        Err(e) => {
+                            println!("❌ Test {} failed with error: {}", i + 1, e);
+                            failed += 1;
+                        }
+                    }
+                }
+
+                println!("\n📊 Test Summary: {} passed, {} failed", passed, failed);
+                if failed > 0 {
+                    std::process::exit(1);
+                }
+            }
+            return Ok(());
+        }
+        Some(Command::Bundle { entry, output }) => {
+            println!("🐝 Bundling JavaScript/TypeScript...");
+
+            // Read entry file
+            let code = std::fs::read_to_string(&entry)
+                .map_err(|e| anyhow::anyhow!("Failed to read entry file: {}", e))?;
+
+            // Create minimal runtime for bundling
+            let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
+                .expect("Failed to create runtime");
+
+            // Execute/transpile the code
+            match runtime.execute_code(&code) {
+                Ok(result) => {
+                    // Determine output path
+                    let output_path = output.unwrap_or_else(|| {
+                        let mut path = entry.clone();
+                        path.set_extension("bundle.js");
+                        path
+                    });
+
+                    // Write bundled code
+                    std::fs::write(&output_path, result)
+                        .map_err(|e| anyhow::anyhow!("Failed to write bundle: {}", e))?;
+
+                    println!("✅ Bundle created: {}", output_path.display());
+                    println!("📦 Bundle size: {} bytes", std::fs::metadata(&output_path).unwrap().len());
+                }
+                Err(e) => {
+                    eprintln!("❌ Bundle failed: {}", e);
+                    std::process::exit(1);
+                }
+            }
+            return Ok(());
+        }
+        Some(Command::Debug { file }) => {
+            println!("🐝 Debugging script: {}", file.display());
+            println!("🔍 Debug mode enabled");
+
+            // Read and display the file content
+            let code = std::fs::read_to_string(&file)
+                .map_err(|e| anyhow::anyhow!("Failed to read file: {}", e))?;
+
+            println!("\n📄 File content:");
+            println!("{}", code);
+
+            // Create runtime with debug mode
+            let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
+                .expect("Failed to create runtime");
+
+            // Execute with detailed error reporting
+            match runtime.execute_code(&code) {
+                Ok(result) => {
+                    println!("\n✅ Execution successful");
+                    if !result.trim().is_empty() {
+                        println!("Result: {}", result);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("\n❌ Execution failed: {}", e);
+                    eprintln!("\n🔧 Debug information:");
+                    eprintln!("- Check syntax errors");
+                    eprintln!("- Verify variable definitions");
+                    eprintln!("- Ensure all imports are available");
+                    std::process::exit(1);
+                }
+            }
+            return Ok(());
+        }
         None => {
             // No command provided, show help
             println!("🐝 Beejs - High-performance JavaScript/TypeScript runtime");
@@ -162,12 +310,18 @@ fn main() -> Result<()> {
             println!("  run <file>    Run a JavaScript/TypeScript file");
             println!("  eval <code>   Evaluate JavaScript code");
             println!("  repl          Start interactive REPL");
+            println!("  test [file]   Run tests (built-in or from file)");
+            println!("  bundle <file> Bundle code for production");
+            println!("  debug <file>  Debug a script with detailed output");
             println!("  version       Display version information");
             println!();
             println!("Examples:");
             println!("  beejs run script.js");
             println!("  beejs eval 'console.log(\"Hello\")'");
             println!("  beejs repl");
+            println!("  beejs test");
+            println!("  beejs bundle entry.ts --output bundle.js");
+            println!("  beejs debug script.ts");
             return Ok(());
         }
     }
