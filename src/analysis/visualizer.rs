@@ -8,6 +8,7 @@ use crate::performance_analyzer::PerformanceReport;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 /// Chart types for visualization
 #[derive(Debug, Clone, Serialize, Deserialize)]

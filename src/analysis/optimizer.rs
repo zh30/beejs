@@ -1,3 +1,4 @@
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 //! Performance optimization suggestion generator
 //!
 //! This module generates actionable optimization suggestions based on
