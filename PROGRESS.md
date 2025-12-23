@@ -1,4 +1,45 @@
 
+
+**最新状态 (2025-12-23)**: 🚀 v0.3.1 增强！fetch() 现在返回真实的 HTTP 响应数据！
+
+### 🎯 v0.3.1 fetch 真实 HTTP 响应 (2025-12-23)
+**进度**: ✅ response.json() | ✅ response.text() | ✅ response.url | ✅ 错误处理 | ✅ JSON 美化格式化
+
+#### v0.3.1 核心改进
+- ✅ **真实 HTTP 响应数据**
+  - 使用 `RESPONSE_CACHE` 缓存 HTTP 响应（URL -> CachedResponse）
+  - `response.json()` 现在返回真实的 JSON 数据（经过美化格式化）
+  - `response.text()` 返回真实的响应体
+  - 新增 `response.url` 属性
+
+- ✅ **错误处理增强**
+  - 无效 URL 时返回结构化错误 JSON
+  - 网络错误时优雅降级
+  - 错误信息: `{"error": "HTTP request failed", "message": "..."}`
+
+- ✅ **JSON 美化格式化**
+  - 自动检测 JSON 响应并美化输出
+  - 便于调试和阅读
+
+#### v0.3.1 测试覆盖
+- 新增 `test_fetch_json_method_returns_real_data` 测试真实 JSON 数据
+- 新增 `test_fetch_text_method_returns_real_data` 测试真实文本数据
+- 新增 `test_fetch_url_property` 测试 URL 属性
+- 新增 `test_fetch_with_invalid_url` 测试错误处理
+
+#### v0.3.1 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+97 行)
+  - 添加 `RESPONSE_CACHE` 静态变量（线程安全缓存）
+  - 添加 `CachedResponse` 结构体
+  - 重构 `fetch()` 函数存储真实响应
+  - 重构 `json()` 和 `text()` 方法返回真实数据
+
+- **修改文件**: `tests/http_fetch_tests.rs` (+60 行)
+  - 更新测试期望真实 HTTP 响应
+  - 新增 4 个测试用例
+
+---
+
 **最新状态 (2025-12-23)**: 🚀 v0.3.0 新增模块系统！CommonJS require, module, exports 完整支持！
 
 ### 🎯 v0.3.0 模块系统 (2025-12-23)
