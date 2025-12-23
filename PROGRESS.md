@@ -1,5 +1,29 @@
 
-**最新状态 (2025-12-23 14:00)**: 🚀 v0.2.2 WebSocket API 完整实现！实时通信支持！极致性能持续优化！
+**最新状态 (2025-12-23 14:30)**: 🚀 v0.2.3 TextEncoder/TextDecoder API 完整实现！Unicode 编码支持！
+
+### 🎯 v0.2.3 TextEncoder/TextDecoder API 完整实现 (2025-12-23 14:30)
+**进度**: ✅ TextEncoder 构造函数 | ✅ encode/encodeInto 方法 | ✅ TextDecoder 构造函数 | ✅ decode 方法 | ✅ Unicode 支持
+
+#### v0.2.3 重大功能突破 (2025-12-23 14:30)
+- ✅ **完整 TextEncoder/TextDecoder API 支持**
+  - 新增 tests/text_encoding_tests.rs (11个测试用例)
+  - TextEncoder - 构造函数、encoding 属性、encode()、encodeInto()
+  - TextDecoder - 构造函数、encoding/fatal/ignoreBOM 属性、decode()
+  - Unicode 支持 - 中文、emoji 等多语言字符正确处理
+
+- ✅ **技术实现亮点**
+  - 使用 encoding_rs 库实现高性能 UTF-8 编码/解码
+  - 支持 Uint8Array 输入输出
+  - 支持 fatal 和 ignoreBOM 选项
+  - 完整的 round-trip 编码/解码验证
+
+- ✅ **功能验证完成**
+  - ASCII 字符串编码/解码
+  - 中文字符编码/解码 (如 "你好世界")
+  - Emoji 字符编码/解码 (如 "🚀🔥")
+  - 完整 round-trip 保持数据完整性
+
+---
 
 ### 🎯 v0.2.2 WebSocket API 完整实现 (2025-12-23 14:00)
 **进度**: ✅ WebSocket 构造函数 | ✅ 实例属性和方法 | ✅ 事件处理程序 | ✅ 状态常量

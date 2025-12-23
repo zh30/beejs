@@ -109,6 +109,9 @@ base64 = "0.22"
 percent-encoding = "2.1"
 urlencoding = "2.1"
 
+# TextEncoder/TextDecoder encoding support
+encoding_rs = "0.8"
+
 # Stage 54.2: ONNX Runtime dependencies
 # onnxruntime = "0.0.14"  # 暂时禁用，需要系统 ONNX Runtime 库
 # candle-core = "0.7"      # 暂时禁用，版本冲突

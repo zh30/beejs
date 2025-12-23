@@ -1198,11 +1198,225 @@ impl MinimalRuntime {
         let crypto_key = v8::String::new(scope, "crypto").unwrap().into();
         global.set(scope, crypto_key, crypto_obj.into());
 
+        // Setup TextEncoder/TextDecoder API (v0.2.3)
+        MinimalRuntime::setup_text_encoding_api(scope, context)?;
+
         // Setup WebSocket API (v0.2.2)
         MinimalRuntime::setup_websocket_api(scope, context)?;
 
         // Setup Promise API
         MinimalRuntime::setup_promise_api(scope, context)?;
+
+        Ok(())
+    }
+
+    /// Set up TextEncoder/TextDecoder API - provides UTF-8 encoding/decoding support
+    /// This is a common Web API used for efficient text-to-bytes conversion
+    fn setup_text_encoding_api(scope: &mut v8::ContextScope<v8::HandleScope>, context: &v8::Context) -> Result<()> {
+        let global = context.global(scope);
+
+        // ==================== TextEncoder ====================
+
+        // Create TextEncoder constructor
+        let text_encoder_constructor = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Create TextEncoder instance object
+            let encoder_obj = v8::Object::new(scope);
+
+            // encoding property (always 'utf-8')
+            let encoding_key = v8::String::new(scope, "encoding").unwrap().into();
+            let encoding_val = v8::String::new(scope, "utf-8").unwrap().into();
+            encoder_obj.set(scope, encoding_key, encoding_val);
+
+            // Create encode method
+            let encode_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                if args.length() >= 1 {
+                    let input = args.get(0);
+                    let input_str = if let Some(s) = input.to_string(scope) {
+                        s.to_rust_string_lossy(scope)
+                    } else {
+                        String::new()
+                    };
+
+                    // Encode to UTF-8 bytes
+                    let encoding = encoding_rs::Encoding::for_label(b"utf-8").unwrap();
+                    let (cow, _, _) = encoding.encode(&input_str);
+
+                    // Create Uint8Array from bytes
+                    let byte_len = cow.len() as i32;
+                    let array = v8::Uint8Array::new(scope, byte_len);
+
+                    // Copy bytes to array
+                    if byte_len > 0 {
+                        let mut dest = vec![0u8; byte_len as usize];
+                        dest.copy_from_slice(&cow);
+                        array.copy_from(&dest, 0, scope);
+                    }
+
+                    retval.set(array.into());
+                }
+            }).ok_or_else(|| anyhow::anyhow!("Failed to create TextEncoder.encode function"))?;
+            let encode_key = v8::String::new(scope, "encode").unwrap().into();
+            encoder_obj.set(scope, encode_key, encode_fn.into());
+
+            // Create encodeInto method
+            let encode_into_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                if args.length() >= 2 {
+                    let input = args.get(0);
+                    let dest = args.get(1);
+
+                    let input_str = if let Some(s) = input.to_string(scope) {
+                        s.to_rust_string_lossy(scope)
+                    } else {
+                        String::new()
+                    };
+
+                    // Encode to UTF-8 bytes
+                    let encoding = encoding_rs::Encoding::for_label(b"utf-8").unwrap();
+                    let (cow, read, written) = encoding.encode(&input_str);
+
+                    // Create result object
+                    let result_obj = v8::Object::new(scope);
+
+                    let read_key = v8::String::new(scope, "read").unwrap().into();
+                    let read_val = v8::Integer::new(scope, read as i32);
+                    result_obj.set(scope, read_key, read_val.into());
+
+                    let written_key = v8::String::new(scope, "written").unwrap().into();
+                    let written_val = v8::Integer::new(scope, written as i32);
+                    result_obj.set(scope, written_key, written_val.into());
+
+                    // Copy bytes to destination if it's an array
+                    if let Ok(dest_array) = v8::Local::<v8::Uint8Array>::try_from(dest) {
+                        let dest_len = dest_array.byte_length();
+                        let copy_len = std::cmp::min(written, dest_len);
+                        if copy_len > 0 {
+                            let mut dest_buf = vec![0u8; dest_len];
+                            dest_buf[..copy_len].copy_from_slice(&cow[..copy_len]);
+                            dest_array.copy_from(&dest_buf, 0, scope);
+                        }
+                    }
+
+                    retval.set(result_obj.into());
+                }
+            }).ok_or_else(|| anyhow::anyhow!("Failed to create TextEncoder.encodeInto function"))?;
+            let encode_into_key = v8::String::new(scope, "encodeInto").unwrap().into();
+            encoder_obj.set(scope, encode_into_key, encode_into_fn.into());
+
+            retval.set(encoder_obj.into());
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create TextEncoder constructor"))?;
+
+        // Add TextEncoder to global
+        let text_encoder_key = v8::String::new(scope, "TextEncoder").unwrap().into();
+        global.set(scope, text_encoder_key, text_encoder_constructor.into());
+
+        // ==================== TextDecoder ====================
+
+        // Create TextDecoder constructor
+        let text_decoder_constructor = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Get encoding (default: 'utf-8')
+            let encoding_label = if args.length() >= 1 {
+                if let Some(s) = args.get(0).to_string(scope) {
+                    s.to_rust_string_lossy(scope)
+                } else {
+                    "utf-8".to_string()
+                }
+            } else {
+                "utf-8".to_string()
+            };
+
+            // Get options (fatal, ignoreBOM)
+            let mut fatal = false;
+            let mut ignore_bom = false;
+
+            if args.length() >= 2 {
+                let options = args.get(1);
+                if let Ok(opts_obj) = v8::Local::<v8::Object>::try_from(options) {
+                    let fatal_key = v8::String::new(scope, "fatal").unwrap().into();
+                    if let Some(fatal_val) = opts_obj.get(scope, fatal_key) {
+                        fatal = fatal_val.to_boolean(scope).is_true();
+                    }
+
+                    let ignore_bom_key = v8::String::new(scope, "ignoreBOM").unwrap().into();
+                    if let Some(ignore_bom_val) = opts_obj.get(scope, ignore_bom_key) {
+                        ignore_bom = ignore_bom_val.to_boolean(scope).is_true();
+                    }
+                }
+            }
+
+            // Create TextDecoder instance object
+            let decoder_obj = v8::Object::new(scope);
+
+            // encoding property
+            let encoding_key = v8::String::new(scope, "encoding").unwrap().into();
+            let encoding_val = v8::String::new(scope, &encoding_label).unwrap().into();
+            decoder_obj.set(scope, encoding_key, encoding_val);
+
+            // fatal property
+            let fatal_key = v8::String::new(scope, "fatal").unwrap().into();
+            let fatal_val = v8::Boolean::new(scope, fatal);
+            decoder_obj.set(scope, fatal_key, fatal_val.into());
+
+            // ignoreBOM property
+            let ignore_bom_key = v8::String::new(scope, "ignoreBOM").unwrap().into();
+            let ignore_bom_val = v8::Boolean::new(scope, ignore_bom);
+            decoder_obj.set(scope, ignore_bom_key, ignore_bom_val.into());
+
+            // Create decode method
+            let decode_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                if args.length() >= 1 {
+                    let input = args.get(0);
+                    let mut result = String::new();
+
+                    // Handle different input types
+                    if let Ok(uint8_array) = v8::Local::<v8::Uint8Array>::try_from(input) {
+                        let byte_len = uint8_array.byte_length();
+                        if byte_len > 0 {
+                            let mut bytes = vec![0u8; byte_len];
+                            // Use copy_to to get bytes from Uint8Array
+                            let view = uint8_array.to_vec(scope);
+                            bytes.copy_from_slice(&view[..]);
+
+                            // Decode using encoding_rs
+                            let encoding = encoding_rs::Encoding::for_label(encoding_label.as_bytes())
+                                .unwrap_or_else(|| encoding_rs::Encoding::utf8());
+
+                            let (cow, _, _) = if fatal {
+                                encoding.decode_with_bom_removal(&bytes)
+                            } else {
+                                encoding.decode(&bytes)
+                            };
+
+                            result = cow.into_owned();
+                        }
+                    } else if let Ok(uint16_array) = v8::Local::<v8::Uint16Array>::try_from(input) {
+                        // Handle Uint16Array (rare case)
+                        let char_len = uint16_array.length();
+                        if char_len > 0 {
+                            let mut chars = vec![0u16; char_len as usize];
+                            let view = uint16_array.to_vec(scope);
+                            chars.copy_from_slice(&view[..]);
+
+                            // Convert UTF-16 to String
+                            result = String::from_utf16_lossy(&chars);
+                        }
+                    } else if let Some(str_val) = input.to_string(scope) {
+                        // Handle string input (rare case)
+                        result = str_val.to_rust_string_lossy(scope);
+                    }
+
+                    let result_val = v8::String::new(scope, &result).unwrap();
+                    retval.set(result_val.into());
+                }
+            }).ok_or_else(|| anyhow::anyhow!("Failed to create TextDecoder.decode function"))?;
+            let decode_key = v8::String::new(scope, "decode").unwrap().into();
+            decoder_obj.set(scope, decode_key, decode_fn.into());
+
+            retval.set(decoder_obj.into());
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create TextDecoder constructor"))?;
+
+        // Add TextDecoder to global
+        let text_decoder_key = v8::String::new(scope, "TextDecoder").unwrap().into();
+        global.set(scope, text_decoder_key, text_decoder_constructor.into());
 
         Ok(())
     }
