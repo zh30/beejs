@@ -43,10 +43,37 @@ fn test_process_next_tick() {
         process.nextTick(() => {
             executed = true;
         });
-        executed;
+        executed === true;
     "#;
     let result: _ = runtime.execute_code(code);
     assert!(result.is_ok());
+    let result_str: _ = result.unwrap();
+    assert!(result_str.contains("true"), "nextTick callback should have executed, got: {}", result_str);
+}
+
+#[test]
+fn test_process_next_tick_with_args() {
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let code: _ = r#"
+        let result = null;
+        process.nextTick((a, b) => {
+            result = a + b;
+        }, 5, 3);
+        result === 8;
+    "#;
+    let result: _ = runtime.execute_code(code);
+    assert!(result.is_ok());
+    let result_str: _ = result.unwrap();
+    assert!(result_str.contains("true"), "nextTick should pass arguments to callback, got: {}", result_str);
+}
+
+#[test]
+fn test_process_next_tick_error_handling() {
+    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    // nextTick without callback should throw
+    let code: _ = r#"process.nextTick()"#;
+    let result: _ = runtime.execute_code(code);
+    assert!(result.is_err(), "nextTick without callback should throw an error");
 }
 
 #[test]

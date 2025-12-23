@@ -86,11 +86,28 @@ fn cwd_callback(
 }
 fn next_tick_callback(
     scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
-    mut retval: v8::ReturnValue,
+    args: v8::FunctionCallbackArguments,
+    _retval: v8::ReturnValue,
 ) {
-    // Simple implementation - execute callback immediately
-    retval.set(v8::null(scope).into());
+    // Get callback function
+    let callback = args.get(0);
+    if !callback.is_function() {
+        let error = v8::String::new(scope, "process.nextTick: callback must be a function").unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
+    // Collect any additional arguments to pass to the callback
+    let callback_args: Vec<v8::Local<v8::Value>> = (1..args.length())
+        .map(|i| args.get(i))
+        .collect();
+
+    // Execute callback immediately (simplified implementation)
+    // In a full async runtime, this would be queued to the microtask queue
+    let callback_func = v8::Local::<v8::Function>::try_from(callback).unwrap();
+    let undefined = v8::undefined(scope);
+    let _: _ = callback_func.call(scope, undefined.into(), &callback_args);
 }
 /// Path module implementation
 fn setup_path(
