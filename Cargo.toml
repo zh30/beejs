@@ -108,6 +108,7 @@ hex = "0.4"
 base64 = "0.22"
 percent-encoding = "2.1"
 urlencoding = "2.1"
+sys-info = "0.9"
 
 # TextEncoder/TextDecoder encoding support
 encoding_rs = "0.8"

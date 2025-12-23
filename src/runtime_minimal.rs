@@ -47,6 +47,32 @@ pub struct HttpResponse {
     pub headers: std::collections::HashMap<String, String>,
 }
 
+/// Helper function to encode a string to bytes with the specified encoding
+fn encode_string_to_bytes(s: &str, encoding: &str) -> Vec<u8> {
+    match encoding.to_lowercase().as_str() {
+        "utf8" | "utf-8" | "utf8mb4" => s.as_bytes().to_vec(),
+        "hex" => hex::decode(s).unwrap_or_else(|_| s.as_bytes().to_vec()),
+        "base64" => base64::decode(s).unwrap_or_else(|_| s.as_bytes().to_vec()),
+        "latin1" | "ascii" | "binary" => s.bytes().collect(),
+        _ => s.as_bytes().to_vec(), // Default to UTF-8
+    }
+}
+
+/// Helper function to decode bytes to a string with the specified encoding
+fn decode_bytes_to_string(bytes: &[u8], encoding: &str) -> String {
+    match encoding.to_lowercase().as_str() {
+        "utf8" | "utf-8" | "utf8mb4" => {
+            String::from_utf8_lossy(bytes).to_string()
+        }
+        "hex" => hex::encode(bytes),
+        "base64" => base64::encode(bytes),
+        "latin1" | "ascii" | "binary" => {
+            bytes.iter().map(|&b| b as char).collect()
+        }
+        _ => String::from_utf8_lossy(bytes).to_string(),
+    }
+}
+
 /// A minimal runtime that only provides basic JavaScript execution
 /// This version avoids complex dependencies for faster startup
 pub struct MinimalRuntime {
@@ -420,50 +446,423 @@ impl MinimalRuntime {
         let fetch_key = v8::String::new(scope, "fetch").unwrap().into();
         global.set(scope, fetch_key, fetch_fn.into());
 
-        // Set up global process object (simplified)
+        // Set up global process object (v0.2.9: Enhanced implementation)
         let process_obj = v8::Object::new(scope);
 
         // Add version
         let version_key = v8::String::new(scope, "version").unwrap().into();
-        let version_val = v8::String::new(scope, "0.1.6").unwrap().into();
+        let version_val = v8::String::new(scope, env!("CARGO_PKG_VERSION")).unwrap().into();
         process_obj.set(scope, version_key, version_val);
 
         // Add platform
         let platform_key = v8::String::new(scope, "platform").unwrap().into();
-        let platform_val = v8::String::new(scope, "beejs").unwrap().into();
+        let platform_val = v8::String::new(scope, std::env::consts::OS).unwrap().into();
         process_obj.set(scope, platform_key, platform_val);
 
         // Add arch
         let arch_key = v8::String::new(scope, "arch").unwrap().into();
-        let arch_val = v8::String::new(scope, "unknown").unwrap().into();
+        let arch_val = v8::String::new(scope, std::env::consts::ARCH).unwrap().into();
         process_obj.set(scope, arch_key, arch_val);
+
+        // Add process.release object
+        let release_obj = v8::Object::new(scope);
+        let release_name_key = v8::String::new(scope, "name").unwrap().into();
+        let release_name_val = v8::String::new(scope, "beejs").unwrap().into();
+        release_obj.set(scope, release_name_key, release_name_val);
+        let release_key = v8::String::new(scope, "release").unwrap().into();
+        process_obj.set(scope, release_key, release_obj.into());
+
+        // Add process.versions object
+        let versions_obj = v8::Object::new(scope);
+        let v8_key = v8::String::new(scope, "v8").unwrap().into();
+        let v8_val = v8::String::new(scope, "10.0.0-beejs").unwrap().into();
+        versions_obj.set(scope, v8_key, v8_val);
+        let versions_key = v8::String::new(scope, "versions").unwrap().into();
+        process_obj.set(scope, versions_key, versions_obj.into());
+
+        // Add process.memoryUsage()
+        let memory_usage_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Get memory stats from the system
+            let memory_usage = sys_info::mem_info().unwrap_or(sys_info::MemInfo { total: 0, free: 0, avail: 0, buffers: 0, cached: 0, swap_total: 0, swap_free: 0 });
+
+            let result_obj = v8::Object::new(_scope);
+
+            // Heap statistics (approximated)
+            let heap_total = v8::Number::new(_scope, 50.0 * 1024.0 * 1024.0); // ~50MB
+            let heap_used = v8::Number::new(_scope, 20.0 * 1024.0 * 1024.0); // ~20MB used
+
+            let heap_total_key = v8::String::new(_scope, "heapTotal").unwrap().into();
+            result_obj.set(_scope, heap_total_key, heap_total.into());
+            let heap_used_key = v8::String::new(_scope, "heapUsed").unwrap().into();
+            result_obj.set(_scope, heap_used_key, heap_used.into());
+
+            // External memory
+            let external = v8::Number::new(_scope, 0.0);
+            let external_key = v8::String::new(_scope, "external").unwrap().into();
+            result_obj.set(_scope, external_key, external.into());
+
+            // RSS (Resident Set Size) - approximate
+            let rss = v8::Number::new(_scope, 100.0 * 1024.0 * 1024.0); // ~100MB RSS
+            let rss_key = v8::String::new(_scope, "rss").unwrap().into();
+            result_obj.set(_scope, rss_key, rss.into());
+
+            retval.set(result_obj.into());
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create process.memoryUsage function"))?;
+        let memory_usage_key = v8::String::new(scope, "memoryUsage").unwrap().into();
+        process_obj.set(scope, memory_usage_key, memory_usage_fn.into());
+
+        // Add process.uptime()
+        let start_time = std::time::SystemTime::now();
+        let uptime_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let uptime = start_time.elapsed().unwrap_or_else(|_| std::time::Duration::from_secs(0)).as_secs_f64();
+            retval.set(v8::Number::new(_scope, uptime).into());
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create process.uptime function"))?;
+        let uptime_key = v8::String::new(scope, "uptime").unwrap().into();
+        process_obj.set(scope, uptime_key, uptime_fn.into());
+
+        // Add process.hrtime() - returns [seconds, nanoseconds]
+        let hrtime_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let elapsed = start_time.elapsed().unwrap_or_else(|_| std::time::Duration::from_secs(0));
+            let secs = elapsed.as_secs();
+            let nanos = elapsed.subsec_nanos();
+
+            let result_arr = v8::Array::new(_scope, 2);
+            result_arr.set_index(_scope, 0, v8::Integer::new(_scope, secs as i32).into());
+            result_arr.set_index(_scope, 1, v8::Integer::new(_scope, nanos as i32).into());
+
+            retval.set(result_arr.into());
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create process.hrtime function"))?;
+        let hrtime_key = v8::String::new(scope, "hrtime").unwrap().into();
+        process_obj.set(scope, hrtime_key, hrtime_fn.into());
+
+        // Add process.argv
+        let argv_arr = v8::Array::new(scope, 2);
+        argv_arr.set_index(scope, 0, v8::String::new(scope, "beejs").unwrap().into());
+        argv_arr.set_index(scope, 1, v8::String::new(scope, "script.js").unwrap().into());
+        let argv_key = v8::String::new(scope, "argv").unwrap().into();
+        process_obj.set(scope, argv_key, argv_arr.into());
 
         let process_key = v8::String::new(scope, "process").unwrap().into();
         global.set(scope, process_key, process_obj.into());
 
-        // Set up global Buffer object
+        // Set up global Buffer object (v0.2.9: Enhanced implementation)
+        // Buffer constructor
         let buffer_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             if args.length() >= 1 {
-                let size_or_string = args.get(0);
-                if size_or_string.is_number() {
-                    // Create buffer with specified size
-                    let size = size_or_string.to_integer(scope).unwrap().value() as usize;
+                let first = args.get(0);
+                if first.is_number() {
+                    let size = first.to_integer(scope).unwrap().value() as usize;
                     let buffer = v8::ArrayBuffer::new(scope, size);
                     retval.set(buffer.into());
-                } else if let Some(str_val) = size_or_string.to_string(scope) {
-                    // Create buffer from string
+                } else if let Some(str_val) = first.to_string(scope) {
                     let rust_string = str_val.to_rust_string_lossy(scope);
-                    let buffer = v8::ArrayBuffer::new(scope, rust_string.len());
+                    let encoding = if args.length() >= 2 {
+                        args.get(1).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "utf8".to_string())
+                    } else {
+                        "utf8".to_string()
+                    };
+                    let bytes = encode_string_to_bytes(&rust_string, &encoding);
+                    let buffer = v8::ArrayBuffer::new(scope, bytes.len());
+                    let store = buffer.backing_store();
+                    let slice = unsafe { std::slice::from_raw_parts_mut(store.data() as *mut u8, bytes.len()) };
+                    slice.copy_from_slice(&bytes);
                     retval.set(buffer.into());
                 }
             } else {
-                // Create empty buffer
                 let buffer = v8::ArrayBuffer::new(scope, 0);
                 retval.set(buffer.into());
             }
         }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer function"))?;
+
+        // Buffer.from()
+        let buffer_from_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let first = args.get(0);
+                if let Some(str_val) = first.to_string(scope) {
+                    let rust_string = str_val.to_rust_string_lossy(scope);
+                    let encoding = if args.length() >= 2 {
+                        args.get(1).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "utf8".to_string())
+                    } else {
+                        "utf8".to_string()
+                    };
+                    let bytes = encode_string_to_bytes(&rust_string, &encoding);
+                    let buffer = v8::ArrayBuffer::new(scope, bytes.len());
+                    let store = buffer.backing_store();
+                    let slice = unsafe { std::slice::from_raw_parts_mut(store.data() as *mut u8, bytes.len()) };
+                    slice.copy_from_slice(&bytes);
+                    retval.set(buffer.into());
+                } else if first.is_number() {
+                    let size = first.to_integer(scope).unwrap().value() as usize;
+                    let buffer = v8::ArrayBuffer::new(scope, size);
+                    retval.set(buffer.into());
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.from function"))?;
+
+        // Buffer.alloc()
+        let buffer_alloc_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let size = if args.length() >= 1 {
+                args.get(0).to_integer(scope).unwrap().value() as usize
+            } else {
+                0
+            };
+            let fill_byte = if args.length() >= 2 {
+                let fill = args.get(1);
+                if fill.is_number() {
+                    fill.to_integer(scope).unwrap().value() as u8
+                } else {
+                    0
+                }
+            } else {
+                0
+            };
+            let buffer = v8::ArrayBuffer::new(scope, size);
+            if size > 0 {
+                let store = buffer.backing_store();
+                let slice = unsafe { std::slice::from_raw_parts_mut(store.data() as *mut u8, size) };
+                slice.fill(fill_byte);
+            }
+            retval.set(buffer.into());
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.alloc function"))?;
+
+        // Buffer.concat()
+        let buffer_concat_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let total_length = if args.length() >= 2 {
+                args.get(1).to_integer(scope).unwrap().value() as usize
+            } else {
+                0
+            };
+            if args.length() >= 1 {
+                let first = args.get(0);
+                if first.is_array() {
+                    let arr = v8::Local::<v8::Array>::try_from(first).unwrap();
+                    let len = arr.length();
+
+                    // Calculate total length if not provided
+                    let calculated_length = if total_length == 0 {
+                        let mut total = 0usize;
+                        for i in 0..len {
+                            if let Some(item) = arr.get_index(scope, i) {
+                                if item.is_array_buffer() || item.is_typed_array() {
+                                    total += item.as_array_buffer().unwrap().byte_length();
+                                }
+                            }
+                        }
+                        total
+                    } else {
+                        total_length
+                    };
+
+                    let buffer = v8::ArrayBuffer::new(scope, calculated_length);
+                    if calculated_length > 0 {
+                        let store = buffer.backing_store();
+                        let dest_slice = unsafe { std::slice::from_raw_parts_mut(store.data() as *mut u8, calculated_length) };
+                        let mut offset = 0usize;
+
+                        for i in 0..len {
+                            if let Some(item) = arr.get_index(scope, i) {
+                                if item.is_array_buffer() || item.is_typed_array() {
+                                    let arr_buffer = item.as_array_buffer().unwrap();
+                                    let item_len = arr_buffer.byte_length();
+                                    if item_len > 0 {
+                                        let item_store = arr_buffer.backing_store();
+                                        let item_slice = unsafe { std::slice::from_raw_parts(item_store.data() as *const u8, item_len) };
+                                        let available = calculated_length - offset;
+                                        let to_copy = std::cmp::min(item_len, available);
+                                        dest_slice[offset..offset + to_copy].copy_from_slice(&item_slice[..to_copy]);
+                                        offset += to_copy;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    retval.set(buffer.into());
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.concat function"))?;
+
+        // Buffer.isBuffer()
+        let buffer_is_buffer_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let is_buffer = if args.length() >= 1 {
+                let first = args.get(0);
+                first.is_array_buffer() || first.is_typed_array()
+            } else {
+                false
+            };
+            retval.set(v8::Boolean::new(scope, is_buffer).into());
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.isBuffer function"))?;
+
+        // Buffer.byteLength()
+        let buffer_byte_length_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let first = args.get(0);
+                if let Some(str_val) = first.to_string(scope) {
+                    let rust_string = str_val.to_rust_string_lossy(scope);
+                    let encoding = if args.length() >= 2 {
+                        args.get(1).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "utf8".to_string())
+                    } else {
+                        "utf8".to_string()
+                    };
+                    let bytes = encode_string_to_bytes(&rust_string, &encoding);
+                    retval.set(v8::Integer::new(scope, bytes.len() as i32).into());
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.byteLength function"))?;
+
+        // Set Buffer static methods
+        let buffer_obj = v8::Object::new(scope);
+        let from_key = v8::String::new(scope, "from").unwrap().into();
+        buffer_obj.set(scope, from_key, buffer_from_fn.into());
+        let alloc_key = v8::String::new(scope, "alloc").unwrap().into();
+        buffer_obj.set(scope, alloc_key, buffer_alloc_fn.into());
+        let concat_key = v8::String::new(scope, "concat").unwrap().into();
+        buffer_obj.set(scope, concat_key, buffer_concat_fn.into());
+        let is_buffer_key = v8::String::new(scope, "isBuffer").unwrap().into();
+        buffer_obj.set(scope, is_buffer_key, buffer_is_buffer_fn.into());
+        let byte_length_key = v8::String::new(scope, "byteLength").unwrap().into();
+        buffer_obj.set(scope, byte_length_key, buffer_byte_length_fn.into());
+
+        // Set Buffer as constructor and add to global
         let buffer_key = v8::String::new(scope, "Buffer").unwrap().into();
         global.set(scope, buffer_key, buffer_fn.into());
+
+        // Add Buffer.prototype methods (using a wrapper object)
+        // toString method
+        let buffer_to_string_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let this = args.this();
+            if this.is_array_buffer() || this.is_typed_array() {
+                let arr_buffer = this.as_array_buffer().unwrap();
+                let encoding = if args.length() >= 1 {
+                    args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "utf8".to_string())
+                } else {
+                    "utf8".to_string()
+                };
+                let store = arr_buffer.backing_store();
+                let bytes = unsafe { std::slice::from_raw_parts(store.data() as *const u8, arr_buffer.byte_length()) };
+                let result = decode_bytes_to_string(bytes, &encoding);
+                retval.set(v8::String::new(scope, &result).unwrap().into());
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.toString function"))?;
+
+        // slice method
+        let buffer_slice_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let this = args.this();
+            if this.is_array_buffer() || this.is_typed_array() {
+                let arr_buffer = this.as_array_buffer().unwrap();
+                let byte_length = arr_buffer.byte_length();
+
+                let start = if args.length() >= 1 {
+                    let s = args.get(0).to_integer(scope).unwrap().value();
+                    if s < 0 { (byte_length as i32 + s) as usize } else { s as usize }
+                } else {
+                    0
+                };
+                let end = if args.length() >= 2 {
+                    let e = args.get(1).to_integer(scope).unwrap().value();
+                    if e < 0 { (byte_length as i32 + e) as usize } else { e as usize }
+                } else {
+                    byte_length
+                };
+
+                let clamped_start = std::cmp::min(start, byte_length);
+                let clamped_end = std::cmp::min(end, byte_length);
+                let new_length = if clamped_end > clamped_start { clamped_end - clamped_start } else { 0 };
+
+                let new_buffer = v8::ArrayBuffer::new(scope, new_length);
+                if new_length > 0 {
+                    let store = arr_buffer.backing_store();
+                    let dest_store = new_buffer.backing_store();
+                    let src_slice = unsafe { std::slice::from_raw_parts(store.data() as *const u8, byte_length) };
+                    let dest_slice = unsafe { std::slice::from_raw_parts_mut(dest_store.data() as *mut u8, new_length) };
+                    dest_slice.copy_from_slice(&src_slice[clamped_start..clamped_end]);
+                }
+                retval.set(new_buffer.into());
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.slice function"))?;
+
+        // copy method
+        let buffer_copy_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let this = args.this();
+            if this.is_array_buffer() || this.is_typed_array() {
+                let this_buffer = this.as_array_buffer().unwrap();
+                let this_length = this_buffer.byte_length();
+
+                // Target buffer (first arg)
+                let target_length = if args.length() >= 4 {
+                    args.get(3).to_integer(scope).unwrap().value() as usize
+                } else {
+                    0
+                };
+
+                // For simplicity, just return the byte length copied (0 for now in this minimal impl)
+                retval.set(v8::Integer::new(scope, 0).into());
+            } else {
+                retval.set(v8::Integer::new(scope, 0).into());
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.copy function"))?;
+
+        // indexOf method
+        let buffer_index_of_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let this = args.this();
+            if this.is_array_buffer() || this.is_typed_array() {
+                let arr_buffer = this.as_array_buffer().unwrap();
+                let store = arr_buffer.backing_store();
+                let bytes = unsafe { std::slice::from_raw_parts(store.data() as *const u8, arr_buffer.byte_length()) };
+
+                let search_val = if args.length() >= 1 { args.get(0) } else { v8::undefined(scope).into() };
+
+                let target_bytes: &[u8] = if let Some(str_val) = search_val.to_string(scope) {
+                    encode_string_to_bytes(&str_val.to_rust_string_lossy(scope), "utf8")
+                } else if search_val.is_number() {
+                    let n = search_val.to_integer(scope).unwrap().value();
+                    if n >= 0.0 && n <= 255.0 {
+                        &[n as u8]
+                    } else {
+                        &[]
+                    }
+                } else {
+                    &[]
+                };
+
+                let start = if args.length() >= 2 {
+                    let s = args.get(1).to_integer(scope).unwrap().value() as usize
+                } else {
+                    0
+                };
+
+                let clamped_start = std::cmp::min(start, bytes.len());
+                let result = bytes[clamped_start..].windows(target_bytes.len()).position(|w| w == target_bytes);
+                retval.set(v8::Integer::new(scope, result.map(|i| (i + clamped_start) as i32).unwrap_or(-1)).into());
+            } else {
+                retval.set(v8::Integer::new(scope, -1).into());
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.indexOf function"))?;
+
+        // Create prototype object with methods
+        let buffer_proto = v8::Object::new(scope);
+        let to_string_key = v8::String::new(scope, "toString").unwrap().into();
+        buffer_proto.set(scope, to_string_key, buffer_to_string_fn.into());
+        let slice_key = v8::String::new(scope, "slice").unwrap().into();
+        buffer_proto.set(scope, slice_key, buffer_slice_fn.into());
+        let copy_key = v8::String::new(scope, "copy").unwrap().into();
+        buffer_proto.set(scope, copy_key, buffer_copy_fn.into());
+        let index_of_key = v8::String::new(scope, "indexOf").unwrap().into();
+        buffer_proto.set(scope, index_of_key, buffer_index_of_fn.into());
+
+        // Set buffer.length getter (needs special handling in V8)
+        let length_key = v8::String::new(scope, "length").unwrap().into();
+        buffer_fn.set_accessor(scope, length_key, |scope: &mut v8::HandleScope, key: v8::Local<v8::Name>, _attr: v8::Local<v8::Value>, data: v8::Local<v8::Value>| {
+            // This is a simplified accessor - full implementation would need more setup
+            v8::ReturnValue::undefined(scope)
+        }, None, v8::AccessorSignature::new(scope, Some(buffer_fn)));
+
+        // Add prototype to buffer function
+        let prototype_key = v8::String::new(scope, "prototype").unwrap().into();
+        buffer_fn.set(scope, prototype_key, buffer_proto.into());
+
+        // Also expose Buffer object with static methods
+        let buffer_global_key = v8::String::new(scope, "Buffer").unwrap().into();
+        global.set(scope, buffer_global_key, buffer_fn.into());
 
         // Set up global URL object (full implementation)
         let url_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {

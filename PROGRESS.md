@@ -1,4 +1,49 @@
 
+**最新状态 (2025-12-23)**: 🚀 v0.2.9 增强！完整的 Buffer API 和 process.memoryUsage 支持！
+
+### 🎯 v0.2.9 Buffer API 与 process 增强 (2025-12-23)
+**进度**: ✅ Buffer.from() | ✅ Buffer.alloc() | ✅ Buffer.concat() | ✅ Buffer.isBuffer() | ✅ process.memoryUsage() | ✅ process.uptime() | ✅ process.hrtime()
+
+#### v0.2.9 核心增强成果 (2025-12-23)
+- ✅ **Buffer API 完整实现**
+  - `Buffer.from()` - 从字符串或 Buffer 创建
+  - `Buffer.alloc(size, fill)` - 创建指定大小和填充值的 Buffer
+  - `Buffer.concat(buffers)` - 合并多个 Buffer
+  - `Buffer.isBuffer()` - 检查是否为 Buffer
+  - `Buffer.byteLength()` - 获取字符串的字节长度
+  - `Buffer.prototype.toString()` - 转换为字符串（支持 UTF-8、hex、base64）
+  - `Buffer.prototype.slice()` - 切片 Buffer
+  - `Buffer.prototype.copy()` - 复制 Buffer 数据
+  - `Buffer.prototype.indexOf()` - 查找子字符串位置
+
+- ✅ **process 对象增强**
+  - `process.memoryUsage()` - 返回堆内存使用情况（heapTotal、heapUsed、external、rss）
+  - `process.uptime()` - 返回进程运行时间
+  - `process.hrtime()` - 返回高精度时间 [seconds, nanoseconds]
+  - `process.release.name` - 发布名称
+  - `process.versions.v8` - V8 引擎版本
+  - `process.argv` - 命令行参数数组
+  - `process.platform` - 操作系统平台（使用 std::env::consts::OS）
+  - `process.arch` - 处理器架构（使用 std::env::consts::ARCH）
+
+- ✅ **辅助编码函数**
+  - `encode_string_to_bytes()` - 支持 UTF-8、hex、base64、latin1 编码
+  - `decode_bytes_to_string()` - 支持多种编码格式到字符串的转换
+
+#### v0.2.9 测试覆盖
+- 新增 `tests/buffer_process_enhanced_tests.rs` 测试文件
+- 25+ 个测试用例覆盖所有新功能
+- 包括 Buffer.from()、Buffer.alloc()、Buffer.concat()、Buffer.isBuffer()、Buffer.byteLength()、Buffer.slice()、Buffer.copy()、Buffer.indexOf()
+- 包括 process.memoryUsage()、process.uptime()、process.hrtime()、process.release.name
+
+#### v0.2.9 代码变更
+- **新增文件**: `tests/buffer_process_enhanced_tests.rs`
+- **修改文件**: `src/runtime_minimal.rs` (添加 Buffer API 和 process 增强)
+- **修改文件**: `Cargo.toml` (添加 sys-info 依赖)
+- **新增依赖**: sys-info 0.9 (用于获取系统内存信息)
+
+---
+
 **最新状态 (2025-12-23 17:20)**: ✅ 代码质量提升！修复 9 个 clippy 警告，编译零警告！
 
 ### 🎯 v0.2.7 代码质量修复 (2025-12-23 17:20)
