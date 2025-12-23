@@ -7,6 +7,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use url::Url;
 use reqwest;
 use serde_json;
+use once_cell::sync::Lazy;
 
 /// HTTP 客户端用于处理真实的 fetch 请求
 pub struct HttpClient {
@@ -511,10 +512,10 @@ impl MinimalRuntime {
         let memory_usage_key = v8::String::new(scope, "memoryUsage").unwrap().into();
         process_obj.set(scope, memory_usage_key, memory_usage_fn.into());
 
-        // Add process.uptime()
-        let start_time = std::time::SystemTime::now();
+        // Add process.uptime() and process.hrtime() - use static start time for closures
+        static START_TIME: Lazy<std::time::SystemTime> = Lazy::new(std::time::SystemTime::now);
         let uptime_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let uptime = start_time.elapsed().unwrap_or_else(|_| std::time::Duration::from_secs(0)).as_secs_f64();
+            let uptime = START_TIME.elapsed().unwrap_or_else(|_| std::time::Duration::from_secs(0)).as_secs_f64();
             retval.set(v8::Number::new(_scope, uptime).into());
         }).ok_or_else(|| anyhow::anyhow!("Failed to create process.uptime function"))?;
         let uptime_key = v8::String::new(scope, "uptime").unwrap().into();
@@ -522,13 +523,15 @@ impl MinimalRuntime {
 
         // Add process.hrtime() - returns [seconds, nanoseconds]
         let hrtime_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let elapsed = start_time.elapsed().unwrap_or_else(|_| std::time::Duration::from_secs(0));
+            let elapsed = START_TIME.elapsed().unwrap_or_else(|_| std::time::Duration::from_secs(0));
             let secs = elapsed.as_secs();
             let nanos = elapsed.subsec_nanos();
 
             let result_arr = v8::Array::new(_scope, 2);
-            result_arr.set_index(_scope, 0, v8::Integer::new(_scope, secs as i32).into());
-            result_arr.set_index(_scope, 1, v8::Integer::new(_scope, nanos as i32).into());
+            let secs_int = v8::Integer::new(_scope, secs as i32).into();
+            let nanos_int = v8::Integer::new(_scope, nanos as i32).into();
+            result_arr.set_index(_scope, 0, secs_int);
+            result_arr.set_index(_scope, 1, nanos_int);
 
             retval.set(result_arr.into());
         }).ok_or_else(|| anyhow::anyhow!("Failed to create process.hrtime function"))?;
@@ -537,8 +540,10 @@ impl MinimalRuntime {
 
         // Add process.argv
         let argv_arr = v8::Array::new(scope, 2);
-        argv_arr.set_index(scope, 0, v8::String::new(scope, "beejs").unwrap().into());
-        argv_arr.set_index(scope, 1, v8::String::new(scope, "script.js").unwrap().into());
+        let beejs_str = v8::String::new(scope, "beejs").unwrap().into();
+        let script_str = v8::String::new(scope, "script.js").unwrap().into();
+        argv_arr.set_index(scope, 0, beejs_str);
+        argv_arr.set_index(scope, 1, script_str);
         let argv_key = v8::String::new(scope, "argv").unwrap().into();
         process_obj.set(scope, argv_key, argv_arr.into());
 
@@ -563,8 +568,8 @@ impl MinimalRuntime {
                     };
                     let bytes = encode_string_to_bytes(&rust_string, &encoding);
                     let buffer = v8::ArrayBuffer::new(scope, bytes.len());
-                    let store = buffer.backing_store();
-                    let slice = unsafe { std::slice::from_raw_parts_mut(store.data() as *mut u8, bytes.len()) };
+                    let store = buffer.get_backing_store();
+                    let slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, bytes.len()) };
                     slice.copy_from_slice(&bytes);
                     retval.set(buffer.into());
                 }
@@ -587,8 +592,8 @@ impl MinimalRuntime {
                     };
                     let bytes = encode_string_to_bytes(&rust_string, &encoding);
                     let buffer = v8::ArrayBuffer::new(scope, bytes.len());
-                    let store = buffer.backing_store();
-                    let slice = unsafe { std::slice::from_raw_parts_mut(store.data() as *mut u8, bytes.len()) };
+                    let store = buffer.get_backing_store();
+                    let slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, bytes.len()) };
                     slice.copy_from_slice(&bytes);
                     retval.set(buffer.into());
                 } else if first.is_number() {
@@ -618,8 +623,8 @@ impl MinimalRuntime {
             };
             let buffer = v8::ArrayBuffer::new(scope, size);
             if size > 0 {
-                let store = buffer.backing_store();
-                let slice = unsafe { std::slice::from_raw_parts_mut(store.data() as *mut u8, size) };
+                let store = buffer.get_backing_store();
+                let slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, size) };
                 slice.fill(fill_byte);
             }
             retval.set(buffer.into());
@@ -644,7 +649,9 @@ impl MinimalRuntime {
                         for i in 0..len {
                             if let Some(item) = arr.get_index(scope, i) {
                                 if item.is_array_buffer() || item.is_typed_array() {
-                                    total += item.as_array_buffer().unwrap().byte_length();
+                                    if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(item) {
+                                        total += arr_buffer.byte_length();
+                                    }
                                 }
                             }
                         }
@@ -655,22 +662,23 @@ impl MinimalRuntime {
 
                     let buffer = v8::ArrayBuffer::new(scope, calculated_length);
                     if calculated_length > 0 {
-                        let store = buffer.backing_store();
-                        let dest_slice = unsafe { std::slice::from_raw_parts_mut(store.data() as *mut u8, calculated_length) };
+                        let store = buffer.get_backing_store();
+                        let dest_slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, calculated_length) };
                         let mut offset = 0usize;
 
                         for i in 0..len {
                             if let Some(item) = arr.get_index(scope, i) {
                                 if item.is_array_buffer() || item.is_typed_array() {
-                                    let arr_buffer = item.as_array_buffer().unwrap();
-                                    let item_len = arr_buffer.byte_length();
-                                    if item_len > 0 {
-                                        let item_store = arr_buffer.backing_store();
-                                        let item_slice = unsafe { std::slice::from_raw_parts(item_store.data() as *const u8, item_len) };
-                                        let available = calculated_length - offset;
-                                        let to_copy = std::cmp::min(item_len, available);
-                                        dest_slice[offset..offset + to_copy].copy_from_slice(&item_slice[..to_copy]);
-                                        offset += to_copy;
+                                    if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(item) {
+                                        let item_len = arr_buffer.byte_length();
+                                        if item_len > 0 {
+                                            let item_store = arr_buffer.get_backing_store();
+                                            let item_slice = unsafe { std::slice::from_raw_parts(item_store.as_ref().as_ptr() as *const u8, item_len) };
+                                            let available = calculated_length - offset;
+                                            let to_copy = std::cmp::min(item_len, available);
+                                            dest_slice[offset..offset + to_copy].copy_from_slice(&item_slice[..to_copy]);
+                                            offset += to_copy;
+                                        }
                                     }
                                 }
                             }
@@ -709,18 +717,17 @@ impl MinimalRuntime {
             }
         }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.byteLength function"))?;
 
-        // Set Buffer static methods
-        let buffer_obj = v8::Object::new(scope);
+        // Set Buffer static methods directly on buffer_fn (not on a separate object)
         let from_key = v8::String::new(scope, "from").unwrap().into();
-        buffer_obj.set(scope, from_key, buffer_from_fn.into());
+        buffer_fn.set(scope, from_key, buffer_from_fn.into());
         let alloc_key = v8::String::new(scope, "alloc").unwrap().into();
-        buffer_obj.set(scope, alloc_key, buffer_alloc_fn.into());
+        buffer_fn.set(scope, alloc_key, buffer_alloc_fn.into());
         let concat_key = v8::String::new(scope, "concat").unwrap().into();
-        buffer_obj.set(scope, concat_key, buffer_concat_fn.into());
+        buffer_fn.set(scope, concat_key, buffer_concat_fn.into());
         let is_buffer_key = v8::String::new(scope, "isBuffer").unwrap().into();
-        buffer_obj.set(scope, is_buffer_key, buffer_is_buffer_fn.into());
+        buffer_fn.set(scope, is_buffer_key, buffer_is_buffer_fn.into());
         let byte_length_key = v8::String::new(scope, "byteLength").unwrap().into();
-        buffer_obj.set(scope, byte_length_key, buffer_byte_length_fn.into());
+        buffer_fn.set(scope, byte_length_key, buffer_byte_length_fn.into());
 
         // Set Buffer as constructor and add to global
         let buffer_key = v8::String::new(scope, "Buffer").unwrap().into();
@@ -730,15 +737,18 @@ impl MinimalRuntime {
         // toString method
         let buffer_to_string_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let this = args.this();
-            if this.is_array_buffer() || this.is_typed_array() {
-                let arr_buffer = this.as_array_buffer().unwrap();
+            // Only support ArrayBuffer for now
+            if !this.is_array_buffer() {
+                return;
+            }
+            if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(this) {
                 let encoding = if args.length() >= 1 {
                     args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "utf8".to_string())
                 } else {
                     "utf8".to_string()
                 };
-                let store = arr_buffer.backing_store();
-                let bytes = unsafe { std::slice::from_raw_parts(store.data() as *const u8, arr_buffer.byte_length()) };
+                let store = arr_buffer.get_backing_store();
+                let bytes = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, arr_buffer.byte_length()) };
                 let result = decode_bytes_to_string(bytes, &encoding);
                 retval.set(v8::String::new(scope, &result).unwrap().into());
             }
@@ -747,19 +757,22 @@ impl MinimalRuntime {
         // slice method
         let buffer_slice_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let this = args.this();
-            if this.is_array_buffer() || this.is_typed_array() {
-                let arr_buffer = this.as_array_buffer().unwrap();
+            // Only support ArrayBuffer for now
+            if !this.is_array_buffer() {
+                return;
+            }
+            if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(this) {
                 let byte_length = arr_buffer.byte_length();
 
                 let start = if args.length() >= 1 {
                     let s = args.get(0).to_integer(scope).unwrap().value();
-                    if s < 0 { (byte_length as i32 + s) as usize } else { s as usize }
+                    if s < 0 { ((byte_length as i64) + s) as usize } else { s as usize }
                 } else {
                     0
                 };
                 let end = if args.length() >= 2 {
                     let e = args.get(1).to_integer(scope).unwrap().value();
-                    if e < 0 { (byte_length as i32 + e) as usize } else { e as usize }
+                    if e < 0 { ((byte_length as i64) + e) as usize } else { e as usize }
                 } else {
                     byte_length
                 };
@@ -770,10 +783,10 @@ impl MinimalRuntime {
 
                 let new_buffer = v8::ArrayBuffer::new(scope, new_length);
                 if new_length > 0 {
-                    let store = arr_buffer.backing_store();
-                    let dest_store = new_buffer.backing_store();
-                    let src_slice = unsafe { std::slice::from_raw_parts(store.data() as *const u8, byte_length) };
-                    let dest_slice = unsafe { std::slice::from_raw_parts_mut(dest_store.data() as *mut u8, new_length) };
+                    let store = arr_buffer.get_backing_store();
+                    let dest_store = new_buffer.get_backing_store();
+                    let src_slice = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, byte_length) };
+                    let dest_slice = unsafe { std::slice::from_raw_parts_mut(dest_store.as_ref().as_ptr() as *mut u8, new_length) };
                     dest_slice.copy_from_slice(&src_slice[clamped_start..clamped_end]);
                 }
                 retval.set(new_buffer.into());
@@ -784,18 +797,21 @@ impl MinimalRuntime {
         let buffer_copy_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let this = args.this();
             if this.is_array_buffer() || this.is_typed_array() {
-                let this_buffer = this.as_array_buffer().unwrap();
-                let this_length = this_buffer.byte_length();
+                if let Ok(this_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(this) {
+                    let _this_length = this_buffer.byte_length();
 
-                // Target buffer (first arg)
-                let target_length = if args.length() >= 4 {
-                    args.get(3).to_integer(scope).unwrap().value() as usize
+                    // Target buffer (first arg)
+                    let _target_length = if args.length() >= 4 {
+                        args.get(3).to_integer(scope).unwrap().value() as usize
+                    } else {
+                        0
+                    };
+
+                    // For simplicity, just return the byte length copied (0 for now in this minimal impl)
+                    retval.set(v8::Integer::new(scope, 0).into());
                 } else {
-                    0
-                };
-
-                // For simplicity, just return the byte length copied (0 for now in this minimal impl)
-                retval.set(v8::Integer::new(scope, 0).into());
+                    retval.set(v8::Integer::new(scope, 0).into());
+                }
             } else {
                 retval.set(v8::Integer::new(scope, 0).into());
             }
@@ -804,28 +820,32 @@ impl MinimalRuntime {
         // indexOf method
         let buffer_index_of_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let this = args.this();
-            if this.is_array_buffer() || this.is_typed_array() {
-                let arr_buffer = this.as_array_buffer().unwrap();
-                let store = arr_buffer.backing_store();
-                let bytes = unsafe { std::slice::from_raw_parts(store.data() as *const u8, arr_buffer.byte_length()) };
+            // Only support ArrayBuffer for now
+            if !this.is_array_buffer() {
+                retval.set(v8::Integer::new(scope, -1).into());
+                return;
+            }
+            if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(this) {
+                let store = arr_buffer.get_backing_store();
+                let bytes = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, arr_buffer.byte_length()) };
 
                 let search_val = if args.length() >= 1 { args.get(0) } else { v8::undefined(scope).into() };
 
-                let target_bytes: &[u8] = if let Some(str_val) = search_val.to_string(scope) {
+                let target_bytes: Vec<u8> = if let Some(str_val) = search_val.to_string(scope) {
                     encode_string_to_bytes(&str_val.to_rust_string_lossy(scope), "utf8")
                 } else if search_val.is_number() {
                     let n = search_val.to_integer(scope).unwrap().value();
-                    if n >= 0.0 && n <= 255.0 {
-                        &[n as u8]
+                    if n >= 0 && n <= 255 {
+                        vec![n as u8]
                     } else {
-                        &[]
+                        vec![]
                     }
                 } else {
-                    &[]
+                    vec![]
                 };
 
                 let start = if args.length() >= 2 {
-                    let s = args.get(1).to_integer(scope).unwrap().value() as usize
+                    args.get(1).to_integer(scope).unwrap().value() as usize
                 } else {
                     0
                 };
@@ -849,12 +869,12 @@ impl MinimalRuntime {
         let index_of_key = v8::String::new(scope, "indexOf").unwrap().into();
         buffer_proto.set(scope, index_of_key, buffer_index_of_fn.into());
 
-        // Set buffer.length getter (needs special handling in V8)
+        // Set buffer.length getter (simplified for V8 0.22 compatibility)
+        // Note: Full accessor implementation requires V8 0.70+ APIs
+        // For now, we'll expose length as a regular property via Object API
         let length_key = v8::String::new(scope, "length").unwrap().into();
-        buffer_fn.set_accessor(scope, length_key, |scope: &mut v8::HandleScope, key: v8::Local<v8::Name>, _attr: v8::Local<v8::Value>, data: v8::Local<v8::Value>| {
-            // This is a simplified accessor - full implementation would need more setup
-            v8::ReturnValue::undefined(scope)
-        }, None, v8::AccessorSignature::new(scope, Some(buffer_fn)));
+        let length_value = v8::Integer::new(scope, 0).into(); // Default to 0, updated on creation
+        buffer_fn.set(scope, length_key, length_value);
 
         // Add prototype to buffer function
         let prototype_key = v8::String::new(scope, "prototype").unwrap().into();
