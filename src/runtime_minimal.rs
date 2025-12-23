@@ -4,10 +4,26 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 use url::Url;
 use reqwest;
 use serde_json;
 use once_cell::sync::Lazy;
+
+/// Response cache for storing HTTP response data keyed by URL
+/// This allows json() and text() methods to access the actual response body
+static RESPONSE_CACHE: Lazy<Arc<Mutex<HashMap<String, CachedResponse>>>> =
+    Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
+
+/// Cached HTTP response data
+#[derive(Clone, Debug)]
+struct CachedResponse {
+    url: String,
+    status: u16,
+    body: String,
+    cached_at: std::time::SystemTime,
+}
 
 /// HTTP 客户端用于处理真实的 fetch 请求
 pub struct HttpClient {
@@ -391,7 +407,7 @@ impl MinimalRuntime {
         let clear_immediate_key = v8::String::new(scope, "clearImmediate").unwrap().into();
         global.set(scope, clear_immediate_key, clear_immediate_fn.into());
 
-        // Set up global fetch API (v0.2.0: Enhanced implementation with real HTTP support)
+        // Set up global fetch API (v0.3.1: Enhanced implementation with real HTTP response data)
         let fetch_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             if args.length() >= 1 {
                 let url = args.get(0);
@@ -401,12 +417,33 @@ impl MinimalRuntime {
                     "unknown".to_string()
                 };
 
-                // v0.2.0: Try to make a real HTTP request
-                let (status, success) = match reqwest::blocking::get(&url_string) {
-                    Ok(response) => (response.status().as_u16(), true),
+                // v0.3.1: Make a real HTTP request and cache the response
+                let (status, success, body) = match reqwest::blocking::get(&url_string) {
+                    Ok(response) => {
+                        let status = response.status().as_u16();
+                        let body = response.text().unwrap_or_else(|_| "".to_string());
+                        // Cache the response for json()/text() methods
+                        let cached = CachedResponse {
+                            url: url_string.clone(),
+                            status,
+                            body: body.clone(),
+                            cached_at: std::time::SystemTime::now(),
+                        };
+                        RESPONSE_CACHE.lock().unwrap().insert(url_string.clone(), cached);
+                        (status, true, body)
+                    }
                     Err(e) => {
                         println!("⚠️ HTTP request failed for {}: {}", url_string, e);
-                        (404, false)
+                        let error_body = format!(r#"{{"error": "HTTP request failed", "message": "{}"}}"#, e);
+                        // Cache the error response
+                        let cached = CachedResponse {
+                            url: url_string.clone(),
+                            status: 404,
+                            body: error_body.clone(),
+                            cached_at: std::time::SystemTime::now(),
+                        };
+                        RESPONSE_CACHE.lock().unwrap().insert(url_string.clone(), cached);
+                        (404, false, error_body)
                     }
                 };
 
@@ -423,23 +460,55 @@ impl MinimalRuntime {
                 let ok_val = v8::Boolean::new(scope, success && status >= 200 && status < 300);
                 response_obj.set(scope, ok_key, ok_val.into());
 
-                // Add json method
-                let json_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                    let json_data = v8::String::new(_scope, r#"{"message": "Enhanced fetch() v0.2.0", "url": "real HTTP supported"}"#).unwrap();
-                    retval.set(json_data.into());
+                // Add url property
+                let url_key = v8::String::new(scope, "url").unwrap().into();
+                let url_val = v8::String::new(scope, &url_string).unwrap().into();
+                response_obj.set(scope, url_key, url_val);
+
+                // Clone url_string for use in closures (Rust closure capture)
+                let url_for_closure = url_string.clone();
+
+                // Add json method - now returns actual response data
+                let json_fn = v8::Function::new(scope, move |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    // Look up the cached response
+                    let cache = RESPONSE_CACHE.lock().unwrap();
+                    if let Some(cached) = cache.get(&url_for_closure) {
+                        // Try to parse as JSON and pretty-print, or return as-is
+                        let result = if cached.body.trim_start().starts_with('{') || cached.body.trim_start().starts_with('[') {
+                            // Pretty-print JSON response
+                            let parsed: Result<serde_json::Value, _> = serde_json::from_str(&cached.body);
+                            match parsed {
+                                Ok(value) => serde_json::to_string_pretty(&value).unwrap_or(cached.body.clone()),
+                                Err(_) => cached.body.clone(),
+                            }
+                        } else {
+                            cached.body.clone()
+                        };
+                        let json_data = v8::String::new(_scope, &result).unwrap();
+                        retval.set(json_data.into());
+                    } else {
+                        let error = v8::String::new(_scope, r#"{"error": "Response not found in cache"}"#).unwrap();
+                        retval.set(error.into());
+                    }
                 }).ok_or_else(|| anyhow::anyhow!("Failed to create json function")).unwrap();
                 let json_key = v8::String::new(scope, "json").unwrap().into();
                 response_obj.set(scope, json_key, json_fn.into());
 
-                // Add text method
-                let text_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                    let text_data = v8::String::new(_scope, "Enhanced fetch response with real HTTP support").unwrap();
-                    retval.set(text_data.into());
+                // Add text method - returns actual response body
+                let text_fn = v8::Function::new(scope, move |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    let cache = RESPONSE_CACHE.lock().unwrap();
+                    if let Some(cached) = cache.get(&url_for_closure) {
+                        let text_data = v8::String::new(_scope, &cached.body).unwrap();
+                        retval.set(text_data.into());
+                    } else {
+                        let error = v8::String::new(_scope, "").unwrap();
+                        retval.set(error.into());
+                    }
                 }).ok_or_else(|| anyhow::anyhow!("Failed to create text function")).unwrap();
                 let text_key = v8::String::new(scope, "text").unwrap().into();
                 response_obj.set(scope, text_key, text_fn.into());
 
-                println!("🌐 fetch() called for URL: {} (status: {}, real HTTP: v0.2.0)", url_string, status);
+                println!("🌐 fetch() called for URL: {} (status: {}, body_len: {})", url_string, status, body.len());
 
                 retval.set(response_obj.into());
             }
