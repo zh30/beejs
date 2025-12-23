@@ -680,9 +680,39 @@ impl MinimalRuntime {
         // Set up global Date object
         let date_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let now = chrono::Utc::now();
-            let date_str = now.to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
-            let date_val = v8::String::new(scope, &date_str).unwrap();
-            retval.set(date_val.into());
+            // Create a Date object with toISOString method
+            let date_obj = v8::Object::new(scope);
+
+            // Add timestamp property
+            let timestamp_key = v8::String::new(scope, "timestamp").unwrap().into();
+            let timestamp_val = v8::Number::new(scope, now.timestamp_millis() as f64);
+            date_obj.set(scope, timestamp_key, timestamp_val.into());
+
+            // Add toISOString method
+            let to_iso_string_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let timestamp_key = v8::String::new(scope, "timestamp").unwrap().into();
+                if let Some(timestamp_val) = this.get(scope, timestamp_key) {
+                    if let Some(timestamp_num) = timestamp_val.to_number(scope) {
+                        let timestamp_ms = timestamp_num.value() as i64;
+                        if let Some(dt) = chrono::DateTime::from_timestamp_millis(timestamp_ms) {
+                            let iso_str = dt.to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+                            let iso_val = v8::String::new(scope, &iso_str).unwrap();
+                            retval.set(iso_val.into());
+                            return;
+                        }
+                    }
+                }
+                // Fallback to current time
+                let now = chrono::Utc::now();
+                let date_str = now.to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+                let date_val = v8::String::new(scope, &date_str).unwrap();
+                retval.set(date_val.into());
+            }).ok_or_else(|| anyhow::anyhow!("Failed to create toISOString function")).unwrap();
+            let to_iso_key = v8::String::new(scope, "toISOString").unwrap().into();
+            date_obj.set(scope, to_iso_key, to_iso_string_fn.into());
+
+            retval.set(date_obj.into());
         }).ok_or_else(|| anyhow::anyhow!("Failed to create Date function"))?;
         let date_key = v8::String::new(scope, "Date").unwrap().into();
         global.set(scope, date_key, date_fn.into());
