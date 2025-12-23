@@ -340,7 +340,7 @@ impl MinimalRuntime {
 
         // Add version
         let version_key = v8::String::new(scope, "version").unwrap().into();
-        let version_val = v8::String::new(scope, "0.1.4").unwrap().into();
+        let version_val = v8::String::new(scope, "0.1.6").unwrap().into();
         process_obj.set(scope, version_key, version_val);
 
         // Add platform
@@ -561,137 +561,111 @@ impl MinimalRuntime {
         let parse_key = v8::String::new(scope, "parse").unwrap().into();
         json_obj.set(scope, parse_key, parse_fn.into());
 
-        // Add JSON.stringify
+        // Add JSON.stringify - recursive implementation with full object support
         let stringify_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            if args.length() >= 1 {
-                let value = args.get(0);
-                // Proper JSON stringify implementation
-                let json_str = if value.is_null() {
-                    "null".to_string()
+            // Helper function to stringify a V8 value recursively
+            fn stringify_value(scope: &mut v8::HandleScope, value: v8::Local<v8::Value>, depth: usize) -> String {
+                // Prevent infinite recursion
+                if depth > 50 {
+                    return "null".to_string();
+                }
+
+                if value.is_undefined() {
+                    return "undefined".to_string();
+                } else if value.is_null() {
+                    return "null".to_string();
                 } else if value.is_true() {
-                    "true".to_string()
+                    return "true".to_string();
                 } else if value.is_false() {
-                    "false".to_string()
+                    return "false".to_string();
                 } else if value.is_number() {
                     if let Some(num) = value.to_number(scope) {
-                        num.to_rust_string_lossy(scope)
-                    } else {
-                        "null".to_string()
+                        let n = num.value();
+                        if n.is_nan() {
+                            return "null".to_string();
+                        } else if n.is_infinite() {
+                            return "null".to_string();
+                        }
+                        return num.to_rust_string_lossy(scope);
                     }
+                    return "null".to_string();
                 } else if value.is_string() {
                     if let Some(str_val) = value.to_string(scope) {
                         let rust_str = str_val.to_rust_string_lossy(scope);
-                        format!("\"{}\"", rust_str.replace('"', "\\\""))
-                    } else {
-                        "null".to_string()
+                        // Escape special characters properly
+                        let escaped = rust_str
+                            .replace('\\', "\\\\")
+                            .replace('"', "\\\"")
+                            .replace('\n', "\\n")
+                            .replace('\r', "\\r")
+                            .replace('\t', "\\t");
+                        return format!("\"{}\"", escaped);
                     }
+                    return "null".to_string();
                 } else if value.is_array() {
-                    let arr = v8::Local::<v8::Array>::try_from(value).unwrap();
-                    let len = arr.length();
-                    let mut items = Vec::new();
-                    for i in 0..len {
-                        let item = arr.get_index(scope, i).unwrap();
-                        let item_str = if item.is_null() {
-                            "null".to_string()
-                        } else if item.is_true() {
-                            "true".to_string()
-                        } else if item.is_false() {
-                            "false".to_string()
-                        } else if item.is_number() {
-                            if let Some(num) = item.to_number(scope) {
-                                num.to_rust_string_lossy(scope)
-                            } else {
-                                "null".to_string()
-                            }
-                        } else if item.is_string() {
-                            if let Some(str_val) = item.to_string(scope) {
-                                let rust_str = str_val.to_rust_string_lossy(scope);
-                                format!("\"{}\"", rust_str.replace('"', "\\\""))
-                            } else {
-                                "null".to_string()
-                            }
-                        } else if item.is_array() {
-                            // Recursively handle nested arrays
-                            let nested_arr = v8::Local::<v8::Array>::try_from(item).unwrap();
-                            let nested_len = nested_arr.length();
-                            let mut nested_items = Vec::new();
-                            for j in 0..nested_len {
-                                let nested_item = nested_arr.get_index(scope, j).unwrap();
-                                let nested_item_str = if nested_item.is_null() {
-                                    "null".to_string()
-                                } else if nested_item.is_true() {
-                                    "true".to_string()
-                                } else if nested_item.is_false() {
-                                    "false".to_string()
-                                } else if nested_item.is_number() {
-                                    if let Some(num) = nested_item.to_number(scope) {
-                                        num.to_rust_string_lossy(scope)
-                                    } else {
-                                        "null".to_string()
-                                    }
-                                } else if nested_item.is_string() {
-                                    if let Some(str_val) = nested_item.to_string(scope) {
-                                        let rust_str = str_val.to_rust_string_lossy(scope);
-                                        format!("\"{}\"", rust_str.replace('"', "\\\""))
-                                    } else {
-                                        "null".to_string()
-                                    }
-                                } else if nested_item.is_array() {
-                                    // Recursively handle arrays
-                                    let arr = v8::Local::<v8::Array>::try_from(nested_item).unwrap();
-                                    let len = arr.length();
-                                    let mut arr_items = Vec::new();
-                                    for k in 0..len {
-                                        let arr_item = arr.get_index(scope, k).unwrap();
-                                        let arr_item_str = if arr_item.is_null() {
-                                            "null".to_string()
-                                        } else if arr_item.is_true() {
-                                            "true".to_string()
-                                        } else if arr_item.is_false() {
-                                            "false".to_string()
-                                        } else if arr_item.is_number() {
-                                            if let Some(num) = arr_item.to_number(scope) {
-                                                num.to_rust_string_lossy(scope)
-                                            } else {
-                                                "null".to_string()
-                                            }
-                                        } else if arr_item.is_string() {
-                                            if let Some(str_val) = arr_item.to_string(scope) {
-                                                let rust_str = str_val.to_rust_string_lossy(scope);
-                                                format!("\"{}\"", rust_str.replace('"', "\\\""))
-                                            } else {
-                                                "null".to_string()
-                                            }
-                                        } else {
-                                            "null".to_string()
-                                        };
-                                        arr_items.push(arr_item_str);
-                                    }
-                                    format!("[{}]", arr_items.join(","))
-                                } else if nested_item.is_object() {
-                                    // For objects, just return "{}" for now (simplified)
-                                    "{}".to_string()
+                    if let Ok(arr) = v8::Local::<v8::Array>::try_from(value) {
+                        let len = arr.length();
+                        let mut items = Vec::new();
+                        for i in 0..len {
+                            if let Some(item) = arr.get_index(scope, i) {
+                                let item_str = stringify_value(scope, item, depth + 1);
+                                // undefined in arrays becomes null
+                                if item_str == "undefined" {
+                                    items.push("null".to_string());
                                 } else {
-                                    "null".to_string()
-                                };
-                                nested_items.push(nested_item_str);
+                                    items.push(item_str);
+                                }
+                            } else {
+                                items.push("null".to_string());
                             }
-                            format!("[{}]", nested_items.join(","))
-                        } else if item.is_object() {
-                            // For objects, just return "{}" for now (simplified)
-                            "{}".to_string()
-                        } else {
-                            "null".to_string()
-                        };
-                        items.push(item_str);
+                        }
+                        return format!("[{}]", items.join(","));
                     }
-                    format!("[{}]", items.join(","))
+                    return "[]".to_string();
+                } else if value.is_function() {
+                    // Functions are excluded from JSON (return undefined behavior)
+                    return "undefined".to_string();
                 } else if value.is_object() {
-                    // For objects, return empty object for now (simplified)
-                    "{}".to_string()
-                } else {
-                    "null".to_string()
-                };
+                    if let Ok(obj) = v8::Local::<v8::Object>::try_from(value) {
+                        // Get all own property names
+                        if let Some(prop_names) = obj.get_own_property_names(scope) {
+                            let len = prop_names.length();
+                            let mut pairs = Vec::new();
+
+                            for i in 0..len {
+                                if let Some(key) = prop_names.get_index(scope, i) {
+                                    if let Some(key_str) = key.to_string(scope) {
+                                        let key_rust = key_str.to_rust_string_lossy(scope);
+
+                                        if let Some(val) = obj.get(scope, key) {
+                                            let val_str = stringify_value(scope, val, depth + 1);
+                                            // Skip undefined values in objects
+                                            if val_str != "undefined" {
+                                                let escaped_key = key_rust
+                                                    .replace('\\', "\\\\")
+                                                    .replace('"', "\\\"");
+                                                pairs.push(format!("\"{}\":{}", escaped_key, val_str));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            return format!("{{{}}}", pairs.join(","));
+                        }
+                    }
+                    return "{}".to_string();
+                }
+                "null".to_string()
+            }
+
+            if args.length() >= 1 {
+                let value = args.get(0);
+                let json_str = stringify_value(scope, value, 0);
+
+                // undefined at top level returns undefined (special case)
+                if json_str == "undefined" {
+                    return;
+                }
 
                 let json_val = v8::String::new(scope, &json_str).unwrap();
                 retval.set(json_val.into());
