@@ -2,6 +2,7 @@
 //! This is a simplified version of RuntimeLite without complex dependencies
 
 use anyhow::Result;
+use base64::Engine;
 use rusty_v8 as v8;
 use std::sync::atomic::{AtomicU64, Ordering};
 use url::Url;
@@ -50,10 +51,11 @@ pub struct HttpResponse {
 
 /// Helper function to encode a string to bytes with the specified encoding
 fn encode_string_to_bytes(s: &str, encoding: &str) -> Vec<u8> {
+    let engine = base64::engine::general_purpose::STANDARD;
     match encoding.to_lowercase().as_str() {
         "utf8" | "utf-8" | "utf8mb4" => s.as_bytes().to_vec(),
         "hex" => hex::decode(s).unwrap_or_else(|_| s.as_bytes().to_vec()),
-        "base64" => base64::decode(s).unwrap_or_else(|_| s.as_bytes().to_vec()),
+        "base64" => engine.decode(s).unwrap_or_else(|_| s.as_bytes().to_vec()),
         "latin1" | "ascii" | "binary" => s.bytes().collect(),
         _ => s.as_bytes().to_vec(), // Default to UTF-8
     }
@@ -61,12 +63,13 @@ fn encode_string_to_bytes(s: &str, encoding: &str) -> Vec<u8> {
 
 /// Helper function to decode bytes to a string with the specified encoding
 fn decode_bytes_to_string(bytes: &[u8], encoding: &str) -> String {
+    let engine = base64::engine::general_purpose::STANDARD;
     match encoding.to_lowercase().as_str() {
         "utf8" | "utf-8" | "utf8mb4" => {
             String::from_utf8_lossy(bytes).to_string()
         }
         "hex" => hex::encode(bytes),
-        "base64" => base64::encode(bytes),
+        "base64" => engine.encode(bytes),
         "latin1" | "ascii" | "binary" => {
             bytes.iter().map(|&b| b as char).collect()
         }
@@ -483,8 +486,8 @@ impl MinimalRuntime {
 
         // Add process.memoryUsage()
         let memory_usage_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            // Get memory stats from the system
-            let memory_usage = sys_info::mem_info().unwrap_or(sys_info::MemInfo { total: 0, free: 0, avail: 0, buffers: 0, cached: 0, swap_total: 0, swap_free: 0 });
+            // Get memory stats from the system (unused but kept for future implementation)
+            let _memory_usage = sys_info::mem_info().unwrap_or(sys_info::MemInfo { total: 0, free: 0, avail: 0, buffers: 0, cached: 0, swap_total: 0, swap_free: 0 });
 
             let result_obj = v8::Object::new(_scope);
 
@@ -522,7 +525,7 @@ impl MinimalRuntime {
         process_obj.set(scope, uptime_key, uptime_fn.into());
 
         // Add process.hrtime() - returns [seconds, nanoseconds]
-        let hrtime_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let hrtime_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let elapsed = START_TIME.elapsed().unwrap_or_else(|_| std::time::Duration::from_secs(0));
             let secs = elapsed.as_secs();
             let nanos = elapsed.subsec_nanos();
