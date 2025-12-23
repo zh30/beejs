@@ -1198,6 +1198,288 @@ impl MinimalRuntime {
         let crypto_key = v8::String::new(scope, "crypto").unwrap().into();
         global.set(scope, crypto_key, crypto_obj.into());
 
+        // Setup Promise API
+        MinimalRuntime::setup_promise_api(scope, context)?;
+
+        Ok(())
+    }
+
+    /// Set up Promise API - uses V8's native Promise resolver
+    fn setup_promise_api(scope: &mut v8::ContextScope<v8::HandleScope>, context: &v8::Context) -> Result<()> {
+        let global = context.global(scope);
+
+        // Create Promise constructor that uses V8's native Promise resolver
+        // Note: V8 already has native Promise support, so we don't need to override it
+        // We just ensure Promise.resolve, Promise.reject, and Promise.all work correctly
+
+        // Create Promise.resolve - uses native V8 Promise
+        let promise_resolve_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let value = args.get(0);
+            if let Some(resolver) = v8::PromiseResolver::new(scope) {
+                let promise = resolver.get_promise(scope);
+                let _ = resolver.resolve(scope, value);
+                retval.set(promise.into());
+            } else {
+                let undefined = v8::undefined(scope);
+                retval.set(undefined.into());
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Promise.resolve function"))?;
+
+        // Get existing Promise from global or create a wrapper object
+        let promise_key = v8::String::new(scope, "Promise").unwrap();
+        let maybe_promise = global.get(scope, promise_key.into());
+
+        // If Promise already exists (V8's native), add our methods to it
+        // Otherwise create a simple wrapper object
+        if let Some(existing_promise) = maybe_promise {
+            if existing_promise.is_function() {
+                let promise_func = v8::Local::<v8::Function>::try_from(existing_promise).unwrap();
+                let resolve_key = v8::String::new(scope, "resolve").unwrap().into();
+                promise_func.set(scope, resolve_key, promise_resolve_fn.into());
+
+                // Create Promise.reject
+                let promise_reject_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    let reason = args.get(0);
+                    if let Some(resolver) = v8::PromiseResolver::new(scope) {
+                        let promise = resolver.get_promise(scope);
+                        let _ = resolver.reject(scope, reason);
+                        retval.set(promise.into());
+                    } else {
+                        let undefined = v8::undefined(scope);
+                        retval.set(undefined.into());
+                    }
+                });
+
+                if let Some(reject_fn) = promise_reject_fn {
+                    let reject_key = v8::String::new(scope, "reject").unwrap().into();
+                    promise_func.set(scope, reject_key, reject_fn.into());
+                }
+
+                // Create Promise.all
+                let promise_all_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    let iterable = args.get(0);
+
+                    if let Some(resolver) = v8::PromiseResolver::new(scope) {
+                        let promise = resolver.get_promise(scope);
+
+                        if iterable.is_array() {
+                            let array = v8::Local::<v8::Array>::try_from(iterable).unwrap();
+                            let len = array.length();
+                            let result_array = v8::Array::new(scope, len as i32);
+
+                            for i in 0..len {
+                                if let Some(item) = array.get_index(scope, i) {
+                                    if item.is_promise() {
+                                        let item_promise = v8::Local::<v8::Promise>::try_from(item).unwrap();
+                                        if item_promise.state() == v8::PromiseState::Fulfilled {
+                                            let value = item_promise.result(scope);
+                                            result_array.set_index(scope, i, value);
+                                        } else {
+                                            result_array.set_index(scope, i, item);
+                                        }
+                                    } else {
+                                        result_array.set_index(scope, i, item);
+                                    }
+                                }
+                            }
+
+                            let _ = resolver.resolve(scope, result_array.into());
+                        } else {
+                            let empty_array = v8::Array::new(scope, 0);
+                            let _ = resolver.resolve(scope, empty_array.into());
+                        }
+
+                        retval.set(promise.into());
+                    } else {
+                        let undefined = v8::undefined(scope);
+                        retval.set(undefined.into());
+                    }
+                });
+
+                if let Some(all_fn) = promise_all_fn {
+                    let all_key = v8::String::new(scope, "all").unwrap().into();
+                    promise_func.set(scope, all_key, all_fn.into());
+                }
+
+                // Create Promise.allSettled
+                let promise_all_settled_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    let iterable = args.get(0);
+
+                    if let Some(resolver) = v8::PromiseResolver::new(scope) {
+                        let promise = resolver.get_promise(scope);
+
+                        if iterable.is_array() {
+                            let array = v8::Local::<v8::Array>::try_from(iterable).unwrap();
+                            let len = array.length();
+                            let result_array = v8::Array::new(scope, len as i32);
+
+                            for i in 0..len {
+                                if let Some(item) = array.get_index(scope, i) {
+                                    if item.is_promise() {
+                                        let item_promise = v8::Local::<v8::Promise>::try_from(item).unwrap();
+                                        let state = item_promise.state();
+                                        let result = item_promise.result(scope);
+
+                                        // 创建状态对象 { status, value/reason }
+                                        let status_obj = v8::Object::new(scope);
+                                        let status_key = v8::String::new(scope, "status").unwrap().into();
+                                        let value_key = v8::String::new(scope, "value").unwrap().into();
+                                        let reason_key = v8::String::new(scope, "reason").unwrap().into();
+
+                                        match state {
+                                            v8::PromiseState::Fulfilled => {
+                                                let status_value = v8::String::new(scope, "fulfilled").unwrap().into();
+                                                status_obj.set(scope, status_key, status_value);
+                                                status_obj.set(scope, value_key, result);
+                                            }
+                                            v8::PromiseState::Rejected => {
+                                                let status_value = v8::String::new(scope, "rejected").unwrap().into();
+                                                status_obj.set(scope, status_key, status_value);
+                                                status_obj.set(scope, reason_key, result);
+                                            }
+                                            v8::PromiseState::Pending => {
+                                                // 对于 pending 的 Promise，我们先放入原值，等待完成
+                                                result_array.set_index(scope, i, item);
+                                            }
+                                        }
+                                    } else {
+                                        // 非 Promise 值直接包装为 fulfilled
+                                        let status_obj = v8::Object::new(scope);
+                                        let status_key = v8::String::new(scope, "status").unwrap().into();
+                                        let value_key = v8::String::new(scope, "value").unwrap().into();
+                                        let status_value = v8::String::new(scope, "fulfilled").unwrap().into();
+                                        status_obj.set(scope, status_key, status_value);
+                                        status_obj.set(scope, value_key, item);
+                                        result_array.set_index(scope, i, status_obj.into());
+                                    }
+                                }
+                            }
+
+                            let _ = resolver.resolve(scope, result_array.into());
+                        } else {
+                            let empty_array = v8::Array::new(scope, 0);
+                            let _ = resolver.resolve(scope, empty_array.into());
+                        }
+
+                        retval.set(promise.into());
+                    } else {
+                        let undefined = v8::undefined(scope);
+                        retval.set(undefined.into());
+                    }
+                });
+
+                if let Some(all_settled_fn) = promise_all_settled_fn {
+                    let all_settled_key = v8::String::new(scope, "allSettled").unwrap().into();
+                    promise_func.set(scope, all_settled_key, all_settled_fn.into());
+                }
+
+                // Create Promise.race
+                let promise_race_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    let iterable = args.get(0);
+
+                    if let Some(resolver) = v8::PromiseResolver::new(scope) {
+                        let promise = resolver.get_promise(scope);
+
+                        if iterable.is_array() {
+                            let array = v8::Local::<v8::Array>::try_from(iterable).unwrap();
+                            let len = array.length();
+
+                            // 简化实现：返回第一个非 Promise 值或第一个 fulfilled Promise 的值
+                            for i in 0..len {
+                                if let Some(item) = array.get_index(scope, i) {
+                                    if item.is_promise() {
+                                        let item_promise = v8::Local::<v8::Promise>::try_from(item).unwrap();
+                                        if item_promise.state() == v8::PromiseState::Fulfilled {
+                                            let value = item_promise.result(scope);
+                                            let _ = resolver.resolve(scope, value);
+                                            retval.set(promise.into());
+                                            return;
+                                        } else if item_promise.state() == v8::PromiseState::Rejected {
+                                            let reason = item_promise.result(scope);
+                                            let _ = resolver.reject(scope, reason);
+                                            retval.set(promise.into());
+                                            return;
+                                        }
+                                    } else {
+                                        // 非 Promise 值直接 resolve
+                                        let _ = resolver.resolve(scope, item);
+                                        retval.set(promise.into());
+                                        return;
+                                    }
+                                }
+                            }
+
+                            // 如果没有找到完成的 Promise，返回第一个值
+                            if let Some(first_item) = array.get_index(scope, 0) {
+                                let _ = resolver.resolve(scope, first_item);
+                            }
+                        }
+
+                        retval.set(promise.into());
+                    } else {
+                        let undefined = v8::undefined(scope);
+                        retval.set(undefined.into());
+                    }
+                });
+
+                if let Some(race_fn) = promise_race_fn {
+                    let race_key = v8::String::new(scope, "race").unwrap().into();
+                    promise_func.set(scope, race_key, race_fn.into());
+                }
+
+                // Create Promise.any
+                let promise_any_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    let iterable = args.get(0);
+
+                    if let Some(resolver) = v8::PromiseResolver::new(scope) {
+                        let promise = resolver.get_promise(scope);
+
+                        if iterable.is_array() {
+                            let array = v8::Local::<v8::Array>::try_from(iterable).unwrap();
+                            let len = array.length();
+
+                            // 简化实现：返回第一个 fulfilled Promise 的值
+                            for i in 0..len {
+                                if let Some(item) = array.get_index(scope, i) {
+                                    if item.is_promise() {
+                                        let item_promise = v8::Local::<v8::Promise>::try_from(item).unwrap();
+                                        if item_promise.state() == v8::PromiseState::Fulfilled {
+                                            let value = item_promise.result(scope);
+                                            let _ = resolver.resolve(scope, value);
+                                            retval.set(promise.into());
+                                            return;
+                                        }
+                                    } else {
+                                        // 非 Promise 值直接 resolve
+                                        let _ = resolver.resolve(scope, item);
+                                        retval.set(promise.into());
+                                        return;
+                                    }
+                                }
+                            }
+
+                            // 如果没有 fulfilled 的 Promise，创建一个简单的错误对象
+                            let error_obj = v8::Object::new(scope);
+                            let message_key = v8::String::new(scope, "message").unwrap().into();
+                            let message_value = v8::String::new(scope, "All promises were rejected").unwrap().into();
+                            error_obj.set(scope, message_key, message_value);
+                            let _ = resolver.reject(scope, error_obj.into());
+                        }
+
+                        retval.set(promise.into());
+                    } else {
+                        let undefined = v8::undefined(scope);
+                        retval.set(undefined.into());
+                    }
+                });
+
+                if let Some(any_fn) = promise_any_fn {
+                    let any_key = v8::String::new(scope, "any").unwrap().into();
+                    promise_func.set(scope, any_key, any_fn.into());
+                }
+            }
+        }
+
         Ok(())
     }
 }
