@@ -4,6 +4,7 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::sync::atomic::{AtomicU64, Ordering};
+use url::{Url, ParseError};
 
 /// A minimal runtime that only provides basic JavaScript execution
 /// This version avoids complex dependencies for faster startup
@@ -375,32 +376,105 @@ impl MinimalRuntime {
         let buffer_key = v8::String::new(scope, "Buffer").unwrap().into();
         global.set(scope, buffer_key, buffer_fn.into());
 
-        // Set up global URL object (simplified)
+        // Set up global URL object (full implementation)
         let url_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let url_obj = v8::Object::new(scope);
+
             if args.length() >= 1 {
                 let url_string = args.get(0);
-                if let Some(url_str) = url_string.to_string(scope) {
-                    let rust_url = url_str.to_rust_string_lossy(scope);
-                    let url_obj = v8::Object::new(scope);
+                let base_url = if args.length() >= 2 {
+                    Some(args.get(1))
+                } else {
+                    None
+                };
 
-                    // Add href property
-                    let href_key = v8::String::new(scope, "href").unwrap().into();
-                    url_obj.set(scope, href_key, url_str.into());
+                // Parse URL using Rust url crate
+                let rust_url_str = url_string.to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_default();
 
-                    // Add protocol (simple parsing)
-                    let protocol_key = v8::String::new(scope, "protocol").unwrap().into();
-                    let protocol_val = if rust_url.starts_with("https://") {
-                        v8::String::new(scope, "https:").unwrap()
-                    } else if rust_url.starts_with("http://") {
-                        v8::String::new(scope, "http:").unwrap()
+                let base_url_str = if let Some(base) = base_url {
+                    if !base.is_undefined() && !base.is_null() {
+                        base.to_string(scope)
+                            .map(|s| s.to_rust_string_lossy(scope))
                     } else {
-                        v8::String::new(scope, "unknown:").unwrap()
-                    };
-                    url_obj.set(scope, protocol_key, protocol_val.into());
+                        None
+                    }
+                } else {
+                    None
+                };
 
-                    retval.set(url_obj.into());
+                // Parse the URL
+                match Url::parse(&rust_url_str) {
+                    Ok(parsed_url) => {
+                        // Handle relative URLs
+                        let final_url = if let Some(base) = base_url_str {
+                            if let Ok(_base_parsed) = Url::parse(&base) {
+                                parsed_url.join(&rust_url_str).unwrap_or(parsed_url)
+                            } else {
+                                parsed_url
+                            }
+                        } else {
+                            parsed_url
+                        };
+
+                        // Set all URL properties
+                        let href = v8::String::new(scope, final_url.as_str()).unwrap().into();
+                        let href_key = v8::String::new(scope, "href").unwrap().into();
+                        url_obj.set(scope, href_key, href);
+
+                        let protocol = v8::String::new(scope, &final_url.scheme()).unwrap().into();
+                        let protocol_key = v8::String::new(scope, "protocol").unwrap().into();
+                        url_obj.set(scope, protocol_key, protocol);
+
+                        let host = v8::String::new(scope, final_url.host_str().unwrap_or("")).unwrap().into();
+                        let host_key = v8::String::new(scope, "host").unwrap().into();
+                        url_obj.set(scope, host_key, host);
+
+                        let hostname = v8::String::new(scope, final_url.host_str().unwrap_or("")).unwrap().into();
+                        let hostname_key = v8::String::new(scope, "hostname").unwrap().into();
+                        url_obj.set(scope, hostname_key, hostname);
+
+                        let port = v8::String::new(scope, &final_url.port().map_or("".to_string(), |p| p.to_string())).unwrap().into();
+                        let port_key = v8::String::new(scope, "port").unwrap().into();
+                        url_obj.set(scope, port_key, port);
+
+                        let pathname = v8::String::new(scope, final_url.path()).unwrap().into();
+                        let pathname_key = v8::String::new(scope, "pathname").unwrap().into();
+                        url_obj.set(scope, pathname_key, pathname);
+
+                        let search_str = final_url.query().map(|q| {
+                            if q.is_empty() { "".to_string() } else { format!("?{}", q) }
+                        }).unwrap_or_else(|| "".to_string());
+                        let search = v8::String::new(scope, &search_str).unwrap().into();
+                        let search_key = v8::String::new(scope, "search").unwrap().into();
+                        url_obj.set(scope, search_key, search);
+
+                        let hash_str = final_url.fragment().map(|h| {
+                            if h.is_empty() { "".to_string() } else { format!("#{}", h) }
+                        }).unwrap_or_else(|| "".to_string());
+                        let hash = v8::String::new(scope, &hash_str).unwrap().into();
+                        let hash_key = v8::String::new(scope, "hash").unwrap().into();
+                        url_obj.set(scope, hash_key, hash);
+
+                        let origin_str = final_url.host().map(|h| h.to_string()).unwrap_or_else(|| final_url.scheme().to_string());
+                        let origin = v8::String::new(scope, &format!("{}://{}", final_url.scheme(), origin_str)).unwrap().into();
+                        let origin_key = v8::String::new(scope, "origin").unwrap().into();
+                        url_obj.set(scope, origin_key, origin);
+
+                        // Add searchParams property (simplified)
+                        let search_params_obj = v8::Object::new(scope);
+
+                        let search_params_key = v8::String::new(scope, "searchParams").unwrap().into();
+                        url_obj.set(scope, search_params_key, search_params_obj.into());
+                    }
+                    Err(_) => {
+                        // Return empty object on parse error
+                    }
                 }
             }
+
+            retval.set(url_obj.into());
         }).ok_or_else(|| anyhow::anyhow!("Failed to create URL function"))?;
         let url_key = v8::String::new(scope, "URL").unwrap().into();
         global.set(scope, url_key, url_fn.into());
