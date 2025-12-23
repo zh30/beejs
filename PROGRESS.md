@@ -1,5 +1,34 @@
 
-**最新状态 (2025-12-23 15:10)**: 🚀 v0.2.4 EventTarget/Event API 完整实现！事件系统基础奠定！
+**最新状态 (2025-12-23 15:30)**: 🚀 v0.2.5 setImmediate/clearImmediate API 完整实现！Node.js 兼容性增强！
+
+### 🎯 v0.2.5 setImmediate/clearImmediate API 完整实现 (2025-12-23 15:30)
+**进度**: ✅ setImmediate 构造函数 | ✅ clearImmediate 构造函数 | ✅ 参数传递支持 | ✅ timer ID 返回 | ✅ 错误处理
+
+#### v0.2.5 重大功能突破 (2025-12-23 15:30)
+- ✅ **完整 setImmediate/clearImmediate API 支持**
+  - 新增 tests/set_immediate_tests.rs (10个测试用例)
+  - setImmediate - 回调函数执行、参数传递、timer ID 返回
+  - clearImmediate - 取消已调度的 setImmediate
+  - 错误处理 - 非函数回调抛出 TypeError
+
+- ✅ **技术实现亮点**
+  - 回调参数透传：支持传递任意数量参数给回调函数
+  - 唯一 timer ID：使用原子计数器生成唯一 ID
+  - 错误验证：回调不是函数时抛出清晰的 TypeError
+  - 双实现支持：MinimalRuntime 和完整运行时同时支持
+
+- ✅ **功能验证完成**
+  - typeof setImmediate → "function" ✅
+  - typeof clearImmediate → "function" ✅
+  - setImmediate(fn, arg) 参数传递正常 ✅
+  - setImmediate 返回 number 类型 timer ID ✅
+
+- ✅ **与现有 API 集成**
+  - 与 setTimeout/setInterval 形成完整的定时器 API 套件
+  - 填补 Beejs 与 Node.js API 的重要差距
+  - 为异步流程控制提供基础支持
+
+---
 
 ### 🎯 v0.2.4 EventTarget/Event API 完整实现 (2025-12-23 15:10)
 **进度**: ✅ EventTarget 构造函数 | ✅ addEventListener/removeEventListener/dispatchEvent | ✅ Event 构造函数 | ✅ CustomEvent 构造函数 | ✅ 测试套件

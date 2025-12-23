@@ -58,6 +58,19 @@ pub fn setup_timer_api(
     let queue_microtask_func: _ = queue_microtask_template.get_function(scope).unwrap();
     let queue_microtask_key: _ = v8::String::new(scope, "queueMicrotask").unwrap();
     global.set(scope, queue_microtask_key.into(), queue_microtask_func.into());
+
+    // Setup setImmediate (v0.2.5)
+    let set_immediate_template: _ = v8::FunctionTemplate::new(scope, set_immediate_callback);
+    let set_immediate_func: _ = set_immediate_template.get_function(scope).unwrap();
+    let set_immediate_key: _ = v8::String::new(scope, "setImmediate").unwrap();
+    global.set(scope, set_immediate_key.into(), set_immediate_func.into());
+
+    // Setup clearImmediate (v0.2.5)
+    let clear_immediate_template: _ = v8::FunctionTemplate::new(scope, clear_immediate_callback);
+    let clear_immediate_func: _ = clear_immediate_template.get_function(scope).unwrap();
+    let clear_immediate_key: _ = v8::String::new(scope, "clearImmediate").unwrap();
+    global.set(scope, clear_immediate_key.into(), clear_immediate_func.into());
+
     Ok(())
 }
 /// setTimeout callback
@@ -171,6 +184,56 @@ fn queue_microtask_callback(
     let callback_func: _ = v8::Local::<v8::Function>::try_from(callback).unwrap();
     let undefined: _ = v8::undefined(scope);
     let _: _ = callback_func.call(scope, undefined.into(), &[]);
+}
+
+/// setImmediate callback - schedules callback to run in next iteration of event loop
+/// v0.2.5: Implementation for Node.js compatibility
+fn set_immediate_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let timer_id: _ = next_timer_id();
+
+    // Get callback function
+    let callback: _ = args.get(0);
+    if !callback.is_function() {
+        let error: _ = v8::String::new(scope, "setImmediate: callback must be a function").unwrap();
+        let error_obj: _ = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
+    // Collect any additional arguments to pass to the callback
+    let callback_args: Vec<v8::Local<v8::Value>> = (1..args.length())
+        .map(|i| args.get(i))
+        .collect();
+
+    // Execute callback immediately (simplified implementation)
+    // In a full async runtime, this would be scheduled for the next event loop iteration
+    let callback_func: _ = v8::Local::<v8::Function>::try_from(callback).unwrap();
+    let undefined: _ = v8::undefined(scope);
+    let _: _ = callback_func.call(scope, undefined.into(), &callback_args);
+
+    // Return timer ID
+    let timer_id_val: _ = v8::Number::new(scope, timer_id as f64);
+    retval.set(timer_id_val.into());
+}
+
+/// clearImmediate callback - cancels a scheduled setImmediate
+/// v0.2.5: Implementation for Node.js compatibility
+fn clear_immediate_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _retval: v8::ReturnValue,
+) {
+    let timer_id: _ = args.get(0)
+        .to_integer(scope)
+        .map(|i| i.value() as u64)
+        .unwrap_or(0);
+    if timer_id > 0 {
+        mark_timer_cleared(timer_id);
+    }
 }
 #[cfg(test)]
 mod tests {

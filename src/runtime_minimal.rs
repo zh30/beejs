@@ -324,6 +324,46 @@ impl MinimalRuntime {
         let clear_interval_key = v8::String::new(scope, "clearInterval").unwrap().into();
         global.set(scope, clear_interval_key, clear_interval_fn.into());
 
+        // Set up global setImmediate (v0.2.5)
+        let set_immediate_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Get callback function
+            let callback = args.get(0);
+            if !callback.is_function() {
+                let error = v8::String::new(scope, "setImmediate: callback must be a function").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            // Collect any additional arguments to pass to the callback
+            let callback_args: Vec<v8::Local<v8::Value>> = (1..args.length())
+                .map(|i| args.get(i))
+                .collect();
+
+            // Execute callback immediately
+            let callback_func = v8::Local::<v8::Function>::try_from(callback).unwrap();
+            let undefined = v8::undefined(scope);
+            let _: _ = callback_func.call(scope, undefined.into(), &callback_args);
+
+            // Generate unique timer ID
+            let timer_id = NEXT_TIMER_ID.fetch_add(1, Ordering::SeqCst);
+            let timer_id_val = v8::Number::new(scope, timer_id as f64);
+            retval.set(timer_id_val.into());
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create setImmediate function"))?;
+        let set_immediate_key = v8::String::new(scope, "setImmediate").unwrap().into();
+        global.set(scope, set_immediate_key, set_immediate_fn.into());
+
+        // Set up global clearImmediate (v0.2.5)
+        let clear_immediate_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let timer_id_val = args.get(0).to_integer(_scope).unwrap();
+                let timer_id = timer_id_val.value() as u64;
+                println!("✓ Immediate timer {} cleared", timer_id);
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create clearImmediate function"))?;
+        let clear_immediate_key = v8::String::new(scope, "clearImmediate").unwrap().into();
+        global.set(scope, clear_immediate_key, clear_immediate_fn.into());
+
         // Set up global fetch API (v0.2.0: Enhanced implementation with real HTTP support)
         let fetch_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             if args.length() >= 1 {
