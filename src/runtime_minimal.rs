@@ -1561,7 +1561,7 @@ impl MinimalRuntime {
                 ws_obj.set(scope, send_key, send_fn.into());
 
                 // Create close method
-                let close_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _rv: v8::ReturnValue| {
+                let close_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
                     // Update readyState to CLOSING (2) then would be CLOSED (3)
                     println!("[WebSocket] Connection closing...");
                 }).ok_or_else(|| anyhow::anyhow!("Failed to create WebSocket.close function")).unwrap();
@@ -1569,7 +1569,6 @@ impl MinimalRuntime {
                 ws_obj.set(scope, close_key, close_fn.into());
 
                 // Simulate async connection open
-                let timeout_val = v8::Number::new(scope, 100.0);
                 retval.set(ws_obj.into());
 
                 println!("[WebSocket] Created connection to: {}", url_string);
@@ -1938,7 +1937,7 @@ impl MinimalRuntime {
             let listeners_key = v8::String::new(scope, &event_type_str).unwrap().into();
             let listeners_val = events_obj.get(scope, listeners_key);
 
-            let mut listener_array = if let Some(val) = listeners_val {
+            let listener_array = if let Some(val) = listeners_val {
                 if val.is_array() {
                     v8::Local::<v8::Array>::try_from(val).unwrap()
                 } else {
@@ -1964,7 +1963,7 @@ impl MinimalRuntime {
         let remove_event_listener_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _retval: v8::ReturnValue| {
             let this = args.this();
             let event_type = args.get(0);
-            let listener = args.get(1);
+            let _listener = args.get(1);
 
             if !event_type.is_string() {
                 return;
@@ -1985,7 +1984,7 @@ impl MinimalRuntime {
                         if listeners_val.is_array() {
                             let listener_array = v8::Local::<v8::Array>::try_from(listeners_val).unwrap();
                             let len = listener_array.length();
-                            let mut new_array = v8::Array::new(scope, 0);
+                            let new_array = v8::Array::new(scope, 0);
                             let mut new_len = 0;
 
                             for i in 0..len {
@@ -2089,7 +2088,7 @@ impl MinimalRuntime {
             event_obj.set(scope, default_prevented_key, default_prevented_val.into());
 
             // Add preventDefault method
-            let prevent_default_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let prevent_default_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
                 let this = args.this();
                 let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap().into();
                 let true_val = v8::Boolean::new(scope, true);
@@ -2099,7 +2098,7 @@ impl MinimalRuntime {
             event_obj.set(scope, prevent_default_key, prevent_default_fn.into());
 
             // Add stopPropagation method
-            let stop_propagation_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut _retval: v8::ReturnValue| {
+            let stop_propagation_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
                 // Simple stopPropagation - sets a flag
                 // In full implementation, this would prevent event bubbling
             }).ok_or_else(|| anyhow::anyhow!("Failed to create stopPropagation function")).unwrap();
@@ -2147,7 +2146,7 @@ impl MinimalRuntime {
             event_obj.set(scope, cancelable_key, cancelable_val.into());
 
             // Add preventDefault method
-            let prevent_default_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let prevent_default_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
                 let this = args.this();
                 let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap().into();
                 let true_val = v8::Boolean::new(scope, true);
