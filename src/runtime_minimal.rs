@@ -27,11 +27,6 @@ impl MinimalRuntime {
         Ok(Self { isolate })
     }
 
-    /// Generate a unique timer ID
-    fn generate_timer_id() -> u64 {
-        NEXT_TIMER_ID.fetch_add(1, Ordering::SeqCst)
-    }
-
     /// Transpile TypeScript to JavaScript by removing type annotations
     fn transpile_typescript_to_js(code: &str) -> Result<String> {
         let mut js_code = code.to_string();
@@ -952,6 +947,44 @@ impl MinimalRuntime {
         }).ok_or_else(|| anyhow::anyhow!("Failed to create atob function"))?;
         let atob_key = v8::String::new(scope, "atob").unwrap().into();
         global.set(scope, atob_key, atob_fn.into());
+
+        // Set up global crypto object
+        let crypto_obj = v8::Object::new(scope);
+
+        // Add crypto.getRandomValues
+        let get_random_values_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                // For now, return the array as-is (mock implementation)
+                // In a full implementation, this would fill the array with random values
+                let array = args.get(0);
+                retval.set(array);
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create getRandomValues function"))?;
+        let get_random_values_key = v8::String::new(scope, "getRandomValues").unwrap().into();
+        crypto_obj.set(scope, get_random_values_key, get_random_values_fn.into());
+
+        // Add crypto.randomUUID
+        let random_uuid_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Generate a simple UUID-like string
+            let uuid = format!("{}-4{}-{}{}-{}",
+                uuid::Uuid::new_v4().simple(),
+                "a", // version 4
+                "8b9f", // variant
+                "d", // variant
+                uuid::Uuid::new_v4().simple());
+            let uuid_str = v8::String::new(_scope, &uuid).unwrap();
+            retval.set(uuid_str.into());
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create randomUUID function"))?;
+        let random_uuid_key = v8::String::new(scope, "randomUUID").unwrap().into();
+        crypto_obj.set(scope, random_uuid_key, random_uuid_fn.into());
+
+        // Add crypto.subtle for WebCrypto API (simplified)
+        let subtle_obj = v8::Object::new(scope);
+        let subtle_key = v8::String::new(scope, "subtle").unwrap().into();
+        crypto_obj.set(scope, subtle_key, subtle_obj.into());
+
+        let crypto_key = v8::String::new(scope, "crypto").unwrap().into();
+        global.set(scope, crypto_key, crypto_obj.into());
 
         Ok(())
     }

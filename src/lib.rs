@@ -384,7 +384,7 @@ impl Default for PerformanceConfig {
 /// 主要的 Beejs 运行时
 pub struct Runtime {
     config: PerformanceConfig,
-    verbose: bool,
+    _verbose: bool,
 }
 impl Runtime {
     /// 创建新的运行时实例
@@ -396,7 +396,7 @@ impl Runtime {
                 enable_optimization,
                 performance_monitoring: true,
             },
-            verbose,
+            _verbose: verbose,
         }
     }
     /// 创建默认配置的运行时
@@ -494,7 +494,7 @@ pub fn run_performance_suite() -> Result<(), Box<dyn std::error::Error>> {
 
 /// 生成性能报告 (Temporarily disabled - automation module disabled)
 pub fn generate_performance_report(
-    results: &[()],
+    _results: &[()],
     format: &str,
 ) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
     // Temporarily disabled due to automation module compilation issues

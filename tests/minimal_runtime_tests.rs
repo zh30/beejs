@@ -433,6 +433,39 @@ mod minimal_runtime_tests {
         assert_eq!(result.unwrap(), "object");
     }
 
+    #[test]
+    fn test_http_fetch() {
+        let mut runtime = TestRuntime::new();
+        runtime.initialize().unwrap();
+
+        // Test basic fetch call
+        let result = runtime.execute("fetch('https://example.com')");
+        assert!(result.is_ok());
+        // Should return a response object
+    }
+
+    #[test]
+    fn test_http_fetch_api_available() {
+        let mut runtime = TestRuntime::new();
+        runtime.initialize().unwrap();
+
+        // Test that fetch function exists
+        let result = runtime.execute("typeof fetch");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "function");
+    }
+
+    #[test]
+    fn test_crypto_api_available() {
+        let mut runtime = TestRuntime::new();
+        runtime.initialize().unwrap();
+
+        // Test that crypto object exists
+        let result = runtime.execute("typeof crypto");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "object");
+    }
+
     // TODO: 扩展测试用例
     // - 测试内存管理
     // - 测试垃圾回收
