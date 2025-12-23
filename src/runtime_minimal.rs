@@ -4,7 +4,7 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::sync::atomic::{AtomicU64, Ordering};
-use url::{Url, ParseError};
+use url::Url;
 
 /// A minimal runtime that only provides basic JavaScript execution
 /// This version avoids complex dependencies for faster startup
