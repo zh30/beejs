@@ -1,7 +1,7 @@
 
 
 
-**最新状态 (2025-12-23)**: 🚀 v0.3.2 增强！__dirname 和 __filename 全局变量支持！
+**最新状态 (2025-12-24)**: 🚀 v0.3.3 模块系统编译修复！8/8 测试通过！零编译错误！
 
 ### 🎯 v0.3.2 CommonJS 全局变量 (2025-12-23)
 **进度**: ✅ __dirname | ✅ __filename | ✅ globalThis 兼容性 | ✅ 测试覆盖
@@ -2455,4 +2455,37 @@ fetch('https://httpbin.org/json').json()  // 返回: 实际 JSON 数据
 **v0.1.4 状态**: 🎉 异步功能完善，Web API 增强！
 **版本**: v0.1.4 (异步功能完善 + process Web API + 18/18测试通过!)
 **目标**: 超越 Bun 的高性能 JavaScript/TypeScript 运行时
+
+---
+
+### 🎯 v0.3.3 模块系统编译修复 (2025-12-24)
+**进度**: ✅ 修复编译错误 | ✅ runtime_minimal.rs 清理 | ✅ 8/8 测试通过
+
+#### v0.3.3 问题修复
+- ✅ **修复 runtime_minimal.rs 编译错误**
+  - 问题: `setup_module_system` 函数被调用但未定义
+  - 原因: 函数实现被移除但调用点未同步更新
+  - 解决: 移除 `runtime_minimal.rs` 中的 `setup_module_system` 调用
+  - 说明: `runtime_minimal.rs` 是轻量级运行时，完整模块系统在 `nodejs.rs` 中
+
+#### v0.3.3 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (-2 行)
+  - 移除第 156-157 行的 `setup_module_system` 调用
+  - 保持轻量级运行时设计
+
+#### v0.3.3 验证结果
+- ✅ `cargo check` 通过
+- ✅ `cargo test --lib` 通过 (8/8 测试)
+- ✅ `beejs eval "console.log('Hello from Beejs!')"` 正常工作
+
+#### 当前状态
+- **编译状态**: ✅ 零错误 (仅 4 个警告)
+- **测试覆盖**: ✅ 8/8 测试通过
+- **二进制运行**: ✅ 正常工作
+
+#### 下一步计划
+1. ✅ 修复模块系统编译错误
+2. 🔄 考虑是否需要为 runtime_minimal 添加简化版模块支持
+3. 🔄 性能优化
+4. 🔄 添加更多内置模块 (fs, crypto 等)
 
