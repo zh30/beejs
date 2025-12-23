@@ -2160,6 +2160,12 @@ impl MinimalRuntime {
         let custom_event_key = v8::String::new(scope, "CustomEvent").unwrap().into();
         global.set(scope, custom_event_key, custom_event_fn.into());
 
+        // Set up globalThis for ES2020 compatibility
+        // In V8, globalThis should already point to the global object,
+        // but we explicitly set it for clarity and compatibility
+        let global_this_key = v8::String::new(scope, "globalThis").unwrap().into();
+        global.set(scope, global_this_key, global.into());
+
         Ok(())
     }
 }
