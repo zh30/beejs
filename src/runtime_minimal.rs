@@ -699,6 +699,197 @@ impl MinimalRuntime {
         // Also set it on the Date function itself
         date_fn.set(scope, now_key, now_fn.into());
 
+        // Set up global fs (filesystem) object
+        let fs_obj = v8::Object::new(scope);
+
+        // Add fs.readFile
+        let readfile_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                if let Some(path_val) = args.get(0).to_string(scope) {
+                    let path = path_val.to_rust_string_lossy(scope);
+                    match std::fs::read_to_string(&path) {
+                        Ok(contents) => {
+                            let contents_val = v8::String::new(scope, &contents).unwrap();
+                            retval.set(contents_val.into());
+                        }
+                        Err(e) => {
+                            let error_msg = format!("Error reading file: {}", e);
+                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                            retval.set(error_val.into());
+                        }
+                    }
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create fs.readFile function"))?;
+        let readfile_key = v8::String::new(scope, "readFile").unwrap().into();
+        fs_obj.set(scope, readfile_key, readfile_fn.into());
+
+        // Add fs.writeFile
+        let writefile_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 2 {
+                if let (Some(path_val), Some(data_val)) = (args.get(0).to_string(scope), args.get(1).to_string(scope)) {
+                    let path = path_val.to_rust_string_lossy(scope);
+                    let data = data_val.to_rust_string_lossy(scope);
+                    match std::fs::write(&path, data) {
+                        Ok(_) => {
+                            let success_val = v8::String::new(scope, "File written successfully").unwrap();
+                            retval.set(success_val.into());
+                        }
+                        Err(e) => {
+                            let error_msg = format!("Error writing file: {}", e);
+                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                            retval.set(error_val.into());
+                        }
+                    }
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create fs.writeFile function"))?;
+        let writefile_key = v8::String::new(scope, "writeFile").unwrap().into();
+        fs_obj.set(scope, writefile_key, writefile_fn.into());
+
+        // Add fs.exists
+        let exists_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                if let Some(path_val) = args.get(0).to_string(scope) {
+                    let path = path_val.to_rust_string_lossy(scope);
+                    let exists = std::path::Path::new(&path).exists();
+                    let exists_val = v8::Boolean::new(scope, exists);
+                    retval.set(exists_val.into());
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create fs.exists function"))?;
+        let exists_key = v8::String::new(scope, "exists").unwrap().into();
+        fs_obj.set(scope, exists_key, exists_fn.into());
+
+        // Add fs.mkdir
+        let mkdir_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                if let Some(path_val) = args.get(0).to_string(scope) {
+                    let path = path_val.to_rust_string_lossy(scope);
+                    match std::fs::create_dir_all(&path) {
+                        Ok(_) => {
+                            let success_val = v8::String::new(scope, "Directory created").unwrap();
+                            retval.set(success_val.into());
+                        }
+                        Err(e) => {
+                            let error_msg = format!("Error creating directory: {}", e);
+                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                            retval.set(error_val.into());
+                        }
+                    }
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create fs.mkdir function"))?;
+        let mkdir_key = v8::String::new(scope, "mkdir").unwrap().into();
+        fs_obj.set(scope, mkdir_key, mkdir_fn.into());
+
+        // Add fs.readdir
+        let readdir_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                if let Some(path_val) = args.get(0).to_string(scope) {
+                    let path = path_val.to_rust_string_lossy(scope);
+                    match std::fs::read_dir(&path) {
+                        Ok(entries) => {
+                            let mut file_names = Vec::new();
+                            for entry in entries {
+                                if let Ok(entry) = entry {
+                                    if let Ok(file_name) = entry.file_name().into_string() {
+                                        file_names.push(file_name);
+                                    }
+                                }
+                            }
+                            // Create JavaScript array
+                            let js_array = v8::Array::new(scope, file_names.len() as i32);
+                            for (i, name) in file_names.iter().enumerate() {
+                                let name_val = v8::String::new(scope, name).unwrap();
+                                js_array.set_index(scope, i as u32, name_val.into());
+                            }
+                            retval.set(js_array.into());
+                        }
+                        Err(e) => {
+                            let error_msg = format!("Error reading directory: {}", e);
+                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                            retval.set(error_val.into());
+                        }
+                    }
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create fs.readdir function"))?;
+        let readdir_key = v8::String::new(scope, "readdir").unwrap().into();
+        fs_obj.set(scope, readdir_key, readdir_fn.into());
+
+        // Add fs.unlink
+        let unlink_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                if let Some(path_val) = args.get(0).to_string(scope) {
+                    let path = path_val.to_rust_string_lossy(scope);
+                    match std::fs::remove_file(&path) {
+                        Ok(_) => {
+                            let success_val = v8::String::new(scope, "File deleted").unwrap();
+                            retval.set(success_val.into());
+                        }
+                        Err(e) => {
+                            let error_msg = format!("Error deleting file: {}", e);
+                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                            retval.set(error_val.into());
+                        }
+                    }
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create fs.unlink function"))?;
+        let unlink_key = v8::String::new(scope, "unlink").unwrap().into();
+        fs_obj.set(scope, unlink_key, unlink_fn.into());
+
+        // Add fs.stat
+        let stat_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                if let Some(path_val) = args.get(0).to_string(scope) {
+                    let path = path_val.to_rust_string_lossy(scope);
+                    match std::fs::metadata(&path) {
+                        Ok(metadata) => {
+                            let stats_obj = v8::Object::new(scope);
+
+                            // Add file size
+                            let size_key = v8::String::new(scope, "size").unwrap().into();
+                            let size_val = v8::Number::new(scope, metadata.len() as f64);
+                            stats_obj.set(scope, size_key, size_val.into());
+
+                            // Add is file
+                            let is_file_key = v8::String::new(scope, "isFile").unwrap().into();
+                            let is_file_val = v8::Boolean::new(scope, metadata.is_file());
+                            stats_obj.set(scope, is_file_key, is_file_val.into());
+
+                            // Add is directory
+                            let is_dir_key = v8::String::new(scope, "isDirectory").unwrap().into();
+                            let is_dir_val = v8::Boolean::new(scope, metadata.is_dir());
+                            stats_obj.set(scope, is_dir_key, is_dir_val.into());
+
+                            // Add modified time
+                            if let Ok(modified) = metadata.modified() {
+                                if let Ok(duration) = modified.duration_since(std::time::UNIX_EPOCH) {
+                                    let mtime_key = v8::String::new(scope, "mtime").unwrap().into();
+                                    let mtime_val = v8::Number::new(scope, duration.as_secs_f64());
+                                    stats_obj.set(scope, mtime_key, mtime_val.into());
+                                }
+                            }
+
+                            retval.set(stats_obj.into());
+                        }
+                        Err(e) => {
+                            let error_msg = format!("Error getting file stats: {}", e);
+                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                            retval.set(error_val.into());
+                        }
+                    }
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create fs.stat function"))?;
+        let stat_key = v8::String::new(scope, "stat").unwrap().into();
+        fs_obj.set(scope, stat_key, stat_fn.into());
+
+        let fs_key = v8::String::new(scope, "fs").unwrap().into();
+        global.set(scope, fs_key, fs_obj.into());
+
         // Set up global btoa/atob for base64 encoding/decoding
         let btoa_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             if args.length() >= 1 {
