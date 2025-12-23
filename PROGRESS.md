@@ -1,12 +1,50 @@
 
 
 
-**最新状态 (2025-12-24)**: 🚀 v0.3.3 模块系统编译修复！8/8 测试通过！零编译错误！
+**最新状态 (2025-12-24)**: 🚀 v0.3.4 fetch() 修复完成！6/6 测试通过！json()、text()、url 全部正常工作！
 
-### 🎯 v0.3.2 CommonJS 全局变量 (2025-12-23)
-**进度**: ✅ __dirname | ✅ __filename | ✅ globalThis 兼容性 | ✅ 测试覆盖
+### 🎯 v0.3.4 fetch() 修复 (2025-12-24)
+**进度**: ✅ response.json() | ✅ response.text() | ✅ response.url | ✅ V8 内部字段存储
 
-#### v0.3.2 核心改进
+#### v0.3.4 核心修复
+- ✅ **response.json() 返回真实数据**
+  - 使用 V8 ObjectTemplate 内部字段存储响应体
+  - 自动检测并美化格式化 JSON 响应
+  - 非 JSON 响应返回原始文本
+
+- ✅ **response.text() 返回真实数据**
+  - 从 V8 内部字段读取响应体
+  - 支持任意文本内容
+
+- ✅ **response.url 属性**
+  - 返回请求的原始 URL
+  - 正确显示在测试断言中
+
+#### v0.3.4 测试结果
+- `test_fetch_json_method_returns_real_data` ✅
+- `test_fetch_text_method_returns_real_data` ✅
+- `test_fetch_url_property` ✅
+- `test_fetch_ok_property` ✅
+- `test_fetch_with_invalid_url` ✅
+- `test_fetch_with_real_http` ✅
+
+#### v0.3.4 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+69 行)
+  - 使用 `ObjectTemplate::new()` 创建带内部字段的响应对象
+  - `response_obj.set_internal_field(0, body_str.into())` 存储响应体
+  - `this_obj.get_internal_field(_scope, 0)` 在方法中读取
+
+- **修改文件**: `src/web_api/fetch.rs` (+99 行)
+  - 添加 `RESPONSE_CACHE` 静态变量
+  - 添加 `json_callback()` 函数解析并美化 JSON
+  - 添加 `text_callback()` 函数返回原始文本
+
+---
+
+### 🎯 v0.3.3 模块系统编译修复 (2025-12-24)
+**进度**: ✅ CommonJS 模块 | ✅ require() | ✅ module.exports | ✅ 编译零错误
+
+#### v0.3.3 核心改进
 - ✅ **__dirname 全局变量**
   - 返回当前模块所在目录的路径
   - 默认值: `/workspace`
