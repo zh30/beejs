@@ -4,26 +4,10 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
 use url::Url;
 use reqwest;
 use serde_json;
 use once_cell::sync::Lazy;
-
-/// Response cache for storing HTTP response data keyed by URL
-/// This allows json() and text() methods to access the actual response body
-static RESPONSE_CACHE: Lazy<Arc<Mutex<HashMap<String, CachedResponse>>>> =
-    Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
-
-/// Cached HTTP response data
-#[derive(Clone, Debug)]
-struct CachedResponse {
-    url: String,
-    status: u16,
-    body: String,
-    cached_at: std::time::SystemTime,
-}
 
 /// HTTP 客户端用于处理真实的 fetch 请求
 pub struct HttpClient {
@@ -407,7 +391,7 @@ impl MinimalRuntime {
         let clear_immediate_key = v8::String::new(scope, "clearImmediate").unwrap().into();
         global.set(scope, clear_immediate_key, clear_immediate_fn.into());
 
-        // Set up global fetch API (v0.3.1: Enhanced implementation with real HTTP response data)
+        // Set up global fetch API (v0.2.0: Enhanced implementation with real HTTP support)
         let fetch_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             if args.length() >= 1 {
                 let url = args.get(0);
@@ -417,33 +401,12 @@ impl MinimalRuntime {
                     "unknown".to_string()
                 };
 
-                // v0.3.1: Make a real HTTP request and cache the response
-                let (status, success, body) = match reqwest::blocking::get(&url_string) {
-                    Ok(response) => {
-                        let status = response.status().as_u16();
-                        let body = response.text().unwrap_or_else(|_| "".to_string());
-                        // Cache the response for json()/text() methods
-                        let cached = CachedResponse {
-                            url: url_string.clone(),
-                            status,
-                            body: body.clone(),
-                            cached_at: std::time::SystemTime::now(),
-                        };
-                        RESPONSE_CACHE.lock().unwrap().insert(url_string.clone(), cached);
-                        (status, true, body)
-                    }
+                // v0.2.0: Try to make a real HTTP request
+                let (status, success) = match reqwest::blocking::get(&url_string) {
+                    Ok(response) => (response.status().as_u16(), true),
                     Err(e) => {
                         println!("⚠️ HTTP request failed for {}: {}", url_string, e);
-                        let error_body = format!(r#"{{"error": "HTTP request failed", "message": "{}"}}"#, e);
-                        // Cache the error response
-                        let cached = CachedResponse {
-                            url: url_string.clone(),
-                            status: 404,
-                            body: error_body.clone(),
-                            cached_at: std::time::SystemTime::now(),
-                        };
-                        RESPONSE_CACHE.lock().unwrap().insert(url_string.clone(), cached);
-                        (404, false, error_body)
+                        (404, false)
                     }
                 };
 
@@ -460,55 +423,23 @@ impl MinimalRuntime {
                 let ok_val = v8::Boolean::new(scope, success && status >= 200 && status < 300);
                 response_obj.set(scope, ok_key, ok_val.into());
 
-                // Add url property
-                let url_key = v8::String::new(scope, "url").unwrap().into();
-                let url_val = v8::String::new(scope, &url_string).unwrap().into();
-                response_obj.set(scope, url_key, url_val);
-
-                // Clone url_string for use in closures (Rust closure capture)
-                let url_for_closure = url_string.clone();
-
-                // Add json method - now returns actual response data
-                let json_fn = v8::Function::new(scope, move |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                    // Look up the cached response
-                    let cache = RESPONSE_CACHE.lock().unwrap();
-                    if let Some(cached) = cache.get(&url_for_closure) {
-                        // Try to parse as JSON and pretty-print, or return as-is
-                        let result = if cached.body.trim_start().starts_with('{') || cached.body.trim_start().starts_with('[') {
-                            // Pretty-print JSON response
-                            let parsed: Result<serde_json::Value, _> = serde_json::from_str(&cached.body);
-                            match parsed {
-                                Ok(value) => serde_json::to_string_pretty(&value).unwrap_or(cached.body.clone()),
-                                Err(_) => cached.body.clone(),
-                            }
-                        } else {
-                            cached.body.clone()
-                        };
-                        let json_data = v8::String::new(_scope, &result).unwrap();
-                        retval.set(json_data.into());
-                    } else {
-                        let error = v8::String::new(_scope, r#"{"error": "Response not found in cache"}"#).unwrap();
-                        retval.set(error.into());
-                    }
+                // Add json method
+                let json_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    let json_data = v8::String::new(_scope, r#"{"message": "Enhanced fetch() v0.2.0", "url": "real HTTP supported"}"#).unwrap();
+                    retval.set(json_data.into());
                 }).ok_or_else(|| anyhow::anyhow!("Failed to create json function")).unwrap();
                 let json_key = v8::String::new(scope, "json").unwrap().into();
                 response_obj.set(scope, json_key, json_fn.into());
 
-                // Add text method - returns actual response body
-                let text_fn = v8::Function::new(scope, move |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                    let cache = RESPONSE_CACHE.lock().unwrap();
-                    if let Some(cached) = cache.get(&url_for_closure) {
-                        let text_data = v8::String::new(_scope, &cached.body).unwrap();
-                        retval.set(text_data.into());
-                    } else {
-                        let error = v8::String::new(_scope, "").unwrap();
-                        retval.set(error.into());
-                    }
+                // Add text method
+                let text_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    let text_data = v8::String::new(_scope, "Enhanced fetch response with real HTTP support").unwrap();
+                    retval.set(text_data.into());
                 }).ok_or_else(|| anyhow::anyhow!("Failed to create text function")).unwrap();
                 let text_key = v8::String::new(scope, "text").unwrap().into();
                 response_obj.set(scope, text_key, text_fn.into());
 
-                println!("🌐 fetch() called for URL: {} (status: {}, body_len: {})", url_string, status, body.len());
+                println!("🌐 fetch() called for URL: {} (status: {}, real HTTP: v0.2.0)", url_string, status);
 
                 retval.set(response_obj.into());
             }
@@ -1735,9 +1666,6 @@ impl MinimalRuntime {
         // Setup Promise API
         MinimalRuntime::setup_promise_api(scope, context)?;
 
-        // Setup Module System (require, module, exports) - v0.3.0
-        MinimalRuntime::setup_module_system(scope, context)?;
-
         Ok(())
     }
 
@@ -2656,363 +2584,6 @@ impl MinimalRuntime {
         // but we explicitly set it for clarity and compatibility
         let global_this_key = v8::String::new(scope, "globalThis").unwrap().into();
         global.set(scope, global_this_key, global.into());
-
-        Ok(())
-    }
-
-    /// Set up module system (require, module, exports) - v0.3.0
-    /// Implements CommonJS-style module loading for Node.js compatibility
-    /// v0.3.2: Added __dirname and __filename global variables
-    fn setup_module_system(scope: &mut v8::ContextScope<v8::HandleScope>, context: &v8::Context) -> Result<()> {
-        let global = context.global(scope);
-
-        // ==================== __dirname and __filename globals (v0.3.2) ====================
-        // These are CommonJS globals that provide the directory and file path of the current module
-        // For scripts executed without a file path, we provide sensible defaults
-
-        // Set up __dirname - the directory name of the current module
-        let dirname_value = v8::String::new(scope, "/workspace").unwrap().into();
-        let dirname_key = v8::String::new(scope, "__dirname").unwrap().into();
-        global.set(scope, dirname_key, dirname_value);
-
-        // Set up __filename - the absolute path of the current module file
-        let filename_value = v8::String::new(scope, "/workspace/script.js").unwrap().into();
-        let filename_key = v8::String::new(scope, "__filename").unwrap().into();
-        global.set(scope, filename_key, filename_value);
-
-        // Create module cache (shared across all requires)
-        // Note: In a full implementation, this would be stored in the runtime struct
-        let module_cache_key = v8::String::new(scope, "__beejs_module_cache__").unwrap().into();
-        let module_cache = v8::Object::new(scope);
-        global.set(scope, module_cache_key, module_cache.into());
-
-        // ==================== module object ====================
-        let module_obj = v8::Object::new(scope);
-
-        // module.id - unique identifier for this module
-        let module_id_val = v8::String::new(scope, "<beejs>").unwrap().into();
-        let module_id_key = v8::String::new(scope, "id").unwrap().into();
-        module_obj.set(scope, module_id_key, module_id_val);
-
-        // module.filename - filename of the module
-        let module_filename_val = v8::String::new(scope, "<beejs>").unwrap().into();
-        let module_filename_key = v8::String::new(scope, "filename").unwrap().into();
-        module_obj.set(scope, module_filename_key, module_filename_val);
-
-        // module.parent - parent module (null for main)
-        let module_parent_val = v8::null(scope).into();
-        let module_parent_key = v8::String::new(scope, "parent").unwrap().into();
-        module_obj.set(scope, module_parent_key, module_parent_val);
-
-        // module.children - array of child modules
-        let module_children_arr = v8::Array::new(scope, 0);
-        let module_children_key = v8::String::new(scope, "children").unwrap().into();
-        module_obj.set(scope, module_children_key, module_children_arr.into());
-
-        // module.loaded - whether the module has finished loading
-        let module_loaded_val = v8::Boolean::new(scope, false);
-        let module_loaded_key = v8::String::new(scope, "loaded").unwrap().into();
-        module_obj.set(scope, module_loaded_key, module_loaded_val.into());
-
-        // module.exports - the actual exports object (linked to global exports)
-        let exports_obj = v8::Object::new(scope);
-        let module_exports_key = v8::String::new(scope, "exports").unwrap().into();
-        module_obj.set(scope, module_exports_key, exports_obj.into());
-
-        // Add module.paths - array of paths to search for modules
-        let module_paths_arr = v8::Array::new(scope, 2);
-        let paths = vec!["node_modules", "."];
-        for (i, path) in paths.iter().enumerate() {
-            let path_val = v8::String::new(scope, path).unwrap();
-            module_paths_arr.set_index(scope, i as u32, path_val.into());
-        }
-        let module_paths_key = v8::String::new(scope, "paths").unwrap().into();
-        module_obj.set(scope, module_paths_key, module_paths_arr.into());
-
-        // Add module.require function
-        let require_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            if args.length() >= 1 {
-                let module_name = args.get(0);
-                if let Some(name_str) = module_name.to_string(scope) {
-                    let name = name_str.to_rust_string_lossy(scope);
-
-                    // Return appropriate module based on name
-                    let module_obj = v8::Object::new(scope);
-
-                    if name == "buffer" || name == "Buffer" {
-                        // Return Buffer object with static methods
-                        let buffer_key = v8::String::new(scope, "Buffer").unwrap().into();
-                        let global = context.global(scope);
-                        if let Some(buffer_val) = global.get(scope, buffer_key) {
-                            module_obj.set(scope, v8::String::new(scope, "Buffer").unwrap().into(), buffer_val);
-                        }
-                        // Add INSPECT_MAX_BYTES
-                        let inspect_max_bytes_key = v8::String::new(scope, "INSPECT_MAX_BYTES").unwrap().into();
-                        let inspect_max_bytes_val = v8::Integer::new(scope, 50);
-                        module_obj.set(scope, inspect_max_bytes_key, inspect_max_bytes_val.into());
-                        // Add kMaxLength
-                        let k_max_length_key = v8::String::new(scope, "kMaxLength").unwrap().into();
-                        let k_max_length_val = v8::Integer::new(scope, 2147483647);
-                        module_obj.set(scope, k_max_length_key, k_max_length_val.into());
-                        retval.set(module_obj.into());
-                    } else if name == "process" || name == "Process" {
-                        // Return process object with env and other properties
-                        let process_global_key = v8::String::new(scope, "process").unwrap().into();
-                        if let Some(process_val) = global.get(scope, process_global_key) {
-                            retval.set(process_val);
-                            return;
-                        }
-                    } else if name == "path" || name == "Path" {
-                        // Return path module with join, resolve, etc.
-                        let path_obj = v8::Object::new(scope);
-
-                        // path.join
-                        let join_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            let mut parts = Vec::new();
-                            for i in 0..args.length() {
-                                if let Some(s) = args.get(i).to_string(scope) {
-                                    parts.push(s.to_rust_string_lossy(scope));
-                                }
-                            }
-                            let result = parts.join("/");
-                            retval.set(v8::String::new(scope, &result).unwrap().into());
-                        }).map(|f| f.into());
-                        if let Some(fn_val) = join_fn {
-                            path_obj.set(scope, v8::String::new(scope, "join").unwrap().into(), fn_val);
-                        }
-
-                        // path.resolve
-                        let resolve_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            let mut parts = Vec::new();
-                            for i in 0..args.length() {
-                                if let Some(s) = args.get(i).to_string(scope) {
-                                    parts.push(s.to_rust_string_lossy(scope));
-                                }
-                            }
-                            let result = parts.join("/");
-                            retval.set(v8::String::new(scope, &result).unwrap().into());
-                        }).map(|f| f.into());
-                        if let Some(fn_val) = resolve_fn {
-                            path_obj.set(scope, v8::String::new(scope, "resolve").unwrap().into(), fn_val);
-                        }
-
-                        // path.dirname
-                        let dirname_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            let default_path = v8::String::new(scope, ".").unwrap();
-                            let path_str = args.get(0).to_string(scope).unwrap_or(default_path);
-                            let path = path_str.to_rust_string_lossy(scope);
-                            let result = std::path::Path::new(&path)
-                                .parent()
-                                .and_then(|p| p.to_str())
-                                .map(|s| s.to_string())
-                                .unwrap_or_else(|| ".".to_string());
-                            retval.set(v8::String::new(scope, &result).unwrap().into());
-                        }).map(|f| f.into());
-                        if let Some(fn_val) = dirname_fn {
-                            path_obj.set(scope, v8::String::new(scope, "dirname").unwrap().into(), fn_val);
-                        }
-
-                        // path.basename
-                        let basename_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            let default_path = v8::String::new(scope, ".").unwrap();
-                            let path_str = args.get(0).to_string(scope).unwrap_or(default_path);
-                            let path = path_str.to_rust_string_lossy(scope);
-                            let ext = if args.length() >= 2 {
-                                args.get(1).to_string(scope).map(|s| s.to_rust_string_lossy(scope))
-                            } else {
-                                None
-                            };
-                            let result = std::path::Path::new(&path)
-                                .file_name()
-                                .and_then(|n| n.to_str())
-                                .map(|s| {
-                                    if let Some(ext) = &ext {
-                                        if s.ends_with(ext) {
-                                            return &s[..s.len() - ext.len()];
-                                        }
-                                    }
-                                    s
-                                })
-                                .map(|s| s.to_string())
-                                .unwrap_or_else(|| ".".to_string());
-                            retval.set(v8::String::new(scope, &result).unwrap().into());
-                        }).map(|f| f.into());
-                        if let Some(fn_val) = basename_fn {
-                            path_obj.set(scope, v8::String::new(scope, "basename").unwrap().into(), fn_val);
-                        }
-
-                        // path.extname
-                        let extname_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            let default_path = v8::String::new(scope, "").unwrap();
-                            let path_str = args.get(0).to_string(scope).unwrap_or(default_path);
-                            let path = path_str.to_rust_string_lossy(scope);
-                            let result = std::path::Path::new(&path)
-                                .extension()
-                                .and_then(|e| e.to_str())
-                                .map(|s| format!(".{}", s))
-                                .unwrap_or_else(|| "".to_string());
-                            retval.set(v8::String::new(scope, &result).unwrap().into());
-                        }).map(|f| f.into());
-                        if let Some(fn_val) = extname_fn {
-                            path_obj.set(scope, v8::String::new(scope, "extname").unwrap().into(), fn_val);
-                        }
-
-                        // path.isAbsolute
-                        let is_absolute_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            let default_path = v8::String::new(scope, "").unwrap();
-                            let path_str = args.get(0).to_string(scope).unwrap_or(default_path);
-                            let path = path_str.to_rust_string_lossy(scope);
-                            let is_abs = std::path::Path::new(&path).is_absolute();
-                            retval.set(v8::Boolean::new(scope, is_abs).into());
-                        }).map(|f| f.into());
-                        if let Some(fn_val) = is_absolute_fn {
-                            path_obj.set(scope, v8::String::new(scope, "isAbsolute").unwrap().into(), fn_val);
-                        }
-
-                        // path.normalize
-                        let normalize_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            let default_path = v8::String::new(scope, ".").unwrap();
-                            let path_str = args.get(0).to_string(scope).unwrap_or(default_path);
-                            let path = path_str.to_rust_string_lossy(scope);
-                            let normalized = std::path::Path::new(&path)
-                                .to_string_lossy()
-                                .to_string();
-                            retval.set(v8::String::new(scope, &normalized).unwrap().into());
-                        }).map(|f| f.into());
-                        if let Some(fn_val) = normalize_fn {
-                            path_obj.set(scope, v8::String::new(scope, "normalize").unwrap().into(), fn_val);
-                        }
-
-                        // path.delimiter
-                        let delimiter_val = v8::String::new(scope, ":").unwrap().into();
-                        path_obj.set(scope, v8::String::new(scope, "delimiter").unwrap().into(), delimiter_val);
-
-                        // path.sep
-                        let sep_val = v8::String::new(scope, "/").unwrap().into();
-                        path_obj.set(scope, v8::String::new(scope, "sep").unwrap().into(), sep_val);
-
-                        retval.set(path_obj.into());
-                    } else if name == "events" || name == "Events" {
-                        // Return EventEmitter-like object
-                        let events_obj = v8::Object::new(scope);
-
-                        // on method
-                        let on_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-                            // Simplified implementation - just returns undefined
-                        }).map(|f| f.into());
-                        if let Some(fn_val) = on_fn {
-                            events_obj.set(scope, v8::String::new(scope, "on").unwrap().into(), fn_val);
-                        }
-
-                        // emit method
-                        let emit_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-                            // Simplified implementation
-                        }).map(|f| f.into());
-                        if let Some(fn_val) = emit_fn {
-                            events_obj.set(scope, v8::String::new(scope, "emit").unwrap().into(), fn_val);
-                        }
-
-                        retval.set(events_obj.into());
-                    } else if name == "util" || name == "Util" {
-                        // Return util module with inspect, etc.
-                        let util_obj = v8::Object::new(scope);
-
-                        // util.inspect
-                        let inspect_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            let obj = args.get(0);
-                            let result = obj.to_string(scope)
-                                .map(|s| s.to_rust_string_lossy(scope))
-                                .unwrap_or_else(|| "[unknown]".to_string());
-                            retval.set(v8::String::new(scope, &result).unwrap().into());
-                        }).map(|f| f.into());
-                        if let Some(fn_val) = inspect_fn {
-                            util_obj.set(scope, v8::String::new(scope, "inspect").unwrap().into(), fn_val);
-                        }
-
-                        // util.isArray
-                        let is_array_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            let val = args.get(0);
-                            retval.set(v8::Boolean::new(_scope, val.is_array()).into());
-                        }).map(|f| f.into());
-                        if let Some(fn_val) = is_array_fn {
-                            util_obj.set(scope, v8::String::new(scope, "isArray").unwrap().into(), fn_val);
-                        }
-
-                        // util.isRegExp
-                        let is_regexp_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            let val = args.get(0);
-                            retval.set(v8::Boolean::new(_scope, val.is_reg_exp()).into());
-                        }).map(|f| f.into());
-                        if let Some(fn_val) = is_regexp_fn {
-                            util_obj.set(scope, v8::String::new(scope, "isRegExp").unwrap().into(), fn_val);
-                        }
-
-                        retval.set(util_obj.into());
-                    } else if name == "stream" || name == "Stream" {
-                        // Return stream module placeholder
-                        let stream_obj = v8::Object::new(scope);
-                        let readable_val = v8::String::new(scope, "Readable").unwrap().into();
-                        stream_obj.set(scope, v8::String::new(scope, "Readable").unwrap().into(), readable_val);
-                        let writable_val = v8::String::new(scope, "Writable").unwrap().into();
-                        stream_obj.set(scope, v8::String::new(scope, "Writable").unwrap().into(), writable_val);
-                        retval.set(stream_obj.into());
-                    } else if name == "os" || name == "Os" {
-                        // Return os module
-                        let os_obj = v8::Object::new(scope);
-                        let platform_val = v8::String::new(scope, std::env::consts::OS).unwrap().into();
-                        os_obj.set(scope, v8::String::new(scope, "platform").unwrap().into(), platform_val);
-                        let arch_val = v8::String::new(scope, std::env::consts::ARCH).unwrap().into();
-                        os_obj.set(scope, v8::String::new(scope, "arch").unwrap().into(), arch_val);
-                        let homedir_val = v8::String::new(scope, &std::env::var("HOME").unwrap_or("/".to_string())).unwrap().into();
-                        os_obj.set(scope, v8::String::new(scope, "homedir").unwrap().into(), homedir_val);
-                        retval.set(os_obj.into());
-                    } else if name == "url" || name == "Url" {
-                        // Return URL object
-                        let url_constructor_key = v8::String::new(scope, "URL").unwrap().into();
-                        if let Some(url_constructor) = global.get(scope, url_constructor_key) {
-                            module_obj.set(scope, v8::String::new(scope, "URL").unwrap().into(), url_constructor);
-                        }
-                        retval.set(module_obj.into());
-                    } else {
-                        // For unknown modules, return an empty object but don't throw
-                        // This allows code to check typeof require('unknown') === 'object'
-                        println!("[beejs] Unknown module: {}", name);
-                        retval.set(module_obj.into());
-                    }
-                }
-            } else {
-                // No argument provided - throw error
-                let error_msg = v8::String::new(scope, "Module name must be a string").unwrap();
-                let error = v8::Exception::type_error(scope, error_msg);
-                scope.throw_exception(error);
-            }
-        }).ok_or_else(|| anyhow::anyhow!("Failed to create require function"))?;
-
-        let require_key = v8::String::new(scope, "require").unwrap().into();
-        module_obj.set(scope, require_key, require_fn.into());
-
-        // Set module on global
-        let module_key = v8::String::new(scope, "module").unwrap().into();
-        global.set(scope, module_key, module_obj.into());
-
-        // ==================== exports object ====================
-        // exports is just a reference to module.exports
-        let exports_key = v8::String::new(scope, "exports").unwrap().into();
-        let module_exports_for_global = v8::Object::new(scope);
-        // Copy all properties from exports_obj to module_exports_for_global
-        // Note: This is a simplified implementation
-        global.set(scope, exports_key, exports_obj.into());
-
-        // Also set these on globalThis for ES modules compatibility
-        let global_this = context.global(scope);
-        let global_this_require_key = v8::String::new(scope, "require").unwrap().into();
-        global_this.set(scope, global_this_require_key, require_fn.into());
-        let global_this_module_key = v8::String::new(scope, "module").unwrap().into();
-        global_this.set(scope, global_this_module_key, module_obj.into());
-        let global_this_exports_key = v8::String::new(scope, "exports").unwrap().into();
-        global_this.set(scope, global_this_exports_key, exports_obj.into());
-
-        println!("[beejs] Module system initialized (require, module, exports)");
 
         Ok(())
     }
