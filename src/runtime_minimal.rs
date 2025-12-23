@@ -439,11 +439,115 @@ impl MinimalRuntime {
                 let json_string = args.get(0);
                 if let Some(str_val) = json_string.to_string(scope) {
                     let rust_string = str_val.to_rust_string_lossy(scope);
-                    // Try to parse as JSON using serde_json (simplified)
+                    // Parse JSON properly using serde_json
                     match serde_json::from_str::<serde_json::Value>(&rust_string) {
                         Ok(value) => {
-                            // Convert to V8 value (simplified - just return the string)
-                            retval.set(str_val.into());
+                            // Convert serde_json::Value to V8 value
+                            let v8_value = match value {
+                                serde_json::Value::Null => v8::null(scope).into(),
+                                serde_json::Value::Bool(b) => v8::Boolean::new(scope, b).into(),
+                                serde_json::Value::Number(n) => {
+                                    if let Some(f) = n.as_f64() {
+                                        v8::Number::new(scope, f).into()
+                                    } else if let Some(i) = n.as_i64() {
+                                        v8::Integer::new(scope, i as i32).into()
+                                    } else {
+                                        v8::null(scope).into()
+                                    }
+                                },
+                                serde_json::Value::String(s) => v8::String::new(scope, &s).unwrap().into(),
+                                serde_json::Value::Array(arr) => {
+                                    let v8_array = v8::Array::new(scope, arr.len() as i32);
+                                    for (i, item) in arr.iter().enumerate() {
+                                        let v8_item = match item {
+                                            serde_json::Value::Null => v8::null(scope).into(),
+                                            serde_json::Value::Bool(b) => v8::Boolean::new(scope, *b).into(),
+                                            serde_json::Value::Number(n) => {
+                                                if let Some(f) = n.as_f64() {
+                                                    v8::Number::new(scope, f).into()
+                                                } else if let Some(i) = n.as_i64() {
+                                                    v8::Integer::new(scope, i as i32).into()
+                                                } else {
+                                                    v8::null(scope).into()
+                                                }
+                                            },
+                                            serde_json::Value::String(s) => v8::String::new(scope, s).unwrap().into(),
+                                            serde_json::Value::Object(obj) => {
+                                                let v8_obj = v8::Object::new(scope);
+                                                for (k, v) in obj {
+                                                    let key = v8::String::new(scope, k).unwrap().into();
+                                                    let v8_val = match v {
+                                                        serde_json::Value::Null => v8::null(scope).into(),
+                                                        serde_json::Value::Bool(b) => v8::Boolean::new(scope, *b).into(),
+                                                        serde_json::Value::Number(n) => {
+                                                            if let Some(f) = n.as_f64() {
+                                                                v8::Number::new(scope, f).into()
+                                                            } else if let Some(i) = n.as_i64() {
+                                                                v8::Integer::new(scope, i as i32).into()
+                                                            } else {
+                                                                v8::null(scope).into()
+                                                            }
+                                                        },
+                                                        serde_json::Value::String(s) => v8::String::new(scope, s).unwrap().into(),
+                                                        _ => v8::null(scope).into(),
+                                                    };
+                                                    v8_obj.set(scope, key, v8_val);
+                                                }
+                                                v8_obj.into()
+                                            },
+                                            _ => v8::null(scope).into(),
+                                        };
+                                        v8_array.set_index(scope, i as u32, v8_item);
+                                    }
+                                    v8_array.into()
+                                },
+                                serde_json::Value::Object(obj) => {
+                                    let v8_obj = v8::Object::new(scope);
+                                    for (k, v) in obj {
+                                        let key = v8::String::new(scope, &k).unwrap().into();
+                                        let v8_val = match v {
+                                            serde_json::Value::Null => v8::null(scope).into(),
+                                            serde_json::Value::Bool(b) => v8::Boolean::new(scope, b).into(),
+                                            serde_json::Value::Number(n) => {
+                                                if let Some(f) = n.as_f64() {
+                                                    v8::Number::new(scope, f).into()
+                                                } else if let Some(i) = n.as_i64() {
+                                                    v8::Integer::new(scope, i as i32).into()
+                                                } else {
+                                                    v8::null(scope).into()
+                                                }
+                                            },
+                                            serde_json::Value::String(s) => v8::String::new(scope, &s).unwrap().into(),
+                                            serde_json::Value::Array(arr) => {
+                                                let v8_array = v8::Array::new(scope, arr.len() as i32);
+                                                for (i, item) in arr.iter().enumerate() {
+                                                    let v8_item = match item {
+                                                        serde_json::Value::Null => v8::null(scope).into(),
+                                                        serde_json::Value::Bool(b) => v8::Boolean::new(scope, *b).into(),
+                                                        serde_json::Value::Number(n) => {
+                                                            if let Some(f) = n.as_f64() {
+                                                                v8::Number::new(scope, f).into()
+                                                            } else if let Some(i) = n.as_i64() {
+                                                                v8::Integer::new(scope, i as i32).into()
+                                                            } else {
+                                                                v8::null(scope).into()
+                                                            }
+                                                        },
+                                                        serde_json::Value::String(s) => v8::String::new(scope, s).unwrap().into(),
+                                                        _ => v8::null(scope).into(),
+                                                    };
+                                                    v8_array.set_index(scope, i as u32, v8_item);
+                                                }
+                                                v8_array.into()
+                                            },
+                                            _ => v8::null(scope).into(),
+                                        };
+                                        v8_obj.set(scope, key, v8_val);
+                                    }
+                                    v8_obj.into()
+                                },
+                            };
+                            retval.set(v8_value);
                         }
                         Err(_) => {
                             // Return null on parse error
@@ -461,13 +565,136 @@ impl MinimalRuntime {
         let stringify_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             if args.length() >= 1 {
                 let value = args.get(0);
-                // Simple stringify - convert to string
-                if let Some(str_val) = value.to_string(scope) {
-                    retval.set(str_val.into());
+                // Proper JSON stringify implementation
+                let json_str = if value.is_null() {
+                    "null".to_string()
+                } else if value.is_true() {
+                    "true".to_string()
+                } else if value.is_false() {
+                    "false".to_string()
+                } else if value.is_number() {
+                    if let Some(num) = value.to_number(scope) {
+                        num.to_rust_string_lossy(scope)
+                    } else {
+                        "null".to_string()
+                    }
+                } else if value.is_string() {
+                    if let Some(str_val) = value.to_string(scope) {
+                        let rust_str = str_val.to_rust_string_lossy(scope);
+                        format!("\"{}\"", rust_str.replace('"', "\\\""))
+                    } else {
+                        "null".to_string()
+                    }
+                } else if value.is_array() {
+                    let arr = v8::Local::<v8::Array>::try_from(value).unwrap();
+                    let len = arr.length();
+                    let mut items = Vec::new();
+                    for i in 0..len {
+                        let item = arr.get_index(scope, i).unwrap();
+                        let item_str = if item.is_null() {
+                            "null".to_string()
+                        } else if item.is_true() {
+                            "true".to_string()
+                        } else if item.is_false() {
+                            "false".to_string()
+                        } else if item.is_number() {
+                            if let Some(num) = item.to_number(scope) {
+                                num.to_rust_string_lossy(scope)
+                            } else {
+                                "null".to_string()
+                            }
+                        } else if item.is_string() {
+                            if let Some(str_val) = item.to_string(scope) {
+                                let rust_str = str_val.to_rust_string_lossy(scope);
+                                format!("\"{}\"", rust_str.replace('"', "\\\""))
+                            } else {
+                                "null".to_string()
+                            }
+                        } else if item.is_array() {
+                            // Recursively handle nested arrays
+                            let nested_arr = v8::Local::<v8::Array>::try_from(item).unwrap();
+                            let nested_len = nested_arr.length();
+                            let mut nested_items = Vec::new();
+                            for j in 0..nested_len {
+                                let nested_item = nested_arr.get_index(scope, j).unwrap();
+                                let nested_item_str = if nested_item.is_null() {
+                                    "null".to_string()
+                                } else if nested_item.is_true() {
+                                    "true".to_string()
+                                } else if nested_item.is_false() {
+                                    "false".to_string()
+                                } else if nested_item.is_number() {
+                                    if let Some(num) = nested_item.to_number(scope) {
+                                        num.to_rust_string_lossy(scope)
+                                    } else {
+                                        "null".to_string()
+                                    }
+                                } else if nested_item.is_string() {
+                                    if let Some(str_val) = nested_item.to_string(scope) {
+                                        let rust_str = str_val.to_rust_string_lossy(scope);
+                                        format!("\"{}\"", rust_str.replace('"', "\\\""))
+                                    } else {
+                                        "null".to_string()
+                                    }
+                                } else if nested_item.is_array() {
+                                    // Recursively handle arrays
+                                    let arr = v8::Local::<v8::Array>::try_from(nested_item).unwrap();
+                                    let len = arr.length();
+                                    let mut arr_items = Vec::new();
+                                    for k in 0..len {
+                                        let arr_item = arr.get_index(scope, k).unwrap();
+                                        let arr_item_str = if arr_item.is_null() {
+                                            "null".to_string()
+                                        } else if arr_item.is_true() {
+                                            "true".to_string()
+                                        } else if arr_item.is_false() {
+                                            "false".to_string()
+                                        } else if arr_item.is_number() {
+                                            if let Some(num) = arr_item.to_number(scope) {
+                                                num.to_rust_string_lossy(scope)
+                                            } else {
+                                                "null".to_string()
+                                            }
+                                        } else if arr_item.is_string() {
+                                            if let Some(str_val) = arr_item.to_string(scope) {
+                                                let rust_str = str_val.to_rust_string_lossy(scope);
+                                                format!("\"{}\"", rust_str.replace('"', "\\\""))
+                                            } else {
+                                                "null".to_string()
+                                            }
+                                        } else {
+                                            "null".to_string()
+                                        };
+                                        arr_items.push(arr_item_str);
+                                    }
+                                    format!("[{}]", arr_items.join(","))
+                                } else if nested_item.is_object() {
+                                    // For objects, just return "{}" for now (simplified)
+                                    "{}".to_string()
+                                } else {
+                                    "null".to_string()
+                                };
+                                nested_items.push(nested_item_str);
+                            }
+                            format!("[{}]", nested_items.join(","))
+                        } else if item.is_object() {
+                            // For objects, just return "{}" for now (simplified)
+                            "{}".to_string()
+                        } else {
+                            "null".to_string()
+                        };
+                        items.push(item_str);
+                    }
+                    format!("[{}]", items.join(","))
+                } else if value.is_object() {
+                    // For objects, return empty object for now (simplified)
+                    "{}".to_string()
                 } else {
-                    let null_val = v8::null(scope);
-                    retval.set(null_val.into());
-                }
+                    "null".to_string()
+                };
+
+                let json_val = v8::String::new(scope, &json_str).unwrap();
+                retval.set(json_val.into());
             }
         }).ok_or_else(|| anyhow::anyhow!("Failed to create stringify function"))?;
         let stringify_key = v8::String::new(scope, "stringify").unwrap().into();
@@ -485,6 +712,18 @@ impl MinimalRuntime {
         }).ok_or_else(|| anyhow::anyhow!("Failed to create Date function"))?;
         let date_key = v8::String::new(scope, "Date").unwrap().into();
         global.set(scope, date_key, date_fn.into());
+
+        // Add Date.now() static method
+        let date_obj = v8::Object::new(scope);
+        let now_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let now_ms = chrono::Utc::now().timestamp_millis();
+            let now_num = v8::Number::new(_scope, now_ms as f64);
+            retval.set(now_num.into());
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Date.now function"))?;
+        let now_key = v8::String::new(scope, "now").unwrap().into();
+        date_obj.set(scope, now_key, now_fn.into());
+        // Also set it on the Date function itself
+        date_fn.set(scope, now_key, now_fn.into());
 
         // Set up global btoa/atob for base64 encoding/decoding
         let btoa_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
