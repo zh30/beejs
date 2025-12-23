@@ -156,6 +156,9 @@ impl MinimalRuntime {
         // Set up Web APIs
         Self::setup_web_apis(scope, &context)?;
 
+        // Set up CommonJS module system (v0.3.x)
+        Self::setup_module_system(scope, &context)?;
+
         // Create a string from the transpiled code
         let code = v8::String::new(scope, &js_code)
             .ok_or_else(|| anyhow::anyhow!("Failed to create V8 string from code"))?;
@@ -2587,6 +2590,291 @@ impl MinimalRuntime {
         // but we explicitly set it for clarity and compatibility
         let global_this_key = v8::String::new(scope, "globalThis").unwrap().into();
         global.set(scope, global_this_key, global.into());
+
+        Ok(())
+    }
+
+    /// Set up CommonJS module system (require, module, exports, __dirname, __filename)
+    /// v0.3.x: Simplified module system for MinimalRuntime
+    fn setup_module_system(scope: &mut v8::ContextScope<v8::HandleScope>, context: &v8::Context) -> Result<()> {
+        let global = context.global(scope);
+
+        // Create module object
+        let module_obj = v8::Object::new(scope);
+        let module_id_key = v8::String::new(scope, "id").unwrap().into();
+        let module_id_val = v8::String::new(scope, "<anonymous>").unwrap().into();
+        module_obj.set(scope, module_id_key, module_id_val);
+
+        let module_filename_key = v8::String::new(scope, "filename").unwrap().into();
+        let module_filename_val = v8::String::new(scope, "/workspace/script.js").unwrap().into();
+        module_obj.set(scope, module_filename_key, module_filename_val);
+
+        let module_parent_key = v8::String::new(scope, "parent").unwrap().into();
+        let module_parent_val = v8::null(scope).into();
+        module_obj.set(scope, module_parent_key, module_parent_val);
+
+        let module_loaded_key = v8::String::new(scope, "loaded").unwrap().into();
+        let module_loaded_val = v8::Boolean::new(scope, false);
+        module_obj.set(scope, module_loaded_key, module_loaded_val.into());
+
+        // Create exports object (should be same as module.exports)
+        let exports_obj = v8::Object::new(scope);
+
+        // Set module.exports to reference exports_obj
+        let module_exports_key = v8::String::new(scope, "exports").unwrap().into();
+        module_obj.set(scope, module_exports_key, exports_obj.clone().into());
+
+        // Create require function
+        let require_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let module_id = args.get(0);
+                let module_id_str = if let Some(s) = module_id.to_string(scope) {
+                    s.to_rust_string_lossy(scope)
+                } else {
+                    "unknown".to_string()
+                };
+
+                // Return appropriate module object based on module id
+                let result_obj = v8::Object::new(scope);
+
+                match module_id_str.as_str() {
+                    "buffer" => {
+                        // Create Buffer function template first
+                        let buffer_fn_template = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            let buffer_obj = v8::Object::new(_scope);
+
+                            if args.length() >= 1 {
+                                let first = args.get(0);
+                                let bytes: Vec<u8> = if let Some(str_val) = first.to_string(_scope) {
+                                    str_val.to_rust_string_lossy(_scope).as_bytes().to_vec()
+                                } else if first.is_number() {
+                                    let size = first.to_integer(_scope).unwrap().value() as usize;
+                                    vec![0u8; size]
+                                } else {
+                                    vec![]
+                                };
+
+                                // Add length property
+                                let length_key = v8::String::new(_scope, "length").unwrap().into();
+                                let length_val = v8::Number::new(_scope, bytes.len() as f64);
+                                buffer_obj.set(_scope, length_key, length_val.into());
+
+                                // Add toString method
+                                let to_string_fn = v8::Function::new(_scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                                    let result_str = v8::String::new(scope, "[Buffer]").unwrap();
+                                    retval.set(result_str.into());
+                                }).unwrap();
+                                let to_string_key = v8::String::new(_scope, "toString").unwrap().into();
+                                buffer_obj.set(_scope, to_string_key, to_string_fn.into());
+                            } else {
+                                // Empty buffer
+                                let length_key = v8::String::new(_scope, "length").unwrap().into();
+                                let length_val = v8::Number::new(_scope, 0.0);
+                                buffer_obj.set(_scope, length_key, length_val.into());
+                            }
+
+                            retval.set(buffer_obj.into());
+                        });
+
+                        // Create Buffer function instance
+                        let buffer_fn = buffer_fn_template.get_function(scope).unwrap();
+
+                        // Add Buffer.from as a static method
+                        let from_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            let buffer_obj = v8::Object::new(_scope);
+
+                            if args.length() >= 1 {
+                                let first = args.get(0);
+                                let bytes: Vec<u8> = if let Some(str_val) = first.to_string(_scope) {
+                                    str_val.to_rust_string_lossy(_scope).as_bytes().to_vec()
+                                } else if first.is_number() {
+                                    let size = first.to_integer(_scope).unwrap().value() as usize;
+                                    vec![0u8; size]
+                                } else {
+                                    vec![]
+                                };
+
+                                let length_key = v8::String::new(_scope, "length").unwrap().into();
+                                let length_val = v8::Number::new(_scope, bytes.len() as f64);
+                                buffer_obj.set(_scope, length_key, length_val.into());
+                            } else {
+                                let length_key = v8::String::new(_scope, "length").unwrap().into();
+                                let length_val = v8::Number::new(_scope, 0.0);
+                                buffer_obj.set(_scope, length_key, length_val.into());
+                            }
+
+                            retval.set(buffer_obj.into());
+                        }).unwrap();
+                        let from_key = v8::String::new(scope, "from").unwrap().into();
+                        buffer_fn.set(scope, from_key, from_fn.into());
+
+                        let buffer_key = v8::String::new(scope, "Buffer").unwrap().into();
+                        result_obj.set(scope, buffer_key, buffer_fn.into());
+                    }
+                    "process" => {
+                        // Return process module with env property
+                        let env_obj = v8::Object::new(scope);
+                        let env_key = v8::String::new(scope, "env").unwrap().into();
+                        result_obj.set(scope, env_key, env_obj.into());
+                    }
+                    "path" => {
+                        // Return path module with join function
+                        let join_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            let parts: Vec<String> = (0..args.length())
+                                .filter_map(|i| args.get(i).to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+                                .collect();
+                            let result = if parts.len() > 1 {
+                                parts.join("/")
+                            } else if parts.len() == 1 {
+                                parts[0].clone()
+                            } else {
+                                "".to_string()
+                            };
+                            let result_str = v8::String::new(scope, &result).unwrap();
+                            retval.set(result_str.into());
+                        }).unwrap();
+                        let join_key = v8::String::new(scope, "join").unwrap().into();
+                        result_obj.set(scope, join_key, join_fn.into());
+
+                        // Add dirname function
+                        let dirname_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            let path_str = if let Some(s) = args.get(0).to_string(scope) {
+                                s.to_rust_string_lossy(scope)
+                            } else {
+                                "/".to_string()
+                            };
+                            let result = std::path::Path::new(&path_str).parent()
+                                .map(|p| p.to_string_lossy().to_string())
+                                .unwrap_or_else(|| "/".to_string());
+                            let result_str = v8::String::new(scope, &result).unwrap();
+                            retval.set(result_str.into());
+                        }).unwrap();
+                        let dirname_key = v8::String::new(scope, "dirname").unwrap().into();
+                        result_obj.set(scope, dirname_key, dirname_fn.into());
+
+                        // Add basename function
+                        let basename_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            let path_str = if let Some(s) = args.get(0).to_string(scope) {
+                                s.to_rust_string_lossy(scope)
+                            } else {
+                                "/".to_string()
+                            };
+                            let result = std::path::Path::new(&path_str).file_name()
+                                .map(|n| n.to_string_lossy().to_string())
+                                .unwrap_or_else(|| path_str);
+                            let result_str = v8::String::new(scope, &result).unwrap();
+                            retval.set(result_str.into());
+                        }).unwrap();
+                        let basename_key = v8::String::new(scope, "basename").unwrap().into();
+                        result_obj.set(scope, basename_key, basename_fn.into());
+
+                        // Add extname function
+                        let extname_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            let path_str = if let Some(s) = args.get(0).to_string(scope) {
+                                s.to_rust_string_lossy(scope)
+                            } else {
+                                "".to_string()
+                            };
+                            let result = std::path::Path::new(&path_str).extension()
+                                .map(|e| format!(".{}", e.to_string_lossy()))
+                                .unwrap_or_else(|| "".to_string());
+                            let result_str = v8::String::new(scope, &result).unwrap();
+                            retval.set(result_str.into());
+                        }).unwrap();
+                        let extname_key = v8::String::new(scope, "extname").unwrap().into();
+                        result_obj.set(scope, extname_key, extname_fn.into());
+
+                        // Add sep constant
+                        let sep_key = v8::String::new(scope, "sep").unwrap().into();
+                        let sep_val = v8::String::new(scope, "/").unwrap().into();
+                        result_obj.set(scope, sep_key, sep_val);
+                    }
+                    _ => {
+                        // Throw error for unknown modules
+                        let error_msg = format!("Cannot find module '{}'", module_id_str);
+                        let error_str = v8::String::new(scope, &error_msg).unwrap();
+                        let error_obj = v8::Exception::error(scope, error_str);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                }
+
+                retval.set(result_obj.into());
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create require function"))?;
+
+        // Set global objects
+        let require_key = v8::String::new(scope, "require").unwrap().into();
+        global.set(scope, require_key, require_fn.into());
+
+        let module_key = v8::String::new(scope, "module").unwrap().into();
+        global.set(scope, module_key, module_obj.into());
+
+        let exports_key = v8::String::new(scope, "exports").unwrap().into();
+        global.set(scope, exports_key, exports_obj.into());
+
+        // Set global Buffer (like Node.js)
+        let global_buffer_fn_template = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let buffer_obj = v8::Object::new(_scope);
+            if args.length() >= 1 {
+                let first = args.get(0);
+                let bytes: Vec<u8> = if let Some(str_val) = first.to_string(_scope) {
+                    str_val.to_rust_string_lossy(_scope).as_bytes().to_vec()
+                } else if first.is_number() {
+                    let size = first.to_integer(_scope).unwrap().value() as usize;
+                    vec![0u8; size]
+                } else {
+                    vec![]
+                };
+                let length_key = v8::String::new(_scope, "length").unwrap().into();
+                let length_val = v8::Number::new(_scope, bytes.len() as f64);
+                buffer_obj.set(_scope, length_key, length_val.into());
+            } else {
+                let length_key = v8::String::new(_scope, "length").unwrap().into();
+                let length_val = v8::Number::new(_scope, 0.0);
+                buffer_obj.set(_scope, length_key, length_val.into());
+            }
+            retval.set(buffer_obj.into());
+        });
+        let global_buffer_fn = global_buffer_fn_template.get_function(scope).unwrap();
+
+        // Add Buffer.from as static method
+        let from_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let buffer_obj = v8::Object::new(_scope);
+            if args.length() >= 1 {
+                let first = args.get(0);
+                let bytes: Vec<u8> = if let Some(str_val) = first.to_string(_scope) {
+                    str_val.to_rust_string_lossy(_scope).as_bytes().to_vec()
+                } else if first.is_number() {
+                    let size = first.to_integer(_scope).unwrap().value() as usize;
+                    vec![0u8; size]
+                } else {
+                    vec![]
+                };
+                let length_key = v8::String::new(_scope, "length").unwrap().into();
+                let length_val = v8::Number::new(_scope, bytes.len() as f64);
+                buffer_obj.set(_scope, length_key, length_val.into());
+            } else {
+                let length_key = v8::String::new(_scope, "length").unwrap().into();
+                let length_val = v8::Number::new(_scope, 0.0);
+                buffer_obj.set(_scope, length_key, length_val.into());
+            }
+            retval.set(buffer_obj.into());
+        }).unwrap();
+        let from_key = v8::String::new(scope, "from").unwrap().into();
+        global_buffer_fn.set(scope, from_key, from_fn.into());
+
+        let buffer_key = v8::String::new(scope, "Buffer").unwrap().into();
+        global.set(scope, buffer_key, global_buffer_fn.into());
+
+        // Set __dirname and __filename globals
+        let dirname_val = v8::String::new(scope, "/workspace").unwrap().into();
+        let dirname_key = v8::String::new(scope, "__dirname").unwrap().into();
+        global.set(scope, dirname_key, dirname_val);
+
+        let filename_val = v8::String::new(scope, "/workspace/script.js").unwrap().into();
+        let filename_key = v8::String::new(scope, "__filename").unwrap().into();
+        global.set(scope, filename_key, filename_val);
 
         Ok(())
     }

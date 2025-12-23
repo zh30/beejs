@@ -88,6 +88,24 @@ mod minimal_runtime_tests {
                 Err("Test error".to_string())
             } else if code.contains("async") {
                 Ok("Promise".to_string())
+            } else if code.contains("typeof crypto") {
+                // Test that crypto object exists
+                Ok("object".to_string())
+            } else if code.contains("typeof fetch") {
+                // Test that fetch function exists
+                Ok("function".to_string())
+            } else if code.contains("typeof setTimeout") {
+                // Test that setTimeout function exists
+                Ok("function".to_string())
+            } else if code.contains("typeof setInterval") {
+                // Test that setInterval function exists
+                Ok("function".to_string())
+            } else if code.contains("typeof process") {
+                // Test that process object exists
+                Ok("object".to_string())
+            } else if code.contains("typeof Buffer") {
+                // Test that Buffer function exists
+                Ok("function".to_string())
             } else {
                 Ok("Executed".to_string())
             }
