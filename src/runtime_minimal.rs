@@ -545,6 +545,95 @@ impl MinimalRuntime {
         let random_key = v8::String::new(scope, "random").unwrap().into();
         math_obj.set(scope, random_key, random_fn.into());
 
+        // Add Math.abs function
+        let abs_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let val = args.get(0).to_number(scope).unwrap();
+                let abs_val = v8::Number::new(scope, val.value().abs());
+                retval.set(abs_val.into());
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Math.abs function"))?;
+        let abs_key = v8::String::new(scope, "abs").unwrap().into();
+        math_obj.set(scope, abs_key, abs_fn.into());
+
+        // Add Math.floor function
+        let floor_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let val = args.get(0).to_number(scope).unwrap();
+                let floor_val = v8::Number::new(scope, val.value().floor());
+                retval.set(floor_val.into());
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Math.floor function"))?;
+        let floor_key = v8::String::new(scope, "floor").unwrap().into();
+        math_obj.set(scope, floor_key, floor_fn.into());
+
+        // Add Math.ceil function
+        let ceil_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let val = args.get(0).to_number(scope).unwrap();
+                let ceil_val = v8::Number::new(scope, val.value().ceil());
+                retval.set(ceil_val.into());
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Math.ceil function"))?;
+        let ceil_key = v8::String::new(scope, "ceil").unwrap().into();
+        math_obj.set(scope, ceil_key, ceil_fn.into());
+
+        // Add Math.round function
+        let round_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let val = args.get(0).to_number(scope).unwrap();
+                let round_val = v8::Number::new(scope, val.value().round());
+                retval.set(round_val.into());
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Math.round function"))?;
+        let round_key = v8::String::new(scope, "round").unwrap().into();
+        math_obj.set(scope, round_key, round_fn.into());
+
+        // Add Math.sqrt function
+        let sqrt_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let val = args.get(0).to_number(scope).unwrap();
+                let sqrt_val = v8::Number::new(scope, val.value().sqrt());
+                retval.set(sqrt_val.into());
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Math.sqrt function"))?;
+        let sqrt_key = v8::String::new(scope, "sqrt").unwrap().into();
+        math_obj.set(scope, sqrt_key, sqrt_fn.into());
+
+        // Add Math.max function
+        let max_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let mut max_val = f64::NEG_INFINITY;
+                for i in 0..args.length() {
+                    let val = args.get(i).to_number(scope).unwrap();
+                    if val.value() > max_val {
+                        max_val = val.value();
+                    }
+                }
+                let max_num = v8::Number::new(scope, max_val);
+                retval.set(max_num.into());
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Math.max function"))?;
+        let max_key = v8::String::new(scope, "max").unwrap().into();
+        math_obj.set(scope, max_key, max_fn.into());
+
+        // Add Math.min function
+        let min_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let mut min_val = f64::INFINITY;
+                for i in 0..args.length() {
+                    let val = args.get(i).to_number(scope).unwrap();
+                    if val.value() < min_val {
+                        min_val = val.value();
+                    }
+                }
+                let min_num = v8::Number::new(scope, min_val);
+                retval.set(min_num.into());
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Math.min function"))?;
+        let min_key = v8::String::new(scope, "min").unwrap().into();
+        math_obj.set(scope, min_key, min_fn.into());
+
         let math_key = v8::String::new(scope, "Math").unwrap().into();
         global.set(scope, math_key, math_obj.into());
 
