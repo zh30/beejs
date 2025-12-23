@@ -1,6 +1,41 @@
 
 
-**最新状态 (2025-12-23)**: 🚀 v0.3.1 增强！fetch() 现在返回真实的 HTTP 响应数据！
+
+**最新状态 (2025-12-23)**: 🚀 v0.3.2 增强！__dirname 和 __filename 全局变量支持！
+
+### 🎯 v0.3.2 CommonJS 全局变量 (2025-12-23)
+**进度**: ✅ __dirname | ✅ __filename | ✅ globalThis 兼容性 | ✅ 测试覆盖
+
+#### v0.3.2 核心改进
+- ✅ **__dirname 全局变量**
+  - 返回当前模块所在目录的路径
+  - 默认值: `/workspace`
+  - 与 globalThis 兼容
+
+- ✅ **__filename 全局变量**
+  - 返回当前模块文件的完整路径
+  - 默认值: `/workspace/script.js`
+  - 与 globalThis 兼容
+
+#### v0.3.2 测试覆盖
+- 新增 `test_dirname_exists` 测试 __dirname 存在性
+- 新增 `test_dirname_value` 测试 __dirname 值
+- 新增 `test_filename_exists` 测试 __filename 存在性
+- 新增 `test_filename_value` 测试 __filename 值
+- 新增 `test_filename_contains_extension` 测试文件扩展名
+- 新增 `test_dirname_and_filename_relationship` 测试路径关系
+- 新增 `test_global_this_has_dirname` 测试 globalThis 兼容性
+- 新增 `test_global_this_has_filename` 测试 globalThis 兼容性
+
+#### v0.3.2 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+14 行)
+  - 在 `setup_module_system()` 函数中添加 `__dirname` 和 `__filename` 全局变量
+  - 使用 `/workspace` 和 `/workspace/script.js` 作为默认值
+
+- **修改文件**: `tests/module_system_tests.rs` (+107 行)
+  - 新增 8 个测试用例覆盖 __dirname 和 __filename 功能
+
+---
 
 ### 🎯 v0.3.1 fetch 真实 HTTP 响应 (2025-12-23)
 **进度**: ✅ response.json() | ✅ response.text() | ✅ response.url | ✅ 错误处理 | ✅ JSON 美化格式化

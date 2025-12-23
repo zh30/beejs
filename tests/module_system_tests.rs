@@ -230,3 +230,110 @@ fn test_process_env_exists() {
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "object", "process.env should be an object");
 }
+
+// v0.3.2: Test __dirname global variable
+#[test]
+#[serial]
+fn test_dirname_exists() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof __dirname;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "string", "__dirname should be a string");
+}
+
+#[test]
+#[serial]
+fn test_dirname_value() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof __dirname === 'string' && __dirname.length > 0;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "__dirname should be a non-empty string");
+}
+
+#[test]
+#[serial]
+fn test_dirname_in_path_module() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const path = require('path');
+        const dirname = path.dirname(__filename || '/test/file.js');
+        typeof dirname;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "string", "path.dirname should return a string");
+}
+
+// v0.3.2: Test __filename global variable
+#[test]
+#[serial]
+fn test_filename_exists() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof __filename;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "string", "__filename should be a string");
+}
+
+#[test]
+#[serial]
+fn test_filename_value() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof __filename === 'string' && __filename.length > 0;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "__filename should be a non-empty string");
+}
+
+#[test]
+#[serial]
+fn test_filename_contains_extension() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        __filename.includes('.js') || __filename.includes('.ts') || __filename.includes('.mjs');
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "__filename should contain a file extension");
+}
+
+#[test]
+#[serial]
+fn test_dirname_and_filename_relationship() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const path = require('path');
+        const computed = path.dirname(__filename || '/test/file.js');
+        // __filename should end with the basename of the file
+        const basename = path.basename(__filename || '/test/file.js');
+        (__filename || '/test/file.js').endsWith(basename);
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "__filename should contain the basename");
+}
+
+#[test]
+#[serial]
+fn test_global_this_has_dirname() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof globalThis.__dirname;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "string", "globalThis.__dirname should be a string");
+}
+
+#[test]
+#[serial]
+fn test_global_this_has_filename() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof globalThis.__filename;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "string", "globalThis.__filename should be a string");
+}

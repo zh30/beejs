@@ -2662,8 +2662,23 @@ impl MinimalRuntime {
 
     /// Set up module system (require, module, exports) - v0.3.0
     /// Implements CommonJS-style module loading for Node.js compatibility
+    /// v0.3.2: Added __dirname and __filename global variables
     fn setup_module_system(scope: &mut v8::ContextScope<v8::HandleScope>, context: &v8::Context) -> Result<()> {
         let global = context.global(scope);
+
+        // ==================== __dirname and __filename globals (v0.3.2) ====================
+        // These are CommonJS globals that provide the directory and file path of the current module
+        // For scripts executed without a file path, we provide sensible defaults
+
+        // Set up __dirname - the directory name of the current module
+        let dirname_value = v8::String::new(scope, "/workspace").unwrap().into();
+        let dirname_key = v8::String::new(scope, "__dirname").unwrap().into();
+        global.set(scope, dirname_key, dirname_value);
+
+        // Set up __filename - the absolute path of the current module file
+        let filename_value = v8::String::new(scope, "/workspace/script.js").unwrap().into();
+        let filename_key = v8::String::new(scope, "__filename").unwrap().into();
+        global.set(scope, filename_key, filename_value);
 
         // Create module cache (shared across all requires)
         // Note: In a full implementation, this would be stored in the runtime struct
