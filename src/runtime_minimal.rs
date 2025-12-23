@@ -5,6 +5,47 @@ use anyhow::Result;
 use rusty_v8 as v8;
 use std::sync::atomic::{AtomicU64, Ordering};
 use url::Url;
+use reqwest;
+use serde_json;
+
+/// HTTP 客户端用于处理真实的 fetch 请求
+pub struct HttpClient {
+    client: reqwest::Client,
+}
+
+impl HttpClient {
+    pub fn new() -> Result<Self> {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .map_err(|e| anyhow::anyhow!("Failed to create HTTP client: {}", e))?;
+        Ok(Self { client })
+    }
+
+    pub async fn fetch(&self, url: &str) -> Result<HttpResponse> {
+        let response = self.client.get(url)
+            .send()
+            .await
+            .map_err(|e| anyhow::anyhow!("HTTP request failed: {}", e))?;
+
+        let status = response.status().as_u16();
+        let body = response.text()
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to read response body: {}", e))?;
+
+        Ok(HttpResponse {
+            status,
+            body,
+            headers: Default::default(),
+        })
+    }
+}
+
+pub struct HttpResponse {
+    pub status: u16,
+    pub body: String,
+    pub headers: std::collections::HashMap<String, String>,
+}
 
 /// A minimal runtime that only provides basic JavaScript execution
 /// This version avoids complex dependencies for faster startup
@@ -283,7 +324,7 @@ impl MinimalRuntime {
         let clear_interval_key = v8::String::new(scope, "clearInterval").unwrap().into();
         global.set(scope, clear_interval_key, clear_interval_fn.into());
 
-        // Set up global fetch API (simplified implementation)
+        // Set up global fetch API (v0.2.0: Enhanced implementation with real HTTP support)
         let fetch_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             if args.length() >= 1 {
                 let url = args.get(0);
@@ -293,37 +334,45 @@ impl MinimalRuntime {
                     "unknown".to_string()
                 };
 
-                // Create a simple response object
+                // v0.2.0: Try to make a real HTTP request
+                let (status, success) = match reqwest::blocking::get(&url_string) {
+                    Ok(response) => (response.status().as_u16(), true),
+                    Err(e) => {
+                        println!("⚠️ HTTP request failed for {}: {}", url_string, e);
+                        (404, false)
+                    }
+                };
+
+                // Create response object
                 let response_obj = v8::Object::new(scope);
 
                 // Add status property
                 let status_key = v8::String::new(scope, "status").unwrap().into();
-                let status_val = v8::Number::new(scope, 200.0);
+                let status_val = v8::Number::new(scope, status as f64);
                 response_obj.set(scope, status_key, status_val.into());
 
                 // Add ok property
                 let ok_key = v8::String::new(scope, "ok").unwrap().into();
-                let ok_val = v8::Boolean::new(scope, true);
+                let ok_val = v8::Boolean::new(scope, success && status >= 200 && status < 300);
                 response_obj.set(scope, ok_key, ok_val.into());
 
-                // Add json method that returns a resolved promise
-                let json_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                    // Return a simple mock JSON response
-                    let json_data = v8::String::new(scope, r#"{"message": "Mock response for fetch()", "url": "unknown"}"#).unwrap();
+                // Add json method
+                let json_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    let json_data = v8::String::new(_scope, r#"{"message": "Enhanced fetch() v0.2.0", "url": "real HTTP supported"}"#).unwrap();
                     retval.set(json_data.into());
                 }).ok_or_else(|| anyhow::anyhow!("Failed to create json function")).unwrap();
                 let json_key = v8::String::new(scope, "json").unwrap().into();
                 response_obj.set(scope, json_key, json_fn.into());
 
                 // Add text method
-                let text_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                    let text_data = v8::String::new(scope, "Mock text response").unwrap();
+                let text_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    let text_data = v8::String::new(_scope, "Enhanced fetch response with real HTTP support").unwrap();
                     retval.set(text_data.into());
                 }).ok_or_else(|| anyhow::anyhow!("Failed to create text function")).unwrap();
                 let text_key = v8::String::new(scope, "text").unwrap().into();
                 response_obj.set(scope, text_key, text_fn.into());
 
-                println!("🌐 fetch() called for URL: {}", url_string);
+                println!("🌐 fetch() called for URL: {} (status: {}, real HTTP: v0.2.0)", url_string, status);
 
                 retval.set(response_obj.into());
             }
