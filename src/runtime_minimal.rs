@@ -2692,7 +2692,7 @@ impl MinimalRuntime {
                             }
                             let result = parts.join("/");
                             retval.set(v8::String::new(scope, &result).unwrap().into());
-                        }).ok().map(|f| f.into());
+                        }).map(|f| f.into());
                         if let Some(fn_val) = join_fn {
                             path_obj.set(scope, v8::String::new(scope, "join").unwrap().into(), fn_val);
                         }
@@ -2707,7 +2707,7 @@ impl MinimalRuntime {
                             }
                             let result = parts.join("/");
                             retval.set(v8::String::new(scope, &result).unwrap().into());
-                        }).ok().map(|f| f.into());
+                        }).map(|f| f.into());
                         if let Some(fn_val) = resolve_fn {
                             path_obj.set(scope, v8::String::new(scope, "resolve").unwrap().into(), fn_val);
                         }
@@ -2723,7 +2723,7 @@ impl MinimalRuntime {
                                 .map(|s| s.to_string())
                                 .unwrap_or_else(|| ".".to_string());
                             retval.set(v8::String::new(scope, &result).unwrap().into());
-                        }).ok().map(|f| f.into());
+                        }).map(|f| f.into());
                         if let Some(fn_val) = dirname_fn {
                             path_obj.set(scope, v8::String::new(scope, "dirname").unwrap().into(), fn_val);
                         }
@@ -2752,7 +2752,7 @@ impl MinimalRuntime {
                                 .map(|s| s.to_string())
                                 .unwrap_or_else(|| ".".to_string());
                             retval.set(v8::String::new(scope, &result).unwrap().into());
-                        }).ok().map(|f| f.into());
+                        }).map(|f| f.into());
                         if let Some(fn_val) = basename_fn {
                             path_obj.set(scope, v8::String::new(scope, "basename").unwrap().into(), fn_val);
                         }
@@ -2768,7 +2768,7 @@ impl MinimalRuntime {
                                 .map(|s| format!(".{}", s))
                                 .unwrap_or_else(|| "".to_string());
                             retval.set(v8::String::new(scope, &result).unwrap().into());
-                        }).ok().map(|f| f.into());
+                        }).map(|f| f.into());
                         if let Some(fn_val) = extname_fn {
                             path_obj.set(scope, v8::String::new(scope, "extname").unwrap().into(), fn_val);
                         }
@@ -2780,7 +2780,7 @@ impl MinimalRuntime {
                             let path = path_str.to_rust_string_lossy(scope);
                             let is_abs = std::path::Path::new(&path).is_absolute();
                             retval.set(v8::Boolean::new(scope, is_abs).into());
-                        }).ok().map(|f| f.into());
+                        }).map(|f| f.into());
                         if let Some(fn_val) = is_absolute_fn {
                             path_obj.set(scope, v8::String::new(scope, "isAbsolute").unwrap().into(), fn_val);
                         }
@@ -2794,7 +2794,7 @@ impl MinimalRuntime {
                                 .to_string_lossy()
                                 .to_string();
                             retval.set(v8::String::new(scope, &normalized).unwrap().into());
-                        }).ok().map(|f| f.into());
+                        }).map(|f| f.into());
                         if let Some(fn_val) = normalize_fn {
                             path_obj.set(scope, v8::String::new(scope, "normalize").unwrap().into(), fn_val);
                         }
@@ -2815,7 +2815,7 @@ impl MinimalRuntime {
                         // on method
                         let on_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
                             // Simplified implementation - just returns undefined
-                        }).ok().map(|f| f.into());
+                        }).map(|f| f.into());
                         if let Some(fn_val) = on_fn {
                             events_obj.set(scope, v8::String::new(scope, "on").unwrap().into(), fn_val);
                         }
@@ -2823,7 +2823,7 @@ impl MinimalRuntime {
                         // emit method
                         let emit_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
                             // Simplified implementation
-                        }).ok().map(|f| f.into());
+                        }).map(|f| f.into());
                         if let Some(fn_val) = emit_fn {
                             events_obj.set(scope, v8::String::new(scope, "emit").unwrap().into(), fn_val);
                         }
@@ -2840,7 +2840,7 @@ impl MinimalRuntime {
                                 .map(|s| s.to_rust_string_lossy(scope))
                                 .unwrap_or_else(|| "[unknown]".to_string());
                             retval.set(v8::String::new(scope, &result).unwrap().into());
-                        }).ok().map(|f| f.into());
+                        }).map(|f| f.into());
                         if let Some(fn_val) = inspect_fn {
                             util_obj.set(scope, v8::String::new(scope, "inspect").unwrap().into(), fn_val);
                         }
@@ -2849,7 +2849,7 @@ impl MinimalRuntime {
                         let is_array_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
                             let val = args.get(0);
                             retval.set(v8::Boolean::new(_scope, val.is_array()).into());
-                        }).ok().map(|f| f.into());
+                        }).map(|f| f.into());
                         if let Some(fn_val) = is_array_fn {
                             util_obj.set(scope, v8::String::new(scope, "isArray").unwrap().into(), fn_val);
                         }
@@ -2857,8 +2857,8 @@ impl MinimalRuntime {
                         // util.isRegExp
                         let is_regexp_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
                             let val = args.get(0);
-                            retval.set(v8::Boolean::new(_scope, val.is_regexp()).into());
-                        }).ok().map(|f| f.into());
+                            retval.set(v8::Boolean::new(_scope, val.is_reg_exp()).into());
+                        }).map(|f| f.into());
                         if let Some(fn_val) = is_regexp_fn {
                             util_obj.set(scope, v8::String::new(scope, "isRegExp").unwrap().into(), fn_val);
                         }
@@ -2879,7 +2879,7 @@ impl MinimalRuntime {
                         os_obj.set(scope, v8::String::new(scope, "platform").unwrap().into(), platform_val);
                         let arch_val = v8::String::new(scope, std::env::consts::ARCH).unwrap().into();
                         os_obj.set(scope, v8::String::new(scope, "arch").unwrap().into(), arch_val);
-                        let homedir_val = v8::String::new(scope, std::env::var("HOME").unwrap_or("/".to_string())).unwrap().into();
+                        let homedir_val = v8::String::new(scope, &std::env::var("HOME").unwrap_or("/".to_string())).unwrap().into();
                         os_obj.set(scope, v8::String::new(scope, "homedir").unwrap().into(), homedir_val);
                         retval.set(os_obj.into());
                     } else if name == "url" || name == "Url" {
