@@ -1,7 +1,7 @@
 // V8 事件循环实现
 // 为 Beejs 提供异步 JavaScript 执行支持
 
-use std::collections::{BTreeMap, HashMap};
+// use std::collections::{BTreeMap, HashMap};  // 已禁用 - 暂时未使用
 use std::sync::{Arc, Mutex};
 use rusty_v8 as v8;
 use std::time::{Duration, Instant};
