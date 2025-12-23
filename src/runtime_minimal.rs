@@ -397,7 +397,7 @@ impl MinimalRuntime {
         let clear_immediate_key = v8::String::new(scope, "clearImmediate").unwrap().into();
         global.set(scope, clear_immediate_key, clear_immediate_fn.into());
 
-        // Set up global fetch API (v0.2.0: Enhanced implementation with real HTTP support)
+        // Set up global fetch API (v0.3.1: Real HTTP support with json/text methods)
         let fetch_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             if args.length() >= 1 {
                 let url = args.get(0);
@@ -407,17 +407,32 @@ impl MinimalRuntime {
                     "unknown".to_string()
                 };
 
-                // v0.2.0: Try to make a real HTTP request
-                let (status, success) = match reqwest::blocking::get(&url_string) {
-                    Ok(response) => (response.status().as_u16(), true),
+                // v0.3.1: Make a real HTTP request with response body
+                let (status, success, response_body) = match reqwest::blocking::get(&url_string) {
+                    Ok(response) => {
+                        let status = response.status().as_u16();
+                        let text = response.text().unwrap_or_default();
+                        (status, true, text)
+                    }
                     Err(e) => {
                         println!("⚠️ HTTP request failed for {}: {}", url_string, e);
-                        (404, false)
+                        (404, false, String::new())
                     }
                 };
 
-                // Create response object
-                let response_obj = v8::Object::new(scope);
+                // Create response object with internal field for body storage (v0.3.1)
+                let response_template = v8::ObjectTemplate::new(scope);
+                response_template.set_internal_field_count(1);
+                let response_obj = response_template.new_instance(scope).expect("Failed to create response object");
+
+                // Store response body in internal field
+                let body_str = v8::String::new(scope, &response_body).unwrap();
+                response_obj.set_internal_field(0, body_str.into());
+
+                // Add url property (v0.3.1)
+                let url_key = v8::String::new(scope, "url").unwrap().into();
+                let url_val = v8::String::new(scope, &url_string).unwrap().into();
+                response_obj.set(scope, url_key, url_val);
 
                 // Add status property
                 let status_key = v8::String::new(scope, "status").unwrap().into();
@@ -429,23 +444,45 @@ impl MinimalRuntime {
                 let ok_val = v8::Boolean::new(scope, success && status >= 200 && status < 300);
                 response_obj.set(scope, ok_key, ok_val.into());
 
-                // Add json method
-                let json_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                    let json_data = v8::String::new(_scope, r#"{"message": "Enhanced fetch() v0.2.0", "url": "real HTTP supported"}"#).unwrap();
-                    retval.set(json_data.into());
+                // Add json method (v0.3.1: returns real data)
+                let json_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    let this_obj: v8::Local<v8::Object> = args.this();
+                    if let Some(body_val) = this_obj.get_internal_field(_scope, 0) {
+                        let body_str = body_val.to_string(_scope).unwrap().to_rust_string_lossy(_scope);
+                        // Try to parse and format JSON prettily
+                        if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&body_str) {
+                            let formatted = serde_json::to_string_pretty(&json_value).unwrap_or(body_str.clone());
+                            let json_data = v8::String::new(_scope, &formatted).unwrap();
+                            retval.set(json_data.into());
+                        } else {
+                            // Not valid JSON, return as-is
+                            let json_data = v8::String::new(_scope, &body_str).unwrap();
+                            retval.set(json_data.into());
+                        }
+                    } else {
+                        let error = v8::String::new(_scope, "Response body not available").unwrap();
+                        retval.set(error.into());
+                    }
                 }).ok_or_else(|| anyhow::anyhow!("Failed to create json function")).unwrap();
                 let json_key = v8::String::new(scope, "json").unwrap().into();
                 response_obj.set(scope, json_key, json_fn.into());
 
-                // Add text method
-                let text_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                    let text_data = v8::String::new(_scope, "Enhanced fetch response with real HTTP support").unwrap();
-                    retval.set(text_data.into());
+                // Add text method (v0.3.1: returns real data)
+                let text_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    let this_obj: v8::Local<v8::Object> = args.this();
+                    if let Some(body_val) = this_obj.get_internal_field(_scope, 0) {
+                        let body_str = body_val.to_string(_scope).unwrap().to_rust_string_lossy(_scope);
+                        let text_data = v8::String::new(_scope, &body_str).unwrap();
+                        retval.set(text_data.into());
+                    } else {
+                        let error = v8::String::new(_scope, "Response body not available").unwrap();
+                        retval.set(error.into());
+                    }
                 }).ok_or_else(|| anyhow::anyhow!("Failed to create text function")).unwrap();
                 let text_key = v8::String::new(scope, "text").unwrap().into();
                 response_obj.set(scope, text_key, text_fn.into());
 
-                println!("🌐 fetch() called for URL: {} (status: {}, real HTTP: v0.2.0)", url_string, status);
+                println!("🌐 fetch() called for URL: {} (status: {}, body_len: {})", url_string, status, response_body.len());
 
                 retval.set(response_obj.into());
             }

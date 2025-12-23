@@ -9,6 +9,9 @@ use rusty_v8 as v8;
 use std::time::Duration;
 use std::task::Context;
 
+/// Thread-safe response cache for json() and text() methods
+static RESPONSE_CACHE: Mutex<HashMap<usize, (String, Vec<u8>)>> = Mutex::new(HashMap::new());
+
 /// Fetch API configuration
 #[derive(Debug, Clone)]
 pub struct FetchConfig {
@@ -177,13 +180,37 @@ fn fetch_callback(
             let status_text_key: _ = v8::String::new(scope, "statusText").unwrap();
             let status_text_val: v8::Local<v8::Value> = v8::String::new(scope, &response.status_text).unwrap().into();
             response_obj.set(scope, status_text_key.into(), status_text_val);
-            // Add body if available
-            if let Some(body_vec) = response.body {
-                let body_str: _ = String::from_utf8(body_vec).unwrap_or_default();
-                let body_key: _ = v8::String::new(scope, "body").unwrap();
-                let body_val: _ = v8::String::new(scope, &body_str).unwrap().into();
-                response_obj.set(scope, body_key.into(), body_val);
-            }
+
+            // Add url property
+            let url_key: _ = v8::String::new(scope, "url").unwrap();
+            let url_val: _ = v8::String::new(scope, &response.url).unwrap().into();
+            response_obj.set(scope, url_key.into(), url_val);
+
+            // Store body in cache for json() and text() methods
+            let response_ptr = &*response_obj as *const v8::Object as usize;
+            let body_vec = response.body.unwrap_or_default();
+            let mut cache = RESPONSE_CACHE.lock().unwrap();
+            cache.insert(response_ptr, (response.url.clone(), body_vec));
+            drop(cache);
+
+            // Add body string for direct access
+            let body_str: _ = String::from_utf8_lossy(&body_vec);
+            let body_key: _ = v8::String::new(scope, "body").unwrap();
+            let body_val: _ = v8::String::new(scope, &body_str).unwrap().into();
+            response_obj.set(scope, body_key.into(), body_val);
+
+            // Add json() method
+            let json_template: _ = v8::FunctionTemplate::new(scope, json_callback);
+            let json_func: _ = json_template.get_function(scope).unwrap();
+            let json_key: _ = v8::String::new(scope, "json").unwrap();
+            response_obj.set(scope, json_key.into(), json_func.into());
+
+            // Add text() method
+            let text_template: _ = v8::FunctionTemplate::new(scope, text_callback);
+            let text_func: _ = text_template.get_function(scope).unwrap();
+            let text_key: _ = v8::String::new(scope, "text").unwrap();
+            response_obj.set(scope, text_key.into(), text_func.into());
+
             // Add headers
             let headers_obj: _ = v8::Object::new(scope);
             for (key, value) in response.headers {
@@ -320,6 +347,64 @@ fn headers_constructor_callback(
     let set_func_instance: _ = set_func.get_function(scope).unwrap();
     headers_obj.set(scope, set_key.into(), set_func_instance.into());
     retval.set(headers_obj.into());
+}
+
+/// json() method callback for Response objects
+fn json_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    // Get the this object (response object)
+    let this_obj: v8::Local<v8::Object> = args.this();
+
+    // Get the pointer to look up in cache
+    let this_ptr = &*this_obj as *const v8::Object as usize;
+    let cache = RESPONSE_CACHE.lock().unwrap();
+
+    if let Some((url, body)) = cache.get(&this_ptr) {
+        // Try to parse and format JSON prettily
+        let body_str = String::from_utf8_lossy(body);
+
+        // Try to parse as JSON and format prettily
+        if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&body_str) {
+            let formatted = serde_json::to_string_pretty(&json_value).unwrap_or(body_str.to_string());
+            let result: v8::Local<v8::Value> = v8::String::new(scope, &formatted).unwrap().into();
+            retval.set(result);
+        } else {
+            // Not valid JSON, return as-is
+            let result: v8::Local<v8::Value> = v8::String::new(scope, &body_str).unwrap().into();
+            retval.set(result);
+        }
+    } else {
+        // No cached response found
+        let error: v8::Local<v8::Value> = v8::String::new(scope, "Response body not available").unwrap().into();
+        retval.set(error);
+    }
+}
+
+/// text() method callback for Response objects
+fn text_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    // Get the this object (response object)
+    let this_obj: v8::Local<v8::Object> = args.this();
+
+    // Get the pointer to look up in cache
+    let this_ptr = &*this_obj as *const v8::Object as usize;
+    let cache = RESPONSE_CACHE.lock().unwrap();
+
+    if let Some((_url, body)) = cache.get(&this_ptr) {
+        let body_str = String::from_utf8_lossy(body);
+        let result: v8::Local<v8::Value> = v8::String::new(scope, &body_str).unwrap().into();
+        retval.set(result);
+    } else {
+        // No cached response found
+        let error: v8::Local<v8::Value> = v8::String::new(scope, "Response body not available").unwrap().into();
+        retval.set(error);
+    }
 }
 #[cfg(test)]
 mod tests {
