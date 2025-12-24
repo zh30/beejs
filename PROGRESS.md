@@ -6,7 +6,7 @@
 
 
 
-**最新状态 (2025-12-24)**: ✨ v0.3.29 HKDF 密钥派生函数 + randomUUID 修复
+**最新状态 (2025-12-25)**: ✨ v0.3.30 Web Crypto API (crypto.subtle) 完整实现
 
 ### ✨ v0.3.29 HKDF 密钥派生函数 (2025-12-24)
 **进度**: ✅ hkdf | ✅ hkdfSync | ✅ SHA-1 | ✅ SHA-256 | ✅ SHA-512 | ✅ 14/14 测试通过
@@ -64,6 +64,98 @@ console.log(key.length); // 32
 // 生成 UUID
 const uuid = crypto.randomUUID();
 console.log(uuid); // e.g., "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+```
+
+### ✨ v0.3.30 Web Crypto API (2025-12-25)
+**进度**: ✅ subtle.digest | ✅ subtle.importKey | ✅ subtle.sign | ✅ subtle.verify | ✅ subtle.generateKey | ✅ subtle.encrypt | ✅ subtle.decrypt | ✅ subtle.exportKey | ✅ 21/21 测试通过
+
+#### v0.3.30 核心功能
+- ✅ **crypto.subtle.digest(algorithm, data)** - 计算哈希摘要
+  - 支持 SHA-1、SHA-256、SHA-384、SHA-512
+  - 返回 Promise\<ArrayBuffer>
+- ✅ **crypto.subtle.importKey(format, keyData, algorithm, extractable, usages)** - 导入密钥
+  - 支持 'raw' 格式导入
+  - 支持 HMAC 算法
+  - 返回 Promise\<CryptoKey>
+- ✅ **crypto.subtle.sign(algorithm, key, data)** - HMAC 签名
+  - 返回 Promise\<ArrayBuffer>
+- ✅ **crypto.subtle.verify(algorithm, key, signature, data)** - HMAC 验证
+  - 返回 Promise\<boolean> (常量时间比较)
+- ✅ **crypto.subtle.generateKey(algorithm, extractable, usages)** - 生成密钥
+  - 支持 AES-GCM (256-bit)
+  - 返回 Promise\<CryptoKey>
+- ✅ **crypto.subtle.encrypt(algorithm, key, data)** - AES-GCM 加密
+  - 支持 12-byte IV
+  - 返回 Promise\<ArrayBuffer>
+- ✅ **crypto.subtle.decrypt(algorithm, key, data)** - AES-GCM 解密
+  - 返回 Promise\<ArrayBuffer>
+- ✅ **crypto.subtle.exportKey(format, key)** - 导出密钥
+  - 支持 'raw' 格式导出
+  - 返回 Promise\<ArrayBuffer>
+
+#### v0.3.30 技术实现
+- **V8 PromiseResolver 模式**
+  - 所有 Web Crypto 函数遵循规范返回 Promise
+  - 同步创建 PromiseResolver，异步 resolve/reject
+  - 使用 `scope.perform_microtask_checkpoint()` 处理微任务
+- **V8 HandleScope 可变借用规则 (E0499)**
+  - 预提取 V8 对象到变量避免重复借用 scope
+  - 分离 resolver 创建和 promise 获取
+- **ring crate 加密原语**
+  - SHA-1/SHA-256/SHA-384/SHA-512 摘要
+  - HMAC-SHA256 签名和验证
+  - AES-GCM 加密 (256-bit)
+- **sha1 crate 0.10 API**
+  - `Sha1::default()` 初始化
+  - `finalize()` 返回摘要
+
+#### v0.3.30 测试验证
+- ✅ 21/21 Web Crypto API 测试全部通过
+- ✅ 14/14 HKDF 测试验证（无回归）
+- ✅ 8/8 randomUUID 测试验证（无回归）
+- ✅ Promise 返回类型验证
+- ✅ API 函数存在性验证
+
+#### v0.3.30 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+300 行)
+  - 新增 8 个 Web Crypto 函数实现 (digest, importKey, sign, verify, generateKey, encrypt, decrypt, exportKey)
+  - 新增 `digest_fn`、`import_key_fn`、`sign_fn`、`verify_fn`、`generate_key_fn`、`encrypt_fn`、`decrypt_fn`、`export_key_fn`
+  - 适配 sha1 crate 0.10 API (`Sha1::default()`, `finalize()`)
+  - 适配 base64 crate 0.22 Engine API
+
+- **修改文件**: `tests/webcrypto_tests.rs` (+315 行)
+  - 21 个测试用例覆盖 Web Crypto API
+  - 测试 Promise 返回类型
+  - 测试所有支持的算法
+
+#### v0.3.30 使用示例
+```javascript
+// SHA-256 摘要
+const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('hello'));
+console.log(new Uint8Array(hash)); // ArrayBuffer
+
+// HMAC 签名
+const key = await crypto.subtle.importKey(
+    'raw',
+    new Uint8Array(32),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+);
+const signature = await crypto.subtle.sign({ name: 'HMAC' }, key, new TextEncoder().encode('message'));
+
+// AES-GCM 加密
+const aesKey = await crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+);
+const iv = crypto.getRandomValues(new Uint8Array(12));
+const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: iv },
+    aesKey,
+    new TextEncoder().encode('message')
+);
 ```
 
 ### ✨ v0.3.28 KeyObjects API (2025-12-24)

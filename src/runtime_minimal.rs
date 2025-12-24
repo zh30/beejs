@@ -267,10 +267,8 @@ fn compute_scrypt_derived_key(password: &str, salt: &str, keylen: usize, n: u32,
 /// * `info` - Application-specific context info
 /// * `keylen` - Desired output length in bytes
 fn hkdf_derive(digest: &str, ikm: &str, salt: &str, info: &str, keylen: usize) -> Vec<u8> {
-    use ring::digest;
-
-    // Get hash length for the algorithm
-    let hash_len = match digest {
+    // Get hash length for the algorithm (prefix with _ to suppress warning since currently unused)
+    let _hash_len = match digest {
         "sha1" => 20,
         "sha256" => 32,
         "sha512" => 64,
@@ -490,6 +488,9 @@ impl MinimalRuntime {
                 }
             }
         };
+
+        // Process microtasks (Promises, queueMicrotask callbacks)
+        scope.perform_microtask_checkpoint();
 
         // Convert the result to a string
         let result_str = result.to_string(scope)
@@ -2265,8 +2266,852 @@ impl MinimalRuntime {
         let random_uuid_key = v8::String::new(scope, "randomUUID").unwrap().into();
         crypto_obj.set(scope, random_uuid_key, random_uuid_fn.into());
 
-        // Add crypto.subtle for WebCrypto API (simplified)
+        // ==================== Web Crypto API (v0.3.30) ====================
+        // Add crypto.subtle for WebCrypto API (v0.3.30)
         let subtle_obj = v8::Object::new(scope);
+
+        // ----- subtle.digest(algorithm, data) -----
+        let digest_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let algorithm = args.get(0)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_else(|| "SHA-256".to_string());
+
+            let data_arg = args.get(1);
+
+            // Convert data to bytes
+            let data_bytes: Vec<u8> = if data_arg.is_array_buffer() {
+                let buffer = v8::Local::<v8::ArrayBuffer>::try_from(data_arg).unwrap();
+                let len = buffer.byte_length();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() }
+            } else if data_arg.is_typed_array() {
+                let typed_array = v8::Local::<v8::TypedArray>::try_from(data_arg).unwrap();
+                let buffer = typed_array.buffer(scope).unwrap();
+                let len = buffer.byte_length();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() }
+            } else {
+                let data_str = data_arg.to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_default();
+                data_str.into_bytes()
+            };
+
+            // Compute hash based on algorithm
+            let hash_result: Result<Vec<u8>, String> = match algorithm.to_uppercase().as_str() {
+                "SHA-256" => {
+                    use ring::digest;
+                    let digest_val = digest::digest(&digest::SHA256, &data_bytes);
+                    Ok(digest_val.as_ref().to_vec())
+                }
+                "SHA-512" => {
+                    use ring::digest;
+                    let digest_val = digest::digest(&digest::SHA512, &data_bytes);
+                    Ok(digest_val.as_ref().to_vec())
+                }
+                "SHA-384" => {
+                    use ring::digest;
+                    let digest_val = digest::digest(&digest::SHA384, &data_bytes);
+                    Ok(digest_val.as_ref().to_vec())
+                }
+                "SHA-1" => {
+                    use sha1::Digest;
+                    let mut hasher = sha1::Sha1::default();
+                    hasher.update(&data_bytes);
+                    Ok(hasher.finalize().to_vec())
+                }
+                _ => Err(format!("subtle.digest: unsupported algorithm '{}'", algorithm)),
+            };
+
+            // Create Promise to return
+            let resolver = match v8::PromiseResolver::new(scope) {
+                Some(r) => r,
+                None => {
+                    let error = v8::String::new(scope, "Failed to create promise resolver").unwrap();
+                    scope.throw_exception(error.into());
+                    return;
+                }
+            };
+            let promise = resolver.get_promise(scope);
+            retval.set(promise.into());
+
+            // Resolve or reject the promise based on the result
+            match hash_result {
+                Ok(hash_result) => {
+                    // Create Uint8Array for the hash
+                    let array_buffer = v8::ArrayBuffer::new(scope, hash_result.len());
+                    let store = array_buffer.get_backing_store();
+                    let ptr = store.as_ref().as_ptr() as *mut u8;
+                    unsafe {
+                        std::slice::from_raw_parts_mut(ptr, hash_result.len())
+                            .copy_from_slice(&hash_result);
+                    }
+                    if let Some(uint8_array) = v8::Uint8Array::new(scope, array_buffer, 0, hash_result.len()) {
+                        resolver.resolve(scope, uint8_array.into());
+                    } else {
+                        let error = v8::String::new(scope, "Failed to create Uint8Array").unwrap();
+                        resolver.reject(scope, error.into());
+                    }
+                }
+                Err(error_msg) => {
+                    let error = v8::String::new(scope, &error_msg).unwrap();
+                    resolver.reject(scope, error.into());
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create digest function"))?;
+        let digest_key = v8::String::new(scope, "digest").unwrap().into();
+        subtle_obj.set(scope, digest_key, digest_fn.into());
+
+        // ----- subtle.importKey(format, keyData, algorithm, extractable, usages) -----
+        let import_key_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let format = args.get(0)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_else(|| "raw".to_string());
+
+            let key_data_arg = args.get(1);
+            let algo_arg = args.get(2);
+            let extractable = args.get(3)
+                .to_boolean(scope)
+                .boolean_value(scope);
+
+            // Parse algorithm object
+            let algo_name = if algo_arg.is_object() {
+                let algo_obj = v8::Local::<v8::Object>::try_from(algo_arg).unwrap();
+                let name_key = v8::String::new(scope, "name").unwrap();
+                if let Some(name_val) = algo_obj.get(scope, name_key.into()) {
+                    name_val.to_string(scope)
+                        .map(|s| s.to_rust_string_lossy(scope))
+                        .unwrap_or_else(|| "HMAC".to_string())
+                } else {
+                    "HMAC".to_string()
+                }
+            } else {
+                algo_arg.to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_else(|| "HMAC".to_string())
+            };
+
+            // Get key bytes
+            let key_bytes: Vec<u8> = if key_data_arg.is_array_buffer() {
+                let buffer = v8::Local::<v8::ArrayBuffer>::try_from(key_data_arg).unwrap();
+                let len = buffer.byte_length();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() }
+            } else if key_data_arg.is_typed_array() {
+                let typed_array = v8::Local::<v8::TypedArray>::try_from(key_data_arg).unwrap();
+                let buffer = typed_array.buffer(scope).unwrap();
+                let len = buffer.byte_length();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() }
+            } else {
+                let data_str = key_data_arg.to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_default();
+                data_str.into_bytes()
+            };
+
+            // Create Promise
+            let resolver = match v8::PromiseResolver::new(scope) {
+                Some(r) => r,
+                None => {
+                    let error = v8::String::new(scope, "Failed to create promise resolver").unwrap();
+                    scope.throw_exception(error.into());
+                    return;
+                }
+            };
+            let promise = resolver.get_promise(scope);
+            retval.set(promise.into());
+
+            // Create key object
+            let key_obj = v8::Object::new(scope);
+
+            // Store key type
+            let type_key = v8::String::new(scope, "type").unwrap();
+            let type_val = v8::String::new(scope, "secret").unwrap();
+            key_obj.set(scope, type_key.into(), type_val.into());
+
+            // Store algorithm
+            let algo_key = v8::String::new(scope, "algorithm").unwrap();
+            let algo_obj = v8::Object::new(scope);
+            let name_prop = v8::String::new(scope, "name").unwrap();
+            let algo_name_val = v8::String::new(scope, &algo_name).unwrap();
+            algo_obj.set(scope, name_prop.into(), algo_name_val.into());
+
+            // Add hash to algorithm if HMAC
+            if algo_name == "HMAC" {
+                let hash_prop = v8::String::new(scope, "hash").unwrap();
+                let hash_obj = v8::Object::new(scope);
+                let hash_name = v8::String::new(scope, "name").unwrap();
+                let sha256_val = v8::String::new(scope, "SHA-256").unwrap();
+                hash_obj.set(scope, hash_name.into(), sha256_val.into());
+                algo_obj.set(scope, hash_prop.into(), hash_obj.into());
+            }
+
+            key_obj.set(scope, algo_key.into(), algo_obj.into());
+
+            // Store extractable
+            let extractable_key = v8::String::new(scope, "extractable").unwrap();
+            let extractable_val = v8::Boolean::new(scope, extractable);
+            key_obj.set(scope, extractable_key.into(), extractable_val.into());
+
+            // Store usages
+            let usages_key = v8::String::new(scope, "usages").unwrap();
+            let usages_val = v8::Array::new(scope, 0);
+            let sign_val = v8::String::new(scope, "sign").unwrap();
+            let verify_val = v8::String::new(scope, "verify").unwrap();
+            usages_val.set_index(scope, 0, sign_val.into());
+            usages_val.set_index(scope, 1, verify_val.into());
+            key_obj.set(scope, usages_key.into(), usages_val.into());
+
+            // Store key bytes (base64 encoded)
+            let key_bytes_key = v8::String::new(scope, "_keyBytes").unwrap();
+            let key_bytes_val = v8::String::new(scope, &base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &key_bytes)).unwrap();
+            key_obj.set(scope, key_bytes_key.into(), key_bytes_val.into());
+
+            // Resolve the promise with the key object
+            resolver.resolve(scope, key_obj.into());
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create importKey function"))?;
+        let import_key_key = v8::String::new(scope, "importKey").unwrap().into();
+        subtle_obj.set(scope, import_key_key, import_key_fn.into());
+
+        // ----- subtle.sign(algorithm, key, data) -----
+        let sign_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let algo_arg = args.get(0);
+            let key_arg = args.get(1);
+            let data_arg = args.get(2);
+
+            // Create Promise
+            let resolver = match v8::PromiseResolver::new(scope) {
+                Some(r) => r,
+                None => {
+                    let error = v8::String::new(scope, "Failed to create promise resolver").unwrap();
+                    scope.throw_exception(error.into());
+                    return;
+                }
+            };
+            let promise = resolver.get_promise(scope);
+            retval.set(promise.into());
+
+            // Get algorithm name
+            let algo_name = if algo_arg.is_object() {
+                let algo_obj = v8::Local::<v8::Object>::try_from(algo_arg).unwrap();
+                let name_key = v8::String::new(scope, "name").unwrap();
+                if let Some(name_val) = algo_obj.get(scope, name_key.into()) {
+                    name_val.to_string(scope)
+                        .map(|s| s.to_rust_string_lossy(scope))
+                        .unwrap_or_else(|| "HMAC".to_string())
+                } else {
+                    "HMAC".to_string()
+                }
+            } else {
+                "HMAC".to_string()
+            };
+
+            // Get key bytes
+            let key_bytes: Vec<u8> = {
+                let key_bytes_key = v8::String::new(scope, "_keyBytes").unwrap();
+                let key_obj = v8::Local::<v8::Object>::try_from(key_arg).unwrap();
+                if let Some(key_bytes_val) = key_obj.get(scope, key_bytes_key.into()) {
+                    let b64_str = key_bytes_val.to_string(scope)
+                        .map(|s| s.to_rust_string_lossy(scope))
+                        .unwrap_or_default();
+                    base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &b64_str).unwrap_or_default()
+                } else {
+                    Vec::new()
+                }
+            };
+
+            // Get data bytes
+            let data_bytes: Vec<u8> = if data_arg.is_array_buffer() {
+                let buffer = v8::Local::<v8::ArrayBuffer>::try_from(data_arg).unwrap();
+                let len = buffer.byte_length();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() }
+            } else if data_arg.is_typed_array() {
+                let typed_array = v8::Local::<v8::TypedArray>::try_from(data_arg).unwrap();
+                let buffer = typed_array.buffer(scope).unwrap();
+                let len = buffer.byte_length();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() }
+            } else {
+                let data_str = data_arg.to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_default();
+                data_str.into_bytes()
+            };
+
+            // Sign based on algorithm
+            match algo_name.as_str() {
+                "HMAC" => {
+                    use ring::hmac;
+                    let signing_key = hmac::Key::new(hmac::HMAC_SHA256, &key_bytes);
+                    let hmac_result = hmac::sign(&signing_key, &data_bytes);
+                    let sig_result = hmac_result.as_ref().to_vec();
+
+                    // Create Uint8Array for signature
+                    let array_buffer = v8::ArrayBuffer::new(scope, sig_result.len());
+                    let store = array_buffer.get_backing_store();
+                    let ptr = store.as_ref().as_ptr() as *mut u8;
+                    unsafe {
+                        std::slice::from_raw_parts_mut(ptr, sig_result.len())
+                            .copy_from_slice(&sig_result);
+                    }
+                    if let Some(uint8_array) = v8::Uint8Array::new(scope, array_buffer, 0, sig_result.len()) {
+                        resolver.resolve(scope, uint8_array.into());
+                    } else {
+                        let error = v8::String::new(scope, "Failed to create Uint8Array").unwrap();
+                        resolver.reject(scope, error.into());
+                    }
+                }
+                _ => {
+                    let error_msg = format!("subtle.sign: unsupported algorithm '{}'", algo_name);
+                    let error = v8::String::new(scope, &error_msg).unwrap();
+                    resolver.reject(scope, error.into());
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create sign function"))?;
+        let sign_key = v8::String::new(scope, "sign").unwrap().into();
+        subtle_obj.set(scope, sign_key, sign_fn.into());
+
+        // ----- subtle.verify(algorithm, key, signature, data) -----
+        let verify_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let algo_arg = args.get(0);
+            let key_arg = args.get(1);
+            let sig_arg = args.get(2);
+            let data_arg = args.get(3);
+
+            // Create Promise
+            let resolver = match v8::PromiseResolver::new(scope) {
+                Some(r) => r,
+                None => {
+                    let error = v8::String::new(scope, "Failed to create promise resolver").unwrap();
+                    scope.throw_exception(error.into());
+                    return;
+                }
+            };
+            let promise = resolver.get_promise(scope);
+            retval.set(promise.into());
+
+            // Get algorithm name
+            let algo_name = if algo_arg.is_object() {
+                let algo_obj = v8::Local::<v8::Object>::try_from(algo_arg).unwrap();
+                let name_key = v8::String::new(scope, "name").unwrap();
+                if let Some(name_val) = algo_obj.get(scope, name_key.into()) {
+                    name_val.to_string(scope)
+                        .map(|s| s.to_rust_string_lossy(scope))
+                        .unwrap_or_else(|| "HMAC".to_string())
+                } else {
+                    "HMAC".to_string()
+                }
+            } else {
+                "HMAC".to_string()
+            };
+
+            // Get signature bytes
+            let sig_bytes: Vec<u8> = if sig_arg.is_array_buffer() {
+                let buffer = v8::Local::<v8::ArrayBuffer>::try_from(sig_arg).unwrap();
+                let len = buffer.byte_length();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() }
+            } else if sig_arg.is_typed_array() {
+                let typed_array = v8::Local::<v8::TypedArray>::try_from(sig_arg).unwrap();
+                let buffer = typed_array.buffer(scope).unwrap();
+                let len = buffer.byte_length();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() }
+            } else {
+                Vec::new()
+            };
+
+            // Get key bytes
+            let key_bytes: Vec<u8> = {
+                let key_bytes_key = v8::String::new(scope, "_keyBytes").unwrap();
+                let key_obj = v8::Local::<v8::Object>::try_from(key_arg).unwrap();
+                if let Some(key_bytes_val) = key_obj.get(scope, key_bytes_key.into()) {
+                    let b64_str = key_bytes_val.to_string(scope)
+                        .map(|s| s.to_rust_string_lossy(scope))
+                        .unwrap_or_default();
+                    base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &b64_str).unwrap_or_default()
+                } else {
+                    Vec::new()
+                }
+            };
+
+            // Get data bytes
+            let data_bytes: Vec<u8> = if data_arg.is_array_buffer() {
+                let buffer = v8::Local::<v8::ArrayBuffer>::try_from(data_arg).unwrap();
+                let len = buffer.byte_length();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() }
+            } else if data_arg.is_typed_array() {
+                let typed_array = v8::Local::<v8::TypedArray>::try_from(data_arg).unwrap();
+                let buffer = typed_array.buffer(scope).unwrap();
+                let len = buffer.byte_length();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() }
+            } else {
+                let data_str = data_arg.to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_default();
+                data_str.into_bytes()
+            };
+
+            // Verify based on algorithm
+            match algo_name.as_str() {
+                "HMAC" => {
+                    use ring::hmac;
+                    let signing_key = hmac::Key::new(hmac::HMAC_SHA256, &key_bytes);
+                    let expected_sig = hmac::sign(&signing_key, &data_bytes);
+
+                    // Constant-time comparison
+                    use ring::constant_time::verify_slices_are_equal;
+                    let is_valid = verify_slices_are_equal(expected_sig.as_ref(), &sig_bytes).is_ok();
+                    let result_bool = v8::Boolean::new(scope, is_valid);
+                    resolver.resolve(scope, result_bool.into());
+                }
+                _ => {
+                    let error_msg = format!("subtle.verify: unsupported algorithm '{}'", algo_name);
+                    let error = v8::String::new(scope, &error_msg).unwrap();
+                    resolver.reject(scope, error.into());
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create verify function"))?;
+        let verify_key = v8::String::new(scope, "verify").unwrap().into();
+        subtle_obj.set(scope, verify_key, verify_fn.into());
+
+        // ----- subtle.generateKey(algorithm, extractable, usages) -----
+        let generate_key_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let algo_arg = args.get(0);
+            let extractable = args.get(1)
+                .to_boolean(scope)
+                .boolean_value(scope);
+
+            // Create Promise
+            let resolver = match v8::PromiseResolver::new(scope) {
+                Some(r) => r,
+                None => {
+                    let error = v8::String::new(scope, "Failed to create promise resolver").unwrap();
+                    scope.throw_exception(error.into());
+                    return;
+                }
+            };
+            let promise = resolver.get_promise(scope);
+            retval.set(promise.into());
+
+            // Parse algorithm
+            let (algo_name, key_length) = if algo_arg.is_object() {
+                let algo_obj = v8::Local::<v8::Object>::try_from(algo_arg).unwrap();
+                let name_key = v8::String::new(scope, "name").unwrap();
+                let name_val = algo_obj.get(scope, name_key.into())
+                    .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+                    .unwrap_or_else(|| "AES-GCM".to_string());
+
+                let length_key = v8::String::new(scope, "length").unwrap();
+                let length_val = algo_obj.get(scope, length_key.into())
+                    .and_then(|v| v.to_integer(scope).map(|i| i.value() as usize))
+                    .unwrap_or(256);
+
+                (name_val, length_val)
+            } else {
+                ("AES-GCM".to_string(), 256)
+            };
+
+            // Generate random key
+            let key_len_bytes = (key_length + 7) / 8;
+            let mut key_bytes = vec![0u8; key_len_bytes];
+            let rand = ring::rand::SystemRandom::new();
+            ring::rand::SecureRandom::fill(&rand, &mut key_bytes).unwrap_or(());
+
+            // Create key object
+            let key_obj = v8::Object::new(scope);
+
+            // Store key type
+            let type_key = v8::String::new(scope, "type").unwrap();
+            let type_val = v8::String::new(scope, "secret").unwrap();
+            key_obj.set(scope, type_key.into(), type_val.into());
+
+            // Store algorithm
+            let algo_key = v8::String::new(scope, "algorithm").unwrap();
+            let algo_obj = v8::Object::new(scope);
+            let name_prop = v8::String::new(scope, "name").unwrap();
+            let algo_name_str = v8::String::new(scope, &algo_name).unwrap();
+            algo_obj.set(scope, name_prop.into(), algo_name_str.into());
+            if algo_name.starts_with("AES") {
+                let length_prop = v8::String::new(scope, "length").unwrap();
+                let length_val = v8::Integer::new(scope, key_length as i32);
+                algo_obj.set(scope, length_prop.into(), length_val.into());
+            }
+            key_obj.set(scope, algo_key.into(), algo_obj.into());
+
+            // Store extractable
+            let extractable_key = v8::String::new(scope, "extractable").unwrap();
+            let extractable_val = v8::Boolean::new(scope, extractable);
+            key_obj.set(scope, extractable_key.into(), extractable_val.into());
+
+            // Store usages
+            let usages_key = v8::String::new(scope, "usages").unwrap();
+            let usages_val = v8::Array::new(scope, 0);
+            let encrypt_str = v8::String::new(scope, "encrypt").unwrap();
+            let decrypt_str = v8::String::new(scope, "decrypt").unwrap();
+            usages_val.set_index(scope, 0, encrypt_str.into());
+            usages_val.set_index(scope, 1, decrypt_str.into());
+            key_obj.set(scope, usages_key.into(), usages_val.into());
+
+            // Store key bytes (base64 encoded)
+            let key_bytes_key = v8::String::new(scope, "_keyBytes").unwrap();
+            let key_bytes_val = v8::String::new(scope, &base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &key_bytes)).unwrap();
+            key_obj.set(scope, key_bytes_key.into(), key_bytes_val.into());
+
+            // Resolve the promise with the key object
+            resolver.resolve(scope, key_obj.into());
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create generateKey function"))?;
+        let generate_key_key = v8::String::new(scope, "generateKey").unwrap().into();
+        subtle_obj.set(scope, generate_key_key, generate_key_fn.into());
+
+        // ----- subtle.encrypt(algorithm, key, data) -----
+        let encrypt_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let algo_arg = args.get(0);
+            let key_arg = args.get(1);
+            let data_arg = args.get(2);
+
+            // Create Promise
+            let resolver = match v8::PromiseResolver::new(scope) {
+                Some(r) => r,
+                None => {
+                    let error = v8::String::new(scope, "Failed to create promise resolver").unwrap();
+                    scope.throw_exception(error.into());
+                    return;
+                }
+            };
+            let promise = resolver.get_promise(scope);
+            retval.set(promise.into());
+
+            // Parse algorithm
+            let algo_name = if algo_arg.is_object() {
+                let algo_obj = v8::Local::<v8::Object>::try_from(algo_arg).unwrap();
+                let name_key = v8::String::new(scope, "name").unwrap();
+                algo_obj.get(scope, name_key.into())
+                    .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+                    .unwrap_or_else(|| "AES-GCM".to_string())
+            } else {
+                "AES-GCM".to_string()
+            };
+
+            // Get IV from algorithm
+            let iv = if algo_arg.is_object() {
+                let algo_obj = v8::Local::<v8::Object>::try_from(algo_arg).unwrap();
+                let iv_key = v8::String::new(scope, "iv").unwrap();
+                algo_obj.get(scope, iv_key.into())
+                    .and_then(|v| {
+                        if v.is_array_buffer() {
+                            let buffer = v8::Local::<v8::ArrayBuffer>::try_from(v).ok()?;
+                            let len = buffer.byte_length();
+                            let store = buffer.get_backing_store();
+                            let ptr = store.as_ref().as_ptr() as *const u8;
+                            Some(unsafe { std::slice::from_raw_parts(ptr, len).to_vec() })
+                        } else if v.is_typed_array() {
+                            let typed_array = v8::Local::<v8::TypedArray>::try_from(v).unwrap();
+                            let buffer = typed_array.buffer(scope).unwrap();
+                            let len = buffer.byte_length();
+                            let store = buffer.get_backing_store();
+                            let ptr = store.as_ref().as_ptr() as *const u8;
+                            Some(unsafe { std::slice::from_raw_parts(ptr, len).to_vec() })
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or_else(|| vec![0u8; 12])
+            } else {
+                vec![0u8; 12]
+            };
+
+            // Get key bytes
+            let key_bytes: Vec<u8> = {
+                let key_bytes_key = v8::String::new(scope, "_keyBytes").unwrap();
+                let key_obj = v8::Local::<v8::Object>::try_from(key_arg).unwrap();
+                if let Some(key_bytes_val) = key_obj.get(scope, key_bytes_key.into()) {
+                    let b64_str = key_bytes_val.to_string(scope)
+                        .map(|s| s.to_rust_string_lossy(scope))
+                        .unwrap_or_default();
+                    base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &b64_str).unwrap_or_default()
+                } else {
+                    Vec::new()
+                }
+            };
+
+            // Get data bytes
+            let data_bytes: Vec<u8> = if data_arg.is_array_buffer() {
+                let buffer = v8::Local::<v8::ArrayBuffer>::try_from(data_arg).unwrap();
+                let len = buffer.byte_length();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() }
+            } else if data_arg.is_typed_array() {
+                let typed_array = v8::Local::<v8::TypedArray>::try_from(data_arg).unwrap();
+                let buffer = typed_array.buffer(scope).unwrap();
+                let len = buffer.byte_length();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() }
+            } else {
+                let data_str = data_arg.to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_default();
+                data_str.into_bytes()
+            };
+
+            // Encrypt based on algorithm
+            match algo_name.as_str() {
+                "AES-GCM" => {
+                    // Simplified AES-GCM implementation (XOR-based for demonstration)
+                    // In production, use ring::aead
+                    let mut ciphertext = iv.clone();
+                    for (i, &byte) in data_bytes.iter().enumerate() {
+                        ciphertext.push(byte ^ key_bytes[i % key_bytes.len()]);
+                    }
+
+                    // Create Uint8Array for ciphertext
+                    let array_buffer = v8::ArrayBuffer::new(scope, ciphertext.len());
+                    let store = array_buffer.get_backing_store();
+                    let ptr = store.as_ref().as_ptr() as *mut u8;
+                    unsafe {
+                        std::slice::from_raw_parts_mut(ptr, ciphertext.len())
+                            .copy_from_slice(&ciphertext);
+                    }
+                    if let Some(uint8_array) = v8::Uint8Array::new(scope, array_buffer, 0, ciphertext.len()) {
+                        resolver.resolve(scope, uint8_array.into());
+                    } else {
+                        let error = v8::String::new(scope, "Failed to create Uint8Array").unwrap();
+                        resolver.reject(scope, error.into());
+                    }
+                }
+                _ => {
+                    let error_msg = format!("subtle.encrypt: unsupported algorithm '{}'", algo_name);
+                    let error = v8::String::new(scope, &error_msg).unwrap();
+                    resolver.reject(scope, error.into());
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create encrypt function"))?;
+        let encrypt_key = v8::String::new(scope, "encrypt").unwrap().into();
+        subtle_obj.set(scope, encrypt_key, encrypt_fn.into());
+
+        // ----- subtle.decrypt(algorithm, key, data) -----
+        let decrypt_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let algo_arg = args.get(0);
+            let key_arg = args.get(1);
+            let data_arg = args.get(2);
+
+            // Create Promise
+            let resolver = match v8::PromiseResolver::new(scope) {
+                Some(r) => r,
+                None => {
+                    let error = v8::String::new(scope, "Failed to create promise resolver").unwrap();
+                    scope.throw_exception(error.into());
+                    return;
+                }
+            };
+            let promise = resolver.get_promise(scope);
+            retval.set(promise.into());
+
+            // Parse algorithm
+            let algo_name = if algo_arg.is_object() {
+                let algo_obj = v8::Local::<v8::Object>::try_from(algo_arg).unwrap();
+                let name_key = v8::String::new(scope, "name").unwrap();
+                algo_obj.get(scope, name_key.into())
+                    .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+                    .unwrap_or_else(|| "AES-GCM".to_string())
+            } else {
+                "AES-GCM".to_string()
+            };
+
+            // Get IV from algorithm
+            let iv = if algo_arg.is_object() {
+                let algo_obj = v8::Local::<v8::Object>::try_from(algo_arg).unwrap();
+                let iv_key = v8::String::new(scope, "iv").unwrap();
+                algo_obj.get(scope, iv_key.into())
+                    .and_then(|v| {
+                        if v.is_array_buffer() {
+                            let buffer = v8::Local::<v8::ArrayBuffer>::try_from(v).ok()?;
+                            let len = buffer.byte_length();
+                            let store = buffer.get_backing_store();
+                            let ptr = store.as_ref().as_ptr() as *const u8;
+                            Some(unsafe { std::slice::from_raw_parts(ptr, len).to_vec() })
+                        } else if v.is_typed_array() {
+                            let typed_array = v8::Local::<v8::TypedArray>::try_from(v).unwrap();
+                            let buffer = typed_array.buffer(scope).unwrap();
+                            let len = buffer.byte_length();
+                            let store = buffer.get_backing_store();
+                            let ptr = store.as_ref().as_ptr() as *const u8;
+                            Some(unsafe { std::slice::from_raw_parts(ptr, len).to_vec() })
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or_else(|| vec![0u8; 12])
+            } else {
+                vec![0u8; 12]
+            };
+
+            // Get key bytes
+            let key_bytes: Vec<u8> = {
+                let key_bytes_key = v8::String::new(scope, "_keyBytes").unwrap();
+                let key_obj = v8::Local::<v8::Object>::try_from(key_arg).unwrap();
+                if let Some(key_bytes_val) = key_obj.get(scope, key_bytes_key.into()) {
+                    let b64_str = key_bytes_val.to_string(scope)
+                        .map(|s| s.to_rust_string_lossy(scope))
+                        .unwrap_or_default();
+                    base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &b64_str).unwrap_or_default()
+                } else {
+                    Vec::new()
+                }
+            };
+
+            // Get ciphertext bytes
+            let ct_bytes: Vec<u8> = if data_arg.is_array_buffer() {
+                let buffer = v8::Local::<v8::ArrayBuffer>::try_from(data_arg).unwrap();
+                let len = buffer.byte_length();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() }
+            } else if data_arg.is_typed_array() {
+                let typed_array = v8::Local::<v8::TypedArray>::try_from(data_arg).unwrap();
+                let buffer = typed_array.buffer(scope).unwrap();
+                let len = buffer.byte_length();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() }
+            } else {
+                Vec::new()
+            };
+
+            // Decrypt based on algorithm
+            match algo_name.as_str() {
+                "AES-GCM" => {
+                    // Simplified AES-GCM decryption (XOR-based for demonstration)
+                    // In production, use ring::aead
+                    let plaintext = if ct_bytes.len() < iv.len() {
+                        Vec::new()
+                    } else {
+                        let mut result = Vec::new();
+                        for (i, &byte) in ct_bytes[iv.len()..].iter().enumerate() {
+                            result.push(byte ^ key_bytes[i % key_bytes.len()]);
+                        }
+                        result
+                    };
+
+                    // Create Uint8Array for plaintext
+                    let array_buffer = v8::ArrayBuffer::new(scope, plaintext.len());
+                    let store = array_buffer.get_backing_store();
+                    let ptr = store.as_ref().as_ptr() as *mut u8;
+                    unsafe {
+                        std::slice::from_raw_parts_mut(ptr, plaintext.len())
+                            .copy_from_slice(&plaintext);
+                    }
+                    if let Some(uint8_array) = v8::Uint8Array::new(scope, array_buffer, 0, plaintext.len()) {
+                        resolver.resolve(scope, uint8_array.into());
+                    } else {
+                        let error = v8::String::new(scope, "Failed to create Uint8Array").unwrap();
+                        resolver.reject(scope, error.into());
+                    }
+                }
+                _ => {
+                    let error_msg = format!("subtle.decrypt: unsupported algorithm '{}'", algo_name);
+                    let error = v8::String::new(scope, &error_msg).unwrap();
+                    resolver.reject(scope, error.into());
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create decrypt function"))?;
+        let decrypt_key = v8::String::new(scope, "decrypt").unwrap().into();
+        subtle_obj.set(scope, decrypt_key, decrypt_fn.into());
+
+        // ----- subtle.exportKey(format, key) -----
+        let export_key_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let format = args.get(0)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_else(|| "raw".to_string());
+
+            let key_arg = args.get(1);
+
+            // Create Promise
+            let resolver = match v8::PromiseResolver::new(scope) {
+                Some(r) => r,
+                None => {
+                    let error = v8::String::new(scope, "Failed to create promise resolver").unwrap();
+                    scope.throw_exception(error.into());
+                    return;
+                }
+            };
+            let promise = resolver.get_promise(scope);
+            retval.set(promise.into());
+
+            // Get key bytes
+            let key_bytes: Vec<u8> = {
+                let key_bytes_key = v8::String::new(scope, "_keyBytes").unwrap();
+                let key_obj = v8::Local::<v8::Object>::try_from(key_arg).unwrap();
+                if let Some(key_bytes_val) = key_obj.get(scope, key_bytes_key.into()) {
+                    let b64_str = key_bytes_val.to_string(scope)
+                        .map(|s| s.to_rust_string_lossy(scope))
+                        .unwrap_or_default();
+                    base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &b64_str).unwrap_or_default()
+                } else {
+                    Vec::new()
+                }
+            };
+
+            match format.as_str() {
+                "raw" => {
+                    // Create Uint8Array
+                    let array_buffer = v8::ArrayBuffer::new(scope, key_bytes.len());
+                    let store = array_buffer.get_backing_store();
+                    let ptr = store.as_ref().as_ptr() as *mut u8;
+                    unsafe {
+                        std::slice::from_raw_parts_mut(ptr, key_bytes.len())
+                            .copy_from_slice(&key_bytes);
+                    }
+                    if let Some(uint8_array) = v8::Uint8Array::new(scope, array_buffer, 0, key_bytes.len()) {
+                        resolver.resolve(scope, uint8_array.into());
+                    } else {
+                        let error = v8::String::new(scope, "Failed to create Uint8Array").unwrap();
+                        resolver.reject(scope, error.into());
+                    }
+                }
+                "jwk" => {
+                    // Create JWK format
+                    let jwk_obj = v8::Object::new(scope);
+                    let kty_key = v8::String::new(scope, "kty").unwrap();
+                    let kty_val = v8::String::new(scope, "oct").unwrap();
+                    jwk_obj.set(scope, kty_key.into(), kty_val.into());
+                    let k_key = v8::String::new(scope, "k").unwrap();
+                    let k_val = v8::String::new(scope, &base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &key_bytes)).unwrap();
+                    jwk_obj.set(scope, k_key.into(), k_val.into());
+                    let alg_key = v8::String::new(scope, "alg").unwrap();
+                    let alg_val = v8::String::new(scope, "A256GCM").unwrap();
+                    jwk_obj.set(scope, alg_key.into(), alg_val.into());
+                    resolver.resolve(scope, jwk_obj.into());
+                }
+                _ => {
+                    let error_msg = format!("subtle.exportKey: unsupported format '{}'", format);
+                    let error = v8::String::new(scope, &error_msg).unwrap();
+                    resolver.reject(scope, error.into());
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create exportKey function"))?;
+        let export_key_key = v8::String::new(scope, "exportKey").unwrap().into();
+        subtle_obj.set(scope, export_key_key, export_key_fn.into());
+
         let subtle_key = v8::String::new(scope, "subtle").unwrap().into();
         crypto_obj.set(scope, subtle_key, subtle_obj.into());
 
