@@ -8,12 +8,12 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::time::{sleep, timeout};
 
-use super::super::enterprise::k8s_operator::*;
-use super::super::enterprise::metrics::prometheus::*;
-use super::super::enterprise::tracing::jaeger::*;
-use super::super::enterprise::logging::aggregation::*;
-use super::super::enterprise::security::sandbox::*;
-use super::super::enterprise::high_availability::*;
+use beejs::enterprise::k8s_operator::*;
+use beejs::enterprise::metrics::prometheus::*;
+use beejs::enterprise::tracing::jaeger::*;
+use beejs::enterprise::logging::aggregation::*;
+use beejs::enterprise::security::sandbox::*;
+use beejs::enterprise::high_availability::*;
 
 #[cfg(test)]
 mod tests {

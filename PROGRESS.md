@@ -1,6 +1,45 @@
 
 
 
+**最新状态 (2025-12-24)**: 🚀 v0.3.13 getHashes 发布！查询可用哈希算法列表！开发者工具场景必备！
+
+### 🎯 v0.3.13 getHashes 列表模块 (2025-12-24)
+**进度**: ✅ getHashes | ✅ 数组返回 | ✅ 算法发现 | ✅ 不可变性
+
+#### v0.3.13 核心功能
+- ✅ **crypto.getHashes()** - 返回支持的哈希算法列表
+- ✅ **返回数组** - 与 Node.js API 完全兼容
+- ✅ **算法发现** - 便于用户查询可用算法
+- ✅ **不可变结果** - 每次调用返回新数组
+
+#### v0.3.13 技术实现
+- 使用 `v8::Array::new()` 创建 V8 数组
+- 遍历算法列表并使用 `set_index()` 设置元素
+- 返回与 createHash/createHmac 一致的算法列表
+
+#### v0.3.13 使用示例
+```javascript
+// 获取支持的哈希算法
+const hashes = crypto.getHashes();
+console.log(hashes); // ['sha256', 'sha512', 'sha1', 'md5', 'blake3']
+
+// 检查算法是否可用
+if (crypto.getHashes().includes('blake3')) {
+    const hash = crypto.createHash('blake3').update('data').digest('hex');
+}
+```
+
+#### v0.3.13 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+25 行)
+  - 添加 `crypto.getHashes` 函数
+  - 返回算法名称数组
+
+- **新增文件**: `tests/crypto_gethashes_tests.rs` (+120 行)
+  - 7 个测试用例覆盖 getHashes API
+  - 测试函数存在性、返回类型、算法列表
+
+---
+
 **最新状态 (2025-12-24)**: 🚀 v0.3.12 PBKDF2 密钥派生发布！密码学安全密钥派生函数！加密存储/密钥生成场景必备！
 
 ### 🎯 v0.3.12 PBKDF2 密钥派生模块 (2025-12-24)

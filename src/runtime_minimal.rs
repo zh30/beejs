@@ -3193,6 +3193,27 @@ impl MinimalRuntime {
         let pbkdf2_key = v8::String::new(scope, "pbkdf2").unwrap().into();
         crypto_obj.set(scope, pbkdf2_key, pbkdf2_fn.into());
 
+        // Add crypto.getHashes (v0.3.13) - list supported hash algorithms
+        let get_hashes_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Define supported hash algorithms (must match createHash/createHmac valid_algorithms)
+            let algorithms = ["sha256", "sha512", "sha1", "md5", "blake3"];
+
+            // Create JavaScript array with algorithm names
+            let array = v8::Array::new(scope, algorithms.len() as i32);
+            for (i, algo) in algorithms.iter().enumerate() {
+                let algo_str = v8::String::new(scope, algo).unwrap();
+                array.set_index(scope, i as u32, algo_str.into());
+            }
+
+            retval.set(array.into());
+        });
+        let get_hashes_fn = match get_hashes_fn {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let get_hashes_key = v8::String::new(scope, "getHashes").unwrap().into();
+        crypto_obj.set(scope, get_hashes_key, get_hashes_fn.into());
+
         let crypto_key = v8::String::new(scope, "crypto").unwrap().into();
         global.set(scope, crypto_key, crypto_obj.into());
 
