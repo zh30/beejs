@@ -7,6 +7,55 @@
 
 
 
+### ✨ v0.3.42 globalThis.global 兼容性 (2025-12-25)
+**进度**: ✅ globalThis.global 实现 | ✅ 7 测试用例 | ✅ 所有测试通过 | ✅ CLI 验证通过
+
+#### v0.3.42 实现内容
+- ✅ **globalThis.global 别名**
+  - 实现 `globalThis.global` 作为 `globalThis` 的引用
+  - 确保 `globalThis.global === globalThis` 返回 `true`
+  - Node.js/Bun 兼容性：许多 npm 包依赖此特性检测 Node.js 环境
+  - global 对象包含所有全局属性（setTimeout, process, console, Buffer 等）
+
+#### v0.3.42 技术实现
+- **global 对象设置** (src/runtime_minimal.rs)
+  ```rust
+  // Set up global as an alias to globalThis for Node.js compatibility
+  // v0.3.42: globalThis.global should equal globalThis
+  let global_key = v8::String::new(scope, "global").unwrap().into();
+  global.set(scope, global_key, global.into());
+  ```
+
+#### v0.3.42 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+6 行)
+  - 在 `setup_global_api` 函数中添加 global 别名
+
+- **新增文件**: `tests/global_object_tests.rs` (+75 行)
+  - 7 个测试用例完整覆盖 global 对象
+  - 测试 global 存在性、类型、与 globalThis 相等性
+  - 测试 global 包含所有全局属性
+
+#### v0.3.42 验证
+- ✅ `cargo build --release` - 零警告
+- ✅ `cargo test --test global_object_tests` - 7 tests passed
+- ✅ `beejs eval "typeof globalThis.global"` → "object"
+- ✅ `beejs eval "globalThis.global === globalThis"` → true
+- ✅ `beejs eval "globalThis.global.setTimeout === setTimeout"` → true
+- ✅ `beejs eval "Object.is(globalThis.global, globalThis)"` → true
+
+---
+
+### ✨ v0.3.41 process.hrtime.bigint() 实现 (2025-12-25)
+**进度**: ✅ process.hrtime.bigint | ✅ 高精度时间 | ✅ 所有测试通过 | ✅ CLI 验证通过
+
+#### v0.3.41 实现内容
+- ✅ **process.hrtime.bigint() 函数**
+  - 返回高精度时间（纳秒级）
+  - 使用 `std::time::SystemTime::now().duration_since(UNIX_EPOCH)`
+  - 返回 BigInt 类型，与 Node.js 兼容
+
+---
+
 ### ✨ v0.3.40 Process 模块增强 - ppid 和 features (2025-12-25)
 **进度**: ✅ process.ppid | ✅ process.features 增强 | ✅ 9 测试用例 | ✅ 所有测试通过 | ✅ CLI 验证通过
 

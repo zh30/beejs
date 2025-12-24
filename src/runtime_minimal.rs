@@ -8657,6 +8657,11 @@ impl MinimalRuntime {
         let global_this_key = v8::String::new(scope, "globalThis").unwrap().into();
         global.set(scope, global_this_key, global.into());
 
+        // Set up global as an alias to globalThis for Node.js compatibility
+        // v0.3.42: globalThis.global should equal globalThis
+        let global_key = v8::String::new(scope, "global").unwrap().into();
+        global.set(scope, global_key, global.into());
+
         Ok(())
     }
 
