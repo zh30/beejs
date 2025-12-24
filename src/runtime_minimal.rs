@@ -5909,6 +5909,299 @@ impl MinimalRuntime {
         let create_ecdh_key = v8::String::new(scope, "createECDH").unwrap().into();
         crypto_obj.set(scope, create_ecdh_key, create_ecdh_fn.into());
 
+        // ==================== createPrivateKey (v0.3.28) ====================
+        // Creates a PrivateKey object from key material (PEM format or KeyObject)
+        let create_private_key_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let key_input = args.get(0);
+
+            // Parse input - can be string (PEM), buffer, or object with key property
+            let mut pem_key: Option<String> = None;
+
+            if key_input.is_string() {
+                if let Some(s) = key_input.to_string(scope) {
+                    pem_key = Some(s.to_rust_string_lossy(scope));
+                }
+            } else if key_input.is_object() {
+                if let Ok(obj) = v8::Local::<v8::Object>::try_from(key_input) {
+                    let key_str = v8::String::new(scope, "key").unwrap();
+                    let key_prop = obj.get(scope, key_str.into());
+                    if let Some(k) = key_prop.and_then(|k| k.to_string(scope)) {
+                        pem_key = Some(k.to_rust_string_lossy(scope));
+                    }
+                }
+            }
+
+            let pem_key = match pem_key {
+                Some(k) => k,
+                None => {
+                    let error_msg = v8::String::new(scope, "createPrivateKey: invalid key format").unwrap();
+                    let error = v8::Exception::type_error(scope, error_msg);
+                    scope.throw_exception(error);
+                    return;
+                }
+            };
+
+            // Detect key type from PEM content
+            let key_type = if pem_key.contains("BEGIN RSA PRIVATE KEY") {
+                "RSA"
+            } else if pem_key.contains("BEGIN EC PRIVATE KEY") || pem_key.contains("BEGIN PRIVATE KEY") {
+                "EC"
+            } else {
+                "RSA"
+            };
+
+            // Create PrivateKey object with type information
+            let private_key_obj = v8::Object::new(scope);
+
+            // Set type property
+            let type_key = v8::String::new(scope, "type").unwrap().into();
+            let type_val = v8::String::new(scope, "private").unwrap().into();
+            private_key_obj.set(scope, type_key, type_val);
+
+            // Set asymmetricKeyType property (Node.js style)
+            let asym_type_key = v8::String::new(scope, "asymmetricKeyType").unwrap().into();
+            let asym_type_val = v8::String::new(scope, &key_type.to_lowercase()).unwrap().into();
+            private_key_obj.set(scope, asym_type_key, asym_type_val);
+
+            // Store the original PEM key
+            let pem_key_val = v8::String::new(scope, &pem_key).unwrap().into();
+            let pem_key_prop = v8::String::new(scope, "pem").unwrap().into();
+            private_key_obj.set(scope, pem_key_prop, pem_key_val);
+
+            // Create export method for PrivateKey
+            let export_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let format = args.get(0)
+                    .to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_else(|| "pem".to_string());
+
+                let this_obj = args.this();
+                let pem_str_name = v8::String::new(scope, "pem").unwrap();
+                let pem_prop = this_obj.get(scope, pem_str_name.into());
+
+                if let Some(pem) = pem_prop.and_then(|p| p.to_string(scope)) {
+                    let pem_str = pem.to_rust_string_lossy(scope);
+
+                    if format == "pem" {
+                        let result = v8::String::new(scope, &pem_str).unwrap();
+                        retval.set(result.into());
+                    } else if format == "der" || format == "buffer" {
+                        let result = v8::String::new(scope, &pem_str).unwrap();
+                        retval.set(result.into());
+                    } else {
+                        let error_msg = format!("export: unsupported format '{}'. Supported: pem, der", format);
+                        let error = v8::String::new(scope, &error_msg).unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj);
+                    }
+                } else {
+                    let error_msg = v8::String::new(scope, "export: no key material found").unwrap();
+                    let error = v8::Exception::type_error(scope, error_msg);
+                    scope.throw_exception(error);
+                }
+            });
+            let export_fn = export_fn_opt.unwrap();
+
+            let export_key = v8::String::new(scope, "export").unwrap().into();
+            private_key_obj.set(scope, export_key, export_fn.into());
+
+            retval.set(private_key_obj.into());
+        });
+        let create_private_key_fn = create_private_key_fn_opt.unwrap();
+        let create_private_key_key = v8::String::new(scope, "createPrivateKey").unwrap().into();
+        crypto_obj.set(scope, create_private_key_key, create_private_key_fn.into());
+
+        // ==================== createPublicKey (v0.3.28) ====================
+        // Creates a PublicKey object from key material
+        let create_public_key_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let key_input = args.get(0);
+
+            // Can be string (PEM), buffer, or KeyObject
+            let mut pem_key: Option<String> = None;
+
+            if key_input.is_string() {
+                if let Some(s) = key_input.to_string(scope) {
+                    pem_key = Some(s.to_rust_string_lossy(scope));
+                }
+            } else if key_input.is_object() {
+                if let Ok(obj) = v8::Local::<v8::Object>::try_from(key_input) {
+                    let pem_str = v8::String::new(scope, "pem").unwrap();
+                    let pem_prop = obj.get(scope, pem_str.into());
+                    if let Some(p) = pem_prop.and_then(|p| p.to_string(scope)) {
+                        pem_key = Some(p.to_rust_string_lossy(scope));
+                    }
+                }
+            }
+
+            let pem_key = match pem_key {
+                Some(k) => k,
+                None => {
+                    let error_msg = v8::String::new(scope, "createPublicKey: invalid key format").unwrap();
+                    let error = v8::Exception::type_error(scope, error_msg);
+                    scope.throw_exception(error);
+                    return;
+                }
+            };
+
+            // Detect key type
+            let key_type = if pem_key.contains("BEGIN RSA PUBLIC KEY") || pem_key.contains("BEGIN PUBLIC KEY") {
+                "RSA"
+            } else if pem_key.contains("BEGIN EC PUBLIC KEY") {
+                "EC"
+            } else {
+                "RSA"
+            };
+
+            // Create PublicKey object
+            let public_key_obj = v8::Object::new(scope);
+
+            let type_key = v8::String::new(scope, "type").unwrap().into();
+            let type_val = v8::String::new(scope, "public").unwrap().into();
+            public_key_obj.set(scope, type_key, type_val);
+
+            let asym_type_key = v8::String::new(scope, "asymmetricKeyType").unwrap().into();
+            let asym_type_val = v8::String::new(scope, &key_type.to_lowercase()).unwrap().into();
+            public_key_obj.set(scope, asym_type_key, asym_type_val);
+
+            let pem_key_val = v8::String::new(scope, &pem_key).unwrap().into();
+            let pem_key_prop = v8::String::new(scope, "pem").unwrap().into();
+            public_key_obj.set(scope, pem_key_prop, pem_key_val);
+
+            // Export method
+            let export_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let format = args.get(0)
+                    .to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_else(|| "pem".to_string());
+
+                let this_obj = args.this();
+                let pem_str_name = v8::String::new(scope, "pem").unwrap();
+                let pem_prop = this_obj.get(scope, pem_str_name.into());
+
+                if let Some(pem) = pem_prop.and_then(|p| p.to_string(scope)) {
+                    let pem_lossy = pem.to_rust_string_lossy(scope);
+                    let result = v8::String::new(scope, &pem_lossy).unwrap();
+                    retval.set(result.into());
+                } else {
+                    let error_msg = v8::String::new(scope, "export: no key material found").unwrap();
+                    let error = v8::Exception::type_error(scope, error_msg);
+                    scope.throw_exception(error);
+                }
+            });
+            let export_fn = export_fn_opt.unwrap();
+
+            let export_key = v8::String::new(scope, "export").unwrap().into();
+            public_key_obj.set(scope, export_key, export_fn.into());
+
+            retval.set(public_key_obj.into());
+        });
+        let create_public_key_fn = create_public_key_fn_opt.unwrap();
+        let create_public_key_key = v8::String::new(scope, "createPublicKey").unwrap().into();
+        crypto_obj.set(scope, create_public_key_key, create_public_key_fn.into());
+
+        // ==================== createSecretKey (v0.3.28) ====================
+        // Creates a SecretKey object for symmetric cryptography
+        let create_secret_key_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let key_input = args.get(0);
+
+            // Parse key - can be buffer, string, or Uint8Array
+            let mut key_bytes: Vec<u8> = Vec::new();
+
+            if key_input.is_string() {
+                if let Some(str_val) = key_input.to_string(scope) {
+                    key_bytes = str_val.to_rust_string_lossy(scope).as_bytes().to_vec();
+                }
+            } else if key_input.is_object() {
+                // Try TypedArray first
+                if let Ok(ta) = v8::Local::<v8::TypedArray>::try_from(key_input) {
+                    key_bytes.resize(ta.byte_length(), 0);
+                    ta.copy_contents(&mut key_bytes);
+                } else if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(key_input) {
+                    let backing_store = ab.get_backing_store();
+                    let store_slice = unsafe { std::slice::from_raw_parts(backing_store.as_ref().as_ptr() as *const u8, ab.byte_length()) };
+                    key_bytes = store_slice.to_vec();
+                }
+            }
+
+            if key_bytes.is_empty() {
+                let error_msg = v8::String::new(scope, "createSecretKey: invalid key format").unwrap();
+                let error = v8::Exception::type_error(scope, error_msg);
+                scope.throw_exception(error);
+                return;
+            }
+
+            // Convert to base64 for storage
+            use base64::{Engine as _, engine::general_purpose::STANDARD};
+            let key_base64 = STANDARD.encode(&key_bytes);
+
+            // Create SecretKey object
+            let secret_key_obj = v8::Object::new(scope);
+
+            let type_key = v8::String::new(scope, "type").unwrap().into();
+            let type_val = v8::String::new(scope, "secret").unwrap().into();
+            secret_key_obj.set(scope, type_key, type_val);
+
+            let asym_type_key = v8::String::new(scope, "asymmetricKeyType").unwrap().into();
+            let asym_type_val = v8::String::new(scope, "secret").unwrap().into();
+            secret_key_obj.set(scope, asym_type_key, asym_type_val);
+
+            // Store key length
+            let length_key = v8::String::new(scope, "length").unwrap().into();
+            let length_val = v8::Integer::new(scope, key_bytes.len() as i32);
+            secret_key_obj.set(scope, length_key, length_val.into());
+
+            // Store base64 encoded key
+            let pem_key_val = v8::String::new(scope, &key_base64).unwrap().into();
+            let pem_key_prop = v8::String::new(scope, "pem").unwrap().into();
+            secret_key_obj.set(scope, pem_key_prop, pem_key_val);
+
+            // Export method
+            let export_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let format = args.get(0)
+                    .to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_else(|| "raw".to_string());
+
+                let this_obj = args.this();
+                let pem_str_name = v8::String::new(scope, "pem").unwrap();
+                let pem_prop = this_obj.get(scope, pem_str_name.into());
+
+                if let Some(pem) = pem_prop.and_then(|p| p.to_string(scope)) {
+                    let base64_str = pem.to_rust_string_lossy(scope);
+                    let key_bytes = STANDARD.decode(&base64_str).unwrap_or_default();
+
+                    if format == "raw" || format == "buffer" {
+                        // Return as Uint8Array
+                        let array_buffer = v8::ArrayBuffer::new(scope, key_bytes.len());
+                        if let Some(view) = v8::Uint8Array::new(scope, array_buffer, 0, key_bytes.len()) {
+                            retval.set(view.into());
+                        }
+                    } else if format == "base64" {
+                        let result = v8::String::new(scope, &base64_str).unwrap();
+                        retval.set(result.into());
+                    } else {
+                        let error_msg = format!("export: unsupported format '{}'. Supported: raw, buffer, base64", format);
+                        let error = v8::String::new(scope, &error_msg).unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj);
+                    }
+                } else {
+                    let error_msg = v8::String::new(scope, "export: no key material found").unwrap();
+                    let error = v8::Exception::type_error(scope, error_msg);
+                    scope.throw_exception(error);
+                }
+            });
+            let export_fn = export_fn_opt.unwrap();
+
+            let export_key = v8::String::new(scope, "export").unwrap().into();
+            secret_key_obj.set(scope, export_key, export_fn.into());
+
+            retval.set(secret_key_obj.into());
+        });
+        let create_secret_key_fn = create_secret_key_fn_opt.unwrap();
+        let create_secret_key_key = v8::String::new(scope, "createSecretKey").unwrap().into();
+        crypto_obj.set(scope, create_secret_key_key, create_secret_key_fn.into());
+
         let crypto_key = v8::String::new(scope, "crypto").unwrap().into();
         global.set(scope, crypto_key, crypto_obj.into());
 

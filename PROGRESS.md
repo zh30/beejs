@@ -5,7 +5,46 @@
 
 
 
-**最新状态 (2025-12-24)**: 🐛 v0.3.27 修复发布 - 解决整数溢出和测试问题
+**最新状态 (2025-12-24)**: ✨ v0.3.28 KeyObjects API - 实现 createPrivateKey/createPublicKey/createSecretKey
+
+### ✨ v0.3.28 KeyObjects API (2025-12-24)
+**进度**: ✅ createPrivateKey | ✅ createPublicKey | ✅ createSecretKey | ✅ 密钥对象 | ✅ export 方法
+
+#### v0.3.28 核心功能
+- ✅ **crypto.createPrivateKey(key)** - 从 PEM 格式创建私钥对象
+  - 自动检测密钥类型 (RSA/EC)
+  - 支持 PEM 字符串和对象 { key: "..." } 格式
+  - 提供 export(format) 方法导出密钥
+- ✅ **crypto.createPublicKey(key)** - 从 PEM 格式创建公钥对象
+  - 支持 RSA/EC 公钥检测
+  - 提供 export(format) 方法
+- ✅ **crypto.createSecretKey(buffer)** - 创建对称密钥对象
+  - 支持 Buffer、Uint8Array、ArrayBuffer 和字符串输入
+  - 提供 export(format) 方法，支持 raw/base64 格式
+  - 返回对象包含 type、asymmetricKeyType、length 属性
+
+#### v0.3.28 技术实现
+- 使用 V8 Function::new 创建嵌套函数处理 export 方法
+- 通过 get_backing_store() 安全访问 ArrayBuffer 数据
+- 使用 base64 编码存储密钥材料
+- 处理 V8 Function::new 返回 Option 类型的情况
+
+#### v0.3.28 使用示例
+```javascript
+// 私钥
+const privateKey = crypto.createPrivateKey("-----BEGIN RSA PRIVATE KEY-----...");
+console.log(privateKey.type);  // "private"
+console.log(privateKey.asymmetricKeyType);  // "rsa"
+
+// 公钥
+const publicKey = crypto.createPublicKey("-----BEGIN PUBLIC KEY-----...");
+console.log(publicKey.type);  // "public"
+
+// 对称密钥
+const secretKey = crypto.createSecretKey(Buffer.from("my-secret"));
+console.log(secretKey.type);  // "secret"
+console.log(secretKey.length);  // 10
+```
 
 ### 🐛 v0.3.27 修复版本 (2025-12-24)
 **进度**: ✅ createECDH | ✅ computeSecret | ✅ 多种曲线 | ✅ 密钥派生 | ✅ 共享密钥 | ✅ 21/21 测试通过
