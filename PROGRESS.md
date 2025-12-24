@@ -5,7 +5,66 @@
 
 
 
-**最新状态 (2025-12-24)**: ✨ v0.3.28 KeyObjects API - 实现 createPrivateKey/createPublicKey/createSecretKey
+
+**最新状态 (2025-12-24)**: ✨ v0.3.29 HKDF 密钥派生函数 + randomUUID 修复
+
+### ✨ v0.3.29 HKDF 密钥派生函数 (2025-12-24)
+**进度**: ✅ hkdf | ✅ hkdfSync | ✅ SHA-1 | ✅ SHA-256 | ✅ SHA-512 | ✅ 14/14 测试通过
+
+#### v0.3.29 核心功能
+- ✅ **crypto.hkdfSync(digest, ikm, salt, info, keylen)** - 同步 HKDF 密钥派生
+  - 支持 SHA-1、SHA-256、SHA-512 摘要算法
+  - 默认 keylen 为 32 字节
+  - 支持空 salt 和空 info
+- ✅ **crypto.hkdf(digest, ikm, salt, info, keylen)** - 异步 HKDF（与同步版相同接口）
+- ✅ **crypto.randomUUID()** - UUID v4 生成（修复实现）
+  - 使用标准 `uuid` crate 生成 RFC 4122 兼容的 UUID
+  - 返回 36 字符标准格式
+
+#### v0.3.29 技术实现
+- **HKDF RFC 5869 实现**
+  - Extract 阶段：PRK = HMAC-Hash(salt, IKM)
+  - Expand 阶段：OKM = T(1) | T(2) | T(3) | ...
+  - 使用 ring::digest 和 sha1 crate 实现 HMAC
+- **V8 ArrayBuffer 写入模式**
+  - `ArrayBuffer::new()` → `get_backing_store()` → `.set()` 字节写入
+  - 这是 rusty_v8 中写入二进制数据的标准模式
+
+#### v0.3.29 测试验证
+- ✅ 8/8 randomUUID 测试全部通过
+- ✅ 14/14 HKDF 测试全部通过
+- ✅ 多种摘要算法验证 (sha1/sha256/sha512)
+- ✅ 不同 keylen 验证 (32/64/256)
+- ✅ 一致性验证 (相同输入产生相同输出)
+- ✅ 差异性验证 (不同输入产生不同输出)
+
+#### v0.3.29 代码变更
+- **新增文件**: `tests/crypto_randomuuid_tests.rs` (+98 行)
+  - 8 个测试用例覆盖 randomUUID API
+  - 测试 UUID 格式、长度、唯一性
+
+- **新增文件**: `tests/crypto_hkdf_tests.rs` (+188 行)
+  - 14 个测试用例覆盖 HKDF API
+  - 测试所有支持的摘要算法
+  - 测试不同 keylen 和参数组合
+
+- **修改文件**: `src/runtime_minimal.rs` (+237 行)
+  - 修复 randomUUID 实现（原实现格式错误）
+  - 新增 `hkdf_derive()` 辅助函数 (RFC 5869)
+  - 新增 `crypto.hkdf` 和 `crypto.hkdfSync` 函数
+
+#### v0.3.29 使用示例
+```javascript
+const crypto = require('crypto');
+
+// HKDF 密钥派生
+const key = crypto.hkdfSync('sha256', 'secret-key', 'salt', 'info', 32);
+console.log(key.length); // 32
+
+// 生成 UUID
+const uuid = crypto.randomUUID();
+console.log(uuid); // e.g., "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+```
 
 ### ✨ v0.3.28 KeyObjects API (2025-12-24)
 **进度**: ✅ createPrivateKey | ✅ createPublicKey | ✅ createSecretKey | ✅ 密钥对象 | ✅ export 方法
