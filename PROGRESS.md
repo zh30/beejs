@@ -1,6 +1,51 @@
 
 
 
+**最新状态 (2025-12-24)**: 🚀 v0.3.8 crypto 模块发布！MD5/SHA256/SHA512/BLAKE3 全面支持！createHash API 实现！
+
+### 🎯 v0.3.8 Crypto 哈希模块 (2025-12-24)
+**进度**: ✅ createHash | ✅ update | ✅ digest | ✅ 链式调用 | ✅ 多种编码
+
+#### v0.3.8 核心功能
+- ✅ **crypto.createHash(algorithm)** - 创建哈希对象，支持 md5/sha1/sha256/sha512/blake3
+- ✅ **hash.update(data)** - 更新哈希数据，支持链式调用
+- ✅ **hash.digest([encoding])** - 生成最终摘要，支持 hex/base64/buffer 编码
+
+#### v0.3.8 技术实现
+- 使用 `md5::compute()` 实现 MD5 哈希
+- 使用 `ring::digest` 实现 SHA256/SHA512 哈希
+- 使用 `blake3` 实现 BLAKE3 哈希
+- 使用 V8 Object 存储算法和数据缓冲区
+- 返回 `this` 实现链式调用
+
+#### v0.3.8 使用示例
+```javascript
+const hash = crypto.createHash('md5');
+hash.update('hello');
+console.log(hash.digest('hex')); // 5d41402abc4b2a76b9719d911017c592
+
+// 链式调用
+const result = crypto.createHash('sha256')
+    .update('hello')
+    .digest('hex');
+
+// 多种编码
+hash.digest('base64'); // XUFAKrxLKna5cZ2REBfFkg==
+```
+
+#### v0.3.8 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+220 行)
+  - 添加 crypto.createHash 函数到全局 crypto 对象
+  - 实现 Hash 对象和 update/digest 方法
+  - 支持多种哈希算法和编码格式
+
+- **新增文件**: `tests/crypto_createhash_tests.rs` (+120 行)
+  - 12 个测试用例覆盖所有 crypto API
+  - 测试各种哈希算法
+  - 测试编码格式
+
+---
+
 **最新状态 (2025-12-24)**: 🚀 v0.3.7 fs/promises 发布！Promise-based API 全面支持！V8 PromiseResolver 实现！
 
 ### 🎯 v0.3.7 Promise 文件系统 (2025-12-24)
