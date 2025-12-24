@@ -28,6 +28,29 @@
 - 通过 get_backing_store() 安全访问 ArrayBuffer 数据
 - 使用 base64 编码存储密钥材料
 - 处理 V8 Function::new 返回 Option 类型的情况
+- 添加 Beejs Buffer 兼容性支持（普通 Object 带 length 属性）
+
+#### v0.3.28 测试验证
+- ✅ 31/31 KeyObjects 测试全部通过
+- ✅ createPrivateKey 存在性、返回对象、类型属性、export 方法
+- ✅ createPublicKey 存在性、返回对象、类型属性、export 方法
+- ✅ createSecretKey 存在性、返回对象、length 属性、多种输入格式支持
+- ✅ export('raw')、export('buffer')、export('base64') 格式导出
+- ✅ 密钥 roundtrip 导入导出测试
+- ✅ 无效格式错误处理测试
+
+#### v0.3.28 代码变更
+- **新增文件**: `tests/crypto_keyobjects_tests.rs` (+427 行)
+  - 31 个测试用例覆盖 KeyObjects API
+  - 测试所有三种密钥类型
+  - 测试 export 方法的多种格式
+  - 测试输入格式兼容性
+  - 测试 roundtrip 导入导出
+
+- **修改文件**: `src/runtime_minimal.rs` (+35 行)
+  - 修复 createSecretKey 对 Beejs Buffer 的兼容性问题
+  - 添加普通 Object（带 length 属性）的遍历支持
+  - 处理数字索引访问的字节读取
 
 #### v0.3.28 使用示例
 ```javascript

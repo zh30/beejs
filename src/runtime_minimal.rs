@@ -6120,6 +6120,26 @@ impl MinimalRuntime {
                     let backing_store = ab.get_backing_store();
                     let store_slice = unsafe { std::slice::from_raw_parts(backing_store.as_ref().as_ptr() as *const u8, ab.byte_length()) };
                     key_bytes = store_slice.to_vec();
+                } else {
+                    // Handle Beejs Buffer (Object with length property and numeric indices)
+                    if let Ok(obj) = v8::Local::<v8::Object>::try_from(key_input) {
+                        let length_key = v8::String::new(scope, "length").unwrap();
+                        let length_prop = obj.get(scope, length_key.into());
+
+                        if let Some(len_val) = length_prop.and_then(|l| l.to_integer(scope)) {
+                            let len = len_val.value() as usize;
+                            if len > 0 {
+                                key_bytes.resize(len, 0);
+                                for i in 0..len {
+                                    let idx: v8::Local<v8::Integer> = v8::Integer::new(scope, i as i32);
+                                    let byte_val = obj.get(scope, idx.into());
+                                    if let Some(b) = byte_val.and_then(|b| b.to_integer(scope)) {
+                                        key_bytes[i] = b.value() as u8;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
