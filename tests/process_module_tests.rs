@@ -230,9 +230,9 @@ fn test_process_pid_exists() {
 fn test_process_uptime_exists() {
     let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let result = runtime.execute_code("typeof process.uptime").expect("Execution failed");
-    // uptime may or may not be implemented
-    assert!(result.trim() == "number" || result.trim() == "undefined",
-        "process.uptime should be a number or undefined");
+    // uptime should be a function (v0.3.38+)
+    assert!(result.trim() == "function" || result.trim() == "undefined",
+        "process.uptime should be a function or undefined");
 }
 
 /// Test process.memory exists (if implemented)

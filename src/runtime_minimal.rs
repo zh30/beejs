@@ -9773,6 +9773,14 @@ impl MinimalRuntime {
         process_obj.set(scope, is_beejs_key.into(), is_beejs_value.into());
         process_obj.set(scope, browser_key.into(), browser_value.into());
 
+        // v0.3.38: Add process.release object
+        let release_obj = v8::Object::new(scope);
+        let release_name_key = v8::String::new(scope, "name").unwrap();
+        let release_name_val = v8::String::new(scope, "beejs").unwrap();
+        release_obj.set(scope, release_name_key.into(), release_name_val.into());
+        let release_key = v8::String::new(scope, "release").unwrap();
+        process_obj.set(scope, release_key.into(), release_obj.into());
+
         // Set process as global
         global.set(scope, process_key.into(), process_obj.into());
 
