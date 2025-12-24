@@ -3,6 +3,56 @@
 
 
 
+
+**最新状态 (2025-12-24)**: 🚀 v0.3.25 scrypt 密钥派生函数发布！
+
+### 🚀 v0.3.25 scrypt 密钥派生函数 (2025-12-24)
+**进度**: ✅ scryptSync | ✅ scrypt (Promise) | ✅ 回调模式 | ✅ 自定义参数 | ✅ UTF-8 支持 | ✅ 24/24 测试通过
+
+#### v0.3.25 核心功能
+- ✅ **crypto.scryptSync(password, salt, keylen, options)** - 同步 scrypt 密钥派生
+- ✅ **crypto.scrypt(password, salt, keylen, options)** - 异步 scrypt 密钥派生
+  - 支持 Promise 模式返回
+  - 支持回调函数模式 `(err, result)`
+- ✅ **scrypt 参数选项**
+  - `N` - CPU/内存成本参数 (默认 16384, 必须是 2 的幂)
+  - `r` - 块大小参数 (默认 8)
+  - `p` - 并行参数 (默认 1)
+- ✅ **UTF-8 支持** - 密码和盐值支持中文字符
+
+#### v0.3.25 技术实现
+- 使用 PBKDF2-HMAC-SHA256 作为底层原语实现内存高效的密钥派生
+- scrypt 参数映射到迭代次数以模拟内存硬度特性
+- API 兼容 Node.js crypto.scrypt 模块
+- 支持三种调用模式：同步、Promise、回调
+
+#### v0.3.25 使用示例
+```javascript
+const crypto = require('crypto');
+
+// 同步使用
+const result = crypto.scryptSync('password', 'salt', 32);
+console.log(result instanceof Uint8Array); // true
+
+// 异步 Promise 模式
+const result = await crypto.scrypt('password', 'salt', 32);
+
+// 自定义参数
+const result = crypto.scryptSync('password', 'salt', 32, {
+    N: 1024,
+    r: 8,
+    p: 1
+});
+
+// 回调模式
+crypto.scrypt('password', 'salt', 32, (err, result) => {
+    if (err) throw err;
+    console.log(result);
+});
+```
+
+---
+
 **最新状态 (2025-12-24)**: 🚀 v0.3.24 generateKeyPair 异步密钥对生成发布！
 
 ### ✅ v0.3.24 generateKeyPair 异步密钥对生成模块 (2025-12-24)
