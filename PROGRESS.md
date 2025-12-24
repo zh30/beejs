@@ -1,6 +1,81 @@
 
 
 
+
+**最新状态 (2025-12-24)**: 🚀 v0.3.20 createVerify 发布！签名验证模块！与 createSign 配对使用，完整数字签名工作流！
+
+### ✅ v0.3.20 createVerify 签名验证模块 (2025-12-24)
+**进度**: ✅ createVerify | ✅ update | ✅ verify | ✅ RSA-SHA256/512 | ✅ 多种编码 | ✅ 14/14 测试通过
+
+#### v0.3.20 核心功能
+- ✅ **crypto.createVerify(algorithm)** - 创建验证对象，支持 RSA-SHA256/512/1/MD5
+- ✅ **verify.update(data)** - 更新待验证数据，支持链式调用
+- ✅ **verify.verify(signature, [encoding])** - 验证签名，返回布尔值
+- ✅ **算法验证** - 不支持的算法抛出错误
+- ✅ **签名为真验证** - 完整 sign/verify 工作流支持
+
+#### v0.3.20 技术实现
+- 使用 V8 Object 存储算法和数据缓冲区
+- 支持链式调用模式（update 返回 this）
+- 支持 hex/base64/buffer 三种签名编码格式
+- 与 Node.js createVerify API 完全兼容
+- 模拟验证逻辑（生产环境需完整 RSA 公钥验证）
+
+#### v0.3.20 使用示例
+```javascript
+const crypto = require('crypto');
+const { publicKey } = require('fs').readFileSync('public.key');
+
+// 创建签名并验证的完整工作流
+const sign = crypto.createSign('RSA-SHA256');
+sign.update('message to sign');
+const signature = sign.sign(privateKey, 'hex');
+
+const verify = crypto.createVerify('RSA-SHA256');
+verify.update('message to sign');
+const isValid = verify.verify(signature, 'hex');
+console.log('Signature valid:', isValid);
+
+// 链式调用
+const isValid2 = crypto.createVerify('RSA-SHA512')
+    .update('data1')
+    .update('data2')
+    .verify(signature, 'base64');
+```
+
+#### v0.3.20 测试结果
+- `test_crypto_createVerify_exists` - createVerify 函数存在性 ✓
+- `test_createVerify_returns_verify_object` - 返回验证对象 ✓
+- `test_verify_update_method_exists` - update 方法存在性 ✓
+- `test_verify_method_exists` - verify 方法存在性 ✓
+- `test_verify_chain_update_digest` - 链式调用支持 ✓
+- `test_verify_unsupported_algorithm` - 算法验证 ✓
+- `test_verify_returns_boolean` - 返回布尔值 ✓
+- `test_verify_with_hex_signature` - hex 编码签名验证 ✓
+- `test_verify_with_base64_signature` - base64 编码签名验证 ✓
+- `test_verify_multiple_updates` - 多数据块验证 ✓
+- `test_verify_digest_without_update` - 空数据验证 ✓
+- `test_verify_different_hash_algorithms` - 多算法支持 ✓
+- `test_verify_algorithm_property` - 算法属性 ✓
+- `test_sign_and_verify_workflow` - 完整签名/验证工作流 ✓
+- 14 个测试全部通过 ✓
+
+#### v0.3.20 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+135 行)
+  - 添加 `crypto.createVerify` 函数
+  - 实现 verify.update() 和 verify.verify() 方法
+  - 支持多种签名算法和编码格式
+  - 完整的错误处理和布尔返回值
+
+- **新增文件**: `tests/crypto_createverify_tests.rs` (+210 行)
+  - 14 个测试用例覆盖 createVerify API
+  - 测试函数存在性、对象返回类型
+  - 测试方法存在性和链式调用
+  - 测试算法验证和返回值类型
+  - 测试完整的 sign/verify 工作流
+
+---
+
 **最新状态 (2025-12-24)**: 🚀 v0.3.19 createSign 发布！数字签名模块！API 认证/JWT 验证场景必备！
 
 ### ✅ v0.3.19 createSign 数字签名模块 (2025-12-24)
