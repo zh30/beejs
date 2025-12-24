@@ -1,6 +1,61 @@
 
 
 
+**最新状态 (2025-12-24)**: 🚀 v0.3.11 timingSafeEqual 发布！时间安全比较函数防止时序攻击！密码/令牌验证场景必备！
+
+### 🎯 v0.3.11 Timing-Safe 比较模块 (2025-12-24)
+**进度**: ✅ timingSafeEqual | ✅ TypedArray 支持 | ✅ ArrayBuffer 支持 | ✅ 空缓冲区处理
+
+#### v0.3.11 核心功能
+- ✅ **crypto.timingSafeEqual(a, b)** - 时间安全地比较两个缓冲区
+- ✅ **恒定时间算法** - 无论输入是否相同，比较时间一致，防止时序攻击
+- ✅ **多种缓冲区类型** - 支持 Uint8Array、ArrayBuffer 等 TypedArray 类型
+- ✅ **长度检查** - 不同长度的缓冲区抛出错误
+
+#### v0.3.11 技术实现
+- 使用 XOR 运算比较每个字节，不提前返回
+- 使用 `std::time::Instant` 防止编译器优化
+- 使用 unsafe pointer access 与现有 V8 代码保持一致
+- 正确处理空缓冲区边界情况
+
+#### v0.3.11 使用示例
+```javascript
+// 密码验证（防止时序攻击）
+const storedHash = crypto.randomBytes(32);
+const inputHash = crypto.randomBytes(32);
+// 确保比较时间不泄露密码信息
+const isValid = crypto.timingSafeEqual(storedHash, inputHash);
+
+// API 令牌比较
+const token1 = crypto.randomBytes(16);
+const token2 = new Uint8Array(token1);
+if (crypto.timingSafeEqual(token1, token2)) {
+    console.log('Tokens match');
+}
+
+// HMAC 签名验证
+const hmac1 = crypto.createHmac('sha256', key).update(data).digest();
+const hmac2 = calculateHmacExternally(data, key);
+if (crypto.timingSafeEqual(hmac1, hmac2)) {
+    console.log('Signature valid');
+}
+```
+
+#### v0.3.11 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+90 行)
+  - 添加 `crypto.timingSafeEqual` 函数
+  - 实现 V8 TypedArray 和 ArrayBuffer 读取
+  - 使用 unsafe pointer access 保持性能
+  - 处理空缓冲区边界情况
+
+- **新增文件**: `tests/crypto_timing_safe_equal_tests.rs` (+200 行)
+  - 15 个测试用例覆盖所有 timingSafeEqual API
+  - 测试相等/不等缓冲区
+  - 测试不同长度缓冲区错误处理
+  - 测试各种缓冲区类型混合使用
+
+---
+
 **最新状态 (2025-12-24)**: 🚀 v0.3.10 randomBytes 随机数模块发布！加密安全随机字节生成！会话令牌/密钥材料场景必备！
 
 ### 🎯 v0.3.10 randomBytes 随机数模块 (2025-12-24)

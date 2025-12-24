@@ -2346,6 +2346,114 @@ impl MinimalRuntime {
         let random_bytes_sync_key = v8::String::new(scope, "randomBytesSync").unwrap().into();
         crypto_obj.set(scope, random_bytes_sync_key, random_bytes_sync_fn.into());
 
+        // Add crypto.timingSafeEqual (v0.3.11)
+        // Timing-safe constant-time comparison to prevent timing attacks
+        let timing_safe_equal_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() < 2 {
+                let error_msg = v8::String::new(scope, "timingSafeEqual requires two arguments").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error_msg);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            let buf_a = args.get(0);
+            let buf_b = args.get(1);
+
+            // Check if both are array-like (TypedArray or ArrayBuffer)
+            if !buf_a.is_typed_array() && !buf_a.is_array_buffer() {
+                let error_msg = v8::String::new(scope, "First argument must be a TypedArray or ArrayBuffer").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error_msg);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            if !buf_b.is_typed_array() && !buf_b.is_array_buffer() {
+                let error_msg = v8::String::new(scope, "Second argument must be a TypedArray or ArrayBuffer").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error_msg);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            // Get the byte lengths
+            let len_a = if buf_a.is_typed_array() {
+                let ta = v8::Local::<v8::TypedArray>::try_from(buf_a).unwrap();
+                ta.byte_length()
+            } else {
+                let ab = v8::Local::<v8::ArrayBuffer>::try_from(buf_a).unwrap();
+                ab.byte_length()
+            };
+
+            let len_b = if buf_b.is_typed_array() {
+                let ta = v8::Local::<v8::TypedArray>::try_from(buf_b).unwrap();
+                ta.byte_length()
+            } else {
+                let ab = v8::Local::<v8::ArrayBuffer>::try_from(buf_b).unwrap();
+                ab.byte_length()
+            };
+
+            // Lengths must match
+            if len_a != len_b {
+                let error_msg = v8::String::new(scope, "Input buffers must have the same length").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error_msg);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            // Extract bytes from buffer A using unsafe pointer access (consistent with existing code)
+            let bytes_a: Vec<u8> = if len_a == 0 {
+                Vec::new()
+            } else if buf_a.is_typed_array() {
+                let ta = v8::Local::<v8::TypedArray>::try_from(buf_a).unwrap();
+                let buffer = ta.buffer(scope).unwrap();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len_a).to_vec() }
+            } else {
+                let ab = v8::Local::<v8::ArrayBuffer>::try_from(buf_a).unwrap();
+                let store = ab.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len_a).to_vec() }
+            };
+
+            // Extract bytes from buffer B using unsafe pointer access (consistent with existing code)
+            let bytes_b: Vec<u8> = if len_b == 0 {
+                Vec::new()
+            } else if buf_b.is_typed_array() {
+                let ta = v8::Local::<v8::TypedArray>::try_from(buf_b).unwrap();
+                let buffer = ta.buffer(scope).unwrap();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len_b).to_vec() }
+            } else {
+                let ab = v8::Local::<v8::ArrayBuffer>::try_from(buf_b).unwrap();
+                let store = ab.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                unsafe { std::slice::from_raw_parts(ptr, len_b).to_vec() }
+            };
+
+            // Constant-time comparison
+            let start = std::time::Instant::now();
+            let mut result: u8 = 0;
+            for i in 0..len_a as usize {
+                result |= bytes_a[i] ^ bytes_b[i];
+            }
+            // Prevent compiler from optimizing out the loop
+            let elapsed = start.elapsed();
+            let _ = elapsed.as_nanos();
+
+            // result is 0 if equal, non-zero if different
+            // Use a constant-time conversion to boolean
+            let equal = result == 0;
+
+            retval.set(v8::Boolean::new(scope, equal).into());
+        });
+        let timing_safe_equal_fn = match timing_safe_equal_fn {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let timing_safe_equal_key = v8::String::new(scope, "timingSafeEqual").unwrap().into();
+        crypto_obj.set(scope, timing_safe_equal_key, timing_safe_equal_fn.into());
+
         let crypto_key = v8::String::new(scope, "crypto").unwrap().into();
         global.set(scope, crypto_key, crypto_obj.into());
 
