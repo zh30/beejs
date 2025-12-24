@@ -45,10 +45,11 @@ fn test_set_immediate_returns_timer_id() {
     let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setImmediate(function() {});
-        typeof timerId;
+        // Timer is now an object (v0.3.36) with methods
+        typeof timerId === 'object' && typeof timerId.unref === 'function';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "number", "setImmediate should return a timer ID (number)");
+    assert_eq!(result.trim(), "true", "setImmediate should return a timer object with methods");
 }
 
 #[test]

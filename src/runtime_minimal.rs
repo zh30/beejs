@@ -38,6 +38,90 @@ fn get_timer_registry() -> &'static Mutex<HashMap<u64, TimerInfo>> {
 /// Static counter for generating unique timer IDs
 static NEXT_TIMER_ID: AtomicU64 = AtomicU64::new(1);
 
+/// v0.3.36: Create a timer object with unref, ref, and refresh methods
+/// Returns an object that can be used to control the timer's reference count
+fn create_timer_object<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    timer_id: u64,
+    _timer_type: TimerType,
+) -> v8::Local<'a, v8::Object> {
+    let timer_obj = v8::Object::new(scope);
+
+    // Store timer ID on the object for clearTimeout/clearInterval to access
+    let id_key = v8::String::new(scope, "_timerId").unwrap();
+    let id_value = v8::Number::new(scope, timer_id as f64);
+    timer_obj.set(scope, id_key.into(), id_value.into());
+
+    // Create unref method - reads timer_id from this object
+    let unref_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        // Get timer_id from this object
+        let this = args.this();
+        let id_key = v8::String::new(scope, "_timerId").unwrap();
+        let id_val = this.get(scope, id_key.into()).unwrap();
+        let timer_id_val = id_val.to_integer(scope).unwrap().value() as u64;
+
+        let mut registry = get_timer_registry().lock().unwrap();
+        if let Some(info) = registry.get_mut(&timer_id_val) {
+            info.is_unrefed = true;
+            println!("✓ Timer {} unrefed", timer_id_val);
+        }
+
+        // Get timer object back for chaining
+        let timer_obj: v8::Local<v8::Object> = args.this();
+        retval.set(timer_obj.into());
+    }).unwrap();
+    let unref_key = v8::String::new(scope, "unref").unwrap();
+    timer_obj.set(scope, unref_key.into(), unref_fn.into());
+
+    // Create ref method
+    let ref_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        // Get timer_id from this object
+        let this = args.this();
+        let id_key = v8::String::new(scope, "_timerId").unwrap();
+        let id_val = this.get(scope, id_key.into()).unwrap();
+        let timer_id_val = id_val.to_integer(scope).unwrap().value() as u64;
+
+        let mut registry = get_timer_registry().lock().unwrap();
+        if let Some(info) = registry.get_mut(&timer_id_val) {
+            info.is_unrefed = false;
+            println!("✓ Timer {} refed", timer_id_val);
+        }
+
+        let timer_obj: v8::Local<v8::Object> = args.this();
+        retval.set(timer_obj.into());
+    }).unwrap();
+    let ref_key = v8::String::new(scope, "ref").unwrap();
+    timer_obj.set(scope, ref_key.into(), ref_fn.into());
+
+    // Create refresh method (Node.js compatibility)
+    let refresh_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let this = args.this();
+        let id_key = v8::String::new(scope, "_timerId").unwrap();
+        let id_val = this.get(scope, id_key.into()).unwrap();
+        let timer_id_val = id_val.to_integer(scope).unwrap().value() as u64;
+
+        println!("⚠️ Timer {} refreshed", timer_id_val);
+
+        let timer_obj: v8::Local<v8::Object> = args.this();
+        retval.set(timer_obj.into());
+    }).unwrap();
+    let refresh_key = v8::String::new(scope, "refresh").unwrap();
+    timer_obj.set(scope, refresh_key.into(), refresh_fn.into());
+
+    // Add valueOf for numeric conversion (allows Number(timer))
+    let value_of_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let this = args.this();
+        let id_key = v8::String::new(scope, "_timerId").unwrap();
+        let id_val = this.get(scope, id_key.into()).unwrap();
+        let timer_id_val = id_val.to_integer(scope).unwrap().value() as f64;
+        retval.set(v8::Number::new(scope, timer_id_val).into());
+    }).unwrap();
+    let value_of_key = v8::String::new(scope, "valueOf").unwrap();
+    timer_obj.set(scope, value_of_key.into(), value_of_fn.into());
+
+    timer_obj
+}
+
 /// HTTP 客户端用于处理真实的 fetch 请求
 pub struct HttpClient {
     client: reqwest::Client,
@@ -844,9 +928,9 @@ impl MinimalRuntime {
                     println!("⚠️ setTimeout with delay {}ms - async mode (timer ID: {})", delay, timer_id);
                 }
 
-                // Return timer ID as number (v0.3.18: simplified for stability)
-                let timer_id_num = v8::Number::new(scope, timer_id as f64);
-                retval.set(timer_id_num.into());
+                // Return timer object with unref/ref/refresh methods (v0.3.36)
+                let timer_obj = create_timer_object(scope, timer_id, TimerType::Timeout);
+                retval.set(timer_obj.into());
             }
         }).ok_or_else(|| anyhow::anyhow!("Failed to create setTimeout function"))?;
         let set_timeout_key = v8::String::new(scope, "setTimeout").unwrap().into();
@@ -885,9 +969,9 @@ impl MinimalRuntime {
 
                 println!("⚠️ setInterval with delay {}ms - async mode (timer ID: {})", delay, timer_id);
 
-                // Return timer ID as number (v0.3.18: simplified for stability)
-                let timer_id_num = v8::Number::new(scope, timer_id as f64);
-                retval.set(timer_id_num.into());
+                // Return timer object with unref/ref/refresh methods (v0.3.36)
+                let timer_obj = create_timer_object(scope, timer_id, TimerType::Interval);
+                retval.set(timer_obj.into());
             }
         }).ok_or_else(|| anyhow::anyhow!("Failed to create setInterval function"))?;
         let set_interval_key = v8::String::new(scope, "setInterval").unwrap().into();
@@ -961,9 +1045,9 @@ impl MinimalRuntime {
             let undefined = v8::undefined(scope);
             let _: _ = callback_func.call(scope, undefined.into(), &callback_args);
 
-            // Return timer ID as number (v0.3.18: simplified for stability)
-            let timer_id_num = v8::Number::new(scope, timer_id as f64);
-            retval.set(timer_id_num.into());
+            // Return timer object with unref/ref/refresh methods (v0.3.36)
+            let timer_obj = create_timer_object(scope, timer_id, TimerType::Immediate);
+            retval.set(timer_obj.into());
         }).ok_or_else(|| anyhow::anyhow!("Failed to create setImmediate function"))?;
         let set_immediate_key = v8::String::new(scope, "setImmediate").unwrap().into();
         global.set(scope, set_immediate_key, set_immediate_fn.into());

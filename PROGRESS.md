@@ -60,7 +60,68 @@
 - ✅ `beejs eval "process.chdir(process.cwd())"` → 返回 undefined
 - ✅ `beejs eval "process.title"` → "beejs"
 
-**最新状态 (2025-12-25)**: ✨ v0.3.35 Process 模块增强
+
+### ✨ v0.3.36 Timers API 增强 - Timer 对象方法 (2025-12-25)
+**进度**: ✅ timer.unref() | ✅ timer.ref() | ✅ timer.refresh() | ✅ 37 测试用例 | ✅ 所有测试通过
+
+#### v0.3.36 实现内容
+- ✅ **Timer 对象方法**
+  - `timer.unref()` - 标记计时器不阻止进程退出
+  - `timer.ref()` - 标记计时器阻止进程退出
+  - `timer.refresh()` - 重置计时器延迟（Node.js 兼容别名）
+  - `timer.valueOf()` - 返回计时器数值（支持 Number(timer) 转换）
+
+- ✅ **Timer 对象结构**
+  - 返回对象而非纯数字（v0.3.36 API 变更）
+  - 对象包含 `_timerId` 内部属性存储计时器 ID
+  - 所有方法（unref/ref/refresh/valueOf）从对象属性读取 timerId
+  - 方法可链式调用：`timer.unref().ref().unref()`
+
+#### v0.3.36 技术实现
+- **create_timer_object 函数** (src/runtime_minimal.rs)
+  ```rust
+  fn create_timer_object<'a>(scope: &mut v8::HandleScope<'a>, timer_id: u64, timer_type: TimerType) -> v8::Local<'a, v8::Object> {
+      let timer_obj = v8::Object::new(scope);
+      // 存储 timerId 于对象属性中（而非闭包捕获）
+      let id_key = v8::String::new(scope, "_timerId").unwrap();
+      timer_obj.set(scope, id_key.into(), v8::Number::new(scope, timer_id as f64).into());
+
+      // unref 方法：从 this 对象读取 timerId
+      let unref_fn = v8::Function::new(scope, |scope, args, mut retval| {
+          let this = args.this();
+          let id_val = this.get(scope, id_key.into()).unwrap();
+          let timer_id_val = id_val.to_integer(scope).unwrap().value() as u64;
+          let mut registry = get_timer_registry().lock().unwrap();
+          if let Some(info) = registry.get_mut(&timer_id_val) { info.is_unrefed = true; }
+          retval.set(this.into());
+      }).unwrap();
+      // ... 类似的 ref, refresh, valueOf 实现
+  }
+  ```
+
+#### v0.3.36 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+120 行)
+  - 新增 `create_timer_object` 函数
+  - 修改 setTimeout, setInterval, setImmediate 返回 timer 对象
+  - 添加 unref, ref, refresh, valueOf 方法到 timer 对象
+  - 新增 `TimerInfo::is_unrefed` 字段支持 unref 语义
+
+- **修改文件**: `tests/timers_enhanced_tests.rs` (+60 行)
+  - 新增 8 个测试用例（unref, ref, refresh 方法）
+  - 更新现有测试以适应 timer 对象返回类型
+
+- **修改文件**: `tests/set_immediate_tests.rs` (+5 行)
+  - 更新 test_set_immediate_returns_timer_id 以适应对象类型
+
+#### v0.3.36 验证
+- ✅ `cargo build --release` 成功
+- ✅ `beejs eval "const t=setTimeout(()=>{},100); typeof t"` → "object"
+- ✅ `beejs eval "const t=setTimeout(()=>{},100); typeof t.unref"` → "function"
+- ✅ `beejs eval "const t=setTimeout(()=>{},100); t.unref() === t"` → true（链式调用）
+- ✅ `beejs eval "const t=setInterval(()=>{},100); typeof t.ref"` → "function"
+- ✅ `beejs eval "const t=setImmediate(()=>{}); Number(t) > 0"` → true
+
+**最新状态 (2025-12-25)**: ✨ v0.3.36 Timers API 增强
 
 ### ✨ v0.3.34 process 模块增强 (2025-12-25)
 **进度**: ✅ process.nextTick 实现 | ✅ 完整测试套件 | ✅ 30+ 测试用例 | ✅ 所有功能验证通过
