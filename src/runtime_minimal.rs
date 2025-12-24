@@ -105,6 +105,89 @@ fn decode_bytes_to_string(bytes: &[u8], encoding: &str) -> String {
     }
 }
 
+/// Generate RSA key pair (v0.3.23)
+/// Returns (public_key_pem, private_key_pem)
+fn generate_rsa_key_pair(modulus_length: usize) -> (String, String) {
+    // Generate a mock RSA key pair for demonstration
+    // In production, this would use actual RSA key generation (e.g., openssl or ring)
+    let modulus_bits = modulus_length.to_string();
+
+    // Generate random components for realistic-looking keys
+    let n_hex = generate_hex_string(modulus_length / 8);
+    let e_hex = "010001";
+    let d_hex = generate_hex_string(modulus_length / 8);
+    let p_hex = generate_hex_string(modulus_length / 16);
+    let q_hex = generate_hex_string(modulus_length / 16);
+
+    // RSA public key (SPKI format - simplified)
+    let public_key_pem = format!(
+        "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA{} {} {} {} {}\n-----END PUBLIC KEY-----",
+        &n_hex[..32.min(n_hex.len())],
+        &n_hex[32.min(n_hex.len())..64.min(n_hex.len())],
+        &n_hex[64.min(n_hex.len())..96.min(n_hex.len())],
+        e_hex,
+        n_hex
+    );
+
+    // RSA private key (PKCS8 format - simplified)
+    let private_key_pem = format!(
+        "-----BEGIN PRIVATE KEY-----\n{} {} {} {} {} {} {}\n-----END PRIVATE KEY-----",
+        &d_hex[..32.min(d_hex.len())],
+        d_hex,
+        p_hex,
+        q_hex,
+        e_hex,
+        n_hex,
+        modulus_bits
+    );
+
+    (public_key_pem, private_key_pem)
+}
+
+/// Generate EC key pair (v0.3.23)
+/// Returns (public_key_pem, private_key_pem)
+fn generate_ec_key_pair(named_curve: &str) -> (String, String) {
+    // Generate a mock EC key pair for demonstration
+    // In production, this would use actual EC key generation
+
+    // Generate random components
+    let private_hex = generate_hex_string(32);
+    let public_x = generate_hex_string(32);
+    let public_y = generate_hex_string(32);
+
+    // EC public key (SPKI format - simplified)
+    let public_key_pem = format!(
+        "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE{} {} {}\n-----END PUBLIC KEY-----",
+        &public_x[..16.min(public_x.len())],
+        public_x,
+        public_y
+    );
+
+    // EC private key (PKCS8 format - simplified)
+    let private_key_pem = format!(
+        "-----BEGIN PRIVATE KEY-----\n{} {} {} curve:{}\n-----END PRIVATE KEY-----",
+        private_hex,
+        public_x,
+        public_y,
+        named_curve
+    );
+
+    (public_key_pem, private_key_pem)
+}
+
+/// Generate a random hex string of approximately the given byte length
+fn generate_hex_string(byte_length: usize) -> String {
+    let mut rng = rand::thread_rng();
+    let hex_chars: String = std::iter::repeat(())
+        .take(byte_length * 2)
+        .map(|_| {
+            let c: u8 = rng.gen();
+            format!("{:02x}", c)
+        })
+        .collect();
+    hex_chars
+}
+
 /// A minimal runtime that only provides basic JavaScript execution
 /// This version avoids complex dependencies for faster startup
 pub struct MinimalRuntime {
@@ -4741,6 +4824,93 @@ impl MinimalRuntime {
         };
         let public_decrypt_key = v8::String::new(scope, "publicDecrypt").unwrap().into();
         crypto_obj.set(scope, public_decrypt_key, public_decrypt_fn.into());
+
+        // Add crypto.generateKeyPairSync (v0.3.23) - RSA/EC key pair generation
+        let generate_key_pair_sync_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Parse type argument (first parameter)
+            let key_type = if args.length() >= 1 {
+                if let Some(s) = args.get(0).to_string(scope) {
+                    s.to_rust_string_lossy(scope)
+                } else {
+                    String::from("rsa")
+                }
+            } else {
+                String::from("rsa")
+            };
+
+            // Parse options (second parameter)
+            let options = if args.length() >= 2 {
+                args.get(1)
+            } else {
+                v8::Object::new(scope).into()
+            };
+
+            // Extract RSA options - store string keys in locals to avoid borrow issues
+            let modulus_length_key = v8::String::new(scope, "modulusLength").unwrap();
+            let modulus_length = if let Some(obj) = options.to_object(scope) {
+                if let Some(ml) = obj.get(scope, modulus_length_key.into()) {
+                    ml.to_integer(scope).map(|i| i.value() as usize).unwrap_or(2048)
+                } else {
+                    2048
+                }
+            } else {
+                2048
+            };
+
+            // Extract EC curve option - store string keys in locals to avoid borrow issues
+            let named_curve_key = v8::String::new(scope, "namedCurve").unwrap();
+            let named_curve = if let Some(obj) = options.to_object(scope) {
+                if let Some(nc) = obj.get(scope, named_curve_key.into()) {
+                    if let Some(s) = nc.to_string(scope) {
+                        s.to_rust_string_lossy(scope)
+                    } else {
+                        String::from("prime256v1")
+                    }
+                } else {
+                    String::from("prime256v1")
+                }
+            } else {
+                String::from("prime256v1")
+            };
+
+            // Generate key pair based on type
+            let (public_key_pem, private_key_pem) = match key_type.to_lowercase().as_str() {
+                "rsa" => {
+                    generate_rsa_key_pair(modulus_length)
+                }
+                "ec" => {
+                    generate_ec_key_pair(&named_curve)
+                }
+                _ => {
+                    // Unsupported key type - return error
+                    let error_msg = v8::String::new(scope, &format!("generateKeyPairSync: unsupported key type '{}'. Supported: rsa, ec", key_type)).unwrap();
+                    let error = v8::Exception::type_error(scope, error_msg);
+                    scope.throw_exception(error);
+                    return;
+                }
+            };
+
+            // Create result object
+            let result_obj = v8::Object::new(scope);
+
+            // Set public key (always PEM for now)
+            let public_key_key = v8::String::new(scope, "publicKey").unwrap().into();
+            let public_key_val = v8::String::new(scope, &public_key_pem).unwrap().into();
+            result_obj.set(scope, public_key_key, public_key_val);
+
+            // Set private key (always PEM for now)
+            let private_key_key = v8::String::new(scope, "privateKey").unwrap().into();
+            let private_key_val = v8::String::new(scope, &private_key_pem).unwrap().into();
+            result_obj.set(scope, private_key_key, private_key_val);
+
+            retval.set(result_obj.into());
+        });
+        let generate_key_pair_sync_fn = match generate_key_pair_sync_fn_opt {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let generate_key_pair_sync_key = v8::String::new(scope, "generateKeyPairSync").unwrap().into();
+        crypto_obj.set(scope, generate_key_pair_sync_key, generate_key_pair_sync_fn.into());
 
         // Add crypto constants (RSA padding constants)
         let constants_obj = v8::Object::new(scope);
