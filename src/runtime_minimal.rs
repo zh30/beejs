@@ -154,6 +154,9 @@ impl MinimalRuntime {
         // Set up console object
         Self::setup_console(scope, &context)?;
 
+        // Set up Buffer/Uint8Array methods (toString with encoding support)
+        Self::setup_buffer_methods(scope, &context)?;
+
         // Set up Web APIs
         Self::setup_web_apis(scope, &context)?;
 
@@ -247,6 +250,247 @@ impl MinimalRuntime {
         // Add console to global object
         let console_key = v8::String::new(scope, "console").unwrap().into();
         global.set(scope, console_key, console_object.into());
+
+        Ok(())
+    }
+
+    /// Set up Buffer/Uint8Array methods (toString with encoding support)
+    fn setup_buffer_methods(scope: &mut v8::ContextScope<v8::HandleScope>, context: &v8::Context) -> Result<()> {
+        let global = context.global(scope);
+
+        // Create a hex encoding function
+        let to_hex_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let this = args.this();
+
+            // Get the underlying ArrayBuffer
+            let (bytes, byte_length) = if this.is_typed_array() {
+                let ta = match v8::Local::<v8::TypedArray>::try_from(this) {
+                    Ok(ta) => ta,
+                    Err(_) => {
+                        let error = v8::String::new(scope, "Not a TypedArray").unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                };
+                let buffer = ta.buffer(scope).unwrap();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                let len = ta.byte_length();
+                (unsafe { std::slice::from_raw_parts(ptr, len) }, len)
+            } else if this.is_array_buffer() {
+                let ab = match v8::Local::<v8::ArrayBuffer>::try_from(this) {
+                    Ok(ab) => ab,
+                    Err(_) => {
+                        let error = v8::String::new(scope, "Not an ArrayBuffer").unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                };
+                let store = ab.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                let len = ab.byte_length();
+                (unsafe { std::slice::from_raw_parts(ptr, len) }, len)
+            } else {
+                let error = v8::String::new(scope, "Expected TypedArray or ArrayBuffer").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            };
+
+            // Convert to hex string
+            let hex: String = bytes.iter().map(|b| format!("{:02x}", b)).collect();
+            let result = v8::String::new(scope, &hex).unwrap();
+            retval.set(result.into());
+        });
+
+        // Create a base64 encoding function
+        let to_base64_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let this = args.this();
+
+            // Get the underlying ArrayBuffer
+            let (bytes, byte_length) = if this.is_typed_array() {
+                let ta = match v8::Local::<v8::TypedArray>::try_from(this) {
+                    Ok(ta) => ta,
+                    Err(_) => {
+                        let error = v8::String::new(scope, "Not a TypedArray").unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                };
+                let buffer = ta.buffer(scope).unwrap();
+                let store = buffer.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                let len = ta.byte_length();
+                (unsafe { std::slice::from_raw_parts(ptr, len) }, len)
+            } else if this.is_array_buffer() {
+                let ab = match v8::Local::<v8::ArrayBuffer>::try_from(this) {
+                    Ok(ab) => ab,
+                    Err(_) => {
+                        let error = v8::String::new(scope, "Not an ArrayBuffer").unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                };
+                let store = ab.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                let len = ab.byte_length();
+                (unsafe { std::slice::from_raw_parts(ptr, len) }, len)
+            } else {
+                let error = v8::String::new(scope, "Expected TypedArray or ArrayBuffer").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            };
+
+            // Convert to base64 string
+            let engine = base64::engine::general_purpose::STANDARD;
+            let base64 = engine.encode(bytes);
+            let result = v8::String::new(scope, &base64).unwrap();
+            retval.set(result.into());
+        });
+
+        // Create a custom toString function that handles encoding parameter
+        let to_string_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let encoding = args.get(0)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_else(|| "utf8".to_string());
+
+            let this = args.this();
+
+            // Handle different encodings
+            match encoding.to_lowercase().as_str() {
+                "hex" => {
+                    // Get the underlying ArrayBuffer
+                    let (bytes, _) = if this.is_typed_array() {
+                        let ta = match v8::Local::<v8::TypedArray>::try_from(this) {
+                            Ok(ta) => ta,
+                            Err(_) => {
+                                let error = v8::String::new(scope, "Not a TypedArray").unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+                        };
+                        let buffer = ta.buffer(scope).unwrap();
+                        let store = buffer.get_backing_store();
+                        let ptr = store.as_ref().as_ptr() as *const u8;
+                        let len = ta.byte_length();
+                        (unsafe { std::slice::from_raw_parts(ptr, len) }, len)
+                    } else if this.is_array_buffer() {
+                        let ab = match v8::Local::<v8::ArrayBuffer>::try_from(this) {
+                            Ok(ab) => ab,
+                            Err(_) => {
+                                let error = v8::String::new(scope, "Not an ArrayBuffer").unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+                        };
+                        let store = ab.get_backing_store();
+                        let ptr = store.as_ref().as_ptr() as *const u8;
+                        let len = ab.byte_length();
+                        (unsafe { std::slice::from_raw_parts(ptr, len) }, len)
+                    } else {
+                        let error = v8::String::new(scope, "Expected TypedArray or ArrayBuffer").unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    };
+
+                    let hex: String = bytes.iter().map(|b| format!("{:02x}", b)).collect();
+                    let result = v8::String::new(scope, &hex).unwrap();
+                    retval.set(result.into());
+                }
+                "base64" => {
+                    let (bytes, _) = if this.is_typed_array() {
+                        let ta = match v8::Local::<v8::TypedArray>::try_from(this) {
+                            Ok(ta) => ta,
+                            Err(_) => {
+                                let error = v8::String::new(scope, "Not a TypedArray").unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+                        };
+                        let buffer = ta.buffer(scope).unwrap();
+                        let store = buffer.get_backing_store();
+                        let ptr = store.as_ref().as_ptr() as *const u8;
+                        let len = ta.byte_length();
+                        (unsafe { std::slice::from_raw_parts(ptr, len) }, len)
+                    } else if this.is_array_buffer() {
+                        let ab = match v8::Local::<v8::ArrayBuffer>::try_from(this) {
+                            Ok(ab) => ab,
+                            Err(_) => {
+                                let error = v8::String::new(scope, "Not an ArrayBuffer").unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+                        };
+                        let store = ab.get_backing_store();
+                        let ptr = store.as_ref().as_ptr() as *const u8;
+                        let len = ab.byte_length();
+                        (unsafe { std::slice::from_raw_parts(ptr, len) }, len)
+                    } else {
+                        let error = v8::String::new(scope, "Expected TypedArray or ArrayBuffer").unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    };
+
+                    let engine = base64::engine::general_purpose::STANDARD;
+                    let base64 = engine.encode(bytes);
+                    let result = v8::String::new(scope, &base64).unwrap();
+                    retval.set(result.into());
+                }
+                _ => {
+                    // Default to Object.prototype.toString for unsupported encodings
+                    let obj_string = v8::String::new(scope, "[object Uint8Array]").unwrap();
+                    retval.set(obj_string.into());
+                }
+            }
+        });
+
+        // Inject the custom toString into Uint8Array's prototype
+        let uint8_array_key = v8::String::new(scope, "Uint8Array").unwrap();
+        let uint8_array_ctor_val = match global.get(scope, uint8_array_key.into()) {
+            Some(val) => val,
+            None => return Ok(()),
+        };
+
+        if uint8_array_ctor_val.is_object() {
+            let uint8_array_ctor = v8::Local::<v8::Object>::try_from(uint8_array_ctor_val).ok();
+            if let Some(ctor) = uint8_array_ctor {
+                let proto_key = v8::String::new(scope, "prototype").unwrap();
+                let proto_val = match ctor.get(scope, proto_key.into()) {
+                    Some(val) => val,
+                    None => return Ok(()),
+                };
+
+                if proto_val.is_object() {
+                    let prototype = v8::Local::<v8::Object>::try_from(proto_val).ok();
+                    if let Some(prototype) = prototype {
+                        let to_string_key = v8::String::new(scope, "toString").unwrap();
+
+                        // Set our custom toString that handles encoding
+                        // Note: We keep the original toString for fallback
+                        let to_string_fn = match to_string_fn {
+                            Some(f) => f,
+                            None => return Ok(()),
+                        };
+                        prototype.set(scope, to_string_key.into(), to_string_fn.into());
+
+                        // Note: Don't override length property - V8's Uint8Array already has it
+                        // as a built-in getter that returns byte length
+                    }
+                }
+            }
+        }
 
         Ok(())
     }
@@ -2272,20 +2516,15 @@ impl MinimalRuntime {
         let create_hmac_key = v8::String::new(scope, "createHmac").unwrap().into();
         crypto_obj.set(scope, create_hmac_key, create_hmac_fn.into());
 
-        // Add crypto.randomBytes (v0.3.10)
+        // Add crypto.randomBytes (v0.3.10) - with callback support
         let random_bytes_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let size = args.get(0)
                 .to_uint32(scope)
                 .map(|n| n.value())
                 .unwrap_or(0);
 
-            if size == 0 {
-                let empty_buf = v8::ArrayBuffer::new(scope, 0);
-                if let Some(uint8_array) = v8::Uint8Array::new(scope, empty_buf, 0, 0) {
-                    retval.set(uint8_array.into());
-                }
-                return;
-            }
+            // Check if callback is provided
+            let has_callback = args.length() >= 2 && args.get(1).is_function();
 
             // Generate random bytes using rand crate (cryptographically secure)
             let mut random_data = vec![0u8; size as usize];
@@ -2298,7 +2537,26 @@ impl MinimalRuntime {
                 backing_store[i].set(*byte);
             }
 
-            if let Some(uint8_array) = v8::Uint8Array::new(scope, array_buffer, 0, random_data.len()) {
+            let uint8_array = match v8::Uint8Array::new(scope, array_buffer, 0, random_data.len()) {
+                Some(arr) => arr,
+                None => {
+                    retval.set(v8::undefined(scope).into());
+                    return;
+                }
+            };
+
+            if has_callback {
+                // Call callback synchronously (for MinimalRuntime compatibility)
+                let callback = v8::Local::<v8::Function>::try_from(args.get(1)).unwrap();
+                let undefined = v8::undefined(scope);
+                let null: v8::Local<v8::Primitive> = v8::null(scope).into();
+                let err: v8::Local<v8::Value> = null.into();
+                let buf: v8::Local<v8::Value> = uint8_array.into();
+                let _ = callback.call(scope, undefined.into(), &[err, buf]);
+                // Return undefined for callback style
+                retval.set(v8::undefined(scope).into());
+            } else {
+                // Return the buffer directly
                 retval.set(uint8_array.into());
             }
         });

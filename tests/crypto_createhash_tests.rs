@@ -124,7 +124,9 @@ fn test_hash_unsupported_algorithm() {
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
-    assert!(result.unwrap().trim().contains("unsupported"));
+    let binding = result.unwrap();
+    let output = binding.trim();
+    assert!(output.contains("unsupported"));
 }
 
 #[test]

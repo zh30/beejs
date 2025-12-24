@@ -31,7 +31,9 @@ fn test_randombytes_returns_buffer() {
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
     // Should return a Buffer-like object
-    assert!(result.unwrap().trim().contains("Buffer") || result.unwrap().trim().contains("Uint8Array"));
+    let binding = result.unwrap();
+    let output = binding.trim();
+    assert!(output.contains("Buffer") || output.contains("Uint8Array"));
 }
 
 #[test]
@@ -148,7 +150,9 @@ fn test_randombytes_sync_returns_buffer() {
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
     // Should return a Buffer-like object
-    assert!(result.unwrap().trim().contains("Buffer") || result.unwrap().trim().contains("Uint8Array"));
+    let binding = result.unwrap();
+    let output = binding.trim();
+    assert!(output.contains("Buffer") || output.contains("Uint8Array"));
 }
 
 #[test]
@@ -207,7 +211,8 @@ fn test_randombytes_with_callback_size() {
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
     // Should complete without error
-    let output = result.unwrap().trim();
+    let binding = result.unwrap();
+    let output = binding.trim();
     // Either returns the length or completes successfully
     assert!(output == "32" || output.is_empty() || output.contains("undefined"));
 }
