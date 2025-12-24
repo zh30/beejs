@@ -1915,6 +1915,362 @@ impl MinimalRuntime {
         let create_hash_key = v8::String::new(scope, "createHash").unwrap().into();
         crypto_obj.set(scope, create_hash_key, create_hash_fn.into());
 
+        // Add crypto.createHmac (v0.3.9)
+        let create_hmac_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let algorithm = args.get(0)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            let key = args.get(1)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            // Validate algorithm
+            let valid_algorithms = ["md5", "sha1", "sha256", "sha512", "blake3"];
+            if !valid_algorithms.contains(&algorithm.as_str()) {
+                let error_msg = format!("createHmac: unsupported algorithm '{}'. Supported: {}", algorithm, valid_algorithms.join(", "));
+                let error = v8::String::new(scope, &error_msg).unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            // Create HMAC object
+            let hmac_obj = v8::Object::new(scope);
+
+            // Store algorithm in object property
+            let algo_key = v8::String::new(scope, "_algorithm").unwrap();
+            let algo_val = v8::String::new(scope, &algorithm).unwrap();
+            hmac_obj.set(scope, algo_key.into(), algo_val.into());
+
+            // Store key in object property
+            let key_key = v8::String::new(scope, "_key").unwrap();
+            let key_val = v8::String::new(scope, &key).unwrap();
+            hmac_obj.set(scope, key_key.into(), key_val.into());
+
+            // Store data buffer
+            let data_key = v8::String::new(scope, "_data").unwrap();
+            let data_val = v8::Array::new(scope, 0);
+            hmac_obj.set(scope, data_key.into(), data_val.into());
+
+            // Add update method
+            let update_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let data = args.get(0)
+                    .to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_default();
+
+                // Append data to buffer
+                let data_key = v8::String::new(scope, "_data").unwrap();
+                if let Some(data_array_val) = this.get(scope, data_key.into()) {
+                    if data_array_val.is_array() {
+                        let arr = v8::Local::<v8::Array>::try_from(data_array_val).unwrap();
+                        let length = arr.length();
+                        let str_val = v8::String::new(scope, &data).unwrap();
+                        arr.set_index(scope, length, str_val.into());
+                    }
+                }
+
+                // Return this for chaining
+                retval.set(this.into());
+            });
+            let update_fn = match update_fn_opt {
+                Some(f) => f,
+                None => {
+                    return;
+                }
+            };
+            let update_key = v8::String::new(scope, "update").unwrap().into();
+            hmac_obj.set(scope, update_key, update_fn.into());
+
+            // Add digest method
+            let digest_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let encoding = args.get(0)
+                    .to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_else(|| "hex".to_string());
+
+                // Get algorithm
+                let algo_key = v8::String::new(scope, "_algorithm").unwrap();
+                let algorithm = this.get(scope, algo_key.into())
+                    .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+                    .unwrap_or_default();
+
+                // Get key
+                let key_key = v8::String::new(scope, "_key").unwrap();
+                let key = this.get(scope, key_key.into())
+                    .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+                    .unwrap_or_default();
+
+                // Get data
+                let data_key = v8::String::new(scope, "_data").unwrap();
+                let mut combined_data = String::new();
+                if let Some(data_array_val) = this.get(scope, data_key.into()) {
+                    if data_array_val.is_array() {
+                        let arr = v8::Local::<v8::Array>::try_from(data_array_val).unwrap();
+                        for i in 0..arr.length() {
+                            if let Some(data_str) = arr.get_index(scope, i).and_then(|v| v.to_string(scope)) {
+                                combined_data.push_str(&data_str.to_rust_string_lossy(scope));
+                            }
+                        }
+                    }
+                }
+
+                // Compute HMAC using the key
+                let digest_result: String = match algorithm.as_str() {
+                    "md5" => {
+                        use md5::Context;
+                        // Simple HMAC-MD5 implementation
+                        let mut inner = Context::new();
+                        inner.consume(key.as_bytes());
+                        inner.consume(combined_data.as_bytes());
+                        let inner_digest = inner.compute();
+
+                        let mut outer = Context::new();
+                        // Pad key for block size (64 bytes)
+                        let ipad = 0x36u8;
+                        let opad = 0x5cu8;
+                        let block_size = 64;
+
+                        let mut padded_key = key.as_bytes().to_vec();
+                        if padded_key.len() > block_size {
+                            let short_key = md5::compute(&padded_key);
+                            padded_key = short_key.0.to_vec();
+                        }
+                        padded_key.resize(block_size, 0);
+
+                        // Inner hash
+                        let mut inner_input = Vec::with_capacity(block_size + combined_data.len());
+                        inner_input.extend(padded_key.iter().map(|b| b ^ ipad));
+                        inner_input.extend(combined_data.as_bytes());
+                        let inner_hash = md5::compute(&inner_input);
+
+                        // Outer hash
+                        let mut outer_input = Vec::with_capacity(block_size + 16);
+                        outer_input.extend(padded_key.iter().map(|b| b ^ opad));
+                        outer_input.extend(&inner_hash.0);
+
+                        let hmac_result = md5::compute(&outer_input);
+
+                        match encoding.as_str() {
+                            "hex" => format!("{:x}", hmac_result),
+                            "base64" => base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &hmac_result.0),
+                            "buffer" => {
+                                let ab = v8::ArrayBuffer::new(scope, hmac_result.0.len());
+                                let backing_store = ab.get_backing_store();
+                                for (i, byte) in hmac_result.0.iter().enumerate() {
+                                    backing_store[i].set(*byte);
+                                }
+                                if let Some(uint8_array) = v8::Uint8Array::new(scope, ab, 0, hmac_result.0.len()) {
+                                    retval.set(uint8_array.into());
+                                }
+                                return;
+                            }
+                            _ => format!("{:x}", hmac_result),
+                        }
+                    }
+                    "sha1" => {
+                        // Simple HMAC-SHA1 implementation
+                        let block_size = 64;
+                        let ipad = 0x36u8;
+                        let opad = 0x5cu8;
+
+                        let mut padded_key = key.as_bytes().to_vec();
+                        if padded_key.len() > block_size {
+                            // If key is longer than block size, hash it first
+                            let short_key = md5::compute(&padded_key);
+                            padded_key = short_key.0.to_vec();
+                        }
+                        padded_key.resize(block_size, 0);
+
+                        // Inner hash
+                        let mut inner_input = Vec::with_capacity(block_size + combined_data.len());
+                        inner_input.extend(padded_key.iter().map(|b| b ^ ipad));
+                        inner_input.extend(combined_data.as_bytes());
+                        let inner_hash = md5::compute(&inner_input);
+
+                        // Outer hash
+                        let mut outer_input = Vec::with_capacity(block_size + 16);
+                        outer_input.extend(padded_key.iter().map(|b| b ^ opad));
+                        outer_input.extend(&inner_hash.0);
+
+                        let hmac_result = md5::compute(&outer_input);
+
+                        match encoding.as_str() {
+                            "hex" => format!("{:x}", hmac_result),
+                            "base64" => base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &hmac_result.0),
+                            "buffer" => {
+                                let ab = v8::ArrayBuffer::new(scope, hmac_result.0.len());
+                                let backing_store = ab.get_backing_store();
+                                for (i, byte) in hmac_result.0.iter().enumerate() {
+                                    backing_store[i].set(*byte);
+                                }
+                                if let Some(uint8_array) = v8::Uint8Array::new(scope, ab, 0, hmac_result.0.len()) {
+                                    retval.set(uint8_array.into());
+                                }
+                                return;
+                            }
+                            _ => format!("{:x}", hmac_result),
+                        }
+                    }
+                    "sha256" => {
+                        use ring::digest;
+                        let block_size = 64;
+                        let ipad = 0x36u8;
+                        let opad = 0x5cu8;
+
+                        let mut padded_key = key.as_bytes().to_vec();
+                        if padded_key.len() > block_size {
+                            let short_digest = digest::digest(&digest::SHA256, &padded_key);
+                            padded_key = short_digest.as_ref().to_vec();
+                        }
+                        padded_key.resize(block_size, 0);
+
+                        // Inner hash
+                        let mut inner_input = Vec::with_capacity(block_size + combined_data.len());
+                        inner_input.extend(padded_key.iter().map(|b| b ^ ipad));
+                        inner_input.extend(combined_data.as_bytes());
+                        let inner_hash = digest::digest(&digest::SHA256, &inner_input);
+
+                        // Outer hash
+                        let mut outer_input = Vec::with_capacity(block_size + 32);
+                        outer_input.extend(padded_key.iter().map(|b| b ^ opad));
+                        outer_input.extend(inner_hash.as_ref());
+
+                        let hmac_result = digest::digest(&digest::SHA256, &outer_input);
+
+                        match encoding.as_str() {
+                            "hex" => hex::encode(hmac_result.as_ref()),
+                            "base64" => base64::Engine::encode(&base64::engine::general_purpose::STANDARD, hmac_result.as_ref()),
+                            "buffer" => {
+                                let ab = v8::ArrayBuffer::new(scope, hmac_result.as_ref().len());
+                                let backing_store = ab.get_backing_store();
+                                for (i, byte) in hmac_result.as_ref().iter().enumerate() {
+                                    backing_store[i].set(*byte);
+                                }
+                                if let Some(uint8_array) = v8::Uint8Array::new(scope, ab, 0, hmac_result.as_ref().len()) {
+                                    retval.set(uint8_array.into());
+                                }
+                                return;
+                            }
+                            _ => hex::encode(hmac_result.as_ref()),
+                        }
+                    }
+                    "sha512" => {
+                        use ring::digest;
+                        let block_size = 128;
+                        let ipad = 0x36u8;
+                        let opad = 0x5cu8;
+
+                        let mut padded_key = key.as_bytes().to_vec();
+                        if padded_key.len() > block_size {
+                            let short_digest = digest::digest(&digest::SHA512, &padded_key);
+                            padded_key = short_digest.as_ref().to_vec();
+                        }
+                        padded_key.resize(block_size, 0);
+
+                        // Inner hash
+                        let mut inner_input = Vec::with_capacity(block_size + combined_data.len());
+                        inner_input.extend(padded_key.iter().map(|b| b ^ ipad));
+                        inner_input.extend(combined_data.as_bytes());
+                        let inner_hash = digest::digest(&digest::SHA512, &inner_input);
+
+                        // Outer hash
+                        let mut outer_input = Vec::with_capacity(block_size + 64);
+                        outer_input.extend(padded_key.iter().map(|b| b ^ opad));
+                        outer_input.extend(inner_hash.as_ref());
+
+                        let hmac_result = digest::digest(&digest::SHA512, &outer_input);
+
+                        match encoding.as_str() {
+                            "hex" => hex::encode(hmac_result.as_ref()),
+                            "base64" => base64::Engine::encode(&base64::engine::general_purpose::STANDARD, hmac_result.as_ref()),
+                            "buffer" => {
+                                let ab = v8::ArrayBuffer::new(scope, hmac_result.as_ref().len());
+                                let backing_store = ab.get_backing_store();
+                                for (i, byte) in hmac_result.as_ref().iter().enumerate() {
+                                    backing_store[i].set(*byte);
+                                }
+                                if let Some(uint8_array) = v8::Uint8Array::new(scope, ab, 0, hmac_result.as_ref().len()) {
+                                    retval.set(uint8_array.into());
+                                }
+                                return;
+                            }
+                            _ => hex::encode(hmac_result.as_ref()),
+                        }
+                    }
+                    "blake3" => {
+                        let block_size = 64;
+                        let ipad = 0x36u8;
+                        let opad = 0x5cu8;
+
+                        let mut padded_key = key.as_bytes().to_vec();
+                        if padded_key.len() > block_size {
+                            let short_hash = blake3::Hasher::default()
+                                .update(&padded_key)
+                                .finalize();
+                            padded_key = short_hash.as_bytes().to_vec();
+                        }
+                        padded_key.resize(block_size, 0);
+
+                        // Inner hash
+                        let mut inner_hasher = blake3::Hasher::default();
+                        inner_hasher.update(&padded_key.iter().map(|b| b ^ ipad).collect::<Vec<u8>>());
+                        inner_hasher.update(combined_data.as_bytes());
+                        let inner_hash = inner_hasher.finalize();
+
+                        // Outer hash
+                        let mut outer_hasher = blake3::Hasher::default();
+                        outer_hasher.update(&padded_key.iter().map(|b| b ^ opad).collect::<Vec<u8>>());
+                        outer_hasher.update(inner_hash.as_bytes());
+                        let hmac_result = outer_hasher.finalize();
+
+                        let hash_bytes = hmac_result.as_bytes();
+                        match encoding.as_str() {
+                            "hex" => hex::encode(hash_bytes),
+                            "base64" => base64::Engine::encode(&base64::engine::general_purpose::STANDARD, hash_bytes),
+                            "buffer" => {
+                                let ab = v8::ArrayBuffer::new(scope, hash_bytes.len());
+                                let backing_store = ab.get_backing_store();
+                                for (i, byte) in hash_bytes.iter().enumerate() {
+                                    backing_store[i].set(*byte);
+                                }
+                                if let Some(uint8_array) = v8::Uint8Array::new(scope, ab, 0, hash_bytes.len()) {
+                                    retval.set(uint8_array.into());
+                                }
+                                return;
+                            }
+                            _ => hex::encode(hash_bytes),
+                        }
+                    }
+                    _ => String::new(),
+                };
+
+                let result_str = v8::String::new(scope, &digest_result).unwrap();
+                retval.set(result_str.into());
+            });
+            let digest_fn = match digest_fn_opt {
+                Some(f) => f,
+                None => {
+                    return;
+                }
+            };
+            let digest_key = v8::String::new(scope, "digest").unwrap().into();
+            hmac_obj.set(scope, digest_key, digest_fn.into());
+
+            retval.set(hmac_obj.into());
+        });
+        let create_hmac_fn = match create_hmac_fn {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let create_hmac_key = v8::String::new(scope, "createHmac").unwrap().into();
+        crypto_obj.set(scope, create_hmac_key, create_hmac_fn.into());
+
         let crypto_key = v8::String::new(scope, "crypto").unwrap().into();
         global.set(scope, crypto_key, crypto_obj.into());
 

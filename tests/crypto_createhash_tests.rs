@@ -1,5 +1,5 @@
 //! Tests for crypto.createHash module (v0.3.8)
-use crate::runtime_minimal::MinimalRuntime;
+use beejs::runtime_minimal::MinimalRuntime;
 use serial_test::serial;
 
 #[test]
@@ -59,7 +59,8 @@ fn test_create_hash_sha512() {
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
-    let output = result.unwrap().trim();
+    let binding = result.unwrap();
+    let output = binding.trim();
     // SHA512 of "test"
     assert_eq!(output.len(), 128); // 512 bits = 128 hex chars
 }
@@ -75,7 +76,8 @@ fn test_create_hash_blake3() {
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
-    let output = result.unwrap().trim();
+    let binding = result.unwrap();
+    let output = binding.trim();
     // BLAKE3 produces 32 bytes = 64 hex chars
     assert_eq!(output.len(), 64);
 }

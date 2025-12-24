@@ -1,6 +1,57 @@
 
 
 
+**最新状态 (2025-12-24)**: 🚀 v0.3.9 HMAC 密钥认证发布！createHmac API 实现！API 认证/Webhook 验证场景必备！
+
+### 🎯 v0.3.9 HMAC 密钥认证模块 (2025-12-24)
+**进度**: ✅ createHmac | ✅ update | ✅ digest | ✅ 链式调用 | ✅ 多种算法 | ✅ 14/14 测试通过
+
+#### v0.3.9 核心功能
+- ✅ **crypto.createHmac(algorithm, key)** - 创建 HMAC 对象，支持 md5/sha1/sha256/sha512/blake3
+- ✅ **hmac.update(data)** - 更新 HMAC 数据，支持链式调用
+- ✅ **hmac.digest([encoding])** - 生成最终认证码，支持 hex/base64/buffer 编码
+- ✅ **HMAC 密钥填充处理** - 自动处理密钥长度超过块大小的情况
+
+#### v0.3.9 技术实现
+- 使用标准 HMAC 算法 (ipad/opad XOR + 双重哈希)
+- 密钥填充：超过块大小的密钥先哈希再填充
+- 支持所有 createHash 算法：md5/sha1/sha256/sha512/blake3
+- 与 createHash 共享 update/digest API 设计
+
+#### v0.3.9 使用示例
+```javascript
+const hmac = crypto.createHmac('sha256', 'my_secret_key');
+hmac.update('message');
+console.log(hmac.digest('hex')); // 认证码
+
+// API 认证场景
+const signature = crypto.createHmac('sha256', apiSecret)
+    .update(timestamp + body)
+    .digest('hex');
+
+// 链式调用
+const authCode = crypto.createHmac('md5', 'secret')
+    .update(data)
+    .digest('base64');
+```
+
+#### v0.3.9 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+360 行)
+  - 添加 crypto.createHmac 函数到全局 crypto 对象
+  - 实现 HMAC 对象的 update/digest 方法
+  - 支持所有哈希算法和编码格式
+  - 标准 HMAC 密钥处理 (ipad/opad XOR)
+
+- **新增文件**: `tests/crypto_createhmac_tests.rs` (+200 行)
+  - 14 个测试用例覆盖所有 HMAC API
+  - 测试各种哈希算法组合
+  - 测试空密钥、空消息、链式调用
+
+- **修复文件**: `tests/crypto_createhash_tests.rs` (+5 行)
+  - 修复导入路径和生命周期问题
+
+---
+
 **最新状态 (2025-12-24)**: 🚀 v0.3.8 crypto 模块发布！MD5/SHA256/SHA512/BLAKE3 全面支持！createHash API 实现！
 
 ### 🎯 v0.3.8 Crypto 哈希模块 (2025-12-24)
