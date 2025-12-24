@@ -3,6 +3,52 @@
 
 
 
+**最新状态 (2025-12-24)**: 🚀 v0.3.24 generateKeyPair 异步密钥对生成发布！
+
+### ✅ v0.3.24 generateKeyPair 异步密钥对生成模块 (2025-12-24)
+**进度**: ✅ RSA | ✅ EC | ✅ 回调模式 | ✅ 默认参数 | ✅ 签名集成 | ✅ 12/12 测试通过
+
+#### v0.3.24 核心功能
+- ✅ **crypto.generateKeyPair('rsa', options, callback)** - 异步生成 RSA 密钥对
+  - 支持 `modulusLength` (默认 2048)
+  - 支持 `publicKeyEncoding` / `privateKeyEncoding` 配置
+- ✅ **crypto.generateKeyPair('ec', options, callback)** - 异步生成 EC 密钥对
+  - 支持 `namedCurve` (默认 prime256v1)
+  - 支持标准 PEM 格式输出
+- ✅ **默认参数** - 省略 options 时直接传 callback
+- ✅ **同步回调执行** - 获得最佳性能（内部密钥生成已是同步操作）
+- ✅ **错误处理** - 不支持的密钥类型通过回调返回错误
+
+#### v0.3.24 技术实现
+- 使用 Node.js 风格的回调模式 `(err, publicKey, privateKey)`
+- 直接调用回调函数（不通过 setImmediate）以获得最佳性能
+- 回调模式 API 兼容 Node.js crypto 模块
+- 与 `generateKeyPairSync` 共享相同的密钥生成逻辑
+
+#### v0.3.24 使用示例
+```javascript
+const crypto = require('crypto');
+
+// 异步生成 RSA 密钥对
+crypto.generateKeyPair('rsa', {
+    modulusLength: 2048
+}, (err, publicKey, privateKey) => {
+    if (err) {
+        console.error('生成失败:', err);
+        return;
+    }
+    console.log('公钥:', publicKey);
+    console.log('私钥:', privateKey);
+});
+
+// 省略 options
+crypto.generateKeyPair('rsa', (err, publicKey, privateKey) => {
+    // 使用默认参数
+});
+```
+
+---
+
 **最新状态 (2025-12-24)**: 🚀 v0.3.23 generateKeyPairSync 发布！RSA/EC 密钥对生成模块！
 
 ### ✅ v0.3.23 generateKeyPairSync 密钥对生成模块 (2025-12-24)
