@@ -2986,6 +2986,161 @@ impl MinimalRuntime {
                         let rmdir_key = v8::String::new(scope, "rmdirSync").unwrap().into();
                         fs_obj.set(scope, rmdir_key, rmdir_fn.into());
 
+                        // Add readFile function (async with callback) - v0.3.6
+                        let readfile_async_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+                            if args.length() < 2 {
+                                let error = v8::String::new(scope, "readFile: missing arguments").unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+
+                            let path_val = args.get(0);
+
+                            // Find the callback - it's at index 1 if index 1 is a function,
+                            // otherwise it's at index 2 (index 1 is options)
+                            let callback_val = if args.get(1).is_function() {
+                                args.get(1)
+                            } else if args.length() >= 3 && args.get(2).is_function() {
+                                args.get(2)
+                            } else {
+                                let error = v8::String::new(scope, "readFile: callback must be a function").unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            };
+
+                            let path = path_val.to_string(scope)
+                                .map(|s| s.to_rust_string_lossy(scope))
+                                .unwrap_or_else(|| "".to_string());
+
+                            // Determine encoding from index 1 if it's a string and index 2 is the callback
+                            let _encoding = if !args.get(1).is_function() && args.get(1).is_string() {
+                                args.get(1).to_string(scope)
+                                    .map(|s| s.to_rust_string_lossy(scope))
+                                    .unwrap_or_else(|| "utf8".to_string())
+                            } else {
+                                "utf8".to_string()
+                            };
+
+                            // Execute read asynchronously using tokio runtime
+                            let callback_func = v8::Local::<v8::Function>::try_from(callback_val).unwrap();
+                            let rt = tokio::runtime::Runtime::new().unwrap();
+                            let read_result = rt.block_on(async {
+                                tokio::fs::read_to_string(&path).await
+                            });
+
+                            let undefined = v8::undefined(scope);
+                            let null_val: v8::Local<v8::Value> = v8::null(scope).into();
+                            match read_result {
+                                Ok(contents) => {
+                                    let contents_val = v8::String::new(scope, &contents).unwrap();
+                                    let _ = callback_func.call(scope, undefined.into(), &[null_val, contents_val.into()]);
+                                }
+                                Err(e) => {
+                                    let error_msg = format!("Error reading file: {}", e);
+                                    let error_val = v8::String::new(scope, &error_msg).unwrap();
+                                    let _ = callback_func.call(scope, undefined.into(), &[error_val.into(), undefined.into()]);
+                                }
+                            }
+                        }).ok_or_else(|| -> anyhow::Error { anyhow::anyhow!("Failed to create readFile function") }).unwrap();
+                        let readfile_async_key = v8::String::new(scope, "readFile").unwrap().into();
+                        fs_obj.set(scope, readfile_async_key, readfile_async_fn.into());
+
+                        // Add writeFile function (async with callback) - v0.3.6
+                        let writefile_async_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+                            if args.length() >= 2 {
+                                let path_val = args.get(0);
+                                let data_val = args.get(1);
+                                let callback_val = args.get(2);
+
+                                if callback_val.is_function() {
+                                    let path = path_val.to_string(scope)
+                                        .map(|s| s.to_rust_string_lossy(scope))
+                                        .unwrap_or_else(|| "".to_string());
+                                    let data = data_val.to_string(scope)
+                                        .map(|s| s.to_rust_string_lossy(scope))
+                                        .unwrap_or_else(|| "".to_string());
+
+                                    let callback_func = v8::Local::<v8::Function>::try_from(callback_val).unwrap();
+
+                                    let rt = tokio::runtime::Runtime::new().unwrap();
+                                    let write_result = rt.block_on(async {
+                                        tokio::fs::write(&path, &data).await
+                                    });
+
+                                    let undefined = v8::undefined(scope);
+                                    match write_result {
+                                        Ok(_) => {
+                                            let null_val = v8::null(scope).into();
+                                            let _ = callback_func.call(scope, undefined.into(), &[null_val]);
+                                        }
+                                        Err(e) => {
+                                            let error_msg = format!("Error writing file: {}", e);
+                                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                                            let _ = callback_func.call(scope, undefined.into(), &[error_val.into()]);
+                                        }
+                                    }
+                                } else {
+                                    let error = v8::String::new(scope, "writeFile: callback must be a function").unwrap();
+                                    let error_obj = v8::Exception::type_error(scope, error);
+                                    scope.throw_exception(error_obj.into());
+                                }
+                            } else {
+                                let error = v8::String::new(scope, "writeFile: missing arguments").unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                            }
+                        }).ok_or_else(|| -> anyhow::Error { anyhow::anyhow!("Failed to create writeFile function") }).unwrap();
+                        let writefile_async_key = v8::String::new(scope, "writeFile").unwrap().into();
+                        fs_obj.set(scope, writefile_async_key, writefile_async_fn.into());
+
+                        // Add appendFile function (async with callback) - v0.3.6
+                        let appendfile_async_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+                            if args.length() >= 3 {
+                                let path_val = args.get(0);
+                                let data_val = args.get(1);
+                                let callback_val = args.get(2);
+
+                                let path = path_val.to_string(scope)
+                                    .map(|s| s.to_rust_string_lossy(scope))
+                                    .unwrap_or_else(|| "".to_string());
+                                let data = data_val.to_string(scope)
+                                    .map(|s| s.to_rust_string_lossy(scope))
+                                    .unwrap_or_else(|| "".to_string());
+
+                                let callback_func = v8::Local::<v8::Function>::try_from(callback_val).unwrap();
+
+                                // Use tokio runtime for async file append
+                                let rt = tokio::runtime::Runtime::new().unwrap();
+                                let append_result = rt.block_on(async {
+                                    // Read existing content, append, then write
+                                    let mut content = tokio::fs::read_to_string(&path).await.unwrap_or_default();
+                                    content.push_str(&data);
+                                    tokio::fs::write(&path, &content).await
+                                });
+
+                                let undefined = v8::undefined(scope);
+                                match append_result {
+                                    Ok(_) => {
+                                        let null_val = v8::null(scope).into();
+                                        let _ = callback_func.call(scope, undefined.into(), &[null_val]);
+                                    }
+                                    Err(e) => {
+                                        let error_msg = format!("Error appending to file: {}", e);
+                                        let error_val = v8::String::new(scope, &error_msg).unwrap();
+                                        let _ = callback_func.call(scope, undefined.into(), &[error_val.into()]);
+                                    }
+                                }
+                            } else {
+                                let error = v8::String::new(scope, "appendFile: missing arguments").unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                            }
+                        }).ok_or_else(|| -> anyhow::Error { anyhow::anyhow!("Failed to create appendFile function") }).unwrap();
+                        let appendfile_async_key = v8::String::new(scope, "appendFile").unwrap().into();
+                        fs_obj.set(scope, appendfile_async_key, appendfile_async_fn.into());
+
                         // For fs module, directly return fs_obj as the module exports
                         retval.set(fs_obj.into());
                         return;

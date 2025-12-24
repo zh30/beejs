@@ -215,3 +215,110 @@ fn test_readfilesync_error_handling() {
     let result = runtime.execute_code(&code).expect("Execution failed");
     assert!(result.contains("Error"), "readFileSync should return error message for non-existent file");
 }
+
+// v0.3.6: Async file operations tests
+
+#[test]
+#[serial]
+fn test_readfile_callback_returns_content() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let test_file = temp_dir.path().join("async_test.txt");
+    fs::write(&test_file, "Async content").expect("Failed to write test file");
+
+    let code = format!(r#"
+        const fs = require('fs');
+        let result;
+        fs.readFile("{}", "utf8", (err, data) => {{
+            result = err ? err : data;
+        }});
+        result;
+    "#, test_file.to_string_lossy().into_owned());
+
+    let result = runtime.execute_code(&code).expect("Execution failed");
+    assert!(result.contains("Async content"), "readFile callback should receive content");
+}
+
+#[test]
+#[serial]
+fn test_writefile_callback_completes() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let test_file = temp_dir.path().join("write_async.txt");
+
+    let code = format!(r#"
+        const fs = require('fs');
+        let completed = false;
+        fs.writeFile("{}", "Async write content", (err) => {{
+            completed = !err;
+        }});
+        completed;
+    "#, test_file.to_string_lossy().into_owned());
+
+    let result = runtime.execute_code(&code).expect("Execution failed");
+    // The callback may not have run yet, so just check it doesn't error
+    assert!(result == "true" || result.trim().is_empty(), "writeFile should not throw");
+
+    // Verify file was written
+    let content = fs::read_to_string(&test_file).expect("Failed to read file");
+    assert_eq!(content, "Async write content", "File should contain written content");
+}
+
+#[test]
+#[serial]
+fn test_appendfile_callback_completes() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let test_file = temp_dir.path().join("append_async.txt");
+    fs::write(&test_file, "Original").expect("Failed to create file");
+
+    let code = format!(r#"
+        const fs = require('fs');
+        fs.appendFile("{}", " appended", (err) => {{}});
+        "done";
+    "#, test_file.to_string_lossy().into_owned());
+
+    let result = runtime.execute_code(&code).expect("Execution failed");
+    assert!(result.trim() == "done", "appendFile should execute without error");
+
+    // Verify content was appended
+    let content = fs::read_to_string(&test_file).expect("Failed to read file");
+    assert_eq!(content, "Original appended", "File should have appended content");
+}
+
+#[test]
+#[serial]
+fn test_readfile_error_callback() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+
+    let code = r#"
+        const fs = require('fs');
+        let errorReceived = false;
+        fs.readFile("/nonexistent/path.txt", "utf8", (err, data) => {
+            errorReceived = !!err;
+        });
+        errorReceived;
+    "#;
+
+    let result = runtime.execute_code(code).expect("Execution failed");
+    // Should receive error in callback (may be true or callback may not have run yet)
+    assert!(result == "true" || result.trim().is_empty(), "readFile should handle error");
+}
+
+#[test]
+#[serial]
+fn test_fs_module_has_async_functions() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const fs = require('fs');
+        const hasReadFile = typeof fs.readFile === 'function';
+        const hasWriteFile = typeof fs.writeFile === 'function';
+        const hasAppendFile = typeof fs.appendFile === 'function';
+        [hasReadFile, hasWriteFile, hasAppendFile].join(',');
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true,true,true", "All async fs functions should exist");
+}

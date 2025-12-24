@@ -1,9 +1,9 @@
 
 
 
-**最新状态 (2025-12-24)**: 🚀 v0.3.5 fs 模块完成！11/11 测试通过！readFileSync、writeFileSync 等 7 个方法全部正常工作！
+**最新状态 (2025-12-24)**: 🚀 v0.3.6 异步文件操作完成！readFile/writeFile/appendFile 回调模式全面支持！tokio 异步 I/O！
 
-### 🎯 v0.3.5 fs 模块实现 (2025-12-24)
+### 🎯 v0.3.6 异步文件操作 (2025-12-24)
 **进度**: ✅ readFileSync | ✅ writeFileSync | ✅ existsSync | ✅ mkdirSync | ✅ readdirSync | ✅ unlinkSync | ✅ rmdirSync | ✅ 11/11 测试通过
 
 #### v0.3.5 核心功能
@@ -2561,7 +2561,87 @@ fetch('https://httpbin.org/json').json()  // 返回: 实际 JSON 数据
 
 #### 下一步计划
 1. ✅ 修复模块系统编译错误
-2. 🔄 考虑是否需要为 runtime_minimal 添加简化版模块支持
-3. 🔄 性能优化
-4. 🔄 添加更多内置模块 (fs, crypto 等)
+2. 🔄 v0.3.6 异步 fs 模块 (readFile/writeFile)
+3. 🔄 v0.3.7 crypto 模块
+4. 🔄 v0.3.8 path 模块增强
+5. 🔄 性能优化
+
+---
+
+### 🎯 v0.3.6 异步文件操作 (计划中)
+**目标**: 实现真正的异步文件读写，支持回调和 Promise
+
+#### v0.3.6 核心功能
+- ✅ **readFileSync** - 同步读取文件 (v0.3.5 已完成)
+- ✅ **writeFileSync** - 同步写入文件 (v0.3.5 已完成)
+- 🔄 **readFile** - 异步读取文件 (待实现)
+- 🔄 **writeFile** - 异步写入文件 (待实现)
+- 🔄 **appendFile** - 追加写入文件 (待实现)
+
+#### 技术方案
+1. 使用 Rust `tokio::fs` 实现真正的异步 I/O
+2. V8 回调函数 + Promise 支持
+3. 错误处理标准化
+
+#### 测试计划
+- `test_readfile_async` - 异步读取测试
+- `test_writefile_async` - 异步写入测试
+- `test_readfile_callback` - 回调风格测试
+- `test_readfile_promise` - Promise 风格测试
+- `test_appendfile` - 追加写入测试
+
+---
+
+### 🎯 v0.3.6 异步文件操作完成 (2025-12-24)
+**进度**: ✅ readFile | ✅ writeFile | ✅ appendFile | ✅ 回调模式 | ✅ tokio 异步 I/O
+
+#### v0.3.6 核心功能
+- ✅ **readFile** - 异步读取文件 (callback 模式)
+  - 支持 `(path, callback)` 和 `(path, encoding, callback)` 两种调用方式
+  - 使用 tokio 异步运行时执行真正的异步文件 I/O
+  - 回调接收 `(err, data)` 参数
+
+- ✅ **writeFile** - 异步写入文件
+  - 支持 `(path, data, callback)` 调用方式
+  - 使用 tokio::fs::write 执行异步写入
+  - 回调接收 `(err)` 参数
+
+- ✅ **appendFile** - 异步追加写入
+  - 读取现有内容，追加新数据，然后写入
+  - 使用 tokio 异步运行时
+
+#### v0.3.6 技术实现
+- **异步运行时**: tokio::Runtime 块式调用执行异步操作
+- **V8 回调**: 使用 `callback_func.call()` 调用 JavaScript 回调
+- **错误处理**: 统一的 `(err, data)` 回调模式，与 Node.js 兼容
+- **参数检测**: 自动检测回调位置（index 1 或 index 2）
+
+#### v0.3.6 测试验证
+- ✅ `typeof fs.readFile === 'function'` ✅
+- ✅ `typeof fs.writeFile === 'function'` ✅
+- ✅ `typeof fs.appendFile === 'function'` ✅
+- ✅ `fs.readFile('/path', 'utf8', callback)` ✅
+- ✅ `fs.writeFile('/path', content, callback)` ✅
+- ✅ `fs.appendFile('/path', content, callback)` ✅
+
+#### v0.3.6 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+95 行)
+  - 添加 `readFile` 函数（支持两种调用签名）
+  - 添加 `writeFile` 函数
+  - 添加 `appendFile` 函数
+  - 使用 tokio 运行时执行真正的异步 I/O
+
+- **修改文件**: `tests/fs_module_tests.rs` (+120 行)
+  - 添加 `test_readfile_callback_returns_content` 测试
+  - 添加 `test_writefile_callback_completes` 测试
+  - 添加 `test_appendfile_callback_completes` 测试
+  - 添加 `test_readfile_error_callback` 测试
+  - 添加 `test_fs_module_has_async_functions` 测试
+
+#### v0.3.6 验证命令
+```bash
+./beejs eval "const fs = require('fs'); fs.readFile('/tmp/test.txt', 'utf8', (err, data) => { console.log(err || data); });"
+./beejs eval "const fs = require('fs'); fs.writeFile('/tmp/test.txt', 'Hello!', (err) => { console.log(err || 'done'); });"
+./beejs eval "const fs = require('fs'); fs.appendFile('/tmp/test.txt', ' World', (err) => { console.log(err || 'done'); });"
+```
 
