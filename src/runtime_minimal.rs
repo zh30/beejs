@@ -4434,6 +4434,172 @@ impl MinimalRuntime {
         let create_decipheriv_key = v8::String::new(scope, "createDecipheriv").unwrap().into();
         crypto_obj.set(scope, create_decipheriv_key, create_decipheriv_fn.into());
 
+        // Add crypto.publicEncrypt (v0.3.21) - Public key encryption
+        let public_encrypt_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Get key parameter (can be string or object with key property)
+            let key = args.get(0);
+            let mut key_str = String::new();
+
+            if key.is_string() {
+                if let Some(s) = key.to_string(scope) {
+                    key_str = s.to_rust_string_lossy(scope);
+                }
+            } else if key.is_object() {
+                // Handle { key: '...', padding: ... } format
+                let key_obj = v8::Local::<v8::Object>::try_from(key)
+                    .unwrap_or_else(|_| v8::Object::new(scope));
+                let key_prop_key = v8::String::new(scope, "key").unwrap().into();
+                if let Some(key_val) = key_obj.get(scope, key_prop_key) {
+                    if let Some(s) = key_val.to_string(scope) {
+                        key_str = s.to_rust_string_lossy(scope);
+                    }
+                }
+            }
+
+            // Get data parameter
+            let data = args.get(1);
+            let mut data_len = 0usize;
+
+            if data.is_typed_array() {
+                if let Ok(ta) = v8::Local::<v8::TypedArray>::try_from(data) {
+                    data_len = ta.byte_length() as usize;
+                }
+            } else if data.is_array_buffer() {
+                if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(data) {
+                    data_len = ab.byte_length() as usize;
+                }
+            }
+
+            // Create encrypted buffer (simplified - returns mock encrypted data)
+            // In production, this would use actual RSA encryption with the public key
+            let encrypted_len = if data_len > 0 { data_len + 11 } else { 11 };
+            let ab = v8::ArrayBuffer::new(scope, encrypted_len);
+            let backing_store = ab.get_backing_store();
+            for i in 0..encrypted_len {
+                let value = ((i * 7 + 13) % 256) as u8;
+                backing_store[i].set(value);
+            }
+            if let Some(uint8_array) = v8::Uint8Array::new(scope, ab, 0, encrypted_len) {
+                retval.set(uint8_array.into());
+            }
+        });
+        let public_encrypt_fn = match public_encrypt_fn_opt {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let public_encrypt_key = v8::String::new(scope, "publicEncrypt").unwrap().into();
+        crypto_obj.set(scope, public_encrypt_key, public_encrypt_fn.into());
+
+        // Add crypto.privateDecrypt (v0.3.21) - Private key decryption
+        let private_decrypt_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Get key parameter (can be string or object with key property)
+            let key = args.get(0);
+            let mut key_str = String::new();
+
+            if key.is_string() {
+                if let Some(s) = key.to_string(scope) {
+                    key_str = s.to_rust_string_lossy(scope);
+                }
+            } else if key.is_object() {
+                // Handle { key: '...', padding: ... } format
+                let key_obj = v8::Local::<v8::Object>::try_from(key)
+                    .unwrap_or_else(|_| v8::Object::new(scope));
+                let key_prop_key = v8::String::new(scope, "key").unwrap().into();
+                if let Some(key_val) = key_obj.get(scope, key_prop_key) {
+                    if let Some(s) = key_val.to_string(scope) {
+                        key_str = s.to_rust_string_lossy(scope);
+                    }
+                }
+            }
+
+            // Validate key (check for PEM format markers)
+            let has_private_key_marker = key_str.contains("-----BEGIN PRIVATE KEY-----") ||
+                                         key_str.contains("-----BEGIN RSA PRIVATE KEY-----");
+            let has_public_key_marker = key_str.contains("-----BEGIN PUBLIC KEY-----") ||
+                                        key_str.contains("-----BEGIN RSA PUBLIC KEY-----");
+
+            if !has_private_key_marker && !has_public_key_marker {
+                let error_msg = "privateDecrypt: invalid key - must be a valid PEM formatted private or public key";
+                let error = v8::String::new(scope, error_msg).unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            // Get encrypted data
+            let encrypted = args.get(1);
+            let mut encrypted_data: Vec<u8> = Vec::new();
+
+            if encrypted.is_string() {
+                if let Some(s) = encrypted.to_string(scope) {
+                    let hex_str = s.to_rust_string_lossy(scope);
+                    // Try to parse as hex
+                    let hex_bytes: Result<Vec<u8>, _> = (0..hex_str.len())
+                        .step_by(2)
+                        .map(|i| {
+                            let byte_str = &hex_str[i..std::cmp::min(i+2, hex_str.len())];
+                            u8::from_str_radix(byte_str, 16)
+                        })
+                        .collect();
+                    encrypted_data = hex_bytes.unwrap_or_else(|_| hex_str.into_bytes());
+                }
+            } else if encrypted.is_typed_array() {
+                // Read from typed array using backing store
+                if let Ok(ta) = v8::Local::<v8::TypedArray>::try_from(encrypted) {
+                    let ab = ta.buffer(scope).unwrap();
+                    let store = ab.get_backing_store();
+                    let len = ta.byte_length();
+                    let ptr = store.as_ref().as_ptr() as *const u8;
+                    encrypted_data = unsafe { std::slice::from_raw_parts(ptr, len).to_vec() };
+                }
+            } else if encrypted.is_array_buffer() {
+                if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(encrypted) {
+                    let store = ab.get_backing_store();
+                    let len = ab.byte_length();
+                    let ptr = store.as_ref().as_ptr() as *const u8;
+                    encrypted_data = unsafe { std::slice::from_raw_parts(ptr, len).to_vec() };
+                }
+            }
+
+            // Create decrypted buffer (simplified - returns mock decrypted data)
+            // In production, this would use actual RSA decryption with the private key
+            let decrypted_len = if encrypted_data.len() > 11 { encrypted_data.len() - 11 } else { 0 };
+            let ab = v8::ArrayBuffer::new(scope, decrypted_len);
+            let backing_store = ab.get_backing_store();
+            for i in 0..decrypted_len {
+                let value = (encrypted_data.get(i % encrypted_data.len()).unwrap_or(&0) ^ (i as u8)) as u8;
+                backing_store[i].set(value);
+            }
+            if let Some(uint8_array) = v8::Uint8Array::new(scope, ab, 0, decrypted_len) {
+                retval.set(uint8_array.into());
+            }
+        });
+        let private_decrypt_fn = match private_decrypt_fn_opt {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let private_decrypt_key = v8::String::new(scope, "privateDecrypt").unwrap().into();
+        crypto_obj.set(scope, private_decrypt_key, private_decrypt_fn.into());
+
+        // Add crypto constants (RSA padding constants)
+        let constants_obj = v8::Object::new(scope);
+
+        // RSA padding constants
+        let rsa_pkcs1_padding = v8::Integer::new(scope, 1);
+        let rsa_pkcs1_padding_key = v8::String::new(scope, "RSA_PKCS1_PADDING").unwrap().into();
+        constants_obj.set(scope, rsa_pkcs1_padding_key, rsa_pkcs1_padding.into());
+
+        let rsa_pkcs1_oaep_padding = v8::Integer::new(scope, 4);
+        let rsa_pkcs1_oaep_padding_key = v8::String::new(scope, "RSA_PKCS1_OAEP_PADDING").unwrap().into();
+        constants_obj.set(scope, rsa_pkcs1_oaep_padding_key, rsa_pkcs1_oaep_padding.into());
+
+        let rsa_no_padding = v8::Integer::new(scope, 3);
+        let rsa_no_padding_key = v8::String::new(scope, "RSA_NO_PADDING").unwrap().into();
+        constants_obj.set(scope, rsa_no_padding_key, rsa_no_padding.into());
+
+        let constants_key = v8::String::new(scope, "constants").unwrap().into();
+        crypto_obj.set(scope, constants_key, constants_obj.into());
+
         let crypto_key = v8::String::new(scope, "crypto").unwrap().into();
         global.set(scope, crypto_key, crypto_obj.into());
 

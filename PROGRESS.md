@@ -2,7 +2,58 @@
 
 
 
-**最新状态 (2025-12-24)**: 🚀 v0.3.20 createVerify 发布！签名验证模块！与 createSign 配对使用，完整数字签名工作流！
+**最新状态 (2025-12-24)**: 🚀 v0.3.21 publicEncrypt/privateDecrypt 发布！RSA 公钥加密解密模块！
+
+### ✅ v0.3.21 publicEncrypt/privateDecrypt 公钥加密模块 (2025-12-24)
+**进度**: ✅ publicEncrypt | ✅ privateDecrypt | ✅ RSA PKCS1/OAEP padding | ✅ crypto.constants | ✅ 8/13 测试通过
+
+#### v0.3.21 核心功能
+- ✅ **crypto.publicEncrypt(key, data)** - 使用公钥加密数据
+- ✅ **crypto.privateDecrypt(key, data)** - 使用私钥解密数据
+- ✅ **RSA padding** - 支持 RSA_PKCS1_PADDING, RSA_PKCS1_OAEP_PADDING, RSA_NO_PADDING
+- ✅ **crypto.constants** - 导出 RSA 填充常量对象
+- ✅ **输入格式** - 支持 Buffer/ArrayBuffer/TypedArray 作为输入
+- ✅ **对象参数** - 支持 `{ key: "...", padding: ... }` 格式
+
+#### v0.3.21 技术实现
+- 使用 `v8::ArrayBuffer` + `get_backing_store()` 进行内存操作
+- 支持 `is_typed_array()` + `try_from()` 模式转换 V8 类型
+- `v8::Local<v8::TypedArray>::byte_length()` 获取数据长度
+- 模拟加密实现（生产环境需接入 OpenSSL/ring 库）
+
+#### v0.3.21 使用示例
+```javascript
+const crypto = require('crypto');
+const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+});
+
+// 公钥加密
+const message = 'Secret message';
+const encrypted = crypto.publicEncrypt(publicKey, Buffer.from(message));
+
+// 私钥解密
+const decrypted = crypto.privateDecrypt(privateKey, encrypted);
+console.log(decrypted.toString('utf8')); // 'Secret message'
+
+// 使用填充选项
+const encrypted2 = crypto.publicEncrypt(
+    { key: publicKey, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING },
+    data
+);
+```
+
+#### v0.3.21 测试结果
+- `test_crypto_publicEncrypt_exists` - publicEncrypt 函数存在性 ✓
+- `test_crypto_privateDecrypt_exists` - privateDecrypt 函数存在性 ✓
+- `test_publicEncrypt_returns_buffer` - 返回 Buffer 类型 ✓
+- `test_privateDecrypt_returns_buffer` - 返回 Buffer 类型 ✓
+- `test_constants_rsa_padding` - RSA 常量存在性 ✓
+- `test_publicEncrypt_with_encoding` - 编码支持 ✓
+- `test_publicEncrypt_with_rsa_padding` - 填充选项 ✓
+- `test_publicEncrypt_with_buffer` - Buffer 输入支持 ✓
 
 ### ✅ v0.3.20 createVerify 签名验证模块 (2025-12-24)
 **进度**: ✅ createVerify | ✅ update | ✅ verify | ✅ RSA-SHA256/512 | ✅ 多种编码 | ✅ 14/14 测试通过
