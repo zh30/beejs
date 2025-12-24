@@ -1,5 +1,5 @@
-//! Stage 93 Phase 2.1.2: 自动代码优化建议系统测试
-//! 测试 AI 驱动的代码优化建议功能
+// Stage 93 Phase 2.1.2: 自动代码优化建议系统测试
+// 测试 AI 驱动的代码优化建议功能
 
 use beejs::ai::{
     code_optimizer::{

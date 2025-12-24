@@ -1,5 +1,5 @@
-//! Stage 91 Phase 4.1 CLI Enhancement Tests
-//! 测试新增的 CLI 命令和功能
+// Stage 91 Phase 4.1 CLI Enhancement Tests
+// 测试新增的 CLI 命令和功能
 
 use std::path::PathBuf;
 use tempfile::TempDir;

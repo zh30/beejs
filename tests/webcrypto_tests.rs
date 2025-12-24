@@ -1,4 +1,4 @@
-//! Tests for Web Crypto API (crypto.subtle) - v0.3.30
+// Tests for Web Crypto API (crypto.subtle) - v0.3.30
 use beejs::runtime_minimal::MinimalRuntime;
 use serial_test::serial;
 

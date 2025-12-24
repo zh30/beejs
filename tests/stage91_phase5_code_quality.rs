@@ -1,6 +1,6 @@
-//! Stage 91 Phase 5: 代码质量测试
-//!
-//! 测试代码质量标准，包括格式化、Lint、文档等
+// Stage 91 Phase 5: 代码质量测试
+//
+// 测试代码质量标准，包括格式化、Lint、文档等
 
 #[cfg(test)]
 mod tests {

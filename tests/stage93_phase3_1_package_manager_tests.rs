@@ -1,7 +1,7 @@
-//! Stage 93 Phase 3.1: Package Manager Enhancement Tests
-//!
-//! This test suite validates the comprehensive package manager functionality
-//! including dependency resolution, version locking, caching, and multi-registry support.
+// Stage 93 Phase 3.1: Package Manager Enhancement Tests
+//
+// This test suite validates the comprehensive package manager functionality
+// including dependency resolution, version locking, caching, and multi-registry support.
 
 use beejs::ecosystem_lite::*;
 use std::fs;

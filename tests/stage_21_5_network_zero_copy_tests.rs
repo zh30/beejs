@@ -1,9 +1,9 @@
-//! Stage 21.5: 零拷贝网络 I/O 优化测试套件
-//!
-//! 该测试套件验证零拷贝网络 I/O 优化的所有功能：
-//! - NetworkBufferPool: 网络缓冲区池
-//! - ConnectionPool: 网络连接池
-//! - NetworkIoStatistics: 网络 I/O 统计
+// Stage 21.5: 零拷贝网络 I/O 优化测试套件
+//
+// 该测试套件验证零拷贝网络 I/O 优化的所有功能：
+// - NetworkBufferPool: 网络缓冲区池
+// - ConnectionPool: 网络连接池
+// - NetworkIoStatistics: 网络 I/O 统计
 
 use beejs::{
     NetworkBufferPool, NetworkIoStatistics,

@@ -1,5 +1,5 @@
-//! Stage 89 Phase 3: 跨平台兼容性测试
-//! 测试 iOS、Android、Linux、macOS、Windows 平台的兼容性
+// Stage 89 Phase 3: 跨平台兼容性测试
+// 测试 iOS、Android、Linux、macOS、Windows 平台的兼容性
 
 #[cfg(test)]
 mod tests {

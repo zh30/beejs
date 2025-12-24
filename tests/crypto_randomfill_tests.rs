@@ -1,5 +1,5 @@
-//! Tests for crypto.randomFill module (v0.3.16)
-//! Tests for crypto.randomFill/randomFillSync - fill existing buffer with random data
+// Tests for crypto.randomFill module (v0.3.16)
+// Tests for crypto.randomFill/randomFillSync - fill existing buffer with random data
 
 use beejs::runtime_minimal::MinimalRuntime;
 use serial_test::serial;

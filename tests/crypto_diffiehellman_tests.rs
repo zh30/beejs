@@ -1,6 +1,6 @@
-//! createDiffieHellman Tests - v0.3.26
-//! Tests for crypto.createDiffieHellman function
-//! Diffie-Hellman key exchange protocol for secure key agreement
+// createDiffieHellman Tests - v0.3.26
+// Tests for crypto.createDiffieHellman function
+// Diffie-Hellman key exchange protocol for secure key agreement
 
 use serial_test::serial;
 use std::fs;

@@ -1,5 +1,5 @@
-//! Stage 54.3: PyTorch 集成测试套件
-//! 测试 PyTorch TorchScript 引擎的所有功能
+// Stage 54.3: PyTorch 集成测试套件
+// 测试 PyTorch TorchScript 引擎的所有功能
 
 use beejs::ai_inference{
     TorchEngine, TorchEngineFactory, TorchGPUAccelerator, TorchOptimizer,

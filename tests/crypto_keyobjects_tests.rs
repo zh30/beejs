@@ -1,6 +1,6 @@
-//! KeyObjects Tests - v0.3.28
-//! Tests for crypto.createPrivateKey, createPublicKey, createSecretKey
-//! KeyObjects API for cryptographic key management
+// KeyObjects Tests - v0.3.28
+// Tests for crypto.createPrivateKey, createPublicKey, createSecretKey
+// KeyObjects API for cryptographic key management
 
 use serial_test::serial;
 use std::fs;

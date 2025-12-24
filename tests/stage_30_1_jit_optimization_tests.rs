@@ -1,6 +1,6 @@
-//! Stage 30.1: JIT 编译器深度优化测试套件
-//!
-//! 测试激进内联、死代码消除、循环展开、逃逸分析等优化技术
+// Stage 30.1: JIT 编译器深度优化测试套件
+//
+// 测试激进内联、死代码消除、循环展开、逃逸分析等优化技术
 
 use std::time::{Duration, Instant};
 use beejs::jit_optimizer::{JITOptimizer, JITThresholds, JITStrategy, OptimizationLevel, CodeComplexity};

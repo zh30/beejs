@@ -1,7 +1,7 @@
-//! Stage 96 Phase 4: 基准测试套件
-//!
-//! 这个模块包含了 Beejs 的扩展基准测试，覆盖 AI 工作负载、
-//! 企业场景、长期稳定性和并发负载等关键场景。
+// Stage 96 Phase 4: 基准测试套件
+//
+// 这个模块包含了 Beejs 的扩展基准测试，覆盖 AI 工作负载、
+// 企业场景、长期稳定性和并发负载等关键场景。
 
 use beejs::runtime_lite::Runtime;
 use beejs::performance_analyzer::PerformanceAnalyzer;

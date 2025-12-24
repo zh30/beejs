@@ -1,5 +1,5 @@
-//! Tests for crypto.generateKeyPairSync module (v0.3.23)
-//! RSA and EC key pair generation for digital signatures and encryption
+// Tests for crypto.generateKeyPairSync module (v0.3.23)
+// RSA and EC key pair generation for digital signatures and encryption
 use beejs::runtime_minimal::MinimalRuntime;
 use serial_test::serial;
 

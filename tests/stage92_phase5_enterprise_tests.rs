@@ -1,5 +1,5 @@
-//! Stage 92 Phase 5: Enterprise Features Integration Tests
-//! 测试企业级功能的集成
+// Stage 92 Phase 5: Enterprise Features Integration Tests
+// 测试企业级功能的集成
 
 use anyhow::{Result, Context};
 use std::collections::HashMap;

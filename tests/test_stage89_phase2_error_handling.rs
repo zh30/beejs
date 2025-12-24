@@ -1,5 +1,5 @@
-//! Stage 89 Phase 2: 错误处理增强 - 测试套件
-//! 测试统一错误处理系统、自动恢复机制和优雅降级
+// Stage 89 Phase 2: 错误处理增强 - 测试套件
+// 测试统一错误处理系统、自动恢复机制和优雅降级
 
 #[cfg(test)]
 mod stage89_phase2_error_handling_tests {

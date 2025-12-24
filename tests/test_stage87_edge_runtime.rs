@@ -1,5 +1,5 @@
-//! Stage 87: Edge Runtime Tests
-//! Test edge runtime with resource management
+// Stage 87: Edge Runtime Tests
+// Test edge runtime with resource management
 
 #[cfg(test)]
 mod tests {

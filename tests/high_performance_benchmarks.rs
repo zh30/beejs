@@ -1,14 +1,14 @@
-//! High-Performance Benchmarks for Beejs Runtime
-//!
-//! This module provides comprehensive benchmarks designed to test and optimize
-//! Beejs performance to exceed Bun's capabilities.
-//!
-//! Focus areas:
-//! - Startup time optimization
-//! - Memory allocation efficiency
-//! - Concurrent execution performance
-//! - I/O operations throughput
-//! - JIT compilation efficiency
+// High-Performance Benchmarks for Beejs Runtime
+//
+// This module provides comprehensive benchmarks designed to test and optimize
+// Beejs performance to exceed Bun's capabilities.
+//
+// Focus areas:
+// - Startup time optimization
+// - Memory allocation efficiency
+// - Concurrent execution performance
+// - I/O operations throughput
+// - JIT compilation efficiency
 
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};

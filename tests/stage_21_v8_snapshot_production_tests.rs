@@ -1,5 +1,5 @@
-//! Stage 21.1: V8 Snapshot Production Environment Tests
-//! Tests to verify V8 snapshot is properly enabled and working in production builds
+// Stage 21.1: V8 Snapshot Production Environment Tests
+// Tests to verify V8 snapshot is properly enabled and working in production builds
 
 use beejs::{v8_snapshot::SnapshotManager, initialize_v8};
 use std::time::Instant;

@@ -1,5 +1,5 @@
-//! Buffer API tests for Beejs runtime
-//! v0.2.8: Comprehensive Buffer API testing
+// Buffer API tests for Beejs runtime
+// v0.2.8: Comprehensive Buffer API testing
 
 use serial_test::serial;
 

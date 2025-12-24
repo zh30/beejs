@@ -1,5 +1,5 @@
-//! Tests for timers API (setTimeout, setInterval) - v0.4.0
-//! Enhanced timer functionality for AI workloads
+// Tests for timers API (setTimeout, setInterval) - v0.4.0
+// Enhanced timer functionality for AI workloads
 
 use serial_test::serial;
 

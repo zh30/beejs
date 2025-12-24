@@ -1,11 +1,11 @@
-//! Stage 91 Phase 2.2: 结构化日志系统测试
-//!
-//! 测试包括：
-//! - 日志级别控制
-//! - JSON 格式化
-//! - 上下文数据
-//! - 关联 ID
-//! - 异步日志写入
+// Stage 91 Phase 2.2: 结构化日志系统测试
+//
+// 测试包括：
+// - 日志级别控制
+// - JSON 格式化
+// - 上下文数据
+// - 关联 ID
+// - 异步日志写入
 
 use beejs::observability::StructuredLogger;
 use serde_json::{json, Value};

@@ -1,13 +1,13 @@
-//! Stage 93 Phase 5: 性能基准测试套件
-//!
-//! 测试基准测试系统的所有功能，包括：
-//! - 基准测试引擎
-//! - 配置系统
-//! - 结果处理
-//! - 工作负载执行器
-//! - 运行时对比
-//! - 回归检测
-//! - 性能监控
+// Stage 93 Phase 5: 性能基准测试套件
+//
+// 测试基准测试系统的所有功能，包括：
+// - 基准测试引擎
+// - 配置系统
+// - 结果处理
+// - 工作负载执行器
+// - 运行时对比
+// - 回归检测
+// - 性能监控
 
 use beejs::benchmark::{
     BenchmarkEngine, BenchmarkConfig, TestSuite, BenchmarkTest, WorkloadProfile,

@@ -1,10 +1,10 @@
-//! Stage 28.3: 生命周期管理测试套件
-//!
-//! 测试覆盖:
-//! - 健康检查端点 (/health, /ready, /live)
-//! - 优雅关闭信号处理
-//! - 连接排空
-//! - 启动/关闭钩子
+// Stage 28.3: 生命周期管理测试套件
+//
+// 测试覆盖:
+// - 健康检查端点 (/health, /ready, /live)
+// - 优雅关闭信号处理
+// - 连接排空
+// - 启动/关闭钩子
 
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;

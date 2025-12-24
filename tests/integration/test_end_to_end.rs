@@ -1,5 +1,5 @@
-//! Stage 89 Phase 3: 端到端工作流测试
-//! 测试完整的 JavaScript/TypeScript 执行工作流
+// Stage 89 Phase 3: 端到端工作流测试
+// 测试完整的 JavaScript/TypeScript 执行工作流
 
 #[cfg(test)]
 mod tests {

@@ -1,5 +1,5 @@
-//! Stage 29.4: 分布式任务执行引擎测试套件
-//! 测试任务执行、监控和容错功能
+// Stage 29.4: 分布式任务执行引擎测试套件
+// 测试任务执行、监控和容错功能
 
 use beejs::distributed::{
     TaskExecutor, ExecutorConfig, ExecutorWorker, WorkerStatus, WorkerConfig, ExecutionError,

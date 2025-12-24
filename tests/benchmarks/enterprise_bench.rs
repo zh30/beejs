@@ -1,7 +1,7 @@
-//! 企业场景基准测试
-//!
-//! 这个模块测试 Beejs 在企业级场景下的性能表现，
-//! 包括多租户隔离、高并发请求、长时间运行和故障恢复等关键场景。
+// 企业场景基准测试
+//
+// 这个模块测试 Beejs 在企业级场景下的性能表现，
+// 包括多租户隔离、高并发请求、长时间运行和故障恢复等关键场景。
 
 use beejs::runtime_lite::Runtime;
 use beejs::performance_analyzer::PerformanceAnalyzer;

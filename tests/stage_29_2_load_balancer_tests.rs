@@ -1,5 +1,5 @@
-//! Stage 29.2: 分布式负载均衡测试套件
-//! 测试一致性哈希、智能路由、流量熔断等功能
+// Stage 29.2: 分布式负载均衡测试套件
+// 测试一致性哈希、智能路由、流量熔断等功能
 
 use std::collections::HashMap;
 use std::time::Duration;

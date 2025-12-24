@@ -1,6 +1,6 @@
-//! EventTarget/Event API 测试套件
-//!
-//! 目标：验证 Beejs 对 EventTarget、Event 和 CustomEvent 的完整支持
+// EventTarget/Event API 测试套件
+//
+// 目标：验证 Beejs 对 EventTarget、Event 和 CustomEvent 的完整支持
 
 #[cfg(test)]
 mod tests {
@@ -13,7 +13,7 @@ mod tests {
             typeof EventTarget
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "EventTarget constructor should be available");
         assert_eq!(result.unwrap().trim(), "function");
@@ -27,7 +27,7 @@ mod tests {
             typeof target
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "EventTarget instance should be created");
         assert_eq!(result.unwrap().trim(), "object");
@@ -41,7 +41,7 @@ mod tests {
             typeof target.addEventListener
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "addEventListener should be available");
         assert_eq!(result.unwrap().trim(), "function");
@@ -60,7 +60,7 @@ mod tests {
             }
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "addEventListener should throw error for non-function");
         assert_eq!(result.unwrap().trim(), "true");
@@ -74,7 +74,7 @@ mod tests {
             typeof target.removeEventListener
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "removeEventListener should be available");
         assert_eq!(result.unwrap().trim(), "function");
@@ -88,7 +88,7 @@ mod tests {
             typeof target.dispatchEvent
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "dispatchEvent should be available");
         assert_eq!(result.unwrap().trim(), "function");
@@ -105,7 +105,7 @@ mod tests {
             count === 1
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "Event listener should be called");
         assert_eq!(result.unwrap().trim(), "true");
@@ -123,7 +123,7 @@ mod tests {
             count === 2
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "Multiple listeners should all be called");
         assert_eq!(result.unwrap().trim(), "true");
@@ -143,7 +143,7 @@ mod tests {
             test1Called && test2Called
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "Different event types should work independently");
         assert_eq!(result.unwrap().trim(), "true");
@@ -156,7 +156,7 @@ mod tests {
             typeof Event
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "Event constructor should be available");
         assert_eq!(result.unwrap().trim(), "function");
@@ -170,7 +170,7 @@ mod tests {
             event.type === 'test' && event.bubbles === false && event.cancelable === true
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "Event properties should be set correctly");
         assert_eq!(result.unwrap().trim(), "true");
@@ -183,7 +183,7 @@ mod tests {
             typeof CustomEvent
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "CustomEvent constructor should be available");
         assert_eq!(result.unwrap().trim(), "function");
@@ -198,7 +198,7 @@ mod tests {
             event.detail && event.detail.foo === 'bar'
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "CustomEvent detail should be set correctly");
         assert_eq!(result.unwrap().trim(), "true");
@@ -215,7 +215,7 @@ mod tests {
             receivedData && receivedData.value === 42
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "Event data should be passed to listener");
         assert_eq!(result.unwrap().trim(), "true");
@@ -231,7 +231,7 @@ mod tests {
             event.defaultPrevented === true
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "preventDefault should set defaultPrevented flag");
         assert_eq!(result.unwrap().trim(), "true");
@@ -253,7 +253,7 @@ mod tests {
             called
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "EventTarget should be extendable");
         assert_eq!(result.unwrap().trim(), "true");

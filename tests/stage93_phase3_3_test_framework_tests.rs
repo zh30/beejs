@@ -1,5 +1,5 @@
-//! Stage 93 Phase 3.3 Test Framework Tests
-//! Comprehensive test suite for enhanced testing framework
+// Stage 93 Phase 3.3 Test Framework Tests
+// Comprehensive test suite for enhanced testing framework
 
 use beejs::testing::*;
 use std::sync::{Arc, Mutex, RwLock};

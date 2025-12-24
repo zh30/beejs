@@ -1,10 +1,10 @@
-//! Stage 91 Phase 2.2: 可观测性系统集成测试
-//!
-//! 测试整个可观测性系统的协同工作：
-//! - Prometheus 指标 + 结构化日志
-//! - 分布式追踪 + 性能分析
-//! - 端到端可观测性
-//! - 性能验证
+// Stage 91 Phase 2.2: 可观测性系统集成测试
+//
+// 测试整个可观测性系统的协同工作：
+// - Prometheus 指标 + 结构化日志
+// - 分布式追踪 + 性能分析
+// - 端到端可观测性
+// - 性能验证
 
 use beejs::observability::{
     ObservableSystem, ObservabilityConfig,

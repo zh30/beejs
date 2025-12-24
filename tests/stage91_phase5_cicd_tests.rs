@@ -1,6 +1,6 @@
-//! Stage 91 Phase 5: CI/CD 流水线测试
-//!
-//! 测试持续集成和持续部署流水线
+// Stage 91 Phase 5: CI/CD 流水线测试
+//
+// 测试持续集成和持续部署流水线
 
 #[cfg(test)]
 mod tests {

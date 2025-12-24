@@ -1,5 +1,5 @@
-//! Tests for crypto.createVerify module (v0.3.20)
-//! Digital signature verification using RSA public keys
+// Tests for crypto.createVerify module (v0.3.20)
+// Digital signature verification using RSA public keys
 use beejs::runtime_minimal::MinimalRuntime;
 use serial_test::serial;
 

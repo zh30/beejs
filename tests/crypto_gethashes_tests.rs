@@ -1,5 +1,5 @@
-//! crypto.getHashes() Tests - v0.3.13
-//! Tests for crypto.getHashes() function to list supported hash algorithms
+// crypto.getHashes() Tests - v0.3.13
+// Tests for crypto.getHashes() function to list supported hash algorithms
 
 use serial_test::serial;
 use std::fs;

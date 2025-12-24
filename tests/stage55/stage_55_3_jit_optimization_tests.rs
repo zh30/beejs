@@ -1,11 +1,11 @@
-//! Stage 55.3 - JIT Compilation Optimization Tests
-//!
-//! This module tests the JIT compilation optimizations required for Stage 55.3:
-//! - V8 optimization configuration
-//! - Hot path optimization
-//! - Function inlining optimization
-//! - Escape analysis optimization
-//! - Dead code elimination
+// Stage 55.3 - JIT Compilation Optimization Tests
+//
+// This module tests the JIT compilation optimizations required for Stage 55.3:
+// - V8 optimization configuration
+// - Hot path optimization
+// - Function inlining optimization
+// - Escape analysis optimization
+// - Dead code elimination
 
 use std::time::Duration;
 use beejs::benchmarks{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};

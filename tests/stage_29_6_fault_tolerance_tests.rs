@@ -1,5 +1,5 @@
-//! Stage 29.6: 故障检测与恢复测试套件
-//! 测试智能故障检测、自动恢复和容错机制
+// Stage 29.6: 故障检测与恢复测试套件
+// 测试智能故障检测、自动恢复和容错机制
 
 use beejs::distributed::fault_tolerance::{
     FaultDetectionConfig,

@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
-//! Stage 81 自动性能优化测试套件
-//! 测试 AI 驱动的性能分析、热点检测和自动优化功能
+// Stage 81 自动性能优化测试套件
+// 测试 AI 驱动的性能分析、热点检测和自动优化功能
 
 #[cfg(test)]
 mod tests {

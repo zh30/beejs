@@ -1,5 +1,5 @@
-//! crypto.createCipher/createDecipher Tests - v0.3.14
-//! Tests for crypto.createCipher and createDecipher symmetric encryption functions
+// crypto.createCipher/createDecipher Tests - v0.3.14
+// Tests for crypto.createCipher and createDecipher symmetric encryption functions
 
 use serial_test::serial;
 use std::fs;

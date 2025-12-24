@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
-//! Stage 43.0: Node.js 兼容性测试
-//! 验证新实现的Node.js API兼容性
+// Stage 43.0: Node.js 兼容性测试
+// 验证新实现的Node.js API兼容性
 
 use beejs::Runtime;
 use std::sync::{Arc, Mutex, RwLock};

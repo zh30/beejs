@@ -1,5 +1,5 @@
-//! Platform runtime tests
-//! Tests for mobile and WebAssembly platform support
+// Platform runtime tests
+// Tests for mobile and WebAssembly platform support
 
 use beejs::platform::{CrossPlatformRuntime, MobileRuntime, WASMRuntime, BeeWasmAPI};
 use std::sync::Arc;

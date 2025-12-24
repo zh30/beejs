@@ -1,5 +1,4 @@
-use std::time::{Duration, Instant}, SystemTime, UNIX_EPOCH;
-
+use std::time::{Duration, Instant};
 use std::time::{SystemTime, UNIX_EPOCH};
 /// Memory statistics tracking
 #[derive(Debug, Clone)]

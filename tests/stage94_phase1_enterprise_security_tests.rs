@@ -1,5 +1,5 @@
-//! Stage 94 Phase 1: Enterprise Security Tests
-//! Comprehensive test suite for enterprise-grade security features
+// Stage 94 Phase 1: Enterprise Security Tests
+// Comprehensive test suite for enterprise-grade security features
 
 use beejs::enterprise::security::*;
 use beejs::enterprise::security_manager::*;

@@ -1,5 +1,5 @@
-//! Beejs 核心功能测试套件 (TDD)
-//! Stage 1: 红色阶段 - 编写失败的测试
+// Beejs 核心功能测试套件 (TDD)
+// Stage 1: 红色阶段 - 编写失败的测试
 
 use std::path::PathBuf;
 use tempfile::TempDir;

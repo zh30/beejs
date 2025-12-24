@@ -1,6 +1,6 @@
-//! Stage 90 Phase 3 并发性能提升测试
-//!
-//! 测试无锁并发算法、任务调度优化和CPU亲和性
+// Stage 90 Phase 3 并发性能提升测试
+//
+// 测试无锁并发算法、任务调度优化和CPU亲和性
 
 use std::sync::Arc;
 use std::thread;

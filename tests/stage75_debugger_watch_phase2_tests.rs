@@ -1,8 +1,8 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
-//! Stage 75 Phase 2: Watch Expression Evaluation Tests
-//!
-//! Tests for the watch expression evaluation functionality in the debugger.
-//! This phase integrates V8 context for actual expression evaluation.
+// Stage 75 Phase 2: Watch Expression Evaluation Tests
+//
+// Tests for the watch expression evaluation functionality in the debugger.
+// This phase integrates V8 context for actual expression evaluation.
 
 use beejs::debugger::{
     DebuggerEngine, DebugConfig, DebugState,

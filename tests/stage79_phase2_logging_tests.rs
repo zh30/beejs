@@ -1,5 +1,5 @@
-//! Stage 79 Phase 2.3: 日志聚合测试
-//! 测试 LogAggregator 结构化日志和日志转发功能
+// Stage 79 Phase 2.3: 日志聚合测试
+// 测试 LogAggregator 结构化日志和日志转发功能
 
 #[cfg(test)]
 mod tests {

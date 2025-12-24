@@ -1,10 +1,10 @@
-//! Stage 96 Phase 3: Enhanced Debugging Tools - Test Suite
-//!
-//! This module tests the enhanced debugging features including:
-//! - Visual debugging interface
-//! - Remote debugging support
-//! - Performance profiling
-//! - Memory analysis
+// Stage 96 Phase 3: Enhanced Debugging Tools - Test Suite
+//
+// This module tests the enhanced debugging features including:
+// - Visual debugging interface
+// - Remote debugging support
+// - Performance profiling
+// - Memory analysis
 
 use beejs::debugger::enhanced::{
     BreakpointManager, VariableInspector, CallStackView, Repl,

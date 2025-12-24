@@ -1,10 +1,10 @@
-//! Beejs 核心功能测试套件 (TDD)
-//! 测试最关键的功能：V8运行时、JavaScript执行、TypeScript支持
-//!
-//! 测试驱动开发（TDD）流程：
-//! 1. 先写测试（红色）
-//! 2. 实现功能（绿色）
-//! 3. 重构优化（蓝色）
+// Beejs 核心功能测试套件 (TDD)
+// 测试最关键的功能：V8运行时、JavaScript执行、TypeScript支持
+//
+// 测试驱动开发（TDD）流程：
+// 1. 先写测试（红色）
+// 2. 实现功能（绿色）
+// 3. 重构优化（蓝色）
 
 use std::sync::{Arc, Mutex};
 use std::time::Instant;

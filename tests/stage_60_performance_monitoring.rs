@@ -1,7 +1,7 @@
-//! Stage 60: 性能监控与指标收集
-//! 测试驱动的开发示例
-//!
-//! 本文件展示如何为 Beejs 添加新的性能监控功能
+// Stage 60: 性能监控与指标收集
+// 测试驱动的开发示例
+//
+// 本文件展示如何为 Beejs 添加新的性能监控功能
 
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 

@@ -1,5 +1,5 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
-//! Stage 78 Phase 4 测试套件 - 极致性能监控
+// Stage 78 Phase 4 测试套件 - 极致性能监控
 
 #[cfg(test)]
 mod tests {

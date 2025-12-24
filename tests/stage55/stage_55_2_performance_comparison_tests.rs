@@ -1,6 +1,6 @@
-//! Stage 55.2 性能对比分析集成测试
-//!
-//! 该测试运行与 Node.js、Bun、Deno 的性能对比，并生成详细报告
+// Stage 55.2 性能对比分析集成测试
+//
+// 该测试运行与 Node.js、Bun、Deno 的性能对比，并生成详细报告
 
 use beejs::performance_comparison::PerformanceComparisonSuite;
 use beejs::performance_comparison::ComparisonReportGenerator;

@@ -1,5 +1,5 @@
-//! Stage 54.2: ONNX Runtime 集成测试套件
-//! 全面测试 ONNX 推理引擎的功能和性能
+// Stage 54.2: ONNX Runtime 集成测试套件
+// 全面测试 ONNX 推理引擎的功能和性能
 
 #[cfg(test)]
 mod onnx_tests {

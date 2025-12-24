@@ -1,5 +1,5 @@
-//! 性能基准测试套件 - 与 Bun 对比
-//! Stage 48: 创建全面的性能测试框架
+// 性能基准测试套件 - 与 Bun 对比
+// Stage 48: 创建全面的性能测试框架
 
 use anyhow::Result;
 use std::time::{Duration, Instant};

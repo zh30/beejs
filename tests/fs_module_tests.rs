@@ -1,5 +1,5 @@
-//! FS module tests for Beejs runtime
-//! v0.3.5: fs module implementation (readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync, rmdirSync)
+// FS module tests for Beejs runtime
+// v0.3.5: fs module implementation (readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync, rmdirSync)
 
 use serial_test::serial;
 use std::fs;

@@ -1,5 +1,5 @@
-//! Module system tests for Beejs runtime
-//! v0.3.0: require(), module, exports implementation
+// Module system tests for Beejs runtime
+// v0.3.0: require(), module, exports implementation
 
 use serial_test::serial;
 use std::fs;

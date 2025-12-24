@@ -1,12 +1,12 @@
-//! PerformanceMonitor 性能监控模块测试
-//! 测试驱动的开发 - Stage 60: 性能监控系统
-//!
-//! 本文件包含 PerformanceMonitor 的完整测试套件，涵盖：
-//! - 性能指标收集测试
-//! - 指标聚合测试
-//! - 阈值检查测试
-//! - 实时数据获取测试
-//! - 配置管理测试
+// PerformanceMonitor 性能监控模块测试
+// 测试驱动的开发 - Stage 60: 性能监控系统
+//
+// 本文件包含 PerformanceMonitor 的完整测试套件，涵盖：
+// - 性能指标收集测试
+// - 指标聚合测试
+// - 阈值检查测试
+// - 实时数据获取测试
+// - 配置管理测试
 
 use beejs::monitor::performance_monitor::{
     PerformanceMonitor, MetricType, MetricValue,

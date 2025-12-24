@@ -1,12 +1,12 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
-//! Stage 28.5: 部署与打包测试套件
-//!
-//! 测试覆盖:
-//! - 单文件可执行打包
-//! - 静态资源内嵌
-//! - 交叉编译支持
-//! - Docker 镜像构建
-//! - 部署配置生成
+// Stage 28.5: 部署与打包测试套件
+//
+// 测试覆盖:
+// - 单文件可执行打包
+// - 静态资源内嵌
+// - 交叉编译支持
+// - Docker 镜像构建
+// - 部署配置生成
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

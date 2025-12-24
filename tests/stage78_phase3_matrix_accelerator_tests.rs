@@ -1,7 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
-//! Stage 78 Phase 3: 矩阵运算加速器测试
-//!
-//! 测试矩阵运算加速器的所有功能，包括 BLAS 优化、批处理和布局优化
+// Stage 78 Phase 3: 矩阵运算加速器测试
+//
+// 测试矩阵运算加速器的所有功能，包括 BLAS 优化、批处理和布局优化
 
 #[cfg(test)]
 mod matrix_accelerator_tests {

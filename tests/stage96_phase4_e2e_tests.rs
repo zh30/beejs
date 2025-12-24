@@ -1,7 +1,7 @@
-//! Stage 96 Phase 4: 端到端测试套件
-//!
-//! 这个模块包含了 Beejs 的端到端测试，覆盖完整用户场景，
-//! 包括调试流程、AI 管道、企业部署和性能监控等关键场景。
+// Stage 96 Phase 4: 端到端测试套件
+//
+// 这个模块包含了 Beejs 的端到端测试，覆盖完整用户场景，
+// 包括调试流程、AI 管道、企业部署和性能监控等关键场景。
 
 use beejs::runtime_lite::Runtime;
 use beejs::performance_analyzer::PerformanceAnalyzer;

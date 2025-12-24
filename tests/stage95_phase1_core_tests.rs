@@ -1,6 +1,6 @@
-//! Stage 95 Phase 1: Core Module Tests
-//!
-//! Tests for the AI Ops core module functionality.
+// Stage 95 Phase 1: Core Module Tests
+//
+// Tests for the AI Ops core module functionality.
 
 #[cfg(test)]
 mod tests {

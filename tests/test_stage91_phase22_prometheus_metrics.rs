@@ -1,11 +1,11 @@
-//! Stage 91 Phase 2.2: Prometheus 指标系统测试
-//!
-//! 测试包括：
-//! - 指标导出功能
-//! - 性能指标收集
-//! - 资源指标收集
-//! - 错误指标收集
-//! - 实时指标更新
+// Stage 91 Phase 2.2: Prometheus 指标系统测试
+//
+// 测试包括：
+// - 指标导出功能
+// - 性能指标收集
+// - 资源指标收集
+// - 错误指标收集
+// - 实时指标更新
 
 use beejs::observability::{
     ObservableSystem, ObservabilityConfig,

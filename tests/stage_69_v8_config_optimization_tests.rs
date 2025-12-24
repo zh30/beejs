@@ -1,8 +1,8 @@
-//! Stage 69 Phase 2: V8 Engine Configuration Optimization Tests
-//!
-//! This test suite validates the performance improvements from V8 engine
-//! configuration optimization, measuring execution speed, memory usage,
-//! and startup time across different configuration profiles.
+// Stage 69 Phase 2: V8 Engine Configuration Optimization Tests
+//
+// This test suite validates the performance improvements from V8 engine
+// configuration optimization, measuring execution speed, memory usage,
+// and startup time across different configuration profiles.
 
 use beejs::runtime_lite::RuntimeLite;
 use beejs::v8_engine::flags::{V8EngineFlags, V8ConfigManager};

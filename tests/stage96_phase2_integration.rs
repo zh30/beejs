@@ -1,5 +1,5 @@
-//! Stage 96 Phase 2 Integration Tests
-//! Tests the integration of Kubernetes Operator, Multi-tenancy, and Monitoring
+// Stage 96 Phase 2 Integration Tests
+// Tests the integration of Kubernetes Operator, Multi-tenancy, and Monitoring
 
 use enterprise::{
 use std::sync::{Arc, Mutex, RwLock};

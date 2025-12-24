@@ -1,5 +1,5 @@
-//! Tests for process object enhancements - v0.4.0
-//! Tests for process.cwd(), process.exit(), process.version, process.platform, process.arch
+// Tests for process object enhancements - v0.4.0
+// Tests for process.cwd(), process.exit(), process.version, process.platform, process.arch
 
 use serial_test::serial;
 

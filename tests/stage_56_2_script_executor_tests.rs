@@ -1,10 +1,10 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
-//! Stage 56.2 - Script Executor Tests
-//! Tests for the script execution engine including:
-//! - File type detection
-//! - Execution context (__dirname, __filename, process.argv)
-//! - Module system support (ES Modules and CommonJS)
-//! - Parameter passing and environment variables
+// Stage 56.2 - Script Executor Tests
+// Tests for the script execution engine including:
+// - File type detection
+// - Execution context (__dirname, __filename, process.argv)
+// - Module system support (ES Modules and CommonJS)
+// - Parameter passing and environment variables
 
 use std::path::PathBuf;
 

@@ -1,6 +1,6 @@
-//! Async/Await 支持测试套件
-//!
-//! 目标：验证 Beejs 对现代 JavaScript async/await 语法的支持
+// Async/Await 支持测试套件
+//
+// 目标：验证 Beejs 对现代 JavaScript async/await 语法的支持
 
 #[cfg(test)]
 mod tests {

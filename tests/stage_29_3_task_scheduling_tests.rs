@@ -1,5 +1,5 @@
-//! Stage 29.3: 分布式任务调度测试套件
-//! 测试任务分发、优先级队列、结果聚合等功能
+// Stage 29.3: 分布式任务调度测试套件
+// 测试任务分发、优先级队列、结果聚合等功能
 
 use beejs::distributed::task_scheduler::{
     TaskScheduler, TaskDistributor, ResultAggregator,

@@ -1,5 +1,5 @@
-//! Tests for crypto.timingSafeEqual module (v0.3.11)
-//! Timing-safe constant-time comparison to prevent timing attacks
+// Tests for crypto.timingSafeEqual module (v0.3.11)
+// Timing-safe constant-time comparison to prevent timing attacks
 use beejs::runtime_minimal::MinimalRuntime;
 use serial_test::serial;
 

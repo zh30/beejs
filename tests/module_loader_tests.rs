@@ -1,13 +1,13 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
-//! ModuleLoader 模块系统测试
-//! 测试驱动的开发 - Stage 60: 模块系统测试套件
-//!
-//! 本文件包含模块系统的完整测试套件，涵盖：
-//! - 模块解析测试
-//! - 模块缓存测试
-//! - 相对路径解析测试
-//! - 内置模块测试
-//! - node_modules 解析测试
+// ModuleLoader 模块系统测试
+// 测试驱动的开发 - Stage 60: 模块系统测试套件
+//
+// 本文件包含模块系统的完整测试套件，涵盖：
+// - 模块解析测试
+// - 模块缓存测试
+// - 相对路径解析测试
+// - 内置模块测试
+// - node_modules 解析测试
 
 use beejs::module_loader::{ModuleLoader, Module};
 use std::path::PathBuf;

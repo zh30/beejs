@@ -1,4 +1,4 @@
-//! Test Stage 37.0 Performance Comparison Engine
+// Test Stage 37.0 Performance Comparison Engine
 
 #[cfg(test)]
 mod tests {

@@ -1,5 +1,5 @@
-//! Stage 94 Phase 3 - CI/CD Integration Tests
-//! Tests for GitOps workflows and CI/CD pipeline integration
+// Stage 94 Phase 3 - CI/CD Integration Tests
+// Tests for GitOps workflows and CI/CD pipeline integration
 
 #[cfg(test)]
 mod cicd_integration_tests {

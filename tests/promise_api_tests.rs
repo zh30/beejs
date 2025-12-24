@@ -1,6 +1,6 @@
-//! Promise API 完整测试套件 - v0.2.1
-//!
-//! 目标：验证 Beejs 对现代 JavaScript Promise 语法的完整支持
+// Promise API 完整测试套件 - v0.2.1
+//
+// 目标：验证 Beejs 对现代 JavaScript Promise 语法的完整支持
 
 #[cfg(test)]
 mod tests {

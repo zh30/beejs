@@ -1,6 +1,6 @@
-//! createECDH Tests - v0.3.27
-//! Tests for crypto.createECDH function
-//! Elliptic Curve Diffie-Hellman key exchange protocol
+// createECDH Tests - v0.3.27
+// Tests for crypto.createECDH function
+// Elliptic Curve Diffie-Hellman key exchange protocol
 
 use serial_test::serial;
 use std::fs;

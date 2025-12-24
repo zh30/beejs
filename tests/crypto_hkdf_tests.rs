@@ -1,4 +1,4 @@
-//! Tests for crypto.hkdf module (v0.3.29)
+// Tests for crypto.hkdf module (v0.3.29)
 use beejs::runtime_minimal::MinimalRuntime;
 use serial_test::serial;
 

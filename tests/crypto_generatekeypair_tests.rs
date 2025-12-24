@@ -1,5 +1,5 @@
-//! Tests for crypto.generateKeyPair module (v0.3.24)
-//! Asynchronous RSA/EC key pair generation with callback pattern
+// Tests for crypto.generateKeyPair module (v0.3.24)
+// Asynchronous RSA/EC key pair generation with callback pattern
 use beejs::runtime_minimal::MinimalRuntime;
 use serial_test::serial;
 

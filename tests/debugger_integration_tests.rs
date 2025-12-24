@@ -1,8 +1,8 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
-//! Debugger Module Integration Tests
-//!
-//! Tests for the beejs debugger functionality
-//! Stage 58: Debugger Integration
+// Debugger Module Integration Tests
+//
+// Tests for the beejs debugger functionality
+// Stage 58: Debugger Integration
 
 use beejs::debugger::{
     DebuggerEngine, BreakpointManager, Breakpoint, StackFrame, StackTrace,

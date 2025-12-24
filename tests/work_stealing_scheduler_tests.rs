@@ -1,5 +1,5 @@
-//! WorkStealingScheduler 测试套件 (TDD)
-//! 测试工作窃取调度器的核心功能
+// WorkStealingScheduler 测试套件 (TDD)
+// 测试工作窃取调度器的核心功能
 
 #[cfg(test)]
 mod tests {

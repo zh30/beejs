@@ -1,5 +1,5 @@
-//! Stage 87: Edge Node Manager Tests
-//! Test-driven development for edge node management functionality
+// Stage 87: Edge Node Manager Tests
+// Test-driven development for edge node management functionality
 
 #[cfg(test)]
 mod tests {

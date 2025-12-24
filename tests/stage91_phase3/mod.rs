@@ -1,7 +1,7 @@
-//! Stage 91 Phase 3 生态系统集成测试套件
-//! Stage 91 Phase 3 - 生态系统集成
-//!
-//! 测试包管理器集成、开发工具支持、框架支持等核心功能
+// Stage 91 Phase 3 生态系统集成测试套件
+// Stage 91 Phase 3 - 生态系统集成
+//
+// 测试包管理器集成、开发工具支持、框架支持等核心功能
 
 #[cfg(test)]
 mod package_manager_tests;

@@ -1,7 +1,7 @@
-//! scrypt Tests - v0.3.25
-//! Tests for crypto.scrypt and crypto.scryptSync functions
-//! scrypt is a password-based key derivation function that is more resistant
-//! to hardware attacks than PBKDF2 due to its memory-hardness property.
+// scrypt Tests - v0.3.25
+// Tests for crypto.scrypt and crypto.scryptSync functions
+// scrypt is a password-based key derivation function that is more resistant
+// to hardware attacks than PBKDF2 due to its memory-hardness property.
 
 use serial_test::serial;
 use std::fs;

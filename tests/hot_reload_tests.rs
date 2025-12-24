@@ -1,5 +1,5 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
-//! Hot Reload Tests for Beejs Runtime
+// Hot Reload Tests for Beejs Runtime
 
 use beejs::watcher::{FileChangeType, HotReloader, WatcherConfig, WatcherConfigBuilder};
 use std::path::Path;

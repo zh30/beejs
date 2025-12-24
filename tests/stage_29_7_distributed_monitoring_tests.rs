@@ -1,5 +1,5 @@
-//! Stage 29.7: 分布式监控与调试测试套件
-//! 测试分布式指标收集、链路追踪和集群可视化控制台功能
+// Stage 29.7: 分布式监控与调试测试套件
+// 测试分布式指标收集、链路追踪和集群可视化控制台功能
 
 use beejs::distributed::distributed_metrics::{
     MetricsConfig,

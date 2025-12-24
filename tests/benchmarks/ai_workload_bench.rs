@@ -1,7 +1,7 @@
-//! AI 工作负载基准测试
-//!
-//! 这个模块专门测试 Beejs 在 AI 工作负载下的性能表现，
-//! 包括张量操作、模型推理、批处理和内存优化等关键场景。
+// AI 工作负载基准测试
+//
+// 这个模块专门测试 Beejs 在 AI 工作负载下的性能表现，
+// 包括张量操作、模型推理、批处理和内存优化等关键场景。
 
 use beejs::runtime_lite::Runtime;
 use beejs::performance_analyzer::PerformanceAnalyzer;

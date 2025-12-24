@@ -1,6 +1,6 @@
-//! Stage 94 Phase 2: Distributed Runtime Tests
-//! Comprehensive test suite for distributed runtime features
-//! Tests cluster management, task scheduling, state management, and fault tolerance
+// Stage 94 Phase 2: Distributed Runtime Tests
+// Comprehensive test suite for distributed runtime features
+// Tests cluster management, task scheduling, state management, and fault tolerance
 
 use beejs::distributed::*;
 use std::collections::HashMap;

@@ -1,13 +1,13 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
-//! Stage 79 Phase 1.1: Kubernetes 集成测试
-//! 测试 K8sManager 集群管理、自动扩缩容和健康检查功能
+// Stage 79 Phase 1.1: Kubernetes 集成测试
+// 测试 K8sManager 集群管理、自动扩缩容和健康检查功能
 
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
-    use tokio::time::{sleep, Duration};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+    use tokio::time::{sleep};
+    use std::sync::{Mutex, RwLock};
+    use std::collections::{HashMap, BTreeMap};
 
     // 模拟 K8sManager 结构体（待实现）
     #[allow(dead_code)]

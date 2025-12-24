@@ -1,5 +1,5 @@
-//! Stage 91 Phase 2.1: 压力测试
-//! 验证 Beejs 运行时在高负载和极限压力下的稳定性和性能
+// Stage 91 Phase 2.1: 压力测试
+// 验证 Beejs 运行时在高负载和极限压力下的稳定性和性能
 
 use beejs::RuntimeLite;
 use std::sync::Arc;

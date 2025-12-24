@@ -1,5 +1,5 @@
-//! Stage 91 Phase 4.2: Enhanced REPL Tests
-//! Tests for Tab auto-completion, syntax highlighting, and advanced commands
+// Stage 91 Phase 4.2: Enhanced REPL Tests
+// Tests for Tab auto-completion, syntax highlighting, and advanced commands
 
 use std::sync::Arc;
 use beejs::RuntimeLite;

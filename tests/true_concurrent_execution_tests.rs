@@ -1,5 +1,5 @@
-//! 真正的并发执行测试套件 (TDD)
-//! 测试目标：支持 10000+ 并发脚本，吞吐量 50,000 ops/sec
+// 真正的并发执行测试套件 (TDD)
+// 测试目标：支持 10000+ 并发脚本，吞吐量 50,000 ops/sec
 
 use std::sync::atomic::{Ordering};
 use std::time::{Duration, Instant};

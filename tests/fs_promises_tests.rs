@@ -1,5 +1,5 @@
-//! fs/promises module tests for Beejs runtime
-//! v0.3.7: Promise-based fs API implementation
+// fs/promises module tests for Beejs runtime
+// v0.3.7: Promise-based fs API implementation
 
 use serial_test::serial;
 use std::fs;

@@ -1,5 +1,5 @@
-//! PBKDF2 Tests - v0.3.12
-//! Tests for crypto.pbkdf2 and crypto.pbkdf2Sync functions
+// PBKDF2 Tests - v0.3.12
+// Tests for crypto.pbkdf2 and crypto.pbkdf2Sync functions
 
 use serial_test::serial;
 use std::fs;

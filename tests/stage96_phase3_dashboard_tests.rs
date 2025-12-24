@@ -1,12 +1,12 @@
-//! Stage 96 Phase 3: Dashboard Integration Tests
-//!
-//! This test suite validates the complete dashboard integration functionality:
-//! - Dashboard manager creation and configuration
-//! - Chart rendering (line, bar, pie charts)
-//! - Graph rendering (topology, dependency graphs)
-//! - Grafana API integration
-//! - Real-time metrics collection
-//! - Template engine functionality
+// Stage 96 Phase 3: Dashboard Integration Tests
+//
+// This test suite validates the complete dashboard integration functionality:
+// - Dashboard manager creation and configuration
+// - Chart rendering (line, bar, pie charts)
+// - Graph rendering (topology, dependency graphs)
+// - Grafana API integration
+// - Real-time metrics collection
+// - Template engine functionality
 
 #[cfg(test)]
 mod dashboard_integration_tests {

@@ -1,10 +1,10 @@
-//! Stage 91 Phase 2.2: 性能分析器测试
-//!
-//! 测试包括：
-//! - 执行时间测量
-//! - 缓存命中率分析
-//! - 性能报告生成
-//! - 性能指标统计
+// Stage 91 Phase 2.2: 性能分析器测试
+//
+// 测试包括：
+// - 执行时间测量
+// - 缓存命中率分析
+// - 性能报告生成
+// - 性能指标统计
 
 use beejs::performance_analyzer::{PerformanceAnalyzer, ExecutionMetrics, PerformanceReport};
 use std::time::Duration;

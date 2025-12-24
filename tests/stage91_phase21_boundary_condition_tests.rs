@@ -1,5 +1,5 @@
-//! Stage 91 Phase 2.1: 边界条件测试
-//! 验证 Beejs 运行时在极端边界条件下的稳定性和正确性
+// Stage 91 Phase 2.1: 边界条件测试
+// 验证 Beejs 运行时在极端边界条件下的稳定性和正确性
 
 use beejs::RuntimeLite;
 use std::time::{Duration, Instant};

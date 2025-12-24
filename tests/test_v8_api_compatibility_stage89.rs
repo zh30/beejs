@@ -1,5 +1,5 @@
-//! Stage 89 Phase 1: V8 API 兼容性测试
-//! 测试 V8 API 兼容性检查器和迁移工具
+// Stage 89 Phase 1: V8 API 兼容性测试
+// 测试 V8 API 兼容性检查器和迁移工具
 
 use beejs::v8_engine::compatibility::{V8CompatibilityChecker, V8APIStatus, DeprecatedAPI};
 use beejs::v8_engine::V8EngineFlags;

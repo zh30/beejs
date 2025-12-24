@@ -1,6 +1,6 @@
-//! Stage 95 Phase 2: 智能故障预测模块测试套件
-//!
-//! 测试异常检测、趋势分析和故障预测功能
+// Stage 95 Phase 2: 智能故障预测模块测试套件
+//
+// 测试异常检测、趋势分析和故障预测功能
 
 use beejs::aiops::prediction::{
     AnomalyDetector, StatisticalAnomalyDetector, AnomalyDetectorConfig,

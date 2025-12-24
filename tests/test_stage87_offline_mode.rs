@@ -1,5 +1,5 @@
-//! Stage 87: Offline Mode Tests
-//! Test-driven development for offline mode functionality
+// Stage 87: Offline Mode Tests
+// Test-driven development for offline mode functionality
 
 #[cfg(test)]
 mod tests {

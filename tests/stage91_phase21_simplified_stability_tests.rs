@@ -1,6 +1,6 @@
-//! Stage 91 Phase 2.1: 简化稳定性测试
-//! 验证 Beejs 运行时在单线程环境下的稳定性和正确性
-//! 避免 V8 Isolate 并发访问问题
+// Stage 91 Phase 2.1: 简化稳定性测试
+// 验证 Beejs 运行时在单线程环境下的稳定性和正确性
+// 避免 V8 Isolate 并发访问问题
 
 use beejs::RuntimeLite;
 use std::time::{Duration, Instant};

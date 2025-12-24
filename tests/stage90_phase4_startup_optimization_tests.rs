@@ -1,5 +1,5 @@
-//! Stage 90 Phase 4: 启动时间优化测试套件
-//! 测试延迟初始化、预编译缓存等启动优化功能
+// Stage 90 Phase 4: 启动时间优化测试套件
+// 测试延迟初始化、预编译缓存等启动优化功能
 
 use beejs::startup::lazy_init::{LazyWebAPI, LazyInitializer, OnDemandLoader};
 use beejs::startup::precompiled_cache::{OptimizedSnapshot, CacheStrategy, OptimizedPrecompiledCache};

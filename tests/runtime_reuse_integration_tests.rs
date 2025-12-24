@@ -1,5 +1,5 @@
-//! Runtime 实例复用集成测试
-//! 通过 CLI 验证全局 Runtime 实例复用功能和性能提升
+// Runtime 实例复用集成测试
+// 通过 CLI 验证全局 Runtime 实例复用功能和性能提升
 
 #[cfg(test)]
 mod runtime_reuse_integration_tests {

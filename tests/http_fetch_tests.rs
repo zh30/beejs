@@ -1,5 +1,5 @@
-//! HTTP Fetch 测试 - v0.3.1
-//! 验证真实的 HTTP fetch 功能（返回实际响应数据）
+// HTTP Fetch 测试 - v0.3.1
+// 验证真实的 HTTP fetch 功能（返回实际响应数据）
 
 #[cfg(test)]
 mod http_tests {

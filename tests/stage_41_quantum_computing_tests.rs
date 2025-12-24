@@ -1,11 +1,11 @@
-//! Stage 41.0 量子计算模块测试
-//!
-//! 测试覆盖:
-//! - 量子比特 (Qubit) 基础操作
-//! - 量子门 (Quantum Gates) 操作
-//! - 量子电路 (Quantum Circuit) 构建
-//! - 量子优化器 (Quantum Optimizer)
-//! - 经典-量子混合计算
+// Stage 41.0 量子计算模块测试
+//
+// 测试覆盖:
+// - 量子比特 (Qubit) 基础操作
+// - 量子门 (Quantum Gates) 操作
+// - 量子电路 (Quantum Circuit) 构建
+// - 量子优化器 (Quantum Optimizer)
+// - 经典-量子混合计算
 
 use beejs::quantum_computing::{
     Qubit, QubitState, QuantumGate, QuantumCircuit,

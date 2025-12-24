@@ -1,5 +1,5 @@
-//! Tests for setImmediate API
-//! v0.2.5: setImmediate implementation
+// Tests for setImmediate API
+// v0.2.5: setImmediate implementation
 
 use serial_test::serial;
 

@@ -1,5 +1,5 @@
-//! Stage 89 Phase 3: 多语言集成测试
-//! 测试 Python/JavaScript、Go/JavaScript、Rust/JavaScript 的互操作性
+// Stage 89 Phase 3: 多语言集成测试
+// 测试 Python/JavaScript、Go/JavaScript、Rust/JavaScript 的互操作性
 
 #[cfg(test)]
 mod tests {

@@ -1,5 +1,5 @@
-//! Stage 15: 启动时间优化测试套件
-//! 测试 V8 预初始化、懒加载和 CLI 优化效果
+// Stage 15: 启动时间优化测试套件
+// 测试 V8 预初始化、懒加载和 CLI 优化效果
 
 #[cfg(test)]
 mod startup_optimization_tests {

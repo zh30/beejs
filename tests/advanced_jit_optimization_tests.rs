@@ -1,5 +1,5 @@
-//! 高级 JIT 优化测试套件
-//! 测试逃逸分析、循环展开、内存布局优化等深度优化技术
+// 高级 JIT 优化测试套件
+// 测试逃逸分析、循环展开、内存布局优化等深度优化技术
 
 use beejs::Runtime;
 use std::time::{Duration, Instant};

@@ -1,5 +1,5 @@
-//! MinimalRuntime 核心功能测试
-//! TDD 风格：先写测试，再实现功能
+// MinimalRuntime 核心功能测试
+// TDD 风格：先写测试，再实现功能
 
 #[cfg(test)]
 mod minimal_runtime_tests {

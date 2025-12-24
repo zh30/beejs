@@ -1,5 +1,5 @@
-//! crypto.createCipheriv Tests - v0.3.15
-//! Tests for crypto.createCipheriv symmetric encryption function with explicit key and IV
+// crypto.createCipheriv Tests - v0.3.15
+// Tests for crypto.createCipheriv symmetric encryption function with explicit key and IV
 
 use serial_test::serial;
 use std::fs;

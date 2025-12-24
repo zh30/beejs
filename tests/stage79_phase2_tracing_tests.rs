@@ -1,5 +1,5 @@
-//! Stage 79 Phase 2.2: 分布式追踪测试
-//! 测试 DistributedTracer 链路追踪和上下文传播功能
+// Stage 79 Phase 2.2: 分布式追踪测试
+// 测试 DistributedTracer 链路追踪和上下文传播功能
 
 #[cfg(test)]
 mod tests {

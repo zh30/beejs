@@ -1,7 +1,7 @@
-//! 长期稳定性基准测试
-//!
-//! 这个模块测试 Beejs 在长期运行下的稳定性，包括内存泄漏检测、
-//! 资源泄漏检测、性能衰减检测和 GC 效率验证等关键场景。
+// 长期稳定性基准测试
+//
+// 这个模块测试 Beejs 在长期运行下的稳定性，包括内存泄漏检测、
+// 资源泄漏检测、性能衰减检测和 GC 效率验证等关键场景。
 
 use beejs::runtime_lite::Runtime;
 use beejs::performance_analyzer::PerformanceAnalyzer;

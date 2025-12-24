@@ -1,4 +1,4 @@
-//! Tests for crypto.randomBytes module (v0.3.10)
+// Tests for crypto.randomBytes module (v0.3.10)
 use beejs::runtime_minimal::MinimalRuntime;
 use serial_test::serial;
 

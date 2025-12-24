@@ -1,5 +1,5 @@
-//! Stage 90 Phase 5: AI 驱动优化完整测试套件
-//! 测试 JIT 优化、内存管理、并发调度和性能监控
+// Stage 90 Phase 5: AI 驱动优化完整测试套件
+// 测试 JIT 优化、内存管理、并发调度和性能监控
 
 use chrono::Utc;
 use std::time::Duration;

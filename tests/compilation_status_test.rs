@@ -1,7 +1,7 @@
-//! Test to verify compilation status of Beejs runtime
-//!
-//! This test ensures that the core modules compile successfully.
-//! Following TDD methodology: write test first, then fix issues.
+// Test to verify compilation status of Beejs runtime
+//
+// This test ensures that the core modules compile successfully.
+// Following TDD methodology: write test first, then fix issues.
 
 #[cfg(test)]
 mod compilation_tests {

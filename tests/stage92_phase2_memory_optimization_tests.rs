@@ -1,6 +1,6 @@
-//! Stage 92 Phase 2: 极致内存优化测试套件
-//!
-//! 测试 DMA、内存映射、智能预取和 GC 优化功能
+// Stage 92 Phase 2: 极致内存优化测试套件
+//
+// 测试 DMA、内存映射、智能预取和 GC 优化功能
 
 use beejs::memory::{
     EnhancedZeroCopy,

@@ -1,5 +1,5 @@
-//! Enhanced Buffer API and process tests for Beejs runtime
-//! v0.2.9: Buffer API enhancements and process.memoryUsage
+// Enhanced Buffer API and process tests for Beejs runtime
+// v0.2.9: Buffer API enhancements and process.memoryUsage
 
 use serial_test::serial;
 

@@ -1,6 +1,6 @@
-//! Stage 92 Phase 2 简单功能测试
-//!
-//! 独立测试 Phase 2 内存优化功能，不依赖整个项目
+// Stage 92 Phase 2 简单功能测试
+//
+// 独立测试 Phase 2 内存优化功能，不依赖整个项目
 
 #[cfg(test)]
 mod tests {

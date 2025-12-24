@@ -1,5 +1,5 @@
-//! Stage 96 Phase 2: Kubernetes Operator Basic Tests
-//! Tests for the basic Kubernetes Operator functionality
+// Stage 96 Phase 2: Kubernetes Operator Basic Tests
+// Tests for the basic Kubernetes Operator functionality
 
 #[cfg(test)]
 mod tests {

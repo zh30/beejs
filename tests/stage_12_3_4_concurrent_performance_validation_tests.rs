@@ -1,16 +1,16 @@
-//! Stage 12.3.4: Concurrent Performance Testing and Validation
-//!
-//! This module validates the performance improvements from Stage 12.3 optimizations:
-//! - Smart scheduling optimization (Stage 12.3.1)
-//! - Work stealing optimization (Stage 12.3.2)
-//! - Memory sharing optimization (Stage 12.3.3)
-//!
-//! Performance targets:
-//! - Concurrent scripts: 15,000+
-//! - Worker utilization: >85%
-//! - Average wait time: <3ms
-//! - Steal success rate: >90%
-//! - Memory usage reduction: 30-50%
+// Stage 12.3.4: Concurrent Performance Testing and Validation
+//
+// This module validates the performance improvements from Stage 12.3 optimizations:
+// - Smart scheduling optimization (Stage 12.3.1)
+// - Work stealing optimization (Stage 12.3.2)
+// - Memory sharing optimization (Stage 12.3.3)
+//
+// Performance targets:
+// - Concurrent scripts: 15,000+
+// - Worker utilization: >85%
+// - Average wait time: <3ms
+// - Steal success rate: >90%
+// - Memory usage reduction: 30-50%
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};

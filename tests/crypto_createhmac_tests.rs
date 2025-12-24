@@ -1,4 +1,4 @@
-//! Tests for crypto.createHmac module (v0.3.9)
+// Tests for crypto.createHmac module (v0.3.9)
 use beejs::runtime_minimal::MinimalRuntime;
 use serial_test::serial;
 

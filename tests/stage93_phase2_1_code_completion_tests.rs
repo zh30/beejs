@@ -1,5 +1,5 @@
-//! Stage 93 Phase 2.1: 智能代码补全测试
-//! 测试 AI 辅助编码功能的增强版代码补全
+// Stage 93 Phase 2.1: 智能代码补全测试
+// 测试 AI 辅助编码功能的增强版代码补全
 
 use beejs::ai::{
     AICodeGenerator, CodeContext, CodeCompletion, Language, ProjectInfo,

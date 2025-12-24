@@ -1,11 +1,11 @@
-//! Stage 28.2: 日志与监控系统测试套件
-//!
-//! 测试覆盖:
-//! - 结构化日志 (JSON 格式)
-//! - 多级日志 (DEBUG/INFO/WARN/ERROR)
-//! - 日志过滤
-//! - 指标收集
-//! - 性能追踪
+// Stage 28.2: 日志与监控系统测试套件
+//
+// 测试覆盖:
+// - 结构化日志 (JSON 格式)
+// - 多级日志 (DEBUG/INFO/WARN/ERROR)
+// - 日志过滤
+// - 指标收集
+// - 性能追踪
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};

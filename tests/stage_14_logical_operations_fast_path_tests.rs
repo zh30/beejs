@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
-//! Stage 14: 逻辑运算符快路径优化测试
-//! Tests for logical operations fast path optimization (&&, ||, !, ??, ?.)
+// Stage 14: 逻辑运算符快路径优化测试
+// Tests for logical operations fast path optimization (&&, ||, !, ??, ?.)
 
 #[cfg(test)]
 mod logical_operations_fast_path_tests {

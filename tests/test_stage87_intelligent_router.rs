@@ -1,5 +1,5 @@
-//! Stage 87: Intelligent Router Tests
-//! Test-driven development for intelligent routing functionality
+// Stage 87: Intelligent Router Tests
+// Test-driven development for intelligent routing functionality
 
 #[cfg(test)]
 mod tests {

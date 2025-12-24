@@ -1,7 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
-//! Bundle Integration Tests
-//!
-//! Tests for the beejs bundle command and bundler functionality
+// Bundle Integration Tests
+//
+// Tests for the beejs bundle command and bundler functionality
 
 use std::fs;
 use std::path::Path;

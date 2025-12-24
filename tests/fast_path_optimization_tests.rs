@@ -1,8 +1,8 @@
-//! Fast Path Optimization Tests
-//! Tests for the recently implemented fast path optimizations:
-//! - Object literals
-//! - Property access
-//! - Comparison operations
+// Fast Path Optimization Tests
+// Tests for the recently implemented fast path optimizations:
+// - Object literals
+// - Property access
+// - Comparison operations
 
 use beejs::RuntimeLite;
 use std::time::Instant;

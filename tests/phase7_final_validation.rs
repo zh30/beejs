@@ -1,7 +1,7 @@
-//! 阶段7：最终性能验证测试套件
-//! 目标：验证Beejs超越Bun性能20-30%
-//!
-//! 注意：由于V8 Isolate的线程亲和性限制，所有测试共享单个Runtime实例
+// 阶段7：最终性能验证测试套件
+// 目标：验证Beejs超越Bun性能20-30%
+//
+// 注意：由于V8 Isolate的线程亲和性限制，所有测试共享单个Runtime实例
 
 use beejs::Runtime;
 use std::time::Instant;

@@ -1,14 +1,14 @@
-//! Stage 55.3.2: Memory Optimization Tests
-//!
-//! This module contains comprehensive tests for memory optimization features:
-//! - Zero-copy allocation
-//! - Intelligent memory pooling
-//! - Generational garbage collection
-//! - Memory compression
-//! - Leak detection
-//!
-//! These tests validate that Beejs achieves 30-50% memory usage reduction
-//! compared to standard allocation strategies.
+// Stage 55.3.2: Memory Optimization Tests
+//
+// This module contains comprehensive tests for memory optimization features:
+// - Zero-copy allocation
+// - Intelligent memory pooling
+// - Generational garbage collection
+// - Memory compression
+// - Leak detection
+//
+// These tests validate that Beejs achieves 30-50% memory usage reduction
+// compared to standard allocation strategies.
 
 use beejs::memory::*;
 use std::time{Duration, Instant};

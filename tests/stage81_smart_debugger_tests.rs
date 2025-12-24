@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
-//! Stage 81 智能调试建议测试套件
-//! 测试 AI 驱动的错误诊断、根因分析和修复建议功能
+// Stage 81 智能调试建议测试套件
+// 测试 AI 驱动的错误诊断、根因分析和修复建议功能
 
 #[cfg(test)]
 mod tests {

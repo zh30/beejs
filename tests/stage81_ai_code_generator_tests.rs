@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
-//! Stage 81 AI 代码生成助手测试套件
-//! 测试 AI 驱动的代码生成、补全和重构功能
+// Stage 81 AI 代码生成助手测试套件
+// 测试 AI 驱动的代码生成、补全和重构功能
 
 #[cfg(test)]
 mod tests {

@@ -1,8 +1,8 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-//! 性能对比验证测试
-//! 验证 Beejs 与 Bun 的性能对比数据准确性
+// 性能对比验证测试
+// 验证 Beejs 与 Bun 的性能对比数据准确性
 
 
 #[cfg(test)]
