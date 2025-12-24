@@ -9632,6 +9632,13 @@ impl MinimalRuntime {
         let arch_value = v8::String::new(scope, if cfg!(target_arch = "x86_64") { "x64" } else if cfg!(target_arch = "aarch64") { "arm64" } else { "unknown" }).unwrap();
         let pid_key = v8::String::new(scope, "pid").unwrap();
         let pid_value = v8::Integer::new(scope, std::process::id() as i32);
+        // v0.3.40: Add process.ppid - parent process ID
+        let ppid_key = v8::String::new(scope, "ppid").unwrap();
+        // Get parent process ID - use getppid() on Unix, estimate on Windows
+        #[cfg(not(windows))]
+        let ppid_value = v8::Integer::new(scope, unsafe { libc::getppid() } as i32);
+        #[cfg(windows)]
+        let ppid_value = v8::Integer::new(scope, 0i32); // Windows doesn't expose ppid directly
         let title_key = v8::String::new(scope, "title").unwrap();
         let title_value = v8::String::new(scope, "beejs").unwrap();
         let env_key = v8::String::new(scope, "env").unwrap();
@@ -9655,6 +9662,13 @@ impl MinimalRuntime {
         let debug_value = v8::Boolean::new(scope, cfg!(debug_assertions));
         let ipc_key = v8::String::new(scope, "ipc").unwrap();
         let ipc_value = v8::Boolean::new(scope, true);
+        // v0.3.40: Add additional features
+        let uv_key = v8::String::new(scope, "uv").unwrap();
+        let uv_value = v8::Boolean::new(scope, true); // V8 provides event loop
+        let v8_feature_key = v8::String::new(scope, "v8").unwrap();
+        let v8_feature_value = v8::Boolean::new(scope, true); // V8 engine is present
+        let modules_key = v8::String::new(scope, "modules").unwrap();
+        let modules_value = v8::Boolean::new(scope, true); // Module loading is supported
         let is_beejs_key = v8::String::new(scope, "isBeejs").unwrap();
         let is_beejs_value = v8::Boolean::new(scope, true);
         let browser_key = v8::String::new(scope, "browser").unwrap();
@@ -9847,6 +9861,10 @@ impl MinimalRuntime {
         let features_obj = v8::Object::new(scope);
         features_obj.set(scope, debug_key.into(), debug_value.into());
         features_obj.set(scope, ipc_key.into(), ipc_value.into());
+        // v0.3.40: Add additional features
+        features_obj.set(scope, uv_key.into(), uv_value.into());
+        features_obj.set(scope, v8_feature_key.into(), v8_feature_value.into());
+        features_obj.set(scope, modules_key.into(), modules_value.into());
 
         // v0.3.35: Create config object with compiler settings
         let config_obj = v8::Object::new(scope);
@@ -9867,6 +9885,8 @@ impl MinimalRuntime {
         process_obj.set(scope, platform_key.into(), platform_value.into());
         process_obj.set(scope, arch_key.into(), arch_value.into());
         process_obj.set(scope, pid_key.into(), pid_value.into());
+        // v0.3.40: Add process.ppid - parent process ID
+        process_obj.set(scope, ppid_key.into(), ppid_value.into());
         process_obj.set(scope, title_key.into(), title_value.into());
         process_obj.set(scope, env_key.into(), env_obj.into());
         process_obj.set(scope, argv_key.into(), argv_array.into());

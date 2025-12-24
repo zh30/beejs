@@ -519,3 +519,105 @@ fn test_process_memory_usage_increases_with_allocation() {
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "process.memoryUsage() should show increased heapUsed after allocation");
 }
+
+/// v0.3.40: Test process.ppid exists and is a number
+#[test]
+#[serial]
+fn test_process_ppid_exists() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let result = runtime.execute_code("typeof process.ppid").expect("Execution failed");
+    assert_eq!(result.trim(), "number", "process.ppid should be a number");
+}
+
+/// v0.3.40: Test process.ppid is positive
+#[test]
+#[serial]
+fn test_process_ppid_is_positive() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        process.ppid > 0;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.ppid should be a positive number");
+}
+
+/// v0.3.40: Test process.ppid is different from pid
+#[test]
+#[serial]
+fn test_process_ppid_different_from_pid() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        process.ppid !== process.pid;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.ppid should typically be different from process.pid");
+}
+
+/// v0.3.40: Test process.features exists and is an object
+#[test]
+#[serial]
+fn test_process_features_exists() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let result = runtime.execute_code("typeof process.features").expect("Execution failed");
+    assert_eq!(result.trim(), "object", "process.features should be an object");
+}
+
+/// v0.3.40: Test process.features.debug is a boolean
+#[test]
+#[serial]
+fn test_process_features_debug() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof process.features.debug === 'boolean';
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.features.debug should be a boolean");
+}
+
+/// v0.3.40: Test process.features.ipc is a boolean
+#[test]
+#[serial]
+fn test_process_features_ipc() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof process.features.ipc === 'boolean';
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.features.ipc should be a boolean");
+}
+
+/// v0.3.40: Test process.features.uv is a boolean (libuv support)
+#[test]
+#[serial]
+fn test_process_features_uv() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof process.features.uv === 'boolean';
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.features.uv should be a boolean");
+}
+
+/// v0.3.40: Test process.features.v8 is a boolean (V8 engine support)
+#[test]
+#[serial]
+fn test_process_features_v8() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof process.features.v8 === 'boolean';
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.features.v8 should be a boolean");
+}
+
+/// v0.3.40: Test process.features.modules is a boolean (module support)
+#[test]
+#[serial]
+fn test_process_features_modules() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof process.features.modules === 'boolean';
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.features.modules should be a boolean");
+}

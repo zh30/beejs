@@ -7,6 +7,61 @@
 
 
 
+### ✨ v0.3.40 Process 模块增强 - ppid 和 features (2025-12-25)
+**进度**: ✅ process.ppid | ✅ process.features 增强 | ✅ 9 测试用例 | ✅ 所有测试通过 | ✅ CLI 验证通过
+
+#### v0.3.40 实现内容
+- ✅ **process.ppid - 父进程 ID**
+  - 使用 `libc::getppid()` 获取 Unix 父进程 ID
+  - 跨平台兼容：Windows 返回 0（因为 Windows 不直接暴露 ppid）
+  - 返回正整数，与 process.pid 不同
+
+- ✅ **process.features 增强**
+  - `features.debug`: 是否为调试构建
+  - `features.ipc`: 是否支持进程间通信
+  - `features.uv`: 事件循环支持（V8 提供）
+  - `features.v8`: V8 引擎存在
+  - `features.modules`: 模块加载支持
+
+#### v0.3.40 技术实现
+- **跨平台 ppid 获取** (src/runtime_minimal.rs)
+  ```rust
+  #[cfg(not(windows))]
+  let ppid_value = v8::Integer::new(scope, unsafe { libc::getppid() } as i32);
+  #[cfg(windows)]
+  let ppid_value = v8::Integer::new(scope, 0i32);
+  ```
+
+- **Features 对象创建** (src/runtime_minimal.rs)
+  ```rust
+  let uv_value = v8::Boolean::new(scope, true);
+  let v8_feature_value = v8::Boolean::new(scope, true);
+  let modules_value = v8::Boolean::new(scope, true);
+  ```
+
+#### v0.3.40 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+18 行)
+  - 添加 ppid_key 和 ppid_value
+  - 添加 uv_key, v8_feature_key, modules_key 及其值
+  - 在 features_obj 中添加新属性
+  - 在 process_obj 中添加 ppid 属性
+
+- **修改文件**: `tests/process_module_tests.rs` (+102 行)
+  - 添加 9 个新测试用例
+  - 测试 ppid 存在、值正确、与 pid 不同
+  - 测试 features 所有属性类型正确
+
+#### v0.3.40 验证
+- ✅ `cargo build --release` - 零警告
+- ✅ `cargo test --test process_module_tests` - 53 tests passed
+- ✅ `beejs eval "process.ppid > 0"` → true
+- ✅ `beejs eval "process.ppid !== process.pid"` → true
+- ✅ `beejs eval "process.features.uv"` → true
+- ✅ `beejs eval "process.features.v8"` → true
+- ✅ `beejs eval "process.features.modules"` → true
+
+---
+
 ### ✨ v0.3.35 Process 模块增强 (2025-12-25)
 **进度**: ✅ process.umask | ✅ process.abort | ✅ process.config | ✅ 14+ 测试用例 | ✅ CLI 验证通过
 
