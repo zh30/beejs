@@ -180,16 +180,16 @@ fn test_process_next_tick_non_function_error() {
     assert!(result.is_err(), "process.nextTick with non-function should throw");
 }
 
-/// Test process.hrtime() exists (if implemented)
+/// Test process.hrtime() exists (v0.3.41: guaranteed to be implemented)
 #[test]
 #[serial]
 fn test_process_hrtime_exists() {
     let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let result = runtime.execute_code("typeof process.hrtime").expect("Execution failed");
-    // hrtime may or may not be implemented - just check it exists
-    assert!(result.trim() == "function" || result.trim() == "undefined",
-        "process.hrtime should be a function or undefined");
+    assert_eq!(result.trim(), "function", "process.hrtime should be a function");
 }
+
+// v0.3.41: Additional hrtime tests are below (test_process_hrtime_returns_object, etc.)
 
 /// Test process.platform exists (if implemented)
 #[test]
@@ -620,4 +620,90 @@ fn test_process_features_modules() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "process.features.modules should be a boolean");
+}
+
+// ============================================================================
+// v0.3.41: process.hrtime.bigint() implementation
+// ============================================================================
+
+/// v0.3.41: Test process.hrtime() returns an object with array-like properties
+#[test]
+#[serial]
+fn test_process_hrtime_returns_object() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const time = process.hrtime();
+        typeof time === 'object' && typeof time[0] === 'number' && typeof time[1] === 'number';
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.hrtime() should return an object with numeric properties [0] and [1]");
+}
+
+/// v0.3.41: Test process.hrtime() returns realistic values
+#[test]
+#[serial]
+fn test_process_hrtime_realistic_values() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const time = process.hrtime();
+        const sec = time[0];
+        const nsec = time[1];
+        sec > 1700000000 && nsec >= 0 && nsec < 1000000000;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.hrtime() should return realistic time values");
+}
+
+/// v0.3.41: Test process.hrtime.bigint() exists and is a function
+#[test]
+#[serial]
+fn test_process_hrtime_bigint_exists() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let result = runtime.execute_code("typeof process.hrtime.bigint").expect("Execution failed");
+    assert_eq!(result.trim(), "function", "process.hrtime.bigint should be a function");
+}
+
+/// v0.3.41: Test process.hrtime.bigint() returns a BigInt
+#[test]
+#[serial]
+fn test_process_hrtime_bigint_returns_bigint() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof process.hrtime.bigint() === 'bigint';
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.hrtime.bigint() should return a bigint");
+}
+
+/// v0.3.41: Test process.hrtime.bigint() returns positive value
+#[test]
+#[serial]
+fn test_process_hrtime_bigint_positive() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const time = process.hrtime.bigint();
+        time > 1700000000000000000n;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.hrtime.bigint() should return a positive bigint");
+}
+
+/// v0.3.41: Test process.hrtime.bigint() returns nanoseconds
+#[test]
+#[serial]
+fn test_process_hrtime_bigint_is_nanoseconds() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        // bigint should be a positive value representing nanoseconds
+        const bigint = process.hrtime.bigint();
+        const sec = process.hrtime()[0];
+        const nsec = process.hrtime()[1];
+        // Verify the bigint is in a reasonable range based on the seconds value
+        // Allow for some time difference between calls (up to 1 second)
+        const expected_range_start = BigInt(sec) * 1000000000n;
+        const expected_range_end = BigInt(sec + 1) * 1000000000n + BigInt(nsec);
+        bigint >= expected_range_start && bigint <= expected_range_end;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.hrtime.bigint() should return nanoseconds as bigint");
 }

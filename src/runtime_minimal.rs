@@ -9785,18 +9785,38 @@ impl MinimalRuntime {
                 .as_secs() as f64;
             retval.set(v8::Number::new(_scope, uptime).into());
         });
-        let hrtime_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+
+        // v0.3.41: process.hrtime() with bigint() method
+        // Create bigint function first
+        let hrtime_bigint_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_nanos();
+            let bigint_val = v8::BigInt::new_from_u64(scope, now as u64);
+            retval.set(bigint_val.into());
+        }).unwrap();
+
+        // Create hrtime function
+        let hrtime_fn_template = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let sec = (now / 1_000_000_000) as i32;
+            let nsec = (now % 1_000_000_000) as i32;
             let result_array = v8::Array::new(scope, 2);
-            let sec_val = v8::Integer::new(scope, (now / 1_000_000_000) as i32);
-            let nsec_val = v8::Integer::new(scope, (now % 1_000_000_000) as i32);
+            let sec_val = v8::Integer::new(scope, sec);
+            let nsec_val = v8::Integer::new(scope, nsec);
             result_array.set_index(scope, 0, sec_val.into());
             result_array.set_index(scope, 1, nsec_val.into());
             retval.set(result_array.into());
         });
+        let hrtime_func = hrtime_fn_template.get_function(scope).unwrap();
+
+        // Add bigint method to the hrtime function object
+        let bigint_key = v8::String::new(scope, "bigint").unwrap();
+        hrtime_func.set(scope, bigint_key.into(), hrtime_bigint_fn.into());
         let exit_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
             let code = args.get(0)
                 .to_integer(_scope)
@@ -9831,7 +9851,6 @@ impl MinimalRuntime {
         let abort_func = abort_fn.get_function(scope).unwrap();
         let memory_usage_func = memory_usage_fn.get_function(scope).unwrap();
         let uptime_func = uptime_fn.get_function(scope).unwrap();
-        let hrtime_func = hrtime_fn.get_function(scope).unwrap();
         let exit_func = exit_fn.get_function(scope).unwrap();
         let next_tick_func = next_tick_fn.get_function(scope).unwrap();
 
