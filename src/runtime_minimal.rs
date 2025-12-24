@@ -2596,6 +2596,176 @@ impl MinimalRuntime {
         let random_bytes_sync_key = v8::String::new(scope, "randomBytesSync").unwrap().into();
         crypto_obj.set(scope, random_bytes_sync_key, random_bytes_sync_fn.into());
 
+        // Add crypto.randomFillSync (v0.3.16) - fill existing buffer with random data
+        let random_fill_sync_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Get buffer (first argument)
+            let buffer = args.get(0);
+
+            // Validate buffer is TypedArray or ArrayBuffer
+            if !buffer.is_typed_array() && !buffer.is_array_buffer() {
+                let error_msg = v8::String::new(scope, "randomFillSync: buffer must be a TypedArray or ArrayBuffer").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error_msg);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            // Get optional offset and size parameters
+            let mut offset: usize = 0;
+            let mut size: usize = 0;
+
+            if args.length() >= 2 {
+                if let Some(off) = args.get(1).to_uint32(scope) {
+                    offset = off.value() as usize;
+                }
+            }
+
+            if args.length() >= 3 {
+                if let Some(sz) = args.get(2).to_uint32(scope) {
+                    size = sz.value() as usize;
+                }
+            }
+
+            // Get buffer details
+            let byte_length = if buffer.is_typed_array() {
+                let ta = v8::Local::<v8::TypedArray>::try_from(buffer).unwrap();
+                ta.byte_length()
+            } else {
+                let ab = v8::Local::<v8::ArrayBuffer>::try_from(buffer).unwrap();
+                ab.byte_length()
+            };
+
+            // Determine fill size
+            if size == 0 {
+                size = byte_length.saturating_sub(offset);
+            }
+
+            // Validate parameters
+            if offset > byte_length {
+                let error_msg = v8::String::new(scope, "randomFillSync: offset is out of bounds").unwrap();
+                let error_obj = v8::Exception::range_error(scope, error_msg);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            if offset + size > byte_length {
+                let error_msg = v8::String::new(scope, "randomFillSync: offset + size exceeds buffer length").unwrap();
+                let error_obj = v8::Exception::range_error(scope, error_msg);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            // Fill the buffer with random data
+            if size > 0 {
+                let store = if buffer.is_typed_array() {
+                    let ta = v8::Local::<v8::TypedArray>::try_from(buffer).unwrap();
+                    let ab = ta.buffer(scope).unwrap();
+                    ab.get_backing_store()
+                } else {
+                    let ab = v8::Local::<v8::ArrayBuffer>::try_from(buffer).unwrap();
+                    ab.get_backing_store()
+                };
+
+                // Generate random bytes and fill
+                let mut random_data = vec![0u8; size];
+                rand::thread_rng().fill(&mut random_data[..]);
+
+                // Copy random data to buffer at offset
+                for (i, &byte) in random_data.iter().enumerate() {
+                    store[offset + i].set(byte);
+                }
+            }
+
+            // Return the buffer for chaining
+            retval.set(buffer);
+        });
+        let random_fill_sync_fn = match random_fill_sync_fn {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let random_fill_sync_key = v8::String::new(scope, "randomFillSync").unwrap().into();
+        crypto_obj.set(scope, random_fill_sync_key, random_fill_sync_fn.into());
+
+        // Add crypto.randomFill (v0.3.16) - async fill with callback
+        let random_fill_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Get buffer (first argument)
+            let buffer = args.get(0);
+
+            // Validate buffer is TypedArray or ArrayBuffer
+            if !buffer.is_typed_array() && !buffer.is_array_buffer() {
+                let error_msg = v8::String::new(scope, "randomFill: buffer must be a TypedArray or ArrayBuffer").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error_msg);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            // Determine callback position: last argument if function
+            let callback_idx = if args.length() >= 2 && args.get(1).is_function() {
+                1
+            } else if args.length() >= 3 && args.get(2).is_function() {
+                2
+            } else {
+                let error_msg = v8::String::new(scope, "randomFill requires a callback function").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error_msg);
+                scope.throw_exception(error_obj.into());
+                return;
+            };
+
+            // Get optional offset
+            let mut offset: usize = 0;
+            if args.length() >= 3 && callback_idx == 2 {
+                if let Some(off) = args.get(1).to_uint32(scope) {
+                    offset = off.value() as usize;
+                }
+            }
+
+            // Get buffer details
+            let byte_length = if buffer.is_typed_array() {
+                let ta = v8::Local::<v8::TypedArray>::try_from(buffer).unwrap();
+                ta.byte_length()
+            } else {
+                let ab = v8::Local::<v8::ArrayBuffer>::try_from(buffer).unwrap();
+                ab.byte_length()
+            };
+
+            // Fill the buffer with random data
+            let store = if buffer.is_typed_array() {
+                let ta = v8::Local::<v8::TypedArray>::try_from(buffer).unwrap();
+                let ab = ta.buffer(scope).unwrap();
+                ab.get_backing_store()
+            } else {
+                let ab = v8::Local::<v8::ArrayBuffer>::try_from(buffer).unwrap();
+                ab.get_backing_store()
+            };
+
+            // Generate random bytes for remaining bytes from offset
+            let fill_size = byte_length.saturating_sub(offset);
+            if fill_size > 0 {
+                let mut random_data = vec![0u8; fill_size];
+                rand::thread_rng().fill(&mut random_data[..]);
+
+                for (i, &byte) in random_data.iter().enumerate() {
+                    store[offset + i].set(byte);
+                }
+            }
+
+            // Call callback with no error
+            let callback = v8::Local::<v8::Function>::try_from(args.get(callback_idx)).unwrap();
+            let undefined = v8::undefined(scope);
+            let null: v8::Local<v8::Primitive> = v8::null(scope).into();
+            let err: v8::Local<v8::Value> = null.into();
+            let buf: v8::Local<v8::Value> = buffer;
+            let _ = callback.call(scope, undefined.into(), &[err, buf]);
+
+            // Return undefined for callback style
+            retval.set(v8::undefined(scope).into());
+        });
+        let random_fill_fn = match random_fill_fn {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let random_fill_key = v8::String::new(scope, "randomFill").unwrap().into();
+        crypto_obj.set(scope, random_fill_key, random_fill_fn.into());
+
         // Add crypto.timingSafeEqual (v0.3.11)
         // Timing-safe constant-time comparison to prevent timing attacks
         let timing_safe_equal_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
