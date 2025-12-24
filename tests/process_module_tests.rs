@@ -285,3 +285,162 @@ fn test_process_is_extensible() {
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "process object should be extensible");
 }
+
+// ============================================================================
+// v0.3.35: New process module features tests
+// ============================================================================
+
+/// v0.3.35: Test process.umask() exists and is a function
+#[test]
+#[serial]
+fn test_process_umask_exists() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let result = runtime.execute_code("typeof process.umask").expect("Execution failed");
+    assert_eq!(result.trim(), "function", "process.umask should be a function");
+}
+
+/// v0.3.35: Test process.umask() returns current mask
+#[test]
+#[serial]
+fn test_process_umask_returns_mask() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const mask = process.umask();
+        typeof mask === 'string' && mask.length === 4;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.umask() should return a 4-character octal string");
+}
+
+/// v0.3.35: Test process.umask() sets new mask
+#[test]
+#[serial]
+fn test_process_umask_sets_mask() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const oldMask = process.umask(0o077);
+        const newMask = process.umask();
+        newMask === '0077';
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.umask() should set and return the mask");
+}
+
+/// v0.3.35: Test process.abort() exists and is a function
+#[test]
+#[serial]
+fn test_process_abort_exists() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let result = runtime.execute_code("typeof process.abort").expect("Execution failed");
+    assert_eq!(result.trim(), "function", "process.abort should be a function");
+}
+
+/// v0.3.35: Test process.config exists and is an object
+#[test]
+#[serial]
+fn test_process_config_exists() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let result = runtime.execute_code("typeof process.config").expect("Execution failed");
+    assert_eq!(result.trim(), "object", "process.config should be an object");
+}
+
+/// v0.3.35: Test process.config.variables exists
+#[test]
+#[serial]
+fn test_process_config_variables_exists() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof process.config.variables === 'object';
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.config.variables should be an object");
+}
+
+/// v0.3.35: Test process.config.variables.host_arch
+#[test]
+#[serial]
+fn test_process_config_host_arch() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof process.config.variables.host_arch === 'string';
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.config.variables.host_arch should be a string");
+}
+
+/// v0.3.35: Test process.config.variables.platform
+#[test]
+#[serial]
+fn test_process_config_platform() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof process.config.variables.platform === 'string';
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.config.variables.platform should be a string");
+}
+
+/// v0.3.35: Test process.chdir() exists and is a function
+#[test]
+#[serial]
+fn test_process_chdir_exists() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let result = runtime.execute_code("typeof process.chdir").expect("Execution failed");
+    assert_eq!(result.trim(), "function", "process.chdir should be a function");
+}
+
+/// v0.3.35: Test process.chdir() changes directory
+#[test]
+#[serial]
+fn test_process_chdir_changes_directory() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const original = process.cwd();
+        const result = process.chdir(original);
+        result === undefined;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.chdir() should return undefined on success");
+}
+
+/// v0.3.35: Test process.title exists and is a string
+#[test]
+#[serial]
+fn test_process_title_exists() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let result = runtime.execute_code("typeof process.title").expect("Execution failed");
+    assert_eq!(result.trim(), "string", "process.title should be a string");
+}
+
+/// v0.3.35: Test process.title has default value
+#[test]
+#[serial]
+fn test_process_title_default_value() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        process.title.length > 0;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.title should have a non-empty default value");
+}
+
+/// v0.3.35: Test process.release object exists
+#[test]
+#[serial]
+fn test_process_release_exists() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let result = runtime.execute_code("typeof process.release").expect("Execution failed");
+    assert_eq!(result.trim(), "object", "process.release should be an object");
+}
+
+/// v0.3.35: Test process.release.name
+#[test]
+#[serial]
+fn test_process_release_name() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        process.release.name === 'beejs';
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.release.name should be 'beejs'");
+}

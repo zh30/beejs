@@ -9254,6 +9254,9 @@ impl MinimalRuntime {
         let exec_path_key = v8::String::new(scope, "execPath").unwrap();
         let cwd_key = v8::String::new(scope, "cwd").unwrap();
         let chdir_key = v8::String::new(scope, "chdir").unwrap();
+        let umask_key = v8::String::new(scope, "umask").unwrap();
+        let abort_key = v8::String::new(scope, "abort").unwrap();
+        let config_key = v8::String::new(scope, "config").unwrap();
         let memory_usage_key = v8::String::new(scope, "memoryUsage").unwrap();
         let uptime_key = v8::String::new(scope, "uptime").unwrap();
         let hrtime_key = v8::String::new(scope, "hrtime").unwrap();
@@ -9301,6 +9304,36 @@ impl MinimalRuntime {
                 }
             }
         });
+
+        // v0.3.35: Add process.umask() - file mode creation mask
+        // umask() with no args returns current mask, with args sets new mask
+        let umask_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            static CURRENT_UMASK: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0o022);
+
+            if args.length() == 0 {
+                // Return current umask as octal string
+                let mask = CURRENT_UMASK.load(std::sync::atomic::Ordering::SeqCst);
+                let mask_str = format!("{:04o}", mask);
+                let mask_v8 = v8::String::new(scope, &mask_str).unwrap();
+                retval.set(mask_v8.into());
+            } else {
+                // Set new umask
+                let new_mask = args.get(0)
+                    .to_integer(scope)
+                    .map(|i| i.value() as u32 & 0o777)
+                    .unwrap_or(0);
+                let old_mask = CURRENT_UMASK.swap(new_mask, std::sync::atomic::Ordering::SeqCst);
+                let old_mask_str = format!("{:04o}", old_mask);
+                let old_mask_v8 = v8::String::new(scope, &old_mask_str).unwrap();
+                retval.set(old_mask_v8.into());
+            }
+        });
+
+        // v0.3.35: Add process.abort() - abort the process
+        let abort_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+            std::process::abort();
+        });
+
         let memory_usage_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let result_obj = v8::Object::new(scope);
             let heap_total = v8::String::new(scope, "heapTotal").unwrap();
@@ -9363,6 +9396,8 @@ impl MinimalRuntime {
         // Get function instances
         let cwd_func = cwd_fn.get_function(scope).unwrap();
         let chdir_func = chdir_fn.get_function(scope).unwrap();
+        let umask_func = umask_fn.get_function(scope).unwrap();
+        let abort_func = abort_fn.get_function(scope).unwrap();
         let memory_usage_func = memory_usage_fn.get_function(scope).unwrap();
         let uptime_func = uptime_fn.get_function(scope).unwrap();
         let hrtime_func = hrtime_fn.get_function(scope).unwrap();
@@ -9396,6 +9431,18 @@ impl MinimalRuntime {
         features_obj.set(scope, debug_key.into(), debug_value.into());
         features_obj.set(scope, ipc_key.into(), ipc_value.into());
 
+        // v0.3.35: Create config object with compiler settings
+        let config_obj = v8::Object::new(scope);
+        let variables_key = v8::String::new(scope, "variables").unwrap();
+        let variables_obj = v8::Object::new(scope);
+        let host_arch_key = v8::String::new(scope, "host_arch").unwrap();
+        let host_arch_value = v8::String::new(scope, if cfg!(target_arch = "x86_64") { "x64" } else if cfg!(target_arch = "aarch64") { "arm64" } else { "unknown" }).unwrap();
+        let platform_key2 = v8::String::new(scope, "platform").unwrap();
+        let platform_value2 = v8::String::new(scope, if cfg!(target_os = "macos") { "darwin" } else if cfg!(target_os = "linux") { "linux" } else if cfg!(target_os = "windows") { "win32" } else { "unknown" }).unwrap();
+        variables_obj.set(scope, host_arch_key.into(), host_arch_value.into());
+        variables_obj.set(scope, platform_key2.into(), platform_value2.into());
+        config_obj.set(scope, variables_key.into(), variables_obj.into());
+
         // Create process object and set all properties
         let process_obj = v8::Object::new(scope);
         process_obj.set(scope, version_key.into(), version_value.into());
@@ -9410,6 +9457,9 @@ impl MinimalRuntime {
         process_obj.set(scope, exec_path_key.into(), exec_path_val.into());
         process_obj.set(scope, cwd_key.into(), cwd_func.into());
         process_obj.set(scope, chdir_key.into(), chdir_func.into());
+        process_obj.set(scope, umask_key.into(), umask_func.into());
+        process_obj.set(scope, abort_key.into(), abort_func.into());
+        process_obj.set(scope, config_key.into(), config_obj.into());
         process_obj.set(scope, memory_usage_key.into(), memory_usage_func.into());
         process_obj.set(scope, uptime_key.into(), uptime_func.into());
         process_obj.set(scope, hrtime_key.into(), hrtime_func.into());
