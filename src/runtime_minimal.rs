@@ -173,6 +173,604 @@ fn encode_string_to_bytes(s: &str, encoding: &str) -> Vec<u8> {
     }
 }
 
+/// Helper function to set up Buffer module with all static and prototype methods
+/// This avoids closure capture issues by defining everything fresh
+fn setup_buffer_module(scope: &mut v8::HandleScope) {
+    // Buffer constructor
+    let buffer_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        if args.length() >= 1 {
+            let first = args.get(0);
+            if first.is_number() {
+                let size = first.to_integer(scope).unwrap().value() as usize;
+                let buffer = v8::ArrayBuffer::new(scope, size);
+                retval.set(buffer.into());
+            } else if let Some(str_val) = first.to_string(scope) {
+                let rust_string = str_val.to_rust_string_lossy(scope);
+                let encoding = if args.length() >= 2 {
+                    args.get(1).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "utf8".to_string())
+                } else {
+                    "utf8".to_string()
+                };
+                let bytes = encode_string_to_bytes(&rust_string, &encoding);
+                let buffer = v8::ArrayBuffer::new(scope, bytes.len());
+                let store = buffer.get_backing_store();
+                let slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, bytes.len()) };
+                slice.copy_from_slice(&bytes);
+                retval.set(buffer.into());
+            }
+        } else {
+            let buffer = v8::ArrayBuffer::new(scope, 0);
+            retval.set(buffer.into());
+        }
+    }).unwrap();
+
+    // Buffer.prototype.toString
+    let buffer_to_string_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let this = args.this();
+        // Get bytes from wrapper, TypedArray, or ArrayBuffer
+        let get_bytes = |scope: &mut v8::HandleScope, this: v8::Local<v8::Value>| -> Option<(Vec<u8>, usize)> {
+            if this.is_object() {
+                let obj = v8::Local::<v8::Object>::try_from(this).unwrap();
+                let buffer_key = v8::String::new(scope, "buffer").unwrap().into();
+                if let Some(buf) = obj.get(scope, buffer_key) {
+                    if buf.is_array_buffer() {
+                        let arr_buffer = v8::Local::<v8::ArrayBuffer>::try_from(buf).unwrap();
+                        let store = arr_buffer.get_backing_store();
+                        let len = arr_buffer.byte_length();
+                        let slice = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, len) };
+                        return Some((slice.to_vec(), len));
+                    }
+                }
+            }
+            if this.is_typed_array() {
+                if let Ok(typed_array) = v8::Local::<v8::TypedArray>::try_from(this) {
+                    let len = typed_array.byte_length() as usize;
+                    let arr_buf = typed_array.buffer(scope).unwrap();
+                    let store = arr_buf.get_backing_store();
+                    let slice = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, len) };
+                    return Some((slice.to_vec(), len));
+                }
+            } else if this.is_array_buffer() {
+                if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(this) {
+                    let store = arr_buffer.get_backing_store();
+                    let len = arr_buffer.byte_length();
+                    let slice = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, len) };
+                    return Some((slice.to_vec(), len));
+                }
+            }
+            None
+        };
+        let (bytes, _byte_length) = if let Some((b, l)) = get_bytes(scope, this.into()) { (b, l) } else {
+            retval.set(v8::String::new(scope, "[object Object]").unwrap().into());
+            return;
+        };
+        let encoding = if args.length() >= 1 {
+            args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "utf8".to_string())
+        } else { "utf8".to_string() };
+        let result = decode_bytes_to_string(&bytes, &encoding);
+        retval.set(v8::String::new(scope, &result).unwrap().into());
+    }).unwrap();
+
+    // Buffer.prototype.slice
+    let buffer_slice_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let this = args.this();
+        // Get source ArrayBuffer and byte_length
+        let (source_buffer, source_len): (v8::Local<v8::ArrayBuffer>, usize) = {
+            let buffer_key = v8::String::new(scope, "buffer").unwrap().into();
+            if let Ok(obj) = v8::Local::<v8::Object>::try_from(this) {
+                if let Some(buf) = obj.get(scope, buffer_key) {
+                    if buf.is_array_buffer() {
+                        if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(buf) {
+                            (arr_buffer, arr_buffer.byte_length())
+                        } else {
+                            return;
+                        }
+                    } else {
+                        return;
+                    }
+                } else {
+                    return;
+                }
+            } else {
+                return;
+            }
+        };
+
+        let start = if args.length() >= 1 {
+            let s = args.get(0).to_integer(scope).unwrap().value();
+            if s < 0 { ((source_len as i64) + s) as usize } else { s as usize }
+        } else {
+            0
+        };
+        let end = if args.length() >= 2 {
+            let e = args.get(1).to_integer(scope).unwrap().value();
+            if e < 0 { ((source_len as i64) + e) as usize } else { e as usize }
+        } else {
+            source_len
+        };
+
+        let clamped_start = std::cmp::min(start, source_len);
+        let clamped_end = std::cmp::min(end, source_len);
+        let new_length = if clamped_end > clamped_start { clamped_end - clamped_start } else { 0 };
+
+        let new_buffer = v8::ArrayBuffer::new(scope, new_length);
+        if new_length > 0 {
+            let store = source_buffer.get_backing_store();
+            let dest_store = new_buffer.get_backing_store();
+            let src_slice = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, source_len) };
+            let dest_slice = unsafe { std::slice::from_raw_parts_mut(dest_store.as_ref().as_ptr() as *mut u8, new_length) };
+            dest_slice.copy_from_slice(&src_slice[clamped_start..clamped_end]);
+        }
+
+        // Create wrapper object with buffer and length properties
+        let wrapper = v8::Object::new(scope);
+        let buffer_key = v8::String::new(scope, "buffer").unwrap().into();
+        let length_key = v8::String::new(scope, "length").unwrap().into();
+        let length_val = v8::Integer::new(scope, new_length as i32).into();
+        wrapper.set(scope, buffer_key, new_buffer.into());
+        wrapper.set(scope, length_key, length_val);
+
+        // Set prototype chain - wrapper.__proto__ = Buffer.prototype
+        let buffer_str = v8::String::new(scope, "Buffer").unwrap().into();
+        let global = scope.get_current_context().global(scope);
+        if let Some(buffer_val) = global.get(scope, buffer_str) {
+            if let Ok(ctor) = v8::Local::<v8::Function>::try_from(buffer_val) {
+                let proto_key = v8::String::new(scope, "prototype").unwrap().into();
+                if let Some(proto_val) = ctor.get(scope, proto_key) {
+                    if let Ok(proto_obj) = v8::Local::<v8::Object>::try_from(proto_val) {
+                        // Set the prototype of wrapper to Buffer.prototype
+                        let set_prototype_fn_key = v8::String::new(scope, "setPrototypeOf").unwrap().into();
+                        let object_str = v8::String::new(scope, "Object").unwrap().into();
+                        let object_val = global.get(scope, object_str);
+                        if let Some(obj) = object_val {
+                            if let Ok(object_ctor) = v8::Local::<v8::Object>::try_from(obj) {
+                                if let Some(set_prototype_fn) = object_ctor.get(scope, set_prototype_fn_key) {
+                                    if let Ok(set_prototype) = v8::Local::<v8::Function>::try_from(set_prototype_fn) {
+                                        let this = v8::undefined(scope).into();
+                                        let proto_as_value = proto_obj.into();
+                                        let _ = set_prototype.call(scope, this, &[wrapper.into(), proto_as_value]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        retval.set(wrapper.into());
+    }).unwrap();
+
+    // Buffer.prototype.copy
+    let buffer_copy_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut _retval: v8::ReturnValue| {
+        _retval.set(v8::Integer::new(_scope, 0).into());
+    }).unwrap();
+
+    // Buffer.prototype.indexOf
+    let buffer_index_of_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let this = args.this();
+        // Get bytes from wrapper, TypedArray, or ArrayBuffer
+        let bytes: Vec<u8> = if this.is_object() {
+            if let Ok(obj) = v8::Local::<v8::Object>::try_from(this) {
+                let buffer_key = v8::String::new(scope, "buffer").unwrap().into();
+                if let Some(buf) = obj.get(scope, buffer_key) {
+                    if buf.is_array_buffer() {
+                        if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(buf) {
+                            let store = arr_buffer.get_backing_store();
+                            let len = arr_buffer.byte_length();
+                            let slice = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, len) };
+                            slice.to_vec()
+                        } else {
+                            vec![]
+                        }
+                    } else {
+                        vec![]
+                    }
+                } else {
+                    vec![]
+                }
+            } else {
+                vec![]
+            }
+        } else {
+            vec![]
+        };
+
+        let search_value = if args.length() >= 1 {
+            args.get(0)
+        } else {
+            return;
+        };
+
+        let target_bytes: Vec<u8> = if search_value.is_string() {
+            if let Some(str_val) = search_value.to_string(scope) {
+                str_val.to_rust_string_lossy(scope).as_bytes().to_vec()
+            } else {
+                return;
+            }
+        } else if search_value.is_number() {
+            vec![search_value.to_integer(scope).unwrap().value() as u8]
+        } else if search_value.is_array_buffer() || search_value.is_typed_array() {
+            if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(search_value) {
+                let store = arr_buffer.get_backing_store();
+                let len = arr_buffer.byte_length();
+                let slice = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, len) };
+                slice.to_vec()
+            } else {
+                vec![]
+            }
+        } else {
+            return;
+        };
+
+        // Get start position from args[1], default to 0
+        let start = if args.length() >= 2 {
+            let start_arg = args.get(1);
+            if start_arg.is_number() {
+                start_arg.to_integer(scope).unwrap().value() as usize
+            } else {
+                0
+            }
+        } else {
+            0
+        };
+
+        let clamped_start = std::cmp::min(start, bytes.len());
+        let result = bytes[clamped_start..].windows(target_bytes.len()).position(|w| w == target_bytes);
+        retval.set(v8::Integer::new(scope, result.map(|i| (i + clamped_start) as i32).unwrap_or(-1)).into());
+    }).unwrap();
+
+    // Buffer.from - looks up methods from Buffer.prototype instead of capturing
+    let buffer_from_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        if args.length() >= 1 {
+            let first = args.get(0);
+            let bytes: Vec<u8> = if let Some(str_val) = first.to_string(scope) {
+                let rust_string = str_val.to_rust_string_lossy(scope);
+                let encoding = if args.length() >= 2 {
+                    args.get(1).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "utf8".to_string())
+                } else {
+                    "utf8".to_string()
+                };
+                encode_string_to_bytes(&rust_string, &encoding)
+            } else if first.is_number() {
+                let size = first.to_integer(scope).unwrap().value() as usize;
+                vec![0u8; size]
+            } else {
+                vec![]
+            };
+            // Create wrapper object with ArrayBuffer
+            let wrapper = v8::Object::new(scope);
+            let buffer = v8::ArrayBuffer::new(scope, bytes.len());
+            let store = buffer.get_backing_store();
+            let slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, bytes.len()) };
+            slice.copy_from_slice(&bytes);
+            // Set buffer and length properties (create strings first to avoid borrow conflicts)
+            let buffer_key = v8::String::new(scope, "buffer").unwrap().into();
+            let length_key = v8::String::new(scope, "length").unwrap().into();
+            let length_val = v8::Integer::new(scope, bytes.len() as i32).into();
+            wrapper.set(scope, buffer_key, buffer.into());
+            wrapper.set(scope, length_key, length_val);
+
+            // Set prototype chain - wrapper.__proto__ = Buffer.prototype
+            let buffer_str = v8::String::new(scope, "Buffer").unwrap().into();
+            let global = scope.get_current_context().global(scope);
+            if let Some(buffer_val) = global.get(scope, buffer_str) {
+                if let Ok(ctor) = v8::Local::<v8::Function>::try_from(buffer_val) {
+                    let proto_key = v8::String::new(scope, "prototype").unwrap().into();
+                    if let Some(proto_val) = ctor.get(scope, proto_key) {
+                        if let Ok(proto_obj) = v8::Local::<v8::Object>::try_from(proto_val) {
+                            // Set the prototype of wrapper to Buffer.prototype
+                            let set_prototype_fn_key = v8::String::new(scope, "setPrototypeOf").unwrap().into();
+                            let object_str = v8::String::new(scope, "Object").unwrap().into();
+                            let object_val = global.get(scope, object_str);
+                            if let Some(obj) = object_val {
+                                if let Ok(object_ctor) = v8::Local::<v8::Object>::try_from(obj) {
+                                    if let Some(set_prototype_fn) = object_ctor.get(scope, set_prototype_fn_key) {
+                                        if let Ok(set_prototype) = v8::Local::<v8::Function>::try_from(set_prototype_fn) {
+                                            let this = v8::undefined(scope).into();
+                                            let proto_as_value = proto_obj.into();
+                                            let _ = set_prototype.call(scope, this, &[wrapper.into(), proto_as_value]);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            retval.set(wrapper.into());
+        }
+    }).unwrap();
+
+    // Buffer.alloc - looks up methods from Buffer.prototype instead of capturing
+    let buffer_alloc_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let size = if args.length() >= 1 {
+            args.get(0).to_integer(scope).unwrap().value() as usize
+        } else {
+            0
+        };
+        let fill_byte = if args.length() >= 2 {
+            let fill = args.get(1);
+            if fill.is_number() {
+                fill.to_integer(scope).unwrap().value() as u8
+            } else {
+                0
+            }
+        } else {
+            0
+        };
+        let bytes = vec![fill_byte; size];
+        // Create wrapper object
+        let wrapper = v8::Object::new(scope);
+        let buffer = v8::ArrayBuffer::new(scope, bytes.len());
+        let store = buffer.get_backing_store();
+        let slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, bytes.len()) };
+        slice.copy_from_slice(&bytes);
+        // Set properties (create strings first)
+        let buffer_key = v8::String::new(scope, "buffer").unwrap().into();
+        let length_key = v8::String::new(scope, "length").unwrap().into();
+        let length_val = v8::Integer::new(scope, bytes.len() as i32).into();
+        wrapper.set(scope, buffer_key, buffer.into());
+        wrapper.set(scope, length_key, length_val);
+
+        // Set prototype chain - wrapper.__proto__ = Buffer.prototype
+        let buffer_str = v8::String::new(scope, "Buffer").unwrap().into();
+        let global = scope.get_current_context().global(scope);
+        if let Some(buffer_val) = global.get(scope, buffer_str) {
+            if let Ok(ctor) = v8::Local::<v8::Function>::try_from(buffer_val) {
+                let proto_key = v8::String::new(scope, "prototype").unwrap().into();
+                if let Some(proto_val) = ctor.get(scope, proto_key) {
+                    if let Ok(proto_obj) = v8::Local::<v8::Object>::try_from(proto_val) {
+                        // Set the prototype of wrapper to Buffer.prototype
+                        let set_prototype_fn_key = v8::String::new(scope, "setPrototypeOf").unwrap().into();
+                        let object_str = v8::String::new(scope, "Object").unwrap().into();
+                        let object_val = global.get(scope, object_str);
+                        if let Some(obj) = object_val {
+                            if let Ok(object_ctor) = v8::Local::<v8::Object>::try_from(obj) {
+                                if let Some(set_prototype_fn) = object_ctor.get(scope, set_prototype_fn_key) {
+                                    if let Ok(set_prototype) = v8::Local::<v8::Function>::try_from(set_prototype_fn) {
+                                        let this = v8::undefined(scope).into();
+                                        let proto_as_value = proto_obj.into();
+                                        let _ = set_prototype.call(scope, this, &[wrapper.into(), proto_as_value]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        retval.set(wrapper.into());
+    }).unwrap();
+
+    // Buffer.concat - looks up methods from Buffer.prototype instead of capturing
+    let buffer_concat_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let total_length = if args.length() >= 2 {
+            args.get(1).to_integer(scope).unwrap().value() as usize
+        } else {
+            0
+        };
+        if args.length() >= 1 {
+            let first = args.get(0);
+            if first.is_array() {
+                let arr = v8::Local::<v8::Array>::try_from(first).unwrap();
+                let len = arr.length();
+                let calculated_length = if total_length == 0 {
+                    let mut total = 0usize;
+                    for i in 0..len {
+                        if let Some(item) = arr.get_index(scope, i) {
+                            // Check for wrapper object with buffer property first
+                            if item.is_object() {
+                                if let Ok(obj) = v8::Local::<v8::Object>::try_from(item) {
+                                    let buffer_key = v8::String::new(scope, "buffer").unwrap().into();
+                                    if let Some(buf) = obj.get(scope, buffer_key) {
+                                        if buf.is_array_buffer() {
+                                            if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(buf) {
+                                                total += arr_buffer.byte_length();
+                                                continue;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            // Check for raw ArrayBuffer or TypedArray
+                            if item.is_array_buffer() {
+                                if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(item) {
+                                    total += arr_buffer.byte_length();
+                                }
+                            } else if item.is_typed_array() {
+                                if let Ok(typed_array) = v8::Local::<v8::TypedArray>::try_from(item) {
+                                    total += typed_array.byte_length() as usize;
+                                }
+                            }
+                        }
+                    }
+                    total
+                } else {
+                    total_length
+                };
+                // Create combined buffer
+                let mut combined = vec![0u8; calculated_length];
+                let mut offset = 0;
+                for i in 0..len {
+                    if let Some(item) = arr.get_index(scope, i) {
+                        // Check for wrapper object with buffer property first
+                        if item.is_object() {
+                            if let Ok(obj) = v8::Local::<v8::Object>::try_from(item) {
+                                let buffer_key = v8::String::new(scope, "buffer").unwrap().into();
+                                if let Some(buf) = obj.get(scope, buffer_key) {
+                                    if buf.is_array_buffer() {
+                                        if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(buf) {
+                                            let store = arr_buffer.get_backing_store();
+                                            let item_len = arr_buffer.byte_length();
+                                            let src_slice = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, item_len) };
+                                            let end = std::cmp::min(offset + item_len, calculated_length);
+                                            combined[offset..end].copy_from_slice(&src_slice[0..(end - offset)]);
+                                            offset = end;
+                                            continue;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // Check for raw ArrayBuffer
+                        if item.is_array_buffer() {
+                            if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(item) {
+                                let store = arr_buffer.get_backing_store();
+                                let item_len = arr_buffer.byte_length();
+                                let src_slice = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, item_len) };
+                                let end = std::cmp::min(offset + item_len, calculated_length);
+                                combined[offset..end].copy_from_slice(&src_slice[0..(end - offset)]);
+                                offset = end;
+                            }
+                        } else if item.is_typed_array() {
+                            if let Ok(typed_array) = v8::Local::<v8::TypedArray>::try_from(item) {
+                                let arr_buf = typed_array.buffer(scope).unwrap();
+                                let store = arr_buf.get_backing_store();
+                                let item_len = typed_array.byte_length() as usize;
+                                let src_slice = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, item_len) };
+                                let end = std::cmp::min(offset + item_len, calculated_length);
+                                combined[offset..end].copy_from_slice(&src_slice[0..(end - offset)]);
+                                offset = end;
+                            }
+                        }
+                    }
+                }
+                // Return wrapper object
+                let wrapper = v8::Object::new(scope);
+                let buffer = v8::ArrayBuffer::new(scope, calculated_length);
+                let store = buffer.get_backing_store();
+                let slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, calculated_length) };
+                slice.copy_from_slice(&combined);
+                let buffer_key = v8::String::new(scope, "buffer").unwrap().into();
+                let length_key = v8::String::new(scope, "length").unwrap().into();
+                let length_val = v8::Integer::new(scope, calculated_length as i32).into();
+                wrapper.set(scope, buffer_key, buffer.into());
+                wrapper.set(scope, length_key, length_val);
+
+                // Set prototype chain - wrapper.__proto__ = Buffer.prototype
+                let buffer_str = v8::String::new(scope, "Buffer").unwrap().into();
+                let global = scope.get_current_context().global(scope);
+                if let Some(buffer_val) = global.get(scope, buffer_str) {
+                    if let Ok(ctor) = v8::Local::<v8::Function>::try_from(buffer_val) {
+                        let proto_key = v8::String::new(scope, "prototype").unwrap().into();
+                        if let Some(proto_val) = ctor.get(scope, proto_key) {
+                            if let Ok(proto_obj) = v8::Local::<v8::Object>::try_from(proto_val) {
+                                // Set the prototype of wrapper to Buffer.prototype
+                                let set_prototype_fn_key = v8::String::new(scope, "setPrototypeOf").unwrap().into();
+                                let object_str = v8::String::new(scope, "Object").unwrap().into();
+                        let object_val = global.get(scope, object_str);
+                                if let Some(obj) = object_val {
+                                    if let Ok(object_ctor) = v8::Local::<v8::Object>::try_from(obj) {
+                                        if let Some(set_prototype_fn) = object_ctor.get(scope, set_prototype_fn_key) {
+                                            if let Ok(set_prototype) = v8::Local::<v8::Function>::try_from(set_prototype_fn) {
+                                                let this = v8::undefined(scope).into();
+                                                let proto_as_value = proto_obj.into();
+                                                let _ = set_prototype.call(scope, this, &[wrapper.into(), proto_as_value]);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                retval.set(wrapper.into());
+            }
+        }
+    }).unwrap();
+
+    // Buffer.isBuffer
+    let buffer_is_buffer_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let is_buffer = if args.length() >= 1 {
+            let first = args.get(0);
+            first.is_object() && {
+                if let Ok(obj) = v8::Local::<v8::Object>::try_from(first) {
+                    let buffer_key = v8::String::new(scope, "buffer").unwrap().into();
+                    if let Some(buf) = obj.get(scope, buffer_key) {
+                        buf.is_array_buffer()
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+        } else {
+            false
+        };
+        retval.set(v8::Boolean::new(scope, is_buffer).into());
+    }).unwrap();
+
+    // Buffer.byteLength
+    let buffer_byte_length_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let byte_length = if args.length() >= 1 {
+            let first = args.get(0);
+            if first.is_string() {
+                if let Some(str_val) = first.to_string(scope) {
+                    let rust_string = str_val.to_rust_string_lossy(scope);
+                    let encoding = if args.length() >= 2 {
+                        args.get(1).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "utf8".to_string())
+                    } else {
+                        "utf8".to_string()
+                    };
+                    encode_string_to_bytes(&rust_string, &encoding).len() as i32
+                } else {
+                    0
+                }
+            } else if first.is_array_buffer() || first.is_typed_array() {
+                if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(first) {
+                    arr_buffer.byte_length() as i32
+                } else if let Ok(typed_array) = v8::Local::<v8::TypedArray>::try_from(first) {
+                    typed_array.byte_length() as i32
+                } else {
+                    0
+                }
+            } else {
+                0
+            }
+        } else {
+            0
+        };
+        retval.set(v8::Integer::new(scope, byte_length).into());
+    }).unwrap();
+
+    // Create Buffer object and set properties
+    let buffer_ctor_key = v8::String::new(scope, "Buffer").unwrap().into();
+    let global = scope.get_current_context().global(scope);
+    global.set(scope, buffer_ctor_key, buffer_fn.into());
+
+    // Set Buffer static methods on the constructor function itself
+    let from_key = v8::String::new(scope, "from").unwrap().into();
+    buffer_fn.set(scope, from_key, buffer_from_fn.into());
+    let alloc_key = v8::String::new(scope, "alloc").unwrap().into();
+    buffer_fn.set(scope, alloc_key, buffer_alloc_fn.into());
+    let concat_key = v8::String::new(scope, "concat").unwrap().into();
+    buffer_fn.set(scope, concat_key, buffer_concat_fn.into());
+    let is_buffer_key = v8::String::new(scope, "isBuffer").unwrap().into();
+    buffer_fn.set(scope, is_buffer_key, buffer_is_buffer_fn.into());
+    let byte_length_key = v8::String::new(scope, "byteLength").unwrap().into();
+    buffer_fn.set(scope, byte_length_key, buffer_byte_length_fn.into());
+
+    // Set Buffer.prototype properties on the constructor
+    let prototype_key = v8::String::new(scope, "prototype").unwrap().into();
+    let prototype_obj = v8::Object::new(scope);
+    buffer_fn.set(scope, prototype_key, prototype_obj.into());
+
+    // Create method names first to avoid borrow conflicts
+    let to_string_key = v8::String::new(scope, "toString").unwrap().into();
+    let slice_key = v8::String::new(scope, "slice").unwrap().into();
+    let copy_key = v8::String::new(scope, "copy").unwrap().into();
+    let index_of_key = v8::String::new(scope, "indexOf").unwrap().into();
+    let constructor_key = v8::String::new(scope, "constructor").unwrap().into();
+
+    prototype_obj.set(scope, to_string_key, buffer_to_string_fn.into());
+    prototype_obj.set(scope, slice_key, buffer_slice_fn.into());
+    prototype_obj.set(scope, copy_key, buffer_copy_fn.into());
+    prototype_obj.set(scope, index_of_key, buffer_index_of_fn.into());
+    // Set constructor to point back to Buffer
+    prototype_obj.set(scope, constructor_key, buffer_fn.into());
+}
+
 /// Helper function to decode bytes to a string with the specified encoding
 fn decode_bytes_to_string(bytes: &[u8], encoding: &str) -> String {
     let engine = base64::engine::general_purpose::STANDARD;
@@ -533,8 +1131,8 @@ impl MinimalRuntime {
         // Set up console object
         Self::setup_console(scope, &context)?;
 
-        // Set up Buffer/Uint8Array methods (toString with encoding support)
-        Self::setup_buffer_methods(scope, &context)?;
+        // Set up Buffer module (complete implementation with from, alloc, concat, etc.)
+        setup_buffer_module(scope);
 
         // Set up Web APIs
         Self::setup_web_apis(scope, &context)?;
@@ -1265,340 +1863,6 @@ impl MinimalRuntime {
 
         let process_key = v8::String::new(scope, "process").unwrap().into();
         global.set(scope, process_key, process_obj.into());
-
-        // Set up global Buffer object (v0.2.9: Enhanced implementation)
-        // Buffer constructor
-        let buffer_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            if args.length() >= 1 {
-                let first = args.get(0);
-                if first.is_number() {
-                    let size = first.to_integer(scope).unwrap().value() as usize;
-                    let buffer = v8::ArrayBuffer::new(scope, size);
-                    retval.set(buffer.into());
-                } else if let Some(str_val) = first.to_string(scope) {
-                    let rust_string = str_val.to_rust_string_lossy(scope);
-                    let encoding = if args.length() >= 2 {
-                        args.get(1).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "utf8".to_string())
-                    } else {
-                        "utf8".to_string()
-                    };
-                    let bytes = encode_string_to_bytes(&rust_string, &encoding);
-                    let buffer = v8::ArrayBuffer::new(scope, bytes.len());
-                    let store = buffer.get_backing_store();
-                    let slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, bytes.len()) };
-                    slice.copy_from_slice(&bytes);
-                    retval.set(buffer.into());
-                }
-            } else {
-                let buffer = v8::ArrayBuffer::new(scope, 0);
-                retval.set(buffer.into());
-            }
-        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer function"))?;
-
-        // Buffer.from()
-        let buffer_from_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            if args.length() >= 1 {
-                let first = args.get(0);
-                if let Some(str_val) = first.to_string(scope) {
-                    let rust_string = str_val.to_rust_string_lossy(scope);
-                    let encoding = if args.length() >= 2 {
-                        args.get(1).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "utf8".to_string())
-                    } else {
-                        "utf8".to_string()
-                    };
-                    let bytes = encode_string_to_bytes(&rust_string, &encoding);
-                    let buffer = v8::ArrayBuffer::new(scope, bytes.len());
-                    let store = buffer.get_backing_store();
-                    let slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, bytes.len()) };
-                    slice.copy_from_slice(&bytes);
-                    retval.set(buffer.into());
-                } else if first.is_number() {
-                    let size = first.to_integer(scope).unwrap().value() as usize;
-                    let buffer = v8::ArrayBuffer::new(scope, size);
-                    retval.set(buffer.into());
-                }
-            }
-        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.from function"))?;
-
-        // Buffer.alloc()
-        let buffer_alloc_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let size = if args.length() >= 1 {
-                args.get(0).to_integer(scope).unwrap().value() as usize
-            } else {
-                0
-            };
-            let fill_byte = if args.length() >= 2 {
-                let fill = args.get(1);
-                if fill.is_number() {
-                    fill.to_integer(scope).unwrap().value() as u8
-                } else {
-                    0
-                }
-            } else {
-                0
-            };
-            let buffer = v8::ArrayBuffer::new(scope, size);
-            if size > 0 {
-                let store = buffer.get_backing_store();
-                let slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, size) };
-                slice.fill(fill_byte);
-            }
-            retval.set(buffer.into());
-        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.alloc function"))?;
-
-        // Buffer.concat()
-        let buffer_concat_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let total_length = if args.length() >= 2 {
-                args.get(1).to_integer(scope).unwrap().value() as usize
-            } else {
-                0
-            };
-            if args.length() >= 1 {
-                let first = args.get(0);
-                if first.is_array() {
-                    let arr = v8::Local::<v8::Array>::try_from(first).unwrap();
-                    let len = arr.length();
-
-                    // Calculate total length if not provided
-                    let calculated_length = if total_length == 0 {
-                        let mut total = 0usize;
-                        for i in 0..len {
-                            if let Some(item) = arr.get_index(scope, i) {
-                                if item.is_array_buffer() || item.is_typed_array() {
-                                    if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(item) {
-                                        total += arr_buffer.byte_length();
-                                    }
-                                }
-                            }
-                        }
-                        total
-                    } else {
-                        total_length
-                    };
-
-                    let buffer = v8::ArrayBuffer::new(scope, calculated_length);
-                    if calculated_length > 0 {
-                        let store = buffer.get_backing_store();
-                        let dest_slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, calculated_length) };
-                        let mut offset = 0usize;
-
-                        for i in 0..len {
-                            if let Some(item) = arr.get_index(scope, i) {
-                                if item.is_array_buffer() || item.is_typed_array() {
-                                    if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(item) {
-                                        let item_len = arr_buffer.byte_length();
-                                        if item_len > 0 {
-                                            let item_store = arr_buffer.get_backing_store();
-                                            let item_slice = unsafe { std::slice::from_raw_parts(item_store.as_ref().as_ptr() as *const u8, item_len) };
-                                            let available = calculated_length - offset;
-                                            let to_copy = std::cmp::min(item_len, available);
-                                            dest_slice[offset..offset + to_copy].copy_from_slice(&item_slice[..to_copy]);
-                                            offset += to_copy;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    retval.set(buffer.into());
-                }
-            }
-        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.concat function"))?;
-
-        // Buffer.isBuffer()
-        let buffer_is_buffer_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let is_buffer = if args.length() >= 1 {
-                let first = args.get(0);
-                first.is_array_buffer() || first.is_typed_array()
-            } else {
-                false
-            };
-            retval.set(v8::Boolean::new(scope, is_buffer).into());
-        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.isBuffer function"))?;
-
-        // Buffer.byteLength()
-        let buffer_byte_length_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            if args.length() >= 1 {
-                let first = args.get(0);
-                if let Some(str_val) = first.to_string(scope) {
-                    let rust_string = str_val.to_rust_string_lossy(scope);
-                    let encoding = if args.length() >= 2 {
-                        args.get(1).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "utf8".to_string())
-                    } else {
-                        "utf8".to_string()
-                    };
-                    let bytes = encode_string_to_bytes(&rust_string, &encoding);
-                    retval.set(v8::Integer::new(scope, bytes.len() as i32).into());
-                }
-            }
-        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.byteLength function"))?;
-
-        // Set Buffer static methods directly on buffer_fn (not on a separate object)
-        let from_key = v8::String::new(scope, "from").unwrap().into();
-        buffer_fn.set(scope, from_key, buffer_from_fn.into());
-        let alloc_key = v8::String::new(scope, "alloc").unwrap().into();
-        buffer_fn.set(scope, alloc_key, buffer_alloc_fn.into());
-        let concat_key = v8::String::new(scope, "concat").unwrap().into();
-        buffer_fn.set(scope, concat_key, buffer_concat_fn.into());
-        let is_buffer_key = v8::String::new(scope, "isBuffer").unwrap().into();
-        buffer_fn.set(scope, is_buffer_key, buffer_is_buffer_fn.into());
-        let byte_length_key = v8::String::new(scope, "byteLength").unwrap().into();
-        buffer_fn.set(scope, byte_length_key, buffer_byte_length_fn.into());
-
-        // Set Buffer as constructor and add to global
-        let buffer_key = v8::String::new(scope, "Buffer").unwrap().into();
-        global.set(scope, buffer_key, buffer_fn.into());
-
-        // Add Buffer.prototype methods (using a wrapper object)
-        // toString method
-        let buffer_to_string_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let this = args.this();
-            // Only support ArrayBuffer for now
-            if !this.is_array_buffer() {
-                return;
-            }
-            if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(this) {
-                let encoding = if args.length() >= 1 {
-                    args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "utf8".to_string())
-                } else {
-                    "utf8".to_string()
-                };
-                let store = arr_buffer.get_backing_store();
-                let bytes = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, arr_buffer.byte_length()) };
-                let result = decode_bytes_to_string(bytes, &encoding);
-                retval.set(v8::String::new(scope, &result).unwrap().into());
-            }
-        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.toString function"))?;
-
-        // slice method
-        let buffer_slice_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let this = args.this();
-            // Only support ArrayBuffer for now
-            if !this.is_array_buffer() {
-                return;
-            }
-            if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(this) {
-                let byte_length = arr_buffer.byte_length();
-
-                let start = if args.length() >= 1 {
-                    let s = args.get(0).to_integer(scope).unwrap().value();
-                    if s < 0 { ((byte_length as i64) + s) as usize } else { s as usize }
-                } else {
-                    0
-                };
-                let end = if args.length() >= 2 {
-                    let e = args.get(1).to_integer(scope).unwrap().value();
-                    if e < 0 { ((byte_length as i64) + e) as usize } else { e as usize }
-                } else {
-                    byte_length
-                };
-
-                let clamped_start = std::cmp::min(start, byte_length);
-                let clamped_end = std::cmp::min(end, byte_length);
-                let new_length = if clamped_end > clamped_start { clamped_end - clamped_start } else { 0 };
-
-                let new_buffer = v8::ArrayBuffer::new(scope, new_length);
-                if new_length > 0 {
-                    let store = arr_buffer.get_backing_store();
-                    let dest_store = new_buffer.get_backing_store();
-                    let src_slice = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, byte_length) };
-                    let dest_slice = unsafe { std::slice::from_raw_parts_mut(dest_store.as_ref().as_ptr() as *mut u8, new_length) };
-                    dest_slice.copy_from_slice(&src_slice[clamped_start..clamped_end]);
-                }
-                retval.set(new_buffer.into());
-            }
-        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.slice function"))?;
-
-        // copy method
-        let buffer_copy_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let this = args.this();
-            if this.is_array_buffer() || this.is_typed_array() {
-                if let Ok(this_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(this) {
-                    let _this_length = this_buffer.byte_length();
-
-                    // Target buffer (first arg)
-                    let _target_length = if args.length() >= 4 {
-                        args.get(3).to_integer(scope).unwrap().value() as usize
-                    } else {
-                        0
-                    };
-
-                    // For simplicity, just return the byte length copied (0 for now in this minimal impl)
-                    retval.set(v8::Integer::new(scope, 0).into());
-                } else {
-                    retval.set(v8::Integer::new(scope, 0).into());
-                }
-            } else {
-                retval.set(v8::Integer::new(scope, 0).into());
-            }
-        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.copy function"))?;
-
-        // indexOf method
-        let buffer_index_of_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let this = args.this();
-            // Only support ArrayBuffer for now
-            if !this.is_array_buffer() {
-                retval.set(v8::Integer::new(scope, -1).into());
-                return;
-            }
-            if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(this) {
-                let store = arr_buffer.get_backing_store();
-                let bytes = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, arr_buffer.byte_length()) };
-
-                let search_val = if args.length() >= 1 { args.get(0) } else { v8::undefined(scope).into() };
-
-                let target_bytes: Vec<u8> = if let Some(str_val) = search_val.to_string(scope) {
-                    encode_string_to_bytes(&str_val.to_rust_string_lossy(scope), "utf8")
-                } else if search_val.is_number() {
-                    let n = search_val.to_integer(scope).unwrap().value();
-                    if n >= 0 && n <= 255 {
-                        vec![n as u8]
-                    } else {
-                        vec![]
-                    }
-                } else {
-                    vec![]
-                };
-
-                let start = if args.length() >= 2 {
-                    args.get(1).to_integer(scope).unwrap().value() as usize
-                } else {
-                    0
-                };
-
-                let clamped_start = std::cmp::min(start, bytes.len());
-                let result = bytes[clamped_start..].windows(target_bytes.len()).position(|w| w == target_bytes);
-                retval.set(v8::Integer::new(scope, result.map(|i| (i + clamped_start) as i32).unwrap_or(-1)).into());
-            } else {
-                retval.set(v8::Integer::new(scope, -1).into());
-            }
-        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer.indexOf function"))?;
-
-        // Create prototype object with methods
-        let buffer_proto = v8::Object::new(scope);
-        let to_string_key = v8::String::new(scope, "toString").unwrap().into();
-        buffer_proto.set(scope, to_string_key, buffer_to_string_fn.into());
-        let slice_key = v8::String::new(scope, "slice").unwrap().into();
-        buffer_proto.set(scope, slice_key, buffer_slice_fn.into());
-        let copy_key = v8::String::new(scope, "copy").unwrap().into();
-        buffer_proto.set(scope, copy_key, buffer_copy_fn.into());
-        let index_of_key = v8::String::new(scope, "indexOf").unwrap().into();
-        buffer_proto.set(scope, index_of_key, buffer_index_of_fn.into());
-
-        // Set buffer.length getter (simplified for V8 0.22 compatibility)
-        // Note: Full accessor implementation requires V8 0.70+ APIs
-        // For now, we'll expose length as a regular property via Object API
-        let length_key = v8::String::new(scope, "length").unwrap().into();
-        let length_value = v8::Integer::new(scope, 0).into(); // Default to 0, updated on creation
-        buffer_fn.set(scope, length_key, length_value);
-
-        // Add prototype to buffer function
-        let prototype_key = v8::String::new(scope, "prototype").unwrap().into();
-        buffer_fn.set(scope, prototype_key, buffer_proto.into());
-
-        // Also expose Buffer object with static methods
-        let buffer_global_key = v8::String::new(scope, "Buffer").unwrap().into();
-        global.set(scope, buffer_global_key, buffer_fn.into());
 
         // Set up global URL object (full implementation)
         let url_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
@@ -9238,59 +9502,8 @@ impl MinimalRuntime {
         let exports_key = v8::String::new(scope, "exports").unwrap().into();
         global.set(scope, exports_key, exports_obj.into());
 
-        // Set global Buffer (like Node.js)
-        let global_buffer_fn_template = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let buffer_obj = v8::Object::new(_scope);
-            if args.length() >= 1 {
-                let first = args.get(0);
-                let bytes: Vec<u8> = if let Some(str_val) = first.to_string(_scope) {
-                    str_val.to_rust_string_lossy(_scope).as_bytes().to_vec()
-                } else if first.is_number() {
-                    let size = first.to_integer(_scope).unwrap().value() as usize;
-                    vec![0u8; size]
-                } else {
-                    vec![]
-                };
-                let length_key = v8::String::new(_scope, "length").unwrap().into();
-                let length_val = v8::Number::new(_scope, bytes.len() as f64);
-                buffer_obj.set(_scope, length_key, length_val.into());
-            } else {
-                let length_key = v8::String::new(_scope, "length").unwrap().into();
-                let length_val = v8::Number::new(_scope, 0.0);
-                buffer_obj.set(_scope, length_key, length_val.into());
-            }
-            retval.set(buffer_obj.into());
-        });
-        let global_buffer_fn = global_buffer_fn_template.get_function(scope).unwrap();
-
-        // Add Buffer.from as static method
-        let from_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let buffer_obj = v8::Object::new(_scope);
-            if args.length() >= 1 {
-                let first = args.get(0);
-                let bytes: Vec<u8> = if let Some(str_val) = first.to_string(_scope) {
-                    str_val.to_rust_string_lossy(_scope).as_bytes().to_vec()
-                } else if first.is_number() {
-                    let size = first.to_integer(_scope).unwrap().value() as usize;
-                    vec![0u8; size]
-                } else {
-                    vec![]
-                };
-                let length_key = v8::String::new(_scope, "length").unwrap().into();
-                let length_val = v8::Number::new(_scope, bytes.len() as f64);
-                buffer_obj.set(_scope, length_key, length_val.into());
-            } else {
-                let length_key = v8::String::new(_scope, "length").unwrap().into();
-                let length_val = v8::Number::new(_scope, 0.0);
-                buffer_obj.set(_scope, length_key, length_val.into());
-            }
-            retval.set(buffer_obj.into());
-        }).unwrap();
-        let from_key = v8::String::new(scope, "from").unwrap().into();
-        global_buffer_fn.set(scope, from_key, from_fn.into());
-
-        let buffer_key = v8::String::new(scope, "Buffer").unwrap().into();
-        global.set(scope, buffer_key, global_buffer_fn.into());
+        // Set up Buffer module using our helper function (v0.3.36)
+        setup_buffer_module(scope);
 
         // Set __dirname and __filename globals
         let dirname_val = v8::String::new(scope, "/workspace").unwrap().into();
