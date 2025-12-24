@@ -9260,6 +9260,7 @@ impl MinimalRuntime {
         let exit_key = v8::String::new(scope, "exit").unwrap();
         let exit_code_key = v8::String::new(scope, "exitCode").unwrap();
         let exit_code_value = v8::Integer::new(scope, 0);
+        let next_tick_key = v8::String::new(scope, "nextTick").unwrap();
         let features_key = v8::String::new(scope, "features").unwrap();
         let debug_key = v8::String::new(scope, "debug").unwrap();
         let debug_value = v8::Boolean::new(scope, cfg!(debug_assertions));
@@ -9339,6 +9340,25 @@ impl MinimalRuntime {
                 .unwrap_or(0);
             std::process::exit(code);
         });
+        let next_tick_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+            // Get callback function
+            let callback = args.get(0);
+            if !callback.is_function() {
+                let error = v8::String::new(scope, "process.nextTick: callback must be a function").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+            // Collect any additional arguments to pass to the callback
+            let callback_args: Vec<v8::Local<v8::Value>> = (1..args.length())
+                .map(|i| args.get(i))
+                .collect();
+            // Execute callback immediately (simplified implementation)
+            // In a full async runtime, this would be queued to the microtask queue
+            let callback_func = v8::Local::<v8::Function>::try_from(callback).unwrap();
+            let undefined = v8::undefined(scope);
+            let _: _ = callback_func.call(scope, undefined.into(), &callback_args);
+        });
 
         // Get function instances
         let cwd_func = cwd_fn.get_function(scope).unwrap();
@@ -9347,6 +9367,7 @@ impl MinimalRuntime {
         let uptime_func = uptime_fn.get_function(scope).unwrap();
         let hrtime_func = hrtime_fn.get_function(scope).unwrap();
         let exit_func = exit_fn.get_function(scope).unwrap();
+        let next_tick_func = next_tick_fn.get_function(scope).unwrap();
 
         // Create process.env object
         let env_obj = v8::Object::new(scope);
@@ -9394,6 +9415,7 @@ impl MinimalRuntime {
         process_obj.set(scope, hrtime_key.into(), hrtime_func.into());
         process_obj.set(scope, exit_key.into(), exit_func.into());
         process_obj.set(scope, exit_code_key.into(), exit_code_value.into());
+        process_obj.set(scope, next_tick_key.into(), next_tick_func.into());
         process_obj.set(scope, features_key.into(), features_obj.into());
         process_obj.set(scope, is_beejs_key.into(), is_beejs_value.into());
         process_obj.set(scope, browser_key.into(), browser_value.into());
