@@ -5617,9 +5617,9 @@ impl MinimalRuntime {
             let private_key: Vec<u8> = (0..key_size).map(|_| rand::random::<u8>()).collect();
             // Derive public key from private key using a simple deterministic transformation
             // In real ECDH: publicKey = privateKey * G (scalar multiplication on curve)
-            // Our simulation: public[i] = private[i] ^ (i*7) ^ 0x42
+            // Our simulation: public[i] = private[i] ^ ((i*7) % 256) ^ 0x42
             let mut public_key = private_key.iter().enumerate()
-                .map(|(i, &b)| b ^ ((i as u8) * 7) ^ 0x42)
+                .map(|(i, &b)| b ^ (((i * 7) % 256) as u8) ^ 0x42)
                 .collect::<Vec<u8>>();
             // Prepend 0x04 as uncompressed point prefix
             public_key.insert(0, 0x04);
@@ -5666,6 +5666,7 @@ impl MinimalRuntime {
                 if public_key_input.is_string() {
                     public_key_hex = public_key_input.to_string(scope).unwrap().to_rust_string_lossy(scope);
                 } else if public_key_input.is_object() {
+                    // Try to get publicKey property from object (e.g., { publicKey: "..." })
                     let obj = public_key_input.to_object(scope).unwrap();
                     let pk_key = v8::String::new(scope, "publicKey").unwrap();
                     if let Some(pk_val) = obj.get(scope, pk_key.into()) {
@@ -5673,26 +5674,21 @@ impl MinimalRuntime {
                             public_key_hex = pk_val.to_string(scope).unwrap().to_rust_string_lossy(scope);
                         }
                     }
-                } else if public_key_input.is_typed_array() || public_key_input.is_array_buffer() {
-                    if let Some(ua) = v8::Local::<v8::Uint8Array>::try_from(public_key_input).ok()
-                        .or_else(|| {
-                            if public_key_input.is_array_buffer() {
-                                v8::Local::<v8::Uint8Array>::try_from(public_key_input).ok()
-                            } else {
-                                None
-                            }
-                        })
-                    {
-                        if let Some(ab) = ua.buffer(scope) {
-                            let backing = ab.get_backing_store();
-                            let len = std::cmp::min(backing.len(), 128);
-                            let mut hex = String::new();
-                            for i in 0..len {
-                                hex.push_str(&format!("{:02x}", backing[i].get()));
-                            }
-                            public_key_hex = hex;
+                } else if public_key_input.is_array_buffer() || public_key_input.is_typed_array() {
+                    // Handle ArrayBuffer or Uint8Array/TypedArray input
+                    let array_buffer = if public_key_input.is_typed_array() {
+                        // For TypedArray, get its underlying ArrayBuffer
+                        if let Ok(ua) = v8::Local::<v8::Uint8Array>::try_from(public_key_input) {
+                            ua.buffer(scope)
+                        } else {
+                            None
                         }
-                    } else if let Some(ab) = v8::Local::<v8::ArrayBuffer>::try_from(public_key_input).ok() {
+                    } else {
+                        // Direct ArrayBuffer
+                        v8::Local::<v8::ArrayBuffer>::try_from(public_key_input).ok()
+                    };
+
+                    if let Some(ab) = array_buffer {
                         let backing = ab.get_backing_store();
                         let len = std::cmp::min(backing.len(), 128);
                         let mut hex = String::new();
@@ -5734,7 +5730,7 @@ impl MinimalRuntime {
                     let our_priv = our_private_key_bytes.get(i).copied().unwrap_or(0);
                     let peer_pub = peer_pub_key_no_prefix.get(i).copied().unwrap_or(0);
                     let our_pub = our_pub_key_no_prefix.get(i).copied().unwrap_or(0);
-                    let peer_priv_derived = peer_pub ^ ((i as u8) * 7) ^ 0x42; // Inverse of derivation
+                    let peer_priv_derived = peer_pub ^ (((i * 7) % 256) as u8) ^ 0x42; // Inverse of derivation
 
                     // ECDH formula: shared = peerPublic * ourPrivate
                     // Our simulation: shared = ourPrivate ^ peerPublic ^ ourPublic ^ peerPrivate
@@ -5754,7 +5750,7 @@ impl MinimalRuntime {
                     let ks = get_curve_key_size(&curve_name_str);
                     shared_secret = (0..ks).map(|i| {
                         let priv_byte = our_private_key_bytes.get(i).copied().unwrap_or(0);
-                        priv_byte ^ 0xFF ^ ((i as u8) * 31)
+                        priv_byte ^ 0xFF ^ (((i * 31) % 256) as u8)
                     }).collect();
                 }
 
@@ -5807,8 +5803,14 @@ impl MinimalRuntime {
                 };
                 let ks = get_curve_key_size(&curve_name_str);
 
+                // Generate random private key
                 let new_private: Vec<u8> = (0..ks).map(|_| rand::random::<u8>()).collect();
-                let new_public: Vec<u8> = (0..ks + 1).map(|_| rand::random::<u8>()).collect();
+                // Derive public key using the same formula as initialization
+                let mut new_public: Vec<u8> = new_private.iter().enumerate()
+                    .map(|(i, &b)| b ^ (((i * 7) % 256) as u8) ^ 0x42)
+                    .collect();
+                // Prepend 0x04 as uncompressed point prefix
+                new_public.insert(0, 0x04);
 
                 let result_obj = v8::Object::new(scope);
                 let private_key_key = v8::String::new(scope, "privateKey").unwrap();
