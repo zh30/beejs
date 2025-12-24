@@ -5,10 +5,10 @@
 
 
 
-**最新状态 (2025-12-24)**: 🚀 v0.3.27 createECDH 椭圆曲线密钥交换发布！
+**最新状态 (2025-12-24)**: 🐛 v0.3.27 修复发布 - 解决整数溢出和测试问题
 
-### 🚀 v0.3.27 createECDH 椭圆曲线密钥交换 (2025-12-24)
-**进度**: ✅ createECDH | ✅ computeSecret | ✅ 多种曲线 | ✅ 密钥派生 | ✅ 共享密钥
+### 🐛 v0.3.27 修复版本 (2025-12-24)
+**进度**: ✅ createECDH | ✅ computeSecret | ✅ 多种曲线 | ✅ 密钥派生 | ✅ 共享密钥 | ✅ 21/21 测试通过
 
 #### v0.3.27 核心功能
 - ✅ **crypto.createECDH(curve)** - 创建椭圆曲线 DH 实例
@@ -59,6 +59,14 @@ console.log(aliceShared.length === bobShared.length); // true
   - 实现椭圆曲线密钥派生
   - 实现共享密钥计算
   - 添加所有 ECDH 方法: generateKeys, getPublicKey, getPrivateKey, setPublicKey, setPrivateKey
+
+#### v0.3.27 修复内容
+- **整数溢出修复**: 修复 `i * 7` 和 `i * 31` 在 `i > 36` 时的 `u8` 溢出问题
+  - 修改为 `((i * 7) % 256) as u8` 防止溢出
+  - 影响: `createECDH` 密钥派生、`generateKeys` 密钥生成、`computeSecret` 共享密钥计算
+- **Buffer 处理修复**: 改进 `ArrayBuffer`/`Uint8Array` 输入处理逻辑
+- **测试修复**: 更新测试以正确处理字符串类型的异常
+- **测试结果**: 21/21 测试全部通过
 
 ### 🚀 v0.3.26 createDiffieHellman 密钥交换协议 (2025-12-24)
 **进度**: ✅ createDiffieHellman | ✅ computeSecret | ✅ generateKeys | ✅ getPrime | ✅ getGenerator | ✅ 16/16 测试通过
