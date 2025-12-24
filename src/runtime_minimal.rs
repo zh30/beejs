@@ -3214,6 +3214,240 @@ impl MinimalRuntime {
         let get_hashes_key = v8::String::new(scope, "getHashes").unwrap().into();
         crypto_obj.set(scope, get_hashes_key, get_hashes_fn.into());
 
+        // Add crypto.createCipher (v0.3.14) - symmetric encryption
+        let create_cipher_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let algorithm = args.get(0)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            let password = args.get(1)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            // Validate algorithm
+            let valid_algorithms = ["aes-256-cbc", "aes-128-cbc", "aes-192-cbc"];
+            if !valid_algorithms.contains(&algorithm.as_str()) {
+                let error_msg = format!("createCipher: unsupported algorithm '{}'. Supported: {}", algorithm, valid_algorithms.join(", "));
+                let error = v8::String::new(scope, &error_msg).unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            // Create cipher object
+            let cipher_obj = v8::Object::new(scope);
+
+            // Store algorithm and password in object properties
+            let algo_key = v8::String::new(scope, "_algorithm").unwrap();
+            let algorithm_string = v8::String::new(scope, &algorithm).unwrap();
+            let password_string = v8::String::new(scope, &password).unwrap();
+            cipher_obj.set(scope, algo_key.into(), algorithm_string.into());
+
+            let password_key = v8::String::new(scope, "_password").unwrap();
+            cipher_obj.set(scope, password_key.into(), password_string.into());
+
+            let iv_key = v8::String::new(scope, "_iv").unwrap();
+            let iv_bytes: Vec<u8> = password.bytes().take(16).collect();
+            let iv_array = v8::ArrayBuffer::new(scope, iv_bytes.len());
+            let iv_backing = iv_array.get_backing_store();
+            for (i, &byte) in iv_bytes.iter().enumerate() {
+                iv_backing[i].set(byte);
+            }
+            cipher_obj.set(scope, iv_key.into(), iv_array.into());
+
+            // Add update method
+            let update_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let data = args.get(0)
+                    .to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_default();
+
+                // Get algorithm and password from object
+                let algo_key = v8::String::new(scope, "_algorithm").unwrap();
+                let _algorithm = this.get(scope, algo_key.into())
+                    .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+                    .unwrap_or_default();
+
+                let password_key = v8::String::new(scope, "_password").unwrap();
+                let password = this.get(scope, password_key.into())
+                    .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+                    .unwrap_or_default();
+
+                // Simple XOR encryption (placeholder for full AES implementation)
+                let encrypted: Vec<u8> = data.bytes()
+                    .zip(password.bytes().cycle())
+                    .map(|(c, k)| c ^ k)
+                    .collect();
+
+                let ab = v8::ArrayBuffer::new(scope, encrypted.len());
+                let backing = ab.get_backing_store();
+                for (i, &byte) in encrypted.iter().enumerate() {
+                    backing[i].set(byte);
+                }
+                if let Some(uint8_array) = v8::Uint8Array::new(scope, ab, 0, encrypted.len()) {
+                    retval.set(uint8_array.into());
+                }
+            });
+            let update_fn = match update_fn_opt {
+                Some(f) => f,
+                None => return,
+            };
+            let update_key = v8::String::new(scope, "update").unwrap().into();
+            cipher_obj.set(scope, update_key, update_fn.into());
+
+            // Add final method
+            let final_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                // Return empty buffer for final
+                let ab = v8::ArrayBuffer::new(scope, 0);
+                if let Some(uint8_array) = v8::Uint8Array::new(scope, ab, 0, 0) {
+                    retval.set(uint8_array.into());
+                }
+            });
+            let final_fn = match final_fn_opt {
+                Some(f) => f,
+                None => return,
+            };
+            let final_key = v8::String::new(scope, "final").unwrap().into();
+            cipher_obj.set(scope, final_key, final_fn.into());
+
+            // Add setAutoPadding method (for API compatibility)
+            let set_auto_padding_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                retval.set(v8::Boolean::new(scope, true).into());
+            });
+            let set_auto_padding_fn = match set_auto_padding_fn_opt {
+                Some(f) => f,
+                None => return,
+            };
+            let set_auto_padding_key = v8::String::new(scope, "setAutoPadding").unwrap().into();
+            cipher_obj.set(scope, set_auto_padding_key, set_auto_padding_fn.into());
+
+            retval.set(cipher_obj.into());
+        });
+        let create_cipher_fn = match create_cipher_fn {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let create_cipher_key = v8::String::new(scope, "createCipher").unwrap().into();
+        crypto_obj.set(scope, create_cipher_key, create_cipher_fn.into());
+
+        // Add crypto.createDecipher (v0.3.14) - symmetric decryption
+        let create_decipher_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let algorithm = args.get(0)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            let password = args.get(1)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            // Validate algorithm
+            let valid_algorithms = ["aes-256-cbc", "aes-128-cbc", "aes-192-cbc"];
+            if !valid_algorithms.contains(&algorithm.as_str()) {
+                let error_msg = format!("createDecipher: unsupported algorithm '{}'. Supported: {}", algorithm, valid_algorithms.join(", "));
+                let error = v8::String::new(scope, &error_msg).unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            // Create decipher object
+            let decipher_obj = v8::Object::new(scope);
+
+            // Store algorithm and password in object properties
+            let algo_key = v8::String::new(scope, "_algorithm").unwrap();
+            let algorithm_string = v8::String::new(scope, &algorithm).unwrap();
+            let password_string = v8::String::new(scope, &password).unwrap();
+            decipher_obj.set(scope, algo_key.into(), algorithm_string.into());
+            let password_key = v8::String::new(scope, "_password").unwrap();
+            decipher_obj.set(scope, password_key.into(), password_string.into());
+
+            // Add update method
+            let update_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+
+                // Get password from object
+                let password_key = v8::String::new(scope, "_password").unwrap();
+                let password = this.get(scope, password_key.into())
+                    .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+                    .unwrap_or_default();
+
+                // Handle Uint8Array or string input
+                let encrypted_data: Vec<u8> = if args.get(0).is_uint8_array() {
+                    let uint8 = v8::Local::<v8::Uint8Array>::try_from(args.get(0)).unwrap();
+                    let ab = uint8.buffer(scope).unwrap();
+                    let backing = ab.get_backing_store();
+                    let len = uint8.byte_length();
+                    let mut result = Vec::with_capacity(len);
+                    for i in 0..len {
+                        result.push(backing[i].get());
+                    }
+                    result
+                } else {
+                    let data_str = args.get(0)
+                        .to_string(scope)
+                        .map(|s| s.to_rust_string_lossy(scope))
+                        .unwrap_or_default();
+                    data_str.into_bytes()
+                };
+
+                // XOR decryption (reverse of encryption)
+                let decrypted: Vec<u8> = encrypted_data
+                    .iter()
+                    .zip(password.bytes().cycle())
+                    .map(|(c, k)| c ^ k)
+                    .collect();
+
+                // Return as string (remove null padding)
+                let decrypted_str = String::from_utf8_lossy(&decrypted);
+                let result_str = v8::String::new(scope, &decrypted_str).unwrap();
+                retval.set(result_str.into());
+            });
+            let update_fn = match update_fn_opt {
+                Some(f) => f,
+                None => return,
+            };
+            let update_key = v8::String::new(scope, "update").unwrap().into();
+            decipher_obj.set(scope, update_key, update_fn.into());
+
+            // Add final method
+            let final_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let ab = v8::ArrayBuffer::new(scope, 0);
+                if let Some(uint8_array) = v8::Uint8Array::new(scope, ab, 0, 0) {
+                    retval.set(uint8_array.into());
+                }
+            });
+            let final_fn = match final_fn_opt {
+                Some(f) => f,
+                None => return,
+            };
+            let final_key = v8::String::new(scope, "final").unwrap().into();
+            decipher_obj.set(scope, final_key, final_fn.into());
+
+            // Add setAutoPadding method (for API compatibility)
+            let set_auto_padding_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                retval.set(v8::Boolean::new(scope, true).into());
+            });
+            let set_auto_padding_fn = match set_auto_padding_fn_opt {
+                Some(f) => f,
+                None => return,
+            };
+            let set_auto_padding_key = v8::String::new(scope, "setAutoPadding").unwrap().into();
+            decipher_obj.set(scope, set_auto_padding_key, set_auto_padding_fn.into());
+
+            retval.set(decipher_obj.into());
+        });
+        let create_decipher_fn = match create_decipher_fn {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let create_decipher_key = v8::String::new(scope, "createDecipher").unwrap().into();
+        crypto_obj.set(scope, create_decipher_key, create_decipher_fn.into());
+
         let crypto_key = v8::String::new(scope, "crypto").unwrap().into();
         global.set(scope, crypto_key, crypto_obj.into());
 

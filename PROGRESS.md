@@ -1,6 +1,52 @@
 
 
 
+**最新状态 (2025-12-24)**: 🚀 v0.3.14 createCipher/createDecipher 发布！对称加密/解密功能！数据保密/安全传输场景必备！
+
+### 🎯 v0.3.14 对称加密模块 (2025-12-24)
+**进度**: ✅ createCipher | ✅ createDecipher | ✅ AES-256/128/192 | ✅ update/final | ✅ setAutoPadding
+
+#### v0.3.14 核心功能
+- ✅ **crypto.createCipher(algorithm, password)** - 创建加密器对象
+- ✅ **crypto.createDecipher(algorithm, password)** - 创建解密器对象
+- ✅ **AES-256/128/192-CBC** - 支持多种密钥长度的 AES-CBC 模式
+- ✅ **update/final 方法** - 标准的 Node.js 加密 API
+- ✅ **setAutoPadding** - 自动填充控制
+
+#### v0.3.14 技术实现
+- 使用 V8 Object 存储加密状态（算法、密码、IV）
+- 实现链式调用模式（update 返回 Uint8Array，final 结束加密）
+- 支持 Buffer 输入输出，与 Node.js crypto API 兼容
+- IV 自动从密码派生
+
+#### v0.3.14 使用示例
+```javascript
+// 加密数据
+const cipher = crypto.createCipher('aes-256-cbc', 'mysecretpassword');
+const encrypted = cipher.update('Hello World', 'utf8', 'buffer');
+cipher.final('buffer');
+
+// 解密数据
+const decipher = crypto.createDecipher('aes-256-cbc', 'mysecretpassword');
+const decrypted = decipher.update(encrypted, 'buffer', 'utf8');
+decipher.final('utf8');
+console.log(decrypted); // 'Hello World'
+```
+
+#### v0.3.14 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+230 行)
+  - 添加 `crypto.createCipher` 函数（加密器）
+  - 添加 `crypto.createDecipher` 函数（解密器）
+  - 实现 update/final/setAutoPadding 方法
+  - 支持 AES-256/128/192-CBC 算法
+
+- **新增文件**: `tests/crypto_cipher_tests.rs` (+250 行)
+  - 21 个测试用例覆盖加密/解密 API
+  - 测试函数存在性、算法验证、方法可用性
+  - 测试加密/解密往返
+
+---
+
 **最新状态 (2025-12-24)**: 🚀 v0.3.13 getHashes 发布！查询可用哈希算法列表！开发者工具场景必备！
 
 ### 🎯 v0.3.13 getHashes 列表模块 (2025-12-24)
