@@ -2826,6 +2826,170 @@ impl MinimalRuntime {
                         let sep_val = v8::String::new(scope, "/").unwrap().into();
                         result_obj.set(scope, sep_key, sep_val);
                     }
+                    "fs" => {
+                        // Return fs module with file system methods (v0.3.5)
+                        let fs_obj = v8::Object::new(scope);
+
+                        // Add readFile function
+                        let readfile_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            if args.length() >= 1 {
+                                if let Some(path_val) = args.get(0).to_string(scope) {
+                                    let path = path_val.to_rust_string_lossy(scope);
+                                    match std::fs::read_to_string(&path) {
+                                        Ok(contents) => {
+                                            let contents_val = v8::String::new(scope, &contents).unwrap();
+                                            retval.set(contents_val.into());
+                                        }
+                                        Err(e) => {
+                                            let error_msg = format!("Error reading file: {}", e);
+                                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                                            retval.set(error_val.into());
+                                        }
+                                    }
+                                }
+                            }
+                        }).unwrap();
+                        let readfile_key = v8::String::new(scope, "readFileSync").unwrap().into();
+                        fs_obj.set(scope, readfile_key, readfile_fn.into());
+
+                        // Add writeFile function
+                        let writefile_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            if args.length() >= 2 {
+                                if let (Some(path_val), Some(data_val)) = (args.get(0).to_string(scope), args.get(1).to_string(scope)) {
+                                    let path = path_val.to_rust_string_lossy(scope);
+                                    let data = data_val.to_rust_string_lossy(scope);
+                                    match std::fs::write(&path, data) {
+                                        Ok(_) => {
+                                            let success_val = v8::undefined(scope).into();
+                                            retval.set(success_val);
+                                        }
+                                        Err(e) => {
+                                            let error_msg = format!("Error writing file: {}", e);
+                                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                                            retval.set(error_val.into());
+                                        }
+                                    }
+                                }
+                            }
+                        }).unwrap();
+                        let writefile_key = v8::String::new(scope, "writeFileSync").unwrap().into();
+                        fs_obj.set(scope, writefile_key, writefile_fn.into());
+
+                        // Add existsSync function
+                        let exists_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            if args.length() >= 1 {
+                                if let Some(path_val) = args.get(0).to_string(scope) {
+                                    let path = path_val.to_rust_string_lossy(scope);
+                                    let exists = std::path::Path::new(&path).exists();
+                                    let exists_val = v8::Boolean::new(scope, exists);
+                                    retval.set(exists_val.into());
+                                }
+                            }
+                        }).unwrap();
+                        let exists_key = v8::String::new(scope, "existsSync").unwrap().into();
+                        fs_obj.set(scope, exists_key, exists_fn.into());
+
+                        // Add mkdirSync function
+                        let mkdir_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            if args.length() >= 1 {
+                                if let Some(path_val) = args.get(0).to_string(scope) {
+                                    let path = path_val.to_rust_string_lossy(scope);
+                                    match std::fs::create_dir_all(&path) {
+                                        Ok(_) => {
+                                            retval.set(v8::undefined(scope).into());
+                                        }
+                                        Err(e) => {
+                                            let error_msg = format!("Error creating directory: {}", e);
+                                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                                            retval.set(error_val.into());
+                                        }
+                                    }
+                                }
+                            }
+                        }).unwrap();
+                        let mkdir_key = v8::String::new(scope, "mkdirSync").unwrap().into();
+                        fs_obj.set(scope, mkdir_key, mkdir_fn.into());
+
+                        // Add readdirSync function
+                        let readdir_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            if args.length() >= 1 {
+                                if let Some(path_val) = args.get(0).to_string(scope) {
+                                    let path = path_val.to_rust_string_lossy(scope);
+                                    match std::fs::read_dir(&path) {
+                                        Ok(entries) => {
+                                            let mut file_names = Vec::new();
+                                            for entry in entries {
+                                                if let Ok(entry) = entry {
+                                                    if let Ok(file_name) = entry.file_name().into_string() {
+                                                        file_names.push(file_name);
+                                                    }
+                                                }
+                                            }
+                                            let js_array = v8::Array::new(scope, file_names.len() as i32);
+                                            for (i, name) in file_names.iter().enumerate() {
+                                                let name_val = v8::String::new(scope, name).unwrap();
+                                                js_array.set_index(scope, i as u32, name_val.into());
+                                            }
+                                            retval.set(js_array.into());
+                                        }
+                                        Err(e) => {
+                                            let error_msg = format!("Error reading directory: {}", e);
+                                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                                            retval.set(error_val.into());
+                                        }
+                                    }
+                                }
+                            }
+                        }).unwrap();
+                        let readdir_key = v8::String::new(scope, "readdirSync").unwrap().into();
+                        fs_obj.set(scope, readdir_key, readdir_fn.into());
+
+                        // Add unlinkSync function
+                        let unlink_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            if args.length() >= 1 {
+                                if let Some(path_val) = args.get(0).to_string(scope) {
+                                    let path = path_val.to_rust_string_lossy(scope);
+                                    match std::fs::remove_file(&path) {
+                                        Ok(_) => {
+                                            retval.set(v8::undefined(scope).into());
+                                        }
+                                        Err(e) => {
+                                            let error_msg = format!("Error deleting file: {}", e);
+                                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                                            retval.set(error_val.into());
+                                        }
+                                    }
+                                }
+                            }
+                        }).unwrap();
+                        let unlink_key = v8::String::new(scope, "unlinkSync").unwrap().into();
+                        fs_obj.set(scope, unlink_key, unlink_fn.into());
+
+                        // Add rmdirSync function
+                        let rmdir_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            if args.length() >= 1 {
+                                if let Some(path_val) = args.get(0).to_string(scope) {
+                                    let path = path_val.to_rust_string_lossy(scope);
+                                    match std::fs::remove_dir(&path) {
+                                        Ok(_) => {
+                                            retval.set(v8::undefined(scope).into());
+                                        }
+                                        Err(e) => {
+                                            let error_msg = format!("Error removing directory: {}", e);
+                                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                                            retval.set(error_val.into());
+                                        }
+                                    }
+                                }
+                            }
+                        }).unwrap();
+                        let rmdir_key = v8::String::new(scope, "rmdirSync").unwrap().into();
+                        fs_obj.set(scope, rmdir_key, rmdir_fn.into());
+
+                        // For fs module, directly return fs_obj as the module exports
+                        retval.set(fs_obj.into());
+                        return;
+                    }
                     _ => {
                         // Throw error for unknown modules
                         let error_msg = format!("Cannot find module '{}'", module_id_str);
