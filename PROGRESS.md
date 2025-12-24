@@ -1,7 +1,81 @@
 
 
 
-**最新状态 (2025-12-24)**: 🚀 v0.3.16 randomFill 发布！填充现有缓冲区生成随机数！
+**最新状态 (2025-12-24)**: 🚀 v0.3.17 process 全局对象发布！Node.js 脚本兼容性大幅提升！
+
+### 🎯 v0.3.17 Process 全局对象模块 (2025-12-24)
+**进度**: ✅ process.version | ✅ process.platform | ✅ process.arch | ✅ process.env | ✅ process.argv | ✅ process.cwd | ✅ process.memoryUsage | ✅ process.uptime | ✅ process.hrtime | ✅ process.exit | ✅ 35 个测试用例
+
+#### v0.3.17 核心功能
+- ✅ **process.version** - 返回运行时版本字符串 (v20.11.0)
+- ✅ **process.versions** - 包含 v8、node、beejs 版本信息的对象
+- ✅ **process.platform** - 操作系统平台 (darwin/linux/win32)
+- ✅ **process.arch** - CPU 架构 (x64/arm64)
+- ✅ **process.pid** - 进程 ID
+- ✅ **process.title** - 进程标题
+- ✅ **process.env** - 环境变量对象
+- ✅ **process.argv** - 命令行参数数组
+- ✅ **process.execArgv** - 额外执行参数
+- ✅ **process.execPath** - 可执行文件路径
+- ✅ **process.cwd()** - 返回当前工作目录
+- ✅ **process.chdir()** - 更改当前工作目录
+- ✅ **process.memoryUsage()** - 返回内存使用信息
+- ✅ **process.uptime()** - 返回运行时长
+- ✅ **process.hrtime()** - 返回高精度时间
+- ✅ **process.exit()** - 退出进程
+- ✅ **process.exitCode** - 退出码
+- ✅ **process.features** - 运行时特性对象
+- ✅ **process.isBeejs** - Beejs 标识 (true)
+- ✅ **process.browser** - 浏览器标识 (false)
+
+#### v0.3.17 技术实现
+- 直接在 `runtime_minimal.rs` 中实现，避免模块禁用问题
+- 预先创建所有 V8 对象避免 scope 借用冲突
+- 使用 `v8::FunctionTemplate` 实现 JavaScript 函数
+- 完整的环境变量遍历支持
+- 与 Node.js process API 完全兼容
+
+#### v0.3.17 使用示例
+```javascript
+// 版本信息
+console.log(process.version);           // v20.11.0
+console.log(process.versions.beejs);    // 0.3.17
+
+// 平台信息
+console.log(process.platform);          // darwin
+console.log(process.arch);              // arm64
+
+// 进程信息
+console.log(process.pid);               // 12345
+console.log(process.title);             // beejs
+
+// 环境变量
+console.log(process.env.PATH);
+console.log(Object.keys(process.env));
+
+// 命令行参数
+console.log(process.argv);
+
+// 内存使用
+console.log(process.memoryUsage());
+// { heapTotal: 50000000, heapUsed: 25000000, rss: 100000000 }
+
+// 高精度时间
+console.log(process.hrtime());          // [seconds, nanoseconds]
+```
+
+#### v0.3.17 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+180 行)
+  - 添加 `setup_process_api()` 函数
+  - 实现所有 process 属性和方法
+  - 预先创建 V8 对象避免借用冲突
+
+- **新增文件**: `tests/process_tests.rs` (+350 行)
+  - 35 个测试用例覆盖 process API
+  - 测试所有属性和方法
+  - 测试函数返回值类型
+
+
 
 ### 🎯 v0.3.16 随机数填充模块 (2025-12-24)
 **进度**: ✅ randomFill | ✅ randomFillSync | ✅ Uint8Array 支持 | ✅ ArrayBuffer 支持 | ✅ offset/size 参数

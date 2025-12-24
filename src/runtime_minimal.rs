@@ -160,6 +160,9 @@ impl MinimalRuntime {
         // Set up Web APIs
         Self::setup_web_apis(scope, &context)?;
 
+        // Set up process global object (v0.3.17)
+        Self::setup_process_api(scope, &context)?;
+
         // Set up CommonJS module system (v0.3.x)
         Self::setup_module_system(scope, &context)?;
 
@@ -5940,6 +5943,190 @@ impl MinimalRuntime {
         let filename_val = v8::String::new(scope, "/workspace/script.js").unwrap().into();
         let filename_key = v8::String::new(scope, "__filename").unwrap().into();
         global.set(scope, filename_key, filename_val);
+
+        Ok(())
+    }
+
+    /// Set up the process global object (v0.3.17)
+    /// Provides process.version, process.platform, process.env, process.argv, etc.
+    fn setup_process_api(
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        context: &v8::Local<v8::Context>,
+    ) -> Result<()> {
+        use std::env;
+
+        let global = context.global(scope);
+
+        // Pre-create all V8 values to avoid scope borrowing issues
+        let version_key = v8::String::new(scope, "version").unwrap();
+        let version_value = v8::String::new(scope, "v20.11.0").unwrap();
+        let versions_key = v8::String::new(scope, "versions").unwrap();
+        let v8_key = v8::String::new(scope, "v8").unwrap();
+        let v8_value = v8::String::new(scope, "12.0.267.1").unwrap();
+        let node_key = v8::String::new(scope, "node").unwrap();
+        let node_value = v8::String::new(scope, "20.11.0").unwrap();
+        let beejs_key = v8::String::new(scope, "beejs").unwrap();
+        let beejs_value = v8::String::new(scope, "0.3.17").unwrap();
+        let platform_key = v8::String::new(scope, "platform").unwrap();
+        let platform_value = v8::String::new(scope, if cfg!(target_os = "macos") { "darwin" } else if cfg!(target_os = "linux") { "linux" } else if cfg!(target_os = "windows") { "win32" } else { "unknown" }).unwrap();
+        let arch_key = v8::String::new(scope, "arch").unwrap();
+        let arch_value = v8::String::new(scope, if cfg!(target_arch = "x86_64") { "x64" } else if cfg!(target_arch = "aarch64") { "arm64" } else { "unknown" }).unwrap();
+        let pid_key = v8::String::new(scope, "pid").unwrap();
+        let pid_value = v8::Integer::new(scope, std::process::id() as i32);
+        let title_key = v8::String::new(scope, "title").unwrap();
+        let title_value = v8::String::new(scope, "beejs").unwrap();
+        let env_key = v8::String::new(scope, "env").unwrap();
+        let argv_key = v8::String::new(scope, "argv").unwrap();
+        let exec_argv_key = v8::String::new(scope, "execArgv").unwrap();
+        let exec_path_key = v8::String::new(scope, "execPath").unwrap();
+        let cwd_key = v8::String::new(scope, "cwd").unwrap();
+        let chdir_key = v8::String::new(scope, "chdir").unwrap();
+        let memory_usage_key = v8::String::new(scope, "memoryUsage").unwrap();
+        let uptime_key = v8::String::new(scope, "uptime").unwrap();
+        let hrtime_key = v8::String::new(scope, "hrtime").unwrap();
+        let exit_key = v8::String::new(scope, "exit").unwrap();
+        let exit_code_key = v8::String::new(scope, "exitCode").unwrap();
+        let exit_code_value = v8::Integer::new(scope, 0);
+        let features_key = v8::String::new(scope, "features").unwrap();
+        let debug_key = v8::String::new(scope, "debug").unwrap();
+        let debug_value = v8::Boolean::new(scope, cfg!(debug_assertions));
+        let ipc_key = v8::String::new(scope, "ipc").unwrap();
+        let ipc_value = v8::Boolean::new(scope, true);
+        let is_beejs_key = v8::String::new(scope, "isBeejs").unwrap();
+        let is_beejs_value = v8::Boolean::new(scope, true);
+        let browser_key = v8::String::new(scope, "browser").unwrap();
+        let browser_value = v8::Boolean::new(scope, false);
+        let process_key = v8::String::new(scope, "process").unwrap();
+
+        // Pre-create string values for array
+        let argv0_val = v8::String::new(scope, "beejs").unwrap();
+        let argv1_val = v8::String::new(scope, "<program>").unwrap();
+        let exec_path_val = v8::String::new(scope, &env::current_exe().unwrap_or_default().to_string_lossy()).unwrap();
+
+        // Pre-create function templates
+        let cwd_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let cwd = env::current_dir().unwrap_or_default();
+            let cwd_str = v8::String::new(scope, cwd.to_string_lossy().as_ref()).unwrap();
+            retval.set(cwd_str.into());
+        });
+        let chdir_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let directory = args.get(0)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+            match env::set_current_dir(&directory) {
+                Ok(()) => {
+                    let undefined = v8::undefined(scope);
+                    retval.set(undefined.into());
+                }
+                Err(e) => {
+                    let error_msg = format!("chdir() failed: {}", e);
+                    let error = v8::String::new(scope, &error_msg).unwrap();
+                    let error_obj = v8::Exception::error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                }
+            }
+        });
+        let memory_usage_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let result_obj = v8::Object::new(scope);
+            let heap_total = v8::String::new(scope, "heapTotal").unwrap();
+            let heap_total_val = v8::Number::new(scope, 50_000_000.0);
+            result_obj.set(scope, heap_total.into(), heap_total_val.into());
+            let heap_used = v8::String::new(scope, "heapUsed").unwrap();
+            let heap_used_val = v8::Number::new(scope, 25_000_000.0);
+            result_obj.set(scope, heap_used.into(), heap_used_val.into());
+            let rss = v8::String::new(scope, "rss").unwrap();
+            let rss_val = v8::Number::new(scope, 100_000_000.0);
+            result_obj.set(scope, rss.into(), rss_val.into());
+            retval.set(result_obj.into());
+        });
+        let uptime_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let uptime = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs() as f64;
+            retval.set(v8::Number::new(_scope, uptime).into());
+        });
+        let hrtime_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let result_array = v8::Array::new(scope, 2);
+            let sec_val = v8::Integer::new(scope, (now / 1_000_000_000) as i32);
+            let nsec_val = v8::Integer::new(scope, (now % 1_000_000_000) as i32);
+            result_array.set_index(scope, 0, sec_val.into());
+            result_array.set_index(scope, 1, nsec_val.into());
+            retval.set(result_array.into());
+        });
+        let exit_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+            let code = args.get(0)
+                .to_integer(_scope)
+                .map(|i| i.value() as i32)
+                .unwrap_or(0);
+            std::process::exit(code);
+        });
+
+        // Get function instances
+        let cwd_func = cwd_fn.get_function(scope).unwrap();
+        let chdir_func = chdir_fn.get_function(scope).unwrap();
+        let memory_usage_func = memory_usage_fn.get_function(scope).unwrap();
+        let uptime_func = uptime_fn.get_function(scope).unwrap();
+        let hrtime_func = hrtime_fn.get_function(scope).unwrap();
+        let exit_func = exit_fn.get_function(scope).unwrap();
+
+        // Create process.env object
+        let env_obj = v8::Object::new(scope);
+        for (key, value) in env::vars() {
+            let k = v8::String::new(scope, &key).unwrap();
+            let v = v8::String::new(scope, &value).unwrap();
+            env_obj.set(scope, k.into(), v.into());
+        }
+
+        // Create argv array
+        let argv_array = v8::Array::new(scope, 2);
+        argv_array.set_index(scope, 0, argv0_val.into());
+        argv_array.set_index(scope, 1, argv1_val.into());
+
+        // Create execArgv array
+        let exec_argv_array = v8::Array::new(scope, 0);
+
+        // Create versions object
+        let versions_obj = v8::Object::new(scope);
+        versions_obj.set(scope, v8_key.into(), v8_value.into());
+        versions_obj.set(scope, node_key.into(), node_value.into());
+        versions_obj.set(scope, beejs_key.into(), beejs_value.into());
+
+        // Create features object
+        let features_obj = v8::Object::new(scope);
+        features_obj.set(scope, debug_key.into(), debug_value.into());
+        features_obj.set(scope, ipc_key.into(), ipc_value.into());
+
+        // Create process object and set all properties
+        let process_obj = v8::Object::new(scope);
+        process_obj.set(scope, version_key.into(), version_value.into());
+        process_obj.set(scope, versions_key.into(), versions_obj.into());
+        process_obj.set(scope, platform_key.into(), platform_value.into());
+        process_obj.set(scope, arch_key.into(), arch_value.into());
+        process_obj.set(scope, pid_key.into(), pid_value.into());
+        process_obj.set(scope, title_key.into(), title_value.into());
+        process_obj.set(scope, env_key.into(), env_obj.into());
+        process_obj.set(scope, argv_key.into(), argv_array.into());
+        process_obj.set(scope, exec_argv_key.into(), exec_argv_array.into());
+        process_obj.set(scope, exec_path_key.into(), exec_path_val.into());
+        process_obj.set(scope, cwd_key.into(), cwd_func.into());
+        process_obj.set(scope, chdir_key.into(), chdir_func.into());
+        process_obj.set(scope, memory_usage_key.into(), memory_usage_func.into());
+        process_obj.set(scope, uptime_key.into(), uptime_func.into());
+        process_obj.set(scope, hrtime_key.into(), hrtime_func.into());
+        process_obj.set(scope, exit_key.into(), exit_func.into());
+        process_obj.set(scope, exit_code_key.into(), exit_code_value.into());
+        process_obj.set(scope, features_key.into(), features_obj.into());
+        process_obj.set(scope, is_beejs_key.into(), is_beejs_value.into());
+        process_obj.set(scope, browser_key.into(), browser_value.into());
+
+        // Set process as global
+        global.set(scope, process_key.into(), process_obj.into());
 
         Ok(())
     }
