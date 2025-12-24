@@ -1,7 +1,55 @@
 
 
 
-**最新状态 (2025-12-24)**: 🚀 v0.3.11 timingSafeEqual 发布！时间安全比较函数防止时序攻击！密码/令牌验证场景必备！
+**最新状态 (2025-12-24)**: 🚀 v0.3.12 PBKDF2 密钥派生发布！密码学安全密钥派生函数！加密存储/密钥生成场景必备！
+
+### 🎯 v0.3.12 PBKDF2 密钥派生模块 (2025-12-24)
+**进度**: ✅ pbkdf2Sync | ✅ pbkdf2 | ✅ 多种摘要算法 | ✅ 任意迭代次数
+
+#### v0.3.12 核心功能
+- ✅ **crypto.pbkdf2Sync(password, salt, iterations, keylen, digest)** - 同步 PBKDF2 密钥派生
+- ✅ **crypto.pbkdf2(password, salt, iterations, keylen, digest, callback)** - 异步 PBKDF2 密钥派生
+- ✅ **多种摘要算法** - 支持 sha256/sha512/sha1/md5
+- ✅ **任意输出长度** - 支持任意 keylen 返回指定长度密钥
+
+#### v0.3.12 技术实现
+- 使用 `rust-crypto` crate 的 PBKDF2 实现
+- 标准 RFC 2898 PBKDF2 算法
+- 支持 SHA-256、SHA-512、SHA-1、MD5 等摘要算法
+- 异步回调基于 V8 PromiseResolver 实现
+
+#### v0.3.12 使用示例
+```javascript
+// 同步派生
+const key = crypto.pbkdf2Sync('password', 'salt', 100000, 64, 'sha256');
+console.log(key.toString('hex')); // 128 hex chars
+
+// 异步派生
+crypto.pbkdf2('password', 'salt', 100000, 32, 'sha256', (err, key) => {
+    console.log(key.toString('hex'));
+});
+
+// 密码存储场景
+const salt = crypto.randomBytes(16);
+const storedKey = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512');
+```
+
+#### v0.3.12 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+180 行)
+  - 添加 `crypto.pbkdf2Sync` 函数（同步）
+  - 添加 `crypto.pbkdf2` 函数（异步回调）
+  - 使用 rust-crypto PBKDF2 实现
+  - 统一参数处理和错误处理
+
+- **新增文件**: `tests/crypto_pbkdf2_tests.rs` (+350 行)
+  - 20+ 测试用例覆盖所有 PBKDF2 API
+  - 测试各种摘要算法
+  - 测试迭代次数和 keylen 参数
+  - 测试异步回调行为
+
+---
+
+**最新状态 (2025-12-24)**: 🚀 v0.3.11 timingSafeEqual 发布！时间安全比较函数防止时序攻击！
 
 ### 🎯 v0.3.11 Timing-Safe 比较模块 (2025-12-24)
 **进度**: ✅ timingSafeEqual | ✅ TypedArray 支持 | ✅ ArrayBuffer 支持 | ✅ 空缓冲区处理
