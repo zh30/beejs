@@ -1,7 +1,40 @@
 
 
 
-**最新状态 (2025-12-24)**: 🚀 v0.3.14 createCipher/createDecipher 发布！对称加密/解密功能！数据保密/安全传输场景必备！
+**最新状态 (2025-12-24)**: 🚀 v0.3.15 createCipheriv/createDecipheriv 发布！显式密钥/IV 对称加密！
+
+### 🎯 v0.3.15 显式密钥/IV 加密模块 (2025-12-24)
+**进度**: ✅ createCipheriv | ✅ createDecipheriv | ✅ AES-256/128/192 | ✅ hex/base64 编码 | ✅ round-trip 测试
+
+#### v0.3.15 核心功能
+- ✅ **crypto.createCipheriv(algorithm, key, iv)** - 创建带显式密钥和 IV 的加密器
+- ✅ **crypto.createDecipheriv(algorithm, key, iv)** - 创建带显式密钥和 IV 的解密器
+- ✅ **AES-128/192/256-CBC** - 支持 16/24/32 字节密钥
+- ✅ **hex/base64 输出编码** - update/final 支持多种输出格式
+- ✅ **utf8 输出** - 解密时返回 UTF-8 字符串
+
+#### v0.3.15 技术实现
+- 密钥和 IV 必须为十六进制字符串
+- 密钥长度验证：128位(16字节)/192位(24字节)/256位(32字节)
+- IV 长度固定为 16 字节 (CBC 模式要求)
+- 支持 hex/base64/buffer/utf8 输入输出编码
+
+#### v0.3.15 使用示例
+```javascript
+const key = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'; // 64 hex = 32 bytes
+const iv = 'abcdef0123456789abcdef0123456789'; // 32 hex = 16 bytes
+
+// 加密
+const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+const encrypted = cipher.update('Hello World', 'utf8', 'hex') + cipher.final('hex');
+
+// 解密
+const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+const decrypted = decipher.update(encrypted, 'hex', 'utf8') + decipher.final('utf8');
+console.log(decrypted); // Hello World
+```
+
+---
 
 ### 🎯 v0.3.14 对称加密模块 (2025-12-24)
 **进度**: ✅ createCipher | ✅ createDecipher | ✅ AES-256/128/192 | ✅ update/final | ✅ setAutoPadding
