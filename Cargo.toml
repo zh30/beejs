@@ -84,6 +84,7 @@ wat = "1.0"
 
 # Stage 27.1: Embedded builtins dependencies
 md5 = "0.8"
+sha1 = "0.10"
 
 # Stage 27.3/28: Additional dependencies
 async-trait = "0.1"

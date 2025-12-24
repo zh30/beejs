@@ -259,11 +259,11 @@ impl MinimalRuntime {
         let global = context.global(scope);
 
         // Create a hex encoding function
-        let to_hex_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let _to_hex_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let this = args.this();
 
             // Get the underlying ArrayBuffer
-            let (bytes, byte_length) = if this.is_typed_array() {
+            let (bytes, _byte_length) = if this.is_typed_array() {
                 let ta = match v8::Local::<v8::TypedArray>::try_from(this) {
                     Ok(ta) => ta,
                     Err(_) => {
@@ -306,11 +306,11 @@ impl MinimalRuntime {
         });
 
         // Create a base64 encoding function
-        let to_base64_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let _to_base64_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let this = args.this();
 
             // Get the underlying ArrayBuffer
-            let (bytes, byte_length) = if this.is_typed_array() {
+            let (bytes, _byte_length) = if this.is_typed_array() {
                 let ta = match v8::Local::<v8::TypedArray>::try_from(this) {
                     Ok(ta) => ta,
                     Err(_) => {
@@ -2268,14 +2268,6 @@ impl MinimalRuntime {
                 // Compute HMAC using the key
                 let digest_result: String = match algorithm.as_str() {
                     "md5" => {
-                        use md5::Context;
-                        // Simple HMAC-MD5 implementation
-                        let mut inner = Context::new();
-                        inner.consume(key.as_bytes());
-                        inner.consume(combined_data.as_bytes());
-                        let inner_digest = inner.compute();
-
-                        let mut outer = Context::new();
                         // Pad key for block size (64 bytes)
                         let ipad = 0x36u8;
                         let opad = 0x5cu8;
@@ -2711,6 +2703,495 @@ impl MinimalRuntime {
         };
         let timing_safe_equal_key = v8::String::new(scope, "timingSafeEqual").unwrap().into();
         crypto_obj.set(scope, timing_safe_equal_key, timing_safe_equal_fn.into());
+
+        // Add crypto.pbkdf2Sync (v0.3.12)
+        let pbkdf2_sync_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let password = args.get(0)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+            let salt = args.get(1)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+            let iterations: usize = args.get(2)
+                .to_integer(scope)
+                .map(|n| n.value() as usize)
+                .unwrap_or(10000);
+            let keylen: usize = args.get(3)
+                .to_integer(scope)
+                .map(|n| n.value() as usize)
+                .unwrap_or(64);
+            let digest = args.get(4)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_else(|| "sha256".to_string());
+
+            // Manual PBKDF2 implementation
+            use ring::digest;
+            use sha1::Digest;
+
+            // Helper function to compute HMAC
+            fn compute_hmac_ring(data: &[u8], key: &[u8], algorithm: &str) -> Vec<u8> {
+                let block_size = 64;
+                let ipad = 0x36u8;
+                let opad = 0x5cu8;
+
+                // Prepare key
+                let mut padded_key = key.to_vec();
+                if padded_key.len() > block_size {
+                    let hash = match algorithm {
+                        "sha256" => digest::digest(&digest::SHA256, &padded_key).as_ref().to_vec(),
+                        "sha512" => digest::digest(&digest::SHA512, &padded_key).as_ref().to_vec(),
+                        "sha1" => {
+                            let mut hasher = sha1::Sha1::default();
+                            hasher.update(&padded_key);
+                            hasher.finalize().to_vec()
+                        }
+                        "md5" => md5::compute(&padded_key).0.to_vec(),
+                        _ => md5::compute(&padded_key).0.to_vec(),
+                    };
+                    padded_key = hash;
+                }
+                padded_key.resize(block_size, 0);
+
+                // Inner hash
+                let mut inner_input = Vec::with_capacity(block_size + data.len());
+                inner_input.extend(padded_key.iter().map(|b| b ^ ipad));
+                inner_input.extend(data);
+                let inner_hash = match algorithm {
+                    "sha256" => digest::digest(&digest::SHA256, &inner_input).as_ref().to_vec(),
+                    "sha512" => digest::digest(&digest::SHA512, &inner_input).as_ref().to_vec(),
+                    "sha1" => {
+                        let mut hasher = sha1::Sha1::default();
+                        hasher.update(&inner_input);
+                        hasher.finalize().to_vec()
+                    }
+                    "md5" => md5::compute(&inner_input).0.to_vec(),
+                    _ => md5::compute(&inner_input).0.to_vec(),
+                };
+
+                // Outer hash
+                let mut outer_input = Vec::with_capacity(block_size + inner_hash.len());
+                outer_input.extend(padded_key.iter().map(|b| b ^ opad));
+                outer_input.extend(&inner_hash);
+
+                match algorithm {
+                    "sha256" => digest::digest(&digest::SHA256, &outer_input).as_ref().to_vec(),
+                    "sha512" => digest::digest(&digest::SHA512, &outer_input).as_ref().to_vec(),
+                    "sha1" => {
+                        let mut hasher = sha1::Sha1::default();
+                        hasher.update(&outer_input);
+                        hasher.finalize().to_vec()
+                    }
+                    "md5" => md5::compute(&outer_input).0.to_vec(),
+                    _ => md5::compute(&outer_input).0.to_vec(),
+                }
+            }
+
+            let rounds = iterations as u32;
+            let result: Result<Vec<u8>, String> = match digest.to_lowercase().as_str() {
+                "md5" => {
+                    // MD5 produces 16 bytes
+                    let mut derived_key = vec![0u8; keylen];
+                    let password_bytes = password.as_bytes();
+                    let salt_bytes = salt.as_bytes();
+                    let hash_len = 16usize;
+
+                    let block_count = (keylen + hash_len - 1) / hash_len;
+
+                    for block_idx in 0..block_count {
+                        let mut salt_block = salt_bytes.to_vec();
+                        let block_num: u32 = (block_idx + 1) as u32;
+                        salt_block.extend_from_slice(&block_num.to_be_bytes());
+
+                        let mut u_prev = compute_hmac_ring(&salt_block, password_bytes, "md5");
+                        let mut t_block = u_prev.clone();
+
+                        for _ in 1..rounds {
+                            u_prev = compute_hmac_ring(&u_prev, password_bytes, "md5");
+                            for (t_byte, u_byte) in t_block.iter_mut().zip(&u_prev) {
+                                *t_byte ^= u_byte;
+                            }
+                        }
+
+                        let start = block_idx * hash_len;
+                        let end = std::cmp::min(start + hash_len, keylen);
+                        derived_key[start..end].copy_from_slice(&t_block[0..(end - start)]);
+                    }
+
+                    Ok(derived_key)
+                }
+                "sha1" => {
+                    // SHA1 produces 20 bytes
+                    let mut derived_key = vec![0u8; keylen];
+                    let password_bytes = password.as_bytes();
+                    let salt_bytes = salt.as_bytes();
+                    let hash_len = 20usize;
+
+                    let block_count = (keylen + hash_len - 1) / hash_len;
+
+                    for block_idx in 0..block_count {
+                        let mut salt_block = salt_bytes.to_vec();
+                        let block_num: u32 = (block_idx + 1) as u32;
+                        salt_block.extend_from_slice(&block_num.to_be_bytes());
+
+                        let mut u_prev = compute_hmac_ring(&salt_block, password_bytes, "sha1");
+                        let mut t_block = u_prev.clone();
+
+                        for _ in 1..rounds {
+                            u_prev = compute_hmac_ring(&u_prev, password_bytes, "sha1");
+                            for (t_byte, u_byte) in t_block.iter_mut().zip(&u_prev) {
+                                *t_byte ^= u_byte;
+                            }
+                        }
+
+                        let start = block_idx * hash_len;
+                        let end = std::cmp::min(start + hash_len, keylen);
+                        derived_key[start..end].copy_from_slice(&t_block[0..(end - start)]);
+                    }
+
+                    Ok(derived_key)
+                }
+                "sha256" => {
+                    // SHA256 produces 32 bytes
+                    let mut derived_key = vec![0u8; keylen];
+                    let password_bytes = password.as_bytes();
+                    let salt_bytes = salt.as_bytes();
+                    let hash_len = 32usize;
+
+                    let block_count = (keylen + hash_len - 1) / hash_len;
+
+                    for block_idx in 0..block_count {
+                        let mut salt_block = salt_bytes.to_vec();
+                        let block_num: u32 = (block_idx + 1) as u32;
+                        salt_block.extend_from_slice(&block_num.to_be_bytes());
+
+                        let mut u_prev = compute_hmac_ring(&salt_block, password_bytes, "sha256");
+                        let mut t_block = u_prev.clone();
+
+                        for _ in 1..rounds {
+                            u_prev = compute_hmac_ring(&u_prev, password_bytes, "sha256");
+                            for (t_byte, u_byte) in t_block.iter_mut().zip(&u_prev) {
+                                *t_byte ^= u_byte;
+                            }
+                        }
+
+                        let start = block_idx * hash_len;
+                        let end = std::cmp::min(start + hash_len, keylen);
+                        derived_key[start..end].copy_from_slice(&t_block[0..(end - start)]);
+                    }
+
+                    Ok(derived_key)
+                }
+                "sha512" => {
+                    // SHA512 produces 64 bytes
+                    let mut derived_key = vec![0u8; keylen];
+                    let password_bytes = password.as_bytes();
+                    let salt_bytes = salt.as_bytes();
+                    let hash_len = 64usize;
+
+                    let block_count = (keylen + hash_len - 1) / hash_len;
+
+                    for block_idx in 0..block_count {
+                        let mut salt_block = salt_bytes.to_vec();
+                        let block_num: u32 = (block_idx + 1) as u32;
+                        salt_block.extend_from_slice(&block_num.to_be_bytes());
+
+                        let mut u_prev = compute_hmac_ring(&salt_block, password_bytes, "sha512");
+                        let mut t_block = u_prev.clone();
+
+                        for _ in 1..rounds {
+                            u_prev = compute_hmac_ring(&u_prev, password_bytes, "sha512");
+                            for (t_byte, u_byte) in t_block.iter_mut().zip(&u_prev) {
+                                *t_byte ^= u_byte;
+                            }
+                        }
+
+                        let start = block_idx * hash_len;
+                        let end = std::cmp::min(start + hash_len, keylen);
+                        derived_key[start..end].copy_from_slice(&t_block[0..(end - start)]);
+                    }
+
+                    Ok(derived_key)
+                }
+                _ => Err(format!("Unsupported digest algorithm: {}. Supported: sha256, sha512, sha1, md5", digest)),
+            };
+
+            match result {
+                Ok(key_bytes) => {
+                    let ab = v8::ArrayBuffer::new(scope, key_bytes.len());
+                    let backing_store = ab.get_backing_store();
+                    for (i, byte) in key_bytes.iter().enumerate() {
+                        backing_store[i].set(*byte);
+                    }
+                    if let Some(uint8_array) = v8::Uint8Array::new(scope, ab, 0, key_bytes.len()) {
+                        retval.set(uint8_array.into());
+                    }
+                }
+                Err(e) => {
+                    let error = v8::String::new(scope, &e).unwrap();
+                    let error_obj = v8::Exception::type_error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                }
+            }
+        });
+        let pbkdf2_sync_fn = match pbkdf2_sync_fn {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let pbkdf2_sync_key = v8::String::new(scope, "pbkdf2Sync").unwrap().into();
+        crypto_obj.set(scope, pbkdf2_sync_key, pbkdf2_sync_fn.into());
+
+        // Add crypto.pbkdf2 (async version using Promise)
+        let pbkdf2_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let password = args.get(0)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+            let salt = args.get(1)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+            let iterations: usize = args.get(2)
+                .to_integer(scope)
+                .map(|n| n.value() as usize)
+                .unwrap_or(10000);
+            let keylen: usize = args.get(3)
+                .to_integer(scope)
+                .map(|n| n.value() as usize)
+                .unwrap_or(64);
+            let digest = args.get(4)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_else(|| "sha256".to_string());
+
+            // Create PromiseResolver
+            let resolver = v8::PromiseResolver::new(scope).unwrap();
+            let promise = resolver.get_promise(scope);
+
+            // Return promise immediately
+            retval.set(promise.into());
+
+            // Execute asynchronously using tokio
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(async {
+                use ring::digest;
+                use sha1::Digest;
+
+                // Helper function to compute HMAC
+                fn compute_hmac_ring(data: &[u8], key: &[u8], algorithm: &str) -> Vec<u8> {
+                    let block_size = 64;
+                    let ipad = 0x36u8;
+                    let opad = 0x5cu8;
+
+                    // Prepare key
+                    let mut padded_key = key.to_vec();
+                    if padded_key.len() > block_size {
+                        let hash = match algorithm {
+                            "sha256" => digest::digest(&digest::SHA256, &padded_key).as_ref().to_vec(),
+                            "sha512" => digest::digest(&digest::SHA512, &padded_key).as_ref().to_vec(),
+                            "sha1" => {
+                            let mut hasher = sha1::Sha1::default();
+                            hasher.update(&padded_key);
+                            hasher.finalize().to_vec()
+                        }
+                            "md5" => md5::compute(&padded_key).0.to_vec(),
+                            _ => md5::compute(&padded_key).0.to_vec(),
+                        };
+                        padded_key = hash;
+                    }
+                    padded_key.resize(block_size, 0);
+
+                    // Inner hash
+                    let mut inner_input = Vec::with_capacity(block_size + data.len());
+                    inner_input.extend(padded_key.iter().map(|b| b ^ ipad));
+                    inner_input.extend(data);
+                    let inner_hash = match algorithm {
+                        "sha256" => digest::digest(&digest::SHA256, &inner_input).as_ref().to_vec(),
+                        "sha512" => digest::digest(&digest::SHA512, &inner_input).as_ref().to_vec(),
+                        "sha1" => {
+                        let mut hasher = sha1::Sha1::default();
+                        hasher.update(&inner_input);
+                        hasher.finalize().to_vec()
+                    }
+                        "md5" => md5::compute(&inner_input).0.to_vec(),
+                        _ => md5::compute(&inner_input).0.to_vec(),
+                    };
+
+                    // Outer hash
+                    let mut outer_input = Vec::with_capacity(block_size + inner_hash.len());
+                    outer_input.extend(padded_key.iter().map(|b| b ^ opad));
+                    outer_input.extend(&inner_hash);
+
+                    match algorithm {
+                        "sha256" => digest::digest(&digest::SHA256, &outer_input).as_ref().to_vec(),
+                        "sha512" => digest::digest(&digest::SHA512, &outer_input).as_ref().to_vec(),
+                        "sha1" => {
+                        let mut hasher = sha1::Sha1::default();
+                        hasher.update(&outer_input);
+                        hasher.finalize().to_vec()
+                    }
+                        "md5" => md5::compute(&outer_input).0.to_vec(),
+                        _ => md5::compute(&outer_input).0.to_vec(),
+                    }
+                }
+
+                let rounds = iterations as u32;
+                let result: Result<Vec<u8>, String> = match digest.to_lowercase().as_str() {
+                    "md5" => {
+                        let mut derived_key = vec![0u8; keylen];
+                        let password_bytes = password.as_bytes();
+                        let salt_bytes = salt.as_bytes();
+
+                        let hash_len = 16usize;
+                        let block_count = (keylen + hash_len - 1) / hash_len;
+
+                        for block_idx in 0..block_count {
+                            let mut salt_block = salt_bytes.to_vec();
+                            let block_num: u32 = (block_idx + 1) as u32;
+                            salt_block.extend_from_slice(&block_num.to_be_bytes());
+
+                            let mut u_prev = compute_hmac_ring(&salt_block, password_bytes, "md5");
+                            let mut t_block = u_prev.clone();
+
+                            for _ in 1..rounds {
+                                u_prev = compute_hmac_ring(&u_prev, password_bytes, "md5");
+                                for (t_byte, u_byte) in t_block.iter_mut().zip(&u_prev) {
+                                    *t_byte ^= u_byte;
+                                }
+                            }
+
+                            let start = block_idx * hash_len;
+                            let end = std::cmp::min(start + hash_len, keylen);
+                            derived_key[start..end].copy_from_slice(&t_block[0..(end - start)]);
+                        }
+
+                        Ok(derived_key)
+                    }
+                    "sha1" => {
+                        let mut derived_key = vec![0u8; keylen];
+                        let password_bytes = password.as_bytes();
+                        let salt_bytes = salt.as_bytes();
+
+                        let hash_len = 20usize;
+                        let block_count = (keylen + hash_len - 1) / hash_len;
+
+                        for block_idx in 0..block_count {
+                            let mut salt_block = salt_bytes.to_vec();
+                            let block_num: u32 = (block_idx + 1) as u32;
+                            salt_block.extend_from_slice(&block_num.to_be_bytes());
+
+                            let mut u_prev = compute_hmac_ring(&salt_block, password_bytes, "sha1");
+                            let mut t_block = u_prev.clone();
+
+                            for _ in 1..rounds {
+                                u_prev = compute_hmac_ring(&u_prev, password_bytes, "sha1");
+                                for (t_byte, u_byte) in t_block.iter_mut().zip(&u_prev) {
+                                    *t_byte ^= u_byte;
+                                }
+                            }
+
+                            let start = block_idx * hash_len;
+                            let end = std::cmp::min(start + hash_len, keylen);
+                            derived_key[start..end].copy_from_slice(&t_block[0..(end - start)]);
+                        }
+
+                        Ok(derived_key)
+                    }
+                    "sha256" => {
+                        let mut derived_key = vec![0u8; keylen];
+                        let password_bytes = password.as_bytes();
+                        let salt_bytes = salt.as_bytes();
+
+                        let hash_len = 32usize;
+                        let block_count = (keylen + hash_len - 1) / hash_len;
+
+                        for block_idx in 0..block_count {
+                            let mut salt_block = salt_bytes.to_vec();
+                            let block_num: u32 = (block_idx + 1) as u32;
+                            salt_block.extend_from_slice(&block_num.to_be_bytes());
+
+                            let mut u_prev = compute_hmac_ring(&salt_block, password_bytes, "sha256");
+                            let mut t_block = u_prev.clone();
+
+                            for _ in 1..rounds {
+                                u_prev = compute_hmac_ring(&u_prev, password_bytes, "sha256");
+                                for (t_byte, u_byte) in t_block.iter_mut().zip(&u_prev) {
+                                    *t_byte ^= u_byte;
+                                }
+                            }
+
+                            let start = block_idx * hash_len;
+                            let end = std::cmp::min(start + hash_len, keylen);
+                            derived_key[start..end].copy_from_slice(&t_block[0..(end - start)]);
+                        }
+
+                        Ok(derived_key)
+                    }
+                    "sha512" => {
+                        let mut derived_key = vec![0u8; keylen];
+                        let password_bytes = password.as_bytes();
+                        let salt_bytes = salt.as_bytes();
+
+                        let hash_len = 64usize;
+                        let block_count = (keylen + hash_len - 1) / hash_len;
+
+                        for block_idx in 0..block_count {
+                            let mut salt_block = salt_bytes.to_vec();
+                            let block_num: u32 = (block_idx + 1) as u32;
+                            salt_block.extend_from_slice(&block_num.to_be_bytes());
+
+                            let mut u_prev = compute_hmac_ring(&salt_block, password_bytes, "sha512");
+                            let mut t_block = u_prev.clone();
+
+                            for _ in 1..rounds {
+                                u_prev = compute_hmac_ring(&u_prev, password_bytes, "sha512");
+                                for (t_byte, u_byte) in t_block.iter_mut().zip(&u_prev) {
+                                    *t_byte ^= u_byte;
+                                }
+                            }
+
+                            let start = block_idx * hash_len;
+                            let end = std::cmp::min(start + hash_len, keylen);
+                            derived_key[start..end].copy_from_slice(&t_block[0..(end - start)]);
+                        }
+
+                        Ok(derived_key)
+                    }
+                    _ => Err(format!("Unsupported digest algorithm: {}. Supported: sha256, sha512, sha1, md5", digest)),
+                };
+
+                // Resolve/reject the promise using the resolver created outside the async block
+                match result {
+                    Ok(key_bytes) => {
+                        let ab = v8::ArrayBuffer::new(scope, key_bytes.len());
+                        let backing_store = ab.get_backing_store();
+                        for (i, byte) in key_bytes.iter().enumerate() {
+                            backing_store[i].set(*byte);
+                        }
+                        if let Some(uint8_array) = v8::Uint8Array::new(scope, ab, 0, key_bytes.len()) {
+                            resolver.resolve(scope, uint8_array.into());
+                        } else {
+                            let error = v8::String::new(scope, "Failed to create Uint8Array").unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            resolver.reject(scope, error_obj);
+                        }
+                    }
+                    Err(e) => {
+                        let error = v8::String::new(scope, &e).unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        resolver.reject(scope, error_obj);
+                    }
+                }
+            });
+        });
+        let pbkdf2_fn = match pbkdf2_fn {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let pbkdf2_key = v8::String::new(scope, "pbkdf2").unwrap().into();
+        crypto_obj.set(scope, pbkdf2_key, pbkdf2_fn.into());
 
         let crypto_key = v8::String::new(scope, "crypto").unwrap().into();
         global.set(scope, crypto_key, crypto_obj.into());
