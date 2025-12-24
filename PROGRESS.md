@@ -1,7 +1,54 @@
 
 
 
-**最新状态 (2025-12-24)**: 🚀 v0.3.15 createCipheriv/createDecipheriv 发布！显式密钥/IV 对称加密！
+**最新状态 (2025-12-24)**: 🚀 v0.3.16 randomFill 发布！填充现有缓冲区生成随机数！
+
+### 🎯 v0.3.16 随机数填充模块 (2025-12-24)
+**进度**: ✅ randomFill | ✅ randomFillSync | ✅ Uint8Array 支持 | ✅ ArrayBuffer 支持 | ✅ offset/size 参数
+
+#### v0.3.16 核心功能
+- ✅ **crypto.randomFill(buffer, callback)** - 异步填充缓冲区（回调风格）
+- ✅ **crypto.randomFill(buffer, offset, callback)** - 带偏移的异步填充
+- ✅ **crypto.randomFill(buffer, offset, size, callback)** - 带偏移和大小的异步填充
+- ✅ **crypto.randomFillSync(buffer)** - 同步填充缓冲区
+- ✅ **crypto.randomFillSync(buffer, offset)** - 带偏移的同步填充
+- ✅ **crypto.randomFillSync(buffer, offset, size)** - 带偏移和大小的同步填充
+
+#### v0.3.16 技术实现
+- 使用 `rand::thread_rng().fill()` 生成加密安全随机数
+- 直接修改 V8 ArrayBuffer/TypedArray 的 backing store
+- 支持 `offset` 和 `size` 参数精确定义填充范围
+- 参数验证：offset/size 边界检查
+- 回调风格 API：`(err, buffer) => {...}`
+
+#### v0.3.16 使用示例
+```javascript
+// 异步填充整个缓冲区
+const buf = new Uint8Array(16);
+crypto.randomFill(buf, (err, buf) => {
+    console.log('Filled with random bytes:', buf);
+});
+
+// 同步填充指定范围
+const buf2 = new Uint8Array(32);
+crypto.randomFillSync(buf2, 8, 16); // 填充 offset=8, size=16
+// bytes 0-7 保持为 0, bytes 8-23 填充随机数据, bytes 24-31 保持为 0
+```
+
+#### v0.3.16 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+170 行)
+  - 添加 `crypto.randomFill` 异步函数
+  - 添加 `crypto.randomFillSync` 同步函数
+  - 参数解析和边界验证
+  - V8 backing store 直接操作
+
+- **新增文件**: `tests/crypto_randomfill_tests.rs` (+180 行)
+  - 12 个测试用例覆盖 randomFill API
+  - 测试函数存在性、Buffer 类型支持
+  - 测试 offset/size 参数
+  - 测试错误处理
+
+---
 
 ### 🎯 v0.3.15 显式密钥/IV 加密模块 (2025-12-24)
 **进度**: ✅ createCipheriv | ✅ createDecipheriv | ✅ AES-256/128/192 | ✅ hex/base64 编码 | ✅ round-trip 测试
