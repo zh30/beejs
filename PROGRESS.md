@@ -1,6 +1,82 @@
 
 
 
+**最新状态 (2025-12-24)**: 🚀 v0.3.7 fs/promises 发布！Promise-based API 全面支持！V8 PromiseResolver 实现！
+
+### 🎯 v0.3.7 Promise 文件系统 (2025-12-24)
+**进度**: ✅ readFile | ✅ writeFile | ✅ appendFile | ✅ unlink | ✅ mkdir | ✅ rmdir | ✅ readdir | ✅ 14/14 测试通过
+
+#### v0.3.7 核心功能
+- ✅ **Promise-based readFile** - 使用 `v8::PromiseResolver` 实现异步读取
+- ✅ **Promise-based writeFile** - 异步写入文件，返回 Promise
+- ✅ **Promise-based appendFile** - 异步追加内容，返回 Promise
+- ✅ **Promise-based unlink** - 异步删除文件
+- ✅ **Promise-based mkdir** - 异步创建目录
+- ✅ **Promise-based rmdir** - 异步删除目录
+- ✅ **Promise-based readdir** - 异步读取目录内容
+
+#### v0.3.7 技术实现
+- 使用 `v8::PromiseResolver::new(scope)` 创建 Promise 解析器
+- 使用 `resolver.resolve(scope, value)` 完成 Promise
+- 使用 `resolver.reject(scope, error)` 拒绝 Promise
+- 使用 `tokio::runtime::Runtime::new().unwrap().block_on()` 执行异步 IO
+- 返回的 Promise 对象直接在 JS 中可用 `.then()` 和 `.catch()`
+
+#### v0.3.7 测试覆盖
+- `test_fs_promises_module_exists` ✅
+- `test_fs_promises_has_readfile` ✅
+- `test_fs_promises_has_writefile` ✅
+- `test_fs_promises_has_appendfile` ✅
+- `test_fs_promises_has_unlink` ✅
+- `test_fs_promises_has_mkdir` ✅
+- `test_fs_promises_has_rmdir` ✅
+- `test_fs_promises_has_readdir` ✅
+- `test_fs_promises_readfile_returns_promise` ✅
+- `test_fs_promises_writefile_returns_promise` ✅
+- `test_fs_promises_appendfile_returns_promise` ✅
+- `test_fs_promises_unlink_returns_promise` ✅
+- `test_fs_promises_mkdir_returns_promise` ✅
+- `test_fs_promises_rmdir_returns_promise` ✅
+- `test_fs_promises_readdir_returns_promise` ✅
+- `test_fs_promises_all_functions_exist` ✅
+- `test_fs_promises_readfile_error_handling` ✅
+
+#### v0.3.7 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+322 行)
+  - 添加 `"fs/promises"` 模块分支到 require() 函数
+  - 实现 7 个 Promise-based 文件系统方法
+  - 每个方法创建 PromiseResolver，返回 Promise 后异步执行
+
+- **新增文件**: `tests/fs_promises_tests.rs` (+180 行)
+  - 17 个测试用例覆盖所有 Promise API
+  - 测试 Promise 返回值 (.then/.catch 方法)
+  - 测试所有函数存在性
+
+#### v0.3.7 使用示例
+```javascript
+const fs = require('fs/promises');
+
+// 读取文件
+const content = await fs.readFile('test.txt', 'utf8');
+
+// 写入文件
+await fs.writeFile('output.txt', 'Hello, Beejs!');
+
+// 追加文件
+await fs.appendFile('output.txt', ' appended text');
+
+// 删除文件
+await fs.unlink('temp.txt');
+
+// 创建目录
+await fs.mkdir('newdir');
+
+// 读取目录
+const files = await fs.readdir('/path/to/dir');
+```
+
+---
+
 **最新状态 (2025-12-24)**: 🚀 v0.3.6 异步文件操作完成！readFile/writeFile/appendFile 回调模式全面支持！tokio 异步 I/O！
 
 ### 🎯 v0.3.6 异步文件操作 (2025-12-24)

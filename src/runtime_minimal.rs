@@ -3145,6 +3145,329 @@ impl MinimalRuntime {
                         retval.set(fs_obj.into());
                         return;
                     }
+                    "fs/promises" => {
+                        // Return fs/promises module with Promise-based API (v0.3.7)
+                        let promises_obj = v8::Object::new(scope);
+
+                        // Create Promise-based readFile
+                        let readfile_promise_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            if args.length() < 1 {
+                                let error = v8::String::new(scope, "readFile: missing path argument").unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+
+                            let path_val = args.get(0);
+                            let path = path_val.to_string(scope)
+                                .map(|s| s.to_rust_string_lossy(scope))
+                                .unwrap_or_else(|| "".to_string());
+
+                            // Determine encoding from index 1 if it's a string
+                            let _encoding = if args.length() >= 2 {
+                                let enc = args.get(1);
+                                if enc.is_string() {
+                                    enc.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            };
+
+                            // Create a promise resolver
+                            let resolver = v8::PromiseResolver::new(scope).unwrap();
+                            let promise = resolver.get_promise(scope);
+
+                            // Return the promise immediately
+                            retval.set(promise.into());
+
+                            // Now resolve the promise asynchronously using tokio
+                            let rt = tokio::runtime::Runtime::new().unwrap();
+                            rt.block_on(async {
+                                match tokio::fs::read_to_string(&path).await {
+                                    Ok(contents) => {
+                                        let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                        let value = v8::String::new(scope, &contents).unwrap();
+                                        resolver.resolve(scope, value.into());
+                                    }
+                                    Err(e) => {
+                                        let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                        let error_msg = format!("Error reading file: {}", e);
+                                        let error_val = v8::String::new(scope, &error_msg).unwrap();
+                                        let error_obj = v8::Exception::error(scope, error_val);
+                                        resolver.reject(scope, error_obj);
+                                    }
+                                }
+                            });
+                        }).ok_or_else(|| anyhow::anyhow!("Failed to create readFile Promise function")).unwrap();
+                        let readfile_promise_key = v8::String::new(scope, "readFile").unwrap().into();
+                        promises_obj.set(scope, readfile_promise_key, readfile_promise_fn.into());
+
+                        // Create Promise-based writeFile
+                        let writefile_promise_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            if args.length() < 2 {
+                                let error = v8::String::new(scope, "writeFile: missing arguments").unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+
+                            let path_val = args.get(0);
+                            let data_val = args.get(1);
+                            let path = path_val.to_string(scope)
+                                .map(|s| s.to_rust_string_lossy(scope))
+                                .unwrap_or_else(|| "".to_string());
+                            let data = data_val.to_string(scope)
+                                .map(|s| s.to_rust_string_lossy(scope))
+                                .unwrap_or_else(|| "".to_string());
+
+                            // Create a promise resolver
+                            let resolver = v8::PromiseResolver::new(scope).unwrap();
+                            let promise = resolver.get_promise(scope);
+                            retval.set(promise.into());
+
+                            // Resolve asynchronously
+                            let rt = tokio::runtime::Runtime::new().unwrap();
+                            rt.block_on(async {
+                                match tokio::fs::write(&path, &data).await {
+                                    Ok(_) => {
+                                        let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                        let undefined = v8::undefined(scope);
+                                        resolver.resolve(scope, undefined);
+                                    }
+                                    Err(e) => {
+                                        let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                        let error_msg = format!("Error writing file: {}", e);
+                                        let error_val = v8::String::new(scope, &error_msg).unwrap();
+                                        let error_obj = v8::Exception::error(scope, error_val);
+                                        resolver.reject(scope, error_obj);
+                                    }
+                                }
+                            });
+                        }).ok_or_else(|| anyhow::anyhow!("Failed to create writeFile Promise function")).unwrap();
+                        let writefile_promise_key = v8::String::new(scope, "writeFile").unwrap().into();
+                        promises_obj.set(scope, writefile_promise_key, writefile_promise_fn.into());
+
+                        // Create Promise-based appendFile
+                        let appendfile_promise_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            if args.length() < 2 {
+                                let error = v8::String::new(scope, "appendFile: missing arguments").unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+
+                            let path_val = args.get(0);
+                            let data_val = args.get(1);
+                            let path = path_val.to_string(scope)
+                                .map(|s| s.to_rust_string_lossy(scope))
+                                .unwrap_or_else(|| "".to_string());
+                            let data = data_val.to_string(scope)
+                                .map(|s| s.to_rust_string_lossy(scope))
+                                .unwrap_or_else(|| "".to_string());
+
+                            // Create a promise resolver
+                            let resolver = v8::PromiseResolver::new(scope).unwrap();
+                            let promise = resolver.get_promise(scope);
+                            retval.set(promise.into());
+
+                            // Resolve asynchronously
+                            let rt = tokio::runtime::Runtime::new().unwrap();
+                            rt.block_on(async {
+                                // Read existing content, append, then write
+                                let mut content = tokio::fs::read_to_string(&path).await.unwrap_or_default();
+                                content.push_str(&data);
+                                match tokio::fs::write(&path, &content).await {
+                                    Ok(_) => {
+                                        let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                        let undefined = v8::undefined(scope);
+                                        resolver.resolve(scope, undefined);
+                                    }
+                                    Err(e) => {
+                                        let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                        let error_msg = format!("Error appending to file: {}", e);
+                                        let error_val = v8::String::new(scope, &error_msg).unwrap();
+                                        let error_obj = v8::Exception::error(scope, error_val);
+                                        resolver.reject(scope, error_obj);
+                                    }
+                                }
+                            });
+                        }).ok_or_else(|| anyhow::anyhow!("Failed to create appendFile Promise function")).unwrap();
+                        let appendfile_promise_key = v8::String::new(scope, "appendFile").unwrap().into();
+                        promises_obj.set(scope, appendfile_promise_key, appendfile_promise_fn.into());
+
+                        // Create Promise-based unlink
+                        let unlink_promise_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            if args.length() < 1 {
+                                let error = v8::String::new(scope, "unlink: missing path argument").unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+
+                            let path_val = args.get(0);
+                            let path = path_val.to_string(scope)
+                                .map(|s| s.to_rust_string_lossy(scope))
+                                .unwrap_or_else(|| "".to_string());
+
+                            let resolver = v8::PromiseResolver::new(scope).unwrap();
+                            let promise = resolver.get_promise(scope);
+                            retval.set(promise.into());
+
+                            let rt = tokio::runtime::Runtime::new().unwrap();
+                            rt.block_on(async {
+                                match tokio::fs::remove_file(&path).await {
+                                    Ok(_) => {
+                                        let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                        let undefined = v8::undefined(scope);
+                                        resolver.resolve(scope, undefined);
+                                    }
+                                    Err(e) => {
+                                        let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                        let error_msg = format!("Error unlinking file: {}", e);
+                                        let error_val = v8::String::new(scope, &error_msg).unwrap();
+                                        let error_obj = v8::Exception::error(scope, error_val);
+                                        resolver.reject(scope, error_obj);
+                                    }
+                                }
+                            });
+                        }).ok_or_else(|| anyhow::anyhow!("Failed to create unlink Promise function")).unwrap();
+                        let unlink_promise_key = v8::String::new(scope, "unlink").unwrap().into();
+                        promises_obj.set(scope, unlink_promise_key, unlink_promise_fn.into());
+
+                        // Create Promise-based mkdir
+                        let mkdir_promise_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            if args.length() < 1 {
+                                let error = v8::String::new(scope, "mkdir: missing path argument").unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+
+                            let path_val = args.get(0);
+                            let path = path_val.to_string(scope)
+                                .map(|s| s.to_rust_string_lossy(scope))
+                                .unwrap_or_else(|| "".to_string());
+
+                            let resolver = v8::PromiseResolver::new(scope).unwrap();
+                            let promise = resolver.get_promise(scope);
+                            retval.set(promise.into());
+
+                            let rt = tokio::runtime::Runtime::new().unwrap();
+                            rt.block_on(async {
+                                match tokio::fs::create_dir_all(&path).await {
+                                    Ok(_) => {
+                                        let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                        let undefined = v8::undefined(scope);
+                                        resolver.resolve(scope, undefined);
+                                    }
+                                    Err(e) => {
+                                        let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                        let error_msg = format!("Error creating directory: {}", e);
+                                        let error_val = v8::String::new(scope, &error_msg).unwrap();
+                                        let error_obj = v8::Exception::error(scope, error_val);
+                                        resolver.reject(scope, error_obj);
+                                    }
+                                }
+                            });
+                        }).ok_or_else(|| anyhow::anyhow!("Failed to create mkdir Promise function")).unwrap();
+                        let mkdir_promise_key = v8::String::new(scope, "mkdir").unwrap().into();
+                        promises_obj.set(scope, mkdir_promise_key, mkdir_promise_fn.into());
+
+                        // Create Promise-based rmdir
+                        let rmdir_promise_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            if args.length() < 1 {
+                                let error = v8::String::new(scope, "rmdir: missing path argument").unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+
+                            let path_val = args.get(0);
+                            let path = path_val.to_string(scope)
+                                .map(|s| s.to_rust_string_lossy(scope))
+                                .unwrap_or_else(|| "".to_string());
+
+                            let resolver = v8::PromiseResolver::new(scope).unwrap();
+                            let promise = resolver.get_promise(scope);
+                            retval.set(promise.into());
+
+                            let rt = tokio::runtime::Runtime::new().unwrap();
+                            rt.block_on(async {
+                                match tokio::fs::remove_dir_all(&path).await {
+                                    Ok(_) => {
+                                        let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                        let undefined = v8::undefined(scope);
+                                        resolver.resolve(scope, undefined);
+                                    }
+                                    Err(e) => {
+                                        let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                        let error_msg = format!("Error removing directory: {}", e);
+                                        let error_val = v8::String::new(scope, &error_msg).unwrap();
+                                        let error_obj = v8::Exception::error(scope, error_val);
+                                        resolver.reject(scope, error_obj);
+                                    }
+                                }
+                            });
+                        }).ok_or_else(|| anyhow::anyhow!("Failed to create rmdir Promise function")).unwrap();
+                        let rmdir_promise_key = v8::String::new(scope, "rmdir").unwrap().into();
+                        promises_obj.set(scope, rmdir_promise_key, rmdir_promise_fn.into());
+
+                        // Create Promise-based readdir
+                        let readdir_promise_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            if args.length() < 1 {
+                                let error = v8::String::new(scope, "readdir: missing path argument").unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+
+                            let path_val = args.get(0);
+                            let path = path_val.to_string(scope)
+                                .map(|s| s.to_rust_string_lossy(scope))
+                                .unwrap_or_else(|| "".to_string());
+
+                            let resolver = v8::PromiseResolver::new(scope).unwrap();
+                            let promise = resolver.get_promise(scope);
+                            retval.set(promise.into());
+
+                            let rt = tokio::runtime::Runtime::new().unwrap();
+                            rt.block_on(async {
+                                match tokio::fs::read_dir(&path).await {
+                                    Ok(mut entries) => {
+                                        let mut names: Vec<String> = Vec::new();
+                                        while let Ok(Some(entry)) = entries.next_entry().await {
+                                            if let Ok(name) = entry.file_name().into_string() {
+                                                names.push(name);
+                                            }
+                                        }
+                                        // Create a JS array with the names
+                                        let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                        let arr = v8::Array::new(scope, names.len() as i32);
+                                        for (i, name) in names.iter().enumerate() {
+                                            let name_str = v8::String::new(scope, name).unwrap();
+                                            arr.set_index(scope, i as u32, name_str.into());
+                                        }
+                                        resolver.resolve(scope, arr.into());
+                                    }
+                                    Err(e) => {
+                                        let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                        let error_msg = format!("Error reading directory: {}", e);
+                                        let error_val = v8::String::new(scope, &error_msg).unwrap();
+                                        let error_obj = v8::Exception::error(scope, error_val);
+                                        resolver.reject(scope, error_obj);
+                                    }
+                                }
+                            });
+                        }).ok_or_else(|| anyhow::anyhow!("Failed to create readdir Promise function")).unwrap();
+                        let readdir_promise_key = v8::String::new(scope, "readdir").unwrap().into();
+                        promises_obj.set(scope, readdir_promise_key, readdir_promise_fn.into());
+
+                        // Return the promises object
+                        retval.set(promises_obj.into());
+                        return;
+                    }
                     _ => {
                         // Throw error for unknown modules
                         let error_msg = format!("Cannot find module '{}'", module_id_str);
