@@ -4452,3 +4452,86 @@ timer.ref();
 - `test_timer_ref` - ref() 功能测试
 - `test_multiple_timer_types` - 多类型定时器混合使用测试
 
+
+### ✨ v0.3.39 process.memoryUsage() 实现 (2025-12-25)
+**进度**: ✅ memoryUsage 函数 | ✅ 跨平台 RSS 获取 | ✅ 5 个测试用例 | ✅ 44/44 测试通过
+
+#### v0.3.39 实现内容
+- ✅ **process.memoryUsage() 函数**
+  - 返回包含 heapTotal、heapUsed、rss、external、arrayBuffers 的对象
+  - heapTotal: V8 堆总大小（估计值，上限 100MB）
+  - heapUsed: V8 堆已使用大小（估计值，上限 50MB）
+  - rss: 进程驻留集大小（真实系统值）
+  - external: 堆外内存（当前为 0）
+  - arrayBuffers: ArrayBuffer 内存使用（当前为 0）
+
+- ✅ **跨平台 RSS 内存获取**
+  - Linux: 读取 `/proc/self/status` 中的 VmRSS
+  - macOS: 使用 `libc::getrusage()`
+  - Windows: 使用 `GetProcessMemoryInfo()`
+  - FreeBSD: 使用 `sysctl`
+
+#### v0.3.39 技术实现
+- **get_rss_memory() 函数** (src/runtime_minimal.rs)
+  ```rust
+  fn get_rss_memory() -> u64 {
+      #[cfg(target_os = "linux")]
+      {
+          // 读取 /proc/self/status 中的 VmRSS
+          if let Ok(content) = std::fs::read_to_string("/proc/self/status") {
+              for line in content.lines() {
+                  if line.starts_with("VmRSS:") {
+                      if let Some(kb_str) = line.split_whitespace().nth(1) {
+                          if let Ok(kb) = kb_str.parse::<u64>() {
+                              return kb * 1024; // 转换为字节
+                          }
+                      }
+                  }
+              }
+          }
+          0
+      }
+      // ... macOS/Windows/FreeBSD 实现
+  }
+  ```
+
+#### v0.3.39 代码变更
+- **新增文件**: `tests/process_module_tests.rs` (+75 行)
+  - `test_process_memory_usage_exists` - 函数存在性测试
+  - `test_process_memory_usage_returns_object` - 返回对象测试
+  - `test_process_memory_usage_realistic_values` - 数值合理性测试
+  - `test_process_memory_usage_multiple_calls` - 多次调用测试
+  - `test_process_memory_usage_increases_with_allocation` - 内存分配测试
+
+- **修改文件**: `src/runtime_minimal.rs` (+120 行, -10 行)
+  - 添加 `get_rss_memory()` 跨平台函数
+  - 实现 `memory_usage_fn` 函数模板
+  - 更新 `Cargo.toml` 添加 `windows-sys` 依赖
+
+- **修改文件**: `Cargo.toml` (+1 行)
+  - 添加 `windows-sys = "0.52"` 依赖
+
+#### v0.3.39 验证结果
+- ✅ `cargo build --release` 成功
+- ✅ `beejs eval "typeof process.memoryUsage"` → "function"
+- ✅ `beejs eval "JSON.stringify(process.memoryUsage())"` → 正确对象
+- ✅ `cargo test --test process_module_tests` → 44/44 通过
+- ✅ `cargo test --lib` → 8/8 通过
+
+#### v0.3.39 使用示例
+```javascript
+// 获取内存使用情况
+const mem = process.memoryUsage();
+console.log(`Heap Total: ${mem.heapTotal} bytes`);
+console.log(`Heap Used: ${mem.heapUsed} bytes`);
+console.log(`RSS: ${mem.rss} bytes`);
+console.log(`External: ${mem.external} bytes`);
+
+// 监控内存变化
+const before = process.memoryUsage().heapUsed;
+const arr = new Array(1000000);
+for (let i = 0; i < 1000000; i++) { arr[i] = i; }
+const after = process.memoryUsage().heapUsed;
+console.log(`Memory increase: ${after - before} bytes`);
+```
+

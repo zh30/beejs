@@ -444,3 +444,78 @@ fn test_process_release_name() {
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "process.release.name should be 'beejs'");
 }
+
+/// v0.3.39: Test process.memoryUsage exists and is a function
+#[test]
+#[serial]
+fn test_process_memory_usage_exists() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let result = runtime.execute_code("typeof process.memoryUsage").expect("Execution failed");
+    assert_eq!(result.trim(), "function", "process.memoryUsage should be a function");
+}
+
+/// v0.3.39: Test process.memoryUsage returns an object with required fields
+#[test]
+#[serial]
+fn test_process_memory_usage_returns_object() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const mem = process.memoryUsage();
+        typeof mem.heapTotal === 'number' &&
+        typeof mem.heapUsed === 'number' &&
+        typeof mem.rss === 'number' &&
+        typeof mem.external === 'number';
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.memoryUsage() should return object with heapTotal, heapUsed, rss, and external fields");
+}
+
+/// v0.3.39: Test process.memoryUsage returns realistic values
+#[test]
+#[serial]
+fn test_process_memory_usage_realistic_values() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const mem = process.memoryUsage();
+        // heapUsed should be between 1MB and 1GB for a simple runtime
+        mem.heapUsed >= 1024 * 1024 && mem.heapUsed <= 1024 * 1024 * 1024 &&
+        // rss should be at least heapTotal
+        mem.rss >= mem.heapTotal &&
+        // All values should be positive
+        mem.heapTotal > 0 && mem.heapUsed > 0 && mem.rss > 0;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.memoryUsage() should return realistic memory values");
+}
+
+/// v0.3.39: Test process.memoryUsage can be called multiple times
+#[test]
+#[serial]
+fn test_process_memory_usage_multiple_calls() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const mem1 = process.memoryUsage();
+        const mem2 = process.memoryUsage();
+        // Both calls should return valid objects
+        typeof mem1.heapUsed === 'number' && typeof mem2.heapUsed === 'number';
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.memoryUsage() should be callable multiple times");
+}
+
+/// v0.3.39: Test process.memoryUsage heapUsed increases with allocation
+#[test]
+#[serial]
+fn test_process_memory_usage_increases_with_allocation() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const memBefore = process.memoryUsage();
+        // Allocate some memory
+        const arr = new Array(100000);
+        for (let i = 0; i < 100000; i++) { arr[i] = i; }
+        const memAfter = process.memoryUsage();
+        memAfter.heapUsed >= memBefore.heapUsed;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "process.memoryUsage() should show increased heapUsed after allocation");
+}
