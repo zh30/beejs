@@ -252,6 +252,7 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
     }).unwrap();
 
     // Buffer.prototype.slice
+    #[allow(irrefutable_let_patterns)]
     let buffer_slice_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
         let this = args.this();
         // Get source ArrayBuffer and byte_length
@@ -346,6 +347,7 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
     }).unwrap();
 
     // Buffer.prototype.indexOf
+    #[allow(irrefutable_let_patterns)]
     let buffer_index_of_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
         let this = args.this();
         // Get bytes from wrapper, TypedArray, or ArrayBuffer
@@ -1241,6 +1243,7 @@ impl MinimalRuntime {
     }
 
     /// Set up Buffer/Uint8Array methods (toString with encoding support)
+    #[allow(dead_code)]
     fn setup_buffer_methods(scope: &mut v8::ContextScope<v8::HandleScope>, context: &v8::Context) -> Result<()> {
         let global = context.global(scope);
 
@@ -9782,9 +9785,6 @@ impl MinimalRuntime {
         scope: &mut v8::ContextScope<v8::HandleScope>,
         context: &v8::Local<v8::Context>,
     ) -> Result<()> {
-        use std::fs;
-        use std::path::Path;
-
         let global = context.global(scope);
 
         // Create os object

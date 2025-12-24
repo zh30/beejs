@@ -90,7 +90,7 @@ fn test_os_freemem() {
     let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let result = runtime.execute_code("os.freemem()").expect("Execution failed");
     let freemem: u64 = result.trim().parse().expect("Should be a number");
-    assert!(freemem >= 0, "freemem should be >= 0, got: {}", freemem);
+    assert!(freemem > 0, "freemem should be > 0, got: {}", freemem);
 }
 
 #[test]
