@@ -4912,6 +4912,133 @@ impl MinimalRuntime {
         let generate_key_pair_sync_key = v8::String::new(scope, "generateKeyPairSync").unwrap().into();
         crypto_obj.set(scope, generate_key_pair_sync_key, generate_key_pair_sync_fn.into());
 
+        // Add crypto.generateKeyPair (v0.3.24) - Async RSA/EC key pair generation with callback
+        let generate_key_pair_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+            // Parse type argument (first parameter)
+            let key_type = if args.length() >= 1 {
+                if let Some(s) = args.get(0).to_string(scope) {
+                    s.to_rust_string_lossy(scope)
+                } else {
+                    String::from("rsa")
+                }
+            } else {
+                String::from("rsa")
+            };
+
+            // Parse options (second parameter)
+            let options = if args.length() >= 2 {
+                args.get(1)
+            } else {
+                v8::Object::new(scope).into()
+            };
+
+            // Extract RSA options - store string keys in locals to avoid borrow issues
+            let modulus_length_key = v8::String::new(scope, "modulusLength").unwrap();
+            let modulus_length = if let Some(obj) = options.to_object(scope) {
+                if let Some(ml) = obj.get(scope, modulus_length_key.into()) {
+                    ml.to_integer(scope).map(|i| i.value() as usize).unwrap_or(2048)
+                } else {
+                    2048
+                }
+            } else {
+                2048
+            };
+
+            // Extract EC curve option - store string keys in locals to avoid borrow issues
+            let named_curve_key = v8::String::new(scope, "namedCurve").unwrap();
+            let named_curve = if let Some(obj) = options.to_object(scope) {
+                if let Some(nc) = obj.get(scope, named_curve_key.into()) {
+                    if let Some(s) = nc.to_string(scope) {
+                        s.to_rust_string_lossy(scope)
+                    } else {
+                        String::from("prime256v1")
+                    }
+                } else {
+                    String::from("prime256v1")
+                }
+            } else {
+                String::from("prime256v1")
+            };
+
+            // Get callback - required for async version
+            // Handle both: generateKeyPair('rsa', options, callback) and generateKeyPair('rsa', callback)
+            let callback = if args.length() >= 3 {
+                // callback is third argument (options is second arg)
+                args.get(2)
+            } else if args.length() >= 2 {
+                // callback might be second argument (no options)
+                let second_arg = args.get(1);
+                if second_arg.is_function() {
+                    second_arg
+                } else {
+                    v8::Object::new(scope).into()
+                }
+            } else {
+                v8::Object::new(scope).into()
+            };
+
+            // Validate callback is a function
+            if !callback.is_function() {
+                let error_msg = v8::String::new(scope, "crypto.generateKeyPair: callback must be a function").unwrap();
+                let error = v8::Exception::type_error(scope, error_msg);
+                scope.throw_exception(error);
+                return;
+            }
+
+            // Validate key type
+            let key_type_lower = key_type.to_lowercase();
+            if key_type_lower != "rsa" && key_type_lower != "ec" {
+                // For async API, call callback with error synchronously
+                let global = scope.get_current_context().global(scope);
+
+                // Create error object
+                let error_msg = v8::String::new(scope, &format!("generateKeyPair: unsupported key type '{}'. Supported: rsa, ec", key_type)).unwrap();
+                let error_obj = v8::Exception::type_error(scope, error_msg);
+
+                // Create wrapper function that calls callback with error
+                let wrapper_source = r#"
+                    (function(callback, err) {
+                        callback(err, null, null);
+                    })
+                "#;
+                let wrapper_source_str = v8::String::new(scope, wrapper_source).unwrap();
+                let script = v8::Script::compile(scope, wrapper_source_str, None).unwrap();
+                let wrapper_func_val = script.run(scope).unwrap();
+                let wrapper_func = v8::Local::<v8::Function>::try_from(wrapper_func_val).unwrap();
+
+                let callback_func = v8::Local::<v8::Function>::try_from(callback).unwrap();
+                let _ = wrapper_func.call(scope, global.into(), &[callback_func.into(), error_obj]);
+                return;
+            }
+
+            // Generate key pair synchronously (simulated async)
+            let (public_key_pem, private_key_pem) = if key_type_lower == "rsa" {
+                generate_rsa_key_pair(modulus_length)
+            } else {
+                generate_ec_key_pair(&named_curve)
+            };
+
+            // Call the callback directly (synchronously) - this is a fast synchronous operation
+            // The callback pattern (err, result) is for API compatibility with Node.js
+            let global = scope.get_current_context().global(scope);
+            let callback_func = v8::Local::<v8::Function>::try_from(callback).unwrap();
+            let null_val = v8::null(scope).into();
+
+            // Create publicKey string (PEM format)
+            let public_key_str = v8::String::new(scope, &public_key_pem).unwrap().into();
+            // Create privateKey string (PEM format)
+            let private_key_str = v8::String::new(scope, &private_key_pem).unwrap().into();
+
+            // Call callback with (null, publicKey, privateKey)
+            let _ = callback_func.call(scope, global.into(), &[null_val, public_key_str, private_key_str]);
+        });
+        let generate_key_pair_fn = match generate_key_pair_fn_opt {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let generate_key_pair_key = v8::String::new(scope, "generateKeyPair").unwrap().into();
+        crypto_obj.set(scope, generate_key_pair_key, generate_key_pair_fn.into());
+
         // Add crypto constants (RSA padding constants)
         let constants_obj = v8::Object::new(scope);
 
