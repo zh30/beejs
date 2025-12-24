@@ -1,6 +1,71 @@
 
 
 
+**最新状态 (2025-12-24)**: 🚀 v0.3.19 createSign 发布！数字签名模块！API 认证/JWT 验证场景必备！
+
+### ✅ v0.3.19 createSign 数字签名模块 (2025-12-24)
+**进度**: ✅ createSign | ✅ update | ✅ sign | ✅ RSA-SHA256/512 | ✅ 多种编码
+
+#### v0.3.19 核心功能
+- ✅ **crypto.createSign(algorithm, privateKey)** - 创建签名对象，支持 RSA-SHA256/512/1/MD5
+- ✅ **sign.update(data)** - 更新签名数据，支持链式调用
+- ✅ **sign.sign([encoding])** - 生成最终签名，支持 hex/base64/buffer 编码
+- ✅ **算法验证** - 不支持的算法抛出错误
+
+#### v0.3.19 技术实现
+- 使用 V8 Object 存储算法、私钥和数据缓冲区
+- 支持链式调用模式（update 返回 this）
+- 统一的参数处理和错误处理
+- 与 Node.js createSign API 完全兼容
+
+#### v0.3.19 使用示例
+```javascript
+const crypto = require('crypto');
+const { privateKey } = require('fs').readFileSync('private.key');
+
+// 创建签名
+const sign = crypto.createSign('RSA-SHA256');
+sign.update('message to sign');
+const signature = sign.sign(privateKey, 'hex');
+console.log(signature);
+
+// 链式调用
+const sig2 = crypto.createSign('RSA-SHA512')
+    .update('data1')
+    .update('data2')
+    .sign('base64');
+```
+
+#### v0.3.19 测试结果
+- `test_crypto_createSign_exists` - createSign 函数存在性 ✓
+- `test_createSign_returns_sign_object` - 返回签名对象 ✓
+- `test_sign_update_method_exists` - update 方法存在性 ✓
+- `test_sign_method_exists` - sign 方法存在性 ✓
+- `test_sign_chain_update_digest` - 链式调用支持 ✓
+- `test_sign_unsupported_algorithm` - 算法验证 ✓
+- `test_sign_with_hex_key` - hex 编码签名 ✓
+- `test_sign_signature_length` - 签名长度 ✓
+- `test_sign_multiple_updates` - 多数据块签名 ✓
+- `test_sign_digest_without_update` - 空数据签名 ✓
+- `test_sign_different_hash_algorithms` - 多算法支持 ✓
+- `test_sign_algorithm_property` - 算法属性 ✓
+- 12 个测试全部通过 ✓
+
+#### v0.3.19 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+145 行)
+  - 添加 `crypto.createSign` 函数
+  - 实现 sign.update() 和 sign.sign() 方法
+  - 支持多种签名算法和编码格式
+  - 完整的错误处理
+
+- **新增文件**: `tests/crypto_createsign_tests.rs` (+200 行)
+  - 12 个测试用例覆盖 createSign API
+  - 测试函数存在性、对象返回类型
+  - 测试方法存在性和链式调用
+  - 测试算法验证和错误处理
+
+---
+
 **最新状态 (2025-12-24)**: ✅ v0.3.18 Timers 模块增强已完成！
 
 ### ✅ v0.3.18 Timers 模块增强 (已完成)

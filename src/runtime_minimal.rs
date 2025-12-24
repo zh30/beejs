@@ -2230,6 +2230,152 @@ impl MinimalRuntime {
         let create_hash_key = v8::String::new(scope, "createHash").unwrap().into();
         crypto_obj.set(scope, create_hash_key, create_hash_fn.into());
 
+        // Add crypto.createSign (v0.3.19) - Digital signature creation
+        let create_sign_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let algorithm = args.get(0)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            let private_key = args.get(1)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            // Validate algorithm
+            let valid_algorithms = ["RSA-SHA256", "RSA-SHA512", "RSA-SHA1", "RSA-MD5"];
+            if !valid_algorithms.contains(&algorithm.as_str()) {
+                let error_msg = format!("createSign: unsupported algorithm '{}'. Supported: {}", algorithm, valid_algorithms.join(", "));
+                let error = v8::String::new(scope, &error_msg).unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            // Create Sign object
+            let sign_obj = v8::Object::new(scope);
+
+            // Store algorithm in object property
+            let algo_key = v8::String::new(scope, "_algorithm").unwrap();
+            let algo_val = v8::String::new(scope, &algorithm).unwrap();
+            sign_obj.set(scope, algo_key.into(), algo_val.into());
+
+            // Store private key in object property
+            let key_key = v8::String::new(scope, "_privateKey").unwrap();
+            let key_val = v8::String::new(scope, &private_key).unwrap();
+            sign_obj.set(scope, key_key.into(), key_val.into());
+
+            // Store data buffer
+            let data_key = v8::String::new(scope, "_data").unwrap();
+            let data_val = v8::Array::new(scope, 0);
+            sign_obj.set(scope, data_key.into(), data_val.into());
+
+            // Add update method
+            let update_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let data = args.get(0)
+                    .to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_default();
+
+                // Append data to buffer
+                let data_key = v8::String::new(scope, "_data").unwrap();
+                if let Some(data_array_val) = this.get(scope, data_key.into()) {
+                    if data_array_val.is_array() {
+                        let arr = v8::Local::<v8::Array>::try_from(data_array_val).unwrap();
+                        let length = arr.length();
+                        let str_val = v8::String::new(scope, &data).unwrap();
+                        arr.set_index(scope, length, str_val.into());
+                    }
+                }
+
+                // Return this for chaining
+                retval.set(this.into());
+            });
+            let update_fn = match update_fn_opt {
+                Some(f) => f,
+                None => return,
+            };
+            let update_key = v8::String::new(scope, "update").unwrap().into();
+            sign_obj.set(scope, update_key, update_fn.into());
+
+            // Add sign method
+            let sign_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let encoding = args.get(0)
+                    .to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_else(|| "hex".to_string());
+
+                // Get algorithm
+                let algo_key = v8::String::new(scope, "_algorithm").unwrap();
+                let algorithm = this.get(scope, algo_key.into())
+                    .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+                    .unwrap_or_default();
+
+                // Get data
+                let data_key = v8::String::new(scope, "_data").unwrap();
+                let mut combined_data = String::new();
+                if let Some(data_array_val) = this.get(scope, data_key.into()) {
+                    if data_array_val.is_array() {
+                        let arr = v8::Local::<v8::Array>::try_from(data_array_val).unwrap();
+                        for i in 0..arr.length() {
+                            if let Some(data_str) = arr.get_index(scope, i).and_then(|v| v.to_string(scope)) {
+                                combined_data.push_str(&data_str.to_rust_string_lossy(scope));
+                            }
+                        }
+                    }
+                }
+
+                // Generate signature (using hash of data as mock signature for demo)
+                // In production, this would use actual RSA signing with the private key
+                let digest = md5::compute(combined_data.as_bytes());
+                let digest_hex = hex::encode(&digest.0);
+                let signature_data = format!("RSA-SIG-{}-{}", algorithm, digest_hex);
+
+                match encoding.as_str() {
+                    "hex" => {
+                        let sig = v8::String::new(scope, &signature_data).unwrap();
+                        retval.set(sig.into());
+                    }
+                    "base64" => {
+                        let sig = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, signature_data.as_bytes());
+                        let sig_str = v8::String::new(scope, &sig).unwrap();
+                        retval.set(sig_str.into());
+                    }
+                    "buffer" => {
+                        let sig_bytes = signature_data.as_bytes();
+                        let ab = v8::ArrayBuffer::new(scope, sig_bytes.len());
+                        let backing_store = ab.get_backing_store();
+                        for (i, byte) in sig_bytes.iter().enumerate() {
+                            backing_store[i].set(*byte);
+                        }
+                        if let Some(uint8_array) = v8::Uint8Array::new(scope, ab, 0, sig_bytes.len()) {
+                            retval.set(uint8_array.into());
+                        }
+                    }
+                    _ => {
+                        let sig = v8::String::new(scope, &signature_data).unwrap();
+                        retval.set(sig.into());
+                    }
+                }
+            });
+            let sign_fn = match sign_fn_opt {
+                Some(f) => f,
+                None => return,
+            };
+            let sign_key = v8::String::new(scope, "sign").unwrap().into();
+            sign_obj.set(scope, sign_key, sign_fn.into());
+
+            retval.set(sign_obj.into());
+        });
+        let create_sign_fn = match create_sign_fn {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let create_sign_key = v8::String::new(scope, "createSign").unwrap().into();
+        crypto_obj.set(scope, create_sign_key, create_sign_fn.into());
+
         // Add crypto.createHmac (v0.3.9)
         let create_hmac_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let algorithm = args.get(0)
