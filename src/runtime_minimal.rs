@@ -258,6 +258,17 @@ fn compute_scrypt_derived_key(password: &str, salt: &str, keylen: usize, n: u32,
     Ok(derived_key)
 }
 
+/// Constant-time comparison to prevent timing attacks
+/// Returns true if both slices have the same content
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    let a_len = a.len();
+    let b_len = b.len();
+    if a_len != b_len {
+        return false;
+    }
+    a.iter().zip(b.iter()).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+}
+
 /// HKDF - HMAC-based Key Derivation Function (RFC 5869)
 ///
 /// # Arguments
@@ -2367,7 +2378,7 @@ impl MinimalRuntime {
 
         // ----- subtle.importKey(format, keyData, algorithm, extractable, usages) -----
         let import_key_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let format = args.get(0)
+            let _format = args.get(0)
                 .to_string(scope)
                 .map(|s| s.to_rust_string_lossy(scope))
                 .unwrap_or_else(|| "raw".to_string());
@@ -2675,9 +2686,8 @@ impl MinimalRuntime {
                     let signing_key = hmac::Key::new(hmac::HMAC_SHA256, &key_bytes);
                     let expected_sig = hmac::sign(&signing_key, &data_bytes);
 
-                    // Constant-time comparison
-                    use ring::constant_time::verify_slices_are_equal;
-                    let is_valid = verify_slices_are_equal(expected_sig.as_ref(), &sig_bytes).is_ok();
+                    // Constant-time comparison using our secure comparison function
+                    let is_valid = constant_time_eq(expected_sig.as_ref(), &sig_bytes);
                     let result_bool = v8::Boolean::new(scope, is_valid);
                     resolver.resolve(scope, result_bool.into());
                 }
@@ -7019,7 +7029,7 @@ impl MinimalRuntime {
 
             // Export method
             let export_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                let format = args.get(0)
+                let _format = args.get(0)
                     .to_string(scope)
                     .map(|s| s.to_rust_string_lossy(scope))
                     .unwrap_or_else(|| "pem".to_string());
