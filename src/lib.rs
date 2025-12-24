@@ -51,7 +51,7 @@ pub mod event_loop;  // v0.2.0: 异步事件循环实现
 // pub mod smart_cache;  // Temporarily disabled - compilation issues
 // pub mod lib_minimal;
 // pub mod memory_pool;  // Temporarily disabled - compilation issues
-// pub mod nodejs_core;  // Temporarily disabled for Stage 60
+// pub mod nodejs_core;  // Temporarily disabled - compilation issues in many sub-modules
 // pub mod process_pool;  // Temporarily disabled - compilation issues
 // pub mod v8_snapshot;  // Temporarily disabled - compilation issues
 // pub mod startup_optimizer;  // Temporarily disabled - compilation issues

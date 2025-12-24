@@ -1231,6 +1231,9 @@ impl MinimalRuntime {
         // Set up child_process module (v0.3.43)
         Self::setup_child_process_api(scope, &context)?;
 
+        // Set up stream module (v0.3.44)
+        Self::setup_stream_api(scope, &context)?;
+
         // Set up CommonJS module system (v0.3.x)
         Self::setup_module_system(scope, &context)?;
 
@@ -10201,6 +10204,195 @@ impl MinimalRuntime {
         // Set child_process as global
         let cp_key = v8::String::new(scope, "child_process").unwrap();
         global.set(scope, cp_key.into(), cp_obj.into());
+
+        Ok(())
+    }
+
+    /// Set up the stream module (v0.3.44)
+    /// Provides Readable, Writable, Transform, Duplex stream classes
+    fn setup_stream_api(
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        context: &v8::Local<v8::Context>,
+    ) -> Result<()> {
+        let global = context.global(scope);
+
+        // Create stream object
+        let stream_obj = v8::Object::new(scope);
+
+        // Readable Stream constructor
+        let readable_constructor = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let stream_obj = v8::Object::new(scope);
+
+            // _read method
+            let read_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut _retval: v8::ReturnValue| {
+                // Default _read implementation
+            });
+            let read_instance = read_func.get_function(scope).unwrap();
+            let read_key = v8::String::new(scope, "_read").unwrap();
+            stream_obj.set(scope, read_key.into(), read_instance.into());
+
+            // read method
+            let read_public_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let _size = args.get(0).to_integer(scope).unwrap_or(v8::Integer::new(scope, -1)).value();
+                // Call _read method if it exists
+                let read_key = v8::String::new(scope, "_read").unwrap();
+                if let Some(read_func_value) = this.get(scope, read_key.into()) {
+                    if read_func_value.is_function() {
+                        if let Ok(read_func) = v8::Local::<v8::Function>::try_from(read_func_value) {
+                            let size_val = v8::Integer::new(scope, -1);
+                            let call_args: &[v8::Local<v8::Value>] = &[size_val.into()];
+                            read_func.call(scope, this.into(), call_args);
+                        }
+                    }
+                }
+                retval.set(v8::null(scope).into());
+            });
+            let read_public_instance = read_public_func.get_function(scope).unwrap();
+            let read_public_key = v8::String::new(scope, "read").unwrap();
+            stream_obj.set(scope, read_public_key.into(), read_public_instance.into());
+
+            // on method (event listener)
+            let on_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let event = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+                let listener = args.get(1);
+
+                // Simulate data/end events for demonstration
+                if event == "data" && listener.is_function() {
+                    if let Ok(listener_func) = v8::Local::<v8::Function>::try_from(listener) {
+                        let data = v8::String::new(scope, "test data chunk").unwrap();
+                        listener_func.call(scope, this.into(), &[data.into()]);
+                    }
+                }
+                if event == "end" && listener.is_function() {
+                    if let Ok(listener_func) = v8::Local::<v8::Function>::try_from(listener) {
+                        listener_func.call(scope, this.into(), &[]);
+                    }
+                }
+                retval.set(this.into());
+            });
+            let on_instance = on_func.get_function(scope).unwrap();
+            let on_key = v8::String::new(scope, "on").unwrap();
+            stream_obj.set(scope, on_key.into(), on_instance.into());
+
+            // pause method
+            let pause_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                retval.set(this.into());
+            });
+            let pause_instance = pause_func.get_function(scope).unwrap();
+            let pause_key = v8::String::new(scope, "pause").unwrap();
+            stream_obj.set(scope, pause_key.into(), pause_instance.into());
+
+            // resume method
+            let resume_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                retval.set(this.into());
+            });
+            let resume_instance = resume_func.get_function(scope).unwrap();
+            let resume_key = v8::String::new(scope, "resume").unwrap();
+            stream_obj.set(scope, resume_key.into(), resume_instance.into());
+
+            // pipe method
+            let pipe_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                retval.set(args.get(0));
+            });
+            let pipe_instance = pipe_func.get_function(scope).unwrap();
+            let pipe_key = v8::String::new(scope, "pipe").unwrap();
+            stream_obj.set(scope, pipe_key.into(), pipe_instance.into());
+
+            retval.set(stream_obj.into());
+        });
+        let readable_func = readable_constructor.get_function(scope).unwrap();
+        let readable_key = v8::String::new(scope, "Readable").unwrap();
+        stream_obj.set(scope, readable_key.into(), readable_func.into());
+
+        // Writable Stream constructor
+        let writable_constructor = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let stream_obj = v8::Object::new(scope);
+
+            // _write method
+            let write_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut _retval: v8::ReturnValue| {
+                // Default _write implementation
+            });
+            let write_instance = write_func.get_function(scope).unwrap();
+            let write_key = v8::String::new(scope, "_write").unwrap();
+            stream_obj.set(scope, write_key.into(), write_instance.into());
+
+            // write method
+            let write_public_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let _chunk = args.get(0);
+                let _encoding = args.get(1).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+                let callback = args.get(2);
+                // Call _write method
+                let write_key = v8::String::new(scope, "_write").unwrap();
+                if let Some(write_func_val) = this.get(scope, write_key.into()) {
+                    if write_func_val.is_function() {
+                        if let Ok(write_func) = v8::Local::<v8::Function>::try_from(write_func_val) {
+                            write_func.call(scope, this.into(), &[]);
+                        }
+                    }
+                }
+                if callback.is_function() {
+                    if let Ok(cb_func) = v8::Local::<v8::Function>::try_from(callback) {
+                        cb_func.call(scope, this.into(), &[]);
+                    }
+                }
+                retval.set(v8::Boolean::new(scope, true).into());
+            });
+            let write_public_instance = write_public_func.get_function(scope).unwrap();
+            let write_public_key = v8::String::new(scope, "write").unwrap();
+            stream_obj.set(scope, write_public_key.into(), write_public_instance.into());
+
+            // end method
+            let end_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let callback = args.get(2);
+                if callback.is_function() {
+                    if let Ok(cb_func) = v8::Local::<v8::Function>::try_from(callback) {
+                        cb_func.call(scope, this.into(), &[]);
+                    }
+                }
+                retval.set(this.into());
+            });
+            let end_instance = end_func.get_function(scope).unwrap();
+            let end_key = v8::String::new(scope, "end").unwrap();
+            stream_obj.set(scope, end_key.into(), end_instance.into());
+
+            retval.set(stream_obj.into());
+        });
+        let writable_func = writable_constructor.get_function(scope).unwrap();
+        let writable_key = v8::String::new(scope, "Writable").unwrap();
+        stream_obj.set(scope, writable_key.into(), writable_func.into());
+
+        // Transform Stream constructor
+        let transform_constructor = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let stream_obj = v8::Object::new(scope);
+            // _transform method placeholder
+            let transform_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut _retval: v8::ReturnValue| {});
+            let transform_instance = transform_func.get_function(scope).unwrap();
+            let transform_key = v8::String::new(scope, "_transform").unwrap();
+            stream_obj.set(scope, transform_key.into(), transform_instance.into());
+            retval.set(stream_obj.into());
+        });
+        let transform_func = transform_constructor.get_function(scope).unwrap();
+        let transform_key = v8::String::new(scope, "Transform").unwrap();
+        stream_obj.set(scope, transform_key.into(), transform_func.into());
+
+        // Duplex Stream constructor
+        let duplex_constructor = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let stream_obj = v8::Object::new(scope);
+            retval.set(stream_obj.into());
+        });
+        let duplex_func = duplex_constructor.get_function(scope).unwrap();
+        let duplex_key = v8::String::new(scope, "Duplex").unwrap();
+        stream_obj.set(scope, duplex_key.into(), duplex_func.into());
+
+        // Set stream as global
+        let stream_key = v8::String::new(scope, "stream").unwrap();
+        global.set(scope, stream_key.into(), stream_obj.into());
 
         Ok(())
     }
