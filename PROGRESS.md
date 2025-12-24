@@ -167,6 +167,35 @@
 - ✅ `beejs eval "os.freemem() > 0"` → true
 - ✅ `beejs eval "os.totalmem() > os.freemem()"` → true
 
+### ✨ v0.3.38 process 模块修复 (2025-12-25)
+**进度**: ✅ process.release | ✅ process.uptime 测试修复 | ✅ 39/39 测试通过
+
+#### v0.3.38 实现内容
+- ✅ **process.release 对象**
+  - 添加 `process.release.name = "beejs"`
+  - 与 Node.js 兼容的 release 对象结构
+  - 39 个测试用例全部通过
+
+- ✅ **测试修复**
+  - 修复 `test_process_uptime_exists` 的 typeof 断言
+  - 正确处理 `process.uptime` 作为函数类型
+
+#### v0.3.38 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+8 行)
+  - 在 `setup_process_api` 函数中添加 `process.release` 对象
+
+- **修改文件**: `tests/process_module_tests.rs` (+2 行)
+  - 更新 `test_process_uptime_exists` 断言逻辑
+
+#### v0.3.38 验证
+- ✅ `cargo build --release` - 零警告
+- ✅ `cargo test --test process_module_tests` - 39 tests passed
+- ✅ `beejs eval "typeof process.release"` → "object"
+- ✅ `beejs eval "process.release.name"` → "beejs"
+- ✅ `beejs eval "typeof process.uptime"` → "function"
+
+---
+
 ### ✨ v0.3.34 process 模块增强 (2025-12-25)
 **进度**: ✅ process.nextTick 实现 | ✅ 完整测试套件 | ✅ 30+ 测试用例 | ✅ 所有功能验证通过
 
