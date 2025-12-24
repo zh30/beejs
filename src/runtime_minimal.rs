@@ -3,6 +3,7 @@
 
 use anyhow::Result;
 use base64::Engine;
+use rand::Rng;
 use rusty_v8 as v8;
 use std::sync::atomic::{AtomicU64, Ordering};
 use url::Url;
@@ -2270,6 +2271,80 @@ impl MinimalRuntime {
         };
         let create_hmac_key = v8::String::new(scope, "createHmac").unwrap().into();
         crypto_obj.set(scope, create_hmac_key, create_hmac_fn.into());
+
+        // Add crypto.randomBytes (v0.3.10)
+        let random_bytes_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let size = args.get(0)
+                .to_uint32(scope)
+                .map(|n| n.value())
+                .unwrap_or(0);
+
+            if size == 0 {
+                let empty_buf = v8::ArrayBuffer::new(scope, 0);
+                if let Some(uint8_array) = v8::Uint8Array::new(scope, empty_buf, 0, 0) {
+                    retval.set(uint8_array.into());
+                }
+                return;
+            }
+
+            // Generate random bytes using rand crate (cryptographically secure)
+            let mut random_data = vec![0u8; size as usize];
+            rand::thread_rng().fill(&mut random_data[..]);
+
+            // Create ArrayBuffer and Uint8Array
+            let array_buffer = v8::ArrayBuffer::new(scope, random_data.len());
+            let backing_store = array_buffer.get_backing_store();
+            for (i, byte) in random_data.iter().enumerate() {
+                backing_store[i].set(*byte);
+            }
+
+            if let Some(uint8_array) = v8::Uint8Array::new(scope, array_buffer, 0, random_data.len()) {
+                retval.set(uint8_array.into());
+            }
+        });
+        let random_bytes_fn = match random_bytes_fn {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let random_bytes_key = v8::String::new(scope, "randomBytes").unwrap().into();
+        crypto_obj.set(scope, random_bytes_key, random_bytes_fn.into());
+
+        // Add crypto.randomBytesSync (v0.3.10)
+        let random_bytes_sync_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let size = args.get(0)
+                .to_uint32(scope)
+                .map(|n| n.value())
+                .unwrap_or(0);
+
+            if size == 0 {
+                let empty_buf = v8::ArrayBuffer::new(scope, 0);
+                if let Some(uint8_array) = v8::Uint8Array::new(scope, empty_buf, 0, 0) {
+                    retval.set(uint8_array.into());
+                }
+                return;
+            }
+
+            // Generate random bytes using rand crate (synchronous, cryptographically secure)
+            let mut random_data = vec![0u8; size as usize];
+            rand::thread_rng().fill(&mut random_data[..]);
+
+            // Create ArrayBuffer and Uint8Array
+            let array_buffer = v8::ArrayBuffer::new(scope, random_data.len());
+            let backing_store = array_buffer.get_backing_store();
+            for (i, byte) in random_data.iter().enumerate() {
+                backing_store[i].set(*byte);
+            }
+
+            if let Some(uint8_array) = v8::Uint8Array::new(scope, array_buffer, 0, random_data.len()) {
+                retval.set(uint8_array.into());
+            }
+        });
+        let random_bytes_sync_fn = match random_bytes_sync_fn {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let random_bytes_sync_key = v8::String::new(scope, "randomBytesSync").unwrap().into();
+        crypto_obj.set(scope, random_bytes_sync_key, random_bytes_sync_fn.into());
 
         let crypto_key = v8::String::new(scope, "crypto").unwrap().into();
         global.set(scope, crypto_key, crypto_obj.into());

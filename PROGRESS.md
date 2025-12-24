@@ -1,6 +1,50 @@
 
 
 
+**最新状态 (2025-12-24)**: 🚀 v0.3.10 randomBytes 随机数模块发布！加密安全随机字节生成！会话令牌/密钥材料场景必备！
+
+### 🎯 v0.3.10 randomBytes 随机数模块 (2025-12-24)
+**进度**: ✅ randomBytes | ✅ randomBytesSync | ✅ 任意大小支持 | ✅ 加密安全
+
+#### v0.3.10 核心功能
+- ✅ **crypto.randomBytes(size)** - 异步生成加密安全随机字节
+- ✅ **crypto.randomBytesSync(size)** - 同步生成加密安全随机字节
+- ✅ **返回 Uint8Array** - 与 Node.js Buffer 兼容的二进制数据
+- ✅ **任意大小支持** - 0 到任意字节数
+
+#### v0.3.10 技术实现
+- 使用 `rand::Rng` crate 生成加密安全随机数
+- 返回 V8 Uint8Array，可直接调用 toString('hex') / toString('base64')
+- 与 Node.js crypto.randomBytes API 完全兼容
+
+#### v0.3.10 使用示例
+```javascript
+// 异步生成
+crypto.randomBytes(16, (err, buf) => {
+    console.log(buf.toString('hex')); // 32 hex chars
+});
+
+// 同步生成
+const token = crypto.randomBytes(32).toString('hex');
+console.log(token); // 64 hex chars (256-bit token)
+
+// 生成密钥材料
+const key = crypto.randomBytes(64).toString('base64');
+```
+
+#### v0.3.10 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+45 行)
+  - 添加 `crypto.randomBytes` 函数（异步）
+  - 添加 `crypto.randomBytesSync` 函数（同步）
+  - 使用 rand crate 生成加密安全随机字节
+
+- **新增文件**: `tests/crypto_randombytes_tests.rs` (+160 行)
+  - 16 个测试用例覆盖所有 randomBytes API
+  - 测试函数存在性、大小正确性、随机性
+  - 测试零大小、大小、边界情况
+
+---
+
 **最新状态 (2025-12-24)**: 🚀 v0.3.9 HMAC 密钥认证发布！createHmac API 实现！API 认证/Webhook 验证场景必备！
 
 ### 🎯 v0.3.9 HMAC 密钥认证模块 (2025-12-24)
