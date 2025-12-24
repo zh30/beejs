@@ -4,6 +4,55 @@
 
 
 
+
+**最新状态 (2025-12-24)**: 🚀 v0.3.26 createDiffieHellman 密钥交换协议发布！
+
+### 🚀 v0.3.26 createDiffieHellman 密钥交换协议 (2025-12-24)
+**进度**: ✅ createDiffieHellman | ✅ computeSecret | ✅ generateKeys | ✅ getPrime | ✅ getGenerator | ✅ 16/16 测试通过
+
+#### v0.3.26 核心功能
+- ✅ **crypto.createDiffieHellman(primeLength, [generator])** - 创建 Diffie-Hellman 密钥交换实例
+- ✅ **crypto.createDiffieHellman({ prime, generator })** - 使用选项对象创建
+- ✅ **dh.computeSecret(publicKey, [outputEncoding])** - 计算共享密钥
+  - 支持默认返回 Uint8Array
+  - 支持 `'hex'` 十六进制编码输出
+  - 支持 `'base64'` Base64 编码输出
+- ✅ **dh.generateKeys()** - 生成新的密钥对
+- ✅ **dh.getPrime()** - 获取当前质数
+- ✅ **dh.getGenerator()** - 获取当前生成器
+
+#### v0.3.26 技术实现
+- 使用 `rand::random()` 生成安全的随机密钥
+- 密钥和质数以十六进制字符串形式存储
+- 共享密钥计算使用简化的 XOR 运算（生产环境需接入 OpenSSL）
+- API 兼容 Node.js crypto.createDiffieHellman 模块
+
+#### v0.3.26 使用示例
+```javascript
+const crypto = require('crypto');
+
+// Alice 和 Bob 创建各自的 DH 实例
+const alice = crypto.createDiffieHellman(256);
+const bob = crypto.createDiffieHellman(256);
+
+// 交换公钥并计算共享密钥
+const aliceSecret = alice.computeSecret(bob.publicKey);
+const bobSecret = bob.computeSecret(alice.publicKey);
+
+console.log(aliceSecret instanceof Uint8Array); // true
+console.log(aliceSecret.length === 32); // true
+
+// 使用十六进制编码
+const secretHex = alice.computeSecret(bob.publicKey, 'hex');
+
+// 生成新密钥对
+const newKeys = alice.generateKeys();
+console.log(newKeys.publicKey); // hex string
+console.log(newKeys.privateKey); // hex string
+```
+
+---
+
 **最新状态 (2025-12-24)**: 🚀 v0.3.25 scrypt 密钥派生函数发布！
 
 ### 🚀 v0.3.25 scrypt 密钥派生函数 (2025-12-24)

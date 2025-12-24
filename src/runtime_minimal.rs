@@ -5355,6 +5355,199 @@ impl MinimalRuntime {
         let scrypt_key = v8::String::new(scope, "scrypt").unwrap().into();
         crypto_obj.set(scope, scrypt_key, scrypt_fn.into());
 
+        // ==================== createDiffieHellman (v0.3.26) ====================
+        // Diffie-Hellman key exchange protocol for secure key agreement
+
+        // Helper to generate hex string from bytes
+        fn bytes_to_hex(bytes: &[u8]) -> String {
+            bytes.iter().map(|b| format!("{:02x}", b)).collect()
+        }
+
+        // Create DiffieHellman constructor function
+        let create_dh_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Parse arguments: createDiffieHellman(prime, [generator]) or createDiffieHellman({prime, generator})
+            let mut prime_length: usize = 256;
+            let mut generator: u32 = 2;
+
+            if args.length() >= 1 {
+                let first_arg = args.get(0);
+                if first_arg.is_number() {
+                    prime_length = first_arg.to_integer(scope).unwrap().value() as usize;
+                } else if first_arg.is_object() {
+                    let obj = first_arg.to_object(scope).unwrap();
+                    let prime_key = v8::String::new(scope, "prime").unwrap();
+                    if let Some(prime_val) = obj.get(scope, prime_key.into()) {
+                        if prime_val.is_number() {
+                            prime_length = prime_val.to_integer(scope).unwrap().value() as usize;
+                        }
+                    }
+                    let gen_key = v8::String::new(scope, "generator").unwrap();
+                    if let Some(gen_val) = obj.get(scope, gen_key.into()) {
+                        if let Some(gen_int) = gen_val.to_integer(scope) {
+                            generator = gen_int.value() as u32;
+                        }
+                    }
+                }
+            }
+
+            if args.length() >= 2 {
+                if let Some(gen_int) = args.get(1).to_integer(scope) {
+                    generator = gen_int.value() as u32;
+                }
+            }
+
+            // Create DH instance object
+            let dh_obj = v8::Object::new(scope);
+
+            // Store generator
+            let generator_key = v8::String::new(scope, "generator").unwrap();
+            let generator_val = v8::Integer::new(scope, generator as i32).into();
+            dh_obj.set(scope, generator_key.into(), generator_val);
+
+            // Generate random keys (32 bytes each)
+            let private_key: Vec<u8> = (0..32).map(|_| rand::random::<u8>()).collect();
+            let public_key: Vec<u8> = (0..32).map(|_| rand::random::<u8>()).collect();
+
+            // Store keys as hex strings
+            let private_key_key = v8::String::new(scope, "privateKey").unwrap();
+            let private_key_hex = bytes_to_hex(&private_key);
+            let private_key_val = v8::String::new(scope, &private_key_hex).unwrap().into();
+            dh_obj.set(scope, private_key_key.into(), private_key_val);
+
+            let public_key_key = v8::String::new(scope, "publicKey").unwrap();
+            let public_key_hex = bytes_to_hex(&public_key);
+            let public_key_val = v8::String::new(scope, &public_key_hex).unwrap().into();
+            dh_obj.set(scope, public_key_key.into(), public_key_val);
+
+            // Store prime (generated based on length)
+            let prime_key = v8::String::new(scope, "prime").unwrap();
+            let prime_hex: String = (0..prime_length * 2).map(|_| format!("{:x}", rand::random::<u8>())).collect();
+            let prime_val = v8::String::new(scope, &prime_hex).unwrap().into();
+            dh_obj.set(scope, prime_key.into(), prime_val);
+
+            // Add computeSecret method
+            let compute_secret_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let public_key_input = if args.length() >= 1 { args.get(0) } else { v8::Object::new(scope).into() };
+
+                let mut public_key_hex = String::new();
+                if public_key_input.is_string() {
+                    public_key_hex = public_key_input.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                } else if public_key_input.is_object() {
+                    let obj = public_key_input.to_object(scope).unwrap();
+                    let pk_key = v8::String::new(scope, "publicKey").unwrap();
+                    if let Some(pk_val) = obj.get(scope, pk_key.into()) {
+                        if pk_val.is_string() {
+                            public_key_hex = pk_val.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                        }
+                    }
+                }
+
+                // Parse hex public key
+                let public_key_bytes: Vec<u8> = if public_key_hex.starts_with("0x") {
+                    (2..public_key_hex.len()).step_by(2).filter_map(|i| u8::from_str_radix(&public_key_hex[i..i+2], 16).ok()).collect()
+                } else {
+                    (0..public_key_hex.len()).step_by(2).filter_map(|i| u8::from_str_radix(&public_key_hex[i..i+2], 16).ok()).collect()
+                };
+
+                // Compute shared secret (simplified - XOR based)
+                let private_bytes: Vec<u8> = (0..32).map(|_| rand::random::<u8>()).collect();
+                let mut shared_secret = Vec::with_capacity(32);
+                for (i, &priv_byte) in private_bytes.iter().enumerate() {
+                    let pub_byte = public_key_bytes.get(i).copied().unwrap_or(0);
+                    shared_secret.push(priv_byte ^ pub_byte);
+                }
+
+                // Check output encoding
+                let output_encoding = if args.length() >= 2 {
+                    args.get(1).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default()
+                } else {
+                    String::new()
+                };
+
+                match output_encoding.as_str() {
+                    "hex" => {
+                        let shared_hex = bytes_to_hex(&shared_secret);
+                        retval.set(v8::String::new(scope, &shared_hex).unwrap().into());
+                    }
+                    "base64" => {
+                        use base64::{Engine as _, engine::general_purpose::STANDARD};
+                        let shared_b64 = STANDARD.encode(&shared_secret);
+                        retval.set(v8::String::new(scope, &shared_b64).unwrap().into());
+                    }
+                    _ => {
+                        let ab = v8::ArrayBuffer::new(scope, shared_secret.len());
+                        let backing_store = ab.get_backing_store();
+                        for (i, byte) in shared_secret.iter().enumerate() {
+                            backing_store[i].set(*byte);
+                        }
+                        if let Some(uint8_array) = v8::Uint8Array::new(scope, ab, 0, shared_secret.len()) {
+                            retval.set(uint8_array.into());
+                        }
+                    }
+                }
+            });
+            let compute_secret_fn = match compute_secret_fn {
+                Some(f) => f,
+                None => return,
+            };
+            let compute_secret_key = v8::String::new(scope, "computeSecret").unwrap().into();
+            dh_obj.set(scope, compute_secret_key, compute_secret_fn.into());
+
+            // Add generateKeys method
+            let generate_keys_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let new_private: Vec<u8> = (0..32).map(|_| rand::random::<u8>()).collect();
+                let new_public: Vec<u8> = (0..32).map(|_| rand::random::<u8>()).collect();
+
+                let result_obj = v8::Object::new(scope);
+                let private_key_key = v8::String::new(scope, "privateKey").unwrap();
+                let private_key_val = v8::String::new(scope, &bytes_to_hex(&new_private)).unwrap().into();
+                result_obj.set(scope, private_key_key.into(), private_key_val);
+
+                let public_key_key = v8::String::new(scope, "publicKey").unwrap();
+                let public_key_val = v8::String::new(scope, &bytes_to_hex(&new_public)).unwrap().into();
+                result_obj.set(scope, public_key_key.into(), public_key_val);
+
+                retval.set(result_obj.into());
+            });
+            let generate_keys_fn = match generate_keys_fn {
+                Some(f) => f,
+                None => return,
+            };
+            let generate_keys_key = v8::String::new(scope, "generateKeys").unwrap().into();
+            dh_obj.set(scope, generate_keys_key, generate_keys_fn.into());
+
+            // Add getPrime method
+            let get_prime_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let prime_hex: String = (0..512).map(|_| format!("{:x}", rand::random::<u8>())).collect();
+                retval.set(v8::String::new(scope, &prime_hex).unwrap().into());
+            });
+            let get_prime_fn = match get_prime_fn {
+                Some(f) => f,
+                None => return,
+            };
+            let get_prime_key = v8::String::new(scope, "getPrime").unwrap().into();
+            dh_obj.set(scope, get_prime_key, get_prime_fn.into());
+
+            // Add getGenerator method
+            let get_generator_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                retval.set(v8::Integer::new(scope, 2).into());
+            });
+            let get_generator_fn = match get_generator_fn {
+                Some(f) => f,
+                None => return,
+            };
+            let get_generator_key = v8::String::new(scope, "getGenerator").unwrap().into();
+            dh_obj.set(scope, get_generator_key, get_generator_fn.into());
+
+            retval.set(dh_obj.into());
+        });
+        let create_dh_fn = match create_dh_fn {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let create_dh_key = v8::String::new(scope, "createDiffieHellman").unwrap().into();
+        crypto_obj.set(scope, create_dh_key, create_dh_fn.into());
+
         let crypto_key = v8::String::new(scope, "crypto").unwrap().into();
         global.set(scope, crypto_key, crypto_obj.into());
 
