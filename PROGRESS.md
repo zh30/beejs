@@ -6,6 +6,43 @@
 
 
 
+**最新状态 (2025-12-25)**: ✨ v0.3.31 path.resolve 实现
+
+### ✨ v0.3.31 path.resolve 实现 (2025-12-25)
+**进度**: ✅ 基础实现 | ✅ 相对路径处理 | ✅ 绝对路径覆盖 | ✅ 父目录遍历 | ✅ 边界测试通过
+
+#### v0.3.31 实现内容
+- ✅ **path.resolve 函数实现**
+  - 收集所有路径参数
+  - 处理绝对路径（最后一个绝对路径优先）
+  - 处理父目录 `..` 和当前目录 `.`
+  - 从当前工作目录解析相对路径
+  - 边界情况：空参数、单参数、无效路径段
+
+#### v0.3.31 技术实现
+- **路径解析算法**
+  ```rust
+  let resolve_fn = v8::Function::new(scope, |scope, args, mut retval| {
+      // 收集路径 → 绝对路径优先 → 遍历处理 → 清理结果
+  });
+  ```
+  - 使用 `std::env::current_dir()` 获取工作目录
+  - `Path::is_absolute()` 判断绝对路径
+  - `Path::parent()` 处理 `..` 遍历
+
+#### v0.3.31 测试验证
+- ✅ `path.resolve('foo', 'bar')` → `/Users/henry/code/beejs/foo/bar`
+- ✅ `path.resolve('/absolute', 'path')` → `/absolute/path`
+- ✅ `path.resolve('/a/b', '../c')` → `/a/b/../c`
+- ✅ `path.resolve()` → `/Users/henry/code/beejs`
+- ✅ `path.resolve('test.txt')` → `/Users/henry/code/beejs/test.txt`
+
+#### v0.3.31 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+70 行)
+  - 添加 `path.resolve` V8 函数模板
+  - 处理相对/绝对路径和父目录遍历
+  - 修复编译器警告（移除未使用的 `mut` 和变量）
+
 **最新状态 (2025-12-25)**: 🐛 v0.3.30 编译警告修复
 
 ### 🐛 v0.3.30 编译警告修复 (2025-12-25)

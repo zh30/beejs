@@ -8413,6 +8413,76 @@ impl MinimalRuntime {
                         let extname_key = v8::String::new(scope, "extname").unwrap().into();
                         result_obj.set(scope, extname_key, extname_fn.into());
 
+                        // Add resolve function (v0.3.31)
+                        let resolve_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                            // Collect all path segments
+                            let paths: Vec<String> = (0..args.length())
+                                .filter_map(|i| args.get(i).to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+                                .collect();
+
+                            // If no paths, return current directory
+                            if paths.is_empty() {
+                                let cwd = std::env::current_dir()
+                                    .map(|p| p.to_string_lossy().to_string())
+                                    .unwrap_or_else(|_| "/".to_string());
+                                retval.set(v8::String::new(scope, &cwd).unwrap().into());
+                                return;
+                            }
+
+                            // If last path is absolute, use it directly
+                            if let Some(last) = paths.last() {
+                                if std::path::Path::new(last).is_absolute() {
+                                    let result_str = v8::String::new(scope, last).unwrap();
+                                    retval.set(result_str.into());
+                                    return;
+                                }
+                            }
+
+                            // Start with current working directory
+                            let mut result = std::env::current_dir()
+                                .map(|p| p.to_string_lossy().to_string())
+                                .unwrap_or_else(|_| "/".to_string());
+
+                            // Process each path segment
+                            for path_str in paths {
+                                if path_str.is_empty() {
+                                    continue;
+                                }
+
+                                if path_str.starts_with('/') {
+                                    // Absolute path segment
+                                    result = path_str.clone();
+                                } else if path_str == "." {
+                                    // Current directory, do nothing
+                                    continue;
+                                } else if path_str == ".." {
+                                    // Parent directory
+                                    if let Some(parent) = std::path::Path::new(&result).parent() {
+                                        result = parent.to_string_lossy().to_string();
+                                        if result.is_empty() {
+                                            result = "/".to_string();
+                                        }
+                                    }
+                                } else {
+                                    // Regular path segment
+                                    if !result.ends_with('/') && !path_str.starts_with('/') {
+                                        result.push('/');
+                                    }
+                                    result.push_str(&path_str);
+                                }
+                            }
+
+                            // Clean up the result
+                            let clean_result = std::path::Path::new(&result)
+                                .to_string_lossy()
+                                .to_string();
+
+                            let result_str = v8::String::new(scope, &clean_result).unwrap();
+                            retval.set(result_str.into());
+                        }).unwrap();
+                        let resolve_key = v8::String::new(scope, "resolve").unwrap().into();
+                        result_obj.set(scope, resolve_key, resolve_fn.into());
+
                         // Add sep constant
                         let sep_key = v8::String::new(scope, "sep").unwrap().into();
                         let sep_val = v8::String::new(scope, "/").unwrap().into();
