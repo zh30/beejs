@@ -258,6 +258,115 @@ fn compute_scrypt_derived_key(password: &str, salt: &str, keylen: usize, n: u32,
     Ok(derived_key)
 }
 
+/// HKDF - HMAC-based Key Derivation Function (RFC 5869)
+///
+/// # Arguments
+/// * `digest` - Hash algorithm ("sha1", "sha256", "sha512")
+/// * `ikm` - Input Keying Material (secret key)
+/// * `salt` - Salt value (optional, should be random but not secret)
+/// * `info` - Application-specific context info
+/// * `keylen` - Desired output length in bytes
+fn hkdf_derive(digest: &str, ikm: &str, salt: &str, info: &str, keylen: usize) -> Vec<u8> {
+    use ring::digest;
+
+    // Get hash length for the algorithm
+    let hash_len = match digest {
+        "sha1" => 20,
+        "sha256" => 32,
+        "sha512" => 64,
+        _ => 32, // default to sha256
+    };
+
+    // Helper function to compute HMAC
+    fn compute_hmac(data: &[u8], key: &[u8], algorithm: &str) -> Vec<u8> {
+        use ring::digest;
+        use sha1::Digest;
+
+        let block_size = 64;
+        let ipad = 0x36u8;
+        let opad = 0x5cu8;
+
+        // Prepare key
+        let mut padded_key = key.to_vec();
+        if padded_key.len() > block_size {
+            padded_key = match algorithm {
+                "sha256" => digest::digest(&digest::SHA256, &padded_key).as_ref().to_vec(),
+                "sha512" => digest::digest(&digest::SHA512, &padded_key).as_ref().to_vec(),
+                "sha1" => {
+                    let mut hasher = sha1::Sha1::default();
+                    hasher.update(&padded_key);
+                    hasher.finalize().to_vec()
+                }
+                _ => digest::digest(&digest::SHA256, &padded_key).as_ref().to_vec(),
+            };
+        }
+        padded_key.resize(block_size, 0);
+
+        // Inner hash
+        let mut inner_input = Vec::with_capacity(block_size + data.len());
+        inner_input.extend(padded_key.iter().map(|b| b ^ ipad));
+        inner_input.extend(data);
+        let inner_hash = match algorithm {
+            "sha256" => digest::digest(&digest::SHA256, &inner_input).as_ref().to_vec(),
+            "sha512" => digest::digest(&digest::SHA512, &inner_input).as_ref().to_vec(),
+            "sha1" => {
+                let mut hasher = sha1::Sha1::default();
+                hasher.update(&inner_input);
+                hasher.finalize().to_vec()
+            }
+            _ => digest::digest(&digest::SHA256, &inner_input).as_ref().to_vec(),
+        };
+
+        // Outer hash
+        let mut outer_input = Vec::with_capacity(block_size + inner_hash.len());
+        outer_input.extend(padded_key.iter().map(|b| b ^ opad));
+        outer_input.extend(&inner_hash);
+
+        match algorithm {
+            "sha256" => digest::digest(&digest::SHA256, &outer_input).as_ref().to_vec(),
+            "sha512" => digest::digest(&digest::SHA512, &outer_input).as_ref().to_vec(),
+            "sha1" => {
+                let mut hasher = sha1::Sha1::default();
+                hasher.update(&outer_input);
+                hasher.finalize().to_vec()
+            }
+            _ => digest::digest(&digest::SHA256, &outer_input).as_ref().to_vec(),
+        }
+    }
+
+    // Step 1: Extract - PRK = HMAC-Hash(salt, IKM)
+    let salt_bytes = if salt.is_empty() { b"" } else { salt.as_bytes() };
+    let ikm_bytes = ikm.as_bytes();
+    let prk = compute_hmac(ikm_bytes, salt_bytes, digest);
+
+    // Step 2: Expand - OKM = T(1) | T(2) | T(3) | ...
+    let mut okm = Vec::with_capacity(keylen);
+    let mut t = Vec::new();
+    let mut counter: u8 = 1;
+
+    while okm.len() < keylen {
+        // T(n) = HMAC-Hash(PRK, T(n-1) | info | counter)
+        let mut input = Vec::new();
+        if !t.is_empty() {
+            input.extend(&t);
+        }
+        input.extend(info.as_bytes());
+        input.push(counter);
+
+        t = compute_hmac(&input, &prk, digest);
+        okm.extend(&t);
+        counter += 1;
+
+        // Safety: counter should not overflow in practice (HKDF limits output)
+        if counter == 0 {
+            break;
+        }
+    }
+
+    okm.truncate(keylen);
+    okm
+}
+
 /// A minimal runtime that only provides basic JavaScript execution
 /// This version avoids complex dependencies for faster startup
 pub struct MinimalRuntime {
@@ -2145,17 +2254,13 @@ impl MinimalRuntime {
         let get_random_values_key = v8::String::new(scope, "getRandomValues").unwrap().into();
         crypto_obj.set(scope, get_random_values_key, get_random_values_fn.into());
 
-        // Add crypto.randomUUID
+        // Add crypto.randomUUID (v0.3.29 - fixed implementation)
         let random_uuid_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            // Generate a simple UUID-like string
-            let uuid = format!("{}-4{}-{}{}-{}",
-                uuid::Uuid::new_v4().simple(),
-                "a", // version 4
-                "8b9f", // variant
-                "d", // variant
-                uuid::Uuid::new_v4().simple());
-            let uuid_str = v8::String::new(_scope, &uuid).unwrap();
-            retval.set(uuid_str.into());
+            // Generate a proper UUID v4
+            let uuid = uuid::Uuid::new_v4();
+            let uuid_str = uuid.to_string();
+            let uuid_v8 = v8::String::new(_scope, &uuid_str).unwrap();
+            retval.set(uuid_v8.into());
         }).ok_or_else(|| anyhow::anyhow!("Failed to create randomUUID function"))?;
         let random_uuid_key = v8::String::new(scope, "randomUUID").unwrap().into();
         crypto_obj.set(scope, random_uuid_key, random_uuid_fn.into());
@@ -6221,6 +6326,113 @@ impl MinimalRuntime {
         let create_secret_key_fn = create_secret_key_fn_opt.unwrap();
         let create_secret_key_key = v8::String::new(scope, "createSecretKey").unwrap().into();
         crypto_obj.set(scope, create_secret_key_key, create_secret_key_fn.into());
+
+        // ==================== hkdf (v0.3.29) ====================
+        // HMAC-based Key Derivation Function (RFC 5869)
+        let hkdf_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Parse arguments: hkdf(digest, ikm, salt, info, keylen)
+            let digest = args.get(0)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_else(|| "sha256".to_string());
+
+            let ikm = args.get(1)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            let salt = args.get(2)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            let info = args.get(3)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            let keylen: usize = args.get(4)
+                .to_integer(scope)
+                .map(|n| n.value() as usize)
+                .unwrap_or(32);
+
+            // Validate digest algorithm
+            let valid_algorithms = ["sha1", "sha256", "sha512"];
+            if !valid_algorithms.contains(&digest.as_str()) {
+                let error_msg = format!("hkdf: unsupported digest '{}'. Supported: {}", digest, valid_algorithms.join(", "));
+                let error = v8::String::new(scope, &error_msg).unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            // HKDF implementation
+            let result = hkdf_derive(&digest, &ikm, &salt, &info, keylen);
+
+            // Create Uint8Array result
+            let array_buffer = v8::ArrayBuffer::new(scope, keylen);
+            let backing_store = array_buffer.get_backing_store();
+            for (i, byte) in result.iter().enumerate() {
+                backing_store[i].set(*byte);
+            }
+            if let Some(uint8_array) = v8::Uint8Array::new(scope, array_buffer, 0, keylen) {
+                retval.set(uint8_array.into());
+            }
+        });
+        let hkdf_fn = match hkdf_fn {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let hkdf_key = v8::String::new(scope, "hkdf").unwrap().into();
+        crypto_obj.set(scope, hkdf_key, hkdf_fn.into());
+
+        // ==================== hkdfSync (v0.3.29) ====================
+        let hkdf_sync_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Same as hkdf but synchronous
+            let digest = args.get(0)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_else(|| "sha256".to_string());
+
+            let ikm = args.get(1)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            let salt = args.get(2)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            let info = args.get(3)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            let keylen: usize = args.get(4)
+                .to_integer(scope)
+                .map(|n| n.value() as usize)
+                .unwrap_or(32);
+
+            // HKDF implementation
+            let result = hkdf_derive(&digest, &ikm, &salt, &info, keylen);
+
+            // Create Uint8Array result
+            let array_buffer = v8::ArrayBuffer::new(scope, keylen);
+            let backing_store = array_buffer.get_backing_store();
+            for (i, byte) in result.iter().enumerate() {
+                backing_store[i].set(*byte);
+            }
+            if let Some(uint8_array) = v8::Uint8Array::new(scope, array_buffer, 0, keylen) {
+                retval.set(uint8_array.into());
+            }
+        });
+        let hkdf_sync_fn = match hkdf_sync_fn {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let hkdf_sync_key = v8::String::new(scope, "hkdfSync").unwrap().into();
+        crypto_obj.set(scope, hkdf_sync_key, hkdf_sync_fn.into());
 
         let crypto_key = v8::String::new(scope, "crypto").unwrap().into();
         global.set(scope, crypto_key, crypto_obj.into());
