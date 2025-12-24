@@ -4590,3 +4590,78 @@ const after = process.memoryUsage().heapUsed;
 console.log(`Memory increase: ${after - before} bytes`);
 ```
 
+
+---
+
+### ✨ v0.3.41 process.hrtime.bigint() 高精度时间函数 (2025-12-25)
+**进度**: ✅ process.hrtime() | ✅ process.hrtime.bigint() | ✅ 7 测试用例 | ✅ 59/59 测试通过 | ✅ CLI 验证通过
+
+#### v0.3.41 实现内容
+- ✅ **process.hrtime() 函数**
+  - 返回 `[seconds, nanoseconds]` 格式的时间数组
+  - 使用 `SystemTime::now().duration_since(UNIX_EPOCH).as_nanos()` 获取高精度时间
+  - 保持与 Node.js 兼容的返回值格式
+
+- ✅ **process.hrtime.bigint() 方法**
+  - 返回 BigInt 格式的纳秒时间
+  - 直接调用 `v8::BigInt::new_from_u64()` 创建 BigInt
+  - 精度足够表示约 584 年的纳秒时间
+
+#### v0.3.41 技术实现
+- **hrtime 函数** (src/runtime_minimal.rs)
+  ```rust
+  let hrtime_fn_template = v8::FunctionTemplate::new(scope, |scope, _args, mut retval| {
+      let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+      let sec = (now / 1_000_000_000) as i32;
+      let nsec = (now % 1_000_000_000) as i32;
+      let result_array = v8::Array::new(scope, 2);
+      // ...
+  });
+  ```
+
+- **bigint 方法** (src/runtime_minimal.rs)
+  ```rust
+  let hrtime_bigint_fn = v8::Function::new(scope, |scope, _args, mut retval| {
+      let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+      let bigint_val = v8::BigInt::new_from_u64(scope, now as u64);
+      retval.set(bigint_val.into());
+  }).unwrap();
+  hrtime_func.set(scope, bigint_key.into(), hrtime_bigint_fn.into());
+  ```
+
+#### v0.3.41 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+86 行)
+  - 添加 `hrtime_bigint_fn` 函数创建 BigInt 时间
+  - 修改 `hrtime_fn_template` 返回数组格式
+  - 将 `bigint` 方法添加到 `hrtime_func` 对象
+
+- **修改文件**: `tests/process_module_tests.rs` (+59 行)
+  - 添加 7 个新测试用例
+  - 测试 hrtime() 返回对象/数组
+  - 测试 hrtime.bigint() 存在和返回值
+  - 测试 bigint 值的范围验证
+
+#### v0.3.41 验证
+- ✅ `cargo build --release` 成功
+- ✅ `cargo test --test process_module_tests` → 59/59 通过
+- ✅ `beejs eval "typeof process.hrtime.bigint"` → "function"
+- ✅ `beejs eval "typeof process.hrtime.bigint()"` → "bigint"
+- ✅ `beejs eval "process.hrtime.bigint() > 1700000000000000000n"` → true
+
+#### v0.3.41 使用示例
+```javascript
+// 获取高精度时间
+const time = process.hrtime();
+console.log(`Seconds: ${time[0]}, Nanoseconds: ${time[1]}`);
+
+// 获取 BigInt 格式的纳秒时间
+const nanoseconds = process.hrtime.bigint();
+console.log(`Nanoseconds since epoch: ${nanoseconds}n`);
+
+// 高精度性能测量
+const start = process.hrtime.bigint();
+// ... 执行一些操作
+const end = process.hrtime.bigint();
+const duration = end - start;
+console.log(`Duration: ${duration}n (${Number(duration) / 1000000}ms)`);
+```
