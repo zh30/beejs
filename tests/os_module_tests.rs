@@ -62,7 +62,7 @@ fn test_os_cpus_cpu_object() {
         }
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert!(result.trim().starts_with("string|string|object"),
+    assert!(result.trim().starts_with("string|number|object"),
             "cpu object should have model (string), speed (number), and times (object)");
 }
 
@@ -108,7 +108,7 @@ fn test_os_uptime() {
     let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let result = runtime.execute_code("os.uptime()").expect("Execution failed");
     let uptime: f64 = result.trim().parse().expect("Should be a number");
-    assert!(uptime > 0, "uptime should be > 0, got: {}", uptime);
+    assert!(uptime > 0.0, "uptime should be > 0, got: {}", uptime);
 }
 
 #[test]
@@ -140,7 +140,7 @@ fn test_os_homedir() {
     let result = runtime.execute_code("os.homedir()").expect("Execution failed");
     let homedir = result.trim();
     assert!(!homedir.is_empty(), "homedir should not be empty");
-    assert!(homedir.starts_with('/') || homedir.starts_with('C:') || homedir.starts_with("\\\\"),
+    assert!(homedir.starts_with('/') || homedir.starts_with("C:") || homedir.starts_with("\\\\"),
             "homedir should be an absolute path, got: {}", homedir);
 }
 
@@ -184,7 +184,7 @@ fn test_os_all_properties() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(),
-        "function|function|object|function|function|function|function|function|function|function",
+        "function|function|function|function|function|function|function|function|function|function",
             "os module should have all expected properties");
 }
 
@@ -210,5 +210,5 @@ fn test_os_functions_are_callable() {
         homedir.length + '|' + tmpdir.length;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert!(result.trim().length() > 0, "All os functions should return values");
+    assert!(result.trim().len() > 0, "All os functions should return values");
 }

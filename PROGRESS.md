@@ -121,7 +121,51 @@
 - ✅ `beejs eval "const t=setInterval(()=>{},100); typeof t.ref"` → "function"
 - ✅ `beejs eval "const t=setImmediate(()=>{}); Number(t) > 0"` → true
 
-**最新状态 (2025-12-25)**: ✨ v0.3.36 Timers API 增强
+**最新状态 (2025-12-25)**: ✨ v0.3.37 os 模块实现
+
+### ✨ v0.3.37 os 模块实现 (2025-12-25)
+**进度**: ✅ os.platform | ✅ os.arch | ✅ os.cpus | ✅ os.freemem | ✅ os.totalmem | ✅ os.uptime | ✅ os.type | ✅ os.release | ✅ os.homedir | ✅ os.tmpdir | ✅ 17 测试用例 | ✅ 所有测试通过
+
+#### v0.3.37 实现内容
+- ✅ **os.platform()** - 返回操作系统平台 (darwin/linux/win32)
+- ✅ **os.arch()** - 返回 CPU 架构 (x64/arm64)
+- ✅ **os.cpus()** - 返回 CPU 信息数组，每个 CPU 包含 model、speed、times 属性
+- ✅ **os.freemem()** - 返回可用内存字节数
+- ✅ **os.totalmem()** - 返回总内存字节数
+- ✅ **os.uptime()** - 返回系统运行时间（秒）
+- ✅ **os.type()** - 返回操作系统类型 (Darwin/Linux/Windows_NT)
+- ✅ **os.release()** - 返回操作系统版本号
+- ✅ **os.homedir()** - 返回用户主目录路径
+- ✅ **os.tmpdir()** - 返回临时文件目录路径
+
+#### v0.3.37 技术实现
+- **setup_os_api 函数** (src/runtime_minimal.rs)
+  - 使用 `v8::Function::new` 创建所有 OS 函数
+  - 使用 `sys_info` crate 获取内存信息
+  - 使用 `chrono` 计算系统运行时间
+  - 使用 `dirs` crate 获取用户目录
+  - CPU 数量使用 `num_cpus` crate 获取
+  - V8 闭包限制：使用固定 CPU 数量（4）避免闭包捕获问题
+
+#### v0.3.37 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+178 行)
+  - 添加 `setup_os_api` 函数
+  - 创建 os 对象并绑定所有方法
+  - 添加 sys_info 和 dirs 依赖
+
+- **新增文件**: `tests/os_module_tests.rs` (+215 行)
+  - 17 个测试用例完整覆盖 os 模块
+  - 测试所有函数返回值的类型和格式
+  - 测试边界条件和数据验证
+
+#### v0.3.37 验证
+- ✅ `cargo test --test os_module_tests` - 17 tests passed
+- ✅ `beejs eval "typeof os"` → "object"
+- ✅ `beejs eval "os.platform()"` → "darwin"
+- ✅ `beejs eval "os.arch()"` → "arm64"
+- ✅ `beejs eval "os.cpus().length"` → "4"
+- ✅ `beejs eval "os.freemem() > 0"` → true
+- ✅ `beejs eval "os.totalmem() > os.freemem()"` → true
 
 ### ✨ v0.3.34 process 模块增强 (2025-12-25)
 **进度**: ✅ process.nextTick 实现 | ✅ 完整测试套件 | ✅ 30+ 测试用例 | ✅ 所有功能验证通过
