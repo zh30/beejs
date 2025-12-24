@@ -7,6 +7,61 @@
 
 
 
+### ✨ v0.3.35 Process 模块增强 (2025-12-25)
+**进度**: ✅ process.umask | ✅ process.abort | ✅ process.config | ✅ 14+ 测试用例 | ✅ CLI 验证通过
+
+#### v0.3.35 实现内容
+- ✅ **process.umask() 函数**
+  - 线程安全的文件模式掩码管理（使用 AtomicU32）
+  - 无参数时返回当前掩码（4位八进制字符串）
+  - 有参数时设置新掩码并返回旧值
+  - 与 Node.js 兼容的返回值格式
+
+- ✅ **process.abort() 函数**
+  - 立即终止当前进程
+  - 调用 Rust std::process::abort()
+
+- ✅ **process.config 对象**
+  - 包含 compiler 配置信息
+  - config.variables.host_arch: 主机架构 (x64/arm64)
+  - config.variables.platform: 平台 (darwin/linux/win32)
+
+- ✅ **验证已实现功能**
+  - process.chdir() 目录切换功能正常
+  - process.title 默认值 "beejs"
+  - process.release.name 值为 "beejs"
+
+#### v0.3.35 技术实现
+- **umask 实现** (src/runtime_minimal.rs)
+  ```rust
+  static CURRENT_UMASK: AtomicU32 = AtomicU32::new(0o022);
+  // 无参数返回当前掩码，有参数设置新掩码
+  ```
+
+#### v0.3.35 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+65 行)
+  - 添加 umask_key, abort_key, config_key
+  - 添加 umask_fn 和 abort_fn 函数模板
+  - 创建 config_obj 和 variables_obj
+  - 将新属性添加到 process 对象
+
+- **修改文件**: `tests/process_module_tests.rs` (+144 行)
+  - 添加 14 个新测试用例
+  - 覆盖 umask, abort, config, chdir, title, release
+
+#### v0.3.35 验证
+- ✅ `cargo build --release` 成功
+- ✅ `beejs eval "typeof process.umask"` → "function"
+- ✅ `beejs eval "process.umask()"` → "0022"
+- ✅ `beejs eval "process.umask(0o077)"` → "0022" (返回旧值)
+- ✅ `beejs eval "typeof process.abort"` → "function"
+- ✅ `beejs eval "typeof process.config"` → "object"
+- ✅ `beejs eval "process.config.variables.host_arch"` → "arm64"
+- ✅ `beejs eval "process.chdir(process.cwd())"` → 返回 undefined
+- ✅ `beejs eval "process.title"` → "beejs"
+
+**最新状态 (2025-12-25)**: ✨ v0.3.35 Process 模块增强
+
 ### ✨ v0.3.34 process 模块增强 (2025-12-25)
 **进度**: ✅ process.nextTick 实现 | ✅ 完整测试套件 | ✅ 30+ 测试用例 | ✅ 所有功能验证通过
 
