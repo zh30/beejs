@@ -4438,11 +4438,11 @@ impl MinimalRuntime {
         let public_encrypt_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             // Get key parameter (can be string or object with key property)
             let key = args.get(0);
-            let mut key_str = String::new();
+            let _key_str = String::new();
 
             if key.is_string() {
                 if let Some(s) = key.to_string(scope) {
-                    key_str = s.to_rust_string_lossy(scope);
+                    let _ = s.to_rust_string_lossy(scope);
                 }
             } else if key.is_object() {
                 // Handle { key: '...', padding: ... } format
@@ -4451,7 +4451,7 @@ impl MinimalRuntime {
                 let key_prop_key = v8::String::new(scope, "key").unwrap().into();
                 if let Some(key_val) = key_obj.get(scope, key_prop_key) {
                     if let Some(s) = key_val.to_string(scope) {
-                        key_str = s.to_rust_string_lossy(scope);
+                        let _ = s.to_rust_string_lossy(scope);
                     }
                 }
             }
@@ -4494,11 +4494,11 @@ impl MinimalRuntime {
         let private_decrypt_fn_opt = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             // Get key parameter (can be string or object with key property)
             let key = args.get(0);
-            let mut key_str = String::new();
+            let key_str = String::new();
 
             if key.is_string() {
                 if let Some(s) = key.to_string(scope) {
-                    key_str = s.to_rust_string_lossy(scope);
+                    let _ = s.to_rust_string_lossy(scope);
                 }
             } else if key.is_object() {
                 // Handle { key: '...', padding: ... } format
@@ -4507,7 +4507,7 @@ impl MinimalRuntime {
                 let key_prop_key = v8::String::new(scope, "key").unwrap().into();
                 if let Some(key_val) = key_obj.get(scope, key_prop_key) {
                     if let Some(s) = key_val.to_string(scope) {
-                        key_str = s.to_rust_string_lossy(scope);
+                        let _ = s.to_rust_string_lossy(scope);
                     }
                 }
             }
