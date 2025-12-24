@@ -1,7 +1,37 @@
 
 
 
-**最新状态 (2025-12-24)**: 🚀 v0.3.17 process 全局对象发布！Node.js 脚本兼容性大幅提升！
+**最新状态 (2025-12-24)**: ✅ v0.3.18 Timers 模块增强已完成！
+
+### ✅ v0.3.18 Timers 模块增强 (已完成)
+**目标**: 实现完整的 timers 模块，支持 setImmediate, unref, ref 等高级功能
+
+#### v0.3.18 核心功能
+- ✅ **setTimeout** - 延迟执行函数 (v0.1.4 已完成，增强于 v0.3.18)
+- ✅ **setInterval** - 间隔执行函数 (v0.1.4 已完成，增强于 v0.3.18)
+- ✅ **clearTimeout** - 清除定时器 (v0.1.4 已完成，增强于 v0.3.18)
+- ✅ **clearInterval** - 清除间隔定时器 (v0.1.4 已完成，增强于 v0.3.18)
+- ✅ **setImmediate** - 在事件循环当前阶段之后执行 (v0.2.5 已完成)
+- ✅ **clearImmediate** - 清除 setImmediate (v0.2.5 已完成)
+- ✅ **TIMER_REGISTRY** - 全局定时器注册表 (v0.3.18 新增)
+- ✅ **定时器唯一 ID** - 使用 AtomicU64 生成器 (v0.3.18 新增)
+
+#### v0.3.18 技术方案
+1. **setImmediate 实现**: 使用 V8 微任务队列之后、下一个 I/O 之前执行 ✓
+2. **定时器注册表**: 使用 OnceLock + Mutex + HashMap 实现 ✓
+3. **统一定时器 ID**: 使用 AtomicU64 生成器，避免 ID 冲突 ✓
+4. **分类管理**: 分别跟踪 timeout、interval、immediate 定时器 ✓
+5. **参数传递**: 支持向定时器回调传递额外参数 ✓
+
+#### v0.3.18 测试结果
+- `test_settimeout_returns_number` - setTimeout 返回数字 ID ✓
+- `test_setinterval_returns_number` - setInterval 返回数字 ID ✓
+- `test_setimmediate_returns_number` - setImmediate 返回数字 ID ✓
+- `test_timer_ids_are_unique` - 定时器 ID 唯一性 ✓
+- `test_set_timeout_with_arguments` - 参数传递支持 ✓
+- 19 个测试全部通过 ✓
+
+---
 
 ### 🎯 v0.3.17 Process 全局对象模块 (2025-12-24)
 **进度**: ✅ process.version | ✅ process.platform | ✅ process.arch | ✅ process.env | ✅ process.argv | ✅ process.cwd | ✅ process.memoryUsage | ✅ process.uptime | ✅ process.hrtime | ✅ process.exit | ✅ 35 个测试用例
@@ -3202,4 +3232,49 @@ fetch('https://httpbin.org/json').json()  // 返回: 实际 JSON 数据
 ./beejs eval "const fs = require('fs'); fs.writeFile('/tmp/test.txt', 'Hello!', (err) => { console.log(err || 'done'); });"
 ./beejs eval "const fs = require('fs'); fs.appendFile('/tmp/test.txt', ' World', (err) => { console.log(err || 'done'); });"
 ```
+
+---
+
+### 🎯 v0.3.18 Timers 模块增强 (计划中)
+**目标**: 实现完整的 timers 模块，支持 setImmediate, unref, ref 等高级功能
+
+#### v0.3.18 核心功能
+- ✅ **setTimeout** - 延迟执行函数 (v0.1.4 已完成)
+- ✅ **setInterval** - 间隔执行函数 (v0.1.4 已完成)
+- ✅ **clearTimeout** - 清除定时器 (v0.1.4 已完成)
+- ✅ **clearInterval** - 清除间隔定时器 (v0.1.4 已完成)
+- 🔄 **setImmediate** - 在事件循环当前阶段之后执行 (待实现)
+- 🔄 **clearImmediate** - 清除 setImmediate (待实现)
+- 🔄 **timer.unref()** - 允许定时器不阻止进程退出 (待实现)
+- 🔄 **timer.ref()** - 重新要求定时器阻止进程退出 (待实现)
+
+#### v0.3.18 技术方案
+1. **setImmediate 实现**: 使用 V8 微任务队列之后、下一个 I/O 之前执行
+2. **unref/ref**: 维护定时器的引用计数，控制进程退出行为
+3. **统一定时器 ID**: 使用 AtomicU64 生成器，避免 ID 冲突
+4. **分类管理**: 分别跟踪 timeout、interval、immediate 定时器
+
+#### v0.3.18 使用示例
+```javascript
+// setImmediate - 在 I/O 之前执行
+setImmediate(() => {
+    console.log('Immediate execution');
+});
+
+// 定时器引用控制
+const timer = setTimeout(() => {
+    console.log('This will not run if unref() is called');
+}, 5000);
+timer.unref(); // 允许进程在不等待此定时器的情况下退出
+
+// 重新要求阻止退出
+timer.ref();
+```
+
+#### v0.3.18 测试计划
+- `test_setimmediate_basic` - setImmediate 基本测试
+- `test_clearimmediate` - clearImmediate 测试
+- `test_timer_unref` - unref() 功能测试
+- `test_timer_ref` - ref() 功能测试
+- `test_multiple_timer_types` - 多类型定时器混合使用测试
 

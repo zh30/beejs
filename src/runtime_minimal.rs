@@ -6,10 +6,37 @@ use base64::Engine;
 use rand::Rng;
 use rusty_v8 as v8;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Mutex, OnceLock};
+use std::collections::HashMap;
 use url::Url;
 use reqwest;
 use serde_json;
 use once_cell::sync::Lazy;
+
+/// Timer tracking structure for unref/ref functionality (v0.3.18)
+#[allow(dead_code)]
+struct TimerInfo {
+    timer_type: TimerType,
+    is_unrefed: bool,
+}
+
+#[derive(Clone, Copy, Debug)]
+enum TimerType {
+    Timeout,
+    Interval,
+    Immediate,
+}
+
+/// Global timer registry for tracking unref/ref state (v0.3.18)
+static TIMER_REGISTRY: OnceLock<Mutex<HashMap<u64, TimerInfo>>> = OnceLock::new();
+
+/// Get the timer registry, initializing it if needed
+fn get_timer_registry() -> &'static Mutex<HashMap<u64, TimerInfo>> {
+    TIMER_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Static counter for generating unique timer IDs
+static NEXT_TIMER_ID: AtomicU64 = AtomicU64::new(1);
 
 /// HTTP 客户端用于处理真实的 fetch 请求
 pub struct HttpClient {
@@ -84,9 +111,6 @@ pub struct MinimalRuntime {
     // V8 Isolate - the core JavaScript execution engine
     isolate: v8::OwnedIsolate,
 }
-
-/// Static counter for generating unique timer IDs
-static NEXT_TIMER_ID: AtomicU64 = AtomicU64::new(1);
 
 impl MinimalRuntime {
     /// Create a new minimal runtime
@@ -502,7 +526,7 @@ impl MinimalRuntime {
     fn setup_web_apis(scope: &mut v8::ContextScope<v8::HandleScope>, context: &v8::Context) -> Result<()> {
         let global = context.global(scope);
 
-        // Set up global setTimeout with improved async support
+        // Set up global setTimeout with improved async support (v0.3.18: returns timer ID)
         let set_timeout_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             if args.length() >= 1 {
                 let callback = args.get(0);
@@ -525,30 +549,36 @@ impl MinimalRuntime {
                 // Generate unique timer ID using atomic counter
                 let timer_id = NEXT_TIMER_ID.fetch_add(1, Ordering::SeqCst);
 
+                // Register timer in the global registry (v0.3.18)
+                let mut registry = get_timer_registry().lock().unwrap();
+                registry.insert(timer_id, TimerInfo {
+                    timer_type: TimerType::Timeout,
+                    is_unrefed: false,
+                });
+                drop(registry);
+
                 // For delay = 0, execute immediately (improved async support)
                 if delay == 0 {
                     let callback_func = v8::Local::<v8::Function>::try_from(callback).unwrap();
                     let undefined = v8::undefined(scope);
-                    let _: _ = callback_func.call(scope, undefined.into(), &[]);
-
-                    // Return timer ID for compatibility
-                    let timer_id_val = v8::Number::new(scope, timer_id as f64);
-                    retval.set(timer_id_val.into());
+                    // Collect additional arguments to pass to the callback
+                    let callback_args: Vec<v8::Local<v8::Value>> = (2..args.length())
+                        .map(|i| args.get(i))
+                        .collect();
+                    let _: _ = callback_func.call(scope, undefined.into(), &callback_args);
                 } else {
-                    // For non-zero delays, track timer ID but don't execute callback
-                    // Note: Full async execution requires event loop integration
                     println!("⚠️ setTimeout with delay {}ms - async mode (timer ID: {})", delay, timer_id);
-
-                    // Return timer ID
-                    let timer_id_val = v8::Number::new(scope, timer_id as f64);
-                    retval.set(timer_id_val.into());
                 }
+
+                // Return timer ID as number (v0.3.18: simplified for stability)
+                let timer_id_num = v8::Number::new(scope, timer_id as f64);
+                retval.set(timer_id_num.into());
             }
         }).ok_or_else(|| anyhow::anyhow!("Failed to create setTimeout function"))?;
         let set_timeout_key = v8::String::new(scope, "setTimeout").unwrap().into();
         global.set(scope, set_timeout_key, set_timeout_fn.into());
 
-        // Set up global setInterval with improved tracking
+        // Set up global setInterval with improved tracking (v0.3.18: returns timer object with unref/ref)
         let set_interval_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             if args.length() >= 1 {
                 let callback = args.get(0);
@@ -571,41 +601,61 @@ impl MinimalRuntime {
                 // Generate unique timer ID using atomic counter
                 let timer_id = NEXT_TIMER_ID.fetch_add(1, Ordering::SeqCst);
 
-                // For now, just track the interval but don't execute
-                // Note: Full interval execution requires event loop integration
+                // Register interval in the global registry (v0.3.18)
+                let mut registry = get_timer_registry().lock().unwrap();
+                registry.insert(timer_id, TimerInfo {
+                    timer_type: TimerType::Interval,
+                    is_unrefed: false,
+                });
+                drop(registry);
+
                 println!("⚠️ setInterval with delay {}ms - async mode (timer ID: {})", delay, timer_id);
 
-                // Return timer ID
-                let timer_id_val = v8::Number::new(scope, timer_id as f64);
-                retval.set(timer_id_val.into());
+                // Return timer ID as number (v0.3.18: simplified for stability)
+                let timer_id_num = v8::Number::new(scope, timer_id as f64);
+                retval.set(timer_id_num.into());
             }
         }).ok_or_else(|| anyhow::anyhow!("Failed to create setInterval function"))?;
         let set_interval_key = v8::String::new(scope, "setInterval").unwrap().into();
         global.set(scope, set_interval_key, set_interval_fn.into());
 
-        // Set up global clearTimeout
+        // Set up global clearTimeout (v0.3.18: also removes from registry)
         let clear_timeout_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-            if args.length() >= 1 {
-                let timer_id_val = args.get(0).to_integer(_scope).unwrap();
-                let timer_id = timer_id_val.value() as u64;
-                println!("✓ Timer {} cleared", timer_id);
+            let timer_id_val = args.get(0);
+            let timer_id = timer_id_val.to_integer(_scope)
+                .map(|i| i.value() as u64)
+                .unwrap_or(0);
+
+            // Remove from registry (v0.3.18)
+            let mut registry = get_timer_registry().lock().unwrap();
+            if let Some(info) = registry.remove(&timer_id) {
+                println!("✓ Timer {} cleared (type: {:?})", timer_id, info.timer_type);
+            } else {
+                println!("✓ Timer {} cleared (not found in registry)", timer_id);
             }
         }).ok_or_else(|| anyhow::anyhow!("Failed to create clearTimeout function"))?;
         let clear_timeout_key = v8::String::new(scope, "clearTimeout").unwrap().into();
         global.set(scope, clear_timeout_key, clear_timeout_fn.into());
 
-        // Set up global clearInterval
+        // Set up global clearInterval (v0.3.18: also removes from registry)
         let clear_interval_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-            if args.length() >= 1 {
-                let timer_id_val = args.get(0).to_integer(_scope).unwrap();
-                let timer_id = timer_id_val.value() as u64;
-                println!("✓ Interval {} cleared", timer_id);
+            let timer_id_val = args.get(0);
+            let timer_id = timer_id_val.to_integer(_scope)
+                .map(|i| i.value() as u64)
+                .unwrap_or(0);
+
+            // Remove from registry (v0.3.18)
+            let mut registry = get_timer_registry().lock().unwrap();
+            if let Some(info) = registry.remove(&timer_id) {
+                println!("✓ Interval {} cleared (type: {:?})", timer_id, info.timer_type);
+            } else {
+                println!("✓ Interval {} cleared (not found in registry)", timer_id);
             }
         }).ok_or_else(|| anyhow::anyhow!("Failed to create clearInterval function"))?;
         let clear_interval_key = v8::String::new(scope, "clearInterval").unwrap().into();
         global.set(scope, clear_interval_key, clear_interval_fn.into());
 
-        // Set up global setImmediate (v0.2.5)
+        // Set up global setImmediate (v0.2.5, enhanced in v0.3.18: returns timer object with unref/ref)
         let set_immediate_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             // Get callback function
             let callback = args.get(0);
@@ -621,25 +671,42 @@ impl MinimalRuntime {
                 .map(|i| args.get(i))
                 .collect();
 
+            // Generate unique timer ID
+            let timer_id = NEXT_TIMER_ID.fetch_add(1, Ordering::SeqCst);
+
+            // Register immediate in the global registry (v0.3.18)
+            let mut registry = get_timer_registry().lock().unwrap();
+            registry.insert(timer_id, TimerInfo {
+                timer_type: TimerType::Immediate,
+                is_unrefed: false,
+            });
+            drop(registry);
+
             // Execute callback immediately
             let callback_func = v8::Local::<v8::Function>::try_from(callback).unwrap();
             let undefined = v8::undefined(scope);
             let _: _ = callback_func.call(scope, undefined.into(), &callback_args);
 
-            // Generate unique timer ID
-            let timer_id = NEXT_TIMER_ID.fetch_add(1, Ordering::SeqCst);
-            let timer_id_val = v8::Number::new(scope, timer_id as f64);
-            retval.set(timer_id_val.into());
+            // Return timer ID as number (v0.3.18: simplified for stability)
+            let timer_id_num = v8::Number::new(scope, timer_id as f64);
+            retval.set(timer_id_num.into());
         }).ok_or_else(|| anyhow::anyhow!("Failed to create setImmediate function"))?;
         let set_immediate_key = v8::String::new(scope, "setImmediate").unwrap().into();
         global.set(scope, set_immediate_key, set_immediate_fn.into());
 
-        // Set up global clearImmediate (v0.2.5)
+        // Set up global clearImmediate (v0.2.5, enhanced in v0.3.18: also removes from registry)
         let clear_immediate_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-            if args.length() >= 1 {
-                let timer_id_val = args.get(0).to_integer(_scope).unwrap();
-                let timer_id = timer_id_val.value() as u64;
-                println!("✓ Immediate timer {} cleared", timer_id);
+            let timer_id_val = args.get(0);
+            let timer_id = timer_id_val.to_integer(_scope)
+                .map(|i| i.value() as u64)
+                .unwrap_or(0);
+
+            // Remove from registry (v0.3.18)
+            let mut registry = get_timer_registry().lock().unwrap();
+            if let Some(info) = registry.remove(&timer_id) {
+                println!("✓ Immediate timer {} cleared (type: {:?})", timer_id, info.timer_type);
+            } else {
+                println!("✓ Immediate timer {} cleared (not found in registry)", timer_id);
             }
         }).ok_or_else(|| anyhow::anyhow!("Failed to create clearImmediate function"))?;
         let clear_immediate_key = v8::String::new(scope, "clearImmediate").unwrap().into();
