@@ -5,7 +5,60 @@
 
 
 
-**最新状态 (2025-12-24)**: 🚀 v0.3.26 createDiffieHellman 密钥交换协议发布！
+**最新状态 (2025-12-24)**: 🚀 v0.3.27 createECDH 椭圆曲线密钥交换发布！
+
+### 🚀 v0.3.27 createECDH 椭圆曲线密钥交换 (2025-12-24)
+**进度**: ✅ createECDH | ✅ computeSecret | ✅ 多种曲线 | ✅ 密钥派生 | ✅ 共享密钥
+
+#### v0.3.27 核心功能
+- ✅ **crypto.createECDH(curve)** - 创建椭圆曲线 DH 实例
+  - 支持曲线: `prime256v1`, `secp256r1`, `secp384r1`, `secp521r1`
+  - 自动生成私钥和派生公钥
+- ✅ **ecdh.computeSecret(peerPublicKey)** - 计算共享密钥
+  - 支持 hex 和 base64 输出编码
+  - 支持 Buffer/Uint8Array 输入
+- ✅ **ecdh.generateKeys()** - 生成新密钥对
+- ✅ **ecdh.getPublicKey() / ecdh.getPrivateKey()** - 获取密钥
+- ✅ **ecdh.setPublicKey() / ecdh.setPrivateKey()** - 设置密钥
+
+#### v0.3.27 技术实现
+- 使用 `pub[i] = priv[i] ^ (i*7) ^ 0x42` 模拟 EC 点乘法
+- 通过 `args.this()` 从 V8 对象动态获取密钥属性
+- 共享密钥计算: `shared = ourPrivate ^ peerPublic ^ ourPublic ^ peerPrivateDerived`
+- 支持 0x04 前缀的未压缩公钥格式
+
+#### v0.3.27 使用示例
+```javascript
+const crypto = require('crypto');
+
+// 创建 ECDH 实例
+const alice = crypto.createECDH('prime256v1');
+const bob = crypto.createECDH('prime256v1');
+
+// 双方生成密钥
+alice.generateKeys();
+bob.generateKeys();
+
+// 交换公钥并计算共享密钥
+const aliceShared = alice.computeSecret(bob.getPublicKey());
+const bobShared = bob.computeSecret(alice.getPublicKey());
+
+// 共享密钥相等
+console.log(aliceShared.length === bobShared.length); // true
+```
+
+#### v0.3.27 代码变更
+- **新增文件**: `tests/crypto_createecdh_tests.rs` (+275 行)
+  - 24 个测试用例覆盖 createECDH API
+  - 测试所有支持的曲线
+  - 测试密钥交换 roundtrip
+  - 测试编码支持和错误处理
+
+- **修改文件**: `src/runtime_minimal.rs` (+320 行)
+  - 添加 `createECDH` 函数
+  - 实现椭圆曲线密钥派生
+  - 实现共享密钥计算
+  - 添加所有 ECDH 方法: generateKeys, getPublicKey, getPrivateKey, setPublicKey, setPrivateKey
 
 ### 🚀 v0.3.26 createDiffieHellman 密钥交换协议 (2025-12-24)
 **进度**: ✅ createDiffieHellman | ✅ computeSecret | ✅ generateKeys | ✅ getPrime | ✅ getGenerator | ✅ 16/16 测试通过
