@@ -3234,7 +3234,7 @@ impl MinimalRuntime {
                                     Ok(_) => {
                                         let resolver = v8::PromiseResolver::new(scope).unwrap();
                                         let undefined = v8::undefined(scope);
-                                        resolver.resolve(scope, undefined);
+                                        resolver.resolve(scope, undefined.into());
                                     }
                                     Err(e) => {
                                         let resolver = v8::PromiseResolver::new(scope).unwrap();
@@ -3282,7 +3282,7 @@ impl MinimalRuntime {
                                     Ok(_) => {
                                         let resolver = v8::PromiseResolver::new(scope).unwrap();
                                         let undefined = v8::undefined(scope);
-                                        resolver.resolve(scope, undefined);
+                                        resolver.resolve(scope, undefined.into());
                                     }
                                     Err(e) => {
                                         let resolver = v8::PromiseResolver::new(scope).unwrap();
@@ -3321,7 +3321,7 @@ impl MinimalRuntime {
                                     Ok(_) => {
                                         let resolver = v8::PromiseResolver::new(scope).unwrap();
                                         let undefined = v8::undefined(scope);
-                                        resolver.resolve(scope, undefined);
+                                        resolver.resolve(scope, undefined.into());
                                     }
                                     Err(e) => {
                                         let resolver = v8::PromiseResolver::new(scope).unwrap();
@@ -3360,7 +3360,7 @@ impl MinimalRuntime {
                                     Ok(_) => {
                                         let resolver = v8::PromiseResolver::new(scope).unwrap();
                                         let undefined = v8::undefined(scope);
-                                        resolver.resolve(scope, undefined);
+                                        resolver.resolve(scope, undefined.into());
                                     }
                                     Err(e) => {
                                         let resolver = v8::PromiseResolver::new(scope).unwrap();
@@ -3399,7 +3399,7 @@ impl MinimalRuntime {
                                     Ok(_) => {
                                         let resolver = v8::PromiseResolver::new(scope).unwrap();
                                         let undefined = v8::undefined(scope);
-                                        resolver.resolve(scope, undefined);
+                                        resolver.resolve(scope, undefined.into());
                                     }
                                     Err(e) => {
                                         let resolver = v8::PromiseResolver::new(scope).unwrap();
