@@ -6,6 +6,58 @@
 
 
 
+**最新状态 (2025-12-25)**: 🐛 v0.3.30 编译警告修复
+
+### 🐛 v0.3.30 编译警告修复 (2025-12-25)
+**进度**: ✅ 修复 ring 废弃 API | ✅ 修复未使用变量 | ✅ 21/21 测试通过 | ✅ 零警告编译
+
+#### v0.3.30 修复内容
+- ✅ **ring::constant_time::verify_slices_are_equal 废弃警告**
+  - ring 0.17+ 移除了 constant_time 模块
+  - 实现自定义 `constant_time_eq` 函数替代
+  - 使用 XOR + OR 运算实现恒定时间比较防止时序攻击
+- ✅ **未使用变量警告修复**
+  - `importKey` 函数中的 `format` 参数 (prefix with `_format`)
+  - `exportKey` 函数中的 `format` 参数 (prefix with `_format`)
+
+#### v0.3.30 技术实现
+- **恒定时间比较算法**
+  ```rust
+  fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+      let a_len = a.len();
+      let b_len = b.len();
+      if a_len != b_len {
+          return false;
+      }
+      a.iter().zip(b.iter()).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+  }
+  ```
+  - 比较所有字节，不提前返回
+  - 使用位运算避免编译器优化
+
+#### v0.3.30 测试验证
+- ✅ 21/21 Web Crypto API 测试全部通过
+- ✅ 8/8 randomUUID 测试通过
+- ✅ 14/14 HKDF 测试通过
+- ✅ 31/31 KeyObjects 测试通过
+- ✅ 零编译警告
+
+#### v0.3.30 代码变更
+- **新增文件**: 无
+- **修改文件**: `src/runtime_minimal.rs` (+15 行)
+  - 添加 `constant_time_eq` 辅助函数
+  - 替换废弃的 ring API 调用
+  - 修复两个未使用变量
+
+#### v0.3.30 使用示例
+```javascript
+// Web Crypto API 正常工作
+const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('hello'));
+console.log(crypto.randomUUID()); // e.g., "b2a8cbc9-5a9f-4045-b9e5-43063e09ff14"
+```
+
+---
+
 **最新状态 (2025-12-25)**: ✨ v0.3.30 Web Crypto API (crypto.subtle) 完整实现
 
 ### ✨ v0.3.29 HKDF 密钥派生函数 (2025-12-24)
