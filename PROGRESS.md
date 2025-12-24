@@ -7,7 +7,32 @@
 
 
 
-### ✨ v0.3.42 globalThis.global 兼容性 (2025-12-25)
+
+### ✨ v0.3.43 child_process 模块实现 (2025-12-25)
+**进度**: spawn/exec/execFile | ChildProcess 对象 | 构建通过 | CLI 验证通过
+
+#### v0.3.43 实现内容
+- spawn() 函数：创建子进程并返回 ChildProcess 对象
+- exec() 函数：执行 shell 命令并返回 ChildProcess 对象
+- execFile() 函数：直接执行可执行文件
+
+#### v0.3.43 技术实现
+- ChildProcess 对象属性：pid、killed、exitCode、signal
+- V8 borrow checker 解决：闭包内预创建 v8::null() 值
+
+#### v0.3.43 代码变更
+- 修改文件: src/runtime_minimal.rs (+100 行)
+  - 添加 setup_child_process_api 函数
+  - 在 initialize_runtime 中调用初始化
+
+#### v0.3.43 验证
+- beejs eval "typeof child_process" -> "object"
+- beejs eval "typeof child_process.spawn" -> "function"
+- beejs eval "child_process.spawn('echo').killed" -> false
+
+---
+
+### v0.3.42 globalThis.global 兼容性 (2025-12-25)
 **进度**: ✅ globalThis.global 实现 | ✅ 7 测试用例 | ✅ 所有测试通过 | ✅ CLI 验证通过
 
 #### v0.3.42 实现内容

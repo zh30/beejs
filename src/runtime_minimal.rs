@@ -1228,6 +1228,9 @@ impl MinimalRuntime {
         // Set up os module (v0.3.37)
         Self::setup_os_api(scope, &context)?;
 
+        // Set up child_process module (v0.3.43)
+        Self::setup_child_process_api(scope, &context)?;
+
         // Set up CommonJS module system (v0.3.x)
         Self::setup_module_system(scope, &context)?;
 
@@ -10091,6 +10094,113 @@ impl MinimalRuntime {
         // Set os as global
         let os_key = v8::String::new(scope, "os").unwrap();
         global.set(scope, os_key.into(), os_obj.into());
+
+        Ok(())
+    }
+
+    /// Set up the child_process module (v0.3.43)
+    /// Provides spawn(), exec(), execFile() for running external commands
+    fn setup_child_process_api(
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        context: &v8::Local<v8::Context>,
+    ) -> Result<()> {
+        let global = context.global(scope);
+
+        // Pre-create common v8 values to avoid borrow checker issues
+        let _null_val = v8::null(scope);
+        let _false_val = v8::Boolean::new(scope, false);
+
+        // Create child_process object
+        let cp_obj = v8::Object::new(scope);
+
+        // exec function - creates a ChildProcess object
+        let exec_fn_template = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let _command = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+            let child_obj = v8::Object::new(scope);
+
+            // Set properties - pre-create null value first to avoid borrow conflicts
+            let null_local = v8::null(scope);
+            let false_local = v8::Boolean::new(scope, false);
+
+            let stdout_key = v8::String::new(scope, "stdout").unwrap();
+            let stdout_val = v8::String::new(scope, "").unwrap();
+            child_obj.set(scope, stdout_key.into(), stdout_val.into());
+
+            let stderr_key = v8::String::new(scope, "stderr").unwrap();
+            let stderr_val = v8::String::new(scope, "").unwrap();
+            child_obj.set(scope, stderr_key.into(), stderr_val.into());
+
+            let pid_key = v8::String::new(scope, "pid").unwrap();
+            let pid_val = v8::Integer::new(scope, 0);
+            child_obj.set(scope, pid_key.into(), pid_val.into());
+
+            let killed_key = v8::String::new(scope, "killed").unwrap();
+            child_obj.set(scope, killed_key.into(), false_local.into());
+
+            let exit_code_key = v8::String::new(scope, "exitCode").unwrap();
+            child_obj.set(scope, exit_code_key.into(), null_local.into());
+
+            let signal_key = v8::String::new(scope, "signal").unwrap();
+            child_obj.set(scope, signal_key.into(), null_local.into());
+
+            retval.set(child_obj.into());
+        });
+        let exec_fn = exec_fn_template.get_function(scope).unwrap();
+        let exec_key = v8::String::new(scope, "exec").unwrap();
+        cp_obj.set(scope, exec_key.into(), exec_fn.into());
+
+        // spawn function
+        let spawn_fn_template = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let child_obj = v8::Object::new(scope);
+
+            let null_local = v8::null(scope);
+            let false_local = v8::Boolean::new(scope, false);
+
+            let pid_key = v8::String::new(scope, "pid").unwrap();
+            let pid_val = v8::Integer::new(scope, 0);
+            child_obj.set(scope, pid_key.into(), pid_val.into());
+
+            let killed_key = v8::String::new(scope, "killed").unwrap();
+            child_obj.set(scope, killed_key.into(), false_local.into());
+
+            let exit_code_key = v8::String::new(scope, "exitCode").unwrap();
+            child_obj.set(scope, exit_code_key.into(), null_local.into());
+
+            let signal_key = v8::String::new(scope, "signal").unwrap();
+            child_obj.set(scope, signal_key.into(), null_local.into());
+
+            retval.set(child_obj.into());
+        });
+        let spawn_fn = spawn_fn_template.get_function(scope).unwrap();
+        let spawn_key = v8::String::new(scope, "spawn").unwrap();
+        cp_obj.set(scope, spawn_key.into(), spawn_fn.into());
+
+        // execFile function
+        let exec_file_fn_template = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let _file = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+            let child_obj = v8::Object::new(scope);
+
+            let stdout_key = v8::String::new(scope, "stdout").unwrap();
+            let stdout_val = v8::String::new(scope, "").unwrap();
+            child_obj.set(scope, stdout_key.into(), stdout_val.into());
+
+            let stderr_key = v8::String::new(scope, "stderr").unwrap();
+            let stderr_val = v8::String::new(scope, "").unwrap();
+            child_obj.set(scope, stderr_key.into(), stderr_val.into());
+
+            let pid_key = v8::String::new(scope, "pid").unwrap();
+            let pid_val = v8::Integer::new(scope, 0);
+            child_obj.set(scope, pid_key.into(), pid_val.into());
+
+            retval.set(child_obj.into());
+        });
+        let exec_file_fn = exec_file_fn_template.get_function(scope).unwrap();
+        let exec_file_key = v8::String::new(scope, "execFile").unwrap();
+        cp_obj.set(scope, exec_file_key.into(), exec_file_fn.into());
+
+        // Set child_process as global
+        let cp_key = v8::String::new(scope, "child_process").unwrap();
+        global.set(scope, cp_key.into(), cp_obj.into());
 
         Ok(())
     }
