@@ -16,6 +16,7 @@ use once_cell::sync::Lazy;
 // v0.3.50: Import Node.js core modules for path and fs
 use crate::nodejs_core::path::setup_path_api;
 use crate::nodejs_core::fs::setup_fs_api;
+use crate::nodejs_core::crypto::setup_crypto_api;
 
 // Event listener storage using thread_local (v0.3.46)
 // Note: rustdoc does not generate documentation for macro invocations
@@ -1265,6 +1266,9 @@ impl MinimalRuntime {
 
         // Set up string_decoder module (v0.3.48)
         Self::setup_string_decoder_api(scope, &context)?;
+
+        // Set up crypto module (v0.3.55)
+        setup_crypto_api(scope, &context)?;
 
         // Set up CommonJS module system (v0.3.x)
         Self::setup_module_system(scope, &context)?;

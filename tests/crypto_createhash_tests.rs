@@ -50,6 +50,21 @@ fn test_create_hash_sha256() {
 
 #[test]
 #[serial]
+fn test_create_hash_sha1() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    // SHA1 of "hello" should be aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d
+    let code = r#"
+        const hash = crypto.createHash('sha1');
+        hash.update('hello');
+        hash.digest('hex');
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d");
+}
+
+#[test]
+#[serial]
 fn test_create_hash_sha512() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
@@ -115,18 +130,11 @@ fn test_hash_base64_encoding() {
 #[serial]
 fn test_hash_unsupported_algorithm() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let code = r#"
-        try {
-            crypto.createHash('unsupported');
-        } catch (e) {
-            e.message;
-        }
-    "#;
+    // 测试调用 digest() 时抛出错误
+    let code = r#"crypto.createHash('unsupported').digest('hex');"#;
     let result = runtime.execute_code(code);
-    assert!(result.is_ok());
-    let binding = result.unwrap();
-    let output = binding.trim();
-    assert!(output.contains("unsupported"));
+    // 验证错误被抛出（传播到 Rust）
+    assert!(result.is_err(), "Expected error for unsupported algorithm");
 }
 
 #[test]

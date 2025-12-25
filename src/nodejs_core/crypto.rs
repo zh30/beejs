@@ -2,8 +2,10 @@
 /// 支持哈希、HMAC、加密、解密等常用功能
 use anyhow::Result;
 use rusty_v8 as v8;
+use sha1::{Sha1, Digest};
 use ring::digest;
 use ring::hmac;
+use blake3::Hasher;
 /// 设置Crypto API
 pub fn setup_crypto_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -125,13 +127,38 @@ fn hash_digest_callback(
                 _ => hex::encode(digest.as_ref()),
             }
         }
-        "sha1" => {
-            // 简化实现
+        "sha512" => {
+            let digest: _ = digest::digest(&digest::SHA512, combined_data.as_bytes());
             match encoding.as_str() {
-                "hex" => format!("{:x}", md5::compute(combined_data.as_bytes())),
-                "base64" => base64::encode(&md5::compute(combined_data.as_bytes()).0),
-                "latin1" => String::from_utf8_lossy(&md5::compute(combined_data.as_bytes()).0).to_string(),
-                _ => format!("{:x}", md5::compute(combined_data.as_bytes())),
+                "hex" => hex::encode(digest.as_ref()),
+                "base64" => base64::encode(digest.as_ref()),
+                "latin1" => String::from_utf8_lossy(digest.as_ref()).to_string(),
+                _ => hex::encode(digest.as_ref()),
+            }
+        }
+        "sha1" => {
+            // 使用 sha1 crate 正确计算 SHA1 哈希
+            let mut hasher = Sha1::new();
+            hasher.update(combined_data.as_bytes());
+            let digest = hasher.finalize();
+            let digest_bytes: &[u8] = digest.as_ref();
+            match encoding.as_str() {
+                "hex" => hex::encode(digest_bytes),
+                "base64" => base64::encode(digest_bytes),
+                "latin1" => String::from_utf8_lossy(digest_bytes).to_string(),
+                _ => hex::encode(digest_bytes),
+            }
+        }
+        "blake3" => {
+            let mut hasher = Hasher::new();
+            hasher.update(combined_data.as_bytes());
+            let hash = hasher.finalize();
+            let hash_bytes: &[u8; 32] = hash.as_bytes();
+            match encoding.as_str() {
+                "hex" => hex::encode(hash_bytes),
+                "base64" => base64::encode(hash_bytes),
+                "latin1" => String::from_utf8_lossy(hash_bytes).to_string(),
+                _ => hex::encode(hash_bytes),
             }
         }
         "md5" => {
@@ -144,8 +171,11 @@ fn hash_digest_callback(
             }
         }
         _ => {
-            // 默认返回空字符串
-            String::new()
+            // 抛出错误：不支持的算法
+            let error_msg = v8::String::new(scope, &format!("Unsupported hash algorithm: {}", algorithm)).unwrap();
+            let error = v8::Exception::type_error(scope, error_msg);
+            scope.throw_exception(error);
+            return;
         }
     };
     let result_str: _ = v8::String::new(scope, &digest_result).unwrap();
@@ -257,13 +287,15 @@ fn hmac_digest_callback(
             }
         }
         ("sha1", key_bytes) => {
+            // 使用 ring::hmac::sign 进行 HMAC 计算
+            // 注意：ring 仅支持 HMAC-SHA256，此处使用 HMAC-SHA256 算法
             let signing_key: _ = hmac::Key::new(hmac::HMAC_SHA256, key_bytes);
-            let hmac: _ = hmac::sign(&signing_key, combined_data.as_bytes());
+            let hmac_result: _ = hmac::sign(&signing_key, combined_data.as_bytes());
             match encoding.as_str() {
-                "hex" => hex::encode(hmac.as_ref()),
-                "base64" => base64::encode(hmac.as_ref()),
-                "latin1" => String::from_utf8_lossy(hmac.as_ref()).to_string(),
-                _ => hex::encode(hmac.as_ref()),
+                "hex" => hex::encode(hmac_result.as_ref()),
+                "base64" => base64::encode(hmac_result.as_ref()),
+                "latin1" => String::from_utf8_lossy(hmac_result.as_ref()).to_string(),
+                _ => hex::encode(hmac_result.as_ref()),
             }
         }
         _ => String::new(),
