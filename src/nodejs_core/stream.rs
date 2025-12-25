@@ -1173,25 +1173,52 @@ fn stream_pipeline_callback(
         }
     }
 
-    // v0.3.77: 设置回调处理
+    // v0.3.78: 修复 pipeline 回调时机 - 在流结束时才调用回调
+    // 使用 once 方法注册一次性监听器，确保流结束时才调用回调
     if let (Some(cb), Some(last)) = (callback, last_writable) {
-        // 在最后一个流上监听 'end' 事件，在适当时机调用回调
-        let this: v8::Local<v8::Value> = last;
-        let end_key: v8::Local<v8::Value> = v8::String::new(scope, "end").unwrap().into();
-
-        // 检查是否已有 end 监听器
         if let Some(last_obj) = last.to_object(scope) {
-            let on_key: v8::Local<v8::Value> = v8::String::new(scope, "on").unwrap().into();
+            let once_key: v8::Local<v8::Value> = v8::String::new(scope, "once").unwrap().into();
 
-            if let Some(on_func) = last_obj.get(scope, on_key) {
-                if on_func.is_function() {
-                    if let Ok(on_fn) = v8::Local::<v8::Function>::try_from(on_func) {
-                        // 创建一个包装回调，在 pipeline 完成时调用原始回调
-                        let undefined = v8::undefined(scope);
+            if let Some(once_func) = last_obj.get(scope, once_key) {
+                if once_func.is_function() {
+                    if let Ok(once_fn) = v8::Local::<v8::Function>::try_from(once_func) {
+                        // 获取事件名称：'end' 用于 Readable/Transform，'finish' 用于 Writable
+                        let finish_key: v8::Local<v8::Value> = v8::String::new(scope, "_writableState").unwrap().into();
+                        let is_writable = last_obj.has(scope, finish_key).unwrap_or(false);
 
-                        // 简单方式：直接调用回调，传递 null 表示成功
-                        let args_arr: &[v8::Local<v8::Value>] = &[v8::null(scope).into()];
-                        cb.call(scope, undefined.into(), args_arr);
+                        let event_name = if is_writable { "finish" } else { "end" };
+                        let event_str: v8::Local<v8::Value> = v8::String::new(scope, event_name).unwrap().into();
+
+                        // 直接在 last 对象上设置回调属性
+                        let callback_key: v8::Local<v8::Value> = v8::String::new(scope, "_pipelineCallback").unwrap().into();
+                        last_obj.set(scope, callback_key, cb.into());
+
+                        // 创建一个包装函数，用于调用原始回调
+                        let pipeline_callback_fn: v8::Local<v8::Function> = v8::FunctionTemplate::new(
+                            scope,
+                            |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+                                let this: v8::Local<v8::Value> = args.this();
+                                if let Some(this_obj) = this.to_object(scope) {
+                                    let callback_key: v8::Local<v8::Value> = v8::String::new(scope, "_pipelineCallback").unwrap().into();
+                                    if let Some(cb_val) = this_obj.get(scope, callback_key) {
+                                        if cb_val.is_function() {
+                                            if let Ok(cb_fn) = v8::Local::<v8::Function>::try_from(cb_val) {
+                                                let args_arr: &[v8::Local<v8::Value>] = &[v8::null(scope).into()];
+                                                let undefined = v8::undefined(scope);
+                                                cb_fn.call(scope, undefined.into(), args_arr);
+
+                                                // 清除回调引用
+                                                this_obj.delete(scope, callback_key.into());
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                        ).get_function(scope).unwrap();
+
+                        // 调用 once('end'/'finish', wrapper) 注册回调
+                        let wrapper_args: &[v8::Local<v8::Value>] = &[event_str, pipeline_callback_fn.into()];
+                        once_fn.call(scope, last.into(), wrapper_args);
                     }
                 }
             }

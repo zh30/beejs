@@ -1045,3 +1045,103 @@ fn test_stream_passthrough_pipeline() {
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
 }
+
+// v0.3.78: pipeline callback timing tests - callback should be called AFTER stream ends
+#[test]
+#[serial]
+fn test_stream_pipeline_callback_after_end() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    // Test that callback is called after the stream ends, not immediately
+    let result = runtime.execute_code(
+        r#"
+        let callbackOrder = [];
+        const r = new stream.Readable({
+          read() {
+            this.push('hello');
+            this.push(null);
+          }
+        });
+        const w = new stream.Writable({
+          _write(chunk, encoding, cb) {
+            callbackOrder.push('write');
+            cb();
+          }
+        });
+        w.on('finish', () => { callbackOrder.push('finish'); });
+        stream.pipeline(r, w, (err) => {
+          callbackOrder.push('callback');
+        });
+        callbackOrder.join(',')
+        "#
+    );
+    assert!(result.is_ok());
+    // Callback should be called AFTER finish event, not before
+    assert_eq!(result.unwrap().trim(), "write,finish,callback");
+}
+
+#[test]
+#[serial]
+fn test_stream_pipeline_callback_with_error() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    // Test that callback receives error when stream errors
+    let result = runtime.execute_code(
+        r#"
+        let errorReceived = null;
+        const r = new stream.Readable({
+          read() {
+            this.push('hello');
+            this.push(null);
+          }
+        });
+        const w = new stream.Writable({
+          _write(chunk, encoding, cb) {
+            cb(new Error('test error'));
+          }
+        });
+        stream.pipeline(r, w, (err) => {
+          errorReceived = err !== null && err.message !== undefined;
+        });
+        errorReceived
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_stream_pipeline_callback_data_integrity() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    // Test that all data flows through the pipeline before callback is called
+    let result = runtime.execute_code(
+        r#"
+        let output = '';
+        let callbackAfterData = false;
+        const r = new stream.Readable({
+          read() {
+            this.push('A');
+            this.push('B');
+            this.push('C');
+            this.push(null);
+          }
+        });
+        const w = new stream.Writable({
+          _write(chunk, encoding, cb) {
+            output += chunk;
+            cb();
+          }
+        });
+        w.on('finish', () => {
+          // At finish time, output should be complete
+          callbackAfterData = output === 'ABC';
+        });
+        stream.pipeline(r, w, (err) => {
+          // When callback fires, data should already be complete
+          callbackAfterData = callbackAfterData && output === 'ABC';
+        });
+        output === 'ABC' && callbackAfterData
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}

@@ -13,6 +13,47 @@
 
 
 
+### v0.3.78 修复 pipeline 回调时机 - 流结束时才调用回调 (2025-12-25)
+**进度**: pipeline 回调时机修复 | 🔧 开发中
+
+#### v0.3.78 问题修复
+- **修复回调立即调用问题**
+  - 之前: 回调在 pipeline 建立时立即调用
+  - 现在: 回调在流结束时（'end'/'finish' 事件）才调用
+  - 使用 `once()` 方法注册一次性监听器
+
+#### v0.3.78 技术实现
+- **延迟回调机制**
+  - 在最后一个流上使用 `once('finish', wrapper)` 注册回调
+  - 包装函数从 `_pipelineCallback` 属性获取原始回调
+  - 流结束时调用原始回调，传递 `null` 表示成功
+  - 调用后清除回调引用避免内存泄漏
+
+#### v0.3.78 新增测试
+```javascript
+// 测试回调顺序
+stream.pipeline(r, w, (err) => {
+  // 回调在 'finish' 事件之后才调用
+});
+// 预期顺序: write → finish → callback
+
+// 测试数据完整性
+stream.pipeline(r, w, (err) => {
+  // 当回调调用时，所有数据已经通过管道
+});
+```
+
+#### v0.3.78 测试用例
+- `test_stream_pipeline_callback_after_end` - 验证回调在流结束后调用
+- `test_stream_pipeline_callback_with_error` - 验证错误传递
+- `test_stream_pipeline_callback_data_integrity` - 验证数据完整性
+
+#### v0.3.78 下一步计划
+- 运行完整测试套件验证修复
+- 继续完善其他 Node.js API 模块
+
+---
+
 ### v0.3.77 增强 stream.pipeline() 支持回调和多流组合 (2025-12-25)
 **进度**: pipeline 增强 | ✅ 代码已合并
 
