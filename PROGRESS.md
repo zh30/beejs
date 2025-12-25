@@ -6141,3 +6141,25 @@ pipeline(r, t, w, (err) => {
 - ✅ `cargo test --test crypto_createhmac_tests` → 14/14 通过
 - ✅ `cargo test --test stream_module_tests` → 60/60 通过
 - ✅ `cargo test --test crypto_createhash_tests` → 12/12 通过
+
+### ✨ v0.3.79 V8 API 兼容性修复 (2025-12-25)
+**进度**: ✅ is_function() 参数修复 | ✅ args.this() 类型修复 | ✅ 编译成功
+
+#### v0.3.79 修复内容
+- **V8 API 兼容性问题**
+  - `is_function()` 方法在新版本 V8 中不接受 `scope` 参数
+  - `args.this()` 返回类型应为 `Object` 而非 `Value`
+
+#### v0.3.79 代码变更
+- **修改文件**: `src/nodejs_core/stream.rs` (+2/-2 行)
+  - 第 1120 行: `last_arg.is_function(scope)` → `last_arg.is_function()`
+  - 第 1200 行: `v8::Local<v8::Value>` → `v8::Local<v8::Object>`
+
+#### v0.3.79 验证
+- ✅ `cargo build --release` 成功
+- ✅ 二进制版本: beejs 0.1.6
+
+#### v0.3.80 下一步计划
+- 运行完整测试套件验证
+- 继续实现 stream.passThrough()
+- 完善 pipeline 回调错误处理
