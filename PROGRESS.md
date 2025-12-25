@@ -10,6 +10,35 @@
 
 
 
+
+
+### v0.3.70 实现 socket.read() 方法并修复警告 (2025-12-25)
+**进度**: socket.read | ✅ 代码已合并
+
+#### v0.3.70 新增功能
+- **实现 socket.read() 方法**
+  - 返回缓存的数据（如果有）
+  - 无数据时返回 null（符合 Node.js 行为）
+  - 支持数据缓存机制
+
+- **修复编译器警告**
+  - 修复 child_process.rs 中未使用变量的编译器警告
+  - 修复 V8 borrow checker 问题
+
+#### v0.3.70 测试结果
+```bash
+$ cargo test --test tcp_real_connection_tests
+running 8 tests
+test result: ok. 8 passed; 0 failed
+```
+
+#### v0.3.70 下一步计划
+- 实现真正的 TCP 连接（使用 tokio 异步）
+- 增强 http.request() 发起真实网络请求
+- 继续完善其他 Node.js API 模块
+
+---
+
 ### v0.3.69 完成 net 模块 TCP 连接实现 (2025-12-25)
 **进度**: net module | ✅ 代码已合并
 
