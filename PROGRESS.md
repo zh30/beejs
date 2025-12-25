@@ -9,6 +9,54 @@
 
 
 
+
+### v0.3.51 fs 模块真正的文件系统操作 (2025-12-25)
+**进度**: fs.readFileSync | fs.writeFileSync | 20/21 测试通过
+
+#### v0.3.51 实现内容
+- **fs.readFileSync(path, encoding)** - 真正的文件读取
+  - 使用 `std::fs::read_to_string` 读取文件内容
+  - 支持 UTF-8 编码
+  - 错误处理返回 JavaScript Exception
+
+- **fs.writeFileSync(path, data, encoding)** - 真正的文件写入
+  - 使用 `std::fs::write` 写入文件
+  - 支持覆盖写入
+  - 错误处理返回 JavaScript Exception
+
+- **fs.existsSync(path)** - 检查文件是否存在
+  - 使用 `Path::exists()` 检查
+  - 返回布尔值
+
+- **fs.mkdirSync(path)** - 创建目录
+  - 使用 `std::fs::create_dir_all` 递归创建目录
+  - 错误处理返回 JavaScript Exception
+
+- **fs.readdirSync(path)** - 读取目录内容
+  - 使用 `std::fs::read_dir` 读取目录条目
+  - 返回 JavaScript 数组
+
+- **fs.statSync(path)** - 获取文件状态
+  - 返回包含 isFile、isDirectory、size、mode、mtime 的对象
+  - 使用 `std::fs::metadata` 获取文件元数据
+
+#### v0.3.51 技术实现
+- **V8 API 集成**
+  - 使用 `FunctionCallbackArguments` 获取 JavaScript 参数
+  - 使用 `v8::String::new` 创建 JavaScript 字符串
+  - 使用 `v8::Object` 创建返回对象
+  - 使用 `v8::Array` 创建数组
+  - 错误时使用 `scope.throw_exception` 抛出异常
+
+#### v0.3.51 验证
+- `cargo test --test nodejs_api_tests` → 20 passed; 1 failed
+- **通过测试**: read_file_sync, write_file_sync, exists_sync, mkdir_sync, readdir_sync, stat_sync ✓
+- **失败测试**: test_require_custom_module (require 机制问题，非 fs 模块)
+
+#### v0.3.51 下一步计划
+- 完善 `nodejs_core/require` 模块支持自定义模块
+- 启用其他 nodejs_core 子模块 (crypto, stream, http, net, etc.)
+
 ### v0.3.50 Node.js API 测试修复与 nodejs_core 模块启用 (2025-12-25)
 **进度**: V8 初始化冲突修复 | nodejs_core 模块启用 | 14/21 测试通过
 
