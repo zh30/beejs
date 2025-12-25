@@ -9,6 +9,36 @@
 
 
 
+### v0.3.49 DNS 模块测试修复 (2025-12-25)
+**进度**: 编译错误修复 | 测试断言修复 | 18 测试用例全部通过
+
+#### v0.3.49 修复内容
+- **编译错误修复**
+  - 修复 `tests/dns_module_tests.rs` 中的生命周期错误
+  - 将 `result.unwrap().trim()` 改为 `let binding = result.unwrap(); let output = binding.trim()`
+
+- **测试断言修复**
+  - V8 将数组转为字符串后不包含 `[` 字符
+  - 更新断言检查实际地址格式 (`::1`, `127.0.0.1` 等)
+
+#### v0.3.49 代码变更
+- **修改文件**: `tests/dns_module_tests.rs` (+6 行, -3 行)
+  - 修复 test_dns_resolve6_localhost 测试断言
+  - 修复 test_dns_getServers_contains_dns_server 生命周期问题
+  - 修复 test_dns_resolve_with_rrtype 测试断言
+
+#### v0.3.49 验证
+- ✅ `cargo test --test dns_module_tests` → 18/18 通过
+- ✅ `cargo build --release` 成功
+
+---
+### ✨ v0.3.48 StringDecoder 模块修复 (2025-12-25)
+**进度**: StringDecoder | 14 测试用例 | ✅ 所有测试通过 | ✅ CLI 验证通过
+
+#### v0.3.48 修复内容
+- 修复 `_encoding` 属性访问问题
+
+---
 ### ✨ v0.3.46 Events 模块实现 (2025-12-25)
 **进度**: EventEmitter | 27 测试用例 | ✅ 所有测试通过 | ✅ CLI 验证通过
 
