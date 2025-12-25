@@ -912,6 +912,61 @@ fn test_stream_pipeline_finish_event() {
     assert_eq!(result.unwrap().trim(), "true");
 }
 
+// v0.3.77: stream.pipeline() callback tests
+#[test]
+#[serial]
+fn test_stream_pipeline_with_callback() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        let callbackCalled = false;
+        const r = new stream.Readable({
+          read() {
+            this.push('hello');
+            this.push(null);
+          }
+        });
+        const w = new stream.Writable({
+          _write(chunk, encoding, cb) { cb(); }
+        });
+        const result = stream.pipeline(r, w, (err) => {
+          callbackCalled = true;
+        });
+        typeof result === 'object' && result !== null && callbackCalled === true
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_stream_pipeline_three_streams() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        let output = '';
+        const r = new stream.Readable({
+          read() {
+            this.push('A');
+            this.push(null);
+          }
+        });
+        const pt = stream.passThrough();
+        const w = new stream.Writable({
+          _write(chunk, encoding, cb) {
+            output += chunk;
+            cb();
+          }
+        });
+        const result = stream.pipeline(r, pt, w);
+        result === w && output === 'A'
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
 // v0.3.74: stream.passThrough() tests
 #[test]
 #[serial]

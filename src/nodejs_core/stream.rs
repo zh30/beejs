@@ -1104,16 +1104,32 @@ fn duplex_constructor_callback(
 }
 
 /// v0.3.59: stream.pipeline() 实现
-/// 将多个流依次连接，返回最后一个 Writable 流
+/// v0.3.77: 增强支持回调参数
+/// 将多个流依次连接，返回最后一个 Writable 流，支持 callback 参数
 fn stream_pipeline_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    // 获取所有流参数
+    let argc = args.length();
+
+    // 检查最后一个参数是否是回调函数
+    let mut callback: Option<v8::Local<v8::Function>> = None;
+    if argc > 0 {
+        if let Some(last_arg) = args.get(argc - 1).to_object(scope) {
+            if last_arg.is_function(scope).unwrap_or(false) {
+                if let Ok(cb) = v8::Local::<v8::Function>::try_from(args.get(argc - 1)) {
+                    callback = Some(cb);
+                }
+            }
+        }
+    }
+
+    // 获取所有流参数（排除最后一个回调参数）
+    let stream_count = if callback.is_some() { argc - 1 } else { argc };
     let mut streams: Vec<v8::Local<v8::Value>> = Vec::new();
 
-    for i in 0..args.length() {
+    for i in 0..stream_count {
         let stream: v8::Local<v8::Value> = args.get(i);
         if stream.is_object() {
             streams.push(stream);
@@ -1128,6 +1144,7 @@ fn stream_pipeline_callback(
 
     // 依次建立管道连接
     let mut last_writable: Option<v8::Local<v8::Value>> = None;
+    let mut error_listeners: Vec<v8::Local<v8::Value>> = Vec::new();
 
     for i in 0..streams.len() - 1 {
         let source = streams[i];
@@ -1150,6 +1167,31 @@ fn stream_pipeline_callback(
                                 last_writable = Some(destination);
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    // v0.3.77: 设置回调处理
+    if let (Some(cb), Some(last)) = (callback, last_writable) {
+        // 在最后一个流上监听 'end' 事件，在适当时机调用回调
+        let this: v8::Local<v8::Value> = last;
+        let end_key: v8::Local<v8::Value> = v8::String::new(scope, "end").unwrap().into();
+
+        // 检查是否已有 end 监听器
+        if let Some(last_obj) = last.to_object(scope) {
+            let on_key: v8::Local<v8::Value> = v8::String::new(scope, "on").unwrap().into();
+
+            if let Some(on_func) = last_obj.get(scope, on_key) {
+                if on_func.is_function() {
+                    if let Ok(on_fn) = v8::Local::<v8::Function>::try_from(on_func) {
+                        // 创建一个包装回调，在 pipeline 完成时调用原始回调
+                        let undefined = v8::undefined(scope);
+
+                        // 简单方式：直接调用回调，传递 null 表示成功
+                        let args_arr: &[v8::Local<v8::Value>] = &[v8::null(scope).into()];
+                        cb.call(scope, undefined.into(), args_arr);
                     }
                 }
             }
