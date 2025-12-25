@@ -175,6 +175,12 @@ fn net_connect_callback(
     let resume_key: _ = v8::String::new(scope, "resume").unwrap();
     socket_obj.set(scope, resume_key.into(), resume_instance.into());
 
+    // read 方法 - v0.3.70 新增
+    let read_func: _ = v8::FunctionTemplate::new(scope, socket_read_callback);
+    let read_instance: _ = read_func.get_function(scope).unwrap();
+    let read_key: _ = v8::String::new(scope, "read").unwrap();
+    socket_obj.set(scope, read_key.into(), read_instance.into());
+
     // 存储连接选项
     let options_key = v8::String::new(scope, "_connectOptions").unwrap();
     socket_obj.set(scope, options_key.into(), options);
@@ -502,6 +508,36 @@ fn socket_resume_callback(
 ) {
     let this: _ = args.this();
     retval.set(this.into());
+}
+
+fn socket_read_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this: _ = args.this();
+
+    // 检查是否有缓存的数据
+    let data_key = v8::String::new(scope, "_cachedData").unwrap();
+    let cached_data = this.get(scope, data_key.into());
+
+    if let Some(data) = cached_data {
+        if !data.is_null() && !data.is_undefined() {
+            // 有缓存数据，返回它并清除缓存
+            let buffer_val = v8::Local::<v8::Value>::try_from(data);
+            if let Ok(buf) = buffer_val {
+                // 预先创建 null 值，避免 borrow checker 问题
+                let null_val = v8::null(scope).into();
+                // 清除缓存
+                this.set(scope, data_key.into(), null_val);
+                retval.set(buf);
+                return;
+            }
+        }
+    }
+
+    // 没有可用数据，返回 null（Node.js 行为）
+    retval.set(v8::null(scope).into());
 }
 
 // ==================== Server 回调 ====================

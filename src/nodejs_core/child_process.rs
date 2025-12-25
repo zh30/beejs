@@ -66,13 +66,13 @@ fn cp_spawn_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let command: _ = args
+    let _command: String = args
         .get(0)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
-    let args_list: _ = args.get(1);
-    let options: _ = args.get(2);
+    let _args_list: v8::Local<v8::Value> = args.get(1);
+    let _options: v8::Local<v8::Value> = args.get(2);
     let child_obj: _ = v8::Object::new(scope);
     let pid_key: _ = v8::String::new(scope, "pid").unwrap();
     let pid_key_val: _ = v8::Integer::new(scope, 12345).into();
@@ -88,14 +88,14 @@ fn cp_exec_file_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let _file: _ = args
+    let _file: String = args
         .get(0)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
-    let args_list: _ = args.get(1);
-    let options: _ = args.get(2);
-    let callback: _ = args.get(3);
+    let _args_list: v8::Local<v8::Value> = args.get(1);
+    let _options: v8::Local<v8::Value> = args.get(2);
+    let _callback: v8::Local<v8::Value> = args.get(3);
     let child_obj: _ = v8::Object::new(scope);
     let stdout_key: _ = v8::String::new(scope, "stdout").unwrap();
     let stdout_val: _ = v8::String::new(scope, "mock output").unwrap();
