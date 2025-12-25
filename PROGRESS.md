@@ -14,6 +14,74 @@
 
 
 
+### v0.3.87 实现 HTTP Server 真实监听和请求处理 (2025-12-26)
+**进度**: HTTP Server | ✅ 已提交
+
+#### v0.3.87 新增功能
+- **TCP 服务器监听**
+  - 使用独立线程处理连接
+  - 非阻塞 `accept()` 循环
+  - 支持 `listen(port, host, callback)` 签名
+
+- **HTTP 请求解析器** (`parse_http_request`)
+  - 解析请求行: `METHOD PATH HTTP/VERSION`
+  - 解析请求头到 `HashMap`
+  - 提取 path（去掉 query string）
+  - 支持请求体解析
+
+- **HTTP 响应构建器** (`HttpServerResponse`)
+  - `set_header(name, value)` - 设置响应头
+  - `get_header(name)` - 获取响应头
+  - `remove_header(name)` - 移除响应头
+  - `write(data)` - 写入 body
+  - 自动生成 HTTP 响应字符串
+
+#### v0.3.87 新增 API
+- **response.removeHeader()** - 移除响应头
+- **listen() 回调支持** - 第三个参数作为启动回调
+- **server.close()** - 正确设置 listening = false
+
+#### v0.3.87 请求对象属性
+- `req.method` - HTTP 方法 (GET, POST, etc.)
+- `req.url` - 完整请求 URL
+- `req.path` - 请求路径（不含 query）
+- `req.httpVersion` - HTTP 版本 (HTTP/1.1)
+- `req.headers` - 请求头对象
+
+#### v0.3.87 代码变更
+- **修改文件**: `src/nodejs_core/http.rs` (+637 行)
+  - 添加 `HttpServerRequest` 结构体
+  - 添加 `HttpServerResponse` 结构体
+  - 添加 `HttpServerState` 结构体
+  - 添加 `parse_http_request()` 函数
+  - 添加 `generate_http_response()` 函数
+  - 添加 `run_http_server()` 函数
+  - 添加 `handle_connection()` 函数
+  - 修改 `http_server_listen_callback()` 支持真实监听
+  - 添加 `http_res_remove_header_callback()` 函数
+
+- **新增文件**: `tests/http_server_real_tests.rs` (20 个测试)
+
+#### v0.3.87 验证
+- ✅ `cargo build --release` 成功
+- ✅ HTTP Server 真实监听功能验证通过
+- ✅ 响应对象方法测试通过
+
+#### v0.3.87 使用示例
+```javascript
+const server = http.createServer((req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.statusCode = 201;
+    res.end(JSON.stringify({message: 'Created'}));
+});
+
+server.listen(3000, 'localhost', () => {
+    console.log('Server listening on localhost:3000');
+});
+```
+
+---
+
 ### v0.3.86 清理编译警告 (2025-12-26)
 **进度**: 代码清理 | ✅ 已提交
 
