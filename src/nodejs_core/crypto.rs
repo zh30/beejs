@@ -577,8 +577,11 @@ fn create_cipher_callback(
         None
     };
 
-    // 生成密钥（根据算法派生）
-    let key = derive_key(&algorithm, &password_data);
+    // 派生密钥和 IV
+    let (key, derived_iv) = derive_key_and_iv(&algorithm, &password_data);
+
+    // 如果没有提供 IV，使用派生的 IV（确保加密和解密使用相同的 IV）
+    let iv_data = iv_data.or(Some(derived_iv));
 
     // 创建 cipher 对象
     let cipher_obj: _ = v8::Object::new(scope);
@@ -602,20 +605,24 @@ fn create_cipher_callback(
     cipher_obj.set(scope, key_key.into(), key_buffer.into());
 
     let iv_key: _ = v8::String::new(scope, "_iv").unwrap();
-    let iv_len = iv_data.as_ref().map(|v| v.len()).unwrap_or(0);
-    let iv_buffer = v8::ArrayBuffer::new(scope, iv_len);
-    // 复制 IV 数据到缓冲区
+    // 只在有 IV 数据时才创建和设置 IV 缓冲区
     if let Some(iv_data_ref) = iv_data.as_ref() {
-        if iv_data_ref.len() > 0 {
+        let iv_len = iv_data_ref.len();
+        let iv_buffer = v8::ArrayBuffer::new(scope, iv_len);
+        if iv_len > 0 {
             let store = iv_buffer.get_backing_store();
             let ptr = store.data() as *mut u8;
             if !ptr.is_null() {
-                let slice = unsafe { std::slice::from_raw_parts_mut(ptr, iv_data_ref.len()) };
+                let slice = unsafe { std::slice::from_raw_parts_mut(ptr, iv_len) };
                 slice.copy_from_slice(iv_data_ref);
             }
         }
+        cipher_obj.set(scope, iv_key.into(), iv_buffer.into());
+    } else {
+        // 没有 IV，设置空值
+        let undefined_val = v8::undefined(scope);
+        cipher_obj.set(scope, iv_key.into(), undefined_val.into());
     }
-    cipher_obj.set(scope, iv_key.into(), iv_buffer.into());
 
     let encrypt_key: _ = v8::String::new(scope, "_encrypt").unwrap();
     let encrypt_val = v8::Boolean::new(scope, true);
@@ -714,8 +721,11 @@ fn create_decipher_callback(
         None
     };
 
-    // 生成密钥
-    let key = derive_key(&algorithm, &password_data);
+    // 派生密钥和 IV
+    let (key, derived_iv) = derive_key_and_iv(&algorithm, &password_data);
+
+    // 如果没有提供 IV，使用派生的 IV（确保加密和解密使用相同的 IV）
+    let iv_data = iv_data.or(Some(derived_iv));
 
     // 创建 decipher 对象
     let decipher_obj: _ = v8::Object::new(scope);
@@ -739,20 +749,24 @@ fn create_decipher_callback(
     decipher_obj.set(scope, key_key.into(), key_buffer.into());
 
     let iv_key: _ = v8::String::new(scope, "_iv").unwrap();
-    let iv_len = iv_data.as_ref().map(|v| v.len()).unwrap_or(0);
-    let iv_buffer = v8::ArrayBuffer::new(scope, iv_len);
-    // 复制 IV 数据到缓冲区
+    // 只在有 IV 数据时才创建和设置 IV 缓冲区
     if let Some(iv_data_ref) = iv_data.as_ref() {
-        if iv_data_ref.len() > 0 {
+        let iv_len = iv_data_ref.len();
+        let iv_buffer = v8::ArrayBuffer::new(scope, iv_len);
+        if iv_len > 0 {
             let store = iv_buffer.get_backing_store();
             let ptr = store.data() as *mut u8;
             if !ptr.is_null() {
-                let slice = unsafe { std::slice::from_raw_parts_mut(ptr, iv_data_ref.len()) };
+                let slice = unsafe { std::slice::from_raw_parts_mut(ptr, iv_len) };
                 slice.copy_from_slice(iv_data_ref);
             }
         }
+        decipher_obj.set(scope, iv_key.into(), iv_buffer.into());
+    } else {
+        // 没有 IV，设置空值
+        let undefined_val = v8::undefined(scope);
+        decipher_obj.set(scope, iv_key.into(), undefined_val.into());
     }
-    decipher_obj.set(scope, iv_key.into(), iv_buffer.into());
 
     let encrypt_key: _ = v8::String::new(scope, "_encrypt").unwrap();
     let encrypt_val = v8::Boolean::new(scope, false);
@@ -1114,7 +1128,7 @@ fn create_decipheriv_callback(
 }
 
 /// 根据算法和密码派生密钥
-fn derive_key(algorithm: &str, password: &[u8]) -> Vec<u8> {
+fn derive_key_and_iv(algorithm: &str, password: &[u8]) -> (Vec<u8>, Vec<u8>) {
     // 根据算法确定密钥长度
     let key_len = if algorithm.to_lowercase().contains("128") {
         16
@@ -1124,37 +1138,47 @@ fn derive_key(algorithm: &str, password: &[u8]) -> Vec<u8> {
         32 // 默认 256 位
     };
 
-    if password.len() >= key_len {
-        password[..key_len].to_vec()
-    } else {
-        // 使用 EVP_BytesToKey 派生密钥（简化版本）
-        let mut derived = vec![0u8; key_len];
-        let mut hash = blake3::Hasher::new();
+    // 对于 AES-CBC，需要 IV (16字节)
+    let iv_len = 16;
+    let total_len = key_len + iv_len;
 
-        // 简单的密码派生：循环哈希
-        let mut counter: u32 = 0;
-        let mut current_input = password.to_vec();
-
-        while derived.iter().any(|&b| b == 0) {
-            counter += 1;
-            let counter_bytes = counter.to_le_bytes();
-            let mut input = current_input.clone();
-            input.extend_from_slice(&counter_bytes);
-
-            hash.update(&input);
-            let output = hash.finalize();
-            let output_bytes = output.as_bytes();
-
-            for (i, byte) in output_bytes.iter().enumerate() {
-                if i < key_len && derived[i] == 0 {
-                    derived[i] = *byte;
-                }
-            }
-            current_input = input;
-        }
-
-        derived
+    if password.len() >= total_len {
+        // 如果密码足够长，前面的作为 key，后面的作为 IV
+        let key = password[..key_len].to_vec();
+        let iv = password[key_len..total_len].to_vec();
+        return (key, iv);
     }
+
+    // 使用 EVP_BytesToKey 风格派生密钥和 IV
+    let mut derived = vec![0u8; total_len];
+    let mut hash = blake3::Hasher::new();
+
+    // 简单的密码派生：循环哈希（最多 3 次迭代以避免无限循环）
+    for counter in 1i32..=3 {
+        let counter_bytes = counter.to_le_bytes();
+        let mut input = password.to_vec();
+        input.extend_from_slice(&counter_bytes);
+
+        hash.update(&input);
+        let output = hash.finalize();
+        let output_bytes = output.as_bytes();
+
+        for (i, byte) in output_bytes.iter().enumerate() {
+            if i < total_len {
+                derived[i] = *byte;
+            }
+        }
+        // 重置哈希器用于下一次迭代
+        hash = blake3::Hasher::new();
+    }
+
+    let key = derived[..key_len].to_vec();
+    let iv = derived[key_len..].to_vec();
+    (key, iv)
+}
+
+fn derive_key(algorithm: &str, password: &[u8]) -> Vec<u8> {
+    derive_key_and_iv(algorithm, password).0
 }
 
 /// cipher.update() 回调函数
@@ -1296,25 +1320,46 @@ fn cipher_update_callback(
     // 获取 IV
     let iv_key: _ = v8::String::new(scope, "_iv").unwrap();
     let iv_val = this.get(scope, iv_key.into());
-    let iv: Option<Vec<u8>> = if let Some(iv_obj) = iv_val.and_then(|v| v.to_object(scope)) {
-        if let Ok(iv_buf) = v8::Local::<v8::ArrayBuffer>::try_from(iv_obj) {
-            let store = iv_buf.get_backing_store();
-            let len = store.byte_length();
-            if len > 0 {
-                let ptr = store.data() as *const u8;
-                if !ptr.is_null() {
-                    Some(unsafe { std::slice::from_raw_parts(ptr, len).to_vec() })
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        } else {
+    let iv: Option<Vec<u8>> = match iv_val {
+        None => {
+            eprintln!("[DEBUG] IV value is None (not found)");
             None
         }
-    } else {
-        None
+        Some(iv_local) => {
+            if iv_local.is_undefined() || iv_local.is_null() {
+                eprintln!("[DEBUG] IV value is undefined/null");
+                None
+            } else {
+                // 直接尝试作为 ArrayBuffer 提取
+                if let Ok(iv_buf) = v8::Local::<v8::ArrayBuffer>::try_from(iv_local) {
+                    let store = iv_buf.get_backing_store();
+                    let len = store.byte_length();
+                    eprintln!("[DEBUG] IV extracted from ArrayBuffer: {} bytes", len);
+                    if len > 0 {
+                        let ptr = store.data() as *const u8;
+                        if !ptr.is_null() {
+                            Some(unsafe { std::slice::from_raw_parts(ptr, len).to_vec() })
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                } else {
+                    // 尝试作为 Uint8Array 提取
+                    if let Ok(uint8_arr) = v8::Local::<v8::Uint8Array>::try_from(iv_local) {
+                        let len = uint8_arr.byte_length();
+                        eprintln!("[DEBUG] IV extracted from Uint8Array: {} bytes", len);
+                        let mut data = vec![0u8; len];
+                        uint8_arr.copy_contents(&mut data);
+                        Some(data)
+                    } else {
+                        eprintln!("[DEBUG] IV is neither ArrayBuffer nor Uint8Array");
+                        None
+                    }
+                }
+            }
+        }
     };
 
     // 获取之前累积的输入数据
@@ -1375,8 +1420,8 @@ fn cipher_update_callback(
         // 返回加密结果
         return_output(scope, &output, &output_encoding, retval);
     } else {
-        // 对于解密：只累积数据，不返回任何内容
-        // 所有解密数据将在 final() 中返回
+        // 对于解密：累积所有数据，不在 update() 中返回
+        // 所有解密数据将在 final() 中返回（正确处理填充）
 
         // 保存累积的数据到 pendingData
         let new_pending_buffer = v8::ArrayBuffer::new(scope, pending_data.len());
@@ -1390,10 +1435,17 @@ fn cipher_update_callback(
         }
         this.set(scope, pending_data_key.into(), new_pending_buffer.into());
 
-        // 解密时返回空 Buffer
-        let empty_buffer: _ = v8::ArrayBuffer::new(scope, 0);
-        if let Some(uint8_array) = v8::Uint8Array::new(scope, empty_buffer, 0, 0) {
-            retval.set(uint8_array.into());
+        // 解密时返回空结果（根据输出编码）
+        if output_encoding == "utf8" || output_encoding == "utf-8" || output_encoding == "latin1" || output_encoding == "binary" {
+            // 返回空字符串
+            let empty_str: _ = v8::String::new(scope, "").unwrap();
+            retval.set(empty_str.into());
+        } else {
+            // 返回空 Buffer
+            let empty_buffer: _ = v8::ArrayBuffer::new(scope, 0);
+            if let Some(uint8_array) = v8::Uint8Array::new(scope, empty_buffer, 0, 0) {
+                retval.set(uint8_array.into());
+            }
         }
     }
 }
@@ -1448,25 +1500,28 @@ fn cipher_final_callback(
     // 获取 IV
     let iv_key: _ = v8::String::new(scope, "_iv").unwrap();
     let iv_val = this.get(scope, iv_key.into());
-    let iv: Option<Vec<u8>> = if let Some(iv_obj) = iv_val.and_then(|v| v.to_object(scope)) {
-        if let Ok(iv_buf) = v8::Local::<v8::ArrayBuffer>::try_from(iv_obj) {
-            let store = iv_buf.get_backing_store();
-            let len = store.byte_length();
-            if len > 0 {
-                let ptr = store.data() as *const u8;
-                if !ptr.is_null() {
-                    Some(unsafe { std::slice::from_raw_parts(ptr, len).to_vec() })
+    let iv: Option<Vec<u8>> = match iv_val {
+        None => None,
+        Some(v) if v.is_undefined() || v.is_null() => None,
+        Some(v) => {
+            // 尝试作为 ArrayBuffer 提取
+            if let Ok(iv_buf) = v8::Local::<v8::ArrayBuffer>::try_from(v) {
+                let store = iv_buf.get_backing_store();
+                let len = store.byte_length();
+                if len > 0 {
+                    let ptr = store.data() as *const u8;
+                    if !ptr.is_null() {
+                        Some(unsafe { std::slice::from_raw_parts(ptr, len).to_vec() })
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
             } else {
                 None
             }
-        } else {
-            None
         }
-    } else {
-        None
     };
 
     // 获取之前累积的 pending 数据

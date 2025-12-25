@@ -697,12 +697,17 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                                 if let Some(buf) = obj.get(scope, buffer_key) {
                                     if buf.is_array_buffer() {
                                         if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(buf) {
-                                            let store = arr_buffer.get_backing_store();
                                             let item_len = arr_buffer.byte_length();
-                                            let src_slice = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, item_len) };
-                                            let end = std::cmp::min(offset + item_len, calculated_length);
-                                            combined[offset..end].copy_from_slice(&src_slice[0..(end - offset)]);
-                                            offset = end;
+                                            if item_len > 0 {
+                                                let store = arr_buffer.get_backing_store();
+                                                let ptr = store.as_ref().as_ptr() as *const u8;
+                                                if !ptr.is_null() {
+                                                    let src_slice = unsafe { std::slice::from_raw_parts(ptr, item_len) };
+                                                    let end = std::cmp::min(offset + item_len, calculated_length);
+                                                    combined[offset..end].copy_from_slice(&src_slice[0..(end - offset)]);
+                                                    offset = end;
+                                                }
+                                            }
                                             continue;
                                         }
                                     }
@@ -712,22 +717,32 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                         // Check for raw ArrayBuffer
                         if item.is_array_buffer() {
                             if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(item) {
-                                let store = arr_buffer.get_backing_store();
                                 let item_len = arr_buffer.byte_length();
-                                let src_slice = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, item_len) };
-                                let end = std::cmp::min(offset + item_len, calculated_length);
-                                combined[offset..end].copy_from_slice(&src_slice[0..(end - offset)]);
-                                offset = end;
+                                if item_len > 0 {
+                                    let store = arr_buffer.get_backing_store();
+                                    let ptr = store.as_ref().as_ptr() as *const u8;
+                                    if !ptr.is_null() {
+                                        let src_slice = unsafe { std::slice::from_raw_parts(ptr, item_len) };
+                                        let end = std::cmp::min(offset + item_len, calculated_length);
+                                        combined[offset..end].copy_from_slice(&src_slice[0..(end - offset)]);
+                                        offset = end;
+                                    }
+                                }
                             }
                         } else if item.is_typed_array() {
                             if let Ok(typed_array) = v8::Local::<v8::TypedArray>::try_from(item) {
-                                let arr_buf = typed_array.buffer(scope).unwrap();
-                                let store = arr_buf.get_backing_store();
                                 let item_len = typed_array.byte_length() as usize;
-                                let src_slice = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, item_len) };
-                                let end = std::cmp::min(offset + item_len, calculated_length);
-                                combined[offset..end].copy_from_slice(&src_slice[0..(end - offset)]);
-                                offset = end;
+                                if item_len > 0 {
+                                    let arr_buf = typed_array.buffer(scope).unwrap();
+                                    let store = arr_buf.get_backing_store();
+                                    let ptr = store.as_ref().as_ptr() as *const u8;
+                                    if !ptr.is_null() {
+                                        let src_slice = unsafe { std::slice::from_raw_parts(ptr, item_len) };
+                                        let end = std::cmp::min(offset + item_len, calculated_length);
+                                        combined[offset..end].copy_from_slice(&src_slice[0..(end - offset)]);
+                                        offset = end;
+                                    }
+                                }
                             }
                         }
                     }

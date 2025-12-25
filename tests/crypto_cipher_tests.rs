@@ -224,17 +224,19 @@ fn test_cipher_decipher_round_trip() {
 const password = 'mysecretkey';
 const plaintext = 'Hello, World!';
 
-// Encrypt
+// Encrypt - need to combine update and final results
 const cipher = crypto.createCipher('aes-256-cbc', password);
-const encrypted = cipher.update(plaintext, 'utf8', 'buffer');
-cipher.final('buffer');
+const encrypted_part1 = cipher.update(plaintext, 'utf8', 'buffer');
+const encrypted_part2 = cipher.final('buffer');
+const encrypted = Buffer.concat([encrypted_part1, encrypted_part2]);
 
 // Decrypt
 const decipher = crypto.createDecipher('aes-256-cbc', password);
 const decrypted = decipher.update(encrypted, 'buffer', 'utf8');
-decipher.final('utf8');
+const decrypted_final = decipher.final('utf8');
+const full_decrypted = decrypted + decrypted_final;
 
-console.log(decrypted === plaintext ? 'PASS' : 'FAIL');
+console.log(full_decrypted === plaintext ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
     assert!(output.contains("PASS"), "Expected encryption/decryption round-trip to work: {}", output);
@@ -255,6 +257,9 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 #[test]
 #[serial]
 fn test_decipher_update_returns_string() {
+    // For small inputs (< block size), decipher.update() returns empty string
+    // because all data is accumulated and returned in final()
+    // This is correct behavior for proper padding handling
     let code = r#"
 const cipher = crypto.createCipher('aes-256-cbc', 'password');
 const encrypted = cipher.update('test data', 'utf8', 'buffer');
@@ -262,8 +267,9 @@ cipher.final('buffer');
 
 const decipher = crypto.createDecipher('aes-256-cbc', 'password');
 const result = decipher.update(encrypted, 'buffer', 'utf8');
-console.log(typeof result === 'string' ? 'PASS' : 'FAIL');
+// For small inputs, update returns empty string (data accumulated for final)
+console.log(result === '' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected decipher update to return string: {}", output);
+    assert!(output.contains("PASS"), "Expected decipher update to return empty string: {}", output);
 }
