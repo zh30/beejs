@@ -619,6 +619,7 @@ fn writable_write_callback(
     }
     retval.set(v8::undefined(scope).into());
 }
+
 fn writable_public_write_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -659,16 +660,19 @@ fn writable_public_write_callback(
         if write_func_val.is_function() {
             if let Ok(write_func) = v8::Local::<v8::Function>::try_from(write_func_val) {
                 let encoding_val: _ = v8::String::new(scope, &encoding).unwrap();
-                let call_args: &[v8::Local<v8::Value>] = &[chunk, encoding_val.into()];
+
+                // v0.3.81: 直接传递回调，错误处理在 _write 实现层完成
+                let call_args: &[v8::Local<v8::Value>] = if callback.is_function() {
+                    &[chunk, encoding_val.into(), callback]
+                } else {
+                    &[chunk, encoding_val.into()]
+                };
+
                 write_func.call(scope, this.into(), call_args);
 
-                // 模拟背压检测：如果缓冲区满，设置 needDrain
-                // 这里简单处理：总是返回 true，实际应用中应检查缓冲区状态
-                if callback.is_function() {
-                    if let Ok(cb_func) = v8::Local::<v8::Function>::try_from(callback) {
-                        cb_func.call(scope, this.into(), &[]);
-                    }
-                }
+                // v0.3.81: 错误处理 - 检查 _write 回调是否设置了错误标志
+                // 由于 MinimalRuntime 没有完整事件循环，这里简化处理
+                // 实际错误处理需要完整的事件循环支持
             }
         }
     }
