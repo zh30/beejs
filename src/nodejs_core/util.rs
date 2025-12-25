@@ -428,7 +428,7 @@ fn util_debuglog_func_callback(
     let section_key: _ = v8::String::new(scope, "_section").unwrap();
     let section: _ = this
         .get(scope, section_key.into())
-        .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
+        .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
         .unwrap_or_default();
     let mut message = String::new();
     for i in 0..args.length() {

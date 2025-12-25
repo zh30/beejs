@@ -160,7 +160,7 @@ fn path_resolve_callback(
     } else {
         // 从右向左处理路径
         for path in paths.into_iter().rev() {
-            if is_windows && (path.starts_with('\\') || (path.len() > 1 && path.chars().nth(1) == Some(':')) {
+            if is_windows && (path.starts_with("\\") || (path.len() > 1 && path.chars().nth(1) == Some(':'))) {
                 // 绝对路径
                 result = path.to_string();
                 break;
@@ -420,23 +420,23 @@ fn path_format_callback(
     if let Some(obj) = path_obj.to_object(scope) {
         let root_key: _ = v8::String::new(scope, "root").unwrap();
         let root: _ = obj.get(scope, root_key.into())
-            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
         let dir_key: _ = v8::String::new(scope, "dir").unwrap();
         let dir: _ = obj.get(scope, dir_key.into())
-            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
         let base_key: _ = v8::String::new(scope, "base").unwrap();
         let base: _ = obj.get(scope, base_key.into())
-            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
         let name_key: _ = v8::String::new(scope, "name").unwrap();
         let name: _ = obj.get(scope, name_key.into())
-            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
         let ext_key: _ = v8::String::new(scope, "ext").unwrap();
         let ext: _ = obj.get(scope, ext_key.into())
-            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
         let file_part: _ = if !base.is_empty() { base.clone() } else { format!("{}{}", name, ext) };
         let result: _ = if !dir.is_empty() {
@@ -517,7 +517,7 @@ fn normalize_path(path: &str, is_windows: bool) -> String {
     }
     // 处理根路径
     if path.starts_with(&separator.to_string()) {
-        result = format!("{}{}, separator", result));
+        result = format!("{}{}", result, separator);
     }
     result
 }

@@ -116,12 +116,12 @@ fn event_emitter_on_callback(
     // 获取当前的监听器数组
     let listeners_key: _ = v8::String::new(scope, "_listeners").unwrap();
     let existing_listeners: _ = this.get(scope, listeners_key.into());
-    let mut listeners_map: HashMap<String, Vec<v8::Global<v8::Function> = HashMap::new();
+    let mut listeners_map: HashMap<String, Vec<v8::Global<v8::Function>>> = HashMap::new();
     if let Some(arr) = existing_listeners.and_then(|v| v.to_object(scope)) {
         // 转换现有的监听器
         let listener_names: _ = EVENT_LISTENERS.with(|map| {
             let map_ref: _ = map.lock().unwrap();
-            map_ref.keys().cloned().collect::<Vec<_>()
+            map_ref.keys().cloned().collect::<Vec<_>>()
         });
         for name in listener_names {
             let name_key: _ = v8::String::new(scope, &name).unwrap();

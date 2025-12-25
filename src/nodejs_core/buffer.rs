@@ -301,7 +301,7 @@ fn buffer_to_string_callback(
     let length_key: _ = v8::String::new(scope, "_length").unwrap();
     let buffer_length: _ = this
         .get(scope, length_key.into())
-        .and_then(|v| v.to_integer(scope).map(|i| i.value())
+        .and_then(|v| v.to_integer(scope).map(|i| i.value()))
         .unwrap_or(0);
     let actual_end: usize = if end == -1 { buffer_length as usize } else { (end.min(buffer_length)) as usize };
     let actual_start: _ = (start as i64).min(buffer_length) as usize;
@@ -322,7 +322,7 @@ fn buffer_to_json_callback(
     let length_key: _ = v8::String::new(scope, "_length").unwrap();
     let buffer_length: _ = this
         .get(scope, length_key.into())
-        .and_then(|v| v.to_integer(scope).map(|i| i.value())
+        .and_then(|v| v.to_integer(scope).map(|i| i.value()))
         .unwrap_or(0);
     // Fixed: Simplified implementation for rusty_v8 0.22
     // Note: Direct data access not available in this version
@@ -350,7 +350,7 @@ fn buffer_fill_callback(
     let length_key: _ = v8::String::new(scope, "_length").unwrap();
     let buffer_length: _ = this
         .get(scope, length_key.into())
-        .and_then(|v| v.to_integer(scope).map(|i| i.value())
+        .and_then(|v| v.to_integer(scope).map(|i| i.value()))
         .unwrap_or(0);
     let actual_end: usize = if end == -1 { buffer_length as usize } else { (end.min(buffer_length)) as usize };
     let actual_start: _ = start.min(buffer_length) as usize;
@@ -385,7 +385,7 @@ fn buffer_slice_callback(
     let length_key: _ = v8::String::new(scope, "_length").unwrap();
     let buffer_length: _ = this
         .get(scope, length_key.into())
-        .and_then(|v| v.to_integer(scope).map(|i| i.value())
+        .and_then(|v| v.to_integer(scope).map(|i| i.value()))
         .unwrap_or(0);
     let actual_end: usize = if end == -1 { buffer_length as usize } else { (end.min(buffer_length)) as usize };
     let actual_start: _ = (start as i64).min(buffer_length) as usize;

@@ -1234,6 +1234,12 @@ impl MinimalRuntime {
         // Set up stream module (v0.3.44)
         Self::setup_stream_api(scope, &context)?;
 
+        // Set up http module (v0.3.45)
+        Self::setup_http_api(scope, &context)?;
+
+        // Set up util module (v0.3.45)
+        Self::setup_util_api(scope, &context)?;
+
         // Set up CommonJS module system (v0.3.x)
         Self::setup_module_system(scope, &context)?;
 
@@ -10393,6 +10399,273 @@ impl MinimalRuntime {
         // Set stream as global
         let stream_key = v8::String::new(scope, "stream").unwrap();
         global.set(scope, stream_key.into(), stream_obj.into());
+
+        Ok(())
+    }
+
+    /// Set up the http module (v0.3.45)
+    /// Provides basic HTTP server and request functionality
+    fn setup_http_api(
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        context: &v8::Local<v8::Context>,
+    ) -> Result<()> {
+        let global = context.global(scope);
+
+        // Create http object
+        let http_obj = v8::Object::new(scope);
+
+        // createServer function
+        let create_server_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let server_obj = v8::Object::new(scope);
+
+            // listen method
+            let listen_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                retval.set(v8::Boolean::new(scope, true).into());
+            });
+            let listen_instance = listen_func.get_function(scope).unwrap();
+            let listen_key = v8::String::new(scope, "listen").unwrap();
+            server_obj.set(scope, listen_key.into(), listen_instance.into());
+
+            // on method
+            let on_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                retval.set(v8::Boolean::new(scope, true).into());
+            });
+            let on_instance = on_func.get_function(scope).unwrap();
+            let on_key = v8::String::new(scope, "on").unwrap();
+            server_obj.set(scope, on_key.into(), on_instance.into());
+
+            retval.set(server_obj.into());
+        });
+        let create_server_instance = create_server_func.get_function(scope).unwrap();
+        let create_server_key = v8::String::new(scope, "createServer").unwrap();
+        http_obj.set(scope, create_server_key.into(), create_server_instance.into());
+
+        // request function
+        let request_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let req_obj = v8::Object::new(scope);
+            retval.set(req_obj.into());
+        });
+        let request_instance = request_func.get_function(scope).unwrap();
+        let request_key = v8::String::new(scope, "request").unwrap();
+        http_obj.set(scope, request_key.into(), request_instance.into());
+
+        // get function
+        let get_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let req_obj = v8::Object::new(scope);
+            retval.set(req_obj.into());
+        });
+        let get_instance = get_func.get_function(scope).unwrap();
+        let get_key = v8::String::new(scope, "get").unwrap();
+        http_obj.set(scope, get_key.into(), get_instance.into());
+
+        // Set http as global
+        let http_key = v8::String::new(scope, "http").unwrap();
+        global.set(scope, http_key.into(), http_obj.into());
+
+        Ok(())
+    }
+
+    /// Set up the util module (v0.3.45)
+    /// Provides utility functions like inspect, format, types, etc.
+    fn setup_util_api(
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        context: &v8::Local<v8::Context>,
+    ) -> Result<()> {
+        let global = context.global(scope);
+
+        // Create util object
+        let util_obj = v8::Object::new(scope);
+
+        // inspect function
+        let inspect_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let object = args.get(0);
+            let result = if object.is_null() {
+                "null".to_string()
+            } else if object.is_undefined() {
+                "undefined".to_string()
+            } else if object.is_string() {
+                format!("'{}'", object.to_string(scope).unwrap().to_rust_string_lossy(scope))
+            } else if object.is_number() {
+                object.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope)
+            } else if object.is_boolean() {
+                object.to_boolean(scope).is_true().to_string()
+            } else if object.is_array() {
+                let arr = v8::Local::<v8::Array>::try_from(object).unwrap();
+                format!("Array({})", arr.length())
+            } else if object.is_object() {
+                let obj = object.to_object(scope).unwrap();
+                let key_count: usize = obj.get_own_property_names(scope).map(|keys| keys.length()).unwrap_or(0) as usize;
+                format!("Object {{ {} keys }}", key_count)
+            } else {
+                "[Unknown]".to_string()
+            };
+            retval.set(v8::String::new(scope, &result).unwrap().into());
+        });
+        let inspect_instance = inspect_func.get_function(scope).unwrap();
+        let inspect_key = v8::String::new(scope, "inspect").unwrap();
+        util_obj.set(scope, inspect_key.into(), inspect_instance.into());
+
+        // format function
+        let format_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let format_str = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+            let mut result = String::new();
+            let mut arg_index = 1;
+            let mut i = 0;
+            while i < format_str.len() {
+                if format_str.chars().nth(i) == Some('%') && i + 1 < format_str.len() {
+                    let format_char = format_str.chars().nth(i + 1).unwrap();
+                    match format_char {
+                        's' | 'd' | 'i' | 'f' => {
+                            if arg_index < args.length() {
+                                let arg = args.get(arg_index);
+                                let arg_str = if arg.is_string() {
+                                    arg.to_string(scope).unwrap().to_rust_string_lossy(scope)
+                                } else if arg.is_number() {
+                                    arg.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope)
+                                } else if arg.is_boolean() {
+                                    arg.to_boolean(scope).is_true().to_string()
+                                } else if arg.is_null() {
+                                    "null".to_string()
+                                } else if arg.is_undefined() {
+                                    "undefined".to_string()
+                                } else {
+                                    "[Object]".to_string()
+                                };
+                                result.push_str(&arg_str);
+                                arg_index += 1;
+                            }
+                            i += 2;
+                        }
+                        'j' => {
+                            result.push_str("[Object]");
+                            arg_index += 1;
+                            i += 2;
+                        }
+                        '%' => {
+                            result.push('%');
+                            i += 2;
+                        }
+                        _ => {
+                            result.push(format_char);
+                            i += 1;
+                        }
+                    }
+                } else {
+                    result.push(format_str.chars().nth(i).unwrap());
+                    i += 1;
+                }
+            }
+            // Add remaining arguments
+            while arg_index < args.length() {
+                if !result.is_empty() {
+                    result.push(' ');
+                }
+                result.push_str(&args.get(arg_index).to_string(scope).unwrap().to_rust_string_lossy(scope));
+                arg_index += 1;
+            }
+            retval.set(v8::String::new(scope, &result).unwrap().into());
+        });
+        let format_instance = format_func.get_function(scope).unwrap();
+        let format_key = v8::String::new(scope, "format").unwrap();
+        util_obj.set(scope, format_key.into(), format_instance.into());
+
+        // types object
+        let types_obj = v8::Object::new(scope);
+        let is_array_buffer_key = v8::String::new(scope, "isArrayBuffer").unwrap();
+        let is_array_buffer_value = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut _retval: v8::ReturnValue| {
+            _retval.set(v8::Boolean::new(_scope, false).into());
+        }).get_function(scope).unwrap();
+        types_obj.set(scope, is_array_buffer_key.into(), is_array_buffer_value.into());
+
+        let is_date_key = v8::String::new(scope, "isDate").unwrap();
+        let is_date_value = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            retval.set(v8::Boolean::new(_scope, args.get(0).is_date()).into());
+        }).get_function(scope).unwrap();
+        types_obj.set(scope, is_date_key.into(), is_date_value.into());
+
+        let is_regexp_key = v8::String::new(scope, "isRegExp").unwrap();
+        let is_regexp_value = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut _retval: v8::ReturnValue| {
+            _retval.set(v8::Boolean::new(_scope, false).into());
+        }).get_function(scope).unwrap();
+        types_obj.set(scope, is_regexp_key.into(), is_regexp_value.into());
+
+        let types_key = v8::String::new(scope, "types").unwrap();
+        util_obj.set(scope, types_key.into(), types_obj.into());
+
+        // isArray function
+        let is_array_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            retval.set(v8::Boolean::new(_scope, args.get(0).is_array()).into());
+        }).get_function(scope).unwrap();
+        let is_array_key = v8::String::new(scope, "isArray").unwrap();
+        util_obj.set(scope, is_array_key.into(), is_array_func.into());
+
+        // isBoolean function
+        let is_bool_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            retval.set(v8::Boolean::new(_scope, args.get(0).is_boolean()).into());
+        }).get_function(scope).unwrap();
+        let is_bool_key = v8::String::new(scope, "isBoolean").unwrap();
+        util_obj.set(scope, is_bool_key.into(), is_bool_func.into());
+
+        // isNull function
+        let is_null_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            retval.set(v8::Boolean::new(_scope, args.get(0).is_null()).into());
+        }).get_function(scope).unwrap();
+        let is_null_key = v8::String::new(scope, "isNull").unwrap();
+        util_obj.set(scope, is_null_key.into(), is_null_func.into());
+
+        // isNumber function
+        let is_number_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            retval.set(v8::Boolean::new(_scope, args.get(0).is_number()).into());
+        }).get_function(scope).unwrap();
+        let is_number_key = v8::String::new(scope, "isNumber").unwrap();
+        util_obj.set(scope, is_number_key.into(), is_number_func.into());
+
+        // isString function
+        let is_string_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            retval.set(v8::Boolean::new(_scope, args.get(0).is_string()).into());
+        }).get_function(scope).unwrap();
+        let is_string_key = v8::String::new(scope, "isString").unwrap();
+        util_obj.set(scope, is_string_key.into(), is_string_func.into());
+
+        // isUndefined function
+        let is_undefined_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            retval.set(v8::Boolean::new(_scope, args.get(0).is_undefined()).into());
+        }).get_function(scope).unwrap();
+        let is_undefined_key = v8::String::new(scope, "isUndefined").unwrap();
+        util_obj.set(scope, is_undefined_key.into(), is_undefined_func.into());
+
+        // isObject function
+        let is_object_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let val = args.get(0);
+            retval.set(v8::Boolean::new(_scope, val.is_object() && !val.is_null()).into());
+        }).get_function(scope).unwrap();
+        let is_object_key = v8::String::new(scope, "isObject").unwrap();
+        util_obj.set(scope, is_object_key.into(), is_object_func.into());
+
+        // isFunction function
+        let is_function_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            retval.set(v8::Boolean::new(_scope, args.get(0).is_function()).into());
+        }).get_function(scope).unwrap();
+        let is_function_key = v8::String::new(scope, "isFunction").unwrap();
+        util_obj.set(scope, is_function_key.into(), is_function_func.into());
+
+        // promisify function
+        let promisify_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            retval.set(v8::undefined(_scope).into());
+        }).get_function(scope).unwrap();
+        let promisify_key = v8::String::new(scope, "promisify").unwrap();
+        util_obj.set(scope, promisify_key.into(), promisify_func.into());
+
+        // debuglog function
+        let debuglog_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            retval.set(v8::undefined(_scope).into());
+        }).get_function(scope).unwrap();
+        let debuglog_key = v8::String::new(scope, "debuglog").unwrap();
+        util_obj.set(scope, debuglog_key.into(), debuglog_func.into());
+
+        // Set util as global
+        let util_key = v8::String::new(scope, "util").unwrap();
+        global.set(scope, util_key.into(), util_obj.into());
 
         Ok(())
     }
