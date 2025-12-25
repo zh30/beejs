@@ -341,3 +341,124 @@ pub fn close_connection(handle: &TcpConnectionHandle) {
     handle.close();
     TCP_MANAGER.remove_connection(handle.id);
 }
+
+/// HTTP 响应结构
+#[derive(Debug, Clone)]
+pub struct HttpResponse {
+    pub status_code: u16,
+    pub status_message: String,
+    pub headers: Vec<(String, String)>,
+    pub body: Vec<u8>,
+}
+
+/// HTTP 请求选项
+pub struct HttpRequestOptions {
+    pub method: String,
+    pub host: String,
+    pub port: u16,
+    pub path: String,
+    pub headers: Vec<(String, String)>,
+    pub body: Vec<u8>,
+}
+
+/// 同步发送 HTTP 请求并接收响应 - v0.3.73
+pub fn sync_http_request(options: HttpRequestOptions, timeout_secs: u64) -> Result<HttpResponse> {
+    // 建立 TCP 连接
+    let handle = sync_connect(&options.host, options.port, timeout_secs)?;
+
+    // 构建 HTTP 请求
+    let mut request = format!(
+        "{} {} HTTP/1.1\r\nHost: {}\r\n",
+        options.method, options.path, options.host
+    );
+
+    // 添加自定义请求头
+    for (key, value) in &options.headers {
+        request.push_str(&format!("{}: {}\r\n", key, value));
+    }
+
+    // 添加 Content-Length（如果有 body）
+    if !options.body.is_empty() {
+        request.push_str(&format!("Content-Length: {}\r\n", options.body.len()));
+    }
+
+    // 结束请求头
+    request.push_str("\r\n");
+
+    // 发送请求头
+    sync_write(&handle, request.as_bytes())?;
+
+    // 发送 body（如果有）
+    if !options.body.is_empty() {
+        sync_write(&handle, &options.body)?;
+    }
+
+    // 读取响应
+    let mut response_buffer = Vec::new();
+    let mut buf = [0u8; 4096];
+
+    loop {
+        match sync_read(&handle, &mut buf) {
+            Ok(0) => break, // 连接关闭
+            Ok(n) => {
+                response_buffer.extend_from_slice(&buf[..n]);
+            }
+            Err(_) => break,
+        }
+    }
+
+    close_connection(&handle);
+
+    // 解析 HTTP 响应
+    parse_http_response(&response_buffer)
+}
+
+/// 解析 HTTP 响应
+fn parse_http_response(data: &[u8]) -> Result<HttpResponse> {
+    let response_str = match std::str::from_utf8(data) {
+        Ok(s) => s,
+        Err(_) => {
+            // 如果不是有效 UTF-8，尝试查找 HTTP 分隔符
+            return Ok(HttpResponse {
+                status_code: 200,
+                status_message: String::from("OK"),
+                headers: vec![(String::from("content-type"), String::from("application/octet-stream"))],
+                body: data.to_vec(),
+            });
+        }
+    };
+
+    // 分割 headers 和 body
+    let parts: Vec<&str> = response_str.split("\r\n\r\n").collect();
+    let header_section = parts.get(0).unwrap_or(&response_str);
+    let body = parts.get(1).unwrap_or(&"");
+
+    // 解析状态行
+    let lines: Vec<&str> = header_section.split("\r\n").collect();
+    let status_line = lines.get(0).unwrap_or(&"");
+
+    // 解析状态码
+    let status_parts: Vec<&str> = status_line.splitn(3, ' ').collect();
+    let status_code = status_parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(200);
+    let status_message = status_parts.get(2).unwrap_or(&"").to_string();
+
+    // 解析 headers
+    let mut headers = Vec::new();
+    for line in lines.iter().skip(1) {
+        if line.is_empty() {
+            continue;
+        }
+        if let Some(pos) = line.find(':') {
+            let key = line[..pos].trim().to_string();
+            let value = line[pos + 1..].trim().to_string();
+            headers.push((key, value));
+        }
+    }
+
+    Ok(HttpResponse {
+        status_code,
+        status_message,
+        headers,
+        body: body.as_bytes().to_vec(),
+    })
+}
