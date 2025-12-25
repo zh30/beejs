@@ -101,6 +101,71 @@ fn test_buffer_slice() {
 
 #[test]
 #[serial]
+fn test_buffer_slice_length() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const buf = Buffer.from('Hello World', 'utf8');
+        const sliced = buf.slice(6, 11);
+        sliced.length;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "5", "Buffer.slice should preserve correct length");
+}
+
+#[test]
+#[serial]
+fn test_buffer_slice_negative_start() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const buf = Buffer.from('Hello World', 'utf8');
+        const sliced = buf.slice(-5);
+        sliced.toString('utf8');
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "World", "Buffer.slice with negative start should work");
+}
+
+#[test]
+#[serial]
+fn test_buffer_slice_negative_end() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const buf = Buffer.from('Hello World', 'utf8');
+        const sliced = buf.slice(0, -6);
+        sliced.toString('utf8');
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "Hello", "Buffer.slice with negative end should work");
+}
+
+#[test]
+#[serial]
+fn test_buffer_slice_empty() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const buf = Buffer.from('Hello', 'utf8');
+        const sliced = buf.slice(5, 5);
+        sliced.length;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "0", "Buffer.slice with same start/end should return empty buffer");
+}
+
+#[test]
+#[serial]
+fn test_buffer_slice_out_of_bounds() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const buf = Buffer.from('Hello', 'utf8');
+        const sliced = buf.slice(0, 100);
+        sliced.length;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "5", "Buffer.slice with out-of-bounds end should return full buffer");
+}
+
+#[test]
+#[serial]
 fn test_global_this_buffer() {
     let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"

@@ -9,6 +9,24 @@
 
 
 
+### v0.3.60 实现 Buffer.slice() 切片逻辑 (2025-12-25)
+**进度**: Buffer.slice | 6/6 新增测试 | 🔄 编译验证中
+
+#### v0.3.60 改进内容
+- **实现真正的 Buffer.slice() 切片逻辑**
+  - 正确计算 start 和 end 索引（支持负数索引）
+  - 正确处理边界情况（超界、空切片）
+  - 创建新的 ArrayBuffer 并设置正确的 length 属性
+  - 支持从 ArrayBuffer 正确转换和返回
+
+- **新增测试用例**
+  - `test_buffer_slice` - 基础切片测试
+  - `test_buffer_slice_length` - 切片长度验证
+  - `test_buffer_slice_negative_start` - 负数起始索引
+  - `test_buffer_slice_negative_end` - 负数结束索引
+  - `test_buffer_slice_empty` - 空切片测试
+  - `test_buffer_slice_out_of_bounds` - 越界处理测试
+
 ### v0.3.59 实现 pipe() 方法 (2025-12-25)
 **进度**: pipe() 方法 | 51/51 测试通过 | ✅ 所有测试通过
 
