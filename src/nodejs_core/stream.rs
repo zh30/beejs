@@ -100,7 +100,7 @@ pub fn setup_stream_api(
 }
 fn readable_constructor_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let stream_obj: _ = v8::Object::new(scope);
@@ -353,13 +353,12 @@ fn readable_resume_callback(
 fn readable_pipe_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
-    mut retval: v8::ReturnValue,
+    mut _retval: v8::ReturnValue,
 ) {
     let destination: _ = args.get(0);
-    retval.set(destination);
 }
 fn readable_unpipe_callback(
-    scope: &mut v8::HandleScope,
+    _scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
@@ -368,7 +367,7 @@ fn readable_unpipe_callback(
 }
 fn writable_constructor_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let stream_obj: _ = v8::Object::new(scope);
@@ -474,7 +473,7 @@ fn writable_end_callback(
 }
 fn transform_constructor_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let stream_obj: _ = v8::Object::new(scope);
@@ -490,8 +489,8 @@ fn transform_transform_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let chunk: _ = args.get(0);
-    let encoding: _ = args
+    let _chunk: _ = args.get(0);
+    let _encoding: _ = args
         .get(1)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
@@ -508,7 +507,7 @@ fn transform_transform_callback(
 }
 fn duplex_constructor_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let stream_obj: _ = v8::Object::new(scope);
