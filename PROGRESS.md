@@ -9,6 +9,68 @@
 
 
 
+### v0.3.50 Node.js API 测试修复与 nodejs_core 模块启用 (2025-12-25)
+**进度**: V8 初始化冲突修复 | nodejs_core 模块启用 | 14/21 测试通过
+
+#### v0.3.50 问题描述
+- **V8 初始化冲突**: `nodejs_api_tests.rs` 中 21 个测试因并行执行导致 `PoisonError`
+- **模块禁用状态**: `nodejs_core` 模块被注释掉，`path`/`fs` 模块无法使用
+
+#### v0.3.50 修复内容
+- **V8 并发初始化问题解决**
+  - 添加 `#[serial]` 属性到所有测试函数
+  - 使用 `serial_test::serial` 确保测试串行执行
+  - 修复 `test_process_next_tick` JavaScript 语法问题 (`let executed: _ = false;` → `let executed = false;`)
+
+- **nodejs_core 模块启用**
+  - 在 `lib.rs` 中启用 `pub mod nodejs_core`
+  - 修复 `nodejs_core/events.rs` 泛型语法错误 (缺失 `>>`)
+  - 修复 `nodejs_core/buffer.rs` V8 API 调用问题 (移除多余的 scope 参数)
+  - 在 `runtime_minimal.rs` 中导入并调用 `setup_path_api` 和 `setup_fs_api`
+
+#### v0.3.50 代码变更
+- **修改文件**: `tests/nodejs_api_tests.rs` (+31 行, -3 行)
+  - 添加 `use serial_test::serial` 导入
+  - 为所有 21 个测试函数添加 `#[serial]` 属性
+  - 修复 test_process_next_tick JavaScript 语法
+
+- **修改文件**: `src/lib.rs` (+1 行)
+  - 启用 `pub mod nodejs_core`
+
+- **修改文件**: `src/nodejs_core/events.rs` (+2 行, -2 行)
+  - 修复 `static EVENT_LISTENERS` 和 `static ONCE_LISTENERS` 泛型语法
+
+- **修改文件**: `src/nodejs_core/buffer.rs` (+4 行, -50 行)
+  - 移除 V8 API 不兼容的 `instance_template` 调用
+  - 简化实例方法设置代码
+
+- **修改文件**: `src/runtime_minimal.rs` (+10 行)
+  - 导入 `setup_path_api` 和 `setup_fs_api`
+  - 在 `execute_code` 中调用 path 和 fs 模块设置
+
+#### v0.3.50 验证
+```bash
+$ cargo test --test nodejs_api_tests
+test result: 14 passed; 7 failed; 0 ignored
+```
+
+**通过测试 (14/21)**:
+- process 模块: argv, version, cwd, nextTick, nextTick_with_args, nextTick_error_handling ✓
+- path 模块: join, resolve, dirname, basename, extname ✓
+- require 模块: builtin_module, module ✓
+- module_exports ✓
+
+**失败测试 (7)**:
+- fs 模块: read_file_sync, write_file_sync, exists_sync, mkdir_sync, readdir_sync, stat_sync
+  - 原因: `nodejs_core/fs.rs` 实现为简化版本，仅返回占位符文本
+- require_custom_module
+  - 原因: 模块系统简化实现，不支持自定义模块路径
+
+#### v0.3.50 下一步计划
+- 增强 `nodejs_core/fs.rs` 实现真正的文件读写操作
+- 完善 `nodejs_core/require` 模块支持自定义模块
+- 启用其他 nodejs_core 子模块 (crypto, stream, http, net, etc.)
+
 ### v0.3.49 DNS 模块测试修复 (2025-12-25)
 **进度**: 编译错误修复 | 测试断言修复 | 18 测试用例全部通过
 
