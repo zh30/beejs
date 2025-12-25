@@ -608,14 +608,14 @@ fn writable_write_callback(
     mut retval: v8::ReturnValue,
 ) {
     let chunk: _ = args.get(0);
-    let encoding: _ = args
+    let _encoding: _ = args
         .get(1)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
     // 默认_write实现 - 输出到控制台
     if chunk.is_string() {
-        let content: _ = chunk.to_string(scope).unwrap().to_rust_string_lossy(scope);
+        let _content: _ = chunk.to_string(scope).unwrap().to_rust_string_lossy(scope);
     }
     retval.set(v8::undefined(scope).into());
 }
@@ -734,7 +734,6 @@ fn writable_end_callback(
         if pipeline_cb_val.is_function() {
             if let Ok(pipeline_cb_func) = v8::Local::<v8::Function>::try_from(pipeline_cb_val) {
                 let args_arr: &[v8::Local<v8::Value>] = &[v8::null(scope).into()];
-                let undefined = v8::undefined(scope);
                 pipeline_cb_func.call(scope, this.into(), args_arr);
 
                 // 清除回调引用，避免内存泄漏
@@ -1167,13 +1166,13 @@ fn stream_pipeline_callback(
 
     // 依次建立管道连接
     let mut last_writable: Option<v8::Local<v8::Value>> = None;
-    let mut error_listeners: Vec<v8::Local<v8::Value>> = Vec::new();
+    let _error_listeners: Vec<v8::Local<v8::Value>> = Vec::new();
 
     for i in 0..streams.len() - 1 {
         let source = streams[i];
         let destination = streams[i + 1];
 
-        if let (Some(source_obj), Some(dest_obj)) = (source.to_object(scope), destination.to_object(scope)) {
+        if let (Some(source_obj), Some(_dest_obj)) = (source.to_object(scope), destination.to_object(scope)) {
             // 检查是否是有效的流
             let pipe_key: v8::Local<v8::Value> = v8::String::new(scope, "pipe").unwrap().into();
 
@@ -1202,7 +1201,7 @@ fn stream_pipeline_callback(
             let is_writable = last_obj.has(scope, finish_key).unwrap_or(false);
 
             let event_name = if is_writable { "finish" } else { "end" };
-            let event_str: v8::Local<v8::Value> = v8::String::new(scope, event_name).unwrap().into();
+            let _event_str: v8::Local<v8::Value> = v8::String::new(scope, event_name).unwrap().into();
 
             // 使用独立的属性名存储回调，避免覆盖用户监听器
             let pipeline_cb_key: v8::Local<v8::Value> = v8::String::new(scope, "_beejs_pipeline_cb_").unwrap().into();
@@ -1407,8 +1406,6 @@ fn passthrough_write_callback(
     args: v8::FunctionCallbackArguments,
     _retval: v8::ReturnValue,
 ) {
-    let this: _ = args.this();
-
     let chunk: _ = args.get(0);
     let _encoding: _ = args.get(1);
     let callback: _ = args.get(2);
