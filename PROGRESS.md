@@ -10,6 +10,27 @@
 
 
 
+### v0.3.57 完善 Writable stream 背压支持 (2025-12-25)
+**进度**: Writable Stream 背压 | 31/31 测试通过 | ✅ 所有测试通过
+
+#### v0.3.57 改进内容
+- **添加 `_writableState` 状态对象**
+  - `highWaterMark`: 背压水位线 (16KB)
+  - `needDrain`: 是否需要等待 drain 事件
+  - `ended`: 流是否已结束
+  - `writable`: 是否可写
+- **完善 `end()` 方法**
+  - 正确设置 `_writableState.ended = true`
+  - 正确设置 `_writableState.writable = false`
+  - 正确触发 'finish' 事件
+- **添加 `on()` 方法**
+  - 支持事件监听器注册
+  - 允许监听 'finish' 等事件
+- **问题修复**
+  - 原本修改了错误的文件 (stream.rs)
+  - 正确识别 `runtime_minimal.rs` 是 `MinimalRuntime` 实际使用的流实现
+  - 在 `runtime_minimal.rs` 中添加背压支持
+
 ### v0.3.56 修复 Readable 构造函数并完善背压支持 (2025-12-25)
 **进度**: Stream 模块修复 | 22/22 测试通过 | ✅ 所有测试通过
 
