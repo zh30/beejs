@@ -67,26 +67,26 @@ fn create_default_agent<'a>(scope: &mut v8::HandleScope<'a>) -> v8::Local<'a, v8
     agent_obj
 }
 fn http_create_server_callback(
-    _scope: &mut v8::HandleScope,
+    scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let server_obj: _ = v8::Object::new(_scope);
+    let server_obj: _ = v8::Object::new(scope);
     // listen
-    let listen_func: _ = v8::FunctionTemplate::new(_scope, http_server_listen_callback);
-    let listen_instance: _ = listen_func.get_function(_scope).unwrap();
-    let listen_key: _ = v8::String::new(_scope, "listen").unwrap();
-    server_obj.set(_scope, listen_key.into(), listen_instance.into());
+    let listen_func: _ = v8::FunctionTemplate::new(scope, http_server_listen_callback);
+    let listen_instance: _ = listen_func.get_function(scope).unwrap();
+    let listen_key: _ = v8::String::new(scope, "listen").unwrap();
+    server_obj.set(scope, listen_key.into(), listen_instance.into());
     // on
-    let on_func: _ = v8::FunctionTemplate::new(_scope, http_server_on_callback);
-    let on_instance: _ = on_func.get_function(_scope).unwrap();
-    let on_key: _ = v8::String::new(_scope, "on").unwrap();
-    server_obj.set(_scope, on_key.into(), on_instance.into());
+    let on_func: _ = v8::FunctionTemplate::new(scope, http_server_on_callback);
+    let on_instance: _ = on_func.get_function(scope).unwrap();
+    let on_key: _ = v8::String::new(scope, "on").unwrap();
+    server_obj.set(scope, on_key.into(), on_instance.into());
     // close - v0.3.64: 添加服务器关闭方法
-    let close_func: _ = v8::FunctionTemplate::new(_scope, http_server_close_callback);
-    let close_instance: _ = close_func.get_function(_scope).unwrap();
-    let close_key: _ = v8::String::new(_scope, "close").unwrap();
-    server_obj.set(_scope, close_key.into(), close_instance.into());
+    let close_func: _ = v8::FunctionTemplate::new(scope, http_server_close_callback);
+    let close_instance: _ = close_func.get_function(scope).unwrap();
+    let close_key: _ = v8::String::new(scope, "close").unwrap();
+    server_obj.set(scope, close_key.into(), close_instance.into());
     retval.set(server_obj.into());
 }
 
@@ -237,11 +237,18 @@ fn http_agent_create_connection_callback(
 
 /// http.Server.close 回调
 fn http_server_close_callback(
-    _scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    retval.set(v8::undefined(_scope).into());
+    let this: _ = args.this();
+
+    // 设置 listening 为 false
+    let listening_key = v8::String::new(scope, "listening").unwrap();
+    let listening_val = v8::Boolean::new(scope, false);
+    this.set(scope, listening_key.into(), listening_val.into());
+
+    retval.set(this.into());
 }
 fn http_request_callback(
     scope: &mut v8::HandleScope,
@@ -403,11 +410,43 @@ fn http_get_callback(
     retval.set(req_obj.into());
 }
 fn http_server_listen_callback(
-    _scope: &mut v8::HandleScope,
+    scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let this: _ = args.this();
+
+    // 解析参数: listen(port, host)
+    let port = args
+        .get(0)
+        .to_integer(scope)
+        .map(|i| i.value() as u16)
+        .unwrap_or(3000);
+
+    // host 是第二个参数
+    let host = args
+        .get(1)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_else(|| "0.0.0.0".to_string());
+
+    // 设置属性
+    let listening_key = v8::String::new(scope, "listening").unwrap();
+    let listening_val = v8::Boolean::new(scope, true);
+    this.set(scope, listening_key.into(), listening_val.into());
+
+    let port_key = v8::String::new(scope, "port").unwrap();
+    let port_val = v8::Integer::new(scope, port as i32);
+    this.set(scope, port_key.into(), port_val.into());
+
+    let address_key = v8::String::new(scope, "address").unwrap();
+    let address_val = v8::String::new(scope, &format!("{}:{}", host, port)).unwrap();
+    this.set(scope, address_key.into(), address_val.into());
+
+    // 打印启动信息
+    eprintln!("[Beejs] HTTP Server listening on {}:{}", host, port);
+
+    // 返回 this
     retval.set(this.into());
 }
 fn http_server_on_callback(
@@ -426,18 +465,15 @@ fn http_server_on_callback(
         retval.set(v8::null(scope).into());
         return;
     }
-    // 模拟emit 'request'事件
+
+    // v0.3.83: Store listener for 'request' events (real HTTP handling coming later)
     if event == "request" {
-        let req_obj: _ = v8::Object::new(scope);
-        let res_obj: _ = v8::Object::new(scope);
-        // 调用监听器
-        if listener.is_function() {
-            if let Ok(listener_func) = v8::Local::<v8::Function>::try_from(listener) {
-                let call_args: &[v8::Local<v8::Value>] = &[req_obj.into(), res_obj.into()];
-                listener_func.call(scope, this.into(), call_args);
-            }
-        }
+        // Store the request handler for later use
+        let handler_key = v8::String::new(scope, "_requestHandler").unwrap();
+        this.set(scope, handler_key.into(), listener);
     }
+
+    // 支持链式调用
     retval.set(this.into());
 }
 fn http_req_end_callback(
