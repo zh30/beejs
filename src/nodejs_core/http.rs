@@ -64,26 +64,26 @@ fn create_default_agent<'a>(scope: &mut v8::HandleScope<'a>) -> v8::Local<'a, v8
     agent_obj
 }
 fn http_create_server_callback(
-    scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let server_obj: _ = v8::Object::new(scope);
+    let server_obj: _ = v8::Object::new(_scope);
     // listen
-    let listen_func: _ = v8::FunctionTemplate::new(scope, http_server_listen_callback);
-    let listen_instance: _ = listen_func.get_function(scope).unwrap();
-    let listen_key: _ = v8::String::new(scope, "listen").unwrap();
-    server_obj.set(scope, listen_key.into(), listen_instance.into());
+    let listen_func: _ = v8::FunctionTemplate::new(_scope, http_server_listen_callback);
+    let listen_instance: _ = listen_func.get_function(_scope).unwrap();
+    let listen_key: _ = v8::String::new(_scope, "listen").unwrap();
+    server_obj.set(_scope, listen_key.into(), listen_instance.into());
     // on
-    let on_func: _ = v8::FunctionTemplate::new(scope, http_server_on_callback);
-    let on_instance: _ = on_func.get_function(scope).unwrap();
-    let on_key: _ = v8::String::new(scope, "on").unwrap();
-    server_obj.set(scope, on_key.into(), on_instance.into());
+    let on_func: _ = v8::FunctionTemplate::new(_scope, http_server_on_callback);
+    let on_instance: _ = on_func.get_function(_scope).unwrap();
+    let on_key: _ = v8::String::new(_scope, "on").unwrap();
+    server_obj.set(_scope, on_key.into(), on_instance.into());
     // close - v0.3.64: 添加服务器关闭方法
-    let close_func: _ = v8::FunctionTemplate::new(scope, http_server_close_callback);
-    let close_instance: _ = close_func.get_function(scope).unwrap();
-    let close_key: _ = v8::String::new(scope, "close").unwrap();
-    server_obj.set(scope, close_key.into(), close_instance.into());
+    let close_func: _ = v8::FunctionTemplate::new(_scope, http_server_close_callback);
+    let close_instance: _ = close_func.get_function(_scope).unwrap();
+    let close_key: _ = v8::String::new(_scope, "close").unwrap();
+    server_obj.set(_scope, close_key.into(), close_instance.into());
     retval.set(server_obj.into());
 }
 
@@ -221,7 +221,7 @@ fn extract_port(scope: &mut v8::HandleScope, options: &v8::Local<v8::Value>, def
 /// Agent.createConnection 回调
 fn http_agent_create_connection_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     // 返回一个模拟的 socket 对象
@@ -234,11 +234,11 @@ fn http_agent_create_connection_callback(
 
 /// http.Server.close 回调
 fn http_server_close_callback(
-    scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    retval.set(v8::undefined(scope).into());
+    retval.set(v8::undefined(_scope).into());
 }
 fn http_request_callback(
     scope: &mut v8::HandleScope,

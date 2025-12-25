@@ -36,60 +36,60 @@ pub fn setup_events_api(
     Ok(())
 }
 fn event_emitter_constructor_callback(
-    scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let emitter_obj: _ = v8::Object::new(scope);
+    let emitter_obj: _ = v8::Object::new(_scope);
     // on(eventName, listener)
-    let on_func: _ = v8::FunctionTemplate::new(scope, event_emitter_on_callback);
-    let on_instance: _ = on_func.get_function(scope).unwrap();
-    let on_key: _ = v8::String::new(scope, "on").unwrap();
-    emitter_obj.set(scope, on_key.into(), on_instance.into());
+    let on_func: _ = v8::FunctionTemplate::new(_scope, event_emitter_on_callback);
+    let on_instance: _ = on_func.get_function(_scope).unwrap();
+    let on_key: _ = v8::String::new(_scope, "on").unwrap();
+    emitter_obj.set(_scope, on_key.into(), on_instance.into());
     // once(eventName, listener)
-    let once_func: _ = v8::FunctionTemplate::new(scope, event_emitter_once_callback);
-    let once_instance: _ = once_func.get_function(scope).unwrap();
-    let once_key: _ = v8::String::new(scope, "once").unwrap();
-    emitter_obj.set(scope, once_key.into(), once_instance.into());
+    let once_func: _ = v8::FunctionTemplate::new(_scope, event_emitter_once_callback);
+    let once_instance: _ = once_func.get_function(_scope).unwrap();
+    let once_key: _ = v8::String::new(_scope, "once").unwrap();
+    emitter_obj.set(_scope, once_key.into(), once_instance.into());
     // emit(eventName, ...args)
-    let emit_func: _ = v8::FunctionTemplate::new(scope, event_emitter_emit_callback);
-    let emit_instance: _ = emit_func.get_function(scope).unwrap();
-    let emit_key: _ = v8::String::new(scope, "emit").unwrap();
-    emitter_obj.set(scope, emit_key.into(), emit_instance.into());
+    let emit_func: _ = v8::FunctionTemplate::new(_scope, event_emitter_emit_callback);
+    let emit_instance: _ = emit_func.get_function(_scope).unwrap();
+    let emit_key: _ = v8::String::new(_scope, "emit").unwrap();
+    emitter_obj.set(_scope, emit_key.into(), emit_instance.into());
     // removeListener(eventName, listener)
-    let remove_listener_func: _ = v8::FunctionTemplate::new(scope, event_emitter_remove_listener_callback);
-    let remove_listener_instance: _ = remove_listener_func.get_function(scope).unwrap();
-    let remove_listener_key: _ = v8::String::new(scope, "removeListener").unwrap();
-    emitter_obj.set(scope, remove_listener_key.into(), remove_listener_instance.into());
+    let remove_listener_func: _ = v8::FunctionTemplate::new(_scope, event_emitter_remove_listener_callback);
+    let remove_listener_instance: _ = remove_listener_func.get_function(_scope).unwrap();
+    let remove_listener_key: _ = v8::String::new(_scope, "removeListener").unwrap();
+    emitter_obj.set(_scope, remove_listener_key.into(), remove_listener_instance.into());
     // removeAllListeners(eventName)
-    let remove_all_func: _ = v8::FunctionTemplate::new(scope, event_emitter_remove_all_callback);
-    let remove_all_instance: _ = remove_all_func.get_function(scope).unwrap();
-    let remove_all_key: _ = v8::String::new(scope, "removeAllListeners").unwrap();
-    emitter_obj.set(scope, remove_all_key.into(), remove_all_instance.into());
+    let remove_all_func: _ = v8::FunctionTemplate::new(_scope, event_emitter_remove_all_callback);
+    let remove_all_instance: _ = remove_all_func.get_function(_scope).unwrap();
+    let remove_all_key: _ = v8::String::new(_scope, "removeAllListeners").unwrap();
+    emitter_obj.set(_scope, remove_all_key.into(), remove_all_instance.into());
     // listeners(eventName)
-    let listeners_func: _ = v8::FunctionTemplate::new(scope, event_emitter_listeners_callback);
-    let listeners_instance: _ = listeners_func.get_function(scope).unwrap();
-    let listeners_key: _ = v8::String::new(scope, "listeners").unwrap();
-    emitter_obj.set(scope, listeners_key.into(), listeners_instance.into());
+    let listeners_func: _ = v8::FunctionTemplate::new(_scope, event_emitter_listeners_callback);
+    let listeners_instance: _ = listeners_func.get_function(_scope).unwrap();
+    let listeners_key: _ = v8::String::new(_scope, "listeners").unwrap();
+    emitter_obj.set(_scope, listeners_key.into(), listeners_instance.into());
     // eventNames()
-    let event_names_func: _ = v8::FunctionTemplate::new(scope, event_emitter_event_names_callback);
-    let event_names_instance: _ = event_names_func.get_function(scope).unwrap();
-    let event_names_key: _ = v8::String::new(scope, "eventNames").unwrap();
-    emitter_obj.set(scope, event_names_key.into(), event_names_instance.into());
+    let event_names_func: _ = v8::FunctionTemplate::new(_scope, event_emitter_event_names_callback);
+    let event_names_instance: _ = event_names_func.get_function(_scope).unwrap();
+    let event_names_key: _ = v8::String::new(_scope, "eventNames").unwrap();
+    emitter_obj.set(_scope, event_names_key.into(), event_names_instance.into());
     // getMaxListeners()
-    let get_max_func: _ = v8::FunctionTemplate::new(scope, event_emitter_get_max_callback);
-    let get_max_instance: _ = get_max_func.get_function(scope).unwrap();
-    let get_max_key: _ = v8::String::new(scope, "getMaxListeners").unwrap();
-    emitter_obj.set(scope, get_max_key.into(), get_max_instance.into());
+    let get_max_func: _ = v8::FunctionTemplate::new(_scope, event_emitter_get_max_callback);
+    let get_max_instance: _ = get_max_func.get_function(_scope).unwrap();
+    let get_max_key: _ = v8::String::new(_scope, "getMaxListeners").unwrap();
+    emitter_obj.set(_scope, get_max_key.into(), get_max_instance.into());
     // setMaxListeners(n)
-    let set_max_func: _ = v8::FunctionTemplate::new(scope, event_emitter_set_max_callback);
-    let set_max_instance: _ = set_max_func.get_function(scope).unwrap();
-    let set_max_key: _ = v8::String::new(scope, "setMaxListeners").unwrap();
-    emitter_obj.set(scope, set_max_key.into(), set_max_instance.into());
+    let set_max_func: _ = v8::FunctionTemplate::new(_scope, event_emitter_set_max_callback);
+    let set_max_instance: _ = set_max_func.get_function(_scope).unwrap();
+    let set_max_key: _ = v8::String::new(_scope, "setMaxListeners").unwrap();
+    emitter_obj.set(_scope, set_max_key.into(), set_max_instance.into());
     // 添加_maxListeners属性
-    let max_listeners_key: _ = v8::String::new(scope, "_maxListeners").unwrap();
-    let max_val: _ = v8::Integer::new(scope, 10);
-    emitter_obj.set(scope, max_listeners_key.into(), max_val.into());
+    let max_listeners_key: _ = v8::String::new(_scope, "_maxListeners").unwrap();
+    let max_val: _ = v8::Integer::new(_scope, 10);
+    emitter_obj.set(_scope, max_listeners_key.into(), max_val.into());
     retval.set(emitter_obj.into());
 }
 fn event_emitter_on_callback(
@@ -292,7 +292,7 @@ fn event_emitter_listeners_callback(
 }
 fn event_emitter_event_names_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let names_array: _ = v8::Array::new(scope, 0);

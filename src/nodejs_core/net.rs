@@ -593,14 +593,14 @@ fn server_address_callback(
 
 fn server_get_connections_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     retval.set(v8::Integer::new(scope, 0).into());
 }
 
 fn server_ref_callback(
-    scope: &mut v8::HandleScope,
+    _scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
@@ -609,7 +609,7 @@ fn server_ref_callback(
 }
 
 fn server_unref_callback(
-    scope: &mut v8::HandleScope,
+    _scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
