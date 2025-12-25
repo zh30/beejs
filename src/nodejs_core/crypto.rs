@@ -1,6 +1,7 @@
 // Node.js Crypto模块实现
 /// 支持哈希、HMAC、加密、解密等常用功能
 use anyhow::Result;
+use base64::{Engine, engine::general_purpose::STANDARD as BASE64_STANDARD};
 use rusty_v8 as v8;
 use sha1::{Sha1, Digest};
 use ring::digest;
@@ -127,7 +128,7 @@ fn hash_digest_callback(
             let digest: _ = digest::digest(&digest::SHA256, combined_data.as_bytes());
             match encoding.as_str() {
                 "hex" => hex::encode(digest.as_ref()),
-                "base64" => base64::encode(digest.as_ref()),
+                "base64" => BASE64_STANDARD.encode(digest.as_ref()),
                 "latin1" => String::from_utf8_lossy(digest.as_ref()).to_string(),
                 _ => hex::encode(digest.as_ref()),
             }
@@ -136,7 +137,7 @@ fn hash_digest_callback(
             let digest: _ = digest::digest(&digest::SHA512, combined_data.as_bytes());
             match encoding.as_str() {
                 "hex" => hex::encode(digest.as_ref()),
-                "base64" => base64::encode(digest.as_ref()),
+                "base64" => BASE64_STANDARD.encode(digest.as_ref()),
                 "latin1" => String::from_utf8_lossy(digest.as_ref()).to_string(),
                 _ => hex::encode(digest.as_ref()),
             }
@@ -149,7 +150,7 @@ fn hash_digest_callback(
             let digest_bytes: &[u8] = digest.as_ref();
             match encoding.as_str() {
                 "hex" => hex::encode(digest_bytes),
-                "base64" => base64::encode(digest_bytes),
+                "base64" => BASE64_STANDARD.encode(digest_bytes),
                 "latin1" => String::from_utf8_lossy(digest_bytes).to_string(),
                 _ => hex::encode(digest_bytes),
             }
@@ -161,7 +162,7 @@ fn hash_digest_callback(
             let hash_bytes: &[u8; 32] = hash.as_bytes();
             match encoding.as_str() {
                 "hex" => hex::encode(hash_bytes),
-                "base64" => base64::encode(hash_bytes),
+                "base64" => BASE64_STANDARD.encode(hash_bytes),
                 "latin1" => String::from_utf8_lossy(hash_bytes).to_string(),
                 _ => hex::encode(hash_bytes),
             }
@@ -170,7 +171,7 @@ fn hash_digest_callback(
             let digest: _ = md5::compute(combined_data.as_bytes());
             match encoding.as_str() {
                 "hex" => format!("{:x}", digest),
-                "base64" => base64::encode(&digest.0),
+                "base64" => BASE64_STANDARD.encode(&digest.0),
                 "latin1" => String::from_utf8_lossy(&digest.0).to_string(),
                 _ => format!("{:x}", digest),
             }
@@ -286,7 +287,7 @@ fn hmac_digest_callback(
             let hmac: _ = hmac::sign(&signing_key, combined_data.as_bytes());
             match encoding.as_str() {
                 "hex" => hex::encode(hmac.as_ref()),
-                "base64" => base64::encode(hmac.as_ref()),
+                "base64" => BASE64_STANDARD.encode(hmac.as_ref()),
                 "latin1" => String::from_utf8_lossy(hmac.as_ref()).to_string(),
                 _ => hex::encode(hmac.as_ref()),
             }
@@ -298,7 +299,7 @@ fn hmac_digest_callback(
             let hmac_result: _ = hmac::sign(&signing_key, combined_data.as_bytes());
             match encoding.as_str() {
                 "hex" => hex::encode(hmac_result.as_ref()),
-                "base64" => base64::encode(hmac_result.as_ref()),
+                "base64" => BASE64_STANDARD.encode(hmac_result.as_ref()),
                 "latin1" => String::from_utf8_lossy(hmac_result.as_ref()).to_string(),
                 _ => hex::encode(hmac_result.as_ref()),
             }

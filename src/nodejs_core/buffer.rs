@@ -1,6 +1,7 @@
 // Node.js Buffer模块实现
 /// 高性能二进制数据处理
 use anyhow::Result;
+use base64::{Engine, engine::general_purpose::STANDARD as BASE64_STANDARD};
 use rusty_v8 as v8;
 /// 设置Buffer API
 pub fn setup_buffer_api(
@@ -101,7 +102,7 @@ fn buffer_from_callback(
         let bytes: _ = match encoding.as_str() {
             "utf8" | "utf-8" => string.as_bytes().to_vec(),
             "hex" => hex::decode(&string).unwrap_or_default(),
-            "base64" => base64::decode(&string).unwrap_or_default(),
+            "base64" => BASE64_STANDARD.decode(&string).unwrap_or_default(),
             "latin1" => string.chars().map(|c| c as u8).collect(),
             _ => string.as_bytes().to_vec(),
         };

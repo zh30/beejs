@@ -76,7 +76,7 @@ fn cp_spawn_callback(
     let child_obj: _ = v8::Object::new(scope);
     let pid_key: _ = v8::String::new(scope, "pid").unwrap();
     let pid_key_val: _ = v8::Integer::new(scope, 12345).into();
-    child_obj.set(scope, pid_key.into(), pid_key_val);;
+    child_obj.set(scope, pid_key.into(), pid_key_val);
     let on_func: _ = v8::FunctionTemplate::new(scope, child_on_callback);
     let on_instance: _ = on_func.get_function(scope).unwrap();
     let on_key: _ = v8::String::new(scope, "on").unwrap();
