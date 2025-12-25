@@ -6,7 +6,7 @@ use anyhow::Result;
 use rusty_v8 as v8;
 
 // 导入 tcp_async 模块（通过父模块的 mod.rs）
-use super::tcp_async::{TcpConnectionHandle, TcpConnectionManager, TCP_MANAGER};
+use super::tcp_async::{TcpConnectionHandle, TCP_MANAGER};
 
 /// 设置 net API
 pub fn setup_net_api(
@@ -90,7 +90,7 @@ fn net_connect_callback(
     let (is_connected, remote_addr, remote_family, local_addr_val) = {
         let rt = tokio::runtime::Runtime::new().ok();
         match rt {
-            Some(mut rt) => {
+            Some(rt) => {
                 let timeout_duration = std::time::Duration::from_secs(timeout_secs);
                 let result = rt.block_on(async {
                     tokio::time::timeout(timeout_duration, connect_result).await
@@ -461,7 +461,7 @@ fn socket_write_callback(
                 if is_conn {
                     // 异步写入数据
                     let rt = tokio::runtime::Runtime::new().ok();
-                    if let Some(mut rt) = rt {
+                    if let Some(rt) = rt {
                         let data = data_bytes.to_vec();
                         let h: TcpConnectionHandle = handle.clone();
                         let _ = rt.block_on(async { h.write(&data).await });
@@ -653,15 +653,13 @@ fn socket_read_callback(
     if let Some(data) = cached_data {
         if !data.is_null() && !data.is_undefined() {
             // 有缓存数据，返回它并清除缓存
-            let buffer_val = v8::Local::<v8::Value>::try_from(data);
-            if let Ok(buf) = buffer_val {
-                // 预先创建 null 值，避免 borrow checker 问题
-                let null_val = v8::null(scope).into();
-                // 清除缓存
-                this.set(scope, data_key.into(), null_val);
-                retval.set(buf);
-                return;
-            }
+            let buf = v8::Local::<v8::Value>::try_from(data).unwrap();
+            // 预先创建 null 值，避免 borrow checker 问题
+            let null_val = v8::null(scope).into();
+            // 清除缓存
+            this.set(scope, data_key.into(), null_val);
+            retval.set(buf);
+            return;
         }
     }
 

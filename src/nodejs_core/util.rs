@@ -99,7 +99,7 @@ fn util_inspect_callback(
     } else {
         false
     };
-    let depth: _ = if !options.is_undefined() {
+    let _depth: _ = if !options.is_undefined() {
         let depth_key: _ = v8::String::new(scope, "depth").unwrap();
         options.to_object(scope).and_then(|obj| {
             obj.get(scope, depth_key.into())
@@ -241,7 +241,7 @@ fn util_format_callback(
 }
 fn util_types_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let types_obj: _ = v8::Object::new(scope);
@@ -445,17 +445,17 @@ fn util_debuglog_func_callback(
     retval.set(v8::undefined(scope).into());
 }
 // 辅助函数
-fn get_object_key_count(obj: v8::Local<v8::Object>, scope: &mut v8::HandleScope) -> usize {
+fn get_object_key_count(_obj: v8::Local<v8::Object>, _scope: &mut v8::HandleScope) -> usize {
     // 简化的实现，返回固定值
     3
 }
 // 类型检查辅助函数
 fn util_is_date_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value: _ = args.get(0);
+    let _value: _ = _args.get(0);
     let is_date: _ = false; // 简化实现
     retval.set(v8::Boolean::new(scope, is_date).into());
 }
@@ -464,7 +464,7 @@ fn util_is_regex_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value: _ = args.get(0);
+    let _value: _ = args.get(0);
     let is_regex: _ = false; // 简化实现
     retval.set(v8::Boolean::new(scope, is_regex).into());
 }
@@ -473,7 +473,7 @@ fn util_is_error_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value: _ = args.get(0);
+    let _value: _ = args.get(0);
     let is_error: _ = false; // 简化实现
     retval.set(v8::Boolean::new(scope, is_error).into());
 }
@@ -482,7 +482,7 @@ fn util_is_native_error_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value: _ = args.get(0);
+    let _value: _ = args.get(0);
     let is_native_error: _ = false; // 简化实现
     retval.set(v8::Boolean::new(scope, is_native_error).into());
 }

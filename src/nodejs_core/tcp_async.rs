@@ -210,7 +210,7 @@ impl TcpConnectionHandle {
 
     /// 获取缓存的数据并清空缓冲区
     pub fn consume_buffer(&self) -> Vec<u8> {
-        let mut buf_guard = self.buffer.lock().unwrap();
+        let buf_guard = self.buffer.lock().unwrap();
         buf_guard.clone()
     }
 

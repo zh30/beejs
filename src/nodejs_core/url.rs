@@ -334,7 +334,7 @@ fn search_params_delete_callback(
     let params_array: _ = this.get(scope, params_key.into()).unwrap();
     if params_array.is_array() {
         if let Ok(arr) = v8::Local::<v8::Array>::try_from(params_array) {
-            let mut new_arr = v8::Array::new(scope, 0);
+            let new_arr = v8::Array::new(scope, 0);
             let mut new_index = 0;
             for i in 0..arr.length() {
                 let v: _ = arr.get_index(scope, i).unwrap();
@@ -603,7 +603,7 @@ struct ParsedUrl {
     host: String,
 }
 // URL解析辅助函数
-fn parse_url_string(url: &str, base: &str) -> Option<ParsedUrl> {
+fn parse_url_string(url: &str, _base: &str) -> Option<ParsedUrl> {
     // 简化的URL解析实现
     let mut parts = ParsedUrl {
         href: url.to_string(),

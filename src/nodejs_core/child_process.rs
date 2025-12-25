@@ -34,13 +34,13 @@ fn cp_exec_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let command: _ = args
+    let _command: _ = args
         .get(0)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
-    let options: _ = args.get(1);
-    let callback: _ = args.get(2);
+    let _options: _ = args.get(1);
+    let _callback: _ = args.get(2);
     let child_obj: _ = v8::Object::new(scope);
     // stdout
     let stdout_key: _ = v8::String::new(scope, "stdout").unwrap();

@@ -1177,6 +1177,7 @@ fn derive_key_and_iv(algorithm: &str, password: &[u8]) -> (Vec<u8>, Vec<u8>) {
     (key, iv)
 }
 
+#[allow(dead_code)]
 fn derive_key(algorithm: &str, password: &[u8]) -> Vec<u8> {
     derive_key_and_iv(algorithm, password).0
 }

@@ -10384,14 +10384,14 @@ impl MinimalRuntime {
             // Check if user passed options with read or _read
             let opts = args.get(0);
             let mut user_read: Option<v8::Local<v8::Value>> = None;
-            let mut user__read: Option<v8::Local<v8::Value>> = None;
+            let mut user_read_: Option<v8::Local<v8::Value>> = None;
 
             if opts.is_object() {
                 if let Some(opts_obj) = opts.to_object(scope) {
                     let read_key = v8::String::new(scope, "read").unwrap();
                     user_read = opts_obj.get(scope, read_key.into());
                     let _read_key = v8::String::new(scope, "_read").unwrap();
-                    user__read = opts_obj.get(scope, _read_key.into());
+                    user_read_ = opts_obj.get(scope, _read_key.into());
                 }
             }
 
@@ -10402,7 +10402,7 @@ impl MinimalRuntime {
                     // User passed {read(size){...}} - use as _read
                     stream_obj.set(scope, read_key.into(), read_fn);
                 }
-            } else if let Some(_read_fn) = user__read {
+            } else if let Some(_read_fn) = user_read_ {
                 if _read_fn.is_function() {
                     // User passed {_read(size){...}}
                     stream_obj.set(scope, read_key.into(), _read_fn);
@@ -10769,14 +10769,14 @@ impl MinimalRuntime {
             // v0.3.59: Support options with write or _write function
             let opts = args.get(0);
             let mut user_write: Option<v8::Local<v8::Value>> = None;
-            let mut user__write: Option<v8::Local<v8::Value>> = None;
+            let mut user_write_: Option<v8::Local<v8::Value>> = None;
 
             if opts.is_object() {
                 if let Some(opts_obj) = opts.to_object(scope) {
                     let write_key = v8::String::new(scope, "write").unwrap();
                     user_write = opts_obj.get(scope, write_key.into());
                     let _write_key = v8::String::new(scope, "_write").unwrap();
-                    user__write = opts_obj.get(scope, _write_key.into());
+                    user_write_ = opts_obj.get(scope, _write_key.into());
                 }
             }
 
@@ -10785,16 +10785,16 @@ impl MinimalRuntime {
 
             // Check for valid write function (exists and is not undefined)
             let has_valid_write = user_write.as_ref().map(|v| !v.is_undefined() && v.is_function()).unwrap_or(false);
-            let has_valid__write = user__write.as_ref().map(|v| !v.is_undefined() && v.is_function()).unwrap_or(false);
+            let has_valid_write_ = user_write_.as_ref().map(|v| !v.is_undefined() && v.is_function()).unwrap_or(false);
 
             if has_valid_write {
                 // User passed {write(chunk, enc, cb){...}}
                 if let Some(write_fn) = user_write {
                     stream_obj.set(scope, write_key.into(), write_fn);
                 }
-            } else if has_valid__write {
+            } else if has_valid_write_ {
                 // User passed {_write(chunk, enc, cb){...}}
-                if let Some(__write_fn) = user__write {
+                if let Some(__write_fn) = user_write_ {
                     stream_obj.set(scope, write_key.into(), __write_fn);
                 }
             } else {

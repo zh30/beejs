@@ -279,7 +279,7 @@ pub fn setup_os_api(
 }
 fn os_arch_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let arch: _ = std::env::consts::ARCH;
@@ -287,7 +287,7 @@ fn os_arch_callback(
 }
 fn os_platform_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let platform: _ = std::env::consts::OS;
@@ -295,7 +295,7 @@ fn os_platform_callback(
 }
 fn os_type_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let os_type: _ = if cfg!(windows) {
@@ -309,7 +309,7 @@ fn os_type_callback(
 }
 fn os_release_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     // 简化实现，返回通用版本
@@ -318,7 +318,7 @@ fn os_release_callback(
 }
 fn os_hostname_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     if let Ok(hostname) = env::var("HOSTNAME") {
@@ -331,7 +331,7 @@ fn os_hostname_callback(
 }
 fn os_loadavg_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     // 简化的负载平均值
@@ -346,7 +346,7 @@ fn os_loadavg_callback(
 }
 fn os_uptime_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     // 获取系统运行时间
@@ -358,7 +358,7 @@ fn os_uptime_callback(
 }
 fn os_cpus_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     // 获取CPU数量
@@ -396,7 +396,7 @@ fn os_cpus_callback(
 }
 fn os_freemem_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     // 简化的可用内存
@@ -405,7 +405,7 @@ fn os_freemem_callback(
 }
 fn os_totalmem_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     // 简化的总内存
@@ -414,7 +414,7 @@ fn os_totalmem_callback(
 }
 fn os_homedir_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     if let Some(home_dir) = dirs::home_dir() {
@@ -425,7 +425,7 @@ fn os_homedir_callback(
 }
 fn os_tmpdir_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let tmpdir: _ = if cfg!(windows) {
@@ -437,7 +437,7 @@ fn os_tmpdir_callback(
 }
 fn os_network_interfaces_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     // 简化的网络接口

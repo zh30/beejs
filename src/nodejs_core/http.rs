@@ -364,7 +364,7 @@ fn http_get_callback(
             let addr_val: _ = v8::String::new(scope, &socket_addr.to_string()).unwrap();
             req_obj.set(scope, resolved_addr_key.into(), addr_val.into());
         }
-        Err(e) => {
+        Err(_) => {
             let undefined: _ = v8::undefined(scope);
             req_obj.set(scope, resolved_addr_key.into(), undefined.into());
         }
@@ -403,7 +403,7 @@ fn http_get_callback(
     retval.set(req_obj.into());
 }
 fn http_server_listen_callback(
-    scope: &mut v8::HandleScope,
+    _scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
@@ -503,6 +503,7 @@ fn http_req_end_callback(
 }
 
 /// 创建响应对象 - v0.3.65
+#[allow(dead_code)]
 fn create_response_object<'a>(scope: &mut v8::HandleScope<'a>) -> v8::Local<'a, v8::Object> {
     let res_obj: _ = v8::Object::new(scope);
 
@@ -771,7 +772,7 @@ fn http_res_set_header_callback(
     let value: _ = args.get(1);
 
     let headers_key: _ = v8::String::new(scope, "headers").unwrap();
-    let mut headers_obj = if let Ok(obj) = v8::Local::<v8::Object>::try_from(
+    let headers_obj = if let Ok(obj) = v8::Local::<v8::Object>::try_from(
         this.get(scope, headers_key.into()).unwrap_or(v8::undefined(scope).into())
     ) {
         obj
@@ -822,7 +823,7 @@ fn http_res_write_head_callback(
     retval.set(this.into());
 }
 fn http_res_end_callback(
-    scope: &mut v8::HandleScope,
+    _scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {

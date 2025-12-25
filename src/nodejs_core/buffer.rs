@@ -149,7 +149,7 @@ fn buffer_alloc_callback(
         .to_integer(scope)
         .unwrap_or(v8::Integer::new(scope, 0))
         .value() as usize;
-    let fill_value: _ = args
+    let _fill_value: _ = args
         .get(1)
         .to_integer(scope)
         .unwrap_or(v8::Integer::new(scope, 0))
@@ -175,7 +175,7 @@ fn buffer_concat_callback(
         .value() as usize;
     if list.is_array() {
         if let Ok(arr) = v8::Local::<v8::Array>::try_from(list) {
-            let mut combined_data: Vec<u8> = Vec::new();
+            let _combined_data: Vec<u8> = Vec::new();
             let mut calculated_length: usize = 0;
             for i in 0..arr.length() {
                 if let Ok(buf) = v8::Local::<v8::Array>::try_from(arr.get_index(scope, i).unwrap()) {
@@ -234,13 +234,14 @@ fn buffer_is_buffer_callback(
     let is_buffer: _ = value.is_array_buffer();
     retval.set(v8::Boolean::new(scope, is_buffer).into());
 }
+#[allow(dead_code)]
 fn buffer_to_string_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let this: _ = args.this();
-    let encoding: _ = args
+    let _encoding: _ = args
         .get(0)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
@@ -270,6 +271,7 @@ fn buffer_to_string_callback(
     let result: _ = String::new();
     retval.set(v8::String::new(scope, &result).unwrap().into());
 }
+#[allow(dead_code)]
 fn buffer_to_json_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -277,7 +279,7 @@ fn buffer_to_json_callback(
 ) {
     let this: _ = args.this();
     let length_key: _ = v8::String::new(scope, "_length").unwrap();
-    let buffer_length: _ = this
+    let _buffer_length: _ = this
         .get(scope, length_key.into())
         .and_then(|v| v.to_integer(scope).map(|i| i.value()))
         .unwrap_or(0);
@@ -287,6 +289,7 @@ fn buffer_to_json_callback(
     let json_array: _ = v8::Array::new(scope, 0);
     retval.set(json_array.into());
 }
+#[allow(dead_code)]
 fn buffer_fill_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -309,9 +312,9 @@ fn buffer_fill_callback(
         .get(scope, length_key.into())
         .and_then(|v| v.to_integer(scope).map(|i| i.value()))
         .unwrap_or(0);
-    let actual_end: usize = if end == -1 { buffer_length as usize } else { (end.min(buffer_length)) as usize };
-    let actual_start: _ = start.min(buffer_length) as usize;
-    let fill_value: _ = if value.is_number() {
+    let _actual_end: usize = if end == -1 { buffer_length as usize } else { (end.min(buffer_length)) as usize };
+    let _actual_start: _ = start.min(buffer_length) as usize;
+    let _fill_value: _ = if value.is_number() {
         value.to_integer(scope).unwrap().value() as u8
     } else if value.is_string() {
         let string: _ = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
@@ -323,6 +326,7 @@ fn buffer_fill_callback(
     // Note: Full data manipulation requires newer V8 APIs
     retval.set(this.into());
 }
+#[allow(dead_code)]
 fn buffer_slice_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
