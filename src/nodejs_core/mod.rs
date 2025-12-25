@@ -13,6 +13,7 @@ pub mod util;
 pub mod url;
 pub mod querystring;
 pub mod child_process;
+pub mod dns; // v0.3.67: DNS lookup and resolve API
 pub mod require; // v0.3.54: CommonJS module loader extracted to独立模块
 use anyhow::Result;
 use rusty_v8 as v8;
@@ -30,6 +31,7 @@ pub fn setup_nodejs_core_apis(
     events::setup_events_api(scope, context)?;
     net::setup_net_api(scope, context)?;
     http::setup_http_api(scope, context)?;
+    dns::setup_dns_api(scope, context)?; // v0.3.67: DNS support
     buffer::setup_buffer_api(scope, context)?;
     path::setup_path_api(scope, context)?;
     os::setup_os_api(scope, context)?;
