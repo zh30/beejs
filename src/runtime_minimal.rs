@@ -9924,6 +9924,7 @@ impl MinimalRuntime {
             retval.set(result_obj.into());
         });
         let uptime_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Returns seconds since Unix epoch (same as before)
             let uptime = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
