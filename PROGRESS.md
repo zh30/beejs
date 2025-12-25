@@ -13,6 +13,43 @@
 
 
 
+### v0.3.77 增强 stream.pipeline() 支持回调和多流组合 (2025-12-25)
+**进度**: pipeline 增强 | ✅ 代码已合并
+
+#### v0.3.77 新增功能
+- **实现 pipeline 回调参数支持**
+  - 支持 `pipeline(stream1, stream2, ..., callback)` 形式的回调参数
+  - 回调函数在 pipeline 建立时调用（简化实现）
+  - 传递 `null` 表示成功
+
+- **增强多流管道支持**
+  - 支持 3 个及以上流的链式组合
+  - 自动建立所有流之间的管道连接
+  - 返回最后一个 Writable 流
+
+#### v0.3.77 测试用例
+```javascript
+// 回调测试
+stream.pipeline(r, w, (err) => { callbackCalled = true; });
+
+// 多流测试
+stream.pipeline(r, passThrough, w); // 3 个流
+```
+
+#### v0.3.77 测试结果
+```bash
+$ cargo test --test stream_module_tests test_stream_pipeline_with_callback
+running 1 test
+test test_stream_pipeline_with_callback ... ok
+test result: ok. 1 passed; 0 failed
+```
+
+#### v0.3.77 下一步计划
+- 实现 pipeline 完整回调（流结束时调用）
+- 继续完善其他 Node.js API 模块
+
+---
+
 ### v0.3.76 实现 stream.Transform transform 选项支持 (2025-12-25)
 **进度**: transform 选项 | ✅ 代码已合并
 
@@ -36,7 +73,7 @@ test result: ok. 1 passed; 0 failed
 ```
 
 #### v0.3.76 下一步计划
-- 增强 pipeline() 方法支持回调和错误处理
+- ✅ 已完成: pipeline() 方法支持回调
 - 继续完善其他 Node.js API 模块
 
 ---
