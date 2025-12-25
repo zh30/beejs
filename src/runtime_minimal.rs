@@ -10220,7 +10220,7 @@ impl MinimalRuntime {
         let stream_obj = v8::Object::new(scope);
 
         // Readable Stream constructor
-        let readable_constructor = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let readable_constructor = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let stream_obj = v8::Object::new(scope);
 
             // _read method
@@ -10277,7 +10277,7 @@ impl MinimalRuntime {
             stream_obj.set(scope, on_key.into(), on_instance.into());
 
             // pause method
-            let pause_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let pause_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
                 let this = args.this();
                 retval.set(this.into());
             });
@@ -10286,7 +10286,7 @@ impl MinimalRuntime {
             stream_obj.set(scope, pause_key.into(), pause_instance.into());
 
             // resume method
-            let resume_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let resume_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
                 let this = args.this();
                 retval.set(this.into());
             });
@@ -10309,7 +10309,7 @@ impl MinimalRuntime {
         stream_obj.set(scope, readable_key.into(), readable_func.into());
 
         // Writable Stream constructor
-        let writable_constructor = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let writable_constructor = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let stream_obj = v8::Object::new(scope);
 
             // _write method
