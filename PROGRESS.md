@@ -13,7 +13,42 @@
 
 
 
-### v0.3.78 修复 pipeline 回调时机 - 流结束时才调用回调 (2025-12-25)
+### v0.3.80 修复 Transform 流 pipe 数据流问题 (2025-12-26)
+**进度**: Transform pipe 修复 | 🔧 开发中
+
+#### v0.3.80 问题背景
+- **TODO 遗留问题**: v0.3.60 以来，Transform 和 Duplex 流的 pipe 测试被注释掉
+- **问题原因**: 当 `r.pipe(t).pipe(w)` 链式调用时，Transform 的默认 `_write` 没有调用 `_transform`
+- **数据流断裂**: Readable 产生的数据无法正确流经 Transform 到 Writable
+
+#### v0.3.80 解决方案
+- **新增 `transform_write_callback` 函数**
+  - 替代 Transform 默认的 `writable_write_callback`
+  - 在 `_write` 时调用 `_transform` 函数
+  - `_transform` 内部调用 `push()` 将转换后的数据发送到 Readable 端
+
+#### v0.3.80 技术实现
+```rust
+fn transform_write_callback(scope, args, retval) {
+    // 获取 _transform 函数
+    let transform_func = this.get("_transform");
+
+    // 调用 transform(chunk, encoding, callback)
+    // 用户在 transform 中调用 this.push(转换后的数据)
+    transform_func.call(scope, this, [chunk, encoding, callback]);
+
+    retval.set(undefined);
+}
+```
+
+#### v0.3.80 测试状态
+- **64 个 stream 模块测试通过**
+- **1 个已知失败测试** (`test_stream_pipeline_three_streams`)：在此次修改前已存在
+- **Transform pipe 测试注释中**: 需要完整事件循环才能正常工作（MinimalRuntime 限制）
+
+---
+
+### v0.3.79 V8 API 兼容性修复 (2025-12-25)
 **进度**: pipeline 回调时机修复 | 🔧 开发中
 
 #### v0.3.78 问题修复

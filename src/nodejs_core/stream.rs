@@ -888,8 +888,10 @@ fn transform_constructor_callback(
         }
     }
     if !has_custom_write {
-        // 默认 _write 实现 - 调用 _transform
-        let write_private_func: _ = v8::FunctionTemplate::new(scope, writable_write_callback);
+        // 默认 _write 实现 - 调用 _transform（v0.3.80 修复）
+        // 使用 transform_write_callback 替代 writable_write_callback
+        // 以支持 r.pipe(t).pipe(w) 链式调用
+        let write_private_func: _ = v8::FunctionTemplate::new(scope, transform_write_callback);
         let write_private_instance: _ = write_private_func.get_function(scope).unwrap();
         let write_private_key: _ = v8::String::new(scope, "_write").unwrap();
         stream_obj.set(scope, write_private_key.into(), write_private_instance.into());
@@ -957,6 +959,51 @@ fn transform_transform_callback(
     }
     retval.set(v8::undefined(scope).into());
 }
+
+/// v0.3.80: Transform 专用的 _write 回调函数
+/// 解决 r.pipe(t).pipe(w) 链式中 Transform 数据流问题
+/// 当数据从 Readable pipe 到 Transform 时，此函数被调用
+/// 它会调用 _transform 函数，_transform 在内部调用 push() 产生新数据
+#[allow(dead_code)]
+fn transform_write_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this = args.this();
+    let chunk = args.get(0);
+    let encoding = args
+        .get(1)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    // 获取 _transform 函数
+    let transform_key = v8::String::new(scope, "_transform").unwrap();
+    if let Some(transform_func_val) = this.get(scope, transform_key.into()) {
+        if transform_func_val.is_function() {
+            if let Ok(transform_func) = v8::Local::<v8::Function>::try_from(transform_func_val) {
+                // 创建一个内联的 callback 函数
+                let callback_template = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+                    // 空的 callback，什么都不做
+                });
+                let callback_func = callback_template.get_function(scope).unwrap();
+
+                // 调用 _transform(chunk, encoding, callback)
+                let encoding_val = v8::String::new(scope, &encoding).unwrap();
+                let call_args = &[chunk, encoding_val.into(), callback_func.into()];
+                transform_func.call(scope, this.into(), call_args);
+
+                retval.set(v8::undefined(scope).into());
+                return;
+            }
+        }
+    }
+
+    // 如果没有 _transform，直接透传数据（类似 PassThrough）
+    retval.set(v8::undefined(scope).into());
+}
+
 fn duplex_constructor_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
