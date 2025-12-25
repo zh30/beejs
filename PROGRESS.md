@@ -10,6 +10,41 @@
 
 
 
+### v0.3.56 修复 Readable 构造函数并完善背压支持 (2025-12-25)
+**进度**: Stream 模块修复 | 22/22 测试通过 | ✅ 所有测试通过
+
+#### v0.3.56 改进内容
+- **修复 Readable 构造函数核心 bug**
+  - 用户传入的 `{read(size){...}}` 函数现在正确设置为 `_read`
+  - 修复了 public `read()` 方法不调用 `_read` 的问题
+- **完善 push(null) 事件触发**
+  - 正确设置 `_readableState.ended = true`
+  - 正确触发 'end' 事件监听器
+- **完善 once() 方法**
+  - 支持已结束流的即时事件触发
+  - 正确处理 'end' 事件的即时回调
+- **完善 pause()/resume() 背压控制**
+  - 正确更新 `_readableState.flowing` 和 `paused` 状态
+  - 符合 Node.js 流的背压语义
+- **修复 V8 API 兼容性问题**
+  - 修复 `to_object()` 返回类型处理
+  - 修复 `boolean_value()` 方法调用
+
+#### v0.3.56 测试验证
+- `cargo test --test stream_module_tests` → 22/22 通过
+- `cargo test --lib` → 8/8 通过
+
+#### v0.3.56 代码变更
+- **修改文件**: 3 个
+  - `src/runtime_minimal.rs` - 修复 Readable 构造函数
+  - `src/nodejs_core/stream.rs` - 增强背压支持
+  - `tests/stream_module_tests.rs` - 更新测试用例
+
+#### v0.3.56 下一步计划
+- 完善 Writable stream 的背压支持
+- 实现 Transform 和 Duplex stream
+- 扩展 crypto 模块加密算法
+
 ### v0.3.55 清理 nodejs_core 未使用 imports (2025-12-25)
 **进度**: 代码质量改进 | 52/52 测试通过 | ✅ 所有测试通过
 
