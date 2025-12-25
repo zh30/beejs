@@ -5092,3 +5092,55 @@ console.log(`Duration: ${duration}n (${Number(duration) / 1000000}ms)`);
 #### v0.3.53 验证
 - ✅ `cargo test --test process_module_tests` → 59/59 通过
 - ✅ `cargo test --test nodejs_api_tests` → 21/21 通过
+
+---
+
+### ✨ v0.3.54 Require 模块重构为独立模块 (2025-12-25)
+**进度**: ✅ require 模块重构 | ✅ 21/21 测试通过
+
+#### v0.3.54 实现内容
+- **模块重构**
+  - 将 runtime_minimal.rs 中约 1000 行的 require 函数提取到独立模块
+  - 创建新文件 `src/nodejs_core/require.rs`
+  - 提供 `setup_require_api()` 函数用于设置 CommonJS 模块系统
+
+- **保持的功能**
+  - 内置模块加载: buffer, process, path, fs
+  - 自定义模块文件加载 (绝对路径和相对路径)
+  - CommonJS 模块包装器 (function(module, exports, __dirname, __filename))
+  - 完整的错误处理 (Cannot find module 等)
+
+#### v0.3.54 技术实现
+- **独立模块结构** (src/nodejs_core/require.rs)
+  ```rust
+  pub fn setup_require_api(
+      scope: &mut v8::ContextScope<v8::HandleScope>,
+      context: &v8::Local<v8::Context>,
+  ) -> Result<()>
+  ```
+
+- **模块集成** (src/nodejs_core/mod.rs)
+  - 添加 `pub mod require;` 导入
+  - 在 `setup_nodejs_core_apis()` 中调用 `require::setup_require_api()`
+
+#### v0.3.54 代码变更
+- **新增文件**: `src/nodejs_core/require.rs` (~700 行)
+  - CommonJS require 函数实现
+  - 内置模块 (buffer, process, path, fs) 定义
+  - 自定义模块加载逻辑
+
+- **修改文件**: `src/nodejs_core/mod.rs` (+2 行)
+  - 添加 require 模块导入
+  - 添加 require::setup_require_api() 调用
+
+#### v0.3.54 验证
+- ✅ `cargo build` 成功
+- ✅ `cargo test --test nodejs_api_tests` → 21/21 通过
+- ✅ `test_require_module` - require 函数存在和基本功能
+- ✅ `test_require_builtin_module` - 内置模块加载
+- ✅ `test_require_custom_module` - 自定义模块加载
+
+#### v0.3.54 下一步计划
+- 启用其他 nodejs_core 子模块 (dns, tls, http2, etc.)
+- 优化模块加载性能
+- 添加模块缓存机制
