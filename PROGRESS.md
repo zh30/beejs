@@ -10,6 +10,60 @@
 
 
 
+### v0.3.55 清理 nodejs_core 未使用 imports (2025-12-25)
+**进度**: 代码质量改进 | 52/52 测试通过 | ✅ 所有测试通过
+
+#### v0.3.55 改进内容
+- **清理 13 个 nodejs_core 模块**中的未使用 imports
+  - 移除 `std::task::Context` (12 个模块)
+  - 移除 `std::collections::{HashMap, BTreeMap}` (10 个模块)
+  - 移除 `std::collections::HashSet` (2 个模块)
+  - 移除 `std::path::PathBuf` (1 个模块)
+  - 移除 `std::time::SystemTime` (1 个模块)
+
+#### v0.3.55 改进效果
+- **编译警告减少**: 107 → 77，减少 30 个 (28%)
+- **代码更简洁**: 删除 32 行无用代码
+- **保持功能**: 所有测试 100% 通过
+
+#### v0.3.55 测试验证
+- `cargo test --test nodejs_api_tests` → 21/21 通过
+- `cargo test --test os_module_tests` → 17/17 通过
+- `cargo test --test stream_module_tests` → 14/14 通过
+
+#### v0.3.55 代码变更
+- **修改文件**: `src/nodejs_core/` 下 13 个模块
+  - buffer.rs, child_process.rs, crypto.rs, events.rs, http.rs
+  - mod.rs, net.rs, os.rs, path.rs, querystring.rs
+  - stream.rs, url.rs, util.rs
+
+#### v0.3.55 下一步计划
+- 启用更多 nodejs_core 子模块功能
+- 完善 crypto 模块的加密算法实现
+- 增强 stream 模块的背压支持
+
+### v0.3.54 require 模块提取到独立文件 (2025-12-25)
+**进度**: CommonJS 模块加载器重构 | 21/21 测试通过 | ✅ 所有测试通过
+
+#### v0.3.54 实现内容
+- 将约 1000 行的 require 函数从 `runtime_minimal.rs` 重构到独立模块
+- 新增 `src/nodejs_core/require.rs` - CommonJS 模块加载器
+- 保持所有现有功能 (内置模块 + 自定义模块加载)
+
+#### v0.3.54 技术实现
+- **模块职责分离**: require.rs 专门处理 CommonJS 模块加载
+- **依赖管理**: require.setup_require_api() 在所有其他模块之后调用
+- **错误处理**: 提供详细的 "Cannot find module" 错误信息
+
+#### v0.3.54 测试验证
+- `cargo test --test nodejs_api_tests` → 21/21 通过
+- `test_require_custom_module` - 自定义模块加载测试通过
+- `test_require_builtin_module` - 内置模块测试通过
+
+#### v0.3.54 下一步计划
+- 清理 nodejs_core 模块中的未使用 imports (v0.3.55)
+- 启用其他 nodejs_core 子模块
+
 ### v0.3.52 require 自定义模块支持 (2025-12-25)
 **进度**: require 自定义模块 | 21/21 测试通过 | ✅ 所有测试通过
 
