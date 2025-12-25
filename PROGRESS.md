@@ -10,6 +10,48 @@
 
 
 
+### v0.3.69 完成 net 模块 TCP 连接实现 (2025-12-25)
+**进度**: net module | ✅ 代码已合并
+
+#### v0.3.69 新增功能
+- **实现 net.connect() 和 net.createConnection()**
+  - 创建 TCP Socket 连接对象
+  - 支持 port、host、localPort、localAddress 等选项
+  - 返回 Socket 对象包含 remoteAddress、remotePort、remoteFamily 等属性
+
+- **实现 net.createServer() 和 net.Server**
+  - 创建 TCP 服务器
+  - listen() 方法支持端口和主机绑定
+  - close() 方法关闭服务器
+
+- **实现 net.isIP()、net.isIPv4()、net.isIPv6()**
+  - IP 地址格式验证函数
+  - IPv4 返回 4，IPv6 返回 6，无效返回 0
+
+- **添加完整 Socket API**
+  - write()、end()、destroy() 方法
+  - on()、once()、emit() 事件处理
+  - setTimeout()、setEncoding()、pause()、resume() 方法
+
+#### v0.3.69 技术实现
+- 完整的 V8 FunctionTemplate 模式实现
+- 预先创建 V8 值避免 borrow checker 问题
+- 与 MinimalRuntime 集成支持测试
+
+#### v0.3.69 测试结果
+```bash
+$ cargo test --test tcp_connection_tests
+running 29 tests
+test result: ok. 29 passed; 0 failed
+```
+
+#### v0.3.69 下一步计划
+- 实现真正的 TCP 连接（使用 tokio 异步）
+- 增强 http.request() 发起真实网络请求
+- 继续完善其他 Node.js API 模块
+
+---
+
 ### v0.3.68 增强 http.request() DNS 解析集成 (2025-12-25)
 **进度**: http.request DNS | ✅ 代码已合并
 

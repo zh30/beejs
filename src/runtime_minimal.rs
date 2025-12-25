@@ -17,6 +17,7 @@ use once_cell::sync::Lazy;
 use crate::nodejs_core::path::setup_path_api;
 use crate::nodejs_core::fs::setup_fs_api;
 use crate::nodejs_core::crypto::setup_crypto_api;
+use crate::nodejs_core::net::setup_net_api;
 
 // Event listener storage using thread_local (v0.3.46)
 // Note: rustdoc does not generate documentation for macro invocations
@@ -1278,6 +1279,9 @@ impl MinimalRuntime {
 
         // Set up DNS module (v0.3.47)
         Self::setup_dns_api(scope, &context)?;
+
+        // Set up net module (v0.3.69)
+        setup_net_api(scope, &context)?;
 
         // Set up string_decoder module (v0.3.48)
         Self::setup_string_decoder_api(scope, &context)?;
