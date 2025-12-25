@@ -27,6 +27,11 @@ pub fn setup_crypto_api(
     let random_bytes_instance: _ = random_bytes_func.get_function(scope).unwrap();
     let random_bytes_key: _ = v8::String::new(scope, "randomBytes").unwrap();
     crypto_obj.set(scope, random_bytes_key.into(), random_bytes_instance.into());
+    // randomBytesSync
+    let random_bytes_sync_func: _ = v8::FunctionTemplate::new(scope, random_bytes_sync_callback);
+    let random_bytes_sync_instance: _ = random_bytes_sync_func.get_function(scope).unwrap();
+    let random_bytes_sync_key: _ = v8::String::new(scope, "randomBytesSync").unwrap();
+    crypto_obj.set(scope, random_bytes_sync_key.into(), random_bytes_sync_instance.into());
     // 设置crypto对象到全局
     let global: _ = context.global(scope);
     let crypto_key: _ = v8::String::new(scope, "crypto").unwrap();
@@ -313,14 +318,87 @@ fn random_bytes_callback(
         .to_integer(scope)
         .unwrap_or(v8::Integer::new(scope, 0))
         .value() as usize;
-    let mut buffer = vec![0u8; size];
-    let rand: _ = ring::rand::SystemRandom::new();
-    ring::rand::SecureRandom::fill(&rand, &mut buffer).unwrap_or(());
-    // 创建Buffer对象
-    // Fixed: ArrayBuffer created successfully
-    // Note: Direct data access not available in rusty_v8 0.22
+
+    let size = size.max(0);
+
+    // Generate random bytes (only if size > 0)
+    let random_data = if size > 0 {
+        let mut data = vec![0u8; size];
+        let rand: _ = ring::rand::SystemRandom::new();
+        ring::rand::SecureRandom::fill(&rand, &mut data).unwrap_or(());
+        data
+    } else {
+        vec![]
+    };
+
+    // Create ArrayBuffer and copy random data
     let buffer_obj: _ = v8::ArrayBuffer::new(scope, size);
-    // 简化实现：仅创建 buffer 但不填充数据
-    // 完整实现需要重新设计 V8 ArrayBuffer 访问方式
-    retval.set(buffer_obj.into());
+
+    // Copy random data to ArrayBuffer's backing store (only if size > 0)
+    if size > 0 {
+        let store = buffer_obj.get_backing_store();
+        let slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, size) };
+        slice.copy_from_slice(&random_data);
+    }
+
+    // Check if callback is provided as second argument
+    let callback = args.get(1);
+    if callback.is_function() {
+        // Callback API: randomBytes(size, callback)
+        if let Ok(cb_func) = v8::Local::<v8::Function>::try_from(callback) {
+            // Create null error (no error occurred)
+            let null_val = v8::null(scope).into();
+            let undefined_val = v8::undefined(scope).into();
+
+            // Create the buffer as Uint8Array for better compatibility
+            if let Some(uint8_array) = v8::Uint8Array::new(scope, buffer_obj, 0, size) {
+                let cb_args: &[v8::Local<v8::Value>] = &[null_val, uint8_array.into()];
+                cb_func.call(scope, undefined_val, cb_args);
+            }
+        }
+    }
+
+    // Return Uint8Array for consistency with Node.js
+    if let Some(uint8_array) = v8::Uint8Array::new(scope, buffer_obj, 0, size) {
+        retval.set(uint8_array.into());
+    }
+}
+
+fn random_bytes_sync_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let size: _ = args
+        .get(0)
+        .to_integer(scope)
+        .unwrap_or(v8::Integer::new(scope, 0))
+        .value() as usize;
+
+    let size = size.max(0);
+
+    // Generate random bytes (only if size > 0)
+    let random_data = if size > 0 {
+        let mut data = vec![0u8; size];
+        let rand: _ = ring::rand::SystemRandom::new();
+        ring::rand::SecureRandom::fill(&rand, &mut data).unwrap_or(());
+        data
+    } else {
+        vec![]
+    };
+
+    // Create ArrayBuffer and copy random data
+    let buffer_obj: _ = v8::ArrayBuffer::new(scope, size);
+
+    // Copy random data to ArrayBuffer's backing store (only if size > 0)
+    if size > 0 {
+        let store = buffer_obj.get_backing_store();
+        let slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, size) };
+        slice.copy_from_slice(&random_data);
+    }
+
+    // Return Uint8Array for consistency with Node.js
+    if let Some(uint8_array) = v8::Uint8Array::new(scope, buffer_obj, 0, size) {
+        retval.set(uint8_array.into());
+    }
 }
