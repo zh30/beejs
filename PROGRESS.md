@@ -13,6 +13,34 @@
 
 
 
+### v0.3.76 实现 stream.Transform transform 选项支持 (2025-12-25)
+**进度**: transform 选项 | ✅ 代码已合并
+
+#### v0.3.76 新增功能
+- **实现 transform 选项处理**
+  - 在 `transform_constructor_callback` 中添加 `transform` 选项处理
+  - 用户提供的 `transform(chunk, encoding, callback)` 函数现在会被正确存储为 `_transform` 方法
+  - 添加唯一标识符 `[TRANSFORM_CONSTRUCTOR_UNIQUE_ID]` 便于后续维护
+
+#### v0.3.76 技术实现
+- 从 options 对象中提取 `transform` 函数
+- 将 transform 函数存储为 `_transform` 属性
+- 与现有的 `_write` 默认实现配合工作
+
+#### v0.3.76 测试结果
+```bash
+$ cargo test --test stream_module_tests test_transform_transform_basic
+running 1 test
+test test_transform_transform_basic ... ok
+test result: ok. 1 passed; 0 failed
+```
+
+#### v0.3.76 下一步计划
+- 增强 pipeline() 方法支持回调和错误处理
+- 继续完善其他 Node.js API 模块
+
+---
+
 ### v0.3.74 实现 stream.passThrough() 方法 (2025-12-25)
 **进度**: passThrough | ✅ 代码已合并
 
@@ -46,7 +74,7 @@ test result: ok. 5 passed; 0 failed
 ```
 
 #### v0.3.74 下一步计划
-- 实现 stream.Transform 完整构造函数
+- ✅ 已完成: stream.Transform 完整构造函数
 - 增强 pipeline() 方法支持多个流组合
 - 继续完善其他 Node.js API 模块
 
