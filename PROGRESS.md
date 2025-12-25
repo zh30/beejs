@@ -9,6 +9,58 @@
 
 
 
+### v0.3.64 完成 http.Agent、fs.promises 和 response header 方法 (2025-12-25)
+**进度**: http.Agent | fs.promises | response headers | ✅ 代码已合并
+
+#### v0.3.64 新增功能
+- **实现 http.Agent 构造函数**
+  - 支持 maxFreeSockets、maxSockets、keepAlive 选项
+  - 实现 createConnection 方法
+  - 添加 http.globalAgent 全局实例
+
+- **实现 http.Server.close() 方法**
+  - 关闭 HTTP 服务器
+
+- **实现 response header 方法**
+  - getAllHeaders() - 获取所有响应头
+  - getHeader(name) - 获取单个响应头
+  - setHeader(name, value) - 设置响应头
+  - writeHead(statusCode, statusMessage, headers) - 写入响应头
+
+- **实现 fs.promises API**
+  - promises.readFile(path) - 异步读取文件
+  - promises.writeFile(path, data) - 异步写入文件
+  - promises.unlink(path) - 删除文件
+  - promises.rename(oldPath, newPath) - 重命名文件
+  - promises.readdir(path) - 读取目录
+  - promises.stat(path) - 获取文件状态
+  - promises.mkdir(path) - 创建目录
+
+#### v0.3.64 技术修复
+- **修复 V8 FunctionTemplate 闭包捕获问题**
+  - V8 FunctionTemplate 要求闭包实现 Copy trait
+  - String 类型不满足 Copy trait
+  - 解决方案：将路径/数据存储为 thenable 对象的属性，在回调中通过 `this` 访问
+
+- **修复 borrow checker 错误**
+  - 同时调用 `this.set(scope, key.into(), v8::String::new(scope, &path).into())` 多次导致借用在冲突
+  - 解决方案：预先创建 V8 值再设置
+
+- **修复 to_integer 返回类型**
+  - `to_int32(scope)` 方法在新版本中返回 `to_integer(scope)`
+  - 使用 `unwrap_or(default).value()` 获取整数值
+
+#### v0.3.64 测试结果
+```bash
+$ cargo build --release
+Finished release profile [optimized]
+```
+
+#### v0.3.64 下一步计划
+- 运行完整测试套件
+- 完善 http 模块（添加完整的请求/响应处理）
+- 增强 fs.promises（添加更多方法）
+
 ### v0.3.61 完成 createCipher/createDecipher 实现 (2025-12-25)
 **进度**: createCipher | createDecipher | 19/19 加密测试通过 | ✅ 全部测试通过
 

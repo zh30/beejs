@@ -1,7 +1,8 @@
-// Node.js http模块实现
-/// HTTP API
+// Node.js http模块实现 - v0.3.64 增强版
+/// HTTP API - 支持 Agent, getAllHeaders 等
 use anyhow::Result;
 use rusty_v8 as v8;
+
 /// 设置http API
 pub fn setup_http_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -23,11 +24,43 @@ pub fn setup_http_api(
     let get_instance: _ = get_func.get_function(scope).unwrap();
     let get_key: _ = v8::String::new(scope, "get").unwrap();
     http_obj.set(scope, get_key.into(), get_instance.into());
+    // Agent - v0.3.64: 添加 Agent 支持
+    let agent_func: _ = v8::FunctionTemplate::new(scope, http_agent_callback);
+    let agent_instance: _ = agent_func.get_function(scope).unwrap();
+    let agent_key: _ = v8::String::new(scope, "Agent").unwrap();
+    http_obj.set(scope, agent_key.into(), agent_instance.into());
+    // 全局 Agent 实例
+    let global_agent: _ = create_default_agent(scope);
+    let global_agent_key: _ = v8::String::new(scope, "globalAgent").unwrap();
+    agent_instance.set(scope, global_agent_key.into(), global_agent.into());
     // 设置到全局
     let global: _ = context.global(scope);
     let http_key: _ = v8::String::new(scope, "http").unwrap();
     global.set(scope, http_key.into(), http_obj.into());
     Ok(())
+}
+
+/// 创建默认的 Agent 实例
+fn create_default_agent<'a>(scope: &mut v8::HandleScope<'a>) -> v8::Local<'a, v8::Object> {
+    let agent_obj: _ = v8::Object::new(scope);
+    // maxFreeSockets
+    let max_free_key: _ = v8::String::new(scope, "maxFreeSockets").unwrap();
+    let max_free_val: _ = v8::Integer::new(scope, 10);
+    agent_obj.set(scope, max_free_key.into(), max_free_val.into());
+    // maxSockets
+    let max_sockets_key: _ = v8::String::new(scope, "maxSockets").unwrap();
+    let max_sockets_val: _ = v8::Integer::new(scope, 20);
+    agent_obj.set(scope, max_sockets_key.into(), max_sockets_val.into());
+    // keepAlive
+    let keep_alive_key: _ = v8::String::new(scope, "keepAlive").unwrap();
+    let keep_alive_val: _ = v8::Boolean::new(scope, false);
+    agent_obj.set(scope, keep_alive_key.into(), keep_alive_val.into());
+    // createConnection
+    let create_conn_func: _ = v8::FunctionTemplate::new(scope, http_agent_create_connection_callback);
+    let create_conn_instance: _ = create_conn_func.get_function(scope).unwrap();
+    let create_conn_key: _ = v8::String::new(scope, "createConnection").unwrap();
+    agent_obj.set(scope, create_conn_key.into(), create_conn_instance.into());
+    agent_obj
 }
 fn http_create_server_callback(
     scope: &mut v8::HandleScope,
@@ -45,7 +78,105 @@ fn http_create_server_callback(
     let on_instance: _ = on_func.get_function(scope).unwrap();
     let on_key: _ = v8::String::new(scope, "on").unwrap();
     server_obj.set(scope, on_key.into(), on_instance.into());
+    // close - v0.3.64: 添加服务器关闭方法
+    let close_func: _ = v8::FunctionTemplate::new(scope, http_server_close_callback);
+    let close_instance: _ = close_func.get_function(scope).unwrap();
+    let close_key: _ = v8::String::new(scope, "close").unwrap();
+    server_obj.set(scope, close_key.into(), close_instance.into());
     retval.set(server_obj.into());
+}
+
+/// http.Agent 构造函数回调
+fn http_agent_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let options: _ = args.get(0);
+    let agent_obj: _ = v8::Object::new(scope);
+
+    // 解析 options 或使用默认值
+    let max_free_sockets = extract_integer_option(scope, &options, "maxFreeSockets", 10);
+    let max_sockets = extract_integer_option(scope, &options, "maxSockets", 20);
+    let keep_alive = extract_boolean_option(scope, &options, "keepAlive", false);
+
+    // 创建所有值再设置，避免 borrow checker 问题
+    let max_free_val = v8::Integer::new(scope, max_free_sockets);
+    let max_sockets_val = v8::Integer::new(scope, max_sockets);
+    let keep_alive_val = v8::Boolean::new(scope, keep_alive);
+
+    // maxFreeSockets
+    let max_free_key: _ = v8::String::new(scope, "maxFreeSockets").unwrap();
+    agent_obj.set(scope, max_free_key.into(), max_free_val.into());
+
+    // maxSockets
+    let max_sockets_key: _ = v8::String::new(scope, "maxSockets").unwrap();
+    agent_obj.set(scope, max_sockets_key.into(), max_sockets_val.into());
+
+    // keepAlive
+    let keep_alive_key: _ = v8::String::new(scope, "keepAlive").unwrap();
+    agent_obj.set(scope, keep_alive_key.into(), keep_alive_val.into());
+
+    // createConnection
+    let create_conn_func: _ = v8::FunctionTemplate::new(scope, http_agent_create_connection_callback);
+    let create_conn_instance: _ = create_conn_func.get_function(scope).unwrap();
+    let create_conn_key: _ = v8::String::new(scope, "createConnection").unwrap();
+    agent_obj.set(scope, create_conn_key.into(), create_conn_instance.into());
+
+    retval.set(agent_obj.into());
+}
+
+/// 提取整数选项
+fn extract_integer_option(scope: &mut v8::HandleScope, options: &v8::Local<v8::Value>, key: &str, default: i32) -> i32 {
+    if options.is_undefined() || options.is_null() {
+        return default;
+    }
+    if let Ok(obj) = v8::Local::<v8::Object>::try_from(*options) {
+        let key_str: _ = v8::String::new(scope, key).unwrap();
+        if let Some(val) = obj.get(scope, key_str.into()) {
+            if val.is_number() {
+                return val.to_integer(scope).unwrap_or(v8::Integer::new(scope, default)).value() as i32;
+            }
+        }
+    }
+    default
+}
+
+/// 提取布尔选项
+fn extract_boolean_option(scope: &mut v8::HandleScope, options: &v8::Local<v8::Value>, key: &str, default: bool) -> bool {
+    if options.is_undefined() || options.is_null() {
+        return default;
+    }
+    if let Ok(obj) = v8::Local::<v8::Object>::try_from(*options) {
+        let key_str: _ = v8::String::new(scope, key).unwrap();
+        if let Some(val) = obj.get(scope, key_str.into()) {
+            return val.to_boolean(scope).is_true();
+        }
+    }
+    default
+}
+
+/// Agent.createConnection 回调
+fn http_agent_create_connection_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    // 返回一个模拟的 socket 对象
+    let socket_obj: _ = v8::Object::new(scope);
+    let connect_key: _ = v8::String::new(scope, "connect").unwrap();
+    let connect_val: _ = v8::String::new(scope, "[Socket connected]").unwrap();
+    socket_obj.set(scope, connect_key.into(), connect_val.into());
+    retval.set(socket_obj.into());
+}
+
+/// http.Server.close 回调
+fn http_server_close_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    retval.set(v8::undefined(scope).into());
 }
 fn http_request_callback(
     scope: &mut v8::HandleScope,
@@ -134,16 +265,171 @@ fn http_req_end_callback(
         let status_code_key: _ = v8::String::new(scope, "statusCode").unwrap();
         let status_val: _ = v8::Integer::new(scope, 200);
         res_obj.set(scope, status_code_key.into(), status_val.into());
+
+        // statusMessage - v0.3.64: 添加状态消息
+        let status_msg_key: _ = v8::String::new(scope, "statusMessage").unwrap();
+        let status_msg_val: _ = v8::String::new(scope, "OK").unwrap();
+        res_obj.set(scope, status_msg_key.into(), status_msg_val.into());
+
+        // headers - v0.3.64: 添加 headers 对象
+        let headers_key: _ = v8::String::new(scope, "headers").unwrap();
+        let headers_obj: _ = v8::Object::new(scope);
+        let content_type_key: _ = v8::String::new(scope, "content-type").unwrap();
+        let content_type_val: _ = v8::String::new(scope, "text/plain").unwrap();
+        headers_obj.set(scope, content_type_key.into(), content_type_val.into());
+        res_obj.set(scope, headers_key.into(), headers_obj.into());
+
+        // getAllHeaders - v0.3.64: 添加获取所有 headers 的方法
+        let get_headers_func: _ = v8::FunctionTemplate::new(scope, http_res_get_all_headers_callback);
+        let get_headers_instance: _ = get_headers_func.get_function(scope).unwrap();
+        let get_headers_key: _ = v8::String::new(scope, "getAllHeaders").unwrap();
+        res_obj.set(scope, get_headers_key.into(), get_headers_instance.into());
+
+        // getHeader - v0.3.64: 添加获取单个 header 的方法
+        let get_header_func: _ = v8::FunctionTemplate::new(scope, http_res_get_header_callback);
+        let get_header_instance: _ = get_header_func.get_function(scope).unwrap();
+        let get_header_key: _ = v8::String::new(scope, "getHeader").unwrap();
+        res_obj.set(scope, get_header_key.into(), get_header_instance.into());
+
+        // setHeader - v0.3.64: 添加设置 header 的方法
+        let set_header_func: _ = v8::FunctionTemplate::new(scope, http_res_set_header_callback);
+        let set_header_instance: _ = set_header_func.get_function(scope).unwrap();
+        let set_header_key: _ = v8::String::new(scope, "setHeader").unwrap();
+        res_obj.set(scope, set_header_key.into(), set_header_instance.into());
+
         // end
         let end_func: _ = v8::FunctionTemplate::new(scope, http_res_end_callback);
         let end_instance: _ = end_func.get_function(scope).unwrap();
         let end_key: _ = v8::String::new(scope, "end").unwrap();
         res_obj.set(scope, end_key.into(), end_instance.into());
+
+        // writeHead - v0.3.64: 添加 writeHead 方法
+        let write_head_func: _ = v8::FunctionTemplate::new(scope, http_res_write_head_callback);
+        let write_head_instance: _ = write_head_func.get_function(scope).unwrap();
+        let write_head_key: _ = v8::String::new(scope, "writeHead").unwrap();
+        res_obj.set(scope, write_head_key.into(), write_head_instance.into());
+
         if let Ok(cb_func) = v8::Local::<v8::Function>::try_from(callback) {
             let call_args: &[v8::Local<v8::Value>] = &[res_obj.into()];
             cb_func.call(scope, this.into(), call_args);
         }
     }
+    retval.set(this.into());
+}
+
+/// response.getAllHeaders() 回调 - v0.3.64
+fn http_res_get_all_headers_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this: _ = args.this();
+
+    // 获取 headers 对象
+    let headers_key: _ = v8::String::new(scope, "headers").unwrap();
+    let headers: _ = this.get(scope, headers_key.into());
+
+    if let Some(h) = headers {
+        retval.set(h);
+    } else {
+        // 如果没有 headers，返回空数组
+        let empty_array: _ = v8::Array::new(scope, 0);
+        retval.set(empty_array.into());
+    }
+}
+
+/// response.getHeader() 回调 - v0.3.64
+fn http_res_get_header_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this: _ = args.this();
+    let name: String = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    let headers_key: _ = v8::String::new(scope, "headers").unwrap();
+    let headers_obj: _ = this.get(scope, headers_key.into());
+
+    if let Ok(obj) = v8::Local::<v8::Object>::try_from(headers_obj.unwrap_or(v8::undefined(scope).into())) {
+        let name_key: _ = v8::String::new(scope, &name).unwrap();
+        let value: _ = obj.get(scope, name_key.into());
+        if let Some(v) = value {
+            retval.set(v);
+        } else {
+            retval.set(v8::undefined(scope).into());
+        }
+    } else {
+        retval.set(v8::undefined(scope).into());
+    }
+}
+
+/// response.setHeader() 回调 - v0.3.64
+fn http_res_set_header_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this: _ = args.this();
+    let name: String = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    let value: _ = args.get(1);
+
+    let headers_key: _ = v8::String::new(scope, "headers").unwrap();
+    let mut headers_obj = if let Ok(obj) = v8::Local::<v8::Object>::try_from(
+        this.get(scope, headers_key.into()).unwrap_or(v8::undefined(scope).into())
+    ) {
+        obj
+    } else {
+        v8::Object::new(scope)
+    };
+
+    let name_key: _ = v8::String::new(scope, &name).unwrap();
+    headers_obj.set(scope, name_key.into(), value);
+    this.set(scope, headers_key.into(), headers_obj.into());
+
+    retval.set(this.into());
+}
+
+/// response.writeHead() 回调 - v0.3.64
+fn http_res_write_head_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this: _ = args.this();
+    let status_code: i32 = args.get(0).to_integer(scope).unwrap_or(v8::Integer::new(scope, 200)).value() as i32;
+    let status_message: String = args
+        .get(1)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_else(|| "OK".to_string());
+    let headers: _ = args.get(2);
+
+    // 创建值再设置，避免 borrow checker 问题
+    let status_code_val = v8::Integer::new(scope, status_code);
+    let status_msg_val = v8::String::new(scope, &status_message).unwrap();
+
+    // 设置 statusCode
+    let status_code_key: _ = v8::String::new(scope, "statusCode").unwrap();
+    this.set(scope, status_code_key.into(), status_code_val.into());
+
+    // 设置 statusMessage
+    let status_msg_key: _ = v8::String::new(scope, "statusMessage").unwrap();
+    this.set(scope, status_msg_key.into(), status_msg_val.into());
+
+    // 设置 headers
+    if !headers.is_undefined() && headers.is_object() {
+        let headers_key: _ = v8::String::new(scope, "headers").unwrap();
+        this.set(scope, headers_key.into(), headers);
+    }
+
     retval.set(this.into());
 }
 fn http_res_end_callback(

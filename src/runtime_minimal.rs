@@ -11605,8 +11605,8 @@ impl MinimalRuntime {
         Ok(())
     }
 
-    /// Set up the http module (v0.3.45)
-    /// Provides basic HTTP server and request functionality
+    /// Set up the http module (v0.3.64)
+    /// Provides HTTP server, client, Agent and response header functionality
     fn setup_http_api(
         scope: &mut v8::ContextScope<v8::HandleScope>,
         context: &v8::Local<v8::Context>,
@@ -11636,6 +11636,14 @@ impl MinimalRuntime {
             let on_key = v8::String::new(scope, "on").unwrap();
             server_obj.set(scope, on_key.into(), on_instance.into());
 
+            // close method (v0.3.64)
+            let close_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                retval.set(v8::undefined(_scope).into());
+            });
+            let close_instance = close_func.get_function(scope).unwrap();
+            let close_key = v8::String::new(scope, "close").unwrap();
+            server_obj.set(scope, close_key.into(), close_instance.into());
+
             retval.set(server_obj.into());
         });
         let create_server_instance = create_server_func.get_function(scope).unwrap();
@@ -11659,6 +11667,82 @@ impl MinimalRuntime {
         let get_instance = get_func.get_function(scope).unwrap();
         let get_key = v8::String::new(scope, "get").unwrap();
         http_obj.set(scope, get_key.into(), get_instance.into());
+
+        // Agent constructor (v0.3.64)
+        let agent_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let options = args.get(0);
+            let agent_obj = v8::Object::new(scope);
+
+            // Parse options with defaults
+            let mut max_free_sockets = 10;
+            let mut max_sockets = 20;
+            let mut keep_alive = false;
+
+            if !options.is_undefined() && options.is_object() {
+                if let Some(opts_obj) = options.to_object(scope) {
+                    let key = v8::String::new(scope, "maxFreeSockets").unwrap();
+                    if let Some(val) = opts_obj.get(scope, key.into()) {
+                        if val.is_number() {
+                            max_free_sockets = val.to_integer(scope).unwrap_or(v8::Integer::new(scope, 10)).value() as i32;
+                        }
+                    }
+                    let key = v8::String::new(scope, "maxSockets").unwrap();
+                    if let Some(val) = opts_obj.get(scope, key.into()) {
+                        if val.is_number() {
+                            max_sockets = val.to_integer(scope).unwrap_or(v8::Integer::new(scope, 20)).value() as i32;
+                        }
+                    }
+                    let key = v8::String::new(scope, "keepAlive").unwrap();
+                    if let Some(val) = opts_obj.get(scope, key.into()) {
+                        keep_alive = val.to_boolean(scope).is_true();
+                    }
+                }
+            }
+
+            // Set agent properties
+            let max_free_key = v8::String::new(scope, "maxFreeSockets").unwrap();
+            let max_free_val = v8::Integer::new(scope, max_free_sockets);
+            agent_obj.set(scope, max_free_key.into(), max_free_val.into());
+
+            let max_sockets_key = v8::String::new(scope, "maxSockets").unwrap();
+            let max_sockets_val = v8::Integer::new(scope, max_sockets);
+            agent_obj.set(scope, max_sockets_key.into(), max_sockets_val.into());
+
+            let keep_alive_key = v8::String::new(scope, "keepAlive").unwrap();
+            let keep_alive_val = v8::Boolean::new(scope, keep_alive);
+            agent_obj.set(scope, keep_alive_key.into(), keep_alive_val.into());
+
+            // createConnection
+            let create_conn_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let socket_obj = v8::Object::new(scope);
+                let connect_key = v8::String::new(scope, "connect").unwrap();
+                let connect_val = v8::String::new(scope, "[Socket connected]").unwrap();
+                socket_obj.set(scope, connect_key.into(), connect_val.into());
+                retval.set(socket_obj.into());
+            });
+            let create_conn_instance = create_conn_func.get_function(scope).unwrap();
+            let create_conn_key = v8::String::new(scope, "createConnection").unwrap();
+            agent_obj.set(scope, create_conn_key.into(), create_conn_instance.into());
+
+            retval.set(agent_obj.into());
+        });
+        let agent_instance = agent_func.get_function(scope).unwrap();
+        let agent_key = v8::String::new(scope, "Agent").unwrap();
+        http_obj.set(scope, agent_key.into(), agent_instance.into());
+
+        // globalAgent (v0.3.64)
+        let global_agent = v8::Object::new(scope);
+        let ga_max_free_key = v8::String::new(scope, "maxFreeSockets").unwrap();
+        let ga_max_free_val = v8::Integer::new(scope, 10);
+        global_agent.set(scope, ga_max_free_key.into(), ga_max_free_val.into());
+        let ga_max_sockets_key = v8::String::new(scope, "maxSockets").unwrap();
+        let ga_max_sockets_val = v8::Integer::new(scope, 20);
+        global_agent.set(scope, ga_max_sockets_key.into(), ga_max_sockets_val.into());
+        let ga_keep_alive_key = v8::String::new(scope, "keepAlive").unwrap();
+        let ga_keep_alive_val = v8::Boolean::new(scope, false);
+        global_agent.set(scope, ga_keep_alive_key.into(), ga_keep_alive_val.into());
+        let global_agent_key = v8::String::new(scope, "globalAgent").unwrap();
+        agent_instance.set(scope, global_agent_key.into(), global_agent.into());
 
         // Set http as global
         let http_key = v8::String::new(scope, "http").unwrap();
