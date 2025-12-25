@@ -10658,10 +10658,35 @@ impl MinimalRuntime {
             let write_public_key = v8::String::new(scope, "write").unwrap();
             stream_obj.set(scope, write_public_key.into(), write_public_instance.into());
 
-            // end method
+            // end method - v0.3.57: Updated to properly set state and trigger 'finish' event
             let end_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
                 let this = args.this();
                 let callback = args.get(2);
+
+                // v0.3.57: Update _writableState - set ended=true and writable=false
+                let wstate_key = v8::String::new(scope, "_writableState").unwrap();
+                if let Some(wstate_val) = this.get(scope, wstate_key.into()) {
+                    if let Some(wstate_obj) = wstate_val.to_object(scope) {
+                        let ended_key = v8::String::new(scope, "ended").unwrap();
+                        let ended_val: v8::Local<v8::Value> = v8::Boolean::new(scope, true).into();
+                        wstate_obj.set(scope, ended_key.into(), ended_val);
+
+                        let writable_key = v8::String::new(scope, "writable").unwrap();
+                        let writable_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+                        wstate_obj.set(scope, writable_key.into(), writable_val);
+                    }
+                }
+
+                // v0.3.57: Trigger 'finish' event
+                let finish_key = v8::String::new(scope, "finish").unwrap();
+                if let Some(listener) = this.get(scope, finish_key.into()) {
+                    if listener.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(listener) {
+                            func.call(scope, this.into(), &[]);
+                        }
+                    }
+                }
+
                 if callback.is_function() {
                     if let Ok(cb_func) = v8::Local::<v8::Function>::try_from(callback) {
                         cb_func.call(scope, this.into(), &[]);
@@ -10672,6 +10697,48 @@ impl MinimalRuntime {
             let end_instance = end_func.get_function(scope).unwrap();
             let end_key = v8::String::new(scope, "end").unwrap();
             stream_obj.set(scope, end_key.into(), end_instance.into());
+
+            // on method - v0.3.57: Event listener registration
+            let on_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _retval: v8::ReturnValue| {
+                let this = args.this();
+                let event = args.get(0);
+                let listener = args.get(1);
+
+                if event.is_string() && listener.is_function() {
+                    let event_str = event.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                    let event_key = v8::String::new(scope, &event_str).unwrap();
+                    this.set(scope, event_key.into(), listener);
+                }
+            });
+            let on_instance = on_func.get_function(scope).unwrap();
+            let on_key = v8::String::new(scope, "on").unwrap();
+            stream_obj.set(scope, on_key.into(), on_instance.into());
+
+            // _writableState - v0.3.57: 背压支持状态对象
+            let wstate_key = v8::String::new(scope, "_writableState").unwrap();
+            let wstate_obj = v8::Object::new(scope);
+
+            // highWaterMark - 背压水位线 (16KB)
+            let hwm_key = v8::String::new(scope, "highWaterMark").unwrap();
+            let hwm_val: v8::Local<v8::Value> = v8::Integer::new(scope, 16 * 1024).into();
+            wstate_obj.set(scope, hwm_key.into(), hwm_val);
+
+            // needDrain - 是否需要等待 drain 事件
+            let drain_key = v8::String::new(scope, "needDrain").unwrap();
+            let drain_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+            wstate_obj.set(scope, drain_key.into(), drain_val);
+
+            // ended - 是否已结束
+            let ended_key = v8::String::new(scope, "ended").unwrap();
+            let ended_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+            wstate_obj.set(scope, ended_key.into(), ended_val);
+
+            // writable - 是否可写
+            let writable_key = v8::String::new(scope, "writable").unwrap();
+            let writable_val: v8::Local<v8::Value> = v8::Boolean::new(scope, true).into();
+            wstate_obj.set(scope, writable_key.into(), writable_val);
+
+            stream_obj.set(scope, wstate_key.into(), wstate_obj.into());
 
             retval.set(stream_obj.into());
         });

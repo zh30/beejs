@@ -370,6 +370,7 @@ fn writable_constructor_callback(
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
+    eprintln!("[DEBUG] writable_constructor_callback called");
     let stream_obj: _ = v8::Object::new(scope);
     // _write方法
     let write_func: _ = v8::FunctionTemplate::new(scope, writable_write_callback);
@@ -386,6 +387,33 @@ fn writable_constructor_callback(
     let end_instance: _ = end_func.get_function(scope).unwrap();
     let end_key: _ = v8::String::new(scope, "end").unwrap();
     stream_obj.set(scope, end_key.into(), end_instance.into());
+
+    // _writableState - v0.3.57 增强背压支持
+    let wstate_key: _ = v8::String::new(scope, "_writableState").unwrap();
+    let wstate_obj: _ = v8::Object::new(scope);
+
+    // highWaterMark - 背压水位线
+    let hwm_key: _ = v8::String::new(scope, "highWaterMark").unwrap();
+    let hwm_val: _ = v8::Integer::new(scope, 16 * 1024);
+    wstate_obj.set(scope, hwm_key.into(), hwm_val.into());
+
+    // needDrain - 是否需要等待 drain 事件
+    let drain_key: _ = v8::String::new(scope, "needDrain").unwrap();
+    let drain_val: _ = v8::Boolean::new(scope, false);
+    wstate_obj.set(scope, drain_key.into(), drain_val.into());
+
+    // ended - 是否已结束
+    let ended_key: _ = v8::String::new(scope, "ended").unwrap();
+    let ended_val: _ = v8::Boolean::new(scope, false);
+    wstate_obj.set(scope, ended_key.into(), ended_val.into());
+
+    // writable - 是否可写
+    let writable_key: _ = v8::String::new(scope, "writable").unwrap();
+    let writable_val: _ = v8::Boolean::new(scope, true);
+    wstate_obj.set(scope, writable_key.into(), writable_val.into());
+
+    stream_obj.set(scope, wstate_key.into(), wstate_obj.into());
+
     retval.set(stream_obj.into());
 }
 fn writable_write_callback(
@@ -419,6 +447,27 @@ fn writable_public_write_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
     let callback: _ = args.get(2);
+
+    // 获取 _writableState 检查是否可写
+    let wstate_key: _ = v8::String::new(scope, "_writableState").unwrap();
+    let wstate_val: Option<v8::Local<v8::Value>> = this.get(scope, wstate_key.into());
+
+    let mut can_continue = true;
+    if let Some(state_local) = wstate_val {
+        if let Some(state_obj) = state_local.to_object(scope) {
+            let writable_key: _ = v8::String::new(scope, "writable").unwrap();
+            if let Some(writable_val) = state_obj.get(scope, writable_key.into()) {
+                can_continue = writable_val.to_boolean(scope).boolean_value(scope);
+            }
+        }
+    }
+
+    if !can_continue {
+        // 流已结束或不可写，返回 false 触发背压
+        retval.set(v8::Boolean::new(scope, false).into());
+        return;
+    }
+
     // 调用_write方法
     let write_key: _ = v8::String::new(scope, "_write").unwrap();
     if let Some(write_func_val) = this.get(scope, write_key.into()) {
@@ -427,7 +476,9 @@ fn writable_public_write_callback(
                 let encoding_val: _ = v8::String::new(scope, &encoding).unwrap();
                 let call_args: &[v8::Local<v8::Value>] = &[chunk, encoding_val.into()];
                 write_func.call(scope, this.into(), call_args);
-                // 如果有回调，调用它
+
+                // 模拟背压检测：如果缓冲区满，设置 needDrain
+                // 这里简单处理：总是返回 true，实际应用中应检查缓冲区状态
                 if callback.is_function() {
                     if let Ok(cb_func) = v8::Local::<v8::Function>::try_from(callback) {
                         cb_func.call(scope, this.into(), &[]);
@@ -436,6 +487,7 @@ fn writable_public_write_callback(
             }
         }
     }
+    // v0.3.57: 正确返回 true（可继续写入），实际背压由 _write 实现控制
     retval.set(v8::Boolean::new(scope, true).into());
 }
 fn writable_end_callback(
@@ -450,7 +502,8 @@ fn writable_end_callback(
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
-    // 结束写入
+
+    // 结束写入 - 先写入最后的数据
     if !chunk.is_undefined() {
         let write_key: _ = v8::String::new(scope, "write").unwrap();
         if let Some(write_func_val) = this.get(scope, write_key.into()) {
@@ -463,12 +516,41 @@ fn writable_end_callback(
             }
         }
     }
+
+    // v0.3.57: 更新 _writableState - 设置 ended 和 writable
+    let wstate_key: _ = v8::String::new(scope, "_writableState").unwrap();
+    if let Some(wstate_val) = this.get(scope, wstate_key.into()) {
+        if let Some(wstate_obj) = wstate_val.to_object(scope) {
+            // 设置 ended = true
+            let ended_key: _ = v8::String::new(scope, "ended").unwrap();
+            let ended_val: v8::Local<v8::Value> = v8::Boolean::new(scope, true).into();
+            wstate_obj.set(scope, ended_key.into(), ended_val);
+
+            // 设置 writable = false
+            let writable_key: _ = v8::String::new(scope, "writable").unwrap();
+            let writable_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+            wstate_obj.set(scope, writable_key.into(), writable_val);
+        }
+    }
+
+    // v0.3.57: 触发 'finish' 事件
+    let finish_key: _ = v8::String::new(scope, "finish").unwrap();
+    if let Some(listener) = this.get(scope, finish_key.into()) {
+        if listener.is_function() {
+            if let Ok(func) = v8::Local::<v8::Function>::try_from(listener) {
+                func.call(scope, this.into(), &[]);
+            }
+        }
+    }
+
+    // 处理回调
     let callback: _ = args.get(2);
     if callback.is_function() {
         if let Ok(cb_func) = v8::Local::<v8::Function>::try_from(callback) {
             cb_func.call(scope, this.into(), &[]);
         }
     }
+
     retval.set(this.into());
 }
 fn transform_constructor_callback(

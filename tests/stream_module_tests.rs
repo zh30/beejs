@@ -300,3 +300,173 @@ fn test_readable_end_event() {
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
 }
+
+// v0.3.57: Writable stream backpressure tests
+
+#[test]
+#[serial]
+fn test_writable_has_writablestate() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        const w = new stream.Writable({
+          _write(chunk, encoding, callback) {
+            callback();
+          }
+        });
+        typeof w._writableState
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "object");
+}
+
+#[test]
+#[serial]
+fn test_writable_state_has_high_water_mark() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        const w = new stream.Writable({
+          _write(chunk, encoding, callback) {
+            callback();
+          }
+        });
+        w._writableState.highWaterMark === 16384
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_writable_state_has_need_drain() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        const w = new stream.Writable({
+          _write(chunk, encoding, callback) {
+            callback();
+          }
+        });
+        w._writableState.needDrain === false
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_writable_state_has_ended() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        const w = new stream.Writable({
+          _write(chunk, encoding, callback) {
+            callback();
+          }
+        });
+        w._writableState.ended === false
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_writable_state_has_writable() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        const w = new stream.Writable({
+          _write(chunk, encoding, callback) {
+            callback();
+          }
+        });
+        w._writableState.writable === true
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_writable_write_returns_boolean() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        const w = new stream.Writable({
+          _write(chunk, encoding, callback) {
+            callback();
+          }
+        });
+        const result = w.write('test');
+        typeof result === 'boolean'
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_writable_end_triggers_finish_event() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        let finished = false;
+        const w = new stream.Writable({
+          _write(chunk, encoding, callback) {
+            callback();
+          }
+        });
+        w.on('finish', () => { finished = true; });
+        w.end();
+        finished
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_writable_end_sets_ended_state() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        const w = new stream.Writable({
+          _write(chunk, encoding, callback) {
+            callback();
+          }
+        });
+        w.end();
+        w._writableState.ended === true
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_writable_end_sets_writable_false() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        const w = new stream.Writable({
+          _write(chunk, encoding, callback) {
+            callback();
+          }
+        });
+        w.end();
+        w._writableState.writable === false
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
