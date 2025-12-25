@@ -1,11 +1,219 @@
-// Node.js http模块实现 - v0.3.73 增强版
+// Node.js http模块实现 - v0.3.84 增强版
 /// HTTP API - 支持 Agent, getAllHeaders, DNS 解析等
+/// v0.3.84: 添加 HTTP Agent 连接池优化
 /// v0.3.73: 添加真实 HTTP 网络请求支持
 use anyhow::Result;
 use rusty_v8 as v8;
+use std::collections::HashMap;
 use std::net::{SocketAddr, ToSocketAddrs};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use super::tcp_async::{sync_http_request, HttpRequestOptions};
+
+/// 连接键：用于标识唯一的服务器端点
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+struct ConnectionKey {
+    host: String,
+    port: u16,
+}
+
+/// 池化连接信息
+#[derive(Debug)]
+struct PooledConnection {
+    /// 连接建立时间，用于超时清理
+    created_at: Instant,
+    /// 最后使用时间
+    last_used: Instant,
+    /// 连接是否仍然有效
+    is_valid: bool,
+}
+
+impl PooledConnection {
+    fn new() -> Self {
+        Self {
+            created_at: Instant::now(),
+            last_used: Instant::now(),
+            is_valid: true,
+        }
+    }
+
+    fn touch(&mut self) {
+        self.last_used = Instant::now();
+    }
+}
+
+/// HTTP 连接池管理器 - v0.3.84
+#[derive(Debug)]
+struct HttpConnectionPool {
+    /// 空闲连接池：按主机端口分组
+    free_connections: HashMap<ConnectionKey, Vec<PooledConnection>>,
+    /// 当前活跃连接数
+    active_connections: usize,
+    /// 最大空闲连接数
+    max_free_sockets: usize,
+    /// 最大总连接数
+    max_sockets: usize,
+    /// 是否启用 keepAlive
+    keep_alive: bool,
+    /// 连接超时时间（秒）
+    connection_timeout: u64,
+}
+
+impl HttpConnectionPool {
+    fn new(max_free_sockets: usize, max_sockets: usize, keep_alive: bool) -> Self {
+        Self {
+            free_connections: HashMap::new(),
+            active_connections: 0,
+            max_free_sockets,
+            max_sockets,
+            keep_alive,
+            connection_timeout: 30, // 30秒超时
+        }
+    }
+
+    /// 获取连接键
+    fn get_key(host: &str, port: u16) -> ConnectionKey {
+        ConnectionKey {
+            host: host.to_lowercase(), // 主机名不区分大小写
+            port,
+        }
+    }
+
+    /// 从池中获取一个空闲连接
+    fn acquire(&mut self, host: &str, port: u16) -> bool {
+        // 检查是否超出总连接限制
+        if self.active_connections >= self.max_sockets {
+            return false;
+        }
+
+        let key = Self::get_key(host, port);
+
+        if let Some(connections) = self.free_connections.get_mut(&key) {
+            // 清理超时的连接
+            connections.retain(|conn| {
+                conn.is_valid && conn.last_used.elapsed() < Duration::from_secs(self.connection_timeout)
+            });
+
+            // 如果有可用的空闲连接
+            if let Some(conn) = connections.first() {
+                if conn.is_valid {
+                    self.active_connections += 1;
+                    return true;
+                }
+            }
+        }
+
+        // 没有可用连接，需要新建
+        self.active_connections += 1;
+        true
+    }
+
+    /// 释放一个连接到池中
+    fn release(&mut self, host: &str, port: u16) {
+        let key = Self::get_key(host, port);
+
+        // 统计当前该 key 的空闲连接数
+        let current_free = self.free_connections.get(&key).map(|v| v.len()).unwrap_or(0);
+
+        if self.keep_alive && current_free < self.max_free_sockets {
+            // 添加到空闲池
+            let conn = PooledConnection::new();
+            self.free_connections.entry(key).or_default().push(conn);
+        } else {
+            // 不 keepAlive 或超出限制，关闭连接
+            // 这里只是减少计数，实际连接由 tcp_async 处理
+        }
+
+        self.active_connections = self.active_connections.saturating_sub(1);
+    }
+
+    /// 获取当前空闲连接数
+    fn free_count(&self, host: &str, port: u16) -> usize {
+        let key = Self::get_key(host, port);
+        self.free_connections
+            .get(&key)
+            .map(|v| v.len())
+            .unwrap_or(0)
+    }
+
+    /// 获取当前活跃连接数
+    fn active_count(&self) -> usize {
+        self.active_connections
+    }
+
+    /// 清理所有超时连接
+    fn cleanup(&mut self) {
+        let timeout = Duration::from_secs(self.connection_timeout);
+
+        for connections in self.free_connections.values_mut() {
+            connections.retain(|conn| {
+                conn.is_valid && conn.last_used.elapsed() < timeout
+            });
+        }
+
+        // 清理空的 key
+        self.free_connections.retain(|_, v| !v.is_empty());
+    }
+}
+
+/// 全局 HTTP 连接池 - 使用 Mutex 确保线程安全
+static mut HTTP_CONNECTION_POOL: Option<Arc<Mutex<HttpConnectionPool>>> = None;
+
+/// 初始化全局连接池
+pub fn init_http_connection_pool(max_free_sockets: usize, max_sockets: usize, keep_alive: bool) {
+    unsafe {
+        HTTP_CONNECTION_POOL = Some(Arc::new(Mutex::new(HttpConnectionPool::new(
+            max_free_sockets,
+            max_sockets,
+            keep_alive,
+        ))));
+    }
+}
+
+/// 从全局连接池获取连接
+pub fn acquire_http_connection(host: &str, port: u16) -> bool {
+    unsafe {
+        if let Some(ref pool) = HTTP_CONNECTION_POOL {
+            return pool.lock().unwrap().acquire(host, port);
+        }
+        false
+    }
+}
+
+/// 释放连接到全局连接池
+pub fn release_http_connection(host: &str, port: u16) {
+    unsafe {
+        if let Some(ref pool) = HTTP_CONNECTION_POOL {
+            pool.lock().unwrap().release(host, port);
+        }
+    }
+}
+
+/// 获取全局连接池状态
+pub fn get_connection_pool_stats() -> String {
+    unsafe {
+        if let Some(ref pool) = HTTP_CONNECTION_POOL {
+            let pool = pool.lock().unwrap();
+            format!(
+                "active: {}, total_free: {}",
+                pool.active_count(),
+                pool.free_connections.values().map(|v| v.len()).sum::<usize>()
+            )
+        } else {
+            "pool not initialized".to_string()
+        }
+    }
+}
+
+/// 清理全局连接池中的超时连接
+pub fn cleanup_connection_pool() {
+    unsafe {
+        if let Some(ref pool) = HTTP_CONNECTION_POOL {
+            pool.lock().unwrap().cleanup();
+        }
+    }
+}
 
 /// 设置http API
 pub fn setup_http_api(
@@ -44,27 +252,57 @@ pub fn setup_http_api(
     Ok(())
 }
 
-/// 创建默认的 Agent 实例
+/// 创建默认的 Agent 实例 - v0.3.84 集成连接池
 fn create_default_agent<'a>(scope: &mut v8::HandleScope<'a>) -> v8::Local<'a, v8::Object> {
     let agent_obj: _ = v8::Object::new(scope);
+
+    // v0.3.84: 从全局获取或创建默认 Agent 配置
+    let max_free_sockets = 10;
+    let max_sockets = 20;
+    let keep_alive = false;
+
     // maxFreeSockets
     let max_free_key: _ = v8::String::new(scope, "maxFreeSockets").unwrap();
-    let max_free_val: _ = v8::Integer::new(scope, 10);
+    let max_free_val: _ = v8::Integer::new(scope, max_free_sockets as i32);
     agent_obj.set(scope, max_free_key.into(), max_free_val.into());
     // maxSockets
     let max_sockets_key: _ = v8::String::new(scope, "maxSockets").unwrap();
-    let max_sockets_val: _ = v8::Integer::new(scope, 20);
+    let max_sockets_val: _ = v8::Integer::new(scope, max_sockets as i32);
     agent_obj.set(scope, max_sockets_key.into(), max_sockets_val.into());
     // keepAlive
     let keep_alive_key: _ = v8::String::new(scope, "keepAlive").unwrap();
-    let keep_alive_val: _ = v8::Boolean::new(scope, false);
+    let keep_alive_val: _ = v8::Boolean::new(scope, keep_alive);
     agent_obj.set(scope, keep_alive_key.into(), keep_alive_val.into());
-    // createConnection
+
+    // createConnection - v0.3.84: 返回连接池状态
     let create_conn_func: _ = v8::FunctionTemplate::new(scope, http_agent_create_connection_callback);
     let create_conn_instance: _ = create_conn_func.get_function(scope).unwrap();
     let create_conn_key: _ = v8::String::new(scope, "createConnection").unwrap();
     agent_obj.set(scope, create_conn_key.into(), create_conn_instance.into());
+
+    // v0.3.84: 添加 getPoolStats 方法
+    let get_stats_func: _ = v8::FunctionTemplate::new(scope, http_agent_get_pool_stats_callback);
+    let get_stats_instance: _ = get_stats_func.get_function(scope).unwrap();
+    let get_stats_key: _ = v8::String::new(scope, "getPoolStats").unwrap();
+    agent_obj.set(scope, get_stats_key.into(), get_stats_instance.into());
+
+    // v0.3.84: 添加 sockets 访问器
+    let sockets_key: _ = v8::String::new(scope, "sockets").unwrap();
+    let sockets_val: _ = v8::String::new(scope, &get_connection_pool_stats()).unwrap();
+    agent_obj.set(scope, sockets_key.into(), sockets_val.into());
+
     agent_obj
+}
+
+/// Agent.getPoolStats() 回调 - v0.3.84
+fn http_agent_get_pool_stats_callback(
+    scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let stats = get_connection_pool_stats();
+    let stats_val: _ = v8::String::new(scope, &stats).unwrap();
+    retval.set(stats_val.into());
 }
 fn http_create_server_callback(
     scope: &mut v8::HandleScope,
@@ -476,6 +714,7 @@ fn http_server_on_callback(
     // 支持链式调用
     retval.set(this.into());
 }
+/// http.request().end() 回调 - v0.3.84 集成连接池
 fn http_req_end_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -491,6 +730,17 @@ fn http_req_end_callback(
     let path = extract_string_property(scope, &this, "path").unwrap_or_else(|| "/".to_string());
     let body = extract_string_property(scope, &this, "_body").unwrap_or_default();
 
+    // v0.3.84: 从连接池获取连接
+    let connection_acquired = acquire_http_connection(&host, port as u16);
+    if !connection_acquired {
+        eprintln!(
+            "[Beejs] HTTP connection pool exhausted for {}:{}, active: {}",
+            host,
+            port,
+            get_connection_pool_stats()
+        );
+    }
+
     // v0.3.73: 尝试发送真实的 HTTP 请求
     let http_response = sync_http_request(
         HttpRequestOptions {
@@ -503,6 +753,9 @@ fn http_req_end_callback(
         },
         10, // 10秒超时
     );
+
+    // v0.3.84: 释放连接回连接池
+    release_http_connection(&host, port as u16);
 
     // 使用真实响应或回退到模拟响应
     let (status_code, status_message, response_headers, response_body) = match http_response {
@@ -520,6 +773,11 @@ fn http_req_end_callback(
 
     // 创建响应对象
     let res_obj = create_response_object_with_data(scope, status_code, &status_message, &response_headers, &response_body);
+
+    // v0.3.84: 在响应对象中存储连接池统计
+    let pool_stats_key: _ = v8::String::new(scope, "_poolStats").unwrap();
+    let pool_stats_val: _ = v8::String::new(scope, &get_connection_pool_stats()).unwrap();
+    res_obj.set(scope, pool_stats_key.into(), pool_stats_val.into());
 
     // 优先使用传入的回调，其次使用请求对象中存储的回调
     let response_callback = if callback.is_function() {

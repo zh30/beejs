@@ -1269,6 +1269,10 @@ impl MinimalRuntime {
         // Set up stream module (v0.3.44)
         Self::setup_stream_api(scope, &context)?;
 
+        // Initialize HTTP connection pool (v0.3.84)
+        use crate::nodejs_core::http::init_http_connection_pool;
+        init_http_connection_pool(10, 20, false);
+
         // Set up http module (v0.3.45)
         setup_http_api(scope, &context)?;
 

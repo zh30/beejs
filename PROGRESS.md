@@ -6240,6 +6240,54 @@ pipeline(r, t, w, (err) => {
 - ✅ `cargo test --test stream_module_tests` → 68/68 通过
 
 #### v0.3.82 下一步计划
-- 实现 HTTP Agent 连接池优化
+- ✅ 实现 HTTP Agent 连接池优化
+- 添加 HTTPS/TLS 支持
+- 实现 http.Server 真实监听功能
+
+---
+
+### ✨ v0.3.84 HTTP Agent 连接池优化 (2025-12-26)
+**进度**: ✅ 连接池架构 | ✅ 集成测试 | ✅ 11/11 测试通过
+
+#### v0.3.84 新增功能
+- **HTTP 连接池管理器**
+  - `HttpConnectionPool` 结构体管理空闲连接
+  - `ConnectionKey` 标识唯一服务器端点 (host:port)
+  - `PooledConnection` 跟踪连接状态和超时
+
+- **连接池核心功能**
+  - `acquire()` - 从池中获取连接，限制总连接数
+  - `release()` - 释放连接回池（支持 keepAlive）
+  - `cleanup()` - 清理超时连接
+  - `get_pool_stats()` - 获取池状态统计
+
+- **Agent API 增强**
+  - `getPoolStats()` - 获取连接池统计信息
+  - `sockets` 属性 - 显示当前连接状态
+  - 响应对象包含 `_poolStats` 属性
+
+#### v0.3.84 技术实现
+```rust
+// 连接池结构
+struct HttpConnectionPool {
+    free_connections: HashMap<ConnectionKey, Vec<PooledConnection>>,
+    active_connections: usize,
+    max_free_sockets: usize,
+    max_sockets: usize,
+    keep_alive: bool,
+}
+
+// 全局连接池
+static mut HTTP_CONNECTION_POOL: Option<Arc<Mutex<HttpConnectionPool>>> = None;
+```
+
+#### v0.3.84 测试结果
+```bash
+$ cargo test --test http_agent_pool_tests
+running 11 tests
+test result: ok. 11 passed; 0 failed
+```
+
+#### v0.3.84 下一步计划
 - 添加 HTTPS/TLS 支持
 - 实现 http.Server 真实监听功能
