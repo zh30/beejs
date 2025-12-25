@@ -9,6 +9,48 @@
 
 
 
+
+### v0.3.67 完成 DNS 模块实现 (2025-12-25)
+**进度**: dns | ✅ 代码已合并
+
+#### v0.3.67 新增功能
+- **实现 dns.lookup(hostname, options, callback)**
+  - 查找主机名的 IP 地址
+  - 支持 family 选项 (4=IPv4, 6=IPv6, 0=任意)
+  - 返回地址对象 {address, family}
+
+- **实现 dns.resolve4(hostname, callback)**
+  - 解析 IPv4 地址记录
+
+- **实现 dns.resolve6(hostname, callback)**
+  - 解析 IPv6 地址记录
+
+- **实现 dns.resolve(hostname, rrtype, callback)**
+  - 通用记录解析 (A, AAAA, CNAME, MX, NS, TXT)
+
+- **实现 dns.reverse(ip, callback)**
+  - 反向 DNS 查询 (PTR 记录)
+
+#### v0.3.67 技术实现
+- 使用系统 DNS 解析 (std::net::ToSocketAddrs)
+- 完整的 V8 回调模式实现
+- 正确的借用了解决策避免 borrow checker 错误
+- 与现有 Node.js API 风格一致
+
+#### v0.3.67 测试结果
+```bash
+$ cargo test --test dns_module_tests
+running 18 tests
+test result: ok. 18 passed; 0 failed
+```
+
+#### v0.3.67 下一步计划
+- 增强 http.request() 使用 dns.lookup() 进行真实的域名解析
+- 实现异步 DNS 查询（使用 tokio）
+- 继续完善其他 Node.js API 模块
+
+---
+
 ### v0.3.66 完成 fs.promises.readFile 编码参数支持 (2025-12-25)
 **进度**: fs.promises encoding | ✅ 代码已合并
 
