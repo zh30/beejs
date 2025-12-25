@@ -9,6 +9,42 @@
 
 
 
+### v0.3.61 完成 createCipher/createDecipher 实现 (2025-12-25)
+**进度**: createCipher | createDecipher | 19/19 加密测试通过 | ✅ 全部测试通过
+
+#### v0.3.61 新增功能
+- **实现 createCipher() 对称加密**
+  - 支持 AES-128/192/256-CBC、ECB、CTR 模式
+  - 自动从密码派生密钥（基于 blake3 哈希）
+  - 支持输入/输出编码参数（utf8、buffer）
+  - 实现 update() 和 final() 方法
+  - 实现 setAutoPadding() 方法（noop）
+
+- **实现 createDecipher() 对称解密**
+  - 支持与 createCipher 相同的算法
+  - 自动从密码派生密钥
+  - 支持 input/output encoding 参数
+  - 实现 update() 返回 UTF-8 字符串功能
+  - 实现 setAutoPadding() 方法（noop）
+
+#### v0.3.61 技术修复
+- **修复 V8 BackingStore 内存安全问题**
+  - 使用 `store.data()` 替代 `store.as_ref().as_ptr()` 获取原始指针
+  - 使用 `store.byte_length()` 替代 `store.len()` 避免 Deref panic
+  - 在访问指针前添加 null 检查
+
+#### v0.3.61 测试结果
+```bash
+$ cargo test --test crypto_cipher_tests
+running 19 tests
+test result: ok. 19 passed; 0 failed
+```
+
+#### v0.3.61 下一步计划
+- 实现 timers 模块（setTimeout、setInterval）
+- 增强 crypto 模块（添加更多算法支持）
+- 完善 http 模块
+
 ### v0.3.60 修复 Buffer.slice() 编译错误并完成测试 (2025-12-25)
 **进度**: Buffer.slice | 21/21 Buffer 测试通过 | 51/51 Stream 测试通过 | ✅ 编译和测试全部通过
 

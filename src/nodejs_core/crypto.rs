@@ -7,6 +7,7 @@ use sha1::{Sha1, Digest};
 use ring::digest;
 use ring::hmac;
 use blake3::Hasher;
+use openssl::symm::{Cipher, Crypter, Mode};
 /// 设置Crypto API
 pub fn setup_crypto_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -33,6 +34,16 @@ pub fn setup_crypto_api(
     let random_bytes_sync_instance: _ = random_bytes_sync_func.get_function(scope).unwrap();
     let random_bytes_sync_key: _ = v8::String::new(scope, "randomBytesSync").unwrap();
     crypto_obj.set(scope, random_bytes_sync_key.into(), random_bytes_sync_instance.into());
+    // createCipher - v0.3.61: 添加对称加密支持
+    let create_cipher_func: _ = v8::FunctionTemplate::new(scope, create_cipher_callback);
+    let create_cipher_instance: _ = create_cipher_func.get_function(scope).unwrap();
+    let create_cipher_key: _ = v8::String::new(scope, "createCipher").unwrap();
+    crypto_obj.set(scope, create_cipher_key.into(), create_cipher_instance.into());
+    // createDecipher - v0.3.61: 添加对称解密支持
+    let create_decipher_func: _ = v8::FunctionTemplate::new(scope, create_decipher_callback);
+    let create_decipher_instance: _ = create_decipher_func.get_function(scope).unwrap();
+    let create_decipher_key: _ = v8::String::new(scope, "createDecipher").unwrap();
+    crypto_obj.set(scope, create_decipher_key.into(), create_decipher_instance.into());
     // 设置crypto对象到全局
     let global: _ = context.global(scope);
     let crypto_key: _ = v8::String::new(scope, "crypto").unwrap();
@@ -338,8 +349,11 @@ fn random_bytes_callback(
     // Copy random data to ArrayBuffer's backing store (only if size > 0)
     if size > 0 {
         let store = buffer_obj.get_backing_store();
-        let slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, size) };
-        slice.copy_from_slice(&random_data);
+        let ptr = store.data() as *mut u8;
+        if !ptr.is_null() {
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr, size) };
+            slice.copy_from_slice(&random_data);
+        }
     }
 
     // Check if callback is provided as second argument
@@ -394,12 +408,522 @@ fn random_bytes_sync_callback(
     // Copy random data to ArrayBuffer's backing store (only if size > 0)
     if size > 0 {
         let store = buffer_obj.get_backing_store();
-        let slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, size) };
-        slice.copy_from_slice(&random_data);
+        let ptr = store.data() as *mut u8;
+        if !ptr.is_null() {
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr, size) };
+            slice.copy_from_slice(&random_data);
+        }
     }
 
     // Return Uint8Array for consistency with Node.js
     if let Some(uint8_array) = v8::Uint8Array::new(scope, buffer_obj, 0, size) {
         retval.set(uint8_array.into());
     }
+}
+
+/// 获取 OpenSSL Cipher 对象
+fn get_cipher(algorithm: &str) -> Option<Cipher> {
+    match algorithm.to_lowercase().as_str() {
+        "aes-128-cbc" | "aes128-cbc" => Some(Cipher::aes_128_cbc()),
+        "aes-192-cbc" | "aes192-cbc" => Some(Cipher::aes_192_cbc()),
+        "aes-256-cbc" | "aes256-cbc" => Some(Cipher::aes_256_cbc()),
+        "aes-128-ecb" | "aes128-ecb" => Some(Cipher::aes_128_ecb()),
+        "aes-192-ecb" | "aes192-ecb" => Some(Cipher::aes_192_ecb()),
+        "aes-256-ecb" | "aes256-ecb" => Some(Cipher::aes_256_ecb()),
+        "aes-128-ctr" | "aes128-ctr" => Some(Cipher::aes_128_ctr()),
+        "aes-192-ctr" | "aes192-ctr" => Some(Cipher::aes_192_ctr()),
+        "aes-256-ctr" | "aes256-ctr" => Some(Cipher::aes_256_ctr()),
+        _ => None,
+    }
+}
+
+/// 创建加密/解密器辅助函数
+fn create_crypter(
+    algorithm: &str,
+    key: &[u8],
+    iv: Option<&[u8]>,
+    is_encrypt: bool,
+) -> Option<Crypter> {
+    let cipher = get_cipher(algorithm)?;
+    let mode = if is_encrypt { Mode::Encrypt } else { Mode::Decrypt };
+
+    let mut crypter = Crypter::new(cipher, mode, key, iv).ok()?;
+    // 添加块大小作为缓冲区（用于最终块）
+    crypter.pad(true);
+    Some(crypter)
+}
+
+/// createCipher 回调函数 - v0.3.61
+/// 创建对称加密 Cipher 对象
+fn create_cipher_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let algorithm: String = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    // 验证算法是否支持
+    if get_cipher(&algorithm).is_none() {
+        let error_msg = v8::String::new(scope, "unsupported algorithm").unwrap();
+        let error = v8::Exception::error(scope, error_msg);
+        scope.throw_exception(error);
+        return;
+    }
+
+    // 支持密码作为 Buffer 或字符串
+    let password_data: Vec<u8> = if args.get(1).is_string() {
+        let password: String = args
+            .get(1)
+            .to_string(scope)
+            .map(|s| s.to_rust_string_lossy(scope))
+            .unwrap_or_default();
+        password.into_bytes()
+    } else if args.get(1).is_array_buffer_view() {
+        // 处理 Buffer 输入
+        if let Ok(uint8_arr) = v8::Local::<v8::Uint8Array>::try_from(args.get(1)) {
+            let len = uint8_arr.byte_length();
+            let mut data = vec![0u8; len];
+            uint8_arr.copy_contents(&mut data);
+            data
+        } else {
+            Vec::new()
+        }
+    } else {
+        Vec::new()
+    };
+
+    // 可选的 IV 参数
+    let iv_data: Option<Vec<u8>> = if !args.get(2).is_undefined() {
+        Some(if args.get(2).is_string() {
+            let iv_str: String = args
+                .get(2)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+            iv_str.into_bytes()
+        } else if args.get(2).is_array_buffer_view() {
+            if let Ok(uint8_arr) = v8::Local::<v8::Uint8Array>::try_from(args.get(2)) {
+                let len = uint8_arr.byte_length();
+                let mut data = vec![0u8; len];
+                uint8_arr.copy_contents(&mut data);
+                data
+            } else {
+                Vec::new()
+            }
+        } else {
+            Vec::new()
+        })
+    } else {
+        None
+    };
+
+    // 生成密钥（根据算法派生）
+    let key = derive_key(&algorithm, &password_data);
+
+    // 创建 cipher 对象
+    let cipher_obj: _ = v8::Object::new(scope);
+
+    // 保存加密状态
+    let algo_key: _ = v8::String::new(scope, "_algorithm").unwrap();
+    let algo_val: _ = v8::String::new(scope, &algorithm).unwrap();
+    cipher_obj.set(scope, algo_key.into(), algo_val.into());
+
+    let key_key: _ = v8::String::new(scope, "_key").unwrap();
+    let key_buffer = v8::ArrayBuffer::new(scope, key.len());
+    // 复制密钥数据到缓冲区
+    if key.len() > 0 {
+        let store = key_buffer.get_backing_store();
+        let ptr = store.data() as *mut u8;
+        if !ptr.is_null() {
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr, key.len()) };
+            slice.copy_from_slice(&key);
+        }
+    }
+    cipher_obj.set(scope, key_key.into(), key_buffer.into());
+
+    let iv_key: _ = v8::String::new(scope, "_iv").unwrap();
+    let iv_len = iv_data.as_ref().map(|v| v.len()).unwrap_or(0);
+    let iv_buffer = v8::ArrayBuffer::new(scope, iv_len);
+    // 复制 IV 数据到缓冲区
+    if let Some(iv_data_ref) = iv_data.as_ref() {
+        if iv_data_ref.len() > 0 {
+            let store = iv_buffer.get_backing_store();
+            let ptr = store.data() as *mut u8;
+            if !ptr.is_null() {
+                let slice = unsafe { std::slice::from_raw_parts_mut(ptr, iv_data_ref.len()) };
+                slice.copy_from_slice(iv_data_ref);
+            }
+        }
+    }
+    cipher_obj.set(scope, iv_key.into(), iv_buffer.into());
+
+    let encrypt_key: _ = v8::String::new(scope, "_encrypt").unwrap();
+    let encrypt_val = v8::Boolean::new(scope, true);
+    cipher_obj.set(scope, encrypt_key.into(), encrypt_val.into());
+
+    // 内部状态 - 待处理的数据
+    let pending_key: _ = v8::String::new(scope, "_pendingData").unwrap();
+    let pending_val: _ = v8::ArrayBuffer::new(scope, 0);
+    cipher_obj.set(scope, pending_key.into(), pending_val.into());
+
+    // update 方法
+    let update_func: _ = v8::FunctionTemplate::new(scope, cipher_update_callback);
+    let update_instance: _ = update_func.get_function(scope).unwrap();
+    let update_key: _ = v8::String::new(scope, "update").unwrap();
+    cipher_obj.set(scope, update_key.into(), update_instance.into());
+
+    // final 方法
+    let final_func: _ = v8::FunctionTemplate::new(scope, cipher_final_callback);
+    let final_instance: _ = final_func.get_function(scope).unwrap();
+    let final_key: _ = v8::String::new(scope, "final").unwrap();
+    cipher_obj.set(scope, final_key.into(), final_instance.into());
+
+    // setAutoPadding 方法 (noop - padding is always enabled)
+    let set_auto_padding_func: _ = v8::FunctionTemplate::new(scope, set_auto_padding_callback);
+    let set_auto_padding_instance = set_auto_padding_func.get_function(scope).unwrap();
+    let set_auto_padding_key: _ = v8::String::new(scope, "setAutoPadding").unwrap();
+    cipher_obj.set(scope, set_auto_padding_key.into(), set_auto_padding_instance.into());
+
+    retval.set(cipher_obj.into());
+}
+
+/// createDecipher 回调函数 - v0.3.61
+/// 创建对称解密 Decipher 对象
+fn create_decipher_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let algorithm: String = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    // 验证算法是否支持
+    if get_cipher(&algorithm).is_none() {
+        let error_msg = v8::String::new(scope, "unsupported algorithm").unwrap();
+        let error = v8::Exception::error(scope, error_msg);
+        scope.throw_exception(error);
+        return;
+    }
+
+    // 支持密码作为 Buffer 或字符串
+    let password_data: Vec<u8> = if args.get(1).is_string() {
+        let password: String = args
+            .get(1)
+            .to_string(scope)
+            .map(|s| s.to_rust_string_lossy(scope))
+            .unwrap_or_default();
+        password.into_bytes()
+    } else if args.get(1).is_array_buffer_view() {
+        if let Ok(uint8_arr) = v8::Local::<v8::Uint8Array>::try_from(args.get(1)) {
+            let len = uint8_arr.byte_length();
+            let mut data = vec![0u8; len];
+            uint8_arr.copy_contents(&mut data);
+            data
+        } else {
+            Vec::new()
+        }
+    } else {
+        Vec::new()
+    };
+
+    // 可选的 IV 参数
+    let iv_data: Option<Vec<u8>> = if !args.get(2).is_undefined() {
+        Some(if args.get(2).is_string() {
+            let iv_str: String = args
+                .get(2)
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+            iv_str.into_bytes()
+        } else if args.get(2).is_array_buffer_view() {
+            if let Ok(uint8_arr) = v8::Local::<v8::Uint8Array>::try_from(args.get(2)) {
+                let len = uint8_arr.byte_length();
+                let mut data = vec![0u8; len];
+                uint8_arr.copy_contents(&mut data);
+                data
+            } else {
+                Vec::new()
+            }
+        } else {
+            Vec::new()
+        })
+    } else {
+        None
+    };
+
+    // 生成密钥
+    let key = derive_key(&algorithm, &password_data);
+
+    // 创建 decipher 对象
+    let decipher_obj: _ = v8::Object::new(scope);
+
+    // 保存解密状态
+    let algo_key: _ = v8::String::new(scope, "_algorithm").unwrap();
+    let algo_val: _ = v8::String::new(scope, &algorithm).unwrap();
+    decipher_obj.set(scope, algo_key.into(), algo_val.into());
+
+    let key_key: _ = v8::String::new(scope, "_key").unwrap();
+    let key_buffer = v8::ArrayBuffer::new(scope, key.len());
+    // 复制密钥数据到缓冲区
+    if key.len() > 0 {
+        let store = key_buffer.get_backing_store();
+        let ptr = store.data() as *mut u8;
+        if !ptr.is_null() {
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr, key.len()) };
+            slice.copy_from_slice(&key);
+        }
+    }
+    decipher_obj.set(scope, key_key.into(), key_buffer.into());
+
+    let iv_key: _ = v8::String::new(scope, "_iv").unwrap();
+    let iv_len = iv_data.as_ref().map(|v| v.len()).unwrap_or(0);
+    let iv_buffer = v8::ArrayBuffer::new(scope, iv_len);
+    // 复制 IV 数据到缓冲区
+    if let Some(iv_data_ref) = iv_data.as_ref() {
+        if iv_data_ref.len() > 0 {
+            let store = iv_buffer.get_backing_store();
+            let ptr = store.data() as *mut u8;
+            if !ptr.is_null() {
+                let slice = unsafe { std::slice::from_raw_parts_mut(ptr, iv_data_ref.len()) };
+                slice.copy_from_slice(iv_data_ref);
+            }
+        }
+    }
+    decipher_obj.set(scope, iv_key.into(), iv_buffer.into());
+
+    let encrypt_key: _ = v8::String::new(scope, "_encrypt").unwrap();
+    let encrypt_val = v8::Boolean::new(scope, false);
+    decipher_obj.set(scope, encrypt_key.into(), encrypt_val.into());
+
+    // 内部状态
+    let pending_key: _ = v8::String::new(scope, "_pendingData").unwrap();
+    let pending_val: _ = v8::ArrayBuffer::new(scope, 0);
+    decipher_obj.set(scope, pending_key.into(), pending_val.into());
+
+    // update 方法
+    let update_func: _ = v8::FunctionTemplate::new(scope, cipher_update_callback);
+    let update_instance: _ = update_func.get_function(scope).unwrap();
+    let update_key: _ = v8::String::new(scope, "update").unwrap();
+    decipher_obj.set(scope, update_key.into(), update_instance.into());
+
+    // final 方法
+    let final_func: _ = v8::FunctionTemplate::new(scope, cipher_final_callback);
+    let final_instance: _ = final_func.get_function(scope).unwrap();
+    let final_key: _ = v8::String::new(scope, "final").unwrap();
+    decipher_obj.set(scope, final_key.into(), final_instance.into());
+
+    // setAutoPadding 方法 (noop - padding is always enabled)
+    let set_auto_padding_func: _ = v8::FunctionTemplate::new(scope, set_auto_padding_callback);
+    let set_auto_padding_instance = set_auto_padding_func.get_function(scope).unwrap();
+    let set_auto_padding_key: _ = v8::String::new(scope, "setAutoPadding").unwrap();
+    decipher_obj.set(scope, set_auto_padding_key.into(), set_auto_padding_instance.into());
+
+    retval.set(decipher_obj.into());
+}
+
+/// 根据算法和密码派生密钥
+fn derive_key(algorithm: &str, password: &[u8]) -> Vec<u8> {
+    // 根据算法确定密钥长度
+    let key_len = if algorithm.to_lowercase().contains("128") {
+        16
+    } else if algorithm.to_lowercase().contains("192") {
+        24
+    } else {
+        32 // 默认 256 位
+    };
+
+    if password.len() >= key_len {
+        password[..key_len].to_vec()
+    } else {
+        // 使用 EVP_BytesToKey 派生密钥（简化版本）
+        let mut derived = vec![0u8; key_len];
+        let mut hash = blake3::Hasher::new();
+
+        // 简单的密码派生：循环哈希
+        let mut counter: u32 = 0;
+        let mut current_input = password.to_vec();
+
+        while derived.iter().any(|&b| b == 0) {
+            counter += 1;
+            let counter_bytes = counter.to_le_bytes();
+            let mut input = current_input.clone();
+            input.extend_from_slice(&counter_bytes);
+
+            hash.update(&input);
+            let output = hash.finalize();
+            let output_bytes = output.as_bytes();
+
+            for (i, byte) in output_bytes.iter().enumerate() {
+                if i < key_len && derived[i] == 0 {
+                    derived[i] = *byte;
+                }
+            }
+            current_input = input;
+        }
+
+        derived
+    }
+}
+
+/// cipher.update() 回调函数
+fn cipher_update_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this: _ = args.this();
+
+    // 获取输入编码 (默认 'utf8')
+    let input_encoding: String = match args.get(1).to_string(scope) {
+        Some(s) => s.to_rust_string_lossy(scope),
+        None => "utf8".to_string(),
+    };
+
+    // 获取输出编码 (默认 'buffer')
+    let output_encoding: String = match args.get(2).to_string(scope) {
+        Some(s) => s.to_rust_string_lossy(scope),
+        None => "buffer".to_string(),
+    };
+
+    // 获取输入数据
+    let input_data: Vec<u8> = if input_encoding == "buffer" || input_encoding == "binary" {
+        if let Ok(uint8_arr) = v8::Local::<v8::Uint8Array>::try_from(args.get(0)) {
+            let len = uint8_arr.byte_length();
+            let mut data = vec![0u8; len];
+            uint8_arr.copy_contents(&mut data);
+            data
+        } else {
+            Vec::new()
+        }
+    } else {
+        // utf8 或其他字符串编码
+        let input: String = args
+            .get(0)
+            .to_string(scope)
+            .map(|s| s.to_rust_string_lossy(scope))
+            .unwrap_or_default();
+        input.into_bytes()
+    };
+
+    // 获取加密状态
+    let algo_key: _ = v8::String::new(scope, "_algorithm").unwrap();
+    let algorithm: String = this
+        .get(scope, algo_key.into())
+        .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+        .unwrap_or_default();
+
+    let encrypt_key: _ = v8::String::new(scope, "_encrypt").unwrap();
+    let is_encrypt: bool = this
+        .get(scope, encrypt_key.into())
+        .and_then(|v| v.to_boolean(scope).boolean_value(scope).into())
+        .unwrap_or(false);
+
+    // 获取密钥
+    let key_key: _ = v8::String::new(scope, "_key").unwrap();
+    let key_val = this.get(scope, key_key.into()).unwrap();
+    let key: Vec<u8> = if let Ok(buf) = v8::Local::<v8::ArrayBuffer>::try_from(key_val) {
+        let store = buf.get_backing_store();
+        let len = store.byte_length();
+        if len > 0 {
+            let ptr = store.data() as *const u8;
+            if !ptr.is_null() {
+                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() }
+            } else {
+                Vec::new()
+            }
+        } else {
+            Vec::new()
+        }
+    } else {
+        Vec::new()
+    };
+
+    // 获取 IV
+    let iv_key: _ = v8::String::new(scope, "_iv").unwrap();
+    let iv_val = this.get(scope, iv_key.into());
+    let iv: Option<Vec<u8>> = if let Some(iv_obj) = iv_val.and_then(|v| v.to_object(scope)) {
+        if let Ok(iv_buf) = v8::Local::<v8::ArrayBuffer>::try_from(iv_obj) {
+            let store = iv_buf.get_backing_store();
+            let len = store.byte_length();
+            if len > 0 {
+                let ptr = store.data() as *const u8;
+                if !ptr.is_null() {
+                    Some(unsafe { std::slice::from_raw_parts(ptr, len).to_vec() })
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    // 执行加密/解密
+    if let Some(mut crypter) = create_crypter(&algorithm, &key, iv.as_deref(), is_encrypt) {
+        let mut output = vec![0u8; input_data.len() + 32]; // 预留空间
+        let count = crypter.update(&input_data, &mut output).unwrap_or(0);
+        let final_count = crypter.finalize(&mut output[count..]).unwrap_or(0);
+        output.truncate(count + final_count);
+
+        // 根据输出编码返回结果
+        if output_encoding == "utf8" || output_encoding == "utf-8" {
+            // 返回 UTF-8 字符串
+            let result_str = String::from_utf8_lossy(&output);
+            let result_v8_str: _ = v8::String::new(scope, &result_str).unwrap();
+            retval.set(result_v8_str.into());
+        } else {
+            // 返回 Buffer (Uint8Array)
+            let buffer_obj: _ = v8::ArrayBuffer::new(scope, output.len());
+            if output.len() > 0 {
+                let store = buffer_obj.get_backing_store();
+                let ptr = store.data() as *mut u8;
+                if !ptr.is_null() {
+                    let slice = unsafe { std::slice::from_raw_parts_mut(ptr, output.len()) };
+                    slice.copy_from_slice(&output);
+                }
+            }
+            if let Some(uint8_array) = v8::Uint8Array::new(scope, buffer_obj, 0, output.len()) {
+                retval.set(uint8_array.into());
+            }
+        }
+    } else {
+        // 不支持的算法 - 使用测试期望的错误消息格式
+        let error_msg = v8::String::new(scope, "unsupported algorithm").unwrap();
+        let error = v8::Exception::error(scope, error_msg);
+        scope.throw_exception(error);
+    }
+}
+
+/// cipher.final() 回调函数
+fn cipher_final_callback(
+    scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    // final() 不接受参数，返回空的 Uint8Array（因为所有数据已在 update 中处理）
+    let buffer_obj: _ = v8::ArrayBuffer::new(scope, 0);
+    if let Some(uint8_array) = v8::Uint8Array::new(scope, buffer_obj, 0, 0) {
+        retval.set(uint8_array.into());
+    }
+}
+
+/// setAutoPadding 回调函数 (noop - padding is always enabled)
+fn set_auto_padding_callback(
+    _scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    _retval: v8::ReturnValue,
+) {
+    // setAutoPadding 是 noop 方法，不返回值
+    // 返回值由 JS 引擎通过 this 处理
 }
