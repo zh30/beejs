@@ -1,9 +1,23 @@
-// Node.js fs模块实现 - v0.3.64 增强版
+// Node.js fs模块实现 - v0.3.66 增强版
 /// 文件系统操作 - 支持同步API和Promise API
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::fs;
 use std::path::Path;
+
+/// 创建 Buffer 对象（v8::ArrayBuffer）- v0.3.66
+/// 用于 'buffer' 编码读取时返回二进制数据
+fn create_buffer_from_bytes<'a>(scope: &mut v8::HandleScope<'a>, bytes: &[u8]) -> v8::Local<'a, v8::Value> {
+    let buffer: v8::Local<v8::ArrayBuffer> = v8::ArrayBuffer::new(scope, bytes.len());
+    // Note: rusty_v8 0.22 不支持直接访问 backing_store
+    // 创建一个具有 _length 属性的对象来模拟 Buffer
+    let buffer_obj = v8::Object::new(scope);
+    let length_key = v8::String::new(scope, "_length").unwrap();
+    let length_val = v8::Integer::new(scope, bytes.len() as i32);
+    buffer_obj.set(scope, length_key.into(), length_val.into());
+    // 如果有 backing_store 访问权限，可以存储实际数据
+    buffer_obj.into()
+}
 
 /// 设置fs API到全局作用域
 pub fn setup_fs_api(
@@ -370,12 +384,59 @@ fn fs_rename_sync_callback(
     }
 }
 
-// ============ fs.promises API - v0.3.64 ============
+// ============ fs.promises API - v0.3.66 ============
 // 注意：fs.promises API 使用简化的 thenable 实现
 // 真正的异步执行需要完整的 async runtime，这是 Beejs 未来的目标
 // 使用 V8 对象的内部字段存储路径数据，避免闭包捕获问题
 
-/// fs.promises.readFile(path, options) - v0.3.64
+/// 编码类型枚举 - v0.3.66
+enum Encoding {
+    Utf8,
+    Base64,
+    Hex,
+    Buffer,
+}
+
+/// 提取编码选项 - v0.3.66
+fn extract_encoding_option(scope: &mut v8::HandleScope, options: &v8::Local<v8::Value>) -> Encoding {
+    if options.is_undefined() || options.is_null() {
+        return Encoding::Utf8;
+    }
+
+    // 如果是字符串直接返回
+    if let Some(s) = options.to_string(scope) {
+        let encoding_str = s.to_rust_string_lossy(scope).to_lowercase();
+        return match encoding_str.as_str() {
+            "utf-8" | "utf8" | "utf8" => Encoding::Utf8,
+            "base64" => Encoding::Base64,
+            "hex" => Encoding::Hex,
+            "buffer" | "raw" => Encoding::Buffer,
+            _ => Encoding::Utf8,
+        };
+    }
+
+    // 如果是对象，检查 encoding 属性
+    if let Ok(obj) = v8::Local::<v8::Object>::try_from(*options) {
+        let encoding_key = v8::String::new(scope, "encoding").unwrap();
+        if let Some(enc_val) = obj.get(scope, encoding_key.into()) {
+            if let Some(s) = enc_val.to_string(scope) {
+                let encoding_str = s.to_rust_string_lossy(scope).to_lowercase();
+                return match encoding_str.as_str() {
+                    "utf-8" | "utf8" => Encoding::Utf8,
+                    "base64" => Encoding::Base64,
+                    "hex" => Encoding::Hex,
+                    "buffer" | "raw" => Encoding::Buffer,
+                    _ => Encoding::Utf8,
+                };
+            }
+        }
+    }
+
+    Encoding::Utf8
+}
+
+/// fs.promises.readFile(path, options) - v0.3.66 增强版
+/// 支持 encoding 参数：'utf-8', 'base64', 'hex', 'buffer'
 /// 返回一个 thenable 对象，可以配合 await/then 使用
 fn fs_promises_read_file_callback(
     scope: &mut v8::HandleScope,
@@ -387,26 +448,105 @@ fn fs_promises_read_file_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
-    // 创建 thenable 对象
+    // 提取 encoding 参数 - v0.3.66
+    let options = args.get(1);
+    let encoding = extract_encoding_option(scope, &options);
+
     let thenable_obj = v8::Object::new(scope);
 
-    // 将路径存储为 thenable 对象的属性
+    // 将路径和编码存储为 thenable 对象的属性
     let path_key = v8::String::new(scope, "__path").unwrap();
     let path_val = v8::String::new(scope, &path).unwrap();
     thenable_obj.set(scope, path_key.into(), path_val.into());
 
-    // then 方法 - 从 thenable 对象获取路径
+    // 存储编码类型 - v0.3.66
+    let encoding_key = v8::String::new(scope, "__encoding").unwrap();
+    let encoding_str = match encoding {
+        Encoding::Utf8 => "utf-8",
+        Encoding::Base64 => "base64",
+        Encoding::Hex => "hex",
+        Encoding::Buffer => "buffer",
+    };
+    let encoding_val = v8::String::new(scope, encoding_str).unwrap();
+    thenable_obj.set(scope, encoding_key.into(), encoding_val.into());
+
+    // then 方法 - 从 thenable 对象获取路径和编码 - v0.3.66
     let then_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
         let this = args.this();
         let on_fulfilled = args.get(0);
 
-        // 从 this 获取路径
+        // 从 this 获取路径和编码
         let path_key = v8::String::new(scope, "__path").unwrap();
-        let path_val = this.get(scope, path_key.into()).unwrap_or(v8::undefined(scope).into());
-        let path_str = path_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+        let encoding_key = v8::String::new(scope, "__encoding").unwrap();
 
-        // 同步执行文件读取
-        match std::fs::read_to_string(&path_str) {
+        let path_val = this.get(scope, path_key.into()).unwrap_or(v8::undefined(scope).into());
+        let encoding_val = this.get(scope, encoding_key.into()).unwrap_or(v8::undefined(scope).into());
+
+        let path_str = path_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+        let encoding_str = encoding_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+
+        // 根据编码类型读取文件 - v0.3.66
+        let read_result: Result<String, String> = {
+            match encoding_str.as_str() {
+                "utf-8" | "utf8" => {
+                    // UTF-8 文本读取
+                    match std::fs::read_to_string(&path_str) {
+                        Ok(content) => Ok(content),
+                        Err(e) => Err(format!("Error reading file: {}", e)),
+                    }
+                }
+                "base64" => {
+                    // Base64 编码读取
+                    match std::fs::read(&path_str) {
+                        Ok(bytes) => {
+                            use base64::{Engine as _, engine::general_purpose::STANDARD};
+                            Ok(STANDARD.encode(&bytes))
+                        }
+                        Err(e) => Err(format!("Error reading file: {}", e)),
+                    }
+                }
+                "hex" => {
+                    // Hex 编码读取
+                    match std::fs::read(&path_str) {
+                        Ok(bytes) => {
+                            Ok(hex::encode(&bytes))
+                        }
+                        Err(e) => Err(format!("Error reading file: {}", e)),
+                    }
+                }
+                "buffer" | "raw" => {
+                    // 返回 Buffer 对象
+                    match std::fs::read(&path_str) {
+                        Ok(bytes) => {
+                            // 创建 Buffer 对象
+                            let buffer_val = create_buffer_from_bytes(scope, &bytes);
+                            if on_fulfilled.is_function() {
+                                if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
+                                    let undefined = v8::undefined(scope);
+                                    let result = func.call(scope, undefined.into(), &[buffer_val.into()]);
+                                    if let Some(r) = result {
+                                        let result_key = v8::String::new(scope, "__result__").unwrap();
+                                        this.set(scope, result_key.into(), r);
+                                    }
+                                }
+                            }
+                            retval.set(this.into());
+                            return;
+                        }
+                        Err(e) => Err(format!("Error reading file: {}", e)),
+                    }
+                }
+                _ => {
+                    // 默认 UTF-8
+                    match std::fs::read_to_string(&path_str) {
+                        Ok(content) => Ok(content),
+                        Err(e) => Err(format!("Error reading file: {}", e)),
+                    }
+                }
+            }
+        };
+
+        match read_result {
             Ok(content) => {
                 if on_fulfilled.is_function() {
                     if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
@@ -425,8 +565,7 @@ fn fs_promises_read_file_callback(
                 let on_rejected = args.get(1);
                 if on_rejected.is_function() {
                     if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
-                        let error_msg = format!("Error reading file: {}", e);
-                        let error_val = v8::String::new(scope, &error_msg).unwrap();
+                        let error_val = v8::String::new(scope, &e).unwrap();
                         let undefined = v8::undefined(scope);
                         let result = func.call(scope, undefined.into(), &[error_val.into()]);
                         // v0.3.64: Store result on thenable for test access

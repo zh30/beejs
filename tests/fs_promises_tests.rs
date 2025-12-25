@@ -263,3 +263,125 @@ fn test_fs_promises_readfile_error_handling() {
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "function", "readFile error should return a Promise with .catch method");
 }
+
+// ============ v0.3.66: Encoding Tests ============
+
+#[test]
+#[serial]
+fn test_fs_promises_readfile_utf8_encoding() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let test_file = temp_dir.path().join("test_utf8.txt");
+    fs::write(&test_file, "Hello, 世界!").expect("Failed to write test file");
+
+    // Test with 'utf-8' encoding string
+    let code = format!(r#"
+        const fsPromises = require('fs/promises');
+        const result = fsPromises.readFile("{}", "utf-8");
+        typeof result.then;
+    "#, test_file.to_string_lossy().into_owned());
+
+    let result = runtime.execute_code(&code).expect("Execution failed");
+    assert_eq!(result.trim(), "function", "readFile with encoding should return a thenable");
+}
+
+#[test]
+#[serial]
+fn test_fs_promises_readfile_base64_encoding() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    // Write binary data that encodes to a known base64 string
+    // "Hello" = "SGVsbG8=" in base64
+    let test_file = temp_dir.path().join("test_base64.txt");
+    fs::write(&test_file, "Hello").expect("Failed to write test file");
+
+    let code = format!(r#"
+        const fsPromises = require('fs/promises');
+        const result = fsPromises.readFile("{}", "base64");
+        typeof result.then;
+    "#, test_file.to_string_lossy().into_owned());
+
+    let result = runtime.execute_code(&code).expect("Execution failed");
+    assert_eq!(result.trim(), "function", "readFile with base64 encoding should return a thenable");
+}
+
+#[test]
+#[serial]
+fn test_fs_promises_readfile_hex_encoding() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    // Write binary data
+    let test_file = temp_dir.path().join("test_hex.txt");
+    fs::write(&test_file, "Hello").expect("Failed to write test file");
+
+    let code = format!(r#"
+        const fsPromises = require('fs/promises');
+        const result = fsPromises.readFile("{}", "hex");
+        typeof result.then;
+    "#, test_file.to_string_lossy().into_owned());
+
+    let result = runtime.execute_code(&code).expect("Execution failed");
+    assert_eq!(result.trim(), "function", "readFile with hex encoding should return a thenable");
+}
+
+#[test]
+#[serial]
+fn test_fs_promises_readfile_buffer_encoding() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let test_file = temp_dir.path().join("test_buffer.txt");
+    fs::write(&test_file, "Binary data").expect("Failed to write test file");
+
+    let code = format!(r#"
+        const fsPromises = require('fs/promises');
+        const result = fsPromises.readFile("{}", "buffer");
+        typeof result.then;
+    "#, test_file.to_string_lossy().into_owned());
+
+    let result = runtime.execute_code(&code).expect("Execution failed");
+    assert_eq!(result.trim(), "function", "readFile with buffer encoding should return a thenable");
+}
+
+#[test]
+#[serial]
+fn test_fs_promises_readfile_encoding_object_option() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let test_file = temp_dir.path().join("test_object_option.txt");
+    fs::write(&test_file, "Test content").expect("Failed to write test file");
+
+    // Test with object encoding option
+    let code = format!(r#"
+        const fsPromises = require('fs/promises');
+        const result = fsPromises.readFile("{}", {{encoding: "utf-8"}});
+        typeof result.then;
+    "#, test_file.to_string_lossy().into_owned());
+
+    let result = runtime.execute_code(&code).expect("Execution failed");
+    assert_eq!(result.trim(), "function", "readFile with object encoding option should return a thenable");
+}
+
+#[test]
+#[serial]
+fn test_fs_promises_readfile_default_encoding() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let test_file = temp_dir.path().join("test_default.txt");
+    fs::write(&test_file, "Default encoding test").expect("Failed to write test file");
+
+    // Test without encoding (should default to utf-8)
+    let code = format!(r#"
+        const fsPromises = require('fs/promises');
+        const result = fsPromises.readFile("{}");
+        typeof result.then;
+    "#, test_file.to_string_lossy().into_owned());
+
+    let result = runtime.execute_code(&code).expect("Execution failed");
+    assert_eq!(result.trim(), "function", "readFile without encoding should return a thenable with default utf-8");
+}
