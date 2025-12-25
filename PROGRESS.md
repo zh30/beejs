@@ -6194,7 +6194,29 @@ pipeline(r, t, w, (err) => {
 - ✅ `cargo build --release` 成功
 - ✅ 二进制版本: beejs 0.1.6
 
-#### v0.3.80 下一步计划
-- 运行完整测试套件验证
-- 继续实现 stream.passThrough()
-- 完善 pipeline 回调错误处理
+### ✨ v0.3.81 简化 stream 回调处理 (2025-12-26)
+**进度**: ✅ 回调处理简化 | ✅ 68/68 测试通过 | ✅ 编译成功
+
+#### v0.3.81 改进内容
+- **简化 writable_public_write_callback**
+  - 移除冗余的回调调用，改为直接传递回调参数
+  - 修正 `_write` 回调的正确传递方式
+  - 添加错误处理注释说明
+
+- **代码清理**
+  - 移除不必要的闭包包装尝试
+  - 保持代码简洁可维护
+
+#### v0.3.81 技术说明
+由于 MinimalRuntime 没有完整的事件循环，完整的错误处理需要后续实现完整的事件循环支持。当前的简化处理确保了基本的流功能正常工作。
+
+#### v0.3.81 验证
+- ✅ `cargo build` 成功
+- ✅ `cargo test --test stream_module_tests` → 68/68 通过
+- ✅ `cargo test --test crypto_createhash_tests` → 12/12 通过
+- ✅ `cargo test --test crypto_createhmac_tests` → 14/14 通过
+
+#### v0.3.81 下一步计划
+- 实现完整的事件循环以支持高级错误处理
+- 启用更多 nodejs_core 子模块 (dns, tls, etc.)
+- 完善 http.request() 真实网络请求功能
