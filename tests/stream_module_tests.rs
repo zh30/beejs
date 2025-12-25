@@ -825,3 +825,89 @@ fn test_readable_pipe_triggers_writable_end() {
 //     assert!(result.is_ok());
 //     assert_eq!(result.unwrap().trim(), "HELLO");
 // }
+
+// v0.3.59: stream.pipeline() tests
+#[test]
+#[serial]
+fn test_stream_pipeline_exists() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"typeof stream.pipeline"#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_stream_pipeline_two_streams() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        let output = '';
+        const r = new stream.Readable({
+          read() {
+            this.push('hello');
+            this.push(null);
+          }
+        });
+        const w = new stream.Writable({
+          _write(chunk, encoding, callback) {
+            output += chunk;
+            callback();
+          }
+        });
+        const result = stream.pipeline(r, w);
+        result === w && output === 'hello'
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_stream_pipeline_returns_last_writable() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    // Test that pipeline returns the destination stream (writable)
+    let result = runtime.execute_code(
+        r#"
+        const r = new stream.Readable({ read() { this.push(null); } });
+        const w = new stream.Writable({ _write(chunk, encoding, cb) { cb(); } });
+        const result = stream.pipeline(r, w);
+        // pipeline should return the destination (writable stream)
+        typeof result === 'object' && result !== null
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_stream_pipeline_finish_event() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        let finished = false;
+        let output = '';
+        const r = new stream.Readable({
+          read() {
+            this.push('test');
+            this.push(null);
+          }
+        });
+        const w = new stream.Writable({
+          _write(chunk, encoding, callback) {
+            output += chunk;
+            callback();
+          }
+        });
+        w.on('finish', () => { finished = true; });
+        stream.pipeline(r, w);
+        finished && output === 'test'
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}

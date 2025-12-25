@@ -93,6 +93,13 @@ pub fn setup_stream_api(
     let duplex_func: _ = duplex_constructor.get_function(scope).unwrap();
     let duplex_key: _ = v8::String::new(scope, "Duplex").unwrap();
     stream_obj.set(scope, duplex_key.into(), duplex_func.into());
+
+    // v0.3.59: pipeline 函数 - 将多个流依次连接
+    let pipeline_fn: _ = v8::FunctionTemplate::new(scope, stream_pipeline_callback);
+    let pipeline_func: _ = pipeline_fn.get_function(scope).unwrap();
+    let pipeline_key: _ = v8::String::new(scope, "pipeline").unwrap();
+    stream_obj.set(scope, pipeline_key.into(), pipeline_func.into());
+
     // 设置到全局
     let stream_key: _ = v8::String::new(scope, "stream").unwrap();
     global.set(scope, stream_key.into(), stream_obj.into());
@@ -1079,3 +1086,65 @@ fn duplex_constructor_callback(
 
     retval.set(stream_obj.into());
 }
+
+/// v0.3.59: stream.pipeline() 实现
+/// 将多个流依次连接，返回最后一个 Writable 流
+fn stream_pipeline_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    // 获取所有流参数
+    let mut streams: Vec<v8::Local<v8::Value>> = Vec::new();
+
+    for i in 0..args.length() {
+        let stream: v8::Local<v8::Value> = args.get(i);
+        if stream.is_object() {
+            streams.push(stream);
+        }
+    }
+
+    // 需要至少两个流
+    if streams.len() < 2 {
+        retval.set(v8::undefined(scope).into());
+        return;
+    }
+
+    // 依次建立管道连接
+    let mut last_writable: Option<v8::Local<v8::Value>> = None;
+
+    for i in 0..streams.len() - 1 {
+        let source = streams[i];
+        let destination = streams[i + 1];
+
+        if let (Some(source_obj), Some(dest_obj)) = (source.to_object(scope), destination.to_object(scope)) {
+            // 检查是否是有效的流
+            let pipe_key: v8::Local<v8::Value> = v8::String::new(scope, "pipe").unwrap().into();
+
+            if source_obj.has(scope, pipe_key).unwrap_or(false) {
+                if let Some(pipe_func) = source_obj.get(scope, pipe_key) {
+                    if pipe_func.is_function() {
+                        if let Ok(pipe_fn) = v8::Local::<v8::Function>::try_from(pipe_func) {
+                            // 调用 source.pipe(destination)
+                            pipe_fn.call(scope, source.into(), &[destination]);
+
+                            // 如果是 Writable，更新 last_writable
+                            let end_key: v8::Local<v8::Value> = v8::String::new(scope, "end").unwrap().into();
+                            if dest_obj.has(scope, end_key).unwrap_or(false) {
+                                last_writable = Some(destination);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 返回最后一个 Writable 流
+    if let Some(last) = last_writable {
+        retval.set(last);
+    } else {
+        retval.set(v8::undefined(scope).into());
+    }
+}
+

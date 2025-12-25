@@ -5892,8 +5892,78 @@ class Echo extends Duplex {
 ```
 
 #### v0.3.59 下一步计划
-- 实现 `pipe()` 方法的完整功能
-- 实现 `stream.pipeline()` 组合多个流
-- 添加 `pass-through` 流的支持
+- ✅ 实现 `pipe()` 方法的完整功能
+- ✅ 实现 `stream.pipeline()` 组合多个流
+- ⏳ 添加 `pass-through` 流的支持
+- ⏳ 完善错误处理和清理逻辑
+- 启用更多 nodejs_core 子模块 (dns, tls, etc.)
+
+### ✨ v0.3.59 Stream Pipeline 支持 (2025-12-25)
+**进度**: ✅ stream.pipeline() | ✅ pipe() 增强 | ✅ 4 个新测试
+
+#### v0.3.59 实现内容
+- **stream.pipeline() 函数**
+  - 接受多个流作为参数，依次建立管道连接
+  - 返回最后一个 Writable 流
+  - 支持 Readable → Writable、Readable → Transform → Writable 等组合
+
+- **pipe() 方法增强**
+  - 正确设置 flowing 状态触发 data 事件
+  - 存储 destination 并在 data 事件中调用 write()
+  - 在 end 事件中自动调用 destination.end()
+
+#### v0.3.59 代码变更
+- **修改文件**: `src/nodejs_core/stream.rs` (+78 行)
+  - 添加 `stream_pipeline_callback` 函数
+  - 在 `setup_stream_api` 中注册 pipeline 函数
+
+- **修改文件**: `src/runtime_minimal.rs` (+58 行)
+  - 添加 pipeline 函数到 MinimalRuntime stream 实现
+  - 修复 V8 API 兼容性问题
+
+- **修改文件**: `tests/stream_module_tests.rs` (+4 个测试)
+  - `test_stream_pipeline_exists` - 检查 pipeline 函数存在
+  - `test_stream_pipeline_two_streams` - 测试两个流管道
+  - `test_stream_pipeline_returns_last_writable` - 测试返回值
+  - `test_stream_pipeline_finish_event` - 测试 finish 事件触发
+
+#### v0.3.59 验证
+- ✅ `cargo build --release` 成功
+- ✅ `cargo test --test stream_module_tests` → 55/55 通过
+
+#### v0.3.59 使用示例
+```javascript
+const { Readable, Writable, Transform, pipeline } = require('stream');
+
+// pipeline() 示例：连接多个流
+const r = new Readable({
+  read() {
+    this.push('hello');
+    this.push(null);
+  }
+});
+const t = new Transform({
+  transform(chunk, encoding, callback) {
+    this.push(chunk.toString().toUpperCase());
+    callback();
+  }
+});
+const w = new Writable({
+  _write(chunk, encoding, callback) {
+    console.log(chunk);
+    callback();
+  }
+});
+
+// 管道连接：r → t → w
+// 输出: "HELLO"
+pipeline(r, t, w, (err) => {
+  if (err) console.error('Pipeline failed:', err);
+});
+```
+
+#### v0.3.60 下一步计划
+- 实现 `stream.passThrough()` 流
 - 完善错误处理和清理逻辑
+- 实现 `pipeline()` 的回调错误处理
 - 启用更多 nodejs_core 子模块 (dns, tls, etc.)

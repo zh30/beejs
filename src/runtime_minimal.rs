@@ -11617,6 +11617,65 @@ impl MinimalRuntime {
         let duplex_key = v8::String::new(scope, "Duplex").unwrap();
         stream_obj.set(scope, duplex_key.into(), duplex_func.into());
 
+        // v0.3.59: pipeline function - connects multiple streams sequentially
+        let pipeline_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Collect all stream arguments
+            let mut streams: Vec<v8::Local<v8::Value>> = Vec::new();
+
+            for i in 0..args.length() {
+                let stream: v8::Local<v8::Value> = args.get(i);
+                if stream.is_object() {
+                    streams.push(stream);
+                }
+            }
+
+            // Need at least 2 streams
+            if streams.len() < 2 {
+                retval.set(v8::undefined(scope).into());
+                return;
+            }
+
+            // Establish pipe connections sequentially
+            let mut last_writable: Option<v8::Local<v8::Value>> = None;
+
+            for i in 0..streams.len() - 1 {
+                let source = streams[i];
+                let destination = streams[i + 1];
+
+                if let (Some(source_obj), Some(dest_obj)) = (source.to_object(scope), destination.to_object(scope)) {
+                    // Check if source has pipe method
+                    let pipe_key: v8::Local<v8::Value> = v8::String::new(scope, "pipe").unwrap().into();
+
+                    if source_obj.has(scope, pipe_key).unwrap_or(false) {
+                        if let Some(pipe_func) = source_obj.get(scope, pipe_key) {
+                            if pipe_func.is_function() {
+                                if let Ok(pipe_fn) = v8::Local::<v8::Function>::try_from(pipe_func) {
+                                    // Call source.pipe(destination)
+                                    pipe_fn.call(scope, source.into(), &[destination]);
+
+                                    // Check if destination has 'end' method (indicates Writable)
+                                    let end_key: v8::Local<v8::Value> = v8::String::new(scope, "end").unwrap().into();
+                                    if dest_obj.has(scope, end_key).unwrap_or(false) {
+                                        last_writable = Some(destination);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Return last Writable stream
+            if let Some(last) = last_writable {
+                retval.set(last);
+            } else {
+                retval.set(v8::undefined(scope).into());
+            }
+        });
+        let pipeline_instance = pipeline_func.get_function(scope).unwrap();
+        let pipeline_key = v8::String::new(scope, "pipeline").unwrap();
+        stream_obj.set(scope, pipeline_key.into(), pipeline_instance.into());
+
         // Set stream as global
         let stream_key = v8::String::new(scope, "stream").unwrap();
         global.set(scope, stream_key.into(), stream_obj.into());
