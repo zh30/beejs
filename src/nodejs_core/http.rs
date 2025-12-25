@@ -121,15 +121,6 @@ impl HttpConnectionPool {
         self.active_connections = self.active_connections.saturating_sub(1);
     }
 
-    /// 获取当前空闲连接数
-    fn free_count(&self, host: &str, port: u16) -> usize {
-        let key = Self::get_key(host, port);
-        self.free_connections
-            .get(&key)
-            .map(|v| v.len())
-            .unwrap_or(0)
-    }
-
     /// 获取当前活跃连接数
     fn active_count(&self) -> usize {
         self.active_connections

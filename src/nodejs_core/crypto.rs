@@ -401,11 +401,11 @@ fn hmac_digest_callback(
             } else {
                 vec![0x36u8; key_bytes.len()]
             };
-            let mut key_xor = key_block.iter().zip(key_bytes.iter()).map(|(a, b)| a ^ b).collect::<Vec<u8>>();
+            let key_xor = key_block.iter().zip(key_bytes.iter()).map(|(a, b)| a ^ b).collect::<Vec<u8>>();
             outer.consume(&key_xor);
             inner.consume(combined_data.as_bytes());
             let inner_digest = inner.clone().finalize();
-            let mut key_xor2 = key_block.iter().zip(key_bytes.iter()).map(|(a, b)| a ^ b).collect::<Vec<u8>>();
+            let key_xor2 = key_block.iter().zip(key_bytes.iter()).map(|(a, b)| a ^ b).collect::<Vec<u8>>();
             let mut final_context = md5::Context::new();
             final_context.consume(&key_xor2);
             final_context.consume(inner_digest.as_ref());

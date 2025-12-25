@@ -11716,12 +11716,9 @@ impl MinimalRuntime {
             stream_obj.set(_scope, _read_key.into(), read_func.into());
 
             // read method
-            let read_public_func = v8::FunctionTemplate::new(_scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                let this = args.this();
-                let size = args.get(0);
-
+            let read_public_func = v8::FunctionTemplate::new(_scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
                 // Return empty string to simulate reading
-                let empty_str: v8::Local<v8::Value> = v8::String::new(scope, "").unwrap().into();
+                let empty_str: v8::Local<v8::Value> = v8::String::new(_scope, "").unwrap().into();
                 retval.set(empty_str);
             }).get_function(_scope).unwrap();
             let read_public_key = v8::String::new(_scope, "read").unwrap();
