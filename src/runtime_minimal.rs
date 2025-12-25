@@ -13,6 +13,10 @@ use reqwest;
 use serde_json;
 use once_cell::sync::Lazy;
 
+// v0.3.50: Import Node.js core modules for path and fs
+use crate::nodejs_core::path::setup_path_api;
+use crate::nodejs_core::fs::setup_fs_api;
+
 // Event listener storage using thread_local (v0.3.46)
 // Note: rustdoc does not generate documentation for macro invocations
 thread_local! {
@@ -1231,6 +1235,12 @@ impl MinimalRuntime {
 
         // Set up process global object (v0.3.17)
         Self::setup_process_api(scope, &context)?;
+
+        // Set up path module (v0.3.50)
+        setup_path_api(scope, &context)?;
+
+        // Set up fs module (v0.3.50)
+        setup_fs_api(scope, &context)?;
 
         // Set up os module (v0.3.37)
         Self::setup_os_api(scope, &context)?;

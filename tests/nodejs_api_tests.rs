@@ -4,8 +4,13 @@ use std::io::Write;
 use tempfile::{NamedTempFile, TempDir};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
+use serial_test::serial;
+
+// v0.3.50: Fixed V8 initialization conflict by adding serial attribute
+// V8 can only be initialized once, so tests must run serially
 
 #[test]
+#[serial]
 fn test_process_argv() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
     // Check that process.argv is an array
@@ -16,6 +21,7 @@ fn test_process_argv() {
 }
 
 #[test]
+#[serial]
 fn test_process_version() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
     let result: _ = runtime.execute_code("process.version");
@@ -26,6 +32,7 @@ fn test_process_version() {
 }
 
 #[test]
+#[serial]
 fn test_process_cwd() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
     let result: _ = runtime.execute_code("process.cwd()");
@@ -36,22 +43,24 @@ fn test_process_cwd() {
 }
 
 #[test]
+#[serial]
 fn test_process_next_tick() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
     let code: _ = r#"
-        let executed: _ = false;
-        process.nextTick(() => {
+        let executed = false;
+        process.nextTick(function() {
             executed = true;
         });
         executed === true;
     "#;
     let result: _ = runtime.execute_code(code);
-    assert!(result.is_ok());
+    assert!(result.is_ok(), "nextTick test failed: {:?}", result);
     let result_str: _ = result.unwrap();
     assert!(result_str.contains("true"), "nextTick callback should have executed, got: {}", result_str);
 }
 
 #[test]
+#[serial]
 fn test_process_next_tick_with_args() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
     let code: _ = r#"
@@ -68,6 +77,7 @@ fn test_process_next_tick_with_args() {
 }
 
 #[test]
+#[serial]
 fn test_process_next_tick_error_handling() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
     // nextTick without callback should throw
@@ -77,6 +87,7 @@ fn test_process_next_tick_error_handling() {
 }
 
 #[test]
+#[serial]
 fn test_path_join() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
     let result: _ = runtime.execute_code(r#"path.join("foo", "bar", "baz")"#);
@@ -86,6 +97,7 @@ fn test_path_join() {
 }
 
 #[test]
+#[serial]
 fn test_path_resolve() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
     let result: _ = runtime.execute_code(r#"path.resolve("foo", "bar")"#);
@@ -96,6 +108,7 @@ fn test_path_resolve() {
 }
 
 #[test]
+#[serial]
 fn test_path_dirname() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
     let result: _ = runtime.execute_code(r#"path.dirname("/foo/bar/baz")"#);
@@ -105,6 +118,7 @@ fn test_path_dirname() {
 }
 
 #[test]
+#[serial]
 fn test_path_basename() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
     let result: _ = runtime.execute_code(r#"path.basename("/foo/bar/baz.txt")"#);
@@ -114,6 +128,7 @@ fn test_path_basename() {
 }
 
 #[test]
+#[serial]
 fn test_path_extname() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
     let result: _ = runtime.execute_code(r#"path.extname("foo/bar/baz.txt")"#);
@@ -123,6 +138,7 @@ fn test_path_extname() {
 }
 
 #[test]
+#[serial]
 fn test_fs_read_file_sync() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
@@ -139,6 +155,7 @@ fn test_fs_read_file_sync() {
 }
 
 #[test]
+#[serial]
 fn test_fs_write_file_sync() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
@@ -157,6 +174,7 @@ fn test_fs_write_file_sync() {
 }
 
 #[test]
+#[serial]
 fn test_fs_exists_sync() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
@@ -172,6 +190,7 @@ fn test_fs_exists_sync() {
 }
 
 #[test]
+#[serial]
 fn test_fs_mkdir_sync() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
@@ -189,6 +208,7 @@ fn test_fs_mkdir_sync() {
 }
 
 #[test]
+#[serial]
 fn test_fs_readdir_sync() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
@@ -204,6 +224,7 @@ fn test_fs_readdir_sync() {
 }
 
 #[test]
+#[serial]
 fn test_fs_stat_sync() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
@@ -220,6 +241,7 @@ fn test_fs_stat_sync() {
 }
 
 #[test]
+#[serial]
 fn test_require_module() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
@@ -239,6 +261,7 @@ fn test_require_module() {
 }
 
 #[test]
+#[serial]
 fn test_require_builtin_module() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
@@ -256,6 +279,7 @@ fn test_require_builtin_module() {
 }
 
 #[test]
+#[serial]
 fn test_require_custom_module() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
@@ -295,6 +319,7 @@ fn test_require_custom_module() {
 }
 
 #[test]
+#[serial]
 fn test_module_exports() {
     let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
 
