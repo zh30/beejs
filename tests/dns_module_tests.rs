@@ -105,7 +105,8 @@ fn test_dns_resolve6_localhost() {
     let binding = result.unwrap();
     let output = binding.trim();
     // Should return an array of IPv6 addresses (or empty if none found)
-    assert!(output.contains("[") || output.starts_with("Error"));
+    // Output could be "::1", "[]", "Error", etc.
+    assert!(output.contains("::") || output.is_empty() || output.starts_with("Error"));
 }
 
 #[test]
@@ -164,7 +165,8 @@ fn test_dns_getServers_contains_dns_server() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code("dns.getServers().includes('8.8.8.8')");
     assert!(result.is_ok());
-    let output = result.unwrap().trim();
+    let binding = result.unwrap();
+    let output = binding.trim();
     // Should contain at least one DNS server (8.8.8.8 is the default)
     assert_eq!(output, "true");
 }
@@ -190,5 +192,6 @@ fn test_dns_resolve_with_rrtype() {
     let binding = result.unwrap();
     let output = binding.trim();
     // Should return an array or error
-    assert!(output.contains("[") || output.starts_with("Error"));
+    // Array is converted to string by V8, so check for addresses or error
+    assert!(output.contains("::1") || output.contains("127.0.0.1") || output.is_empty() || output.starts_with("Error"));
 }
