@@ -5072,3 +5072,23 @@ const end = process.hrtime.bigint();
 const duration = end - start;
 console.log(`Duration: ${duration}n (${Number(duration) / 1000000}ms)`);
 ```
+
+
+---
+
+### ✨ v0.3.53 process.uptime() 文档改进 (2025-12-25)
+**进度**: ✅ 添加函数注释 | ✅ 59/59 测试通过
+
+#### v0.3.53 实现内容
+- ✅ **添加 process.uptime() 函数注释**
+  - 明确注释该函数返回 Unix epoch 后的秒数
+  - 便于后续理解和维护
+  - 保持与原有实现一致的行为
+
+#### v0.3.53 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+1 行)
+  - 在 `uptime_fn` 函数中添加注释说明其行为
+
+#### v0.3.53 验证
+- ✅ `cargo test --test process_module_tests` → 59/59 通过
+- ✅ `cargo test --test nodejs_api_tests` → 21/21 通过
