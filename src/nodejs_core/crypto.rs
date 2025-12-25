@@ -8,6 +8,8 @@ use ring::digest;
 use ring::hmac;
 use blake3::Hasher;
 use openssl::symm::{Cipher, Crypter, Mode};
+use openssl::pkey::PKey;
+use openssl::sign::Signer;
 
 /// 根据输出编码返回结果的辅助函数
 fn return_output(
@@ -263,6 +265,14 @@ fn create_hmac_callback(
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
+    // 验证算法是否支持
+    let supported_algorithms = ["sha256", "sha1", "sha512", "md5", "blake3"];
+    if !supported_algorithms.contains(&algorithm.as_str()) {
+        let error_msg = v8::String::new(scope, &format!("Unsupported HMAC algorithm: {}", algorithm)).unwrap();
+        let error = v8::Exception::type_error(scope, error_msg);
+        scope.throw_exception(error);
+        return;
+    }
     // 创建hmac对象
     let hmac_obj: _ = v8::Object::new(scope);
     // update方法
@@ -345,18 +355,6 @@ fn hmac_digest_callback(
     let digest_result: _ = match (algorithm.as_str(), key.as_bytes()) {
         ("sha256", key_bytes) => {
             let signing_key: _ = hmac::Key::new(hmac::HMAC_SHA256, key_bytes);
-            let hmac: _ = hmac::sign(&signing_key, combined_data.as_bytes());
-            match encoding.as_str() {
-                "hex" => hex::encode(hmac.as_ref()),
-                "base64" => BASE64_STANDARD.encode(hmac.as_ref()),
-                "latin1" => String::from_utf8_lossy(hmac.as_ref()).to_string(),
-                _ => hex::encode(hmac.as_ref()),
-            }
-        }
-        ("sha1", key_bytes) => {
-            // 使用 ring::hmac::sign 进行 HMAC 计算
-            // 注意：ring 仅支持 HMAC-SHA256，此处使用 HMAC-SHA256 算法
-            let signing_key: _ = hmac::Key::new(hmac::HMAC_SHA256, key_bytes);
             let hmac_result: _ = hmac::sign(&signing_key, combined_data.as_bytes());
             match encoding.as_str() {
                 "hex" => hex::encode(hmac_result.as_ref()),
@@ -365,7 +363,90 @@ fn hmac_digest_callback(
                 _ => hex::encode(hmac_result.as_ref()),
             }
         }
-        _ => String::new(),
+        ("sha1", key_bytes) => {
+            // 使用 OpenSSL 实现 HMAC-SHA1
+            use openssl::hash::MessageDigest;
+            let pkey = PKey::hmac(key_bytes).unwrap();
+            let signer = Signer::new(MessageDigest::sha1(), &pkey).unwrap();
+            let hmac_result = signer.sign_to_vec().unwrap();
+            match encoding.as_str() {
+                "hex" => hex::encode(&hmac_result),
+                "base64" => BASE64_STANDARD.encode(&hmac_result),
+                "latin1" => String::from_utf8_lossy(&hmac_result).to_string(),
+                _ => hex::encode(&hmac_result),
+            }
+        }
+        ("sha512", key_bytes) => {
+            // 使用 OpenSSL 实现 HMAC-SHA512
+            use openssl::hash::MessageDigest;
+            let pkey = PKey::hmac(key_bytes).unwrap();
+            let signer = Signer::new(MessageDigest::sha512(), &pkey).unwrap();
+            let hmac_result = signer.sign_to_vec().unwrap();
+            match encoding.as_str() {
+                "hex" => hex::encode(&hmac_result),
+                "base64" => BASE64_STANDARD.encode(&hmac_result),
+                "latin1" => String::from_utf8_lossy(&hmac_result).to_string(),
+                _ => hex::encode(&hmac_result),
+            }
+        }
+        ("md5", key_bytes) => {
+            // 使用 md5 crate 实现 HMAC-MD5
+            let mut inner = md5::Context::new();
+            inner.consume(key_bytes);
+            let mut outer = md5::Context::new();
+            let key_block = if key_bytes.len() > 64 {
+                let digest = inner.clone().finalize();
+                outer.consume(digest.as_ref());
+                vec![0x36u8; 64]
+            } else {
+                vec![0x36u8; key_bytes.len()]
+            };
+            let mut key_xor = key_block.iter().zip(key_bytes.iter()).map(|(a, b)| a ^ b).collect::<Vec<u8>>();
+            outer.consume(&key_xor);
+            inner.consume(combined_data.as_bytes());
+            let inner_digest = inner.clone().finalize();
+            let mut key_xor2 = key_block.iter().zip(key_bytes.iter()).map(|(a, b)| a ^ b).collect::<Vec<u8>>();
+            let mut final_context = md5::Context::new();
+            final_context.consume(&key_xor2);
+            final_context.consume(inner_digest.as_ref());
+            let result = final_context.finalize();
+            match encoding.as_str() {
+                "hex" => format!("{:x}", result),
+                "base64" => BASE64_STANDARD.encode(result.as_ref()),
+                "latin1" => String::from_utf8_lossy(result.as_ref()).to_string(),
+                _ => format!("{:x}", result),
+            }
+        }
+        ("blake3", key_bytes) => {
+            // 使用 blake3 crate 实现 HMAC-BLAKE3
+            // blake3::keyed_hash 需要 32 字节密钥，需要标准化密钥长度
+            let mut key_32 = [0u8; 32];
+            if key_bytes.len() > 32 {
+                // 如果密钥过长，先哈希
+                let mut hasher = blake3::Hasher::new();
+                hasher.update(key_bytes);
+                let hashed = hasher.finalize();
+                key_32.copy_from_slice(hashed.as_bytes());
+            } else {
+                // 如果密钥过短或正好 32 字节，直接复制或填充
+                key_32[..key_bytes.len()].copy_from_slice(key_bytes);
+            }
+            // 使用 blake3::keyed_hash 进行带密钥的哈希
+            let result = blake3::keyed_hash(&key_32, combined_data.as_bytes());
+            match encoding.as_str() {
+                "hex" => hex::encode(result.as_bytes()),
+                "base64" => BASE64_STANDARD.encode(result.as_bytes()),
+                "latin1" => String::from_utf8_lossy(result.as_bytes()).to_string(),
+                _ => hex::encode(result.as_bytes()),
+            }
+        }
+        _ => {
+            // 抛出错误：不支持的算法
+            let error_msg = v8::String::new(scope, &format!("Unsupported HMAC algorithm: {}", algorithm)).unwrap();
+            let error = v8::Exception::type_error(scope, error_msg);
+            scope.throw_exception(error);
+            return;
+        }
     };
     let result_str: _ = v8::String::new(scope, &digest_result).unwrap();
     retval.set(result_str.into());

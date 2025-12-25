@@ -6006,3 +6006,32 @@ pipeline(r, t, w, (err) => {
 - 完善错误处理和清理逻辑
 - 实现 `pipeline()` 的回调错误处理
 - 启用更多 nodejs_core 子模块 (dns, tls, etc.)
+
+### ✨ v0.3.75 HMAC 多算法支持修复 (2025-12-25)
+**进度**: ✅ HMAC-SHA1 | ✅ HMAC-SHA512 | ✅ HMAC-MD5 | ✅ HMAC-BLAKE3 | ✅ 14/14 测试通过
+
+#### v0.3.75 修复内容
+- **HMAC 算法支持扩展**
+  - 原实现仅支持 SHA256，新增 SHA1、SHA512、MD5、BLAKE3 算法
+  - SHA1/SHA512: 使用 OpenSSL `PKey::hmac()` + `Signer::sign_to_vec()`
+  - MD5: 手动实现 RFC 2104 HMAC 算法
+  - BLAKE3: 使用 `blake3::keyed_hash()` 函数
+
+- **错误处理增强**
+  - 在 `createHmac()` 时验证算法是否支持
+  - 不支持的算法抛出包含 "Unsupported" 的 TypeError
+
+#### v0.3.75 代码变更
+- **修改文件**: `src/nodejs_core/crypto.rs` (+94 行)
+  - 添加 `openssl::pkey::PKey` 和 `openssl::sign::Signer` 导入
+  - 在 `create_hmac_callback` 中添加算法验证
+  - 重写 `hmac_digest_callback` 支持多算法
+
+- **修改文件**: `src/runtime_minimal.rs` (+3 行)
+  - 添加必要的运行时支持
+
+#### v0.3.75 验证
+- ✅ `cargo build` 成功
+- ✅ `cargo test --test crypto_createhmac_tests` → 14/14 通过
+- ✅ `cargo test --test stream_module_tests` → 60/60 通过
+- ✅ `cargo test --test crypto_createhash_tests` → 12/12 通过
