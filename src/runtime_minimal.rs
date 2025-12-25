@@ -11683,7 +11683,7 @@ impl MinimalRuntime {
 
         // v0.3.74: passThrough stream - complete implementation following nodejs_core/stream.rs pattern
         // PassThrough is a Transform stream that passes data through without modification
-        let passthrough_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let passthrough_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let stream_obj = v8::Object::new(_scope);
 
             // ===== Readable methods =====

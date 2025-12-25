@@ -21,8 +21,6 @@ struct ConnectionKey {
 /// 池化连接信息
 #[derive(Debug)]
 struct PooledConnection {
-    /// 连接建立时间，用于超时清理
-    created_at: Instant,
     /// 最后使用时间
     last_used: Instant,
     /// 连接是否仍然有效
@@ -32,14 +30,9 @@ struct PooledConnection {
 impl PooledConnection {
     fn new() -> Self {
         Self {
-            created_at: Instant::now(),
             last_used: Instant::now(),
             is_valid: true,
         }
-    }
-
-    fn touch(&mut self) {
-        self.last_used = Instant::now();
     }
 }
 
