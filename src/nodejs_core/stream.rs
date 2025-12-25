@@ -1117,7 +1117,7 @@ fn stream_pipeline_callback(
     let mut callback: Option<v8::Local<v8::Function>> = None;
     if argc > 0 {
         if let Some(last_arg) = args.get(argc - 1).to_object(scope) {
-            if last_arg.is_function(scope).unwrap_or(false) {
+            if last_arg.is_function() {
                 if let Ok(cb) = v8::Local::<v8::Function>::try_from(args.get(argc - 1)) {
                     callback = Some(cb);
                 }
@@ -1197,7 +1197,7 @@ fn stream_pipeline_callback(
                         let pipeline_callback_fn: v8::Local<v8::Function> = v8::FunctionTemplate::new(
                             scope,
                             |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-                                let this: v8::Local<v8::Value> = args.this();
+                                let this: v8::Local<v8::Object> = args.this();
                                 if let Some(this_obj) = this.to_object(scope) {
                                     let callback_key: v8::Local<v8::Value> = v8::String::new(scope, "_pipelineCallback").unwrap().into();
                                     if let Some(cb_val) = this_obj.get(scope, callback_key) {
