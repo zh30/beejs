@@ -15,6 +15,7 @@ pub mod querystring;
 pub mod child_process;
 pub mod dns; // v0.3.67: DNS lookup and resolve API
 pub mod require; // v0.3.54: CommonJS module loader extracted to独立模块
+pub mod tcp_async; // v0.3.71: Async TCP connection module
 use anyhow::Result;
 use rusty_v8 as v8;
 /// 设置所有Node.js核心API

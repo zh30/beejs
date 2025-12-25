@@ -1,8 +1,12 @@
-// Node.js net 模块实现 - v0.3.69 完整版
+// Node.js net 模块实现 - v0.3.71 完整版
 // TCP 连接、网络服务器和 Socket API
+// v0.3.71: 添加真实异步 TCP 连接支持
 
 use anyhow::Result;
 use rusty_v8 as v8;
+
+// 导入 tcp_async 模块（通过父模块的 mod.rs）
+use super::tcp_async::{TcpConnectionHandle, TcpConnectionManager, TCP_MANAGER};
 
 /// 设置 net API
 pub fn setup_net_api(
@@ -74,7 +78,34 @@ fn net_connect_callback(
     let host = extract_string_option(scope, &options, "host", "localhost");
     let local_port = extract_integer_option(scope, &options, "localPort", 0);
     let local_address = extract_string_option(scope, &options, "localAddress", "0.0.0.0");
-    let _connect_timeout = extract_integer_option(scope, &options, "connectTimeout", 0);
+    let connect_timeout = extract_integer_option(scope, &options, "connectTimeout", 0);
+
+    // 创建真实的 TCP 连接
+    let tcp_handle = TCP_MANAGER.create_connection();
+    let handle_id = tcp_handle.id;
+
+    // 尝试建立真实连接（带超时）
+    let timeout_secs = if connect_timeout > 0 { connect_timeout as u64 } else { 10 };
+    let connect_result = tcp_handle.connect(&host, port as u16);
+    let (is_connected, remote_addr, remote_family, local_addr_val) = {
+        let rt = tokio::runtime::Runtime::new().ok();
+        match rt {
+            Some(mut rt) => {
+                let timeout_duration = std::time::Duration::from_secs(timeout_secs);
+                let result = rt.block_on(async {
+                    tokio::time::timeout(timeout_duration, connect_result).await
+                });
+                match result {
+                    Ok(Ok(())) => {
+                        let info = tcp_handle.get_info();
+                        (true, info.remote_addr.clone(), info.family.clone(), info.local_addr.clone())
+                    }
+                    _ => (false, host.clone(), if host.contains(':') { "IPv6".to_string() } else { "IPv4".to_string() }, local_address)
+                }
+            }
+            None => (false, host.clone(), if host.contains(':') { "IPv6".to_string() } else { "IPv4".to_string() }, local_address),
+        }
+    };
 
     // 创建 socket 对象
     let socket_obj: _ = v8::Object::new(scope);
@@ -85,7 +116,7 @@ fn net_connect_callback(
     socket_obj.set(scope, port_key.into(), port_val.into());
 
     let host_key = v8::String::new(scope, "remoteAddress").unwrap();
-    let host_val = v8::String::new(scope, &host).unwrap();
+    let host_val = v8::String::new(scope, &remote_addr).unwrap();
     socket_obj.set(scope, host_key.into(), host_val.into());
 
     let local_port_key = v8::String::new(scope, "localPort").unwrap();
@@ -93,28 +124,28 @@ fn net_connect_callback(
     socket_obj.set(scope, local_port_key.into(), local_port_val.into());
 
     let local_addr_key = v8::String::new(scope, "localAddress").unwrap();
-    let local_addr_val = v8::String::new(scope, &local_address).unwrap();
-    socket_obj.set(scope, local_addr_key.into(), local_addr_val.into());
+    let local_addr_v8_val = v8::String::new(scope, &local_addr_val).unwrap();
+    socket_obj.set(scope, local_addr_key.into(), local_addr_v8_val.into());
 
     // 确定 address family
-    let remote_family = if host.contains(':') || host == "::1" || host.starts_with('[') {
-        "IPv6"
-    } else {
-        "IPv4"
-    };
     let family_key = v8::String::new(scope, "remoteFamily").unwrap();
-    let family_val = v8::String::new(scope, remote_family).unwrap();
+    let family_val = v8::String::new(scope, &remote_family).unwrap();
     socket_obj.set(scope, family_key.into(), family_val.into());
 
     // 连接状态
     let connecting_key = v8::String::new(scope, "connecting").unwrap();
-    let connecting_val = v8::Boolean::new(scope, true);
+    let connecting_val = v8::Boolean::new(scope, !is_connected);
     socket_obj.set(scope, connecting_key.into(), connecting_val.into());
 
     // connect 事件标识
     let connect_key = v8::String::new(scope, "connect").unwrap();
-    let connect_val = v8::String::new(scope, "open").unwrap();
+    let connect_val = v8::String::new(scope, if is_connected { "open" } else { "opening" }).unwrap();
     socket_obj.set(scope, connect_key.into(), connect_val.into());
+
+    // 存储连接句柄 ID
+    let handle_id_key = v8::String::new(scope, "_handleId").unwrap();
+    let handle_id_val = v8::Integer::new(scope, handle_id as i32);
+    socket_obj.set(scope, handle_id_key.into(), handle_id_val.into());
 
     // write 方法
     let write_func: _ = v8::FunctionTemplate::new(scope, socket_write_callback);
@@ -405,13 +436,41 @@ fn socket_write_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let _this: _ = args.this();
-    let _data: _ = args.get(0);
-    let _encoding: _ = args
+    let this: _ = args.this();
+    let data_val: _ = args.get(0);
+    let _encoding: String = args
         .get(1)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_else(|| "utf8".to_string());
+
+    // 转换为字符串
+    let data_str = data_val.to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    let data_bytes = data_str.as_bytes();
+
+    // 获取 TCP 句柄 ID 并写入数据
+    let handle_id_key = v8::String::new(scope, "_handleId").unwrap();
+    if let Some(handle_id_val) = this.get(scope, handle_id_key.into()) {
+        if let Some(id_num) = handle_id_val.to_int32(scope) {
+            let handle_id = id_num.value() as u64;
+            if let Some(handle) = TCP_MANAGER.get_connection(handle_id) {
+                let is_conn = handle.is_connected();
+                if is_conn {
+                    // 异步写入数据
+                    let rt = tokio::runtime::Runtime::new().ok();
+                    if let Some(mut rt) = rt {
+                        let data = data_bytes.to_vec();
+                        let h: TcpConnectionHandle = handle.clone();
+                        let _ = rt.block_on(async { h.write(&data).await });
+                    }
+                }
+            }
+        }
+    }
+
     retval.set(v8::Boolean::new(scope, true).into());
 }
 
@@ -463,6 +522,20 @@ fn socket_destroy_callback(
     mut retval: v8::ReturnValue,
 ) {
     let this: _ = args.this();
+
+    // 关闭真实的 TCP 连接
+    let handle_id_key = v8::String::new(scope, "_handleId").unwrap();
+    if let Some(handle_id_val) = this.get(scope, handle_id_key.into()) {
+        if let Some(id_num) = handle_id_val.to_int32(scope) {
+            let handle_id = id_num.value() as u64;
+            if let Some(handle) = TCP_MANAGER.get_connection(handle_id) {
+                let _h: TcpConnectionHandle = handle;
+                _h.close();
+                TCP_MANAGER.remove_connection(handle_id);
+            }
+        }
+    }
+
     // 设置 connecting 为 false
     let connecting_key = v8::String::new(scope, "connecting").unwrap();
     let connecting_val = v8::Boolean::new(scope, false);
