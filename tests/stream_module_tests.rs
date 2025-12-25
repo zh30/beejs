@@ -972,6 +972,71 @@ fn test_stream_pipeline_with_callback() {
 
 #[test]
 #[serial]
+fn test_readable_push_in_read_direct() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    // 测试直接调用 read() 时 push('A')
+    let result = runtime.execute_code(
+        r#"
+        const r = new stream.Readable({
+            read() {
+                this.push('A');
+            }
+        });
+        r.read();
+        "#
+    );
+    if let Err(e) = &result {
+        panic!("Direct push error: {:?}", e);
+    }
+    assert!(result.is_ok());
+}
+
+#[test]
+#[serial]
+fn test_pipe_just_setup() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    // 测试 pipe 但不触发 read
+    let result = runtime.execute_code(
+        r#"
+        const r = new stream.Readable({ read() { console.log('read called'); } });
+        const pt = stream.passThrough();
+        // Don't call read(), just set up pipe
+        const result = r.pipe(pt);
+        result === pt
+        "#
+    );
+    if let Err(e) = &result {
+        panic!("Pipe setup error: {:?}", e);
+    }
+    assert!(result.is_ok());
+}
+
+#[test]
+#[serial]
+fn test_pipe_with_push_no_data_handler() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    // 测试 pipe + push 但不设置 data 事件监听器
+    let result = runtime.execute_code(
+        r#"
+        const r = new stream.Readable({
+            read() {
+                this.push('A');
+            }
+        });
+        const pt = stream.passThrough();
+        // 不设置 data 监听器，直接 pipe
+        const result = r.pipe(pt);
+        result === pt
+        "#
+    );
+    if let Err(e) = &result {
+        panic!("Pipe with push error: {:?}", e);
+    }
+    assert!(result.is_ok());
+}
+
+#[test]
+#[serial]
 fn test_stream_pipeline_three_streams() {
     let mut runtime = MinimalRuntime::new().unwrap();
     // 测试 pipe + push('A') 但不触发 end

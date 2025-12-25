@@ -11723,26 +11723,42 @@ impl MinimalRuntime {
             stream_obj.set(_scope, read_public_key.into(), read_public_func.into());
 
             // push method - emits 'data' event with stored callback
+            // v0.3.81: Fix to check is_object before to_object to avoid "Cannot convert undefined or null to object"
             let push_func = v8::FunctionTemplate::new(_scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
                 let chunk = args.get(0);
                 let _encoding = args.get(1);
 
                 let this = args.this();
 
-                // Get stored callbacks from _events
+                let chunk_val = if chunk.is_undefined() || chunk.is_null() {
+                    v8::String::new(scope, "").unwrap().into()
+                } else {
+                    chunk
+                };
+
+                // v0.3.81: First check 'data' callback directly on this (set by pipe())
+                let data_key = v8::String::new(scope, "data").unwrap();
+                if let Some(callback_val) = this.get(scope, data_key.into()) {
+                    if callback_val.is_function() {
+                        if let Ok(callback) = v8::Local::<v8::Function>::try_from(callback_val) {
+                            callback.call(scope, this.into(), &[chunk_val]);
+                            retval.set(v8::Boolean::new(scope, true).into());
+                            return;
+                        }
+                    }
+                }
+
+                // v0.3.81: Fall back to _events for on() registered listeners
+                // v0.3.81: Check is_object before to_object to avoid TypeError
                 let events_key = v8::String::new(scope, "_events").unwrap();
                 if let Some(events_val) = this.get(scope, events_key.into()) {
-                    if let Some(events_obj) = events_val.to_object(scope) {
-                        let data_key = v8::String::new(scope, "data").unwrap();
-                        if let Some(callback_val) = events_obj.get(scope, data_key.into()) {
-                            if callback_val.is_function() {
-                                if let Ok(callback) = v8::Local::<v8::Function>::try_from(callback_val) {
-                                    let chunk_val = if chunk.is_undefined() || chunk.is_null() {
-                                        v8::String::new(scope, "").unwrap().into()
-                                    } else {
-                                        chunk
-                                    };
-                                    callback.call(scope, this.into(), &[chunk_val]);
+                    if events_val.is_object() {
+                        if let Some(events_obj) = events_val.to_object(scope) {
+                            if let Some(callback_val) = events_obj.get(scope, data_key.into()) {
+                                if callback_val.is_function() {
+                                    if let Ok(callback) = v8::Local::<v8::Function>::try_from(callback_val) {
+                                        callback.call(scope, this.into(), &[chunk_val]);
+                                    }
                                 }
                             }
                         }
