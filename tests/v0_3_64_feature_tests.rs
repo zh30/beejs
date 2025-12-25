@@ -317,3 +317,90 @@ fn test_fs_promises_error_handling() {
     assert!(result.trim().starts_with("error:"),
         "fs.promises should handle errors, got: {}", result.trim());
 }
+
+// v0.3.65 Tests: http.request enhancement
+
+#[test]
+#[serial]
+fn test_http_request_exists() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof http.request;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "function", "http.request should be a function");
+}
+
+#[test]
+#[serial]
+fn test_http_request_options() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const req = http.request({
+            method: 'POST',
+            hostname: 'example.com',
+            port: 8080,
+            path: '/api/test'
+        });
+        req.method + ',' + req.hostname + ',' + req.port + ',' + req.path;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "POST,example.com,8080,/api/test",
+        "http.request should parse options correctly");
+}
+
+#[test]
+#[serial]
+fn test_http_request_default_options() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const req = http.request({});
+        req.method + ',' + req.hostname + ',' + req.port + ',' + req.path;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "GET,localhost,80,/",
+        "http.request should use default options");
+}
+
+#[test]
+#[serial]
+fn test_http_request_write_method() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const req = http.request({});
+        typeof req.write;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "function", "http.request should have write method");
+}
+
+#[test]
+#[serial]
+fn test_http_request_write_body() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const req = http.request({});
+        req.write('hello');
+        req._body;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "hello", "http.request().write() should store body");
+}
+
+#[test]
+#[serial]
+fn test_http_request_callback_pattern() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const req = http.request({
+            hostname: 'example.com',
+            path: '/test'
+        }, (res) => {
+            return res.statusCode;
+        });
+        req.end();
+        'done';
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "done", "http.request callback pattern should work");
+}

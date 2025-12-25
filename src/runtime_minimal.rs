@@ -11650,9 +11650,200 @@ impl MinimalRuntime {
         let create_server_key = v8::String::new(scope, "createServer").unwrap();
         http_obj.set(scope, create_server_key.into(), create_server_instance.into());
 
-        // request function
-        let request_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        // request function (v0.3.65 enhanced)
+        let request_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let options = args.get(0);
+            let callback = args.get(1);
+
+            // 创建请求对象
             let req_obj = v8::Object::new(scope);
+
+            // 预先创建所有 key
+            let method_key = v8::String::new(scope, "method").unwrap();
+            let hostname_key = v8::String::new(scope, "hostname").unwrap();
+            let port_key = v8::String::new(scope, "port").unwrap();
+            let path_key = v8::String::new(scope, "path").unwrap();
+
+            // 解析选项 - 使用 Rust String 变量
+            let mut req_method = "GET".to_string();
+            let mut req_hostname = "localhost".to_string();
+            let mut req_port: i32 = 80;
+            let mut req_path = "/".to_string();
+
+            // 解析选项
+            if !options.is_undefined() && !options.is_null() && options.is_object() {
+                if let Some(opts_obj) = options.to_object(scope) {
+                    // method - 必须先检查 is_undefined，to_string 对 undefined 返回 "undefined" 字符串
+                    let opt_key = v8::String::new(scope, "method").unwrap();
+                    if let Some(val) = opts_obj.get(scope, opt_key.into()) {
+                        if !val.is_undefined() && val.is_string() {
+                            if let Some(s) = val.to_string(scope) {
+                                req_method = s.to_rust_string_lossy(scope);
+                            }
+                        }
+                    }
+
+                    // hostname
+                    let opt_key = v8::String::new(scope, "hostname").unwrap();
+                    if let Some(val) = opts_obj.get(scope, opt_key.into()) {
+                        if !val.is_undefined() && val.is_string() {
+                            if let Some(s) = val.to_string(scope) {
+                                req_hostname = s.to_rust_string_lossy(scope);
+                            }
+                        }
+                    }
+
+                    // port
+                    let opt_key = v8::String::new(scope, "port").unwrap();
+                    if let Some(val) = opts_obj.get(scope, opt_key.into()) {
+                        if !val.is_undefined() && val.is_number() {
+                            req_port = val.to_integer(scope).unwrap_or(v8::Integer::new(scope, 80)).value() as i32;
+                        }
+                    }
+
+                    // path
+                    let opt_key = v8::String::new(scope, "path").unwrap();
+                    if let Some(val) = opts_obj.get(scope, opt_key.into()) {
+                        if !val.is_undefined() && val.is_string() {
+                            if let Some(s) = val.to_string(scope) {
+                                req_path = s.to_rust_string_lossy(scope);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 最后创建 V8 值并设置 - 避免借用冲突
+            let method_val = v8::String::new(scope, &req_method).unwrap();
+            let hostname_val = v8::String::new(scope, &req_hostname).unwrap();
+            let port_val = v8::Integer::new(scope, req_port);
+            let path_val = v8::String::new(scope, &req_path).unwrap();
+
+            req_obj.set(scope, method_key.into(), method_val.into());
+            req_obj.set(scope, hostname_key.into(), hostname_val.into());
+            req_obj.set(scope, port_key.into(), port_val.into());
+            req_obj.set(scope, path_key.into(), path_val.into());
+
+            // end 方法
+            let end_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let cb = args.get(0);
+
+                // 创建响应对象
+                let res_obj = v8::Object::new(scope);
+
+                // statusCode
+                let status_code_key = v8::String::new(scope, "statusCode").unwrap();
+                let status_val = v8::Integer::new(scope, 200);
+                res_obj.set(scope, status_code_key.into(), status_val.into());
+
+                // statusMessage
+                let status_msg_key = v8::String::new(scope, "statusMessage").unwrap();
+                let status_msg_val = v8::String::new(scope, "OK").unwrap();
+                res_obj.set(scope, status_msg_key.into(), status_msg_val.into());
+
+                // headers
+                let headers_key = v8::String::new(scope, "headers").unwrap();
+                let headers_obj = v8::Object::new(scope);
+                let content_type_key = v8::String::new(scope, "content-type").unwrap();
+                let content_type_val = v8::String::new(scope, "text/plain").unwrap();
+                headers_obj.set(scope, content_type_key.into(), content_type_val.into());
+                res_obj.set(scope, headers_key.into(), headers_obj.into());
+
+                // getAllHeaders
+                let get_headers_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    let empty_array: v8::Local<v8::Array> = v8::Array::new(_scope, 0);
+                    retval.set(empty_array.into());
+                });
+                let get_headers_instance = get_headers_func.get_function(scope).unwrap();
+                let get_headers_key = v8::String::new(scope, "getAllHeaders").unwrap();
+                res_obj.set(scope, get_headers_key.into(), get_headers_instance.into());
+
+                // getHeader
+                let get_header_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    retval.set(v8::undefined(_scope).into());
+                });
+                let get_header_instance = get_header_func.get_function(scope).unwrap();
+                let get_header_key = v8::String::new(scope, "getHeader").unwrap();
+                res_obj.set(scope, get_header_key.into(), get_header_instance.into());
+
+                // setHeader
+                let set_header_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    retval.set(v8::null(_scope).into());
+                });
+                let set_header_instance = set_header_func.get_function(scope).unwrap();
+                let set_header_key = v8::String::new(scope, "setHeader").unwrap();
+                res_obj.set(scope, set_header_key.into(), set_header_instance.into());
+
+                // end
+                let end_res_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    retval.set(v8::undefined(_scope).into());
+                });
+                let end_res_instance = end_res_func.get_function(scope).unwrap();
+                let end_res_key = v8::String::new(scope, "end").unwrap();
+                res_obj.set(scope, end_res_key.into(), end_res_instance.into());
+
+                // writeHead
+                let write_head_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    retval.set(v8::undefined(_scope).into());
+                });
+                let write_head_instance = write_head_func.get_function(scope).unwrap();
+                let write_head_key = v8::String::new(scope, "writeHead").unwrap();
+                res_obj.set(scope, write_head_key.into(), write_head_instance.into());
+
+                // 调用回调
+                if cb.is_function() {
+                    if let Ok(cb_func) = v8::Local::<v8::Function>::try_from(cb) {
+                        let call_args: &[v8::Local<v8::Value>] = &[res_obj.into()];
+                        cb_func.call(scope, this.into(), call_args);
+                    }
+                }
+                retval.set(this.into());
+            });
+            let end_instance = end_func.get_function(scope).unwrap();
+            let end_key = v8::String::new(scope, "end").unwrap();
+            req_obj.set(scope, end_key.into(), end_instance.into());
+
+            // write 方法 (v0.3.65)
+            let write_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let chunk = args.get(0);
+
+                if !chunk.is_undefined() {
+                    let body_key = v8::String::new(scope, "_body").unwrap();
+                    let existing_body = this.get(scope, body_key.into()).unwrap_or(v8::undefined(scope).into());
+
+                    if existing_body.is_string() {
+                        let existing_str = existing_body.to_string(scope).unwrap();
+                        let existing_rust = existing_str.to_rust_string_lossy(scope);
+
+                        let chunk_rust = if chunk.is_string() {
+                            let chunk_str = chunk.to_string(scope).unwrap();
+                            chunk_str.to_rust_string_lossy(scope)
+                        } else {
+                            "[chunk]".to_string()
+                        };
+
+                        let combined_rust = format!("{}{}", existing_rust, chunk_rust);
+                        let combined = v8::String::new(scope, &combined_rust).unwrap();
+                        this.set(scope, body_key.into(), combined.into());
+                    } else {
+                        this.set(scope, body_key.into(), chunk);
+                    }
+                }
+
+                retval.set(this.into());
+            });
+            let write_instance = write_func.get_function(scope).unwrap();
+            let write_key = v8::String::new(scope, "write").unwrap();
+            req_obj.set(scope, write_key.into(), write_instance.into());
+
+            // 设置响应回调
+            if callback.is_function() {
+                let cb_key = v8::String::new(scope, "_responseCallback").unwrap();
+                req_obj.set(scope, cb_key.into(), callback);
+            }
+
             retval.set(req_obj.into());
         });
         let request_instance = request_func.get_function(scope).unwrap();
