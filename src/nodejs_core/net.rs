@@ -489,12 +489,61 @@ fn socket_on_callback(
     mut retval: v8::ReturnValue,
 ) {
     let this: _ = args.this();
-    let _event: String = args
+    let event: String = args
         .get(0)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
-    let _listener: _ = args.get(1);
+
+    // 获取回调函数
+    let listener_val = args.get(1);
+
+    // 将回调存储在 socket 对象的 _events 属性中
+    let events_key = v8::String::new(scope, "_events").unwrap();
+
+    // 获取或创建 _events 对象
+    let events_obj = if let Some(events) = this.get(scope, events_key.into()) {
+        if events.is_object() {
+            v8::Local::<v8::Object>::try_from(events).unwrap_or_else(|_| v8::Object::new(scope))
+        } else {
+            v8::Object::new(scope)
+        }
+    } else {
+        v8::Object::new(scope)
+    };
+
+    // 存储回调函数
+    let event_key = v8::String::new(scope, &event).unwrap();
+    events_obj.set(scope, event_key.into(), listener_val);
+
+    // 保存 _events 对象回 socket
+    this.set(scope, events_key.into(), events_obj.into());
+
+    // 如果是 connect 事件且已连接，立即触发
+    if event == "connect" {
+        let connecting_key = v8::String::new(scope, "connecting").unwrap();
+        let is_connecting = if let Some(conn_val) = this.get(scope, connecting_key.into()) {
+            conn_val.to_boolean(scope).boolean_value(scope)
+        } else {
+            false
+        };
+        if !is_connecting {
+            // 触发 connect 事件 - 预创建所有值避免 borrow checker 问题
+            if let Some(events) = this.get(scope, events_key.into()) {
+                if let Ok(events_obj) = v8::Local::<v8::Object>::try_from(events) {
+                    let connect_key = v8::String::new(scope, "connect").unwrap();
+                    let callback_val = events_obj.get(scope, connect_key.into());
+                    if let Some(cb) = callback_val {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(cb) {
+                            let this_val: v8::Local<v8::Value> = this.into();
+                            func.call(scope, this_val.into(), &[]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     retval.set(this.into());
 }
 
@@ -548,11 +597,18 @@ fn socket_destroy_callback(
 }
 
 fn socket_set_timeout_callback(
-    _scope: &mut v8::HandleScope,
+    scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let this: _ = args.this();
+    let timeout = args.get(0).to_int32(scope).map(|i| i.value()).unwrap_or(0);
+
+    // 设置 timeout 属性
+    let timeout_key = v8::String::new(scope, "timeout").unwrap();
+    let timeout_val = v8::Integer::new(scope, timeout as i32);
+    this.set(scope, timeout_key.into(), timeout_val.into());
+
     retval.set(this.into());
 }
 

@@ -1,10 +1,13 @@
-// 异步 TCP 连接模块 - v0.3.71
+// 异步 TCP 连接模块 - v0.3.72
 // 使用 tokio 实现真正的异步 TCP 网络连接
+// v0.3.72: 添加数据缓冲区和读取支持
 
 use anyhow::Result;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream as TokioTcpStream;
+use std::thread;
+use std::time::Duration;
 
 /// TCP 连接状态
 #[derive(Debug, Clone, PartialEq)]
@@ -33,6 +36,8 @@ pub struct TcpConnectionHandle {
     pub stream: Arc<Mutex<Option<TokioTcpStream>>>,
     pub info: Arc<Mutex<TcpConnectionInfo>>,
     pub buffer: Arc<Mutex<Vec<u8>>>,
+    /// 读取运行状态
+    pub reading: Arc<AtomicBool>,
 }
 
 impl TcpConnectionHandle {
@@ -50,6 +55,7 @@ impl TcpConnectionHandle {
                 state: TcpConnectionState::Disconnected,
             })),
             buffer: Arc::new(Mutex::new(Vec::new())),
+            reading: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -141,6 +147,78 @@ impl TcpConnectionHandle {
         let mut info = self.info.lock().unwrap();
         info.state = TcpConnectionState::Disconnected;
     }
+
+    /// 开始异步读取数据（后台任务）- 数据存入缓冲区
+    pub fn start_reading(&self) {
+        if self.reading.swap(true, Ordering::SeqCst) {
+            return; // 已经在读取
+        }
+
+        let handle = self.clone();
+        thread::spawn(move || {
+            let mut buffer = [0u8; 1024];
+            loop {
+                if !handle.reading.load(Ordering::SeqCst) {
+                    break;
+                }
+
+                let read_result = {
+                    let mut stream_guard = handle.stream.lock().unwrap();
+                    if let Some(ref mut stream) = *stream_guard {
+                        // 使用闭包捕获结果
+                        let result = tokio::runtime::Runtime::new()
+                            .ok()
+                            .and_then(|rt| {
+                                let rt = rt;
+                                let fut = async { stream.read(&mut buffer).await };
+                                Some(rt.block_on(fut))
+                            });
+                        result
+                    } else {
+                        None
+                    }
+                };
+
+                match read_result {
+                    Some(Ok(0)) => {
+                        // 连接关闭
+                        handle.reading.store(false, Ordering::SeqCst);
+                        break;
+                    }
+                    Some(Ok(n)) => {
+                        // 收到数据，存储到缓冲区
+                        let data = buffer[..n].to_vec();
+                        let mut buf_guard = handle.buffer.lock().unwrap();
+                        buf_guard.extend_from_slice(&data);
+                    }
+                    Some(Err(_)) => {
+                        handle.reading.store(false, Ordering::SeqCst);
+                        break;
+                    }
+                    None => {
+                        thread::sleep(Duration::from_millis(10));
+                    }
+                }
+            }
+        });
+    }
+
+    /// 停止读取
+    pub fn stop_reading(&self) {
+        self.reading.store(false, Ordering::SeqCst);
+    }
+
+    /// 获取缓存的数据并清空缓冲区
+    pub fn consume_buffer(&self) -> Vec<u8> {
+        let mut buf_guard = self.buffer.lock().unwrap();
+        buf_guard.clone()
+    }
+
+    /// 检查是否有缓存数据
+    pub fn has_buffered_data(&self) -> bool {
+        let buf_guard = self.buffer.lock().unwrap();
+        !buf_guard.is_empty()
+    }
 }
 
 /// TCP 连接管理器 - 管理所有活跃连接
@@ -227,7 +305,7 @@ pub fn spawn_async_connect(host: String, port: u16) -> (u64, tokio::sync::onesho
 /// 同步连接（阻塞，等待连接完成）
 pub fn sync_connect(host: &str, port: u16, timeout_secs: u64) -> Result<TcpConnectionHandle> {
     let handle = TCP_MANAGER.create_connection();
-    let handle_id = handle.id;
+    let _handle_id = handle.id;
 
     // 使用 tokio runtime 执行异步连接
     let rt = tokio::runtime::Runtime::new()?;
