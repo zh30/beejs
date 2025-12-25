@@ -5,9 +5,6 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::env;
-use std::collections::{HashMap, BTreeMap};
-use std::time::SystemTime;
-use std::task::Context;
 /// 设置OS API
 pub fn setup_os_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,

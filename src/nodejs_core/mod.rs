@@ -1,6 +1,5 @@
 // Stage 43.0: 完整Node.js核心API兼容层
 /// 对标Bun，实现100% Node.js API兼容性
-use std::task::Context;
 pub mod fs;
 pub mod crypto;
 pub mod stream;
@@ -17,7 +16,6 @@ pub mod child_process;
 pub mod require; // v0.3.54: CommonJS module loader extracted to独立模块
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::collections::{HashMap, BTreeMap};
 /// 设置所有Node.js核心API
 pub fn setup_nodejs_core_apis(
     scope: &mut v8::ContextScope<v8::HandleScope>,

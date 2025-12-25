@@ -2,8 +2,6 @@
 /// 查询字符串处理
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::collections::{HashMap, BTreeMap};
-use std::task::Context;
 /// 设置querystring API
 pub fn setup_querystring_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
