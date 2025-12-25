@@ -8,8 +8,58 @@
 
 
 
-### ✨ v0.3.44 Stream 模块实现 (2025-12-25)
-**进度**: Readable/Writable/Transform/Duplex | 14 测试用例 | ✅ 所有测试通过 | ✅ CLI 验证通过
+
+### ✨ v0.3.46 Events 模块实现 (2025-12-25)
+**进度**: EventEmitter | 27 测试用例 | ✅ 所有测试通过 | ✅ CLI 验证通过
+
+#### v0.3.46 实现内容
+- **events 对象**
+  - `events.EventEmitter` - 事件发射器构造函数
+
+- **EventEmitter 实例方法**
+  - `on(eventName, listener)` - 添加事件监听器
+  - `once(eventName, listener)` - 添加一次性监听器
+  - `emit(eventName, ...args)` - 触发事件
+  - `removeListener(eventName, listener)` - 移除指定监听器
+  - `removeAllListeners([eventName])` - 移除所有/指定事件监听器
+  - `listeners(eventName)` - 获取事件监听器数组
+  - `eventNames()` - 获取所有事件名数组
+  - `getMaxListeners()` - 获取最大监听器数量
+  - `setMaxListeners(n)` - 设置最大监听器数量
+
+- **EventEmitter 静态方法**
+  - `listenerCount(emitter, eventName)` - 获取监听器数量
+
+#### v0.3.46 技术实现
+- **thread_local 存储** (src/runtime_minimal.rs)
+  - 使用 `thread_local!` 宏存储全局事件监听器
+  - `EVENT_LISTENERS` - 普通监听器存储
+  - `ONCE_LISTENERS` - 一次性监听器存储
+  - 使用 `v8::Global<v8::Function>` 跨调用保持 JS 函数引用
+
+#### v0.3.46 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+180 行)
+  - 在文件顶部添加 `thread_local!` 宏定义
+  - 添加 `setup_events_api()` 函数
+  - 在 `execute_code()` 中调用初始化
+
+- **新增文件**: `tests/events_module_tests.rs` (+27 测试用例)
+  - 27 个测试用例完整覆盖 events 模块
+  - 测试模块存在性、EventEmitter 构造函数
+  - 测试 on/once/emit/listeners/removeListener 等方法
+  - 测试事件触发、一次性监听器、监听器计数
+
+#### v0.3.46 验证
+- `cargo build` - 零错误（仅 2 个警告）
+- `cargo test --test events_module_tests` - 27 tests passed
+- `beejs eval "typeof events"` → "object"
+- `beejs eval "typeof events.EventEmitter"` → "function"
+- `beejs eval "e.emit('test')"` → true
+
+---
+
+### ✨ v0.3.45 HTTP 和 Util 模块实现 (2025-12-25)
+**进度**: fetch/http.request/http.createServer | ✅ CLI 验证通过
 
 #### v0.3.44 实现内容
 - **Readable Stream**

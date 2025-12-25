@@ -13,6 +13,12 @@ use reqwest;
 use serde_json;
 use once_cell::sync::Lazy;
 
+/// Event listener storage using thread_local (v0.3.46)
+thread_local! {
+    static EVENT_LISTENERS: Mutex<HashMap<String, Vec<v8::Global<v8::Function>>>> = Mutex::new(HashMap::new());
+    static ONCE_LISTENERS: Mutex<HashMap<String, Vec<v8::Global<v8::Function>>>> = Mutex::new(HashMap::new());
+}
+
 /// Timer tracking structure for unref/ref functionality (v0.3.18)
 #[allow(dead_code)]
 struct TimerInfo {
@@ -1239,6 +1245,9 @@ impl MinimalRuntime {
 
         // Set up util module (v0.3.45)
         Self::setup_util_api(scope, &context)?;
+
+        // Set up events module (v0.3.46)
+        Self::setup_events_api(scope, &context)?;
 
         // Set up CommonJS module system (v0.3.x)
         Self::setup_module_system(scope, &context)?;
@@ -10666,6 +10675,299 @@ impl MinimalRuntime {
         // Set util as global
         let util_key = v8::String::new(scope, "util").unwrap();
         global.set(scope, util_key.into(), util_obj.into());
+
+        Ok(())
+    }
+
+    /// Set up the events module (v0.3.46)
+    /// Provides EventEmitter for event-driven programming
+    fn setup_events_api(
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        context: &v8::Local<v8::Context>,
+    ) -> Result<()> {
+        let global = context.global(scope);
+
+        // Create events object
+        let events_obj = v8::Object::new(scope);
+
+        // EventEmitter constructor
+        let event_emitter_constructor = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let emitter_obj = v8::Object::new(scope);
+
+            // Note: Full instanceof support requires prototype chain setup after constructor is created
+            // This is handled in setup_events_api after getting the function
+
+            // on(eventName, listener)
+            let on_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let event_name = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+                let listener = args.get(1);
+
+                if !listener.is_function() {
+                    retval.set(v8::null(scope).into());
+                    return;
+                }
+
+                let listener_func = v8::Local::<v8::Function>::try_from(listener).unwrap();
+                let function_global = v8::Global::new(scope, listener_func);
+
+                EVENT_LISTENERS.with(|map| {
+                    let mut map_ref = map.lock().unwrap();
+                    map_ref.entry(event_name.clone()).or_insert_with(Vec::new).push(function_global);
+                });
+
+                // Set event flag on object
+                let prop_key = v8::String::new(scope, &event_name).unwrap();
+                let val = v8::Boolean::new(scope, true);
+                this.set(scope, prop_key.into(), val.into());
+                retval.set(this.into());
+            });
+            let on_instance = on_func.get_function(scope).unwrap();
+            let on_key = v8::String::new(scope, "on").unwrap();
+            emitter_obj.set(scope, on_key.into(), on_instance.into());
+
+            // once(eventName, listener)
+            let once_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let event_name = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+                let listener = args.get(1);
+
+                if !listener.is_function() {
+                    retval.set(v8::null(scope).into());
+                    return;
+                }
+
+                let listener_func = v8::Local::<v8::Function>::try_from(listener).unwrap();
+                let function_global = v8::Global::new(scope, listener_func);
+
+                ONCE_LISTENERS.with(|map| {
+                    let mut map_ref = map.lock().unwrap();
+                    map_ref.entry(event_name.clone()).or_insert_with(Vec::new).push(function_global);
+                });
+
+                let prop_key = v8::String::new(scope, &event_name).unwrap();
+                let prop_val = v8::Boolean::new(scope, true);
+                this.set(scope, prop_key.into(), prop_val.into());
+                retval.set(this.into());
+            });
+            let once_instance = once_func.get_function(scope).unwrap();
+            let once_key = v8::String::new(scope, "once").unwrap();
+            emitter_obj.set(scope, once_key.into(), once_instance.into());
+
+            // emit(eventName, ...args)
+            let emit_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let event_name = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+
+                let mut event_args: Vec<v8::Local<v8::Value>> = Vec::new();
+                for i in 1..args.length() {
+                    event_args.push(args.get(i));
+                }
+
+                let mut emitted = false;
+
+                // Call regular listeners
+                EVENT_LISTENERS.with(|map| {
+                    let map_ref = map.lock().unwrap();
+                    if let Some(listeners) = map_ref.get(&event_name) {
+                        for listener in listeners {
+                            let listener_func = v8::Local::new(scope, listener);
+                            listener_func.call(scope, this.into(), &event_args);
+                            emitted = true;
+                        }
+                    }
+                });
+
+                // Call once listeners and remove them
+                let mut executed_once: Vec<v8::Global<v8::Function>> = Vec::new();
+                ONCE_LISTENERS.with(|map| {
+                    let mut map_ref = map.lock().unwrap();
+                    if let Some(listeners) = map_ref.get_mut(&event_name) {
+                        for listener in listeners.iter() {
+                            let listener_func = v8::Local::new(scope, listener);
+                            listener_func.call(scope, this.into(), &event_args);
+                            executed_once.push(listener.clone());
+                            emitted = true;
+                        }
+                        listeners.retain(|l| !executed_once.contains(l));
+                    }
+                });
+
+                retval.set(v8::Boolean::new(scope, emitted).into());
+            });
+            let emit_instance = emit_func.get_function(scope).unwrap();
+            let emit_key = v8::String::new(scope, "emit").unwrap();
+            emitter_obj.set(scope, emit_key.into(), emit_instance.into());
+
+            // removeListener(eventName, listener)
+            let remove_listener_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let event_name = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+                let listener = args.get(1);
+
+                // Remove from EVENT_LISTENERS
+                if listener.is_function() {
+                    EVENT_LISTENERS.with(|map| {
+                        let mut map_ref = map.lock().unwrap();
+                        if let Some(listeners) = map_ref.get_mut(&event_name) {
+                            listeners.retain(|global_func| {
+                                let local_func = v8::Local::new(scope, global_func);
+                                !local_func.strict_equals(listener)
+                            });
+                        }
+                    });
+                    // Also check ONCE_LISTENERS
+                    ONCE_LISTENERS.with(|map| {
+                        let mut map_ref = map.lock().unwrap();
+                        if let Some(listeners) = map_ref.get_mut(&event_name) {
+                            listeners.retain(|global_func| {
+                                let local_func = v8::Local::new(scope, global_func);
+                                !local_func.strict_equals(listener)
+                            });
+                        }
+                    });
+                }
+
+                // Remove event flag
+                let prop_key = v8::String::new(scope, &event_name).unwrap();
+                this.delete(scope, prop_key.into());
+                retval.set(this.into());
+            });
+            let remove_listener_instance = remove_listener_func.get_function(scope).unwrap();
+            let remove_listener_key = v8::String::new(scope, "removeListener").unwrap();
+            emitter_obj.set(scope, remove_listener_key.into(), remove_listener_instance.into());
+
+            // removeAllListeners([eventName])
+            let remove_all_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let event_name = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+
+                if event_name.is_empty() {
+                    EVENT_LISTENERS.with(|map| {
+                        let mut map_ref = map.lock().unwrap();
+                        map_ref.clear();
+                    });
+                    ONCE_LISTENERS.with(|map| {
+                        let mut map_ref = map.lock().unwrap();
+                        map_ref.clear();
+                    });
+                } else {
+                    EVENT_LISTENERS.with(|map| {
+                        let mut map_ref = map.lock().unwrap();
+                        map_ref.remove(&event_name);
+                    });
+                    ONCE_LISTENERS.with(|map| {
+                        let mut map_ref = map.lock().unwrap();
+                        map_ref.remove(&event_name);
+                    });
+                }
+                retval.set(this.into());
+            });
+            let remove_all_instance = remove_all_func.get_function(scope).unwrap();
+            let remove_all_key = v8::String::new(scope, "removeAllListeners").unwrap();
+            emitter_obj.set(scope, remove_all_key.into(), remove_all_instance.into());
+
+            // listeners(eventName)
+            let listeners_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let event_name = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+                let listeners_array = v8::Array::new(scope, 0);
+
+                EVENT_LISTENERS.with(|map| {
+                    let map_ref = map.lock().unwrap();
+                    if let Some(listeners) = map_ref.get(&event_name) {
+                        for (i, listener) in listeners.iter().enumerate() {
+                            let listener_func = v8::Local::new(scope, listener);
+                            listeners_array.set_index(scope, i as u32, listener_func.into());
+                        }
+                    }
+                });
+                retval.set(listeners_array.into());
+            });
+            let listeners_instance = listeners_func.get_function(scope).unwrap();
+            let listeners_key = v8::String::new(scope, "listeners").unwrap();
+            emitter_obj.set(scope, listeners_key.into(), listeners_instance.into());
+
+            // eventNames()
+            let event_names_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let names_array = v8::Array::new(scope, 0);
+                EVENT_LISTENERS.with(|map| {
+                    let map_ref = map.lock().unwrap();
+                    for (i, (name, _)) in map_ref.iter().enumerate() {
+                        let name_str = v8::String::new(scope, name).unwrap();
+                        names_array.set_index(scope, i as u32, name_str.into());
+                    }
+                });
+                retval.set(names_array.into());
+            });
+            let event_names_instance = event_names_func.get_function(scope).unwrap();
+            let event_names_key = v8::String::new(scope, "eventNames").unwrap();
+            emitter_obj.set(scope, event_names_key.into(), event_names_instance.into());
+
+            // getMaxListeners()
+            let get_max_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let max_key = v8::String::new(_scope, "_maxListeners").unwrap();
+                let max = this.get(_scope, max_key.into()).unwrap_or(v8::Integer::new(_scope, 10).into());
+                retval.set(max);
+            });
+            let get_max_instance = get_max_func.get_function(scope).unwrap();
+            let get_max_key = v8::String::new(scope, "getMaxListeners").unwrap();
+            emitter_obj.set(scope, get_max_key.into(), get_max_instance.into());
+
+            // setMaxListeners(n)
+            let set_max_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let n = args.get(0).to_integer(scope).unwrap_or(v8::Integer::new(scope, 10)).value() as i32;
+                let max_key = v8::String::new(scope, "_maxListeners").unwrap();
+                let max_key_val = v8::Integer::new(scope, n).into();
+                this.set(scope, max_key.into(), max_key_val);
+                retval.set(this.into());
+            });
+            let set_max_instance = set_max_func.get_function(scope).unwrap();
+            let set_max_key = v8::String::new(scope, "setMaxListeners").unwrap();
+            emitter_obj.set(scope, set_max_key.into(), set_max_instance.into());
+
+            // _maxListeners property (default 10)
+            let max_listeners_key = v8::String::new(scope, "_maxListeners").unwrap();
+            let max_val = v8::Integer::new(scope, 10);
+            emitter_obj.set(scope, max_listeners_key.into(), max_val.into());
+
+            retval.set(emitter_obj.into());
+        });
+
+        // Get the EventEmitter function
+        let event_emitter_func = event_emitter_constructor.get_function(scope).unwrap();
+
+        // Set EventEmitter as events.EventEmitter
+        let event_emitter_key = v8::String::new(scope, "EventEmitter").unwrap();
+        events_obj.set(scope, event_emitter_key.into(), event_emitter_func.into());
+
+        // Add static method listenerCount(emitter, eventName)
+        let listener_count_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let _emitter = args.get(0);
+            let event_name = args.get(1).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+            let mut count = 0;
+
+            EVENT_LISTENERS.with(|map| {
+                let map_ref = map.lock().unwrap();
+                if let Some(listeners) = map_ref.get(&event_name) {
+                    count = listeners.len();
+                }
+            });
+            retval.set(v8::Integer::new(scope, count as i32).into());
+        });
+        let listener_count_instance = listener_count_func.get_function(scope).unwrap();
+        let listener_count_key = v8::String::new(scope, "listenerCount").unwrap();
+        event_emitter_func.set(scope, listener_count_key.into(), listener_count_instance.into());
+
+        // Set up prototype chain for instanceof support (v0.3.46)
+        let prototype_obj = v8::Object::new(scope);
+        let prototype_key = v8::String::new(scope, "prototype").unwrap();
+        event_emitter_func.set(scope, prototype_key.into(), prototype_obj.into());
+
+        // Set events as global
+        let events_key = v8::String::new(scope, "events").unwrap();
+        global.set(scope, events_key.into(), events_obj.into());
 
         Ok(())
     }
