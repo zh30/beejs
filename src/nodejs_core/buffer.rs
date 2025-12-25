@@ -329,34 +329,34 @@ fn buffer_slice_callback(
     mut retval: v8::ReturnValue,
 ) {
     let this: _ = args.this();
-    let start: _ = args
+    let start: isize = args
         .get(0)
         .to_integer(scope)
         .unwrap_or(v8::Integer::new(scope, 0))
         .value() as isize;
-    let end: _ = args
+    let end: isize = args
         .get(1)
         .to_integer(scope)
         .unwrap_or(v8::Integer::new(scope, -1))
-        .value();
+        .value() as isize;
 
     // 获取源 Buffer 的长度
     let length_key: _ = v8::String::new(scope, "_length").unwrap();
-    let buffer_length: _ = this
+    let buffer_length: isize = this
         .get(scope, length_key.into())
-        .and_then(|v| v.to_integer(scope).map(|i| i.value()))
+        .and_then(|v| v.to_integer(scope).map(|i| i.value() as isize))
         .unwrap_or(0);
 
     // 计算实际的 start 和 end
     let actual_start: usize = if start < 0 {
-        ((buffer_length as isize + start).max(0)) as usize
+        ((buffer_length + start).max(0)) as usize
     } else {
         start.min(buffer_length) as usize
     };
     let actual_end: usize = if end == -1 {
         buffer_length as usize
     } else if end < 0 {
-        ((buffer_length as isize + end).max(0)) as usize
+        ((buffer_length + end).max(0)) as usize
     } else {
         end.min(buffer_length) as usize
     };
@@ -370,24 +370,20 @@ fn buffer_slice_callback(
     // 获取源 ArrayBuffer
     let source_buffer: Option<v8::Local<v8::ArrayBuffer>> = this.try_into().ok();
 
-    if let Some(source) = source_buffer {
+    if let Some(_source) = source_buffer {
         if slice_length > 0 {
-            // 创建新的 ArrayBuffer（深拷贝需要的内存）
+            // 创建新的 ArrayBuffer（由于 rusty_v8 0.22 没有直接的 backing_store 访问，
+            // 我们创建新的空 buffer，实际数据复制需要更高版本的 V8 API）
             let new_buffer: _ = v8::ArrayBuffer::new(scope, slice_length);
 
-            // 由于 rusty_v8 0.22 没有直接的 backing_store 访问，
-            // 我们创建一个共享底层存储的 Uint8Array 来实现切片
-            // 注意：这是一种简化实现，实际生产环境需要完整的字节访问
-
-            // 创建一个 Uint8Array 视图来访问源数据
-            let source_view: _ = v8::Uint8Array::new(scope, slice_length);
+            // Note: 暂时不创建 Uint8Array 视图，因为需要访问 backing_store
+            // 实际生产环境需要更新到更新版本的 rusty_v8 来实现真正的数据复制
 
             // 设置新 buffer 的属性
             let new_length_key: _ = v8::String::new(scope, "_length").unwrap();
             let new_length_val: _ = v8::Integer::new(scope, slice_length as i32).into();
             new_buffer.set(scope, new_length_key.into(), new_length_val);
 
-            // 将 Uint8Array 设置为返回对象的原型方法
             // 返回带有 length 属性的 ArrayBuffer
             retval.set(new_buffer.into());
         } else {
