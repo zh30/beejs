@@ -17,6 +17,11 @@ fn readable_push_callback(
     let state_key: _ = v8::String::new(scope, "_readableState").unwrap();
     let state_val: Option<v8::Local<v8::Value>> = this.get(scope, state_key.into());
 
+    if state_val.is_none() {
+        retval.set(v8::Boolean::new(scope, false).into());
+        return;
+    }
+
     // 检查是否是 push(null) - 表示流结束
     if chunk.is_null() {
         // 标记流已结束
@@ -399,6 +404,11 @@ fn pipe_data_callback(
     let dest_key: _ = v8::String::new(scope, "_pipeDestination").unwrap();
     let dest_val: Option<v8::Local<v8::Value>> = this.get(scope, dest_key.into());
 
+    if dest_val.is_none() {
+        retval.set(v8::undefined(scope).into());
+        return;
+    }
+
     if let Some(dest) = dest_val {
         if let Some(dest_obj) = dest.to_object(scope) {
             // 调用 destination.write(chunk)
@@ -515,7 +525,6 @@ fn writable_constructor_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    eprintln!("[DEBUG] writable_constructor_callback called");
     let stream_obj: _ = v8::Object::new(scope);
 
     // v0.3.59: 支持 options 参数，包含用户自定义的 _write 函数
@@ -607,7 +616,6 @@ fn writable_write_callback(
     // 默认_write实现 - 输出到控制台
     if chunk.is_string() {
         let content: _ = chunk.to_string(scope).unwrap().to_rust_string_lossy(scope);
-        eprintln!("[Writable Stream] {}: {}", encoding, content);
     }
     retval.set(v8::undefined(scope).into());
 }
@@ -716,6 +724,21 @@ fn writable_end_callback(
         if listener.is_function() {
             if let Ok(func) = v8::Local::<v8::Function>::try_from(listener) {
                 func.call(scope, this.into(), &[]);
+            }
+        }
+    }
+
+    // v0.3.78: 调用 pipeline 回调（如果有）
+    let pipeline_cb_key: _ = v8::String::new(scope, "_beejs_pipeline_cb_").unwrap();
+    if let Some(pipeline_cb_val) = this.get(scope, pipeline_cb_key.into()) {
+        if pipeline_cb_val.is_function() {
+            if let Ok(pipeline_cb_func) = v8::Local::<v8::Function>::try_from(pipeline_cb_val) {
+                let args_arr: &[v8::Local<v8::Value>] = &[v8::null(scope).into()];
+                let undefined = v8::undefined(scope);
+                pipeline_cb_func.call(scope, this.into(), args_arr);
+
+                // 清除回调引用，避免内存泄漏
+                this.delete(scope, pipeline_cb_key.into());
             }
         }
     }
@@ -1161,11 +1184,8 @@ fn stream_pipeline_callback(
                             // 调用 source.pipe(destination)
                             pipe_fn.call(scope, source.into(), &[destination]);
 
-                            // 如果是 Writable，更新 last_writable
-                            let end_key: v8::Local<v8::Value> = v8::String::new(scope, "end").unwrap().into();
-                            if dest_obj.has(scope, end_key).unwrap_or(false) {
-                                last_writable = Some(destination);
-                            }
+                            // 最后一个流就是 Writable（假设最后一个参数是 Writable）
+                            last_writable = Some(destination);
                         }
                     }
                 }
@@ -1174,54 +1194,47 @@ fn stream_pipeline_callback(
     }
 
     // v0.3.78: 修复 pipeline 回调时机 - 在流结束时才调用回调
-    // 使用 once 方法注册一次性监听器，确保流结束时才调用回调
+    // v0.3.79: 使用独立的属性名存储回调，直接设置监听器而非使用 once()
     if let (Some(cb), Some(last)) = (callback, last_writable) {
         if let Some(last_obj) = last.to_object(scope) {
-            let once_key: v8::Local<v8::Value> = v8::String::new(scope, "once").unwrap().into();
+            // 获取事件名称：'end' 用于 Readable/Transform，'finish' 用于 Writable
+            let finish_key: v8::Local<v8::Value> = v8::String::new(scope, "_writableState").unwrap().into();
+            let is_writable = last_obj.has(scope, finish_key).unwrap_or(false);
 
-            if let Some(once_func) = last_obj.get(scope, once_key) {
-                if once_func.is_function() {
-                    if let Ok(once_fn) = v8::Local::<v8::Function>::try_from(once_func) {
-                        // 获取事件名称：'end' 用于 Readable/Transform，'finish' 用于 Writable
-                        let finish_key: v8::Local<v8::Value> = v8::String::new(scope, "_writableState").unwrap().into();
-                        let is_writable = last_obj.has(scope, finish_key).unwrap_or(false);
+            let event_name = if is_writable { "finish" } else { "end" };
+            let event_str: v8::Local<v8::Value> = v8::String::new(scope, event_name).unwrap().into();
 
-                        let event_name = if is_writable { "finish" } else { "end" };
-                        let event_str: v8::Local<v8::Value> = v8::String::new(scope, event_name).unwrap().into();
+            // 使用独立的属性名存储回调，避免覆盖用户监听器
+            let pipeline_cb_key: v8::Local<v8::Value> = v8::String::new(scope, "_beejs_pipeline_cb_").unwrap().into();
+            last_obj.set(scope, pipeline_cb_key, cb.into());
 
-                        // 直接在 last 对象上设置回调属性
-                        let callback_key: v8::Local<v8::Value> = v8::String::new(scope, "_pipelineCallback").unwrap().into();
-                        last_obj.set(scope, callback_key, cb.into());
+            // 创建一个包装函数，用于调用原始回调
+            // 注意：不捕获任何变量，从对象属性获取回调
+            let pipeline_callback_fn: v8::Local<v8::Function> = v8::FunctionTemplate::new(
+                scope,
+                |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+                    let this: v8::Local<v8::Object> = args.this();
+                    if let Some(this_obj) = this.to_object(scope) {
+                        let cb_key: v8::Local<v8::Value> = v8::String::new(scope, "_beejs_pipeline_cb_").unwrap().into();
+                        if let Some(cb_val) = this_obj.get(scope, cb_key) {
+                            if cb_val.is_function() {
+                                if let Ok(cb_fn) = v8::Local::<v8::Function>::try_from(cb_val) {
+                                    let args_arr: &[v8::Local<v8::Value>] = &[v8::null(scope).into()];
+                                    let undefined = v8::undefined(scope);
+                                    cb_fn.call(scope, undefined.into(), args_arr);
 
-                        // 创建一个包装函数，用于调用原始回调
-                        let pipeline_callback_fn: v8::Local<v8::Function> = v8::FunctionTemplate::new(
-                            scope,
-                            |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-                                let this: v8::Local<v8::Object> = args.this();
-                                if let Some(this_obj) = this.to_object(scope) {
-                                    let callback_key: v8::Local<v8::Value> = v8::String::new(scope, "_pipelineCallback").unwrap().into();
-                                    if let Some(cb_val) = this_obj.get(scope, callback_key) {
-                                        if cb_val.is_function() {
-                                            if let Ok(cb_fn) = v8::Local::<v8::Function>::try_from(cb_val) {
-                                                let args_arr: &[v8::Local<v8::Value>] = &[v8::null(scope).into()];
-                                                let undefined = v8::undefined(scope);
-                                                cb_fn.call(scope, undefined.into(), args_arr);
-
-                                                // 清除回调引用
-                                                this_obj.delete(scope, callback_key.into());
-                                            }
-                                        }
-                                    }
+                                    // 清除回调引用，避免内存泄漏
+                                    this_obj.delete(scope, cb_key.into());
                                 }
-                            },
-                        ).get_function(scope).unwrap();
-
-                        // 调用 once('end'/'finish', wrapper) 注册回调
-                        let wrapper_args: &[v8::Local<v8::Value>] = &[event_str, pipeline_callback_fn.into()];
-                        once_fn.call(scope, last.into(), wrapper_args);
+                            }
+                        }
                     }
-                }
-            }
+                },
+            ).get_function(scope).unwrap();
+
+            // 直接在 last 对象上设置监听器（不使用 once）
+            let listener_key: v8::Local<v8::Value> = v8::String::new(scope, event_name).unwrap().into();
+            last_obj.set(scope, listener_key, pipeline_callback_fn.into());
         }
     }
 
@@ -1394,6 +1407,8 @@ fn passthrough_write_callback(
     args: v8::FunctionCallbackArguments,
     _retval: v8::ReturnValue,
 ) {
+    let this: _ = args.this();
+
     let chunk: _ = args.get(0);
     let _encoding: _ = args.get(1);
     let callback: _ = args.get(2);
