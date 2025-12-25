@@ -1527,7 +1527,7 @@ fn cipher_final_callback(
     // 获取之前累积的 pending 数据
     let pending_data_key: _ = v8::String::new(scope, "_pendingData").unwrap();
     let pending_data_val = this.get(scope, pending_data_key.into());
-    let mut pending_data: Vec<u8> = if let Ok(buf) = v8::Local::<v8::ArrayBuffer>::try_from(pending_data_val.unwrap()) {
+    let pending_data: Vec<u8> = if let Ok(buf) = v8::Local::<v8::ArrayBuffer>::try_from(pending_data_val.unwrap()) {
         let store = buf.get_backing_store();
         let len = store.byte_length();
         if len > 0 {

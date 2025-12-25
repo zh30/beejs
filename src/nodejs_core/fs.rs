@@ -8,7 +8,7 @@ use std::path::Path;
 /// 创建 Buffer 对象（v8::ArrayBuffer）- v0.3.66
 /// 用于 'buffer' 编码读取时返回二进制数据
 fn create_buffer_from_bytes<'a>(scope: &mut v8::HandleScope<'a>, bytes: &[u8]) -> v8::Local<'a, v8::Value> {
-    let buffer: v8::Local<v8::ArrayBuffer> = v8::ArrayBuffer::new(scope, bytes.len());
+    let _buffer: v8::Local<v8::ArrayBuffer> = v8::ArrayBuffer::new(scope, bytes.len());
     // Note: rusty_v8 0.22 不支持直接访问 backing_store
     // 创建一个具有 _length 属性的对象来模拟 Buffer
     let buffer_obj = v8::Object::new(scope);
@@ -407,7 +407,7 @@ fn extract_encoding_option(scope: &mut v8::HandleScope, options: &v8::Local<v8::
     if let Some(s) = options.to_string(scope) {
         let encoding_str = s.to_rust_string_lossy(scope).to_lowercase();
         return match encoding_str.as_str() {
-            "utf-8" | "utf8" | "utf8" => Encoding::Utf8,
+            "utf-8" | "utf8" => Encoding::Utf8,
             "base64" => Encoding::Base64,
             "hex" => Encoding::Hex,
             "buffer" | "raw" => Encoding::Buffer,
@@ -839,8 +839,9 @@ fn fs_promises_stat_callback(
 
                 // v0.3.64: isFile should be a function that returns a boolean
                 // Use integer flag instead of closure to avoid V8 FunctionTemplate issues
-                let is_file_flag: i32 = if is_file { 1 } else { 0 };
-                let is_dir_flag: i32 = if is_dir { 1 } else { 0 };
+                // Note: These flags are stored for potential future use with cross-beam scope
+                let _is_file_flag: i32 = if is_file { 1 } else { 0 };
+                let _is_dir_flag: i32 = if is_dir { 1 } else { 0 };
 
                 let is_file_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
                     // Use persistent state via closure capture (V8 restriction workaround)

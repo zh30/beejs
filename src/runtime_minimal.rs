@@ -10697,7 +10697,7 @@ impl MinimalRuntime {
                 // Register callbacks on source (this)
                 // Store destination reference for callbacks to access
                 let dest_ref_key = v8::String::new(scope, "_pipeDest").unwrap();
-                if let Some(dest) = dest_obj {
+                if let Some(_dest) = dest_obj {
                     this.set(scope, dest_ref_key.into(), destination);
                 }
 
@@ -11095,7 +11095,7 @@ impl MinimalRuntime {
             stream_obj.set(scope, resume_key.into(), resume_instance.into());
 
             // pipe方法
-            let pipe_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let pipe_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
                 let this = args.this();
                 let _destination = args.get(0);
                 retval.set(this.into());
@@ -11449,7 +11449,7 @@ impl MinimalRuntime {
             stream_obj.set(scope, resume_key.into(), resume_instance.into());
 
             // pipe方法
-            let pipe_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let pipe_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
                 let this = args.this();
                 let _destination = args.get(0);
                 retval.set(this.into());
