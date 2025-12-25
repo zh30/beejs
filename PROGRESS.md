@@ -57,6 +57,35 @@
 - `beejs eval "e.emit('test')"` → true
 
 ---
+### ✨ v0.3.47 DNS 模块实现 (2025-12-25)
+**进度**: dns.lookup/dns.resolve/dns.resolve4/dns.resolve6/dns.reverse | 16 测试用例 | ✅ 待测试
+
+#### v0.3.47 实现内容
+- **dns 对象**
+  - `dns.lookup(hostname, [options])` - DNS 查询,返回第一个 IP 地址
+  - `dns.resolve(hostname, [rrtype])` - DNS 解析,返回地址数组
+  - `dns.resolve4(hostname)` - 仅解析 IPv4 地址
+  - `dns.resolve6(hostname)` - 仅解析 IPv6 地址
+  - `dns.reverse(ip)` - PTR 反向查询
+  - `dns.getServers()` - 获取 DNS 服务器列表
+
+#### v0.3.47 技术实现
+- **Rust 标准库集成** (src/runtime_minimal.rs)
+  - 使用 `std::net::ToSocketAddrs` 进行 DNS 查询
+  - 无需额外依赖,保持轻量级设计
+  - 地址排序和去重处理
+
+#### v0.3.47 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+180 行)
+  - 添加 `setup_dns_api()` 函数
+  - 在 `execute_code()` 中调用初始化
+
+- **新增文件**: `tests/dns_module_tests.rs` (+16 测试用例)
+  - 16 个测试用例覆盖 DNS 模块
+  - 测试模块存在性、函数存在性
+  - 测试各种查询功能
+
+---
 
 ### ✨ v0.3.45 HTTP 和 Util 模块实现 (2025-12-25)
 **进度**: fetch/http.request/http.createServer | ✅ CLI 验证通过

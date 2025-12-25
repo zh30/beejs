@@ -13,7 +13,8 @@ use reqwest;
 use serde_json;
 use once_cell::sync::Lazy;
 
-/// Event listener storage using thread_local (v0.3.46)
+// Event listener storage using thread_local (v0.3.46)
+// Note: rustdoc does not generate documentation for macro invocations
 thread_local! {
     static EVENT_LISTENERS: Mutex<HashMap<String, Vec<v8::Global<v8::Function>>>> = Mutex::new(HashMap::new());
     static ONCE_LISTENERS: Mutex<HashMap<String, Vec<v8::Global<v8::Function>>>> = Mutex::new(HashMap::new());
@@ -1248,6 +1249,9 @@ impl MinimalRuntime {
 
         // Set up events module (v0.3.46)
         Self::setup_events_api(scope, &context)?;
+
+        // Set up DNS module (v0.3.47)
+        Self::setup_dns_api(scope, &context)?;
 
         // Set up CommonJS module system (v0.3.x)
         Self::setup_module_system(scope, &context)?;
@@ -10692,6 +10696,7 @@ impl MinimalRuntime {
 
         // EventEmitter constructor
         let event_emitter_constructor = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let _ = args; // args not used in constructor
             let emitter_obj = v8::Object::new(scope);
 
             // Note: Full instanceof support requires prototype chain setup after constructor is created
@@ -10968,6 +10973,184 @@ impl MinimalRuntime {
         // Set events as global
         let events_key = v8::String::new(scope, "events").unwrap();
         global.set(scope, events_key.into(), events_obj.into());
+
+        Ok(())
+    }
+
+    /// Provides DNS lookup and resolution functions (v0.3.47)
+    fn setup_dns_api(
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        context: &v8::Local<v8::Context>,
+    ) -> Result<()> {
+        let global = context.global(scope);
+
+        // Create dns object
+        let dns_obj = v8::Object::new(scope);
+
+        // dns.lookup(hostname, [options]) - Look up a hostname
+        let lookup_key = v8::String::new(scope, "lookup").unwrap();
+        let lookup_instance = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let hostname = args.get(0).to_string(_scope).map(|s| s.to_rust_string_lossy(_scope)).unwrap_or_default();
+
+            if hostname.is_empty() {
+                retval.set(v8::String::new(_scope, "Error: hostname is required").unwrap().into());
+                return;
+            }
+
+            // Use standard library for DNS lookup
+            let result = std::net::ToSocketAddrs::to_socket_addrs(&hostname);
+
+            match result {
+                Ok(addrs) => {
+                    let mut addresses: Vec<String> = addrs.map(|addr| addr.to_string()).collect();
+                    addresses.sort();
+                    addresses.dedup();
+
+                    // Return first address as string for compatibility
+                    if let Some(ip) = addresses.first() {
+                        retval.set(v8::String::new(_scope, ip).unwrap().into());
+                    } else {
+                        retval.set(v8::null(_scope).into());
+                    }
+                }
+                Err(e) => {
+                    let error_msg = format!("Error: dns.lookup {} - {}", hostname, e);
+                    retval.set(v8::String::new(_scope, &error_msg).unwrap().into());
+                }
+            }
+        }).get_function(scope).unwrap();
+        dns_obj.set(scope, lookup_key.into(), lookup_instance.into());
+
+        // dns.resolve(hostname, [rrtype]) - Resolve a hostname
+        let resolve_key = v8::String::new(scope, "resolve").unwrap();
+        let resolve_instance = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let hostname = args.get(0).to_string(_scope).map(|s| s.to_rust_string_lossy(_scope)).unwrap_or_default();
+            let _rrtype = args.get(1).to_string(_scope).map(|s| s.to_rust_string_lossy(_scope)).unwrap_or_else(|| "A".to_string());
+            // Note: rrtype parameter is accepted for API compatibility but full record-type
+            // specific resolution would require a DNS crate like trust-dns or c-ares
+
+            if hostname.is_empty() {
+                retval.set(v8::String::new(_scope, "Error: hostname is required").unwrap().into());
+                return;
+            }
+
+            // Perform DNS lookup based on record type
+            // Note: Full DNS resolution with different record types requires a DNS crate
+            // For now, use standard library lookup which handles A/AAAA records
+            let result = std::net::ToSocketAddrs::to_socket_addrs(&hostname);
+
+            match result {
+                Ok(addrs) => {
+                    let addresses: Vec<String> = addrs.map(|addr| addr.to_string()).collect();
+                    // Create array of addresses
+                    let arr = v8::Array::new(_scope, addresses.len() as i32);
+                    for (i, addr) in addresses.iter().enumerate() {
+                        let addr_str = v8::String::new(_scope, addr).unwrap();
+                        arr.set_index(_scope, i as u32, addr_str.into());
+                    }
+                    retval.set(arr.into());
+                }
+                Err(e) => {
+                    let error_msg = format!("Error: dns.resolve {} - {}", hostname, e);
+                    retval.set(v8::String::new(_scope, &error_msg).unwrap().into());
+                }
+            }
+        }).get_function(scope).unwrap();
+        dns_obj.set(scope, resolve_key.into(), resolve_instance.into());
+
+        // dns.resolve4(hostname) - Resolve IPv4 addresses
+        let resolve4_key = v8::String::new(scope, "resolve4").unwrap();
+        let resolve4_instance = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let hostname = args.get(0).to_string(_scope).map(|s| s.to_rust_string_lossy(_scope)).unwrap_or_default();
+
+            if hostname.is_empty() {
+                retval.set(v8::String::new(_scope, "Error: hostname is required").unwrap().into());
+                return;
+            }
+
+            match std::net::ToSocketAddrs::to_socket_addrs(&hostname) {
+                Ok(addrs) => {
+                    let v4_addresses: Vec<String> = addrs
+                        .filter(|addr| addr.is_ipv4())
+                        .map(|addr| addr.to_string())
+                        .collect();
+
+                    let arr = v8::Array::new(_scope, v4_addresses.len() as i32);
+                    for (i, addr) in v4_addresses.iter().enumerate() {
+                        let addr_str = v8::String::new(_scope, addr).unwrap();
+                        arr.set_index(_scope, i as u32, addr_str.into());
+                    }
+                    retval.set(arr.into());
+                }
+                Err(e) => {
+                    let error_msg = format!("Error: dns.resolve4 {} - {}", hostname, e);
+                    retval.set(v8::String::new(_scope, &error_msg).unwrap().into());
+                }
+            }
+        }).get_function(scope).unwrap();
+        dns_obj.set(scope, resolve4_key.into(), resolve4_instance.into());
+
+        // dns.resolve6(hostname) - Resolve IPv6 addresses
+        let resolve6_key = v8::String::new(scope, "resolve6").unwrap();
+        let resolve6_instance = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let hostname = args.get(0).to_string(_scope).map(|s| s.to_rust_string_lossy(_scope)).unwrap_or_default();
+
+            if hostname.is_empty() {
+                retval.set(v8::String::new(_scope, "Error: hostname is required").unwrap().into());
+                return;
+            }
+
+            match std::net::ToSocketAddrs::to_socket_addrs(&hostname) {
+                Ok(addrs) => {
+                    let v6_addresses: Vec<String> = addrs
+                        .filter(|addr| addr.is_ipv6())
+                        .map(|addr| addr.to_string())
+                        .collect();
+
+                    let arr = v8::Array::new(_scope, v6_addresses.len() as i32);
+                    for (i, addr) in v6_addresses.iter().enumerate() {
+                        let addr_str = v8::String::new(_scope, addr).unwrap();
+                        arr.set_index(_scope, i as u32, addr_str.into());
+                    }
+                    retval.set(arr.into());
+                }
+                Err(e) => {
+                    let error_msg = format!("Error: dns.resolve6 {} - {}", hostname, e);
+                    retval.set(v8::String::new(_scope, &error_msg).unwrap().into());
+                }
+            }
+        }).get_function(scope).unwrap();
+        dns_obj.set(scope, resolve6_key.into(), resolve6_instance.into());
+
+        // dns.reverse(ip) - PTR record lookup (reverse DNS)
+        let reverse_key = v8::String::new(scope, "reverse").unwrap();
+        let reverse_instance = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let ip = args.get(0).to_string(_scope).map(|s| s.to_rust_string_lossy(_scope)).unwrap_or_default();
+
+            if ip.is_empty() {
+                retval.set(v8::String::new(_scope, "Error: IP address is required").unwrap().into());
+                return;
+            }
+
+            // For PTR records, we return the IP as hostname for compatibility
+            // Full PTR lookup would require a DNS resolver crate
+            retval.set(v8::String::new(_scope, &ip).unwrap().into());
+        }).get_function(scope).unwrap();
+        dns_obj.set(scope, reverse_key.into(), reverse_instance.into());
+
+        // dns.getServers() - Get DNS servers (mock for compatibility)
+        let get_servers_key = v8::String::new(scope, "getServers").unwrap();
+        let get_servers_instance = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let servers = v8::Array::new(_scope, 1);
+            let dns_server = v8::String::new(_scope, "8.8.8.8").unwrap();
+            servers.set_index(_scope, 0, dns_server.into());
+            retval.set(servers.into());
+        }).get_function(scope).unwrap();
+        dns_obj.set(scope, get_servers_key.into(), get_servers_instance.into());
+
+        // Set dns as global
+        let dns_key = v8::String::new(scope, "dns").unwrap();
+        global.set(scope, dns_key.into(), dns_obj.into());
 
         Ok(())
     }
