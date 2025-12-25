@@ -555,15 +555,129 @@ fn writable_end_callback(
 }
 fn transform_constructor_callback(
     scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
+    args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let stream_obj: _ = v8::Object::new(scope);
+
+    // ===== Readable 方法 =====
+    // _read方法
+    let read_func: _ = v8::FunctionTemplate::new(scope, readable_read_callback);
+    let read_instance: _ = read_func.get_function(scope).unwrap();
+    let read_key: _ = v8::String::new(scope, "_read").unwrap();
+    stream_obj.set(scope, read_key.into(), read_instance.into());
+
+    // read方法
+    let read_public_func: _ = v8::FunctionTemplate::new(scope, readable_public_read_callback);
+    let read_public_instance: _ = read_public_func.get_function(scope).unwrap();
+    let read_public_key: _ = v8::String::new(scope, "read").unwrap();
+    stream_obj.set(scope, read_public_key.into(), read_public_instance.into());
+
+    // push方法
+    let push_func: _ = v8::FunctionTemplate::new(scope, readable_push_callback);
+    let push_instance: _ = push_func.get_function(scope).unwrap();
+    let push_key: _ = v8::String::new(scope, "push").unwrap();
+    stream_obj.set(scope, push_key.into(), push_instance.into());
+
+    // on方法
+    let on_func: _ = v8::FunctionTemplate::new(scope, readable_on_callback);
+    let on_instance: _ = on_func.get_function(scope).unwrap();
+    let on_key: _ = v8::String::new(scope, "on").unwrap();
+    stream_obj.set(scope, on_key.into(), on_instance.into());
+
+    // once方法
+    let once_func: _ = v8::FunctionTemplate::new(scope, readable_once_callback);
+    let once_instance: _ = once_func.get_function(scope).unwrap();
+    let once_key: _ = v8::String::new(scope, "once").unwrap();
+    stream_obj.set(scope, once_key.into(), once_instance.into());
+
+    // pause方法
+    let pause_func: _ = v8::FunctionTemplate::new(scope, readable_pause_callback);
+    let pause_instance: _ = pause_func.get_function(scope).unwrap();
+    let pause_key: _ = v8::String::new(scope, "pause").unwrap();
+    stream_obj.set(scope, pause_key.into(), pause_instance.into());
+
+    // resume方法
+    let resume_func: _ = v8::FunctionTemplate::new(scope, readable_resume_callback);
+    let resume_instance: _ = resume_func.get_function(scope).unwrap();
+    let resume_key: _ = v8::String::new(scope, "resume").unwrap();
+    stream_obj.set(scope, resume_key.into(), resume_instance.into());
+
+    // pipe方法
+    let pipe_func: _ = v8::FunctionTemplate::new(scope, readable_pipe_callback);
+    let pipe_instance: _ = pipe_func.get_function(scope).unwrap();
+    let pipe_key: _ = v8::String::new(scope, "pipe").unwrap();
+    stream_obj.set(scope, pipe_key.into(), pipe_instance.into());
+
+    // unpipe方法
+    let unpipe_func: _ = v8::FunctionTemplate::new(scope, readable_unpipe_callback);
+    let unpipe_instance: _ = unpipe_func.get_function(scope).unwrap();
+    let unpipe_key: _ = v8::String::new(scope, "unpipe").unwrap();
+    stream_obj.set(scope, unpipe_key.into(), unpipe_instance.into());
+
+    // _readableState
+    let readable_state_key: _ = v8::String::new(scope, "_readableState").unwrap();
+    let readable_state_obj: _ = v8::Object::new(scope);
+    let flowing_key: _ = v8::String::new(scope, "flowing").unwrap();
+    let flowing_val: _ = v8::Boolean::new(scope, false);
+    readable_state_obj.set(scope, flowing_key.into(), flowing_val.into());
+    let paused_key: _ = v8::String::new(scope, "paused").unwrap();
+    let paused_val: _ = v8::Boolean::new(scope, false);
+    readable_state_obj.set(scope, paused_key.into(), paused_val.into());
+    let ended_key: _ = v8::String::new(scope, "ended").unwrap();
+    let ended_val: _ = v8::Boolean::new(scope, false);
+    readable_state_obj.set(scope, ended_key.into(), ended_val.into());
+    let high_water_mark_key: _ = v8::String::new(scope, "highWaterMark").unwrap();
+    let hwm_val: _ = v8::Integer::new(scope, 16 * 1024);
+    readable_state_obj.set(scope, high_water_mark_key.into(), hwm_val.into());
+    stream_obj.set(scope, readable_state_key.into(), readable_state_obj.into());
+
+    // ===== Writable 方法 =====
+    // _write方法 (私有，默认实现)
+    let write_private_func: _ = v8::FunctionTemplate::new(scope, writable_write_callback);
+    let write_private_instance: _ = write_private_func.get_function(scope).unwrap();
+    let write_private_key: _ = v8::String::new(scope, "_write").unwrap();
+    stream_obj.set(scope, write_private_key.into(), write_private_instance.into());
+
+    // write方法 (公开)
+    let write_func: _ = v8::FunctionTemplate::new(scope, writable_public_write_callback);
+    let write_instance: _ = write_func.get_function(scope).unwrap();
+    let write_key: _ = v8::String::new(scope, "write").unwrap();
+    stream_obj.set(scope, write_key.into(), write_instance.into());
+
+    // end方法
+    let end_func: _ = v8::FunctionTemplate::new(scope, writable_end_callback);
+    let end_instance: _ = end_func.get_function(scope).unwrap();
+    let end_key: _ = v8::String::new(scope, "end").unwrap();
+    stream_obj.set(scope, end_key.into(), end_instance.into());
+
+    // on方法 (复用 readable_on)
+    stream_obj.set(scope, on_key.into(), on_instance.into());
+
+    // _writableState
+    let writable_state_key: _ = v8::String::new(scope, "_writableState").unwrap();
+    let writable_state_obj: _ = v8::Object::new(scope);
+    let need_drain_key: _ = v8::String::new(scope, "needDrain").unwrap();
+    let need_drain_val: _ = v8::Boolean::new(scope, false);
+    writable_state_obj.set(scope, need_drain_key.into(), need_drain_val.into());
+    let w_ended_key: _ = v8::String::new(scope, "ended").unwrap();
+    let w_ended_val: _ = v8::Boolean::new(scope, false);
+    writable_state_obj.set(scope, w_ended_key.into(), w_ended_val.into());
+    let writable_flag_key: _ = v8::String::new(scope, "writable").unwrap();
+    let writable_flag_val: _ = v8::Boolean::new(scope, true);
+    writable_state_obj.set(scope, writable_flag_key.into(), writable_flag_val.into());
+    let w_hwm_key: _ = v8::String::new(scope, "highWaterMark").unwrap();
+    let w_hwm_val: _ = v8::Integer::new(scope, 16 * 1024);
+    writable_state_obj.set(scope, w_hwm_key.into(), w_hwm_val.into());
+    stream_obj.set(scope, writable_state_key.into(), writable_state_obj.into());
+
+    // ===== Transform 特有方法 =====
     // _transform方法
     let transform_func: _ = v8::FunctionTemplate::new(scope, transform_transform_callback);
     let transform_instance: _ = transform_func.get_function(scope).unwrap();
     let transform_key: _ = v8::String::new(scope, "_transform").unwrap();
     stream_obj.set(scope, transform_key.into(), transform_instance.into());
+
     retval.set(stream_obj.into());
 }
 fn transform_transform_callback(
@@ -593,5 +707,117 @@ fn duplex_constructor_callback(
     mut retval: v8::ReturnValue,
 ) {
     let stream_obj: _ = v8::Object::new(scope);
+
+    // ===== Readable 方法 =====
+    // _read方法
+    let read_func: _ = v8::FunctionTemplate::new(scope, readable_read_callback);
+    let read_instance: _ = read_func.get_function(scope).unwrap();
+    let read_key: _ = v8::String::new(scope, "_read").unwrap();
+    stream_obj.set(scope, read_key.into(), read_instance.into());
+
+    // read方法
+    let read_public_func: _ = v8::FunctionTemplate::new(scope, readable_public_read_callback);
+    let read_public_instance: _ = read_public_func.get_function(scope).unwrap();
+    let read_public_key: _ = v8::String::new(scope, "read").unwrap();
+    stream_obj.set(scope, read_public_key.into(), read_public_instance.into());
+
+    // push方法
+    let push_func: _ = v8::FunctionTemplate::new(scope, readable_push_callback);
+    let push_instance: _ = push_func.get_function(scope).unwrap();
+    let push_key: _ = v8::String::new(scope, "push").unwrap();
+    stream_obj.set(scope, push_key.into(), push_instance.into());
+
+    // on方法
+    let on_func: _ = v8::FunctionTemplate::new(scope, readable_on_callback);
+    let on_instance: _ = on_func.get_function(scope).unwrap();
+    let on_key: _ = v8::String::new(scope, "on").unwrap();
+    stream_obj.set(scope, on_key.into(), on_instance.into());
+
+    // once方法
+    let once_func: _ = v8::FunctionTemplate::new(scope, readable_once_callback);
+    let once_instance: _ = once_func.get_function(scope).unwrap();
+    let once_key: _ = v8::String::new(scope, "once").unwrap();
+    stream_obj.set(scope, once_key.into(), once_instance.into());
+
+    // pause方法
+    let pause_func: _ = v8::FunctionTemplate::new(scope, readable_pause_callback);
+    let pause_instance: _ = pause_func.get_function(scope).unwrap();
+    let pause_key: _ = v8::String::new(scope, "pause").unwrap();
+    stream_obj.set(scope, pause_key.into(), pause_instance.into());
+
+    // resume方法
+    let resume_func: _ = v8::FunctionTemplate::new(scope, readable_resume_callback);
+    let resume_instance: _ = resume_func.get_function(scope).unwrap();
+    let resume_key: _ = v8::String::new(scope, "resume").unwrap();
+    stream_obj.set(scope, resume_key.into(), resume_instance.into());
+
+    // pipe方法
+    let pipe_func: _ = v8::FunctionTemplate::new(scope, readable_pipe_callback);
+    let pipe_instance: _ = pipe_func.get_function(scope).unwrap();
+    let pipe_key: _ = v8::String::new(scope, "pipe").unwrap();
+    stream_obj.set(scope, pipe_key.into(), pipe_instance.into());
+
+    // unpipe方法
+    let unpipe_func: _ = v8::FunctionTemplate::new(scope, readable_unpipe_callback);
+    let unpipe_instance: _ = unpipe_func.get_function(scope).unwrap();
+    let unpipe_key: _ = v8::String::new(scope, "unpipe").unwrap();
+    stream_obj.set(scope, unpipe_key.into(), unpipe_instance.into());
+
+    // _readableState
+    let readable_state_key: _ = v8::String::new(scope, "_readableState").unwrap();
+    let readable_state_obj: _ = v8::Object::new(scope);
+    let flowing_key: _ = v8::String::new(scope, "flowing").unwrap();
+    let flowing_val: _ = v8::Boolean::new(scope, false);
+    readable_state_obj.set(scope, flowing_key.into(), flowing_val.into());
+    let paused_key: _ = v8::String::new(scope, "paused").unwrap();
+    let paused_val: _ = v8::Boolean::new(scope, false);
+    readable_state_obj.set(scope, paused_key.into(), paused_val.into());
+    let ended_key: _ = v8::String::new(scope, "ended").unwrap();
+    let ended_val: _ = v8::Boolean::new(scope, false);
+    readable_state_obj.set(scope, ended_key.into(), ended_val.into());
+    let high_water_mark_key: _ = v8::String::new(scope, "highWaterMark").unwrap();
+    let hwm_val: _ = v8::Integer::new(scope, 16 * 1024);
+    readable_state_obj.set(scope, high_water_mark_key.into(), hwm_val.into());
+    stream_obj.set(scope, readable_state_key.into(), readable_state_obj.into());
+
+    // ===== Writable 方法 =====
+    // _write方法 (私有，默认实现)
+    let write_private_func: _ = v8::FunctionTemplate::new(scope, writable_write_callback);
+    let write_private_instance: _ = write_private_func.get_function(scope).unwrap();
+    let write_private_key: _ = v8::String::new(scope, "_write").unwrap();
+    stream_obj.set(scope, write_private_key.into(), write_private_instance.into());
+
+    // write方法 (公开)
+    let write_func: _ = v8::FunctionTemplate::new(scope, writable_public_write_callback);
+    let write_instance: _ = write_func.get_function(scope).unwrap();
+    let write_key: _ = v8::String::new(scope, "write").unwrap();
+    stream_obj.set(scope, write_key.into(), write_instance.into());
+
+    // end方法
+    let end_func: _ = v8::FunctionTemplate::new(scope, writable_end_callback);
+    let end_instance: _ = end_func.get_function(scope).unwrap();
+    let end_key: _ = v8::String::new(scope, "end").unwrap();
+    stream_obj.set(scope, end_key.into(), end_instance.into());
+
+    // on方法 (复用 readable_on)
+    stream_obj.set(scope, on_key.into(), on_instance.into());
+
+    // _writableState
+    let writable_state_key: _ = v8::String::new(scope, "_writableState").unwrap();
+    let writable_state_obj: _ = v8::Object::new(scope);
+    let need_drain_key: _ = v8::String::new(scope, "needDrain").unwrap();
+    let need_drain_val: _ = v8::Boolean::new(scope, false);
+    writable_state_obj.set(scope, need_drain_key.into(), need_drain_val.into());
+    let w_ended_key: _ = v8::String::new(scope, "ended").unwrap();
+    let w_ended_val: _ = v8::Boolean::new(scope, false);
+    writable_state_obj.set(scope, w_ended_key.into(), w_ended_val.into());
+    let writable_flag_key: _ = v8::String::new(scope, "writable").unwrap();
+    let writable_flag_val: _ = v8::Boolean::new(scope, true);
+    writable_state_obj.set(scope, writable_flag_key.into(), writable_flag_val.into());
+    let w_hwm_key: _ = v8::String::new(scope, "highWaterMark").unwrap();
+    let w_hwm_val: _ = v8::Integer::new(scope, 16 * 1024);
+    writable_state_obj.set(scope, w_hwm_key.into(), w_hwm_val.into());
+    stream_obj.set(scope, writable_state_key.into(), writable_state_obj.into());
+
     retval.set(stream_obj.into());
 }

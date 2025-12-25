@@ -9,6 +9,27 @@
 
 
 
+### v0.3.58 实现 Transform 和 Duplex stream (2025-12-25)
+**进度**: Transform/Duplex Stream | 48/48 测试通过 | ✅ 所有测试通过
+
+#### v0.3.58 改进内容
+- **实现 Transform stream**
+  - 完整的 Readable + Writable 方法继承
+  - `_transform` 方法正确调用用户的 `transform` 函数
+  - 支持 `this.push()` 在 transform 中输出数据
+  - 正确触发 'data' 和 'end' 事件
+- **实现 Duplex stream**
+  - 完整的 Readable + Writable 方法继承
+  - `_write` 方法正确调用用户的 `_write` 函数
+  - 支持 `this.push()` 在 _write 中输出数据
+  - 正确触发 'data' 和 'end' 事件
+- **背压机制完善**
+  - 添加 'data' 监听器时自动设置 `flowing = true`
+  - `on()` 和 `once()` 方法正确更新流状态
+  - 修复 callback 未传递时的默认处理
+- **V8 闭包捕获问题修复**
+  - 将用户函数存储在流对象属性中（`_user_transform`, `_user_write`）
+  - 避免直接捕获 `v8::Local` 句柄导致编译错误
 
 ### v0.3.57 完善 Writable stream 背压支持 (2025-12-25)
 **进度**: Writable Stream 背压 | 31/31 测试通过 | ✅ 所有测试通过

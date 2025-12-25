@@ -470,3 +470,224 @@ fn test_writable_end_sets_writable_false() {
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
 }
+
+// Transform stream tests - v0.3.58
+#[test]
+#[serial]
+fn test_transform_has_read_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const t = new stream.Transform({ transform() {} }); typeof t.read"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_transform_has_push_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const t = new stream.Transform({ transform() {} }); typeof t.push"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_transform_has_on_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const t = new stream.Transform({ transform() {} }); typeof t.on"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_transform_has_write_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const t = new stream.Transform({ transform() {} }); typeof t.write"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_transform_has_end_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const t = new stream.Transform({ transform() {} }); typeof t.end"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_transform_has_pause_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const t = new stream.Transform({ transform() {} }); typeof t.pause"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_transform_has_resume_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const t = new stream.Transform({ transform() {} }); typeof t.resume"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_transform_has_pipe_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const t = new stream.Transform({ transform() {} }); typeof t.pipe"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+// Duplex stream tests - v0.3.58
+#[test]
+#[serial]
+fn test_duplex_has_read_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const d = new stream.Duplex({}); typeof d.read"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_duplex_has_push_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const d = new stream.Duplex({}); typeof d.push"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_duplex_has_on_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const d = new stream.Duplex({}); typeof d.on"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_duplex_has_write_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const d = new stream.Duplex({}); typeof d.write"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_duplex_has_end_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const d = new stream.Duplex({}); typeof d.end"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_duplex_has_pause_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const d = new stream.Duplex({}); typeof d.pause"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_duplex_has_resume_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const d = new stream.Duplex({}); typeof d.resume"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_transform_transform_basic() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        let output = '';
+        const t = new stream.Transform({
+          transform(chunk, encoding, callback) {
+            this.push(chunk.toString().toUpperCase());
+            callback();
+          }
+        });
+        t.on('data', (d) => { output += d; });
+        t.on('end', () => { output += '|END'; });
+        t.write('hello');
+        t.write('world');
+        t.end();
+        output
+        "#;
+    let result = runtime.execute_code(code);
+    if result.is_err() {
+        eprintln!("Error: {:?}", result.as_ref().err());
+    }
+    assert!(result.is_ok(), "Code execution failed: {:?}", result.as_ref().err());
+    assert_eq!(result.unwrap().trim(), "HELLOWORLD|END");
+}
+
+#[test]
+#[serial]
+fn test_duplex_basic() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        let output = '';
+        const d = new stream.Duplex({
+          _write(chunk, encoding, callback) {
+            this.push(chunk.toString().toUpperCase());
+            callback();
+          }
+        });
+        d.on('data', (d) => { output += d; });
+        d.on('end', () => { output += '|END'; });
+        d.write('hello');
+        d.write('world');
+        d.end();
+        output
+        "#;
+    let result = runtime.execute_code(code);
+    if result.is_err() {
+        eprintln!("Error: {:?}", result.as_ref().err());
+    }
+    assert!(result.is_ok(), "Code execution failed: {:?}", result.as_ref().err());
+    assert_eq!(result.unwrap().trim(), "HELLOWORLD|END");
+}
