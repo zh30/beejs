@@ -13,6 +13,25 @@
 
 
 
+### v0.3.85 修复 V8 闭包参数警告和编译错误 (2025-12-26)
+**进度**: Bug 修复 | ✅ 已提交
+
+#### v0.3.85 修复内容
+- **http.rs**: 简化 `PooledConnection` 结构体
+  - 移除未使用的 `created_at` 字段
+  - 减少内存占用
+
+- **runtime_minimal.rs**: 修复 `passThrough` 函数的编译错误
+  - 修复 `_scope` 变量名错误（应为 `scope`）
+  - 修复 V8 闭包参数警告
+
+#### v0.3.85 测试结果
+```bash
+$ cargo test --test stream_module_tests
+test result: ok. 68 passed; 0 failed
+```
+
+---
 ### v0.3.80 修复 Transform 流 pipe 数据流问题 (2025-12-26)
 **进度**: Transform pipe 修复 | 🔧 开发中
 
