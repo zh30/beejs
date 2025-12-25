@@ -41,9 +41,46 @@ test result: ok. 19 passed; 0 failed
 ```
 
 #### v0.3.61 下一步计划
-- 实现 timers 模块（setTimeout、setInterval）
+- ✅ 实现 timers 模块（setTimeout、setInterval、setImmediate）- **v0.3.62 已完成**
 - 增强 crypto 模块（添加更多算法支持）
 - 完善 http 模块
+
+### v0.3.62 完成 Timers 模块实现 (2025-12-25)
+**进度**: Timers | 27/27 timers 测试通过 | 10/10 setImmediate 测试通过 | ✅ 全部测试通过
+
+#### v0.3.62 新增功能
+- **完善 setTimeout/setInterval 实现**
+  - 支持回调函数和延迟参数
+  - 支持传递额外参数给回调
+  - 返回 timer 对象（v0.3.36+）
+  - 实现 unref()/ref() 方法
+  - 实现 refresh() 方法（Node.js 兼容性）
+
+- **实现 setImmediate/setClearImmediate**
+  - 支持立即执行回调
+  - 返回唯一 timer ID
+  - 支持 clearImmediate 取消
+
+- **实现 queueMicrotask**
+  - 支持微任务队列
+  - 立即同步执行微任务
+
+#### v0.3.62 测试结果
+```bash
+$ cargo test --test timers_enhanced_tests
+running 27 tests
+test result: ok. 27 passed; 0 failed
+
+$ cargo test --test set_immediate_tests
+running 10 tests
+test result: ok. 10 passed; 0 failed
+```
+
+#### v0.3.62 下一步计划
+- 增强 crypto 模块（添加 createCipheriv）
+- 完善 http 模块（添加 Agent、getAllHeaders 等）
+- 实现 fs.promises（Promise-based API）
+- 添加 nextTick 支持
 
 ### v0.3.60 修复 Buffer.slice() 编译错误并完成测试 (2025-12-25)
 **进度**: Buffer.slice | 21/21 Buffer 测试通过 | 51/51 Stream 测试通过 | ✅ 编译和测试全部通过
