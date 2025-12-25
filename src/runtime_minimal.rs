@@ -11730,7 +11730,7 @@ impl MinimalRuntime {
         let agent_key = v8::String::new(scope, "Agent").unwrap();
         http_obj.set(scope, agent_key.into(), agent_instance.into());
 
-        // globalAgent (v0.3.64)
+        // globalAgent (v0.3.64) - 修正：设置到 http 对象而非 Agent 构造函数上
         let global_agent = v8::Object::new(scope);
         let ga_max_free_key = v8::String::new(scope, "maxFreeSockets").unwrap();
         let ga_max_free_val = v8::Integer::new(scope, 10);
@@ -11742,7 +11742,7 @@ impl MinimalRuntime {
         let ga_keep_alive_val = v8::Boolean::new(scope, false);
         global_agent.set(scope, ga_keep_alive_key.into(), ga_keep_alive_val.into());
         let global_agent_key = v8::String::new(scope, "globalAgent").unwrap();
-        agent_instance.set(scope, global_agent_key.into(), global_agent.into());
+        http_obj.set(scope, global_agent_key.into(), global_agent.into());
 
         // Set http as global
         let http_key = v8::String::new(scope, "http").unwrap();

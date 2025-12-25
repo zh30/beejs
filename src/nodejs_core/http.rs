@@ -29,10 +29,10 @@ pub fn setup_http_api(
     let agent_instance: _ = agent_func.get_function(scope).unwrap();
     let agent_key: _ = v8::String::new(scope, "Agent").unwrap();
     http_obj.set(scope, agent_key.into(), agent_instance.into());
-    // 全局 Agent 实例
+    // 全局 Agent 实例 - v0.3.64: 修正：设置到 http 对象而非构造函数上
     let global_agent: _ = create_default_agent(scope);
     let global_agent_key: _ = v8::String::new(scope, "globalAgent").unwrap();
-    agent_instance.set(scope, global_agent_key.into(), global_agent.into());
+    http_obj.set(scope, global_agent_key.into(), global_agent.into());
     // 设置到全局
     let global: _ = context.global(scope);
     let http_key: _ = v8::String::new(scope, "http").unwrap();

@@ -163,7 +163,9 @@ fn test_fs_promises_readfile_content() {
     fs::write(&test_file, "Test content 123").expect("Failed to write test file");
 
     let code = format!(r#"
-        fs.promises.readFile("{}").then(content => content);
+        const p = fs.promises.readFile("{}");
+        p.then(content => content);
+        p.__result__;
     "#, test_file.to_string_lossy().into_owned());
 
     let result = runtime.execute_code(&code).expect("Execution failed");
@@ -180,7 +182,9 @@ fn test_fs_promises_writefile_thenable() {
     let test_file = temp_dir.path().join("write_test.txt");
 
     let code = format!(r#"
-        fs.promises.writeFile("{}", "Written content").then(() => 'done');
+        const p = fs.promises.writeFile("{}", "Written content");
+        p.then(() => 'done');
+        p.__result__;
     "#, test_file.to_string_lossy().into_owned());
 
     let result = runtime.execute_code(&code).expect("Execution failed");
@@ -201,7 +205,9 @@ fn test_fs_promises_unlink_thenable() {
     fs::write(&test_file, "delete me").expect("Failed to write test file");
 
     let code = format!(r#"
-        fs.promises.unlink("{}").then(() => 'deleted');
+        const p = fs.promises.unlink("{}");
+        p.then(() => 'deleted');
+        p.__result__;
     "#, test_file.to_string_lossy().into_owned());
 
     let result = runtime.execute_code(&code).expect("Execution failed");
@@ -222,7 +228,9 @@ fn test_fs_promises_rename_thenable() {
     fs::write(&old_file, "Rename me").expect("Failed to write test file");
 
     let code = format!(r#"
-        fs.promises.rename("{}", "{}").then(() => 'renamed');
+        const p = fs.promises.rename("{}", "{}");
+        p.then(() => 'renamed');
+        p.__result__;
     "#, old_file.to_string_lossy().into_owned(), new_file.to_string_lossy().into_owned());
 
     let result = runtime.execute_code(&code).expect("Execution failed");
@@ -243,7 +251,9 @@ fn test_fs_promises_readdir_thenable() {
     fs::write(temp_dir.path().join("file2.txt"), "content2").expect("Failed to create file");
 
     let code = format!(r#"
-        fs.promises.readdir("{}").then(files => files.length);
+        const p = fs.promises.readdir("{}");
+        p.then(files => files.length);
+        p.__result__;
     "#, temp_dir.path().to_string_lossy().into_owned());
 
     let result = runtime.execute_code(&code).expect("Execution failed");
@@ -260,7 +270,9 @@ fn test_fs_promises_stat_thenable() {
     fs::write(&test_file, "stat me").expect("Failed to write test file");
 
     let code = format!(r#"
-        fs.promises.stat("{}").then(stat => stat.isFile());
+        const p = fs.promises.stat("{}");
+        p.then(stat => stat.isFile());
+        p.__result__;
     "#, test_file.to_string_lossy().into_owned());
 
     let result = runtime.execute_code(&code).expect("Execution failed");
@@ -276,7 +288,9 @@ fn test_fs_promises_mkdir_thenable() {
     let new_dir = temp_dir.path().join("new_dir");
 
     let code = format!(r#"
-        fs.promises.mkdir("{}").then(() => 'created');
+        const p = fs.promises.mkdir("{}");
+        p.then(() => 'created');
+        p.__result__;
     "#, new_dir.to_string_lossy().into_owned());
 
     let result = runtime.execute_code(&code).expect("Execution failed");
@@ -291,10 +305,12 @@ fn test_fs_promises_error_handling() {
     let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
 
     let code = r#"
-        fs.promises.readFile("/nonexistent/path/file.txt").then(
+        const p = fs.promises.readFile("/nonexistent/path/file.txt");
+        p.then(
             () => 'success',
             (err) => 'error: ' + err
         );
+        p.__result__;
     "#;
 
     let result = runtime.execute_code(code).expect("Execution failed");
