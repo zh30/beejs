@@ -5275,3 +5275,182 @@ console.log(`Duration: ${duration}n (${Number(duration) / 1000000}ms)`);
 - 启用其他 nodejs_core 子模块 (dns, tls, http2, etc.)
 - 优化模块加载性能
 - 添加模块缓存机制
+
+---
+
+### ✨ v0.3.55 代码质量改进 (2025-12-25)
+**进度**: ✅ 修复 base64 弃用警告 | ✅ 移除冗余分号 | ✅ 清理未使用 imports
+
+#### v0.3.55 实现内容
+- **修复 base64 API 弃用警告**
+  - 修复 crypto.rs 中 7 处 `base64::encode` 弃用警告
+  - 修复 buffer.rs 中 1 处 `base64::decode` 弃用警告
+  - 使用 `BASE64_STANDARD.encode/decode` 新 API
+
+- **移除冗余分号**
+  - 修复 child_process.rs 中冗余的双分号
+
+#### v0.3.55 代码变更
+- **修改文件**: `src/nodejs_core/buffer.rs` (+2/-1 行)
+  - 更新 base64 API 调用
+
+- **修改文件**: `src/nodejs_core/child_process.rs` (+1/-1 行)
+  - 移除冗余分号
+
+- **修改文件**: `src/nodejs_core/crypto.rs` (+8/-7 行)
+  - 修复 7 处 base64 弃用警告
+
+#### v0.3.55 验证
+- ✅ `cargo build --release` 成功，无 base64 警告
+- ✅ `cargo test --test crypto_randombytes_tests` → 通过
+
+---
+
+### ✨ v0.3.56 Stream 模块修复与背压支持 (2025-12-25)
+**进度**: ✅ 修复 Readable 构造函数 | ✅ 完善背压 | ✅ V8 API 兼容性
+
+#### v0.3.56 实现内容
+- **Readable 构造函数修复**
+  - 修复用户传入的 `_read` 函数不被调用的问题
+  - 完善 `push(null)` 触发 `end` 事件的逻辑
+  - 完善 `once()` 方法对已结束流的处理
+  - 完善 `pause()/resume()` 方法更新 `_readableState`
+
+- **背压机制完善**
+  - 修复 V8 API 兼容性问题
+  - 更新测试用例以匹配正确的流语义
+
+#### v0.3.56 代码变更
+- **修改文件**: `src/nodejs_core/stream.rs` (+155/-26 行)
+  - 重构 Readable 构造函数
+  - 完善事件处理逻辑
+
+- **修改文件**: `src/runtime_minimal.rs` (+180/-23 行)
+  - 添加 ReadableState 初始化
+  - 完善流状态管理
+
+- **修改文件**: `tests/stream_module_tests.rs` (+121/-14 行)
+  - 添加边界情况测试
+
+#### v0.3.56 验证
+- ✅ `cargo test --test stream_module_tests` → 26/26 通过
+
+---
+
+### ✨ v0.3.57 Writable Stream 背压支持 (2025-12-25)
+**进度**: ✅ WritableState 对象 | ✅ finish 事件 | ✅ 背压机制
+
+#### v0.3.57 实现内容
+- **WritableState 完整实现**
+  - 添加 `highWaterMark` (16KB 默认值)
+  - 添加 `needDrain` 背压检测标志
+  - 添加 `ended` 和 `writable` 状态属性
+
+- **事件系统完善**
+  - `'finish'` 事件触发机制
+  - `on()` 方法用于 Writable 事件监听
+
+- **end() 方法回调**
+  - 设置 `ended=true` 和 `writable=false`
+  - 触发 `'finish'` 事件
+
+#### v0.3.57 代码变更
+- **修改文件**: `src/nodejs_core/stream.rs` (+73/-3 行)
+  - 添加 WritableState 初始化
+  - 完善 end() 方法
+
+- **修改文件**: `src/runtime_minimal.rs` (+63/-6 行)
+  - 添加 Writable 构造函数
+  - 完善流状态管理
+
+- **修改文件**: `tests/stream_module_tests.rs` (+159/-11 行)
+  - 添加 Writable 状态测试
+  - 添加事件测试
+
+#### v0.3.57 验证
+- ✅ `cargo test --test stream_module_tests` → 31/31 通过
+- ✅ `cargo build --release` 成功
+
+---
+
+### ✨ v0.3.58 Transform 和 Duplex Stream 实现 (2025-12-25)
+**进度**: ✅ Transform stream | ✅ Duplex stream | ✅ 背压机制 | ✅ V8 闭包修复
+
+#### v0.3.58 实现内容
+- **Transform Stream**
+  - 继承 Readable + Writable 方法
+  - `_transform` 正确调用用户的 transform 函数
+  - `this.push()` 支持输出转换后的数据
+  - 正确触发 `data` 和 `end` 事件
+
+- **Duplex Stream**
+  - 继承 Readable + Writable 方法
+  - `_write` 正确调用用户的 `_write` 函数
+  - `this.push()` 支持输出转换后的数据
+  - 正确触发 `data` 和 `end` 事件
+
+- **V8 闭包捕获修复**
+  - 将用户函数存储在流对象属性中
+  - 避免直接捕获 `v8::Local` 导致编译错误
+
+- **背压机制完善**
+  - `on/once` 方法添加 `data` 监听器时设置 `flowing = true`
+  - 修复 callback 未传递时的默认处理
+
+#### v0.3.58 技术实现
+```rust
+// Duplex 构造函数模式
+fn duplex_constructor_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    // 组合 Readable + Writable 状态和方法
+    // 用户函数存储在对象属性中供回调访问
+}
+```
+
+#### v0.3.58 代码变更
+- **修改文件**: `src/nodejs_core/stream.rs` (+228/- 行)
+  - 添加 `duplex_constructor_callback`
+  - 完善 Transform/Duplex 方法
+
+- **修改文件**: `src/runtime_minimal.rs` (+670/- 行)
+  - 添加 Transform 构造函数
+  - 添加用户函数存储和访问机制
+
+- **修改文件**: `tests/stream_module_tests.rs` (+221/- 行)
+  - 添加 Transform 基本测试
+  - 添加 Duplex 基本测试
+
+#### v0.3.58 验证
+- ✅ `cargo test --test stream_module_tests` → 48/48 通过
+- ✅ `cargo build --release` 成功
+
+#### v0.3.58 使用示例
+```javascript
+const { Transform, Duplex } = require('stream');
+
+// Transform 示例：数据转换
+class Uppercase extends Transform {
+  _transform(chunk, encoding, callback) {
+    this.push(chunk.toString().toUpperCase());
+    callback();
+  }
+}
+
+// Duplex 示例：同时可读可写
+class Echo extends Duplex {
+  _write(chunk, encoding, callback) {
+    this.push(chunk);
+    callback();
+  }
+}
+```
+
+#### v0.3.59 下一步计划
+- 实现 `pipe()` 方法的完整功能
+- 实现 `stream.pipeline()` 组合多个流
+- 添加 `pass-through` 流的支持
+- 完善错误处理和清理逻辑
+- 启用更多 nodejs_core 子模块 (dns, tls, etc.)
