@@ -9,8 +9,38 @@
 
 
 
-### v0.3.64 完成 http.Agent、fs.promises 和 response header 方法 (2025-12-25)
-**进度**: http.Agent | fs.promises | response headers | ✅ 代码已合并
+### v0.3.66 完成 fs.promises.readFile 编码参数支持 (2025-12-25)
+**进度**: fs.promises encoding | ✅ 代码已合并
+
+#### v0.3.66 新增功能
+- **实现 fs.promises.readFile 编码参数**
+  - 支持 'utf-8' 编码读取（默认）
+  - 支持 'base64' 编码读取
+  - 支持 'hex' 编码读取
+  - 支持 'buffer' 编码读取
+  - 支持对象格式的 encoding 选项 {encoding: 'utf-8'}
+
+#### v0.3.66 技术实现
+- 添加 Encoding 枚举和 extract_encoding_option() 函数
+- 修改 fs_promises_read_file_callback 支持编码参数
+- 添加 create_buffer_from_bytes() 辅助函数
+- 存储编码类型到 thenable 对象属性
+
+#### v0.3.66 测试结果
+```bash
+$ cargo test --test fs_promises_tests
+running 23 tests
+test result: ok. 23 passed; 0 failed
+```
+
+#### v0.3.66 下一步计划
+- 运行完整测试套件
+- 继续完善其他 Node.js API 模块
+
+---
+
+### v0.3.65 完成 http.request() 完整实现 (2025-12-25)
+**进度**: http.request | ✅ 代码已合并
 
 #### v0.3.64 新增功能
 - **实现 http.Agent 构造函数**
