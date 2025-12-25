@@ -12,6 +12,35 @@
 
 
 
+
+### v0.3.71 实现异步 TCP 连接模块 (2025-12-25)
+**进度**: async TCP | ✅ 代码已合并
+
+#### v0.3.71 新增功能
+- **新增 tcp_async.rs 模块**
+  - 使用 tokio 实现真正的异步 TCP 网络连接
+  - TcpConnectionHandle 管理单个连接（connect、write、read、close）
+  - TcpConnectionManager 管理所有活跃连接
+  - 支持连接超时设置和状态追踪
+
+- **net.rs 集成真实 TCP 连接**
+  - socket_write_callback 实际写入数据到 TCP 连接
+  - socket_destroy_callback 关闭真实 TCP 连接
+  - 连接信息从真实连接获取而非猜测
+
+#### v0.3.71 技术实现
+- 使用 tokio::net::TcpStream 进行异步 I/O
+- Arc<Mutex<>> 模式安全共享连接状态
+- 同步包装函数支持 V8 回调上下文调用
+- 连接句柄 ID 存储在 Socket 对象属性中
+
+#### v0.3.71 下一步计划
+- 实现 Socket data 事件和真实数据接收
+- 增强 http.request() 发起真实网络请求
+- 继续完善其他 Node.js API 模块
+
+---
+
 ### v0.3.70 实现 socket.read() 方法并修复警告 (2025-12-25)
 **进度**: socket.read | ✅ 代码已合并
 
