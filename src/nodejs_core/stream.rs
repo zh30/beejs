@@ -100,16 +100,38 @@ pub fn setup_stream_api(
 }
 fn readable_constructor_callback(
     scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
+    args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let stream_obj: _ = v8::Object::new(scope);
 
-    // _read方法
-    let read_func: _ = v8::FunctionTemplate::new(scope, readable_read_callback);
-    let read_instance: _ = read_func.get_function(scope).unwrap();
-    let read_key: _ = v8::String::new(scope, "_read").unwrap();
-    stream_obj.set(scope, read_key.into(), read_instance.into());
+    // v0.3.59: 支持 options 参数，包含用户自定义的 _read 函数
+    let options: _ = args.get(0);
+
+    // 检查是否提供了自定义 _read 函数
+    let mut has_custom_read = false;
+    if options.is_object() {
+        if let Some(options_obj) = options.to_object(scope) {
+            let read_key: _ = v8::String::new(scope, "read").unwrap();
+            if let Some(read_func) = options_obj.get(scope, read_key.into()) {
+                if read_func.is_function() {
+                    // 使用用户提供的 _read 函数
+                    let _read_key: _ = v8::String::new(scope, "_read").unwrap();
+                    stream_obj.set(scope, _read_key.into(), read_func);
+                    has_custom_read = true;
+                }
+            }
+        }
+    }
+
+    // 如果没有自定义 _read，使用默认实现
+    if !has_custom_read {
+        // _read方法 (默认实现)
+        let read_func: _ = v8::FunctionTemplate::new(scope, readable_read_callback);
+        let read_instance: _ = read_func.get_function(scope).unwrap();
+        let read_key: _ = v8::String::new(scope, "_read").unwrap();
+        stream_obj.set(scope, read_key.into(), read_instance.into());
+    }
 
     // read方法
     let read_public_func: _ = v8::FunctionTemplate::new(scope, readable_public_read_callback);
@@ -350,12 +372,122 @@ fn readable_resume_callback(
     }
     retval.set(this.into());
 }
+/// pipe 数据处理回调 - 当 readable 产生数据时调用
+/// v0.3.59: 实现 pipe() 方法的数据流
+fn pipe_data_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this: _ = args.this(); // readable stream
+    let chunk: _ = args.get(0);
+
+    // 获取存储的 destination (writable stream)
+    let dest_key: _ = v8::String::new(scope, "_pipeDestination").unwrap();
+    let dest_val: Option<v8::Local<v8::Value>> = this.get(scope, dest_key.into());
+
+    if let Some(dest) = dest_val {
+        if let Some(dest_obj) = dest.to_object(scope) {
+            // 调用 destination.write(chunk)
+            let write_key: _ = v8::String::new(scope, "write").unwrap();
+            if let Some(write_val) = dest_obj.get(scope, write_key.into()) {
+                if write_val.is_function() {
+                    if let Ok(write_func) = v8::Local::<v8::Function>::try_from(write_val) {
+                        let encoding: _ = v8::String::new(scope, "utf8").unwrap();
+                        let call_args: &[v8::Local<v8::Value>] = &[chunk, encoding.into()];
+                        write_func.call(scope, dest.into(), call_args);
+                    }
+                }
+            }
+        }
+    }
+
+    retval.set(v8::undefined(scope).into());
+}
+
+/// pipe 结束处理回调 - 当 readable 结束时调用
+/// v0.3.59: 实现 pipe() 方法的结束处理
+fn pipe_end_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this: _ = args.this(); // readable stream
+
+    // 获取存储的 destination (writable stream)
+    let dest_key: _ = v8::String::new(scope, "_pipeDestination").unwrap();
+    let dest_val: Option<v8::Local<v8::Value>> = this.get(scope, dest_key.into());
+
+    if let Some(dest) = dest_val {
+        if let Some(dest_obj) = dest.to_object(scope) {
+            // 调用 destination.end()
+            let end_key: _ = v8::String::new(scope, "end").unwrap();
+            if let Some(end_val) = dest_obj.get(scope, end_key.into()) {
+                if end_val.is_function() {
+                    if let Ok(end_func) = v8::Local::<v8::Function>::try_from(end_val) {
+                        end_func.call(scope, dest.into(), &[]);
+                    }
+                }
+            }
+        }
+    }
+
+    retval.set(this.into());
+}
+
+/// v0.3.59: pipe() 方法实现
+/// 将 readable 流的数据管道传输到 writable 流
 fn readable_pipe_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
-    mut _retval: v8::ReturnValue,
+    mut retval: v8::ReturnValue,
 ) {
-    let destination: _ = args.get(0);
+    let this: _ = args.this(); // source readable stream
+    let destination: _ = args.get(0); // destination writable stream
+
+    if !destination.is_object() {
+        retval.set(v8::undefined(scope).into());
+        return;
+    }
+
+    // 1. 设置 flowing = true 以触发 data 事件
+    let state_key: _ = v8::String::new(scope, "_readableState").unwrap();
+    if let Some(state_val) = this.get(scope, state_key.into()) {
+        if let Some(state_obj) = state_val.to_object(scope) {
+            let flowing_key: _ = v8::String::new(scope, "flowing").unwrap();
+            let flowing_val: v8::Local<v8::Value> = v8::Boolean::new(scope, true).into();
+            state_obj.set(scope, flowing_key.into(), flowing_val);
+        }
+    }
+
+    // 2. 存储 destination 到 readable 对象
+    let dest_key: _ = v8::String::new(scope, "_pipeDestination").unwrap();
+    this.set(scope, dest_key.into(), destination);
+
+    // 3. 创建 data 事件回调并注册
+    let data_callback_func: _ = v8::FunctionTemplate::new(scope, pipe_data_callback);
+    let data_callback_instance: _ = data_callback_func.get_function(scope).unwrap();
+    let data_key: _ = v8::String::new(scope, "data").unwrap();
+    this.set(scope, data_key.into(), data_callback_instance.into());
+
+    // 4. 创建 end 事件回调并注册
+    let end_callback_func: _ = v8::FunctionTemplate::new(scope, pipe_end_callback);
+    let end_callback_instance: _ = end_callback_func.get_function(scope).unwrap();
+    let end_key: _ = v8::String::new(scope, "end").unwrap();
+    this.set(scope, end_key.into(), end_callback_instance.into());
+
+    // 5. 调用 read() 启动数据流
+    let read_key: _ = v8::String::new(scope, "read").unwrap();
+    if let Some(read_val) = this.get(scope, read_key.into()) {
+        if read_val.is_function() {
+            if let Ok(read_func) = v8::Local::<v8::Function>::try_from(read_val) {
+                read_func.call(scope, this.into(), &[]);
+            }
+        }
+    }
+
+    // 6. 返回 destination 以支持链式调用
+    retval.set(destination);
 }
 fn readable_unpipe_callback(
     _scope: &mut v8::HandleScope,
@@ -367,16 +499,48 @@ fn readable_unpipe_callback(
 }
 fn writable_constructor_callback(
     scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
+    args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     eprintln!("[DEBUG] writable_constructor_callback called");
     let stream_obj: _ = v8::Object::new(scope);
-    // _write方法
-    let write_func: _ = v8::FunctionTemplate::new(scope, writable_write_callback);
-    let write_instance: _ = write_func.get_function(scope).unwrap();
-    let write_key: _ = v8::String::new(scope, "_write").unwrap();
-    stream_obj.set(scope, write_key.into(), write_instance.into());
+
+    // v0.3.59: 支持 options 参数，包含用户自定义的 _write 函数
+    let options: _ = args.get(0);
+
+    // 检查是否提供了自定义 _write 函数 (支持 write 或 _write 键名)
+    let mut has_custom_write = false;
+    if options.is_object() {
+        if let Some(options_obj) = options.to_object(scope) {
+            // 首先尝试获取 _write
+            let _write_key: _ = v8::String::new(scope, "_write").unwrap();
+            if let Some(write_func) = options_obj.get(scope, _write_key.into()) {
+                if write_func.is_function() {
+                    stream_obj.set(scope, _write_key.into(), write_func);
+                    has_custom_write = true;
+                }
+            }
+            // 如果没有 _write，尝试获取 write
+            if !has_custom_write {
+                let write_key: _ = v8::String::new(scope, "write").unwrap();
+                if let Some(write_func) = options_obj.get(scope, write_key.into()) {
+                    if write_func.is_function() {
+                        stream_obj.set(scope, _write_key.into(), write_func);
+                        has_custom_write = true;
+                    }
+                }
+            }
+        }
+    }
+
+    // 如果没有自定义 _write，使用默认实现
+    if !has_custom_write {
+        // _write方法 (默认实现)
+        let write_func: _ = v8::FunctionTemplate::new(scope, writable_write_callback);
+        let write_instance: _ = write_func.get_function(scope).unwrap();
+        let write_key: _ = v8::String::new(scope, "_write").unwrap();
+        stream_obj.set(scope, write_key.into(), write_instance.into());
+    }
     // write方法
     let write_public_func: _ = v8::FunctionTemplate::new(scope, writable_public_write_callback);
     let write_public_instance: _ = write_public_func.get_function(scope).unwrap();
@@ -560,12 +724,34 @@ fn transform_constructor_callback(
 ) {
     let stream_obj: _ = v8::Object::new(scope);
 
+    // v0.3.59: 支持 options 参数
+    let options: _ = args.get(0);
+    let options_obj = if options.is_object() {
+        options.to_object(scope)
+    } else {
+        None
+    };
+
     // ===== Readable 方法 =====
-    // _read方法
-    let read_func: _ = v8::FunctionTemplate::new(scope, readable_read_callback);
-    let read_instance: _ = read_func.get_function(scope).unwrap();
-    let read_key: _ = v8::String::new(scope, "_read").unwrap();
-    stream_obj.set(scope, read_key.into(), read_instance.into());
+
+    // _read方法 - 检查是否提供自定义 read
+    let mut has_custom_read = false;
+    if let Some(obj) = &options_obj {
+        let read_key: _ = v8::String::new(scope, "read").unwrap();
+        if let Some(read_func) = obj.get(scope, read_key.into()) {
+            if read_func.is_function() {
+                let _read_key: _ = v8::String::new(scope, "_read").unwrap();
+                stream_obj.set(scope, _read_key.into(), read_func);
+                has_custom_read = true;
+            }
+        }
+    }
+    if !has_custom_read {
+        let read_func: _ = v8::FunctionTemplate::new(scope, readable_read_callback);
+        let read_instance: _ = read_func.get_function(scope).unwrap();
+        let read_key: _ = v8::String::new(scope, "_read").unwrap();
+        stream_obj.set(scope, read_key.into(), read_instance.into());
+    }
 
     // read方法
     let read_public_func: _ = v8::FunctionTemplate::new(scope, readable_public_read_callback);
@@ -633,11 +819,36 @@ fn transform_constructor_callback(
     stream_obj.set(scope, readable_state_key.into(), readable_state_obj.into());
 
     // ===== Writable 方法 =====
-    // _write方法 (私有，默认实现)
-    let write_private_func: _ = v8::FunctionTemplate::new(scope, writable_write_callback);
-    let write_private_instance: _ = write_private_func.get_function(scope).unwrap();
-    let write_private_key: _ = v8::String::new(scope, "_write").unwrap();
-    stream_obj.set(scope, write_private_key.into(), write_private_instance.into());
+    // _write方法 - Transform/Duplex 使用内部的 _write
+    // 检查是否提供自定义 write 或 _write (用于底层 Writable)
+    let mut has_custom_write = false;
+    if let Some(obj) = &options_obj {
+        // 首先尝试获取 _write
+        let _write_key: _ = v8::String::new(scope, "_write").unwrap();
+        if let Some(write_func) = obj.get(scope, _write_key.into()) {
+            if write_func.is_function() {
+                stream_obj.set(scope, _write_key.into(), write_func);
+                has_custom_write = true;
+            }
+        }
+        // 如果没有 _write，尝试获取 write
+        if !has_custom_write {
+            let write_key: _ = v8::String::new(scope, "write").unwrap();
+            if let Some(write_func) = obj.get(scope, write_key.into()) {
+                if write_func.is_function() {
+                    stream_obj.set(scope, _write_key.into(), write_func);
+                    has_custom_write = true;
+                }
+            }
+        }
+    }
+    if !has_custom_write {
+        // 默认 _write 实现 - 调用 _transform
+        let write_private_func: _ = v8::FunctionTemplate::new(scope, writable_write_callback);
+        let write_private_instance: _ = write_private_func.get_function(scope).unwrap();
+        let write_private_key: _ = v8::String::new(scope, "_write").unwrap();
+        stream_obj.set(scope, write_private_key.into(), write_private_instance.into());
+    }
 
     // write方法 (公开)
     let write_func: _ = v8::FunctionTemplate::new(scope, writable_public_write_callback);
@@ -703,17 +914,39 @@ fn transform_transform_callback(
 }
 fn duplex_constructor_callback(
     scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
+    args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let stream_obj: _ = v8::Object::new(scope);
 
+    // v0.3.59: 支持 options 参数
+    let options: _ = args.get(0);
+    let options_obj = if options.is_object() {
+        options.to_object(scope)
+    } else {
+        None
+    };
+
     // ===== Readable 方法 =====
-    // _read方法
-    let read_func: _ = v8::FunctionTemplate::new(scope, readable_read_callback);
-    let read_instance: _ = read_func.get_function(scope).unwrap();
-    let read_key: _ = v8::String::new(scope, "_read").unwrap();
-    stream_obj.set(scope, read_key.into(), read_instance.into());
+
+    // _read方法 - 检查是否提供自定义 read
+    let mut has_custom_read = false;
+    if let Some(obj) = &options_obj {
+        let read_key: _ = v8::String::new(scope, "read").unwrap();
+        if let Some(read_func) = obj.get(scope, read_key.into()) {
+            if read_func.is_function() {
+                let _read_key: _ = v8::String::new(scope, "_read").unwrap();
+                stream_obj.set(scope, _read_key.into(), read_func);
+                has_custom_read = true;
+            }
+        }
+    }
+    if !has_custom_read {
+        let read_func: _ = v8::FunctionTemplate::new(scope, readable_read_callback);
+        let read_instance: _ = read_func.get_function(scope).unwrap();
+        let read_key: _ = v8::String::new(scope, "_read").unwrap();
+        stream_obj.set(scope, read_key.into(), read_instance.into());
+    }
 
     // read方法
     let read_public_func: _ = v8::FunctionTemplate::new(scope, readable_public_read_callback);
@@ -781,11 +1014,36 @@ fn duplex_constructor_callback(
     stream_obj.set(scope, readable_state_key.into(), readable_state_obj.into());
 
     // ===== Writable 方法 =====
-    // _write方法 (私有，默认实现)
-    let write_private_func: _ = v8::FunctionTemplate::new(scope, writable_write_callback);
-    let write_private_instance: _ = write_private_func.get_function(scope).unwrap();
-    let write_private_key: _ = v8::String::new(scope, "_write").unwrap();
-    stream_obj.set(scope, write_private_key.into(), write_private_instance.into());
+    // _write方法 - Transform/Duplex 使用内部的 _write
+    // 检查是否提供自定义 write 或 _write (用于底层 Writable)
+    let mut has_custom_write = false;
+    if let Some(obj) = &options_obj {
+        // 首先尝试获取 _write
+        let _write_key: _ = v8::String::new(scope, "_write").unwrap();
+        if let Some(write_func) = obj.get(scope, _write_key.into()) {
+            if write_func.is_function() {
+                stream_obj.set(scope, _write_key.into(), write_func);
+                has_custom_write = true;
+            }
+        }
+        // 如果没有 _write，尝试获取 write
+        if !has_custom_write {
+            let write_key: _ = v8::String::new(scope, "write").unwrap();
+            if let Some(write_func) = obj.get(scope, write_key.into()) {
+                if write_func.is_function() {
+                    stream_obj.set(scope, _write_key.into(), write_func);
+                    has_custom_write = true;
+                }
+            }
+        }
+    }
+    if !has_custom_write {
+        // 默认 _write 实现 - 调用 _transform
+        let write_private_func: _ = v8::FunctionTemplate::new(scope, writable_write_callback);
+        let write_private_instance: _ = write_private_func.get_function(scope).unwrap();
+        let write_private_key: _ = v8::String::new(scope, "_write").unwrap();
+        stream_obj.set(scope, write_private_key.into(), write_private_instance.into());
+    }
 
     // write方法 (公开)
     let write_func: _ = v8::FunctionTemplate::new(scope, writable_public_write_callback);

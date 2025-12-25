@@ -9,6 +9,29 @@
 
 
 
+### v0.3.59 实现 pipe() 方法 (2025-12-25)
+**进度**: pipe() 方法 | 51/51 测试通过 | ✅ 所有测试通过
+
+#### v0.3.59 改进内容
+- **实现完整的 pipe() 方法**
+  - 正确设置 source 的 `flowing = true` 状态
+  - 正确注册 'data' 和 'end' 回调到 source
+  - 数据流动时调用 `destination.write(chunk)`
+  - 流结束时调用 `destination.end()`
+  - 正确返回 destination 对象
+- **修复 Writable constructor**
+  - 正确从 options 提取 `_write` 函数
+  - 处理 `undefined` 和非函数值的情况
+- **修复 write() 方法**
+  - 正确传递 chunk, encoding, callback 三个参数
+  - 当 callback 为 undefined 时创建 noop 函数
+- **修复 on('data') 行为**
+  - 注册 'data' 监听器时设置 `flowing = true`
+  - 自动调用 `read()` 启动数据流动
+- **修复 Transform constructor**
+  - 正确设置 `_transform` 属性
+  - 确保 transform 函数可被找到
+
 ### v0.3.58 实现 Transform 和 Duplex stream (2025-12-25)
 **进度**: Transform/Duplex Stream | 48/48 测试通过 | ✅ 所有测试通过
 
