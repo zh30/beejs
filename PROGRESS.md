@@ -10,6 +10,63 @@
 
 
 
+### v0.3.52 require 自定义模块支持 (2025-12-25)
+**进度**: require 自定义模块 | 21/21 测试通过 | ✅ 所有测试通过
+
+#### v0.3.52 问题描述
+- **问题**: require 函数只支持内置模块（buffer, process, path, fs），无法加载自定义模块文件
+- **错误**: `Cannot find module '/var/folders/.../tmpXXX'` 错误
+- **影响**: test_require_custom_module 测试失败
+
+#### v0.3.52 修复内容
+- **自定义模块文件加载**
+  - 检测模块 ID 是否为文件路径（绝对路径或相对路径）
+  - 使用 `std::fs::read_to_string` 读取模块文件内容
+  - 支持 `./` 和 `../` 相对路径自动添加 `.js` 后缀
+
+- **模块代码执行**
+  - 创建 CommonJS 包装函数 `(function(module, exports, __dirname, __filename) { ... })`
+  - 提供 `module`, `exports`, `__dirname`, `__filename` 上下文
+  - 执行模块代码并返回 `exports` 对象
+
+- **错误处理**
+  - 文件不存在时抛出 "Cannot find module" 错误
+  - 文件读取失败时抛出详细错误信息
+
+#### v0.3.52 技术实现
+- **路径检测逻辑** (src/runtime_minimal.rs)
+  ```rust
+  let module_path = std::path::Path::new(&module_id_str);
+  if module_path.exists() && module_path.is_file() {
+      // 读取并执行模块文件
+  }
+  ```
+
+- **模块包装执行**
+  ```rust
+  let wrapper_code = format!(
+      r#"(function(module, exports, __dirname, __filename) {{ {} }})"#,
+      code
+  );
+  ```
+
+#### v0.3.52 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+120 行)
+  - 在 `_ =>` 分支添加文件路径检测
+  - 添加绝对路径模块加载逻辑
+  - 添加相对路径（./, ../）模块加载逻辑
+  - 实现 CommonJS 模块包装和执行
+
+#### v0.3.52 验证
+- ✅ `cargo test --test nodejs_api_tests` → 21 passed; 0 failed
+- ✅ `test_require_custom_module` - 自定义模块加载测试通过
+- ✅ `test_require_builtin_module` - 内置模块测试通过
+- ✅ `test_require_module` - 模块系统测试通过
+
+#### v0.3.52 下一步计划
+- 启用其他 nodejs_core 子模块 (crypto, stream, http, net, etc.)
+- 实现 `nodejs_core/require.rs` 独立模块（从 runtime_minimal.rs 中提取）
+
 ### v0.3.51 fs 模块真正的文件系统操作 (2025-12-25)
 **进度**: fs.readFileSync | fs.writeFileSync | 20/21 测试通过
 
