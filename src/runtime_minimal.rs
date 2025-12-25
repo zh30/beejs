@@ -1253,6 +1253,9 @@ impl MinimalRuntime {
         // Set up DNS module (v0.3.47)
         Self::setup_dns_api(scope, &context)?;
 
+        // Set up string_decoder module (v0.3.48)
+        Self::setup_string_decoder_api(scope, &context)?;
+
         // Set up CommonJS module system (v0.3.x)
         Self::setup_module_system(scope, &context)?;
 
@@ -11168,6 +11171,77 @@ impl MinimalRuntime {
         // Set dns as global
         let dns_key = v8::String::new(scope, "dns").unwrap();
         global.set(scope, dns_key.into(), dns_obj.into());
+
+        Ok(())
+    }
+
+    /// Set up the string_decoder module (v0.3.48)
+    /// Provides StringDecoder for handling multi-byte characters in streams
+    fn setup_string_decoder_api(
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        context: &v8::Local<v8::Context>,
+    ) -> Result<()> {
+        let global = context.global(scope);
+
+        // Create string_decoder object
+        let string_decoder_obj = v8::Object::new(scope);
+
+        // StringDecoder constructor
+        let string_decoder_constructor = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Get encoding from argument or default to utf8
+            // We need to get this before creating the decoder_obj to avoid borrow issues
+            let encoding_str = if args.length() > 0 && !args.get(0).is_undefined() && !args.get(0).is_null() {
+                args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or("utf8".to_string())
+            } else {
+                "utf8".to_string()
+            };
+
+            let decoder_obj = v8::Object::new(scope);
+
+            // Store encoding - create v8::String first, then use it
+            // This pattern works better with V8's borrow checker
+            let encoding_key = v8::String::new(scope, "_encoding").unwrap();
+            {
+                let encoding_val = v8::String::new(scope, &encoding_str).unwrap();
+                decoder_obj.set(scope, encoding_key.into(), encoding_val.into());
+            }
+
+            // Store leftover buffer
+            let buffer_key = v8::String::new(scope, "_buffer").unwrap();
+            let empty_buffer = v8::Array::new(scope, 0);
+            decoder_obj.set(scope, buffer_key.into(), empty_buffer.into());
+
+            // write method
+            let write_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let chunk = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+
+                // For now, just return the string (V8 handles encoding internally)
+                retval.set(v8::String::new(scope, &chunk).unwrap().into());
+            });
+            let write_instance = write_func.get_function(scope).unwrap();
+            let write_key = v8::String::new(scope, "write").unwrap();
+            decoder_obj.set(scope, write_key.into(), write_instance.into());
+
+            // end method
+            let end_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let chunk = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+
+                // Return any remaining string
+                retval.set(v8::String::new(scope, &chunk).unwrap().into());
+            });
+            let end_instance = end_func.get_function(scope).unwrap();
+            let end_key = v8::String::new(scope, "end").unwrap();
+            decoder_obj.set(scope, end_key.into(), end_instance.into());
+
+            retval.set(decoder_obj.into());
+        });
+        let string_decoder_func = string_decoder_constructor.get_function(scope).unwrap();
+        let string_decoder_key = v8::String::new(scope, "StringDecoder").unwrap();
+        string_decoder_obj.set(scope, string_decoder_key.into(), string_decoder_func.into());
+
+        // Set string_decoder as global
+        let decoder_key = v8::String::new(scope, "string_decoder").unwrap();
+        global.set(scope, decoder_key.into(), string_decoder_obj.into());
 
         Ok(())
     }
