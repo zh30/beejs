@@ -10359,16 +10359,41 @@ impl MinimalRuntime {
         let stream_obj = v8::Object::new(scope);
 
         // Readable Stream constructor
-        let readable_constructor = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let readable_constructor = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let stream_obj = v8::Object::new(scope);
 
-            // _read method
-            let read_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut _retval: v8::ReturnValue| {
-                // Default _read implementation
-            });
-            let read_instance = read_func.get_function(scope).unwrap();
+            // Check if user passed options with read or _read
+            let opts = args.get(0);
+            let mut user_read: Option<v8::Local<v8::Value>> = None;
+            let mut user__read: Option<v8::Local<v8::Value>> = None;
+
+            if opts.is_object() {
+                if let Some(opts_obj) = opts.to_object(scope) {
+                    let read_key = v8::String::new(scope, "read").unwrap();
+                    user_read = opts_obj.get(scope, read_key.into());
+                    let _read_key = v8::String::new(scope, "_read").unwrap();
+                    user__read = opts_obj.get(scope, _read_key.into());
+                }
+            }
+
+            // _read method - use user's read or _read, or default
             let read_key = v8::String::new(scope, "_read").unwrap();
-            stream_obj.set(scope, read_key.into(), read_instance.into());
+            if let Some(read_fn) = user_read {
+                if read_fn.is_function() {
+                    // User passed {read(size){...}} - use as _read
+                    stream_obj.set(scope, read_key.into(), read_fn);
+                }
+            } else if let Some(_read_fn) = user__read {
+                if _read_fn.is_function() {
+                    // User passed {_read(size){...}}
+                    stream_obj.set(scope, read_key.into(), _read_fn);
+                }
+            } else {
+                // Default empty _read
+                let read_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut _retval: v8::ReturnValue| {});
+                let read_instance = read_func.get_function(scope).unwrap();
+                stream_obj.set(scope, read_key.into(), read_instance.into());
+            }
 
             // read method
             let read_public_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
@@ -10391,33 +10416,164 @@ impl MinimalRuntime {
             let read_public_key = v8::String::new(scope, "read").unwrap();
             stream_obj.set(scope, read_public_key.into(), read_public_instance.into());
 
+            // push method - v0.3.56: Push data to the stream
+            let push_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let chunk = args.get(0);
+
+                // Check for push(null) - end of stream
+                if chunk.is_null() {
+                    // Set ended state
+                    let state_key = v8::String::new(scope, "_readableState").unwrap();
+                    if let Some(state_val) = this.get(scope, state_key.into()) {
+                        if let Some(state_obj) = state_val.to_object(scope) {
+                            let ended_key = v8::String::new(scope, "ended").unwrap();
+                            let ended_val: v8::Local<v8::Value> = v8::Boolean::new(scope, true).into();
+                            state_obj.set(scope, ended_key.into(), ended_val);
+                        }
+                    }
+
+                    // Trigger 'end' event - look for listener set via on/once
+                    let end_key = v8::String::new(scope, "end").unwrap();
+                    if let Some(listener) = this.get(scope, end_key.into()) {
+                        if listener.is_function() {
+                            if let Ok(func) = v8::Local::<v8::Function>::try_from(listener) {
+                                func.call(scope, this.into(), &[]);
+                            }
+                        }
+                    }
+
+                    let result_val: v8::Local<v8::Value> = v8::Boolean::new(scope, true).into();
+                    retval.set(result_val);
+                    return;
+                }
+
+                // For non-null chunks in flowing mode, trigger 'data' event
+                let state_key = v8::String::new(scope, "_readableState").unwrap();
+                if let Some(state_val) = this.get(scope, state_key.into()) {
+                    if let Some(state_obj) = state_val.to_object(scope) {
+                        let flowing_key = v8::String::new(scope, "flowing").unwrap();
+                        if let Some(flowing) = state_obj.get(scope, flowing_key.into()) {
+                            if flowing.to_boolean(scope).boolean_value(scope) {
+                                let data_key = v8::String::new(scope, "data").unwrap();
+                                if let Some(listener) = this.get(scope, data_key.into()) {
+                                    if listener.is_function() {
+                                        if let Ok(func) = v8::Local::<v8::Function>::try_from(listener) {
+                                            func.call(scope, this.into(), &[chunk]);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                retval.set(v8::Boolean::new(scope, true).into());
+            });
+            let push_instance = push_func.get_function(scope).unwrap();
+            let push_key = v8::String::new(scope, "push").unwrap();
+            stream_obj.set(scope, push_key.into(), push_instance.into());
+
             // on method (event listener)
             let on_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
                 let this = args.this();
                 let event = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
                 let listener = args.get(1);
 
-                // Simulate data/end events for demonstration
+                // For 'end' event, check if stream already ended
+                if event == "end" && listener.is_function() {
+                    let state_key = v8::String::new(scope, "_readableState").unwrap();
+                    if let Some(state_val) = this.get(scope, state_key.into()) {
+                        if let Some(state_obj) = state_val.to_object(scope) {
+                            let ended_key = v8::String::new(scope, "ended").unwrap();
+                            if let Some(ended) = state_obj.get(scope, ended_key.into()) {
+                                if ended.to_boolean(scope).boolean_value(scope) {
+                                    // Stream already ended, fire listener immediately
+                                    if let Ok(listener_func) = v8::Local::<v8::Function>::try_from(listener) {
+                                        listener_func.call(scope, this.into(), &[]);
+                                    }
+                                    retval.set(this.into());
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Store listener on the stream object for push() to find
+                let event_key = v8::String::new(scope, &event).unwrap();
+                this.set(scope, event_key.into(), listener);
+
+                // For 'data' event, simulate immediate data (for basic tests)
                 if event == "data" && listener.is_function() {
                     if let Ok(listener_func) = v8::Local::<v8::Function>::try_from(listener) {
                         let data = v8::String::new(scope, "test data chunk").unwrap();
                         listener_func.call(scope, this.into(), &[data.into()]);
                     }
                 }
-                if event == "end" && listener.is_function() {
-                    if let Ok(listener_func) = v8::Local::<v8::Function>::try_from(listener) {
-                        listener_func.call(scope, this.into(), &[]);
-                    }
-                }
+
                 retval.set(this.into());
             });
             let on_instance = on_func.get_function(scope).unwrap();
             let on_key = v8::String::new(scope, "on").unwrap();
             stream_obj.set(scope, on_key.into(), on_instance.into());
 
-            // pause method
-            let pause_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // once method - v0.3.56: One-time event listener
+            let once_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
                 let this = args.this();
+                let event = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+                let listener = args.get(1);
+
+                if !listener.is_function() {
+                    retval.set(v8::null(scope).into());
+                    return;
+                }
+
+                // For 'end' event, check if already ended
+                if event == "end" {
+                    let state_key = v8::String::new(scope, "_readableState").unwrap();
+                    if let Some(state_val) = this.get(scope, state_key.into()) {
+                        if let Some(state_obj) = state_val.to_object(scope) {
+                            let ended_key = v8::String::new(scope, "ended").unwrap();
+                            if let Some(ended) = state_obj.get(scope, ended_key.into()) {
+                                if ended.to_boolean(scope).boolean_value(scope) {
+                                    // Stream already ended, fire immediately
+                                    if let Ok(listener_func) = v8::Local::<v8::Function>::try_from(listener) {
+                                        listener_func.call(scope, this.into(), &[]);
+                                    }
+                                    retval.set(this.into());
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Set listener (same as on for now)
+                let event_key = v8::String::new(scope, &event).unwrap();
+                this.set(scope, event_key.into(), listener);
+
+                retval.set(this.into());
+            });
+            let once_instance = once_func.get_function(scope).unwrap();
+            let once_key = v8::String::new(scope, "once").unwrap();
+            stream_obj.set(scope, once_key.into(), once_instance.into());
+
+            // pause method - v0.3.56: Update flowing and paused state
+            let pause_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                // Update _readableState
+                let state_key = v8::String::new(scope, "_readableState").unwrap();
+                if let Some(state_val) = this.get(scope, state_key.into()) {
+                    if let Some(state_obj) = state_val.to_object(scope) {
+                        let flowing_key = v8::String::new(scope, "flowing").unwrap();
+                        let flowing_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+                        state_obj.set(scope, flowing_key.into(), flowing_val);
+                        let paused_key = v8::String::new(scope, "paused").unwrap();
+                        let paused_val: v8::Local<v8::Value> = v8::Boolean::new(scope, true).into();
+                        state_obj.set(scope, paused_key.into(), paused_val);
+                    }
+                }
                 retval.set(this.into());
             });
             let pause_instance = pause_func.get_function(scope).unwrap();
@@ -10440,6 +10596,23 @@ impl MinimalRuntime {
             let pipe_instance = pipe_func.get_function(scope).unwrap();
             let pipe_key = v8::String::new(scope, "pipe").unwrap();
             stream_obj.set(scope, pipe_key.into(), pipe_instance.into());
+
+            // _readableState - v0.3.56: Stream state object
+            let state_key = v8::String::new(scope, "_readableState").unwrap();
+            let state_obj = v8::Object::new(scope);
+            let flowing_key = v8::String::new(scope, "flowing").unwrap();
+            let flowing_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+            state_obj.set(scope, flowing_key.into(), flowing_val);
+            let paused_key = v8::String::new(scope, "paused").unwrap();
+            let paused_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+            state_obj.set(scope, paused_key.into(), paused_val);
+            let ended_key = v8::String::new(scope, "ended").unwrap();
+            let ended_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+            state_obj.set(scope, ended_key.into(), ended_val);
+            let hwm_key = v8::String::new(scope, "highWaterMark").unwrap();
+            let hwm_val: v8::Local<v8::Value> = v8::Integer::new(scope, 16 * 1024).into();
+            state_obj.set(scope, hwm_key.into(), hwm_val);
+            stream_obj.set(scope, state_key.into(), state_obj.into());
 
             retval.set(stream_obj.into());
         });

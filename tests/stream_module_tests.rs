@@ -1,5 +1,5 @@
 // Stream module tests for Beejs runtime
-// v0.3.44: Tests for Readable, Writable, Transform, Duplex streams
+// v0.3.56: Tests for Readable, Writable, Transform, Duplex streams with backpressure support
 
 use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
@@ -126,6 +126,137 @@ fn test_writable_has_end_method() {
     assert_eq!(result.unwrap().trim(), "function");
 }
 
+// v0.3.56: Test push method exists
+#[test]
+#[serial]
+fn test_readable_has_push_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const r = new stream.Readable({ read() {} }); typeof r.push"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+// v0.3.56: Test once method exists
+#[test]
+#[serial]
+fn test_readable_has_once_method() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const r = new stream.Readable({ read() {} }); typeof r.once"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+// v0.3.56: Test _readableState has highWaterMark
+#[test]
+#[serial]
+fn test_readable_state_has_high_water_mark() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const r = new stream.Readable({ read() {} }); r._readableState.highWaterMark"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "16384"); // 16KB default
+}
+
+// v0.3.56: Test _readableState has ended
+#[test]
+#[serial]
+fn test_readable_state_has_ended() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        "const r = new stream.Readable({ read() {} }); r._readableState.ended"
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "false");
+}
+
+// v0.3.56: Test push returns true for normal data
+#[test]
+#[serial]
+fn test_readable_push_returns_true() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        const r = new stream.Readable({
+          read(size) {
+            const result = this.push('test');
+            return result;
+          }
+        });
+        r.push('test')
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+// v0.3.56: Test push(null) triggers end event
+#[test]
+#[serial]
+fn test_readable_push_null_triggers_end() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        let endFired = false;
+        const r = new stream.Readable({
+          read(size) {
+            this.push(null);
+          }
+        });
+        // Call read() to trigger _read() which calls push(null)
+        r.read();
+        r.on('end', () => { endFired = true; });
+        r._readableState.ended && endFired
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+// v0.3.56: Test once fires for already-ended stream
+#[test]
+#[serial]
+fn test_readable_once_on_ended_stream() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        let endFired = false;
+        const r = new stream.Readable({
+          read(size) {
+            this.push(null);
+          }
+        });
+        // First push(null) to end the stream
+        r.read();
+        // Then add once listener - should fire immediately
+        r.once('end', () => { endFired = true; });
+        endFired
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+// v0.3.56: Test backpressure - pause/resume
+#[test]
+#[serial]
+fn test_readable_pause_resume() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        const r = new stream.Readable({ read() {} });
+        r.pause();
+        r._readableState.flowing === false && r._readableState.paused === true
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
 #[test]
 #[serial]
 fn test_readable_data_event() {
@@ -161,6 +292,8 @@ fn test_readable_end_event() {
           }
         });
         r.on('end', () => { ended = true; });
+        // Read to trigger _read -> push(null), which should fire end event
+        r.read();
         ended
         "#
     );
