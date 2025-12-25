@@ -911,3 +911,82 @@ fn test_stream_pipeline_finish_event() {
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
 }
+
+// v0.3.74: stream.passThrough() tests
+#[test]
+#[serial]
+fn test_stream_passthrough_exists() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"typeof stream.passThrough"#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_stream_passthrough_creates_object() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        const pt = stream.passThrough();
+        pt !== null && typeof pt === 'object'
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_stream_passthrough_data_passthrough() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        let output = '';
+        const pt = stream.passThrough();
+        pt.on('data', (chunk) => { output += chunk; });
+        pt.write('hello');
+        pt.end();
+        output
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "hello");
+}
+
+#[test]
+#[serial]
+fn test_stream_passthrough_with_options() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(
+        r#"
+        let output = '';
+        const pt = stream.passThrough({ highWaterMark: 64 });
+        pt.on('data', (chunk) => { output += chunk; });
+        pt.write('test');
+        pt.end();
+        output
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "test");
+}
+
+#[test]
+#[serial]
+fn test_stream_passthrough_pipeline() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    // Test that pipe returns destination for chaining
+    let result = runtime.execute_code(
+        r#"
+        const pt1 = stream.passThrough();
+        const pt2 = stream.passThrough();
+        const result = pt1.pipe(pt2);
+        result === pt2
+        "#
+    );
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}

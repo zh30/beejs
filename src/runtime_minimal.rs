@@ -11676,6 +11676,357 @@ impl MinimalRuntime {
         let pipeline_key = v8::String::new(scope, "pipeline").unwrap();
         stream_obj.set(scope, pipeline_key.into(), pipeline_instance.into());
 
+        // v0.3.74: passThrough stream - complete implementation following nodejs_core/stream.rs pattern
+        // PassThrough is a Transform stream that passes data through without modification
+        let passthrough_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let stream_obj = v8::Object::new(_scope);
+
+            // ===== Readable methods =====
+
+            // _read method - default implementation
+            let read_func = v8::FunctionTemplate::new(_scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+                let this = args.this();
+                // Get readable state
+                let state_key = v8::String::new(scope, "_readableState").unwrap();
+                if let Some(state_val) = this.get(scope, state_key.into()) {
+                    if let Some(state_obj) = state_val.to_object(scope) {
+                        // Set ended=true
+                        let ended_key = v8::String::new(scope, "ended").unwrap();
+                        let ended_val: v8::Local<v8::Value> = v8::Boolean::new(scope, true).into();
+                        state_obj.set(scope, ended_key.into(), ended_val);
+                    }
+                }
+                // Emit 'readable' event
+                let on_key = v8::String::new(scope, "on").unwrap();
+                if let Some(on_func_val) = this.get(scope, on_key.into()) {
+                    if on_func_val.is_function() {
+                        if let Ok(on_fn) = v8::Local::<v8::Function>::try_from(on_func_val) {
+                            let event_name = v8::String::new(scope, "readable").unwrap();
+                            on_fn.call(scope, this.into(), &[event_name.into()]);
+                        }
+                    }
+                }
+            }).get_function(_scope).unwrap();
+            let _read_key = v8::String::new(_scope, "_read").unwrap();
+            stream_obj.set(_scope, _read_key.into(), read_func.into());
+
+            // read method
+            let read_public_func = v8::FunctionTemplate::new(_scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let size = args.get(0);
+
+                // Return empty string to simulate reading
+                let empty_str: v8::Local<v8::Value> = v8::String::new(scope, "").unwrap().into();
+                retval.set(empty_str);
+            }).get_function(_scope).unwrap();
+            let read_public_key = v8::String::new(_scope, "read").unwrap();
+            stream_obj.set(_scope, read_public_key.into(), read_public_func.into());
+
+            // push method - emits 'data' event with stored callback
+            let push_func = v8::FunctionTemplate::new(_scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let chunk = args.get(0);
+                let _encoding = args.get(1);
+
+                let this = args.this();
+
+                // Get stored callbacks from _events
+                let events_key = v8::String::new(scope, "_events").unwrap();
+                if let Some(events_val) = this.get(scope, events_key.into()) {
+                    if let Some(events_obj) = events_val.to_object(scope) {
+                        let data_key = v8::String::new(scope, "data").unwrap();
+                        if let Some(callback_val) = events_obj.get(scope, data_key.into()) {
+                            if callback_val.is_function() {
+                                if let Ok(callback) = v8::Local::<v8::Function>::try_from(callback_val) {
+                                    let chunk_val = if chunk.is_undefined() || chunk.is_null() {
+                                        v8::String::new(scope, "").unwrap().into()
+                                    } else {
+                                        chunk
+                                    };
+                                    callback.call(scope, this.into(), &[chunk_val]);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Return true
+                let result: v8::Local<v8::Value> = v8::Boolean::new(scope, true).into();
+                retval.set(result);
+            }).get_function(_scope).unwrap();
+            let push_key = v8::String::new(_scope, "push").unwrap();
+            stream_obj.set(_scope, push_key.into(), push_func.into());
+
+            // on method - event listener that stores callbacks
+            let on_func = v8::FunctionTemplate::new(_scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+                let event_name = args.get(0);
+                let callback = args.get(1);
+                let this = args.this();
+
+                if !event_name.is_string() || !callback.is_function() {
+                    return;
+                }
+
+                // Store callback on the object using event name as key
+                let events_key = v8::String::new(scope, "_events").unwrap();
+                let events_val = this.get(scope, events_key.into());
+
+                let events_obj = if let Some(val) = events_val {
+                    if val.is_object() {
+                        val.to_object(scope).unwrap()
+                    } else {
+                        let new_events = v8::Object::new(scope);
+                        this.set(scope, events_key.into(), new_events.into());
+                        new_events
+                    }
+                } else {
+                    let new_events = v8::Object::new(scope);
+                    this.set(scope, events_key.into(), new_events.into());
+                    new_events
+                };
+
+                // Get event name string
+                let name_str = event_name.to_string(scope).unwrap();
+                let name_str_local: v8::Local<v8::String> = name_str;
+
+                events_obj.set(scope, name_str_local.into(), callback);
+            }).get_function(_scope).unwrap();
+            let on_key = v8::String::new(_scope, "on").unwrap();
+            stream_obj.set(_scope, on_key.into(), on_func.into());
+
+            // once method
+            let once_func = v8::FunctionTemplate::new(_scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+                // Same as on for now
+            }).get_function(_scope).unwrap();
+            let once_key = v8::String::new(_scope, "once").unwrap();
+            stream_obj.set(_scope, once_key.into(), once_func.into());
+
+            // pause method
+            let pause_func = v8::FunctionTemplate::new(_scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+                let this = args.this();
+                let state_key = v8::String::new(scope, "_readableState").unwrap();
+                if let Some(state_val) = this.get(scope, state_key.into()) {
+                    if let Some(state_obj) = state_val.to_object(scope) {
+                        let flowing_key = v8::String::new(scope, "flowing").unwrap();
+                        let flowing_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+                        state_obj.set(scope, flowing_key.into(), flowing_val);
+                    }
+                }
+            }).get_function(_scope).unwrap();
+            let pause_key = v8::String::new(_scope, "pause").unwrap();
+            stream_obj.set(_scope, pause_key.into(), pause_func.into());
+
+            // resume method
+            let resume_func = v8::FunctionTemplate::new(_scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+                let this = args.this();
+                let state_key = v8::String::new(scope, "_readableState").unwrap();
+                if let Some(state_val) = this.get(scope, state_key.into()) {
+                    if let Some(state_obj) = state_val.to_object(scope) {
+                        let flowing_key = v8::String::new(scope, "flowing").unwrap();
+                        let flowing_val: v8::Local<v8::Value> = v8::Boolean::new(scope, true).into();
+                        state_obj.set(scope, flowing_key.into(), flowing_val);
+                    }
+                }
+            }).get_function(_scope).unwrap();
+            let resume_key = v8::String::new(_scope, "resume").unwrap();
+            stream_obj.set(_scope, resume_key.into(), resume_func.into());
+
+            // pipe method - connects this (source) to destination
+            let pipe_func = v8::FunctionTemplate::new(_scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let dest = args.get(0);
+
+                // Store destination reference on source for data forwarding
+                let dest_ref_key = v8::String::new(scope, "_pipeDest").unwrap();
+                this.set(scope, dest_ref_key.into(), dest);
+
+                // Set flowing=true on readable state to enable data flow
+                let state_key = v8::String::new(scope, "_readableState").unwrap();
+                if let Some(state_val) = this.get(scope, state_key.into()) {
+                    if let Some(state_obj) = state_val.to_object(scope) {
+                        let flowing_key = v8::String::new(scope, "flowing").unwrap();
+                        let flowing_val: v8::Local<v8::Value> = v8::Boolean::new(scope, true).into();
+                        state_obj.set(scope, flowing_key.into(), flowing_val);
+                    }
+                }
+
+                // Return destination for chaining
+                retval.set(dest);
+            }).get_function(_scope).unwrap();
+            let pipe_key = v8::String::new(_scope, "pipe").unwrap();
+            stream_obj.set(_scope, pipe_key.into(), pipe_func.into());
+
+            // unpipe method
+            let unpipe_func = v8::FunctionTemplate::new(_scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+                // No-op for now
+            }).get_function(_scope).unwrap();
+            let unpipe_key = v8::String::new(_scope, "unpipe").unwrap();
+            stream_obj.set(_scope, unpipe_key.into(), unpipe_func.into());
+
+            // _readableState
+            let readable_state_key = v8::String::new(_scope, "_readableState").unwrap();
+            let readable_state_obj = v8::Object::new(_scope);
+            let flowing_key = v8::String::new(_scope, "flowing").unwrap();
+            let flowing_val: v8::Local<v8::Value> = v8::Boolean::new(_scope, false).into();
+            readable_state_obj.set(_scope, flowing_key.into(), flowing_val);
+            let paused_key = v8::String::new(_scope, "paused").unwrap();
+            let paused_val: v8::Local<v8::Value> = v8::Boolean::new(_scope, false).into();
+            readable_state_obj.set(_scope, paused_key.into(), paused_val);
+            let ended_key = v8::String::new(_scope, "ended").unwrap();
+            let ended_val: v8::Local<v8::Value> = v8::Boolean::new(_scope, false).into();
+            readable_state_obj.set(_scope, ended_key.into(), ended_val);
+            let high_water_mark_key = v8::String::new(_scope, "highWaterMark").unwrap();
+            let hwm_val: v8::Local<v8::Value> = v8::Integer::new(_scope, 16 * 1024).into();
+            readable_state_obj.set(_scope, high_water_mark_key.into(), hwm_val);
+            stream_obj.set(_scope, readable_state_key.into(), readable_state_obj.into());
+
+            // ===== Writable methods =====
+
+            // _write method - PassThrough implementation that calls push to pass data through
+            // Also forwards data to pipe destination if one exists
+            let write_func = v8::FunctionTemplate::new(_scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+                let chunk = args.get(0);
+                let _encoding = args.get(1);
+                let callback = args.get(2);
+
+                let this = args.this();
+
+                // Call push to pass data through (this is the key for PassThrough behavior)
+                let push_key = v8::String::new(scope, "push").unwrap();
+                if let Some(push_func_val) = this.get(scope, push_key.into()) {
+                    if push_func_val.is_function() {
+                        if let Ok(push_fn) = v8::Local::<v8::Function>::try_from(push_func_val) {
+                            let chunk_to_push = if chunk.is_undefined() || chunk.is_null() {
+                                v8::String::new(scope, "").unwrap().into()
+                            } else {
+                                chunk
+                            };
+                            push_fn.call(scope, this.into(), &[chunk_to_push]);
+                        }
+                    }
+                }
+
+                // Forward to pipe destination if one exists
+                let dest_ref_key = v8::String::new(scope, "_pipeDest").unwrap();
+                if let Some(dest_val) = this.get(scope, dest_ref_key.into()) {
+                    if let Ok(dest) = v8::Local::<v8::Object>::try_from(dest_val) {
+                        let write_key = v8::String::new(scope, "write").unwrap();
+                        if let Some(write_func_val) = dest.get(scope, write_key.into()) {
+                            if write_func_val.is_function() {
+                                if let Ok(write_fn) = v8::Local::<v8::Function>::try_from(write_func_val) {
+                                    let enc_str = v8::String::new(scope, "utf8").unwrap();
+                                    let chunk_to_write = if chunk.is_undefined() || chunk.is_null() {
+                                        v8::String::new(scope, "").unwrap().into()
+                                    } else {
+                                        chunk
+                                    };
+                                    // Use a noop callback since we need to call our callback too
+                                    let noop_fn = v8::Function::new(scope, |_s: &mut v8::HandleScope, _a: v8::FunctionCallbackArguments, _r: v8::ReturnValue| {}).unwrap();
+                                    write_fn.call(scope, dest.into(), &[chunk_to_write, enc_str.into(), noop_fn.into()]);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Call callback to indicate write is done
+                if callback.is_function() {
+                    if let Ok(cb_fn) = v8::Local::<v8::Function>::try_from(callback) {
+                        cb_fn.call(scope, this.into(), &[]);
+                    }
+                }
+            }).get_function(_scope).unwrap();
+            let _write_key = v8::String::new(_scope, "_write").unwrap();
+            stream_obj.set(_scope, _write_key.into(), write_func.into());
+
+            // write method
+            let write_public_func = v8::FunctionTemplate::new(_scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let chunk = args.get(0);
+                let _encoding = args.get(1);
+                let callback = args.get(2);
+
+                // Get _write and call it
+                let this = args.this();
+                let write_key = v8::String::new(scope, "_write").unwrap();
+                if let Some(write_func_val) = this.get(scope, write_key.into()) {
+                    if write_func_val.is_function() {
+                        if let Ok(write_fn) = v8::Local::<v8::Function>::try_from(write_func_val) {
+                            let enc_str = v8::String::new(scope, "utf8").unwrap();
+                            // Create a no-op callback if none provided
+                            let cb = if callback.is_function() {
+                                callback
+                            } else {
+                                let noop_fn = v8::Function::new(scope, |_s: &mut v8::HandleScope, _a: v8::FunctionCallbackArguments, _r: v8::ReturnValue| {}).unwrap();
+                                noop_fn.into()
+                            };
+                            let chunk_val = if chunk.is_undefined() || chunk.is_null() {
+                                v8::String::new(scope, "").unwrap().into()
+                            } else {
+                                chunk
+                            };
+                            write_fn.call(scope, this.into(), &[chunk_val, enc_str.into(), cb]);
+                        }
+                    }
+                }
+
+                // Return true (stream not full)
+                let result: v8::Local<v8::Value> = v8::Boolean::new(scope, true).into();
+                retval.set(result);
+            }).get_function(_scope).unwrap();
+            let write_public_key = v8::String::new(_scope, "write").unwrap();
+            stream_obj.set(_scope, write_public_key.into(), write_public_func.into());
+
+            // end method
+            let end_func = v8::FunctionTemplate::new(_scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+                let _chunk = args.get(0);
+                let _encoding = args.get(1);
+                let callback = args.get(2);
+
+                let this = args.this();
+
+                // Emit 'end' event
+                let on_key = v8::String::new(scope, "on").unwrap();
+                if let Some(on_func_val) = this.get(scope, on_key.into()) {
+                    if on_func_val.is_function() {
+                        if let Ok(on_fn) = v8::Local::<v8::Function>::try_from(on_func_val) {
+                            let end_key = v8::String::new(scope, "end").unwrap();
+                            on_fn.call(scope, this.into(), &[end_key.into()]);
+                        }
+                    }
+                }
+
+                // Call callback if provided
+                if callback.is_function() {
+                    if let Ok(cb_fn) = v8::Local::<v8::Function>::try_from(callback) {
+                        cb_fn.call(scope, this.into(), &[]);
+                    }
+                }
+            }).get_function(_scope).unwrap();
+            let end_key = v8::String::new(_scope, "end").unwrap();
+            stream_obj.set(_scope, end_key.into(), end_func.into());
+
+            // _writableState
+            let writable_state_key = v8::String::new(_scope, "_writableState").unwrap();
+            let writable_state_obj = v8::Object::new(_scope);
+            let writable_ended_key = v8::String::new(_scope, "ended").unwrap();
+            let writable_ended_val: v8::Local<v8::Value> = v8::Boolean::new(_scope, false).into();
+            writable_state_obj.set(_scope, writable_ended_key.into(), writable_ended_val);
+            let writable_finished_key = v8::String::new(_scope, "finished").unwrap();
+            let writable_finished_val: v8::Local<v8::Value> = v8::Boolean::new(_scope, false).into();
+            writable_state_obj.set(_scope, writable_finished_key.into(), writable_finished_val);
+            let writable_flag_key = v8::String::new(_scope, "writable").unwrap();
+            let writable_flag_val: v8::Local<v8::Value> = v8::Boolean::new(_scope, true).into();
+            writable_state_obj.set(_scope, writable_flag_key.into(), writable_flag_val);
+            let w_hwm_key = v8::String::new(_scope, "highWaterMark").unwrap();
+            let w_hwm_val: v8::Local<v8::Value> = v8::Integer::new(_scope, 16 * 1024).into();
+            writable_state_obj.set(_scope, w_hwm_key.into(), w_hwm_val);
+            stream_obj.set(_scope, writable_state_key.into(), writable_state_obj.into());
+
+            retval.set(stream_obj.into());
+        });
+        let passthrough_instance = passthrough_func.get_function(scope).unwrap();
+        let passthrough_key = v8::String::new(scope, "passThrough").unwrap();
+        stream_obj.set(scope, passthrough_key.into(), passthrough_instance.into());
+
         // Set stream as global
         let stream_key = v8::String::new(scope, "stream").unwrap();
         global.set(scope, stream_key.into(), stream_obj.into());
@@ -12320,11 +12671,11 @@ impl MinimalRuntime {
         let is_string_key = v8::String::new(scope, "isString").unwrap();
         util_obj.set(scope, is_string_key.into(), is_string_func.into());
 
-        // isUndefined function
+        // is_undefined function
         let is_undefined_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             retval.set(v8::Boolean::new(_scope, args.get(0).is_undefined()).into());
         }).get_function(scope).unwrap();
-        let is_undefined_key = v8::String::new(scope, "isUndefined").unwrap();
+        let is_undefined_key = v8::String::new(scope, "is_undefined").unwrap();
         util_obj.set(scope, is_undefined_key.into(), is_undefined_func.into());
 
         // isObject function

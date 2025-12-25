@@ -100,6 +100,12 @@ pub fn setup_stream_api(
     let pipeline_key: _ = v8::String::new(scope, "pipeline").unwrap();
     stream_obj.set(scope, pipeline_key.into(), pipeline_func.into());
 
+    // v0.3.74: PassThrough 流 - 不做任何转换的 Transform 流
+    let passthrough_fn: _ = v8::FunctionTemplate::new(scope, stream_passthrough_callback);
+    let passthrough_func: _ = passthrough_fn.get_function(scope).unwrap();
+    let passthrough_key: _ = v8::String::new(scope, "passThrough").unwrap();
+    stream_obj.set(scope, passthrough_key.into(), passthrough_func.into());
+
     // 设置到全局
     let stream_key: _ = v8::String::new(scope, "stream").unwrap();
     global.set(scope, stream_key.into(), stream_obj.into());
@@ -1145,6 +1151,192 @@ fn stream_pipeline_callback(
         retval.set(last);
     } else {
         retval.set(v8::undefined(scope).into());
+    }
+}
+
+/// v0.3.74: stream.passThrough() 实现
+/// 创建一个 PassThrough 流（不做任何转换的 Transform 流）
+fn stream_passthrough_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let stream_obj: _ = v8::Object::new(scope);
+
+    // 支持 options 参数
+    let options: _ = args.get(0);
+    let options_obj = if options.is_object() {
+        options.to_object(scope)
+    } else {
+        None
+    };
+
+    // ===== Readable 方法 =====
+
+    // _read方法 - 检查是否提供自定义 read
+    let mut has_custom_read = false;
+    if let Some(obj) = &options_obj {
+        let read_key: _ = v8::String::new(scope, "read").unwrap();
+        if let Some(read_func) = obj.get(scope, read_key.into()) {
+            if read_func.is_function() {
+                let _read_key: _ = v8::String::new(scope, "_read").unwrap();
+                stream_obj.set(scope, _read_key.into(), read_func);
+                has_custom_read = true;
+            }
+        }
+    }
+    if !has_custom_read {
+        let read_func: _ = v8::FunctionTemplate::new(scope, readable_read_callback);
+        let read_instance: _ = read_func.get_function(scope).unwrap();
+        let _read_key: _ = v8::String::new(scope, "_read").unwrap();
+        stream_obj.set(scope, _read_key.into(), read_instance.into());
+    }
+
+    // read方法
+    let read_public_func: _ = v8::FunctionTemplate::new(scope, readable_public_read_callback);
+    let read_public_instance: _ = read_public_func.get_function(scope).unwrap();
+    let read_public_key: _ = v8::String::new(scope, "read").unwrap();
+    stream_obj.set(scope, read_public_key.into(), read_public_instance.into());
+
+    // push方法
+    let push_func: _ = v8::FunctionTemplate::new(scope, readable_push_callback);
+    let push_instance: _ = push_func.get_function(scope).unwrap();
+    let push_key: _ = v8::String::new(scope, "push").unwrap();
+    stream_obj.set(scope, push_key.into(), push_instance.into());
+
+    // on方法
+    let on_func: _ = v8::FunctionTemplate::new(scope, readable_on_callback);
+    let on_instance: _ = on_func.get_function(scope).unwrap();
+    let on_key: _ = v8::String::new(scope, "on").unwrap();
+    stream_obj.set(scope, on_key.into(), on_instance.into());
+
+    // once方法
+    let once_func: _ = v8::FunctionTemplate::new(scope, readable_once_callback);
+    let once_instance: _ = once_func.get_function(scope).unwrap();
+    let once_key: _ = v8::String::new(scope, "once").unwrap();
+    stream_obj.set(scope, once_key.into(), once_instance.into());
+
+    // pause方法
+    let pause_func: _ = v8::FunctionTemplate::new(scope, readable_pause_callback);
+    let pause_instance: _ = pause_func.get_function(scope).unwrap();
+    let pause_key: _ = v8::String::new(scope, "pause").unwrap();
+    stream_obj.set(scope, pause_key.into(), pause_instance.into());
+
+    // resume方法
+    let resume_func: _ = v8::FunctionTemplate::new(scope, readable_resume_callback);
+    let resume_instance: _ = resume_func.get_function(scope).unwrap();
+    let resume_key: _ = v8::String::new(scope, "resume").unwrap();
+    stream_obj.set(scope, resume_key.into(), resume_instance.into());
+
+    // pipe方法
+    let pipe_func: _ = v8::FunctionTemplate::new(scope, readable_pipe_callback);
+    let pipe_instance: _ = pipe_func.get_function(scope).unwrap();
+    let pipe_key: _ = v8::String::new(scope, "pipe").unwrap();
+    stream_obj.set(scope, pipe_key.into(), pipe_instance.into());
+
+    // unpipe方法
+    let unpipe_func: _ = v8::FunctionTemplate::new(scope, readable_unpipe_callback);
+    let unpipe_instance: _ = unpipe_func.get_function(scope).unwrap();
+    let unpipe_key: _ = v8::String::new(scope, "unpipe").unwrap();
+    stream_obj.set(scope, unpipe_key.into(), unpipe_instance.into());
+
+    // _readableState
+    let readable_state_key: _ = v8::String::new(scope, "_readableState").unwrap();
+    let readable_state_obj: _ = v8::Object::new(scope);
+    let flowing_key: _ = v8::String::new(scope, "flowing").unwrap();
+    let flowing_val: _ = v8::Boolean::new(scope, false);
+    readable_state_obj.set(scope, flowing_key.into(), flowing_val.into());
+    let paused_key: _ = v8::String::new(scope, "paused").unwrap();
+    let paused_val: _ = v8::Boolean::new(scope, false);
+    readable_state_obj.set(scope, paused_key.into(), paused_val.into());
+    let ended_key: _ = v8::String::new(scope, "ended").unwrap();
+    let ended_val: _ = v8::Boolean::new(scope, false);
+    readable_state_obj.set(scope, ended_key.into(), ended_val.into());
+    let high_water_mark_key: _ = v8::String::new(scope, "highWaterMark").unwrap();
+    let hwm_val: _ = v8::Integer::new(scope, 16 * 1024);
+    readable_state_obj.set(scope, high_water_mark_key.into(), hwm_val.into());
+    stream_obj.set(scope, readable_state_key.into(), readable_state_obj.into());
+
+    // ===== Writable 方法 =====
+
+    // _write方法 - PassThrough 使用默认实现，直接传递数据
+    let write_func: _ = v8::FunctionTemplate::new(scope, passthrough_write_callback);
+    let write_instance: _ = write_func.get_function(scope).unwrap();
+    let _write_key: _ = v8::String::new(scope, "_write").unwrap();
+    stream_obj.set(scope, _write_key.into(), write_instance.into());
+
+    // write方法
+    let write_public_func: _ = v8::FunctionTemplate::new(scope, writable_public_write_callback);
+    let write_public_instance: _ = write_public_func.get_function(scope).unwrap();
+    let write_public_key: _ = v8::String::new(scope, "write").unwrap();
+    stream_obj.set(scope, write_public_key.into(), write_public_instance.into());
+
+    // end方法
+    let end_func: _ = v8::FunctionTemplate::new(scope, writable_end_callback);
+    let end_instance: _ = end_func.get_function(scope).unwrap();
+    let end_key: _ = v8::String::new(scope, "end").unwrap();
+    stream_obj.set(scope, end_key.into(), end_instance.into());
+
+    // on方法 (复用 readable_on)
+    let on_func: _ = v8::FunctionTemplate::new(scope, readable_on_callback);
+    let on_instance: _ = on_func.get_function(scope).unwrap();
+    let on_key: _ = v8::String::new(scope, "on").unwrap();
+    stream_obj.set(scope, on_key.into(), on_instance.into());
+
+    // once方法 (复用 readable_once)
+    let once_func: _ = v8::FunctionTemplate::new(scope, readable_once_callback);
+    let once_instance: _ = once_func.get_function(scope).unwrap();
+    let once_key: _ = v8::String::new(scope, "once").unwrap();
+    stream_obj.set(scope, once_key.into(), once_instance.into());
+
+    // _writableState
+    let writable_state_key: _ = v8::String::new(scope, "_writableState").unwrap();
+    let writable_state_obj: _ = v8::Object::new(scope);
+    let writable_ended_key: _ = v8::String::new(scope, "ended").unwrap();
+    let writable_ended_val: _ = v8::Boolean::new(scope, false);
+    writable_state_obj.set(scope, writable_ended_key.into(), writable_ended_val.into());
+    let writable_finished_key: _ = v8::String::new(scope, "finished").unwrap();
+    let writable_finished_val: _ = v8::Boolean::new(scope, false);
+    writable_state_obj.set(scope, writable_finished_key.into(), writable_finished_val.into());
+    let writable_flag_key: _ = v8::String::new(scope, "writable").unwrap();
+    let writable_flag_val: _ = v8::Boolean::new(scope, true);
+    writable_state_obj.set(scope, writable_flag_key.into(), writable_flag_val.into());
+    let w_hwm_key: _ = v8::String::new(scope, "highWaterMark").unwrap();
+    let w_hwm_val: _ = v8::Integer::new(scope, 16 * 1024);
+    writable_state_obj.set(scope, w_hwm_key.into(), w_hwm_val.into());
+    stream_obj.set(scope, writable_state_key.into(), writable_state_obj.into());
+
+    retval.set(stream_obj.into());
+}
+
+/// PassThrough 流的默认 _write 实现 - 直接将输入传递到输出（通过 push）
+fn passthrough_write_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _retval: v8::ReturnValue,
+) {
+    let chunk: _ = args.get(0);
+    let _encoding: _ = args.get(1);
+    let callback: _ = args.get(2);
+
+    // 获取 this 对象
+    let this: _ = args.this();
+
+    // 调用 push 方法将数据传递出去（模拟 Transform 的行为）
+    let push_key: _ = v8::String::new(scope, "push").unwrap();
+    if let Some(push_func_val) = this.get(scope, push_key.into()) {
+        if push_func_val.is_function() {
+            if let Ok(push_fn) = v8::Local::<v8::Function>::try_from(push_func_val) {
+                push_fn.call(scope, this.into(), &[chunk]);
+            }
+        }
+    }
+
+    // 调用 callback 表示完成
+    if callback.is_function() {
+        if let Ok(cb_fn) = v8::Local::<v8::Function>::try_from(callback) {
+            cb_fn.call(scope, this.into(), &[]);
+        }
     }
 }
 
