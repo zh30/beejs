@@ -735,6 +735,7 @@ fn transform_constructor_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
+    // [TRANSFORM_CONSTRUCTOR_UNIQUE_ID]
     let stream_obj: _ = v8::Object::new(scope);
 
     // v0.3.59: 支持 options 参数
@@ -831,8 +832,8 @@ fn transform_constructor_callback(
     readable_state_obj.set(scope, high_water_mark_key.into(), hwm_val.into());
     stream_obj.set(scope, readable_state_key.into(), readable_state_obj.into());
 
-    // ===== Writable 方法 =====
-    // _write方法 - Transform/Duplex 使用内部的 _write
+    // ===== Writable 方法 (Transform) =====
+    // _write方法 - Transform 使用内部的 _write
     // 检查是否提供自定义 write 或 _write (用于底层 Writable)
     let mut has_custom_write = false;
     if let Some(obj) = &options_obj {
@@ -852,6 +853,15 @@ fn transform_constructor_callback(
                     stream_obj.set(scope, _write_key.into(), write_func);
                     has_custom_write = true;
                 }
+            }
+        }
+        // v0.3.76: 检查是否提供 transform 函数（用于 Transform 流）
+        // transform 函数应该被存储为 _transform
+        let transform_key: _ = v8::String::new(scope, "transform").unwrap();
+        if let Some(transform_func) = obj.get(scope, transform_key.into()) {
+            if transform_func.is_function() {
+                let _transform_key: _ = v8::String::new(scope, "_transform").unwrap();
+                stream_obj.set(scope, _transform_key.into(), transform_func);
             }
         }
     }
