@@ -58,7 +58,7 @@
 
 ---
 ### ✨ v0.3.47 DNS 模块实现 (2025-12-25)
-**进度**: dns.lookup/dns.resolve/dns.resolve4/dns.resolve6/dns.reverse | 16 测试用例 | ✅ 待测试
+**进度**: dns.lookup/dns.resolve/dns.resolve4/dns.resolve6/dns.reverse | 16 测试用例 | ✅ CLI 验证通过
 
 #### v0.3.47 实现内容
 - **dns 对象**
@@ -74,16 +74,23 @@
   - 使用 `std::net::ToSocketAddrs` 进行 DNS 查询
   - 无需额外依赖,保持轻量级设计
   - 地址排序和去重处理
+  - 修复 localhost 解析问题 (使用 hostname:0 格式回退)
 
 #### v0.3.47 代码变更
-- **修改文件**: `src/runtime_minimal.rs` (+180 行)
+- **修改文件**: `src/runtime_minimal.rs` (+200 行)
   - 添加 `setup_dns_api()` 函数
+  - 修复 localhost 解析问题
   - 在 `execute_code()` 中调用初始化
 
 - **新增文件**: `tests/dns_module_tests.rs` (+16 测试用例)
   - 16 个测试用例覆盖 DNS 模块
   - 测试模块存在性、函数存在性
   - 测试各种查询功能
+
+#### v0.3.47 验证
+- `beejs eval "typeof dns"` → "object"
+- `beejs eval "dns.lookup('localhost')"` → "127.0.0.1"
+- `beejs eval "dns.getServers()"` → "8.8.8.8"
 
 ---
 

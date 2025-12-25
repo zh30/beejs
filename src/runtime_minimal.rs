@@ -10998,11 +10998,20 @@ impl MinimalRuntime {
             }
 
             // Use standard library for DNS lookup
-            let result = std::net::ToSocketAddrs::to_socket_addrs(&hostname);
+            // Try different formats to handle localhost and regular hostnames
+            let result = std::net::ToSocketAddrs::to_socket_addrs(&hostname)
+                .or_else(|_| std::net::ToSocketAddrs::to_socket_addrs(&format!("{}:0", hostname)));
 
             match result {
                 Ok(addrs) => {
-                    let mut addresses: Vec<String> = addrs.map(|addr| addr.to_string()).collect();
+                    // Extract IP addresses only (without port)
+                    let mut addresses: Vec<String> = addrs.map(|addr| {
+                        if addr.is_ipv4() {
+                            format!("{}", addr.ip())
+                        } else {
+                            format!("{}", addr.ip())
+                        }
+                    }).collect();
                     addresses.sort();
                     addresses.dedup();
 
@@ -11037,11 +11046,13 @@ impl MinimalRuntime {
             // Perform DNS lookup based on record type
             // Note: Full DNS resolution with different record types requires a DNS crate
             // For now, use standard library lookup which handles A/AAAA records
-            let result = std::net::ToSocketAddrs::to_socket_addrs(&hostname);
+            let result = std::net::ToSocketAddrs::to_socket_addrs(&hostname)
+                .or_else(|_| std::net::ToSocketAddrs::to_socket_addrs(&format!("{}:0", hostname)));
 
             match result {
                 Ok(addrs) => {
-                    let addresses: Vec<String> = addrs.map(|addr| addr.to_string()).collect();
+                    // Extract IP addresses only (without port)
+                    let addresses: Vec<String> = addrs.map(|addr| format!("{}", addr.ip())).collect();
                     // Create array of addresses
                     let arr = v8::Array::new(_scope, addresses.len() as i32);
                     for (i, addr) in addresses.iter().enumerate() {
@@ -11068,11 +11079,14 @@ impl MinimalRuntime {
                 return;
             }
 
-            match std::net::ToSocketAddrs::to_socket_addrs(&hostname) {
+            let result = std::net::ToSocketAddrs::to_socket_addrs(&hostname)
+                .or_else(|_| std::net::ToSocketAddrs::to_socket_addrs(&format!("{}:0", hostname)));
+
+            match result {
                 Ok(addrs) => {
                     let v4_addresses: Vec<String> = addrs
                         .filter(|addr| addr.is_ipv4())
-                        .map(|addr| addr.to_string())
+                        .map(|addr| format!("{}", addr.ip()))
                         .collect();
 
                     let arr = v8::Array::new(_scope, v4_addresses.len() as i32);
@@ -11100,11 +11114,14 @@ impl MinimalRuntime {
                 return;
             }
 
-            match std::net::ToSocketAddrs::to_socket_addrs(&hostname) {
+            let result = std::net::ToSocketAddrs::to_socket_addrs(&hostname)
+                .or_else(|_| std::net::ToSocketAddrs::to_socket_addrs(&format!("{}:0", hostname)));
+
+            match result {
                 Ok(addrs) => {
                     let v6_addresses: Vec<String> = addrs
                         .filter(|addr| addr.is_ipv6())
-                        .map(|addr| addr.to_string())
+                        .map(|addr| format!("{}", addr.ip()))
                         .collect();
 
                     let arr = v8::Array::new(_scope, v6_addresses.len() as i32);
