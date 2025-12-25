@@ -10,6 +10,39 @@
 
 
 
+### v0.3.68 增强 http.request() DNS 解析集成 (2025-12-25)
+**进度**: http.request DNS | ✅ 代码已合并
+
+#### v0.3.68 新增功能
+- **实现 http.request() DNS 解析集成**
+  - 添加 `resolve_hostname()` 辅助函数进行域名解析
+  - 支持 localhost、IPv4、IPv6 地址解析
+  - DNS 解析结果存储到 `_resolvedAddress` 属性
+
+- **添加 http.request DNS 测试用例**
+  - 测试 DNS 解析集成
+  - 测试 localhost 和 IP 地址解析
+  - 测试回调模式
+
+#### v0.3.68 技术实现
+- 使用 `std::net::ToSocketAddrs` 进行 DNS 解析
+- 添加 `extract_port()` 辅助函数处理端口选项
+- 修复 borrow checker 借用问题（将迭代器收集为 Vec）
+
+#### v0.3.68 测试结果
+```bash
+$ cargo test --test http_request_dns_tests
+running 12 tests
+test result: ok. 12 passed; 0 failed
+```
+
+#### v0.3.68 下一步计划
+- 实现真正的 TCP 连接（使用 tokio）
+- 增强 http.request() 发起真实网络请求
+- 继续完善其他 Node.js API 模块
+
+---
+
 ### v0.3.67 完成 DNS 模块实现 (2025-12-25)
 **进度**: dns | ✅ 代码已合并
 

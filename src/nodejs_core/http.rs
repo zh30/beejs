@@ -1,7 +1,8 @@
-// Node.js http模块实现 - v0.3.64 增强版
-/// HTTP API - 支持 Agent, getAllHeaders 等
+// Node.js http模块实现 - v0.3.68 增强版
+/// HTTP API - 支持 Agent, getAllHeaders, DNS 解析等
 use anyhow::Result;
 use rusty_v8 as v8;
+use std::net::{SocketAddr, ToSocketAddrs};
 
 /// 设置http API
 pub fn setup_http_api(
@@ -172,6 +173,51 @@ fn extract_string_option(scope: &mut v8::HandleScope, options: &v8::Local<v8::Va
     default.to_string()
 }
 
+/// DNS 解析辅助函数 - v0.3.68
+/// 将主机名解析为 IP 地址
+fn resolve_hostname(hostname: &str, port: u16) -> Result<SocketAddr, String> {
+    // 处理 localhost
+    if hostname == "localhost" {
+        // 尝试创建 IPv4 SocketAddr
+        let addr: SocketAddr = ([127, 0, 0, 1], port).into();
+        return Ok(addr);
+    }
+
+    // 尝试解析为 IP 地址（IPv4 或 IPv6）
+    if let Ok(addr) = format!("{}:{}", hostname, port).parse::<SocketAddr>() {
+        return Ok(addr);
+    }
+
+    // 执行 DNS 解析
+    let addr_format = format!("{}:{}", hostname, port);
+    match addr_format.to_socket_addrs() {
+        Ok(addrs) => {
+            // 将迭代器收集为 Vec
+            let addrs_vec: Vec<SocketAddr> = addrs.collect();
+            // 返回第一个地址
+            addrs_vec.first().copied()
+                .ok_or_else(|| "No addresses found".to_string())
+        }
+        Err(e) => Err(format!("DNS resolution failed: {}", e)),
+    }
+}
+
+/// 从 options 中提取 port - v0.3.68
+fn extract_port(scope: &mut v8::HandleScope, options: &v8::Local<v8::Value>, default: u16) -> u16 {
+    if options.is_undefined() || options.is_null() {
+        return default;
+    }
+    if let Ok(obj) = v8::Local::<v8::Object>::try_from(*options) {
+        let key_str = v8::String::new(scope, "port").unwrap();
+        if let Some(val) = obj.get(scope, key_str.into()) {
+            if val.is_number() {
+                return val.to_int32(scope).unwrap().value() as u16;
+            }
+        }
+    }
+    default
+}
+
 /// Agent.createConnection 回调
 fn http_agent_create_connection_callback(
     scope: &mut v8::HandleScope,
@@ -205,7 +251,7 @@ fn http_request_callback(
     // 解析请求选项
     let method = extract_string_option(scope, &options, "method", "GET");
     let hostname = extract_string_option(scope, &options, "hostname", "localhost");
-    let port = extract_integer_option(scope, &options, "port", 80);
+    let port = extract_port(scope, &options, 80);
     let path = extract_string_option(scope, &options, "path", "/");
 
     // 创建请求对象
@@ -221,12 +267,27 @@ fn http_request_callback(
     req_obj.set(scope, hostname_key.into(), hostname_val.into());
 
     let port_key: _ = v8::String::new(scope, "port").unwrap();
-    let port_val: _ = v8::Integer::new(scope, port);
+    let port_val: _ = v8::Integer::new(scope, port as i32);
     req_obj.set(scope, port_key.into(), port_val.into());
 
     let path_key: _ = v8::String::new(scope, "path").unwrap();
     let path_val: _ = v8::String::new(scope, &path).unwrap();
     req_obj.set(scope, path_key.into(), path_val.into());
+
+    // v0.3.68: 执行 DNS 解析并存储解析结果
+    let resolved_addr_key: _ = v8::String::new(scope, "_resolvedAddress").unwrap();
+    match resolve_hostname(&hostname, port) {
+        Ok(socket_addr) => {
+            let addr_val: _ = v8::String::new(scope, &socket_addr.to_string()).unwrap();
+            req_obj.set(scope, resolved_addr_key.into(), addr_val.into());
+        }
+        Err(e) => {
+            let undefined: _ = v8::undefined(scope);
+            req_obj.set(scope, resolved_addr_key.into(), undefined.into());
+            // 可以在控制台输出错误（可选）
+            eprintln!("[Beejs] DNS resolution warning for '{}': {}", hostname, e);
+        }
+    }
 
     // 提取 headers
     let headers_key_str: _ = v8::String::new(scope, "headers").unwrap();
