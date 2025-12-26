@@ -1061,12 +1061,20 @@ pub struct DestructuringProperty {
 /// 函数参数类型（支持简单参数和解构参数）
 #[derive(Debug, Clone)]
 pub enum FunctionParameter {
-    /// 简单参数: `name` 或 `name: Type`
+    /// 简单参数: `name` 或 `name: Type`，支持访问修饰符
     Simple {
         name: String,
         type_annotation: Option<String>,
         /// 默认值（可选）
         default_value: Option<Box<ASTNode>>,
+        /// public 修饰符（用于构造函数参数）
+        is_public: bool,
+        /// private 修饰符（用于构造函数参数）
+        is_private: bool,
+        /// protected 修饰符（用于构造函数参数）
+        is_protected: bool,
+        /// readonly 修饰符（用于构造函数参数）
+        is_readonly: bool,
     },
     /// 解构参数: `[a, b]` 或 `{ a, b }`，支持默认值
     Destructuring {
@@ -1806,6 +1814,32 @@ impl Parser {
                 FunctionParameter::Destructuring { pattern, default_value }
             } else {
                 // 解析简单参数
+                // 首先检查是否是访问修饰符（public, private, protected）
+                let mut is_public = false;
+                let mut is_private = false;
+                let mut is_protected = false;
+                let mut is_readonly = false;
+
+                while self.current_token_eq(&Token::Public)
+                    || self.current_token_eq(&Token::Private)
+                    || self.current_token_eq(&Token::Protected)
+                {
+                    if self.current_token_eq(&Token::Public) {
+                        is_public = true;
+                    } else if self.current_token_eq(&Token::Private) {
+                        is_private = true;
+                    } else if self.current_token_eq(&Token::Protected) {
+                        is_protected = true;
+                    }
+                    self.advance();
+                }
+
+                // 检查 readonly 修饰符
+                if self.current_token_eq(&Token::Readonly) {
+                    is_readonly = true;
+                    self.advance();
+                }
+
                 let param_name_token = self.consume_any_identifier()?;
                 let param_name: _ = match param_name_token {
                     Token::Identifier(name) => name,
@@ -1837,7 +1871,20 @@ impl Parser {
                     None
                 };
 
-                FunctionParameter::Simple { name: param_name, type_annotation, default_value }
+                // 跳过分号分隔的参数声明（用于 public/private/protected 参数）
+                if self.current_token_eq(&Token::SemiColon) {
+                    self.consume(Token::SemiColon)?;
+                }
+
+                FunctionParameter::Simple {
+                    name: param_name,
+                    type_annotation,
+                    default_value,
+                    is_public,
+                    is_private,
+                    is_protected,
+                    is_readonly,
+                }
             };
 
             params.push(param);
@@ -2407,7 +2454,15 @@ impl Parser {
                 } else {
                     None
                 };
-                FunctionParameter::Simple { name: param_name, type_annotation: param_type, default_value: None }
+                FunctionParameter::Simple {
+                    name: param_name,
+                    type_annotation: param_type,
+                    default_value: None,
+                    is_public: false,
+                    is_private: false,
+                    is_protected: false,
+                    is_readonly: false,
+                }
             };
             params.push(param);
             if self.current_token_eq(&Token::Comma) {
@@ -5051,6 +5106,31 @@ impl CodeEmitter {
                     self.emit_function_parameter(param);
                 }
                 self.output.push_str(") {\n");
+
+                // 如果是构造函数，生成访问修饰符参数的赋值语句
+                if name == "constructor" {
+                    for param in params.iter() {
+                        if let FunctionParameter::Simple {
+                            name: param_name,
+                            is_public,
+                            is_private,
+                            is_protected,
+                            is_readonly: _,
+                            ..
+                        } = param
+                        {
+                            // 如果有访问修饰符，生成 this.paramName = paramName;
+                            if *is_public || *is_private || *is_protected {
+                                self.output.push_str("    this.");
+                                self.output.push_str(param_name);
+                                self.output.push_str(" = ");
+                                self.output.push_str(param_name);
+                                self.output.push_str(";\n");
+                            }
+                        }
+                    }
+                }
+
                 for stmt in body {
                     self.emit_node(stmt);
                 }
@@ -5472,7 +5552,15 @@ impl CodeEmitter {
     /// 发射函数参数（支持简单参数和解构参数）
     fn emit_function_parameter(&mut self, param: &FunctionParameter) {
         match param {
-            FunctionParameter::Simple { name, type_annotation: _, default_value } => {
+            FunctionParameter::Simple {
+                name,
+                type_annotation: _,
+                default_value,
+                is_public: _,
+                is_private: _,
+                is_protected: _,
+                is_readonly: _,
+            } => {
                 self.output.push_str(name);
                 if let Some(default) = default_value {
                     self.output.push_str(" = ");
@@ -6410,6 +6498,37 @@ class Person {
             "Should contain 'constructor': {}", result.js_code);
         assert!(result.js_code.contains("greet"),
             "Should contain 'greet': {}", result.js_code);
+        // Should not contain TypeScript type annotations
+        assert!(!result.js_code.contains(": string"),
+            "Should not contain type annotation ': string': {}", result.js_code);
+        assert!(!result.js_code.contains(": number"),
+            "Should not contain type annotation ': number': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_constructor_with_access_modifiers() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test class with constructor that has access modifiers (public, private, protected)
+        let source = r#"
+class Person {
+    constructor(public name: string, private age: number, protected id: number) {}
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        println!("Constructor with access modifiers transpiled output:\n{}", result.js_code);
+        assert!(result.js_code.contains("class Person"),
+            "Should contain 'class Person': {}", result.js_code);
+        assert!(result.js_code.contains("constructor"),
+            "Should contain 'constructor': {}", result.js_code);
+        // Should generate this.name = name; for public parameter
+        assert!(result.js_code.contains("this.name = name"),
+            "Should generate 'this.name = name;' for public parameter: {}", result.js_code);
+        // Should generate this.age = age; for private parameter
+        assert!(result.js_code.contains("this.age = age"),
+            "Should generate 'this.age = age;' for private parameter: {}", result.js_code);
+        // Should generate this.id = id; for protected parameter
+        assert!(result.js_code.contains("this.id = id"),
+            "Should generate 'this.id = id;' for protected parameter: {}", result.js_code);
         // Should not contain TypeScript type annotations
         assert!(!result.js_code.contains(": string"),
             "Should not contain type annotation ': string': {}", result.js_code);
