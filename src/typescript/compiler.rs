@@ -470,18 +470,69 @@ impl TypeScriptCompiler {
                                 tokens.push(Token::Gt);
                             }
                         } else if c == '&' {
-                            if pos + 1 < chars.len() && chars[pos + 1] == '&' {
+                            if pos + 1 < chars.len() && chars[pos + 1] == '=' {
+                                tokens.push(Token::AmpersanderEq);
+                                pos += 1;
+                            } else if pos + 1 < chars.len() && chars[pos + 1] == '&' {
                                 tokens.push(Token::AmpersanderAmpersand);
                                 pos += 1;
                             } else {
                                 tokens.push(Token::Ampersand);
                             }
                         } else if c == '|' {
-                            if pos + 1 < chars.len() && chars[pos + 1] == '|' {
+                            if pos + 1 < chars.len() && chars[pos + 1] == '=' {
+                                tokens.push(Token::PipeEq);
+                                pos += 1;
+                            } else if pos + 1 < chars.len() && chars[pos + 1] == '|' {
                                 tokens.push(Token::PipePipe);
                                 pos += 1;
                             } else {
                                 tokens.push(Token::Pipe);
+                            }
+                        } else if c == '^' {
+                            if pos + 1 < chars.len() && chars[pos + 1] == '=' {
+                                tokens.push(Token::CaretEq);
+                                pos += 1;
+                            } else {
+                                tokens.push(Token::Caret);
+                            }
+                        } else if c == '<' {
+                            if pos + 1 < chars.len() && chars[pos + 1] == '=' {
+                                tokens.push(Token::LtEq);
+                                pos += 1;
+                            } else if pos + 1 < chars.len() && chars[pos + 1] == '<' {
+                                if pos + 2 < chars.len() && chars[pos + 2] == '=' {
+                                    tokens.push(Token::LtLtEq);
+                                    pos += 2;
+                                } else {
+                                    tokens.push(Token::LtLt);
+                                    pos += 1;
+                                }
+                            } else {
+                                tokens.push(Token::Lt);
+                            }
+                        } else if c == '>' {
+                            if pos + 1 < chars.len() && chars[pos + 1] == '=' {
+                                tokens.push(Token::GtEq);
+                                pos += 1;
+                            } else if pos + 1 < chars.len() && chars[pos + 1] == '>' {
+                                if pos + 2 < chars.len() && chars[pos + 2] == '=' {
+                                    tokens.push(Token::GtGtEq);
+                                    pos += 2;
+                                } else if pos + 2 < chars.len() && chars[pos + 2] == '>' {
+                                    if pos + 3 < chars.len() && chars[pos + 3] == '=' {
+                                        tokens.push(Token::GtGtGtEq);
+                                        pos += 3;
+                                    } else {
+                                        tokens.push(Token::GtGtGt);
+                                        pos += 2;
+                                    }
+                                } else {
+                                    tokens.push(Token::GtGt);
+                                    pos += 1;
+                                }
+                            } else {
+                                tokens.push(Token::Gt);
                             }
                         } else if c == '?' {
                             if pos + 1 < chars.len() && chars[pos + 1] == '.' {
@@ -882,9 +933,19 @@ pub enum Token {
     Gt,
     GtEq,      // >=
     Ampersand, // &
+    AmpersanderEq,   // &=
     AmpersanderAmpersand, // &&
     Pipe,      // |
+    PipeEq,    // |=
     PipePipe,  // ||
+    Caret,     // ^
+    CaretEq,   // ^=
+    LtLt,      // <<
+    LtLtEq,    // <<=
+    GtGt,      // >>
+    GtGtEq,    // >>=
+    GtGtGt,    // >>>
+    GtGtGtEq,  // >>>=
     FatArrow,
     TemplateStart,
     TemplateMiddle,
@@ -2202,6 +2263,11 @@ impl Parser {
                             Token::Identifier(name) => name,
                             _ => bail!("Expected parameter name"),
                         };
+                        // 跳过类型注解
+                        if self.current_token_eq(&Token::Colon) {
+                            self.consume(Token::Colon)?;
+                            self.parse_type_annotation();
+                        }
                         params.push((param_name, None));
                         if self.current_token_eq(&Token::Comma) {
                             self.consume(Token::Comma)?;
@@ -2262,7 +2328,13 @@ impl Parser {
                 }));
             }
 
-            // 可能是字段，检查是否有初始化器
+            // 可能是字段，跳过类型注解
+            if self.current_token_eq(&Token::Colon) {
+                self.consume(Token::Colon)?;
+                self.parse_type_annotation();
+            }
+
+            // 检查是否有初始化器
             let initializer: Option<ASTExpression> = if self.current_token_eq(&Token::Eq) {
                 self.consume(Token::Eq)?;
                 Some(self.parse_expression()?)
@@ -2707,7 +2779,9 @@ impl Parser {
                 // 二元运算符
                 Token::Plus | Token::Minus | Token::Star | Token::Slash | Token::Percent |
                 Token::EqEq | Token::EqEqEq | Token::NotEq | Token::NotEqEq |
-                Token::Lt | Token::Gt | Token::LtEq | Token::GtEq => {
+                Token::Lt | Token::Gt | Token::LtEq | Token::GtEq |
+                Token::Ampersand | Token::Pipe | Token::Caret |
+                Token::LtLt | Token::GtGt | Token::GtGtGt => {
                     let op: _ = match self.current_token() {
                         Token::Plus => "+",
                         Token::Minus => "-",
@@ -2722,6 +2796,12 @@ impl Parser {
                         Token::Gt => ">",
                         Token::LtEq => "<=",
                         Token::GtEq => ">=",
+                        Token::Ampersand => "&",
+                        Token::Pipe => "|",
+                        Token::Caret => "^",
+                        Token::LtLt => "<<",
+                        Token::GtGt => ">>",
+                        Token::GtGtGt => ">>>",
                         _ => unreachable!(),
                     };
                     self.advance();
@@ -2750,6 +2830,15 @@ impl Parser {
                         condition,
                         consequent,
                         alternate: Box::new(alternate),
+                    };
+                }
+                // 赋值运算符: expr = value, expr += value, etc.
+                Token::Eq | Token::PlusEq | Token::MinusEq | Token::StarEq | Token::SlashEq | Token::PercentEq | Token::AmpersanderEq | Token::PipeEq | Token::CaretEq | Token::LtLtEq | Token::GtGtEq | Token::GtGtGtEq => {
+                    self.advance();
+                    let right = self.parse_expression()?;
+                    expr = ASTExpression::AssignmentExpression {
+                        left: Box::new(expr),
+                        right: Box::new(right),
                     };
                 }
                 _ => break,
@@ -4861,6 +4950,41 @@ const sum = `${a + a}`;"#;
                 println!("JS Code:\n{}", result.js_code);
                 assert!(result.js_code.contains("const"),
                     "Should contain const: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_assignment_expression() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test assignment expression in class method
+        let source = r#"
+class Animal {
+    name: string;
+    constructor(name: string) {
+        this.name = name;
+    }
+    speak(): void {
+        console.log(`${this.name} makes a sound`);
+    }
+}
+"#;
+        println!("\n========== Testing: class with constructor and assignment ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("class"),
+                    "Should contain class: {}", result.js_code);
+                assert!(result.js_code.contains("constructor"),
+                    "Should contain constructor: {}", result.js_code);
+                assert!(result.js_code.contains("this.name = name"),
+                    "Should contain assignment: {}", result.js_code);
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
