@@ -1,3 +1,47 @@
+### v0.3.108 增强 TypeScript 编译器模板字符串和 async 支持 (2025-12-26)
+**进度**: TypeScript 支持 | ✅ 已提交
+
+#### v0.3.108 新增功能
+- **模板字符串词法分析**
+  - 实现完整的 backtick (`) 字符串解析
+  - 支持 `${}` 表达式插值
+  - 识别模板字符串内的转义字符 (\`, \\, \$)
+
+- **模板字符串 AST 表示**
+  - 添加 `Token::TemplateStart`, `TemplateMiddle`, `TemplateEnd`
+  - 添加 `ASTExpression::TemplateLiteral` 节点类型
+  - 支持交替的字符串和表达式 parts
+
+- **Async 函数解析**
+  - 支持 `async function` 声明
+  - 解析 `async () => {}` 箭头函数
+  - 添加 `ASTNode::FunctionDeclaration::is_async` 字段
+
+- **泛型参数解析**
+  - 支持 `<T>` 和 `<T, U>` 形式的泛型参数
+  - 存储在 `type_params` 字段中
+
+#### v0.3.108 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+300/- 行)
+  - 完整实现模板字符串词法分析
+  - 添加 Token 和 AST 变体
+  - 实现 async 函数和泛型解析
+  - 修复 dead code: `encode_vlq` 现在用于 Source Map 生成
+
+- **修改文件**: `src/runtime_minimal.rs` (+35/- 行)
+  - 改进类型注解移除逻辑
+  - 避免误转译包含冒号的普通 JS 代码
+
+#### v0.3.108 验证
+- ✅ `cargo build --release` 零警告
+- ✅ `cargo test --lib` 28/28 通过
+
+#### v0.3.108 下一步计划
+- 完善模板字符串到 JS 的转译
+- 实现 async/await 的代码生成
+- 增强 Source Map 精度（行列映射）
+
+
 ### v0.3.104 修复 WebSocket 热重载编译警告 (2025-12-26)
 **进度**: 代码质量 | ✅ 已完成
 
