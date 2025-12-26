@@ -1,3 +1,66 @@
+### v0.3.143 await 在函数表达式中的正确处理 (2025-12-27)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.143 新增功能
+- **await 上下文验证**
+  - 添加 `async_context_stack` 到 `TypeContext` 追踪 async 函数嵌套
+  - 实现 `enter_async()` 和 `exit_async()` 方法管理上下文
+  - 在函数声明、箭头函数和函数表达式中正确管理 async 上下文
+
+- **await 使用验证**
+  - 非 async 函数中使用 await 会产生诊断错误
+  - 错误信息: "await expression can only be used within an async function"
+  - 支持嵌套 async 函数的正确上下文传播
+
+- **测试用例新增**
+  - `test_await_in_async_function_expression` - async 函数表达式中的 await
+  - `test_await_in_async_arrow_function` - async 箭头函数中的 await
+
+#### v0.3.143 技术实现
+- **TypeContext 增强**: 添加 `async_context_stack: Vec<bool>` 字段
+- **上下文管理**: `enter_async()` 压栈，`exit_async()` 弹栈
+- **await 验证**: 检查 `is_in_async()` 标志
+
+#### v0.3.143 验证
+- ✅ `cargo test --lib` 189/189 通过 (+2)
+- ✅ `cargo build --release` 成功编译
+- ✅ await 上下文验证正常工作
+
+#### v0.3.143 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+77/-2 行)
+  - 添加 `async_context_stack` 到 `TypeContext`
+  - 添加 `enter_async()`, `exit_async()`, `is_in_async()` 方法
+  - 修改 `check_node()` 为函数声明添加 async 上下文管理
+  - 修改 `check_expression()` 为箭头函数和函数表达式添加 async 上下文管理
+  - 修改 `check_expression()` 添加 await 位置验证
+  - 新增 2 个测试用例
+
+#### v0.3.143 使用示例
+```typescript
+// ✅ 正确: async 函数表达式中的 await
+const fetchData = async function(): Promise<string> {
+    const result = await fetch('/api/data');
+    return result;
+};
+
+// ✅ 正确: async 箭头函数中的 await
+const fetchData = async () => {
+    const result = await getData();
+    return result;
+};
+
+// ❌ 错误: 非 async 函数中使用 await
+function badExample() {
+    const result = await fetch('/api/data'); // 编译错误
+}
+```
+
+#### v0.3.143 下一步计划
+- 继续完善 TypeScript 特性覆盖
+- 添加更多边界情况测试
+
+---
+
 ### v0.3.142 函数表达式支持 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 
