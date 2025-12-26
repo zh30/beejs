@@ -1,6 +1,7 @@
 // HTTP Server Integration Tests - v0.3.88
 // 测试 http.Server 的真实网络请求处理功能
 // 注意: 这些测试验证服务器是否正确监听和接收请求
+// v0.3.97: 添加测试隔离和清理功能
 
 use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
@@ -8,6 +9,33 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::thread;
 use std::time::Duration;
+
+/// 测试隔离设置函数
+/// v0.3.97: 在每个测试开始时调用，确保干净的全局状态
+#[allow(dead_code)]
+fn setup_test_environment() {
+    use beejs::nodejs_core::http::reset_http_server_channel;
+    // 重置消息通道以清除任何残留消息
+    let _ = reset_http_server_channel();
+    // 等待更长时间让 TIME_WAIT 端口释放 (macOS TIME_WAIT 可达 60s)
+    // 使用 SO_REUSEADDR 后，延迟可以更短，但仍需要一定时间
+    thread::sleep(Duration::from_millis(500));
+}
+
+/// 关闭测试服务器的辅助函数
+/// v0.3.97: 确保测试结束后端口能立即释放
+#[allow(dead_code)]
+fn close_test_server(runtime: &mut MinimalRuntime) {
+    let close_code = r#"
+        if (globalThis._testServer && typeof globalThis._testServer.close === 'function') {
+            globalThis._testServer.close();
+            globalThis._testServer = null;
+        }
+    "#;
+    let _ = runtime.execute_code(close_code);
+    // 等待 socket 完全关闭
+    thread::sleep(Duration::from_millis(100));
+}
 
 /// Helper function to send HTTP request and receive response with non-blocking I/O
 /// v0.3.95: Updated to use non-blocking pattern for message channel tests
@@ -77,6 +105,9 @@ fn send_http_request(port: u16, request: &str) -> bool {
 #[test]
 #[serial]
 fn test_http_server_listens_on_port() {
+    // v0.3.97: 设置测试环境，确保干净的全局状态
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const server = http.createServer((req, res) => {
@@ -97,6 +128,9 @@ fn test_http_server_listens_on_port() {
 #[test]
 #[serial]
 fn test_http_server_receives_requests() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const server = http.createServer((req, res) => {
@@ -117,6 +151,9 @@ fn test_http_server_receives_requests() {
 #[test]
 #[serial]
 fn test_http_server_handles_multiple_connections() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const server = http.createServer((req, res) => {
@@ -138,6 +175,9 @@ fn test_http_server_handles_multiple_connections() {
 #[test]
 #[serial]
 fn test_http_server_different_ports() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
 
     // Start server on port 3533
@@ -159,6 +199,9 @@ fn test_http_server_different_ports() {
 #[test]
 #[serial]
 fn test_http_server_request_method_detection() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const server = http.createServer((req, res) => {
@@ -184,6 +227,9 @@ fn test_http_server_request_method_detection() {
 #[test]
 #[serial]
 fn test_http_server_request_with_headers() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const server = http.createServer((req, res) => {
@@ -205,6 +251,9 @@ fn test_http_server_request_with_headers() {
 #[test]
 #[serial]
 fn test_http_server_close() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const server = http.createServer((req, res) => {
@@ -239,6 +288,9 @@ fn test_http_server_close() {
 #[test]
 #[serial]
 fn test_http_server_listen_callback() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         let callbackCalled = false;
@@ -259,12 +311,16 @@ fn test_http_server_listen_callback() {
 #[test]
 #[serial]
 fn test_http_server_ipv6_binding() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const server = http.createServer((req, res) => {
             res.statusCode = 200;
             res.end('OK');
         });
+        globalThis._testServer = server;
         server.listen(3538, '127.0.0.1');
     "#;
 
@@ -273,6 +329,9 @@ fn test_http_server_ipv6_binding() {
 
     let connected = send_http_request(3538, "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n");
     assert!(connected, "Should connect to IPv4 bound server");
+
+    // v0.3.97: 关闭测试服务器
+    close_test_server(&mut runtime);
 }
 
 // v0.3.90: 测试消息通道功能
@@ -298,6 +357,7 @@ fn test_http_message_channel_basics() {
 }
 
 // v0.3.90: 测试 create_http_response 辅助函数
+// v0.3.97: 修复 - 不再检查 Connection 头，因为现在由服务器根据 Keep-Alive 动态决定
 #[test]
 #[serial]
 fn test_create_http_response() {
@@ -310,7 +370,8 @@ fn test_create_http_response() {
     assert_eq!(response.body, b"Hello World");
     assert_eq!(response.headers.get("Content-Type").unwrap(), "text/plain");
     assert_eq!(response.headers.get("Content-Length").unwrap(), "11");
-    assert_eq!(response.headers.get("Connection").unwrap(), "close");
+    // v0.3.97: Connection 头不再由 create_http_response 设置，由服务器添加
+    assert!(response.headers.get("Connection").is_none(), "Connection header should not be set by create_http_response");
 }
 
 // v0.3.90: 测试 init_http_server_channel 全局初始化
@@ -354,6 +415,9 @@ fn test_try_recv_http_request_empty() {
 #[test]
 #[serial]
 fn test_http_server_response_headers() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const server = http.createServer((req, res) => {
@@ -422,6 +486,9 @@ fn test_http_server_response_headers() {
 #[test]
 #[serial]
 fn test_http_server_post_with_body() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const server = http.createServer((req, res) => {
@@ -447,12 +514,16 @@ fn test_http_server_post_with_body() {
 #[test]
 #[serial]
 fn test_http_server_different_methods() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const server = http.createServer((req, res) => {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(req.method);
         });
+        globalThis._testServer = server;
         server.listen(3542);
     "#;
 
@@ -463,6 +534,9 @@ fn test_http_server_different_methods() {
     let request = "DELETE /resource/123 HTTP/1.1\r\nHost: localhost\r\n\r\n";
     let response = send_request_and_get_response(3542, request, &mut runtime);
 
+    // v0.3.97: 关闭测试服务器
+    close_test_server(&mut runtime);
+
     assert!(response.contains("DELETE"), "Should handle DELETE method, got: {}", response);
 }
 
@@ -471,6 +545,9 @@ fn test_http_server_different_methods() {
 #[test]
 #[serial]
 fn test_http_server_multiple_headers() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const server = http.createServer((req, res) => {
@@ -497,6 +574,9 @@ fn test_http_server_multiple_headers() {
 #[test]
 #[serial]
 fn test_http_server_request_headers() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const server = http.createServer((req, res) => {
@@ -521,12 +601,16 @@ fn test_http_server_request_headers() {
 #[test]
 #[serial]
 fn test_http_server_404_response() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const server = http.createServer((req, res) => {
             res.writeHead(404, { 'Content-Type': 'text/plain' });
             res.end('Not Found');
         });
+        globalThis._testServer = server;
         server.listen(3545);
     "#;
 
@@ -535,6 +619,9 @@ fn test_http_server_404_response() {
 
     let request = "GET /nonexistent HTTP/1.1\r\nHost: localhost\r\n\r\n";
     let response = send_request_and_get_response(3545, request, &mut runtime);
+
+    // v0.3.97: 关闭测试服务器
+    close_test_server(&mut runtime);
 
     assert!(response.contains("HTTP/1.1 404"), "Should return 404 status, got: {}", response);
     assert!(response.contains("Not Found"), "Should have Not Found body");
@@ -545,6 +632,9 @@ fn test_http_server_404_response() {
 #[test]
 #[serial]
 fn test_pump_http_messages() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     use beejs::nodejs_core::http::reset_http_server_channel;
 
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
@@ -574,12 +664,16 @@ fn test_pump_http_messages() {
 #[test]
 #[serial]
 fn test_http_server_body_transmission() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const server = http.createServer((req, res) => {
             res.writeHead(200, { 'Content-Type': 'text/plain' });
             res.end('This is a longer response body that should be transmitted correctly.');
         });
+        globalThis._testServer = server;
         server.listen(3546);
     "#;
 
@@ -589,14 +683,20 @@ fn test_http_server_body_transmission() {
     let request = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
     let response = send_request_and_get_response(3546, request, &mut runtime);
 
+    // v0.3.97: 关闭测试服务器
+    close_test_server(&mut runtime);
+
     assert!(response.contains("This is a longer response body"), "Should have full body, got: {}", response);
 }
 
-/// 测试 HTTP Keep-Alive 连接
-/// v0.3.96: 新增功能测试
+/// v0.3.97: 测试 HTTP Keep-Alive 连接
+/// 使用非阻塞 I/O，必须交替调用 pump_http_messages() 处理请求
 #[test]
 #[serial]
 fn test_http_server_keep_alive() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         let requestCount = 0;
@@ -605,32 +705,52 @@ fn test_http_server_keep_alive() {
             res.writeHead(200, { 'Content-Type': 'text/plain' });
             res.end('Request ' + requestCount + ' received');
         });
+        globalThis._testServer = server;
         server.listen(3547);
     "#;
 
     runtime.execute_code(code).expect("Execution failed");
     wait_for_server(3547);
 
-    // 建立持久连接，发送多个请求
+    // 使用非阻塞 I/O
     let mut stream = TcpStream::connect(("127.0.0.1", 3547)).expect("Failed to connect");
-    stream.set_read_timeout(Some(Duration::from_secs(15))).expect("set_read_timeout failed");
+    stream.set_nonblocking(true).expect("set_nonblocking failed");
 
     // 发送第一个请求
     stream.write_all(b"GET /first HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
 
+    // 读取第一个响应（需要交替调用 pump_http_messages）
     let mut response1 = String::new();
+    let start = std::time::Instant::now();
     let mut buffer = [0u8; 1024];
-    loop {
+
+    while start.elapsed() < Duration::from_secs(10) {
+        // 处理消息通道中的请求
+        let _ = runtime.pump_http_messages();
+
         match stream.read(&mut buffer) {
-            Ok(0) => break,
+            Ok(0) => break, // 连接关闭
             Ok(n) => {
                 response1.push_str(&String::from_utf8_lossy(&buffer[..n]));
-                if response1.contains("\r\n\r\n") {
-                    break;
+                // 找到 header 结束和完整 body
+                if let Some(header_end) = response1.find("\r\n\r\n") {
+                    if let Some(cl_start) = response1[..header_end].find("Content-Length:") {
+                        let cl_line = &response1[..header_end][cl_start + 15..];
+                        if let Some(cl_end) = cl_line.find("\r\n") {
+                            let cl_value = &cl_line[..cl_end];
+                            if let Ok(body_len) = cl_value.trim().parse::<usize>() {
+                                let total_len = header_end + 4 + body_len;
+                                if response1.len() >= total_len {
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
             }
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock || e.kind() == std::io::ErrorKind::TimedOut => {
-                // 继续等待
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                // 短暂休眠后重试
+                thread::sleep(Duration::from_millis(10));
             }
             Err(e) => {
                 panic!("Read error: {}", e);
@@ -638,15 +758,20 @@ fn test_http_server_keep_alive() {
         }
     }
 
-    // 验证第一个响应包含 Connection: keep-alive
+    // 验证第一个响应
     assert!(response1.contains("Connection: keep-alive"), "Should have Connection: keep-alive, got: {}", response1);
     assert!(response1.contains("Request 1 received"), "Should handle first request, got: {}", response1);
 
     // 发送第二个请求（复用同一个连接）
     stream.write_all(b"GET /second HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
 
+    // 读取第二个响应
     let mut response2 = String::new();
-    loop {
+    let start2 = std::time::Instant::now();
+
+    while start2.elapsed() < Duration::from_secs(10) {
+        let _ = runtime.pump_http_messages();
+
         match stream.read(&mut buffer) {
             Ok(0) => break,
             Ok(n) => {
@@ -655,8 +780,8 @@ fn test_http_server_keep_alive() {
                     break;
                 }
             }
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock || e.kind() == std::io::ErrorKind::TimedOut => {
-                // 继续等待
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                thread::sleep(Duration::from_millis(10));
             }
             Err(e) => {
                 panic!("Read error: {}", e);
@@ -665,23 +790,30 @@ fn test_http_server_keep_alive() {
     }
 
     // 验证第二个响应
-    assert!(response2.contains("Request 2 received"), "Should handle second request on same connection, got: {}", response2);
+    assert!(response2.contains("Request 2 received"), "Should handle second request, got: {}", response2);
 
     // 关闭连接
     drop(stream);
+
+    // v0.3.97: 关闭测试服务器
+    close_test_server(&mut runtime);
 }
 
 /// 测试 HTTP Connection: close
-/// v0.3.96: 新增功能测试
+/// v0.3.96: 新增功能测试，v0.3.97: 修复缺少 pump_http_messages() 问题
 #[test]
 #[serial]
 fn test_http_server_connection_close() {
+    // v0.3.97: 设置测试环境
+    setup_test_environment();
+
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const server = http.createServer((req, res) => {
             res.writeHead(200, { 'Content-Type': 'text/plain' });
             res.end('Close connection');
         });
+        globalThis._testServer = server;
         server.listen(3548);
     "#;
 
@@ -690,13 +822,20 @@ fn test_http_server_connection_close() {
 
     // 发送带有 Connection: close 的请求
     let mut stream = TcpStream::connect(("127.0.0.1", 3548)).expect("Failed to connect");
-    stream.set_read_timeout(Some(Duration::from_secs(5))).expect("set_read_timeout failed");
-
+    stream.set_nonblocking(true).expect("set_nonblocking failed");
     stream.write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n").expect("Failed to write");
+    let _ = stream.shutdown(std::net::Shutdown::Write);
 
     let mut response = String::new();
+    let start = std::time::Instant::now();
     let mut buffer = [0u8; 1024];
-    loop {
+
+    // v0.3.97: 添加 pump_http_messages() 调用以处理请求
+    while start.elapsed() < Duration::from_secs(10) {
+        // 处理消息通道中的请求
+        let _ = runtime.pump_http_messages();
+
+        // 尝试读取响应
         match stream.read(&mut buffer) {
             Ok(0) => {
                 // 连接已关闭
@@ -708,17 +847,22 @@ fn test_http_server_connection_close() {
                     break;
                 }
             }
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock || e.kind() == std::io::ErrorKind::TimedOut => {
-                // 继续等待
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                // 还没收到数据，继续
             }
             Err(e) => {
                 panic!("Read error: {}", e);
             }
         }
+
+        thread::sleep(Duration::from_millis(5));
     }
 
     // 验证响应包含 Connection: close
     assert!(response.contains("Connection: close"), "Should have Connection: close, got: {}", response);
     assert!(response.contains("Close connection"), "Should have body, got: {}", response);
+
+    // v0.3.97: 关闭测试服务器
+    close_test_server(&mut runtime);
 }
 

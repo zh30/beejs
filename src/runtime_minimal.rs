@@ -13027,7 +13027,8 @@ impl MinimalRuntime {
                 response_headers.insert("Content-Type".to_string(), "text/plain; charset=utf-8".to_string());
             }
             response_headers.insert("Content-Length".to_string(), body.len().to_string());
-            response_headers.insert("Connection".to_string(), "close".to_string());
+            // v0.3.97: 不设置默认 Connection 头，让 handle_connection 根据 Keep-Alive 决定
+            // response_headers.insert("Connection".to_string(), "close".to_string());
 
             // 创建响应消息
             let response_msg = crate::nodejs_core::http::HttpResponseMessage {

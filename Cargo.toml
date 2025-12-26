@@ -43,7 +43,7 @@ tiny_http = "0.12"
 
 # System calls for zero-copy network I/O
 libc = "0.2"
-nix = { version = "0.29", features = ["uio"] }
+nix = { version = "0.29", features = ["uio", "socket"] }
 windows-sys = { version = "0.52", features = ["Win32_System_Diagnostics_Debug"] }
 
 # Temporary file support

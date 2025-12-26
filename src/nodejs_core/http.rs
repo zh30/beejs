@@ -16,6 +16,10 @@ use super::tcp_async::{sync_http_request, HttpRequestOptions};
 
 use std::sync::atomic::AtomicU64;
 
+// v0.3.97: 添加 SO_REUSEADDR 支持以解决端口重用问题
+#[cfg(unix)]
+use libc;
+
 /// HTTP 请求消息（跨线程传递）
 /// v0.3.89: 添加跨线程消息传递支持
 #[derive(Debug, Clone)]
@@ -211,7 +215,7 @@ pub fn create_http_response(
     let mut headers = HashMap::new();
     headers.insert("Content-Type".to_string(), content_type.to_string());
     headers.insert("Content-Length".to_string(), body.len().to_string());
-    headers.insert("Connection".to_string(), "close".to_string());
+    // v0.3.97: 不设置默认 Connection 头，让服务器根据 Keep-Alive 决定
 
     HttpResponseMessage {
         connection_id,
@@ -1635,6 +1639,26 @@ fn run_http_server(
         }
     };
 
+    // v0.3.97: 设置 SO_REUSEADDR 和 SO_REUSEPORT 以允许端口重用
+    #[cfg(unix)]
+    {
+        use std::os::unix::io::AsRawFd;
+        let fd = listener.as_raw_fd();
+        let val: libc::c_int = 1;
+        let val_ptr = &val as *const libc::c_int as *const libc::c_void;
+        let val_len = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
+        if unsafe { libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEADDR, val_ptr, val_len) } != 0 {
+            eprintln!("[Beejs] Failed to set SO_REUSEADDR: {}", std::io::Error::last_os_error());
+        }
+        // macOS 需要 SO_REUSEPORT 来完全解决端口重用问题
+        #[cfg(target_os = "macos")]
+        {
+            if unsafe { libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEPORT, val_ptr, val_len) } != 0 {
+                eprintln!("[Beejs] Failed to set SO_REUSEPORT: {}", std::io::Error::last_os_error());
+            }
+        }
+    }
+
     // 设置为非阻塞模式
     listener.set_nonblocking(true).ok();
 
@@ -1713,12 +1737,15 @@ fn handle_connection(
     _handler_code: &str,
     connection_id: u64,
 ) {
-    // Keep-Alive 循环：处理多个请求
+    // v0.3.97: Keep-Alive 循环：处理多个请求
+    const KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(30);
+
     loop {
         let mut buffer = [0u8; 8192];
         let mut request_data = Vec::new();
         let mut connection_close = false;
         let mut _is_keep_alive = false;
+        let keep_alive_start = Instant::now();
 
         // 读取请求数据
         loop {
@@ -1744,10 +1771,14 @@ fn handle_connection(
                     }
                 }
                 Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                    // 读取超时
-                    eprintln!("[Beejs] Keep-Alive read timeout");
-                    connection_close = true;
-                    break;
+                    // 没有数据可用，检查是否超时
+                    if keep_alive_start.elapsed() > KEEP_ALIVE_TIMEOUT {
+                        eprintln!("[Beejs] Keep-Alive timeout ({}s), closing connection", KEEP_ALIVE_TIMEOUT.as_secs());
+                        break;
+                    }
+                    // 短暂等待后重试
+                    thread::sleep(Duration::from_millis(50));
+                    continue;
                 }
                 Err(e) => {
                     eprintln!("[Beejs] Read error: {}", e);
@@ -1757,8 +1788,13 @@ fn handle_connection(
             }
         }
 
-        // 如果连接关闭或没有请求数据，退出循环
-        if connection_close || request_data.is_empty() {
+        // v0.3.97: 如果连接关闭或没有请求数据，退出循环
+        if connection_close {
+            break;
+        }
+        if request_data.is_empty() {
+            // 没有收到数据但连接未关闭，这是 Keep-Alive 超时
+            eprintln!("[Beejs] Keep-Alive timeout, closing connection");
             break;
         }
 
@@ -1836,6 +1872,7 @@ fn handle_connection(
             );
             response_data.push_str(&fallback_body);
 
+            eprintln!("[Debug] Fallback path sending response with Connection: {}", connection_header);
             if let Err(e) = stream.write_all(response_data.as_bytes()) {
                 eprintln!("[Beejs] Write error: {}", e);
             }
@@ -1873,19 +1910,41 @@ fn handle_connection(
                     Ok(response) => {
                         // 收到响应，根据 _is_keep_alive 决定是否关闭连接
                         let connection_header = if _is_keep_alive { "keep-alive" } else { "close" };
+                        eprintln!("[Debug] Received response from message channel");
+                        eprintln!("[Debug] response.connection_id: {}, response.status_code: {}", response.connection_id, response.status_code);
+                        eprintln!("[Debug] response.headers: {:?}", response.headers);
 
                         // 生成响应并添加 Connection 头
                         let mut response_data = generate_http_response_v2(&response);
+                        eprintln!("[Debug] Original response (bytes): {:?}", response_data);
+                        eprintln!("[Debug] Original response (utf8): {:?}", String::from_utf8_lossy(&response_data));
 
                         // 如果还没有 Connection 头，添加它
+                        eprintln!("[Debug] response.headers before check: {:?}", response.headers);
                         if !response.headers.contains_key("Connection") {
-                            response_data.splice(
-                                response_data.windows(4).position(|w| w == b"\r\n\r\n").map(|p| p..p)
-                                    .unwrap_or_else(|| response_data.len() - 4..response_data.len() - 4),
-                                format!("Connection: {}\r\n", connection_header).bytes(),
-                            );
+                            // 查找 \r\n\r\n（header 和 body 之间的分隔符）
+                            // 注意：windows 找到的 \r\n\r\n 可能是 header 行的结尾 + header/body 分隔符的组合
+                            // 需要在最后一个 header 的 \r\n 之后插入新的 header
+                            if let Some(separator_pos) = response_data.windows(4).rposition(|w| w == b"\r\n\r\n") {
+                                eprintln!("[Debug] Found \\r\\n\\r\\n at position {}", separator_pos);
+                                eprintln!("[Debug] 4 bytes at separator_pos: {:?}", &response_data[separator_pos..separator_pos+4]);
+                                // separator_pos 指向 \r\n\r\n 的第一个 \r
+                                // 需要在最后一个 header 的 \r\n 之后插入，即 separator_pos + 2
+                                let insert_pos = separator_pos + 2;
+                                eprintln!("[Debug] No Connection header in response, will add: {} at position {}", connection_header, insert_pos);
+                                // 使用 insert 逐字节插入，确保正确插入而不是替换
+                                let connection_header_bytes = format!("Connection: {}\r\n", connection_header).into_bytes();
+                                for i in (0..connection_header_bytes.len()).rev() {
+                                    response_data.insert(insert_pos, connection_header_bytes[i]);
+                                }
+                                eprintln!("[Debug] After insert, response_data len: {}", response_data.len());
+                            } else {
+                                eprintln!("[Debug] No separator found, response_data len: {}", response_data.len());
+                            }
                         }
 
+                        eprintln!("[Debug] Message channel path sending response with Connection: {}", connection_header);
+                        eprintln!("[Debug] Full response data: {:?}", String::from_utf8_lossy(&response_data));
                         let _ = stream.write_all(&response_data);
 
                         // 如果不是 Keep-Alive，关闭连接
@@ -2099,6 +2158,8 @@ pub fn process_http_request_in_v8(
     if !response_headers.contains_key("Content-Type") {
         response_headers.insert("Content-Type".to_string(), "text/plain; charset=utf-8".to_string());
     }
+
+    eprintln!("[Debug] Response headers before HttpResponseMessage: {:?}", response_headers);
 
     Some(HttpResponseMessage {
         connection_id: request.connection_id,
