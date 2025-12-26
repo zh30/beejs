@@ -1,3 +1,46 @@
+### v0.3.126 实现 never、unknown 类型和 is 关键字支持 (2025-12-27)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.126 新增功能
+- **never 类型**
+  - 表示永远不返回的值（如抛出异常或无限循环）
+  - 支持 `function throwError(msg: string): never`
+  - 支持条件类型中的 never `T extends U ? X : never`
+
+- **unknown 类型**
+  - 类型安全的 top 类型，是 `any` 的类型安全替代品
+  - 支持 `type UnknownType = unknown`
+  - 支持泛型约束 `T extends unknown`
+
+- **is 关键字（类型谓词）**
+  - 用于类型守卫，如 `value is string`
+  - 支持泛型类型谓词 `value is NonNullable<T>`
+  - 解析器检测 `identifier is Type` 模式
+
+#### v0.3.126 验证
+- ✅ `cargo test --lib` 124/124 通过 (+4)
+- ✅ 新增测试用例:
+  - `test_never_type`: never 类型基础用法
+  - `test_unknown_type`: unknown 类型基础用法
+  - `test_type_predicate_is`: 类型谓词语法
+  - `test_never_unknown_with_generics`: 与泛型结合使用
+- ✅ `cargo build --release` 成功编译
+- ✅ 无编译器警告
+
+#### v0.3.126 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+158/-4 行)
+  - 添加 `Never`、`UnknownType`、`Is` Token 类型
+  - 添加 `UnknownChar` 用于词法分析 fallback
+  - 修改词法分析器识别 `never`、`unknown`、`is` 关键字
+  - 修改 `parse_basic_type()` 处理 never 和 unknown 类型
+  - 修改 `parse_type_annotation()` 处理类型谓词
+  - 添加 4 个测试用例
+
+#### v0.3.126 下一步计划
+- 继续完善 TypeScript 编译器功能
+- 实现更多高级类型特性
+- 添加更多边界情况测试
+
 ### v0.3.125 实现 infer 关键字支持 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 
