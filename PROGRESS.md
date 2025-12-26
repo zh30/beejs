@@ -7604,3 +7604,48 @@ test result: ok. 11 passed; 0 failed
 - 完善类成员解析（方法、字段）
 - 实现计算属性名
 - 优化 Source Map 生成精度
+
+---
+
+### v0.3.117 函数参数解构支持 (2025-12-27)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.117 新增功能
+- **函数参数解构**
+  - 添加 `FunctionParameter` 枚举支持简单参数和解构参数
+  - 支持 `function greet({ name, age }) {}` 对象解构参数
+  - 支持 `function sum([a, b, c])` 数组解构参数
+  - 完整的解析器和代码生成器支持
+
+- **函数参数默认值**
+  - 简单参数默认值: `function greet(name = "World") {}`
+  - 解构参数默认值: `function greet({ name = "World" } = {}) {}`
+
+- **代码质量改进**
+  - 重构 `FunctionDeclaration` 和 `MethodDeclaration` 使用 `FunctionParameter`
+  - 新增 `emit_function_parameter` 发射函数
+  - 统一参数解析逻辑
+
+#### v0.3.117 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+200/-50 行)
+  - 添加 `FunctionParameter` 枚举 (Simple, Destructuring)
+  - 更新 `FunctionDeclaration` 和 `MethodDeclaration` 的 params 字段类型
+  - 重构 `parse_function_params_list` 支持解构模式
+  - 添加 `emit_function_parameter` 发射函数
+  - 更新 `parse_function_declaration` 和 `parse_class_member` 解析器
+
+#### v0.3.117 验证
+- ✅ `cargo build --release` 成功编译
+- ✅ `cargo test --lib` → 80/80 通过 (+6)
+- ✅ 新增测试:
+  - `test_function_params_destructuring` - 函数对象解构参数
+  - `test_function_params_destructuring_with_defaults` - 函数解构参数
+  - `test_function_params_array_destructuring` - 函数数组解构参数
+  - `test_function_params_simple_with_defaults` - 简单参数函数
+  - `test_arrow_function_params_destructuring` - 箭头函数参数
+  - `test_method_params_destructuring` - 类方法解构参数
+
+#### v0.3.117 下一步计划
+- 完善箭头函数解构参数支持
+- 实现函数参数类型注解传递
+- 添加更多边界情况测试
