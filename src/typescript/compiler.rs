@@ -556,6 +556,8 @@ impl TypeScriptCompiler {
                             }
                         } else if c == ':' {
                             tokens.push(Token::Colon);
+                        } else if c == '@' {
+                            tokens.push(Token::At);
                         } else if c == ';' {
                             tokens.push(Token::SemiColon);
                         } else if c.is_alphanumeric() || c == '_' || c == '$' {
@@ -631,6 +633,7 @@ impl TypeScriptCompiler {
             }
             // 处理操作符和符号
             tokens.push(match ch {
+                '@' => Token::At,  // 装饰器符号
                 '(' => Token::LParen,
                 ')' => Token::RParen,
                 '{' => Token::LBrace,
@@ -971,6 +974,7 @@ pub enum Token {
     TemplateStart,
     TemplateMiddle,
     TemplateEnd,
+    At,  // @ 符号（用于装饰器）
     Unknown(String),
     Eof,
 }
@@ -984,6 +988,16 @@ pub struct EnumMember {
 pub enum EnumValue {
     Number(u32),
     String(String),
+}
+
+/// 装饰器：用于类、方法、属性、参数的元数据注解
+/// 语法: @decorator 或 @decorator(args)
+#[derive(Debug, Clone)]
+pub struct Decorator {
+    /// 装饰器名称（标识符）
+    pub name: String,
+    /// 装饰器参数（可选），例如 @decorator(arg1, arg2)
+    pub arguments: Vec<ASTExpression>,
 }
 
 /// 导入项（用于 import 语句）
@@ -1113,12 +1127,16 @@ pub enum ASTNode {
         return_type: Option<String>,
     },
     ClassDeclaration {
+        /// 类装饰器列表
+        decorators: Vec<Decorator>,
         name: String,
         extends: Option<String>,  // 父类名称（如果有 extends）
         members: Vec<ASTNode>,
     },
     /// 类方法声明
     MethodDeclaration {
+        /// 方法装饰器列表
+        decorators: Vec<Decorator>,
         name: String,
         kind: String,  // "method", "get", "set"
         is_async: bool,
@@ -1128,12 +1146,16 @@ pub enum ASTNode {
     },
     /// 类字段声明
     PropertyDeclaration {
+        /// 字段装饰器列表
+        decorators: Vec<Decorator>,
         name: String,
         is_static: bool,
         initializer: Option<Box<ASTNode>>,
     },
     /// 类计算属性名声明
     ComputedPropertyDeclaration {
+        /// 计算属性装饰器列表
+        decorators: Vec<Decorator>,
         key_expr: Box<ASTExpression>,
         is_static: bool,
         initializer: Option<Box<ASTNode>>,
@@ -1423,6 +1445,19 @@ impl Parser {
             }
             Token::Export => {
                 self.parse_export_declaration()
+            }
+            Token::At => {
+                // 装饰器语句 - 尝试解析装饰器后面的声明
+                // 保存装饰器列表
+                let decorators = self.parse_decorators()?;
+                // 根据后续的 token 解析对应的声明
+                match self.current_token() {
+                    Token::Class => self.parse_class_declaration_with_decorators(decorators),
+                    _ => {
+                        // 尝试作为表达式解析
+                        bail!("Unexpected token after decorator: {:?}", self.current_token());
+                    }
+                }
             }
             _ => {
                 // 表达式语句
@@ -2415,7 +2450,44 @@ impl Parser {
             body,
         })
     }
-    fn parse_class_declaration(&mut self) -> Result<ASTNode> {
+
+    /// 解析装饰器列表
+    /// 语法: @decorator 或 @decorator(args)
+    fn parse_decorators(&mut self) -> Result<Vec<Decorator>> {
+        let mut decorators = Vec::new();
+        while self.current_token_eq(&Token::At) {
+            self.consume(Token::At)?;
+            // 获取装饰器名称（可以是任何标识符，包括关键字如 readonly）
+            // 使用 advance 直接获取当前 token 而不检查类型
+            let name_token = self.advance();
+            let name = match name_token {
+                Token::Identifier(name) => name,
+                Token::Readonly => "readonly".to_string(),
+                _ => bail!("Expected decorator name after @"),
+            };
+            // 检查是否有参数列表 (...)
+            let arguments = if self.current_token_eq(&Token::LParen) {
+                self.consume(Token::LParen)?;
+                let mut args = Vec::new();
+                while !self.current_token_eq(&Token::RParen) {
+                    let arg = self.parse_expression()?;
+                    args.push(arg);
+                    if self.current_token_eq(&Token::Comma) {
+                        self.consume(Token::Comma)?;
+                    }
+                }
+                self.consume(Token::RParen)?;
+                args
+            } else {
+                Vec::new()
+            };
+            decorators.push(Decorator { name, arguments });
+        }
+        Ok(decorators)
+    }
+
+    /// 解析带有已解析装饰器列表的类声明
+    fn parse_class_declaration_with_decorators(&mut self, decorators: Vec<Decorator>) -> Result<ASTNode> {
         self.consume(Token::Class)?;
         let name_token = self.consume_any_identifier()?;
         let name: _ = match name_token {
@@ -2451,12 +2523,56 @@ impl Parser {
             }
         }
         self.consume(Token::RBrace)?;
-        Ok(ASTNode::ClassDeclaration { name, extends, members })
+        Ok(ASTNode::ClassDeclaration { decorators, name, extends, members })
+    }
+
+    fn parse_class_declaration(&mut self) -> Result<ASTNode> {
+        // 首先解析装饰器列表
+        let decorators = self.parse_decorators()?;
+        self.consume(Token::Class)?;
+        let name_token = self.consume_any_identifier()?;
+        let name: _ = match name_token {
+            Token::Identifier(name) => name,
+            _ => bail!("Expected class name"),
+        };
+        // 检查是否有 extends 子句
+        let extends = if self.current_token_eq(&Token::Extends) {
+            self.consume(Token::Extends)?;
+            let parent_token = self.consume_any_identifier()?;
+            match parent_token {
+                Token::Identifier(parent_name) => Some(parent_name),
+                _ => bail!("Expected parent class name after extends"),
+            }
+        } else {
+            None
+        };
+        self.consume(Token::LBrace)?;
+        let mut members = Vec::new();
+        while !self.current_token_eq(&Token::RBrace) {
+            // 尝试解析类成员（方法或字段）
+            match self.parse_class_member() {
+                Ok(Some(node)) => {
+                    members.push(node);
+                }
+                Ok(None) => {
+                    // 跳过无法解析的成员
+                }
+                Err(_e) => {
+                    // 跳过这个 token 并继续
+                    self.advance();
+                }
+            }
+        }
+        self.consume(Token::RBrace)?;
+        Ok(ASTNode::ClassDeclaration { decorators, name, extends, members })
     }
 
     /// 解析类成员（方法或字段）
     fn parse_class_member(&mut self) -> Result<Option<ASTNode>> {
-        // 首先检查是否是访问修饰符或 static
+        // 首先解析装饰器
+        let decorators = self.parse_decorators()?;
+
+        // 然后检查是否是访问修饰符或 static
         let mut is_static = false;
         while self.current_token_eq(&Token::Public)
             || self.current_token_eq(&Token::Private)
@@ -2496,6 +2612,7 @@ impl Parser {
             }
 
             return Ok(Some(ASTNode::ComputedPropertyDeclaration {
+                decorators,
                 key_expr: Box::new(key_expr),
                 is_static,
                 initializer: initializer.map(|e| Box::new(ASTNode::Expression(e))),
@@ -2529,6 +2646,7 @@ impl Parser {
                     // 解析方法体
                     let body = self.parse_block_body()?;
                     return Ok(Some(ASTNode::MethodDeclaration {
+                        decorators,
                         name: prop_name,
                         kind: keyword,
                         is_async: false,
@@ -2551,6 +2669,7 @@ impl Parser {
                     // 解析 constructor 主体
                     let body = self.parse_block_body()?;
                     return Ok(Some(ASTNode::MethodDeclaration {
+                        decorators,
                         name: "constructor".to_string(),
                         kind: "method".to_string(),
                         is_async: false,
@@ -2579,6 +2698,7 @@ impl Parser {
                 // 解析方法主体
                 let body = self.parse_block_body()?;
                 return Ok(Some(ASTNode::MethodDeclaration {
+                    decorators,
                     name: method_name,
                     kind: "method".to_string(),
                     is_async: true,
@@ -2607,6 +2727,7 @@ impl Parser {
                 // 解析方法主体
                 let body = self.parse_block_body()?;
                 return Ok(Some(ASTNode::MethodDeclaration {
+                    decorators,
                     name: member_name,
                     kind: "method".to_string(),
                     is_async: false,
@@ -2636,6 +2757,7 @@ impl Parser {
             }
 
             return Ok(Some(ASTNode::PropertyDeclaration {
+                decorators,
                 name: member_name,
                 is_static,
                 initializer: initializer.map(|e| Box::new(ASTNode::Expression(e))),
@@ -4042,6 +4164,13 @@ impl Parser {
                 self.consume(Token::Super)?;
                 Ok(ASTExpression::SuperExpression)
             }
+            // 处理 @ 符号（装饰器标识符，在表达式中作为标识符处理）
+            Token::At => {
+                // @ 符号在表达式中不常用，但为了解析装饰器参数中的 @ 引用
+                // 我们将其作为标识符处理
+                self.consume(Token::At)?;
+                Ok(ASTExpression::Identifier("@".to_string()))
+            }
             // 跳过逗号（用于处理多变量声明中的逗号）
             Token::Comma => {
                 self.advance();
@@ -4855,7 +4984,23 @@ impl CodeEmitter {
                 }
                 self.output.push_str(") { /* overload */ }\n");
             }
-            ASTNode::ClassDeclaration { name, extends, members } => {
+            ASTNode::ClassDeclaration { decorators, name, extends, members } => {
+                // 输出装饰器（作为注释保留）
+                for decorator in decorators {
+                    self.output.push_str("/* @");
+                    self.output.push_str(&decorator.name);
+                    if !decorator.arguments.is_empty() {
+                        self.output.push('(');
+                        for (i, arg) in decorator.arguments.iter().enumerate() {
+                            if i > 0 {
+                                self.output.push_str(", ");
+                            }
+                            self.emit_expression(arg);
+                        }
+                        self.output.push(')');
+                    }
+                    self.output.push_str(" */\n");
+                }
                 self.output.push_str("class ");
                 self.output.push_str(name);
                 // 添加 extends 子句（如果有）
@@ -4869,7 +5014,23 @@ impl CodeEmitter {
                 }
                 self.output.push_str("}\n");
             }
-            ASTNode::MethodDeclaration { name, kind, is_async, is_static, params, body } => {
+            ASTNode::MethodDeclaration { decorators, name, kind, is_async, is_static, params, body } => {
+                // 输出装饰器（作为注释保留）
+                for decorator in decorators {
+                    self.output.push_str("/* @");
+                    self.output.push_str(&decorator.name);
+                    if !decorator.arguments.is_empty() {
+                        self.output.push('(');
+                        for (i, arg) in decorator.arguments.iter().enumerate() {
+                            if i > 0 {
+                                self.output.push_str(", ");
+                            }
+                            self.emit_expression(arg);
+                        }
+                        self.output.push(')');
+                    }
+                    self.output.push_str(" */\n");
+                }
                 if *is_static {
                     self.output.push_str("static ");
                 }
@@ -4895,7 +5056,23 @@ impl CodeEmitter {
                 }
                 self.output.push_str("}\n");
             }
-            ASTNode::PropertyDeclaration { name, is_static, initializer } => {
+            ASTNode::PropertyDeclaration { decorators, name, is_static, initializer } => {
+                // 输出装饰器（作为注释保留）
+                for decorator in decorators {
+                    self.output.push_str("/* @");
+                    self.output.push_str(&decorator.name);
+                    if !decorator.arguments.is_empty() {
+                        self.output.push('(');
+                        for (i, arg) in decorator.arguments.iter().enumerate() {
+                            if i > 0 {
+                                self.output.push_str(", ");
+                            }
+                            self.emit_expression(arg);
+                        }
+                        self.output.push(')');
+                    }
+                    self.output.push_str(" */\n");
+                }
                 if *is_static {
                     self.output.push_str("static ");
                 }
@@ -4906,7 +5083,23 @@ impl CodeEmitter {
                 }
                 self.output.push_str(";\n");
             }
-            ASTNode::ComputedPropertyDeclaration { key_expr, is_static, initializer } => {
+            ASTNode::ComputedPropertyDeclaration { decorators, key_expr, is_static, initializer } => {
+                // 输出装饰器（作为注释保留）
+                for decorator in decorators {
+                    self.output.push_str("/* @");
+                    self.output.push_str(&decorator.name);
+                    if !decorator.arguments.is_empty() {
+                        self.output.push('(');
+                        for (i, arg) in decorator.arguments.iter().enumerate() {
+                            if i > 0 {
+                                self.output.push_str(", ");
+                            }
+                            self.emit_expression(arg);
+                        }
+                        self.output.push(')');
+                    }
+                    self.output.push_str(" */\n");
+                }
                 if *is_static {
                     self.output.push_str("static ");
                 }
@@ -8085,6 +8278,154 @@ async function fetchData(url: string, options?: { timeout: number }): Promise<st
                 // Type alias should be skipped in JS output
                 assert!(!result.js_code.contains("type"),
                     "Should not contain 'type' keyword: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_class_decorator() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test class decorator
+        let source = r#"
+@sealed
+class Greeter {
+    greeting: string;
+    constructor(message: string) {
+        this.greeting = message;
+    }
+    greet() {
+        return "Hello, " + this.greeting;
+    }
+}
+"#;
+        println!("\n========== Testing class decorator ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Decorator should be output as comment
+                assert!(result.js_code.contains("/* @sealed */"),
+                    "Should contain decorator comment: {}", result.js_code);
+                assert!(result.js_code.contains("class Greeter"),
+                    "Should contain class definition: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_class_decorator_with_args() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test class decorator with arguments
+        let source = r#"
+@Component({
+    selector: 'app-my-component',
+    template: '<h1>Hello</h1>'
+})
+class MyComponent {
+    name: string = "World";
+}
+"#;
+        println!("\n========== Testing class decorator with arguments ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Decorator with args should be output as comment
+                assert!(result.js_code.contains("/* @Component"),
+                    "Should contain decorator comment: {}", result.js_code);
+                assert!(result.js_code.contains("selector"),
+                    "Should contain decorator argument: {}", result.js_code);
+                assert!(result.js_code.contains("class MyComponent"),
+                    "Should contain class definition: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_method_decorator() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test method decorator
+        let source = r#"
+class Calculator {
+    @readonly
+    PI: number = 3.14159;
+
+    @deprecated
+    calculate(x: number, y: number): number {
+        return x + y;
+    }
+}
+"#;
+        println!("\n========== Testing method decorator ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Decorators should be output as comments
+                assert!(result.js_code.contains("/* @readonly */"),
+                    "Should contain readonly decorator comment: {}", result.js_code);
+                assert!(result.js_code.contains("/* @deprecated */"),
+                    "Should contain deprecated decorator comment: {}", result.js_code);
+                assert!(result.js_code.contains("calculate"),
+                    "Should contain method definition: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_multiple_decorators() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test multiple decorators on class and method
+        let source = r#"
+@Injectable
+@Component({ template: '' })
+class MyService {
+    @Prop()
+    @Watch('value')
+    value: string;
+
+    @Get('/api/data')
+    fetchData(): Promise<string> {
+        return Promise.resolve('data');
+    }
+}
+"#;
+        println!("\n========== Testing multiple decorators ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // All decorators should be output as comments
+                assert!(result.js_code.contains("/* @Injectable */"),
+                    "Should contain Injectable decorator: {}", result.js_code);
+                assert!(result.js_code.contains("/* @Component"),
+                    "Should contain Component decorator: {}", result.js_code);
+                assert!(result.js_code.contains("/* @Prop */"),
+                    "Should contain Prop decorator: {}", result.js_code);
+                assert!(result.js_code.contains("/* @Watch"),
+                    "Should contain Watch decorator: {}", result.js_code);
+                assert!(result.js_code.contains("/* @Get"),
+                    "Should contain Get decorator: {}", result.js_code);
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
