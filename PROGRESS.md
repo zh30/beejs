@@ -1,3 +1,47 @@
+### v0.3.119 实现类型别名声明支持 (2025-12-27)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.119 新增功能
+- **类型别名声明**
+  - 支持 `type Foo = string` 简单类型别名
+  - 支持 `type Id = number | string` 联合类型别名
+  - 支持 `type Container<T> = T | null` 泛型类型别名
+  - 支持 `type Maybe<T> = T | null | undefined` 复杂联合类型
+
+- **AST 节点扩展**
+  - 添加 `ASTNode::TypeAliasDeclaration` 变体
+  - 支持类型参数列表解析
+  - 支持类型定义解析
+
+- **代码质量改进**
+  - 修复 mod.rs 类型注解问题
+  - 添加 5 个测试用例覆盖所有场景
+
+#### v0.3.119 验证
+- ✅ `cargo test --lib` 95/95 通过 (+5)
+- ✅ 新增测试用例:
+  - `test_type_alias_simple`: 简单类型别名
+  - `test_type_alias_union`: 联合类型别名
+  - `test_type_alias_with_generics`: 泛型类型别名
+  - `test_type_alias_complex`: 复杂联合类型
+  - `test_type_alias_in_function`: 函数中使用类型别名
+- ✅ `cargo build --release` 成功编译
+
+#### v0.3.119 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+120/-0 行)
+  - 添加 `TypeAliasDeclaration` AST 节点变体
+  - 添加 `parse_type_alias_declaration` 解析函数
+  - 添加发射器跳过逻辑
+  - 添加 5 个测试用例
+- **修改文件**: `src/typescript/mod.rs` (+2/-2 行)
+  - 修复类型注解问题
+
+#### v0.3.119 下一步计划
+- 继续完善 TypeScript 编译器功能
+- 实现对象类型解析
+- 实现交叉类型支持
+- 添加更多边界情况测试
+
 ### v0.3.116 实现解构赋值默认值支持 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 

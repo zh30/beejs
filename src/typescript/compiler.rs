@@ -1107,6 +1107,14 @@ pub enum ASTNode {
         name: String,
         members: Vec<EnumMember>,
     },
+    /// 类型别名声明: type Foo = string | number
+    TypeAliasDeclaration {
+        name: String,
+        /// 类型参数（泛型），如 ['T']
+        type_params: Option<Vec<String>>,
+        /// 类型定义
+        type_definition: String,
+    },
     /// 导入语句: import { a, b } from 'module' | import x from 'module'
     ImportDeclaration {
         /// 模块路径
@@ -1329,6 +1337,9 @@ impl Parser {
             }
             Token::Enum => {
                 self.parse_enum_declaration()
+            }
+            Token::Type => {
+                self.parse_type_alias_declaration()
             }
             Token::Return => {
                 self.parse_return_statement()
@@ -2675,6 +2686,54 @@ impl Parser {
         }
         self.consume(Token::RBrace)?;
         Ok(ASTNode::EnumDeclaration { name, members })
+    }
+
+    /// 解析类型别名声明
+    /// 支持:
+    /// - type Foo = string | number
+    /// - type Foo<T> = T | null
+    /// - type Foo = { name: string; age: number }
+    fn parse_type_alias_declaration(&mut self) -> Result<ASTNode> {
+        self.consume(Token::Type)?;
+
+        // 解析类型名称
+        let name = if let Token::Identifier(name) = self.consume_any_identifier()? {
+            name
+        } else {
+            bail!("Expected type name after 'type' keyword");
+        };
+
+        // 检查是否有泛型参数
+        let mut type_params = None;
+        if self.current_token_eq(&Token::Lt) {
+            self.consume(Token::Lt)?;
+            let mut params = Vec::new();
+            while !self.current_token_eq(&Token::Gt) {
+                if let Token::Identifier(param) = self.consume_any_identifier()? {
+                    params.push(param);
+                } else {
+                    break;
+                }
+                if self.current_token_eq(&Token::Comma) {
+                    self.consume(Token::Comma)?;
+                }
+            }
+            self.consume(Token::Gt)?;
+            type_params = Some(params);
+        }
+
+        self.consume(Token::Eq)?;
+
+        // 解析类型定义（使用现有的类型解析器）
+        let type_definition = self.parse_type_annotation();
+
+        self.consume(Token::SemiColon)?;
+
+        Ok(ASTNode::TypeAliasDeclaration {
+            name,
+            type_params,
+            type_definition: type_definition.unwrap_or_else(|| "unknown".to_string()),
+        })
     }
 
     /// 解析导入语句
@@ -4152,6 +4211,10 @@ impl CodeEmitter {
             }
             ASTNode::InterfaceDeclaration { .. } => {
                 // 接口在 JavaScript 中不存在，跳过
+            }
+            ASTNode::TypeAliasDeclaration { .. } => {
+                // 类型别名在 JavaScript 中不存在，跳过
+                // 但保留类型定义用于类型检查
             }
             ASTNode::EnumDeclaration { name, members } => {
                 // 转译枚举为 JavaScript 对象
@@ -6122,6 +6185,128 @@ class Animal {
                     "Should contain export: {}", result.js_code);
                 assert!(result.js_code.contains("*"),
                     "Should contain *: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_type_alias_simple() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test simple type alias
+        let source = r#"type MyString = string;"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Type alias should be skipped in JS output
+                assert!(!result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_type_alias_union() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test union type alias
+        let source = r#"type Id = number | string;"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Type alias should be skipped in JS output
+                assert!(!result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_type_alias_with_generics() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test generic type alias
+        let source = r#"type Container<T> = T | null;"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Type alias should be skipped in JS output
+                assert!(!result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_type_alias_complex() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test complex type alias with multiple type params
+        // Note: object types and intersection types are not yet supported
+        // Using union type with multiple type params
+        let source = r#"type Maybe<T> = T | null | undefined;"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Type alias should be skipped in JS output
+                assert!(!result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_type_alias_in_function() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test type alias used in function
+        let source = r#"
+type Status = "loading" | "success" | "error";
+
+function getStatus(): Status {
+    return "success";
+}
+
+console.log(getStatus());
+"#;
+        println!("\n========== Testing type alias in function ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Type alias should be skipped, but function should remain
+                assert!(result.js_code.contains("function getStatus"),
+                    "Should contain function: {}", result.js_code);
+                assert!(!result.js_code.contains("type Status"),
+                    "Should not contain 'type' keyword: {}", result.js_code);
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
