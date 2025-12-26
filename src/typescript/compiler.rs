@@ -177,6 +177,10 @@ impl TypeScriptCompiler {
                     "else" => Token::Else,
                     "for" => Token::For,
                     "while" => Token::While,
+                    "do" => Token::Do,
+                    "switch" => Token::Switch,
+                    "case" => Token::Case,
+                    "default" => Token::Default,
                     "return" => Token::Return,
                     "class" => Token::Class,
                     "interface" => Token::Interface,
@@ -190,6 +194,14 @@ impl TypeScriptCompiler {
                     "static" => Token::Static,
                     "async" => Token::Async,
                     "await" => Token::Await,
+                    "try" => Token::Try,
+                    "catch" => Token::Catch,
+                    "finally" => Token::Finally,
+                    "throw" => Token::Throw,
+                    "break" => Token::Break,
+                    "continue" => Token::Continue,
+                    "new" => Token::New,
+                    "this" => Token::This,
                     _ => Token::Identifier(ident),
                 };
                 tokens.push(token);
@@ -390,6 +402,7 @@ impl TypeScriptCompiler {
                 '<' => Token::Lt,
                 '>' => Token::Gt,
                 '|' => Token::Pipe,
+                '%' => Token::Percent,
                 _ => Token::Unknown(ch.to_string()),
             });
             pos += 1;
@@ -507,6 +520,10 @@ pub enum Token {
     Else,
     For,
     While,
+    Do,
+    Switch,
+    Case,
+    Default,
     Return,
     Class,
     Interface,
@@ -520,6 +537,14 @@ pub enum Token {
     Static,
     Async,
     Await,
+    Try,
+    Catch,
+    Finally,
+    Throw,
+    Break,
+    Continue,
+    New,
+    This,
     // 符号
     LParen,
     RParen,
@@ -551,6 +576,7 @@ pub enum Token {
     Lt,
     Gt,
     Pipe,
+    Percent,
     FatArrow,
     TemplateStart,
     TemplateMiddle,
@@ -646,6 +672,13 @@ pub enum ASTExpression {
     Await {
         expression: Box<ASTExpression>,
     },
+    /// new 表达式: new Constructor(args)
+    NewExpression {
+        constructor: Box<ASTExpression>,
+        arguments: Vec<ASTExpression>,
+    },
+    /// this 关键字
+    ThisExpression,
 }
 #[derive(Debug, Clone)]
 pub enum ASTStatement {
@@ -670,6 +703,51 @@ pub enum ASTStatement {
         update: Option<ASTExpression>,
         body: Box<ASTNode>,
     },
+    /// while 循环: while (condition) { ... }
+    While {
+        test: ASTExpression,
+        body: Box<ASTNode>,
+    },
+    /// do...while 循环: do { ... } while (condition)
+    DoWhile {
+        body: Box<ASTNode>,
+        test: ASTExpression,
+    },
+    /// switch 语句: switch (x) { case 1: ...; break; default: ...; }
+    Switch {
+        discriminant: ASTExpression,
+        cases: Vec<SwitchCase>,
+    },
+    /// try...catch...finally 语句
+    Try {
+        body: Box<ASTNode>,
+        handler: Option<CatchClause>,
+        finalizer: Option<Box<ASTNode>>,
+    },
+    /// break 语句
+    Break {
+        label: Option<String>,
+    },
+    /// continue 语句
+    Continue {
+        label: Option<String>,
+    },
+    /// throw 语句
+    Throw {
+        expression: ASTExpression,
+    },
+}
+/// switch case 结构
+#[derive(Debug, Clone)]
+pub struct SwitchCase {
+    pub test: Option<ASTExpression>,  // None 表示 default
+    pub body: Vec<ASTNode>,
+}
+/// catch 子句
+#[derive(Debug, Clone)]
+pub struct CatchClause {
+    pub param: Option<String>,  // 捕获的异常变量名
+    pub body: Vec<ASTNode>,
 }
 /// 解析器
 struct Parser {
@@ -724,6 +802,27 @@ impl Parser {
             }
             Token::If => {
                 self.parse_if_statement()
+            }
+            Token::While => {
+                self.parse_while_statement()
+            }
+            Token::Do => {
+                self.parse_do_while_statement()
+            }
+            Token::Switch => {
+                self.parse_switch_statement()
+            }
+            Token::Try => {
+                self.parse_try_statement()
+            }
+            Token::Throw => {
+                self.parse_throw_statement()
+            }
+            Token::Break => {
+                self.parse_break_statement()
+            }
+            Token::Continue => {
+                self.parse_continue_statement()
             }
             _ => {
                 // 表达式语句
@@ -850,6 +949,168 @@ impl Parser {
             consequent,
             alternate,
         }))
+    }
+
+    /// 解析 while 语句
+    fn parse_while_statement(&mut self) -> Result<ASTNode> {
+        self.consume(Token::While)?;
+        self.consume(Token::LParen)?;
+        let test = self.parse_expression()?;
+        self.consume(Token::RParen)?;
+        let body = Box::new(self.parse_block_or_statement()?);
+        Ok(ASTNode::Statement(ASTStatement::While { test, body }))
+    }
+
+    /// 解析 do...while 语句
+    fn parse_do_while_statement(&mut self) -> Result<ASTNode> {
+        self.consume(Token::Do)?;
+        let body = Box::new(self.parse_block_or_statement()?);
+        self.consume(Token::While)?;
+        self.consume(Token::LParen)?;
+        let test = self.parse_expression()?;
+        self.consume(Token::RParen)?;
+        self.consume(Token::SemiColon)?;
+        Ok(ASTNode::Statement(ASTStatement::DoWhile { body, test }))
+    }
+
+    /// 解析 switch 语句
+    fn parse_switch_statement(&mut self) -> Result<ASTNode> {
+        self.consume(Token::Switch)?;
+        self.consume(Token::LParen)?;
+        let discriminant = self.parse_expression()?;
+        self.consume(Token::RParen)?;
+        self.consume(Token::LBrace)?;
+
+        let mut cases = Vec::new();
+        while !self.current_token_eq(&Token::RBrace) {
+            // 解析 case 或 default
+            let test = if self.current_token_eq(&Token::Case) {
+                self.consume(Token::Case)?;
+                let case_test = self.parse_expression()?;
+                self.consume(Token::Colon)?;
+                Some(case_test)
+            } else if self.current_token_eq(&Token::Default) {
+                self.consume(Token::Default)?;
+                self.consume(Token::Colon)?;
+                None
+            } else {
+                bail!("Expected 'case' or 'default' in switch statement");
+            };
+
+            // 解析 case 体
+            let mut body = Vec::new();
+            while !self.current_token_eq(&Token::RBrace)
+                && !self.current_token_eq(&Token::Case)
+                && !self.current_token_eq(&Token::Default)
+            {
+                body.push(self.parse_statement()?);
+            }
+
+            cases.push(SwitchCase { test, body });
+        }
+
+        self.consume(Token::RBrace)?;
+        Ok(ASTNode::Statement(ASTStatement::Switch { discriminant, cases }))
+    }
+
+    /// 解析 try...catch...finally 语句
+    fn parse_try_statement(&mut self) -> Result<ASTNode> {
+        self.consume(Token::Try)?;
+
+        // 解析 try 块
+        let body: Box<ASTNode> = if self.current_token_eq(&Token::LBrace) {
+            Box::new(self.parse_block_or_statement()?)
+        } else {
+            Box::new(self.parse_statement()?)
+        };
+
+        // 解析 catch 子句
+        let handler: Option<CatchClause> = if self.current_token_eq(&Token::Catch) {
+            self.consume(Token::Catch)?;
+
+            // 可选的 catch 参数: catch (e)
+            let param: Option<String> = if self.current_token_eq(&Token::LParen) {
+                self.consume(Token::LParen)?;
+                let param_token = self.consume_any_identifier()?;
+                let param_name = match param_token {
+                    Token::Identifier(name) => name,
+                    _ => bail!("Expected identifier in catch parameter"),
+                };
+                self.consume(Token::RParen)?;
+                Some(param_name)
+            } else {
+                None
+            };
+
+            // 解析 catch 块
+            let catch_body: Vec<ASTNode> = if self.current_token_eq(&Token::LBrace) {
+                self.consume(Token::LBrace)?;
+                let mut statements = Vec::new();
+                while !self.current_token_eq(&Token::RBrace) {
+                    statements.push(self.parse_statement()?);
+                }
+                self.consume(Token::RBrace)?;
+                statements
+            } else {
+                vec![self.parse_statement()?]
+            };
+
+            Some(CatchClause { param, body: catch_body })
+        } else {
+            None
+        };
+
+        // 解析 finally 子句
+        let finalizer: Option<Box<ASTNode>> = if self.current_token_eq(&Token::Finally) {
+            self.consume(Token::Finally)?;
+            Some(Box::new(self.parse_block_or_statement()?))
+        } else {
+            None
+        };
+
+        Ok(ASTNode::Statement(ASTStatement::Try { body, handler, finalizer }))
+    }
+
+    /// 解析 throw 语句
+    fn parse_throw_statement(&mut self) -> Result<ASTNode> {
+        self.consume(Token::Throw)?;
+        let expr = self.parse_expression()?;
+        self.consume(Token::SemiColon)?;
+        Ok(ASTNode::Statement(ASTStatement::Throw { expression: expr }))
+    }
+
+    /// 解析 break 语句
+    fn parse_break_statement(&mut self) -> Result<ASTNode> {
+        self.consume(Token::Break)?;
+        // 可选的标签
+        let label: Option<String> = if self.current_token_eq(&Token::Identifier("".to_string())) {
+            let label_token = self.consume_any_identifier()?;
+            match label_token {
+                Token::Identifier(name) => Some(name),
+                _ => None,
+            }
+        } else {
+            None
+        };
+        self.consume(Token::SemiColon)?;
+        Ok(ASTNode::Statement(ASTStatement::Break { label }))
+    }
+
+    /// 解析 continue 语句
+    fn parse_continue_statement(&mut self) -> Result<ASTNode> {
+        self.consume(Token::Continue)?;
+        // 可选的标签
+        let label: Option<String> = if self.current_token_eq(&Token::Identifier("".to_string())) {
+            let label_token = self.consume_any_identifier()?;
+            match label_token {
+                Token::Identifier(name) => Some(name),
+                _ => None,
+            }
+        } else {
+            None
+        };
+        self.consume(Token::SemiColon)?;
+        Ok(ASTNode::Statement(ASTStatement::Continue { label }))
     }
 
     /// 解析块或单个语句
@@ -1392,7 +1653,7 @@ impl Parser {
                     };
                 }
                 // 二元运算符
-                Token::Plus | Token::Minus | Token::Star | Token::Slash |
+                Token::Plus | Token::Minus | Token::Star | Token::Slash | Token::Percent |
                 Token::EqEq | Token::EqEqEq | Token::NotEq | Token::NotEqEq |
                 Token::Lt | Token::Gt => {
                     let op: _ = match self.current_token() {
@@ -1400,6 +1661,7 @@ impl Parser {
                         Token::Minus => "-",
                         Token::Star => "*",
                         Token::Slash => "/",
+                        Token::Percent => "%",
                         Token::EqEq => "==",
                         Token::EqEqEq => "===",
                         Token::NotEq => "!=",
@@ -1720,6 +1982,31 @@ impl Parser {
                 // 对象字面量
                 self.parse_object_literal()
             }
+            Token::New => {
+                // new 表达式: new Constructor(args)
+                self.consume(Token::New)?;
+                let constructor = self.parse_primary_expression()?;
+                // 解析参数列表
+                let mut arguments = Vec::new();
+                if self.current_token_eq(&Token::LParen) {
+                    self.consume(Token::LParen)?;
+                    while !self.current_token_eq(&Token::RParen) {
+                        arguments.push(self.parse_expression()?);
+                        if self.current_token_eq(&Token::Comma) {
+                            self.consume(Token::Comma)?;
+                        }
+                    }
+                    self.consume(Token::RParen)?;
+                }
+                Ok(ASTExpression::NewExpression {
+                    constructor: Box::new(constructor),
+                    arguments,
+                })
+            }
+            Token::This => {
+                self.consume(Token::This)?;
+                Ok(ASTExpression::ThisExpression)
+            }
             _ => bail!("Unexpected token in expression: {:?}", self.current_token()),
         }
     }
@@ -2034,6 +2321,80 @@ impl CodeEmitter {
                         self.output.push_str(") ");
                         self.emit_node(body);
                     }
+                    ASTStatement::While { test, body } => {
+                        self.output.push_str("while (");
+                        self.emit_expression(test);
+                        self.output.push_str(") ");
+                        self.emit_node(body);
+                    }
+                    ASTStatement::DoWhile { body, test } => {
+                        self.output.push_str("do ");
+                        self.emit_node(body);
+                        self.output.push_str("while (");
+                        self.emit_expression(test);
+                        self.output.push_str(");\n");
+                    }
+                    ASTStatement::Switch { discriminant, cases } => {
+                        self.output.push_str("switch (");
+                        self.emit_expression(discriminant);
+                        self.output.push_str(") {\n");
+                        for case in cases {
+                            if let Some(test) = &case.test {
+                                self.output.push_str("case ");
+                                self.emit_expression(test);
+                                self.output.push_str(":\n");
+                            } else {
+                                self.output.push_str("default:\n");
+                            }
+                            for stmt in &case.body {
+                                self.emit_node(stmt);
+                            }
+                        }
+                        self.output.push_str("}\n");
+                    }
+                    ASTStatement::Try { body, handler, finalizer } => {
+                        self.output.push_str("try ");
+                        self.emit_node(body);
+                        if let Some(catch) = handler {
+                            self.output.push_str("catch");
+                            if let Some(param) = &catch.param {
+                                self.output.push_str(" (");
+                                self.output.push_str(param);
+                                self.output.push_str(")");
+                            }
+                            self.output.push_str(" ");
+                            self.output.push_str("{\n");
+                            for stmt in &catch.body {
+                                self.emit_node(stmt);
+                            }
+                            self.output.push_str("}\n");
+                        }
+                        if let Some(finally) = finalizer {
+                            self.output.push_str("finally ");
+                            self.emit_node(finally);
+                        }
+                    }
+                    ASTStatement::Break { label } => {
+                        self.output.push_str("break");
+                        if let Some(lbl) = label {
+                            self.output.push_str(" ");
+                            self.output.push_str(lbl);
+                        }
+                        self.output.push_str(";\n");
+                    }
+                    ASTStatement::Continue { label } => {
+                        self.output.push_str("continue");
+                        if let Some(lbl) = label {
+                            self.output.push_str(" ");
+                            self.output.push_str(lbl);
+                        }
+                        self.output.push_str(";\n");
+                    }
+                    ASTStatement::Throw { expression } => {
+                        self.output.push_str("throw ");
+                        self.emit_expression(expression);
+                        self.output.push_str(";\n");
+                    }
                 }
             }
         }
@@ -2153,6 +2514,21 @@ impl CodeEmitter {
                     self.emit_expression(argument);
                     self.output.push_str(operator);
                 }
+            }
+            ASTExpression::NewExpression { constructor, arguments } => {
+                self.output.push_str("new ");
+                self.emit_expression(constructor);
+                self.output.push('(');
+                for (i, arg) in arguments.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push_str(", ");
+                    }
+                    self.emit_expression(arg);
+                }
+                self.output.push(')');
+            }
+            ASTExpression::ThisExpression => {
+                self.output.push_str("this");
             }
         }
     }
@@ -2494,5 +2870,157 @@ if (x > 0) {
             "Should contain if: {}", result.js_code);
         assert!(result.js_code.contains("else"),
             "Should contain else: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_while_loop() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test while loop
+        let source = r#"
+let i = 0;
+while (i < 5) {
+    i++;
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("while"),
+            "Should contain while: {}", result.js_code);
+        assert!(result.js_code.contains("i < 5"),
+            "Should contain condition: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_do_while_loop() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test do...while loop
+        let source = r#"
+let i = 0;
+do {
+    i++;
+} while (i < 10);
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("do"),
+            "Should contain do: {}", result.js_code);
+        assert!(result.js_code.contains("while"),
+            "Should contain while: {}", result.js_code);
+        assert!(result.js_code.contains("i < 10"),
+            "Should contain condition: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_switch_statement() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test switch statement
+        let source = r#"
+switch (x) {
+    case 1:
+        console.log("one");
+        break;
+    case 2:
+        console.log("two");
+        break;
+    default:
+        console.log("other");
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("switch"),
+            "Should contain switch: {}", result.js_code);
+        assert!(result.js_code.contains("case 1"),
+            "Should contain case 1: {}", result.js_code);
+        assert!(result.js_code.contains("case 2"),
+            "Should contain case 2: {}", result.js_code);
+        assert!(result.js_code.contains("default"),
+            "Should contain default: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_try_catch_statement() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test try...catch statement
+        let source = r#"
+try {
+    riskyFunction();
+} catch (e) {
+    handleError(e);
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("try"),
+            "Should contain try: {}", result.js_code);
+        assert!(result.js_code.contains("catch"),
+            "Should contain catch: {}", result.js_code);
+        assert!(result.js_code.contains("riskyFunction"),
+            "Should contain riskyFunction: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_try_catch_finally_statement() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test try...catch...finally statement
+        let source = r#"
+try {
+    riskyFunction();
+} catch (e) {
+    handleError(e);
+} finally {
+    cleanup();
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("try"),
+            "Should contain try: {}", result.js_code);
+        assert!(result.js_code.contains("catch"),
+            "Should contain catch: {}", result.js_code);
+        assert!(result.js_code.contains("finally"),
+            "Should contain finally: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_throw_statement() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test throw statement
+        let source = r#"
+if (error) {
+    throw new Error("Something went wrong");
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("throw"),
+            "Should contain throw: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_break_statement() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test break statement
+        let source = r#"
+for (let i = 0; i < 10; i++) {
+    if (i === 5) {
+        break;
+    }
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("break"),
+            "Should contain break: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_continue_statement() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test continue statement
+        let source = r#"
+for (let i = 0; i < 10; i++) {
+    if (i % 2 === 0) {
+        continue;
+    }
+    console.log(i);
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("continue"),
+            "Should contain continue: {}", result.js_code);
     }
 }

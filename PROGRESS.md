@@ -7297,3 +7297,79 @@ test result: ok. 11 passed; 0 failed
 - 添加 HTTPS/TLS 支持
 - 实现 HTTP/2 支持
 - 优化 Keep-Alive 超时机制
+
+---
+
+### v0.3.112 实现完整控制流语句支持 (2025-12-26)
+**进度**: 控制流语句解析 | ✅ 已完成
+
+#### v0.3.112 新增功能
+- **while 循环语句**
+  - 支持 `while (condition) { ... }` 语法
+  - 完整的解析器和代码生成器支持
+
+- **do...while 循环语句**
+  - 支持 `do { ... } while (condition)` 语法
+  - 完整的解析器和代码生成器支持
+
+- **switch 语句**
+  - 支持 `switch (expr) { case x: ...; default: ... }` 语法
+  - 支持多个 case 和 default 分支
+  - 完整的解析器和代码生成器支持
+
+- **try...catch...finally 语句**
+  - 支持 `try { ... } catch (e) { ... } finally { ... }` 语法
+  - 可选的 catch 参数和 finally 块
+  - 完整的解析器和代码生成器支持
+
+- **throw 语句**
+  - 支持 `throw expression` 语法
+  - 完整的解析器和代码生成器支持
+
+- **break/continue 语句**
+  - 支持 `break;` 和 `continue;` 语法
+  - 支持可选标签（label）
+  - 完整的解析器和代码生成器支持
+
+- **new 表达式**
+  - 支持 `new Constructor(args)` 语法
+  - 完整的解析器和代码生成器支持
+
+- **this 关键字**
+  - 支持 `this` 关键字
+  - 完整的解析器和代码生成器支持
+
+- **模运算符 (%)**
+  - 支持 `%` 模运算符
+  - 在词法分析器和二元表达式解析器中添加支持
+
+#### v0.3.112 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+350 行)
+  - 在 `Token` 枚举中添加新关键字: `While`, `Do`, `Switch`, `Case`, `Default`, `Try`, `Catch`, `Finally`, `Throw`, `Break`, `Continue`, `New`, `This`, `Percent`
+  - 在 `ASTStatement` 枚举中添加新语句: `While`, `DoWhile`, `Switch`, `Try`, `Break`, `Continue`, `Throw`
+  - 在 `ASTExpression` 枚举中添加新表达式: `NewExpression`, `ThisExpression`
+  - 添加新结构体: `SwitchCase`, `CatchClause`
+  - 在词法分析器中添加新关键字识别
+  - 添加新解析函数: `parse_while_statement`, `parse_do_while_statement`, `parse_switch_statement`, `parse_try_statement`, `parse_throw_statement`, `parse_break_statement`, `parse_continue_statement`
+  - 在代码生成器中添加新语句的发射逻辑
+
+- **新增测试** (`src/typescript/compiler.rs`): +8 测试
+  - `test_while_loop` - 测试 while 循环
+  - `test_do_while_loop` - 测试 do...while 循环
+  - `test_switch_statement` - 测试 switch 语句
+  - `test_try_catch_statement` - 测试 try...catch 语句
+  - `test_try_catch_finally_statement` - 测试 try...catch...finally 语句
+  - `test_throw_statement` - 测试 throw 语句
+  - `test_break_statement` - 测试 break 语句
+  - `test_continue_statement` - 测试 continue 语句
+
+#### v0.3.112 验证
+- ✅ `cargo build` 成功（零警告）
+- ✅ `cargo test --lib` → 48/48 通过
+- ✅ 新增 8 个控制流语句测试全部通过
+
+#### v0.3.112 下一步计划
+- 实现数组解构和展开运算符
+- 实现模板字符串完整支持
+- 实现类继承语法
+- 优化 Source Map 生成精度
