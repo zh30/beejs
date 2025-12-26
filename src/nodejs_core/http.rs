@@ -2230,3 +2230,254 @@ pub fn set_global_request_handler(
     let handler_key = v8::String::new(scope, "_httpServerRequestHandler").unwrap();
     global.set(scope, handler_key.into(), handler.into());
 }
+
+// ============================================================================
+// v0.3.98: HTTPS Server Support (TLS/SSL)
+// ============================================================================
+
+use std::fs::File;
+use std::io::{BufReader, Cursor};
+use std::sync::Arc;
+
+/// HTTPS/TLS 配置
+/// v0.3.98: 新增结构体
+#[derive(Debug, Clone)]
+pub struct HttpsServerConfig {
+    /// TLS 证书文件路径
+    pub cert_path: String,
+    /// TLS 私钥文件路径
+    pub key_path: String,
+    /// 服务器端口
+    pub port: u16,
+    /// 服务器主机
+    pub host: String,
+    /// 是否验证客户端证书
+    pub verify_client: bool,
+    /// ALPN 协议列表
+    pub alpn_protocols: Vec<Vec<u8>>,
+}
+
+impl Default for HttpsServerConfig {
+    fn default() -> Self {
+        Self {
+            cert_path: String::new(),
+            key_path: String::new(),
+            port: 443,
+            host: "0.0.0.0".to_string(),
+            verify_client: false,
+            alpn_protocols: vec![
+                b"h2".to_vec(),
+                b"http/1.1".to_vec(),
+            ],
+        }
+    }
+}
+
+/// TLS 证书加载结果
+/// v0.3.98: 新增
+#[derive(Debug)]
+pub struct TlsCertificate {
+    /// 证书链
+    pub cert_chain: Vec<rustls::Certificate>,
+    /// 私钥
+    pub private_key: rustls::PrivateKey,
+}
+
+/// 加载 TLS 证书和私钥
+/// v0.3.98: 新增功能
+///
+/// # 参数
+/// - `cert_path`: 证书文件路径 (PEM 格式)
+/// - `key_path`: 私钥文件路径 (PEM 格式)
+///
+/// # 返回
+/// - `Ok(TlsCertificate)` 加载成功
+/// - `Err(String)` 加载失败
+pub fn load_tls_certificate(cert_path: &str, key_path: &str) -> Result<TlsCertificate, String> {
+    // 加载证书文件
+    let cert_file = File::open(cert_path)
+        .map_err(|e| format!("Failed to open certificate file: {}", e))?;
+    let mut cert_reader = BufReader::new(cert_file);
+
+    // 使用 rustls-pemfile 解析证书
+    let certs: Vec<rustls::Certificate> = rustls_pemfile::certs(&mut cert_reader)
+        .map_err(|e| format!("Failed to parse certificate: {}", e))?
+        .into_iter()
+        .map(rustls::Certificate)
+        .collect();
+
+    if certs.is_empty() {
+        return Err("No certificates found in file".to_string());
+    }
+
+    // 加载私钥文件
+    let key_file = File::open(key_path)
+        .map_err(|e| format!("Failed to open key file: {}", e))?;
+    let mut key_reader = BufReader::new(key_file);
+
+    // 解析私钥
+    let keys: Vec<rustls::PrivateKey> = rustls_pemfile::rsa_private_keys(&mut key_reader)
+        .map_err(|e| format!("Failed to parse private key: {}", e))?
+        .into_iter()
+        .map(rustls::PrivateKey)
+        .collect();
+
+    // 如果没有 RSA 密钥，尝试 PKCS8 格式
+    let keys: Vec<rustls::PrivateKey> = if keys.is_empty() {
+        let mut key_reader = BufReader::new(File::open(key_path)
+            .map_err(|e| format!("Failed to reopen key file: {}", e))?);
+        rustls_pemfile::pkcs8_private_keys(&mut key_reader)
+            .map_err(|e| format!("Failed to parse PKCS8 private key: {}", e))?
+            .into_iter()
+            .map(rustls::PrivateKey)
+            .collect()
+    } else {
+        keys
+    };
+
+    if keys.is_empty() {
+        return Err("No private key found in file".to_string());
+    }
+
+    Ok(TlsCertificate {
+        cert_chain: certs,
+        private_key: keys.remove(0),
+    })
+}
+
+/// 创建 TLS 服务器配置
+/// v0.3.98: 新增功能
+///
+/// # 参数
+/// - `cert`: TLS 证书
+/// - `config`: HTTPS 服务器配置
+///
+/// # 返回
+/// - `Arc<rustls::ServerConfig>` TLS 服务器配置
+pub fn create_tls_server_config(
+    cert: &TlsCertificate,
+    config: &HttpsServerConfig,
+) -> Arc<rustls::ServerConfig> {
+    let mut tls_config = rustls::ServerConfig::builder()
+        .with_safe_defaults()
+        .with_no_client_auth()
+        .with_single_cert(cert.cert_chain.clone(), cert.private_key.clone())
+        .expect("Failed to create TLS config");
+
+    // 设置 ALPN 协议
+    tls_config.alpn_protocols = config.alpn_protocols.clone();
+
+    Arc::new(tls_config)
+}
+
+/// HTTPS 服务器状态
+/// v0.3.98: 新增
+#[derive(Debug, Clone)]
+pub struct HttpsServerState {
+    pub listening: Arc<AtomicBool>,
+    pub port: u16,
+    pub host: String,
+    pub tls_config: Option<Arc<rustls::ServerConfig>>,
+}
+
+impl HttpsServerState {
+    pub fn new() -> Self {
+        Self {
+            listening: Arc::new(AtomicBool::new(false)),
+            port: 443,
+            host: "0.0.0.0".to_string(),
+            tls_config: None,
+        }
+    }
+
+    /// 检查是否已配置 TLS
+    pub fn is_tls_configured(&self) -> bool {
+        self.tls_config.is_some()
+    }
+}
+
+/// 解析 HTTPS URL
+/// v0.3.98: 新增功能
+///
+/// HTTPS 请求解析与 HTTP 相同，只是传输层使用 TLS
+pub fn parse_https_request(data: &[u8]) -> Option<HttpServerRequest> {
+    // HTTPS 使用与 HTTP 相同的请求解析逻辑
+    parse_http_request(data)
+}
+
+/// 生成 HTTPS 响应
+/// v0.3.98: 新增功能
+///
+/// HTTPS 响应与 HTTP 响应格式相同
+pub fn generate_https_response(response: &mut HttpServerResponse) -> Vec<u8> {
+    generate_http_response(response)
+}
+
+// ============================================================================
+// V8 API 集成 - HTTPS 服务器
+// ============================================================================
+
+/// 创建 HTTPS 服务器配置的 JavaScript API
+/// v0.3.98: 新增功能
+pub fn create_https_config_js(
+    scope: &mut v8::HandleScope,
+    cert_path: String,
+    key_path: String,
+    port: u16,
+) -> Option<v8::Local<v8::Object>> {
+    let config_obj = v8::Object::new(scope);
+
+    // certPath
+    let cert_path_key = v8::String::new(scope, "certPath").unwrap();
+    let cert_path_val = v8::String::new(scope, &cert_path).unwrap();
+    config_obj.set(scope, cert_path_key.into(), cert_path_val.into());
+
+    // keyPath
+    let key_path_key = v8::String::new(scope, "keyPath").unwrap();
+    let key_path_val = v8::String::new(scope, &key_path).unwrap();
+    config_obj.set(scope, key_path_key.into(), key_path_val.into());
+
+    // port
+    let port_key = v8::String::new(scope, "port").unwrap();
+    let port_val = v8::Number::new(scope, port as f64);
+    config_obj.set(scope, port_key.into(), port_val.into());
+
+    Some(config_obj)
+}
+
+/// 加载 TLS 证书的 JavaScript API
+/// v0.3.98: 新增功能
+pub fn load_tls_certificate_js(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+) -> Option<v8::Local<v8::Object>> {
+    let cert_path: String = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    let key_path: String = args
+        .get(1)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    // 尝试加载证书
+    match load_tls_certificate(&cert_path, &key_path) {
+        Ok(_) => {
+            let result_obj = v8::Object::new(scope);
+            let success_key = v8::String::new(scope, "success").unwrap();
+            result_obj.set(scope, success_key.into(), v8::Boolean::new(scope, true).into());
+            result_obj
+        }
+        Err(e) => {
+            let result_obj = v8::Object::new(scope);
+            let success_key = v8::String::new(scope, "success").unwrap();
+            result_obj.set(scope, success_key.into(), v8::Boolean::new(scope, false).into());
+            let error_key = v8::String::new(scope, "error").unwrap();
+            let error_val = v8::String::new(scope, &e).unwrap();
+            result_obj.set(scope, error_key.into(), error_val.into());
+            result_obj
+        }
+    }
+}

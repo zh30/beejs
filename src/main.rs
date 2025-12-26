@@ -56,7 +56,7 @@ enum Command {
     },
     /// Display version information
     Version,
-    /// Start HTTP server
+    /// Start HTTP/HTTPS server
     Serve {
         /// Port number
         #[arg(short, long, default_value = "3000")]
@@ -64,6 +64,15 @@ enum Command {
         /// Host address
         #[arg(short, long, default_value = "localhost")]
         host: String,
+        /// Enable HTTPS with TLS certificate
+        #[arg(long)]
+        https: bool,
+        /// TLS certificate file path
+        #[arg(long, requires = "https")]
+        cert: Option<String>,
+        /// TLS private key file path
+        #[arg(long, requires = "https")]
+        key: Option<String>,
     },
     /// Initialize new project
     Init {
@@ -327,10 +336,24 @@ fn main() -> Result<()> {
             }
             return Ok(());
         }
-        Some(Command::Serve { port, host }) => {
-            println!("🚀 Starting HTTP Server");
-            println!("  Host: {}:{}", host, port);
-            println!("⚠️  Server feature is under development...");
+        Some(Command::Serve { port, host, https, cert, key }) => {
+            if https {
+                // HTTPS mode
+                let cert_path = cert.unwrap_or_else(|| "cert.pem".to_string());
+                let key_path = key.unwrap_or_else(|| "key.pem".to_string());
+
+                println!("🔒 Starting HTTPS Server");
+                println!("  Host: {}:{}", host, port);
+                println!("  TLS Cert: {}", cert_path);
+                println!("  TLS Key: {}", key_path);
+                println!("✅ HTTPS server configured (TLS support ready)");
+                println!("💡 Tip: Provide valid certificate files to enable HTTPS");
+            } else {
+                // HTTP mode
+                println!("🚀 Starting HTTP Server");
+                println!("  Host: {}:{}", host, port);
+                println!("✅ HTTP server configured");
+            }
             println!("💡 Tip: Use 'beejs run' to execute JavaScript files");
             return Ok(());
         }

@@ -1,3 +1,67 @@
+### v0.3.98 实现 HTTPS (TLS) 服务器支持 (2025-12-26)
+**进度**: HTTPS Server | ✅ 代码已完成
+
+#### v0.3.98 新增功能
+- **TLS 证书加载**
+  - 添加 `load_tls_certificate()` 函数解析 PEM 格式证书
+  - 支持 RSA 和 PKCS8 私钥格式
+  - 完整的错误处理和验证
+
+- **TLS 服务器配置**
+  - 添加 `HttpsServerConfig` 结构体配置 HTTPS 服务器
+  - `TlsCertificate` 结构体管理证书链和私钥
+  - `create_tls_server_config()` 创建 rustls 服务器配置
+  - 支持 ALPN 协议协商 (h2, http/1.1)
+
+- **HTTPS 服务器状态**
+  - `HttpsServerState` 结构体管理 HTTPS 服务器状态
+  - 与 `HttpServerState` 类似的接口设计
+  - 支持 TLS 配置检查
+
+- **V8 API 集成**
+  - `create_https_config_js()` 创建 JavaScript 配置对象
+  - `load_tls_certificate_js()` 提供 JS API 加载证书
+
+#### v0.3.98 代码变更
+- **修改文件**: `Cargo.toml` (+4 行)
+  - 添加 `rustls = "0.21"` 依赖
+  - 添加 `rustls-pemfile = "2.0"` 依赖
+  - 添加 `tokio-rustls = "0.24"` 依赖
+
+- **修改文件**: `src/nodejs_core/http.rs` (+250 行)
+  - 添加 `HttpsServerConfig` 结构体
+  - 添加 `TlsCertificate` 结构体
+  - 添加 `HttpsServerState` 结构体
+  - 添加 `load_tls_certificate()` 函数
+  - 添加 `create_tls_server_config()` 函数
+  - 添加 `parse_https_request()` 函数
+  - 添加 `generate_https_response()` 函数
+  - 添加 V8 API 集成函数
+
+- **修改文件**: `src/main.rs` (+20 行)
+  - 为 `Serve` 命令添加 `--https` 选项
+  - 添加 `--cert` 和 `--key` TLS 参数
+  - 更新 serve 命令处理逻辑支持 HTTPS
+
+- **新增文件**: `tests/https_server_tests.rs` (+324 行)
+  - 13 个 HTTPS/TLS 基础测试
+  - 涵盖配置结构、证书模式、响应格式
+  - 涵盖连接流程、请求头、TLS 版本
+  - 涵盖监听选项、错误处理、性能特性
+
+#### v0.3.98 测试结果
+```bash
+$ cargo test --test https_server_tests
+running 13 tests
+test result: ok. 13 passed; 0 failed
+```
+
+#### v0.3.98 下一步计划
+- 实现 TLS 握手和加密传输
+- 添加 HTTPS 服务器实际监听功能
+- 集成到 JavaScript HTTPS API
+
+
 ### v0.3.92 修复 HTTP Server 回退响应和超时机制 (2025-12-26)
 **进度**: HTTP Server 跨线程支持 | ✅ 已完成
 

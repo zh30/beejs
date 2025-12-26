@@ -152,6 +152,11 @@ openssl = "0.10"
 sled = "0.34"
 getrandom = { version = "0.2", features = ["js"] }
 
+# v0.3.98: HTTPS/TLS support using rustls for better performance
+rustls = { version = "0.21", features = ["dangerous_configuration"] }
+rustls-pemfile = "2.0"
+tokio-rustls = "0.24"
+
 # Testing
 [dev-dependencies]
 tempfile = "3.0"
