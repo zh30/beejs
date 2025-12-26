@@ -970,12 +970,21 @@ pub enum EnumValue {
 pub enum DestructuringPattern {
     /// 数组解构: [a, b, c]
     Array {
-        elements: Vec<Option<Box<ASTNode>>>,  // None 表示空位
+        elements: Vec<Option<DestructuringElement>>,  // None 表示空位
     },
     /// 对象解构: { a, b, c }
     Object {
         properties: Vec<DestructuringProperty>,
     },
+}
+
+/// 数组解构元素（支持默认值）
+#[derive(Debug, Clone)]
+pub struct DestructuringElement {
+    /// 解构模式（标识符或嵌套模式）
+    pub pattern: Box<ASTNode>,
+    /// 默认值（可选）
+    pub default_value: Option<Box<ASTNode>>,
 }
 
 /// 解构属性（用于对象解构）
@@ -1730,25 +1739,48 @@ impl Parser {
                 } else {
                     bail!("Expected identifier after ...");
                 };
-                elements.push(Some(Box::new(ASTNode::DestructuringPattern {
-                    pattern: DestructuringPattern::Object {
-                        properties: vec![DestructuringProperty {
-                            key: "rest".to_string(),
-                            alias: Some(rest_name),
-                            default_value: None,
-                            is_rest: true,
-                            rest_target: None,
-                        }],
-                    },
-                })));
+                elements.push(Some(DestructuringElement {
+                    pattern: Box::new(ASTNode::DestructuringPattern {
+                        pattern: DestructuringPattern::Object {
+                            properties: vec![DestructuringProperty {
+                                key: "rest".to_string(),
+                                alias: Some(rest_name),
+                                default_value: None,
+                                is_rest: true,
+                                rest_target: None,
+                            }],
+                        },
+                    }),
+                    default_value: None,
+                }));
             } else if self.current_token_eq(&Token::LBracket) {
                 // 嵌套数组解构
                 let nested = self.parse_array_destructuring_pattern()?;
-                elements.push(Some(Box::new(ASTNode::DestructuringPattern { pattern: nested })));
+                let default_value = if self.current_token_eq(&Token::Eq) {
+                    self.consume(Token::Eq)?;
+                    let expr = self.parse_initializer_expression()?;
+                    Some(Box::new(ASTNode::Expression(expr)))
+                } else {
+                    None
+                };
+                elements.push(Some(DestructuringElement {
+                    pattern: Box::new(ASTNode::DestructuringPattern { pattern: nested }),
+                    default_value,
+                }));
             } else if self.current_token_eq(&Token::LBrace) {
                 // 嵌套对象解构
                 let nested = self.parse_object_destructuring_pattern()?;
-                elements.push(Some(Box::new(ASTNode::DestructuringPattern { pattern: nested })));
+                let default_value = if self.current_token_eq(&Token::Eq) {
+                    self.consume(Token::Eq)?;
+                    let expr = self.parse_initializer_expression()?;
+                    Some(Box::new(ASTNode::Expression(expr)))
+                } else {
+                    None
+                };
+                elements.push(Some(DestructuringElement {
+                    pattern: Box::new(ASTNode::DestructuringPattern { pattern: nested }),
+                    default_value,
+                }));
             } else if self.current_token_eq(&Token::Comma) {
                 // 空位
                 elements.push(None);
@@ -1761,7 +1793,17 @@ impl Parser {
                 } else {
                     bail!("Expected identifier in destructuring pattern");
                 };
-                elements.push(Some(Box::new(ASTNode::Expression(ASTExpression::Identifier(name_token)))));
+                let default_value = if self.current_token_eq(&Token::Eq) {
+                    self.consume(Token::Eq)?;
+                    let expr = self.parse_initializer_expression()?;
+                    Some(Box::new(ASTNode::Expression(expr)))
+                } else {
+                    None
+                };
+                elements.push(Some(DestructuringElement {
+                    pattern: Box::new(ASTNode::Expression(ASTExpression::Identifier(name_token))),
+                    default_value,
+                }));
             }
 
             // 处理逗号分隔符
@@ -1856,17 +1898,20 @@ impl Parser {
                     bail!("Expected identifier or string in destructuring pattern");
                 };
 
-                // 检查是否有默认值（简化处理：跳过默认值）
-                if self.current_token_eq(&Token::Eq) {
+                // 检查是否有默认值
+                let default_value = if self.current_token_eq(&Token::Eq) {
                     self.consume(Token::Eq)?;
-                    // 跳过默认值表达式
-                    let _value = self.parse_expression()?;
-                }
+                    // 解析默认值表达式
+                    let value = self.parse_expression()?;
+                    Some(Box::new(ASTNode::Expression(value)))
+                } else {
+                    None
+                };
 
                 properties.push(DestructuringProperty {
                     key,
                     alias,
-                    default_value: None,
+                    default_value,
                     is_rest: false,
                     rest_target: None,
                 });
@@ -3838,7 +3883,7 @@ impl CodeEmitter {
                         self.output.push_str(", ");
                     }
                     if let Some(e) = elem {
-                        self.emit_node(e);
+                        self.emit_destructuring_element(e);
                     }
                 }
                 self.output.push(']');
@@ -3862,10 +3907,24 @@ impl CodeEmitter {
                             self.output.push_str(": ");
                             self.output.push_str(alias);
                         }
+                        // 如果有默认值，输出默认值
+                        if let Some(default) = &prop.default_value {
+                            self.output.push_str(" = ");
+                            self.emit_node(default);
+                        }
                     }
                 }
                 self.output.push('}');
             }
+        }
+    }
+
+    /// 发射数组解构元素
+    fn emit_destructuring_element(&mut self, element: &DestructuringElement) {
+        self.emit_node(&element.pattern);
+        if let Some(default) = &element.default_value {
+            self.output.push_str(" = ");
+            self.emit_node(default);
         }
     }
     fn emit_expression(&mut self, expr: &ASTExpression) {
@@ -4985,6 +5044,108 @@ class Animal {
                     "Should contain constructor: {}", result.js_code);
                 assert!(result.js_code.contains("this.name = name"),
                     "Should contain assignment: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_array_destructuring_with_defaults() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test array destructuring with default values
+        let source = r#"const [a, b = 2, c = 3] = [1];"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("const"),
+                    "Should contain const: {}", result.js_code);
+                assert!(result.js_code.contains("a"),
+                    "Should contain a: {}", result.js_code);
+                assert!(result.js_code.contains("b = 2"),
+                    "Should contain b = 2: {}", result.js_code);
+                assert!(result.js_code.contains("c = 3"),
+                    "Should contain c = 3: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_object_destructuring_with_defaults() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test object destructuring with default values
+        let source = r#"const { x, y = 10, z = 20 } = { x: 1 };"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("const"),
+                    "Should contain const: {}", result.js_code);
+                assert!(result.js_code.contains("x"),
+                    "Should contain x: {}", result.js_code);
+                assert!(result.js_code.contains("y = 10"),
+                    "Should contain y = 10: {}", result.js_code);
+                assert!(result.js_code.contains("z = 20"),
+                    "Should contain z = 20: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_object_destructuring_with_alias_and_defaults() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test object destructuring with alias and default values
+        let source = r#"const { a: alias = 5 } = {};"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("const"),
+                    "Should contain const: {}", result.js_code);
+                assert!(result.js_code.contains("alias = 5"),
+                    "Should contain alias = 5: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_nested_destructuring_with_defaults() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test nested destructuring with default values
+        let source = r#"const [{ a: nestedA = 1 }, { b: nestedB = 2 }] = [{}, { b: 5 }];"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("const"),
+                    "Should contain const: {}", result.js_code);
+                assert!(result.js_code.contains("nestedA = 1"),
+                    "Should contain nestedA = 1: {}", result.js_code);
+                assert!(result.js_code.contains("nestedB = 2"),
+                    "Should contain nestedB = 2: {}", result.js_code);
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
