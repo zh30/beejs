@@ -1,3 +1,42 @@
+### v0.3.114 实现三元条件运算符解析和比较运算符补全 (2025-12-27)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.114 新增功能
+- **三元条件运算符**
+  - 添加 `ConditionalExpression` AST 节点支持
+  - 实现 `condition ? consequent : alternate` 语法解析
+  - 支持嵌套三元运算符（需要使用括号明确分组）
+  - 例如: `a > 0 ? "positive" : (a < 0 ? "negative" : "zero")`
+
+- **比较运算符补全**
+  - 添加 `<=` 和 `>=` 二元比较运算符支持
+  - 完善比较运算符解析逻辑
+
+- **代码质量改进**
+  - 清理 `dead_code` 警告
+  - 为未使用的辅助函数添加 `#[allow(dead_code)]`
+
+#### v0.3.114 验证
+- ✅ `cargo test --lib` 66/66 通过
+- ✅ 新增测试用例:
+  - `test_conditional_expression`: 基础三元运算符
+  - `test_nested_conditional_expression`: 嵌套三元运算符
+  - `test_conditional_in_function`: 函数中的三元运算符
+- ✅ `cargo build --release` 成功编译
+
+#### v0.3.114 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+89/-1 行)
+  - 添加 `ASTExpression::ConditionalExpression` 变体
+  - 实现三元运算符解析逻辑
+  - 补全二元运算符 (`LtEq`, `GtEq`)
+  - 添加三个测试用例
+
+#### v0.3.114 下一步计划
+- 继续完善 TypeScript 编译器功能
+- 实现解构语法支持
+- 添加更多边界情况测试
+
+
 ### v0.3.113 修复数字字面量词法分析和类成员解析 (2025-12-27)
 **进度**: TypeScript 编译器修复 | ✅ 已提交
 
