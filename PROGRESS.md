@@ -54,6 +54,49 @@ test result: ok. 68 passed; 0 failed; 0 ignored
 - 添加完整的端到端 HTTP Server 测试
 
 
+### v0.3.90 实现消息通道双向通信和测试 (2025-12-26)
+**进度**: HTTP Server 跨线程支持 | ✅ 已完成
+
+#### v0.3.90 新增功能
+- **消息通道双向通信**
+  - 添加 `request_receiver` 到 `HttpServerMessageChannel`
+  - 实现 `send_response()` 方法完成响应回传
+  - `response_sender` 和 `response_receiver` 配对使用
+
+- **非阻塞消息接收**
+  - `try_recv_http_request()` - 非阻塞接收 HTTP 请求
+  - 避免主线程在消息队列为空时阻塞
+
+- **响应构建辅助函数**
+  - `create_http_response()` - 快速创建标准 HTTP 响应
+  - 自动设置 Content-Type, Content-Length, Connection 头
+
+#### v0.3.90 代码变更
+- **修改文件**: `src/nodejs_core/http.rs` (+91 行)
+  - 添加 `request_receiver` 字段到 `HttpServerMessageChannel`
+  - 实现 `send_response()` 方法
+  - 实现 `try_recv_http_request()` 函数
+  - 实现 `create_http_response()` 辅助函数
+  - 修复弃用的 `get_http_request_receiver()` 函数
+
+- **新增测试**: `tests/http_server_integration_tests.rs` (+70 行)
+  - `test_http_message_channel_basics` - 测试通道基本功能
+  - `test_create_http_response` - 测试响应创建辅助函数
+  - `test_http_server_channel_initialization` - 测试全局通道初始化
+  - `test_try_recv_http_request_empty` - 测试空队列接收
+
+#### v0.3.90 测试结果
+```bash
+$ cargo test --test http_server_integration_tests
+running 13 tests
+test result: ok. 13 passed; 0 failed
+```
+
+#### v0.3.90 下一步计划
+- 实现主线程事件循环轮询消息队列
+- 在 V8 上下文中调用 JavaScript request handler
+- 实现从 JS handler 接收响应并发送回后台线程
+- 添加端到端 HTTP Server 测试（真实网络请求）
 
 
 
