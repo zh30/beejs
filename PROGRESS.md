@@ -65,6 +65,69 @@ Options:
 - 添加 WebSocket 热重载连接支持
 
 
+### v0.3.102 启用 TypeScript 模块 (2025-12-26)
+**进度**: TypeScript 支持 | ✅ 代码已完成
+
+#### v0.3.102 新增功能
+- **TypeScript 编译支持**
+  - 在 `lib.rs` 中启用 `typescript` 模块
+  - 添加 `read_and_compile_source()` 辅助函数
+  - 自动检测 `.ts` 和 `.tsx` 文件并编译
+  - 显示编译诊断信息（警告/错误）
+
+#### v0.3.102 代码变更
+- **修改文件**: `src/lib.rs` (+1 行)
+  - 启用 `typescript` 模块
+
+- **修改文件**: `src/main.rs` (+45 行)
+  - 添加 `use anyhow::{Result, anyhow}` 导入
+  - 添加 `std::path::Path` 导入
+  - 实现 `read_and_compile_source()` 函数
+  - 修改 `Run` 命令使用 TypeScript 编译
+
+#### v0.3.102 使用示例
+```bash
+# 运行 TypeScript 文件
+beejs run index.ts
+beejs run index.tsx
+
+# 热重载模式也支持 TypeScript
+beejs run index.ts --watch
+```
+
+#### v0.3.102 下一步计划
+- 集成完整 TypeScript 编译器（swc）
+- 优化编译错误提示
+- 添加 source map 支持
+
+
+### v0.3.101 启用 Package Manager 模块 (2025-12-26)
+**进度**: 包管理 | ✅ 代码已完成
+
+#### v0.3.101 修复内容
+- **编译问题修复**
+  - 添加缺失的 `use std::fs;` 导入
+  - 修复测试模块的导入问题 (`use super::*;`)
+  - 启用 `package_manager` 模块
+
+#### v0.3.101 测试结果
+```bash
+$ cargo test --lib package_manager
+running 4 tests
+test package_manager::tests::test_package_manager_creation ... ok
+test package_manager::tests::test_add_remove_dependency ... ok
+test package_manager::tests::test_init_package_json ... ok
+test package_manager::tests::test_parse_package_json ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored
+```
+
+#### v0.3.101 下一步计划
+- 实现 npm registry 集成
+- 添加包下载和缓存功能
+- 支持 `beejs add` 命令
+
+
 ### v0.3.99 修复内建模块 require 加载问题 (2025-12-26)
 **进度**: Node.js 兼容性 | ✅ 代码已完成
 
