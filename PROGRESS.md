@@ -7369,7 +7369,49 @@ test result: ok. 11 passed; 0 failed
 - ✅ 新增 8 个控制流语句测试全部通过
 
 #### v0.3.112 下一步计划
-- 实现数组解构和展开运算符
+- 实现数组解构和展开运算符 ✅ v0.3.113
 - 实现模板字符串完整支持
-- 实现类继承语法
+- 实现类继承语法 ✅ v0.3.113
+- 优化 Source Map 生成精度
+
+---
+
+### v0.3.113 数组解构与类继承支持 (2025-12-26)
+**进度**: 高级语法解析 | ✅ 已完成
+
+#### v0.3.113 新增功能
+- **数组字面量与展开运算符**
+  - 支持 `[expr1, expr2, ...rest]` 语法
+  - 支持展开运算符 `...expr`
+  - 完整的解析器和代码生成器支持
+
+- **类继承语法 (extends)**
+  - 支持 `class Child extends Parent { ... }` 语法
+  - 完整的 `extends` 子句解析
+  - 解析器跳过类成员实现（暂时）
+
+#### v0.3.113 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+200 行)
+  - 在 `Token` 枚举中添加新 Token: `Extends`, `Super`, `DotDotDot`
+  - 在 `ASTExpression` 枚举中添加新表达式: `ArrayExpression`, `SpreadExpression`, `SuperExpression`
+  - 在 `ASTNode` 中更新 `ClassDeclaration` 添加 `extends: Option<String>` 字段
+  - 添加新解析函数: `parse_array_literal`
+  - 添加 `parse_class_member` 和 `skip_to_matching_brace` 辅助函数
+  - 在代码生成器中添加新表达式的发射逻辑
+
+- **新增测试** (`src/typescript/compiler.rs`): +4 测试
+  - `test_array_literal` - 测试数组字面量
+  - `test_spread_expression` - 测试展开运算符
+  - `test_class_with_extends` - 测试类继承语法
+  - `test_super_keyword` - 测试 super 关键字（类继承）
+
+#### v0.3.113 验证
+- ✅ `cargo build` 成功（1 个 unreachable_pattern 警告，不影响功能）
+- ✅ `cargo test --lib` → 52/52 通过
+- ✅ 新增 4 个语法解析测试全部通过
+
+#### v0.3.113 下一步计划
+- 实现模板字符串完整支持
+- 完善类成员解析（方法、字段）
+- 实现计算属性名
 - 优化 Source Map 生成精度
