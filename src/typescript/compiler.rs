@@ -1396,6 +1396,17 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<ASTNode> {
         match self.current_token() {
             Token::Let | Token::Const | Token::Var => {
+                // 检查是否是 const enum（TypeScript 特定语法）
+                if self.current_token_eq(&Token::Const) {
+                    let saved_position = self.position;
+                    self.advance(); // consume const
+                    if self.current_token_eq(&Token::Enum) {
+                        return self.parse_enum_declaration();
+                    } else {
+                        // 不是 const enum，将 position 恢复
+                        self.position = saved_position;
+                    }
+                }
                 let node = self.parse_variable_declaration()?;
                 // 消耗分号（对于独立的变量声明）
                 if self.current_token_eq(&Token::SemiColon) {
@@ -8545,6 +8556,134 @@ class MyService {
                     "Should contain Watch decorator: {}", result.js_code);
                 assert!(result.js_code.contains("/* @Get"),
                     "Should contain Get decorator: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_enum_basic() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test basic enum
+        let source = r#"
+enum Color {
+    Red,
+    Green,
+    Blue
+}
+"#;
+        println!("\n========== Testing basic enum ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Enum should be transpiled to JavaScript object
+                assert!(result.js_code.contains("var Color"),
+                    "Should contain 'var Color': {}", result.js_code);
+                assert!(result.js_code.contains("Red"),
+                    "Should contain 'Red': {}", result.js_code);
+                assert!(result.js_code.contains("Green"),
+                    "Should contain 'Green': {}", result.js_code);
+                assert!(result.js_code.contains("Blue"),
+                    "Should contain 'Blue': {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_enum_with_values() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test enum with explicit values
+        let source = r#"
+enum Status {
+    Pending = 1,
+    Active = 2,
+    Inactive = 0
+}
+"#;
+        println!("\n========== Testing enum with values ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("var Status"),
+                    "Should contain 'var Status': {}", result.js_code);
+                assert!(result.js_code.contains("Pending: 1"),
+                    "Should contain 'Pending: 1': {}", result.js_code);
+                assert!(result.js_code.contains("Active: 2"),
+                    "Should contain 'Active: 2': {}", result.js_code);
+                assert!(result.js_code.contains("Inactive: 0"),
+                    "Should contain 'Inactive: 0': {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_string_enum() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test string enum
+        let source = r#"
+enum Direction {
+    Up = "UP",
+    Down = "DOWN",
+    Left = "LEFT",
+    Right = "RIGHT"
+}
+"#;
+        println!("\n========== Testing string enum ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("var Direction"),
+                    "Should contain 'var Direction': {}", result.js_code);
+                assert!(result.js_code.contains("Up: \"UP\""),
+                    "Should contain 'Up: \"UP\"': {}", result.js_code);
+                assert!(result.js_code.contains("Down: \"DOWN\""),
+                    "Should contain 'Down: \"DOWN\"': {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_const_enum() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test const enum (should be inlined)
+        let source = r#"
+const enum PixelSize {
+    Small = 1,
+    Medium = 2,
+    Large = 3
+}
+const size = PixelSize.Medium;
+"#;
+        println!("\n========== Testing const enum ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // const enum should still be transpiled (simple implementation)
+                assert!(result.js_code.contains("PixelSize"),
+                    "Should contain 'PixelSize': {}", result.js_code);
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
