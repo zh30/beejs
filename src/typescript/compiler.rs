@@ -204,6 +204,8 @@ impl TypeScriptCompiler {
                     "this" => Token::This,
                     "extends" => Token::Extends,
                     "super" => Token::Super,
+                    "from" => Token::From,
+                    "as" => Token::As,
                     _ => Token::Identifier(ident),
                 };
                 tokens.push(token);
@@ -894,6 +896,8 @@ pub enum Token {
     This,
     Extends,
     Super,
+    From,
+    As,
     // 符号
     LParen,
     RParen,
@@ -963,6 +967,26 @@ pub struct EnumMember {
 pub enum EnumValue {
     Number(u32),
     String(String),
+}
+
+/// 导入项（用于 import 语句）
+#[derive(Debug, Clone)]
+pub struct ImportSpecifier {
+    /// 原始名称（从模块导入的名称）
+    pub imported: String,
+    /// 本地别名（绑定到当前文件的名称）
+    pub alias: Option<String>,
+    /// 是否为默认导入项
+    pub is_default: bool,
+}
+
+/// 导出项（用于 export 语句）
+#[derive(Debug, Clone)]
+pub struct ExportSpecifier {
+    /// 原始名称（要导出的名称）
+    pub name: String,
+    /// 导出别名（重命名导出）
+    pub alias: Option<String>,
 }
 
 /// 解构模式类型
@@ -1082,6 +1106,28 @@ pub enum ASTNode {
     EnumDeclaration {
         name: String,
         members: Vec<EnumMember>,
+    },
+    /// 导入语句: import { a, b } from 'module' | import x from 'module'
+    ImportDeclaration {
+        /// 模块路径
+        module_specifier: String,
+        /// 导入项列表
+        imports: Vec<ImportSpecifier>,
+        /// 是否为默认导入
+        is_default: bool,
+        /// 命名空间导入别名 (import * as name)
+        namespace_alias: Option<String>,
+    },
+    /// 导出语句: export { a, b } | export default x | export const x = 1
+    ExportDeclaration {
+        /// 导出项列表（用于 export { ... }）
+        exports: Vec<ExportSpecifier>,
+        /// 是否为默认导出
+        is_default: bool,
+        /// 源模块（用于 re-export: export { x } from 'module'）
+        module_specifier: Option<String>,
+        /// 内联导出声明（用于 export const x = 1）
+        inline_declaration: Option<Box<ASTNode>>,
     },
     Expression(ASTExpression),
     Statement(ASTStatement),
@@ -1313,6 +1359,12 @@ impl Parser {
             }
             Token::Continue => {
                 self.parse_continue_statement()
+            }
+            Token::Import => {
+                self.parse_import_declaration()
+            }
+            Token::Export => {
+                self.parse_export_declaration()
             }
             _ => {
                 // 表达式语句
@@ -2624,6 +2676,364 @@ impl Parser {
         self.consume(Token::RBrace)?;
         Ok(ASTNode::EnumDeclaration { name, members })
     }
+
+    /// 解析导入语句
+    /// 支持:
+    /// - import "module" (副作用导入)
+    /// - import defaultExport from "module" (默认导入)
+    /// - import { a, b } from "module" (命名导入)
+    /// - import defaultExport, { a, b } from "module" (混合导入)
+    /// - import * as namespace from "module" (命名空间导入)
+    fn parse_import_declaration(&mut self) -> Result<ASTNode> {
+        self.consume(Token::Import)?;
+
+        // 检查是否为默认导入（import x from ...）
+        // 如果后面是字符串字面量，则是副作用导入或默认导入
+        if let Token::String(ref s, _) = self.current_token() {
+            // 副作用导入: import "module"
+            let module_specifier = format!("\"{}\"", s);
+            self.advance();
+            self.consume(Token::SemiColon)?;
+            return Ok(ASTNode::ImportDeclaration {
+                module_specifier,
+                imports: Vec::new(),
+                is_default: false,
+                namespace_alias: None,
+            });
+        }
+
+        // 检查是否有 * (命名空间导入)
+        if self.current_token_eq(&Token::Star) {
+            self.consume(Token::Star)?;
+            self.consume(Token::As)?;
+            // 解析 as 别名
+            if let Token::Identifier(alias) = self.consume_any_identifier()? {
+                self.consume(Token::From)?;
+                let module_specifier = if let Token::String(ref s, _) = self.current_token() {
+                    format!("\"{}\"", s)
+                } else {
+                    bail!("Expected string literal for module specifier");
+                };
+                self.advance();
+                self.consume(Token::SemiColon)?;
+                return Ok(ASTNode::ImportDeclaration {
+                    module_specifier,
+                    imports: Vec::new(),
+                    is_default: false,
+                    namespace_alias: Some(alias),
+                });
+            }
+        }
+
+        // 检查 { (命名导入)
+        if self.current_token_eq(&Token::LBrace) {
+            self.consume(Token::LBrace)?;
+            let mut imports = Vec::new();
+            while !self.current_token_eq(&Token::RBrace) {
+                let imported_token = self.consume_any_identifier()?;
+                let imported = match imported_token {
+                    Token::Identifier(name) => name,
+                    _ => bail!("Expected identifier in import"),
+                };
+
+                // 检查 as 别名
+                let mut alias = None;
+                if self.current_token_eq(&Token::As) {
+                    self.consume(Token::As)?;
+                    let alias_token = self.consume_any_identifier()?;
+                    alias = match alias_token {
+                        Token::Identifier(name) => Some(name),
+                        _ => bail!("Expected alias after 'as'"),
+                    };
+                }
+
+                imports.push(ImportSpecifier {
+                    imported,
+                    alias,
+                    is_default: false,
+                });
+
+                if self.current_token_eq(&Token::Comma) {
+                    self.consume(Token::Comma)?;
+                }
+            }
+            self.consume(Token::RBrace)?;
+            self.consume(Token::From)?;
+            let module_specifier = if let Token::String(ref s, _) = self.current_token() {
+                format!("\"{}\"", s)
+            } else {
+                bail!("Expected string literal for module specifier");
+            };
+            self.advance();
+            self.consume(Token::SemiColon)?;
+            return Ok(ASTNode::ImportDeclaration {
+                module_specifier,
+                imports,
+                is_default: false,
+                namespace_alias: None,
+            });
+        }
+
+        // 可能是默认导入
+        if let Token::Identifier(name) = self.current_token() {
+            let name_str = name.clone();
+            self.consume(Token::Identifier(name_str.clone()))?;
+
+            // 检查是否有 from
+            if self.current_token_eq(&Token::From) {
+                self.consume(Token::From)?;
+                let module_specifier = if let Token::String(ref s, _) = self.current_token() {
+                    format!("\"{}\"", s)
+                } else {
+                    bail!("Expected string literal for module specifier");
+                };
+                self.advance();
+                self.consume(Token::SemiColon)?;
+                return Ok(ASTNode::ImportDeclaration {
+                    module_specifier,
+                    imports: vec![ImportSpecifier {
+                        imported: name_str.clone(),
+                        alias: None,
+                        is_default: true,
+                    }],
+                    is_default: true,
+                    namespace_alias: None,
+                });
+            }
+
+            // 检查是否有逗号（混合导入：默认导入 + 命名导入）
+            if self.current_token_eq(&Token::Comma) {
+                self.consume(Token::Comma)?;
+                // 解析命名导入
+                if self.current_token_eq(&Token::LBrace) {
+                    self.consume(Token::LBrace)?;
+                    let mut named_imports = Vec::new();
+                    while !self.current_token_eq(&Token::RBrace) {
+                        let imported_token = self.consume_any_identifier()?;
+                        let imported = match imported_token {
+                            Token::Identifier(n) => n,
+                            _ => bail!("Expected identifier in import"),
+                        };
+
+                        let mut alias = None;
+                        if self.current_token_eq(&Token::As) {
+                            self.consume(Token::As)?;
+                            let alias_token = self.consume_any_identifier()?;
+                            alias = match alias_token {
+                                Token::Identifier(n) => Some(n),
+                                _ => bail!("Expected alias after 'as'"),
+                            };
+                        }
+
+                        named_imports.push(ImportSpecifier {
+                            imported,
+                            alias,
+                            is_default: false,
+                        });
+
+                        if self.current_token_eq(&Token::Comma) {
+                            self.consume(Token::Comma)?;
+                        }
+                    }
+                    self.consume(Token::RBrace)?;
+                    self.consume(Token::From)?;
+                    let module_specifier = if let Token::String(ref s, _) = self.current_token() {
+                        format!("\"{}\"", s)
+                    } else {
+                        bail!("Expected string literal for module specifier");
+                    };
+                    self.advance();
+                    self.consume(Token::SemiColon)?;
+
+                    // 合并默认导入和命名导入
+                    let mut all_imports = vec![ImportSpecifier {
+                        imported: name_str,
+                        alias: None,
+                        is_default: true,
+                    }];
+                    all_imports.extend(named_imports);
+
+                    return Ok(ASTNode::ImportDeclaration {
+                        module_specifier,
+                        imports: all_imports,
+                        is_default: true,
+                        namespace_alias: None,
+                    });
+                }
+            }
+
+            bail!("Invalid import syntax");
+        }
+
+        bail!("Invalid import statement");
+    }
+
+    /// 解析导出语句
+    /// 支持:
+    /// - export { a, b } (命名导出)
+    /// - export default expr (默认导出)
+    /// - export const x = 1 (内联导出声明)
+    /// - export { a, b } from "module" (重新导出)
+    /// - export * from "module" (重新导出所有)
+    fn parse_export_declaration(&mut self) -> Result<ASTNode> {
+        self.consume(Token::Export)?;
+
+        // 检查 default
+        if self.current_token_eq(&Token::Default) {
+            self.consume(Token::Default)?;
+            // 解析默认导出的表达式或声明
+            let expr = self.parse_expression()?;
+            self.consume(Token::SemiColon)?;
+            return Ok(ASTNode::ExportDeclaration {
+                exports: Vec::new(),
+                is_default: true,
+                module_specifier: None,
+                inline_declaration: Some(Box::new(ASTNode::Expression(expr))),
+            });
+        }
+
+        // 检查 export *
+        if self.current_token_eq(&Token::Star) {
+            self.consume(Token::Star)?;
+            self.consume(Token::From)?;
+            let module_specifier = if let Token::String(ref s, _) = self.current_token() {
+                format!("\"{}\"", s)
+            } else {
+                bail!("Expected string literal for module specifier");
+            };
+            self.advance();
+            self.consume(Token::SemiColon)?;
+            return Ok(ASTNode::ExportDeclaration {
+                exports: Vec::new(),
+                is_default: false,
+                module_specifier: Some(module_specifier),
+                inline_declaration: None,
+            });
+        }
+
+        // 检查 export { ... }
+        if self.current_token_eq(&Token::LBrace) {
+            self.consume(Token::LBrace)?;
+            let mut exports = Vec::new();
+            while !self.current_token_eq(&Token::RBrace) {
+                let name_token = self.consume_any_identifier()?;
+                let name = match name_token {
+                    Token::Identifier(n) => n,
+                    _ => bail!("Expected identifier in export"),
+                };
+
+                let mut alias = None;
+                if self.current_token_eq(&Token::As) {
+                    self.consume(Token::As)?;
+                    let alias_token = self.consume_any_identifier()?;
+                    alias = match alias_token {
+                        Token::Identifier(n) => Some(n),
+                        _ => bail!("Expected alias after 'as'"),
+                    };
+                }
+
+                exports.push(ExportSpecifier { name, alias });
+
+                if self.current_token_eq(&Token::Comma) {
+                    self.consume(Token::Comma)?;
+                }
+            }
+            self.consume(Token::RBrace)?;
+
+            // 检查 from (重新导出)
+            if self.current_token_eq(&Token::From) {
+                self.consume(Token::From)?;
+                let module_specifier = if let Token::String(ref s, _) = self.current_token() {
+                    format!("\"{}\"", s)
+                } else {
+                    bail!("Expected string literal for module specifier");
+                };
+                self.advance();
+                self.consume(Token::SemiColon)?;
+                return Ok(ASTNode::ExportDeclaration {
+                    exports,
+                    is_default: false,
+                    module_specifier: Some(module_specifier),
+                    inline_declaration: None,
+                });
+            }
+
+            self.consume(Token::SemiColon)?;
+            return Ok(ASTNode::ExportDeclaration {
+                exports,
+                is_default: false,
+                module_specifier: None,
+                inline_declaration: None,
+            });
+        }
+
+        // 内联导出声明: export const/let/var/function/class
+        match self.current_token() {
+            Token::Const | Token::Let | Token::Var => {
+                let declaration = self.parse_variable_declaration()?;
+                // 消耗分号
+                if self.current_token_eq(&Token::SemiColon) {
+                    self.consume(Token::SemiColon)?;
+                }
+                return Ok(ASTNode::ExportDeclaration {
+                    exports: Vec::new(),
+                    is_default: false,
+                    module_specifier: None,
+                    inline_declaration: Some(Box::new(declaration)),
+                });
+            }
+            Token::Function => {
+                let declaration = self.parse_function_declaration()?;
+                // 消耗分号
+                if self.current_token_eq(&Token::SemiColon) {
+                    self.consume(Token::SemiColon)?;
+                }
+                return Ok(ASTNode::ExportDeclaration {
+                    exports: Vec::new(),
+                    is_default: false,
+                    module_specifier: None,
+                    inline_declaration: Some(Box::new(declaration)),
+                });
+            }
+            Token::Class => {
+                let declaration = self.parse_class_declaration()?;
+                // 消耗分号
+                if self.current_token_eq(&Token::SemiColon) {
+                    self.consume(Token::SemiColon)?;
+                }
+                return Ok(ASTNode::ExportDeclaration {
+                    exports: Vec::new(),
+                    is_default: false,
+                    module_specifier: None,
+                    inline_declaration: Some(Box::new(declaration)),
+                });
+            }
+            Token::Interface => {
+                let declaration = self.parse_interface_declaration()?;
+                // 消耗分号
+                if self.current_token_eq(&Token::SemiColon) {
+                    self.consume(Token::SemiColon)?;
+                }
+                return Ok(ASTNode::ExportDeclaration {
+                    exports: Vec::new(),
+                    is_default: false,
+                    module_specifier: None,
+                    inline_declaration: Some(Box::new(declaration)),
+                });
+            }
+            Token::Enum => {
+                let declaration = self.parse_enum_declaration()?;
+                return Ok(ASTNode::ExportDeclaration {
+                    exports: Vec::new(),
+                    is_default: false,
+                    module_specifier: None,
+                    inline_declaration: Some(Box::new(declaration)),
+                });
+            }
+            _ => bail!("Invalid export declaration"),
+        }
+    }
+
     #[allow(dead_code)]
     /// 解析初始化器表达式（不解析二元运算符）
     /// 用于变量声明的初始化器，避免错误地消耗 for 循环中的比较运算符
@@ -3768,6 +4178,127 @@ impl CodeEmitter {
                     }
                 }
                 self.output.push_str("\n};\n");
+            }
+            ASTNode::ImportDeclaration { module_specifier, imports, is_default, namespace_alias } => {
+                // 发射 import 语句
+                self.output.push_str("import ");
+
+                // 命名空间导入
+                if let Some(alias) = namespace_alias {
+                    self.output.push_str("* as ");
+                    self.output.push_str(alias);
+                    self.output.push_str(" from ");
+                    self.output.push_str(module_specifier);
+                    self.output.push_str(";\n");
+                    return;
+                }
+
+                // 混合导入（默认 + 命名）
+                if *is_default && !imports.is_empty() {
+                    for (i, import) in imports.iter().enumerate() {
+                        if i > 0 {
+                            self.output.push_str(", ");
+                        }
+                        if import.is_default {
+                            self.output.push_str(&import.imported);
+                        } else {
+                            self.output.push_str("{ ");
+                            self.output.push_str(&import.imported);
+                            if let Some(alias) = &import.alias {
+                                self.output.push_str(" as ");
+                                self.output.push_str(alias);
+                            }
+                            self.output.push_str(" }");
+                        }
+                    }
+                    self.output.push_str(" from ");
+                    self.output.push_str(module_specifier);
+                    self.output.push_str(";\n");
+                    return;
+                }
+
+                // 命名导入
+                if !imports.is_empty() {
+                    self.output.push_str("{ ");
+                    for (i, import) in imports.iter().enumerate() {
+                        if i > 0 {
+                            self.output.push_str(", ");
+                        }
+                        self.output.push_str(&import.imported);
+                        if let Some(alias) = &import.alias {
+                            self.output.push_str(" as ");
+                            self.output.push_str(alias);
+                        }
+                    }
+                    self.output.push_str(" } from ");
+                    self.output.push_str(module_specifier);
+                    self.output.push_str(";\n");
+                    return;
+                }
+
+                // 副作用导入
+                self.output.push_str(module_specifier);
+                self.output.push_str(";\n");
+            }
+            ASTNode::ExportDeclaration { exports, is_default, module_specifier, inline_declaration } => {
+                self.output.push_str("export ");
+
+                // 默认导出
+                if *is_default {
+                    self.output.push_str("default ");
+                    if let Some(decl) = inline_declaration {
+                        self.emit_node(decl);
+                    }
+                    return;
+                }
+
+                // 重新导出 from
+                if let Some(specifier) = module_specifier {
+                    if exports.is_empty() {
+                        // export * from "module"
+                        self.output.push_str("* from ");
+                        self.output.push_str(specifier);
+                        self.output.push_str(";\n");
+                    } else {
+                        self.output.push_str("{ ");
+                        for (i, export) in exports.iter().enumerate() {
+                            if i > 0 {
+                                self.output.push_str(", ");
+                            }
+                            self.output.push_str(&export.name);
+                            if let Some(alias) = &export.alias {
+                                self.output.push_str(" as ");
+                                self.output.push_str(alias);
+                            }
+                        }
+                        self.output.push_str(" } from ");
+                        self.output.push_str(specifier);
+                        self.output.push_str(";\n");
+                    }
+                    return;
+                }
+
+                // 命名导出
+                if !exports.is_empty() {
+                    self.output.push_str("{ ");
+                    for (i, export) in exports.iter().enumerate() {
+                        if i > 0 {
+                            self.output.push_str(", ");
+                        }
+                        self.output.push_str(&export.name);
+                        if let Some(alias) = &export.alias {
+                            self.output.push_str(" as ");
+                            self.output.push_str(alias);
+                        }
+                    }
+                    self.output.push_str(" };\n");
+                    return;
+                }
+
+                // 内联导出声明
+                if let Some(decl) = inline_declaration {
+                    self.emit_node(decl);
+                }
             }
             ASTNode::Expression(expr) => {
                 self.emit_expression(expr);
@@ -5359,6 +5890,238 @@ class Animal {
                 // Note: emitter outputs without spaces: {name, age}
                 assert!(result.js_code.contains("greet({name, age})"),
                     "Should contain destructuring param: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_import_statement() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test named import
+        let source = r#"import { a, b } from "module";"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("import"),
+                    "Should contain import: {}", result.js_code);
+                assert!(result.js_code.contains("{ a, b }"),
+                    "Should contain {{ a, b }}: {}", result.js_code);
+                assert!(result.js_code.contains("from"),
+                    "Should contain from: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_import_default() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test default import
+        let source = r#"import foo from "module";"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("import"),
+                    "Should contain import: {}", result.js_code);
+                assert!(result.js_code.contains("foo"),
+                    "Should contain foo: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_import_namespace() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test namespace import
+        let source = r#"import * as utils from "module";"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("import"),
+                    "Should contain import: {}", result.js_code);
+                assert!(result.js_code.contains("* as utils"),
+                    "Should contain * as utils: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_import_side_effect() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test side-effect import
+        let source = r#"import "module";"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("import"),
+                    "Should contain import: {}", result.js_code);
+                assert!(result.js_code.contains("module"),
+                    "Should contain module: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_import_with_alias() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test import with alias
+        let source = r#"import { original as alias } from "module";"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("import"),
+                    "Should contain import: {}", result.js_code);
+                assert!(result.js_code.contains("original as alias"),
+                    "Should contain original as alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_export_named() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test named export
+        let source = r#"export { a, b };"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("export"),
+                    "Should contain export: {}", result.js_code);
+                assert!(result.js_code.contains("{ a, b }"),
+                    "Should contain {{ a, b }}: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_export_default() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test default export
+        let source = r#"export default foo;"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("export"),
+                    "Should contain export: {}", result.js_code);
+                assert!(result.js_code.contains("default"),
+                    "Should contain default: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_export_inline() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test inline export
+        let source = r#"export const x = 1;"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("export"),
+                    "Should contain export: {}", result.js_code);
+                assert!(result.js_code.contains("const"),
+                    "Should contain const: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_export_from() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test re-export from
+        let source = r#"export { a, b } from "module";"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("export"),
+                    "Should contain export: {}", result.js_code);
+                assert!(result.js_code.contains("from"),
+                    "Should contain from: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_export_all_from() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test export all from
+        let source = r#"export * from "module";"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("export"),
+                    "Should contain export: {}", result.js_code);
+                assert!(result.js_code.contains("*"),
+                    "Should contain *: {}", result.js_code);
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
