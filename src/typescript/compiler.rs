@@ -3961,26 +3961,139 @@ impl Parser {
         Ok(ASTExpression::ArrayExpression { elements })
     }
     fn parse_type_annotation(&mut self) -> Option<String> {
-        self.parse_union_type()
+        // 检查是否是对象类型字面量
+        let first_type = if self.current_token_eq(&Token::LBrace) {
+            self.parse_object_type()
+        } else {
+            self.parse_basic_type()
+        }?;
+
+        // 处理 & 和 | 操作符
+        let mut types = vec![first_type];
+        let mut operators = Vec::new();
+
+        while self.current_token_eq(&Token::Ampersand) || self.current_token_eq(&Token::Pipe) {
+            let op = if self.current_token_eq(&Token::Ampersand) {
+                self.advance();
+                "&"
+            } else {
+                self.advance();
+                "|"
+            };
+            operators.push(op.to_string());
+
+            // 解析下一个类型
+            let next_type = if self.current_token_eq(&Token::LBrace) {
+                self.parse_object_type()
+            } else {
+                self.parse_basic_type()
+            };
+
+            if let Some(t) = next_type {
+                types.push(t);
+            } else {
+                break;
+            }
+        }
+
+        if types.len() == 1 {
+            Some(types[0].clone())
+        } else {
+            let mut result = types[0].clone();
+            for (i, op) in operators.iter().enumerate() {
+                result.push(' ');
+                result.push_str(op);
+                result.push(' ');
+                result.push_str(&types[i + 1]);
+            }
+            Some(result)
+        }
+    }
+
+    /// 解析对象类型字面量: { name: string; age: number }
+    fn parse_object_type(&mut self) -> Option<String> {
+        self.consume(Token::LBrace).ok()?;
+        let mut properties = Vec::new();
+
+        // 解析属性列表
+        while !self.current_token_eq(&Token::RBrace) {
+            // 解析属性名（标识符或字符串）
+            let prop_name = match self.current_token() {
+                Token::Identifier(ref name) => {
+                    let name = name.clone();
+                    self.advance();
+                    name
+                }
+                Token::String(ref s, _) => {
+                    let s = s.clone();
+                    self.advance();
+                    format!("\"{}\"", s)
+                }
+                _ => break,
+            };
+
+            // 跳过可选运算符 ?
+            if self.current_token_eq(&Token::Question) {
+                self.advance();
+            }
+
+            // 期望冒号
+            self.consume(Token::Colon).ok()?;
+
+            // 解析属性类型
+            let prop_type = self.parse_union_type();
+
+            if let Some(t) = prop_type {
+                properties.push(format!("{}: {}", prop_name, t));
+            }
+
+            // 处理分号或逗号分隔符
+            if self.current_token_eq(&Token::SemiColon) {
+                self.advance();
+            } else if self.current_token_eq(&Token::Comma) {
+                self.advance();
+            }
+        }
+
+        self.consume(Token::RBrace).ok()?;
+        Some(format!("{{ {} }}", properties.join("; ")))
     }
     fn parse_union_type(&mut self) -> Option<String> {
         // 解析第一个类型
         let first_type: _ = self.parse_basic_type()?;
         let mut types = vec![first_type];
-        // 检查是否有更多类型（通过 | 连接）
-        while self.current_token_eq(&Token::Pipe) {
-            self.advance(); // 消耗 |
+        let mut operators = Vec::new();
+
+        // 检查是否有更多类型（通过 | 或 & 连接）
+        while self.current_token_eq(&Token::Pipe) || self.current_token_eq(&Token::Ampersand) {
+            let op = if self.current_token_eq(&Token::Pipe) {
+                self.advance();
+                "|"
+            } else {
+                self.advance();
+                "&"
+            };
+            operators.push(op.to_string());
             if let Some(t) = self.parse_basic_type() {
                 types.push(t);
             } else {
                 break;
             }
         }
-        // 如果只有一个类型，返回它；否则返回联合类型
+
+        // 如果只有一个类型，返回它；否则返回组合类型
         if types.len() == 1 {
             Some(types[0].clone())
         } else {
-            Some(types.join(" | "))
+            // 交替输出类型和运算符
+            let mut result = types[0].clone();
+            for (i, op) in operators.iter().enumerate() {
+                result.push(' ');
+                result.push_str(op);
+                result.push(' ');
+                result.push_str(&types[i + 1]);
+            }
+            Some(result)
         }
     }
     fn parse_basic_type(&mut self) -> Option<String> {
@@ -4026,6 +4139,10 @@ impl Parser {
                 let n: _ = n.clone();
                 self.advance();
                 Some(n)
+            }
+            Token::LBrace => {
+                // 处理嵌套对象类型，如 Array<{ name: string }>
+                self.parse_object_type()
             }
             _ => None,
         }
@@ -6306,6 +6423,116 @@ console.log(getStatus());
                 assert!(result.js_code.contains("function getStatus"),
                     "Should contain function: {}", result.js_code);
                 assert!(!result.js_code.contains("type Status"),
+                    "Should not contain 'type' keyword: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_object_type_literal() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test object type literal
+        let source = r#"type User = { name: string; age: number };"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Type alias should be skipped in JS output
+                assert!(!result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_object_type_with_optional() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test object type with optional properties
+        let source = r#"type Point = { x: number; y?: number };"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Type alias should be skipped in JS output
+                assert!(!result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_intersection_type() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test intersection type
+        let source = r#"type Person = { name: string } & { age: number };"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Type alias should be skipped in JS output
+                assert!(!result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_mixed_union_intersection() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test mixed union and intersection types
+        let source = r#"type Shape = { kind: "circle" } & { radius: number } | { kind: "square" } & { side: number };"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Type alias should be skipped in JS output
+                assert!(!result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_nested_object_type() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test nested object type
+        let source = r#"type Config = { nested: { value: string } };"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Type alias should be skipped in JS output
+                assert!(!result.js_code.contains("type"),
                     "Should not contain 'type' keyword: {}", result.js_code);
             }
             Err(e) => {
