@@ -270,7 +270,7 @@ impl TypeScriptCompiler {
             }
             // 处理标识符和关键字
             if ch.is_alphabetic() || ch == '_' || ch == '$' {
-                let start: _ = pos;
+                let start: usize = pos;
                 pos += 1;
                 while pos < chars.len() {
                     let c: _ = chars[pos];
@@ -929,6 +929,54 @@ impl TypeScriptCompiler {
         tokens.push(Token::Eof);
         Ok(tokens)
     }
+
+    /// 为 token 序列添加位置信息（简化实现）
+    /// 通过扫描源代码来确定每个 token 的大致位置
+    #[allow(dead_code)]
+    fn add_token_positions(&self, source: &str, tokens: &[Token]) -> Vec<SpannedToken> {
+        let chars: Vec<char> = source.chars().collect();
+        let mut spanned_tokens = Vec::new();
+        let mut source_pos = 0;
+
+        for token in tokens {
+            let start_pos = source_pos;
+
+            // 根据 token 类型推进 source_pos
+            match token {
+                Token::Identifier(s) | Token::Number(s) | Token::String(s, _) => {
+                    source_pos += s.len();
+                }
+                Token::TemplateStart | Token::TemplateMiddle | Token::TemplateEnd => {
+                    source_pos += 1;
+                }
+                _ => {
+                    source_pos += 1;
+                }
+            }
+
+            // 简单估算行/列位置
+            let line = chars[..start_pos.min(chars.len())]
+                .iter()
+                .filter(|&&c| c == '\n')
+                .count() as u32;
+
+            let last_newline = chars[..start_pos.min(chars.len())]
+                .iter()
+                .rposition(|&c| c == '\n')
+                .map_or(0, |p| p + 1);
+
+            let column = (start_pos.saturating_sub(last_newline)) as u32;
+
+            spanned_tokens.push(SpannedToken {
+                token: token.clone(),
+                location: SourceLocation { line, column },
+                end_location: SourceLocation { line, column: column.saturating_add(1) },
+            });
+        }
+
+        spanned_tokens
+    }
+
     /// 语法分析 - 生成抽象语法树
     fn syntax_analysis(&self, tokens: &[Token], _file_name: &str) -> Result<ASTNode> {
         // 简化的语法分析器
