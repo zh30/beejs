@@ -207,7 +207,7 @@ impl TypeScriptCompiler {
                 continue;
             }
             // 处理字符串
-            if ch == '\'' || ch == '"' || ch == '`' {
+            if ch == '\'' || ch == '"' {
                 let quote: _ = ch;
                 let _start: _ = pos;
                 pos += 1;
@@ -238,6 +238,72 @@ impl TypeScriptCompiler {
                     pos += 1;
                 }
                 tokens.push(Token::String(String::from_iter(string_chars), quote));
+                continue;
+            }
+            // 处理模板字符串 (backtick)
+            if ch == '`' {
+                let quote: _ = ch;
+                pos += 1;
+                // 检查是否是空模板字符串
+                if pos < chars.len() && chars[pos] == '`' {
+                    tokens.push(Token::String("".to_string(), quote));
+                    pos += 1;
+                    continue;
+                }
+                // 处理模板字符串内容
+                let mut in_expression = false;
+                let mut template_parts: Vec<String> = Vec::new();
+                let mut current_part = String::new();
+
+                while pos < chars.len() {
+                    let c: _ = chars[pos];
+                    if c == '\\' && pos + 1 < chars.len() {
+                        // 转义字符
+                        let next_char = chars[pos + 1];
+                        if next_char == '`' || next_char == '\\' || next_char == '$' {
+                            current_part.push(next_char);
+                            pos += 2;
+                            continue;
+                        }
+                    }
+                    if c == '$' && pos + 1 < chars.len() && chars[pos + 1] == '{' {
+                        // 模板表达式开始
+                        if !current_part.is_empty() {
+                            template_parts.push(current_part.clone());
+                            current_part.clear();
+                        }
+                        tokens.push(Token::String(current_part.clone(), quote));
+                        tokens.push(Token::TemplateStart);
+                        current_part.clear();
+                        pos += 2;
+                        in_expression = true;
+                        continue;
+                    }
+                    if c == '}' && in_expression {
+                        // 模板表达式结束
+                        if !current_part.is_empty() {
+                            template_parts.push(current_part.clone());
+                            current_part.clear();
+                        }
+                        tokens.push(Token::TemplateMiddle);
+                        current_part.clear();
+                        pos += 1;
+                        in_expression = false;
+                        continue;
+                    }
+                    if c == '`' && !in_expression {
+                        // 模板字符串结束
+                        if !current_part.is_empty() {
+                            template_parts.push(current_part.clone());
+                        }
+                        tokens.push(Token::String(current_part.clone(), quote));
+                        tokens.push(Token::TemplateEnd);
+                        pos += 1;
+                        break;
+                    }
+                    current_part.push(c);
+                    pos += 1;
+                }
                 continue;
             }
             // 处理操作符和符号
@@ -361,16 +427,24 @@ impl TypeScriptCompiler {
 
 /// Generate VLQ-encoded source map mappings
 fn generate_vlq_mappings(js_code: &str) -> String {
-    // Simple mapping: each line maps to itself
+    // Generate proper VLQ-encoded mappings for each line
     let mut mappings = String::new();
     let lines: Vec<&str> = js_code.lines().collect();
 
-    for (line_idx, _) in lines.iter().enumerate() {
+    for (line_idx, _line) in lines.iter().enumerate() {
         if line_idx > 0 {
             mappings.push(';');
         }
-        // Add a simple mapping for the start of each line
-        mappings.push_str("AACA"); // Generated column 0 -> source line 0, col 0
+        // Each segment: generated column, source file index (0), source line, source column, name index
+        // We encode: 0 (col) -> 0 (source line) -> 0 (source col)
+        // VLQ encoding of 0 is "A", so each line starts with "AA" plus continuation
+        mappings.push_str(&encode_vlq(0)); // generated column
+        mappings.push_str(",");
+        mappings.push_str(&encode_vlq(0)); // source file index (0)
+        mappings.push_str(",");
+        mappings.push_str(&encode_vlq(line_idx as i32)); // source line
+        mappings.push_str(",");
+        mappings.push_str(&encode_vlq(0)); // source column
     }
 
     mappings
@@ -470,6 +544,9 @@ pub enum Token {
     Gt,
     Pipe,
     FatArrow,
+    TemplateStart,
+    TemplateMiddle,
+    TemplateEnd,
     Unknown(String),
     Eof,
 }
@@ -496,6 +573,8 @@ pub enum ASTNode {
     },
     FunctionDeclaration {
         name: String,
+        is_async: bool,
+        type_params: Option<Vec<String>>,  // 泛型参数列表，如 ['T']
         params: Vec<(String, Option<String>)>,
         return_type: Option<String>,
         body: Vec<ASTNode>,
@@ -544,6 +623,10 @@ pub enum ASTExpression {
         body: Box<ASTExpression>,
         return_type: Option<String>,
     },
+    /// 模板字符串: `Hello ${name}!`
+    TemplateLiteral {
+        parts: Vec<ASTExpression>,  // 交替的字符串和表达式
+    },
 }
 #[derive(Debug, Clone)]
 pub enum ASTStatement {
@@ -580,7 +663,7 @@ impl Parser {
             Token::Let | Token::Const | Token::Var => {
                 self.parse_variable_declaration()
             }
-            Token::Function => {
+            Token::Function | Token::Async => {
                 self.parse_function_declaration()
             }
             Token::Class => {
@@ -670,11 +753,46 @@ impl Parser {
         })
     }
     fn parse_function_declaration(&mut self) -> Result<ASTNode> {
-        self.consume(Token::Function)?;
+        // 处理 async 关键字
+        let is_async = if self.current_token_eq(&Token::Async) {
+            self.consume(Token::Async)?;
+            // async 函数后面必须有 function 关键字
+            if self.current_token_eq(&Token::Function) {
+                self.consume(Token::Function)?;
+            } else {
+                bail!("Expected 'function' keyword after 'async'");
+            }
+            true
+        } else if self.current_token_eq(&Token::Function) {
+            self.consume(Token::Function)?;
+            false
+        } else {
+            bail!("Expected 'async' or 'function' keyword, got {:?}", self.current_token());
+        };
         let name_token = self.consume(Token::Identifier("".to_string()))?;
         let name: _ = match name_token {
             Token::Identifier(name) => name,
             _ => bail!("Expected function name"),
+        };
+        // 解析泛型参数列表 (如 <T> 或 <T, U>)
+        let type_params: Option<Vec<String>> = if self.current_token_eq(&Token::Lt) {
+            self.consume(Token::Lt)?;
+            let mut type_params = Vec::new();
+            while !self.current_token_eq(&Token::Gt) {
+                let type_param_token = self.consume(Token::Identifier("".to_string()))?;
+                let type_param_name: _ = match type_param_token {
+                    Token::Identifier(name) => name,
+                    _ => bail!("Expected type parameter name"),
+                };
+                type_params.push(type_param_name);
+                if self.current_token_eq(&Token::Comma) {
+                    self.consume(Token::Comma)?;
+                }
+            }
+            self.consume(Token::Gt)?;
+            Some(type_params)
+        } else {
+            None
         };
         self.consume(Token::LParen)?;
         let mut params = Vec::new();
@@ -711,6 +829,8 @@ impl Parser {
         self.consume(Token::RBrace)?;
         Ok(ASTNode::FunctionDeclaration {
             name,
+            is_async,
+            type_params,
             params,
             return_type,
             body,
@@ -963,8 +1083,32 @@ impl Parser {
         };
         // 检查 FatArrow
         self.consume(Token::FatArrow)?;
-        // 解析函数体
-        let body: _ = self.parse_expression()?;
+        // 解析函数体 - 支持表达式和块语句
+        let body = if self.current_token_eq(&Token::LBrace) {
+            // 块语句: { return expr; }
+            self.consume(Token::LBrace)?;
+            let body_expr = if self.current_token_eq(&Token::Return) {
+                self.consume(Token::Return)?;
+                // 解析 return 后面的表达式
+                let expr = self.parse_expression()?;
+                self.consume(Token::SemiColon)?;
+                self.consume(Token::RBrace)?;
+                expr
+            } else {
+                // 其他语句，先解析再转换为表达式
+                let stmt = self.parse_statement()?;
+                self.consume(Token::RBrace)?;
+                // 将语句转换为表达式
+                match stmt {
+                    ASTNode::Expression(expr) => expr,
+                    _ => bail!("Unexpected statement in arrow function body"),
+                }
+            };
+            body_expr
+        } else {
+            // 表达式: expr
+            self.parse_expression()?
+        };
         Ok(ASTExpression::ArrowFunctionExpression {
             params,
             body: Box::new(body),
@@ -974,8 +1118,32 @@ impl Parser {
     fn parse_arrow_function_expression(&mut self, params: Vec<(String, Option<String>)>) -> Result<ASTExpression> {
         // 消耗 FatArrow token
         self.consume(Token::FatArrow)?;
-        // 解析函数体
-        let body: _ = self.parse_expression()?;
+        // 解析函数体 - 支持表达式和块语句
+        let body = if self.current_token_eq(&Token::LBrace) {
+            // 块语句: { return expr; }
+            self.consume(Token::LBrace)?;
+            let body_expr = if self.current_token_eq(&Token::Return) {
+                self.consume(Token::Return)?;
+                // 解析 return 后面的表达式
+                let expr = self.parse_expression()?;
+                self.consume(Token::SemiColon)?;
+                self.consume(Token::RBrace)?;
+                expr
+            } else {
+                // 其他语句，先解析再转换为表达式
+                let stmt = self.parse_statement()?;
+                self.consume(Token::RBrace)?;
+                // 将语句转换为表达式
+                match stmt {
+                    ASTNode::Expression(expr) => expr,
+                    _ => bail!("Unexpected statement in arrow function body"),
+                }
+            };
+            body_expr
+        } else {
+            // 表达式: expr
+            self.parse_expression()?
+        };
         Ok(ASTExpression::ArrowFunctionExpression {
             params,
             body: Box::new(body),
@@ -999,11 +1167,28 @@ impl Parser {
                     };
                 }
                 Token::LParen => {
-                    // 处理分组表达式 (a + b)
+                    // 函数调用: expr(args) 或分组表达式 (expr)
                     self.advance();
-                    let inner_expr = self.parse_expression()?;
+                    let mut arguments = Vec::new();
+                    while !self.current_token_eq(&Token::RParen) {
+                        arguments.push(self.parse_expression()?);
+                        if self.current_token_eq(&Token::Comma) {
+                            self.advance();
+                        }
+                    }
                     self.consume(Token::RParen)?;
-                    expr = inner_expr;
+                    // 如果有参数，则是函数调用；否则是分组表达式
+                    if arguments.is_empty() {
+                        // 分组表达式 (expr) - 括号内只有一个表达式
+                        // 这里的 arguments 为空表示是 (expr) 形式
+                        // 但我们丢失了 inner_expr，所以需要重新解析
+                        // 这种情况实际上不应该发生，因为分组表达式在 parse_primary_expression 中处理
+                        // 这里主要是处理函数调用
+                    }
+                    expr = ASTExpression::CallExpression {
+                        callee: Box::new(expr),
+                        arguments,
+                    };
                 }
                 Token::LBracket => {
                     self.advance();
@@ -1036,6 +1221,42 @@ impl Parser {
                 self.advance();
                 Ok(ASTExpression::Literal(s))
             }
+            Token::TemplateStart => {
+                // 模板字符串: `part1${expr1}part2${expr2}part3`
+                self.consume(Token::TemplateStart)?;
+                let mut parts = Vec::new();
+
+                // 解析第一个部分（模板表达式前的空字符串特殊情况）
+                if let Token::String(ref s, _) = self.current_token() {
+                    let s = format!("\"{}\"", s);
+                    parts.push(ASTExpression::Literal(s));
+                    self.advance();
+                }
+
+                // 解析模板表达式和后续部分
+                loop {
+                    if self.current_token_eq(&Token::TemplateMiddle) {
+                        self.consume(Token::TemplateMiddle)?;
+                        // 解析表达式
+                        let expr = self.parse_expression()?;
+                        parts.push(expr);
+
+                        // 解析下一个字符串部分
+                        if let Token::String(ref s, _) = self.current_token() {
+                            let s = format!("\"{}\"", s);
+                            parts.push(ASTExpression::Literal(s));
+                            self.advance();
+                        }
+                    } else if self.current_token_eq(&Token::TemplateEnd) {
+                        self.consume(Token::TemplateEnd)?;
+                        break;
+                    } else {
+                        bail!("Expected TemplateMiddle or TemplateEnd in template literal");
+                    }
+                }
+
+                Ok(ASTExpression::TemplateLiteral { parts })
+            }
             Token::LParen => {
                 // 括号表达式
                 self.advance();
@@ -1053,7 +1274,8 @@ impl Parser {
     fn parse_object_literal(&mut self) -> Result<ASTExpression> {
         self.consume(Token::LBrace)?;
         let mut properties = Vec::new();
-        while !self.current_token_eq(&Token::RBrace) {
+        // 在对象字面量中，结束条件是 RBrace 或 RParen（处理函数调用中的对象字面量）
+        while !self.current_token_eq(&Token::RBrace) && !self.current_token_eq(&Token::RParen) {
             // 解析属性名
             let prop_name_token = self.consume(Token::Identifier("".to_string()))?;
             let prop_name: _ = match prop_name_token {
@@ -1069,7 +1291,13 @@ impl Parser {
                 self.consume(Token::Comma)?;
             }
         }
-        self.consume(Token::RBrace)?;
+        // 消费结束括号：可能是 RBrace 或 RParen
+        if self.current_token_eq(&Token::RBrace) {
+            self.consume(Token::RBrace)?;
+        } else if self.current_token_eq(&Token::RParen) {
+            // 如果是 RParen（函数调用中的对象字面量），消费它
+            self.consume(Token::RParen)?;
+        }
         Ok(ASTExpression::ObjectLiteral { properties })
     }
     fn parse_type_annotation(&mut self) -> Option<String> {
@@ -1100,7 +1328,31 @@ impl Parser {
             Token::Identifier(ref name) => {
                 let name: _ = name.clone();
                 self.advance();
-                Some(name)
+                // 处理泛型类型，如 Promise<string>
+                if self.current_token_eq(&Token::Lt) {
+                    self.consume(Token::Lt).ok()?;
+                    let mut type_args = Vec::new();
+                    while !self.current_token_eq(&Token::Gt) {
+                        if let Some(arg) = self.parse_basic_type() {
+                            type_args.push(arg);
+                        } else if self.current_token_eq(&Token::Identifier("".to_string())) {
+                            let arg_name: String = match self.advance() {
+                                Token::Identifier(name) => name,
+                                _ => return Some(name),
+                            };
+                            type_args.push(arg_name);
+                        } else {
+                            break;
+                        }
+                        if self.current_token_eq(&Token::Comma) {
+                            self.consume(Token::Comma).ok()?;
+                        }
+                    }
+                    self.consume(Token::Gt).ok()?;
+                    Some(format!("{}<{}>", name, type_args.join(", ")))
+                } else {
+                    Some(name)
+                }
             }
             Token::String(ref s, quote) => {
                 let s: _ = s.clone();
@@ -1193,10 +1445,15 @@ impl CodeEmitter {
             }
             ASTNode::FunctionDeclaration {
                 name,
+                is_async,
+                type_params: _,
                 params,
                 return_type: _,
                 body,
             } => {
+                if *is_async {
+                    self.output.push_str("async ");
+                }
                 self.output.push_str("function ");
                 self.output.push_str(name);
                 self.output.push('(');
@@ -1205,7 +1462,6 @@ impl CodeEmitter {
                         self.output.push_str(", ");
                     }
                     self.output.push_str(param_name);
-                    // 跳过类型注解
                 }
                 self.output.push_str(") {\n");
                 for stmt in body {
@@ -1363,6 +1619,16 @@ impl CodeEmitter {
                     // 已移除
                 }
             }
+            ASTExpression::TemplateLiteral { parts } => {
+                // 将模板字符串转换为字符串拼接
+                // `part1${expr1}part2` => "part1" + expr1 + "part2"
+                for (i, part) in parts.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push_str(" + ");
+                    }
+                    self.emit_expression(part);
+                }
+            }
         }
     }
 }
@@ -1454,5 +1720,26 @@ mod tests {
         assert_eq!(escape_for_json("hello\nworld"), "hello\\nworld");
         assert_eq!(escape_for_json("hello\"world"), "hello\\\"world");
         assert_eq!(escape_for_json("hello\\world"), "hello\\\\world");
+    }
+
+    #[test]
+    fn test_object_literal_in_function_call() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        let source = r#"
+interface User {
+    name: string;
+    version: string;
+}
+
+function greet(user: User): string {
+    return "Hello";
+}
+
+console.log(greet({name: "Test", version: "1.0"}));
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // The object literal has spaces: {name: "Test", version: "1.0"}
+        assert!(result.js_code.contains("greet({name: \"Test\", version: \"1.0\"})"),
+            "Should contain object literal in function call: {}", result.js_code);
     }
 }

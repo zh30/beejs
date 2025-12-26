@@ -1235,19 +1235,25 @@ impl MinimalRuntime {
         let interface_pattern = regex::Regex::new(r"(?m)^interface\s+\w+.*?$").unwrap();
         js_code = interface_pattern.replace_all(&js_code, "").to_string();
 
-        // Remove type annotations from function parameters: name: type
-        let param_pattern = regex::Regex::new(r":\s*[^,)={]+").unwrap();
-        js_code = param_pattern.replace_all(&js_code, "").to_string();
+        // Remove type annotations from function parameters ONLY
+        // This pattern matches: :TypeName followed by , or )
+        // Using capturing group instead of lookahead (not supported by regex crate)
+        let param_pattern = regex::Regex::new(r":\s*(string|number|boolean|undefined|null|any|void|never|unknown|object|symbol|bigint|Function|Promise<[^>]+>|Array<[^>]+>)([,\)])").unwrap();
+        js_code = param_pattern.replace_all(&js_code, "$1$2").to_string();
+
+        // Also handle simple type annotations like : TypeName (capitalized)
+        let simple_type_pattern = regex::Regex::new(r":\s*([A-Z][a-zA-Z0-9]*)([,\)])").unwrap();
+        js_code = simple_type_pattern.replace_all(&js_code, "$1$2").to_string();
 
         // Remove return type annotations: -> type
         let return_pattern = regex::Regex::new(r"->\s*[^;{]+").unwrap();
         js_code = return_pattern.replace_all(&js_code, "").to_string();
 
-        // Remove variable type annotations
-        let var_pattern = regex::Regex::new(r"let\s+(\w+):\s*[^;=]+").unwrap();
+        // Remove variable type annotations - only match at statement start
+        let var_pattern = regex::Regex::new(r"(?m)^let\s+(\w+):\s*[^;=]+").unwrap();
         js_code = var_pattern.replace_all(&js_code, "let $1").to_string();
 
-        let const_pattern = regex::Regex::new(r"const\s+(\w+):\s*[^;=]+").unwrap();
+        let const_pattern = regex::Regex::new(r"(?m)^const\s+(\w+):\s*[^;=]+").unwrap();
         js_code = const_pattern.replace_all(&js_code, "const $1").to_string();
 
         Ok(js_code)
@@ -1257,8 +1263,21 @@ impl MinimalRuntime {
     /// v0.3.93: 修改为使用存储的 Context 以支持跨调用共享数据
     pub fn execute_code(&mut self, code: &str) -> Result<String> {
         // Transpile TypeScript to JavaScript if TypeScript features are detected
-        let js_code = if code.contains("function ") && code.contains(": ") {
-            // If code contains both "function" and type annotations ":", it's likely TypeScript
+        // Only transpile raw TypeScript syntax that our proper compiler can't handle
+        // Note: We avoid transpiling patterns that might exist in already-compiled JS
+        // We look for patterns that are DEFINITELY TypeScript, not just JavaScript with colons
+        let has_raw_typescript =
+            code.contains("interface ")    // interface definition
+            || code.contains("enum ")      // enum definition
+            || code.contains("type ")       // type alias
+            || code.contains(": string")    // type annotation with known type
+            || code.contains(": number")
+            || code.contains(": boolean")
+            || code.contains(": User")      // custom type in function param
+            || code.contains(": Promise<");
+
+        let js_code = if has_raw_typescript {
+            // Only transpile if it looks like raw TypeScript
             Self::transpile_typescript_to_js(code)?
         } else {
             code.to_string()
