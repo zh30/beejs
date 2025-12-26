@@ -1,3 +1,39 @@
+### v0.3.124 实现模板字面量类型支持 (2025-12-27)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.124 新增功能
+- **模板字面量类型（Template Literal Types）**
+  - 支持 `` `prefix${Type}suffix` `` 基础语法
+  - 支持多个占位符 `` `user-${string}@${string}.com` ``
+  - 支持泛型类型参数 `` `${T}_clicked` ``
+  - 支持 API 路径模板 `` `/api/${string}/${string}` ``
+
+- **解析器增强**
+  - 修改 `parse_type_annotation()` 添加模板字面量类型检测
+  - 新增 `parse_template_literal_type()` 解析函数
+  - 处理 `TemplateStart`, `TemplateMiddle`, `TemplateEnd` token 序列
+
+#### v0.3.124 验证
+- ✅ `cargo test --lib` 117/117 通过 (+4)
+- ✅ 新增测试用例:
+  - `test_template_literal_type_basic`: 基础 `` `Hello ${string}` `` 语法
+  - `test_template_literal_type_multiple_placeholders`: 多占位符语法
+  - `test_template_literal_type_with_generic`: 泛型参数支持
+  - `test_template_literal_type_path`: API 路径模板
+- ✅ `cargo build --release` 成功编译
+- ✅ 无编译器警告
+
+#### v0.3.124 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+80/-0 行)
+  - 在 `parse_type_annotation()` 添加模板字面量类型检测
+  - 新增 `parse_template_literal_type()` 解析函数
+  - 添加 4 个测试用例
+
+#### v0.3.124 下一步计划
+- 继续完善 TypeScript 编译器功能
+- 实现 `infer` 关键字支持
+- 添加更多边界情况测试
+
 ### v0.3.123 实现条件类型支持 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 

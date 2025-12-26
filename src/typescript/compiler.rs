@@ -3975,6 +3975,11 @@ impl Parser {
         Ok(ASTExpression::ArrayExpression { elements })
     }
     fn parse_type_annotation(&mut self) -> Option<String> {
+        // 检查是否是模板字面量类型: `prefix${Type}suffix`
+        if self.current_token_eq(&Token::TemplateStart) {
+            return self.parse_template_literal_type();
+        }
+
         // 检查是否是对象类型字面量
         let is_lbrace = self.current_token_eq(&Token::LBrace);
         let first_type = if is_lbrace {
@@ -4191,6 +4196,56 @@ impl Parser {
         // 映射类型在转译后的 JS 中应被移除，这里返回空对象类型的占位符
         Some(String::new())
     }
+
+    /// 解析模板字面量类型: `prefix${Type}suffix`
+    /// 例如: `Hello ${string}`, `user-${string}@${string}.com`
+    fn parse_template_literal_type(&mut self) -> Option<String> {
+        // 消耗 TemplateStart
+        self.consume(Token::TemplateStart).ok()?;
+
+        loop {
+            match self.current_token() {
+                Token::String(_, _) => {
+                    // 字符串部分，跳过
+                    self.advance();
+                }
+                Token::TemplateMiddle => {
+                    // ${ 开始模板表达式
+                    self.consume(Token::TemplateMiddle).ok()?;
+
+                    // 解析类型表达式（跳过）
+                    let _expr_type = self.parse_union_type()?;
+
+                    // 消耗直到 TemplateEnd
+                    while !self.current_token_eq(&Token::TemplateEnd)
+                          && !self.current_token_eq(&Token::Eof)
+                          && !self.current_token_eq(&Token::SemiColon) {
+                        self.advance();
+                    }
+                    // 只有在找到 TemplateEnd 时才消耗它
+                    if self.current_token_eq(&Token::TemplateEnd) {
+                        self.consume(Token::TemplateEnd).ok()?;
+                    }
+                }
+                Token::TemplateEnd => {
+                    // 模板结束，不消耗，让调用者处理
+                    break;
+                }
+                Token::Eof | Token::SemiColon => {
+                    // 提前结束
+                    break;
+                }
+                _ => {
+                    // 其他 token，跳过
+                    self.advance();
+                }
+            }
+        }
+
+        // 模板字面量类型在转译后的 JS 中移除，这里返回占位符
+        Some(String::new())
+    }
+
     fn parse_union_type(&mut self) -> Option<String> {
         // 解析第一个类型
         let first_type: _ = self.parse_basic_type()?;
@@ -7047,6 +7102,90 @@ type ConfigType = typeof config;
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 assert!(!result.js_code.contains("type NonNullable"),
+                    "Should not contain type alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_template_literal_type_basic() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test basic template literal type: `Hello ${string}`
+        let source = r#"type Greeting = `Hello ${string}`;"#;
+        println!("\n========== Testing basic template literal type ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(!result.js_code.contains("type Greeting"),
+                    "Should not contain type alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_template_literal_type_multiple_placeholders() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test template literal type with multiple placeholders
+        let source = r#"type Email = `user-${string}@${string}.${string}`;"#;
+        println!("\n========== Testing template literal type with multiple placeholders ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(!result.js_code.contains("type Email"),
+                    "Should not contain type alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_template_literal_type_with_generic() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test template literal type with generic type parameter
+        let source = r#"type EventName<T> = `${T}_clicked`;"#;
+        println!("\n========== Testing template literal type with generic ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(!result.js_code.contains("type EventName"),
+                    "Should not contain type alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_template_literal_type_path() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test template literal type for API paths
+        let source = r#"type ApiPath = `/api/${string}/${string}`;"#;
+        println!("\n========== Testing template literal type for API paths ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(!result.js_code.contains("type ApiPath"),
                     "Should not contain type alias: {}", result.js_code);
             }
             Err(e) => {
