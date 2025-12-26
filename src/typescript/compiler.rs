@@ -724,7 +724,54 @@ impl Parser {
         let initializer: _ = if self.current_token_eq(&Token::Eq) {
             self.consume(Token::Eq)?;
             // 检查是否是箭头函数
-            if self.current_token_eq(&Token::LParen) || self.current_token_eq(&Token::Identifier("".to_string())) {
+            // 使用 lookahead 来检查是否是箭头函数，避免消耗 token
+            let is_arrow_fn = if self.current_token_eq(&Token::LParen) {
+                // 可能是 (params) => expr
+                true
+            } else if self.current_token_eq(&Token::Identifier("".to_string())) {
+                // 可能是 x => expr 或 ident<Type>(args)
+                // 向后看检查是否有 =>
+                let mut lookahead = self.position;
+                let mut depth = 0;
+                let mut found_arrow = false;
+                while lookahead < self.tokens.len() {
+                    match &self.tokens[lookahead] {
+                        Token::Lt => {
+                            depth += 1;
+                            lookahead += 1;
+                        }
+                        Token::Gt => {
+                            if depth > 0 {
+                                depth -= 1;
+                                lookahead += 1;
+                            } else {
+                                // 找到 > 不是在泛型中，可能是比较运算符
+                                break;
+                            }
+                        }
+                        Token::FatArrow => {
+                            found_arrow = true;
+                            break;
+                        }
+                        Token::LParen | Token::LBracket | Token::Dot => {
+                            // 这些 token 表明不是箭头函数
+                            break;
+                        }
+                        Token::SemiColon | Token::Comma | Token::RBrace | Token::RParen => {
+                            // 这些 token 表明表达式结束
+                            break;
+                        }
+                        _ => {
+                            lookahead += 1;
+                        }
+                    }
+                }
+                found_arrow
+            } else {
+                false
+            };
+
+            if is_arrow_fn {
                 // 这可能是箭头函数
                 match self.parse_arrow_function_from_assignment() {
                     Ok(expr) => Some(Box::new(ASTNode::Expression(expr))),
@@ -933,6 +980,78 @@ impl Parser {
     fn parse_expression(&mut self) -> Result<ASTExpression> {
         // 解析主表达式 (标识符、字面量、括号表达式)
         let mut expr = self.parse_primary_expression()?;
+
+        // 在检查箭头函数之前，先处理泛型类型参数调用
+        // 例如: identity<string>("hello")
+        // 通过检查 < 后面是否有标识符、> 和 ( 来判断是否是泛型调用
+        if self.current_token_eq(&Token::Lt) {
+            // 简单的启发式：如果 < 后面是标识符，> 后面是 (，则是泛型调用
+            let mut lookahead = self.position;
+            let mut depth = 0;
+            let mut found_type_args = false;
+
+            // 快速扫描检查是否是 <Type> 或 <T, U> 后面跟着 (
+            while lookahead < self.tokens.len() {
+                match &self.tokens[lookahead] {
+                    Token::Lt => {
+                        if depth == 0 { depth = 1; }
+                        else { depth += 1; }
+                        lookahead += 1;
+                    }
+                    Token::Gt if depth > 0 => {
+                        depth -= 1;
+                        if depth == 0 {
+                            // 找到完整的 <...>
+                            lookahead += 1;
+                            // 检查是否是 (
+                            if lookahead < self.tokens.len() && matches!(self.tokens[lookahead], Token::LParen) {
+                                found_type_args = true;
+                            }
+                            break;
+                        }
+                        lookahead += 1;
+                    }
+                    Token::Comma | Token::Identifier(_) if depth > 0 => {
+                        lookahead += 1;
+                    }
+                    _ => {
+                        if depth == 0 { break; }
+                        lookahead += 1;
+                    }
+                }
+            }
+
+            // 如果是泛型调用，则处理
+            if found_type_args {
+                // 消费 < Type >
+                self.consume(Token::Lt)?;
+                let mut depth = 1;
+                while depth > 0 && !self.is_at_end() {
+                    match self.current_token() {
+                        Token::Lt => { depth += 1; self.advance(); }
+                        Token::Gt => { depth -= 1; if depth > 0 { self.advance(); } else { self.advance(); } }
+                        _ => { self.advance(); }
+                    }
+                }
+                // 处理函数调用
+                if self.current_token_eq(&Token::LParen) {
+                    self.advance();
+                    let mut arguments = Vec::new();
+                    while !self.current_token_eq(&Token::RParen) {
+                        arguments.push(self.parse_expression()?);
+                        if self.current_token_eq(&Token::Comma) {
+                            self.advance();
+                        }
+                    }
+                    self.consume(Token::RParen)?;
+                    expr = ASTExpression::CallExpression {
+                        callee: Box::new(expr),
+                        arguments,
+                    };
+                }
+            }
+        }
+
         // 处理箭头函数
         if self.current_token_eq(&Token::FatArrow) {
             // 检查是否是带括号的参数列表
@@ -998,8 +1117,7 @@ impl Parser {
                 }
                 // 二元运算符
                 Token::Plus | Token::Minus | Token::Star | Token::Slash |
-                Token::EqEq | Token::EqEqEq | Token::NotEq | Token::NotEqEq |
-                Token::Lt | Token::Gt => {
+                Token::EqEq | Token::EqEqEq | Token::NotEq | Token::NotEqEq => {
                     let op: _ = match self.current_token() {
                         Token::Plus => "+",
                         Token::Minus => "-",
@@ -1009,8 +1127,6 @@ impl Parser {
                         Token::EqEqEq => "===",
                         Token::NotEq => "!=",
                         Token::NotEqEq => "!==",
-                        Token::Lt => "<",
-                        Token::Gt => ">",
                         _ => unreachable!(),
                     };
                     self.advance();
@@ -1332,18 +1448,20 @@ impl Parser {
                 if self.current_token_eq(&Token::Lt) {
                     self.consume(Token::Lt).ok()?;
                     let mut type_args = Vec::new();
+                    // 循环解析类型参数，直到遇到 >
                     while !self.current_token_eq(&Token::Gt) {
-                        if let Some(arg) = self.parse_basic_type() {
+                        // 检查是否是基本类型（标识符）
+                        if let Token::Identifier(ref arg_name) = self.current_token() {
+                            type_args.push(arg_name.clone());
+                            self.advance();
+                        } else if let Some(arg) = self.parse_basic_type() {
+                            // 嵌套泛型或其他复杂类型
                             type_args.push(arg);
-                        } else if self.current_token_eq(&Token::Identifier("".to_string())) {
-                            let arg_name: String = match self.advance() {
-                                Token::Identifier(name) => name,
-                                _ => return Some(name),
-                            };
-                            type_args.push(arg_name);
                         } else {
+                            // 不是有效的类型参数，退出循环
                             break;
                         }
+                        // 处理逗号分隔符
                         if self.current_token_eq(&Token::Comma) {
                             self.consume(Token::Comma).ok()?;
                         }
@@ -1741,5 +1859,54 @@ console.log(greet({name: "Test", version: "1.0"}));
         // The object literal has spaces: {name: "Test", version: "1.0"}
         assert!(result.js_code.contains("greet({name: \"Test\", version: \"1.0\"})"),
             "Should contain object literal in function call: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_generic_return_type() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test Promise<string> return type
+        let source = r#"
+async function fetchData(): Promise<string> {
+    return "Data loaded!";
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors and produce valid JS
+        assert!(result.js_code.contains("async function fetchData"),
+            "Should contain async function: {}", result.js_code);
+        assert!(result.js_code.contains("return \"Data loaded!\""),
+            "Should contain return statement: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_generic_function() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test generic function
+        let source = r#"
+function identity<T>(arg: T): T {
+    return arg;
+}
+
+let result = identity<string>("hello");
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("function identity"),
+            "Should contain function: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_async_function_return_type() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test async function with Promise return type
+        let source = r#"
+async function fetchData(): Promise<string> {
+    return "Data loaded!";
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("async function fetchData"),
+            "Should contain async function: {}", result.js_code);
+        assert!(result.js_code.contains("return \"Data loaded!\""),
+            "Should contain return statement: {}", result.js_code);
     }
 }
