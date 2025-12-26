@@ -71,6 +71,68 @@
 - 创建浏览器客户端脚本接收热重载事件
 
 
+### v0.3.106 集成 WebSocket 热重载到 watch 模式 (2025-12-26)
+**进度**: 热重载 | ✅ 已完成
+
+#### v0.3.106 新增功能
+- **WebSocket CLI 集成**
+  - 添加 `--websocket-port` / `-p` 选项到 `beejs run` 命令
+  - 默认端口 9999，可自定义
+  - 与 `--watch` 和 `--debounce` 组合使用
+
+- **Watch 模式 WebSocket 广播**
+  - 在 watch 循环中启动 WebSocket 服务器
+  - 文件变化时自动广播 `reload` 事件到所有连接的客户端
+  - 异步处理连接，不阻塞文件监控
+
+- **浏览器热重载客户端**
+  - 创建 `hot-reload-client.js` 浏览器脚本
+  - 自动连接 WebSocket 服务器
+  - 支持自动页面刷新和自定义回调
+  - 自动重连机制（最多 10 次尝试）
+
+#### v0.3.106 代码变更
+- **修改文件**: `src/main.rs` (+45 行)
+  - 添加 `#[tokio::main]` 异步运行时
+  - 为 `Run` 命令添加 `websocket_port` 字段
+  - 实现 WebSocket 服务器启动和事件广播
+
+- **修改文件**: `src/watcher_websocket.rs` (+1 行)
+  - 为 `WebSocketHotReloader` 添加 `#[derive(Clone)]`
+
+- **新增文件**: `examples/hot-reload-client.js` (+200 行)
+  - 浏览器端热重载客户端类
+  - 支持连接管理、事件处理、自动重连
+
+- **新增文件**: `examples/demo-hot-reload.js` (+25 行)
+  - 热重载演示脚本
+
+- **新增文件**: `examples/demo-hot-reload.html` (+150 行)
+  - 热重载演示 HTML 页面
+
+#### v0.3.106 使用示例
+```bash
+# 启动热重载模式（默认端口 9999）
+beejs run index.js --watch
+
+# 自定义 WebSocket 端口
+beejs run index.js --watch -p 8888
+
+# 完整配置示例
+beejs run index.js --watch --debounce 200 -p 9999
+```
+
+#### v0.3.106 验证
+- ✅ `cargo build --release` 成功
+- ✅ `cargo test --lib` 23/23 通过
+- ✅ CLI 帮助显示新选项
+
+#### v0.3.106 下一步计划
+- 完善 npm registry 集成
+- 增强 TypeScript 转译支持
+- 添加 source map 支持
+
+
 ### v0.3.100 实现热重载功能 (2025-12-26)
 **进度**: 开发体验 | ✅ 代码已完成
 

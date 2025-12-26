@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beejs Hot Reload Demo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+    }
+    .container {
+      text-align: center;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      max-width: 500px;
+    }
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 20px;
+      background: linear-gradient(90deg, #f9d423, #ff4e50);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .status {
+      margin: 20px 0;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+    }
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      margin: 10px 0;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 5px;
+    }
+    .status-label {
+      color: #aaa;
+    }
+    .status-value {
+      font-weight: bold;
+      color: #4ade80;
+    }
+    .status-value.error {
+      color: #ef4444;
+    }
+    .status-value.pending {
+      color: #facc15;
+    }
+    .info {
+      margin-top: 30px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      text-align: left;
+    }
+    .info h3 {
+      margin-bottom: 15px;
+      color: #f9d423;
+    }
+    .info ul {
+      list-style: none;
+      padding: 0;
+    }
+    .info li {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .info li:last-child {
+      border-bottom: none;
+    }
+    code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'Fira Code', monospace;
+    }
+    .bee {
+      font-size: 4em;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="bee">🐝</div>
+    <h1>Beejs Hot Reload</h1>
+
+    <div class="status">
+      <div class="status-item">
+        <span class="status-label">Connection Status:</span>
+        <span id="connection-status" class="status-value pending">Connecting...</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Reload Count:</span>
+        <span id="reload-count" class="status-value">0</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Last Reload:</span>
+        <span id="last-reload" class="status-value">-</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Last Changed File:</span>
+        <span id="last-file" class="status-value">-</span>
+      </div>
+    </div>
+
+    <div class="info">
+      <h3>How to Use</h3>
+      <ul>
+        <li>1. Run: <code>beejs run demo-hot-reload.js --watch</code></li>
+        <li>2. Open this page in a browser</li>
+        <li>3. Edit <code>demo-hot-reload.js</code> and save</li>
+        <li>4. Page will auto-reload on file changes</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Beejs Hot Reload Client -->
+  <script src="hot-reload-client.js"></script>
+  <script>
+    // Initialize hot reload
+    const hotReload = new BeejsHotReload({
+      port: 9999,
+      host: 'localhost',
+      onConnect: (event) => {
+        document.getElementById('connection-status').textContent = 'Connected';
+        document.getElementById('connection-status').classList.remove('pending');
+        document.getElementById('connection-status').classList.add('connected');
+      },
+      onReload: (event) => {
+        document.getElementById('reload-count').textContent =
+          parseInt(document.getElementById('reload-count').textContent) + 1;
+        document.getElementById('last-reload').textContent = new Date().toLocaleTimeString();
+        document.getElementById('last-file').textContent =
+          event.file_path ? event.file_path.split('/').pop() : 'unknown';
+      },
+      onError: (error) => {
+        document.getElementById('connection-status').textContent = 'Error';
+        document.getElementById('connection-status').classList.remove('pending');
+        document.getElementById('connection-status').classList.add('error');
+      }
+    });
+
+    // Track reload count in sessionStorage
+    let reloadCount = sessionStorage.getItem('beejsReloadCount') || 0;
+    reloadCount = parseInt(reloadCount) + 1;
+    sessionStorage.setItem('beejsReloadCount', reloadCount);
+    document.getElementById('reload-count').textContent = reloadCount;
+  </script>
+</body>
+</html>

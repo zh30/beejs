@@ -49,6 +49,7 @@ pub struct HotReloadEvent {
 }
 
 /// WebSocket hot reload server
+#[derive(Debug, Clone)]
 pub struct WebSocketHotReloader {
     config: WebSocketConfig,
     /// Broadcast sender for sending events to all connected clients

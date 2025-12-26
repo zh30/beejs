@@ -5,6 +5,7 @@ use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
 use std::io::{self, Write};
 use std::path::{PathBuf, Path};
+use tokio;
 
 #[derive(Parser, Debug)]
 #[command(name = "beejs")]
@@ -34,6 +35,9 @@ enum Command {
         /// Debounce time in milliseconds for watch mode
         #[arg(long, default_value = "100")]
         debounce: u64,
+        /// WebSocket port for hot reload notifications
+        #[arg(short = 'p', long, default_value = "9999")]
+        websocket_port: u16,
     },
     /// Evaluate JavaScript code
     Eval {
@@ -145,7 +149,8 @@ fn read_and_compile_source(file: &Path) -> Result<String> {
     }
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // Handle subcommands
@@ -203,7 +208,7 @@ fn main() -> Result<()> {
             }
             return Ok(());
         }
-        Some(Command::Run { file, args, watch, debounce }) => {
+        Some(Command::Run { file, args, watch, debounce, websocket_port }) => {
             println!("🐝 Running Beejs on: {}", file.display());
             if !args.is_empty() {
                 println!("Args: {:?}", args);
@@ -220,16 +225,25 @@ fn main() -> Result<()> {
                     file.clone()
                 };
 
-                // Create a hot reloader
-                let config = beejs::watcher::WatcherConfigBuilder::new()
+                // Create WebSocket hot reloader
+                let ws_config = beejs::watcher_websocket::WebSocketConfig {
+                    port: websocket_port,
+                    host: "127.0.0.1".to_string(),
+                    channel_capacity: 100,
+                };
+                let ws_reloader = beejs::watcher_websocket::WebSocketHotReloader::with_config(ws_config);
+
+                // Create a hot reloader for file watching
+                let watcher_config = beejs::watcher::WatcherConfigBuilder::new()
                     .debounce_ms(debounce)
                     .build();
-                let mut reloader = beejs::watcher::HotReloader::with_config(config);
+                let mut reloader = beejs::watcher::HotReloader::with_config(watcher_config);
 
                 let rx = reloader.watch(&watch_path)
                     .map_err(|e| anyhow::anyhow!("Failed to start watcher: {}", e))?;
 
                 println!("👀 Watching for changes in {:?}...", watch_path);
+                println!("🔌 WebSocket server ready on ws://127.0.0.1:{}", websocket_port);
 
                 // Initial execution
                 let execute_file = |file: &PathBuf| -> Result<()> {
@@ -255,11 +269,30 @@ fn main() -> Result<()> {
                 // Initial run
                 execute_file(&file)?;
 
+                // Start WebSocket server in background
+                let ws_reloader_clone = ws_reloader.clone();
+                let _ws_handle = tokio::spawn(async move {
+                    let _ = ws_reloader_clone.start().await;
+                });
+
+                // Give WebSocket server time to start
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
                 // Watch for changes
                 loop {
                     match rx.recv() {
                         Ok(change) => {
-                            println!("\n🔄 Detected change: {:?}", change.path.file_name());
+                            let file_name = change.path.file_name()
+                                .map(|n| n.to_string_lossy().to_string())
+                                .unwrap_or_else(|| "unknown".to_string());
+
+                            println!("\n🔄 Detected change: {}", file_name);
+
+                            // Broadcast via WebSocket
+                            ws_reloader.broadcast_reload(
+                                change.path.to_string_lossy().to_string(),
+                                "modified".to_string()
+                            );
 
                             // Clear console for better readability
                             print!("\x1B[2J\x1B[1;1H");
@@ -277,6 +310,9 @@ fn main() -> Result<()> {
                         }
                     }
                 }
+
+                // Stop WebSocket server
+                ws_reloader.stop();
             } else {
                 // Normal execution mode
                 let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
