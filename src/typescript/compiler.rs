@@ -979,8 +979,19 @@ pub enum ASTExpression {
         operator: String,
         is_prefix: bool,
     },
+    /// 对象属性：支持普通属性和计算属性名
+    /// 普通属性: `{ name: value }`
+    /// 计算属性: `{ [expr]: value }`
+    ObjectProperty {
+        /// 属性名：普通属性为 Some(identifier)，计算属性为 None（使用 key_expr）
+        name: Option<String>,
+        /// 计算属性名表达式：普通属性为 None，计算属性为 Some(expr)
+        key_expr: Option<Box<ASTExpression>>,
+        /// 属性值表达式
+        value: Box<ASTExpression>,
+    },
     ObjectLiteral {
-        properties: Vec<(String, ASTExpression)>,
+        properties: Vec<ASTExpression>,  // 使用 ObjectProperty 表达式
     },
     ArrowFunctionExpression {
         params: Vec<(String, Option<String>)>,
@@ -2846,19 +2857,19 @@ impl Parser {
             }
             Token::LBrace => {
                 // 对象字面量 vs 块语句
-                // 向前查看：如果后面是 Identifier: 则为对象字面量
+                // 向前查看：如果后面是 Identifier:、String: 或 [expr] 则为对象字面量
                 // 否则可能是箭头函数的块语句或其他
-                let mut lookahead = self.position + 1;
+                let lookahead = self.position + 1;
                 let mut is_object_literal = false;
 
                 // 简单向前查看：检查是否看起来像对象字面量
-                // 模式: { identifier : ... } 或 { string : ... }
-                while lookahead < self.tokens.len() {
+                // 模式: { identifier : ... } 或 { string : ... } 或 { [expr] : ... }
+                if lookahead < self.tokens.len() {
                     let next_token = &self.tokens[lookahead];
                     match next_token {
                         Token::RBrace | Token::RParen | Token::SemiColon | Token::Eof => {
-                            // 空的 {} 或以这些结尾 - 可能是对象字面量
-                            break;
+                            // 空的 {} - 可能是对象字面量
+                            is_object_literal = true;
                         }
                         Token::Identifier(_) | Token::String(_, _) => {
                             // 找到属性名，检查下一个是否是 :
@@ -2867,11 +2878,13 @@ impl Parser {
                                     is_object_literal = true;
                                 }
                             }
-                            break;
+                        }
+                        Token::LBracket => {
+                            // 计算属性名: { [expr] : ... } - 是对象字面量
+                            is_object_literal = true;
                         }
                         _ => {
                             // 其他 token，不是典型的对象字面量开头
-                            break;
                         }
                     }
                 }
@@ -2932,16 +2945,38 @@ impl Parser {
         let mut properties = Vec::new();
         // 在对象字面量中，结束条件是 RBrace 或 RParen（处理函数调用中的对象字面量）
         while !self.current_token_eq(&Token::RBrace) && !self.current_token_eq(&Token::RParen) {
-            // 解析属性名
-            let prop_name_token = self.consume_any_identifier()?;
-            let prop_name: _ = match prop_name_token {
-                Token::Identifier(name) => name,
-                _ => bail!("Expected property name"),
-            };
-            self.consume(Token::Colon)?;
-            // 解析属性值
-            let prop_value: _ = self.parse_expression()?;
-            properties.push((prop_name, prop_value));
+            // 检查是否是计算属性名 [expr]
+            if self.current_token_eq(&Token::LBracket) {
+                // 计算属性名: { [expr]: value }
+                self.consume(Token::LBracket)?;
+                let key_expr = self.parse_expression()?;
+                self.consume(Token::RBracket)?;
+                self.consume(Token::Colon)?;
+                let value = self.parse_expression()?;
+                properties.push(ASTExpression::ObjectProperty {
+                    name: None,
+                    key_expr: Some(Box::new(key_expr)),
+                    value: Box::new(value),
+                });
+            } else {
+                // 普通属性名: { name: value } 或 { "string": value }
+                let prop_name = self.consume_property_name()?;
+                let name_str = match prop_name {
+                    Token::Identifier(name) => name,
+                    Token::String(s, quote) => {
+                        // 字符串属性名需要保留引号
+                        format!("{}{}{}", quote, s, quote)
+                    }
+                    _ => bail!("Expected property name (identifier or string)"),
+                };
+                self.consume(Token::Colon)?;
+                let prop_value = self.parse_expression()?;
+                properties.push(ASTExpression::ObjectProperty {
+                    name: Some(name_str),
+                    key_expr: None,
+                    value: Box::new(prop_value),
+                });
+            }
             // 处理逗号分隔符
             if self.current_token_eq(&Token::Comma) {
                 self.consume(Token::Comma)?;
@@ -3086,6 +3121,13 @@ impl Parser {
             Ok(self.advance())
         } else {
             bail!("Expected identifier");
+        }
+    }
+    /// 消耗属性名（Identifier 或 String）
+    fn consume_property_name(&mut self) -> Result<Token> {
+        match self.current_token() {
+            Token::Identifier(_) | Token::String(_, _) => Ok(self.advance()),
+            _ => bail!("Expected property name (identifier or string)"),
         }
     }
     fn current_token(&self) -> &Token {
@@ -3450,15 +3492,43 @@ impl CodeEmitter {
                 self.emit_expression(index);
                 self.output.push(']');
             }
+            ASTExpression::ObjectProperty { name, key_expr, value } => {
+                // 对象属性（用于对象字面量内部）
+                if let Some(expr) = key_expr {
+                    self.output.push('[');
+                    self.emit_expression(expr);
+                    self.output.push(']');
+                } else if let Some(n) = name {
+                    self.output.push_str(n);
+                }
+                self.output.push_str(": ");
+                self.emit_expression(value);
+            }
             ASTExpression::ObjectLiteral { properties } => {
                 self.output.push('{');
-                for (i, (name, value)) in properties.iter().enumerate() {
+                for (i, prop) in properties.iter().enumerate() {
                     if i > 0 {
                         self.output.push_str(", ");
                     }
-                    self.output.push_str(name);
-                    self.output.push_str(": ");
-                    self.emit_expression(value);
+                    match prop {
+                        ASTExpression::ObjectProperty { name, key_expr, value } => {
+                            if let Some(expr) = key_expr {
+                                // 计算属性名: [expr]
+                                self.output.push('[');
+                                self.emit_expression(expr);
+                                self.output.push(']');
+                            } else if let Some(n) = name {
+                                // 普通属性名: name
+                                self.output.push_str(n);
+                            }
+                            self.output.push_str(": ");
+                            self.emit_expression(value);
+                        }
+                        _ => {
+                            // 降级处理：尝试作为普通表达式输出
+                            self.emit_expression(prop);
+                        }
+                    }
                 }
                 self.output.push('}');
             }
@@ -3660,6 +3730,46 @@ console.log(greet({name: "Test", version: "1.0"}));
         // The object literal has spaces: {name: "Test", version: "1.0"}
         assert!(result.js_code.contains("greet({name: \"Test\", version: \"1.0\"})"),
             "Should contain object literal in function call: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_computed_property_name() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test computed property names: { [expr]: value }
+        let source = r#"
+const key = "name";
+const obj = {
+    [key]: "value",
+    ["static"]: "static value",
+    [1 + 1]: "computed number"
+};
+console.log(obj);
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("[key]"),
+            "Should contain computed property [key]: {}", result.js_code);
+        assert!(result.js_code.contains("[\"static\"]"),
+            "Should contain computed property [\"static\"]: {}", result.js_code);
+        assert!(result.js_code.contains("[1 + 1]"),
+            "Should contain computed property [1 + 1]: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_string_literal_property() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test string literal as property name
+        let source = r#"
+const obj = {
+    "normal-key": "value1",
+    "another-key": "value2"
+};
+console.log(obj);
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("\"normal-key\""),
+            "Should contain string property name: {}", result.js_code);
     }
 
     #[test]

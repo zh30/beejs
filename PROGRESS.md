@@ -1,3 +1,39 @@
+### v0.3.113 修复数字字面量词法分析和类成员解析 (2025-12-27)
+**进度**: TypeScript 编译器修复 | ✅ 已提交
+
+#### v0.3.113 修复内容
+- **词法分析器修复**
+  - 修复小数数字解析，添加 `.` 小数点和 `e`/`E` 指数部分支持
+  - 例如: `3.14` 现在正确解析为单个 `Number("3.14")` token
+  - 之前错误地解析为 `Number("3")` + `Dot` + `Number("14")`
+
+- **类成员解析修复**
+  - `parse_function_params_list` 添加空参数列表检查
+  - `MethodDeclaration` 添加 `kind` 字段区分 regular/getter/setter
+  - 发射器正确输出 `get`/`set` 关键字
+
+#### v0.3.113 验证
+- ✅ `cargo test --lib` 61/61 通过
+- ✅ 所有类成员测试通过:
+  - `test_class_with_method`
+  - `test_class_with_constructor`
+  - `test_class_with_getter_setter`
+  - `test_class_with_static_method`
+  - `test_class_with_async_method`
+  - `test_class_with_extends`
+
+#### v0.3.113 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+401/-42 行)
+  - 数字词法分析添加小数点和指数处理
+  - 类成员解析添加空参数处理
+  - 清理所有调试语句
+
+#### v0.3.113 下一步计划
+- 继续完善 TypeScript 编译器功能
+- 添加数组字面量和类继承完整支持
+- 实现完整的 Source Map 支持
+
+
 ### v0.3.112 清理 TypeScript 编译器警告并优化代码质量 (2025-12-27)
 **进度**: 代码质量 | ✅ 已提交
 
