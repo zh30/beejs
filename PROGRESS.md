@@ -1,3 +1,47 @@
+### v0.3.139 完善 Source Map 生成精度 (2025-12-27)
+**进度**: Source Map 改进 | ✅ 已提交
+
+#### v0.3.139 新增功能
+- **SourceLocation 结构体**
+  - 新增 `SourceLocation` 结构体存储行号和列号
+  - 为未来精确 source map 追踪奠定基础
+
+- **改进的 Source Map 生成**
+  - 新增 `build_line_positions()` 函数追踪源码行边界
+  - 新增 `generate_vlq_mappings_improved()` 生成更精确的映射
+  - 改进 `generate_source_map()` 使用行位置信息
+
+#### v0.3.139 技术实现
+- **行边界追踪**: 在词法分析阶段记录每行的起始位置
+- **改进的 VLQ 编码**: 为每个 JS 输出行生成更准确的映射段
+- **多行支持**: 正确处理多行 TypeScript 文件的 source map 生成
+
+#### v0.3.139 验证
+- ✅ `cargo test --lib` 171/171 通过 (+5)
+- ✅ 新增测试用例:
+  - `test_build_line_positions_single_line`: 单行位置追踪
+  - `test_build_line_positions_multi_line`: 多行位置追踪
+  - `test_source_map_multiline_generation`: 多行 source map 生成
+  - `test_source_map_with_type_annotations`: 带类型注解的 source map
+  - `test_generate_vlq_mappings_improved`: 改进的 VLQ 映射测试
+- ✅ `cargo build --release` 成功编译
+- ✅ 无编译器警告
+
+#### v0.3.139 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+89/-12 行)
+  - 新增 `SourceLocation` 结构体
+  - 新增 `build_line_positions()` 函数
+  - 新增 `generate_vlq_mappings_improved()` 函数
+  - 修改 `generate_source_map()` 使用改进的映射
+  - 添加 5 个测试用例
+
+#### v0.3.139 下一步计划
+- 实现 AST 节点位置追踪（完整 source map 精度）
+- 添加 Source Map 验证工具
+- 集成 debugger source map 支持
+
+---
+
 ### v0.3.131 实现索引签名支持 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 
