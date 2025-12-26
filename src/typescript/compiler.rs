@@ -2498,12 +2498,23 @@ impl Parser {
                 self.advance();
                 if let Token::Identifier(prop_name) = self.current_token().clone() {
                     self.advance();
-                    // Getter/setter 语法: get/set propertyName() { ... }
-                    // 需要先消费 () 参数列表
-                    if self.current_token_eq(&Token::LParen) {
-                        self.consume(Token::LParen)?;
-                        self.consume(Token::RParen)?;
+
+                    // Getter 语法: get propertyName(): Type { ... }
+                    // Setter 语法: set propertyName(value: Type) { ... }
+                    let params = if self.current_token_eq(&Token::LParen) {
+                        // 解析参数列表（setter 有参数）
+                        self.parse_function_params_list()?
+                    } else {
+                        vec![]
+                    };
+
+                    // Getter: 跳过返回类型注解 (如 `: number`)
+                    // Setter: 没有返回类型注解
+                    if keyword == "get" && self.current_token_eq(&Token::Colon) {
+                        self.consume(Token::Colon)?;
+                        self.parse_type_annotation();
                     }
+
                     // 解析方法体
                     let body = self.parse_block_body()?;
                     return Ok(Some(ASTNode::MethodDeclaration {
@@ -2511,7 +2522,7 @@ impl Parser {
                         kind: keyword,
                         is_async: false,
                         is_static,
-                        params: vec![],
+                        params,
                         body,
                     }));
                 }
@@ -6063,6 +6074,40 @@ class Calculator {
     }
 
     #[test]
+    fn test_constructor_with_type_annotations() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test class with constructor that has TypeScript type annotations
+        let source = r#"
+class Person {
+    private name: string;
+    private age: number;
+
+    constructor(name: string, age: number) {
+        this.name = name;
+        this.age = age;
+    }
+
+    greet(): string {
+        return `Hello, my name is ${this.name}`;
+    }
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        println!("Constructor with type annotations transpiled output:\n{}", result.js_code);
+        assert!(result.js_code.contains("class Person"),
+            "Should contain 'class Person': {}", result.js_code);
+        assert!(result.js_code.contains("constructor"),
+            "Should contain 'constructor': {}", result.js_code);
+        assert!(result.js_code.contains("greet"),
+            "Should contain 'greet': {}", result.js_code);
+        // Should not contain TypeScript type annotations
+        assert!(!result.js_code.contains(": string"),
+            "Should not contain type annotation ': string': {}", result.js_code);
+        assert!(!result.js_code.contains(": number"),
+            "Should not contain type annotation ': number': {}", result.js_code);
+    }
+
+    #[test]
     fn test_class_method_with_type_annotations() {
         let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
         // Test class with methods that have TypeScript type annotations
@@ -6133,6 +6178,41 @@ class Temperature {
         println!("Class with getter transpiled output:\n{}", result.js_code);
         assert!(result.js_code.contains("get value()"),
             "Should contain 'get value()': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_getter_setter_with_type_annotations() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test class with getter and setter that have TypeScript type annotations
+        let source = r#"
+class Rectangle {
+    private _width: number = 0;
+    private _height: number = 0;
+
+    get width(): number {
+        return this._width;
+    }
+
+    set width(value: number) {
+        this._width = value;
+    }
+
+    get area(): number {
+        return this._width * this._height;
+    }
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        println!("Getter/setter with type annotations transpiled output:\n{}", result.js_code);
+        assert!(result.js_code.contains("get width()"),
+            "Should contain 'get width()': {}", result.js_code);
+        assert!(result.js_code.contains("set width"),
+            "Should contain 'set width': {}", result.js_code);
+        assert!(result.js_code.contains("get area()"),
+            "Should contain 'get area()': {}", result.js_code);
+        // Should not contain TypeScript type annotations
+        assert!(!result.js_code.contains(": number"),
+            "Should not contain type annotation ': number': {}", result.js_code);
     }
 
     #[test]
