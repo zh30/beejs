@@ -293,10 +293,19 @@ fn http_agent_get_pool_stats_callback(
 }
 fn http_create_server_callback(
     scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
+    args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
+    let request_handler: _ = args.get(0);
+
     let server_obj: _ = v8::Object::new(scope);
+
+    // 如果提供了 request handler，立即存储到 _requestHandler
+    if request_handler.is_function() {
+        let handler_key = v8::String::new(scope, "_requestHandler").unwrap();
+        server_obj.set(scope, handler_key.into(), request_handler);
+    }
+
     // listen
     let listen_func: _ = v8::FunctionTemplate::new(scope, http_server_listen_callback);
     let listen_instance: _ = listen_func.get_function(scope).unwrap();
@@ -648,22 +657,32 @@ fn http_server_listen_callback(
 ) {
     let this: _ = args.this();
 
-    // 解析参数: listen(port, host, callback)
+    // 解析参数: 支持多种调用方式
+    // - listen(port)
+    // - listen(port, callback)
+    // - listen(port, host, callback)
     let port = args
         .get(0)
         .to_integer(scope)
         .map(|i| i.value() as u16)
         .unwrap_or(3000);
 
-    // host 是第二个参数
-    let host = args
-        .get(1)
-        .to_string(scope)
-        .map(|s| s.to_rust_string_lossy(scope))
-        .unwrap_or_else(|| "0.0.0.0".to_string());
-
-    // 第三个参数是回调函数
-    let callback: _ = args.get(2);
+    // 检查第二个参数是 host 还是 callback
+    let arg1 = args.get(1);
+    let (host, callback) = if arg1.is_undefined() || arg1.is_null() {
+        // 没有第二个参数
+        ("0.0.0.0".to_string(), args.get(2))
+    } else if arg1.is_function() {
+        // 第二个参数是回调函数: listen(port, callback)
+        ("0.0.0.0".to_string(), arg1)
+    } else if arg1.is_string() {
+        // 第二个参数是 host
+        let host_str = arg1.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "0.0.0.0".to_string());
+        (host_str, args.get(2))
+    } else {
+        // 默认值
+        ("0.0.0.0".to_string(), args.get(2))
+    };
 
     // v0.3.87: 创建服务器状态并启动真实 TCP 服务器
     let server_state = Arc::new(HttpServerState {
