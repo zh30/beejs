@@ -1,10 +1,10 @@
 //! Beejs - High-performance JavaScript/TypeScript runtime
 //! Built with Rust and V8
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
 use std::io::{self, Write};
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 
 #[derive(Parser, Debug)]
 #[command(name = "beejs")]
@@ -100,6 +100,51 @@ enum Command {
     },
 }
 
+/// Read and compile source code (JavaScript or TypeScript)
+fn read_and_compile_source(file: &Path) -> Result<String> {
+    let extension = file.extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase())
+        .unwrap_or_default();
+
+    let source = std::fs::read_to_string(file)
+        .map_err(|e| anyhow!("Failed to read file: {}", e))?;
+
+    // If it's a TypeScript file, compile it
+    if extension == "ts" || extension == "tsx" {
+        println!("📝 Compiling TypeScript file...");
+
+        match beejs::typescript::compile_typescript(&source, &file.to_string_lossy()) {
+            Ok(output) => {
+                // Show diagnostics (warnings/errors)
+                if !output.diagnostics.is_empty() {
+                    for diagnostic in &output.diagnostics {
+                        match diagnostic.severity {
+                            beejs::typescript::ErrorSeverity::Warning => {
+                                eprintln!("⚠️  Warning: {}", diagnostic.message);
+                            }
+                            beejs::typescript::ErrorSeverity::Error => {
+                                eprintln!("❌ Error: {}", diagnostic.message);
+                            }
+                            beejs::typescript::ErrorSeverity::Info => {
+                                eprintln!("ℹ️  Info: {}", diagnostic.message);
+                            }
+                        }
+                    }
+                }
+                println!("✅ TypeScript compiled successfully");
+                Ok(output.js_code)
+            }
+            Err(e) => {
+                Err(anyhow!("TypeScript compilation failed: {}", e))
+            }
+        }
+    } else {
+        // Return JavaScript as-is
+        Ok(source)
+    }
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
@@ -188,8 +233,7 @@ fn main() -> Result<()> {
 
                 // Initial execution
                 let execute_file = |file: &PathBuf| -> Result<()> {
-                    let code = std::fs::read_to_string(file)
-                        .map_err(|e| anyhow::anyhow!("Failed to read file: {}", e))?;
+                    let code = read_and_compile_source(file)?;
 
                     let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
                         .expect("Failed to create runtime");
@@ -238,8 +282,7 @@ fn main() -> Result<()> {
                 let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
                     .expect("Failed to create runtime");
 
-                let code = std::fs::read_to_string(&file)
-                    .map_err(|e| anyhow::anyhow!("Failed to read file: {}", e))?;
+                let code = read_and_compile_source(&file)?;
 
                 match runtime.execute_code(&code) {
                     Ok(result) => {

@@ -123,7 +123,7 @@ pub mod watcher;  // v0.3.100: Hot reload module - now enabled
 // pub mod simd;  // Temporarily disabled - compilation issues
 // pub mod package;  // Temporarily disabled - compilation issues
 // Stage 48: TypeScript 支持
-// pub mod typescript;  // Temporarily disabled - compilation issues
+pub mod typescript;  // v0.3.102: TypeScript 转译支持
 // pub mod stage_48_optimized_process_pool;
 // pub mod stage_48_ai_workload_optimizer;
 // Stage 56.4: Testing Framework
