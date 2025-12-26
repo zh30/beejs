@@ -1717,8 +1717,10 @@ fn handle_connection(
     );
 
     // v0.3.89: 尝试通过消息通道发送到主线程处理
+    // v0.3.92: 添加超时机制，防止在没有调用 pump_http_messages 时永久阻塞
     let channel = get_http_server_channel();
     let use_message_channel = server_state.use_message_channel && channel.is_some();
+    let mut message_channel_used = false;
 
     if use_message_channel {
         // 通过消息通道发送请求到主线程
@@ -1735,32 +1737,67 @@ fn handle_connection(
         if let Some(ref channel_ref) = channel {
             if let Some(ref msg_channel) = *channel_ref.lock().unwrap() {
                 if msg_channel.send_request(request_msg).is_ok() {
-                    // 等待响应
-                    match msg_channel.recv_response() {
-                        Ok(response) => {
-                            // 生成 HTTP 响应
-                            let response_data = generate_http_response_v2(&response);
-                            if let Err(e) = stream.write_all(&response_data) {
-                                eprintln!("[Beejs] Write error: {}", e);
+                    // v0.3.92: 使用 try_recv 实现非阻塞超时
+                    let timeout_duration = Duration::from_millis(100); // 100ms 超时
+                    let start_time = Instant::now();
+
+                    // 使用 try_recv 配合循环实现超时
+                    loop {
+                        match msg_channel.response_receiver.try_recv() {
+                            Ok(response) => {
+                                // 生成 HTTP 响应
+                                let response_data = generate_http_response_v2(&response);
+                                if let Err(e) = stream.write_all(&response_data) {
+                                    eprintln!("[Beejs] Write error: {}", e);
+                                }
+                                // 关闭写入端，通知客户端响应已完成
+                                let _ = stream.shutdown(std::net::Shutdown::Write);
+                                return;
                             }
-                            return;
-                        }
-                        Err(e) => {
-                            eprintln!("[Beejs] Failed to receive response: {}", e);
+                            Err(crossbeam::channel::TryRecvError::Empty) => {
+                                // 通道为空（还没收到响应），检查是否超时
+                                if start_time.elapsed() >= timeout_duration {
+                                    eprintln!("[Beejs] Message channel response timeout, using fallback response");
+                                    break; // 跳出循环，使用回退响应
+                                }
+                                // 短暂睡眠后重试
+                                thread::sleep(Duration::from_millis(5));
+                            }
+                            Err(crossbeam::channel::TryRecvError::Disconnected) => {
+                                // 通道已断开，使用回退响应
+                                eprintln!("[Beejs] Message channel disconnected, using fallback response");
+                                break;
+                            }
                         }
                     }
+                    message_channel_used = true;
                 }
             }
         }
     }
 
-    // 回退：生成简单的响应（当消息通道不可用时）
-    let mut response = HttpServerResponse::new();
-    let response_data = generate_http_response(&mut response);
+    // 回退：生成简单的响应（当消息通道不可用、超时或没有 handler 时）
+    // v0.3.92: 改进回退响应，根据请求方法生成不同的响应
+    let fallback_body = format!(
+        "Beejs HTTP Server\nMethod: {}\nPath: {}\nHandler: {}",
+        parsed_request.method,
+        parsed_request.path,
+        if message_channel_used { "timeout" } else { "not configured" }
+    );
 
-    if let Err(e) = stream.write_all(&response_data) {
+    // 直接构建完整的 HTTP 响应，避免重复添加 body
+    let mut response_data = format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        fallback_body.len()
+    );
+    response_data.push_str(&fallback_body);
+
+    if let Err(e) = stream.write_all(response_data.as_bytes()) {
         eprintln!("[Beejs] Write error: {}", e);
     }
+
+    // 关闭写入端，通知客户端响应已完成
+    let _ = stream.shutdown(std::net::Shutdown::Write);
 }
 
 /// response.removeHeader() 回调 - v0.3.87

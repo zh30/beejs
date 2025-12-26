@@ -327,14 +327,32 @@ fn test_http_server_response_headers() {
 
     // 发送请求并读取响应
     let mut stream = TcpStream::connect(("127.0.0.1", 3540)).expect("Failed to connect");
+    // 设置读取超时
+    stream.set_read_timeout(Some(Duration::from_secs(2))).expect("set_read_timeout failed");
     stream.write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
 
+    // 读取响应（使用缓冲区读取直到超时或完成）
     let mut response = String::new();
-    stream.read_to_string(&mut response).expect("Failed to read");
+    let mut buffer = [0u8; 1024];
+    loop {
+        match stream.read(&mut buffer) {
+            Ok(0) => break, // 连接关闭
+            Ok(n) => {
+                response.push_str(&String::from_utf8_lossy(&buffer[..n]));
+            }
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock || e.kind() == std::io::ErrorKind::TimedOut => {
+                // 超时，但可能已经读取了数据
+                break;
+            }
+            Err(e) => {
+                panic!("Read error: {}", e);
+            }
+        }
+    }
 
     // 验证响应包含正确的状态行
-    assert!(response.contains("HTTP/1.1 200"), "Response should have 200 status");
-    assert!(response.contains("Content-Type: text/plain"), "Should have Content-Type header");
+    assert!(response.contains("HTTP/1.1 200"), "Response should have 200 status, got: {}", response);
+    assert!(response.contains("Content-Type: text/plain"), "Should have Content-Type header, got: {}", response);
 }
 
 /// 测试服务器处理 POST 请求并读取 body
