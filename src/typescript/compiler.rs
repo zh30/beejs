@@ -2470,6 +2470,13 @@ impl Parser {
                 self.advance();
                 // 解析方法参数
                 let params = self.parse_function_params_list()?;
+
+                // 跳过返回类型注解 (如 `: Promise<number>`)
+                if self.current_token_eq(&Token::Colon) {
+                    self.consume(Token::Colon)?;
+                    self.parse_type_annotation();
+                }
+
                 // 解析方法主体
                 let body = self.parse_block_body()?;
                 return Ok(Some(ASTNode::MethodDeclaration {
@@ -2491,6 +2498,13 @@ impl Parser {
             if self.current_token_eq(&Token::LParen) {
                 // 解析方法参数
                 let params = self.parse_function_params_list()?;
+
+                // 跳过返回类型注解 (如 `: number`)
+                if self.current_token_eq(&Token::Colon) {
+                    self.consume(Token::Colon)?;
+                    self.parse_type_annotation();
+                }
+
                 // 解析方法主体
                 let body = self.parse_block_body()?;
                 return Ok(Some(ASTNode::MethodDeclaration {
@@ -5896,6 +5910,40 @@ class Calculator {
     }
 
     #[test]
+    fn test_class_method_with_type_annotations() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test class with methods that have TypeScript type annotations
+        let source = r#"
+class Calculator {
+    add(a: number, b: number): number {
+        return a + b;
+    }
+    multiply(x: number, y: number): number {
+        return x * y;
+    }
+    greet(name: string): string {
+        return "Hello, " + name;
+    }
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        println!("Class with typed methods transpiled output:\n{}", result.js_code);
+        assert!(result.js_code.contains("class Calculator"),
+            "Should contain 'class Calculator': {}", result.js_code);
+        assert!(result.js_code.contains("add("),
+            "Should contain 'add(' method: {}", result.js_code);
+        assert!(result.js_code.contains("multiply("),
+            "Should contain 'multiply(' method: {}", result.js_code);
+        assert!(result.js_code.contains("greet("),
+            "Should contain 'greet(' method: {}", result.js_code);
+        // Should not contain TypeScript type annotations
+        assert!(!result.js_code.contains(": number"),
+            "Should not contain type annotation ': number': {}", result.js_code);
+        assert!(!result.js_code.contains(": string"),
+            "Should not contain type annotation ': string': {}", result.js_code);
+    }
+
+    #[test]
     fn test_class_with_static_method() {
         let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
         // Test class with static method - using PI as method name
@@ -5950,6 +5998,34 @@ class DataFetcher {
         println!("Class with async method transpiled output:\n{}", result.js_code);
         assert!(result.js_code.contains("async fetchData"),
             "Should contain 'async fetchData': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_async_method_with_type_annotations() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test class with async method that has TypeScript type annotations
+        let source = r#"
+class DataFetcher {
+    async fetchData(url: string): Promise<string> {
+        const response = await fetch(url);
+        return response.text();
+    }
+    async getCount(): Promise<number> {
+        return 42;
+    }
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        println!("Async method with types transpiled output:\n{}", result.js_code);
+        assert!(result.js_code.contains("async fetchData"),
+            "Should contain 'async fetchData': {}", result.js_code);
+        assert!(result.js_code.contains("async getCount"),
+            "Should contain 'async getCount': {}", result.js_code);
+        // Should not contain TypeScript type annotations
+        assert!(!result.js_code.contains(": string"),
+            "Should not contain type annotation ': string': {}", result.js_code);
+        assert!(!result.js_code.contains(": Promise"),
+            "Should not contain type annotation ': Promise': {}", result.js_code);
     }
 
     #[test]
