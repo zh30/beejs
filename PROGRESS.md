@@ -1,3 +1,48 @@
+### v0.3.115 实现解构赋值语法支持 (2025-12-27)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.115 新增功能
+- **数组解构赋值**
+  - 添加 `DestructuringPattern` 和 `DestructuringDeclaration` AST 节点
+  - 支持 `const [a, b, c] = [1, 2, 3]` 语法
+  - 支持嵌套数组解构: `const [[a, b], c] = [[1, 2], 3]`
+  - 支持空位: `const [a, , c] = [1, 2, 3]`
+  - 支持展开运算符: `const [first, ...rest] = arr`
+
+- **对象解构赋值**
+  - 支持 `const { x, y } = { x: 1, y: 2 }` 语法
+  - 支持重命名: `const { a: alias } = { a: 1 }`
+  - 支持字符串属性名: `const { "key": value } = obj`
+  - 支持嵌套对象解构
+  - 支持展开运算符: `const { a, ...rest } = obj`
+
+- **代码质量改进**
+  - 添加 `ASTExpression::AssignmentExpression` 变体
+  - 重构解构模式解析逻辑
+
+#### v0.3.115 验证
+- ✅ `cargo test --lib` 69/69 通过 (+3)
+- ✅ 新增测试用例:
+  - `test_array_destructuring`: 基础数组解构
+  - `test_object_destructuring`: 基础对象解构
+  - `test_object_destructuring_with_alias`: 对象解构重命名
+- ✅ `cargo build --release` 成功编译
+
+#### v0.3.115 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+200/-20 行)
+  - 添加 `DestructuringPattern` 枚举 (Array, Object)
+  - 添加 `DestructuringProperty` 结构体
+  - 添加 `ASTNode::DestructuringDeclaration` 变体
+  - 实现 `parse_destructuring_pattern` 系列函数
+  - 实现 `emit_destructuring_pattern` 发射函数
+  - 添加三个测试用例
+
+#### v0.3.115 下一步计划
+- 继续完善 TypeScript 编译器功能
+- 实现解构赋值默认值支持
+- 添加更多边界情况测试
+
+
 ### v0.3.114 实现三元条件运算符解析和比较运算符补全 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 

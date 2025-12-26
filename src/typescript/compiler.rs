@@ -903,15 +903,61 @@ pub enum EnumValue {
     Number(u32),
     String(String),
 }
+
+/// 解构模式类型
+#[derive(Debug, Clone)]
+pub enum DestructuringPattern {
+    /// 数组解构: [a, b, c]
+    Array {
+        elements: Vec<Option<Box<ASTNode>>>,  // None 表示空位
+    },
+    /// 对象解构: { a, b, c }
+    Object {
+        properties: Vec<DestructuringProperty>,
+    },
+}
+
+/// 解构属性（用于对象解构）
+#[derive(Debug, Clone)]
+pub struct DestructuringProperty {
+    /// 属性名（用于从源对象提取）
+    pub key: String,
+    /// 变量名（绑定到的新变量名，如果与 key 不同）
+    /// 默认为 key，表示同名绑定
+    pub alias: Option<String>,
+    /// 默认值
+    pub default_value: Option<Box<ASTNode>>,
+    /// 是否是展开运算符 (...rest)
+    pub is_rest: bool,
+    /// 展开的目标（仅用于 rest）
+    pub rest_target: Option<String>,
+}
+
 /// 抽象语法树节点
 #[derive(Debug, Clone)]
 pub enum ASTNode {
     Program(Vec<ASTNode>),
     VariableDeclaration {
         kind: String,
+        /// 变量名（简单标识符）或解构模式
+        /// 简单标识符: `name`
+        /// 解构模式: `DestructuringPattern(Box<DestructuringPattern>)`
         name: String,
         type_annotation: Option<String>,
         initializer: Option<Box<ASTNode>>,
+    },
+    /// 解构模式（用于变量声明和参数）
+    DestructuringPattern {
+        /// 数组模式或对象模式
+        pattern: DestructuringPattern,
+    },
+    /// 解构赋值声明：const [a, b] = arr 或 const { a, b } = obj
+    DestructuringDeclaration {
+        kind: String,
+        /// 解构模式
+        pattern: DestructuringPattern,
+        /// 源表达式
+        source: Box<ASTExpression>,
     },
     FunctionDeclaration {
         name: String,
@@ -1014,6 +1060,11 @@ pub enum ASTExpression {
     },
     /// this 关键字
     ThisExpression,
+    /// 赋值表达式: a = b
+    AssignmentExpression {
+        left: Box<ASTExpression>,
+        right: Box<ASTExpression>,
+    },
     /// 数组表达式: [1, 2, 3]
     ArrayExpression {
         elements: Vec<Option<ASTExpression>>,  // None 表示空位或解构
@@ -1531,6 +1582,22 @@ impl Parser {
             _ => unreachable!(),
         };
 
+        // 检查是否是解构赋值
+        // 模式: const [a, b] = arr 或 const { a, b } = obj
+        if self.current_token_eq(&Token::LBracket) || self.current_token_eq(&Token::LBrace) {
+            // 解析解构模式
+            let pattern = self.parse_destructuring_pattern()?;
+            // 消耗等号
+            self.consume(Token::Eq)?;
+            // 解析源表达式
+            let source = self.parse_expression()?;
+            return Ok(ASTNode::DestructuringDeclaration {
+                kind: kind.to_string(),
+                pattern,
+                source: Box::new(source),
+            });
+        }
+
         // 解析第一个变量
         let (name, initializer) = self.parse_variable_name_and_initializer(kind)?;
 
@@ -1565,6 +1632,195 @@ impl Parser {
             type_annotation: None,
             initializer,
         })
+    }
+
+    /// 解析解构模式（数组或对象）
+    fn parse_destructuring_pattern(&mut self) -> Result<DestructuringPattern> {
+        if self.current_token_eq(&Token::LBracket) {
+            self.parse_array_destructuring_pattern()
+        } else if self.current_token_eq(&Token::LBrace) {
+            self.parse_object_destructuring_pattern()
+        } else {
+            bail!("Expected destructuring pattern ([ or {{)");
+        }
+    }
+
+    /// 解析数组解构模式: [a, b, c]
+    fn parse_array_destructuring_pattern(&mut self) -> Result<DestructuringPattern> {
+        self.consume(Token::LBracket)?;
+        let mut elements = Vec::new();
+
+        // 处理空数组模式 []
+        if self.current_token_eq(&Token::RBracket) {
+            self.consume(Token::RBracket)?;
+            return Ok(DestructuringPattern::Array { elements });
+        }
+
+        // 解析元素
+        while !self.current_token_eq(&Token::RBracket) {
+            if self.current_token_eq(&Token::DotDotDot) {
+                // 展开运算符: ...rest
+                self.consume(Token::DotDotDot)?;
+                // 解析 rest 标识符
+                let rest_name = if let Token::Identifier(name) = self.current_token() {
+                    let name = name.clone();
+                    self.advance();
+                    name
+                } else {
+                    bail!("Expected identifier after ...");
+                };
+                elements.push(Some(Box::new(ASTNode::DestructuringPattern {
+                    pattern: DestructuringPattern::Object {
+                        properties: vec![DestructuringProperty {
+                            key: "rest".to_string(),
+                            alias: Some(rest_name),
+                            default_value: None,
+                            is_rest: true,
+                            rest_target: None,
+                        }],
+                    },
+                })));
+            } else if self.current_token_eq(&Token::LBracket) {
+                // 嵌套数组解构
+                let nested = self.parse_array_destructuring_pattern()?;
+                elements.push(Some(Box::new(ASTNode::DestructuringPattern { pattern: nested })));
+            } else if self.current_token_eq(&Token::LBrace) {
+                // 嵌套对象解构
+                let nested = self.parse_object_destructuring_pattern()?;
+                elements.push(Some(Box::new(ASTNode::DestructuringPattern { pattern: nested })));
+            } else if self.current_token_eq(&Token::Comma) {
+                // 空位
+                elements.push(None);
+            } else {
+                // 标识符（简化处理：直接使用标识符）
+                let name_token = if let Token::Identifier(name) = self.current_token() {
+                    let name = name.clone();
+                    self.advance();
+                    name
+                } else {
+                    bail!("Expected identifier in destructuring pattern");
+                };
+                elements.push(Some(Box::new(ASTNode::Expression(ASTExpression::Identifier(name_token)))));
+            }
+
+            // 处理逗号分隔符
+            if self.current_token_eq(&Token::Comma) {
+                self.consume(Token::Comma)?;
+            } else if !self.current_token_eq(&Token::RBracket) {
+                break;
+            }
+        }
+
+        self.consume(Token::RBracket)?;
+        Ok(DestructuringPattern::Array { elements })
+    }
+
+    /// 解析对象解构模式: { a, b, c }
+    fn parse_object_destructuring_pattern(&mut self) -> Result<DestructuringPattern> {
+        self.consume(Token::LBrace)?;
+        let mut properties = Vec::new();
+
+        // 处理空对象模式 {}
+        if self.current_token_eq(&Token::RBrace) {
+            self.consume(Token::RBrace)?;
+            return Ok(DestructuringPattern::Object { properties });
+        }
+
+        // 解析属性
+        while !self.current_token_eq(&Token::RBrace) {
+            // 检查是否是展开运算符
+            if self.current_token_eq(&Token::DotDotDot) {
+                self.consume(Token::DotDotDot)?;
+                let rest_name = if let Token::Identifier(name) = self.current_token() {
+                    let name = name.clone();
+                    self.advance();
+                    name
+                } else {
+                    bail!("Expected identifier after ...");
+                };
+                properties.push(DestructuringProperty {
+                    key: "rest".to_string(),
+                    alias: Some(rest_name),
+                    default_value: None,
+                    is_rest: true,
+                    rest_target: None,
+                });
+            } else {
+                // 解析属性名
+                let is_identifier = matches!(self.current_token(), Token::Identifier(_));
+                let (key, alias) = if is_identifier {
+                    // 可能是 key 或 key: alias
+                    let key_name = if let Token::Identifier(name) = self.current_token() {
+                        let name = name.clone();
+                        self.advance();
+                        name
+                    } else {
+                        bail!("Expected identifier in destructuring pattern");
+                    };
+
+                    // 检查是否有冒号（重命名）
+                    if self.current_token_eq(&Token::Colon) {
+                        self.consume(Token::Colon)?;
+                        let alias_name = if let Token::Identifier(name) = self.current_token() {
+                            let name = name.clone();
+                            self.advance();
+                            name
+                        } else {
+                            bail!("Expected identifier after : in destructuring pattern");
+                        };
+                        (key_name, Some(alias_name))
+                    } else {
+                        // 同名简写
+                        (key_name.clone(), None)
+                    }
+                } else if let Token::String(_, _) = self.current_token() {
+                    // 字符串属性名: { "key": value }
+                    let key = if let Token::String(s, _) = self.current_token() {
+                        let s = s.clone();
+                        self.advance();
+                        format!("\"{}\"", s)
+                    } else {
+                        unreachable!()
+                    };
+                    self.consume(Token::Colon)?;
+                    let alias_name = if let Token::Identifier(name) = self.current_token() {
+                        let name = name.clone();
+                        self.advance();
+                        name
+                    } else {
+                        bail!("Expected identifier after : in destructuring pattern");
+                    };
+                    (key, Some(alias_name))
+                } else {
+                    bail!("Expected identifier or string in destructuring pattern");
+                };
+
+                // 检查是否有默认值（简化处理：跳过默认值）
+                if self.current_token_eq(&Token::Eq) {
+                    self.consume(Token::Eq)?;
+                    // 跳过默认值表达式
+                    let _value = self.parse_expression()?;
+                }
+
+                properties.push(DestructuringProperty {
+                    key,
+                    alias,
+                    default_value: None,
+                    is_rest: false,
+                    rest_target: None,
+                });
+            }
+
+            // 处理逗号分隔符
+            if self.current_token_eq(&Token::Comma) {
+                self.consume(Token::Comma)?;
+            } else if !self.current_token_eq(&Token::RBrace) {
+                break;
+            }
+        }
+
+        self.consume(Token::RBrace)?;
+        Ok(DestructuringPattern::Object { properties })
     }
 
     /// 解析变量名和初始化器（用于变量声明）
@@ -3469,6 +3725,58 @@ impl CodeEmitter {
                     }
                 }
             }
+            ASTNode::DestructuringPattern { pattern } => {
+                self.emit_destructuring_pattern(pattern);
+            }
+            ASTNode::DestructuringDeclaration { kind, pattern, source } => {
+                self.output.push_str(kind);
+                self.output.push(' ');
+                self.emit_destructuring_pattern(pattern);
+                self.output.push_str(" = ");
+                self.emit_expression(source);
+                self.output.push_str(";\n");
+            }
+        }
+    }
+
+    /// 发射解构模式
+    fn emit_destructuring_pattern(&mut self, pattern: &DestructuringPattern) {
+        match pattern {
+            DestructuringPattern::Array { elements } => {
+                self.output.push('[');
+                for (i, elem) in elements.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push_str(", ");
+                    }
+                    if let Some(e) = elem {
+                        self.emit_node(e);
+                    }
+                }
+                self.output.push(']');
+            }
+            DestructuringPattern::Object { properties } => {
+                self.output.push('{');
+                for (i, prop) in properties.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push_str(", ");
+                    }
+                    if prop.is_rest {
+                        self.output.push_str("...");
+                        if let Some(alias) = &prop.alias {
+                            self.output.push_str(alias);
+                        }
+                    } else {
+                        // 输出属性名
+                        self.output.push_str(&prop.key);
+                        // 如果有别名，输出重命名
+                        if let Some(alias) = &prop.alias {
+                            self.output.push_str(": ");
+                            self.output.push_str(alias);
+                        }
+                    }
+                }
+                self.output.push('}');
+            }
         }
     }
     fn emit_expression(&mut self, expr: &ASTExpression) {
@@ -3655,6 +3963,11 @@ impl CodeEmitter {
             }
             ASTExpression::SuperExpression => {
                 self.output.push_str("super");
+            }
+            ASTExpression::AssignmentExpression { left, right } => {
+                self.emit_expression(left);
+                self.output.push_str(" = ");
+                self.emit_expression(right);
             }
         }
     }
@@ -4479,6 +4792,79 @@ const sum = `${a + a}`;"#;
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
+            }
+        }
+    }
+
+    #[test]
+    fn test_array_destructuring() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test array destructuring
+        let source = r#"const [a, b, c] = [1, 2, 3];"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("const"),
+                    "Should contain const: {}", result.js_code);
+                assert!(result.js_code.contains("a"),
+                    "Should contain a: {}", result.js_code);
+                assert!(result.js_code.contains("b"),
+                    "Should contain b: {}", result.js_code);
+                assert!(result.js_code.contains("c"),
+                    "Should contain c: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_object_destructuring() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test object destructuring
+        let source = r#"const { x, y } = { x: 1, y: 2 };"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("const"),
+                    "Should contain const: {}", result.js_code);
+                assert!(result.js_code.contains("x"),
+                    "Should contain x: {}", result.js_code);
+                assert!(result.js_code.contains("y"),
+                    "Should contain y: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_object_destructuring_with_alias() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test object destructuring with alias
+        let source = r#"const { a: alias } = { a: 1 };"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("const"),
+                    "Should contain const: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
             }
         }
     }
