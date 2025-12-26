@@ -592,3 +592,133 @@ fn test_http_server_body_transmission() {
     assert!(response.contains("This is a longer response body"), "Should have full body, got: {}", response);
 }
 
+/// 测试 HTTP Keep-Alive 连接
+/// v0.3.96: 新增功能测试
+#[test]
+#[serial]
+fn test_http_server_keep_alive() {
+    let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        let requestCount = 0;
+        const server = http.createServer((req, res) => {
+            requestCount++;
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            res.end('Request ' + requestCount + ' received');
+        });
+        server.listen(3547);
+    "#;
+
+    runtime.execute_code(code).expect("Execution failed");
+    wait_for_server(3547);
+
+    // 建立持久连接，发送多个请求
+    let mut stream = TcpStream::connect(("127.0.0.1", 3547)).expect("Failed to connect");
+    stream.set_read_timeout(Some(Duration::from_secs(15))).expect("set_read_timeout failed");
+
+    // 发送第一个请求
+    stream.write_all(b"GET /first HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
+
+    let mut response1 = String::new();
+    let mut buffer = [0u8; 1024];
+    loop {
+        match stream.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(n) => {
+                response1.push_str(&String::from_utf8_lossy(&buffer[..n]));
+                if response1.contains("\r\n\r\n") {
+                    break;
+                }
+            }
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock || e.kind() == std::io::ErrorKind::TimedOut => {
+                // 继续等待
+            }
+            Err(e) => {
+                panic!("Read error: {}", e);
+            }
+        }
+    }
+
+    // 验证第一个响应包含 Connection: keep-alive
+    assert!(response1.contains("Connection: keep-alive"), "Should have Connection: keep-alive, got: {}", response1);
+    assert!(response1.contains("Request 1 received"), "Should handle first request, got: {}", response1);
+
+    // 发送第二个请求（复用同一个连接）
+    stream.write_all(b"GET /second HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
+
+    let mut response2 = String::new();
+    loop {
+        match stream.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(n) => {
+                response2.push_str(&String::from_utf8_lossy(&buffer[..n]));
+                if response2.contains("Request 2 received") {
+                    break;
+                }
+            }
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock || e.kind() == std::io::ErrorKind::TimedOut => {
+                // 继续等待
+            }
+            Err(e) => {
+                panic!("Read error: {}", e);
+            }
+        }
+    }
+
+    // 验证第二个响应
+    assert!(response2.contains("Request 2 received"), "Should handle second request on same connection, got: {}", response2);
+
+    // 关闭连接
+    drop(stream);
+}
+
+/// 测试 HTTP Connection: close
+/// v0.3.96: 新增功能测试
+#[test]
+#[serial]
+fn test_http_server_connection_close() {
+    let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const server = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            res.end('Close connection');
+        });
+        server.listen(3548);
+    "#;
+
+    runtime.execute_code(code).expect("Execution failed");
+    wait_for_server(3548);
+
+    // 发送带有 Connection: close 的请求
+    let mut stream = TcpStream::connect(("127.0.0.1", 3548)).expect("Failed to connect");
+    stream.set_read_timeout(Some(Duration::from_secs(5))).expect("set_read_timeout failed");
+
+    stream.write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n").expect("Failed to write");
+
+    let mut response = String::new();
+    let mut buffer = [0u8; 1024];
+    loop {
+        match stream.read(&mut buffer) {
+            Ok(0) => {
+                // 连接已关闭
+                break;
+            }
+            Ok(n) => {
+                response.push_str(&String::from_utf8_lossy(&buffer[..n]));
+                if response.contains("Connection: close") {
+                    break;
+                }
+            }
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock || e.kind() == std::io::ErrorKind::TimedOut => {
+                // 继续等待
+            }
+            Err(e) => {
+                panic!("Read error: {}", e);
+            }
+        }
+    }
+
+    // 验证响应包含 Connection: close
+    assert!(response.contains("Connection: close"), "Should have Connection: close, got: {}", response);
+    assert!(response.contains("Close connection"), "Should have body, got: {}", response);
+}
+

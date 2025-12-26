@@ -12844,7 +12844,6 @@ impl MinimalRuntime {
     pub fn pump_http_messages(&mut self) -> usize {
         use crate::nodejs_core::http::{
             try_recv_http_request,
-            send_http_response,
             get_global_request_handler,
             create_http_response,
             get_http_server_channel,

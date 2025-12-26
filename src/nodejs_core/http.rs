@@ -1683,163 +1683,229 @@ fn run_http_server(
 
 /// 处理单个连接
 /// v0.3.89: 修改为使用消息通道模式，支持跨线程 V8 上下文调用
+/// 检查是否应该保持连接（Keep-Alive）
+/// v0.3.96: 新增功能
+fn should_keep_alive(headers: &HashMap<String, String>, http_version: &str) -> bool {
+    // HTTP/1.1 默认 Keep-Alive，HTTP/1.0 默认 Close
+    if http_version == "HTTP/1.1" {
+        // HTTP/1.1 默认 Keep-Alive，除非明确指定 Connection: close
+        match headers.get("Connection").map(|s| s.to_lowercase()) {
+            Some(conn) if conn == "close" => false,
+            Some(conn) if conn == "keep-alive" => true,
+            None => true, // 没有 Connection 头，默认 Keep-Alive
+            _ => true,
+        }
+    } else {
+        // HTTP/1.0 默认 Close，除非明确指定 Connection: keep-alive
+        match headers.get("Connection").map(|s| s.to_lowercase()) {
+            Some(conn) if conn == "keep-alive" => true,
+            _ => false,
+        }
+    }
+}
+
+/// 处理 HTTP 连接（支持 Keep-Alive）
+/// v0.3.96: 添加 Keep-Alive 支持
+/// v0.3.87: 基础功能
 fn handle_connection(
     mut stream: TcpStream,
     server_state: &HttpServerState,
     _handler_code: &str,
     connection_id: u64,
 ) {
-    let mut buffer = [0u8; 8192];
-    let mut request_data = Vec::new();
-
-    // 读取请求数据
+    // Keep-Alive 循环：处理多个请求
     loop {
-        match stream.read(&mut buffer) {
-            Ok(0) => break, // 连接关闭
-            Ok(n) => {
-                request_data.extend_from_slice(&buffer[..n]);
+        let mut buffer = [0u8; 8192];
+        let mut request_data = Vec::new();
+        let mut connection_close = false;
+        let mut _is_keep_alive = false;
 
-                // 检查是否收到完整的请求（以 \r\n\r\n 结尾）
-                if request_data.windows(4).any(|w| w == b"\r\n\r\n") {
+        // 读取请求数据
+        loop {
+            match stream.read(&mut buffer) {
+                Ok(0) => {
+                    // 连接关闭
+                    connection_close = true;
                     break;
                 }
+                Ok(n) => {
+                    request_data.extend_from_slice(&buffer[..n]);
 
-                // 防止缓冲区过大
-                if request_data.len() > 1024 * 1024 {
-                    eprintln!("[Beejs] Request too large");
-                    return;
+                    // 检查是否收到完整的请求头（以 \r\n\r\n 结尾）
+                    if request_data.windows(4).any(|w| w == b"\r\n\r\n") {
+                        break;
+                    }
+
+                    // 防止缓冲区过大
+                    if request_data.len() > 1024 * 1024 {
+                        eprintln!("[Beejs] Request too large");
+                        connection_close = true;
+                        break;
+                    }
                 }
-            }
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                // 非阻塞，继续尝试
-                thread::sleep(Duration::from_millis(10));
-                continue;
-            }
-            Err(e) => {
-                eprintln!("[Beejs] Read error: {}", e);
-                return;
-            }
-        }
-    }
-
-    if request_data.is_empty() {
-        return;
-    }
-
-    // 解析 HTTP 请求
-    let parsed_request = match parse_http_request(&request_data) {
-        Some(req) => req,
-        None => {
-            eprintln!("[Beejs] Failed to parse request");
-            return;
-        }
-    };
-
-    eprintln!(
-        "[Beejs] {} {} {}",
-        parsed_request.method,
-        parsed_request.url,
-        parsed_request.http_version
-    );
-
-    // v0.3.89: 尝试通过消息通道发送到主线程处理
-    // v0.3.92: 添加超时机制，防止在没有调用 pump_http_messages 时永久阻塞
-    let channel = get_http_server_channel();
-    let use_message_channel = server_state.use_message_channel && channel.is_some();
-
-    let mut message_channel_used = false;
-
-    // 创建请求消息
-    let request_msg = HttpRequestMessage {
-        method: parsed_request.method.clone(),
-        url: parsed_request.url.clone(),
-        path: parsed_request.path.clone(),
-        http_version: parsed_request.http_version.clone(),
-        headers: parsed_request.headers.clone(),
-        body: parsed_request.body.clone(),
-        connection_id,
-    };
-
-    if use_message_channel {
-        if let Some(ref channel_ref) = channel {
-            let locked = channel_ref.lock().unwrap();
-            if let Some(ref msg_channel) = *locked {
-                match msg_channel.send_request(request_msg) {
-                    Ok(()) => {
-                        message_channel_used = true;
-                    }
-                    Err(e) => {
-                        eprintln!("[Beejs] Failed to send request via channel: {:?}", e);
-                    }
+                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    // 读取超时
+                    eprintln!("[Beejs] Keep-Alive read timeout");
+                    connection_close = true;
+                    break;
+                }
+                Err(e) => {
+                    eprintln!("[Beejs] Read error: {}", e);
+                    connection_close = true;
+                    break;
                 }
             }
         }
-    }
 
-    // v0.3.93: 只有当消息通道未使用时才发送回退响应
-    // 如果消息通道已使用但尚未收到响应，需要等待主线程处理
-    if !message_channel_used {
-        // 消息通道不可用，发送回退响应
-        let fallback_body = format!(
-            "Beejs HTTP Server\nMethod: {}\nPath: {}\nHandler: not configured",
-            parsed_request.method,
-            parsed_request.path
-        );
-
-        let mut response_data = format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-            fallback_body.len()
-        );
-        response_data.push_str(&fallback_body);
-
-        if let Err(e) = stream.write_all(response_data.as_bytes()) {
-            eprintln!("[Beejs] Write error: {}", e);
+        // 如果连接关闭或没有请求数据，退出循环
+        if connection_close || request_data.is_empty() {
+            break;
         }
 
-        let _ = stream.shutdown(std::net::Shutdown::Write);
-        return;
-    }
-
-    // v0.3.93: 消息通道已使用，等待主线程处理
-    // v0.3.95: 修复 - 移除超时限制，改为无限等待响应
-    // v0.3.95: 修复 deadlock - 释放锁后再等待，避免阻塞其他线程
-    // 原来的超时会导致在测试场景中连接过早关闭
-    let channel = get_http_server_channel();
-    if let Some(ref channel_ref) = channel {
-        // 获取响应接收器并释放锁，避免阻塞其他线程
-        let response_receiver = {
-            let guard = channel_ref.lock().unwrap();
-            if let Some(ref msg_channel) = *guard {
-                // v0.3.95: 克隆 receiver 并释放锁后再等待
-                Some(msg_channel.response_receiver.clone())
-            } else {
-                None
+        // 解析 HTTP 请求
+        let parsed_request = match parse_http_request(&request_data) {
+            Some(req) => req,
+            None => {
+                eprintln!("[Beejs] Failed to parse request");
+                break;
             }
         };
-        // guard 现在被释放，锁已释放
 
-        // 等待响应
-        if let Some(receiver) = response_receiver {
-            loop {
-                // 尝试接收请求（主线程处理完后会发送响应）
+        // 判断是否 Keep-Alive
+        _is_keep_alive = should_keep_alive(&parsed_request.headers, &parsed_request.http_version);
+
+        eprintln!(
+            "[Beejs] {} {} {} (Keep-Alive: {})",
+            parsed_request.method,
+            parsed_request.url,
+            parsed_request.http_version,
+            _is_keep_alive
+        );
+
+        // v0.3.89: 尝试通过消息通道发送到主线程处理
+        // v0.3.92: 添加超时机制，防止在没有调用 pump_http_messages 时永久阻塞
+        let channel = get_http_server_channel();
+        let use_message_channel = server_state.use_message_channel && channel.is_some();
+
+        let mut message_channel_used = false;
+
+        // 创建请求消息
+        let request_msg = HttpRequestMessage {
+            method: parsed_request.method.clone(),
+            url: parsed_request.url.clone(),
+            path: parsed_request.path.clone(),
+            http_version: parsed_request.http_version.clone(),
+            headers: parsed_request.headers.clone(),
+            body: parsed_request.body.clone(),
+            connection_id,
+        };
+
+        if use_message_channel {
+            if let Some(ref channel_ref) = channel {
+                let locked = channel_ref.lock().unwrap();
+                if let Some(ref msg_channel) = *locked {
+                    match msg_channel.send_request(request_msg) {
+                        Ok(()) => {
+                            message_channel_used = true;
+                        }
+                        Err(e) => {
+                            eprintln!("[Beejs] Failed to send request via channel: {:?}", e);
+                        }
+                    }
+                }
+            }
+        }
+
+        // v0.3.93: 只有当消息通道未使用时才发送回退响应
+        // v0.3.96: 添加 Keep-Alive 支持
+        if !message_channel_used {
+            // 消息通道不可用，发送回退响应
+            let fallback_body = format!(
+                "Beejs HTTP Server\nMethod: {}\nPath: {}\nHandler: not configured",
+                parsed_request.method,
+                parsed_request.path
+            );
+
+            // 根据 Keep-Alive 决定 Connection 头
+            let connection_header = if _is_keep_alive { "keep-alive" } else { "close" };
+
+            let mut response_data = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: {}\r\n\r\n",
+                fallback_body.len(),
+                connection_header
+            );
+            response_data.push_str(&fallback_body);
+
+            if let Err(e) = stream.write_all(response_data.as_bytes()) {
+                eprintln!("[Beejs] Write error: {}", e);
+            }
+
+            // 如果不是 Keep-Alive，关闭连接
+            if !_is_keep_alive {
+                let _ = stream.shutdown(std::net::Shutdown::Write);
+                break;
+            }
+            // 否则继续循环等待下一个请求
+            continue;
+        }
+
+        // v0.3.93: 消息通道已使用，等待主线程处理
+        // v0.3.95: 修复 - 移除超时限制，改为无限等待响应
+        // v0.3.95: 修复 deadlock - 释放锁后再等待，避免阻塞其他线程
+        // v0.3.96: 添加 Keep-Alive 支持
+        let channel = get_http_server_channel();
+        if let Some(ref channel_ref) = channel {
+            // 获取响应接收器并释放锁，避免阻塞其他线程
+            let response_receiver = {
+                let guard = channel_ref.lock().unwrap();
+                if let Some(ref msg_channel) = *guard {
+                    // v0.3.95: 克隆 receiver 并释放锁后再等待
+                    Some(msg_channel.response_receiver.clone())
+                } else {
+                    None
+                }
+            };
+            // guard 现在被释放，锁已释放
+
+            // 等待响应
+            if let Some(receiver) = response_receiver {
                 match receiver.recv() {
                     Ok(response) => {
-                        // 收到响应
-                        let response_data = generate_http_response_v2(&response);
+                        // 收到响应，根据 _is_keep_alive 决定是否关闭连接
+                        let connection_header = if _is_keep_alive { "keep-alive" } else { "close" };
+
+                        // 生成响应并添加 Connection 头
+                        let mut response_data = generate_http_response_v2(&response);
+
+                        // 如果还没有 Connection 头，添加它
+                        if !response.headers.contains_key("Connection") {
+                            response_data.splice(
+                                response_data.windows(4).position(|w| w == b"\r\n\r\n").map(|p| p..p)
+                                    .unwrap_or_else(|| response_data.len() - 4..response_data.len() - 4),
+                                format!("Connection: {}\r\n", connection_header).bytes(),
+                            );
+                        }
+
                         let _ = stream.write_all(&response_data);
-                        let _ = stream.shutdown(std::net::Shutdown::Write);
-                        return;
+
+                        // 如果不是 Keep-Alive，关闭连接
+                        if !_is_keep_alive {
+                            let _ = stream.shutdown(std::net::Shutdown::Write);
+                            break;
+                        }
+                        // 否则继续循环等待下一个请求
                     }
                     Err(_) => {
-                        // 通道断开
+                        // 通道断开，关闭连接
                         let _ = stream.shutdown(std::net::Shutdown::Write);
-                        return;
+                        break;
                     }
                 }
             }
         }
     }
 
+    // 连接关闭
     let _ = stream.shutdown(std::net::Shutdown::Write);
 }
 
