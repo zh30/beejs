@@ -1319,6 +1319,7 @@ pub struct CompilationOutput {
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
     #[test]
     fn test_lexical_analysis() {
         let compiler: _ = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
