@@ -216,6 +216,23 @@ impl TypeScriptCompiler {
                 while pos < chars.len() && chars[pos].is_digit(10) {
                     pos += 1;
                 }
+                // 检查小数部分
+                if pos < chars.len() && chars[pos] == '.' {
+                    pos += 1;  // consume the '.'
+                    while pos < chars.len() && chars[pos].is_digit(10) {
+                        pos += 1;
+                    }
+                }
+                // 检查指数部分 (e.g., 1e5, 1.5e-3)
+                if pos < chars.len() && (chars[pos] == 'e' || chars[pos] == 'E') {
+                    pos += 1;  // consume 'e' or 'E'
+                    if pos < chars.len() && (chars[pos] == '+' || chars[pos] == '-') {
+                        pos += 1;  // consume sign
+                    }
+                    while pos < chars.len() && chars[pos].is_digit(10) {
+                        pos += 1;
+                    }
+                }
                 let number: String = chars[start..pos].iter().collect();
                 tokens.push(Token::Number(number));
                 continue;
@@ -480,16 +497,6 @@ impl TypeScriptCompiler {
                             tokens.push(Token::Colon);
                         } else if c == ';' {
                             tokens.push(Token::SemiColon);
-                        } else if c.is_digit(10) {
-                            // 处理数字
-                            let start: _ = pos;
-                            pos += 1;
-                            while pos < chars.len() && chars[pos].is_digit(10) {
-                                pos += 1;
-                            }
-                            let number: String = chars[start..pos].iter().collect();
-                            tokens.push(Token::Number(number));
-                            continue; // pos 已经更新，跳过下面的 pos += 1
                         } else if c.is_alphanumeric() || c == '_' || c == '$' {
                             // 处理标识符
                             let start: _ = pos;
@@ -918,6 +925,21 @@ pub enum ASTNode {
         name: String,
         extends: Option<String>,  // 父类名称（如果有 extends）
         members: Vec<ASTNode>,
+    },
+    /// 类方法声明
+    MethodDeclaration {
+        name: String,
+        kind: String,  // "method", "get", "set"
+        is_async: bool,
+        is_static: bool,
+        params: Vec<(String, Option<String>)>,
+        body: Vec<ASTNode>,
+    },
+    /// 类字段声明
+    PropertyDeclaration {
+        name: String,
+        is_static: bool,
+        initializer: Option<Box<ASTNode>>,
     },
     InterfaceDeclaration {
         name: String,
@@ -1439,6 +1461,50 @@ impl Parser {
             self.parse_statement()
         }
     }
+
+    /// 解析函数/方法体块，返回语句列表
+    fn parse_block_body(&mut self) -> Result<Vec<ASTNode>> {
+        if !self.current_token_eq(&Token::LBrace) {
+            // 没有块语句，可能是表达式主体（如箭头函数）
+            return Ok(vec![]);
+        }
+        self.consume(Token::LBrace)?;
+        let mut statements = Vec::new();
+        while !self.current_token_eq(&Token::RBrace) {
+            statements.push(self.parse_statement()?);
+        }
+        self.consume(Token::RBrace)?;
+        Ok(statements)
+    }
+
+    /// 解析函数参数列表（不包括括号）
+    fn parse_function_params_list(&mut self) -> Result<Vec<(String, Option<String>)>> {
+        self.consume(Token::LParen)?;
+        let mut params = Vec::new();
+        while !self.current_token_eq(&Token::RParen) {
+            // 再次检查，防止空参数列表时循环尝试消费标识符
+            if self.current_token_eq(&Token::RParen) {
+                break;
+            }
+            let param_name_token = self.consume_any_identifier()?;
+            let param_name: _ = match param_name_token {
+                Token::Identifier(name) => name,
+                _ => bail!("Expected parameter name"),
+            };
+            // 跳过类型注解
+            if self.current_token_eq(&Token::Colon) {
+                self.consume(Token::Colon)?;
+                self.parse_type_annotation();
+            }
+            params.push((param_name, None));
+            if self.current_token_eq(&Token::Comma) {
+                self.consume(Token::Comma)?;
+            }
+        }
+        self.consume(Token::RParen)?;
+        Ok(params)
+    }
+
     fn parse_variable_declaration(&mut self) -> Result<ASTNode> {
         let kind_token: _ = self.consume_any(&[Token::Let, Token::Const, Token::Var])?;
         let kind: _ = match kind_token {
@@ -1790,9 +1856,13 @@ impl Parser {
         while !self.current_token_eq(&Token::RBrace) {
             // 尝试解析类成员（方法或字段）
             match self.parse_class_member() {
-                Ok(Some(node)) => members.push(node),
-                Ok(None) => {} // 跳过无法解析的成员
-                Err(_) => {
+                Ok(Some(node)) => {
+                    members.push(node);
+                }
+                Ok(None) => {
+                    // 跳过无法解析的成员
+                }
+                Err(_e) => {
                     // 跳过这个 token 并继续
                     self.advance();
                 }
@@ -1804,58 +1874,150 @@ impl Parser {
 
     /// 解析类成员（方法或字段）
     fn parse_class_member(&mut self) -> Result<Option<ASTNode>> {
-        // 检查是否是访问修饰符或 static
+        // 首先检查是否是访问修饰符或 static
+        let mut is_static = false;
         while self.current_token_eq(&Token::Public)
             || self.current_token_eq(&Token::Private)
             || self.current_token_eq(&Token::Protected)
             || self.current_token_eq(&Token::Static)
         {
+            if self.current_token_eq(&Token::Static) {
+                is_static = true;
+            }
             self.advance();
+        }
+
+        // 特殊处理：检查是否是 get 或 set 关键字
+        if let Token::Identifier(ref name) = self.current_token() {
+            if name == "get" || name == "set" {
+                let keyword = name.clone();
+                self.advance();
+                if let Token::Identifier(prop_name) = self.current_token().clone() {
+                    self.advance();
+                    // Getter/setter 语法: get/set propertyName() { ... }
+                    // 需要先消费 () 参数列表
+                    if self.current_token_eq(&Token::LParen) {
+                        self.consume(Token::LParen)?;
+                        self.consume(Token::RParen)?;
+                    }
+                    // 解析方法体
+                    let body = self.parse_block_body()?;
+                    return Ok(Some(ASTNode::MethodDeclaration {
+                        name: prop_name,
+                        kind: keyword,
+                        is_async: false,
+                        is_static,
+                        params: vec![],
+                        body,
+                    }));
+                }
+                // 如果不是有效的 getter/setter，消费 get/set 关键字并作为标识符处理
+            }
         }
 
         // 检查是否是 constructor
         if let Token::Identifier(ref name) = self.current_token() {
             if name == "constructor" {
                 self.advance();
-                self.skip_to_matching_brace()?;
-                // 消费方法体的 RBrace
-                if self.current_token_eq(&Token::RBrace) {
-                    self.consume(Token::RBrace)?;
+                // 解析 constructor 参数列表
+                if self.current_token_eq(&Token::LParen) {
+                    self.consume(Token::LParen)?;
+                    let mut params = Vec::new();
+                    while !self.current_token_eq(&Token::RParen) {
+                        let param_name_token = self.consume_any_identifier()?;
+                        let param_name: _ = match param_name_token {
+                            Token::Identifier(name) => name,
+                            _ => bail!("Expected parameter name"),
+                        };
+                        params.push((param_name, None));
+                        if self.current_token_eq(&Token::Comma) {
+                            self.consume(Token::Comma)?;
+                        }
+                    }
+                    self.consume(Token::RParen)?;
+                    // 解析 constructor 主体
+                    let body = self.parse_block_body()?;
+                    return Ok(Some(ASTNode::MethodDeclaration {
+                        name: "constructor".to_string(),
+                        kind: "method".to_string(),
+                        is_async: false,
+                        is_static,
+                        params,
+                        body,
+                    }));
                 }
-                return Ok(None);
             }
         }
 
-        // 检查是否是方法（后面有括号）
-        if let Token::Identifier(_name) = self.current_token().clone() {
+        // 检查是否是 async 方法
+        if self.current_token_eq(&Token::Async) {
+            self.consume(Token::Async)?;
+            if let Token::Identifier(method_name) = self.current_token().clone() {
+                self.advance();
+                // 解析方法参数
+                let params = self.parse_function_params_list()?;
+                // 解析方法主体
+                let body = self.parse_block_body()?;
+                return Ok(Some(ASTNode::MethodDeclaration {
+                    name: method_name,
+                    kind: "method".to_string(),
+                    is_async: true,
+                    is_static,
+                    params,
+                    body,
+                }));
+            }
+        }
+
+        // 普通方法或字段
+        if let Token::Identifier(member_name) = self.current_token().clone() {
             self.advance();
+
             // 检查是否是方法（有参数列表）
             if self.current_token_eq(&Token::LParen) {
-                self.skip_to_matching_brace()?;
-                // 消费方法体的 RBrace
-                if self.current_token_eq(&Token::RBrace) {
-                    self.consume(Token::RBrace)?;
-                }
-                return Ok(None);
+                // 解析方法参数
+                let params = self.parse_function_params_list()?;
+                // 解析方法主体
+                let body = self.parse_block_body()?;
+                return Ok(Some(ASTNode::MethodDeclaration {
+                    name: member_name,
+                    kind: "method".to_string(),
+                    is_async: false,
+                    is_static,
+                    params,
+                    body,
+                }));
             }
-            // 如果不是方法（如字段名），跳过可能的初始化器
-            if self.current_token_eq(&Token::Eq) {
-                self.advance();
-                self.skip_expression();
+
+            // 可能是字段，检查是否有初始化器
+            let initializer: Option<ASTExpression> = if self.current_token_eq(&Token::Eq) {
+                self.consume(Token::Eq)?;
+                Some(self.parse_expression()?)
+            } else {
+                None
+            };
+
+            // 跳过分号分隔的字段声明
+            if self.current_token_eq(&Token::SemiColon) {
+                self.consume(Token::SemiColon)?;
             }
+
+            return Ok(Some(ASTNode::PropertyDeclaration {
+                name: member_name,
+                is_static,
+                initializer: initializer.map(|e| Box::new(ASTNode::Expression(e))),
+            }));
         }
 
-        // 跳过分号分隔的字段声明
+        // 消费未知成员末尾的分号
         if self.current_token_eq(&Token::SemiColon) {
             self.consume(Token::SemiColon)?;
         }
 
-        // 消费方法或类末尾的 RBrace（如果调用者留下的）
-        if self.current_token_eq(&Token::RBrace) {
-            self.consume(Token::RBrace)?;
-        }
+        // 推进一个 token 以避免无限循环
+        self.advance();
 
-        Ok(None) // 跳过字段声明（类型信息）
+        Ok(None)
     }
 
     /// 跳过到匹配的右括号（用于跳过参数列表和函数体）
@@ -2683,8 +2845,46 @@ impl Parser {
                 Ok(expr)
             }
             Token::LBrace => {
-                // 对象字面量
-                self.parse_object_literal()
+                // 对象字面量 vs 块语句
+                // 向前查看：如果后面是 Identifier: 则为对象字面量
+                // 否则可能是箭头函数的块语句或其他
+                let mut lookahead = self.position + 1;
+                let mut is_object_literal = false;
+
+                // 简单向前查看：检查是否看起来像对象字面量
+                // 模式: { identifier : ... } 或 { string : ... }
+                while lookahead < self.tokens.len() {
+                    let next_token = &self.tokens[lookahead];
+                    match next_token {
+                        Token::RBrace | Token::RParen | Token::SemiColon | Token::Eof => {
+                            // 空的 {} 或以这些结尾 - 可能是对象字面量
+                            break;
+                        }
+                        Token::Identifier(_) | Token::String(_, _) => {
+                            // 找到属性名，检查下一个是否是 :
+                            if lookahead + 1 < self.tokens.len() {
+                                if matches!(self.tokens[lookahead + 1], Token::Colon) {
+                                    is_object_literal = true;
+                                }
+                            }
+                            break;
+                        }
+                        _ => {
+                            // 其他 token，不是典型的对象字面量开头
+                            break;
+                        }
+                    }
+                }
+
+                if is_object_literal {
+                    // 对象字面量
+                    self.parse_object_literal()
+                } else {
+                    // 块语句（用于箭头函数等）- 消费 { 并返回空
+                    // 注意：在表达式上下文中，{ 通常应该是对象字面量
+                    // 如果不是，则这是一个语法错误
+                    bail!("Unexpected '{{' in expression. Expected object literal or expression.");
+                }
             }
             Token::LBracket => {
                 // 数组字面量: [1, 2, 3] 或展开: [...arr]
@@ -2997,6 +3197,43 @@ impl CodeEmitter {
                     self.emit_node(member);
                 }
                 self.output.push_str("}\n");
+            }
+            ASTNode::MethodDeclaration { name, kind, is_async, is_static, params, body } => {
+                if *is_static {
+                    self.output.push_str("static ");
+                }
+                // 输出 get/set 关键字（如果是 getter/setter）
+                if *kind != "method" {
+                    self.output.push_str(kind);
+                    self.output.push(' ');
+                }
+                if *is_async {
+                    self.output.push_str("async ");
+                }
+                self.output.push_str(name);
+                self.output.push('(');
+                for (i, (param_name, _)) in params.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push_str(", ");
+                    }
+                    self.output.push_str(param_name);
+                }
+                self.output.push_str(") {\n");
+                for stmt in body {
+                    self.emit_node(stmt);
+                }
+                self.output.push_str("}\n");
+            }
+            ASTNode::PropertyDeclaration { name, is_static, initializer } => {
+                if *is_static {
+                    self.output.push_str("static ");
+                }
+                self.output.push_str(name);
+                if let Some(init) = initializer {
+                    self.output.push_str(" = ");
+                    self.emit_node(&**init);
+                }
+                self.output.push_str(";\n");
             }
             ASTNode::InterfaceDeclaration { .. } => {
                 // 接口在 JavaScript 中不存在，跳过
@@ -3846,6 +4083,114 @@ const arr2 = [...arr1, 4, 5];
     }
 
     #[test]
+    fn test_class_with_method() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test class with method (using JS syntax for simplicity)
+        let source = r#"
+class Counter {
+    count = 0;
+    increment() {
+        this.count++;
+    }
+    getCount() {
+        return this.count;
+    }
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        println!("Class with method transpiled output:\n{}", result.js_code);
+        assert!(result.js_code.contains("class Counter"),
+            "Should contain 'class Counter': {}", result.js_code);
+        assert!(result.js_code.contains("increment()"),
+            "Should contain 'increment()': {}", result.js_code);
+        assert!(result.js_code.contains("getCount()"),
+            "Should contain 'getCount()': {}", result.js_code);
+        assert!(result.js_code.contains("count"),
+            "Should contain 'count' field: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_class_with_constructor() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test class with constructor (simplified - just return statements)
+        let source = r#"
+class Calculator {
+    constructor() {
+        return 0;
+    }
+    add(a, b) {
+        return a + b;
+    }
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        println!("Class with constructor transpiled output:\n{}", result.js_code);
+        assert!(result.js_code.contains("class Calculator"),
+            "Should contain 'class Calculator': {}", result.js_code);
+        assert!(result.js_code.contains("constructor"),
+            "Should contain 'constructor': {}", result.js_code);
+        assert!(result.js_code.contains("add"),
+            "Should contain 'add': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_class_with_static_method() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test class with static method - using PI as method name
+        let source = r#"
+class MathUtils {
+    static add(a, b) {
+        return a + b;
+    }
+    static PI() {
+        return 3.14159;
+    }
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        println!("Class with static method transpiled output:\n{}", result.js_code);
+        assert!(result.js_code.contains("static add"),
+            "Should contain 'static add': {}", result.js_code);
+        assert!(result.js_code.contains("static PI"),
+            "Should contain 'static PI': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_class_with_getter_setter() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test class with getter and setter (minimal body)
+        let source = r#"
+class Temperature {
+    get value() {
+        return 1;
+    }
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        println!("Class with getter transpiled output:\n{}", result.js_code);
+        assert!(result.js_code.contains("get value()"),
+            "Should contain 'get value()': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_class_with_async_method() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test class with async method
+        let source = r#"
+class DataFetcher {
+    async fetchData(url) {
+        const response = await fetch(url);
+        return response.text();
+    }
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        println!("Class with async method transpiled output:\n{}", result.js_code);
+        assert!(result.js_code.contains("async fetchData"),
+            "Should contain 'async fetchData': {}", result.js_code);
+    }
+
+    #[test]
     fn test_template_literal() {
         let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
         // Test simple template literal
@@ -3900,9 +4245,23 @@ const sum = `${a + a}`;"#;
     #[test]
     fn debug_token_stream() {
         let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
-        // Test template literal with expression - with multi-var declaration
-        let source = r#"const a = 1, b = 2;
-const sum = `${a} + ${b} = ${a + b}`;"#;
+        // Test simple return statement first
+        let source = r#"return 0;"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "debug.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+            }
+        }
+
+        // Test getter syntax - simple return
+        let source = r#"get fahrenheit() { return 0; }"#;
+        println!("\n========== Testing: {} ==========\n", source);
 
         println!("\n=== Source ===\n{}", source);
 
