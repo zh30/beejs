@@ -702,6 +702,16 @@ impl TypeScriptCompiler {
                             // 跳过空白字符
                             pos += 1;
                             continue;
+                        } else if c as u32 > 127 {
+                            // 非 ASCII 字符（表情符号等），添加到当前部分
+                            if !in_template_expression {
+                                current_part.push(c);
+                            } else {
+                                // 在模板表达式内部，尝试作为标识符处理
+                                tokens.push(Token::UnknownChar(c.to_string()));
+                            }
+                            pos += 1;
+                            continue;
                         } else {
                             // 未知字符，作为 Unknown token
                             tokens.push(Token::UnknownChar(c.to_string()));
@@ -1631,7 +1641,7 @@ fn escape_for_json(s: &str) -> String {
         .replace('\t', "\\t")
 }
 /// 记号类型
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Identifier(String),
     Number(String),
@@ -4928,6 +4938,9 @@ impl Parser {
                             let s = format!("\"{}\"", s);
                             parts.push(ASTExpression::Literal(s));
                             self.advance();
+                        } else if self.current_token_eq(&Token::TemplateEnd) {
+                            // 表达式后面直接是模板结束，没有字符串部分
+                            // （如 `${expr}` 后面没有内容的情况）
                         }
                     } else if self.current_token_eq(&Token::TemplateEnd) {
                         self.consume(Token::TemplateEnd)?;
@@ -5039,6 +5052,10 @@ impl Parser {
             Token::Comma => {
                 self.advance();
                 self.parse_primary_expression()
+            }
+            // 处理模板字符串的结束标记（在 ${...} 表达式内部）
+            Token::RBrace | Token::TemplateMiddle | Token::TemplateEnd => {
+                bail!("Unexpected token in expression: {:?}", self.current_token())
             }
             _ => bail!("Unexpected token in expression: {:?}", self.current_token()),
         }
@@ -5195,31 +5212,40 @@ impl Parser {
             return Some(format!("{} extends {} ? {} : {}", first_type, extend_type, true_type, false_type));
         }
 
-        // 处理索引访问类型后缀: T["key"] 或 T[K]
+        // 处理数组类型和索引访问类型后缀
         let mut result = first_type;
         while self.current_token_eq(&Token::LBracket) {
-            self.advance();
-            // 解析索引键
-            let index_key = if let Token::String(ref s, quote) = self.current_token() {
-                let s = s.clone();
-                let quote_char = *quote;
-                self.advance();
-                format!("{}{}{}", quote_char, s, quote_char)
-            } else if let Token::Identifier(ref name) = self.current_token() {
-                let name = name.clone();
-                self.advance();
-                name
-            } else {
-                // 解析基本类型作为索引
-                if let Some(idx_type) = self.parse_basic_type() {
-                    idx_type
+            // 向前查看：检查是否是空括号 [] (数组类型) 或有内容 (索引访问类型)
+            if self.position + 1 < self.tokens.len() && self.tokens[self.position + 1] == Token::RBracket {
+                // 数组类型: T[]
+                self.advance(); // 消耗 [
+                self.advance(); // 消耗 ]
+                result = format!("{}[]", result);
                 } else {
-                    break
+                    // 索引访问类型: T[key]
+                    self.advance();
+                    // 解析索引键
+                    let index_key = if let Token::String(ref s, quote) = self.current_token() {
+                        let s = s.clone();
+                        let quote_char = *quote;
+                        self.advance();
+                        format!("{}{}{}", quote_char, s, quote_char)
+                    } else if let Token::Identifier(ref name) = self.current_token() {
+                        let name = name.clone();
+                        self.advance();
+                        name
+                    } else {
+                        // 解析基本类型作为索引
+                        if let Some(idx_type) = self.parse_basic_type() {
+                            idx_type
+                        } else {
+                            break
+                        }
+                    };
+                    self.consume(Token::RBracket).ok()?;
+                    result = format!("{}[{}]", result, index_key);
                 }
-            };
-            self.consume(Token::RBracket).ok()?;
-            result = format!("{}[{}]", result, index_key);
-        }
+            }
 
         // 处理 & 和 | 操作符
         let mut types = vec![result];
@@ -5530,31 +5556,40 @@ impl Parser {
             return Some(format!("{} extends {} ? {} : {}", first_type, extend_type, true_type, false_type));
         }
 
-        // 处理索引访问类型后缀: T["key"] 或 T[K]
+        // 处理数组类型和索引访问类型后缀
         let mut result = first_type;
         while self.current_token_eq(&Token::LBracket) {
-            self.advance();
-            // 解析索引键
-            let index_key = if let Token::String(ref s, quote) = self.current_token() {
-                let s = s.clone();
-                let quote_char = *quote;
-                self.advance();
-                format!("{}{}{}", quote_char, s, quote_char)
-            } else if let Token::Identifier(ref name) = self.current_token() {
-                let name = name.clone();
-                self.advance();
-                name
-            } else {
-                // 解析基本类型作为索引
-                if let Some(idx_type) = self.parse_basic_type() {
-                    idx_type
+            // 向前查看：检查是否是空括号 [] (数组类型) 或有内容 (索引访问类型)
+            if self.position + 1 < self.tokens.len() && self.tokens[self.position + 1] == Token::RBracket {
+                // 数组类型: T[]
+                self.advance(); // 消耗 [
+                self.advance(); // 消耗 ]
+                result = format!("{}[]", result);
                 } else {
-                    break
+                    // 索引访问类型: T[key]
+                    self.advance();
+                    // 解析索引键
+                    let index_key = if let Token::String(ref s, quote) = self.current_token() {
+                        let s = s.clone();
+                        let quote_char = *quote;
+                        self.advance();
+                        format!("{}{}{}", quote_char, s, quote_char)
+                    } else if let Token::Identifier(ref name) = self.current_token() {
+                        let name = name.clone();
+                        self.advance();
+                        name
+                    } else {
+                        // 解析基本类型作为索引
+                        if let Some(idx_type) = self.parse_basic_type() {
+                            idx_type
+                        } else {
+                            break
+                        }
+                    };
+                    self.consume(Token::RBracket).ok()?;
+                    result = format!("{}[{}]", result, index_key);
                 }
-            };
-            self.consume(Token::RBracket).ok()?;
-            result = format!("{}[{}]", result, index_key);
-        }
+            }
 
         let mut types = vec![result];
         let mut operators = Vec::new();
@@ -6433,7 +6468,18 @@ impl CodeEmitter {
                 callee,
                 arguments,
             } => {
+                // 检查 callee 是否需要括号包裹（箭头函数）
+                let needs_parentheses = matches!(
+                    callee.as_ref(),
+                    ASTExpression::ArrowFunctionExpression { .. }
+                );
+                if needs_parentheses {
+                    self.output.push('(');
+                }
                 self.emit_expression(callee);
+                if needs_parentheses {
+                    self.output.push(')');
+                }
                 self.output.push('(');
                 for (i, arg) in arguments.iter().enumerate() {
                     if i > 0 {
