@@ -1,3 +1,58 @@
+### v0.3.89 实现跨线程 V8 上下文消息传递机制 (2025-12-26)
+**进度**: HTTP Server 跨线程支持 | ✅ 已完成
+
+#### v0.3.89 新增功能
+- **跨线程消息通道**
+  - 添加 `HttpServerMessageChannel` 结构体
+  - 使用 `crossbeam::channel` 实现高性能线程通信
+  - 支持请求/响应消息的跨线程传递
+
+- **HTTP 请求消息** (`HttpRequestMessage`)
+  - 包含 method, url, path, http_version, headers, body, connection_id
+  - 可以在主线程和后台线程之间传递
+
+- **HTTP 响应消息** (`HttpResponseMessage`)
+  - 包含 connection_id, status_code, headers, body
+  - 支持从主线程发送响应到后台线程
+
+- **全局消息通道管理**
+  - `init_http_server_channel()` - 初始化全局消息通道
+  - `get_http_server_channel()` - 获取全局消息通道
+  - 线程安全的 Arc<Mutex<Option<...>>> 模式
+
+#### v0.3.89 代码变更
+- **修改文件**: `src/nodejs_core/http.rs` (+202 行)
+  - 添加 `HttpRequestMessage` 结构体
+  - 添加 `HttpResponseMessage` 结构体
+  - 添加 `HttpServerMessageChannel` 结构体
+  - 添加 `init_http_server_channel()` 函数
+  - 添加 `get_http_server_channel()` 函数
+  - 添加 `generate_http_response_v2()` 函数
+  - 修改 `HttpServerState` 添加 `use_message_channel` 字段
+  - 修改 `http_create_server_callback()` 初始化消息通道
+  - 修改 `http_server_listen_callback()` 启用消息通道模式
+  - 修改 `handle_connection()` 使用消息通道
+
+- **修复文件**: `tests/http_server_integration_tests.rs`
+  - 移除未使用的 `Read` 导入
+
+#### v0.3.89 测试结果
+```bash
+$ cargo test --test http_server_integration_tests
+running 9 tests
+test result: ok. 9 passed; 0 failed; 0 ignored
+
+$ cargo test --test stream_module_tests
+running 68 tests
+test result: ok. 68 passed; 0 failed; 0 ignored
+```
+
+#### v0.3.89 下一步计划
+- 实现主线程事件循环处理消息队列中的请求
+- 调用 JavaScript request handler
+- 将响应发送回后台线程
+- 添加完整的端到端 HTTP Server 测试
+
 
 
 

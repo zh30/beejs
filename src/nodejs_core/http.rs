@@ -14,6 +14,122 @@ use std::time::{Duration, Instant};
 
 use super::tcp_async::{sync_http_request, HttpRequestOptions};
 
+use std::sync::atomic::AtomicU64;
+
+/// HTTP 请求消息（跨线程传递）
+/// v0.3.89: 添加跨线程消息传递支持
+#[derive(Debug, Clone)]
+pub struct HttpRequestMessage {
+    /// HTTP 方法
+    pub method: String,
+    /// 请求 URL
+    pub url: String,
+    /// 请求路径
+    pub path: String,
+    /// HTTP 版本
+    pub http_version: String,
+    /// 请求头
+    pub headers: HashMap<String, String>,
+    /// 请求体
+    pub body: Vec<u8>,
+    /// 连接 ID（用于响应时定位连接）
+    pub connection_id: u64,
+}
+
+/// HTTP 响应消息（跨线程传递）
+/// v0.3.89: 添加跨线程消息传递支持
+#[derive(Debug)]
+pub struct HttpResponseMessage {
+    /// 连接 ID
+    pub connection_id: u64,
+    /// 状态码
+    pub status_code: u16,
+    /// 响应头
+    pub headers: HashMap<String, String>,
+    /// 响应体
+    pub body: Vec<u8>,
+}
+
+/// HTTP 服务器消息通道
+/// 用于主线程和后台线程之间的请求/响应传递
+/// v0.3.89: 添加跨线程消息传递支持
+pub struct HttpServerMessageChannel {
+    /// 发送请求到主线程
+    pub request_sender: crossbeam::channel::Sender<HttpRequestMessage>,
+    /// 接收主线程的响应
+    pub response_receiver: crossbeam::channel::Receiver<HttpResponseMessage>,
+    /// 是否启用了消息模式
+    pub enabled: bool,
+    /// 下一个连接 ID
+    pub next_connection_id: Arc<AtomicU64>,
+}
+
+impl HttpServerMessageChannel {
+    /// 创建新的消息通道
+    #[allow(clippy::redundant_closure)]
+    pub fn new(capacity: usize) -> Self {
+        let (request_sender, _request_receiver) = crossbeam::channel::bounded(capacity);
+        let (_response_sender, response_receiver) = crossbeam::channel::bounded(capacity);
+
+        Self {
+            request_sender,
+            response_receiver,
+            enabled: true,
+            next_connection_id: Arc::new(AtomicU64::new(1)),
+        }
+    }
+
+    /// 生成新的连接 ID
+    pub fn next_connection_id(&self) -> u64 {
+        self.next_connection_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+    }
+
+    /// 发送请求消息
+    pub fn send_request(&self, request: HttpRequestMessage) -> Result<(), crossbeam::channel::SendError<HttpRequestMessage>> {
+        self.request_sender.send(request)
+    }
+
+    /// 接收响应消息
+    pub fn recv_response(&self) -> Result<HttpResponseMessage, crossbeam::channel::RecvError> {
+        self.response_receiver.recv()
+    }
+
+    /// 尝试接收响应（非阻塞）
+    pub fn try_recv_response(&self) -> Result<HttpResponseMessage, crossbeam::channel::TryRecvError> {
+        self.response_receiver.try_recv()
+    }
+}
+
+/// 全局 HTTP 服务器消息通道
+/// v0.3.89: 添加跨线程消息传递支持
+static mut HTTP_SERVER_CHANNEL: Option<Arc<Mutex<Option<HttpServerMessageChannel>>>> = None;
+
+/// 初始化全局消息通道
+#[allow(static_mut_refs)]
+pub fn init_http_server_channel() -> Arc<Mutex<Option<HttpServerMessageChannel>>> {
+    unsafe {
+        if HTTP_SERVER_CHANNEL.is_none() {
+            HTTP_SERVER_CHANNEL = Some(Arc::new(Mutex::new(Some(HttpServerMessageChannel::new(100)))));
+        }
+        HTTP_SERVER_CHANNEL.as_ref().unwrap().clone()
+    }
+}
+
+/// 获取全局消息通道
+#[allow(static_mut_refs)]
+pub fn get_http_server_channel() -> Option<Arc<Mutex<Option<HttpServerMessageChannel>>>> {
+    unsafe {
+        HTTP_SERVER_CHANNEL.as_ref().cloned()
+    }
+}
+
+/// 发送 HTTP 响应到主线程
+/// v0.3.89: 添加跨线程消息传递支持
+pub fn send_http_response(_response: HttpResponseMessage) {
+    // This function will be used to send responses back to the server thread
+    // The actual implementation will be in the runtime's process loop
+}
+
 /// 连接键：用于标识唯一的服务器端点
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 struct ConnectionKey {
@@ -321,6 +437,13 @@ fn http_create_server_callback(
     let close_instance: _ = close_func.get_function(scope).unwrap();
     let close_key: _ = v8::String::new(scope, "close").unwrap();
     server_obj.set(scope, close_key.into(), close_instance.into());
+
+    // v0.3.89: 初始化消息通道并标记到 server 对象
+    let _message_channel = init_http_server_channel();
+    let channel_key = v8::String::new(scope, "_messageChannel").unwrap();
+    let channel_initialized = v8::Boolean::new(scope, true);
+    server_obj.set(scope, channel_key.into(), channel_initialized.into());
+
     retval.set(server_obj.into());
 }
 
@@ -685,10 +808,13 @@ fn http_server_listen_callback(
     };
 
     // v0.3.87: 创建服务器状态并启动真实 TCP 服务器
+    // v0.3.89: 检查是否启用了消息通道模式
+    let use_message_channel = get_http_server_channel().is_some();
     let server_state = Arc::new(HttpServerState {
         listening: Arc::new(AtomicBool::new(false)),
         port,
         host: host.clone(),
+        use_message_channel,
     });
 
     // 检查是否有 request handler
@@ -1289,6 +1415,8 @@ pub struct HttpServerState {
     pub listening: Arc<AtomicBool>,
     pub port: u16,
     pub host: String,
+    /// v0.3.89: 是否使用消息通道模式
+    pub use_message_channel: bool,
 }
 
 impl HttpServerState {
@@ -1297,6 +1425,7 @@ impl HttpServerState {
             listening: Arc::new(AtomicBool::new(false)),
             port: 3000,
             host: "0.0.0.0".to_string(),
+            use_message_channel: false,
         }
     }
 }
@@ -1357,6 +1486,33 @@ pub fn generate_http_response(response: &mut HttpServerResponse) -> Vec<u8> {
     let output = response.to_string().into_bytes();
     let mut result = output;
     result.extend_from_slice(&response.body);
+    result
+}
+
+/// 生成 HTTP 响应（从 HttpResponseMessage）
+/// v0.3.89: 添加跨线程消息传递支持
+pub fn generate_http_response_v2(response: &HttpResponseMessage) -> Vec<u8> {
+    let mut result = Vec::new();
+
+    // Status line
+    result.extend_from_slice(format!("HTTP/1.1 {} OK\r\n", response.status_code).as_bytes());
+
+    // Headers
+    for (name, value) in &response.headers {
+        result.extend_from_slice(format!("{}: {}\r\n", name, value).as_bytes());
+    }
+
+    // Content-Length header if body is present
+    if !response.body.is_empty() {
+        result.extend_from_slice(format!("Content-Length: {}\r\n", response.body.len()).as_bytes());
+    }
+
+    // End of headers
+    result.extend_from_slice(b"\r\n");
+
+    // Body
+    result.extend_from_slice(&response.body);
+
     result
 }
 
@@ -1423,11 +1579,12 @@ fn run_http_server(
 }
 
 /// 处理单个连接
+/// v0.3.89: 修改为使用消息通道模式，支持跨线程 V8 上下文调用
 fn handle_connection(
     mut stream: TcpStream,
-    _server_state: &HttpServerState,
+    server_state: &HttpServerState,
     _handler_code: &str,
-    _connection_id: u64,
+    connection_id: u64,
 ) {
     let mut buffer = [0u8; 8192];
     let mut request_data = Vec::new();
@@ -1467,7 +1624,7 @@ fn handle_connection(
     }
 
     // 解析 HTTP 请求
-    let request = match parse_http_request(&request_data) {
+    let parsed_request = match parse_http_request(&request_data) {
         Some(req) => req,
         None => {
             eprintln!("[Beejs] Failed to parse request");
@@ -1477,16 +1634,50 @@ fn handle_connection(
 
     eprintln!(
         "[Beejs] {} {} {}",
-        request.method,
-        request.url,
-        request.http_version
+        parsed_request.method,
+        parsed_request.url,
+        parsed_request.http_version
     );
 
-    // 由于 MinimalRuntime 不能直接在后台线程调用，
-    // 我们在这里生成一个简单的响应
-    // 完整的请求处理需要在主线程中调用 JavaScript 处理器
+    // v0.3.89: 尝试通过消息通道发送到主线程处理
+    let channel = get_http_server_channel();
+    let use_message_channel = server_state.use_message_channel && channel.is_some();
 
-    // 存储请求信息到文件供测试使用
+    if use_message_channel {
+        // 通过消息通道发送请求到主线程
+        let request_msg = HttpRequestMessage {
+            method: parsed_request.method.clone(),
+            url: parsed_request.url.clone(),
+            path: parsed_request.path.clone(),
+            http_version: parsed_request.http_version.clone(),
+            headers: parsed_request.headers.clone(),
+            body: parsed_request.body.clone(),
+            connection_id,
+        };
+
+        if let Some(ref channel_ref) = channel {
+            if let Some(ref msg_channel) = *channel_ref.lock().unwrap() {
+                if msg_channel.send_request(request_msg).is_ok() {
+                    // 等待响应
+                    match msg_channel.recv_response() {
+                        Ok(response) => {
+                            // 生成 HTTP 响应
+                            let response_data = generate_http_response_v2(&response);
+                            if let Err(e) = stream.write_all(&response_data) {
+                                eprintln!("[Beejs] Write error: {}", e);
+                            }
+                            return;
+                        }
+                        Err(e) => {
+                            eprintln!("[Beejs] Failed to receive response: {}", e);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 回退：生成简单的响应（当消息通道不可用时）
     let mut response = HttpServerResponse::new();
     let response_data = generate_http_response(&mut response);
 
