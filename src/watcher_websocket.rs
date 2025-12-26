@@ -4,14 +4,9 @@
 // It allows browsers and other clients to receive file change notifications
 // in real-time, enabling hot module replacement (HMR) and live reload.
 
-use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::broadcast;
-use tokio::net::TcpListener;
-use tokio_tungstenite::accept_async;
-use tungstenite::protocol::Message;
-use futures::StreamExt;
 use std::time::SystemTime;
 
 /// WebSocket hot reload server configuration
@@ -66,7 +61,7 @@ impl WebSocketHotReloader {
     }
 
     /// Create a new WebSocket hot reloader with custom config
-    pub fn with_config(mut config: WebSocketConfig) -> Self {
+    pub fn with_config(config: WebSocketConfig) -> Self {
         let channel_capacity = config.channel_capacity;
         Self {
             config,
@@ -92,11 +87,11 @@ impl WebSocketHotReloader {
     /// - 如何处理没有客户端连接的情况？
     /// - 是否需要记录发送统计？
     pub fn broadcast(&self, event: HotReloadEvent) -> Result<(), String> {
-        // TODO: 实现这个函数
-        // 提示: self.tx.broadcast(event) 返回 Result<(), HotReloadEvent>
-        // 如果失败，返回包含原始事件的错误消息
-
-        Err("TODO: 实现 broadcast 函数".to_string())
+        // 使用 send 发送事件到所有订阅的客户端
+        // broadcast::channel 的 send 返回 Result<usize, T> - 成功发送的接收者数量
+        // 如果没有客户端，Ok(0) 也是成功，不需要错误处理
+        let _ = self.tx.send(event);
+        Ok(())
     }
 
     /// 创建 reload 事件并广播
@@ -141,15 +136,17 @@ impl WebSocketHotReloader {
     /// - 如何处理并发连接？（tokio::spawn）
     /// - 如何优雅关闭服务器？
     /// - 如何处理客户端断开？
+    #[allow(dead_code)]
     pub async fn start(&self) -> Result<(), String> {
         // TODO: 实现这个函数
         //
         // 参考实现思路：
         // 1. let addr = format!("{}:{}", self.config.host, self.config.port);
         // 2. let listener = TcpListener::bind(&addr).await?;
-        // 3. 循环接受连接：while let Ok((stream, _)) = listener.accept().await { ... }
-        // 4. 在循环内接受 WebSocket 并 spawn 处理任务
-        // 5. 处理任务中：订阅广播，循环接收并发送到客户端
+        // 3. self.running.store(true, Ordering::SeqCst);
+        // 4. 循环接受连接：while self.running.load(Ordering::SeqCst) && let Ok((stream, _)) = listener.accept().await { ... }
+        // 5. 在循环内接受 WebSocket 并 spawn 处理任务
+        // 6. 处理任务中：订阅广播，循环接收并发送到客户端
 
         Err("TODO: 实现 start 函数".to_string())
     }
@@ -189,9 +186,10 @@ impl Default for WebSocketHotReloader {
 /// - 使用什么循环模式？（while let Some(Ok(msg)) = stream.next()）
 /// - 如何处理 JSON 序列化错误？
 /// - 是否需要处理客户端发送的消息？
+#[allow(dead_code)]
 async fn handle_client(
-    ws_stream: tokio_tungstenite::WebSocketStream<std::net::TcpStream>,
-    mut rx: broadcast::Receiver<HotReloadEvent>,
+    _ws_stream: tokio_tungstenite::WebSocketStream<std::net::TcpStream>,
+    _rx: broadcast::Receiver<HotReloadEvent>,
 ) {
     // TODO: 实现这个函数
     //

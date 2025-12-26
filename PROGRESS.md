@@ -1,3 +1,38 @@
+### v0.3.104 修复 WebSocket 热重载编译警告 (2025-12-26)
+**进度**: 代码质量 | ✅ 已完成
+
+#### v0.3.104 修复内容
+- **实现 broadcast 函数**
+  - 修复 `broadcast()` 函数实现，使用 `tx.send()` 正确发送广播事件
+  - 理解 broadcast channel 的语义：`send()` 返回接收者数量而非错误
+
+- **清理未使用导入**
+  - 移除 `std::net::SocketAddr`, `tokio::net::TcpListener`
+  - 移除 `tokio_tungstenite::accept_async`, `tungstenite::protocol::Message`
+  - 移除 `futures::StreamExt`
+
+- **修复 mut 警告**
+  - 移除 `with_config` 函数中不必要的 `mut`
+
+- **添加 #[allow(dead_code)]**
+  - 标记未实现的 `start()` 和 `handle_client()` 函数
+
+#### v0.3.104 代码变更
+- **修改文件**: `src/watcher_websocket.rs` (-20 行导入, +5 行实现)
+  - 移除未使用的导入
+  - 实现 `broadcast()` 函数
+  - 清理 mut 和 dead_code 警告
+
+#### v0.3.104 验证
+- ✅ `cargo build --release` 零警告
+- ✅ `cargo test --lib watcher_websocket` 2/2 通过
+
+#### v0.3.104 下一步计划
+- 实现 `start()` WebSocket 服务器函数
+- 实现 `handle_client()` 客户端处理函数
+- 集成热重载 WebSocket 到 watch 模式
+
+
 ### v0.3.100 实现热重载功能 (2025-12-26)
 **进度**: 开发体验 | ✅ 代码已完成
 
