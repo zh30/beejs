@@ -8632,3 +8632,36 @@ console.log(p.name);  // "Alice"
 
 ### Performance
 - Improved TypeScript compilation robustness for complex arrow function scenarios
+
+---
+
+## v0.3.145 (2025-12-27)
+
+### New Features
+- **Source Map Validation Utility**
+  - Added `validate_source_map()` function to verify source map correctness
+  - Supports Source Map v3 specification validation
+  - Validates required fields: version, sources, mappings
+  - Validates VLQ encoding correctness
+
+### Validation Features
+- Checks required fields (version, sources, mappings)
+- Validates VLQ character set (A-Z, a-z, 0-9, +, /, ;, ,)
+- Reports detailed validation error messages
+
+### Tests
+- Added `test_source_map_validation_valid` - valid source map validation
+- Added `test_source_map_validation_structure` - structure validation
+- Added `test_source_map_validation_missing_version` - missing version test
+- Added `test_source_map_validation_missing_mappings` - missing mappings test
+- Added `test_source_map_validation_invalid_vlq` - invalid VLQ test
+- Added `test_source_map_validation_multiline` - multiline validation test
+
+### Verification
+- ✅ `cargo test --lib` 204/204 passed (+6)
+- ✅ Added 6 source map validation tests
+- ✅ `cargo build --release` compiled successfully
+
+### Next Steps
+- Implement AST node position tracking (full source map precision)
+- Integrate debugger source map support
