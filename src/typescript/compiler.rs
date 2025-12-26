@@ -1062,6 +1062,14 @@ pub enum FunctionParameter {
     },
 }
 
+/// 索引签名：用于定义动态属性类型，如 [key: string]: T
+#[derive(Debug, Clone)]
+pub struct IndexSignature {
+    pub key_name: String,   // 索引参数名，如 "key"
+    pub key_type: String,   // 键类型："string" 或 "number"
+    pub value_type: String, // 值类型
+}
+
 /// 抽象语法树节点
 #[derive(Debug, Clone)]
 pub enum ASTNode {
@@ -1130,9 +1138,12 @@ pub enum ASTNode {
         is_static: bool,
         initializer: Option<Box<ASTNode>>,
     },
+    /// 接口声明：支持索引签名 [key: string]: T
     InterfaceDeclaration {
         name: String,
         properties: HashMap<String, String>,
+        /// 索引签名：[key: string]: T 或 [key: number]: T
+        index_signature: Option<Box<IndexSignature>>,
     },
     EnumDeclaration {
         name: String,
@@ -2742,21 +2753,54 @@ impl Parser {
         };
         self.consume(Token::LBrace)?;
         let mut properties = HashMap::new();
+        let mut index_signature = None;
+
         while !self.current_token_eq(&Token::RBrace) {
-            let prop_name_token = self.consume_any_identifier()?;
-            let prop_name: _ = match prop_name_token {
-                Token::Identifier(name) => name,
-                _ => bail!("Expected property name"),
-            };
-            self.consume(Token::Colon)?;
-            let prop_type: _ = self.parse_type_annotation();
-            properties.insert(prop_name, prop_type.unwrap_or_else(|| "any".to_string()));
+            // 检测索引签名语法：[keyName: keyType]: valueType
+            if self.current_token_eq(&Token::LBracket) {
+                self.consume(Token::LBracket)?;
+                // 解析索引参数名
+                let key_name_token = self.consume_any_identifier()?;
+                let key_name: String = match key_name_token {
+                    Token::Identifier(name) => name,
+                    _ => bail!("Expected index key name"),
+                };
+                self.consume(Token::Colon)?;
+                // 解析键类型 (string 或 number)
+                let key_type_token = self.consume_any_identifier()?;
+                let key_type: String = match key_type_token {
+                    Token::Identifier(name) if name == "string" || name == "number" => name,
+                    _ => bail!("Expected 'string' or 'number' for index key type"),
+                };
+                self.consume(Token::RBracket)?;
+                self.consume(Token::Colon)?;
+                // 解析值类型
+                let value_type: _ = self.parse_type_annotation();
+                let value_type_str = value_type.unwrap_or_else(|| "any".to_string());
+
+                index_signature = Some(Box::new(IndexSignature {
+                    key_name,
+                    key_type,
+                    value_type: value_type_str,
+                }));
+            } else {
+                // 解析普通属性
+                let prop_name_token = self.consume_any_identifier()?;
+                let prop_name: _ = match prop_name_token {
+                    Token::Identifier(name) => name,
+                    _ => bail!("Expected property name"),
+                };
+                self.consume(Token::Colon)?;
+                let prop_type: _ = self.parse_type_annotation();
+                properties.insert(prop_name, prop_type.unwrap_or_else(|| "any".to_string()));
+            }
+
             if self.current_token_eq(&Token::SemiColon) {
                 self.consume(Token::SemiColon)?;
             }
         }
         self.consume(Token::RBrace)?;
-        Ok(ASTNode::InterfaceDeclaration { name, properties })
+        Ok(ASTNode::InterfaceDeclaration { name, properties, index_signature })
     }
     fn parse_enum_declaration(&mut self) -> Result<ASTNode> {
         self.consume(Token::Enum)?;
@@ -4228,13 +4272,36 @@ impl Parser {
 
     /// 解析对象类型字面量: { name: string; age: number }
     /// 或映射类型: { [P in keyof T]: T[P] }
+    /// 或索引签名: { [key: string]: T }
     fn parse_object_type(&mut self) -> Option<String> {
         self.consume(Token::LBrace).ok()?;
 
         // 检测映射类型语法: { [P in KeyType]: ValueType } 或 { readonly [P in KeyType]: ValueType }
-        let is_mapped_type = self.current_token_eq(&Token::LBracket) ||
-           (self.current_token_eq(&Token::Readonly) && self.position + 1 < self.tokens.len() &&
-            matches!(self.tokens[self.position + 1], Token::LBracket));
+        // 检测是否有 `[` 或 `readonly [`
+        let has_lbracket = self.current_token_eq(&Token::LBracket);
+        let has_readonly_lbracket = self.current_token_eq(&Token::Readonly) &&
+            self.position + 2 < self.tokens.len() &&
+            matches!(self.tokens[self.position + 1], Token::LBracket);
+
+        let is_mapped_type = if has_lbracket {
+            // 检查是否是映射类型 (有 `in` 关键字) 而不是索引签名 (有 `:` 紧随 `[identifier]`)
+            // token 序列: [ Identifier : ... ]: 或 [ Identifier in ... ]:
+            if self.position + 4 < self.tokens.len() {
+                matches!(self.tokens[self.position + 2], Token::In)
+            } else {
+                false
+            }
+        } else if has_readonly_lbracket {
+            // token 序列: readonly [ Identifier in ... ]:
+            if self.position + 5 < self.tokens.len() {
+                matches!(self.tokens[self.position + 3], Token::In)
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
         if is_mapped_type {
             return self.parse_mapped_type();
         }
@@ -4243,6 +4310,56 @@ impl Parser {
 
         // 解析属性列表
         while !self.current_token_eq(&Token::RBrace) {
+            // 检测索引签名语法: [keyName: keyType]: valueType
+            if self.current_token_eq(&Token::LBracket) {
+                // 消耗 [
+                self.advance();
+
+                // 解析索引参数名
+                let key_name = match self.current_token() {
+                    Token::Identifier(ref name) => {
+                        let name = name.clone();
+                        self.advance();
+                        name
+                    }
+                    _ => break,
+                };
+
+                // 期望冒号（索引签名的 `: type` 部分）
+                self.consume(Token::Colon).ok()?;
+
+                // 解析键类型 (string 或 number)
+                let key_type = match self.current_token() {
+                    Token::Identifier(ref name) if name == "string" || name == "number" => {
+                        let t = name.clone();
+                        self.advance();
+                        t
+                    }
+                    _ => break,
+                };
+
+                // 期望 ]
+                self.consume(Token::RBracket).ok()?;
+
+                // 期望 : (值类型注解)
+                self.consume(Token::Colon).ok()?;
+
+                // 解析值类型
+                let value_type = self.parse_union_type();
+
+                if let Some(t) = value_type {
+                    properties.push(format!("[{}: {}]: {}", key_name, key_type, t));
+                }
+
+                // 处理分号或逗号分隔符
+                if self.current_token_eq(&Token::SemiColon) {
+                    self.advance();
+                } else if self.current_token_eq(&Token::Comma) {
+                    self.advance();
+                }
+                continue;
+            }
+
             // 解析属性名（标识符或字符串）
             let prop_name = match self.current_token() {
                 Token::Identifier(ref name) => {
@@ -7869,6 +7986,105 @@ async function fetchData(url: string, options?: { timeout: number }): Promise<st
                 let overload_count = result.js_code.matches("/** @overload */").count();
                 assert_eq!(overload_count, 2,
                     "Should have 2 @overload comments, got {}", overload_count);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_interface_index_signature_string() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test interface with string index signature
+        let source = r#"interface StringMap {
+    [key: string]: string;
+}"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Interface should be skipped in JS output
+                assert!(!result.js_code.contains("interface"),
+                    "Should not contain 'interface' keyword: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_interface_index_signature_number() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test interface with number index signature
+        let source = r#"interface NumberArray {
+    [index: number]: string;
+}"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Interface should be skipped in JS output
+                assert!(!result.js_code.contains("interface"),
+                    "Should not contain 'interface' keyword: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_interface_with_properties_and_index_signature() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test interface with both regular properties and index signature
+        let source = r#"interface User {
+    name: string;
+    age: number;
+    [key: string]: any;
+}"#;
+        println!("\n========== Testing interface with properties and index signature ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Interface should be skipped in JS output
+                assert!(!result.js_code.contains("interface"),
+                    "Should not contain 'interface' keyword: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_type_alias_with_index_signature() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test type alias with index signature
+        let source = r#"type Dictionary = {
+    [key: string]: number;
+    name: string;
+};"#;
+        println!("\n========== Testing type alias with index signature ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Type alias should be skipped in JS output
+                assert!(!result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}", result.js_code);
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);

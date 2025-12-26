@@ -1,3 +1,73 @@
+### v0.3.131 实现索引签名支持 (2025-12-27)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.131 新增功能
+- **索引签名 (Index Signatures)**
+  - 支持 `[key: string]: T` 字符串索引签名
+  - 支持 `[key: number]: T` 数字索引签名
+  - 在接口中定义动态属性类型
+  - 在类型别名中定义索引签名
+
+- **AST 增强**
+  - 新增 `IndexSignature` 结构体存储索引签名信息
+  - 包含 `key_name`、`key_type`、`value_type` 字段
+  - `InterfaceDeclaration` 添加 `index_signature` 字段
+
+- **解析器增强**
+  - 修改 `parse_interface_declaration()` 支持 `[key: type]: value` 语法
+  - 修改 `parse_object_type()` 支持类型别名中的索引签名
+  - 正确区分索引签名和映射类型（通过 `in` 关键字判断）
+
+#### v0.3.131 验证
+- ✅ `cargo test --lib` 137/137 通过 (+4)
+- ✅ 新增测试用例:
+  - `test_interface_index_signature_string`: 字符串索引签名
+  - `test_interface_index_signature_number`: 数字索引签名
+  - `test_interface_with_properties_and_index_signature`: 属性+索引签名
+  - `test_type_alias_with_index_signature`: 类型别名索引签名
+- ✅ `cargo build --release` 成功编译
+- ✅ 无编译器警告
+
+#### v0.3.131 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+128/-8 行)
+  - 新增 `IndexSignature` 结构体
+  - 修改 `InterfaceDeclaration` 添加索引签名字段
+  - 修改 `parse_interface_declaration()` 解析索引签名
+  - 修改 `parse_object_type()` 支持类型别名索引签名
+  - 修复映射类型检测逻辑（区分 `readonly [P in ...]` 和 `[key: type]:`）
+  - 添加 4 个测试用例
+
+#### v0.3.131 示例代码
+```typescript
+// 字符串索引签名
+interface StringMap {
+    [key: string]: string;
+}
+
+// 数字索引签名
+interface NumberArray {
+    [index: number]: string;
+}
+
+// 混合属性和索引签名
+interface User {
+    name: string;
+    age: number;
+    [key: string]: any;
+}
+
+// 类型别名中的索引签名
+type Dictionary = {
+    [key: string]: number;
+    name: string;
+};
+```
+
+#### v0.3.131 下一步计划
+- 完善 Source Map 生成精度
+- 实现更多高级类型特性
+- 添加更多边界情况测试
+
 ### v0.3.130 实现 getter/setter 和构造函数类型注解支持 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 
