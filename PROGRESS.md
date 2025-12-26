@@ -99,6 +99,66 @@ test result: ok. 13 passed; 0 failed
 - 添加端到端 HTTP Server 测试（真实网络请求）
 
 
+### v0.3.91 实现 V8 上下文 HTTP 请求处理器集成 (2025-12-26)
+**进度**: HTTP Server 跨线程支持 | ✅ 已完成
+
+#### v0.3.91 新增功能
+- **V8 上下文 HTTP 请求处理**
+  - `process_http_request_in_v8()` - 在 V8 上下文中处理 HTTP 请求
+  - 调用 JavaScript request handler 并返回响应
+  - 自动创建 req/res 对象并暴露给 JS
+
+- **全局 Handler 管理**
+  - `get_global_request_handler()` - 获取全局 request handler
+  - `set_global_request_handler()` - 设置全局 request handler
+  - 通过 `_httpServerRequestHandler` 全局变量存储
+
+- **HTTP Server 消息轮询**
+  - `pump_http_messages()` - 轮询消息通道并处理请求
+  - 集成到 MinimalRuntime 提供 API
+  - 支持 `init_http_server()` 和 `set_http_request_handler()`
+
+#### v0.3.91 代码变更
+- **修改文件**: `src/nodejs_core/http.rs` (+120 行)
+  - 添加 `process_http_request_in_v8()` 函数
+  - 添加 `handle_http_request_v8()` 函数
+  - 添加 `get_global_request_handler()` 函数
+  - 添加 `set_global_request_handler()` 函数
+
+- **修改文件**: `src/runtime_minimal.rs` (+200 行)
+  - 添加 `pump_http_messages()` 方法
+  - 添加 `init_http_server()` 方法
+  - 添加 `set_http_request_handler()` 方法
+  - 完整的 V8 上下文请求处理流程
+
+- **新增测试**: `tests/http_server_integration_tests.rs` (+80 行)
+  - `test_http_server_response_headers` - 测试响应头
+  - `test_http_server_post_with_body` - 测试 POST 请求
+  - `test_http_server_different_methods` - 测试多种 HTTP 方法
+  - `test_http_server_multiple_headers` - 测试多响应头
+  - `test_http_server_request_headers` - 测试请求头传递
+  - `test_http_server_404_response` - 测试 404 响应
+  - `test_pump_http_messages` - 测试消息轮询
+  - `test_http_server_body_transmission` - 测试 body 传输
+
+- **修复文件**: `tests/http_server_integration_tests.rs`
+  - 添加 `use std::io::Read` 导入以支持 `read_to_string`
+
+#### v0.3.91 测试结果
+```bash
+$ cargo test --test stream_module_tests
+running 68 tests
+test result: ok. 68 passed; 0 failed
+```
+
+#### v0.3.91 下一步计划
+- 完善 HTTP Server 端到端测试
+- 优化请求处理性能
+- 添加 HTTP Server Keep-Alive 支持
+- 实现 HTTP/1.1 持久连接
+- 添加 HTTPS (TLS) 支持
+
+
 
 
 
