@@ -87,6 +87,9 @@ struct TypeContext {
     variables: HashMap<String, String>,
     /// 函数返回类型栈（用于 return 语句检查）
     return_type_stack: Vec<Option<String>>,
+    /// async 上下文栈（用于 await 验证）
+    /// true 表示当前在 async 函数/箭头函数中
+    async_context_stack: Vec<bool>,
 }
 
 impl TypeContext {
@@ -97,10 +100,26 @@ impl TypeContext {
             enums: HashMap::new(),
             variables: HashMap::new(),
             return_type_stack: Vec::new(),
+            async_context_stack: Vec::new(),
         };
         // 注册内置类型
         ctx.register_builtin_types();
         ctx
+    }
+
+    /// 进入 async 上下文
+    fn enter_async(&mut self, is_async: bool) {
+        self.async_context_stack.push(is_async);
+    }
+
+    /// 退出 async 上下文
+    fn exit_async(&mut self) {
+        self.async_context_stack.pop();
+    }
+
+    /// 检查当前是否在 async 函数中
+    fn is_in_async(&self) -> bool {
+        self.async_context_stack.iter().any(|&b| b)
     }
 
     fn register_builtin_types(&mut self) {
@@ -926,7 +945,7 @@ impl TypeScriptCompiler {
                     ctx.add_variable(name, "any");
                 }
             }
-            ASTNode::FunctionDeclaration { name: _, params, return_type, body, .. } => {
+            ASTNode::FunctionDeclaration { name: _, params, return_type, body, is_async, type_params: _ } => {
                 // 为函数参数创建新作用域
                 let prev_vars = ctx.variables.clone();
 
@@ -950,10 +969,13 @@ impl TypeScriptCompiler {
                 // 记录返回类型
                 ctx.return_type_stack.push(return_type.clone());
 
+                // 进入/退出 async 上下文
+                ctx.enter_async(*is_async);
                 // 检查函数体
                 for stmt in body {
                     self.check_node(stmt, ctx)?;
                 }
+                ctx.exit_async();
 
                 // 恢复作用域
                 ctx.variables = prev_vars;
@@ -1161,16 +1183,34 @@ impl TypeScriptCompiler {
                     self.check_expression(prop, _ctx)?;
                 }
             }
-            ASTExpression::ArrowFunctionExpression { body, .. } => {
+            ASTExpression::ArrowFunctionExpression { body, is_async, .. } => {
+                // 进入/退出 async 上下文
+                _ctx.enter_async(*is_async);
                 self.check_node(body.as_ref(), _ctx)?;
+                _ctx.exit_async();
             }
             ASTExpression::TemplateLiteral { parts, .. } => {
                 for part in parts {
                     self.check_expression(part, _ctx)?;
                 }
             }
+            ASTExpression::FunctionExpression { body, is_async, .. } => {
+                // 进入/退出 async 上下文
+                _ctx.enter_async(*is_async);
+                for stmt in body {
+                    self.check_node(stmt, _ctx)?;
+                }
+                _ctx.exit_async();
+            }
             ASTExpression::Await { expression, .. } => {
                 self.check_expression(expression, _ctx)?;
+                // 验证 await 是否在 async 函数中
+                if !_ctx.is_in_async() {
+                    self.add_diagnostic(
+                        "await expression can only be used within an async function".to_string(),
+                        None,
+                    );
+                }
             }
             ASTExpression::AssignmentExpression { left, right, .. } => {
                 self.check_expression(left, _ctx)?;
@@ -10654,5 +10694,40 @@ processAsync([]);
             "Should contain 'async function': {}", result.js_code);
         assert!(result.js_code.contains("processAsync"),
             "Should contain 'processAsync': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_await_in_async_function_expression() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test await in async function expression
+        let source = r#"
+const fetchData = async function(): Promise<string> {
+    const result = await fetch('/api/data');
+    return result;
+};
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Note: single quotes may be converted to double quotes in output
+        assert!(result.js_code.contains("await fetch"),
+            "Should contain await expression: {}", result.js_code);
+        assert!(result.js_code.contains("async function"),
+            "Should contain async function: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_await_in_async_arrow_function() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test await in async arrow function
+        let source = r#"
+const fetchData = async () => {
+    const result = await getData();
+    return result;
+};
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("await getData()"),
+            "Should contain await expression: {}", result.js_code);
+        assert!(result.js_code.contains("async"),
+            "Should contain async: {}", result.js_code);
     }
 }
