@@ -1,3 +1,60 @@
+### v0.3.128 实现函数重载支持 (2025-12-27)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.128 新增功能
+- **函数重载（Function Overloads）**
+  - 支持多个同名的函数签名声明
+  - 支持 `function foo(x: T): T;` 重载签名语法
+  - 实现函数自动识别签名与实现
+  - 重载签名输出为 JSDoc `@overload` 注释保留类型信息
+
+- **可选参数支持（Optional Parameters）**
+  - 支持 `name?: Type` 可选参数语法
+  - 解析器正确跳过 `?` 标记
+  - 在参数列表和函数签名中均可使用
+
+- **typeof 表达式支持**
+  - 新增 `ASTExpression::Unary` 变体支持一元运算符
+  - 解析器正确处理 `typeof` 表达式
+  - 支持 `typeof input === "string"` 等模式
+
+#### v0.3.128 验证
+- ✅ `cargo test --lib` 130/130 通过 (+4)
+- ✅ 新增测试用例:
+  - `test_function_overload_basic`: 基础函数重载
+  - `test_function_overload_multiple_signatures`: 多签名重载
+  - `test_function_overload_with_generics`: 泛型函数重载
+  - `test_async_function_overload`: 异步函数重载
+- ✅ `cargo build --release` 成功编译
+- ✅ 无编译器警告
+
+#### v0.3.128 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+209/-0 行)
+  - 添加 `FunctionOverload` AST 节点类型
+  - 添加 `Unary` 表达式类型
+  - 修改 `parse_function_declaration()` 检测重载签名（分号结尾）
+  - 修改 `parse_function_params_list()` 支持可选参数 `?`
+  - 修改 `parse_primary_expression()` 支持 `typeof` 表达式
+  - 修改转译器输出 `@overload` JSDoc 注释
+  - 添加 4 个测试用例
+
+#### v0.3.128 示例代码
+```typescript
+// 函数重载示例
+function greet(name: string): string;
+function greet(name: string, formal: boolean): string;
+function greet(name: string, formal?: boolean): string {
+    return formal ? `Good day, ${name}` : `Hi, ${name}`;
+}
+
+// 泛型重载
+function identity<T>(value: T): T;
+function identity<T>(value: T, defaultValue: T): T;
+function identity<T>(value: T, defaultValue?: T): T {
+    return value ?? defaultValue;
+}
+```
+
 ### v0.3.126 实现 never、unknown 类型和 is 关键字支持 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 
