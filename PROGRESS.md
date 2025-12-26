@@ -1,3 +1,72 @@
+### v0.3.130 实现 getter/setter 和构造函数类型注解支持 (2025-12-27)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.130 新增功能
+- **Getter 类型注解**
+  - 支持 `get propertyName(): Type { ... }` 语法
+  - 跳过返回类型注解 `: Type`
+
+- **Setter 参数类型注解**
+  - 支持 `set propertyName(value: Type) { ... }` 语法
+  - 使用 `parse_function_params_list()` 解析参数和类型注解
+
+- **构造函数参数类型注解**
+  - 支持 `constructor(name: string, age: number)` 语法
+  - 利用已有的 `parse_function_params_list()` 解析参数
+
+#### v0.3.130 解析器增强
+- 重构 `parse_class_member()` 中的 getter/setter 解析逻辑
+- 区分 getter 返回类型注解和 setter 参数类型注解
+- Setter 现在可以正确解析带类型注解的参数
+
+#### v0.3.130 验证
+- ✅ `cargo test --lib` 133/133 通过 (+2)
+- ✅ 新增测试用例:
+  - `test_constructor_with_type_annotations`
+  - `test_getter_setter_with_type_annotations`
+- ✅ `cargo build --release` 成功编译
+- ✅ 无编译器警告
+
+#### v0.3.130 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+86/-6 行)
+  - 重构 getter/setter 解析支持参数列表
+  - 添加 getter 返回类型注解跳过逻辑
+  - 添加 2 个测试用例
+
+#### v0.3.130 示例代码
+```typescript
+// Getter/Setter 类型注解示例
+class Rectangle {
+    private _width: number = 0;
+    private _height: number = 0;
+
+    get width(): number {
+        return this._width;
+    }
+
+    set width(value: number) {
+        this._width = value;
+    }
+
+    get area(): number {
+        return this._width * this._height;
+    }
+}
+
+// 构造函数类型注解示例
+class Person {
+    constructor(name: string, age: number) {
+        this.name = name;
+        this.age = age;
+    }
+}
+```
+
+#### v0.3.130 下一步计划
+- 完善 Source Map 生成精度
+- 实现更多高级类型特性
+- 添加更多边界情况测试
+
 ### v0.3.129 实现类计算属性名支持 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 
