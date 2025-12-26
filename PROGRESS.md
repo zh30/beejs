@@ -6705,3 +6705,40 @@ test result: ok. 11 passed; 0 failed
 - 重新设计 HTTP 消息通道架构解决同步问题
 - 添加 HTTPS/TLS 支持
 - 启用更多被忽略的测试
+
+---
+
+### v0.3.96 实现 HTTP Server Keep-Alive 支持 (2025-12-26)
+**进度**: HTTP Server Keep-Alive | ✅ 已完成
+
+#### v0.3.96 新增功能
+- **Keep-Alive 连接支持**
+  - 添加 `should_keep_alive()` 函数判断连接是否保持
+  - HTTP/1.1 默认 Keep-Alive（无 Connection 头或 Connection: keep-alive）
+  - HTTP/1.0 默认 Close（除非指定 Connection: keep-alive）
+  - 实现连接循环处理，支持多请求复用同一连接
+
+- **Connection 响应头处理**
+  - 根据请求的 Connection 头和 HTTP 版本决定响应行为
+  - 响应中自动添加 `Connection: keep-alive` 或 `Connection: close`
+  - 支持客户端显式请求 `Connection: close`
+
+#### v0.3.96 代码变更
+- **修改文件**: `src/nodejs_core/http.rs` (+195 行)
+  - 添加 `should_keep_alive()` 函数
+  - 重构 `handle_connection()` 为 Keep-Alive 循环模式
+  - 根据 `_is_keep_alive` 变量决定是否关闭连接
+
+- **新增测试**: `tests/http_server_integration_tests.rs` (+130 行)
+  - `test_http_server_keep_alive` - 测试同一连接多请求
+  - `test_http_server_connection_close` - 测试 Connection: close
+
+#### v0.3.96 验证
+- ✅ `cargo build` 成功（零警告）
+- ✅ `cargo test --test stream_module_tests` → 68/68 通过
+- ✅ `cargo test --test http_server_tests` → 16/16 通过
+
+#### v0.3.96 下一步计划
+- 添加 HTTPS/TLS 支持
+- 实现 HTTP/2 支持
+- 优化 Keep-Alive 超时机制
