@@ -1,3 +1,43 @@
+### v0.3.111 实现箭头函数块语句完整解析 (2025-12-26)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.111 新增功能
+- **AST 结构升级**
+  - `ArrowFunctionExpression.body` 从 `Box<ASTExpression>` 改为 `Box<ASTNode>`
+  - 支持块语句 `{}` 作为箭头函数体，包含多条语句
+
+- **解析器增强**
+  - `parse_async_arrow_function` 完整支持 `async () => { statements; }`
+  - `parse_arrow_function_from_assignment` 支持块语句解析
+  - `parse_arrow_function_expression` 统一处理表达式和块语句
+
+- **发射器更新**
+  - `emit_expression` 调用 `emit_node` 处理 ASTNode 类型的 body
+  - 正确输出块语句结构 `{ statements }`
+
+#### v0.3.111 验证
+- ✅ `cargo test --lib` 36/36 通过
+- ✅ 新增测试用例：`test_async_arrow_function_block_body`, `test_arrow_function_block_body_with_multiple_statements`
+- ✅ `beejs run examples/test_arrow_block_body.ts` 成功运行
+
+#### v0.3.111 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+101/-61 行)
+  - 修改 `ASTExpression::ArrowFunctionExpression` 结构
+  - 重写 `parse_async_arrow_function` 块语句解析
+  - 重写 `parse_arrow_function_from_assignment` 块语句解析
+  - 重写 `parse_arrow_function_expression` 块语句解析
+  - 更新 `emit_expression` 调用 `emit_node`
+
+- **新增文件**: `examples/test_arrow_block_body.ts`
+  - 测试 async 箭头函数块语句
+  - 测试普通箭头函数块语句
+
+#### v0.3.111 下一步计划
+- 实现 `for...of` 循环支持
+- 实现 `if/else` 语句支持
+- 实现更多控制流语句
+
+
 ### v0.3.110 实现 await 表达式解析 (2025-12-26)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 
@@ -27,8 +67,8 @@
   - 修改 `emit_expression` 处理 await 和 async
 
 #### v0.3.110 下一步计划
-- 完善块语句形式的 async 箭头函数解析
-- 支持 `async () => { statements; }` 完整语法
+- 完善块语句形式的 async 箭头函数解析 ✅ 已完成 (v0.3.111)
+- 支持 `async () => { statements; }` 完整语法 ✅ 已完成 (v0.3.111)
 - 实现 `await` 在更多上下文中的支持（如条件表达式、函数调用参数等）
 
 
