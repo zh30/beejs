@@ -1,3 +1,70 @@
+### v0.3.100 实现热重载功能 (2025-12-26)
+**进度**: 开发体验 | ✅ 代码已完成
+
+#### v0.3.100 新增功能
+- **Watch Mode (热重载)**
+  - 添加 `--watch` 选项到 `beejs run` 命令
+  - 使用 `notify_debouncer_mini` 实现高效文件监控
+  - 自动检测 JS/TS/JSX/TSX 文件变化
+  - 智能忽略 node_modules、.git、dist 等目录
+
+- **可配置去抖动**
+  - `--debounce` 参数控制响应延迟 (默认 100ms)
+  - 防止快速连续的文件变化导致频繁重载
+
+- **用户体验增强**
+  - 控制台自动清屏，保持输出整洁
+  - 实时显示文件变化和重载耗时
+  - 成功/失败状态可视化
+
+#### v0.3.100 代码变更
+- **修改文件**: `src/main.rs` (+60 行)
+  - 为 `Run` 命令添加 `--watch` 和 `--debounce` 选项
+  - 实现热重载事件循环
+  - 添加初始执行和错误处理
+
+- **修改文件**: `src/lib.rs` (+1 行)
+  - 启用 `watcher` 模块
+
+- **修改文件**: `src/watcher.rs` (+40 行)
+  - 修复编译错误
+  - 添加 `mpsc` 和 `RecursiveMode` 导入
+  - 简化类型定义
+
+#### v0.3.100 使用示例
+```bash
+# 启动热重载模式
+beejs run index.js --watch
+
+# 自定义去抖动时间
+beejs run index.js --watch --debounce 300
+
+# 运行并退出
+beejs run index.js
+```
+
+#### v0.3.100 测试结果
+```bash
+$ cargo test --lib
+running 14 tests
+test result: ok. 14 passed; 0 failed; 0 ignored
+
+$ ./target/release/beejs run --help
+Run a script file
+
+Usage: beejs run [OPTIONS] <FILE> [ARGS]...
+
+Options:
+  -w, --watch                Enable watch mode (hot reload)
+      --debounce <DEBOUNCE>  Debounce time in milliseconds for watch mode [default: 100]
+```
+
+#### v0.3.100 下一步计划
+- 完善 package manager npm registry 集成
+- 增强 TypeScript 转译支持
+- 添加 WebSocket 热重载连接支持
+
+
 ### v0.3.99 修复内建模块 require 加载问题 (2025-12-26)
 **进度**: Node.js 兼容性 | ✅ 代码已完成
 
