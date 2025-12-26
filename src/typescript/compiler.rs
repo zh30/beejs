@@ -622,10 +622,15 @@ pub enum ASTExpression {
         params: Vec<(String, Option<String>)>,
         body: Box<ASTExpression>,
         return_type: Option<String>,
+        is_async: bool,
     },
     /// 模板字符串: `Hello ${name}!`
     TemplateLiteral {
         parts: Vec<ASTExpression>,  // 交替的字符串和表达式
+    },
+    /// await 表达式: await somePromise
+    Await {
+        expression: Box<ASTExpression>,
     },
 }
 #[derive(Debug, Clone)]
@@ -978,6 +983,15 @@ impl Parser {
         Ok(ASTNode::EnumDeclaration { name, members })
     }
     fn parse_expression(&mut self) -> Result<ASTExpression> {
+        // 处理 await 表达式（作为一元前缀运算符）
+        if self.current_token_eq(&Token::Await) {
+            self.consume(Token::Await)?;
+            let inner = self.parse_expression()?;
+            return Ok(ASTExpression::Await {
+                expression: Box::new(inner),
+            });
+        }
+
         // 解析主表达式 (标识符、字面量、括号表达式)
         let mut expr = self.parse_primary_expression()?;
 
@@ -1229,6 +1243,76 @@ impl Parser {
             params,
             body: Box::new(body),
             return_type,
+            is_async: false,
+        })
+    }
+    /// 解析 async 箭头函数 (async () => {} 或 async x => {})
+    fn parse_async_arrow_function(&mut self) -> Result<ASTExpression> {
+        // 解析参数部分
+        let params: Vec<(String, Option<String>)> = if self.current_token_eq(&Token::LParen) {
+            // 带括号的参数列表: async (a, b)
+            self.consume(Token::LParen)?;
+            let mut params = Vec::new();
+            while !self.current_token_eq(&Token::RParen) {
+                let param_name_token = self.consume(Token::Identifier("".to_string()))?;
+                let param_name: _ = match param_name_token {
+                    Token::Identifier(name) => name,
+                    _ => bail!("Expected parameter name"),
+                };
+                // 跳过类型注解
+                if self.current_token_eq(&Token::Colon) {
+                    self.consume(Token::Colon)?;
+                    self.parse_type_annotation();
+                }
+                params.push((param_name, None));
+                if self.current_token_eq(&Token::Comma) {
+                    self.consume(Token::Comma)?;
+                }
+            }
+            self.consume(Token::RParen)?;
+            params
+        } else if let Token::Identifier(ref name) = self.current_token() {
+            // 单个参数无括号: async x => {}
+            let name = name.clone();
+            self.advance();
+            vec![(name, None)]
+        } else {
+            bail!("Expected parameter list or identifier after async");
+        };
+
+        // 消耗 FatArrow
+        self.consume(Token::FatArrow)?;
+
+        // 解析函数体
+        let body = if self.current_token_eq(&Token::LBrace) {
+            // 块语句: { statements; }
+            self.consume(Token::LBrace)?;
+            // 解析块中的语句，找到 return 语句作为函数体表达式
+            let mut return_expr: Option<ASTExpression> = None;
+            while !self.current_token_eq(&Token::RBrace) {
+                if self.current_token_eq(&Token::Return) {
+                    self.consume(Token::Return)?;
+                    let expr = self.parse_expression()?;
+                    self.consume(Token::SemiColon)?;
+                    return_expr = Some(expr);
+                } else {
+                    // 跳过其他语句（变量声明等）
+                    self.parse_statement()?;
+                }
+            }
+            self.consume(Token::RBrace)?;
+            // 如果没有 return 语句，使用 undefined 作为默认返回值
+            return_expr.unwrap_or(ASTExpression::Identifier("undefined".to_string()))
+        } else {
+            // 表达式体: expr
+            self.parse_expression()?
+        };
+
+        Ok(ASTExpression::ArrowFunctionExpression {
+            params,
+            body: Box::new(body),
+            return_type: None,
+            is_async: true,
         })
     }
     fn parse_arrow_function_expression(&mut self, params: Vec<(String, Option<String>)>) -> Result<ASTExpression> {
@@ -1264,6 +1348,7 @@ impl Parser {
             params,
             body: Box::new(body),
             return_type: None,
+            is_async: false,
         })
     }
     fn parse_postfix(&mut self, mut expr: ASTExpression) -> Result<ASTExpression> {
@@ -1336,6 +1421,12 @@ impl Parser {
                 let s: _ = format!("\"{}\"", s.clone());
                 self.advance();
                 Ok(ASTExpression::Literal(s))
+            }
+            // 处理 async 关键字开头的箭头函数
+            Token::Async => {
+                self.consume(Token::Async)?;
+                // 解析 async 箭头函数
+                self.parse_async_arrow_function()
             }
             Token::TemplateStart => {
                 // 模板字符串: `part1${expr1}part2${expr2}part3`
@@ -1720,7 +1811,12 @@ impl CodeEmitter {
                 params,
                 body,
                 return_type,
+                is_async,
             } => {
+                // 如果是 async 箭头函数，添加 async 关键字
+                if *is_async {
+                    self.output.push_str("async ");
+                }
                 // 转译箭头函数参数（跳过类型注解）
                 self.output.push('(');
                 for (i, (param_name, _)) in params.iter().enumerate() {
@@ -1746,6 +1842,11 @@ impl CodeEmitter {
                     }
                     self.emit_expression(part);
                 }
+            }
+            ASTExpression::Await { expression } => {
+                // await 表达式直接转译为 JavaScript
+                self.output.push_str("await ");
+                self.emit_expression(expression);
             }
         }
     }
@@ -1908,5 +2009,52 @@ async function fetchData(): Promise<string> {
             "Should contain async function: {}", result.js_code);
         assert!(result.js_code.contains("return \"Data loaded!\""),
             "Should contain return statement: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_await_expression() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test await expression in async function
+        let source = r#"
+async function getData(): Promise<string> {
+    const result = await fetchData();
+    return result;
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("await fetchData()"),
+            "Should contain await expression: {}", result.js_code);
+        assert!(result.js_code.contains("async function getData"),
+            "Should contain async function: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_await_with_call_expression() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test await with method call
+        let source = r#"
+async function process() {
+    const data = await api.getUsers();
+    return data;
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("await api.getUsers()"),
+            "Should contain await with method call: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_await_in_arrow_function() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test await in arrow function (simplified - expression body)
+        let source = r#"
+const fetch = async () => await fetchData();
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        eprintln!("DEBUG: compiled JS = {:?}", result.js_code);
+        assert!(result.js_code.contains("await fetchData()"),
+            "Should contain await in arrow function: {}", result.js_code);
+        assert!(result.js_code.contains("async ()"),
+            "Should contain async arrow function: {}", result.js_code);
     }
 }

@@ -1,3 +1,37 @@
+### v0.3.110 实现 await 表达式解析 (2025-12-26)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.110 新增功能
+- **await 表达式解析**
+  - 在 `ASTExpression` 枚举中添加 `Await` 变体
+  - 在 `parse_expression` 开头添加 await 前置检测
+  - 实现一元前缀运算符的递归解析
+
+- **async 箭头函数支持**
+  - 添加 `ASTExpression::ArrowFunctionExpression::is_async` 字段
+  - 实现 `parse_async_arrow_function` 函数
+  - 在 `parse_primary_expression` 中处理 `async` 关键字
+  - 转译时正确输出 `async` 前缀
+
+#### v0.3.110 验证
+- ✅ `cargo test --lib` 34/34 通过
+- ✅ 新增测试用例：`test_await_expression`, `test_await_with_call_expression`, `test_await_in_arrow_function`
+- ✅ 编译输出正确包含 `await fetchData()` 形式
+
+#### v0.3.110 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+120/- 行)
+  - 添加 `ASTExpression::Await` 变体
+  - 添加 `ASTExpression::ArrowFunctionExpression::is_async` 字段
+  - 实现 `parse_async_arrow_function` 函数
+  - 修改 `parse_expression` 处理 await
+  - 修改 `emit_expression` 处理 await 和 async
+
+#### v0.3.110 下一步计划
+- 完善块语句形式的 async 箭头函数解析
+- 支持 `async () => { statements; }` 完整语法
+- 实现 `await` 在更多上下文中的支持（如条件表达式、函数调用参数等）
+
+
 ### v0.3.109 修复泛型类型参数解析问题 (2025-12-26)
 **进度**: TypeScript 编译器修复 | ✅ 已提交
 
@@ -24,10 +58,6 @@
   - 重写 `parse_basic_type` 中泛型参数解析循环
   - 重写 `parse_variable_declaration` 中箭头函数检测逻辑
   - 在 `parse_expression` 中添加泛型调用前置处理
-
-#### v0.3.109 下一步计划
-- 实现 `await` 表达式解析
-- 完善 async/await 代码生成（转换为 Promise 形式）
 
 
 ### v0.3.108 增强 TypeScript 编译器模板字符串和 async 支持 (2025-12-26)
