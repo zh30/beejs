@@ -3255,65 +3255,147 @@ console.log(crypto.randomUUID()); // e.g., "b2a8cbc9-5a9f-4045-b9e5-43063e09ff14
 
 ---
 
-**最新状态 (2025-12-25)**: ✨ v0.3.30 Web Crypto API (crypto.subtle) 完整实现
+### ✨ v0.3.132 TypeScript 装饰器支持 (2025-12-27)
+**进度**: ✅ Token 层 | ✅ AST 层 | ✅ 解析器 | ✅ 转译器 | ✅ 4/4 测试通过
 
-### ✨ v0.3.29 HKDF 密钥派生函数 (2025-12-24)
-**进度**: ✅ hkdf | ✅ hkdfSync | ✅ SHA-1 | ✅ SHA-256 | ✅ SHA-512 | ✅ 14/14 测试通过
+#### v0.3.132 核心功能
+- ✅ **类装饰器** - `@sealed`, `@Component({...})` 等
+- ✅ **方法装饰器** - `@deprecated`, `@autobind` 等
+- ✅ **属性装饰器** - `@readonly`, `@nonenumerable` 等
+- ✅ **多装饰器** - 支持同一目标多个装饰器 `@Injectable @Component`
+- ✅ **装饰器参数** - 支持带参数的装饰器调用
 
-#### v0.3.29 核心功能
-- ✅ **crypto.hkdfSync(digest, ikm, salt, info, keylen)** - 同步 HKDF 密钥派生
-  - 支持 SHA-1、SHA-256、SHA-512 摘要算法
-  - 默认 keylen 为 32 字节
-  - 支持空 salt 和空 info
-- ✅ **crypto.hkdf(digest, ikm, salt, info, keylen)** - 异步 HKDF（与同步版相同接口）
-- ✅ **crypto.randomUUID()** - UUID v4 生成（修复实现）
-  - 使用标准 `uuid` crate 生成 RFC 4122 兼容的 UUID
-  - 返回 36 字符标准格式
+#### v0.3.132 技术实现
+- **词法分析层**
+  - 新增 `Token::At` 变体识别 `@` 符号
+  - 装饰器语法：`@decoratorName` 或 `@decoratorName(args)`
 
-#### v0.3.29 技术实现
-- **HKDF RFC 5869 实现**
-  - Extract 阶段：PRK = HMAC-Hash(salt, IKM)
-  - Expand 阶段：OKM = T(1) | T(2) | T(3) | ...
-  - 使用 ring::digest 和 sha1 crate 实现 HMAC
-- **V8 ArrayBuffer 写入模式**
-  - `ArrayBuffer::new()` → `get_backing_store()` → `.set()` 字节写入
-  - 这是 rusty_v8 中写入二进制数据的标准模式
+- **AST 层**
+  ```rust
+  #[derive(Debug, Clone)]
+  pub struct Decorator {
+      pub name: String,
+      pub arguments: Vec<ASTExpression>,
+  }
+  ```
+  - 为 `ClassDeclaration`, `MethodDeclaration`, `PropertyDeclaration` 添加 `decorators` 字段
+  - 保持装饰器类型信息用于 IDE 和构建工具
 
-#### v0.3.29 测试验证
-- ✅ 8/8 randomUUID 测试全部通过
-- ✅ 14/14 HKDF 测试全部通过
-- ✅ 多种摘要算法验证 (sha1/sha256/sha512)
-- ✅ 不同 keylen 验证 (32/64/256)
-- ✅ 一致性验证 (相同输入产生相同输出)
-- ✅ 差异性验证 (不同输入产生不同输出)
+- **解析器层**
+  - 新增 `parse_decorators()` 函数解析装饰器列表
+  - 支持带括号的参数列表解析
+  - 处理 `Token::Readonly` 作为合法装饰器名
 
-#### v0.3.29 代码变更
-- **新增文件**: `tests/crypto_randomuuid_tests.rs` (+98 行)
-  - 8 个测试用例覆盖 randomUUID API
-  - 测试 UUID 格式、长度、唯一性
+- **转译器层**
+  - 装饰器输出为注释 `/* @decorator */` 保留类型信息
+  - 保持 JavaScript 运行时兼容性
 
-- **新增文件**: `tests/crypto_hkdf_tests.rs` (+188 行)
-  - 14 个测试用例覆盖 HKDF API
-  - 测试所有支持的摘要算法
-  - 测试不同 keylen 和参数组合
+#### v0.3.132 测试验证
+- ✅ `test_class_decorator` - 基础类装饰器
+- ✅ `test_class_decorator_with_args` - 带参数装饰器
+- ✅ `test_method_decorator` - 方法装饰器
+- ✅ `test_multiple_decorators` - 多装饰器场景
 
-- **修改文件**: `src/runtime_minimal.rs` (+237 行)
-  - 修复 randomUUID 实现（原实现格式错误）
-  - 新增 `hkdf_derive()` 辅助函数 (RFC 5869)
-  - 新增 `crypto.hkdf` 和 `crypto.hkdfSync` 函数
+#### v0.3.132 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+~120 行)
+  - 新增 `Token::At` 词法 token
+  - 新增 `Decorator` AST 节点结构
+  - 新增 `parse_decorators()` 解析函数
+  - 新增 `parse_class_declaration_with_decorators()` 包装函数
+  - 更新 `ClassDeclaration`, `MethodDeclaration`, `PropertyDeclaration` 节点
+  - 添加 4 个装饰器测试用例
 
-#### v0.3.29 使用示例
-```javascript
-const crypto = require('crypto');
+#### v0.3.132 使用示例
+```typescript
+// 类装饰器
+@sealed
+@Component({ selector: 'app' })
+class MyClass {}
 
-// HKDF 密钥派生
-const key = crypto.hkdfSync('sha256', 'secret-key', 'salt', 'info', 32);
-console.log(key.length); // 32
+// 方法装饰器
+class Calculator {
+  @deprecated
+  add(a: number, b: number): number {
+    return a + b;
+  }
+}
 
-// 生成 UUID
-const uuid = crypto.randomUUID();
-console.log(uuid); // e.g., "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+// 属性装饰器
+class User {
+  @readonly
+  name: string;
+}
+
+// 多装饰器
+@Injectable()
+@Component()
+class Service {}
 ```
+
+#### v0.3.132 已知限制
+- 装饰器元数据 API (`reflect-metadata`) 未实现
+- 参数装饰器暂未支持
+- 装饰器顺序按声明顺序输出（标准顺序）
+
+---
+
+**最新状态 (2025-12-27)**: ✨ v0.3.132 TypeScript 装饰器支持
+
+### ✨ v0.3.131 索引签名支持 (2025-12-27)
+**进度**: ✅ 解析 | ✅ 转译 | ✅ 测试
+
+#### v0.3.131 核心功能
+- ✅ **索引签名类型** - `{ [key: T]: U }` 语法支持
+- ✅ **字符串索引签名** - `{ [key: string]: any }`
+- ✅ **数字索引签名** - `{ [key: number]: T }`
+- ✅ **混合类型索引** - 同时支持 string 和 number 索引
+
+#### v0.3.131 技术实现
+- **词法分析** - 识别 `[` 作为索引签名的开始标记
+- **语法解析** - 新增 `TypeSignature::Index` 变体
+- **代码生成** - 转换为 JavaScript 对象类型
+
+#### v0.3.131 测试验证
+- ✅ 索引签名基本解析测试
+- ✅ 字符串索引签名测试
+- ✅ 数字索引签名测试
+- ✅ 泛型索引签名测试
+
+#### v0.3.131 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+~80 行)
+  - 新增 `TypeSignature::Index` AST 变体
+  - 新增 `parse_type_signature_index()` 解析函数
+  - 添加索引签名测试用例
+
+---
+
+### ✨ v0.3.129 类计算属性名支持 (2025-12-26)
+**进度**: ✅ 解析 | ✅ 转译 | ✅ 测试
+
+#### v0.3.129 核心功能
+- ✅ **计算属性名** - `[expression]: value` 语法
+- ✅ **字符串字面量** - `['propName']: value`
+- ✅ **数字字面量** - `[0]: value`
+- ✅ **模板字面量** - `[`prefix${name}`]: value`
+
+#### v0.3.129 技术实现
+- **词法分析** - 识别 `[` 开启计算属性名语法
+- **语法解析** - 解析方括号内的表达式作为属性名
+- **代码生成** - 转换为标准的对象属性赋值
+
+#### v0.3.129 测试验证
+- ✅ 简单计算属性名
+- ✅ 字符串字面量属性名
+- ✅ 数字字面量属性名
+- ✅ 模板字面量属性名
+
+#### v0.3.129 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+~60 行)
+  - 新增 `parse_computed_property_name()` 解析函数
+  - 修改 `PropertyAssignment` AST 节点支持计算属性
+  - 添加计算属性名测试用例
+
+---
 
 ### ✨ v0.3.30 Web Crypto API (2025-12-25)
 **进度**: ✅ subtle.digest | ✅ subtle.importKey | ✅ subtle.sign | ✅ subtle.verify | ✅ subtle.generateKey | ✅ subtle.encrypt | ✅ subtle.decrypt | ✅ subtle.exportKey | ✅ 21/21 测试通过
