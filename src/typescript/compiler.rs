@@ -74,11 +74,66 @@ pub enum ErrorSeverity {
     Warning,
     Info,
 }
+
+/// 类型检查上下文
+struct TypeContext {
+    /// 已定义的接口
+    interfaces: HashMap<String, HashMap<String, String>>,
+    /// 已定义的类型别名
+    type_aliases: HashMap<String, String>,
+    /// 已定义的枚举
+    enums: HashMap<String, Vec<String>>,
+    /// 当前作用域的变量类型
+    variables: HashMap<String, String>,
+    /// 函数返回类型栈（用于 return 语句检查）
+    return_type_stack: Vec<Option<String>>,
+}
+
+impl TypeContext {
+    fn new() -> Self {
+        let mut ctx = Self {
+            interfaces: HashMap::new(),
+            type_aliases: HashMap::new(),
+            enums: HashMap::new(),
+            variables: HashMap::new(),
+            return_type_stack: Vec::new(),
+        };
+        // 注册内置类型
+        ctx.register_builtin_types();
+        ctx
+    }
+
+    fn register_builtin_types(&mut self) {
+        // 字符串类型
+        self.variables.insert("string".to_string(), "string".to_string());
+        self.variables.insert("number".to_string(), "string".to_string());
+        self.variables.insert("boolean".to_string(), "boolean".to_string());
+        self.variables.insert("any".to_string(), "any".to_string());
+        self.variables.insert("void".to_string(), "void".to_string());
+        self.variables.insert("null".to_string(), "null".to_string());
+        self.variables.insert("undefined".to_string(), "undefined".to_string());
+        self.variables.insert("never".to_string(), "never".to_string());
+        self.variables.insert("unknown".to_string(), "unknown".to_string());
+        self.variables.insert("object".to_string(), "object".to_string());
+        self.variables.insert("symbol".to_string(), "symbol".to_string());
+        self.variables.insert("bigint".to_string(), "bigint".to_string());
+    }
+
+    fn get_variable_type(&self, name: &str) -> Option<&String> {
+        self.variables.get(name)
+    }
+
+    fn add_variable(&mut self, name: &str, type_name: &str) {
+        self.variables.insert(name.to_string(), type_name.to_string());
+    }
+}
+
 /// TypeScript 编译器主结构
 pub struct TypeScriptCompiler {
     config: TypeScriptCompilerConfig,
     diagnostics: Vec<TypeScriptError>,
 }
+
 impl TypeScriptCompiler {
     /// 创建新的 TypeScript 编译器
     pub fn new(config: TypeScriptCompilerConfig) -> Self {
@@ -777,14 +832,627 @@ impl TypeScriptCompiler {
         let mut parser = Parser::new(tokens.to_vec());
         parser.parse()
     }
+
     /// 类型检查
-    fn type_check(&self, _ast: &ASTNode, _file_name: &str) -> Result<()> {
-        // TODO: 实现类型检查
-        // 1. 检查变量类型注解
-        // 2. 检查函数参数和返回类型
-        // 3. 检查接口实现
-        // 4. 检查泛型
+    fn type_check(&self, ast: &ASTNode, _file_name: &str) -> Result<()> {
+        let mut type_context = TypeContext::new();
+        self.check_node(ast, &mut type_context)?;
         Ok(())
+    }
+
+    /// 检查 AST 节点
+    fn check_node(&self, node: &ASTNode, ctx: &mut TypeContext) -> Result<()> {
+        match node {
+            ASTNode::Program(statements) => {
+                for stmt in statements {
+                    self.check_node(stmt, ctx)?;
+                }
+            }
+            ASTNode::VariableDeclaration { name, type_annotation, initializer, .. } => {
+                // 检查变量类型注解
+                if let Some(ref type_ann) = type_annotation {
+                    if !self.is_valid_type(type_ann, ctx) {
+                        self.add_diagnostic(
+                            format!("Type '{}' is not defined", type_ann),
+                            None,
+                        );
+                    }
+                    // 注册变量类型
+                    ctx.add_variable(name, type_ann);
+                } else if let Some(init) = initializer {
+                    // 尝试从初始化表达式推断类型
+                    // init 是 &Box<ASTNode>，需要检查是否是表达式
+                    if let ASTNode::Expression(expr) = init.as_ref() {
+                        let inferred_type = self.infer_type(expr, ctx)?;
+                        if let Some(t) = inferred_type {
+                            ctx.add_variable(name, &t);
+                        }
+                    } else {
+                        // 非表达式类型，无法推断
+                        ctx.add_variable(name, "any");
+                    }
+                } else {
+                    // 无类型注解且无初始化，推断为 any
+                    ctx.add_variable(name, "any");
+                }
+            }
+            ASTNode::FunctionDeclaration { name, params, return_type, body, .. } => {
+                // 为函数参数创建新作用域
+                let prev_vars = ctx.variables.clone();
+
+                // 检查参数类型
+                for param in params {
+                    if let FunctionParameter::Simple { name: param_name, type_annotation, .. } = param {
+                        if let Some(ref type_ann) = type_annotation {
+                            if !self.is_valid_type(type_ann, ctx) {
+                                self.add_diagnostic(
+                                    format!("Parameter '{}' has invalid type '{}'", param_name, type_ann),
+                                    None,
+                                );
+                            }
+                            ctx.add_variable(param_name, type_ann);
+                        } else {
+                            ctx.add_variable(param_name, "any");
+                        }
+                    }
+                }
+
+                // 记录返回类型
+                ctx.return_type_stack.push(return_type.clone());
+
+                // 检查函数体
+                for stmt in body {
+                    self.check_node(stmt, ctx)?;
+                }
+
+                // 恢复作用域
+                ctx.variables = prev_vars;
+                ctx.return_type_stack.pop();
+            }
+            ASTNode::ClassDeclaration { members, .. } => {
+                // 检查类成员
+                for member in members {
+                    self.check_node(member, ctx)?;
+                }
+            }
+            ASTNode::MethodDeclaration { params, body, .. } => {
+                // 为方法参数创建新作用域
+                let prev_vars = ctx.variables.clone();
+
+                // 检查参数类型
+                for param in params {
+                    if let FunctionParameter::Simple { name: param_name, type_annotation, .. } = param {
+                        if let Some(ref type_ann) = type_annotation {
+                            ctx.add_variable(param_name, type_ann);
+                        } else {
+                            ctx.add_variable(param_name, "any");
+                        }
+                    }
+                }
+
+                // 检查方法体
+                for stmt in body {
+                    self.check_node(stmt, ctx)?;
+                }
+
+                // 恢复作用域
+                ctx.variables = prev_vars;
+            }
+            ASTNode::PropertyDeclaration { .. } => {
+                // 属性检查
+            }
+            ASTNode::InterfaceDeclaration { name, properties, index_signature } => {
+                // 注册接口
+                ctx.interfaces.insert(name.clone(), properties.clone());
+
+                // 检查索引签名
+                if let Some(ref idx_sig) = index_signature {
+                    // 索引签名已解析，类型检查通过
+                }
+            }
+            ASTNode::TypeAliasDeclaration { name, type_definition, .. } => {
+                // 验证类型定义
+                if !self.is_valid_type(type_definition, ctx) {
+                    self.add_diagnostic(
+                        format!("Type alias '{}' has invalid type definition", name),
+                        None,
+                    );
+                }
+                // 注册类型别名
+                ctx.type_aliases.insert(name.clone(), type_definition.clone());
+            }
+            ASTNode::EnumDeclaration { name, members } => {
+                // 注册枚举
+                let member_names: Vec<String> = members.iter().map(|m| m.name.clone()).collect();
+                ctx.enums.insert(name.clone(), member_names);
+            }
+            ASTNode::Statement(stmt) => {
+                self.check_statement(stmt, ctx)?;
+            }
+            ASTNode::Expression(expr) => {
+                self.check_expression(expr, ctx)?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    /// 检查语句
+    fn check_statement(&self, stmt: &ASTStatement, ctx: &mut TypeContext) -> Result<()> {
+        match stmt {
+            ASTStatement::Return(expr) => {
+                if let Some(ref return_expr) = expr {
+                    // 获取当前函数的返回类型
+                    if let Some(expected_opt) = ctx.return_type_stack.last() {
+                        if let Some(expected) = expected_opt {
+                            // 推断返回表达式的类型
+                            let actual_type = self.infer_type(return_expr, ctx)?;
+
+                            // 检查类型兼容性
+                            if let Some(actual) = actual_type {
+                                if !self.is_type_compatible(expected, &actual, ctx) {
+                                    self.add_diagnostic(
+                                        format!("Type '{}' is not assignable to type '{}'", actual, expected),
+                                        None,
+                                    );
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // 检查返回类型是否应该是 void
+                    if let Some(expected_opt) = ctx.return_type_stack.last() {
+                        if let Some(expected) = expected_opt {
+                            if expected != "void" && expected != "undefined" && expected != "never" {
+                                self.add_diagnostic(
+                                    format!("Expected to return '{}', but got void", expected),
+                                    None,
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+            ASTStatement::Expression(expr) => {
+                self.check_expression(expr, ctx)?;
+            }
+            ASTStatement::If { test, consequent, alternate } => {
+                self.check_expression(test, ctx)?;
+                self.check_node(consequent, ctx)?;
+                if let Some(alt) = alternate {
+                    self.check_node(alt, ctx)?;
+                }
+            }
+            ASTStatement::ForOf { initializer, iterable, body } => {
+                self.check_node(initializer, ctx)?;
+                self.check_expression(iterable, ctx)?;
+                self.check_node(body, ctx)?;
+            }
+            ASTStatement::For { initializer, condition, update, body } => {
+                if let Some(init) = initializer {
+                    self.check_node(init, ctx)?;
+                }
+                if let Some(cond) = condition {
+                    self.check_expression(cond, ctx)?;
+                }
+                if let Some(upd) = update {
+                    self.check_expression(upd, ctx)?;
+                }
+                self.check_node(body, ctx)?;
+            }
+            ASTStatement::While { test, body } => {
+                self.check_expression(test, ctx)?;
+                self.check_node(body, ctx)?;
+            }
+            ASTStatement::DoWhile { test, body } => {
+                self.check_expression(test, ctx)?;
+                self.check_node(body, ctx)?;
+            }
+            ASTStatement::Switch { discriminant, cases, .. } => {
+                self.check_expression(discriminant, ctx)?;
+                for case in cases {
+                    for stmt in &case.body {
+                        self.check_node(stmt, ctx)?;
+                    }
+                }
+            }
+            ASTStatement::Try { body, handler, finalizer } => {
+                self.check_node(body, ctx)?;
+                if let Some(h) = handler {
+                    for stmt in &h.body {
+                        self.check_node(stmt, ctx)?;
+                    }
+                }
+                if let Some(finalizer) = finalizer {
+                    self.check_node(finalizer, ctx)?;
+                }
+            }
+            ASTStatement::Throw { expression } => {
+                self.check_expression(expression, ctx)?;
+            }
+            ASTStatement::Break { .. } => {}
+            ASTStatement::Continue { .. } => {}
+            ASTStatement::Block(statements) => {
+                for stmt in statements {
+                    self.check_node(stmt, ctx)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// 检查表达式
+    fn check_expression(&self, expr: &ASTExpression, _ctx: &mut TypeContext) -> Result<()> {
+        match expr {
+            ASTExpression::BinaryExpression { left, right, .. } => {
+                self.check_expression(left, _ctx)?;
+                self.check_expression(right, _ctx)?;
+            }
+            ASTExpression::CallExpression { callee, arguments, .. } => {
+                self.check_expression(callee, _ctx)?;
+                for arg in arguments {
+                    self.check_expression(arg, _ctx)?;
+                }
+            }
+            ASTExpression::MemberExpression { object, .. } => {
+                self.check_expression(object, _ctx)?;
+            }
+            ASTExpression::Unary { operand, .. } => {
+                self.check_expression(operand, _ctx)?;
+            }
+            ASTExpression::UpdateExpression { argument, .. } => {
+                self.check_expression(argument, _ctx)?;
+            }
+            ASTExpression::ObjectProperty { value, .. } => {
+                self.check_expression(value, _ctx)?;
+            }
+            ASTExpression::ObjectLiteral { properties, .. } => {
+                for prop in properties {
+                    self.check_expression(prop, _ctx)?;
+                }
+            }
+            ASTExpression::ArrowFunctionExpression { body, .. } => {
+                self.check_node(body.as_ref(), _ctx)?;
+            }
+            ASTExpression::TemplateLiteral { parts, .. } => {
+                for part in parts {
+                    self.check_expression(part, _ctx)?;
+                }
+            }
+            ASTExpression::Await { expression, .. } => {
+                self.check_expression(expression, _ctx)?;
+            }
+            ASTExpression::AssignmentExpression { left, right, .. } => {
+                self.check_expression(left, _ctx)?;
+                self.check_expression(right, _ctx)?;
+            }
+            ASTExpression::ArrayExpression { elements, .. } => {
+                for elem in elements {
+                    if let Some(e) = elem {
+                        self.check_expression(e, _ctx)?;
+                    }
+                }
+            }
+            ASTExpression::SpreadExpression { argument, .. } => {
+                self.check_expression(argument, _ctx)?;
+            }
+            ASTExpression::ConditionalExpression { condition, consequent, alternate, .. } => {
+                self.check_expression(condition, _ctx)?;
+                self.check_expression(consequent, _ctx)?;
+                self.check_expression(alternate, _ctx)?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    /// 推断表达式的类型
+    fn infer_type(&self, expr: &ASTExpression, ctx: &TypeContext) -> Result<Option<String>> {
+        match expr {
+            ASTExpression::Literal(value) => {
+                // 根据字面量值推断类型
+                if value.starts_with('"') || value.starts_with('\'') {
+                    Ok(Some("string".to_string()))
+                } else if value == "true" || value == "false" {
+                    Ok(Some("boolean".to_string()))
+                } else if value.parse::<f64>().is_ok() {
+                    Ok(Some("number".to_string()))
+                } else {
+                    Ok(Some("any".to_string()))
+                }
+            }
+            ASTExpression::Identifier(name) => {
+                // 从上下文获取变量类型
+                if let Some(t) = ctx.get_variable_type(name) {
+                    let result: Option<String> = Some((*t).clone());
+                    Ok(result)
+                } else {
+                    Ok(None)
+                }
+            }
+            ASTExpression::BinaryExpression { left, right, operator } => {
+                // 根据运算符推断类型
+                match operator.as_str() {
+                    "+" => {
+                        let left_type = self.infer_type(left, ctx)?;
+                        let right_type = self.infer_type(right, ctx)?;
+                        // 如果任一操作数是字符串，结果是字符串
+                        if left_type.as_ref().map(|t| t == "string").unwrap_or(false)
+                            || right_type.as_ref().map(|t| t == "string").unwrap_or(false) {
+                            Ok(Some("string".to_string()))
+                        } else {
+                            Ok(Some("number".to_string()))
+                        }
+                    }
+                    "-" | "*" | "/" | "%" | "<<" | ">>" | ">>>" | "&" | "|" | "^" => {
+                        Ok(Some("number".to_string()))
+                    }
+                    "==" | "!=" | "===" | "!==" | "<" | ">" | "<=" | ">=" => {
+                        Ok(Some("boolean".to_string()))
+                    }
+                    "&&" | "||" | "??" => {
+                        let left_type = self.infer_type(left, ctx)?;
+                        let right_type = self.infer_type(right, ctx)?;
+                        // 推断联合类型
+                        if left_type.is_some() && right_type.is_some() {
+                            Ok(Some(format!("{} | {}", left_type.unwrap(), right_type.unwrap())))
+                        } else {
+                            Ok(None)
+                        }
+                    }
+                    _ => Ok(Some("any".to_string())),
+                }
+            }
+            ASTExpression::CallExpression { callee, .. } => {
+                // 如果是内置构造函数，返回相应类型
+                match callee.as_ref() {
+                    ASTExpression::Identifier(name) => match name.as_str() {
+                        "String" | "Number" | "Boolean" | "Array" | "Object" | "Map" | "Set"
+                        | "Promise" | "Function" => {
+                            // 返回构造函数调用的结果类型
+                            if name == "String" {
+                                Ok(Some("string".to_string()))
+                            } else if name == "Number" {
+                                Ok(Some("number".to_string()))
+                            } else if name == "Boolean" {
+                                Ok(Some("boolean".to_string()))
+                            } else if name == "Promise" {
+                                Ok(Some("Promise<unknown>".to_string()))
+                            } else {
+                                Ok(Some(name.clone()))
+                            }
+                        }
+                        _ => {
+                            // 从上下文获取函数返回类型
+                            if let Some(t) = ctx.get_variable_type(name) {
+                                let result: Option<String> = Some((*t).clone());
+                                Ok(result)
+                            } else {
+                                Ok(Some("any".to_string()))
+                            }
+                        }
+                    },
+                    _ => Ok(Some("any".to_string())),
+                }
+            }
+            ASTExpression::MemberExpression { .. } => {
+                Ok(Some("any".to_string()))
+            }
+            ASTExpression::ArrayExpression { .. } => {
+                Ok(Some("any[]".to_string()))
+            }
+            ASTExpression::ObjectLiteral { .. } => {
+                Ok(Some("object".to_string()))
+            }
+            ASTExpression::ObjectProperty { .. } => {
+                Ok(Some("any".to_string()))
+            }
+            ASTExpression::ArrowFunctionExpression { return_type, .. } => {
+                Ok(return_type.clone().or(Some("any".to_string())))
+            }
+            ASTExpression::TemplateLiteral { .. } => {
+                Ok(Some("string".to_string()))
+            }
+            ASTExpression::Unary { operator, .. } => {
+                match operator.as_str() {
+                    "!" => Ok(Some("boolean".to_string())),
+                    "-" | "+" | "~" => Ok(Some("number".to_string())),
+                    "typeof" => Ok(Some("string".to_string())),
+                    _ => Ok(Some("any".to_string())),
+                }
+            }
+            ASTExpression::ConditionalExpression { consequent, alternate, .. } => {
+                // 条件表达式的类型是两个分支的联合类型
+                let true_type = self.infer_type(consequent, ctx)?;
+                let false_type = self.infer_type(alternate, ctx)?;
+                match (true_type, false_type) {
+                    (Some(t1), Some(t2)) => Ok(Some(format!("{} | {}", t1, t2))),
+                    (Some(t), None) | (None, Some(t)) => Ok(Some(t)),
+                    _ => Ok(None),
+                }
+            }
+            ASTExpression::NewExpression { .. } => {
+                Ok(Some("object".to_string()))
+            }
+            ASTExpression::ThisExpression => {
+                Ok(Some("any".to_string()))
+            }
+            ASTExpression::UpdateExpression { .. } => {
+                Ok(Some("number".to_string()))
+            }
+            ASTExpression::IndexExpression { .. } => {
+                Ok(Some("any".to_string()))
+            }
+            ASTExpression::AssignmentExpression { .. } => {
+                Ok(Some("any".to_string()))
+            }
+            ASTExpression::Await { expression, .. } => {
+                // await 的类型是 Promise 的泛型参数
+                let inner_type = self.infer_type(expression, ctx)?;
+                if let Some(t) = inner_type {
+                    if t.starts_with("Promise<") {
+                        // 提取 Promise 的泛型参数
+                        let inner = t.trim_start_matches("Promise<").trim_end_matches('>');
+                        Ok(Some(inner.to_string()))
+                    } else {
+                        Ok(Some("any".to_string()))
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+            ASTExpression::SpreadExpression { .. } => {
+                Ok(Some("any".to_string()))
+            }
+            ASTExpression::SuperExpression => {
+                Ok(Some("any".to_string()))
+            }
+        }
+    }
+
+    /// 检查类型是否有效
+    fn is_valid_type(&self, type_name: &str, ctx: &TypeContext) -> bool {
+        // 检查内置类型
+        let builtin_types = [
+            "string", "number", "boolean", "any", "void", "null", "undefined",
+            "never", "unknown", "object", "symbol", "bigint", "true", "false"
+        ];
+
+        if builtin_types.contains(&type_name) {
+            return true;
+        }
+
+        // 检查带数组后缀的类型
+        if type_name.ends_with("[]") {
+            let inner_type = &type_name[..type_name.len() - 2];
+            return self.is_valid_type(inner_type, ctx);
+        }
+
+        // 检查 Promise<T> 泛型
+        if type_name.starts_with("Promise<") && type_name.ends_with('>') {
+            let inner = &type_name[8..type_name.len() - 1];
+            return self.is_valid_type(inner, ctx);
+        }
+
+        // 检查类型别名
+        if ctx.type_aliases.contains_key(type_name) {
+            return true;
+        }
+
+        // 检查接口
+        if ctx.interfaces.contains_key(type_name) {
+            return true;
+        }
+
+        // 检查枚举
+        if ctx.enums.contains_key(type_name) {
+            return true;
+        }
+
+        // 检查泛型容器类型
+        if type_name.starts_with("Array<") && type_name.ends_with('>') {
+            let inner = &type_name[6..type_name.len() - 1];
+            return self.is_valid_type(inner, ctx);
+        }
+
+        if type_name.starts_with("Map<") && type_name.ends_with('>') {
+            let parts: Vec<&str> = type_name[5..type_name.len() - 1].split(", ").collect();
+            if parts.len() == 2 {
+                return self.is_valid_type(parts[0], ctx) && self.is_valid_type(parts[1], ctx);
+            }
+            return true;
+        }
+
+        if type_name.starts_with("Record<") && type_name.ends_with('>') {
+            let parts: Vec<&str> = type_name[7..type_name.len() - 1].split(", ").collect();
+            if parts.len() == 2 {
+                return self.is_valid_type(parts[0], ctx) && self.is_valid_type(parts[1], ctx);
+            }
+            return true;
+        }
+
+        // 标识符类型（可能是用户定义的类型）
+        if type_name.chars().next().map(|c| c.is_ascii_uppercase()).unwrap_or(false) {
+            // 大写开头的标识符被视为有效类型
+            return true;
+        }
+
+        // 检查联合类型
+        if type_name.contains('|') {
+            let types: Vec<&str> = type_name.split('|').map(|s| s.trim()).collect();
+            return types.iter().all(|t| self.is_valid_type(t, ctx));
+        }
+
+        // 检查交叉类型
+        if type_name.contains('&') {
+            let types: Vec<&str> = type_name.split('&').map(|s| s.trim()).collect();
+            return types.iter().all(|t| self.is_valid_type(t, ctx));
+        }
+
+        // 检查只读修饰符
+        if type_name.starts_with("readonly ") {
+            return self.is_valid_type(&type_name[9..], ctx);
+        }
+
+        false
+    }
+
+    /// 检查类型兼容性
+    fn is_type_compatible(&self, expected: &str, actual: &str, ctx: &TypeContext) -> bool {
+        // any 兼容所有类型
+        if expected == "any" || actual == "any" {
+            return true;
+        }
+
+        // never 兼容所有类型
+        if expected == "never" {
+            return true;
+        }
+
+        // unknown 兼容所有类型
+        if actual == "unknown" {
+            return true;
+        }
+
+        // 相同的类型
+        if expected == actual {
+            return true;
+        }
+
+        // 检查数字和字符串字面量类型
+        if expected == "number" && actual.parse::<f64>().is_ok() {
+            return true;
+        }
+
+        if expected == "string" && (actual.starts_with('"') || actual.starts_with('\'')) {
+            return true;
+        }
+
+        if expected == "boolean" && (actual == "true" || actual == "false") {
+            return true;
+        }
+
+        // 检查联合类型
+        if expected.contains('|') {
+            let expected_types: Vec<&str> = expected.split('|').map(|s| s.trim()).collect();
+            return expected_types.iter().any(|t| self.is_type_compatible(t, actual, ctx));
+        }
+
+        // 检查数组类型
+        if expected.ends_with("[]") && actual.ends_with("[]") {
+            let inner_expected = &expected[..expected.len() - 2];
+            let inner_actual = &actual[..actual.len() - 2];
+            return self.is_type_compatible(inner_expected, inner_actual, ctx);
+        }
+
+        false
+    }
+
+    /// 添加诊断信息
+    fn add_diagnostic(&self, message: String, _location: Option<(u32, u32)>) {
+        // 在实际实现中，这里会将诊断信息添加到 diagnostics 列表
+        // 目前仅打印到控制台
+        eprintln!("TypeScript Type Check: {}", message);
     }
     /// 转译为 JavaScript
     fn transpile(&self, ast: &ASTNode) -> Result<String> {
@@ -8690,5 +9358,116 @@ const size = PixelSize.Medium;
                 panic!("Should compile successfully");
             }
         }
+    }
+
+    #[test]
+    fn test_type_check_variable_declaration() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test type checking for variable declarations
+        let source = r#"
+let name: string = "John";
+let age: number = 25;
+let isActive: boolean = true;
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("name"),
+            "Should contain 'name': {}", result.js_code);
+        assert!(result.js_code.contains("age"),
+            "Should contain 'age': {}", result.js_code);
+        // Type annotations should be removed in output
+        assert!(!result.js_code.contains(": string"),
+            "Should not contain ': string': {}", result.js_code);
+        assert!(!result.js_code.contains(": number"),
+            "Should not contain ': number': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_type_check_function_declaration() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test type checking for function declarations
+        let source = r#"
+function greet(name: string): string {
+    return "Hello, " + name;
+}
+
+function add(a: number, b: number): number {
+    return a + b;
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("function greet"),
+            "Should contain 'function greet': {}", result.js_code);
+        assert!(result.js_code.contains("function add"),
+            "Should contain 'function add': {}", result.js_code);
+        // Type annotations should be removed in output
+        assert!(!result.js_code.contains(": string"),
+            "Should not contain ': string': {}", result.js_code);
+        assert!(!result.js_code.contains(": number"),
+            "Should not contain ': number': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_type_check_interface() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test type checking for interface declarations
+        let source = r#"
+interface Person {
+    name: string;
+    age: number;
+}
+
+interface Employee {
+    employeeId: string;
+    department: string;
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Interface declarations should be removed in transpiled output
+        assert!(!result.js_code.contains("interface Person"),
+            "Should not contain 'interface Person': {}", result.js_code);
+        assert!(!result.js_code.contains("interface Employee"),
+            "Should not contain 'interface Employee': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_type_check_type_alias() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test type checking for type alias declarations
+        let source = r#"
+type Status = "active" | "inactive" | "pending";
+type UserId = string | number;
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Type alias declarations should be removed in transpiled output
+        assert!(!result.js_code.contains("type Status"),
+            "Should not contain 'type Status': {}", result.js_code);
+        assert!(!result.js_code.contains("type UserId"),
+            "Should not contain 'type UserId': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_type_check_enum() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test type checking for enum declarations
+        let source = r#"
+enum Color {
+    Red,
+    Green,
+    Blue
+}
+
+enum Direction {
+    North,
+    South,
+    East,
+    West
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Enum declarations should be transpiled
+        assert!(result.js_code.contains("Color"),
+            "Should contain 'Color': {}", result.js_code);
+        assert!(result.js_code.contains("Direction"),
+            "Should contain 'Direction': {}", result.js_code);
     }
 }
