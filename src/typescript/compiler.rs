@@ -1022,6 +1022,12 @@ pub enum ASTExpression {
     SpreadExpression {
         argument: Box<ASTExpression>,
     },
+    /// 条件表达式（三元运算符）: condition ? true_expr : false_expr
+    ConditionalExpression {
+        condition: Box<ASTExpression>,
+        consequent: Box<ASTExpression>,
+        alternate: Box<ASTExpression>,
+    },
     /// super 关键字
     SuperExpression,
 }
@@ -2033,6 +2039,7 @@ impl Parser {
 
     /// 跳过到匹配的右括号（用于跳过参数列表和函数体）
     /// 注意：不消费最终的右花括号，由调用者决定是否消费
+    #[allow(dead_code)]
     fn skip_to_matching_brace(&mut self) -> Result<Option<ASTNode>> {
         // 跳过参数列表
         self.consume(Token::LParen)?;
@@ -2080,6 +2087,7 @@ impl Parser {
     }
 
     /// 跳过表达式（用于跳过字段初始化器）
+    #[allow(dead_code)]
     fn skip_expression(&mut self) {
         let mut paren_depth = 0;
         let mut brace_depth = 0;
@@ -2397,6 +2405,7 @@ impl Parser {
             };
             return self.parse_arrow_function_expression(params);
         }
+
         // 处理后缀操作符 (成员访问、函数调用、二元运算符)
         loop {
             match self.current_token() {
@@ -2442,7 +2451,7 @@ impl Parser {
                 // 二元运算符
                 Token::Plus | Token::Minus | Token::Star | Token::Slash | Token::Percent |
                 Token::EqEq | Token::EqEqEq | Token::NotEq | Token::NotEqEq |
-                Token::Lt | Token::Gt => {
+                Token::Lt | Token::Gt | Token::LtEq | Token::GtEq => {
                     let op: _ = match self.current_token() {
                         Token::Plus => "+",
                         Token::Minus => "-",
@@ -2455,6 +2464,8 @@ impl Parser {
                         Token::NotEqEq => "!==",
                         Token::Lt => "<",
                         Token::Gt => ">",
+                        Token::LtEq => "<=",
+                        Token::GtEq => ">=",
                         _ => unreachable!(),
                     };
                     self.advance();
@@ -2465,6 +2476,24 @@ impl Parser {
                         left: Box::new(expr),
                         operator: op.to_string(),
                         right: Box::new(right),
+                    };
+                }
+                // 条件运算符（三元运算符）: condition ? true_expr : false_expr
+                // 在每个迭代开始时检查，因为条件运算符可能出现在任何二元运算符之后
+                Token::Question => {
+                    let condition = Box::new(expr);
+                    self.consume(Token::Question)?;
+                    let consequent = Box::new(self.parse_expression()?);
+                    self.consume(Token::Colon)?;
+
+                    // 解析 alternate 部分
+                    let alternate = self.parse_expression()?;
+
+                    // 构建条件表达式
+                    expr = ASTExpression::ConditionalExpression {
+                        condition,
+                        consequent,
+                        alternate: Box::new(alternate),
                     };
                 }
                 _ => break,
@@ -3617,6 +3646,13 @@ impl CodeEmitter {
                 self.output.push_str("...");
                 self.emit_expression(argument);
             }
+            ASTExpression::ConditionalExpression { condition, consequent, alternate } => {
+                self.emit_expression(condition);
+                self.output.push_str(" ? ");
+                self.emit_expression(consequent);
+                self.output.push_str(" : ");
+                self.emit_expression(alternate);
+            }
             ASTExpression::SuperExpression => {
                 self.output.push_str("super");
             }
@@ -3753,6 +3789,58 @@ console.log(obj);
             "Should contain computed property [\"static\"]: {}", result.js_code);
         assert!(result.js_code.contains("[1 + 1]"),
             "Should contain computed property [1 + 1]: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_conditional_expression() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test conditional (ternary) operator: condition ? true_expr : false_expr
+        let source = r#"
+const x = 10;
+const result = x > 5 ? "greater" : "less or equal";
+console.log(result);
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("?"),
+            "Should contain ternary operator: {}", result.js_code);
+        assert!(result.js_code.contains(":"),
+            "Should contain ternary colon: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_nested_conditional_expression() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test nested ternary operator with explicit grouping
+        // Using parentheses to make the grouping explicit
+        let source = r#"
+const score = 85;
+const grade = score >= 90 ? "A" : (score >= 80 ? "B" : (score >= 70 ? "C" : "F"));
+console.log(grade);
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("?"),
+            "Should contain ternary operator: {}", result.js_code);
+        assert!(result.js_code.contains("score >= 90"),
+            "Should contain first condition: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_conditional_in_function() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test ternary in function return
+        let source = r#"
+function max(a: number, b: number): number {
+    return a > b ? a : b;
+}
+console.log(max(3, 7));
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("function max"),
+            "Should contain function: {}", result.js_code);
+        assert!(result.js_code.contains("a > b ? a : b"),
+            "Should contain ternary in return: {}", result.js_code);
     }
 
     #[test]
