@@ -1,3 +1,35 @@
+### v0.3.109 修复泛型类型参数解析问题 (2025-12-26)
+**进度**: TypeScript 编译器修复 | ✅ 已提交
+
+#### v0.3.109 修复内容
+- **修复 parse_basic_type 泛型参数循环条件**
+  - 问题：使用 `current_token_eq(&Token::Identifier("".to_string()))` 比较时，discriminant 匹配但内容不同导致条件失败
+  - 解决：改用 `if let Token::Identifier(ref arg_name) = self.current_token()` 直接匹配
+
+- **修复 parse_variable_declaration 箭头函数检测**
+  - 问题：`parse_arrow_function_from_assignment` 在失败时消耗了 `identity` token，导致后续 `parse_expression` 从错误位置开始
+  - 解决：添加前瞻解析（lookahead）检查 `=>` 存在，避免不必要的 token 消耗
+
+- **添加泛型调用 (identity<T>(arg)) 支持**
+  - 在 `parse_expression` 中添加泛型类型参数的前置检测和处理
+  - 通过 lookahead 判断 `<Type>` 后面是否跟着 `(` 来区分泛型调用和比较运算
+
+#### v0.3.109 验证
+- ✅ `cargo test --lib` 31/31 通过
+- ✅ `beejs run examples/async_fn_test.ts` 现在可以正确编译运行
+- ✅ 新增测试用例：`test_async_function_return_type`, `test_generic_function`
+
+#### v0.3.109 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+179/-12 行)
+  - 重写 `parse_basic_type` 中泛型参数解析循环
+  - 重写 `parse_variable_declaration` 中箭头函数检测逻辑
+  - 在 `parse_expression` 中添加泛型调用前置处理
+
+#### v0.3.109 下一步计划
+- 实现 `await` 表达式解析
+- 完善 async/await 代码生成（转换为 Promise 形式）
+
+
 ### v0.3.108 增强 TypeScript 编译器模板字符串和 async 支持 (2025-12-26)
 **进度**: TypeScript 支持 | ✅ 已提交
 
