@@ -1,3 +1,81 @@
+### v0.3.142 函数表达式支持 (2025-12-27)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.142 新增功能
+- **函数表达式支持**
+  - 支持 `function(params) { ... }` 语法
+  - 支持 `async function(params) { ... }` 语法
+  - 支持命名函数表达式 `function name(params) { ... }`
+  - 支持参数类型注解和返回类型注解
+  - 支持泛型参数 `function foo<T>(x: T): T`
+
+- **AST 增强**
+  - 新增 `ASTExpression::FunctionExpression` 变体
+  - 包含 `is_async`, `type_params`, `params`, `return_type`, `body` 字段
+  - 复用 `FunctionParameter` 枚举处理参数
+
+- **解析器增强**
+  - 新增 `parse_function_expression()` 函数
+  - 修改 `parse_primary_expression()` 处理 `function` 和 `async function`
+  - 支持函数名解析（用于命名函数表达式）
+
+- **代码生成增强**
+  - 在 `emit_expression()` 中添加 `FunctionExpression` 处理
+  - 正确生成 `function(...) {...}` 和 `async function(...) {...}` 代码
+  - 自动移除类型注解保留 JavaScript 语义
+
+#### v0.3.142 测试用例
+- `test_function_expression_basic` - 基本函数表达式
+- `test_async_function_expression` - async 函数表达式
+- `test_function_expression_no_params` - 无参数函数表达式
+- `test_async_function_expression_no_params` - 无参数 async 函数表达式
+- `test_function_expression_with_callback` - 作为回调的函数表达式
+- `test_named_function_expression` - 命名函数表达式
+- `test_async_named_function_expression` - 命名 async 函数表达式
+
+#### v0.3.142 验证
+- ✅ `cargo test --lib` 187/187 通过 (+7)
+- ✅ `cargo build --release` 成功编译
+- ✅ 所有函数表达式测试正常工作
+
+#### v0.3.142 代码变更
+- **新增文件**: `src/typescript/compiler.rs`
+  - 添加 `FunctionExpression` 到 `ASTExpression` 枚举
+  - 新增 `parse_function_expression()` 函数 (~100 行)
+  - 修改 `parse_primary_expression()` 添加函数表达式解析 (~10 行)
+  - 新增 `emit_expression()` 中 `FunctionExpression` 处理 (~25 行)
+  - 新增 7 个测试用例 (~60 行)
+
+#### v0.3.142 使用示例
+```typescript
+// 基本函数表达式
+const add = function(a: number, b: number): number {
+    return a + b;
+};
+
+// async 函数表达式
+const fetchData = async function(url: string): Promise<string> {
+    return await fetch(url);
+};
+
+// 命名函数表达式（用于递归）
+const factorial = function fact(n: number): number {
+    return n <= 1 ? 1 : n * fact(n - 1);
+};
+
+// 作为回调使用
+const doubled = numbers.map(function(n: number): number {
+    return n * 2;
+});
+```
+
+#### v0.3.142 下一步计划
+- 实现 `await` 在函数表达式中的正确处理
+- 添加函数表达式的 Source Map 追踪
+- 继续完善 TypeScript 特性覆盖
+
+---
+
 ### v0.3.140 修复多项 TypeScript 编译问题 (2025-12-27)
 **进度**: TypeScript 编译器修复 | ✅ 已提交
 

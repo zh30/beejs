@@ -1300,6 +1300,9 @@ impl TypeScriptCompiler {
             ASTExpression::ArrowFunctionExpression { return_type, .. } => {
                 Ok(return_type.clone().or(Some("any".to_string())))
             }
+            ASTExpression::FunctionExpression { return_type, .. } => {
+                Ok(return_type.clone().or(Some("any".to_string())))
+            }
             ASTExpression::TemplateLiteral { .. } => {
                 Ok(Some("string".to_string()))
             }
@@ -2097,6 +2100,15 @@ pub enum ASTExpression {
     TSAsExpression {
         expression: Box<ASTExpression>,
         target_type: String,
+    },
+    /// 函数表达式: function(x) { ... } 或 async function(x) { ... }
+    /// 用于: const fn = function() {} 或 const fn = async function() {}
+    FunctionExpression {
+        is_async: bool,
+        type_params: Option<Vec<String>>,  // 泛型参数列表
+        params: Vec<FunctionParameter>,
+        return_type: Option<String>,
+        body: Vec<ASTNode>,
     },
 }
 #[derive(Debug, Clone)]
@@ -3307,6 +3319,118 @@ impl Parser {
         self.consume(Token::RBrace)?;
         Ok(ASTNode::FunctionDeclaration {
             name,
+            is_async,
+            type_params,
+            params,
+            return_type,
+            body,
+        })
+    }
+
+    /// 解析函数表达式: function(params) { ... } 或 async function(params) { ... }
+    /// 用于: const fn = function() {} 或 const fn = async function() {}
+    fn parse_function_expression(&mut self, is_async: bool) -> Result<ASTExpression> {
+        // 解析可选的函数名（匿名函数表达式可以省略名称）
+        // 注意：函数表达式可以有名称（如 function foo() {}），用于递归调用
+        // 语法: function [name](params) { body }
+        // 如果后面直接是 (，则没有函数名（匿名函数表达式）
+        // 如果后面是 Identifier 且后面是 (，则这是函数名
+        // 如果后面是 Identifier 但后面不是 (，则这是第一个参数
+        let _name: Option<String> = None;
+        if let Token::Identifier(_) = self.current_token() {
+            // 检查后面是否是 (，如果是则这是函数名
+            if self.position + 1 < self.tokens.len() && self.tokens[self.position + 1] == Token::LParen {
+                // 这是一个命名函数表达式 - 消费函数名
+                self.consume_any_identifier()?;
+            }
+            // 如果后面不是 (，则说明这是第一个参数，什么都不做
+        }
+        // 如果当前 token 不是 Identifier，则没有函数名（匿名函数表达式）
+
+        // 解析泛型参数列表 (如 <T> 或 <T extends keyof T, U>)
+        let type_params: Option<Vec<String>> = if self.current_token_eq(&Token::Lt) {
+            self.consume(Token::Lt)?;
+            let mut type_params = Vec::new();
+            while !self.current_token_eq(&Token::Gt) {
+                let type_param_token = self.consume_any_identifier()?;
+                let type_param_name: _ = match type_param_token {
+                    Token::Identifier(name) => name,
+                    _ => bail!("Expected type parameter name"),
+                };
+                // 处理泛型约束: extends keyof T
+                if self.current_token_eq(&Token::Extends) {
+                    self.consume(Token::Extends)?;
+                    // 跳过约束类型
+                    self.parse_type_annotation();
+                }
+                type_params.push(type_param_name);
+                if self.current_token_eq(&Token::Comma) {
+                    self.consume(Token::Comma)?;
+                }
+            }
+            self.consume(Token::Gt)?;
+            Some(type_params)
+        } else {
+            None
+        };
+
+        self.consume(Token::LParen)?;
+        let mut params = Vec::new();
+        while !self.current_token_eq(&Token::RParen) {
+            // 检查是否是解构参数 ([ 或 {)
+            let param = if self.current_token_eq(&Token::LBracket) || self.current_token_eq(&Token::LBrace) {
+                // 解析解构模式
+                let pattern = self.parse_destructuring_pattern()?;
+                FunctionParameter::Destructuring { pattern, default_value: None }
+            } else {
+                // 解析简单参数
+                let param_name_token = self.consume_any_identifier()?;
+                let param_name: _ = match param_name_token {
+                    Token::Identifier(name) => name,
+                    _ => bail!("Expected parameter name"),
+                };
+                // 跳过可选参数标记 ?
+                if self.current_token_eq(&Token::Question) {
+                    self.consume(Token::Question)?;
+                }
+                let param_type: _ = if self.current_token_eq(&Token::Colon) {
+                    self.consume(Token::Colon)?;
+                    self.parse_type_annotation()
+                } else {
+                    None
+                };
+                FunctionParameter::Simple {
+                    name: param_name,
+                    type_annotation: param_type,
+                    default_value: None,
+                    is_public: false,
+                    is_private: false,
+                    is_protected: false,
+                    is_readonly: false,
+                }
+            };
+            params.push(param);
+            if self.current_token_eq(&Token::Comma) {
+                self.consume(Token::Comma)?;
+            }
+        }
+        self.consume(Token::RParen)?;
+        // 可能的返回类型
+        let return_type: _ = if self.current_token_eq(&Token::Colon) {
+            self.consume(Token::Colon)?;
+            self.parse_type_annotation()
+        } else {
+            None
+        };
+        // 解析函数体
+        self.consume(Token::LBrace)?;
+        let mut body = Vec::new();
+        while !self.current_token_eq(&Token::RBrace) {
+            body.push(self.parse_statement()?);
+        }
+        self.consume(Token::RBrace)?;
+
+        Ok(ASTExpression::FunctionExpression {
             is_async,
             type_params,
             params,
@@ -4934,8 +5058,22 @@ impl Parser {
             // 处理 async 关键字开头的箭头函数
             Token::Async => {
                 self.consume(Token::Async)?;
-                // 解析 async 箭头函数
-                self.parse_async_arrow_function()
+                // 检查是否是 async function 表达式还是 async 箭头函数
+                // async function(...) {} 是函数表达式
+                // async (...) => ... 是箭头函数
+                if self.current_token_eq(&Token::Function) {
+                    // async function 表达式
+                    self.consume(Token::Function)?;
+                    self.parse_function_expression(true)
+                } else {
+                    // async 箭头函数
+                    self.parse_async_arrow_function()
+                }
+            }
+            // 处理 function 关键字开头的函数表达式
+            Token::Function => {
+                self.consume(Token::Function)?;
+                self.parse_function_expression(false)
             }
             Token::TemplateStart => {
                 // 模板字符串: `part1${expr1}part2${expr2}part3`
@@ -6596,6 +6734,31 @@ impl CodeEmitter {
                 if let Some(_) = return_type {
                     // 已移除
                 }
+            }
+            ASTExpression::FunctionExpression {
+                is_async,
+                type_params: _,
+                params,
+                return_type: _,
+                body,
+            } => {
+                // 函数表达式: function(...) { ... } 或 async function(...) { ... }
+                if *is_async {
+                    self.output.push_str("async ");
+                }
+                self.output.push_str("function ");
+                self.output.push('(');
+                for (i, param) in params.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push_str(", ");
+                    }
+                    self.emit_function_parameter(param);
+                }
+                self.output.push_str(") {\n");
+                for stmt in body {
+                    self.emit_node(stmt);
+                }
+                self.output.push_str("}\n");
             }
             ASTExpression::TemplateLiteral { parts } => {
                 // 将模板字符串转换为字符串拼接
@@ -10346,5 +10509,150 @@ const result = process("test");
             "Should contain 'process': {}", result.js_code);
         assert!(result.js_code.contains("result"),
             "Should contain 'result': {}", result.js_code);
+    }
+
+    // ===== v0.3.142 函数表达式测试 =====
+
+    #[test]
+    fn test_function_expression_basic() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test basic function expression
+        let source = r#"
+const add = function(a: number, b: number): number {
+    return a + b;
+};
+
+const result = add(1, 2);
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("function"),
+            "Should contain 'function': {}", result.js_code);
+        assert!(result.js_code.contains("add"),
+            "Should contain 'add': {}", result.js_code);
+        assert!(result.js_code.contains("result"),
+            "Should contain 'result': {}", result.js_code);
+        // Type annotations should be removed
+        assert!(!result.js_code.contains(": number"),
+            "Should not contain type annotations: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_async_function_expression() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test async function expression
+        let source = r#"
+const fetchData = async function(url: string): Promise<string> {
+    return "data";
+};
+
+const runner = fetchData();
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("async function"),
+            "Should contain 'async function': {}", result.js_code);
+        assert!(result.js_code.contains("fetchData"),
+            "Should contain 'fetchData': {}", result.js_code);
+        // Promise type annotation should be removed
+        assert!(!result.js_code.contains("Promise"),
+            "Should not contain Promise type: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_function_expression_no_params() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test function expression with no parameters
+        let source = r#"
+const greet = function(): string {
+    return "Hello!";
+};
+
+console.log(greet());
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("function"),
+            "Should contain 'function': {}", result.js_code);
+        assert!(result.js_code.contains("greet"),
+            "Should contain 'greet': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_async_function_expression_no_params() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test async function expression with no parameters
+        let source = r#"
+const wait = async function(): Promise<void> {
+    await new Promise(r => setTimeout(r, 100));
+};
+
+wait();
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("async function"),
+            "Should contain 'async function': {}", result.js_code);
+        assert!(result.js_code.contains("wait"),
+            "Should contain 'wait': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_function_expression_with_callback() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test function expression passed as callback
+        let source = r#"
+const numbers = [1, 2, 3];
+const doubled = numbers.map(function(n: number): number {
+    return n * 2;
+});
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("function"),
+            "Should contain 'function': {}", result.js_code);
+        assert!(result.js_code.contains("map"),
+            "Should contain 'map': {}", result.js_code);
+        assert!(result.js_code.contains("doubled"),
+            "Should contain 'doubled': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_named_function_expression() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test named function expression (for recursion)
+        let source = r#"
+const factorial = function fact(n: number): number {
+    if (n <= 1) return 1;
+    return n * fact(n - 1);
+};
+
+console.log(factorial(5));
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("function"),
+            "Should contain 'function': {}", result.js_code);
+        assert!(result.js_code.contains("factorial"),
+            "Should contain 'factorial': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_async_named_function_expression() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test async named function expression - simplified test without complex generic types
+        let source = r#"
+const processAsync = async function processData(items: any[]): any {
+    return items;
+};
+
+processAsync([]);
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("async function"),
+            "Should contain 'async function': {}", result.js_code);
+        assert!(result.js_code.contains("processAsync"),
+            "Should contain 'processAsync': {}", result.js_code);
     }
 }
