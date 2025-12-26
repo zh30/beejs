@@ -1,7 +1,46 @@
-### v0.3.115 实现解构赋值语法支持 (2025-12-27)
+### v0.3.116 实现解构赋值默认值支持 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 
-#### v0.3.115 新增功能
+#### v0.3.116 新增功能
+- **数组解构默认值**
+  - 支持 `const [a, b = 2, c = 3] = [1]` 语法
+  - 支持嵌套数组解构默认值
+  - 支持标识符、嵌套模式的默认值
+
+- **对象解构默认值**
+  - 支持 `const { x, y = 10, z = 20 } = { x: 1 }` 语法
+  - 支持别名+默认值组合: `const { a: alias = 5 } = {}`
+  - 支持嵌套对象解构默认值
+
+- **代码质量改进**
+  - 添加 `DestructuringElement` 结构体
+  - 重构数组解构元素存储方式
+  - 添加 `emit_destructuring_element` 发射函数
+
+#### v0.3.116 验证
+- ✅ `cargo test --lib` 74/74 通过 (+4)
+- ✅ 新增测试用例:
+  - `test_array_destructuring_with_defaults`: 数组解构默认值
+  - `test_object_destructuring_with_defaults`: 对象解构默认值
+  - `test_object_destructuring_with_alias_and_defaults`: 别名+默认值
+  - `test_nested_destructuring_with_defaults`: 嵌套解构默认值
+- ✅ `cargo build --release` 成功编译
+
+#### v0.3.116 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+183/-22 行)
+  - 添加 `DestructuringElement` 结构体
+  - 修改 `DestructuringPattern::Array` 元素类型
+  - 修改 `parse_array_destructuring_pattern` 支持默认值
+  - 修改 `parse_object_destructuring_pattern` 保存默认值
+  - 添加 `emit_destructuring_element` 函数
+  - 修改 `emit_destructuring_pattern` 输出默认值
+
+#### v0.3.116 下一步计划
+- 继续完善 TypeScript 编译器功能
+- 实现函数参数解构默认值
+- 添加更多边界情况测试
+
+### v0.3.115 实现解构赋值语法支持 (2025-12-27)
 - **数组解构赋值**
   - 添加 `DestructuringPattern` 和 `DestructuringDeclaration` AST 节点
   - 支持 `const [a, b, c] = [1, 2, 3]` 语法
