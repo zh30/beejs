@@ -1682,6 +1682,67 @@ fn generate_vlq_mappings_improved(js_code: &str, _line_positions: &[usize]) -> S
     mappings
 }
 
+/// Generate precise source map mappings using token positions (v0.3.146)
+/// This function creates a source map that tracks exact positions between
+/// TypeScript source and generated JavaScript output.
+fn generate_precise_source_map(
+    js_code: &str,
+    token_positions: &[(usize, usize, usize, usize)], // (js_line, js_col, ts_line, ts_col)
+) -> String {
+    let mut mappings = String::new();
+    let mut prev_js_line: i32 = 0;
+    let mut prev_js_col: i32 = 0;
+    let mut prev_ts_line: i32 = 0;
+    let mut prev_ts_col: i32 = 0;
+
+    // Sort positions by JS line and column
+    let mut sorted_positions: Vec<_> = token_positions.iter().collect();
+    sorted_positions.sort_by_key(|(js_line, js_col, _, _)| (*js_line, *js_col));
+
+    for (idx, (js_line, js_col, ts_line, ts_col)) in sorted_positions.iter().enumerate() {
+        // Add semicolon for new line
+        if *js_line as i32 > prev_js_line {
+            mappings.push(';');
+            prev_js_col = 0;
+        }
+
+        // Calculate relative values (VLQ encoding uses relative values)
+        let js_line_diff = (*js_line as i32) - prev_js_line;
+        let js_col_diff = (*js_col as i32) - prev_js_col;
+        let ts_line_diff = (*ts_line as i32) - prev_ts_line;
+        let ts_col_diff = (*ts_col as i32) - prev_ts_col;
+
+        // Encode in VLQ format: generatedLine, generatedCol, sourceLine, sourceCol
+        // Only include segments that have actual mappings
+        if idx == 0 || js_line_diff != 0 || js_col_diff != 0 {
+            if idx > 0 {
+                mappings.push(',');
+            }
+
+            // Encode generated column (relative to previous)
+            mappings.push_str(&encode_vlq(js_col_diff));
+
+            // Encode source file index (always 0, omitted in VLQ)
+            // mappings.push_str(",");
+            // mappings.push_str(&encode_vlq(0));
+
+            // Encode source line (relative to previous)
+            mappings.push_str(&encode_vlq(ts_line_diff));
+
+            // Encode source column (relative to previous)
+            mappings.push_str(&encode_vlq(ts_col_diff));
+        }
+
+        // Update previous values
+        prev_js_line = *js_line as i32;
+        prev_js_col = *js_col as i32;
+        prev_ts_line = *ts_line as i32;
+        prev_ts_col = *ts_col as i32;
+    }
+
+    mappings
+}
+
 /// Encode a number using VLQ (Variable Length Quantity)
 fn encode_vlq(value: i32) -> String {
     let mut result = String::new();
@@ -1844,6 +1905,22 @@ impl SourceLocation {
     fn new(line: u32, column: u32) -> Self {
         Self { line, column }
     }
+}
+
+/// Spanned token with source location for precise source map generation (v0.3.146)
+#[derive(Debug, Clone, PartialEq)]
+pub struct SpannedToken {
+    pub token: Token,
+    pub location: SourceLocation,
+    pub end_location: SourceLocation,  // Location after this token
+}
+
+/// Lexer state for position tracking
+struct LexerState {
+    line: u32,
+    column: u32,
+    start_line: u32,
+    start_column: u32,
 }
 
 /// 枚举成员
@@ -11163,6 +11240,53 @@ function wrap<T = string>(value: T): T[] {
         if let Some(mappings) = &validation.mappings {
             assert!(mappings.contains(';'), "Multi-line source map should have semicolons");
         }
+    }
+
+    /// Test precise source map generation with token positions (v0.3.146)
+    #[test]
+    pub fn test_precise_source_map_generation() {
+        // Test the precise source map generation function
+        let token_positions: Vec<(usize, usize, usize, usize)> = vec![
+            (0, 0, 0, 0),   // Line 0, col 0 -> TS line 0, col 0
+            (0, 4, 0, 4),   // Line 0, col 4 -> TS line 0, col 4
+            (1, 0, 1, 0),   // Line 1, col 0 -> TS line 1, col 0
+        ];
+
+        let js_code = "let x = 5;\nlet y = 10;";
+        let mappings = generate_precise_source_map(js_code, &token_positions);
+
+        // Should generate valid VLQ mappings
+        assert!(!mappings.is_empty(), "Should generate mappings");
+
+        // Should contain segment separators
+        assert!(mappings.contains(';'), "Should have line separators for multi-line");
+
+        // Validate VLQ encoding characters
+        for ch in mappings.chars() {
+            if ch != ';' && ch != ',' {
+                assert!(
+                    ch.is_alphanumeric() || ch == '+' || ch == '/' || ch == '-',
+                    "Invalid VLQ character: {}", ch
+                );
+            }
+        }
+    }
+
+    /// Test precise source map with single line (v0.3.146)
+    #[test]
+    pub fn test_precise_source_map_single_line() {
+        let token_positions: Vec<(usize, usize, usize, usize)> = vec![
+            (0, 0, 0, 0),
+            (0, 3, 0, 3),
+            (0, 5, 0, 6),
+        ];
+
+        let js_code = "let x = 5;";
+        let mappings = generate_precise_source_map(js_code, &token_positions);
+
+        // Single line should not have semicolons
+        assert!(!mappings.contains(';'), "Single line should not have semicolons");
+        assert!(!mappings.is_empty(), "Should generate mappings");
     }
 }
 

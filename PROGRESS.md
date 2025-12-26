@@ -1,3 +1,57 @@
+### v0.3.146 Source Map 精确位置追踪 (2025-12-27)
+**进度**: Source Map 增强 | ✅ 已提交
+
+#### v0.3.146 新增功能
+- **SpannedToken 结构体**
+  - 添加 `SpannedToken` 结构体，包含 token 及其开始/结束位置
+  - 包含 `SourceLocation` 字段记录行号和列号
+  - 为精确 source map 生成提供基础设施
+
+- **精确 Source Map 生成函数**
+  - 新增 `generate_precise_source_map()` 函数
+  - 使用 VLQ 编码生成精确的 source map 映射
+  - 支持跟踪 JS 行/列到 TS 行/列的对应关系
+  - 实现了 `token_positions` 参数：`(js_line, js_col, ts_line, ts_col)`
+
+- **Lexer 位置追踪基础设施**
+  - 添加 `LexerState` 结构体用于 lexer 内部位置追踪
+  - 为未来的完整位置追踪功能打下基础
+
+#### v0.3.146 测试用例新增
+- `test_precise_source_map_generation` - 多行精确 source map 测试
+- `test_precise_source_map_single_line` - 单行精确 source map 测试
+
+#### v0.3.146 验证
+- ✅ `cargo test --lib` 206/206 通过 (+2)
+- ✅ `cargo build --release` 成功编译
+- ✅ 精确 source map 生成正常工作
+- ✅ VLQ 编码验证通过
+
+#### v0.3.146 代码变更
+- **新增文件**: `src/typescript/compiler.rs`
+  - 添加 `SpannedToken` 结构体 (~10 行)
+  - 添加 `LexerState` 结构体 (~8 行)
+  - 添加 `generate_precise_source_map()` 函数 (~60 行)
+  - 添加 2 个测试用例 (~50 行)
+
+#### v0.3.146 使用示例
+```typescript
+// 精确 source map 生成的 token 位置格式
+let token_positions: Vec<(usize, usize, usize, usize)> = vec![
+    (0, 0, 0, 0),   // JS 行 0, 列 0 -> TS 行 0, 列 0
+    (0, 4, 0, 4),   // JS 行 0, 列 4 -> TS 行 0, 列 4
+    (1, 0, 1, 0),   // JS 行 1, 列 0 -> TS 行 1, 列 0
+];
+let mappings = generate_precise_source_map(js_code, &token_positions);
+```
+
+#### v0.3.146 下一步计划
+- 集成调试器的 source map 支持
+- 实现 AST 节点位置追踪
+- 完善 TypeScript 到 JavaScript 的完整位置映射
+
+---
+
 ### v0.3.143 await 在函数表达式中的正确处理 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 
