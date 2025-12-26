@@ -2236,8 +2236,7 @@ pub fn set_global_request_handler(
 // ============================================================================
 
 use std::fs::File;
-use std::io::{BufReader, Cursor};
-use std::sync::Arc;
+use std::io::BufReader;
 
 /// HTTPS/TLS 配置
 /// v0.3.98: 新增结构体
@@ -2300,11 +2299,12 @@ pub fn load_tls_certificate(cert_path: &str, key_path: &str) -> Result<TlsCertif
     let mut cert_reader = BufReader::new(cert_file);
 
     // 使用 rustls-pemfile 解析证书
-    let certs: Vec<rustls::Certificate> = rustls_pemfile::certs(&mut cert_reader)
-        .map_err(|e| format!("Failed to parse certificate: {}", e))?
-        .into_iter()
-        .map(rustls::Certificate)
-        .collect();
+    let certs_result = rustls_pemfile::certs(&mut cert_reader);
+    let mut certs = Vec::new();
+    for cert in certs_result {
+        let cert_der = cert.map_err(|e| format!("Failed to parse certificate: {}", e))?;
+        certs.push(rustls::Certificate(cert_der.to_vec()));
+    }
 
     if certs.is_empty() {
         return Err("No certificates found in file".to_string());
@@ -2315,25 +2315,27 @@ pub fn load_tls_certificate(cert_path: &str, key_path: &str) -> Result<TlsCertif
         .map_err(|e| format!("Failed to open key file: {}", e))?;
     let mut key_reader = BufReader::new(key_file);
 
-    // 解析私钥
-    let keys: Vec<rustls::PrivateKey> = rustls_pemfile::rsa_private_keys(&mut key_reader)
-        .map_err(|e| format!("Failed to parse private key: {}", e))?
-        .into_iter()
-        .map(rustls::PrivateKey)
-        .collect();
+    // 首先尝试解析 RSA 私钥
+    let keys_result = rustls_pemfile::rsa_private_keys(&mut key_reader);
+    let mut keys = Vec::new();
+    for key in keys_result {
+        let key_bytes = key.map_err(|e| format!("Failed to parse private key: {}", e))?;
+        keys.push(rustls::PrivateKey(key_bytes.secret_pkcs1_der().to_vec()));
+    }
 
     // 如果没有 RSA 密钥，尝试 PKCS8 格式
-    let keys: Vec<rustls::PrivateKey> = if keys.is_empty() {
-        let mut key_reader = BufReader::new(File::open(key_path)
-            .map_err(|e| format!("Failed to reopen key file: {}", e))?);
-        rustls_pemfile::pkcs8_private_keys(&mut key_reader)
-            .map_err(|e| format!("Failed to parse PKCS8 private key: {}", e))?
-            .into_iter()
-            .map(rustls::PrivateKey)
-            .collect()
-    } else {
-        keys
-    };
+    if keys.is_empty() {
+        drop(key_reader);
+        let key_file = File::open(key_path)
+            .map_err(|e| format!("Failed to reopen key file: {}", e))?;
+        let mut key_reader = BufReader::new(key_file);
+
+        let pkcs8_result = rustls_pemfile::pkcs8_private_keys(&mut key_reader);
+        for key in pkcs8_result {
+            let key_bytes = key.map_err(|e| format!("Failed to parse PKCS8 private key: {}", e))?;
+            keys.push(rustls::PrivateKey(key_bytes.secret_pkcs8_der().to_vec()));
+        }
+    }
 
     if keys.is_empty() {
         return Err("No private key found in file".to_string());
@@ -2419,12 +2421,12 @@ pub fn generate_https_response(response: &mut HttpServerResponse) -> Vec<u8> {
 
 /// 创建 HTTPS 服务器配置的 JavaScript API
 /// v0.3.98: 新增功能
-pub fn create_https_config_js(
-    scope: &mut v8::HandleScope,
+pub fn create_https_config_js<'a>(
+    scope: &mut v8::HandleScope<'a>,
     cert_path: String,
     key_path: String,
     port: u16,
-) -> Option<v8::Local<v8::Object>> {
+) -> Option<v8::Local<'a, v8::Object>> {
     let config_obj = v8::Object::new(scope);
 
     // certPath
@@ -2447,10 +2449,10 @@ pub fn create_https_config_js(
 
 /// 加载 TLS 证书的 JavaScript API
 /// v0.3.98: 新增功能
-pub fn load_tls_certificate_js(
-    scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
-) -> Option<v8::Local<v8::Object>> {
+pub fn load_tls_certificate_js<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    args: v8::FunctionCallbackArguments<'a>,
+) -> Option<v8::Local<'a, v8::Object>> {
     let cert_path: String = args
         .get(0)
         .to_string(scope)
@@ -2467,17 +2469,19 @@ pub fn load_tls_certificate_js(
         Ok(_) => {
             let result_obj = v8::Object::new(scope);
             let success_key = v8::String::new(scope, "success").unwrap();
-            result_obj.set(scope, success_key.into(), v8::Boolean::new(scope, true).into());
-            result_obj
+            let success_val = v8::Boolean::new(scope, true);
+            result_obj.set(scope, success_key.into(), success_val.into());
+            Some(result_obj)
         }
         Err(e) => {
             let result_obj = v8::Object::new(scope);
             let success_key = v8::String::new(scope, "success").unwrap();
-            result_obj.set(scope, success_key.into(), v8::Boolean::new(scope, false).into());
+            let success_val = v8::Boolean::new(scope, false);
+            result_obj.set(scope, success_key.into(), success_val.into());
             let error_key = v8::String::new(scope, "error").unwrap();
             let error_val = v8::String::new(scope, &e).unwrap();
             result_obj.set(scope, error_key.into(), error_val.into());
-            result_obj
+            Some(result_obj)
         }
     }
 }
