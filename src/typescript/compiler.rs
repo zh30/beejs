@@ -3983,6 +3983,39 @@ impl Parser {
             self.parse_basic_type()
         }?;
 
+        // 检查是否是条件类型: T extends U ? X : Y
+        if self.current_token_eq(&Token::Extends) {
+            // 解析条件类型
+            self.consume(Token::Extends).ok()?;
+            let extend_type = if let Some(t) = self.parse_type_annotation() {
+                t
+            } else {
+                "unknown".to_string()
+            };
+
+            // 检查 ?
+            self.consume(Token::Question).ok()?;
+
+            // 解析 true 分支
+            let true_type = if let Some(t) = self.parse_type_annotation() {
+                t
+            } else {
+                "never".to_string()
+            };
+
+            // 检查 :
+            self.consume(Token::Colon).ok()?;
+
+            // 解析 false 分支
+            let false_type = if let Some(t) = self.parse_type_annotation() {
+                t
+            } else {
+                first_type.clone()
+            };
+
+            return Some(format!("{} extends {} ? {} : {}", first_type, extend_type, true_type, false_type));
+        }
+
         // 处理索引访问类型后缀: T["key"] 或 T[K]
         let mut result = first_type;
         while self.current_token_eq(&Token::LBracket) {
@@ -4161,6 +4194,39 @@ impl Parser {
     fn parse_union_type(&mut self) -> Option<String> {
         // 解析第一个类型
         let first_type: _ = self.parse_basic_type()?;
+
+        // 检查是否是条件类型: T extends U ? X : Y
+        if self.current_token_eq(&Token::Extends) {
+            // 解析条件类型
+            self.consume(Token::Extends).ok()?;
+            let extend_type = if let Some(t) = self.parse_union_type() {
+                t
+            } else {
+                "unknown".to_string()
+            };
+
+            // 检查 ?
+            self.consume(Token::Question).ok()?;
+
+            // 解析 true 分支
+            let true_type = if let Some(t) = self.parse_union_type() {
+                t
+            } else {
+                "never".to_string()
+            };
+
+            // 检查 :
+            self.consume(Token::Colon).ok()?;
+
+            // 解析 false 分支
+            let false_type = if let Some(t) = self.parse_union_type() {
+                t
+            } else {
+                first_type.clone()
+            };
+
+            return Some(format!("{} extends {} ? {} : {}", first_type, extend_type, true_type, false_type));
+        }
 
         // 处理索引访问类型后缀: T["key"] 或 T[K]
         let mut result = first_type;
@@ -6898,6 +6964,90 @@ type ConfigType = typeof config;
                 println!("JS Code:\n{}", result.js_code);
                 assert!(result.js_code.contains("function makeOptional"),
                     "Should contain function: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_conditional_type_basic() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test basic conditional type: T extends U ? X : Y
+        let source = r#"type IsString<T> = T extends string ? true : false;"#;
+        println!("\n========== Testing basic conditional type ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(!result.js_code.contains("type IsString"),
+                    "Should not contain type alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_conditional_type_with_generics() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test conditional type with generics
+        let source = r#"type Result<T> = T extends Promise<infer U> ? U : T;"#;
+        println!("\n========== Testing conditional type with infer ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(!result.js_code.contains("type Result"),
+                    "Should not contain type alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_conditional_type_nested() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test nested conditional types
+        let source = r#"type DeepResult<T> = T extends string ? "string" : T extends number ? "number" : "other";"#;
+        println!("\n========== Testing nested conditional types ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(!result.js_code.contains("type DeepResult"),
+                    "Should not contain type alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_conditional_type_in_type_alias() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test conditional type in type alias declaration
+        let source = r#"type NonNullable<T> = T extends null | undefined ? never : T;"#;
+        println!("\n========== Testing conditional type in type alias ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(!result.js_code.contains("type NonNullable"),
+                    "Should not contain type alias: {}", result.js_code);
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
