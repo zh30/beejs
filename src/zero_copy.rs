@@ -10,6 +10,7 @@ use std::time::Instant;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::num::NonZeroUsize;
 use std::marker::PhantomData;
+use tempfile::TempDir;
 
 /// 零拷贝缓冲区
 /// 包装一个字节切片，允许零拷贝传递

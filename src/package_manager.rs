@@ -8,14 +8,22 @@
 // - 包下载和缓存
 // - node_modules 结构管理
 
+#[allow(unused)]
 use anyhow::{Result, anyhow};
+#[allow(unused)]
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+#[allow(unused)]
+use std::collections::HashMap;
+#[allow(unused)]
 use std::fs;
+#[allow(unused)]
 use std::path::{Path, PathBuf};
-use tempfile::{NamedTempFile, TempDir};
-use std::io::Write;
+#[allow(unused)]
 use std::hash::Hash;
+#[allow(unused)]
+use std::io::Write;
+#[allow(unused)]
+use tempfile::{NamedTempFile, TempDir};
 
 #[allow(unused_imports)]
 /// Package manager configuration
