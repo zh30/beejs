@@ -33,6 +33,44 @@
 - 集成热重载 WebSocket 到 watch 模式
 
 
+### v0.3.105 实现 WebSocket 热重载服务器核心功能 (2025-12-26)
+**进度**: 热重载 | ✅ 已提交
+
+#### v0.3.105 新增功能
+- **WebSocket 服务器启动**
+  - 实现 `start()` 函数：创建 TCP 监听器
+  - 异步接受 WebSocket 连接
+  - 为每个客户端 spawn 处理任务
+  - 监听广播事件并发送到客户端
+
+- **客户端连接处理**
+  - 实现 `handle_client()` 函数
+  - 使用 `tokio::select!` 同时处理广播和客户端消息
+  - 支持 ping/pong 心跳检测
+  - 处理客户端断开连接
+
+- **导入依赖**
+  - 添加 `tokio::net::{TcpListener, TcpStream}`
+  - 添加 `tokio_tungstenite::{accept_async, tungstenite::protocol::Message}`
+  - 添加 `futures_util::{SinkExt, StreamExt}`
+
+#### v0.3.105 代码变更
+- **修改文件**: `src/watcher_websocket.rs` (+128/-57 行)
+  - 添加 WebSocket 导入
+  - 实现 `start()` 异步函数
+  - 实现 `handle_client()` 异步函数
+  - 使用 tokio::select! 处理并发事件
+
+#### v0.3.105 验证
+- ✅ `cargo build --release` 成功
+- ✅ `cargo test --lib` 23/23 通过
+
+#### v0.3.105 下一步计划
+- 集成热重载 WebSocket 到 watch 模式
+- 添加 `--websocket-port` CLI 选项
+- 创建浏览器客户端脚本接收热重载事件
+
+
 ### v0.3.100 实现热重载功能 (2025-12-26)
 **进度**: 开发体验 | ✅ 代码已完成
 
