@@ -134,6 +134,20 @@ pub fn get_http_server_channel() -> Option<Arc<Mutex<Option<HttpServerMessageCha
     }
 }
 
+/// 重置全局消息通道
+/// v0.3.93: 添加测试支持，用于清空通道中的残留消息
+/// 创建一个新的消息通道，丢弃所有未处理的消息
+#[allow(static_mut_refs)]
+pub fn reset_http_server_channel() {
+    unsafe {
+        if let Some(ref channel_arc) = HTTP_SERVER_CHANNEL {
+            let mut channel_guard = channel_arc.lock().unwrap();
+            // 创建一个新通道，丢弃所有未处理的消息
+            *channel_guard = Some(HttpServerMessageChannel::new(100));
+        }
+    }
+}
+
 /// 发送 HTTP 响应到后台线程
 /// v0.3.90: 实现跨线程响应传递
 #[allow(static_mut_refs)]
@@ -141,9 +155,7 @@ pub fn send_http_response(response: HttpResponseMessage) {
     unsafe {
         if let Some(ref channel_arc) = HTTP_SERVER_CHANNEL {
             if let Some(ref channel) = *channel_arc.lock().unwrap() {
-                if let Err(e) = channel.send_response(response) {
-                    eprintln!("[Beejs] Failed to send HTTP response: {}", e);
-                }
+                let _ = channel.send_response(response);
             }
         }
     }
@@ -401,11 +413,17 @@ pub fn setup_http_api(
     context: &v8::Local<v8::Context>,
 ) -> Result<()> {
     let http_obj: _ = v8::Object::new(scope);
-    // createServer
-    let create_server_func: _ = v8::FunctionTemplate::new(scope, http_create_server_callback);
+
+    // createServer - 使用普通 callback
+    // v0.3.93: callback 中会直接从 context 获取全局对象
+    let create_server_func = v8::FunctionTemplate::new(
+        scope,
+        http_create_server_with_global_callback,
+    );
     let create_server_instance: _ = create_server_func.get_function(scope).unwrap();
     let create_server_key: _ = v8::String::new(scope, "createServer").unwrap();
     http_obj.set(scope, create_server_key.into(), create_server_instance.into());
+
     // request
     let request_func: _ = v8::FunctionTemplate::new(scope, http_request_callback);
     let request_instance: _ = request_func.get_function(scope).unwrap();
@@ -497,6 +515,12 @@ fn http_create_server_callback(
     if request_handler.is_function() {
         let handler_key = v8::String::new(scope, "_requestHandler").unwrap();
         server_obj.set(scope, handler_key.into(), request_handler);
+
+        // v0.3.93: 同时设置全局 HTTP request handler
+        // 注意: 在 HandleScope 中我们需要使用 context.global()，但这里没有 context
+        // 所以我们需要在外部设置，或者使用不同的方法
+        // 由于无法直接访问全局对象，我们暂时只在 server 对象上存储
+        // pump_http_messages 需要从 server 对象或其他方式获取 handler
     }
 
     // listen
@@ -516,6 +540,55 @@ fn http_create_server_callback(
     server_obj.set(scope, close_key.into(), close_instance.into());
 
     // v0.3.89: 初始化消息通道并标记到 server 对象
+    let _message_channel = init_http_server_channel();
+    let channel_key = v8::String::new(scope, "_messageChannel").unwrap();
+    let channel_initialized = v8::Boolean::new(scope, true);
+    server_obj.set(scope, channel_key.into(), channel_initialized.into());
+
+    retval.set(server_obj.into());
+}
+
+/// v0.3.93: http.createServer callback 版本，可以访问全局对象
+fn http_create_server_with_global_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let request_handler: _ = args.get(0);
+
+    // 直接从当前 scope 获取 context 和全局对象
+    let context = scope.get_current_context();
+    let global = context.global(scope);
+
+    let server_obj: _ = v8::Object::new(scope);
+
+    // 如果提供了 request handler，立即存储到 _requestHandler
+    if request_handler.is_function() {
+        let handler_key = v8::String::new(scope, "_requestHandler").unwrap();
+        server_obj.set(scope, handler_key.into(), request_handler);
+
+        // v0.3.93: 同时设置全局 HTTP request handler
+        let global_handler_key = v8::String::new(scope, "_httpServerRequestHandler").unwrap();
+        global.set(scope, global_handler_key.into(), request_handler);
+    }
+
+    // listen
+    let listen_func: _ = v8::FunctionTemplate::new(scope, http_server_listen_callback);
+    let listen_instance: _ = listen_func.get_function(scope).unwrap();
+    let listen_key: _ = v8::String::new(scope, "listen").unwrap();
+    server_obj.set(scope, listen_key.into(), listen_instance.into());
+    // on
+    let on_func: _ = v8::FunctionTemplate::new(scope, http_server_on_callback);
+    let on_instance: _ = on_func.get_function(scope).unwrap();
+    let on_key: _ = v8::String::new(scope, "on").unwrap();
+    server_obj.set(scope, on_key.into(), on_instance.into());
+    // close
+    let close_func: _ = v8::FunctionTemplate::new(scope, http_server_close_callback);
+    let close_instance: _ = close_func.get_function(scope).unwrap();
+    let close_key: _ = v8::String::new(scope, "close").unwrap();
+    server_obj.set(scope, close_key.into(), close_instance.into());
+
+    // 初始化消息通道
     let _message_channel = init_http_server_channel();
     let channel_key = v8::String::new(scope, "_messageChannel").unwrap();
     let channel_initialized = v8::Boolean::new(scope, true);
@@ -1308,7 +1381,7 @@ fn http_res_get_header_callback(
 }
 
 /// response.setHeader() 回调 - v0.3.64
-fn http_res_set_header_callback(
+pub fn http_res_set_header_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
@@ -1338,7 +1411,7 @@ fn http_res_set_header_callback(
 }
 
 /// response.writeHead() 回调 - v0.3.64
-fn http_res_write_head_callback(
+pub fn http_res_write_head_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
@@ -1372,7 +1445,8 @@ fn http_res_write_head_callback(
 
     retval.set(this.into());
 }
-fn http_res_end_callback(
+/// response.end() 回调 - v0.3.64
+pub fn http_res_end_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
@@ -1737,66 +1811,72 @@ fn handle_connection(
         if let Some(ref channel_ref) = channel {
             if let Some(ref msg_channel) = *channel_ref.lock().unwrap() {
                 if msg_channel.send_request(request_msg).is_ok() {
-                    // v0.3.92: 使用 try_recv 实现非阻塞超时
-                    let timeout_duration = Duration::from_millis(100); // 100ms 超时
-                    let start_time = Instant::now();
-
-                    // 使用 try_recv 配合循环实现超时
-                    loop {
-                        match msg_channel.response_receiver.try_recv() {
-                            Ok(response) => {
-                                // 生成 HTTP 响应
-                                let response_data = generate_http_response_v2(&response);
-                                if let Err(e) = stream.write_all(&response_data) {
-                                    eprintln!("[Beejs] Write error: {}", e);
-                                }
-                                // 关闭写入端，通知客户端响应已完成
-                                let _ = stream.shutdown(std::net::Shutdown::Write);
-                                return;
-                            }
-                            Err(crossbeam::channel::TryRecvError::Empty) => {
-                                // 通道为空（还没收到响应），检查是否超时
-                                if start_time.elapsed() >= timeout_duration {
-                                    eprintln!("[Beejs] Message channel response timeout, using fallback response");
-                                    break; // 跳出循环，使用回退响应
-                                }
-                                // 短暂睡眠后重试
-                                thread::sleep(Duration::from_millis(5));
-                            }
-                            Err(crossbeam::channel::TryRecvError::Disconnected) => {
-                                // 通道已断开，使用回退响应
-                                eprintln!("[Beejs] Message channel disconnected, using fallback response");
-                                break;
-                            }
-                        }
-                    }
+                    // 成功发送请求，标记消息通道已使用
                     message_channel_used = true;
                 }
             }
         }
     }
 
-    // 回退：生成简单的响应（当消息通道不可用、超时或没有 handler 时）
-    // v0.3.92: 改进回退响应，根据请求方法生成不同的响应
-    let fallback_body = format!(
-        "Beejs HTTP Server\nMethod: {}\nPath: {}\nHandler: {}",
-        parsed_request.method,
-        parsed_request.path,
-        if message_channel_used { "timeout" } else { "not configured" }
-    );
+    // v0.3.93: 只有当消息通道未使用时才发送回退响应
+    // 如果消息通道已使用但尚未收到响应，需要等待主线程处理
+    if !message_channel_used {
+        // 消息通道不可用，发送回退响应
+        let fallback_body = format!(
+            "Beejs HTTP Server\nMethod: {}\nPath: {}\nHandler: not configured",
+            parsed_request.method,
+            parsed_request.path
+        );
 
-    // 直接构建完整的 HTTP 响应，避免重复添加 body
-    let mut response_data = format!(
-        "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-        fallback_body.len()
-    );
-    response_data.push_str(&fallback_body);
+        let mut response_data = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            fallback_body.len()
+        );
+        response_data.push_str(&fallback_body);
 
-    if let Err(e) = stream.write_all(response_data.as_bytes()) {
-        eprintln!("[Beejs] Write error: {}", e);
+        if let Err(e) = stream.write_all(response_data.as_bytes()) {
+            eprintln!("[Beejs] Write error: {}", e);
+        }
+
+        let _ = stream.shutdown(std::net::Shutdown::Write);
+        return;
     }
 
-    // 关闭写入端，通知客户端响应已完成
+    // v0.3.93: 消息通道已使用，等待主线程处理
+    // 使用非阻塞方式等待响应，给主线程充足时间
+    let channel = get_http_server_channel();
+    if let Some(ref channel_ref) = channel {
+        if let Some(ref msg_channel) = *channel_ref.lock().unwrap() {
+            // 使用较长的轮询周期，给主线程处理时间
+            let start_time = Instant::now();
+            let max_wait = Duration::from_secs(5); // 最多等5秒
+
+            loop {
+                match msg_channel.response_receiver.try_recv() {
+                    Ok(response) => {
+                        let response_data = generate_http_response_v2(&response);
+                        let _ = stream.write_all(&response_data);
+                        let _ = stream.shutdown(std::net::Shutdown::Write);
+                        return;
+                    }
+                    Err(crossbeam::channel::TryRecvError::Empty) => {
+                        if start_time.elapsed() >= max_wait {
+                            // 超时，关闭连接
+                            let _ = stream.shutdown(std::net::Shutdown::Write);
+                            return;
+                        }
+                        // 短暂睡眠后重试
+                        thread::sleep(Duration::from_millis(50));
+                    }
+                    Err(crossbeam::channel::TryRecvError::Disconnected) => {
+                        let _ = stream.shutdown(std::net::Shutdown::Write);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
     let _ = stream.shutdown(std::net::Shutdown::Write);
 }
 
@@ -1945,7 +2025,6 @@ pub fn process_http_request_in_v8(
     let args = [req_obj.into(), res_obj.into()];
 
     if handler_fn.call(scope, this_val, &args).is_none() {
-        eprintln!("[Beejs] Request handler execution failed");
         return None;
     }
 
@@ -2022,7 +2101,18 @@ pub fn get_global_request_handler(
 
     // 查找 _httpServerRequestHandler
     let handler_key = v8::String::new(scope, "_httpServerRequestHandler").unwrap();
-    let handler_val = global.get(scope, handler_key.into())?;
+    let handler_val = global.get(scope, handler_key.into());
+
+    let handler_val = match handler_val {
+        Some(v) => v,
+        None => {
+            return None;
+        }
+    };
+
+    if handler_val.is_undefined() {
+        return None;
+    }
 
     if !handler_val.is_function() {
         return None;

@@ -1174,9 +1174,12 @@ fn hkdf_derive(digest: &str, ikm: &str, salt: &str, info: &str, keylen: usize) -
 
 /// A minimal runtime that only provides basic JavaScript execution
 /// This version avoids complex dependencies for faster startup
+/// v0.3.93: 添加 Context 存储以支持跨 Context 共享 handler
 pub struct MinimalRuntime {
     // V8 Isolate - the core JavaScript execution engine
     isolate: v8::OwnedIsolate,
+    // v0.3.93: 存储 V8 Context 以支持跨 Context 共享数据
+    context: Option<v8::Global<v8::Context>>,
 }
 
 impl MinimalRuntime {
@@ -1188,7 +1191,32 @@ impl MinimalRuntime {
         // Create a new isolate with default parameters
         let isolate = v8::Isolate::new(v8::CreateParams::default());
 
-        Ok(Self { isolate })
+        // v0.3.93: Context 将在第一次调用 get_context() 时创建
+        Ok(Self { isolate, context: None })
+    }
+
+    /// 获取或创建 V8 Context
+    /// v0.3.93: 确保 Context 存在且可被复用
+    fn get_context(&mut self) -> v8::Global<v8::Context> {
+        if let Some(ref mut ctx) = self.context {
+            return ctx.clone();
+        }
+
+        // 如果没有 Context，创建一个
+        let scope = &mut v8::HandleScope::new(&mut self.isolate);
+        let context = v8::Context::new(scope);
+        let global_context = v8::Global::new(scope, context);
+        self.context = Some(global_context.clone());
+        global_context
+    }
+
+    /// 强制重新创建 Context
+    /// v0.3.93: 用于需要全新上下文的情况
+    pub fn recreate_context(&mut self) {
+        let scope = &mut v8::HandleScope::new(&mut self.isolate);
+        let context = v8::Context::new(scope);
+        let global_context = v8::Global::new(scope, context);
+        self.context = Some(global_context);
     }
 
     /// Transpile TypeScript to JavaScript by removing type annotations
@@ -1226,6 +1254,7 @@ impl MinimalRuntime {
     }
 
     /// Execute JavaScript or TypeScript code and return the result as a string
+    /// v0.3.93: 修改为使用存储的 Context 以支持跨调用共享数据
     pub fn execute_code(&mut self, code: &str) -> Result<String> {
         // Transpile TypeScript to JavaScript if TypeScript features are detected
         let js_code = if code.contains("function ") && code.contains(": ") {
@@ -1235,67 +1264,53 @@ impl MinimalRuntime {
             code.to_string()
         };
 
-        // Create a handle scope for this execution
+        // 创建 HandleScope（整个函数只创建一次）
         let scope = &mut v8::HandleScope::new(&mut self.isolate);
 
-        // Create a context with default options
-        let context = v8::Context::new(scope);
+        // 获取或创建 Context
+        let context = if self.context.is_none() {
+            // 第一次调用，创建 Context 并设置所有 API
+            let context = v8::Context::new(scope);
+            let global_context = v8::Global::new(scope, context);
+            self.context = Some(global_context);
+            context
+        } else {
+            // 复用已存储的 Context
+            v8::Local::new(scope, self.context.as_ref().unwrap())
+        };
+
         let scope = &mut v8::ContextScope::new(scope, context);
 
-        // Set up console object
-        Self::setup_console(scope, &context)?;
+        // 检查是否需要设置 API（第一次调用时）
+        let global = context.global(scope);
+        let http_key = v8::String::new(scope, "http").unwrap();
+        let needs_setup = global.get(scope, http_key.into()).unwrap().is_undefined();
 
-        // Set up Buffer module (complete implementation with from, alloc, concat, etc.)
-        setup_buffer_module(scope);
+        if needs_setup {
+            // 第一次调用，设置所有 API
+            Self::setup_console(scope, &context)?;
+            setup_buffer_module(scope);
+            Self::setup_web_apis(scope, &context)?;
+            Self::setup_process_api(scope, &context)?;
+            setup_path_api(scope, &context)?;
+            setup_fs_api(scope, &context)?;
+            Self::setup_os_api(scope, &context)?;
+            Self::setup_child_process_api(scope, &context)?;
+            Self::setup_stream_api(scope, &context)?;
 
-        // Set up Web APIs
-        Self::setup_web_apis(scope, &context)?;
+            // Initialize HTTP connection pool (v0.3.84)
+            use crate::nodejs_core::http::init_http_connection_pool;
+            init_http_connection_pool(10, 20, false);
 
-        // Set up process global object (v0.3.17)
-        Self::setup_process_api(scope, &context)?;
-
-        // Set up path module (v0.3.50)
-        setup_path_api(scope, &context)?;
-
-        // Set up fs module (v0.3.50)
-        setup_fs_api(scope, &context)?;
-
-        // Set up os module (v0.3.37)
-        Self::setup_os_api(scope, &context)?;
-
-        // Set up child_process module (v0.3.43)
-        Self::setup_child_process_api(scope, &context)?;
-
-        // Set up stream module (v0.3.44)
-        Self::setup_stream_api(scope, &context)?;
-
-        // Initialize HTTP connection pool (v0.3.84)
-        use crate::nodejs_core::http::init_http_connection_pool;
-        init_http_connection_pool(10, 20, false);
-
-        // Set up http module (v0.3.45)
-        setup_http_api(scope, &context)?;
-
-        // Set up util module (v0.3.45)
-        Self::setup_util_api(scope, &context)?;
-
-        // Set up events module (v0.3.46)
-        Self::setup_events_api(scope, &context)?;
-
-        // Set up DNS module (v0.3.47)
-        Self::setup_dns_api(scope, &context)?;
-
-        // Set up net module (v0.3.69)
-        setup_net_api(scope, &context)?;
-
-        // Set up string_decoder module (v0.3.48)
-        Self::setup_string_decoder_api(scope, &context)?;
-
-        // Set up crypto module (v0.3.55)
-        setup_crypto_api(scope, &context)?;
-
-        // Set up CommonJS module system (v0.3.x)
-        Self::setup_module_system(scope, &context)?;
+            setup_http_api(scope, &context)?;
+            Self::setup_util_api(scope, &context)?;
+            Self::setup_events_api(scope, &context)?;
+            Self::setup_dns_api(scope, &context)?;
+            setup_net_api(scope, &context)?;
+            Self::setup_string_decoder_api(scope, &context)?;
+            setup_crypto_api(scope, &context)?;
+            Self::setup_module_system(scope, &context)?;
+        }
 
         // Create a string from the transpiled code
         let code = v8::String::new(scope, &js_code)
@@ -12826,38 +12841,76 @@ impl MinimalRuntime {
     /// 返回处理的请求数量
     /// v0.3.91: 新增功能
     pub fn pump_http_messages(&mut self) -> usize {
+        use std::time::Duration;
         use crate::nodejs_core::http::{
             try_recv_http_request,
             send_http_response,
             get_global_request_handler,
             create_http_response,
+            get_http_server_channel,
         };
 
         let mut processed = 0;
 
-        // 持续处理队列中的请求
-        while let Some(request) = try_recv_http_request() {
-            // 创建 V8 上下文处理请求
-            let scope = &mut v8::HandleScope::new(&mut self.isolate);
-            let context = v8::Context::new(scope);
-            let scope = &mut v8::ContextScope::new(scope, context);
+        // v0.3.93: 获取存储的 Context，复用以保持 handler 可见性
+        let global_context = self.get_context();
 
-            // 设置 HTTP API
-            if let Err(e) = setup_http_api(scope, &context) {
-                eprintln!("[Beejs] Failed to setup HTTP API: {}", e);
-                continue;
+        // 检查消息通道状态
+        let channel = get_http_server_channel();
+
+        // v0.3.93: 持续尝试接收请求，给连接线程时间发送
+        let start_wait = std::time::Instant::now();
+        let max_wait = Duration::from_secs(9); // 最多等9秒（给连接10秒超时留余地）
+        let mut first_request = None;
+
+        // 尝试接收请求，带重试
+        while start_wait.elapsed() < max_wait {
+            if let Some(request) = try_recv_http_request() {
+                first_request = Some(request);
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+
+        // 处理第一个请求（如果有）
+        if let Some(request) = first_request {
+            // 使用已存储的 Context，而不是创建新的
+            let scope = &mut v8::HandleScope::new(&mut self.isolate);
+            let context_local = v8::Local::new(scope, &global_context);
+            let scope = &mut v8::ContextScope::new(scope, context_local);
+
+            // v0.3.93: 设置 HTTP API（仅在第一次时需要）
+            // 检查是否已经设置了 http 模块
+            let global = context_local.global(scope);
+            let http_key = v8::String::new(scope, "http").unwrap();
+            let http_setup_failed = if global.get(scope, http_key.into()).unwrap().is_undefined() {
+                if let Err(_e) = setup_http_api(scope, &context_local) {
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+
+            if http_setup_failed {
+                // 发送错误响应
+                let response = create_http_response(request.connection_id, 500, "Setup failed", "text/plain");
+                send_http_response(response);
+                return 1;
             }
 
             // 获取 handler 并处理请求
-            let handler = match get_global_request_handler(scope, &context) {
-                Some(h) => h,
-                None => {
-                    // 发送默认 404 响应
-                    let response = create_http_response(request.connection_id, 404, "No handler", "text/plain");
-                    send_http_response(response);
-                    continue;
-                }
-            };
+            let handler = get_global_request_handler(scope, &context_local);
+
+            if handler.is_none() {
+                // 发送默认 404 响应
+                let response = create_http_response(request.connection_id, 404, "No handler", "text/plain");
+                send_http_response(response);
+                return 1;
+            }
+
+            let handler = handler.unwrap();
 
             // 创建请求对象
             let req_obj = v8::Object::new(scope);
@@ -12897,27 +12950,57 @@ impl MinimalRuntime {
             let empty_body = v8::String::new(scope, "").unwrap();
             res_obj.set(scope, body_key.into(), empty_body.into());
 
+            // v0.3.93: 设置 response 方法 (writeHead, end, setHeader)
+            // 这些方法在 nodejs_core/http.rs 中定义，需要导入
+            use crate::nodejs_core::http::{
+                http_res_end_callback,
+                http_res_write_head_callback,
+                http_res_set_header_callback,
+            };
+
+            // 设置 end 方法
+            let end_fn = v8::FunctionTemplate::new(scope, http_res_end_callback);
+            let end_instance = end_fn.get_function(scope).unwrap();
+            let end_key = v8::String::new(scope, "end").unwrap();
+            res_obj.set(scope, end_key.into(), end_instance.into());
+
+            // 设置 writeHead 方法
+            let write_head_fn = v8::FunctionTemplate::new(scope, http_res_write_head_callback);
+            let write_head_instance = write_head_fn.get_function(scope).unwrap();
+            let write_head_key = v8::String::new(scope, "writeHead").unwrap();
+            res_obj.set(scope, write_head_key.into(), write_head_instance.into());
+
+            // 设置 setHeader 方法
+            let set_header_fn = v8::FunctionTemplate::new(scope, http_res_set_header_callback);
+            let set_header_instance = set_header_fn.get_function(scope).unwrap();
+            let set_header_key = v8::String::new(scope, "setHeader").unwrap();
+            res_obj.set(scope, set_header_key.into(), set_header_instance.into());
+
             // 调用 handler
-            let handler_fn = v8::Local::new(scope, &handler);
+            let handler_fn: v8::Local<v8::Function> = v8::Local::new(scope, &handler);
             let this_val = v8::undefined(scope).into();
             let args = [req_obj.into(), res_obj.into()];
 
             if handler_fn.call(scope, this_val, &args).is_none() {
-                eprintln!("[Beejs] Request handler execution failed");
                 let response = create_http_response(request.connection_id, 500, "Handler error", "text/plain");
                 send_http_response(response);
-                continue;
+                return 1;
             }
+
+            // v0.3.93: 重要！handler 可能修改了 res 对象，但我们需要获取更新后的值
+            // handler.call 传入的 res_obj 是 HandleScope 内的 Local，handler 对 res 的修改
+            // 不会自动同步到 res_obj。我们需要重新从 args 获取 this 值
+            let updated_res_obj = args.get(1).unwrap().to_object(scope).unwrap();
 
             // 提取响应
             let status_code_key = v8::String::new(scope, "statusCode").unwrap();
             let status_200_fallback = v8::Integer::new(scope, 200);
-            let status_code_val = res_obj.get(scope, status_code_key.into()).unwrap_or(status_200_fallback.into());
+            let status_code_val = updated_res_obj.get(scope, status_code_key.into()).unwrap_or(status_200_fallback.into());
             let status_code = status_code_val.to_int32(scope).map(|i| i.value() as u16).unwrap_or(200);
 
             let body_key = v8::String::new(scope, "_body").unwrap();
             let empty_body_fallback = v8::String::new(scope, "").unwrap();
-            let body_val = res_obj.get(scope, body_key.into()).unwrap_or(empty_body_fallback.into());
+            let body_val = updated_res_obj.get(scope, body_key.into()).unwrap_or(empty_body_fallback.into());
             let body = body_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
 
             // 生成并发送响应
@@ -12940,8 +13023,11 @@ impl MinimalRuntime {
     /// 设置 HTTP 请求处理器
     /// v0.3.91: 新增功能
     pub fn set_http_request_handler(&mut self, handler_code: &str) -> Result<()> {
+        // v0.3.93: 先获取 Context
+        let global_context = self.get_context();
+
         let scope = &mut v8::HandleScope::new(&mut self.isolate);
-        let context = v8::Context::new(scope);
+        let context = v8::Local::new(scope, &global_context);
         let scope = &mut v8::ContextScope::new(scope, context);
 
         // 编译 handler 代码
