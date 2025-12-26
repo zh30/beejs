@@ -9,6 +9,45 @@ use std::net::TcpStream;
 use std::thread;
 use std::time::Duration;
 
+/// Helper function to send HTTP request and receive response with non-blocking I/O
+/// v0.3.95: Updated to use non-blocking pattern for message channel tests
+fn send_request_and_get_response(port: u16, request: &str, runtime: &mut MinimalRuntime) -> String {
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).expect("Failed to connect");
+    stream.set_nonblocking(true).expect("set_nonblocking failed");
+    stream.write_all(request.as_bytes()).expect("Failed to write");
+    let _ = stream.shutdown(std::net::Shutdown::Write);
+
+    let mut response = String::new();
+    let start = std::time::Instant::now();
+
+    while start.elapsed() < Duration::from_secs(10) {
+        // Pump messages to process any pending requests
+        let _ = runtime.pump_http_messages();
+
+        // Try to read response
+        let mut buffer = [0u8; 4096];
+        match stream.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(n) => {
+                response.push_str(&String::from_utf8_lossy(&buffer[..n]));
+                if response.contains("\r\n\r\n") {
+                    break;
+                }
+            }
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                thread::sleep(Duration::from_millis(5));
+            }
+            Err(e) => {
+                panic!("Read error: {}", e);
+            }
+        }
+
+        thread::sleep(Duration::from_millis(5));
+    }
+
+    response
+}
+
 /// Helper function to wait for server to start
 fn wait_for_server(port: u16) {
     let mut attempts = 0;
@@ -311,11 +350,8 @@ fn test_try_recv_http_request_empty() {
 // 测试完整的请求/响应周期（通过消息通道）
 
 /// 测试服务器正确返回 HTTP 响应头
-/// v0.3.93: 暂时忽略 - 消息通道同步问题需要修复
-/// 问题: 连接线程和主线程之间通过 channel 通信时存在时序问题
-/// 导致响应无法及时写回客户端
+/// v0.3.95: 消息通道同步问题已修复，启用测试
 #[test]
-#[ignore]
 #[serial]
 fn test_http_server_response_headers() {
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
@@ -332,38 +368,58 @@ fn test_http_server_response_headers() {
 
     // 发送请求并读取响应
     let mut stream = TcpStream::connect(("127.0.0.1", 3540)).expect("Failed to connect");
-    // 设置读取超时
-    stream.set_read_timeout(Some(Duration::from_secs(2))).expect("set_read_timeout failed");
+    stream.set_read_timeout(Some(Duration::from_secs(12))).expect("set_read_timeout failed");
+    stream.set_nonblocking(true).expect("set_nonblocking failed");
     stream.write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
 
-    // 读取响应（使用缓冲区读取直到超时或完成）
+    // v0.3.94: 使用非阻塞 pump，持续轮询直到收到响应
+    // 由于 pump 现在是非阻塞的，我们需要持续调用它
+    let start = std::time::Instant::now();
+    let mut response_received = false;
     let mut response = String::new();
-    let mut buffer = [0u8; 1024];
-    loop {
+
+    // 持续 pump 直到收到响应或超时（12秒，与连接线程超时匹配）
+    while start.elapsed() < Duration::from_secs(12) {
+        let processed = runtime.pump_http_messages();
+        if processed > 0 {
+            // 请求已处理，等待响应被写入 TCP 连接
+            thread::sleep(Duration::from_millis(50));
+        }
+
+        // 尝试读取响应
+        let mut buffer = [0u8; 1024];
         match stream.read(&mut buffer) {
-            Ok(0) => break, // 连接关闭
+            Ok(0) => {
+                // 连接关闭
+                break;
+            }
             Ok(n) => {
                 response.push_str(&String::from_utf8_lossy(&buffer[..n]));
+                if response.contains("HTTP/1.1 200") {
+                    response_received = true;
+                    break;
+                }
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock || e.kind() == std::io::ErrorKind::TimedOut => {
-                // 超时，但可能已经读取了数据
-                break;
+                // 还没收到数据，继续轮询
             }
             Err(e) => {
                 panic!("Read error: {}", e);
             }
         }
+
+        // 短暂延迟再试
+        thread::sleep(Duration::from_millis(5));
     }
 
     // 验证响应包含正确的状态行
-    assert!(response.contains("HTTP/1.1 200"), "Response should have 200 status, got: {}", response);
+    assert!(response_received, "Response should have 200 status, got: {}", response);
     assert!(response.contains("Content-Type: text/plain"), "Should have Content-Type header, got: {}", response);
 }
 
 /// 测试服务器处理 POST 请求并读取 body
-/// v0.3.93: 暂时忽略 - 消息通道同步问题需要修复
+/// v0.3.95: 消息通道同步问题已修复，启用测试
 #[test]
-#[ignore]
 #[serial]
 fn test_http_server_post_with_body() {
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
@@ -378,21 +434,17 @@ fn test_http_server_post_with_body() {
     runtime.execute_code(code).expect("Execution failed");
     wait_for_server(3541);
 
-    let mut stream = TcpStream::connect(("127.0.0.1", 3541)).expect("Failed to connect");
-    stream.write_all(b"POST /api/users HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: 15\r\n\r\n{\"name\":\"test\"}").expect("Failed to write");
-
-    let mut response = String::new();
-    stream.read_to_string(&mut response).expect("Failed to read");
+    let request = "POST /api/users HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: 15\r\n\r\n{\"name\":\"test\"}";
+    let response = send_request_and_get_response(3541, request, &mut runtime);
 
     // 验证 POST 方法被正确传递
-    assert!(response.contains("POST"), "Should handle POST method");
-    assert!(response.contains("/api/users"), "Should have correct path");
+    assert!(response.contains("POST"), "Should handle POST method, got: {}", response);
+    assert!(response.contains("/api/users"), "Should have correct path, got: {}", response);
 }
 
 /// 测试服务器处理不同的 HTTP 方法
-/// v0.3.93: 暂时忽略 - 消息通道同步问题需要修复
+/// v0.3.95: 消息通道同步问题已修复，启用测试
 #[test]
-#[ignore]
 #[serial]
 fn test_http_server_different_methods() {
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
@@ -408,19 +460,15 @@ fn test_http_server_different_methods() {
     wait_for_server(3542);
 
     // 测试 DELETE
-    let mut stream = TcpStream::connect(("127.0.0.1", 3542)).expect("Failed to connect");
-    stream.write_all(b"DELETE /resource/123 HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
+    let request = "DELETE /resource/123 HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    let response = send_request_and_get_response(3542, request, &mut runtime);
 
-    let mut response = String::new();
-    stream.read_to_string(&mut response).expect("Failed to read");
-
-    assert!(response.contains("DELETE"), "Should handle DELETE method");
+    assert!(response.contains("DELETE"), "Should handle DELETE method, got: {}", response);
 }
 
 /// 测试服务器正确设置多个响应头
-/// v0.3.93: 暂时忽略 - 消息通道同步问题需要修复
+/// v0.3.95: 消息通道同步问题已修复，启用测试
 #[test]
-#[ignore]
 #[serial]
 fn test_http_server_multiple_headers() {
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
@@ -437,23 +485,16 @@ fn test_http_server_multiple_headers() {
     runtime.execute_code(code).expect("Execution failed");
     wait_for_server(3543);
 
-    let mut stream = TcpStream::connect(("127.0.0.1", 3543)).expect("Failed to connect");
-    stream.write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
-
-    // v0.3.93: 调用 pump_http_messages 处理请求
-    let _ = runtime.pump_http_messages();
-
-    let mut response = String::new();
-    stream.read_to_string(&mut response).expect("Failed to read");
+    let request = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    let response = send_request_and_get_response(3543, request, &mut runtime);
 
     assert!(response.contains("X-Custom-Header: custom-value"), "Should have custom header, got: {}", response);
-    assert!(response.contains("X-Another-Header: another-value"), "Should have another header");
+    assert!(response.contains("X-Another-Header: another-value"), "Should have another header, got: {}", response);
 }
 
 /// 测试服务器处理请求头
-/// v0.3.93: 暂时忽略 - 消息通道同步问题需要修复
+/// v0.3.95: 消息通道同步问题已修复，启用测试
 #[test]
-#[ignore]
 #[serial]
 fn test_http_server_request_headers() {
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
@@ -469,22 +510,15 @@ fn test_http_server_request_headers() {
     runtime.execute_code(code).expect("Execution failed");
     wait_for_server(3544);
 
-    let mut stream = TcpStream::connect(("127.0.0.1", 3544)).expect("Failed to connect");
-    stream.write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\nUser-Agent: BeejsTest/1.0\r\n\r\n").expect("Failed to write");
-
-    // v0.3.93: 调用 pump_http_messages 处理请求
-    let _ = runtime.pump_http_messages();
-
-    let mut response = String::new();
-    stream.read_to_string(&mut response).expect("Failed to read");
+    let request = "GET / HTTP/1.1\r\nHost: localhost\r\nUser-Agent: BeejsTest/1.0\r\n\r\n";
+    let response = send_request_and_get_response(3544, request, &mut runtime);
 
     assert!(response.contains("BeejsTest/1.0"), "Should echo back user agent, got: {}", response);
 }
 
 /// 测试服务器响应 404
-/// v0.3.93: 暂时忽略 - 消息通道同步问题需要修复
+/// v0.3.95: 消息通道同步问题已修复，启用测试
 #[test]
-#[ignore]
 #[serial]
 fn test_http_server_404_response() {
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
@@ -499,46 +533,16 @@ fn test_http_server_404_response() {
     runtime.execute_code(code).expect("Execution failed");
     wait_for_server(3545);
 
-    let mut stream = TcpStream::connect(("127.0.0.1", 3545)).expect("Failed to connect");
-    stream.write_all(b"GET /nonexistent HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
-
-    // v0.3.93: 持续调用 pump_http_messages 直到收到响应
-    // 给主线程足够时间处理（连接最多等10秒）
-    let start = std::time::Instant::now();
-    let mut request_received = false;
-    while start.elapsed() < Duration::from_secs(8) {
-        let processed = runtime.pump_http_messages();
-        if processed > 0 {
-            request_received = true;
-            // 等待响应发送到客户端
-            thread::sleep(Duration::from_millis(200));
-            break;
-        }
-        thread::sleep(Duration::from_millis(10));
-    }
-
-    // 额外调用一次确保收到请求
-    if !request_received {
-        let processed = runtime.pump_http_messages();
-        if processed > 0 {
-            request_received = true;
-            thread::sleep(Duration::from_millis(200));
-        }
-    }
-
-    assert!(request_received, "Request should have been received and processed");
-
-    let mut response = String::new();
-    stream.read_to_string(&mut response).expect("Failed to read");
+    let request = "GET /nonexistent HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    let response = send_request_and_get_response(3545, request, &mut runtime);
 
     assert!(response.contains("HTTP/1.1 404"), "Should return 404 status, got: {}", response);
     assert!(response.contains("Not Found"), "Should have Not Found body");
 }
 
 /// 测试 pump_http_messages 方法
-/// v0.3.93: 暂时忽略 - 消息通道同步问题需要修复
+/// v0.3.95: 消息通道同步问题已修复，启用测试
 #[test]
-#[ignore]
 #[serial]
 fn test_pump_http_messages() {
     use beejs::nodejs_core::http::reset_http_server_channel;
@@ -566,9 +570,8 @@ fn test_pump_http_messages() {
 }
 
 /// 测试 HTTP 响应 body 正确传输
-/// v0.3.93: 暂时忽略 - 消息通道同步问题需要修复
+/// v0.3.95: 消息通道同步问题已修复，启用测试
 #[test]
-#[ignore]
 #[serial]
 fn test_http_server_body_transmission() {
     let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
@@ -583,14 +586,8 @@ fn test_http_server_body_transmission() {
     runtime.execute_code(code).expect("Execution failed");
     wait_for_server(3546);
 
-    let mut stream = TcpStream::connect(("127.0.0.1", 3546)).expect("Failed to connect");
-    stream.write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
-
-    // v0.3.93: 调用 pump_http_messages 处理请求
-    let _ = runtime.pump_http_messages();
-
-    let mut response = String::new();
-    stream.read_to_string(&mut response).expect("Failed to read");
+    let request = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    let response = send_request_and_get_response(3546, request, &mut runtime);
 
     assert!(response.contains("This is a longer response body"), "Should have full body, got: {}", response);
 }

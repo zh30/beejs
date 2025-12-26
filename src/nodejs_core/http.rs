@@ -184,9 +184,11 @@ pub fn try_recv_http_request() -> Option<HttpRequestMessage> {
             if let Some(ref channel) = *channel_arc.lock().unwrap() {
                 match channel.request_receiver.try_recv() {
                     Ok(request) => Some(request),
-                    Err(crossbeam::channel::TryRecvError::Empty) => None,
+                    Err(crossbeam::channel::TryRecvError::Empty) => {
+                        // Channel is empty, no request available
+                        None
+                    }
                     Err(crossbeam::channel::TryRecvError::Disconnected) => {
-                        eprintln!("[Beejs] HTTP message channel disconnected");
                         None
                     }
                 }
@@ -1596,20 +1598,16 @@ pub fn generate_http_response(response: &mut HttpServerResponse) -> Vec<u8> {
 
 /// 生成 HTTP 响应（从 HttpResponseMessage）
 /// v0.3.89: 添加跨线程消息传递支持
+/// v0.3.95: 移除重复的 Content-Length 添加（ headers 中已包含）
 pub fn generate_http_response_v2(response: &HttpResponseMessage) -> Vec<u8> {
     let mut result = Vec::new();
 
     // Status line
     result.extend_from_slice(format!("HTTP/1.1 {} OK\r\n", response.status_code).as_bytes());
 
-    // Headers
+    // Headers - Content-Length 已在 send_http_response 中从 JS 对象提取
     for (name, value) in &response.headers {
         result.extend_from_slice(format!("{}: {}\r\n", name, value).as_bytes());
-    }
-
-    // Content-Length header if body is present
-    if !response.body.is_empty() {
-        result.extend_from_slice(format!("Content-Length: {}\r\n", response.body.len()).as_bytes());
     }
 
     // End of headers
@@ -1748,25 +1746,31 @@ fn handle_connection(
     // v0.3.92: 添加超时机制，防止在没有调用 pump_http_messages 时永久阻塞
     let channel = get_http_server_channel();
     let use_message_channel = server_state.use_message_channel && channel.is_some();
+
     let mut message_channel_used = false;
 
-    if use_message_channel {
-        // 通过消息通道发送请求到主线程
-        let request_msg = HttpRequestMessage {
-            method: parsed_request.method.clone(),
-            url: parsed_request.url.clone(),
-            path: parsed_request.path.clone(),
-            http_version: parsed_request.http_version.clone(),
-            headers: parsed_request.headers.clone(),
-            body: parsed_request.body.clone(),
-            connection_id,
-        };
+    // 创建请求消息
+    let request_msg = HttpRequestMessage {
+        method: parsed_request.method.clone(),
+        url: parsed_request.url.clone(),
+        path: parsed_request.path.clone(),
+        http_version: parsed_request.http_version.clone(),
+        headers: parsed_request.headers.clone(),
+        body: parsed_request.body.clone(),
+        connection_id,
+    };
 
+    if use_message_channel {
         if let Some(ref channel_ref) = channel {
-            if let Some(ref msg_channel) = *channel_ref.lock().unwrap() {
-                if msg_channel.send_request(request_msg).is_ok() {
-                    // 成功发送请求，标记消息通道已使用
-                    message_channel_used = true;
+            let locked = channel_ref.lock().unwrap();
+            if let Some(ref msg_channel) = *locked {
+                match msg_channel.send_request(request_msg) {
+                    Ok(()) => {
+                        message_channel_used = true;
+                    }
+                    Err(e) => {
+                        eprintln!("[Beejs] Failed to send request via channel: {:?}", e);
+                    }
                 }
             }
         }
@@ -1797,32 +1801,37 @@ fn handle_connection(
     }
 
     // v0.3.93: 消息通道已使用，等待主线程处理
-    // 使用非阻塞方式等待响应，给主线程充足时间
+    // v0.3.95: 修复 - 移除超时限制，改为无限等待响应
+    // v0.3.95: 修复 deadlock - 释放锁后再等待，避免阻塞其他线程
+    // 原来的超时会导致在测试场景中连接过早关闭
     let channel = get_http_server_channel();
     if let Some(ref channel_ref) = channel {
-        if let Some(ref msg_channel) = *channel_ref.lock().unwrap() {
-            // 使用较长的轮询周期，给主线程处理时间
-            let start_time = Instant::now();
-            let max_wait = Duration::from_secs(5); // 最多等5秒
+        // 获取响应接收器并释放锁，避免阻塞其他线程
+        let response_receiver = {
+            let guard = channel_ref.lock().unwrap();
+            if let Some(ref msg_channel) = *guard {
+                // v0.3.95: 克隆 receiver 并释放锁后再等待
+                Some(msg_channel.response_receiver.clone())
+            } else {
+                None
+            }
+        };
+        // guard 现在被释放，锁已释放
 
+        // 等待响应
+        if let Some(receiver) = response_receiver {
             loop {
-                match msg_channel.response_receiver.try_recv() {
+                // 尝试接收请求（主线程处理完后会发送响应）
+                match receiver.recv() {
                     Ok(response) => {
+                        // 收到响应
                         let response_data = generate_http_response_v2(&response);
                         let _ = stream.write_all(&response_data);
                         let _ = stream.shutdown(std::net::Shutdown::Write);
                         return;
                     }
-                    Err(crossbeam::channel::TryRecvError::Empty) => {
-                        if start_time.elapsed() >= max_wait {
-                            // 超时，关闭连接
-                            let _ = stream.shutdown(std::net::Shutdown::Write);
-                            return;
-                        }
-                        // 短暂睡眠后重试
-                        thread::sleep(Duration::from_millis(50));
-                    }
-                    Err(crossbeam::channel::TryRecvError::Disconnected) => {
+                    Err(_) => {
+                        // 通道断开
                         let _ = stream.shutdown(std::net::Shutdown::Write);
                         return;
                     }
@@ -1911,10 +1920,13 @@ pub fn process_http_request_in_v8(
     let http_version_val = v8::String::new(scope, &request.http_version).unwrap();
     req_obj.set(scope, http_version_key.into(), http_version_val.into());
 
-    // 设置 headers 对象
+    // 设置 headers 对象（使用 lowercase 键名以匹配 Node.js 惯例）
+    // v0.3.95: 修复 header 键名大小写问题
     let headers_obj = v8::Object::new(scope);
     for (name, value) in &request.headers {
-        let name_key = v8::String::new(scope, name).unwrap();
+        // 使用 lowercase 键名，HTTP header 查找是大小写敏感的
+        let name_lower = name.to_lowercase();
+        let name_key = v8::String::new(scope, &name_lower).unwrap();
         let value_val = v8::String::new(scope, value).unwrap();
         headers_obj.set(scope, name_key.into(), value_val.into());
     }
@@ -1993,12 +2005,14 @@ pub fn process_http_request_in_v8(
     let body_str = body_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
     let body_bytes = body_str.into_bytes();
 
-    // 提取 headers
+    // 提取 headers - 使用 GetPropertyNames 获取所有属性
+    // v0.3.95: 修复 header 枚举问题，使用更可靠的方法
     let mut response_headers = HashMap::new();
     let res_headers_key = v8::String::new(scope, "headers").unwrap();
     if let Some(headers_val) = res_obj.get(scope, res_headers_key.into()) {
         if let Ok(headers_obj) = v8::Local::<v8::Object>::try_from(headers_val) {
-            let props = headers_obj.get_own_property_names(scope).unwrap_or(v8::Array::new(scope, 0));
+            // 使用 GetPropertyNames 获取所有属性
+            let props = headers_obj.get_property_names(scope).unwrap_or(v8::Array::new(scope, 0));
             for i in 0..props.length() {
                 if let Some(key_val) = props.get_index(scope, i) {
                     if let Some(key_str) = key_val.to_string(scope) {
@@ -2015,8 +2029,10 @@ pub fn process_http_request_in_v8(
         }
     }
 
-    // 设置默认 headers
-    response_headers.insert("Content-Type".to_string(), "text/plain; charset=utf-8".to_string());
+    // 设置默认 headers（如果还没有设置的话）
+    if !response_headers.contains_key("Content-Type") {
+        response_headers.insert("Content-Type".to_string(), "text/plain; charset=utf-8".to_string());
+    }
 
     Some(HttpResponseMessage {
         connection_id: request.connection_id,

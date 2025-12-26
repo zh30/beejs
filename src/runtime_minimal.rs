@@ -12840,8 +12840,8 @@ impl MinimalRuntime {
     /// 轮询 HTTP 消息通道并处理请求
     /// 返回处理的请求数量
     /// v0.3.91: 新增功能
+    /// v0.3.94: 改为非阻塞模式，由调用者决定是否继续轮询
     pub fn pump_http_messages(&mut self) -> usize {
-        use std::time::Duration;
         use crate::nodejs_core::http::{
             try_recv_http_request,
             send_http_response,
@@ -12858,19 +12858,15 @@ impl MinimalRuntime {
         // v0.3.93: 检查消息通道状态（验证 channel 已初始化）
         let _channel = get_http_server_channel();
 
-        // v0.3.93: 持续尝试接收请求，给连接线程时间发送
-        let start_wait = std::time::Instant::now();
-        let max_wait = Duration::from_secs(9); // 最多等9秒（给连接10秒超时留余地）
-        let mut first_request = None;
-
-        // 尝试接收请求，带重试
-        while start_wait.elapsed() < max_wait {
-            if let Some(request) = try_recv_http_request() {
-                first_request = Some(request);
-                break;
-            }
-            std::thread::sleep(std::time::Duration::from_millis(5));
-        }
+        // v0.3.94: 修复 - 使用非阻塞接收，避免与测试时间冲突
+        // 原来的阻塞循环等待最多 9 秒，但测试可能在此之前停止调用 pump
+        // 现在改为非阻塞模式，由调用者决定是否继续轮询
+        let first_request = if let Some(request) = try_recv_http_request() {
+            Some(request)
+        } else {
+            // 没有待处理的请求，立即返回
+            return 0;
+        };
 
         // 处理第一个请求（如果有）
         if let Some(request) = first_request {
@@ -12926,10 +12922,12 @@ impl MinimalRuntime {
             let path_val = v8::String::new(scope, &request.path).unwrap();
             req_obj.set(scope, path_key.into(), path_val.into());
 
-            // 设置 headers
+            // v0.3.95: 设置 headers（使用 lowercase 键名以匹配 Node.js 惯例）
             let headers_obj = v8::Object::new(scope);
             for (name, value) in &request.headers {
-                let name_key = v8::String::new(scope, name).unwrap();
+                // 使用 lowercase 键名，HTTP header 查找是大小写敏感的
+                let name_lower = name.to_lowercase();
+                let name_key = v8::String::new(scope, &name_lower).unwrap();
                 let value_val = v8::String::new(scope, value).unwrap();
                 headers_obj.set(scope, name_key.into(), value_val.into());
             }
@@ -13003,9 +13001,46 @@ impl MinimalRuntime {
             let body_val = updated_res_obj.get(scope, body_key.into()).unwrap_or(empty_body_fallback.into());
             let body = body_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
 
-            // 生成并发送响应
-            let response = create_http_response(request.connection_id, status_code, &body, "text/plain; charset=utf-8");
-            send_http_response(response);
+            // v0.3.95: 提取自定义 headers（与 send_http_response 相同的逻辑）
+            let mut response_headers = std::collections::HashMap::new();
+            let res_headers_key = v8::String::new(scope, "headers").unwrap();
+            if let Some(headers_val) = updated_res_obj.get(scope, res_headers_key.into()) {
+                if let Ok(headers_obj) = v8::Local::<v8::Object>::try_from(headers_val) {
+                    let props = headers_obj.get_property_names(scope).unwrap_or(v8::Array::new(scope, 0));
+                    for i in 0..props.length() {
+                        if let Some(key_val) = props.get_index(scope, i) {
+                            if let Some(key_str) = key_val.to_string(scope) {
+                                let key = key_str.to_rust_string_lossy(scope);
+                                if let Some(value_val) = headers_obj.get(scope, key_val) {
+                                    if let Some(value_str) = value_val.to_string(scope) {
+                                        let value = value_str.to_rust_string_lossy(scope);
+                                        response_headers.insert(key, value);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 添加默认 headers（如果还没有设置）
+            if !response_headers.contains_key("Content-Type") {
+                response_headers.insert("Content-Type".to_string(), "text/plain; charset=utf-8".to_string());
+            }
+            response_headers.insert("Content-Length".to_string(), body.len().to_string());
+            response_headers.insert("Connection".to_string(), "close".to_string());
+
+            // 创建响应消息
+            let response_msg = crate::nodejs_core::http::HttpResponseMessage {
+                connection_id: request.connection_id,
+                status_code,
+                headers: response_headers,
+                body: body.as_bytes().to_vec(),
+            };
+
+            // 发送响应
+            use crate::nodejs_core::http::send_http_response;
+            send_http_response(response_msg);
             processed += 1;
         }
 

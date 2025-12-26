@@ -6666,3 +6666,42 @@ test result: ok. 11 passed; 0 failed
 #### v0.3.84 下一步计划
 - 添加 HTTPS/TLS 支持
 - 实现 http.Server 真实监听功能
+
+---
+
+### ✨ v0.3.94 编译警告清理和测试修复 (2025-12-26)
+**进度**: ✅ 移除未使用函数 | ✅ 修复变量警告 | ✅ 测试修复 | ✅ 68/68 测试通过
+
+#### v0.3.94 修复内容
+- **移除未使用函数**
+  - 删除 `http_create_server_callback` 函数（原第 505-549 行）
+  - 该函数已被 `http_create_server_with_global_callback` 替代
+
+- **修复编译警告**
+  - `channel` 变量改为 `_channel` 避免未使用警告
+  - 保持代码整洁和可维护性
+
+- **修复测试问题**
+  - 修复 `test_stream_pipeline_with_callback` 变量重复声明错误
+  - 将第二个测试块的变量 `r`/`w` 改为 `r2`/`w2` 避免作用域冲突
+
+#### v0.3.94 代码变更
+- **修改文件**: `src/nodejs_core/http.rs` (-46 行)
+  - 移除未使用的 `http_create_server_callback` 函数
+
+- **修改文件**: `src/runtime_minimal.rs` (+2/-2 行)
+  - `channel` → `_channel` 避免未使用警告
+
+- **修改文件**: `tests/stream_module_tests.rs` (+17/-8 行)
+  - 修复变量重复声明问题
+
+#### v0.3.94 验证
+- ✅ `cargo build` 成功（零警告）
+- ✅ `cargo test --test stream_module_tests` → 68/68 通过
+- ✅ `cargo test --test http_server_integration_tests` → 13/13 通过
+- ✅ `cargo test --test http_server_tests` → 16/16 通过
+
+#### v0.3.94 下一步计划
+- 重新设计 HTTP 消息通道架构解决同步问题
+- 添加 HTTPS/TLS 支持
+- 启用更多被忽略的测试
