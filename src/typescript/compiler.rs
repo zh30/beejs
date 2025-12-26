@@ -1487,6 +1487,10 @@ impl TypeScriptCompiler {
             ASTExpression::TSAsExpression { target_type, .. } => {
                 Ok(Some(target_type.clone()))
             }
+            // 尖括号类型断言的类型也是目标类型
+            ASTExpression::TSAngleBracketAssertion { target_type, .. } => {
+                Ok(Some(target_type.clone()))
+            }
         }
     }
 
@@ -2304,6 +2308,13 @@ pub enum ASTExpression {
     /// TypeScript 类型断言: value as Type
     /// 转译时类型信息被移除，直接输出原始表达式
     TSAsExpression {
+        expression: Box<ASTExpression>,
+        target_type: String,
+    },
+    /// TypeScript 尖括号类型断言: <Type>value
+    /// 转译时类型信息被移除，直接输出原始表达式
+    /// 注意：这是旧式类型断言语法，在 JSX/TSX 中可能与泛型冲突
+    TSAngleBracketAssertion {
         expression: Box<ASTExpression>,
         target_type: String,
     },
@@ -4713,6 +4724,7 @@ impl Parser {
         }
 
         // 解析主表达式 (标识符、字面量、括号表达式)
+        // 注意：尖括号断言 <Type>expr 在 parse_primary_expression 中处理
         let mut expr = self.parse_primary_expression()?;
         // 处理后缀运算符
         expr = self.parse_postfix(expr)?;
@@ -5537,6 +5549,124 @@ impl Parser {
             Token::Super => {
                 self.consume(Token::Super)?;
                 Ok(ASTExpression::SuperExpression)
+            }
+            // TypeScript 尖括号类型断言: <Type>expr
+            // 这是一个前缀表达式，<Type> 后面跟一个表达式
+            Token::Lt => {
+                // 检查是否是尖括号断言: <Type>expr
+                // 尖括号断言的特征:
+                // 1. < 后面是类型标识符（以大写字母开头或常见类型名）
+                // 2. > 后面直接跟表达式
+                // 3. 不是小于运算符（前面有标识符，后面有数字）
+                let is_angle_bracket_assertion = {
+                    let mut lookahead = self.position + 1;
+                    let mut depth = 1;
+                    let mut found_gt = false;
+
+                    // 首先检查 < 后面是否是有效的类型标识符开头
+                    // 类型标识符通常以大写字母开头，或者是 any, unknown, number, string, boolean 等
+                    let starts_with_type = if lookahead < self.tokens.len() {
+                        match &self.tokens[lookahead] {
+                            Token::Identifier(name) => {
+                                // 检查是否是大写字母开头，或者是常见的类型名
+                                let first_char = name.chars().next();
+                                let is_uppercase = first_char.map(|c| c.is_ascii_uppercase()).unwrap_or(false);
+                                let is_known_type = matches!(name.as_str(),
+                                    "any" | "unknown" | "number" | "string" | "boolean"
+                                    | "void" | "null" | "undefined" | "never" | "object"
+                                    | "symbol" | "bigint" | "Date" | "Array" | "Promise"
+                                    | "Map" | "Set" | "Function" | "Error" | "RegExp");
+                                is_uppercase || is_known_type
+                            }
+                            Token::LParen | Token::LBracket | Token::LBrace => true, // 泛型表达式如 <T[]>
+                            _ => false,
+                        }
+                    } else {
+                        false
+                    };
+
+                    if !starts_with_type {
+                        // 不是尖括号断言，这不是主表达式的起始
+                        // 恢复 position 并让调用方处理
+                        self.position = self.position.saturating_sub(1);
+                        bail!("Unexpected token in expression: {:?}", self.current_token())
+                    }
+
+                    // 找到匹配的 >
+                    while lookahead < self.tokens.len() && depth > 0 {
+                        match &self.tokens[lookahead] {
+                            Token::Lt => { depth += 1; lookahead += 1; }
+                            Token::Gt => { depth -= 1; lookahead += 1; found_gt = true; }
+                            _ => { lookahead += 1; }
+                        }
+                    }
+
+                    // 如果找到了 >，检查后面是否是表达式起始
+                    if found_gt && depth == 0 && lookahead < self.tokens.len() {
+                        matches!(&self.tokens[lookahead],
+                            Token::Identifier(_) | Token::Number(_) | Token::String(_, _)
+                            | Token::LParen | Token::LBracket | Token::LBrace
+                            | Token::Bang | Token::Plus | Token::Minus | Token::Star)
+                    } else {
+                        false
+                    }
+                };
+
+                if is_angle_bracket_assertion {
+                    // 消费 <
+                    self.consume(Token::Lt)?;
+                    let mut depth = 1;
+                    let mut type_content = String::new();
+
+                    while depth > 0 && !self.is_at_end() {
+                        match self.current_token() {
+                            Token::Lt => {
+                                depth += 1;
+                                type_content.push('<');
+                                self.advance();
+                            }
+                            Token::Gt => {
+                                depth -= 1;
+                                if depth > 0 {
+                                    type_content.push('>');
+                                    self.advance();
+                                } else {
+                                    type_content.push('>');
+                                    self.advance();
+                                    break;
+                                }
+                            }
+                            Token::Comma => {
+                                type_content.push(',');
+                                self.advance();
+                            }
+                            _ => {
+                                if let Token::Identifier(name) = self.current_token() {
+                                    type_content.push_str(name);
+                                    self.advance();
+                                } else if let Token::Number(num) = self.current_token() {
+                                    type_content.push_str(num);
+                                    self.advance();
+                                } else if let Token::String(s, _) = self.current_token() {
+                                    type_content.push_str(&s);
+                                    self.advance();
+                                } else {
+                                    self.advance();
+                                }
+                            }
+                        }
+                    }
+
+                    // 解析表达式
+                    let inner_expr = self.parse_primary_expression()?;
+                    Ok(ASTExpression::TSAngleBracketAssertion {
+                        expression: Box::new(inner_expr),
+                        target_type: type_content.trim().to_string(),
+                    })
+                } else {
+                    // 不是尖括号断言，作为小于运算符处理
+                    bail!("Unexpected token in expression: {:?}", self.current_token())
+                }
             }
             // 处理 @ 符号（装饰器标识符，在表达式中作为标识符处理）
             Token::At => {
@@ -7232,6 +7362,11 @@ impl CodeEmitter {
             // TypeScript 类型断言: value as Type
             // 转译时移除类型信息，直接输出原始表达式
             ASTExpression::TSAsExpression { expression, target_type: _ } => {
+                self.emit_expression(expression);
+            }
+            // TypeScript 尖括号类型断言: <Type>value
+            // 转译时移除类型信息，直接输出原始表达式
+            ASTExpression::TSAngleBracketAssertion { expression, target_type: _ } => {
                 self.emit_expression(expression);
             }
             ASTExpression::AssignmentExpression { left, right } => {
@@ -10395,6 +10530,99 @@ const result = value as string as any;
         // Chained type assertions should be removed, leaving just the expression
         assert!(result.js_code.contains("result = value"),
             "Should contain 'result = value': {}", result.js_code);
+    }
+
+    // ============ Angle Bracket Type Assertion Tests (v0.3.147) ============
+
+    #[test]
+    fn test_angle_bracket_type_assertion_basic() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test basic angle bracket type assertion: <Type>expr
+        let source = r#"
+const value: any = "hello";
+const str = <string>value;
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Type assertion should be removed
+        assert!(result.js_code.contains("str = value"),
+            "Should contain 'str = value': {}", result.js_code);
+        // Type annotation should be removed
+        assert!(!result.js_code.contains("<string>"),
+            "Should not contain '<string>': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_angle_bracket_type_assertion_with_number() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test angle bracket type assertion with number
+        let source = r#"
+const input: unknown = "42";
+const num = <number>input;
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("num = input"),
+            "Should contain 'num = input': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_angle_bracket_type_assertion_complex_type() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test angle bracket type assertion with complex type
+        let source = r#"
+interface Person {
+    name: string;
+    age: number;
+}
+
+const data: unknown = { name: "Alice", age: 30 };
+const person = <Person>data;
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Type assertion should be removed
+        assert!(result.js_code.contains("person = data"),
+            "Should contain 'person = data': {}", result.js_code);
+        // Interface should be removed
+        assert!(!result.js_code.contains("interface Person"),
+            "Should not contain 'interface Person': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_angle_bracket_vs_as_assertion_equivalence() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test that both assertion styles produce the same output
+        let source_as = r#"
+const value: any = "test";
+const result1 = value as string;
+"#;
+        let source_angle = r#"
+const value: any = "test";
+const result2 = <string>value;
+"#;
+        let result_as = compiler.compile_source(source_as, "test.ts").unwrap();
+        let mut compiler2 = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        let result_angle = compiler2.compile_source(source_angle, "test.ts").unwrap();
+
+        // Both should produce similar output (without type annotations)
+        assert!(result_as.js_code.contains("result1 = value"),
+            "AS assertion should contain 'result1 = value': {}", result_as.js_code);
+        assert!(result_angle.js_code.contains("result2 = value"),
+            "Angle bracket assertion should contain 'result2 = value': {}", result_angle.js_code);
+    }
+
+    #[test]
+    fn test_angle_bracket_in_expression() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test angle bracket type assertion in expression context
+        let source = r#"
+function process(input: unknown): string {
+    const str = <string>input;
+    return str + " processed";
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should handle function with type assertion
+        assert!(result.js_code.contains("processed"),
+            "Should contain 'processed': {}", result.js_code);
     }
 
     // ============ Utility Types Tests ============
