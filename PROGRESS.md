@@ -1,3 +1,33 @@
+### v0.3.112 清理 TypeScript 编译器警告并优化代码质量 (2025-12-27)
+**进度**: 代码质量 | ✅ 已提交
+
+#### v0.3.112 修复内容
+- **移除重复匹配分支**
+  - 移除模板字符串词法分析中重复的 '?' 字符匹配（可选链 `?.` 和空值合并 `??` 已在内层处理）
+  - 移除重复的 '%' 字符匹配（取模赋值 `%=` 已在内层处理）
+  - 修复 `parse_statement` 中重复的 `Token::RBrace` 匹配
+
+- **清理未使用代码**
+  - 为 `parse_initializer_expression` 和 `parse_arrow_function_from_assignment` 添加 `#[allow(dead_code)]`
+  - 修复未使用变量警告（添加下划线前缀 `_next_name`, `_next_initializer`）
+
+#### v0.3.112 验证
+- ✅ `cargo test --lib` 56/56 通过
+- ✅ `cargo build --release` 零警告
+- ✅ 所有模板字符串测试正常通过
+
+#### v0.3.112 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+714/-125 行)
+  - 移除 unreachable pattern 分支
+  - 添加 `#[allow(dead_code)]` 属性
+  - 修复变量命名
+
+#### v0.3.112 下一步计划
+- 继续完善 TypeScript 编译器功能
+- 添加更多测试用例
+- 实现完整的 Source Map 支持
+
+
 ### v0.3.111 实现箭头函数块语句完整解析 (2025-12-26)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 
