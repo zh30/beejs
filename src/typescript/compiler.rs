@@ -11092,6 +11092,177 @@ function wrap<T = string>(value: T): T[] {
 
         assert!(result.js_code.contains("Generic"), "Should contain 'Generic'");
     }
+
+    // v0.3.145: Source Map validation utility tests
+    #[test]
+    fn test_source_map_validation_valid() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        let source = "let x: number = 5;";
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+
+        assert!(result.source_map.is_some(), "Source map should be generated");
+
+        // Validate the source map
+        let validation = validate_source_map(result.source_map.as_ref().unwrap());
+        assert!(validation.is_valid, "Source map should be valid: {:?}", validation.errors);
+    }
+
+    #[test]
+    fn test_source_map_validation_structure() {
+        let source_map = r#"{"version":3,"sources":["test.ts"],"mappings":"AACA","names":[],"sourcesContent":["let x: number = 5;"]}"#;
+        let validation = validate_source_map(source_map);
+
+        assert!(validation.is_valid, "Valid source map should pass validation");
+        assert!(validation.version.is_some(), "Should detect version 3");
+        assert!(validation.sources.is_some(), "Should detect sources");
+        assert!(validation.mappings.is_some(), "Should detect mappings");
+    }
+
+    #[test]
+    fn test_source_map_validation_missing_version() {
+        let source_map = r#"{"sources":["test.ts"],"mappings":"AACA"}"#;
+        let validation = validate_source_map(source_map);
+
+        assert!(!validation.is_valid, "Source map without version should fail");
+        assert!(validation.errors.contains(&"Missing required field: version".to_string()),
+            "Should report missing version error");
+    }
+
+    #[test]
+    fn test_source_map_validation_missing_mappings() {
+        let source_map = r#"{"version":3,"sources":["test.ts"]}"#;
+        let validation = validate_source_map(source_map);
+
+        assert!(!validation.is_valid, "Source map without mappings should fail");
+        assert!(validation.errors.contains(&"Missing required field: mappings".to_string()),
+            "Should report missing mappings error");
+    }
+
+    #[test]
+    fn test_source_map_validation_invalid_vlq() {
+        let source_map = r#"{"version":3,"sources":["test.ts"],"mappings":"!!!INVALID!!!","names":[]}"#;
+        let validation = validate_source_map(source_map);
+
+        assert!(!validation.is_valid, "Source map with invalid VLQ should fail");
+        assert!(!validation.errors.is_empty(), "Should report VLQ errors");
+    }
+
+    #[test]
+    fn test_source_map_validation_multiline() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        let source = "let x: number = 5;\nlet y: string = 'hello';\nlet z: boolean = true;";
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+
+        assert!(result.source_map.is_some(), "Source map should be generated");
+
+        // Validate the source map
+        let validation = validate_source_map(result.source_map.as_ref().unwrap());
+        assert!(validation.is_valid, "Multi-line source map should be valid: {:?}", validation.errors);
+
+        // Should have semicolons in mappings for multi-line
+        if let Some(mappings) = &validation.mappings {
+            assert!(mappings.contains(';'), "Multi-line source map should have semicolons");
+        }
+    }
+}
+
+/// Source Map validation result (v0.3.145)
+#[derive(Debug)]
+struct SourceMapValidationResult {
+    is_valid: bool,
+    version: Option<u32>,
+    sources: Option<Vec<String>>,
+    mappings: Option<String>,
+    sources_content: Option<String>,
+    errors: Vec<String>,
+}
+
+/// Validate a source map string (v0.3.145)
+fn validate_source_map(source_map: &str) -> SourceMapValidationResult {
+    let mut result = SourceMapValidationResult {
+        is_valid: true,
+        version: None,
+        sources: None,
+        mappings: None,
+        sources_content: None,
+        errors: Vec::new(),
+    };
+
+    // Parse as JSON
+    let json: Result<serde_json::Value, _> = serde_json::from_str(source_map);
+    match json {
+        Ok(map) => {
+            // Validate version (required, must be 3)
+            if let Some(v) = map.get("version") {
+                if let Some(v_num) = v.as_u64() {
+                    result.version = Some(v_num as u32);
+                    if v_num != 3 {
+                        result.errors.push("Source map version must be 3".to_string());
+                        result.is_valid = false;
+                    }
+                } else {
+                    result.errors.push("Invalid version format".to_string());
+                    result.is_valid = false;
+                }
+            } else {
+                result.errors.push("Missing required field: version".to_string());
+                result.is_valid = false;
+            }
+
+            // Validate sources (required)
+            if let Some(sources) = map.get("sources") {
+                if sources.is_array() {
+                    result.sources = Some(sources.as_array().unwrap()
+                        .iter()
+                        .filter_map(|s| s.as_str().map(|s| s.to_string()))
+                        .collect());
+                }
+            } else {
+                result.errors.push("Missing required field: sources".to_string());
+                result.is_valid = false;
+            }
+
+            // Validate mappings (required)
+            if let Some(m) = map.get("mappings") {
+                if let Some(m_str) = m.as_str() {
+                    result.mappings = Some(m_str.to_string());
+                    // Validate VLQ encoding
+                    for ch in m_str.chars() {
+                        if ch != ';' && ch != ',' {
+                            if !ch.is_alphanumeric() && ch != '+' && ch != '/' {
+                                result.errors.push(format!("Invalid VLQ character: {}", ch));
+                                result.is_valid = false;
+                            }
+                        }
+                    }
+                }
+            } else {
+                result.errors.push("Missing required field: mappings".to_string());
+                result.is_valid = false;
+            }
+
+            // Validate sourcesContent (optional but recommended)
+            if let Some(sc) = map.get("sourcesContent") {
+                if sc.is_string() || sc.is_array() {
+                    result.sources_content = Some(sc.to_string());
+                }
+            }
+
+            // Validate names (optional)
+            if let Some(names) = map.get("names") {
+                if !names.is_array() {
+                    result.errors.push("Field 'names' must be an array".to_string());
+                    result.is_valid = false;
+                }
+            }
+        }
+        Err(e) => {
+            result.errors.push(format!("Invalid JSON: {}", e));
+            result.is_valid = false;
+        }
+    }
+
+    result
 }
 #[cfg(test)]
 impl TypeScriptCompiler {
