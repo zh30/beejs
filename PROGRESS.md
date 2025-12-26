@@ -39,6 +39,48 @@
 
 ---
 
+### v0.3.141 边界情况测试与接口继承 (2025-12-27)
+**进度**: TypeScript 编译器测试增强 | ✅ 已提交
+
+#### v0.3.141 新增功能
+- **接口继承支持**
+  - 支持 `interface A extends B` 语法
+  - 支持多接口继承 `interface C extends A, B`
+  - AST 节点新增 `extends` 字段存储父接口列表
+
+- **边界情况测试**
+  - IIFE 语法测试 (async/regular arrow)
+  - 嵌套数组类型 `string[][]` 测试
+  - 模板字符串 emoji 支持测试
+  - 模板表达式结尾 `${expr}` 测试
+  - 复杂类特性测试 (访问修饰符、getter/setter)
+  - 接口+继承+索引签名组合测试
+  - 泛型约束测试
+  - 函数重载+泛型组合测试
+
+#### v0.3.141 技术实现
+- **InterfaceDeclaration AST 增强**: 添加 `extends: Vec<String>` 字段
+- **parse_interface_declaration 重构**: 添加 `extends` 子句解析逻辑
+- **测试用例设计**: 覆盖 9 个新边界情况
+
+#### v0.3.141 验证
+- ✅ `cargo test --lib` 180/180 通过 (+9)
+- ✅ `cargo build --release` 成功编译
+- ✅ 所有边界情况测试正常工作
+
+#### v0.3.141 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+185/-12 行)
+  - 添加 `extends` 字段到 `InterfaceDeclaration`
+  - 重构 `parse_interface_declaration` 支持继承
+  - 添加 9 个边界情况测试用例
+
+#### v0.3.141 下一步计划
+- 实现 `async function` 函数表达式支持
+- 添加更多复杂场景测试
+- 继续完善 TypeScript 特性覆盖
+
+---
+
 ### v0.3.139 完善 Source Map 生成精度 (2025-12-27)
 **进度**: Source Map 改进 | ✅ 已提交
 

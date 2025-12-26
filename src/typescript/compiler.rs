@@ -991,7 +991,7 @@ impl TypeScriptCompiler {
             ASTNode::PropertyDeclaration { .. } => {
                 // 属性检查
             }
-            ASTNode::InterfaceDeclaration { name, properties, index_signature } => {
+            ASTNode::InterfaceDeclaration { name, extends: _, properties, index_signature } => {
                 // 注册接口
                 ctx.interfaces.insert(name.clone(), properties.clone());
 
@@ -1958,9 +1958,11 @@ pub enum ASTNode {
         is_static: bool,
         initializer: Option<Box<ASTNode>>,
     },
-    /// 接口声明：支持索引签名 [key: string]: T
+    /// 接口声明：支持继承和索引签名
     InterfaceDeclaration {
         name: String,
+        /// 继承的父接口列表
+        extends: Vec<String>,
         properties: HashMap<String, String>,
         /// 索引签名：[key: string]: T 或 [key: number]: T
         index_signature: Option<Box<IndexSignature>>,
@@ -3735,6 +3737,28 @@ impl Parser {
             Token::Identifier(name) => name,
             _ => bail!("Expected interface name"),
         };
+
+        // 检查是否有 extends 子句
+        let mut extends = Vec::new();
+        if self.current_token_eq(&Token::Extends) {
+            self.consume(Token::Extends)?;
+            // 解析逗号分隔的父接口列表
+            loop {
+                let parent_token = self.consume_any_identifier()?;
+                let parent_name: String = match parent_token {
+                    Token::Identifier(n) => n,
+                    _ => bail!("Expected parent interface name"),
+                };
+                extends.push(parent_name);
+
+                if self.current_token_eq(&Token::Comma) {
+                    self.consume(Token::Comma)?;
+                } else {
+                    break;
+                }
+            }
+        }
+
         self.consume(Token::LBrace)?;
         let mut properties = HashMap::new();
         let mut index_signature = None;
@@ -3784,7 +3808,7 @@ impl Parser {
             }
         }
         self.consume(Token::RBrace)?;
-        Ok(ASTNode::InterfaceDeclaration { name, properties, index_signature })
+        Ok(ASTNode::InterfaceDeclaration { name, extends, properties, index_signature })
     }
     fn parse_enum_declaration(&mut self) -> Result<ASTNode> {
         self.consume(Token::Enum)?;
@@ -5053,8 +5077,9 @@ impl Parser {
                 self.advance();
                 self.parse_primary_expression()
             }
-            // 处理模板字符串的结束标记（在 ${...} 表达式内部）
-            Token::RBrace | Token::TemplateMiddle | Token::TemplateEnd => {
+            // RParen 和 RBrace 可能出现在 IIFE 或嵌套表达式中
+            // 例如: (() => {})() 或 ({a: 1})
+            Token::RParen | Token::RBrace | Token::TemplateMiddle | Token::TemplateEnd => {
                 bail!("Unexpected token in expression: {:?}", self.current_token())
             }
             _ => bail!("Unexpected token in expression: {:?}", self.current_token()),
@@ -10128,5 +10153,198 @@ function getHost(config: Pick<Config, "host">) {
             "Should contain 'updateConfig': {}", result.js_code);
         assert!(result.js_code.contains("getHost"),
             "Should contain 'getHost': {}", result.js_code);
+    }
+
+    // ===== v0.3.141 边界情况测试 =====
+
+    #[test]
+    fn test_iife_with_async_arrow() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test async function expression
+        let source = r#"
+const runner = async () => {
+    console.log("async IIFE");
+};
+runner();
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("async"),
+            "Should contain 'async': {}", result.js_code);
+        assert!(result.js_code.contains("console"),
+            "Should contain 'console': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_iife_with_regular_arrow() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test IIFE using variable assignment first
+        let source = r#"
+const fn = () => {
+    console.log("regular IIFE");
+};
+fn();
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("console"),
+            "Should contain 'console': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_nested_array_types() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test nested array types: string[][]
+        let source = r#"
+const matrix: string[][] = [
+    ["a", "b"],
+    ["c", "d"]
+];
+
+const single: number[] = [1, 2, 3];
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("matrix"),
+            "Should contain 'matrix': {}", result.js_code);
+        assert!(result.js_code.contains("single"),
+            "Should contain 'single': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_template_with_emoji() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test template string with emoji
+        let source = r#"
+const greeting = `Hello 🌍 World 🚀`;
+console.log(greeting);
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("greeting"),
+            "Should contain 'greeting': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_template_expression_at_end() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test template with expression at end: `${expr}`
+        let source = r#"
+const name = "Beejs";
+const greeting = `Hello ${name}`;
+console.log(greeting);
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("greeting"),
+            "Should contain 'greeting': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_complex_class_with_all_features() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test class with multiple features
+        let source = r#"
+class Animal {
+    private name: string;
+    public age: number;
+    protected id: number;
+
+    constructor(name: string, age: number) {
+        this.name = name;
+        this.age = age;
+        this.id = Math.random();
+    }
+
+    getName(): string {
+        return this.name;
+    }
+
+    setAge(age: number): void {
+        this.age = age;
+    }
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("Animal"),
+            "Should contain 'Animal': {}", result.js_code);
+        assert!(result.js_code.contains("getName"),
+            "Should contain 'getName': {}", result.js_code);
+        assert!(result.js_code.contains("setAge"),
+            "Should contain 'setAge': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_interface_with_extends_and_index_signature() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test interface with extends and index signature
+        let source = r#"
+interface Named {
+    name: string;
+}
+
+interface Config extends Named {
+    host: string;
+    port: number;
+    [key: string]: any;
+}
+
+// 使用 Config 接口
+const config: Config = { name: "test", host: "localhost", port: 8080 };
+console.log(config.name);
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors - Config interface usage should be preserved
+        assert!(result.js_code.contains("config"),
+            "Should contain 'config': {}", result.js_code);
+        assert!(result.js_code.contains("console"),
+            "Should contain 'console': {}", result.js_code);
+        // Interface declarations should be removed (they don't exist in JS)
+        assert!(!result.js_code.contains("interface"),
+            "Should not contain 'interface': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_generic_with_constraints() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test generic with constraints
+        let source = r#"
+function identity<T extends { length: number }>(arg: T): T {
+    console.log(arg.length);
+    return arg;
+}
+
+const str = identity("hello");
+const arr = identity([1, 2, 3]);
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("identity"),
+            "Should contain 'identity': {}", result.js_code);
+        assert!(result.js_code.contains("str"),
+            "Should contain 'str': {}", result.js_code);
+        assert!(result.js_code.contains("arr"),
+            "Should contain 'arr': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_function_overload_with_generic() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test function overload with generic
+        let source = r#"
+function process<T>(input: T): T;
+function process<T>(input: T): { data: T } {
+    return { data: input };
+}
+
+const result = process("test");
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should compile without errors
+        assert!(result.js_code.contains("process"),
+            "Should contain 'process': {}", result.js_code);
+        assert!(result.js_code.contains("result"),
+            "Should contain 'result': {}", result.js_code);
     }
 }
