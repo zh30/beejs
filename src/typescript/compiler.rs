@@ -1096,6 +1096,14 @@ pub enum ASTNode {
         return_type: Option<String>,
         body: Vec<ASTNode>,
     },
+    /// 函数重载签名（无函数体）: function foo(x: T): T;
+    FunctionOverload {
+        name: String,
+        is_async: bool,
+        type_params: Option<Vec<String>>,
+        params: Vec<FunctionParameter>,
+        return_type: Option<String>,
+    },
     ClassDeclaration {
         name: String,
         extends: Option<String>,  // 父类名称（如果有 extends）
@@ -1177,6 +1185,11 @@ pub enum ASTExpression {
     IndexExpression {
         object: Box<ASTExpression>,
         index: Box<ASTExpression>,
+    },
+    // 一元运算符: typeof, !, -, +, ~ 等
+    Unary {
+        operator: String,
+        operand: Box<ASTExpression>,
     },
     // 更新表达式: i++ 或 --i
     UpdateExpression {
@@ -1745,6 +1758,14 @@ impl Parser {
                 let param_name: _ = match param_name_token {
                     Token::Identifier(name) => name,
                     _ => bail!("Expected parameter name"),
+                };
+
+                // 跳过可选参数标记 ?
+                let _is_optional = if self.current_token_eq(&Token::Question) {
+                    self.consume(Token::Question)?;
+                    true
+                } else {
+                    false
                 };
 
                 // 跳过类型注解
@@ -2324,6 +2345,10 @@ impl Parser {
                     Token::Identifier(name) => name,
                     _ => bail!("Expected parameter name"),
                 };
+                // 跳过可选参数标记 ?
+                if self.current_token_eq(&Token::Question) {
+                    self.consume(Token::Question)?;
+                }
                 let param_type: _ = if self.current_token_eq(&Token::Colon) {
                     self.consume(Token::Colon)?;
                     self.parse_type_annotation()
@@ -2345,6 +2370,19 @@ impl Parser {
         } else {
             None
         };
+        // 检查是否是函数重载签名（以分号结尾，无函数体）
+        if self.current_token_eq(&Token::SemiColon) {
+            // 重载签名，不消耗函数体
+            self.consume(Token::SemiColon)?;
+            return Ok(ASTNode::FunctionOverload {
+                name,
+                is_async,
+                type_params,
+                params,
+                return_type,
+            });
+        }
+        // 实现函数
         self.consume(Token::LBrace)?;
         let mut body = Vec::new();
         while !self.current_token_eq(&Token::RBrace) {
@@ -3770,6 +3808,15 @@ impl Parser {
                 self.advance();
                 Ok(ASTExpression::Literal(s))
             }
+            // 处理 typeof 运算符
+            Token::Typeof => {
+                self.consume(Token::Typeof)?;
+                let expr = self.parse_primary_expression()?;
+                Ok(ASTExpression::Unary {
+                    operator: "typeof".to_string(),
+                    operand: Box::new(expr),
+                })
+            }
             // 处理 async 关键字开头的箭头函数
             Token::Async => {
                 self.consume(Token::Async)?;
@@ -4616,6 +4663,31 @@ impl CodeEmitter {
                 }
                 self.output.push_str("}\n");
             }
+            // 函数重载签名 - 转译时输出为注释保留签名信息
+            ASTNode::FunctionOverload {
+                name,
+                is_async,
+                type_params: _,
+                params,
+                return_type: _,
+            } => {
+                // 函数重载签名在 JavaScript 中没有直接对应语法
+                // 我们输出一个带有 TypeScript 签名的 JSDoc 注释
+                self.output.push_str("/** @overload */\n");
+                if *is_async {
+                    self.output.push_str("async ");
+                }
+                self.output.push_str("function ");
+                self.output.push_str(name);
+                self.output.push('(');
+                for (i, param) in params.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push_str(", ");
+                    }
+                    self.emit_function_parameter(param);
+                }
+                self.output.push_str(") { /* overload */ }\n");
+            }
             ASTNode::ClassDeclaration { name, extends, members } => {
                 self.output.push_str("class ");
                 self.output.push_str(name);
@@ -5187,6 +5259,11 @@ impl CodeEmitter {
                     self.emit_expression(argument);
                     self.output.push_str(operator);
                 }
+            }
+            ASTExpression::Unary { operator, operand } => {
+                self.output.push_str(operator);
+                self.output.push(' ');
+                self.emit_expression(operand);
             }
             ASTExpression::NewExpression { constructor, arguments } => {
                 self.output.push_str("new ");
@@ -7504,6 +7581,138 @@ function genericFunction<T extends unknown>(value: T): T {
                 println!("JS Code:\n{}", result.js_code);
                 assert!(!result.js_code.contains("type UnionWithNever"),
                     "Should not contain type alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_function_overload_basic() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test basic function overloads
+        let source = r#"
+function greet(name: string): string;
+function greet(name: string, formal: boolean): string;
+function greet(name: string, formal?: boolean): string {
+    if (formal) {
+        return "Good day, " + name;
+    }
+    return "Hi, " + name;
+}
+"#;
+        println!("\n========== Testing function overload basic ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Should contain function implementation
+                assert!(result.js_code.contains("function greet"),
+                    "Should contain function greet: {}", result.js_code);
+                // Should contain @overload comments for signatures
+                assert!(result.js_code.contains("/** @overload */"),
+                    "Should contain @overload comment: {}", result.js_code);
+                // Should not contain TypeScript type annotations in output
+                assert!(!result.js_code.contains(": string;"),
+                    "Should not contain overload signature type annotation: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_function_overload_multiple_signatures() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test function with multiple overload signatures
+        let source = r#"
+function process(input: string): number;
+function process(input: number): string;
+function process(input: string | number): string | number {
+    if (typeof input === "string") {
+        return input.length;
+    }
+    return String(input);
+}
+"#;
+        println!("\n========== Testing function overload with multiple signatures ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("function process"),
+                    "Should contain function process: {}", result.js_code);
+                // Count @overload occurrences (should be 2)
+                let overload_count = result.js_code.matches("/** @overload */").count();
+                assert_eq!(overload_count, 2,
+                    "Should have 2 @overload comments, got {}: {}", overload_count, result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_function_overload_with_generics() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test function overloads with generics
+        let source = r#"
+function identity<T>(value: T): T;
+function identity<T>(value: T, defaultValue: T): T;
+function identity<T>(value: T, defaultValue?: T): T {
+    return value !== undefined ? value : defaultValue;
+}
+"#;
+        println!("\n========== Testing function overload with generics ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("function identity"),
+                    "Should contain function identity: {}", result.js_code);
+                let overload_count = result.js_code.matches("/** @overload */").count();
+                assert_eq!(overload_count, 2,
+                    "Should have 2 @overload comments, got {}", overload_count);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_async_function_overload() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test async function overloads
+        let source = r#"
+async function fetchData(url: string): Promise<string>;
+async function fetchData(url: string, options: { timeout: number }): Promise<string>;
+async function fetchData(url: string, options?: { timeout: number }): Promise<string> {
+    const response = await fetch(url);
+    return response.text();
+}
+"#;
+        println!("\n========== Testing async function overload ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("async function fetchData"),
+                    "Should contain async function fetchData: {}", result.js_code);
+                let overload_count = result.js_code.matches("/** @overload */").count();
+                assert_eq!(overload_count, 2,
+                    "Should have 2 @overload comments, got {}", overload_count);
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
