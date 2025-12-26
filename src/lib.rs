@@ -62,7 +62,7 @@ pub mod nodejs_core;  // v0.3.50: Enabled for path and fs modules
 // pub mod nodejs;  // Temporarily disabled for Stage 60
 // pub mod code_analyzer;  // Temporarily disabled - compilation issues
 // pub mod module_loader;  // Temporarily disabled - compilation issues
-// pub mod package_manager;  // Temporarily disabled - compilation issues
+pub mod package_manager;  // v0.3.101: Package manager - now enabled with fs fix
 pub mod watcher;  // v0.3.100: Hot reload module - now enabled
 // pub mod repl;  // Temporarily disabled - compilation issues
 // pub mod cli;  // Stage 93: CLI tools - Temporarily disabled due to compilation errors

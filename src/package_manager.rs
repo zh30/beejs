@@ -11,6 +11,7 @@
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
+use std::fs;
 use std::path::{Path, PathBuf};
 use tempfile::{NamedTempFile, TempDir};
 use std::io::Write;
@@ -241,6 +242,7 @@ impl PackageManager {
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
     #[test]
     fn test_package_manager_creation() {
         let temp_dir: _ = TempDir::new().unwrap();
