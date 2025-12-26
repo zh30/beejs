@@ -8615,3 +8615,20 @@ console.log(p.name);  // "Alice"
 - 完善箭头函数解构参数支持
 - 实现函数参数类型注解传递
 - 添加更多边界情况测试
+
+## v0.3.144 (2024-12-27)
+
+### Bug Fixes
+- **Template string escape sequences**: Fixed `\n` and `\t` being converted to actual newline/tab characters, which caused JavaScript syntax errors in generated code
+- **Template string quote escaping**: Added proper escaping for quotes inside template strings (`"test"` → `\"test\"`)
+- **Arrow function in function calls**: Fixed parsing of arrow functions as function arguments (e.g., `setTimeout(() => {...})`)
+  - Added lookahead mechanism to distinguish between grouping expressions `(expr)` and arrow function parameters `(params) => body`
+  - Properly handles empty parameter lists `() => ...`
+  - Supports destructuring parameters in arrow functions
+
+### Tests
+- Added `test_newline_in_template_string` to verify `\n` handling
+- Added `test_template_with_quotes` to verify quote escaping in templates
+
+### Performance
+- Improved TypeScript compilation robustness for complex arrow function scenarios

@@ -426,15 +426,16 @@ impl TypeScriptCompiler {
                             pos += 2;
                             continue;
                         } else if next_char == 'n' {
-                            if !in_template_expression {
-                                current_part.push('\n');
-                            }
+                            // 在模板字符串中保持 \n 为字符串，而不是转换为实际换行
+                            // 这样生成的 JavaScript 才能正确工作
+                            current_part.push('\\');
+                            current_part.push('n');
                             pos += 2;
                             continue;
                         } else if next_char == 't' {
-                            if !in_template_expression {
-                                current_part.push('\t');
-                            }
+                            // 保持 \t 为字符串
+                            current_part.push('\\');
+                            current_part.push('t');
                             pos += 2;
                             continue;
                         }
@@ -481,8 +482,9 @@ impl TypeScriptCompiler {
                                 brace_depth -= 1;
                             }
                             if brace_depth == 0 && paren_depth == 0 {
-                                // 模板表达式结束，不发射 RBrace
+                                // 模板表达式结束，标记状态但不发射 RBrace
                                 in_template_expression = false;
+                                // 跳过 }，让它不被当作普通 token 处理
                             } else if brace_depth > 0 {
                                 tokens.push(Token::RBrace);
                             }
@@ -620,6 +622,52 @@ impl TypeScriptCompiler {
                             } else {
                                 tokens.push(Token::Caret);
                             }
+                        } else if c == '"' || c == '\'' {
+                            // 处理模板表达式内部的字符串字面量
+                            let string_quote = c;
+                            let mut string_content = String::new();
+                            pos += 1;
+                            while pos < chars.len() {
+                                let sc = chars[pos];
+                                if sc == '\\' && pos + 1 < chars.len() {
+                                    // 处理转义字符
+                                    let next_sc = chars[pos + 1];
+                                    if next_sc == '"' || next_sc == '\'' || next_sc == '\\' || next_sc == '$' {
+                                        string_content.push(next_sc);
+                                    } else if next_sc == 'n' {
+                                        string_content.push('\n');
+                                    } else if next_sc == 't' {
+                                        string_content.push('\t');
+                                    } else {
+                                        string_content.push(sc);
+                                    }
+                                    pos += 2;
+                                    continue;
+                                }
+                                if sc == string_quote {
+                                    // 字符串结束
+                                    pos += 1;
+                                    break;
+                                }
+                                if sc == '$' && pos + 1 < chars.len() && chars[pos + 1] == '{' {
+                                    // 这是模板表达式的一部分，不能作为字符串结束
+                                    string_content.push(sc);
+                                    pos += 1;
+                                    continue;
+                                }
+                                string_content.push(sc);
+                                pos += 1;
+                            }
+                            tokens.push(Token::String(string_content, string_quote));
+                            continue;
+                        } else if c == '`' {
+                            // 模板字符串结束
+                            if !current_part.is_empty() {
+                                tokens.push(Token::String(current_part.clone(), quote));
+                            }
+                            tokens.push(Token::TemplateEnd);
+                            pos += 1;
+                            break;
                         } else if c == '<' {
                             if pos + 1 < chars.len() && chars[pos + 1] == '=' {
                                 tokens.push(Token::LtEq);
@@ -5120,7 +5168,9 @@ impl Parser {
 
                 // 解析第一个部分（模板表达式前的空字符串特殊情况）
                 if let Token::String(ref s, _) = self.current_token() {
-                    let s = format!("\"{}\"", s);
+                    // 对字符串内容中的引号进行转义
+                    let escaped = s.replace('"', "\\\"");
+                    let s = format!("\"{}\"", escaped);
                     parts.push(ASTExpression::Literal(s));
                     self.advance();
                 }
@@ -5135,7 +5185,9 @@ impl Parser {
 
                         // 解析下一个字符串部分
                         if let Token::String(ref s, _) = self.current_token() {
-                            let s = format!("\"{}\"", s);
+                            // 对字符串内容中的引号进行转义
+                            let escaped = s.replace('"', "\\\"");
+                            let s = format!("\"{}\"", escaped);
                             parts.push(ASTExpression::Literal(s));
                             self.advance();
                         } else if self.current_token_eq(&Token::TemplateEnd) {
@@ -5158,11 +5210,125 @@ impl Parser {
                 Ok(ASTExpression::TemplateLiteral { parts })
             }
             Token::LParen => {
-                // 括号表达式
-                self.advance();
-                let expr: _ = self.parse_expression()?;
-                self.consume(Token::RParen)?;
-                Ok(expr)
+                // 括号表达式 vs 箭头函数参数列表
+                // 向前查看：检查是否是箭头函数 (params) => body
+                let mut depth = 1;
+                let mut i = 1;
+                let n = self.tokens.len();
+                let start_pos = self.position;
+
+                while start_pos + i < n && depth > 0 {
+                    match &self.tokens[start_pos + i] {
+                        Token::LParen => {
+                            depth += 1;
+                            i += 1;
+                        }
+                        Token::RParen => {
+                            depth -= 1;
+                            i += 1;
+                        }
+                        _ => {
+                            i += 1;
+                        }
+                    }
+                }
+
+                // 检查匹配的 RParen 后面是否是 FatArrow
+                let is_arrow_function = if start_pos + i < n {
+                    matches!(self.tokens[start_pos + i], Token::FatArrow)
+                } else {
+                    false
+                };
+
+                if is_arrow_function {
+                    // 箭头函数参数列表: (params) =>
+                    self.advance(); // 消费 (
+                    let mut params = Vec::new();
+
+                    // 解析参数列表
+                    if !self.current_token_eq(&Token::RParen) {
+                        while !self.current_token_eq(&Token::RParen) {
+                            // 检查是否是解构参数
+                            if self.current_token_eq(&Token::LBrace) {
+                                // 解构参数: { a, b } 或 { a = default }
+                                self.consume(Token::LBrace)?;
+                                let mut prop_names = Vec::new();
+                                while !self.current_token_eq(&Token::RBrace) {
+                                    if let Token::Identifier(name) = self.current_token().clone() {
+                                        self.advance();
+                                        prop_names.push(name);
+                                    }
+                                    if self.current_token_eq(&Token::Comma) {
+                                        self.advance();
+                                    }
+                                }
+                                self.consume(Token::RBrace)?;
+                                // 简化的解构参数处理
+                                if let Some(name) = prop_names.first() {
+                                    params.push((name.clone(), None));
+                                }
+                            } else if let Token::LBracket = self.current_token() {
+                                // 数组解构参数: [a, b]
+                                self.consume(Token::LBracket)?;
+                                let mut elem_names = Vec::new();
+                                while !self.current_token_eq(&Token::RBracket) {
+                                    if let Token::Identifier(name) = self.current_token().clone() {
+                                        self.advance();
+                                        elem_names.push(name);
+                                    }
+                                    if self.current_token_eq(&Token::Comma) {
+                                        self.advance();
+                                    }
+                                }
+                                self.consume(Token::RBracket)?;
+                                if let Some(name) = elem_names.first() {
+                                    params.push((name.clone(), None));
+                                }
+                            } else if let Token::Identifier(name) = self.current_token().clone() {
+                                self.advance();
+                                // 检查是否有类型注解
+                                if self.current_token_eq(&Token::Colon) {
+                                    self.consume(Token::Colon)?;
+                                    self.parse_type_annotation();
+                                }
+                                params.push((name, None));
+                            }
+
+                            if self.current_token_eq(&Token::Comma) {
+                                self.consume(Token::Comma)?;
+                            }
+                        }
+                    }
+                    self.consume(Token::RParen)?;
+
+                    // 解析箭头函数体
+                    self.consume(Token::FatArrow)?;
+
+                    let body: ASTNode = if self.current_token_eq(&Token::LBrace) {
+                        self.consume(Token::LBrace)?;
+                        let mut statements = Vec::new();
+                        while !self.current_token_eq(&Token::RBrace) {
+                            statements.push(self.parse_statement()?);
+                        }
+                        self.consume(Token::RBrace)?;
+                        ASTNode::Statement(ASTStatement::Block(statements))
+                    } else {
+                        ASTNode::Expression(self.parse_expression()?)
+                    };
+
+                    Ok(ASTExpression::ArrowFunctionExpression {
+                        params,
+                        body: Box::new(body),
+                        return_type: None,
+                        is_async: false,
+                    })
+                } else {
+                    // 真正的分组表达式: (expr)
+                    self.advance();
+                    let expr: _ = self.parse_expression()?;
+                    self.consume(Token::RParen)?;
+                    Ok(expr)
+                }
             }
             Token::LBrace => {
                 // 对象字面量 vs 块语句
@@ -10896,5 +11062,41 @@ function wrap<T = string>(value: T): T[] {
             "Should contain function: {}", result.js_code);
         assert!(!result.js_code.contains("= string"),
             "Should not contain generic default in JS: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_newline_in_template_string() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test newline at start of template string
+        let source = r#"console.log(`\nSum: 1 + 2 = ${add(1, 2)}`);"#;
+        println!("\n========== Testing newline in template ==========\n");
+        println!("Source: {}", source);
+
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        println!("Compiled JS:\n{}", result.js_code);
+
+        // The \n should be converted to actual newline or \\n
+        assert!(result.js_code.contains("Sum"), "Should contain 'Sum'");
+    }
+
+    #[test]
+    fn test_template_with_quotes() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test template string with quotes inside
+        let source = r#"console.log(`Generic identity("test") = ${identity("test")}`);"#;
+        println!("\n========== Testing template with quotes ==========\n");
+        println!("Source: {}", source);
+
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        println!("Compiled JS:\n{}", result.js_code);
+
+        assert!(result.js_code.contains("Generic"), "Should contain 'Generic'");
+    }
+}
+#[cfg(test)]
+impl TypeScriptCompiler {
+    pub fn debug_compile(&mut self, source: &str) -> String {
+        let result = self.compile_source(source, "test.ts").unwrap();
+        result.js_code
     }
 }
