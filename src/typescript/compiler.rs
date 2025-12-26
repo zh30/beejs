@@ -620,7 +620,7 @@ pub enum ASTExpression {
     },
     ArrowFunctionExpression {
         params: Vec<(String, Option<String>)>,
-        body: Box<ASTExpression>,
+        body: Box<ASTNode>,  // 可以是 Expression 或 Block(Vec<ASTNode>)
         return_type: Option<String>,
         is_async: bool,
     },
@@ -1214,30 +1214,18 @@ impl Parser {
         // 检查 FatArrow
         self.consume(Token::FatArrow)?;
         // 解析函数体 - 支持表达式和块语句
-        let body = if self.current_token_eq(&Token::LBrace) {
-            // 块语句: { return expr; }
+        let body: ASTNode = if self.current_token_eq(&Token::LBrace) {
+            // 块语句: { statements; }
             self.consume(Token::LBrace)?;
-            let body_expr = if self.current_token_eq(&Token::Return) {
-                self.consume(Token::Return)?;
-                // 解析 return 后面的表达式
-                let expr = self.parse_expression()?;
-                self.consume(Token::SemiColon)?;
-                self.consume(Token::RBrace)?;
-                expr
-            } else {
-                // 其他语句，先解析再转换为表达式
-                let stmt = self.parse_statement()?;
-                self.consume(Token::RBrace)?;
-                // 将语句转换为表达式
-                match stmt {
-                    ASTNode::Expression(expr) => expr,
-                    _ => bail!("Unexpected statement in arrow function body"),
-                }
-            };
-            body_expr
+            let mut statements = Vec::new();
+            while !self.current_token_eq(&Token::RBrace) {
+                statements.push(self.parse_statement()?);
+            }
+            self.consume(Token::RBrace)?;
+            ASTNode::Statement(ASTStatement::Block(statements))
         } else {
             // 表达式: expr
-            self.parse_expression()?
+            ASTNode::Expression(self.parse_expression()?)
         };
         Ok(ASTExpression::ArrowFunctionExpression {
             params,
@@ -1283,29 +1271,19 @@ impl Parser {
         // 消耗 FatArrow
         self.consume(Token::FatArrow)?;
 
-        // 解析函数体
-        let body = if self.current_token_eq(&Token::LBrace) {
+        // 解析函数体 - 支持完整块语句
+        let body: ASTNode = if self.current_token_eq(&Token::LBrace) {
             // 块语句: { statements; }
             self.consume(Token::LBrace)?;
-            // 解析块中的语句，找到 return 语句作为函数体表达式
-            let mut return_expr: Option<ASTExpression> = None;
+            let mut statements = Vec::new();
             while !self.current_token_eq(&Token::RBrace) {
-                if self.current_token_eq(&Token::Return) {
-                    self.consume(Token::Return)?;
-                    let expr = self.parse_expression()?;
-                    self.consume(Token::SemiColon)?;
-                    return_expr = Some(expr);
-                } else {
-                    // 跳过其他语句（变量声明等）
-                    self.parse_statement()?;
-                }
+                statements.push(self.parse_statement()?);
             }
             self.consume(Token::RBrace)?;
-            // 如果没有 return 语句，使用 undefined 作为默认返回值
-            return_expr.unwrap_or(ASTExpression::Identifier("undefined".to_string()))
+            ASTNode::Statement(ASTStatement::Block(statements))
         } else {
             // 表达式体: expr
-            self.parse_expression()?
+            ASTNode::Expression(self.parse_expression()?)
         };
 
         Ok(ASTExpression::ArrowFunctionExpression {
@@ -1319,30 +1297,18 @@ impl Parser {
         // 消耗 FatArrow token
         self.consume(Token::FatArrow)?;
         // 解析函数体 - 支持表达式和块语句
-        let body = if self.current_token_eq(&Token::LBrace) {
-            // 块语句: { return expr; }
+        let body: ASTNode = if self.current_token_eq(&Token::LBrace) {
+            // 块语句: { statements; }
             self.consume(Token::LBrace)?;
-            let body_expr = if self.current_token_eq(&Token::Return) {
-                self.consume(Token::Return)?;
-                // 解析 return 后面的表达式
-                let expr = self.parse_expression()?;
-                self.consume(Token::SemiColon)?;
-                self.consume(Token::RBrace)?;
-                expr
-            } else {
-                // 其他语句，先解析再转换为表达式
-                let stmt = self.parse_statement()?;
-                self.consume(Token::RBrace)?;
-                // 将语句转换为表达式
-                match stmt {
-                    ASTNode::Expression(expr) => expr,
-                    _ => bail!("Unexpected statement in arrow function body"),
-                }
-            };
-            body_expr
+            let mut statements = Vec::new();
+            while !self.current_token_eq(&Token::RBrace) {
+                statements.push(self.parse_statement()?);
+            }
+            self.consume(Token::RBrace)?;
+            ASTNode::Statement(ASTStatement::Block(statements))
         } else {
             // 表达式: expr
-            self.parse_expression()?
+            ASTNode::Expression(self.parse_expression()?)
         };
         Ok(ASTExpression::ArrowFunctionExpression {
             params,
@@ -1826,8 +1792,8 @@ impl CodeEmitter {
                     self.output.push_str(param_name);
                 }
                 self.output.push_str(") => ");
-                // 转译函数体
-                self.emit_expression(body);
+                // 转译函数体 - body 现在是 ASTNode，可以是 Expression 或 Block
+                self.emit_node(body);
                 // 跳过返回类型注解（在转译时移除）
                 if let Some(_) = return_type {
                     // 已移除
@@ -2056,5 +2022,64 @@ const fetch = async () => await fetchData();
             "Should contain await in arrow function: {}", result.js_code);
         assert!(result.js_code.contains("async ()"),
             "Should contain async arrow function: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_async_arrow_function_block_body() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test async arrow function with block body containing multiple statements
+        let source = r#"
+const processData = async (input: string) => {
+    const temp = input.trim();
+    const result = await fetchData(temp);
+    return result;
+};
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        eprintln!("DEBUG: compiled JS = {:?}", result.js_code);
+        // Should contain async keyword
+        assert!(result.js_code.contains("async"),
+            "Should contain async keyword: {}", result.js_code);
+        // Should contain parameter
+        assert!(result.js_code.contains("input"),
+            "Should contain parameter: {}", result.js_code);
+        // Should contain variable declarations
+        assert!(result.js_code.contains("const temp"),
+            "Should contain temp variable: {}", result.js_code);
+        assert!(result.js_code.contains("const result"),
+            "Should contain result variable: {}", result.js_code);
+        // Should contain await expression
+        assert!(result.js_code.contains("await fetchData"),
+            "Should contain await: {}", result.js_code);
+        // Should contain return statement
+        assert!(result.js_code.contains("return result"),
+            "Should contain return: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_arrow_function_block_body_with_multiple_statements() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test regular (non-async) arrow function with block body
+        let source = r#"
+const add = (a: number, b: number) => {
+    const sum = a + b;
+    console.log(sum);
+    return sum;
+};
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        eprintln!("DEBUG: compiled JS = {:?}", result.js_code);
+        // Should contain parameter
+        assert!(result.js_code.contains("a"),
+            "Should contain parameter a: {}", result.js_code);
+        assert!(result.js_code.contains("b"),
+            "Should contain parameter b: {}", result.js_code);
+        // Should contain all statements
+        assert!(result.js_code.contains("const sum"),
+            "Should contain sum variable: {}", result.js_code);
+        assert!(result.js_code.contains("console.log"),
+            "Should contain console.log: {}", result.js_code);
+        assert!(result.js_code.contains("return sum"),
+            "Should contain return: {}", result.js_code);
     }
 }
