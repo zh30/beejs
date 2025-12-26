@@ -82,6 +82,28 @@ server.listen(3000, 'localhost', () => {
 
 ---
 
+### v0.3.87.1 修复 HTTP Server 参数解析问题 (2025-12-26)
+**进度**: Bug 修复 | ✅ 已提交
+
+#### v0.3.87.1 修复内容
+- **http.createServer() request handler 支持**
+  - 修复 `http.createServer((req, res) => {...})` 语法
+  - request handler 自动存储到 `_requestHandler` 属性
+  - 不再需要单独调用 `server.on('request', handler)`
+
+- **http.listen() 多调用方式支持**
+  - `listen(port)` - 仅端口
+  - `listen(port, callback)` - 端口 + 回调
+  - `listen(port, host, callback)` - 端口 + 主机 + 回调
+  - 正确识别参数类型，避免 host/callback 混淆
+
+#### v0.3.87.1 测试结果
+- ✅ 17 个 HTTP Server 真实监听测试全部通过
+- ✅ 68 个 Stream 模块测试保持通过
+- ✅ `cargo build --release` 成功
+
+---
+
 ### v0.3.86 清理编译警告 (2025-12-26)
 **进度**: 代码清理 | ✅ 已提交
 
