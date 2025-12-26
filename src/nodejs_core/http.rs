@@ -56,8 +56,12 @@ pub struct HttpResponseMessage {
 pub struct HttpServerMessageChannel {
     /// 发送请求到主线程
     pub request_sender: crossbeam::channel::Sender<HttpRequestMessage>,
+    /// v0.3.90: 接收来自后台线程的请求
+    pub request_receiver: crossbeam::channel::Receiver<HttpRequestMessage>,
     /// 接收主线程的响应
     pub response_receiver: crossbeam::channel::Receiver<HttpResponseMessage>,
+    /// v0.3.90: 发送响应到后台线程
+    pub response_sender: crossbeam::channel::Sender<HttpResponseMessage>,
     /// 是否启用了消息模式
     pub enabled: bool,
     /// 下一个连接 ID
@@ -68,12 +72,14 @@ impl HttpServerMessageChannel {
     /// 创建新的消息通道
     #[allow(clippy::redundant_closure)]
     pub fn new(capacity: usize) -> Self {
-        let (request_sender, _request_receiver) = crossbeam::channel::bounded(capacity);
-        let (_response_sender, response_receiver) = crossbeam::channel::bounded(capacity);
+        let (request_sender, request_receiver) = crossbeam::channel::bounded(capacity);
+        let (response_sender, response_receiver) = crossbeam::channel::bounded(capacity);
 
         Self {
             request_sender,
+            request_receiver,
             response_receiver,
+            response_sender,
             enabled: true,
             next_connection_id: Arc::new(AtomicU64::new(1)),
         }
@@ -97,6 +103,11 @@ impl HttpServerMessageChannel {
     /// 尝试接收响应（非阻塞）
     pub fn try_recv_response(&self) -> Result<HttpResponseMessage, crossbeam::channel::TryRecvError> {
         self.response_receiver.try_recv()
+    }
+
+    /// v0.3.90: 发送响应消息到后台线程
+    pub fn send_response(&self, response: HttpResponseMessage) -> Result<(), crossbeam::channel::SendError<HttpResponseMessage>> {
+        self.response_sender.send(response)
     }
 }
 
@@ -123,11 +134,77 @@ pub fn get_http_server_channel() -> Option<Arc<Mutex<Option<HttpServerMessageCha
     }
 }
 
-/// 发送 HTTP 响应到主线程
-/// v0.3.89: 添加跨线程消息传递支持
-pub fn send_http_response(_response: HttpResponseMessage) {
-    // This function will be used to send responses back to the server thread
-    // The actual implementation will be in the runtime's process loop
+/// 发送 HTTP 响应到后台线程
+/// v0.3.90: 实现跨线程响应传递
+#[allow(static_mut_refs)]
+pub fn send_http_response(response: HttpResponseMessage) {
+    unsafe {
+        if let Some(ref channel_arc) = HTTP_SERVER_CHANNEL {
+            if let Some(ref channel) = *channel_arc.lock().unwrap() {
+                if let Err(e) = channel.send_response(response) {
+                    eprintln!("[Beejs] Failed to send HTTP response: {}", e);
+                }
+            }
+        }
+    }
+}
+
+/// 获取消息接收器（用于事件循环轮询）
+/// v0.3.90: 添加消息接收支持
+#[allow(static_mut_refs)]
+#[deprecated(since = "0.3.90", note = "Use try_recv_http_request instead")]
+pub fn get_http_request_receiver() -> Option<crossbeam::channel::Receiver<HttpRequestMessage>> {
+    unsafe {
+        HTTP_SERVER_CHANNEL.as_ref().and_then(|channel_arc| {
+            let _ = channel_arc.lock().unwrap().as_ref()?;
+            // 使用 try_recv_http_request 替代
+            None
+        })
+    }
+}
+
+/// v0.3.90: 尝试接收 HTTP 请求（非阻塞）
+/// 返回 Some(request) 如果有请求，None 如果没有请求
+#[allow(static_mut_refs)]
+pub fn try_recv_http_request() -> Option<HttpRequestMessage> {
+    unsafe {
+        if let Some(ref channel_arc) = HTTP_SERVER_CHANNEL {
+            if let Some(ref channel) = *channel_arc.lock().unwrap() {
+                match channel.request_receiver.try_recv() {
+                    Ok(request) => Some(request),
+                    Err(crossbeam::channel::TryRecvError::Empty) => None,
+                    Err(crossbeam::channel::TryRecvError::Disconnected) => {
+                        eprintln!("[Beejs] HTTP message channel disconnected");
+                        None
+                    }
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+}
+
+/// v0.3.90: 创建简单的 HTTP 响应消息
+pub fn create_http_response(
+    connection_id: u64,
+    status_code: u16,
+    body: &str,
+    content_type: &str,
+) -> HttpResponseMessage {
+    let mut headers = HashMap::new();
+    headers.insert("Content-Type".to_string(), content_type.to_string());
+    headers.insert("Content-Length".to_string(), body.len().to_string());
+    headers.insert("Connection".to_string(), "close".to_string());
+
+    HttpResponseMessage {
+        connection_id,
+        status_code,
+        headers,
+        body: body.as_bytes().to_vec(),
+    }
 }
 
 /// 连接键：用于标识唯一的服务器端点

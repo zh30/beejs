@@ -235,3 +235,73 @@ fn test_http_server_ipv6_binding() {
     let connected = send_http_request(3538, "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n");
     assert!(connected, "Should connect to IPv4 bound server");
 }
+
+// v0.3.90: 测试消息通道功能
+// 测试 HttpRequestMessage 和 HttpResponseMessage 的创建和传递
+#[test]
+#[serial]
+fn test_http_message_channel_basics() {
+    use beejs::nodejs_core::http::HttpServerMessageChannel;
+
+    // 创建消息通道
+    let channel = HttpServerMessageChannel::new(10);
+
+    // 验证 channel 创建成功
+    assert!(channel.enabled, "Channel should be enabled");
+
+    // 验证连接 ID 生成
+    let id1 = channel.next_connection_id();
+    let id2 = channel.next_connection_id();
+    assert_eq!(id2, id1 + 1, "Connection IDs should be sequential");
+
+    // 验证 next_connection_id 连续性
+    assert_eq!(channel.next_connection_id(), id2 + 1);
+}
+
+// v0.3.90: 测试 create_http_response 辅助函数
+#[test]
+#[serial]
+fn test_create_http_response() {
+    use beejs::nodejs_core::http::create_http_response;
+
+    let response = create_http_response(1, 200, "Hello World", "text/plain");
+
+    assert_eq!(response.connection_id, 1);
+    assert_eq!(response.status_code, 200);
+    assert_eq!(response.body, b"Hello World");
+    assert_eq!(response.headers.get("Content-Type").unwrap(), "text/plain");
+    assert_eq!(response.headers.get("Content-Length").unwrap(), "11");
+    assert_eq!(response.headers.get("Connection").unwrap(), "close");
+}
+
+// v0.3.90: 测试 init_http_server_channel 全局初始化
+#[test]
+#[serial]
+fn test_http_server_channel_initialization() {
+    use beejs::nodejs_core::http::init_http_server_channel;
+
+    // 初始化全局消息通道
+    let channel = init_http_server_channel();
+
+    // 验证 channel 被正确初始化
+    let inner = channel.lock().unwrap();
+    assert!(inner.is_some(), "Channel should be initialized");
+
+    let channel_ref = inner.as_ref().unwrap();
+    assert!(channel_ref.enabled, "Channel should be enabled");
+    assert_eq!(channel_ref.next_connection_id(), 1);
+}
+
+// v0.3.90: 测试 try_recv_http_request 返回 None（没有发送请求时）
+#[test]
+#[serial]
+fn test_try_recv_http_request_empty() {
+    use beejs::nodejs_core::http::try_recv_http_request;
+
+    // 初始化通道
+    let _channel = beejs::nodejs_core::http::init_http_server_channel();
+
+    // 尝试接收请求，应该返回 None（因为没有请求）
+    let result = try_recv_http_request();
+    assert!(result.is_none(), "Should return None when no requests pending");
+}
