@@ -23,16 +23,17 @@
 
 #### v0.3.146 验证
 - ✅ `cargo test --lib` 206/206 通过 (+2)
-- ✅ `cargo build --release` 成功编译
+- ✅ `cargo build --release` 成功编译，零警告
 - ✅ 精确 source map 生成正常工作
 - ✅ VLQ 编码验证通过
 
 #### v0.3.146 代码变更
-- **新增文件**: `src/typescript/compiler.rs`
+- **修改文件**: `src/typescript/compiler.rs`
   - 添加 `SpannedToken` 结构体 (~10 行)
   - 添加 `LexerState` 结构体 (~8 行)
   - 添加 `generate_precise_source_map()` 函数 (~60 行)
   - 添加 2 个测试用例 (~50 行)
+  - 为预留函数添加 `#[allow(dead_code)]` 标注 (~3 处)
 
 #### v0.3.146 使用示例
 ```typescript

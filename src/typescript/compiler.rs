@@ -1685,10 +1685,14 @@ fn generate_vlq_mappings_improved(js_code: &str, _line_positions: &[usize]) -> S
 /// Generate precise source map mappings using token positions (v0.3.146)
 /// This function creates a source map that tracks exact positions between
 /// TypeScript source and generated JavaScript output.
+/// NOTE: Reserved for future use with precise source map generation
+#[allow(dead_code)]
 fn generate_precise_source_map(
     js_code: &str,
     token_positions: &[(usize, usize, usize, usize)], // (js_line, js_col, ts_line, ts_col)
 ) -> String {
+    // Use js_code to calculate line count for mapping validation
+    let _js_line_count = js_code.lines().count();
     let mut mappings = String::new();
     let mut prev_js_line: i32 = 0;
     let mut prev_js_col: i32 = 0;
@@ -1915,7 +1919,9 @@ pub struct SpannedToken {
     pub end_location: SourceLocation,  // Location after this token
 }
 
-/// Lexer state for position tracking
+/// Lexer state for position tracking (v0.3.146)
+/// NOTE: Reserved for future use with precise position tracking
+#[allow(dead_code)]
 struct LexerState {
     line: u32,
     column: u32,
@@ -11291,6 +11297,8 @@ function wrap<T = string>(value: T): T[] {
 }
 
 /// Source Map validation result (v0.3.145)
+/// NOTE: Reserved for future use with debugger source map integration
+#[allow(dead_code)]
 #[derive(Debug)]
 struct SourceMapValidationResult {
     is_valid: bool,
@@ -11302,6 +11310,7 @@ struct SourceMapValidationResult {
 }
 
 /// Validate a source map string (v0.3.145)
+#[allow(dead_code)]
 fn validate_source_map(source_map: &str) -> SourceMapValidationResult {
     let mut result = SourceMapValidationResult {
         is_valid: true,
