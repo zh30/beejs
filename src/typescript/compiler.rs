@@ -1124,6 +1124,12 @@ pub enum ASTNode {
         is_static: bool,
         initializer: Option<Box<ASTNode>>,
     },
+    /// 类计算属性名声明
+    ComputedPropertyDeclaration {
+        key_expr: Box<ASTExpression>,
+        is_static: bool,
+        initializer: Option<Box<ASTNode>>,
+    },
     InterfaceDeclaration {
         name: String,
         properties: HashMap<String, String>,
@@ -2450,6 +2456,39 @@ impl Parser {
                 is_static = true;
             }
             self.advance();
+        }
+
+        // 检查是否是计算属性名 [expr]
+        if self.current_token_eq(&Token::LBracket) {
+            // 计算属性名: { [expr]: value }
+            self.consume(Token::LBracket)?;
+            let key_expr = self.parse_expression()?;
+            self.consume(Token::RBracket)?;
+
+            // 跳过类型注解 (如 `: string`)
+            if self.current_token_eq(&Token::Colon) {
+                self.consume(Token::Colon)?;
+                self.parse_type_annotation();
+            }
+
+            // 检查是否有初始化器
+            let initializer: Option<ASTExpression> = if self.current_token_eq(&Token::Eq) {
+                self.consume(Token::Eq)?;
+                Some(self.parse_expression()?)
+            } else {
+                None
+            };
+
+            // 跳过分号分隔的字段声明
+            if self.current_token_eq(&Token::SemiColon) {
+                self.consume(Token::SemiColon)?;
+            }
+
+            return Ok(Some(ASTNode::ComputedPropertyDeclaration {
+                key_expr: Box::new(key_expr),
+                is_static,
+                initializer: initializer.map(|e| Box::new(ASTNode::Expression(e))),
+            }));
         }
 
         // 特殊处理：检查是否是 get 或 set 关键字
@@ -4739,6 +4778,19 @@ impl CodeEmitter {
                 }
                 self.output.push_str(";\n");
             }
+            ASTNode::ComputedPropertyDeclaration { key_expr, is_static, initializer } => {
+                if *is_static {
+                    self.output.push_str("static ");
+                }
+                self.output.push_str("[");
+                self.emit_expression(key_expr);
+                self.output.push_str("]");
+                if let Some(init) = initializer {
+                    self.output.push_str(" = ");
+                    self.emit_node(&**init);
+                }
+                self.output.push_str(";\n");
+            }
             ASTNode::InterfaceDeclaration { .. } => {
                 // 接口在 JavaScript 中不存在，跳过
             }
@@ -5442,6 +5494,30 @@ console.log(obj);
             "Should contain computed property [key]: {}", result.js_code);
         assert!(result.js_code.contains("[\"static\"]"),
             "Should contain computed property [\"static\"]: {}", result.js_code);
+        assert!(result.js_code.contains("[1 + 1]"),
+            "Should contain computed property [1 + 1]: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_class_computed_property_name() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test computed property names in class: { [expr]: value }
+        let source = r#"
+const prefix = "test";
+class MyClass {
+    [prefix + "Key"] = "computed field";
+    ["staticKey"] = "static string key";
+    [1 + 1] = "number key";
+}
+console.log(MyClass);
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        println!("Class computed property output:\n{}", result.js_code);
+        // Should compile without errors
+        assert!(result.js_code.contains("[prefix + \"Key\"]"),
+            "Should contain computed property [prefix + \"Key\"]: {}", result.js_code);
+        assert!(result.js_code.contains("[\"staticKey\"]"),
+            "Should contain computed property [\"staticKey\"]: {}", result.js_code);
         assert!(result.js_code.contains("[1 + 1]"),
             "Should contain computed property [1 + 1]: {}", result.js_code);
     }
