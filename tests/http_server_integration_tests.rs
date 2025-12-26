@@ -4,7 +4,7 @@
 
 use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::thread;
 use std::time::Duration;
