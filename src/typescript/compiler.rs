@@ -211,6 +211,9 @@ impl TypeScriptCompiler {
                     "in" => Token::In,
                     "infer" => Token::Infer,
                     "readonly" => Token::Readonly,
+                    "never" => Token::Never,
+                    "unknown" => Token::UnknownType,
+                    "is" => Token::Is,
                     _ => Token::Identifier(ident),
                 };
                 tokens.push(token);
@@ -346,12 +349,12 @@ impl TypeScriptCompiler {
                             // 在表达式内部，我们保留转义序列，让后续处理
                             if next_char == 'n' || next_char == 't' || next_char == 'r' {
                                 // 保留转义序列，让解析器处理
-                                tokens.push(Token::Unknown(c.to_string()));
+                                tokens.push(Token::UnknownChar(c.to_string()));
                                 pos += 1;
                                 continue;
                             }
                             // 其他转义字符也保留
-                            tokens.push(Token::Unknown(c.to_string()));
+                            tokens.push(Token::UnknownChar(c.to_string()));
                             pos += 1;
                             continue;
                         }
@@ -604,7 +607,7 @@ impl TypeScriptCompiler {
                             continue;
                         } else {
                             // 未知字符，作为 Unknown token
-                            tokens.push(Token::Unknown(c.to_string()));
+                            tokens.push(Token::UnknownChar(c.to_string()));
                         }
                         pos += 1;
                         continue;
@@ -757,7 +760,7 @@ impl TypeScriptCompiler {
                         Token::Pipe
                     }
                 },
-                _ => Token::Unknown(ch.to_string()),
+                _ => Token::UnknownChar(ch.to_string()),
             });
             pos += 1;
         }
@@ -908,6 +911,10 @@ pub enum Token {
     Typeof,   // typeof 操作符
     In,       // in 操作符（用于映射类型）
     Infer,    // infer 关键字（用于条件类型推导）
+    Never,        // never 类型（表示永远不返回的值）
+    UnknownType,  // unknown 类型（类型安全的 top 类型）
+    Is,           // is 关键字（类型谓词，用于类型守卫）
+    UnknownChar(String), // 未知字符（用于词法分析 fallback）
     // 符号
     LParen,
     RParen,
@@ -3982,6 +3989,23 @@ impl Parser {
             return self.parse_template_literal_type();
         }
 
+        // 检查是否是类型谓词: parameterName is Type（用于类型守卫）
+        if let Token::Identifier(ref param_name) = self.current_token() {
+            let param_name = param_name.clone();
+            // 向前看一个 token 检查是否是 is 关键字
+            if self.position + 1 < self.tokens.len() && matches!(self.tokens[self.position + 1], Token::Is) {
+                self.advance(); // 消耗参数名
+                self.advance(); // 消耗 is 关键字
+                // 解析谓词目标类型
+                let target_type = if let Some(t) = self.parse_type_annotation() {
+                    t
+                } else {
+                    "unknown".to_string()
+                };
+                return Some(format!("{} is {}", param_name, target_type));
+            }
+        }
+
         // 检查是否是对象类型字面量
         let is_lbrace = self.current_token_eq(&Token::LBrace);
         let first_type = if is_lbrace {
@@ -4435,6 +4459,16 @@ impl Parser {
                 } else {
                     Some("infer _".to_string())
                 }
+            }
+            // 处理 never 类型（表示永远不返回的值）
+            Token::Never => {
+                self.advance();
+                Some("never".to_string())
+            }
+            // 处理 unknown 类型（类型安全的 top 类型）
+            Token::UnknownType => {
+                self.advance();
+                Some("unknown".to_string())
             }
             // 注意: 索引访问类型 T[K] 由 parse_type_annotation 处理
             _ => None,
@@ -7273,6 +7307,126 @@ type ConfigType = typeof config;
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 assert!(!result.js_code.contains("type DeepUnwrap"),
+                    "Should not contain type alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_never_type() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test never type - represents values that never occur
+        let source = r#"
+type NeverType = never;
+function throwError(msg: string): never {
+    throw new Error(msg);
+}
+type Result<T> = T extends success ? T : never;
+"#;
+        println!("\n========== Testing never type ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(!result.js_code.contains("type NeverType"),
+                    "Should not contain type alias: {}", result.js_code);
+                assert!(!result.js_code.contains("type Result"),
+                    "Should not contain type alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_unknown_type() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test unknown type - type-safe top type
+        let source = r#"
+type UnknownType = unknown;
+function processValue(value: unknown): string {
+    return String(value);
+}
+type SafeResult<T> = T extends unknown ? T : never;
+"#;
+        println!("\n========== Testing unknown type ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(!result.js_code.contains("type UnknownType"),
+                    "Should not contain type alias: {}", result.js_code);
+                assert!(!result.js_code.contains("type SafeResult"),
+                    "Should not contain type alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_type_predicate_is() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test type predicate (is keyword) for type guards
+        let source = r#"
+function isString(value: unknown): value is string {
+    return true;
+}
+function isNumber<T>(value: T): value is number {
+    return true;
+}
+function isDefined<T>(value: T): value is NonNullable<T> {
+    return true;
+}
+"#;
+        println!("\n========== Testing type predicate (is keyword) ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Should remove type annotations including type predicates
+                assert!(!result.js_code.contains(": unknown"),
+                    "Should not contain type annotation: {}", result.js_code);
+                assert!(!result.js_code.contains(": string"),
+                    "Should not contain return type: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_never_unknown_with_generics() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test never and unknown types with generics
+        let source = r#"
+type UnionWithNever = string | never;  // never is identity for union
+type UnionWithUnknown = unknown | string;  // unknown absorbs all
+type IntersectionWithUnknown = unknown & string;  // narrows to string
+function genericFunction<T extends unknown>(value: T): T {
+    return value;
+}
+"#;
+        println!("\n========== Testing never and unknown with generics ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(!result.js_code.contains("type UnionWithNever"),
                     "Should not contain type alias: {}", result.js_code);
             }
             Err(e) => {
