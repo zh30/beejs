@@ -1,3 +1,44 @@
+### v0.3.140 修复多项 TypeScript 编译问题 (2025-12-27)
+**进度**: TypeScript 编译器修复 | ✅ 已提交
+
+#### v0.3.140 新增功能
+- **IIFE 语法修复**
+  - 箭头函数作为 `CallExpression` callee 时添加括号包裹
+  - 修复 `(async () => {})()` 语法生成问题
+
+- **数组类型支持**
+  - 支持 `string[]` 数组类型语法
+  - 正确处理 `features: string[]` 等类型注解
+
+- **模板字符串解析改进**
+  - 处理 `${expr}` 后无字符串部分的情况
+  - 改进非 ASCII 字符（表情符号）处理
+
+#### v0.3.140 技术实现
+- **CallExpression emit 改进**: 检测箭头函数 callee 并自动添加括号
+- **类型注解解析增强**: 通过向前查看区分 `T[]` 和 `T[key]`
+- **Token 添加 PartialEq derive**: 支持模式匹配比较
+
+#### v0.3.140 验证
+- ✅ `cargo test --lib` 171/171 通过
+- ✅ `cargo build --release` 成功编译
+- ✅ IIFE 示例正常工作
+- ✅ 数组类型语法正常工作
+
+#### v0.3.140 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+89/-43 行)
+  - 修改 `emit_expression` 添加箭头函数括号包裹
+  - 修改 `parse_type_annotation` 支持数组类型 `T[]`
+  - 添加 `Token PartialEq` derive
+  - 改进模板字符串解析逻辑
+
+#### v0.3.140 下一步计划
+- 完善 hello.ts 完整示例测试
+- 添加更多边界情况测试用例
+- 继续增强 TypeScript 特性支持
+
+---
+
 ### v0.3.139 完善 Source Map 生成精度 (2025-12-27)
 **进度**: Source Map 改进 | ✅ 已提交
 
