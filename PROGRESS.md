@@ -1,3 +1,43 @@
+### v0.3.120 实现对象类型字面量和交叉类型支持 (2025-12-27)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.120 新增功能
+- **对象类型字面量**
+  - 支持 `{ name: string; age: number }` 语法
+  - 支持可选属性 `{ x: number; y?: number }`
+  - 支持字符串属性名 `{ "key": value }`
+  - 支持嵌套对象类型 `{ nested: { value: string } }`
+
+- **交叉类型**
+  - 支持 `A & B` 交叉类型语法
+  - 支持混合联合/交叉类型 `(A & B) | (C & D)`
+
+- **解析器增强**
+  - 重构 `parse_type_annotation` 支持多类型组合
+  - 添加 `parse_object_type` 解析函数
+  - 支持 `&` 和 `|` 操作符在类型表达式中混用
+
+#### v0.3.120 验证
+- ✅ `cargo test --lib` 80/80 通过 (+5)
+- ✅ 新增测试用例:
+  - `test_object_type_literal`: 基础对象类型
+  - `test_object_type_with_optional`: 可选属性
+  - `test_intersection_type`: 交叉类型
+  - `test_mixed_union_intersection`: 混合类型
+  - `test_nested_object_type`: 嵌套对象
+- ✅ `cargo build --release` 成功编译
+
+#### v0.3.120 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+233/-6 行)
+  - 重构 `parse_type_annotation` 函数
+  - 添加 `parse_object_type` 解析函数
+  - 添加 5 个测试用例
+
+#### v0.3.120 下一步计划
+- 继续完善 TypeScript 编译器功能
+- 实现索引类型查询
+- 添加更多边界情况测试
+
 ### v0.3.119 实现类型别名声明支持 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 
