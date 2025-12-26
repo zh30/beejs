@@ -1,3 +1,53 @@
+### v0.3.129 实现类计算属性名支持 (2025-12-27)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.129 新增功能
+- **类计算属性名（Computed Property Names）**
+  - 支持 `{ [expr]: value }` 语法在类成员中使用
+  - 支持动态计算属性名如 `[prefix + "Key"]`
+  - 支持字符串字面量属性名 `["staticKey"]`
+  - 支持数字表达式属性名 `[1 + 1]`
+
+- **AST 增强**
+  - 新增 `ComputedPropertyDeclaration` AST 节点类型
+  - 包含 `key_expr` 字段存储计算表达式
+  - 与现有 `PropertyDeclaration` 保持一致的设计
+
+- **解析器增强**
+  - 在 `parse_class_member()` 添加 `[` token 检测
+  - 解析 `[expr]` 语法并生成正确的 AST
+  - 支持类型注解和初始化器
+
+#### v0.3.129 验证
+- ✅ `cargo test --lib` 131/131 通过 (+1)
+- ✅ 新增测试用例:
+  - `test_class_computed_property_name`: 类计算属性名
+- ✅ `cargo build --release` 成功编译
+- ✅ 无编译器警告
+
+#### v0.3.129 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+76/-0 行)
+  - 添加 `ComputedPropertyDeclaration` AST 节点类型
+  - 修改 `parse_class_member()` 支持 `[expr]` 解析
+  - 修改转译器输出计算属性名语法
+  - 添加 1 个测试用例
+
+#### v0.3.129 示例代码
+```typescript
+// 类计算属性名示例
+const prefix = "test";
+class MyClass {
+    [prefix + "Key"] = "computed field";
+    ["staticKey"] = "static string key";
+    [1 + 1] = "number key";
+}
+```
+
+#### v0.3.129 下一步计划
+- 完善构造函数参数类型注解支持
+- 实现 getter/setter 类型注解
+- 优化 Source Map 生成精度
+
 ### v0.3.128 实现函数重载支持 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 
