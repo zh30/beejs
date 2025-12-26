@@ -12818,6 +12818,144 @@ impl MinimalRuntime {
 
         Ok(())
     }
+
+    // v0.3.91: HTTP Server 消息轮询
+    // 用于在事件循环中处理来自消息通道的 HTTP 请求
+
+    /// 轮询 HTTP 消息通道并处理请求
+    /// 返回处理的请求数量
+    /// v0.3.91: 新增功能
+    pub fn pump_http_messages(&mut self) -> usize {
+        use crate::nodejs_core::http::{
+            try_recv_http_request,
+            send_http_response,
+            get_global_request_handler,
+            create_http_response,
+        };
+
+        let mut processed = 0;
+
+        // 持续处理队列中的请求
+        while let Some(request) = try_recv_http_request() {
+            // 创建 V8 上下文处理请求
+            let scope = &mut v8::HandleScope::new(&mut self.isolate);
+            let context = v8::Context::new(scope);
+            let scope = &mut v8::ContextScope::new(scope, context);
+
+            // 设置 HTTP API
+            if let Err(e) = setup_http_api(scope, &context) {
+                eprintln!("[Beejs] Failed to setup HTTP API: {}", e);
+                continue;
+            }
+
+            // 获取 handler 并处理请求
+            let handler = match get_global_request_handler(scope, &context) {
+                Some(h) => h,
+                None => {
+                    // 发送默认 404 响应
+                    let response = create_http_response(request.connection_id, 404, "No handler", "text/plain");
+                    send_http_response(response);
+                    continue;
+                }
+            };
+
+            // 创建请求对象
+            let req_obj = v8::Object::new(scope);
+            let method_key = v8::String::new(scope, "method").unwrap();
+            let method_val = v8::String::new(scope, &request.method).unwrap();
+            req_obj.set(scope, method_key.into(), method_val.into());
+
+            let url_key = v8::String::new(scope, "url").unwrap();
+            let url_val = v8::String::new(scope, &request.url).unwrap();
+            req_obj.set(scope, url_key.into(), url_val.into());
+
+            let path_key = v8::String::new(scope, "path").unwrap();
+            let path_val = v8::String::new(scope, &request.path).unwrap();
+            req_obj.set(scope, path_key.into(), path_val.into());
+
+            // 设置 headers
+            let headers_obj = v8::Object::new(scope);
+            for (name, value) in &request.headers {
+                let name_key = v8::String::new(scope, name).unwrap();
+                let value_val = v8::String::new(scope, value).unwrap();
+                headers_obj.set(scope, name_key.into(), value_val.into());
+            }
+            let headers_key = v8::String::new(scope, "headers").unwrap();
+            req_obj.set(scope, headers_key.into(), headers_obj.into());
+
+            // 创建响应对象
+            let res_obj = v8::Object::new(scope);
+            let res_headers_obj = v8::Object::new(scope);
+            let res_headers_key = v8::String::new(scope, "headers").unwrap();
+            res_obj.set(scope, res_headers_key.into(), res_headers_obj.into());
+
+            let status_code_key = v8::String::new(scope, "statusCode").unwrap();
+            let status_200 = v8::Integer::new(scope, 200);
+            res_obj.set(scope, status_code_key.into(), status_200.into());
+
+            let body_key = v8::String::new(scope, "_body").unwrap();
+            let empty_body = v8::String::new(scope, "").unwrap();
+            res_obj.set(scope, body_key.into(), empty_body.into());
+
+            // 调用 handler
+            let handler_fn = v8::Local::new(scope, &handler);
+            let this_val = v8::undefined(scope).into();
+            let args = [req_obj.into(), res_obj.into()];
+
+            if handler_fn.call(scope, this_val, &args).is_none() {
+                eprintln!("[Beejs] Request handler execution failed");
+                let response = create_http_response(request.connection_id, 500, "Handler error", "text/plain");
+                send_http_response(response);
+                continue;
+            }
+
+            // 提取响应
+            let status_code_key = v8::String::new(scope, "statusCode").unwrap();
+            let status_200_fallback = v8::Integer::new(scope, 200);
+            let status_code_val = res_obj.get(scope, status_code_key.into()).unwrap_or(status_200_fallback.into());
+            let status_code = status_code_val.to_int32(scope).map(|i| i.value() as u16).unwrap_or(200);
+
+            let body_key = v8::String::new(scope, "_body").unwrap();
+            let empty_body_fallback = v8::String::new(scope, "").unwrap();
+            let body_val = res_obj.get(scope, body_key.into()).unwrap_or(empty_body_fallback.into());
+            let body = body_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+
+            // 生成并发送响应
+            let response = create_http_response(request.connection_id, status_code, &body, "text/plain; charset=utf-8");
+            send_http_response(response);
+            processed += 1;
+        }
+
+        processed
+    }
+
+    /// 初始化 HTTP 服务器消息通道
+    /// 必须在启动 HTTP 服务器前调用
+    /// v0.3.91: 新增功能
+    pub fn init_http_server(&mut self) {
+        use crate::nodejs_core::http::init_http_server_channel;
+        init_http_server_channel();
+    }
+
+    /// 设置 HTTP 请求处理器
+    /// v0.3.91: 新增功能
+    pub fn set_http_request_handler(&mut self, handler_code: &str) -> Result<()> {
+        let scope = &mut v8::HandleScope::new(&mut self.isolate);
+        let context = v8::Context::new(scope);
+        let scope = &mut v8::ContextScope::new(scope, context);
+
+        // 编译 handler 代码
+        let code = v8::String::new(scope, handler_code)
+            .ok_or_else(|| anyhow::anyhow!("Failed to create handler string"))?;
+
+        let script = v8::Script::compile(scope, code, None)
+            .ok_or_else(|| anyhow::anyhow!("Failed to compile handler"))?;
+
+        let _ = script.run(scope)
+            .ok_or_else(|| anyhow::anyhow!("Failed to run handler"))?;
+
+        Ok(())
+    }
 }
 
 impl Default for MinimalRuntime {

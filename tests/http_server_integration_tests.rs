@@ -305,3 +305,216 @@ fn test_try_recv_http_request_empty() {
     let result = try_recv_http_request();
     assert!(result.is_none(), "Should return None when no requests pending");
 }
+
+// v0.3.91: 端到端 HTTP Server 测试
+// 测试完整的请求/响应周期（通过消息通道）
+
+/// 测试服务器正确返回 HTTP 响应头
+#[test]
+#[serial]
+fn test_http_server_response_headers() {
+    let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const server = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            res.end('Hello');
+        });
+        server.listen(3540);
+    "#;
+
+    runtime.execute_code(code).expect("Execution failed");
+    wait_for_server(3540);
+
+    // 发送请求并读取响应
+    let mut stream = TcpStream::connect(("127.0.0.1", 3540)).expect("Failed to connect");
+    stream.write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
+
+    let mut response = String::new();
+    stream.read_to_string(&mut response).expect("Failed to read");
+
+    // 验证响应包含正确的状态行
+    assert!(response.contains("HTTP/1.1 200"), "Response should have 200 status");
+    assert!(response.contains("Content-Type: text/plain"), "Should have Content-Type header");
+}
+
+/// 测试服务器处理 POST 请求并读取 body
+#[test]
+#[serial]
+fn test_http_server_post_with_body() {
+    let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const server = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ method: req.method, path: req.path }));
+        });
+        server.listen(3541);
+    "#;
+
+    runtime.execute_code(code).expect("Execution failed");
+    wait_for_server(3541);
+
+    let mut stream = TcpStream::connect(("127.0.0.1", 3541)).expect("Failed to connect");
+    stream.write_all(b"POST /api/users HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: 15\r\n\r\n{\"name\":\"test\"}").expect("Failed to write");
+
+    let mut response = String::new();
+    stream.read_to_string(&mut response).expect("Failed to read");
+
+    // 验证 POST 方法被正确传递
+    assert!(response.contains("POST"), "Should handle POST method");
+    assert!(response.contains("/api/users"), "Should have correct path");
+}
+
+/// 测试服务器处理不同的 HTTP 方法
+#[test]
+#[serial]
+fn test_http_server_different_methods() {
+    let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const server = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(req.method);
+        });
+        server.listen(3542);
+    "#;
+
+    runtime.execute_code(code).expect("Execution failed");
+    wait_for_server(3542);
+
+    // 测试 DELETE
+    let mut stream = TcpStream::connect(("127.0.0.1", 3542)).expect("Failed to connect");
+    stream.write_all(b"DELETE /resource/123 HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
+
+    let mut response = String::new();
+    stream.read_to_string(&mut response).expect("Failed to read");
+
+    assert!(response.contains("DELETE"), "Should handle DELETE method");
+}
+
+/// 测试服务器正确设置多个响应头
+#[test]
+#[serial]
+fn test_http_server_multiple_headers() {
+    let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const server = http.createServer((req, res) => {
+            res.setHeader('X-Custom-Header', 'custom-value');
+            res.setHeader('X-Another-Header', 'another-value');
+            res.writeHead(200);
+            res.end('done');
+        });
+        server.listen(3543);
+    "#;
+
+    runtime.execute_code(code).expect("Execution failed");
+    wait_for_server(3543);
+
+    let mut stream = TcpStream::connect(("127.0.0.1", 3543)).expect("Failed to connect");
+    stream.write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
+
+    let mut response = String::new();
+    stream.read_to_string(&mut response).expect("Failed to read");
+
+    assert!(response.contains("X-Custom-Header: custom-value"), "Should have custom header");
+    assert!(response.contains("X-Another-Header: another-value"), "Should have another header");
+}
+
+/// 测试服务器处理请求头
+#[test]
+#[serial]
+fn test_http_server_request_headers() {
+    let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const server = http.createServer((req, res) => {
+            const userAgent = req.headers['user-agent'] || 'unknown';
+            res.writeHead(200);
+            res.end(userAgent);
+        });
+        server.listen(3544);
+    "#;
+
+    runtime.execute_code(code).expect("Execution failed");
+    wait_for_server(3544);
+
+    let mut stream = TcpStream::connect(("127.0.0.1", 3544)).expect("Failed to connect");
+    stream.write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\nUser-Agent: BeejsTest/1.0\r\n\r\n").expect("Failed to write");
+
+    let mut response = String::new();
+    stream.read_to_string(&mut response).expect("Failed to read");
+
+    assert!(response.contains("BeejsTest/1.0"), "Should echo back user agent");
+}
+
+/// 测试服务器响应 404
+#[test]
+#[serial]
+fn test_http_server_404_response() {
+    let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const server = http.createServer((req, res) => {
+            res.writeHead(404, { 'Content-Type': 'text/plain' });
+            res.end('Not Found');
+        });
+        server.listen(3545);
+    "#;
+
+    runtime.execute_code(code).expect("Execution failed");
+    wait_for_server(3545);
+
+    let mut stream = TcpStream::connect(("127.0.0.1", 3545)).expect("Failed to connect");
+    stream.write_all(b"GET /nonexistent HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
+
+    let mut response = String::new();
+    stream.read_to_string(&mut response).expect("Failed to read");
+
+    assert!(response.contains("HTTP/1.1 404"), "Should return 404 status");
+    assert!(response.contains("Not Found"), "Should have Not Found body");
+}
+
+/// 测试 pump_http_messages 方法
+#[test]
+#[serial]
+fn test_pump_http_messages() {
+    let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+
+    // 初始化 HTTP 服务器
+    runtime.init_http_server();
+
+    // 设置 request handler
+    let handler_code = r#"
+        globalThis._httpServerRequestHandler = function(req, res) {
+            res.statusCode = 200;
+            res.end('handled');
+        };
+    "#;
+    runtime.set_http_request_handler(handler_code).expect("Failed to set handler");
+
+    // 泵送消息（应该处理 0 个请求）
+    let processed = runtime.pump_http_messages();
+    assert_eq!(processed, 0, "Should process 0 messages initially");
+}
+
+/// 测试 HTTP 响应 body 正确传输
+#[test]
+#[serial]
+fn test_http_server_body_transmission() {
+    let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const server = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            res.end('This is a longer response body that should be transmitted correctly.');
+        });
+        server.listen(3546);
+    "#;
+
+    runtime.execute_code(code).expect("Execution failed");
+    wait_for_server(3546);
+
+    let mut stream = TcpStream::connect(("127.0.0.1", 3546)).expect("Failed to connect");
+    stream.write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
+
+    let mut response = String::new();
+    stream.read_to_string(&mut response).expect("Failed to read");
+
+    assert!(response.contains("This is a longer response body"), "Should have full body");
+}
+

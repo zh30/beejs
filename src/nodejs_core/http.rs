@@ -1792,3 +1792,217 @@ fn http_res_remove_header_callback(
 
     retval.set(this.into());
 }
+
+// ============================================================================
+// v0.3.91: V8 上下文 HTTP 请求处理（跨线程调用 JavaScript Handler）
+// ============================================================================
+
+/// 在 V8 上下文中处理 HTTP 请求消息
+/// 调用 JavaScript request handler 并返回响应
+/// v0.3.91: 新增功能
+///
+/// # 参数
+/// - `request`: HTTP 请求消息（从消息通道接收）
+/// - `scope`: V8 句柄作用域
+/// - `_context`: V8 上下文（预留用于将来使用）
+/// - `request_handler`: 可选的 JavaScript request handler 函数
+///
+/// # 返回
+/// - `Some(HttpResponseMessage)` 如果处理成功
+/// - `None` 如果没有 handler 或处理失败
+pub fn process_http_request_in_v8(
+    request: &HttpRequestMessage,
+    scope: &mut v8::HandleScope,
+    _context: &v8::Local<v8::Context>,
+    request_handler: Option<v8::Global<v8::Function>>,
+) -> Option<HttpResponseMessage> {
+    // 如果没有 handler，返回 404
+    let handler = request_handler?;
+    let handler_fn = v8::Local::new(scope, &handler);
+
+    // 创建请求对象 (IncomingMessage)
+    let req_obj = v8::Object::new(scope);
+
+    // 设置请求属性
+    let method_key = v8::String::new(scope, "method").unwrap();
+    let method_val = v8::String::new(scope, &request.method).unwrap();
+    req_obj.set(scope, method_key.into(), method_val.into());
+
+    let url_key = v8::String::new(scope, "url").unwrap();
+    let url_val = v8::String::new(scope, &request.url).unwrap();
+    req_obj.set(scope, url_key.into(), url_val.into());
+
+    let path_key = v8::String::new(scope, "path").unwrap();
+    let path_val = v8::String::new(scope, &request.path).unwrap();
+    req_obj.set(scope, path_key.into(), path_val.into());
+
+    let http_version_key = v8::String::new(scope, "httpVersion").unwrap();
+    let http_version_val = v8::String::new(scope, &request.http_version).unwrap();
+    req_obj.set(scope, http_version_key.into(), http_version_val.into());
+
+    // 设置 headers 对象
+    let headers_obj = v8::Object::new(scope);
+    for (name, value) in &request.headers {
+        let name_key = v8::String::new(scope, name).unwrap();
+        let value_val = v8::String::new(scope, value).unwrap();
+        headers_obj.set(scope, name_key.into(), value_val.into());
+    }
+    let headers_key = v8::String::new(scope, "headers").unwrap();
+    req_obj.set(scope, headers_key.into(), headers_obj.into());
+
+    // 创建响应对象 (ServerResponse)
+    let res_obj = v8::Object::new(scope);
+
+    // 初始化 headers 对象
+    let res_headers_obj = v8::Object::new(scope);
+    let res_headers_key = v8::String::new(scope, "headers").unwrap();
+    res_obj.set(scope, res_headers_key.into(), res_headers_obj.into());
+
+    // 初始化 statusCode
+    let status_code_key = v8::String::new(scope, "statusCode").unwrap();
+    let status_code_val = v8::Integer::new(scope, 200);
+    res_obj.set(scope, status_code_key.into(), status_code_val.into());
+
+    // 初始化 statusMessage
+    let status_msg_key = v8::String::new(scope, "statusMessage").unwrap();
+    let status_msg_val = v8::String::new(scope, "OK").unwrap();
+    res_obj.set(scope, status_msg_key.into(), status_msg_val.into());
+
+    // 初始化 _body 用于存储响应体
+    let body_key = v8::String::new(scope, "_body").unwrap();
+    let empty_body = v8::String::new(scope, "").unwrap();
+    res_obj.set(scope, body_key.into(), empty_body.into());
+
+    // 设置 end 方法
+    let end_fn = v8::FunctionTemplate::new(scope, http_res_end_callback);
+    let end_instance = end_fn.get_function(scope).unwrap();
+    let end_key = v8::String::new(scope, "end").unwrap();
+    res_obj.set(scope, end_key.into(), end_instance.into());
+
+    // 设置 writeHead 方法
+    let write_head_fn = v8::FunctionTemplate::new(scope, http_res_write_head_callback);
+    let write_head_instance = write_head_fn.get_function(scope).unwrap();
+    let write_head_key = v8::String::new(scope, "writeHead").unwrap();
+    res_obj.set(scope, write_head_key.into(), write_head_instance.into());
+
+    // 设置 setHeader 方法
+    let set_header_fn = v8::FunctionTemplate::new(scope, http_res_set_header_callback);
+    let set_header_instance = set_header_fn.get_function(scope).unwrap();
+    let set_header_key = v8::String::new(scope, "setHeader").unwrap();
+    res_obj.set(scope, set_header_key.into(), set_header_instance.into());
+
+    // 设置 getHeader 方法
+    let get_header_fn = v8::FunctionTemplate::new(scope, http_res_get_header_callback);
+    let get_header_instance = get_header_fn.get_function(scope).unwrap();
+    let get_header_key = v8::String::new(scope, "getHeader").unwrap();
+    res_obj.set(scope, get_header_key.into(), get_header_instance.into());
+
+    // 设置 removeHeader 方法
+    let remove_header_fn = v8::FunctionTemplate::new(scope, http_res_remove_header_callback);
+    let remove_header_instance = remove_header_fn.get_function(scope).unwrap();
+    let remove_header_key = v8::String::new(scope, "removeHeader").unwrap();
+    res_obj.set(scope, remove_header_key.into(), remove_header_instance.into());
+
+    // 调用 request handler: handler(req, res)
+    let this_val = v8::undefined(scope).into();
+    let args = [req_obj.into(), res_obj.into()];
+
+    if handler_fn.call(scope, this_val, &args).is_none() {
+        eprintln!("[Beejs] Request handler execution failed");
+        return None;
+    }
+
+    // 从响应对象提取数据
+    let status_code_key = v8::String::new(scope, "statusCode").unwrap();
+    let status_code_val = res_obj.get(scope, status_code_key.into()).unwrap_or(v8::Integer::new(scope, 200).into());
+    let status_code = status_code_val.to_int32(scope).map(|i| i.value() as u16).unwrap_or(200);
+
+    // 提取 body
+    let body_key = v8::String::new(scope, "_body").unwrap();
+    let body_val = res_obj.get(scope, body_key.into()).unwrap_or(v8::String::new(scope, "").unwrap().into());
+    let body_str = body_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+    let body_bytes = body_str.into_bytes();
+
+    // 提取 headers
+    let mut response_headers = HashMap::new();
+    let res_headers_key = v8::String::new(scope, "headers").unwrap();
+    if let Some(headers_val) = res_obj.get(scope, res_headers_key.into()) {
+        if let Ok(headers_obj) = v8::Local::<v8::Object>::try_from(headers_val) {
+            let props = headers_obj.get_own_property_names(scope).unwrap_or(v8::Array::new(scope, 0));
+            for i in 0..props.length() {
+                if let Some(key_val) = props.get_index(scope, i) {
+                    if let Some(key_str) = key_val.to_string(scope) {
+                        let key = key_str.to_rust_string_lossy(scope);
+                        if let Some(value_val) = headers_obj.get(scope, key_val) {
+                            if let Some(value_str) = value_val.to_string(scope) {
+                                let value = value_str.to_rust_string_lossy(scope);
+                                response_headers.insert(key, value);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 设置默认 headers
+    response_headers.insert("Content-Type".to_string(), "text/plain; charset=utf-8".to_string());
+
+    Some(HttpResponseMessage {
+        connection_id: request.connection_id,
+        status_code,
+        headers: response_headers,
+        body: body_bytes,
+    })
+}
+
+/// 在 V8 上下文中处理 HTTP 请求（获取 response 对象）
+/// 用于 event_loop.rs 中轮询消息队列
+/// v0.3.91: 新增功能
+///
+/// 返回响应的 body 字符串和状态码
+pub fn handle_http_request_v8(
+    request: &HttpRequestMessage,
+    scope: &mut v8::HandleScope,
+    context: &v8::Local<v8::Context>,
+) -> Option<(u16, Vec<u8>)> {
+    // 获取全局 request handler
+    let handler = get_global_request_handler(scope, context)?;
+
+    // 处理请求
+    let response = process_http_request_in_v8(request, scope, context, Some(handler))?;
+
+    Some((response.status_code, response.body))
+}
+
+/// 获取全局 request handler
+/// v0.3.91: 新增功能
+pub fn get_global_request_handler(
+    scope: &mut v8::HandleScope,
+    context: &v8::Local<v8::Context>,
+) -> Option<v8::Global<v8::Function>> {
+    let global = context.global(scope);
+
+    // 查找 _httpServerRequestHandler
+    let handler_key = v8::String::new(scope, "_httpServerRequestHandler").unwrap();
+    let handler_val = global.get(scope, handler_key.into())?;
+
+    if !handler_val.is_function() {
+        return None;
+    }
+
+    let handler_fn = v8::Local::<v8::Function>::try_from(handler_val).ok()?;
+    Some(v8::Global::new(scope, handler_fn))
+}
+
+/// 设置全局 request handler（供 JS 代码使用）
+/// v0.3.91: 新增功能
+pub fn set_global_request_handler(
+    scope: &mut v8::HandleScope,
+    context: &v8::Local<v8::Context>,
+    handler: v8::Local<v8::Function>,
+) {
+    let global = context.global(scope);
+    let handler_key = v8::String::new(scope, "_httpServerRequestHandler").unwrap();
+    global.set(scope, handler_key.into(), handler.into());
+}
