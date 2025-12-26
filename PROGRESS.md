@@ -48,6 +48,48 @@
 - `req.httpVersion` - HTTP 版本 (HTTP/1.1)
 - `req.headers` - 请求头对象
 
+#### v0.3.87.1 修复和增强
+- **修复 http.end() 回调参数处理**
+  - `end()` 函数现在正确处理传入的数据参数
+  - 数据会被追加到 `_body` 属性中
+  - 与 `write()` 方法的行为一致
+
+#### v0.3.88 新增功能 (2025-12-26)
+**进度**: HTTP Server Tests | ✅ 代码已合并
+
+#### v0.3.88 新增集成测试
+- **新增 `tests/http_server_integration_tests.rs`**
+  - `test_http_server_listens_on_port()` - 验证服务器监听端口
+  - `test_http_server_receives_requests()` - 验证接收请求
+  - `test_http_server_handles_multiple_connections()` - 验证多连接处理
+  - `test_http_server_different_ports()` - 验证不同端口
+  - `test_http_server_request_method_detection()` - 验证 HTTP 方法
+  - `test_http_server_request_with_headers()` - 验证请求头处理
+  - `test_http_server_close()` - 验证关闭功能
+  - `test_http_server_listen_callback()` - 验证监听回调
+  - `test_http_server_ipv6_binding()` - 验证 IPv4 绑定
+
+#### v0.3.88 测试结果
+```bash
+$ cargo test --test http_server_integration_tests
+running 9 tests
+test test_http_server_request_with_headers ... ok
+test test_http_server_ipv6_binding ... ok
+test test_http_server_receives_requests ... ok
+test test_http_server_listens_on_port ... ok
+test test_http_server_request_method_detection ... ok
+test test_http_server_handles_multiple_connections ... ok
+test test_http_server_listen_callback ... ok
+test test_http_server_different_ports ... ok
+test test_http_server_close ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 measured; 0 failed
+```
+
+#### v0.3.88 下一步计划
+- 继续完善 HTTP Server 响应处理（需要跨线程 V8 上下文）
+- 添加更多 Node.js API 兼容性测试
+- 优化性能基准测试
+
 #### v0.3.87 代码变更
 - **修改文件**: `src/nodejs_core/http.rs` (+637 行)
   - 添加 `HttpServerRequest` 结构体

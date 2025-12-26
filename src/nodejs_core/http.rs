@@ -1170,11 +1170,41 @@ fn http_res_write_head_callback(
     retval.set(this.into());
 }
 fn http_res_end_callback(
-    _scope: &mut v8::HandleScope,
+    scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let this: _ = args.this();
+    let data: _ = args.get(0);
+
+    // 处理 end() 的数据参数，存储到 _body
+    if !data.is_undefined() {
+        let body_key: _ = v8::String::new(scope, "_body").unwrap();
+        // 获取现有 body
+        let existing_body = this.get(scope, body_key.into()).unwrap_or(v8::undefined(scope).into());
+
+        // 追加新数据到现有 body
+        if existing_body.is_string() {
+            // 字符串拼接 - 预先构建 Rust 字符串避免双重借用
+            let existing_str = existing_body.to_string(scope).unwrap();
+            let existing_rust = existing_str.to_rust_string_lossy(scope);
+
+            let data_rust = if data.is_string() {
+                let data_str = data.to_string(scope).unwrap();
+                data_str.to_rust_string_lossy(scope)
+            } else {
+                "[data]".to_string()
+            };
+
+            let combined_rust = format!("{}{}", existing_rust, data_rust);
+            let combined = v8::String::new(scope, &combined_rust).unwrap();
+            this.set(scope, body_key.into(), combined.into());
+        } else {
+            // 存储新数据
+            this.set(scope, body_key.into(), data);
+        }
+    }
+
     retval.set(this.into());
 }
 
