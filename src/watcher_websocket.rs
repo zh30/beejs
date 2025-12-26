@@ -7,6 +7,9 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::broadcast;
+use tokio::net::{TcpListener, TcpStream};
+use tokio_tungstenite::{accept_async, tungstenite::protocol::Message};
+use futures_util::{SinkExt, StreamExt};
 use std::time::SystemTime;
 
 /// WebSocket hot reload server configuration
@@ -124,31 +127,59 @@ impl WebSocketHotReloader {
         let _ = self.broadcast(event);
     }
 
-    /// TODO: 实现 WebSocket 服务器启动函数
+    /// Start the WebSocket server and accept connections
     ///
-    /// 这里是你的贡献机会！这个异步函数需要：
-    /// 1. 创建 TCP 监听器
-    /// 2. 接受 WebSocket 连接
-    /// 3. 为每个客户端创建处理任务
-    /// 4. 监听广播事件并发送到客户端
-    ///
-    /// 考虑点：
-    /// - 如何处理并发连接？（tokio::spawn）
-    /// - 如何优雅关闭服务器？
-    /// - 如何处理客户端断开？
+    /// This function:
+    /// 1. Creates a TCP listener on the configured host/port
+    /// 2. Accepts WebSocket connections asynchronously
+    /// 3. Spawns a handler task for each client
+    /// 4. Listens for broadcast events and sends them to all connected clients
     #[allow(dead_code)]
     pub async fn start(&self) -> Result<(), String> {
-        // TODO: 实现这个函数
-        //
-        // 参考实现思路：
-        // 1. let addr = format!("{}:{}", self.config.host, self.config.port);
-        // 2. let listener = TcpListener::bind(&addr).await?;
-        // 3. self.running.store(true, Ordering::SeqCst);
-        // 4. 循环接受连接：while self.running.load(Ordering::SeqCst) && let Ok((stream, _)) = listener.accept().await { ... }
-        // 5. 在循环内接受 WebSocket 并 spawn 处理任务
-        // 6. 处理任务中：订阅广播，循环接收并发送到客户端
+        let addr = format!("{}:{}", self.config.host, self.config.port);
 
-        Err("TODO: 实现 start 函数".to_string())
+        // Create TCP listener
+        let listener = match TcpListener::bind(&addr).await {
+            Ok(l) => l,
+            Err(e) => return Err(format!("Failed to bind to {}: {}", addr, e)),
+        };
+
+        self.running.store(true, Ordering::SeqCst);
+
+        println!("\n\x1b[36m[beejs]\x1b[0m 🔌 WebSocket server listening on ws://{}", addr);
+
+        // Accept connections loop
+        while self.running.load(Ordering::SeqCst) {
+            match listener.accept().await {
+                Ok((stream, addr)) => {
+                    // Accept WebSocket handshake
+                    match accept_async(stream).await {
+                        Ok(ws_stream) => {
+                            let rx = self.subscribe();
+                            let running = self.running.clone();
+
+                            // Spawn handler task for each client
+                            tokio::spawn(async move {
+                                handle_client(ws_stream, rx, running).await;
+                            });
+
+                            println!("\x1b[36m[beejs]\x1b[0m 📡 Client connected: {}", addr);
+                        }
+                        Err(e) => {
+                            eprintln!("[beejs] WebSocket handshake failed: {}", e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    // Only log if we're still running
+                    if self.running.load(Ordering::SeqCst) {
+                        eprintln!("[beejs] Failed to accept connection: {}", e);
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Stop the server
@@ -173,44 +204,84 @@ impl Default for WebSocketHotReloader {
     }
 }
 
-/// TODO: 实现客户端连接处理函数
+/// Handle a single WebSocket client connection
 ///
-/// 这个内部函数处理单个 WebSocket 客户端连接。
-/// 它需要：
-/// 1. 接收 WebSocket 流
-/// 2. 订阅广播通道
-/// 3. 将接收到的广播消息转换为 JSON 并发送到客户端
-/// 4. 处理客户端断开连接
-///
-/// 考虑点：
-/// - 使用什么循环模式？（while let Some(Ok(msg)) = stream.next()）
-/// - 如何处理 JSON 序列化错误？
-/// - 是否需要处理客户端发送的消息？
-#[allow(dead_code)]
+/// This function:
+/// 1. Receives the WebSocket stream
+/// 2. Subscribes to the broadcast channel
+/// 3. Converts received broadcast messages to JSON and sends to client
+/// 4. Handles client disconnection
 async fn handle_client(
-    _ws_stream: tokio_tungstenite::WebSocketStream<std::net::TcpStream>,
-    _rx: broadcast::Receiver<HotReloadEvent>,
+    ws_stream: tokio_tungstenite::WebSocketStream<TcpStream>,
+    mut rx: broadcast::Receiver<HotReloadEvent>,
+    running: Arc<AtomicBool>,
 ) {
-    // TODO: 实现这个函数
-    //
-    // 参考实现思路：
-    // let (mut ws_sender, mut ws_receiver) = ws_stream.split();
-    // let mut rx = rx.clone();
-    //
-    // tokio::spawn(async move {
-    //     while let Ok(event) = rx.recv().await {
-    //         if let Ok(json) = serde_json::to_string(&event) {
-    //             let _ = ws_sender.send(Message::Text(json)).await;
-    //         }
-    //     }
-    // });
-    //
-    // 处理客户端消息（可选）：
-    // while let Some(Ok(msg)) = ws_receiver.next().await {
-    //     if let Message::Text(text) = msg {
-    //         // 处理客户端消息...
-    //     }
-    // }
+    // Split the WebSocket stream into sender and receiver
+    let (mut ws_sender, mut ws_receiver) = ws_stream.split();
+
+    // Clone running flag for use in select
+    let running_clone = running.clone();
+
+    // Handle both broadcast events and client messages using select
+    loop {
+        tokio::select! {
+            // Handle broadcast events
+            biased;
+            event_result = rx.recv() => {
+                match event_result {
+                    Ok(event) => {
+                        // Serialize event to JSON and send to client
+                        if let Ok(json) = serde_json::to_string(&event) {
+                            if ws_sender.send(Message::Text(json)).await.is_err() {
+                                // Client disconnected
+                                break;
+                            }
+                        }
+                    }
+                    Err(broadcast::error::RecvError::Closed) => {
+                        // Channel closed
+                        break;
+                    }
+                    Err(_) => {
+                        // Unexpected error
+                        break;
+                    }
+                }
+            }
+            // Handle client messages
+            msg_result = ws_receiver.next() => {
+                match msg_result {
+                    Some(Ok(Message::Text(text))) => {
+                        // Handle ping/pong for keepalive
+                        if text == "ping" {
+                            let _ = ws_sender.send(Message::Text("pong".to_string())).await;
+                        }
+                    }
+                    Some(Ok(Message::Close(_))) => {
+                        // Client closed connection
+                        break;
+                    }
+                    Some(Ok(_)) => {
+                        // Ignore other message types
+                    }
+                    Some(Err(e)) => {
+                        eprintln!("[beejs] WebSocket error: {}", e);
+                        break;
+                    }
+                    None => {
+                        // Stream ended
+                        break;
+                    }
+                }
+            }
+            _ = tokio::time::sleep(std::time::Duration::from_secs(1)) => {
+                // Periodic check if running flag changed
+                if !running_clone.load(Ordering::SeqCst) {
+                    break;
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
