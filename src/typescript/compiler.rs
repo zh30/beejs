@@ -1307,6 +1307,10 @@ impl TypeScriptCompiler {
             ASTExpression::SuperExpression => {
                 Ok(Some("any".to_string()))
             }
+            // 类型断言表达式的类型就是目标类型
+            ASTExpression::TSAsExpression { target_type, .. } => {
+                Ok(Some(target_type.clone()))
+            }
         }
     }
 
@@ -1968,6 +1972,12 @@ pub enum ASTExpression {
     },
     /// super 关键字
     SuperExpression,
+    /// TypeScript 类型断言: value as Type
+    /// 转译时类型信息被移除，直接输出原始表达式
+    TSAsExpression {
+        expression: Box<ASTExpression>,
+        target_type: String,
+    },
 }
 #[derive(Debug, Clone)]
 pub enum ASTStatement {
@@ -4359,6 +4369,18 @@ impl Parser {
                         index: Box::new(index),
                     };
                 }
+                // TypeScript 类型断言: expr as Type
+                // 必须在索引访问之后处理，因为 < 可能被解释为泛型或小于运算符
+                Token::As => {
+                    self.consume(Token::As)?;
+                    // 解析目标类型
+                    let target_type = self.parse_type_annotation()
+                        .unwrap_or_else(|| "unknown".to_string());
+                    expr = ASTExpression::TSAsExpression {
+                        expression: Box::new(expr),
+                        target_type,
+                    };
+                }
                 // 二元运算符
                 Token::Plus | Token::Minus | Token::Star | Token::Slash | Token::Percent |
                 Token::EqEq | Token::EqEqEq | Token::NotEq | Token::NotEqEq |
@@ -6445,6 +6467,11 @@ impl CodeEmitter {
             }
             ASTExpression::SuperExpression => {
                 self.output.push_str("super");
+            }
+            // TypeScript 类型断言: value as Type
+            // 转译时移除类型信息，直接输出原始表达式
+            ASTExpression::TSAsExpression { expression, target_type: _ } => {
+                self.emit_expression(expression);
             }
             ASTExpression::AssignmentExpression { left, right } => {
                 self.emit_expression(left);
@@ -9469,5 +9496,62 @@ enum Direction {
             "Should contain 'Color': {}", result.js_code);
         assert!(result.js_code.contains("Direction"),
             "Should contain 'Direction': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_type_assertion_as() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test basic type assertion with 'as' keyword
+        // Type assertions are removed in transpiled JS (not needed in JS)
+        let source = r#"
+const value: unknown = "hello";
+const strValue = value as string;
+const numValue = someValue as number;
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Type annotations should be removed
+        assert!(!result.js_code.contains(": unknown"),
+            "Should not contain ': unknown': {}", result.js_code);
+        // The type assertion `as Type` should be removed, leaving just the expression
+        assert!(result.js_code.contains("strValue = value"),
+            "Should contain 'strValue = value': {}", result.js_code);
+        assert!(result.js_code.contains("numValue = someValue"),
+            "Should contain 'numValue = someValue': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_type_assertion_with_object() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test type assertion with object properties
+        let source = r#"
+interface Person {
+    name: string;
+    age: number;
+}
+
+const data = { name: "John", age: 30 };
+const person = data as Person;
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Type assertion should be removed
+        assert!(result.js_code.contains("person = data"),
+            "Should contain 'person = data': {}", result.js_code);
+        // Interface should be removed
+        assert!(!result.js_code.contains("interface Person"),
+            "Should not contain 'interface Person': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_type_assertion_chain() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test chained type assertions
+        let source = r#"
+const value: any = "test";
+const result = value as string as any;
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Chained type assertions should be removed, leaving just the expression
+        assert!(result.js_code.contains("result = value"),
+            "Should contain 'result = value': {}", result.js_code);
     }
 }
