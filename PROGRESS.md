@@ -1,3 +1,39 @@
+### v0.3.123 实现条件类型支持 (2025-12-27)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.123 新增功能
+- **条件类型（Conditional Types）**
+  - 支持 `T extends U ? X : Y` 基础语法
+  - 支持嵌套条件类型 `T extends U ? A : T extends V ? B : C`
+  - 支持条件类型与泛型结合 `<T, U extends T>`
+  - 支持条件类型在类型别名中使用
+
+- **解析器增强**
+  - 修改 `parse_type_annotation()` 添加条件类型检测
+  - 修改 `parse_union_type()` 添加条件类型检测
+
+#### v0.3.123 验证
+- ✅ `cargo test --lib` 113/113 通过 (+4)
+- ✅ 新增测试用例:
+  - `test_conditional_type_basic`: 基础 `T extends U ? X : Y` 语法
+  - `test_conditional_type_with_generics`: 条件类型与泛型结合
+  - `test_conditional_type_nested`: 嵌套条件类型
+  - `test_conditional_type_in_type_alias`: 类型别名中的条件类型
+- ✅ `cargo build --release` 成功编译
+- ✅ 无编译器警告
+
+#### v0.3.123 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+150/-0 行)
+  - 在 `parse_type_annotation()` 添加条件类型检测逻辑
+  - 在 `parse_union_type()` 添加条件类型检测逻辑
+  - 添加 4 个测试用例
+
+#### v0.3.123 下一步计划
+- 继续完善 TypeScript 编译器功能
+- 实现模板字面量类型（Template Literal Types）
+- 实现 `infer` 关键字支持
+- 添加更多边界情况测试
+
 ### v0.3.122 实现映射类型支持 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 
