@@ -1,5 +1,43 @@
-### v0.3.121 实现索引类型查询支持 (2025-12-27)
+### v0.3.122 实现映射类型支持 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.122 新增功能
+- **映射类型（Mapped Types）**
+  - 支持 `{ [P in keyof T]: T[P] }` 基础语法
+  - 支持 `{ [P in keyof T]?: T[P] }` 可选修饰符
+  - 支持 `{ readonly [P in keyof T]: T[P] }` 只读修饰符
+  - 支持 `{ readonly [P in keyof T]?: T[P] }` 组合修饰符
+  - 支持 `{ [P in "name" | "age"]: T[P] }` 字符串联合键类型
+
+- **关键字扩展**
+  - 新增 `in` 关键字 Token（用于映射类型 `in` 操作符）
+  - 新增 `readonly` 关键字 Token（用于只读修饰符）
+
+#### v0.3.122 验证
+- ✅ `cargo test --lib` 109/109 通过 (+4)
+- ✅ 新增测试用例:
+  - `test_mapped_type_basic`: 基础 `{ [P in keyof T]?: T[P] }` 语法
+  - `test_mapped_type_with_string_union`: 字符串联合键类型
+  - `test_mapped_type_readonly`: readonly 修饰符支持
+  - `test_mapped_type_in_generic`: 映射类型在泛型函数中使用
+- ✅ `cargo build --release` 成功编译
+- ✅ 无编译器警告
+
+#### v0.3.122 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+188/-8 行)
+  - 添加 `Readonly` 和 `In` Token 类型
+  - 修改词法分析器识别 `in` 和 `readonly` 关键字
+  - 新增 `parse_mapped_type` 解析函数
+  - 修改 `parse_object_type` 检测映射类型语法
+  - 增强 `parse_union_type` 支持索引访问类型后缀 `T[P]`
+  - 添加 4 个测试用例
+
+#### v0.3.122 下一步计划
+- 继续完善 TypeScript 编译器功能
+- 实现条件类型（Conditional Types）
+- 添加更多边界情况测试
+
+### v0.3.121 实现索引类型查询支持 (2025-12-27)
 
 #### v0.3.121 新增功能
 - **keyof 操作符**
