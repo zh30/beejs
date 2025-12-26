@@ -1,3 +1,38 @@
+### v0.3.125 实现 infer 关键字支持 (2025-12-27)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.125 新增功能
+- **infer 关键字（类型推断）**
+  - 支持 `infer U` 基础语法（在条件类型中推导类型）
+  - 支持 `infer U extends T` 带约束的类型推断
+  - 支持链式条件类型 `T extends Promise<infer U> ? DeepUnwrap<U> : T`
+
+- **解析器增强**
+  - 在 `Token` 枚举添加 `Infer` 变体
+  - 在词法分析器添加 `infer` 关键字识别
+  - 在 `parse_basic_type()` 添加 infer 类型解析逻辑
+
+#### v0.3.125 验证
+- ✅ `cargo test --lib` 120/120 通过 (+3)
+- ✅ 新增测试用例:
+  - `test_infer_keyword_basic`: 基础 `infer U` 语法
+  - `test_infer_keyword_with_constraint`: 带约束的 `infer U extends T`
+  - `test_infer_keyword_chained`: 链式条件类型中的推断
+- ✅ `cargo build --release` 成功编译
+- ✅ 无编译器警告
+
+#### v0.3.125 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+60/-0 行)
+  - 添加 `Infer` Token 类型
+  - 在词法分析器添加 `infer` 关键字识别
+  - 在 `parse_basic_type()` 添加 infer 处理逻辑
+  - 添加 3 个测试用例
+
+#### v0.3.125 下一步计划
+- 继续完善 TypeScript 编译器功能
+- 实现更多高级类型特性
+- 添加更多边界情况测试
+
 ### v0.3.124 实现模板字面量类型支持 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 
@@ -31,7 +66,7 @@
 
 #### v0.3.124 下一步计划
 - 继续完善 TypeScript 编译器功能
-- 实现 `infer` 关键字支持
+- 实现 `infer` 关键字支持 ✅ 已完成
 - 添加更多边界情况测试
 
 ### v0.3.123 实现条件类型支持 (2025-12-27)

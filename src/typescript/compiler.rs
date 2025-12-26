@@ -209,6 +209,7 @@ impl TypeScriptCompiler {
                     "keyof" => Token::Keyof,
                     "typeof" => Token::Typeof,
                     "in" => Token::In,
+                    "infer" => Token::Infer,
                     "readonly" => Token::Readonly,
                     _ => Token::Identifier(ident),
                 };
@@ -906,6 +907,7 @@ pub enum Token {
     Keyof,    // keyof 操作符
     Typeof,   // typeof 操作符
     In,       // in 操作符（用于映射类型）
+    Infer,    // infer 关键字（用于条件类型推导）
     // 符号
     LParen,
     RParen,
@@ -4412,6 +4414,28 @@ impl Parser {
                     Some("typeof unknown".to_string())
                 }
             }
+            // 处理 infer 关键字: infer U 或 infer U extends T
+            Token::Infer => {
+                self.advance();
+                // 获取推断的类型变量名
+                if let Token::Identifier(ref name) = self.current_token() {
+                    let infer_name = name.clone();
+                    self.advance();
+                    // 检查是否有 extends 约束
+                    if self.current_token_eq(&Token::Extends) {
+                        self.advance();
+                        if let Some(constraint) = self.parse_basic_type() {
+                            Some(format!("infer {} extends {}", infer_name, constraint))
+                        } else {
+                            Some(format!("infer {}", infer_name))
+                        }
+                    } else {
+                        Some(format!("infer {}", infer_name))
+                    }
+                } else {
+                    Some("infer _".to_string())
+                }
+            }
             // 注意: 索引访问类型 T[K] 由 parse_type_annotation 处理
             _ => None,
         }
@@ -7186,6 +7210,69 @@ type ConfigType = typeof config;
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 assert!(!result.js_code.contains("type ApiPath"),
+                    "Should not contain type alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_infer_keyword_basic() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test basic infer keyword: infer U
+        let source = r#"type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;"#;
+        println!("\n========== Testing basic infer keyword ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(!result.js_code.contains("type UnwrapPromise"),
+                    "Should not contain type alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_infer_keyword_with_constraint() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test infer keyword with extends constraint: infer U extends string
+        let source = r#"type StringResult<T> = T extends infer U extends string ? U : never;"#;
+        println!("\n========== Testing infer keyword with constraint ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(!result.js_code.contains("type StringResult"),
+                    "Should not contain type alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_infer_keyword_chained() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test chained conditional types with infer
+        let source = r#"type DeepUnwrap<T> = T extends Promise<infer U> ? DeepUnwrap<U> : T;"#;
+        println!("\n========== Testing infer keyword chained ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(!result.js_code.contains("type DeepUnwrap"),
                     "Should not contain type alias: {}", result.js_code);
             }
             Err(e) => {
