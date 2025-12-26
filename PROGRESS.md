@@ -8297,9 +8297,51 @@ class DataFetcher {
 ```
 
 #### v0.3.127 下一步计划
-- 完善类成员解析（构造函数参数类型、 getter/setter 类型）
+- 完善类成员解析（构造函数参数类型、 getter/setter 类型）✅ v0.3.134
 - 实现计算属性名
 - 优化 Source Map 生成精度
+
+---
+
+### v0.3.134 构造函数访问修饰符支持 (2025-12-27)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.134 新增功能
+- **构造函数参数访问修饰符**
+  - 支持 `constructor(public name: string)` 语法
+  - 支持 `constructor(private age: number)` 语法
+  - 支持 `constructor(protected id: number)` 语法
+  - 支持 `readonly` 修饰符
+  - 自动生成 `this.name = name;` 赋值语句
+
+- **AST 增强**
+  - `FunctionParameter::Simple` 添加 `is_public`, `is_private`, `is_protected`, `is_readonly` 字段
+  - 构造函数代码生成时自动生成属性赋值
+
+#### v0.3.134 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+123/-4 行)
+  - 更新 `FunctionParameter` 枚举添加访问修饰符字段
+  - 修改 `parse_function_params_list()` 解析访问修饰符
+  - 修改 `emit_node()` 为构造函数生成 `this.param = param;` 赋值
+  - 新增 `test_constructor_with_access_modifiers` 测试
+
+#### v0.3.134 验证
+- ✅ `cargo test --lib` → 142/142 通过 (+1)
+- ✅ 新增测试用例验证访问修饰符编译
+
+#### v0.3.134 使用示例
+```typescript
+class Person {
+    constructor(public name: string, private age: number, protected id: number) {}
+}
+const p = new Person("Alice", 30, 123);
+console.log(p.name);  // "Alice"
+```
+
+#### v0.3.134 下一步计划
+- 实现计算属性名
+- 优化 Source Map 生成精度
+- 实现模板字符串完整支持
 
 #### v0.3.117 下一步计划
 - 完善箭头函数解构参数支持
