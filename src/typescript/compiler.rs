@@ -208,6 +208,8 @@ impl TypeScriptCompiler {
                     "as" => Token::As,
                     "keyof" => Token::Keyof,
                     "typeof" => Token::Typeof,
+                    "in" => Token::In,
+                    "readonly" => Token::Readonly,
                     _ => Token::Identifier(ident),
                 };
                 tokens.push(token);
@@ -886,6 +888,7 @@ pub enum Token {
     Private,
     Protected,
     Static,
+    Readonly, // readonly 修饰符（用于映射类型）
     Async,
     Await,
     Try,
@@ -902,6 +905,7 @@ pub enum Token {
     As,
     Keyof,    // keyof 操作符
     Typeof,   // typeof 操作符
+    In,       // in 操作符（用于映射类型）
     // 符号
     LParen,
     RParen,
@@ -3972,7 +3976,8 @@ impl Parser {
     }
     fn parse_type_annotation(&mut self) -> Option<String> {
         // 检查是否是对象类型字面量
-        let first_type = if self.current_token_eq(&Token::LBrace) {
+        let is_lbrace = self.current_token_eq(&Token::LBrace);
+        let first_type = if is_lbrace {
             self.parse_object_type()
         } else {
             self.parse_basic_type()
@@ -4047,8 +4052,18 @@ impl Parser {
     }
 
     /// 解析对象类型字面量: { name: string; age: number }
+    /// 或映射类型: { [P in keyof T]: T[P] }
     fn parse_object_type(&mut self) -> Option<String> {
         self.consume(Token::LBrace).ok()?;
+
+        // 检测映射类型语法: { [P in KeyType]: ValueType } 或 { readonly [P in KeyType]: ValueType }
+        let is_mapped_type = self.current_token_eq(&Token::LBracket) ||
+           (self.current_token_eq(&Token::Readonly) && self.position + 1 < self.tokens.len() &&
+            matches!(self.tokens[self.position + 1], Token::LBracket));
+        if is_mapped_type {
+            return self.parse_mapped_type();
+        }
+
         let mut properties = Vec::new();
 
         // 解析属性列表
@@ -4094,10 +4109,86 @@ impl Parser {
         self.consume(Token::RBrace).ok()?;
         Some(format!("{{ {} }}", properties.join("; ")))
     }
+
+    /// 解析映射类型: { [P in keyof T]: T[P] } 或 { readonly [P in keyof T]: T[P] }
+    fn parse_mapped_type(&mut self) -> Option<String> {
+        // 跳过可选的 readonly 修饰符（可能在 [ 之前）
+        if self.current_token_eq(&Token::Readonly) {
+            self.advance();
+        }
+
+        // 消耗 [
+        self.consume(Token::LBracket).ok()?;
+
+        // 解析键变量名 (P)
+        let _key_var = match self.current_token() {
+            Token::Identifier(ref name) => {
+                let name = name.clone();
+                self.advance();
+                name
+            }
+            _ => {
+                return None;
+            }
+        };
+
+        // 期望 in 关键字
+        self.consume(Token::In).ok()?;
+
+        // 解析键类型 (keyof T 或 "key1" | "key2")
+        let _key_type = self.parse_union_type()?;
+
+        // 消耗 ]
+        self.consume(Token::RBracket).ok()?;
+
+        // 跳过可选的 ? 修饰符
+        if self.current_token_eq(&Token::Question) {
+            self.advance();
+        }
+
+        // 期望冒号
+        self.consume(Token::Colon).ok()?;
+
+        // 解析值类型 (T[P])
+        let _value_type = self.parse_union_type()?;
+
+        // 消耗 }
+        self.consume(Token::RBrace).ok()?;
+
+        // 映射类型在转译后的 JS 中应被移除，这里返回空对象类型的占位符
+        Some(String::new())
+    }
     fn parse_union_type(&mut self) -> Option<String> {
         // 解析第一个类型
         let first_type: _ = self.parse_basic_type()?;
-        let mut types = vec![first_type];
+
+        // 处理索引访问类型后缀: T["key"] 或 T[K]
+        let mut result = first_type;
+        while self.current_token_eq(&Token::LBracket) {
+            self.advance();
+            // 解析索引键
+            let index_key = if let Token::String(ref s, quote) = self.current_token() {
+                let s = s.clone();
+                let quote_char = *quote;
+                self.advance();
+                format!("{}{}{}", quote_char, s, quote_char)
+            } else if let Token::Identifier(ref name) = self.current_token() {
+                let name = name.clone();
+                self.advance();
+                name
+            } else {
+                // 解析基本类型作为索引
+                if let Some(idx_type) = self.parse_basic_type() {
+                    idx_type
+                } else {
+                    break
+                }
+            };
+            self.consume(Token::RBracket).ok()?;
+            result = format!("{}[{}]", result, index_key);
+        }
+
+        let mut types = vec![result];
         let mut operators = Vec::new();
 
         // 检查是否有更多类型（通过 | 或 & 连接）
@@ -4122,14 +4213,14 @@ impl Parser {
             Some(types[0].clone())
         } else {
             // 交替输出类型和运算符
-            let mut result = types[0].clone();
+            let mut final_result = types[0].clone();
             for (i, op) in operators.iter().enumerate() {
-                result.push(' ');
-                result.push_str(op);
-                result.push(' ');
-                result.push_str(&types[i + 1]);
+                final_result.push(' ');
+                final_result.push_str(op);
+                final_result.push(' ');
+                final_result.push_str(&types[i + 1]);
             }
-            Some(result)
+            Some(final_result)
         }
     }
     fn parse_basic_type(&mut self) -> Option<String> {
@@ -6717,6 +6808,95 @@ type ConfigType = typeof config;
                 println!("JS Code:\n{}", result.js_code);
                 // Function should remain but type annotations should be removed
                 assert!(result.js_code.contains("function getProperty"),
+                    "Should contain function: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_mapped_type_basic() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test basic mapped type: { [P in keyof T]: T[P] }
+        let source = r#"type Partial<T> = { [P in keyof T]?: T[P] };"#;
+        println!("\n========== Testing basic mapped type ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Type alias should be skipped in JS output
+                assert!(!result.js_code.contains("type Partial"),
+                    "Should not contain 'type Partial': {}", result.js_code);
+                assert!(!result.js_code.contains("[P in keyof T]"),
+                    "Should not contain mapped type syntax: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_mapped_type_with_string_union() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test mapped type with string union keys
+        let source = r#"type StringKeyMap = { [P in "name" | "age"]: any };"#;
+        println!("\n========== Testing mapped type with string union ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(!result.js_code.contains("type StringKeyMap"),
+                    "Should not contain type alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_mapped_type_readonly() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test mapped type with readonly modifier
+        let source = r#"type Readonly<T> = { readonly [P in keyof T]: T[P] };"#;
+        println!("\n========== Testing mapped type with readonly ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(!result.js_code.contains("type Readonly"),
+                    "Should not contain type alias: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_mapped_type_in_generic() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test mapped type used in generic function
+        let source = r#"function makeOptional<T>(obj: T): { [P in keyof T]?: T[P] } {
+    return obj;
+}"#;
+        println!("\n========== Testing mapped type in generic function ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("function makeOptional"),
                     "Should contain function: {}", result.js_code);
             }
             Err(e) => {
