@@ -28,6 +28,12 @@ enum Command {
         file: PathBuf,
         /// Arguments to pass to the script
         args: Vec<String>,
+        /// Enable watch mode (hot reload)
+        #[arg(short, long)]
+        watch: bool,
+        /// Debounce time in milliseconds for watch mode
+        #[arg(long, default_value = "100")]
+        debounce: u64,
     },
     /// Evaluate JavaScript code
     Eval {
@@ -152,29 +158,99 @@ fn main() -> Result<()> {
             }
             return Ok(());
         }
-        Some(Command::Run { file, args }) => {
+        Some(Command::Run { file, args, watch, debounce }) => {
             println!("🐝 Running Beejs on: {}", file.display());
             if !args.is_empty() {
                 println!("Args: {:?}", args);
             }
 
-            // Create a minimal runtime
-            let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
-                .expect("Failed to create runtime");
+            if watch {
+                // Watch mode: enable hot reload
+                println!("🔥 Watch mode enabled (debounce: {}ms)", debounce);
 
-            // Read and execute the file
-            let code = std::fs::read_to_string(&file)
-                .map_err(|e| anyhow::anyhow!("Failed to read file: {}", e))?;
+                // Get the directory to watch
+                let watch_path = if file.is_file() {
+                    file.parent().unwrap_or(&file).to_path_buf()
+                } else {
+                    file.clone()
+                };
 
-            match runtime.execute_code(&code) {
-                Ok(result) => {
-                    if !result.trim().is_empty() {
-                        println!("Result: {}", result);
+                // Create a hot reloader
+                let config = beejs::watcher::WatcherConfigBuilder::new()
+                    .debounce_ms(debounce)
+                    .build();
+                let mut reloader = beejs::watcher::HotReloader::with_config(config);
+
+                let rx = reloader.watch(&watch_path)
+                    .map_err(|e| anyhow::anyhow!("Failed to start watcher: {}", e))?;
+
+                println!("👀 Watching for changes in {:?}...", watch_path);
+
+                // Initial execution
+                let execute_file = |file: &PathBuf| -> Result<()> {
+                    let code = std::fs::read_to_string(file)
+                        .map_err(|e| anyhow::anyhow!("Failed to read file: {}", e))?;
+
+                    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
+                        .expect("Failed to create runtime");
+
+                    match runtime.execute_code(&code) {
+                        Ok(result) => {
+                            if !result.trim().is_empty() {
+                                println!("\n📊 Result: {}", result);
+                            }
+                            println!("✅ Executed successfully");
+                        }
+                        Err(e) => {
+                            eprintln!("❌ Error: {}", e);
+                        }
+                    }
+                    Ok(())
+                };
+
+                // Initial run
+                execute_file(&file)?;
+
+                // Watch for changes
+                loop {
+                    match rx.recv() {
+                        Ok(change) => {
+                            println!("\n🔄 Detected change: {:?}", change.path.file_name());
+
+                            // Clear console for better readability
+                            print!("\x1B[2J\x1B[1;1H");
+
+                            let start = std::time::Instant::now();
+                            if let Err(e) = execute_file(&file) {
+                                eprintln!("❌ Reload failed: {}", e);
+                            }
+                            let duration = start.elapsed().as_millis();
+                            println!("🔄 Reloaded in {}ms", duration);
+                        }
+                        Err(e) => {
+                            eprintln!("❌ Watch error: {}", e);
+                            break;
+                        }
                     }
                 }
-                Err(e) => {
-                    eprintln!("Error: {}", e);
-                    std::process::exit(1);
+            } else {
+                // Normal execution mode
+                let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
+                    .expect("Failed to create runtime");
+
+                let code = std::fs::read_to_string(&file)
+                    .map_err(|e| anyhow::anyhow!("Failed to read file: {}", e))?;
+
+                match runtime.execute_code(&code) {
+                    Ok(result) => {
+                        if !result.trim().is_empty() {
+                            println!("Result: {}", result);
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        std::process::exit(1);
+                    }
                 }
             }
             return Ok(());

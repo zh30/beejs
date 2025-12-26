@@ -4,12 +4,10 @@
 // It monitors JavaScript/TypeScript files for changes and automatically re-executes them.
 
 use notify_debouncer_mini::{DebouncedEventKind, new_debouncer};
-use std::collections::{BTreeMap, HashMap};
+use notify::RecursiveMode;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
-
-use std::fs::File;
-use anyhow::{Result, Error};
+use std::sync::Arc;
+use std::sync::mpsc;
 use std::time::Duration;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::atomic::AtomicU64;
@@ -128,8 +126,8 @@ impl HotReloader {
     pub fn with_config(config: WatcherConfig) -> Self {
         Self {
             config,
-            stats: Arc::new(Mutex::new(WatcherStats::new())),
-            running: Arc::new(Mutex::new(AtomicBool::new(false))),
+            stats: Arc::new(WatcherStats::new()),
+            running: Arc::new(AtomicBool::new(false)),
         }
     }
     /// Check if a file should be watched based on extension and path
@@ -158,7 +156,7 @@ impl HotReloader {
     /// Returns a channel receiver for file change events
     pub fn watch(&mut self, path: impl AsRef<Path>) -> anyhow::Result<mpsc::Receiver<FileChange>> {
         let path: _ = path.as_ref().to_path_buf();
-        let (tx, rx) = mpsc::channel(100);
+        let (tx, rx) = mpsc::channel();
         let config: _ = self.config.clone();
         let stats: _ = self.stats.clone();
         let running: _ = self.running.clone();
@@ -243,7 +241,7 @@ impl HotReloader {
                                 change_type,
                                 timestamp: SystemTime::now(),
                             };
-                            if tx.blocking_send(change).is_err() {
+                            if tx.send(change).is_err() {
                                 break;
                             }
                         }
@@ -358,6 +356,8 @@ impl WatcherConfigBuilder {
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn test_watcher_config_default() {
         let config: _ = WatcherConfig::default();
