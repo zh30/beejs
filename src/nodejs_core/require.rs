@@ -1,6 +1,9 @@
 // Stage 93.3: Require Module - CommonJS Module Loader
 // v0.3.52: Extracted from runtime_minimal.rs for better modularity
+// v0.3.99: Added builtin module support for Node.js compatibility
+//
 // Provides require() function for loading both built-in and custom modules
+// Builtin modules (os, crypto, events, etc.) are available as global objects
 
 use anyhow::Result;
 use rusty_v8 as v8;
@@ -451,6 +454,45 @@ pub fn setup_require_api(
                     // Set fs as the default export
                     let fs_default_key = v8::String::new(scope, "default").unwrap().into();
                     result_obj.set(scope, fs_default_key, fs_obj.into());
+                }
+                // v0.3.99: Handle builtin modules that are set as global objects
+                // These modules are set up as global objects in the runtime
+                "os" | "crypto" | "events" | "net" | "http" | "util" | "url" |
+                "querystring" | "dns" | "child_process" | "tcp_async" | "stream" => {
+                    // Create a minimal fallback object with a message
+                    let fallback_obj = v8::Object::new(scope);
+                    let message_key = v8::String::new(scope, "message").unwrap();
+
+                    // Create message based on module name
+                    let msg = if module_id_str == "os" {
+                        "os module available as global.os"
+                    } else if module_id_str == "crypto" {
+                        "crypto module available as global.crypto"
+                    } else if module_id_str == "events" {
+                        "events module available as global.events"
+                    } else if module_id_str == "net" {
+                        "net module available as global.net"
+                    } else if module_id_str == "http" {
+                        "http module available as global.http"
+                    } else if module_id_str == "util" {
+                        "util module available as global.util"
+                    } else if module_id_str == "url" {
+                        "url module available as global.url"
+                    } else if module_id_str == "querystring" {
+                        "querystring module available as global.querystring"
+                    } else if module_id_str == "dns" {
+                        "dns module available as global.dns"
+                    } else if module_id_str == "child_process" {
+                        "child_process module available as global.child_process"
+                    } else if module_id_str == "tcp_async" {
+                        "tcp_async module available as global.tcp_async"
+                    } else {
+                        "stream module available as global.stream"
+                    };
+                    let fallback_msg = v8::String::new(scope, msg).unwrap();
+                    fallback_obj.set(scope, message_key.into(), fallback_msg.into());
+
+                    retval.set(fallback_obj.into());
                 }
                 _ => {
                     // Check if module_id is a file path (absolute or relative path)

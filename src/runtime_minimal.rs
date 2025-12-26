@@ -9653,6 +9653,46 @@ impl MinimalRuntime {
                         retval.set(promises_obj.into());
                         return;
                     }
+                    // v0.3.99: Handle builtin modules (os, crypto, events, etc.)
+                    // These are set up as global objects in the runtime
+                    "os" | "crypto" | "events" | "net" | "http" | "util" | "url" |
+                    "querystring" | "dns" | "child_process" | "tcp_async" | "stream" => {
+                        // Create a minimal fallback object with info message
+                        let fallback_obj = v8::Object::new(scope);
+                        let message_key = v8::String::new(scope, "message").unwrap();
+
+                        let msg = module_id_str.as_str();
+                        let info_msg = if msg == "os" {
+                            "os module available as global.os"
+                        } else if msg == "crypto" {
+                            "crypto module available as global.crypto"
+                        } else if msg == "events" {
+                            "events module available as global.events"
+                        } else if msg == "net" {
+                            "net module available as global.net"
+                        } else if msg == "http" {
+                            "http module available as global.http"
+                        } else if msg == "util" {
+                            "util module available as global.util"
+                        } else if msg == "url" {
+                            "url module available as global.url"
+                        } else if msg == "querystring" {
+                            "querystring module available as global.querystring"
+                        } else if msg == "dns" {
+                            "dns module available as global.dns"
+                        } else if msg == "child_process" {
+                            "child_process module available as global.child_process"
+                        } else if msg == "tcp_async" {
+                            "tcp_async module available as global.tcp_async"
+                        } else {
+                            "stream module available as global.stream"
+                        };
+                        let fallback_msg = v8::String::new(scope, info_msg).unwrap();
+                        fallback_obj.set(scope, message_key.into(), fallback_msg.into());
+
+                        retval.set(fallback_obj.into());
+                        return;
+                    }
                     _ => {
                         // Check if module_id is a file path (absolute or relative path)
                         let module_path = std::path::Path::new(&module_id_str);
