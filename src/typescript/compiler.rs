@@ -636,25 +636,12 @@ impl TypeScriptCompiler {
                                 tokens.push(Token::Lt);
                             }
                         } else if c == '>' {
+                            // NOTE: For TypeScript, we don't combine >> into GtGt
+                            // because nested generics like A<B<C>> should be parsed
+                            // as separate > tokens, not as a right-shift operator
                             if pos + 1 < chars.len() && chars[pos + 1] == '=' {
                                 tokens.push(Token::GtEq);
                                 pos += 1;
-                            } else if pos + 1 < chars.len() && chars[pos + 1] == '>' {
-                                if pos + 2 < chars.len() && chars[pos + 2] == '=' {
-                                    tokens.push(Token::GtGtEq);
-                                    pos += 2;
-                                } else if pos + 2 < chars.len() && chars[pos + 2] == '>' {
-                                    if pos + 3 < chars.len() && chars[pos + 3] == '=' {
-                                        tokens.push(Token::GtGtGtEq);
-                                        pos += 3;
-                                    } else {
-                                        tokens.push(Token::GtGtGt);
-                                        pos += 2;
-                                    }
-                                } else {
-                                    tokens.push(Token::GtGt);
-                                    pos += 1;
-                                }
                             } else {
                                 tokens.push(Token::Gt);
                             }
@@ -2701,9 +2688,10 @@ impl Parser {
                     self.advance();
                 }
 
-                let param_name_token = self.consume_any_identifier()?;
+                let param_name_token = self.consume_param_name()?;
                 let param_name: _ = match param_name_token {
                     Token::Identifier(name) => name,
+                    Token::This => "this".to_string(),
                     _ => bail!("Expected parameter name"),
                 };
 
@@ -3274,10 +3262,15 @@ impl Parser {
                     Token::Identifier(name) => name,
                     _ => bail!("Expected type parameter name"),
                 };
-                // 处理泛型约束: extends keyof T
+                // 处理泛型约束: extends keyof T 或默认类型: = string
                 if self.current_token_eq(&Token::Extends) {
                     self.consume(Token::Extends)?;
                     // 跳过约束类型
+                    self.parse_type_annotation();
+                } else if self.current_token_eq(&Token::Eq) {
+                    // 处理默认类型: <T = string>
+                    self.consume(Token::Eq)?;
+                    // 跳过默认类型
                     self.parse_type_annotation();
                 }
                 type_params.push(type_param_name);
@@ -3397,10 +3390,15 @@ impl Parser {
                     Token::Identifier(name) => name,
                     _ => bail!("Expected type parameter name"),
                 };
-                // 处理泛型约束: extends keyof T
+                // 处理泛型约束: extends keyof T 或默认类型: = string
                 if self.current_token_eq(&Token::Extends) {
                     self.consume(Token::Extends)?;
                     // 跳过约束类型
+                    self.parse_type_annotation();
+                } else if self.current_token_eq(&Token::Eq) {
+                    // 处理默认类型: <T = string>
+                    self.consume(Token::Eq)?;
+                    // 跳过默认类型
                     self.parse_type_annotation();
                 }
                 type_params.push(type_param_name);
@@ -5425,10 +5423,13 @@ impl Parser {
                 self.advance(); // 消耗 ]
                 result = format!("{}[]", result);
                 } else {
-                    // 索引访问类型: T[key]
+                    // 索引访问类型: T[key] 或 T[key1 | key2]
                     self.advance();
-                    // 解析索引键
-                    let index_key = if let Token::String(ref s, quote) = self.current_token() {
+                    // 解析索引键（支持联合类型）
+                    let mut index_keys = Vec::new();
+
+                    // 解析第一个索引键
+                    let first_key = if let Token::String(ref s, quote) = self.current_token() {
                         let s = s.clone();
                         let quote_char = *quote;
                         self.advance();
@@ -5445,7 +5446,39 @@ impl Parser {
                             break
                         }
                     };
+                    index_keys.push(first_key);
+
+                    // 检查是否有联合类型: |
+                    while self.current_token_eq(&Token::Pipe) {
+                        self.advance(); // 消耗 |
+                        // 解析下一个索引键
+                        let next_key = if let Token::String(ref s, quote) = self.current_token() {
+                            let s = s.clone();
+                            let quote_char = *quote;
+                            self.advance();
+                            format!("{}{}{}", quote_char, s, quote_char)
+                        } else if let Token::Identifier(ref name) = self.current_token() {
+                            let name = name.clone();
+                            self.advance();
+                            name
+                        } else {
+                            // 解析基本类型作为索引
+                            if let Some(idx_type) = self.parse_basic_type() {
+                                idx_type
+                            } else {
+                                break
+                            }
+                        };
+                        index_keys.push(next_key);
+                    }
+
                     self.consume(Token::RBracket).ok()?;
+                    // 如果只有一个键，直接使用；如果有多个，合并为联合类型
+                    let index_key = if index_keys.len() == 1 {
+                        index_keys[0].clone()
+                    } else {
+                        index_keys.join(" | ")
+                    };
                     result = format!("{}[{}]", result, index_key);
                 }
             }
@@ -5847,12 +5880,35 @@ impl Parser {
                 let name: _ = name.clone();
                 self.advance();
                 // 处理泛型类型，如 Promise<string>
+                // 注意：支持嵌套泛型如 A<B<C>>，需要跟踪 < depth
                 if self.current_token_eq(&Token::Lt) {
                     self.consume(Token::Lt).ok()?;
                     let mut type_args = Vec::new();
-                    // 循环解析类型参数，直到遇到 >
-                    while !self.current_token_eq(&Token::Gt) {
-                        // 检查是否是基本类型（标识符）
+                    let mut depth = 1; // 已消耗一个 <，depth 从 1 开始
+
+                    // 循环解析类型参数，直到 depth 回到 0（遇到对应的 >）
+                    while depth > 0 {
+                        // 检查是否是逗号（在 depth == 1 时才处理逗号分隔）
+                        if depth == 1 && self.current_token_eq(&Token::Comma) {
+                            self.consume(Token::Comma).ok()?;
+                            continue;
+                        }
+
+                        // 检查是否是嵌套的 <
+                        if self.current_token_eq(&Token::Lt) {
+                            self.consume(Token::Lt).ok()?;
+                            depth += 1;
+                            continue;
+                        }
+
+                        // 检查是否是 >
+                        if self.current_token_eq(&Token::Gt) {
+                            self.consume(Token::Gt).ok()?;
+                            depth -= 1;
+                            continue;
+                        }
+
+                        // 解析类型参数
                         if let Token::Identifier(ref arg_name) = self.current_token() {
                             type_args.push(arg_name.clone());
                             self.advance();
@@ -5863,12 +5919,7 @@ impl Parser {
                             // 不是有效的类型参数，退出循环
                             break;
                         }
-                        // 处理逗号分隔符
-                        if self.current_token_eq(&Token::Comma) {
-                            self.consume(Token::Comma).ok()?;
-                        }
                     }
-                    self.consume(Token::Gt).ok()?;
 
                     // 检查是否是 Utility Type
                     if Self::is_utility_type(&name) {
@@ -5980,6 +6031,13 @@ impl Parser {
             Ok(self.advance())
         } else {
             bail!("Expected identifier");
+        }
+    }
+    /// 消耗参数名（包括 this 关键字）
+    fn consume_param_name(&mut self) -> Result<Token> {
+        match self.current_token() {
+            Token::Identifier(_) | Token::This => Ok(self.advance()),
+            _ => bail!("Expected parameter name"),
         }
     }
     /// 消耗属性名（Identifier 或 String）
@@ -10729,5 +10787,114 @@ const fetchData = async () => {
             "Should contain await expression: {}", result.js_code);
         assert!(result.js_code.contains("async"),
             "Should contain async: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_indexed_access_nested() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test nested indexed access type: Person["address"]["city"]
+        let source = r#"
+type Address = { city: string; street: string };
+type Person = { name: string; address: Address };
+type PersonCity = Person["address"]["city"];
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Type aliases should be removed in JS output
+        assert!(!result.js_code.contains("type PersonCity"),
+            "Should not contain type alias: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_indexed_access_with_union() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test indexed access with union type keys
+        let source = r#"
+type Data = { id: number; name: string; active: boolean };
+type DataIdOrName = Data["id" | "name"];
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(!result.js_code.contains("type DataIdOrName"),
+            "Should not contain type alias: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_mapped_type_with_keyof() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test mapped type with keyof
+        let source = r#"
+type Point = { x: number; y: number };
+type PointKeys = keyof Point;
+type MappedPoint = { [K in keyof Point]: Point[K] };
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(!result.js_code.contains("type PointKeys"),
+            "Should not contain type alias: {}", result.js_code);
+        assert!(!result.js_code.contains("[K in keyof"),
+            "Should not contain mapped type syntax: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_conditional_type_recursive() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test recursive conditional types
+        let source = r#"
+type DeepPromise<T> = T extends Promise<infer U> ? DeepPromise<U> : T;
+type Result1 = DeepPromise<Promise<Promise<string>>>;
+type Result2 = DeepPromise<number>;
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(!result.js_code.contains("type Result1"),
+            "Should not contain type alias: {}", result.js_code);
+        assert!(!result.js_code.contains("type Result2"),
+            "Should not contain type alias: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_template_literal_type_with_number() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test template literal type with number concatenation
+        let source = r#"
+type Id = { id: number };
+type IdString = `${Id["id"]}_suffix`;
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(!result.js_code.contains("type IdString"),
+            "Should not contain type alias: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_this_parameter_in_method() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test this parameter in method
+        let source = r#"
+class Counter {
+    private count: number = 0;
+    increment(this: this): void {
+        this.count++;
+    }
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Should remove type annotations but keep method structure
+        assert!(result.js_code.contains("increment"),
+            "Should contain increment method: {}", result.js_code);
+        assert!(!result.js_code.contains(": this"),
+            "Should not contain this parameter type: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_generic_with_default() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test generic with default type
+        let source = r#"
+function wrap<T = string>(value: T): T[] {
+    return [value];
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        assert!(result.js_code.contains("function wrap"),
+            "Should contain function: {}", result.js_code);
+        assert!(!result.js_code.contains("= string"),
+            "Should not contain generic default in JS: {}", result.js_code);
     }
 }
