@@ -206,6 +206,8 @@ impl TypeScriptCompiler {
                     "super" => Token::Super,
                     "from" => Token::From,
                     "as" => Token::As,
+                    "keyof" => Token::Keyof,
+                    "typeof" => Token::Typeof,
                     _ => Token::Identifier(ident),
                 };
                 tokens.push(token);
@@ -898,6 +900,8 @@ pub enum Token {
     Super,
     From,
     As,
+    Keyof,    // keyof 操作符
+    Typeof,   // typeof 操作符
     // 符号
     LParen,
     RParen,
@@ -2266,7 +2270,7 @@ impl Parser {
             Token::Identifier(name) => name,
             _ => bail!("Expected function name"),
         };
-        // 解析泛型参数列表 (如 <T> 或 <T, U>)
+        // 解析泛型参数列表 (如 <T> 或 <T extends keyof T, U>)
         let type_params: Option<Vec<String>> = if self.current_token_eq(&Token::Lt) {
             self.consume(Token::Lt)?;
             let mut type_params = Vec::new();
@@ -2276,6 +2280,12 @@ impl Parser {
                     Token::Identifier(name) => name,
                     _ => bail!("Expected type parameter name"),
                 };
+                // 处理泛型约束: extends keyof T
+                if self.current_token_eq(&Token::Extends) {
+                    self.consume(Token::Extends)?;
+                    // 跳过约束类型
+                    self.parse_type_annotation();
+                }
                 type_params.push(type_param_name);
                 if self.current_token_eq(&Token::Comma) {
                     self.consume(Token::Comma)?;
@@ -3968,8 +3978,34 @@ impl Parser {
             self.parse_basic_type()
         }?;
 
+        // 处理索引访问类型后缀: T["key"] 或 T[K]
+        let mut result = first_type;
+        while self.current_token_eq(&Token::LBracket) {
+            self.advance();
+            // 解析索引键
+            let index_key = if let Token::String(ref s, quote) = self.current_token() {
+                let s = s.clone();
+                let quote_char = *quote;
+                self.advance();
+                format!("{}{}{}", quote_char, s, quote_char)
+            } else if let Token::Identifier(ref name) = self.current_token() {
+                let name = name.clone();
+                self.advance();
+                name
+            } else {
+                // 解析基本类型作为索引
+                if let Some(idx_type) = self.parse_basic_type() {
+                    idx_type
+                } else {
+                    break
+                }
+            };
+            self.consume(Token::RBracket).ok()?;
+            result = format!("{}[{}]", result, index_key);
+        }
+
         // 处理 & 和 | 操作符
-        let mut types = vec![first_type];
+        let mut types = vec![result];
         let mut operators = Vec::new();
 
         while self.current_token_eq(&Token::Ampersand) || self.current_token_eq(&Token::Pipe) {
@@ -3999,14 +4035,14 @@ impl Parser {
         if types.len() == 1 {
             Some(types[0].clone())
         } else {
-            let mut result = types[0].clone();
+            let mut final_result = types[0].clone();
             for (i, op) in operators.iter().enumerate() {
-                result.push(' ');
-                result.push_str(op);
-                result.push(' ');
-                result.push_str(&types[i + 1]);
+                final_result.push(' ');
+                final_result.push_str(op);
+                final_result.push(' ');
+                final_result.push_str(&types[i + 1]);
             }
-            Some(result)
+            Some(final_result)
         }
     }
 
@@ -4144,6 +4180,27 @@ impl Parser {
                 // 处理嵌套对象类型，如 Array<{ name: string }>
                 self.parse_object_type()
             }
+            // 处理 keyof 操作符: keyof T
+            Token::Keyof => {
+                self.advance();
+                if let Some(inner_type) = self.parse_basic_type() {
+                    Some(format!("keyof {}", inner_type))
+                } else {
+                    Some("keyof unknown".to_string())
+                }
+            }
+            // 处理 typeof 操作符: typeof x
+            Token::Typeof => {
+                self.advance();
+                if let Token::Identifier(ref name) = self.current_token() {
+                    let name = name.clone();
+                    self.advance();
+                    Some(format!("typeof {}", name))
+                } else {
+                    Some("typeof unknown".to_string())
+                }
+            }
+            // 注意: 索引访问类型 T[K] 由 parse_type_annotation 处理
             _ => None,
         }
     }
@@ -6534,6 +6591,133 @@ console.log(getStatus());
                 // Type alias should be skipped in JS output
                 assert!(!result.js_code.contains("type"),
                     "Should not contain 'type' keyword: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_keyof_type() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test keyof type operator
+        let source = r#"type Keys = keyof { name: string; age: number };"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Type alias should be skipped in JS output
+                assert!(!result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}", result.js_code);
+                assert!(!result.js_code.contains("keyof"),
+                    "Should not contain 'keyof' keyword: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_keyof_with_interface() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test keyof with interface
+        let source = r#"
+interface User {
+    name: string;
+    age: number;
+}
+type UserKeys = keyof User;
+"#;
+        println!("\n========== Testing keyof with interface ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Type aliases and interfaces should be skipped
+                assert!(!result.js_code.contains("type UserKeys"),
+                    "Should not contain 'type UserKeys': {}", result.js_code);
+                assert!(!result.js_code.contains("interface"),
+                    "Should not contain 'interface': {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_typeof_operator() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test typeof operator
+        let source = r#"
+const config = { name: "test", value: 42 };
+type ConfigType = typeof config;
+"#;
+        println!("\n========== Testing typeof operator ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Type alias should be skipped but const should remain
+                assert!(result.js_code.contains("const config"),
+                    "Should contain 'const config': {}", result.js_code);
+                assert!(!result.js_code.contains("type ConfigType"),
+                    "Should not contain 'type ConfigType': {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_indexed_access_type() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test indexed access type T[K]
+        let source = r#"type NameType = { name: string; age: number }["name"];"#;
+        println!("\n========== Testing: {} ==========\n", source);
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Type alias should be skipped in JS output
+                assert!(!result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}", result.js_code);
+            }
+            Err(e) => {
+                println!("Compilation failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
+    }
+
+    #[test]
+    fn test_keyof_in_generics() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test keyof in generic constraint
+        let source = r#"function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {
+    return obj[key];
+}"#;
+        println!("\n========== Testing keyof in generics ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Function should remain but type annotations should be removed
+                assert!(result.js_code.contains("function getProperty"),
+                    "Should contain function: {}", result.js_code);
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);

@@ -1,42 +1,50 @@
-### v0.3.120 实现对象类型字面量和交叉类型支持 (2025-12-27)
+### v0.3.121 实现索引类型查询支持 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 
-#### v0.3.120 新增功能
-- **对象类型字面量**
-  - 支持 `{ name: string; age: number }` 语法
-  - 支持可选属性 `{ x: number; y?: number }`
-  - 支持字符串属性名 `{ "key": value }`
-  - 支持嵌套对象类型 `{ nested: { value: string } }`
+#### v0.3.121 新增功能
+- **keyof 操作符**
+  - 支持 `keyof T` 获取对象类型的所有键
+  - 支持 `keyof { name: string; age: number }` 对象类型字面量
+  - 支持 `keyof InterfaceName` 接口类型
 
-- **交叉类型**
-  - 支持 `A & B` 交叉类型语法
-  - 支持混合联合/交叉类型 `(A & B) | (C & D)`
+- **typeof 操作符**
+  - 支持 `typeof variable` 获取值的类型
+  - 支持 `typeof config` 变量类型查询
 
-- **解析器增强**
-  - 重构 `parse_type_annotation` 支持多类型组合
-  - 添加 `parse_object_type` 解析函数
-  - 支持 `&` 和 `|` 操作符在类型表达式中混用
+- **索引访问类型**
+  - 支持 `T["key"]` 字符串字面量索引访问
+  - 支持 `T[K]` 泛型索引访问
+  - 支持 `T["name" | "age"]` 联合索引访问
 
-#### v0.3.120 验证
-- ✅ `cargo test --lib` 80/80 通过 (+5)
+- **泛型约束增强**
+  - 支持 `K extends keyof T` 泛型参数约束
+  - 支持 `<T, K extends keyof T>` 多泛型参数约束
+
+#### v0.3.121 验证
+- ✅ `cargo test --lib` 105/105 通过 (+5)
 - ✅ 新增测试用例:
-  - `test_object_type_literal`: 基础对象类型
-  - `test_object_type_with_optional`: 可选属性
-  - `test_intersection_type`: 交叉类型
-  - `test_mixed_union_intersection`: 混合类型
-  - `test_nested_object_type`: 嵌套对象
+  - `test_keyof_type`: 基础 keyof 操作符
+  - `test_keyof_with_interface`: keyof 与接口配合使用
+  - `test_typeof_operator`: typeof 操作符
+  - `test_indexed_access_type`: 索引访问类型 T["key"]
+  - `test_keyof_in_generics`: 泛型约束 K extends keyof T
 - ✅ `cargo build --release` 成功编译
 
-#### v0.3.120 代码变更
-- **修改文件**: `src/typescript/compiler.rs` (+233/-6 行)
-  - 重构 `parse_type_annotation` 函数
-  - 添加 `parse_object_type` 解析函数
+#### v0.3.121 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+68/-15 行)
+  - 添加 `Keyof` 和 `Typeof` Token 类型
+  - 修改词法分析器识别 `keyof` 和 `typeof` 关键字
+  - 重构 `parse_type_annotation` 支持索引访问类型后缀
+  - 修改 `parse_basic_type` 支持 keyof/typeof 操作符
+  - 增强泛型参数解析支持 `extends` 约束
   - 添加 5 个测试用例
 
-#### v0.3.120 下一步计划
+#### v0.3.121 下一步计划
 - 继续完善 TypeScript 编译器功能
-- 实现索引类型查询
+- 实现映射类型（Mapped Types）
 - 添加更多边界情况测试
+
+### v0.3.120 实现对象类型字面量和交叉类型支持 (2025-12-27)
 
 ### v0.3.119 实现类型别名声明支持 (2025-12-27)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
