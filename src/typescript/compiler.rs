@@ -106,7 +106,7 @@ impl TypeContext {
     fn register_builtin_types(&mut self) {
         // 字符串类型
         self.variables.insert("string".to_string(), "string".to_string());
-        self.variables.insert("number".to_string(), "string".to_string());
+        self.variables.insert("number".to_string(), "number".to_string());
         self.variables.insert("boolean".to_string(), "boolean".to_string());
         self.variables.insert("any".to_string(), "any".to_string());
         self.variables.insert("void".to_string(), "void".to_string());
@@ -117,6 +117,46 @@ impl TypeContext {
         self.variables.insert("object".to_string(), "object".to_string());
         self.variables.insert("symbol".to_string(), "symbol".to_string());
         self.variables.insert("bigint".to_string(), "bigint".to_string());
+
+        // Utility Types - 这些是 TypeScript 内置的类型构造器
+        // Partial<T> - 所有属性变为可选
+        self.variables.insert("Partial".to_string(), "utility".to_string());
+        // Required<T> - 所有属性变为必需
+        self.variables.insert("Required".to_string(), "utility".to_string());
+        // Readonly<T> - 所有属性变为只读
+        self.variables.insert("Readonly".to_string(), "utility".to_string());
+        // Pick<T, K> - 从 T 中选择指定属性
+        self.variables.insert("Pick".to_string(), "utility".to_string());
+        // Omit<T, K> - 从 T 中移除指定属性
+        self.variables.insert("Omit".to_string(), "utility".to_string());
+        // Record<K, T> - 创建具有指定键和值类型的对象
+        self.variables.insert("Record".to_string(), "utility".to_string());
+        // Exclude<T, U> - 从 T 中排除可赋值给 U 的类型
+        self.variables.insert("Exclude".to_string(), "utility".to_string());
+        // Extract<T, U> - 从 T 中提取可赋值给 U 的类型
+        self.variables.insert("Extract".to_string(), "utility".to_string());
+        // NonNullable<T> - 排除 null 和 undefined
+        self.variables.insert("NonNullable".to_string(), "utility".to_string());
+        // ReturnType<T> - 获取函数类型 T 的返回类型
+        self.variables.insert("ReturnType".to_string(), "utility".to_string());
+        // Parameters<T> - 获取函数类型 T 的参数类型
+        self.variables.insert("Parameters".to_string(), "utility".to_string());
+        // ConstructorParameters<T> - 获取构造函数类型 T 的参数类型
+        self.variables.insert("ConstructorParameters".to_string(), "utility".to_string());
+        // InstanceType<T> - 获取构造函数类型的实例类型
+        self.variables.insert("InstanceType".to_string(), "utility".to_string());
+        // ThisParameterType<T> - 获取函数类型 T 的 this 参数类型
+        self.variables.insert("ThisParameterType".to_string(), "utility".to_string());
+        // OmitThisParameter<T> - 移除函数类型 T 的 this 参数
+        self.variables.insert("OmitThisParameter".to_string(), "utility".to_string());
+        // Uppercase<StringType> - 字符串大写
+        self.variables.insert("Uppercase".to_string(), "utility".to_string());
+        // Lowercase<StringType> - 字符串小写
+        self.variables.insert("Lowercase".to_string(), "utility".to_string());
+        // Capitalize<StringType> - 首字母大写
+        self.variables.insert("Capitalize".to_string(), "utility".to_string());
+        // Uncapitalize<StringType> - 首字母小写
+        self.variables.insert("Uncapitalize".to_string(), "utility".to_string());
     }
 
     fn get_variable_type(&self, name: &str) -> Option<&String> {
@@ -5483,6 +5523,18 @@ impl Parser {
             Some(final_result)
         }
     }
+    /// 检查是否是 Utility Type
+    fn is_utility_type(name: &str) -> bool {
+        matches!(
+            name,
+            "Partial" | "Required" | "Readonly" | "Pick" | "Omit" | "Record"
+            | "Exclude" | "Extract" | "NonNullable" | "ReturnType" | "Parameters"
+            | "ConstructorParameters" | "InstanceType" | "ThisParameterType"
+            | "OmitThisParameter" | "Uppercase" | "Lowercase" | "Capitalize"
+            | "Uncapitalize"
+        )
+    }
+
     fn parse_basic_type(&mut self) -> Option<String> {
         match self.current_token() {
             Token::Identifier(ref name) => {
@@ -5511,7 +5563,19 @@ impl Parser {
                         }
                     }
                     self.consume(Token::Gt).ok()?;
-                    Some(format!("{}<{}>", name, type_args.join(", ")))
+
+                    // 检查是否是 Utility Type
+                    if Self::is_utility_type(&name) {
+                        // Utility Types 在转译时被擦除，只返回第一个类型参数
+                        // 例如 Partial<User> => User, Pick<T, "name" | "age"> => T
+                        if !type_args.is_empty() {
+                            Some(type_args[0].clone())
+                        } else {
+                            Some(name)
+                        }
+                    } else {
+                        Some(format!("{}<{}>", name, type_args.join(", ")))
+                    }
                 } else {
                     Some(name)
                 }
@@ -9553,5 +9617,321 @@ const result = value as string as any;
         // Chained type assertions should be removed, leaving just the expression
         assert!(result.js_code.contains("result = value"),
             "Should contain 'result = value': {}", result.js_code);
+    }
+
+    // ============ Utility Types Tests ============
+
+    #[test]
+    fn test_utility_type_partial() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test Partial<T> utility type - all properties become optional
+        let source = r#"
+interface User {
+    name: string;
+    age: number;
+}
+
+function updateUser(user: Partial<User>) {
+    console.log(user);
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Partial<T> should be erased, leaving just the inner type
+        assert!(!result.js_code.contains("Partial"),
+            "Should not contain 'Partial': {}", result.js_code);
+        // Interface should be removed
+        assert!(!result.js_code.contains("interface User"),
+            "Should not contain 'interface User': {}", result.js_code);
+        // Function should still be present
+        assert!(result.js_code.contains("updateUser"),
+            "Should contain 'updateUser': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_utility_type_required() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test Required<T> utility type - all properties become required
+        // Note: Optional properties (?:) are not fully supported, so we test Required with basic types
+        let source = r#"
+interface Config {
+    host: string;
+    port: number;
+}
+
+function init(config: Required<Config>) {
+    console.log(config.host, config.port);
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Required<T> should be erased
+        assert!(!result.js_code.contains("Required"),
+            "Should not contain 'Required': {}", result.js_code);
+        // Interface should be removed
+        assert!(!result.js_code.contains("interface Config"),
+            "Should not contain 'interface Config': {}", result.js_code);
+        // Function should still be present
+        assert!(result.js_code.contains("init"),
+            "Should contain 'init': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_utility_type_readonly() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test Readonly<T> utility type - all properties become readonly
+        let source = r#"
+interface Point {
+    x: number;
+    y: number;
+}
+
+const origin: Readonly<Point> = { x: 0, y: 0 };
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Readonly<T> should be erased
+        assert!(!result.js_code.contains("Readonly"),
+            "Should not contain 'Readonly': {}", result.js_code);
+        // Interface should be removed
+        assert!(!result.js_code.contains("interface Point"),
+            "Should not contain 'interface Point': {}", result.js_code);
+        // Origin assignment should still be present
+        assert!(result.js_code.contains("origin"),
+            "Should contain 'origin': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_utility_type_pick() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test Pick<T, K> utility type - select specific keys
+        // Note: Pick with union type keys like "name" | "email" requires union type support
+        // We'll use a simpler case to test basic utility type erasure
+        let source = r#"
+interface User {
+    id: number;
+    name: string;
+}
+
+type UserPreview = Pick<User, "name">;
+
+const user: UserPreview = { name: "Alice" };
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Pick<T, K> should be erased, keeping only the first type argument
+        assert!(!result.js_code.contains("Pick"),
+            "Should not contain 'Pick': {}", result.js_code);
+        // Interface should be removed
+        assert!(!result.js_code.contains("interface User"),
+            "Should not contain 'interface User': {}", result.js_code);
+        // Variable should still be present
+        assert!(result.js_code.contains("user"),
+            "Should contain 'user': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_utility_type_record() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test Record<K, T> utility type - create object with specific keys and values
+        let source = r#"
+type Status = "pending" | "active" | "completed";
+
+const tasks: Record<Status, boolean> = {
+    pending: true,
+    active: true,
+    completed: false
+};
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Record<K, T> should be erased
+        assert!(!result.js_code.contains("Record"),
+            "Should not contain 'Record': {}", result.js_code);
+        // Type alias should be removed
+        assert!(!result.js_code.contains("type Status"),
+            "Should not contain 'type Status': {}", result.js_code);
+        // Tasks assignment should still be present
+        assert!(result.js_code.contains("tasks"),
+            "Should contain 'tasks': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_utility_type_omit() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test Omit<T, K> utility type - remove specific keys
+        let source = r#"
+interface User {
+    id: number;
+    name: string;
+    email: string;
+    password: string;
+}
+
+type PublicUser = Omit<User, "password">;
+
+function showUser(user: PublicUser) {
+    console.log(user.name, user.email);
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Omit<T, K> should be erased
+        assert!(!result.js_code.contains("Omit"),
+            "Should not contain 'Omit': {}", result.js_code);
+        // Interface should be removed
+        assert!(!result.js_code.contains("interface User"),
+            "Should not contain 'interface User': {}", result.js_code);
+        // Function should still be present
+        assert!(result.js_code.contains("showUser"),
+            "Should contain 'showUser': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_utility_type_exclude() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test Exclude<T, U> utility type - exclude types from union
+        let source = r#"
+type Status = "pending" | "active" | "completed" | "deleted";
+type ActiveStatus = Exclude<Status, "deleted">;
+
+const current: ActiveStatus = "active";
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Exclude<T, U> should be erased
+        assert!(!result.js_code.contains("Exclude"),
+            "Should not contain 'Exclude': {}", result.js_code);
+        // Type aliases should be removed
+        assert!(!result.js_code.contains("type Status"),
+            "Should not contain 'type Status': {}", result.js_code);
+        // Variable should still be present
+        assert!(result.js_code.contains("current"),
+            "Should contain 'current': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_utility_type_extract() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test Extract<T, U> utility type - extract types from union
+        let source = r#"
+type Status = "pending" | "active" | "completed" | number;
+type StringStatus = Extract<Status, string>;
+
+const status: StringStatus = "active";
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Extract<T, U> should be erased
+        assert!(!result.js_code.contains("Extract"),
+            "Should not contain 'Extract': {}", result.js_code);
+        // Type aliases should be removed
+        assert!(!result.js_code.contains("type Status"),
+            "Should not contain 'type Status': {}", result.js_code);
+        // Variable should still be present
+        assert!(result.js_code.contains("status"),
+            "Should contain 'status': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_utility_type_nonnullable() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test NonNullable<T> utility type - remove null and undefined
+        // Using a simple type argument to test erasure
+        let source = r#"
+type MaybeString = string;
+const value: NonNullable<MaybeString> = "hello";
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // NonNullable<T> should be erased
+        assert!(!result.js_code.contains("NonNullable"),
+            "Should not contain 'NonNullable': {}", result.js_code);
+        // Variable should still be present
+        assert!(result.js_code.contains("value"),
+            "Should contain 'value': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_utility_type_return_type() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test ReturnType<T> utility type - get return type of function
+        let source = r#"
+function getUser(): { id: number; name: string } {
+    return { id: 1, name: "Alice" };
+}
+
+type User = ReturnType<typeof getUser>;
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // ReturnType<T> should be erased
+        assert!(!result.js_code.contains("ReturnType"),
+            "Should not contain 'ReturnType': {}", result.js_code);
+        // Type alias should be removed
+        assert!(!result.js_code.contains("type User"),
+            "Should not contain 'type User': {}", result.js_code);
+        // Function should still be present
+        assert!(result.js_code.contains("getUser"),
+            "Should contain 'getUser': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_utility_type_parameters() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test Parameters<T> utility type - get parameters of function
+        let source = r#"
+function greet(name: string, age: number): string {
+    return `Hello ${name}, you are ${age} years old`;
+}
+
+type GreetParams = Parameters<typeof greet>;
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // Parameters<T> should be erased
+        assert!(!result.js_code.contains("Parameters"),
+            "Should not contain 'Parameters': {}", result.js_code);
+        // Type alias should be removed
+        assert!(!result.js_code.contains("type GreetParams"),
+            "Should not contain 'type GreetParams': {}", result.js_code);
+        // Function should still be present
+        assert!(result.js_code.contains("greet"),
+            "Should contain 'greet': {}", result.js_code);
+    }
+
+    #[test]
+    fn test_utility_types_multiple() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test multiple utility types in one file
+        let source = r#"
+interface Config {
+    host: string;
+    port: number;
+    ssl: boolean;
+}
+
+// Partial for updates
+function updateConfig(config: Partial<Config>) {
+    console.log(config);
+}
+
+// Readonly for constants
+const defaultConfig: Readonly<Config> = {
+    host: "localhost",
+    port: 8080,
+    ssl: false
+};
+
+// Pick for specific fields
+function getHost(config: Pick<Config, "host">) {
+    return config.host;
+}
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // All utility types should be erased
+        assert!(!result.js_code.contains("Partial"),
+            "Should not contain 'Partial': {}", result.js_code);
+        assert!(!result.js_code.contains("Readonly"),
+            "Should not contain 'Readonly': {}", result.js_code);
+        assert!(!result.js_code.contains("Pick"),
+            "Should not contain 'Pick': {}", result.js_code);
+        // Interface should be removed
+        assert!(!result.js_code.contains("interface Config"),
+            "Should not contain 'interface Config': {}", result.js_code);
+        // Functions should still be present
+        assert!(result.js_code.contains("updateConfig"),
+            "Should contain 'updateConfig': {}", result.js_code);
+        assert!(result.js_code.contains("getHost"),
+            "Should contain 'getHost': {}", result.js_code);
     }
 }
