@@ -12855,8 +12855,8 @@ impl MinimalRuntime {
         // v0.3.93: 获取存储的 Context，复用以保持 handler 可见性
         let global_context = self.get_context();
 
-        // 检查消息通道状态
-        let channel = get_http_server_channel();
+        // v0.3.93: 检查消息通道状态（验证 channel 已初始化）
+        let _channel = get_http_server_channel();
 
         // v0.3.93: 持续尝试接收请求，给连接线程时间发送
         let start_wait = std::time::Instant::now();

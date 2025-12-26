@@ -502,52 +502,6 @@ fn http_agent_get_pool_stats_callback(
     let stats_val: _ = v8::String::new(scope, &stats).unwrap();
     retval.set(stats_val.into());
 }
-fn http_create_server_callback(
-    scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
-    mut retval: v8::ReturnValue,
-) {
-    let request_handler: _ = args.get(0);
-
-    let server_obj: _ = v8::Object::new(scope);
-
-    // 如果提供了 request handler，立即存储到 _requestHandler
-    if request_handler.is_function() {
-        let handler_key = v8::String::new(scope, "_requestHandler").unwrap();
-        server_obj.set(scope, handler_key.into(), request_handler);
-
-        // v0.3.93: 同时设置全局 HTTP request handler
-        // 注意: 在 HandleScope 中我们需要使用 context.global()，但这里没有 context
-        // 所以我们需要在外部设置，或者使用不同的方法
-        // 由于无法直接访问全局对象，我们暂时只在 server 对象上存储
-        // pump_http_messages 需要从 server 对象或其他方式获取 handler
-    }
-
-    // listen
-    let listen_func: _ = v8::FunctionTemplate::new(scope, http_server_listen_callback);
-    let listen_instance: _ = listen_func.get_function(scope).unwrap();
-    let listen_key: _ = v8::String::new(scope, "listen").unwrap();
-    server_obj.set(scope, listen_key.into(), listen_instance.into());
-    // on
-    let on_func: _ = v8::FunctionTemplate::new(scope, http_server_on_callback);
-    let on_instance: _ = on_func.get_function(scope).unwrap();
-    let on_key: _ = v8::String::new(scope, "on").unwrap();
-    server_obj.set(scope, on_key.into(), on_instance.into());
-    // close - v0.3.64: 添加服务器关闭方法
-    let close_func: _ = v8::FunctionTemplate::new(scope, http_server_close_callback);
-    let close_instance: _ = close_func.get_function(scope).unwrap();
-    let close_key: _ = v8::String::new(scope, "close").unwrap();
-    server_obj.set(scope, close_key.into(), close_instance.into());
-
-    // v0.3.89: 初始化消息通道并标记到 server 对象
-    let _message_channel = init_http_server_channel();
-    let channel_key = v8::String::new(scope, "_messageChannel").unwrap();
-    let channel_initialized = v8::Boolean::new(scope, true);
-    server_obj.set(scope, channel_key.into(), channel_initialized.into());
-
-    retval.set(server_obj.into());
-}
-
 /// v0.3.93: http.createServer callback 版本，可以访问全局对象
 fn http_create_server_with_global_callback(
     scope: &mut v8::HandleScope,

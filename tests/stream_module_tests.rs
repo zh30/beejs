@@ -941,29 +941,30 @@ fn test_stream_pipeline_with_callback() {
     assert_eq!(result.unwrap().trim(), "true");
 
     // 然后验证回调被正确存储（会在事件循环中调用）
+    // v0.3.94: 使用不同的变量名避免重复声明错误
     let result = runtime.execute_code(
         r#"
-        let callbackCalled = false;
-        const r = new stream.Readable({
+        let callbackCalled2 = false;
+        const r2 = new stream.Readable({
           read() {
             this.push('hello');
             this.push(null);
           }
         });
-        const w = new stream.Writable({
+        const w2 = new stream.Writable({
           _write(chunk, encoding, cb) {
             // 手动触发 end 以便回调能够被调用
             cb();
           }
         });
         // 设置 finish 监听器来验证流完成
-        let finished = false;
-        w.on('finish', () => { finished = true; });
-        stream.pipeline(r, w, (err) => {
-          callbackCalled = true;
+        let finished2 = false;
+        w2.on('finish', () => { finished2 = true; });
+        stream.pipeline(r2, w2, (err) => {
+          callbackCalled2 = true;
         });
         // 由于没有完整事件循环，只能验证回调被正确设置
-        typeof callbackCalled === 'boolean'
+        typeof callbackCalled2 === 'boolean'
         "#
     );
     assert!(result.is_ok());
