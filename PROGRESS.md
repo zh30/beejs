@@ -71,6 +71,50 @@
 - 创建浏览器客户端脚本接收热重载事件
 
 
+### v0.3.107 实现 Source Map 生成功能 (2025-12-26)
+**进度**: TypeScript 支持 | ✅ 已提交
+
+#### v0.3.107 新增功能
+- **VLQ 编码算法**
+  - 实现 `encode_vlq()` 函数用于 source map 的 mappings 字段
+  - 支持正数和负数的 VLQ 编码
+  - 使用 Base64 字符集进行编码
+
+- **JSON 转义函数**
+  - 添加 `escape_for_json()` 函数处理特殊字符
+  - 支持换行、引号、反斜杠等字符的转义
+
+- **Source Map 生成**
+  - 实现 `generate_vlq_mappings()` 生成每行的映射
+  - 增强 TypeScript 编译器生成符合 source map v3 规范的映射
+  - 包含 version、sources、mappings、sourcesContent 字段
+
+#### v0.3.107 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+105/-5 行)
+  - 添加 `SourceMapping` 结构体跟踪源位置
+  - 实现 `encode_vlq()` VLQ 编码函数
+  - 添加 `escape_for_json()` JSON 转义函数
+  - 实现 `generate_vlq_mappings()` 映射生成函数
+  - 更新 `generate_source_map()` 使用新实现
+
+#### v0.3.107 新增测试
+- `test_source_map_generation` - 验证 source map 结构
+- `test_source_map_contains_source_content` - 验证源内容包含
+- `test_vlq_encoding` - 验证 VLQ 编码
+- `test_escape_for_json` - 验证 JSON 转义
+
+#### v0.3.107 验证
+- ✅ `cargo test --lib typescript::compiler::tests` 7/7 通过
+- ✅ `cargo test --lib` 27/27 通过
+- ✅ Source map 包含正确的 version 3 格式
+- ✅ 源文件路径正确包含在 sources 字段中
+
+#### v0.3.107 下一步计划
+- 完善 npm registry 集成
+- 增强 Source Map 精度（行列映射）
+- 添加 Source Map 解析 API
+
+
 ### v0.3.106 集成 WebSocket 热重载到 watch 模式 (2025-12-26)
 **进度**: 热重载 | ✅ 已完成
 
