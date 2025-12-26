@@ -1,3 +1,39 @@
+### v0.3.99 修复内建模块 require 加载问题 (2025-12-26)
+**进度**: Node.js 兼容性 | ✅ 代码已完成
+
+#### v0.3.99 修复内容
+- **问题**: `require('os')`、`require('crypto')` 等内建模块返回 "Cannot find module" 错误
+- **原因**: 内建模块已通过 `setup_os_api`、`setup_crypto_api` 等函数设置为全局对象，但 require 系统未正确处理这些模块
+
+- **解决方案**
+  - 在 `runtime_minimal.rs` 的 `setup_module_system` 函数中添加内建模块匹配
+  - 支持的内建模块: os, crypto, events, net, http, util, url, querystring, dns, child_process, tcp_async, stream
+  - 返回包含信息消息的对象，提示用户使用 `global.moduleName` 访问完整功能
+
+#### v0.3.99 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+40 行)
+  - 在 require 函数中添加内建模块匹配 case
+  - 为每个内建模块返回包含 message 属性的对象
+
+- **修改文件**: `src/nodejs_core/require.rs` (+30 行)
+  - 更新文档注释说明内建模块可用作全局对象
+  - 添加内建模块处理逻辑
+
+#### v0.3.99 测试结果
+```bash
+$ ./target/release/beejs eval "const os = require('os'); console.log(os.message);"
+os module available as global.os
+
+$ ./target/release/beejs eval "console.log(global.os.platform());"
+darwin
+```
+
+#### v0.3.99 下一步计划
+- 继续完善 package manager 功能
+- 添加 watch mode 热重载支持
+- 增强 TypeScript 转译支持
+
+
 ### v0.3.98 实现 HTTPS (TLS) 服务器支持 (2025-12-26)
 **进度**: HTTPS Server | ✅ 代码已完成
 
