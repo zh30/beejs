@@ -7925,6 +7925,54 @@ test result: ok. 11 passed; 0 failed
   - `test_arrow_function_params_destructuring` - 箭头函数参数
   - `test_method_params_destructuring` - 类方法解构参数
 
+#### v0.3.127 类方法返回类型注解修复 (2025-12-27)
+**进度**: TypeScript 编译器修复 | ✅ 已提交
+
+#### v0.3.127 修复内容
+- **类方法返回类型注解解析**
+  - 修复普通方法返回类型注解跳过：`add(a: number, b: number): number`
+  - 修复 async 方法返回类型注解跳过：`async fetchData(url: string): Promise<string>`
+  - 在 `parse_class_member` 中添加返回类型注解检测和跳过逻辑
+
+- **代码变更**
+  - `src/typescript/compiler.rs` (+76 行)
+  - 普通方法解析后添加返回类型注解跳过
+  - async 方法解析后添加返回类型注解跳过
+
+- **新增测试用例**
+  - `test_class_method_with_type_annotations` - 测试带类型注解的类方法
+  - `test_async_method_with_type_annotations` - 测试带类型注解的 async 方法
+
+#### v0.3.127 验证结果
+- ✅ `cargo build --release` 成功编译
+- ✅ `cargo test --lib` → 126/126 通过 (+2)
+- ✅ 类方法类型注解编译正常
+- ✅ async 方法类型注解编译正常
+
+#### v0.3.127 使用示例
+```typescript
+class Calculator {
+    add(a: number, b: number): number {
+        return a + b;
+    }
+    multiply(x: number, y: number): number {
+        return x * y;
+    }
+}
+
+class DataFetcher {
+    async fetchData(url: string): Promise<string> {
+        const response = await fetch(url);
+        return response.text();
+    }
+}
+```
+
+#### v0.3.127 下一步计划
+- 完善类成员解析（构造函数参数类型、 getter/setter 类型）
+- 实现计算属性名
+- 优化 Source Map 生成精度
+
 #### v0.3.117 下一步计划
 - 完善箭头函数解构参数支持
 - 实现函数参数类型注解传递
