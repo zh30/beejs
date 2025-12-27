@@ -672,4 +672,132 @@ declare global {
             }
         }
     }
+
+    /// Test function type (v0.3.154)
+    #[test]
+    fn test_function_type() {
+        // 测试函数类型注解 (arg1: type1, arg2: type2) => returnType
+        let ts_code: _ = r#"
+type Callback = (data: string) => void;
+type BinaryOp = (a: number, b: number) => number;
+type AsyncHandler = (req: unknown) => Promise<string>;
+const onData = (data: string) => { console.log(data); };
+const add = (a: number, b: number): number => a + b;
+"#;
+        match compile_typescript(ts_code, "function_type.ts") {
+            Ok(output) => {
+                println!("函数类型转译结果:");
+                println!("{}", output.js_code);
+                // 函数类型注解应该被移除
+                assert!(!output.js_code.contains(": string) => void"),
+                    "Should not contain function type annotation: {}", output.js_code);
+                // 变量赋值应该保留
+                assert!(output.js_code.contains("onData"),
+                    "Should contain onData: {}", output.js_code);
+                assert!(output.js_code.contains("add"),
+                    "Should contain add: {}", output.js_code);
+                // 验证箭头函数被正确保留
+                assert!(output.js_code.contains("=>"),
+                    "Should contain arrow function: {}", output.js_code);
+                println!("✅ Function type test passed");
+            }
+            Err(e) => {
+                panic!("Function type transpilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test tuple type (v0.3.154)
+    #[test]
+    fn test_tuple_type() {
+        // 测试元组类型 [type1, type2, ...restType]
+        let ts_code: _ = r#"
+type Point = [number, number];
+type StringNumberPair = [string, number];
+const point = [1, 2];
+const pair = ["hello", 42];
+"#;
+        match compile_typescript(ts_code, "tuple_type.ts") {
+            Ok(output) => {
+                println!("元组类型转译结果:");
+                println!("{}", output.js_code);
+                // 变量赋值应该保留
+                assert!(output.js_code.contains("point"),
+                    "Should contain point: {}", output.js_code);
+                assert!(output.js_code.contains("pair"),
+                    "Should contain pair: {}", output.js_code);
+                // 验证数组字面量被正确保留
+                assert!(output.js_code.contains("[1, 2]"),
+                    "Should contain array literal: {}", output.js_code);
+                assert!(output.js_code.contains("[\"hello\", 42]"),
+                    "Should contain array literal: {}", output.js_code);
+                println!("✅ Tuple type test passed");
+            }
+            Err(e) => {
+                panic!("Tuple type transpilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test infer keyword in conditional types (v0.3.154)
+    #[test]
+    fn test_infer_keyword() {
+        // 测试 infer 关键字在条件类型中的使用
+        let ts_code: _ = r#"
+type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
+type UnwrapArray<T> = T extends Array<infer E> ? E : T;
+const p = "hello";
+const arr = "item";
+"#;
+        match compile_typescript(ts_code, "infer_keyword.ts") {
+            Ok(output) => {
+                println!("infer 关键字转译结果:");
+                println!("{}", output.js_code);
+                // 变量赋值应该保留
+                assert!(output.js_code.contains("p"),
+                    "Should contain p: {}", output.js_code);
+                assert!(output.js_code.contains("arr"),
+                    "Should contain arr: {}", output.js_code);
+                // 验证字符串值被正确保留
+                assert!(output.js_code.contains("\"hello\""),
+                    "Should contain string value: {}", output.js_code);
+                println!("✅ Infer keyword test passed");
+            }
+            Err(e) => {
+                panic!("Infer keyword transpilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test generic with extends constraint (v0.3.154)
+    #[test]
+    fn test_generic_extends_constraint() {
+        // 测试泛型约束 <T extends U>
+        let ts_code: _ = r#"
+type WithConstraint<T extends string> = T;
+type Numeric<T extends number> = T;
+const constrained = "hello";
+const num = 42;
+"#;
+        match compile_typescript(ts_code, "generic_extends.ts") {
+            Ok(output) => {
+                println!("泛型约束转译结果:");
+                println!("{}", output.js_code);
+                // 变量赋值应该保留
+                assert!(output.js_code.contains("constrained"),
+                    "Should contain constrained: {}", output.js_code);
+                assert!(output.js_code.contains("num"),
+                    "Should contain num: {}", output.js_code);
+                // 验证值被正确保留
+                assert!(output.js_code.contains("\"hello\""),
+                    "Should contain string value: {}", output.js_code);
+                assert!(output.js_code.contains("42"),
+                    "Should contain number value: {}", output.js_code);
+                println!("✅ Generic extends constraint test passed");
+            }
+            Err(e) => {
+                panic!("Generic extends constraint transpilation failed: {}", e);
+            }
+        }
+    }
 }
