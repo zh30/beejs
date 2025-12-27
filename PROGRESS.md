@@ -1,3 +1,48 @@
+### v0.3.151 declare function 声明支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.151 新增功能
+- **declare function 支持**
+  - 添加 `ASTNode::FunctionDeclaration` 的 `is_declare` 字段
+  - 实现 `declare function foo(x: number): string;` 语法解析
+  - 区分普通 function 和 declare function 的代码生成策略
+  - declare function 生成带 `declare` 关键字的类型声明（以分号结束）
+
+- **parse_function_declaration 增强**
+  - 添加 `is_declare` 参数支持
+  - 当 `is_declare` 为 true 且以分号结束时，生成空函数体的 FunctionDeclaration
+  - 保持普通函数重载签名（FunctionOverload）的原有行为
+
+- **emit 逻辑增强**
+  - FunctionDeclaration 根据 `is_declare` 字段输出 `declare` 前缀
+  - declare function 或空函数体以分号结束，不生成函数体
+
+- **export declare function 支持**
+  - 添加 `export declare function` 语法支持
+  - 在 `parse_export_declaration()` 中传递 `is_declare` 参数
+
+#### 实现细节
+- 重构 `parse_function_declaration()` 支持 `is_declare` 参数
+- 修改 `parse_statement()` 和 `parse_export_declaration()` 中的函数声明调用
+- 更新 `emit` 逻辑处理 declare function 的分号结束
+
+#### 测试用例
+- `test_declare_function_basic` - 基本 declare function 声明
+- `test_declare_function_with_params` - declare function 参数处理
+- `test_export_declare_function` - export declare function
+- `test_regular_function_vs_declare_function` - 普通函数与声明函数对比
+
+#### 验证
+- ✅ `cargo test --lib typescript` 200/200 通过
+- ✅ 4/4 declare function 测试通过
+
+#### 下一步
+- 完善类型推导增强（如 infer 类型推导）
+- 增强 Source Map 位置追踪精度
+- 添加更多边界情况测试覆盖
+
+---
+
 ### v0.3.150 declare class 声明支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 

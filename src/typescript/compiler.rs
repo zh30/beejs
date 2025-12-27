@@ -1030,7 +1030,7 @@ impl TypeScriptCompiler {
                     ctx.add_variable(name, "any");
                 }
             }
-            ASTNode::FunctionDeclaration { name: _, params, return_type, body, is_async, type_params: _ } => {
+            ASTNode::FunctionDeclaration { is_declare: _, name: _, params, return_type, body, is_async, type_params: _ } => {
                 // 为函数参数创建新作用域
                 let prev_vars = ctx.variables.clone();
 
@@ -2131,6 +2131,8 @@ pub enum ASTNode {
         source: Box<ASTExpression>,
     },
     FunctionDeclaration {
+        /// 是否为 declare 声明（declare function）
+        is_declare: bool,
         name: String,
         is_async: bool,
         type_params: Option<Vec<String>>,  // 泛型参数列表，如 ['T']
@@ -2463,7 +2465,7 @@ impl Parser {
                 Ok(node)
             }
             Token::Function | Token::Async => {
-                self.parse_function_declaration()
+                self.parse_function_declaration(false)
             }
             Token::Class => {
                 self.parse_class_declaration()
@@ -2492,7 +2494,7 @@ impl Parser {
                         self.parse_class_declaration_internal(is_declare, Vec::new())
                     }
                     Token::Function => {
-                        self.parse_function_declaration()
+                        self.parse_function_declaration(is_declare)
                     }
                     Token::Interface => {
                         self.parse_interface_declaration()
@@ -3479,7 +3481,7 @@ impl Parser {
         false
     }
 
-    fn parse_function_declaration(&mut self) -> Result<ASTNode> {
+    fn parse_function_declaration(&mut self, is_declare: bool) -> Result<ASTNode> {
         // 处理 async 关键字
         let is_async = if self.current_token_eq(&Token::Async) {
             self.consume(Token::Async)?;
@@ -3581,9 +3583,24 @@ impl Parser {
             None
         };
         // 检查是否是函数重载签名（以分号结尾，无函数体）
+        // 注意：declare function 也是以分号结尾，但应该生成 FunctionDeclaration
         if self.current_token_eq(&Token::SemiColon) {
-            // 重载签名，不消耗函数体
+            // 消耗分号
             self.consume(Token::SemiColon)?;
+            if is_declare {
+                // declare function 应该生成 FunctionDeclaration（带有 declare 关键字）
+                // 但没有函数体
+                return Ok(ASTNode::FunctionDeclaration {
+                    is_declare,
+                    name,
+                    is_async,
+                    type_params,
+                    params,
+                    return_type,
+                    body: Vec::new(), // 空函数体
+                });
+            }
+            // 普通函数重载签名
             return Ok(ASTNode::FunctionOverload {
                 name,
                 is_async,
@@ -3600,6 +3617,7 @@ impl Parser {
         }
         self.consume(Token::RBrace)?;
         Ok(ASTNode::FunctionDeclaration {
+            is_declare,
             name,
             is_async,
             type_params,
@@ -4658,7 +4676,7 @@ impl Parser {
                 });
             }
             Token::Function => {
-                let declaration = self.parse_function_declaration()?;
+                let declaration = self.parse_function_declaration(false)?;
                 // 消耗分号
                 if self.current_token_eq(&Token::SemiColon) {
                     self.consume(Token::SemiColon)?;
@@ -4729,7 +4747,7 @@ impl Parser {
                         });
                     }
                     Token::Function => {
-                        let declaration = self.parse_function_declaration()?;
+                        let declaration = self.parse_function_declaration(is_declare)?;
                         return Ok(ASTNode::ExportDeclaration {
                             exports: Vec::new(),
                             is_default: false,
@@ -6686,6 +6704,7 @@ impl CodeEmitter {
                 self.output.push_str(";\n");
             }
             ASTNode::FunctionDeclaration {
+                is_declare,
                 name,
                 is_async,
                 type_params: _,
@@ -6693,6 +6712,10 @@ impl CodeEmitter {
                 return_type: _,
                 body,
             } => {
+                // 处理 declare function（空函数体，以分号结束）
+                if *is_declare {
+                    self.output.push_str("declare ");
+                }
                 if *is_async {
                     self.output.push_str("async ");
                 }
@@ -6705,11 +6728,17 @@ impl CodeEmitter {
                     }
                     self.emit_function_parameter(param);
                 }
-                self.output.push_str(") {\n");
-                for stmt in body {
-                    self.emit_node(stmt);
+                self.output.push_str(")");
+                if *is_declare || body.is_empty() {
+                    // declare function 或空函数体以分号结束
+                    self.output.push_str(";\n");
+                } else {
+                    self.output.push_str(" {\n");
+                    for stmt in body {
+                        self.emit_node(stmt);
+                    }
+                    self.output.push_str("}\n");
                 }
-                self.output.push_str("}\n");
             }
             // 函数重载签名 - 转译时输出为注释保留签名信息
             ASTNode::FunctionOverload {
@@ -11895,6 +11924,134 @@ namespace MyNamespace {
                 // Interface should be stripped, but person should remain
                 assert!(result.js_code.contains("person"), "Should have person variable");
                 println!("✅ Namespace with interface test passed");
+            }
+            Err(e) => {
+                panic!("Compilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test declare function (v0.3.151)
+    #[test]
+    fn test_declare_function_basic() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test basic declare function
+        let source = r#"
+declare function greet(name: string): string;
+declare function add(a: number, b: number): number;
+"#;
+        println!("\n========== Testing: declare function basic ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Should contain declare keyword
+                assert!(result.js_code.contains("declare function greet"),
+                    "Should contain declare function greet: {}", result.js_code);
+                assert!(result.js_code.contains("declare function add"),
+                    "Should contain declare function add: {}", result.js_code);
+                // Type annotations should be stripped
+                assert!(!result.js_code.contains(": string"),
+                    "Should not contain type annotation: {}", result.js_code);
+                println!("✅ Declare function basic test passed");
+            }
+            Err(e) => {
+                panic!("Compilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test declare function with parameters (v0.3.151)
+    #[test]
+    fn test_declare_function_with_params() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test declare function with multiple parameters
+        let source = r#"
+declare function fetchData(url: string, options?: object): Promise<string>;
+declare function logMessage(msg: string, level: string): void;
+"#;
+        println!("\n========== Testing: declare function with params ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("declare function fetchData"),
+                    "Should contain declare function fetchData: {}", result.js_code);
+                assert!(result.js_code.contains("declare function logMessage"),
+                    "Should contain declare function logMessage: {}", result.js_code);
+                // Parameters should be present without type annotations
+                assert!(result.js_code.contains("url"),
+                    "Should contain url parameter: {}", result.js_code);
+                assert!(result.js_code.contains("options"),
+                    "Should contain options parameter: {}", result.js_code);
+                println!("✅ Declare function with params test passed");
+            }
+            Err(e) => {
+                panic!("Compilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test export declare function (v0.3.151)
+    #[test]
+    fn test_export_declare_function() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test export declare function
+        let source = r#"
+export declare function calculate(a: number, b: number): number;
+export declare function getVersion(): string;
+"#;
+        println!("\n========== Testing: export declare function ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("export"),
+                    "Should contain export keyword: {}", result.js_code);
+                assert!(result.js_code.contains("declare function calculate"),
+                    "Should contain export declare function calculate: {}", result.js_code);
+                assert!(result.js_code.contains("declare function getVersion"),
+                    "Should contain export declare function getVersion: {}", result.js_code);
+                println!("✅ Export declare function test passed");
+            }
+            Err(e) => {
+                panic!("Compilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test regular function vs declare function (v0.3.151)
+    #[test]
+    fn test_regular_function_vs_declare_function() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Compare regular function with declare function
+        let source = r#"
+function regularFunc(x: number): number {
+    return x * 2;
+}
+
+declare function declaredFunc(x: number): number;
+"#;
+        println!("\n========== Testing: regular vs declare function ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Regular function should have body
+                assert!(result.js_code.contains("function regularFunc"),
+                    "Should contain regular function: {}", result.js_code);
+                assert!(result.js_code.contains("return x * 2"),
+                    "Should contain function body: {}", result.js_code);
+                // Declare function should have declare keyword but no body
+                assert!(result.js_code.contains("declare function declaredFunc"),
+                    "Should contain declare function: {}", result.js_code);
+                assert!(!result.js_code.contains("declare function declaredFunc {"),
+                    "Declare function should not have body: {}", result.js_code);
+                println!("✅ Regular vs declare function test passed");
             }
             Err(e) => {
                 panic!("Compilation failed: {}", e);
