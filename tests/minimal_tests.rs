@@ -611,4 +611,101 @@ function greet(this: { name: string }, message: string): string {
 
         println!("✅ Test 25: TypeScript this parameter in function");
     }
+
+    /// 测试26: TypeScript 映射类型 [P in keyof T] 支持 (v0.3.184)
+    /// 测试 fast-path 对映射类型语法的移除
+    #[test]
+    fn test_typescript_mapped_type_fast_path() {
+        // 测试基本映射类型的移除
+        let ts_code = r#"
+type Partial<T> = { [P in keyof T]?: T[P] };
+interface User {
+    name: string;
+    age: number;
+}
+const user: Partial<User> = { name: "Alice" };
+"#;
+        let result = typescript::compile_typescript(ts_code, "mapped_type_test.ts");
+        assert!(result.is_ok(), "mapped type should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证映射类型语法被移除
+        assert!(!output.js_code.contains("[P in keyof T]"),
+            "Should remove mapped type syntax: {}", output.js_code);
+
+        // 验证接口和代码保留
+        assert!(output.js_code.contains("user"),
+            "Should preserve user: {}", output.js_code);
+
+        println!("✅ Test 26: TypeScript mapped type fast-path support (basic)");
+    }
+
+    /// 测试27: TypeScript 映射类型带 readonly 修饰符 (v0.3.184)
+    #[test]
+    fn test_typescript_mapped_type_readonly() {
+        // 测试带 readonly 的映射类型
+        let ts_code = r#"
+type Readonly<T> = { readonly [P in keyof T]: T[P] };
+interface Config {
+    apiKey: string;
+    timeout: number;
+}
+const config: Readonly<Config> = { apiKey: "secret", timeout: 30 };
+"#;
+        let result = typescript::compile_typescript(ts_code, "readonly_mapped_type_test.ts");
+        assert!(result.is_ok(), "readonly mapped type should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证映射类型语法被移除
+        assert!(!output.js_code.contains("[P in keyof T]"),
+            "Should remove mapped type syntax: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("config"),
+            "Should preserve config: {}", output.js_code);
+
+        println!("✅ Test 27: TypeScript mapped type with readonly modifier");
+    }
+
+    /// 测试28: TypeScript 映射类型带字符串联合键 (v0.3.184)
+    #[test]
+    fn test_typescript_mapped_type_string_union() {
+        // 测试带字符串联合类型的映射类型
+        let ts_code = r#"
+type StringKeyMap = { [P in "name" | "age"]: any };
+const map: StringKeyMap = { name: "Alice", age: 30 };
+"#;
+        let result = typescript::compile_typescript(ts_code, "string_union_mapped_type_test.ts");
+        assert!(result.is_ok(), "string union mapped type should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证映射类型语法被移除
+        assert!(!output.js_code.contains("[P in \"name\""),
+            "Should remove mapped type with string union: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("map"),
+            "Should preserve map: {}", output.js_code);
+
+        println!("✅ Test 28: TypeScript mapped type with string union keys");
+    }
+
+    /// 测试29: TypeScript 映射类型带可选修饰符 (v0.3.184)
+    #[test]
+    fn test_typescript_mapped_type_optional() {
+        // 测试带 ? 修饰符的映射类型
+        let ts_code = r#"
+type Optional<T> = { [P in keyof T]?: T[P] };
+type Result<T, E> = { [P in keyof T]?: T[P] } | { error: E };
+"#;
+        let result = typescript::compile_typescript(ts_code, "optional_mapped_type_test.ts");
+        assert!(result.is_ok(), "optional mapped type should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证映射类型语法被移除
+        assert!(!output.js_code.contains("[P in keyof T]?"),
+            "Should remove optional mapped type syntax: {}", output.js_code);
+
+        println!("✅ Test 29: TypeScript mapped type with optional modifier");
+    }
 }

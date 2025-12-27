@@ -1451,6 +1451,108 @@ impl MinimalRuntime {
         let type_union_pattern = regex::Regex::new(r"type\s+([A-Z][a-zA-Z0-9_]*)\s*=\s*[^;]+(?:\|[^;]+)*;").unwrap();
         js_code = type_union_pattern.replace_all(&js_code, "/* type $1 */").to_string();
 
+        // v0.3.184: Remove mapped type definitions
+        // Pattern: { [P in keyof T]: T[P] } or { readonly [P in keyof T]: T[P] }
+        // This uses a bracket-matching approach to handle nested types properly
+        fn remove_mapped_types(code: &str) -> String {
+            let mut result = String::new();
+            let mut i = 0;
+            let chars: Vec<char> = code.chars().collect();
+            let n = chars.len();
+
+            while i < n {
+                // Look for "[" followed by identifier and " in " (mapped type pattern)
+                // Pattern: [Identifier in ...]: or readonly [Identifier in ...]:
+                let is_lbracket = chars[i] == '[';
+                let has_identifier_in = if is_lbracket && i + 1 < n {
+                    // Check if we have [Identifier... or [ Identifier...
+                    let mut j = i + 1;
+                    while j < n && chars[j].is_whitespace() {
+                        j += 1;
+                    }
+                    // Check for readonly modifier
+                    let has_readonly = chars[j..].starts_with(&['r', 'e', 'a', 'd', 'o', 'n', 'l', 'y'][..]);
+                    if has_readonly {
+                        j += 8;
+                        while j < n && chars[j].is_whitespace() {
+                            j += 1;
+                        }
+                    }
+                    // Now should be at [
+                    if j < n && chars[j] == '[' {
+                        j += 1;
+                        while j < n && chars[j].is_whitespace() {
+                            j += 1;
+                        }
+                        // Check for identifier followed by " in "
+                        if j < n && (chars[j].is_alphabetic() || chars[j] == '_') {
+                            j += 1;
+                            while j < n && (chars[j].is_alphanumeric() || chars[j] == '_' || chars[j] == '$') {
+                                j += 1;
+                            }
+                            while j < n && chars[j].is_whitespace() {
+                                j += 1;
+                            }
+                            // Check for " in "
+                            chars[j..].starts_with(&['i', 'n', ' '][..]) && j + 3 < n && chars[j + 3].is_whitespace()
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                };
+
+                if has_identifier_in {
+                    // Find the matching ] for the opening [
+                    // Start from i, find the first ] that closes the opening [
+                    let mut depth = 1;
+                    let mut j = i + 1;
+                    let mut in_string = false;
+                    let mut string_char = '\0';
+
+                    while j < n && depth > 0 {
+                        let c = chars[j];
+                        if in_string {
+                            if c == '\\' && j + 1 < n {
+                                j += 2;
+                                continue;
+                            }
+                            if c == string_char {
+                                in_string = false;
+                            }
+                        } else {
+                            if c == '"' || c == '\'' || c == '`' {
+                                in_string = true;
+                                string_char = c;
+                            } else if c == '[' {
+                                depth += 1;
+                            } else if c == ']' {
+                                depth -= 1;
+                            }
+                        }
+                        j += 1;
+                    }
+
+                    // Replace with comment placeholder
+                    result.push_str("/* mapped type */");
+                    i = j;
+                    continue;
+                }
+
+                result.push(chars[i]);
+                i += 1;
+            }
+
+            result
+        }
+
+        // Remove mapped types before interface removal
+        // This handles { [P in keyof T]: T[P] } patterns
+        js_code = remove_mapped_types(&js_code);
+
         // Remove type annotations from function parameters ONLY
         // This pattern matches: :TypeName followed by , or )
         // Using capturing group instead of lookahead (not supported by regex crate)
@@ -1821,7 +1923,8 @@ impl MinimalRuntime {
             || code.contains("infer ")      // v0.3.175: infer keyword in conditional types
             || code.contains("abstract class")   // v0.3.176: abstract class declaration
             || code.contains("abstract ")       // v0.3.176: abstract method or class
-            || code.contains("this:");          // v0.3.183: this parameter type annotation
+            || code.contains("this:")           // v0.3.183: this parameter type annotation
+            || code.contains(" in ") && code.contains("[");  // v0.3.184: mapped type [P in keyof T] pattern
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript

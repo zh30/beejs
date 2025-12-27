@@ -87,6 +87,39 @@
 
 ---
 
+### v0.3.184 实现映射类型 `in` 关键字支持（2025-12-28）
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.184 新增功能
+- **映射类型快速路径支持**
+  - 运行时快速路径识别 `{ [P in keyof T]: T[P] }` 模式
+  - 支持 readonly 修饰符: `{ readonly [P in keyof T]: T[P] }`
+  - 支持字符串联合键: `{ [P in "key1" | "key2"]: T[P] }`
+  - 支持可选修饰符: `{ [P in keyof T]?: T[P] }`
+
+#### v0.3.184 实现细节
+- **运行时快速路径检测增强** (`src/runtime_minimal.rs`)
+  - 添加 ` in ` 和 `[` 组合模式检测到 `has_raw_typescript()`
+
+- **运行时快速路径移除增强** (`src/runtime_minimal.rs`)
+  - 实现 `remove_mapped_types()` 函数
+  - 使用括号匹配算法正确处理嵌套类型
+  - 支持嵌套括号和字符串内的括号
+  - 正确处理 readonly 修饰符
+
+#### v0.3.184 测试验证
+- ✅ `test_typescript_mapped_type_fast_path`: 基本映射类型 `{ [P in keyof T]?: T[P] }`
+- ✅ `test_typescript_mapped_type_readonly`: 带 readonly 修饰符的映射类型
+- ✅ `test_typescript_mapped_type_string_union`: 带字符串联合键的映射类型
+- ✅ `test_typescript_mapped_type_optional`: 带可选修饰符的映射类型
+- ✅ `cargo test --test minimal_tests`: 29/29 通过
+
+#### v0.3.184 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现映射类型 keyof 关键字完整支持
+
+---
+
 ### v0.3.179 实现 BigInt 字面量支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 
