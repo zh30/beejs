@@ -10363,3 +10363,29 @@ console.log(p.name);  // "Alice"
 - 继续完善 TypeScript 编译器功能
 - 实现更多工具类型支持
 - 优化运行时性能
+
+---
+
+### v0.3.191 添加 ReturnType 和 Parameters 工具类型测试（2025-12-28）
+**进度**: TypeScript 测试增强 | ✅ 已提交
+
+#### v0.3.191 新增测试用例
+- **ReturnType<T> 工具类型测试**
+  - 测试 `ReturnType<typeof getUser>` 获取函数返回类型
+  - 验证工具类型引用在转译时被正确移除
+  - 保留函数定义和代码
+
+- **Parameters<T> 工具类型测试**
+  - 测试 `Parameters<typeof greet>` 获取函数参数类型
+  - 验证工具类型引用在转译时被正确移除
+  - 保留函数定义和代码
+
+#### v0.3.191 测试验证
+- ✅ `cargo test --test minimal_tests`: 59/59 通过 (+2)
+- ✅ `cargo test --lib`: 221/221 通过
+- ✅ 所有新测试用例通过
+
+#### v0.3.191 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多工具类型测试覆盖
+- 优化运行时性能
