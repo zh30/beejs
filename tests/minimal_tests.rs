@@ -158,4 +158,37 @@ const str = identity("hello");
             "Should contain identity function: {}", output.js_code);
         println!("✅ Test 8: TypeScript generic function");
     }
+
+    /// 测试9: TypeScript export = 语法 (CommonJS/AMD 兼容)
+    #[test]
+    fn test_typescript_export_equals() {
+        let ts_code = r#"
+export = 5;
+"#;
+        let result = typescript::compile_typescript(ts_code, "test.ts");
+        assert!(result.is_ok(), "export = should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+        // export = 应该被转译为注释占位符
+        assert!(output.js_code.contains("/* export ="),
+            "Should contain export = placeholder: {}", output.js_code);
+        println!("✅ Test 9: TypeScript export = syntax");
+    }
+
+    /// 测试10: TypeScript export = 函数 (CommonJS/AMD 兼容)
+    #[test]
+    fn test_typescript_export_equals_function() {
+        let ts_code = r#"
+function myModule() {
+    return { value: 42 };
+}
+export = myModule;
+"#;
+        let result = typescript::compile_typescript(ts_code, "test.ts");
+        assert!(result.is_ok(), "export = function should compile, error: {:?}", result.err());
+        let output = result.unwrap();
+        // 验证函数被保留
+        assert!(output.js_code.contains("myModule") || output.js_code.contains("/* export ="),
+            "Should contain myModule or export = placeholder: {}", output.js_code);
+        println!("✅ Test 10: TypeScript export = with function");
+    }
 }

@@ -1507,6 +1507,11 @@ impl MinimalRuntime {
         let declare_module_pattern = regex::Regex::new(r#"declare\s+module\s+"[^"]+"\s*[{][^}]*[}]"#).unwrap();
         js_code = declare_module_pattern.replace_all(&js_code, "/* declare module */").to_string();
 
+        // v0.3.172: Remove export = expr statements (CommonJS/AMD compatible)
+        // export = is a TypeScript/TSX specific syntax for module exports
+        let export_equals_pattern = regex::Regex::new(r"export\s*=\s*[^;]+;").unwrap();
+        js_code = export_equals_pattern.replace_all(&js_code, "/* export = */").to_string();
+
         // Clean up extra whitespace (especially after removing satisfies)
         let cleanup_pattern = regex::Regex::new(r"\s+([;,})])").unwrap();
         js_code = cleanup_pattern.replace_all(&js_code, "$1").to_string();
@@ -1548,7 +1553,8 @@ impl MinimalRuntime {
             || code.contains(" as ")        // as Type assertion
             || code.contains(" satisfies ") // satisfies operator
             || code.contains("declare global")  // v0.3.170: global declaration block
-            || code.contains("declare module \""); // v0.3.170: module declaration
+            || code.contains("declare module \"") // v0.3.170: module declaration
+            || code.contains("export") && code.contains('='); // v0.3.172: export = statement
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript

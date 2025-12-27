@@ -1529,6 +1529,10 @@ impl TypeScriptCompiler {
                     self.check_node(stmt, ctx)?;
                 }
             }
+            // export = 语句的类型检查（跳过，因为是类型声明）
+            ASTStatement::ExportAssignment { .. } => {
+                // export = 是类型声明，不需要运行时类型检查
+            }
         }
         Ok(())
     }
@@ -2816,6 +2820,14 @@ pub enum ASTStatement {
         body: Vec<ASTNode>,
         /// 是否为 declare 声明
         is_declare: bool,
+    },
+    /// TypeScript export = 语法（CommonJS/AMD 兼容）
+    /// 用于导出单个值，常用于与 CommonJS 或 AMD 模块互操作
+    ExportAssignment {
+        /// 要导出的表达式
+        expression: Box<ASTExpression>,
+        /// 是否为 type-only 导出
+        is_type_only: bool,
     },
 }
 /// switch case 结构
@@ -5388,6 +5400,17 @@ impl Parser {
                     inline_declaration: Some(Box::new(declaration)),
                     is_type_only,
                 });
+            }
+            Token::Eq => {
+                // export = expr (CommonJS/AMD 兼容语法)
+                self.consume(Token::Eq)?;
+                let expr = self.parse_expression()?;
+                self.consume(Token::SemiColon)?;
+                // 创建 ExportAssignment AST 节点
+                return Ok(ASTNode::Statement(ASTStatement::ExportAssignment {
+                    expression: Box::new(expr),
+                    is_type_only,
+                }));
             }
             _ => bail!("Invalid export declaration"),
         }
@@ -8109,6 +8132,16 @@ impl CodeEmitter {
                             self.output.push_str(" || (");
                             self.output.push_str(name);
                             self.output.push_str(" = {}));\n");
+                        }
+                    }
+                    // export = 语句 (CommonJS/AMD 兼容)
+                    ASTStatement::ExportAssignment { expression, is_type_only } => {
+                        if *is_type_only {
+                            self.output.push_str("/* export = type */\n");
+                        } else {
+                            self.output.push_str("/* export = ");
+                            self.emit_expression(expression);
+                            self.output.push_str(" */\n");
                         }
                     }
                 }
