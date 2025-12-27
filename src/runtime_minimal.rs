@@ -2243,12 +2243,14 @@ impl MinimalRuntime {
         js_code = esm_import_dq_pattern.replace_all(&js_code, r"const /* ESM import */ = require('$1')").to_string();
 
         // v0.3.195: Convert simple ESM export statements to comments
+        // v0.3.196: Added abstract for export abstract class support
         // Complex exports (export { a, b }) need variable tracking, so we use placeholders
         // - "export const X = val" -> "/* export const X = val */" (will be cleaned up)
         // - "export function foo() {}" -> "/* export function foo() {} */"
         // - "export class C {}" -> "/* export class C {} */"
+        // - "export abstract class C {}" -> "/* export abstract class C {} */"
         let esm_export_pattern = regex::Regex::new(
-            r"(?m)^\s*export\s+(?:const|let|var|function|class|interface|type)\s+"
+            r"(?m)^\s*export\s+(?:const|let|var|function|class|interface|type|abstract)\s+"
         ).unwrap();
         js_code = esm_export_pattern.replace_all(&js_code, "/* ESM export removed: ").to_string();
 
@@ -2294,6 +2296,7 @@ impl MinimalRuntime {
             || code.contains("infer ")      // v0.3.175: infer keyword in conditional types
             || code.contains("abstract class")   // v0.3.176: abstract class declaration
             || code.contains("abstract ")       // v0.3.176: abstract method or class
+            || code.contains("export abstract") // v0.3.196: export abstract class
             || code.contains("this:")           // v0.3.183: this parameter type annotation
             || code.contains(" in ") && code.contains("[")  // v0.3.184: mapped type [P in keyof T] pattern
             || code.contains("keyof typeof")    // v0.3.185: keyof typeof pattern

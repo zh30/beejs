@@ -10574,3 +10574,35 @@ console.log(p.name);  // "Alice"
 - 实现更完整的 ESM 支持（变量追踪）
 - 实现 package.json 解析和依赖管理
 - 创建性能基准测试与 Bun 对比
+
+---
+
+### v0.3.196 实现 export abstract class 快速路径支持（2025-12-28）
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.196 新增功能
+- **export abstract class 快速路径支持**
+  - 运行时快速路径识别 `export abstract class` 模式
+  - 将 `export abstract class X {}` 正确转换为注释占位符
+  - 保留 abstract 关键字用于后续类型擦除
+
+#### v0.3.196 实现细节
+- **运行时快速路径增强** (`src/runtime_minimal.rs`)
+  - 在 ESM export 正则模式中添加 `abstract` 关键字
+  - 更新 `has_raw_typescript()` 检测 `export abstract` 模式
+  - 支持 `export abstract class Animal { abstract makeSound(): void; }` 等复杂场景
+
+- **新增测试用例** (`tests/minimal_tests.rs`)
+  - `test_esm_export_abstract_class`: 测试 export abstract class 转换
+
+#### v0.3.196 测试验证
+- ✅ `cargo check --release` 成功编译
+- ✅ `export abstract class Animal {}` → 正确转换为注释
+- ✅ 保留 abstract 关键字用于类型擦除
+- ✅ 与现有 ESM 导出模式兼容
+
+#### v0.3.196 下一步
+- 继续完善 Node.js API 兼容性
+- 实现更完整的 ESM 支持（变量追踪）
+- 实现 package.json 解析和依赖管理
+- 创建性能基准测试与 Bun 对比

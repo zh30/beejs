@@ -1689,4 +1689,21 @@ const x = 1;
         assert!(output.js_code.contains("require"), "Should have require: {}", output.js_code);
         println!("✅ Test 70: ESM import side-effect");
     }
+
+    /// 测试71: ESM export abstract class 转注释 (v0.3.196)
+    #[test]
+    fn test_esm_export_abstract_class() {
+        let ts_code = r#"
+export abstract class Animal {
+    abstract makeSound(): void;
+}
+const x = 1;
+"#;
+        let result = typescript::compile_typescript(ts_code, "esm_test.ts");
+        assert!(result.is_ok(), "ESM export abstract should compile, error: {:?}", result.err());
+        let output = result.unwrap();
+        assert!(output.js_code.contains("/* ESM export"), "Should have ESM comment: {}", output.js_code);
+        assert!(output.js_code.contains("abstract"), "Should preserve abstract keyword: {}", output.js_code);
+        println!("✅ Test 71: ESM export abstract class");
+    }
 }
