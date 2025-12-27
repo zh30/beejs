@@ -2565,4 +2565,106 @@ const text: StringOnly = "hello";
 
         println!("✅ Test 102: TypeScript Extract with complex union types");
     }
+
+    /// 测试103: TypeScript InstanceType<T> 快速路径测试 (v0.3.210)
+    #[test]
+    fn test_instancetype_utility_fast_path() {
+        // 测试 InstanceType 快速路径移除
+        // InstanceType<T> 获取构造函数的实例类型
+        let ts_code = r#"
+class Person {
+    name: string;
+    age: number;
+    constructor(name: string, age: number) {
+        this.name = name;
+        this.age = age;
+    }
+}
+
+type PersonInstance = InstanceType<typeof Person>;
+const person: PersonInstance = new Person("Alice", 30);
+"#;
+        let result = typescript::compile_typescript(ts_code, "instancetype_fastpath.ts");
+        assert!(result.is_ok(), "InstanceType fast-path should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 InstanceType 被快速路径移除
+        assert!(!output.js_code.contains("InstanceType<"),
+            "Should remove InstanceType via fast-path: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("class Person"),
+            "Should preserve class declaration: {}", output.js_code);
+        assert!(output.js_code.contains("new Person"),
+            "Should preserve constructor call: {}", output.js_code);
+        assert!(output.js_code.contains("const person"),
+            "Should preserve const declaration: {}", output.js_code);
+
+        println!("✅ Test 103: TypeScript InstanceType<T> fast-path");
+    }
+
+    /// 测试104: InstanceType 与泛型类组合测试 (v0.3.210)
+    #[test]
+    fn test_instancetype_with_generic_class() {
+        // 测试 InstanceType 与泛型类组合
+        let ts_code = r#"
+class Container<T> {
+    value: T;
+    constructor(value: T) {
+        this.value = value;
+    }
+}
+
+type ContainerInstance = InstanceType<typeof Container>;
+const container: ContainerInstance = new Container(42);
+"#;
+        let result = typescript::compile_typescript(ts_code, "instancetype_generic.ts");
+        assert!(result.is_ok(), "InstanceType with generic class should compile");
+        let output = result.unwrap();
+
+        // 验证 InstanceType 被移除
+        assert!(!output.js_code.contains("InstanceType<"),
+            "Should remove InstanceType: {}", output.js_code);
+
+        // 验证代码可执行
+        assert!(output.js_code.contains("class Container"),
+            "Should preserve class: {}", output.js_code);
+        assert!(output.js_code.contains("new Container"),
+            "Should preserve constructor: {}", output.js_code);
+
+        println!("✅ Test 104: TypeScript InstanceType with generic class");
+    }
+
+    /// 测试105: InstanceType 与 typeof 组合测试 (v0.3.210)
+    #[test]
+    fn test_instancetype_with_typeof() {
+        // 测试 InstanceType 与 typeof 组合使用
+        // 注意: typeof 在类型注解中会被移除，这是 TypeScript 类型擦除的正常行为
+        let ts_code = r#"
+class User {
+    username: string;
+    email: string;
+}
+
+type UserType = InstanceType<typeof User>;
+const user: UserType = new User("test", "test@example.com");
+"#;
+        let result = typescript::compile_typescript(ts_code, "instancetype_typeof.ts");
+        assert!(result.is_ok(), "InstanceType with typeof should compile");
+        let output = result.unwrap();
+
+        // 验证 InstanceType 被移除
+        assert!(!output.js_code.contains("InstanceType<"),
+            "Should remove InstanceType: {}", output.js_code);
+
+        // 验证 class 保留
+        assert!(output.js_code.contains("class User"),
+            "Should preserve class: {}", output.js_code);
+
+        // 验证 new User 调用保留
+        assert!(output.js_code.contains("new User"),
+            "Should preserve constructor call: {}", output.js_code);
+
+        println!("✅ Test 105: TypeScript InstanceType with typeof combination");
+    }
 }

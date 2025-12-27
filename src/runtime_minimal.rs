@@ -2355,6 +2355,13 @@ impl MinimalRuntime {
         let extract_pattern = regex::Regex::new(r"Extract\s*<([^,]+),").unwrap();
         js_code = extract_pattern.replace_all(&js_code, "$1").to_string();
 
+        // v0.3.210: Remove InstanceType utility type
+        // InstanceType<T> gets the instance type of a constructor type T
+        // For runtime, we remove the wrapper and keep the inner type
+        // Pattern: "InstanceType<typeof Person>" -> "Person"
+        let instancetype_pattern = regex::Regex::new(r"InstanceType\s*<([^>]+)>").unwrap();
+        js_code = instancetype_pattern.replace_all(&js_code, "$1").to_string();
+
         // v0.3.195: Convert simple ESM export statements to comments
         // v0.3.196: Added abstract for export abstract class support
         // Complex exports (export { a, b }) need variable tracking, so we use placeholders
@@ -2444,7 +2451,8 @@ impl MinimalRuntime {
             || code.contains("Omit<")           // v0.3.208: Omit utility type
             || code.contains("Record<")         // v0.3.208: Record utility type
             || code.contains("Exclude<")        // v0.3.209: Exclude utility type
-            || code.contains("Extract<");       // v0.3.209: Extract utility type
+            || code.contains("Extract<")        // v0.3.209: Extract utility type
+            || code.contains("InstanceType<");  // v0.3.210: InstanceType utility type
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript
