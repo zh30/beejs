@@ -97,8 +97,57 @@
 - ✅ 无回归问题
 
 #### v0.3.164 下一步
-- 实现完整的类型声明解析
-- 继续增强边缘情况测试覆盖
+- 实现完整的类型声明解析 ✅ 已完成 (v0.3.165)
+- 继续增强边缘情况测试覆盖 ✅ 已完成 (v0.3.165)
+
+---
+
+### v0.3.165 枚举类型测试覆盖 (2025-12-27)
+**进度**: TypeScript 编译测试增强 | ✅ 已提交
+
+#### v0.3.165 新增测试用例
+- **基本枚举测试 (Basic Enum)**
+  - 添加 `test_enum_basic` 测试字符串和数值枚举
+  - 验证枚举被正确转译为 JavaScript 对象
+  - 验证枚举成员值正确保留
+
+- **常量枚举测试 (Const Enum)**
+  - 添加 `test_const_enum` 测试 `const enum` 声明
+  - 验证 const enum 被正确转译
+
+- **数值枚举测试 (Numeric Enum)**
+  - 添加 `test_enum_numeric` 测试 HTTP 状态码等数值枚举
+  - 验证自定义数值（如 200, 404, 500）正确保留
+
+- **混合枚举测试 (Mixed Enum)**
+  - 添加 `test_enum_mixed` 测试字符串和数值混合的枚举
+  - 验证自动递增成员值（从最后一个数值递增）
+
+- **枚举反向映射测试 (Reverse Mapping)**
+  - 添加 `test_enum_reverse_mapping` 测试枚举的反向映射语法
+  - 验证 `Status[1]` 等反向访问正确保留
+
+- **枚举在对象中使用测试**
+  - 添加 `test_enum_in_object` 测试枚举在对象属性中的使用
+  - 验证枚举访问表达式正确转译
+
+- **枚举计算值测试 (Computed Values)**
+  - 添加 `test_enum_computed_values` 测试枚举成员计算值
+  - 验证自定义数值正确保留
+
+- **枚举函数返回类型测试**
+  - 添加 `test_enum_function_return` 测试枚举作为函数返回类型
+  - 验证类型注解在转译时正确移除
+
+#### v0.3.165 验证
+- ✅ `cargo test --test typescript_enum_tests` 8/8 通过
+- ✅ `cargo test --lib` 220/220 通过
+- ✅ `cargo test --test typescript_compiler_integration_tests` 60/60 通过
+- ✅ 无回归问题
+
+#### v0.3.165 下一步
+- 实现完整的类型声明解析（剩余功能）
+- 继续增强 TypeScript 编译器测试覆盖
 
 ---
 
