@@ -4525,14 +4525,32 @@ impl Parser {
                     value_type: value_type_str,
                 }));
             } else {
-                // 解析普通属性
+                // 解析普通属性 (v0.3.169: 支持 ? 可选修饰符和 readonly 修饰符)
+                // 先检查是否有 readonly 修饰符
+                if self.current_token_eq(&Token::Readonly) {
+                    self.consume(Token::Readonly)?;
+                }
+
+                // 检查是否有 ? 可选修饰符
+                if self.current_token_eq(&Token::Question) {
+                    self.consume(Token::Question)?;
+                }
+
+                // 读取属性名
                 let prop_name_token = self.consume_any_identifier()?;
                 let prop_name: _ = match prop_name_token {
                     Token::Identifier(name) => name,
                     _ => bail!("Expected property name"),
                 };
+
+                // 如果之前没有检查 ?，现在检查 (处理 x?: type 的情况)
+                if self.current_token_eq(&Token::Question) {
+                    self.consume(Token::Question)?;
+                }
+
                 self.consume(Token::Colon)?;
                 let prop_type: _ = self.parse_type_annotation();
+                // 可选修饰符和 readonly 在转译时会被移除，只存储属性类型
                 properties.insert(prop_name, prop_type.unwrap_or_else(|| "any".to_string()));
             }
 
