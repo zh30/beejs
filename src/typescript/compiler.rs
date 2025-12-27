@@ -2668,8 +2668,10 @@ pub enum ASTExpression {
     ObjectLiteral {
         properties: Vec<ASTExpression>,  // 使用 ObjectProperty 表达式
     },
+    // v0.3.180: 箭头函数表达式 - 支持默认参数值
     ArrowFunctionExpression {
-        params: Vec<(String, Option<String>)>,
+        // params: Vec<(name, type_annotation, default_value)>
+        params: Vec<(String, Option<String>, Option<String>)>,
         body: Box<ASTNode>,  // 可以是 Expression 或 Block(Vec<ASTNode>)
         return_type: Option<String>,
         is_async: bool,
@@ -4001,6 +4003,7 @@ impl Parser {
         } else {
             None
         };
+        // v0.3.180: 修复函数参数默认值解析
         self.consume(Token::LParen)?;
         let mut params = Vec::new();
         while !self.current_token_eq(&Token::RParen) {
@@ -4008,7 +4011,17 @@ impl Parser {
             let param = if self.current_token_eq(&Token::LBracket) || self.current_token_eq(&Token::LBrace) {
                 // 解析解构模式
                 let pattern = self.parse_destructuring_pattern()?;
-                FunctionParameter::Destructuring { pattern, default_value: None }
+
+                // 检查是否有默认值
+                let default_value = if self.current_token_eq(&Token::Eq) {
+                    self.consume(Token::Eq)?;
+                    let expr = self.parse_expression()?;
+                    Some(Box::new(ASTNode::Expression(expr)))
+                } else {
+                    None
+                };
+
+                FunctionParameter::Destructuring { pattern, default_value }
             } else {
                 // 解析简单参数
                 let param_name_token = self.consume_any_identifier()?;
@@ -4026,10 +4039,18 @@ impl Parser {
                 } else {
                     None
                 };
+                // v0.3.180: 检查是否有默认值
+                let default_value = if self.current_token_eq(&Token::Eq) {
+                    self.consume(Token::Eq)?;
+                    let expr = self.parse_expression()?;
+                    Some(Box::new(ASTNode::Expression(expr)))
+                } else {
+                    None
+                };
                 FunctionParameter::Simple {
                     name: param_name,
                     type_annotation: param_type,
-                    default_value: None,
+                    default_value,
                     is_public: false,
                     is_private: false,
                     is_protected: false,
@@ -4145,7 +4166,7 @@ impl Parser {
         } else {
             None
         };
-
+        // v0.3.180: 修复函数表达式参数默认值解析
         self.consume(Token::LParen)?;
         let mut params = Vec::new();
         while !self.current_token_eq(&Token::RParen) {
@@ -4153,7 +4174,17 @@ impl Parser {
             let param = if self.current_token_eq(&Token::LBracket) || self.current_token_eq(&Token::LBrace) {
                 // 解析解构模式
                 let pattern = self.parse_destructuring_pattern()?;
-                FunctionParameter::Destructuring { pattern, default_value: None }
+
+                // 检查是否有默认值
+                let default_value = if self.current_token_eq(&Token::Eq) {
+                    self.consume(Token::Eq)?;
+                    let expr = self.parse_expression()?;
+                    Some(Box::new(ASTNode::Expression(expr)))
+                } else {
+                    None
+                };
+
+                FunctionParameter::Destructuring { pattern, default_value }
             } else {
                 // 解析简单参数
                 let param_name_token = self.consume_any_identifier()?;
@@ -4171,10 +4202,18 @@ impl Parser {
                 } else {
                     None
                 };
+                // v0.3.180: 检查是否有默认值
+                let default_value = if self.current_token_eq(&Token::Eq) {
+                    self.consume(Token::Eq)?;
+                    let expr = self.parse_expression()?;
+                    Some(Box::new(ASTNode::Expression(expr)))
+                } else {
+                    None
+                };
                 FunctionParameter::Simple {
                     name: param_name,
                     type_annotation: param_type,
-                    default_value: None,
+                    default_value,
                     is_public: false,
                     is_private: false,
                     is_protected: false,
@@ -5667,15 +5706,16 @@ impl Parser {
 
         // 处理箭头函数
         if self.current_token_eq(&Token::FatArrow) {
+            // v0.3.180: 使用 3 元素元组支持默认参数
             // 检查是否是带括号的参数列表
             let params: _ = if let ASTExpression::Identifier(name) = expr {
-                vec![(name, None)]
+                vec![(name, None, None)]
             } else if let ASTExpression::CallExpression { callee: _, arguments } = &expr {
                 // 处理带括号的参数列表，如 (a, b)
                 let mut params = Vec::new();
                 for arg in arguments {
                     if let ASTExpression::Identifier(name) = arg {
-                        params.push((name.clone(), None));
+                        params.push((name.clone(), None, None));
                     } else {
                         return Err(anyhow::anyhow!("Arrow function parameters must be identifiers"));
                     }
@@ -5834,8 +5874,8 @@ impl Parser {
     }
     #[allow(dead_code)]
     fn parse_arrow_function_from_assignment(&mut self) -> Result<ASTExpression> {
-        // 解析箭头函数的参数部分
-        let mut params = Vec::new();
+        // v0.3.180: 解析箭头函数的参数部分 - 支持默认参数值
+        let mut params: Vec<(String, Option<String>, Option<String>)> = Vec::new();
         if self.current_token_eq(&Token::LParen) {
             // 带括号的参数列表: (a, b, c)
             self.consume(Token::LParen)?;
@@ -5854,7 +5894,16 @@ impl Parser {
                     } else {
                         None
                     };
-                    params.push((param_name, param_type));
+                    // v0.3.180: 检查是否有默认值
+                    let default_value: Option<String> = if self.current_token_eq(&Token::Eq) {
+                        self.consume(Token::Eq)?;
+                        // 解析默认值表达式（简单实现：读取直到逗号或右括号）
+                        let default = self.parse_default_value_expression()?;
+                        Some(default)
+                    } else {
+                        None
+                    };
+                    params.push((param_name, param_type, default_value));
                     if self.current_token_eq(&Token::Comma) {
                         self.consume(Token::Comma)?;
                     }
@@ -5875,7 +5924,15 @@ impl Parser {
             } else {
                 None
             };
-            params.push((param_name, param_type));
+            // v0.3.180: 检查是否有默认值
+            let default_value: Option<String> = if self.current_token_eq(&Token::Eq) {
+                self.consume(Token::Eq)?;
+                let default = self.parse_default_value_expression()?;
+                Some(default)
+            } else {
+                None
+            };
+            params.push((param_name, param_type, default_value));
         } else {
             bail!("Expected parameter list or parameter name");
         }
@@ -5914,6 +5971,7 @@ impl Parser {
     /// 这种情况发生在变量声明中: const add = (a: number, b: number) => {}
     /// 此时参数列表已经被消耗了，需要重新解析
     fn parse_arrow_function_from_assignment_with_name(&mut self, _first_param_name: String) -> Result<ASTExpression> {
+        // v0.3.180: 使用 3 元素元组支持默认参数
         // 注意：由于我们无法恢复已消耗的 token，这里需要特殊处理
         // 实际上，我们应该在检测到箭头函数时不消耗参数，而是保存状态后重新解析
         // 为了简化，我们让 parse_variable_name_and_initializer 返回不同的标记
@@ -5925,7 +5983,7 @@ impl Parser {
         }
 
         // 检查当前是否是左括号（带括号的参数列表）
-        let mut params = Vec::new();
+        let mut params: Vec<(String, Option<String>, Option<String>)> = Vec::new();
 
         if self.current_token_eq(&Token::LParen) {
             // 带括号的参数列表: (a, b, c)
@@ -5946,7 +6004,15 @@ impl Parser {
                     } else {
                         None
                     };
-                    params.push((param_name, param_type));
+                    // v0.3.180: 检查是否有默认值
+                    let default_value: Option<String> = if self.current_token_eq(&Token::Eq) {
+                        self.consume(Token::Eq)?;
+                        let default = self.parse_default_value_expression()?;
+                        Some(default)
+                    } else {
+                        None
+                    };
+                    params.push((param_name, param_type, default_value));
                     if self.current_token_eq(&Token::Comma) {
                         self.consume(Token::Comma)?;
                     }
@@ -5995,8 +6061,8 @@ impl Parser {
 
     /// 解析 async 箭头函数 (async () => {} 或 async x => {})
     fn parse_async_arrow_function(&mut self) -> Result<ASTExpression> {
-        // 解析参数部分
-        let params: Vec<(String, Option<String>)> = if self.current_token_eq(&Token::LParen) {
+        // v0.3.180: 解析参数部分 - 使用 3 元素元组支持默认值
+        let params: Vec<(String, Option<String>, Option<String>)> = if self.current_token_eq(&Token::LParen) {
             // 带括号的参数列表: async (a, b)
             self.consume(Token::LParen)?;
             let mut params = Vec::new();
@@ -6011,7 +6077,8 @@ impl Parser {
                     self.consume(Token::Colon)?;
                     self.parse_type_annotation();
                 }
-                params.push((param_name, None));
+                // v0.3.180: 暂不支持 async 箭头函数的默认参数（简化处理）
+                params.push((param_name, None, None));
                 if self.current_token_eq(&Token::Comma) {
                     self.consume(Token::Comma)?;
                 }
@@ -6022,7 +6089,7 @@ impl Parser {
             // 单个参数无括号: async x => {}
             let name = name.clone();
             self.advance();
-            vec![(name, None)]
+            vec![(name, None, None)]
         } else {
             bail!("Expected parameter list or identifier after async");
         };
@@ -6052,7 +6119,8 @@ impl Parser {
             is_async: true,
         })
     }
-    fn parse_arrow_function_expression(&mut self, params: Vec<(String, Option<String>)>) -> Result<ASTExpression> {
+    // v0.3.180: 更新函数签名以支持默认参数值
+    fn parse_arrow_function_expression(&mut self, params: Vec<(String, Option<String>, Option<String>)>) -> Result<ASTExpression> {
         // 消耗 FatArrow token
         self.consume(Token::FatArrow)?;
         // 解析函数体 - 支持表达式和块语句
@@ -6275,9 +6343,10 @@ impl Parser {
                 };
 
                 if is_arrow_function {
-                    // 箭头函数参数列表: (params) =>
+                    // v0.3.180: 箭头函数参数列表: (params) =>
                     self.advance(); // 消费 (
-                    let mut params = Vec::new();
+                    // 使用 3 元素元组支持默认参数
+                    let mut params: Vec<(String, Option<String>, Option<String>)> = Vec::new();
 
                     // 解析参数列表
                     if !self.current_token_eq(&Token::RParen) {
@@ -6297,9 +6366,9 @@ impl Parser {
                                     }
                                 }
                                 self.consume(Token::RBrace)?;
-                                // 简化的解构参数处理
+                                // v0.3.180: 简化的解构参数处理
                                 if let Some(name) = prop_names.first() {
-                                    params.push((name.clone(), None));
+                                    params.push((name.clone(), None, None));
                                 }
                             } else if let Token::LBracket = self.current_token() {
                                 // 数组解构参数: [a, b]
@@ -6316,7 +6385,7 @@ impl Parser {
                                 }
                                 self.consume(Token::RBracket)?;
                                 if let Some(name) = elem_names.first() {
-                                    params.push((name.clone(), None));
+                                    params.push((name.clone(), None, None));
                                 }
                             } else if let Token::Identifier(name) = self.current_token().clone() {
                                 self.advance();
@@ -6325,7 +6394,8 @@ impl Parser {
                                     self.consume(Token::Colon)?;
                                     self.parse_type_annotation();
                                 }
-                                params.push((name, None));
+                                // v0.3.180: 暂不支持默认参数
+                                params.push((name, None, None));
                             }
 
                             if self.current_token_eq(&Token::Comma) {
@@ -6844,6 +6914,151 @@ impl Parser {
             }
             Some(final_result)
         }
+    }
+
+    // v0.3.180: 解析箭头函数参数的默认值表达式
+    /// 解析默认值表达式，返回原始字符串表示
+    /// 简单实现：读取直到逗号或右括号
+    fn parse_default_value_expression(&mut self) -> Result<String> {
+        let mut value = String::new();
+        let mut paren_depth = 0;
+        let mut bracket_depth = 0;
+        let mut brace_depth = 0;
+        let mut in_string = false;
+        let _string_char = '\0';
+
+        // 收集 token 直到遇到顶级逗号或右括号
+        while !self.is_at_end() {
+            match self.current_token() {
+                Token::LParen => {
+                    if in_string {
+                        value.push('(');
+                    } else {
+                        paren_depth += 1;
+                        value.push('(');
+                    }
+                }
+                Token::RParen => {
+                    if in_string {
+                        value.push(')');
+                    } else if paren_depth > 0 {
+                        paren_depth -= 1;
+                        value.push(')');
+                    } else {
+                        // 顶级右括号，结束
+                        break;
+                    }
+                }
+                Token::LBracket => {
+                    if in_string {
+                        value.push('[');
+                    } else {
+                        bracket_depth += 1;
+                        value.push('[');
+                    }
+                }
+                Token::RBracket => {
+                    if in_string {
+                        value.push(']');
+                    } else if bracket_depth > 0 {
+                        bracket_depth -= 1;
+                        value.push(']');
+                    } else {
+                        // 顶级右括号，结束
+                        break;
+                    }
+                }
+                Token::LBrace => {
+                    if in_string {
+                        value.push('{');
+                    } else {
+                        brace_depth += 1;
+                        value.push('{');
+                    }
+                }
+                Token::RBrace => {
+                    if in_string {
+                        value.push('}');
+                    } else if brace_depth > 0 {
+                        brace_depth -= 1;
+                        value.push('}');
+                    } else {
+                        // 顶级右括号，结束
+                        break;
+                    }
+                }
+                Token::Comma => {
+                    if in_string {
+                        value.push(',');
+                    } else if paren_depth == 0 && bracket_depth == 0 && brace_depth == 0 {
+                        // 顶级逗号，结束
+                        break;
+                    } else {
+                        value.push(',');
+                    }
+                }
+                Token::String(s, quote) => {
+                    value.push(*quote);
+                    value.push_str(&s);
+                    value.push(*quote);
+                }
+                Token::Identifier(s) => {
+                    if !value.is_empty() && !value.ends_with(' ') {
+                        value.push(' ');
+                    }
+                    value.push_str(&s);
+                }
+                Token::Number(n) => {
+                    value.push_str(&n);
+                }
+                Token::BigInt(n) => {
+                    value.push_str(&n);
+                    value.push('n');
+                }
+                Token::TemplateStart => {
+                    value.push('`');
+                }
+                Token::TemplateMiddle => {
+                    // For template literals inside the expression
+                    value.push_str("${");
+                }
+                Token::TemplateEnd => {
+                    value.push('`');
+                }
+                Token::Plus => value.push('+'),
+                Token::Minus => value.push('-'),
+                Token::Star => value.push('*'),
+                Token::Slash => value.push('/'),
+                Token::Percent => value.push('%'),
+                Token::StarStar => value.push_str("**"),
+                Token::Bang => value.push('!'),
+                Token::Question => value.push('?'),
+                Token::Colon => value.push(':'),
+                Token::Ampersand => value.push('&'),
+                Token::Pipe => value.push('|'),
+                Token::Caret => value.push('^'),
+                Token::Lt => value.push('<'),
+                Token::Gt => value.push('>'),
+                Token::LtEq => value.push_str("<="),
+                Token::GtEq => value.push_str(">="),
+                Token::EqEq => value.push_str("=="),
+                Token::NotEq => value.push_str("!="),
+                Token::EqEqEq => value.push_str("==="),
+                Token::NotEqEq => value.push_str("!=="),
+                Token::PlusPlus => value.push_str("++"),
+                Token::MinusMinus => value.push_str("--"),
+                Token::DotDotDot => value.push_str("..."),
+                Token::QuestionQuestion => value.push_str("??"),
+                Token::QuestionDot => value.push_str("?."),
+                _ => {
+                    // 其他 token，直接添加
+                    value.push_str(&format!("{:?}", self.current_token()));
+                }
+            }
+            self.advance();
+        }
+
+        Ok(value.trim().to_string())
     }
 
     /// 解析对象类型字面量: { name: string; age: number }
@@ -8459,13 +8674,18 @@ impl CodeEmitter {
                 if *is_async {
                     self.output.push_str("async ");
                 }
-                // 转译箭头函数参数（跳过类型注解）
+                // v0.3.180: 转译箭头函数参数（跳过类型注解，保留默认值）
                 self.output.push('(');
-                for (i, (param_name, _)) in params.iter().enumerate() {
+                for (i, (param_name, _, default_value)) in params.iter().enumerate() {
                     if i > 0 {
                         self.output.push_str(", ");
                     }
                     self.output.push_str(param_name);
+                    // 输出默认值
+                    if let Some(default) = default_value {
+                        self.output.push_str(" = ");
+                        self.output.push_str(default);
+                    }
                 }
                 self.output.push_str(") => ");
                 // 转译函数体 - body 现在是 ASTNode，可以是 Expression 或 Block
