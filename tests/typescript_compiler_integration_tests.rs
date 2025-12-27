@@ -1819,4 +1819,222 @@ const other: string = "other";
             }
         }
     }
+
+    /// Test type predicate with 'is' keyword (v0.3.164)
+    #[test]
+    fn test_type_predicate_is_keyword() {
+        // 测试类型谓词 is 关键字 - 转译时会移除返回类型注解，但函数保留
+        let ts_code = r#"
+function isString(value: unknown): value is string {
+    return typeof value === "string";
+}
+
+function isNumber(value: unknown): value is number {
+    return typeof value === "number";
+}
+
+function isDefined<T>(value: T | undefined): value is T {
+    return value !== undefined;
+}
+"#;
+        match compile_typescript(ts_code, "type_predicate.ts") {
+            Ok(output) => {
+                println!("类型谓词 is 关键字转译结果:");
+                println!("{}", output.js_code);
+                // 验证函数被正确保留（转译时移除类型注解）
+                assert!(output.js_code.contains("function isString(value)"),
+                    "Should contain isString function: {}", output.js_code);
+                assert!(output.js_code.contains("function isNumber(value)"),
+                    "Should contain isNumber function: {}", output.js_code);
+                assert!(output.js_code.contains("function isDefined(value)"),
+                    "Should contain isDefined function: {}", output.js_code);
+                // 验证函数体被保留
+                assert!(output.js_code.contains("typeof value === \"string\""),
+                    "Should contain function body: {}", output.js_code);
+                // 注意：类型谓词 `value is string` 在转译后的 JS 中会被移除
+                println!("✅ Type predicate with 'is' keyword test passed");
+            }
+            Err(e) => {
+                panic!("Type predicate with 'is' keyword test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test typeof with expressions (v0.3.164)
+    #[test]
+    fn test_typeof_expressions() {
+        // 测试 typeof 与表达式
+        let ts_code = r#"
+const user = { name: "Alice", age: 30 };
+const config = { apiUrl: "https://api.example.com", timeout: 5000 };
+
+type UserType = typeof user;
+type ConfigType = typeof config;
+
+function getType<T>(obj: T): T {
+    return obj;
+}
+
+const arr = [1, 2, 3];
+type ArrType = typeof arr;
+"#;
+        match compile_typescript(ts_code, "typeof_expressions.ts") {
+            Ok(output) => {
+                println!("typeof 表达式测试转译结果:");
+                println!("{}", output.js_code);
+                // 验证变量被正确保留
+                assert!(output.js_code.contains("user"),
+                    "Should contain user: {}", output.js_code);
+                assert!(output.js_code.contains("config"),
+                    "Should contain config: {}", output.js_code);
+                assert!(output.js_code.contains("arr"),
+                    "Should contain arr: {}", output.js_code);
+                // 验证 typeof 关键字在类型注解中被移除
+                assert!(!output.js_code.contains("UserType"),
+                    "Type alias should be removed: {}", output.js_code);
+                assert!(!output.js_code.contains("ConfigType"),
+                    "Type alias should be removed: {}", output.js_code);
+                // 验证函数被保留
+                assert!(output.js_code.contains("getType"),
+                    "Should contain getType: {}", output.js_code);
+                println!("✅ Typeof expressions test passed");
+            }
+            Err(e) => {
+                panic!("Typeof expressions test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test keyof with complex types (v0.3.164)
+    #[test]
+    fn test_keyof_complex_types() {
+        // 测试 keyof 与复杂类型 - 接口在 JS 输出中被移除
+        let ts_code = r#"
+interface User {
+    id: number;
+    name: string;
+    email: string;
+}
+
+interface Product {
+    sku: string;
+    price: number;
+    inStock: boolean;
+}
+
+type UserKeys = keyof User;
+type ProductKeys = keyof Product;
+type AllKeys = keyof User | keyof Product;
+
+function getKeys<T>(obj: T): T[keyof T] {
+    return obj[Object.keys(obj)[0] as keyof T];
+}
+
+const user = { id: 1, name: "Alice" };
+"#;
+        match compile_typescript(ts_code, "keyof_complex.ts") {
+            Ok(output) => {
+                println!("keyof 复杂类型转译结果:");
+                println!("{}", output.js_code);
+                // 注意：接口在 JS 输出中被移除（用于类型检查）
+                // 验证类型别名被移除
+                assert!(!output.js_code.contains("UserKeys"),
+                    "Type alias should be removed: {}", output.js_code);
+                assert!(!output.js_code.contains("ProductKeys"),
+                    "Type alias should be removed: {}", output.js_code);
+                // 验证函数被保留
+                assert!(output.js_code.contains("function getKeys"),
+                    "Should contain getKeys: {}", output.js_code);
+                // 验证变量定义被保留
+                assert!(output.js_code.contains("const user"),
+                    "Should contain const user: {}", output.js_code);
+                // 验证函数有正确返回值
+                assert!(output.js_code.contains("Object.keys"),
+                    "Should contain Object.keys: {}", output.js_code);
+                println!("✅ Keyof complex types test passed");
+            }
+            Err(e) => {
+                panic!("Keyof complex types test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test readonly modifier in mapped types (v0.3.164)
+    #[test]
+    fn test_readonly_mapped_type() {
+        // 测试 readonly 修饰符在映射类型中的使用 - 接口在 JS 输出中被移除
+        let ts_code = r#"
+interface MutableUser {
+    id: number;
+    name: string;
+}
+
+type ReadonlyUser<T> = { readonly [P in keyof T]: T[P] };
+type PartialUser<T> = { [P in keyof T]?: T[P] };
+type ReadonlyPartialUser<T> = { readonly [P in keyof T]?: T[P] };
+
+const user: ReadonlyUser<MutableUser> = { id: 1, name: "Alice" };
+"#;
+        match compile_typescript(ts_code, "readonly_mapped.ts") {
+            Ok(output) => {
+                println!("readonly 映射类型转译结果:");
+                println!("{}", output.js_code);
+                // 注意：接口在 JS 输出中被移除（用于类型检查）
+                // 验证类型别名被移除
+                assert!(!output.js_code.contains("ReadonlyUser"),
+                    "Type alias should be removed: {}", output.js_code);
+                // 验证变量被保留
+                assert!(output.js_code.contains("const user"),
+                    "Should contain const user: {}", output.js_code);
+                // 验证对象字面量被保留（格式可能略有不同）
+                assert!(output.js_code.contains("{id: 1, name:") || output.js_code.contains("{ id: 1, name:"),
+                    "Should contain object literal: {}", output.js_code);
+                println!("✅ Readonly modifier in mapped types test passed");
+            }
+            Err(e) => {
+                panic!("Readonly modifier in mapped types test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test infer with constraints (v0.3.164)
+    #[test]
+    fn test_infer_with_constraints() {
+        // 测试 infer 关键字与约束
+        let ts_code = r#"
+type UnpackPromise<T> = T extends Promise<infer U> ? U : T;
+type UnpackArray<T> = T extends Array<infer E> ? E : T;
+
+const p1: Promise<number> = Promise.resolve(42);
+const p2: Promise<string> = Promise.resolve("hello");
+const a1: number[] = [1, 2, 3];
+
+function getValue<T>(arg: T): T {
+    return arg;
+}
+"#;
+        match compile_typescript(ts_code, "infer_constraints.ts") {
+            Ok(output) => {
+                println!("infer 约束测试转译结果:");
+                println!("{}", output.js_code);
+                // 验证变量被保留
+                assert!(output.js_code.contains("const p1"),
+                    "Should contain p1: {}", output.js_code);
+                assert!(output.js_code.contains("const p2"),
+                    "Should contain p2: {}", output.js_code);
+                assert!(output.js_code.contains("const a1"),
+                    "Should contain a1: {}", output.js_code);
+                // 验证函数被保留
+                assert!(output.js_code.contains("function getValue"),
+                    "Should contain getValue: {}", output.js_code);
+                // 验证类型别名被移除
+                assert!(!output.js_code.contains("UnpackPromise"),
+                    "Type alias should be removed: {}", output.js_code);
+                println!("✅ Infer with constraints test passed");
+            }
+            Err(e) => {
+                panic!("Infer with constraints test failed: {}", e);
+            }
+        }
+    }
 }

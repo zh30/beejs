@@ -67,6 +67,41 @@
 
 ---
 
+### v0.3.164 边缘情况测试覆盖增强 (2025-12-27)
+**进度**: TypeScript 编译测试增强 | ✅ 已提交
+
+#### v0.3.164 新增测试用例
+- **类型谓词测试 (Type Predicate with 'is')**
+  - 添加 `test_type_predicate_is_keyword` 测试 `value is Type` 语法
+  - 验证函数声明中的类型谓词正确转译
+
+- **typeof 表达式测试 (Typeof Expressions)**
+  - 添加 `test_typeof_expressions` 测试 `typeof` 与对象、数组表达式
+  - 验证类型别名中的 typeof 正确移除
+
+- **keyof 复杂类型测试 (Keyof Complex Types)**
+  - 添加 `test_keyof_complex_types` 测试 `keyof` 与接口组合
+  - 验证联合类型 `keyof A | keyof B` 的处理
+
+- **readonly 映射类型测试 (Readonly Modifier in Mapped Types)**
+  - 添加 `test_readonly_mapped_type` 测试 `{ readonly [P in keyof T]: T[P] }` 语法
+  - 验证可选修饰符 `?` 的组合使用
+
+- **infer 约束测试 (Infer with Constraints)**
+  - 添加 `test_infer_with_constraints` 测试条件类型中的 `infer` 关键字
+  - 验证 `infer U` 和 `infer E` 的类型推导
+
+#### v0.3.164 验证
+- ✅ `cargo test --test typescript_compiler_integration_tests` 60/60 通过
+- ✅ 新增 5 个边缘情况测试全部通过
+- ✅ 无回归问题
+
+#### v0.3.164 下一步
+- 实现完整的类型声明解析
+- 继续增强边缘情况测试覆盖
+
+---
+
 ### v0.3.163 复杂条件类型测试覆盖 (2025-12-27)
 **进度**: TypeScript 编译测试增强 | ✅ 已提交
 
