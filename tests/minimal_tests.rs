@@ -309,4 +309,71 @@ type Test2 = DeepUnwrap<string>;
             "Should remove all infer keywords: {}", output.js_code);
         println!("✅ Test 16: TypeScript infer in complex conditional types");
     }
+
+    /// 测试17: TypeScript abstract 抽象类支持 (v0.3.176)
+    #[test]
+    fn test_typescript_abstract_class() {
+        let ts_code = r#"
+abstract class Animal {
+    abstract makeSound(): void;
+    move(): void {
+        console.log("Moving...");
+    }
+}
+class Dog extends Animal {
+    makeSound(): void {
+        console.log("Woof!");
+    }
+}
+const dog = new Dog();
+dog.makeSound();
+"#;
+        let result = typescript::compile_typescript(ts_code, "abstract_class.ts");
+        assert!(result.is_ok(), "abstract class should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+        // abstract 关键字应该被移除
+        assert!(!output.js_code.contains("abstract"),
+            "Should remove abstract keyword: {}", output.js_code);
+        // 类和继承应该保留
+        assert!(output.js_code.contains("class Animal"),
+            "Should preserve Animal class: {}", output.js_code);
+        assert!(output.js_code.contains("class Dog"),
+            "Should preserve Dog class: {}", output.js_code);
+        assert!(output.js_code.contains("extends"),
+            "Should preserve extends: {}", output.js_code);
+        // 方法应该保留
+        assert!(output.js_code.contains("makeSound"),
+            "Should preserve makeSound method: {}", output.js_code);
+        println!("✅ Test 17: TypeScript abstract class support");
+    }
+
+    /// 测试18: TypeScript abstract 抽象方法支持 (v0.3.176)
+    #[test]
+    fn test_typescript_abstract_method() {
+        let ts_code = r#"
+abstract class Shape {
+    abstract getArea(): number;
+}
+class Circle extends Shape {
+    getArea(): number {
+        return Math.PI * this.radius * this.radius;
+    }
+    radius: number = 5;
+}
+const circle = new Circle();
+console.log(circle.getArea());
+"#;
+        let result = typescript::compile_typescript(ts_code, "abstract_method.ts");
+        assert!(result.is_ok(), "abstract method should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+        // abstract 关键字应该被移除
+        assert!(!output.js_code.contains("abstract"),
+            "Should remove abstract keyword: {}", output.js_code);
+        // 类应该保留
+        assert!(output.js_code.contains("class Shape"),
+            "Should preserve Shape class: {}", output.js_code);
+        assert!(output.js_code.contains("class Circle"),
+            "Should preserve Circle class: {}", output.js_code);
+        println!("✅ Test 18: TypeScript abstract method support");
+    }
 }

@@ -1530,6 +1530,17 @@ impl MinimalRuntime {
         let infer_pattern = regex::Regex::new(r"infer\s+([A-Z][a-zA-Z0-9_]*)(?:\s+extends\s+[^?;=]+)?").unwrap();
         js_code = infer_pattern.replace_all(&js_code, "/* infer $1 */").to_string();
 
+        // v0.3.176: Remove abstract class and abstract method declarations
+        // abstract is a TypeScript-only keyword for defining abstract classes and methods
+        // Pattern: "abstract class ClassName" and "abstract methodName(): returnType;"
+        let abstract_class_pattern = regex::Regex::new(r"abstract\s+class\s+([A-Z][a-zA-Z0-9_]*)").unwrap();
+        js_code = abstract_class_pattern.replace_all(&js_code, "class $1").to_string();
+
+        // Remove abstract modifier from method declarations within classes
+        // Pattern: "abstract methodName(...params): returnType;"
+        let abstract_method_pattern = regex::Regex::new(r"abstract\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(").unwrap();
+        js_code = abstract_method_pattern.replace_all(&js_code, "$1(").to_string();
+
         // Clean up extra whitespace (especially after removing satisfies)
         let cleanup_pattern = regex::Regex::new(r"\s+([;,})])").unwrap();
         js_code = cleanup_pattern.replace_all(&js_code, "$1").to_string();
@@ -1575,7 +1586,9 @@ impl MinimalRuntime {
             || code.contains("export") && code.contains('=') // v0.3.172: export = statement
             || code.contains("keyof ")      // v0.3.174: keyof operator
             || code.contains("typeof ")     // v0.3.174: typeof operator in type context
-            || code.contains("infer ");     // v0.3.175: infer keyword in conditional types
+            || code.contains("infer ")      // v0.3.175: infer keyword in conditional types
+            || code.contains("abstract class")   // v0.3.176: abstract class declaration
+            || code.contains("abstract ");      // v0.3.176: abstract method or class
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript
