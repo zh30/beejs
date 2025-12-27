@@ -10666,3 +10666,39 @@ console.log(p.name);  // "Alice"
 - 继续完善 TypeScript 编译器功能
 - 实现更多 ESM 特性完整支持
 - 完善工具类型（Utility Types）实现
+
+---
+
+### v0.3.199 新增内建字符串类型测试 (2025-12-28)
+**进度**: TypeScript 测试增强 | ✅ 已提交
+
+#### v0.3.199 新增功能
+- **内建字符串操作类型测试覆盖**
+  - `Uppercase<'hello'>` → "HELLO"
+  - `Lowercase<'HELLO'>` → "hello"
+  - `Capitalize<'hello'>` → "Hello"
+  - `Uncapitalize<'Hello'>` → "hello"
+
+#### v0.3.199 测试用例
+- `test_uppercase_basic`: 基础 Uppercase 类型
+- `test_lowercase_basic`: 基础 Lowercase 类型
+- `test_capitalize_basic`: 基础 Capitalize 类型
+- `test_uncapitalize_basic`: 基础 Uncapitalize 类型
+- `test_intrinsic_with_union`: 内建类型与联合类型
+- `test_intrinsic_in_generic`: 泛型上下文中的内建类型
+- `test_combined_intrinsic_types`: 组合内建类型
+- `test_intrinsic_with_template_literal`: 与模板字面量结合
+- `test_all_intrinsic_types`: 所有内建类型综合测试
+
+#### v0.3.199 测试验证
+- ✅ `cargo test --test typescript_intrinsic_string_types_tests`: 9/9 通过
+- ✅ 覆盖 4 种内建字符串操作类型
+- ✅ 验证与泛型、联合类型、模板字面量的组合使用
+
+#### v0.3.199 新增文件
+- `tests/typescript_intrinsic_string_types_tests.rs`: 内建字符串类型测试套件
+
+#### v0.3.199 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更复杂的类型推断场景测试
+- 完善其他内建类型测试（如 Number, Array）
