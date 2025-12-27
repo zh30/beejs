@@ -197,4 +197,66 @@ export = myModule;
             "Should contain myModule or export = placeholder: {}", output.js_code);
         println!("✅ Test 10: TypeScript export = with function");
     }
+
+    /// 测试11: TypeScript keyof 操作符支持 (v0.3.174)
+    #[test]
+    fn test_typescript_keyof_operator() {
+        let ts_code = r#"
+type Point = { x: number; y: number };
+type PointKeys = keyof Point;
+const keys: PointKeys = "x";
+"#;
+        let result = typescript::compile_typescript(ts_code, "test.ts");
+        assert!(result.is_ok(), "keyof operator should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+        // keyof 应该被移除，只保留原始表达式
+        assert!(!output.js_code.contains("keyof"),
+            "Should remove keyof operator: {}", output.js_code);
+        assert!(output.js_code.contains("const keys"),
+            "Should preserve const declaration: {}", output.js_code);
+        println!("✅ Test 11: TypeScript keyof operator support");
+    }
+
+    /// 测试12: TypeScript typeof 操作符支持 (v0.3.174)
+    #[test]
+    fn test_typescript_typeof_operator() {
+        let ts_code = r#"
+const myObj = { a: 1, b: "hello" };
+type MyObjType = typeof myObj;
+const copy: MyObjType = myObj;
+"#;
+        let result = typescript::compile_typescript(ts_code, "test.ts");
+        assert!(result.is_ok(), "typeof operator should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+        // typeof 在类型位置应该被移除
+        assert!(output.js_code.contains("myObj"),
+            "Should preserve myObj: {}", output.js_code);
+        assert!(output.js_code.contains("const copy"),
+            "Should preserve const copy: {}", output.js_code);
+        println!("✅ Test 12: TypeScript typeof operator support");
+    }
+
+    /// 测试13: TypeScript keyof 和 typeof 组合使用 (v0.3.174)
+    #[test]
+    fn test_typescript_keyof_typeof_combined() {
+        let ts_code = r#"
+interface User {
+    name: string;
+    age: number;
+}
+type UserKeys = keyof User;
+const user = { name: "Alice", age: 30 };
+type UserType = typeof user;
+"#;
+        let result = typescript::compile_typescript(ts_code, "test.ts");
+        assert!(result.is_ok(), "Combined keyof/typeof should compile, error: {:?}", result.err());
+        let output = result.unwrap();
+        assert!(!output.js_code.contains("keyof"),
+            "Should remove keyof: {}", output.js_code);
+        assert!(output.js_code.contains("User"),
+            "Should preserve User reference: {}", output.js_code);
+        assert!(output.js_code.contains("user"),
+            "Should preserve user: {}", output.js_code);
+        println!("✅ Test 13: TypeScript keyof and typeof combined");
+    }
 }

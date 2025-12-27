@@ -1512,6 +1512,18 @@ impl MinimalRuntime {
         let export_equals_pattern = regex::Regex::new(r"export\s*=\s*[^;]+;").unwrap();
         js_code = export_equals_pattern.replace_all(&js_code, "/* export = */").to_string();
 
+        // v0.3.174: Remove keyof Type expressions
+        // keyof returns union of string literal types representing property names
+        // Pattern: "keyof TypeName" where TypeName is typically capitalized
+        let keyof_pattern = regex::Regex::new(r"keyof\s+[A-Z][a-zA-Z0-9_<>]*").unwrap();
+        js_code = keyof_pattern.replace_all(&js_code, "string").to_string();
+
+        // v0.3.174: Remove typeof identifier in type context
+        // typeof returns the type of a value at compile time
+        // Pattern: "typeof identifier" where identifier is typically lowercase
+        let typeof_pattern = regex::Regex::new(r"typeof\s+([a-zA-Z_$][a-zA-Z0-9_$]*)").unwrap();
+        js_code = typeof_pattern.replace_all(&js_code, "/* typeof $1 */").to_string();
+
         // Clean up extra whitespace (especially after removing satisfies)
         let cleanup_pattern = regex::Regex::new(r"\s+([;,})])").unwrap();
         js_code = cleanup_pattern.replace_all(&js_code, "$1").to_string();
@@ -1554,7 +1566,9 @@ impl MinimalRuntime {
             || code.contains(" satisfies ") // satisfies operator
             || code.contains("declare global")  // v0.3.170: global declaration block
             || code.contains("declare module \"") // v0.3.170: module declaration
-            || code.contains("export") && code.contains('='); // v0.3.172: export = statement
+            || code.contains("export") && code.contains('=') // v0.3.172: export = statement
+            || code.contains("keyof ")      // v0.3.174: keyof operator
+            || code.contains("typeof ");    // v0.3.174: typeof operator in type context
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript
