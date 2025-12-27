@@ -8,24 +8,53 @@
   - 支持数组类型：`[1, 2, 3] satisfies number[]`
   - 支持对象类型：`{ x: 1 } satisfies { x: number }`
   - 支持泛型类型：`value satisfies Array<string>`
+  - 支持联合类型、元组类型、接口类型
 
 #### v0.3.168 实现细节
+- **TypeScript 编译器增强** (`src/typescript/compiler.rs`)
+  - 新增 `TSSatisfiesExpression` AST 节点类型
+  - 新增 `Token::Satisfies` 词法标记
+  - 词法分析器识别 `satisfies` 关键字
+  - 解析器在 `parse_expression()` 中处理 satisfies
+  - 发射器移除类型信息，保留原始表达式
+
 - **快速转译路径** (`runtime_minimal.rs`)
   - `has_raw_typescript()` 检测 ` satisfies ` 模式
   - `transpile_typescript_to_js()` 中实现满足表达式移除
   - 手动解析处理类型表达式，跳过标识符、`[]` 数组后缀、`<>` 泛型参数
   - 正确处理嵌套结构（括号、花括号、方括号）
 
+#### v0.3.168 测试用例
+- `test_satisfies_basic_number`: 基础数字 satisfies
+- `test_satisfies_string_literal`: 字符串字面量 satisfies
+- `test_satisfies_array_type`: 数组类型 satisfies
+- `test_satisfies_object_type`: 对象类型 satisfies
+- `test_satisfies_generic_type`: 泛型类型 satisfies
+- `test_satisfies_in_function`: 函数内 satisfies
+- `test_satisfies_boolean`: 布尔类型 satisfies
+- `test_satisfies_nested_object`: 嵌套对象 satisfies
+- `test_satisfies_union_type`: 联合类型 satisfies
+- `test_satisfies_in_array`: 数组元素 satisfies
+- `test_satisfies_multiple`: 多重 satisfies
+- `test_satisfies_tuple`: 元组类型 satisfies
+- `test_satisfies_interface`: 接口类型 satisfies
+- `test_satisfies_type_alias`: 类型别名 satisfies
+- `test_satisfies_map_type`: Map 类型 satisfies
+- `test_satisfies_promise`: Promise 类型 satisfies
+- `test_satisfies_preserves_value`: 表达式保留测试
+- `test_mixed_as_const_and_satisfies`: 混合 as const 和 satisfies
+- `test_satisfies_in_ternary`: 三元表达式 satisfies
+
 #### v0.3.168 验证
 - ✅ `cargo build --release` 成功编译
 - ✅ `cargo test --lib` 220/220 通过
+- ✅ `cargo test --test typescript_satisfies_tests` 19/19 通过
 - ✅ 手动测试验证：
-  - `const x = 1 satisfies number` → 输出 `1`
-  - `const nums = [1, 2, 3] satisfies number[]` → 输出 `1,2,3`
+  - `const x = 1 satisfies number` → 输出 `const x = 1;`
+  - `const nums = [1, 2, 3] satisfies number[]` → 输出 `const nums = [1, 2, 3];`
 
 #### v0.3.168 下一步
 - 完善复杂类型注解处理（如对象类型内的 `string`、`number`）
-- 添加 satisfies 操作符单元测试
 - 继续完善 TypeScript 编译器功能
 
 ---

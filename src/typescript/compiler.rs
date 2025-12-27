@@ -499,6 +499,7 @@ impl TypeScriptCompiler {
                     "super" => Token::Super,
                     "from" => Token::From,
                     "as" => Token::As,
+                    "satisfies" => Token::Satisfies,  // v0.3.168
                     "keyof" => Token::Keyof,
                     "typeof" => Token::Typeof,
                     "in" => Token::In,
@@ -1687,6 +1688,10 @@ impl TypeScriptCompiler {
             ASTExpression::TSAngleBracketAssertion { target_type, .. } => {
                 Ok(Some(target_type.clone()))
             }
+            // satisfies 操作符保留原始表达式的类型
+            ASTExpression::TSSatisfiesExpression { expression, .. } => {
+                self.infer_type(expression, ctx)
+            }
         }
     }
 
@@ -2137,6 +2142,7 @@ pub enum Token {
     Super,
     From,
     As,
+    Satisfies, // satisfies 操作符 (v0.3.168)
     Keyof,    // keyof 操作符
     Typeof,   // typeof 操作符
     In,       // in 操作符（用于映射类型）
@@ -2588,6 +2594,13 @@ pub enum ASTExpression {
     /// 转译时类型信息被移除，直接输出原始表达式
     /// 注意：这是旧式类型断言语法，在 JSX/TSX 中可能与泛型冲突
     TSAngleBracketAssertion {
+        expression: Box<ASTExpression>,
+        target_type: String,
+    },
+    /// TypeScript satisfies 操作符: expr satisfies Type
+    /// 转译时类型信息被移除，直接输出原始表达式
+    /// 与 as 不同，satisfies 不改变表达式的推断类型
+    TSSatisfiesExpression {
         expression: Box<ASTExpression>,
         target_type: String,
     },
@@ -5493,6 +5506,18 @@ impl Parser {
                         is_const: const_flag,
                     };
                 }
+                // TypeScript satisfies 操作符: expr satisfies Type
+                // 必须在 as 之后处理，因为 as 和 satisfies 都是后缀类型操作符
+                Token::Satisfies => {
+                    self.consume(Token::Satisfies)?;
+                    // 解析目标类型
+                    let target_type = self.parse_type_annotation()
+                        .unwrap_or_else(|| "unknown".to_string());
+                    expr = ASTExpression::TSSatisfiesExpression {
+                        expression: Box::new(expr),
+                        target_type,
+                    };
+                }
                 // 二元运算符
                 Token::Plus | Token::Minus | Token::Star | Token::Slash | Token::Percent |
                 Token::EqEq | Token::EqEqEq | Token::NotEq | Token::NotEqEq |
@@ -8261,6 +8286,11 @@ impl CodeEmitter {
             // TypeScript 尖括号类型断言: <Type>value
             // 转译时移除类型信息，直接输出原始表达式
             ASTExpression::TSAngleBracketAssertion { expression, target_type: _ } => {
+                self.emit_expression(expression);
+            }
+            // TypeScript satisfies 操作符: expr satisfies Type
+            // 转译时移除类型信息，直接输出原始表达式
+            ASTExpression::TSSatisfiesExpression { expression, target_type: _ } => {
                 self.emit_expression(expression);
             }
             ASTExpression::AssignmentExpression { left, right } => {
