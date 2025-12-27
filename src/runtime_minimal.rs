@@ -2292,6 +2292,13 @@ impl MinimalRuntime {
         let uncapitalize_pattern = regex::Regex::new(r"Uncapitalize\s*<([^>]+)>").unwrap();
         js_code = uncapitalize_pattern.replace_all(&js_code, "$1").to_string();
 
+        // v0.3.204: Remove NonNullable utility type
+        // NonNullable<T> removes null and undefined from type T
+        // For runtime, we remove the wrapper and keep the inner type
+        // Pattern: "NonNullable<string | null>" -> "string"
+        let nonnullable_pattern = regex::Regex::new(r"NonNullable\s*<([^>]+)>").unwrap();
+        js_code = nonnullable_pattern.replace_all(&js_code, "$1").to_string();
+
         // v0.3.195: Convert simple ESM export statements to comments
         // v0.3.196: Added abstract for export abstract class support
         // Complex exports (export { a, b }) need variable tracking, so we use placeholders
@@ -2372,7 +2379,8 @@ impl MinimalRuntime {
             || code.contains("Uppercase<")     // v0.3.203: standalone Uppercase intrinsic type
             || code.contains("Lowercase<")     // v0.3.203: standalone Lowercase intrinsic type
             || code.contains("Capitalize<")    // v0.3.203: standalone Capitalize intrinsic type
-            || code.contains("Uncapitalize<"); // v0.3.203: standalone Uncapitalize intrinsic type
+            || code.contains("Uncapitalize<")   // v0.3.203: standalone Uncapitalize intrinsic type
+            || code.contains("NonNullable<");   // v0.3.204: NonNullable utility type
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript

@@ -1186,6 +1186,58 @@ const value: T0 = "hello";
         println!("✅ Test 50: TypeScript NonNullable<T> utility type");
     }
 
+    /// 测试50.1: TypeScript NonNullable<T> 快速路径 (v0.3.204)
+    #[test]
+    fn test_nonnullable_utility_fast_path() {
+        // 测试 NonNullable 快速路径移除
+        let ts_code = r#"
+type NullableString = string | null;
+type NotNull = NonNullable<NullableString>;
+const value: NotNull = "hello";
+"#;
+        let result = typescript::compile_typescript(ts_code, "nonnullable_fastpath.ts");
+        assert!(result.is_ok(), "NonNullable fast-path should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 NonNullable 被快速路径移除
+        assert!(!output.js_code.contains("NonNullable"),
+            "Should remove NonNullable via fast-path: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("const value"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("\"hello\""),
+            "Should preserve string value: {}", output.js_code);
+
+        println!("✅ Test 50.1: TypeScript NonNullable<T> fast-path");
+    }
+
+    /// 测试50.2: TypeScript NonNullable 与联合类型 (v0.3.204)
+    #[test]
+    fn test_nonnullable_with_union() {
+        // 测试 NonNullable 与复杂联合类型
+        let ts_code = r#"
+type Result<T> = T | null | undefined;
+type SafeResult<T> = NonNullable<Result<T>>;
+const num: SafeResult<number> = 42;
+const str: SafeResult<string> = "test";
+"#;
+        let result = typescript::compile_typescript(ts_code, "nonnullable_union.ts");
+        assert!(result.is_ok(), "NonNullable with union should compile");
+        let output = result.unwrap();
+
+        assert!(!output.js_code.contains("NonNullable"),
+            "Should remove NonNullable: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("const num"),
+            "Should preserve const num: {}", output.js_code);
+        assert!(output.js_code.contains("const str"),
+            "Should preserve const str: {}", output.js_code);
+
+        println!("✅ Test 50.2: TypeScript NonNullable with union types");
+    }
+
     /// 测试51: TypeScript 工具类型组合使用 (v0.3.189)
     #[test]
     fn test_typescript_utility_types_combined() {
