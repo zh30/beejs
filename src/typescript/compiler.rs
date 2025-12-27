@@ -310,6 +310,7 @@ impl TypeScriptCompiler {
                     "private" => Token::Private,
                     "protected" => Token::Protected,
                     "static" => Token::Static,
+                    "abstract" => Token::Abstract,
                     "async" => Token::Async,
                     "await" => Token::Await,
                     "try" => Token::Try,
@@ -1888,6 +1889,7 @@ pub enum Token {
     Private,
     Protected,
     Static,
+    Abstract,  // abstract 修饰符（用于抽象类和抽象方法）
     Readonly, // readonly 修饰符（用于映射类型）
     Async,
     Await,
@@ -2167,6 +2169,8 @@ pub enum ASTNode {
     ClassDeclaration {
         /// 是否为 declare 声明（declare class）
         is_declare: bool,
+        /// 是否为抽象类（abstract class）
+        is_abstract: bool,
         /// 类装饰器列表
         decorators: Vec<Decorator>,
         name: String,
@@ -2181,6 +2185,7 @@ pub enum ASTNode {
         kind: String,  // "method", "get", "set"
         is_async: bool,
         is_static: bool,
+        is_abstract: bool,  // 是否为抽象方法
         params: Vec<FunctionParameter>,
         body: Vec<ASTNode>,
     },
@@ -2190,6 +2195,7 @@ pub enum ASTNode {
         decorators: Vec<Decorator>,
         name: String,
         is_static: bool,
+        is_abstract: bool,  // 是否为抽象字段
         initializer: Option<Box<ASTNode>>,
     },
     /// 类计算属性名声明
@@ -2502,6 +2508,10 @@ impl Parser {
                 self.parse_function_declaration(false)
             }
             Token::Class => {
+                self.parse_class_declaration()
+            }
+            Token::Abstract => {
+                // abstract class 声明
                 self.parse_class_declaration()
             }
             Token::Interface => {
@@ -3837,6 +3847,13 @@ impl Parser {
     /// - 声明为类型声明，不生成实际代码
     /// - 或者生成声明语句 declare class X { ... }
     fn parse_class_declaration_internal(&mut self, is_declare: bool, decorators: Vec<Decorator>) -> Result<ASTNode> {
+        // 检查是否有 abstract 修饰符
+        let is_abstract = if self.current_token_eq(&Token::Abstract) {
+            self.consume(Token::Abstract)?;
+            true
+        } else {
+            false
+        };
         self.consume(Token::Class)?;
         let name_token = self.consume_any_identifier()?;
         let name: _ = match name_token {
@@ -3872,7 +3889,7 @@ impl Parser {
             }
         }
         self.consume(Token::RBrace)?;
-        Ok(ASTNode::ClassDeclaration { is_declare, decorators, name, extends, members })
+        Ok(ASTNode::ClassDeclaration { is_declare, is_abstract, decorators, name, extends, members })
     }
 
     /// 解析带有已解析装饰器列表的类声明
@@ -3891,15 +3908,20 @@ impl Parser {
         // 首先解析装饰器
         let decorators = self.parse_decorators()?;
 
-        // 然后检查是否是访问修饰符或 static
+        // 然后检查是否是访问修饰符、static 或 abstract
         let mut is_static = false;
+        let mut is_abstract = false;
         while self.current_token_eq(&Token::Public)
             || self.current_token_eq(&Token::Private)
             || self.current_token_eq(&Token::Protected)
             || self.current_token_eq(&Token::Static)
+            || self.current_token_eq(&Token::Abstract)
         {
             if self.current_token_eq(&Token::Static) {
                 is_static = true;
+            }
+            if self.current_token_eq(&Token::Abstract) {
+                is_abstract = true;
             }
             self.advance();
         }
@@ -3970,6 +3992,7 @@ impl Parser {
                         kind: keyword,
                         is_async: false,
                         is_static,
+                        is_abstract,
                         params,
                         body,
                     }));
@@ -3993,6 +4016,7 @@ impl Parser {
                         kind: "method".to_string(),
                         is_async: false,
                         is_static,
+                        is_abstract,
                         params,
                         body,
                     }));
@@ -4022,6 +4046,7 @@ impl Parser {
                     kind: "method".to_string(),
                     is_async: true,
                     is_static,
+                    is_abstract,
                     params,
                     body,
                 }));
@@ -4051,6 +4076,7 @@ impl Parser {
                     kind: "method".to_string(),
                     is_async: false,
                     is_static,
+                    is_abstract,
                     params,
                     body,
                 }));
@@ -4079,6 +4105,7 @@ impl Parser {
                 decorators,
                 name: member_name,
                 is_static,
+                is_abstract,
                 initializer: initializer.map(|e| Box::new(ASTNode::Expression(e))),
             }));
         }
@@ -7047,7 +7074,7 @@ impl CodeEmitter {
                 }
                 self.output.push_str(") { /* overload */ }\n");
             }
-            ASTNode::ClassDeclaration { is_declare, decorators, name, extends, members } => {
+            ASTNode::ClassDeclaration { is_declare, is_abstract, decorators, name, extends, members } => {
                 // 输出装饰器（作为注释保留）
                 for decorator in decorators {
                     self.output.push_str("/* @");
@@ -7068,6 +7095,10 @@ impl CodeEmitter {
                 if *is_declare {
                     self.output.push_str("declare ");
                 }
+                // 处理 abstract class
+                if *is_abstract {
+                    self.output.push_str("abstract ");
+                }
                 self.output.push_str("class ");
                 self.output.push_str(name);
                 // 添加 extends 子句（如果有）
@@ -7081,7 +7112,7 @@ impl CodeEmitter {
                 }
                 self.output.push_str("}\n");
             }
-            ASTNode::MethodDeclaration { decorators, name, kind, is_async, is_static, params, body } => {
+            ASTNode::MethodDeclaration { decorators, name, kind, is_async, is_static, is_abstract, params, body } => {
                 // 输出装饰器（作为注释保留）
                 for decorator in decorators {
                     self.output.push_str("/* @");
@@ -7100,6 +7131,9 @@ impl CodeEmitter {
                 }
                 if *is_static {
                     self.output.push_str("static ");
+                }
+                if *is_abstract {
+                    self.output.push_str("abstract ");
                 }
                 // 输出 get/set 关键字（如果是 getter/setter）
                 if *kind != "method" {
@@ -7148,7 +7182,7 @@ impl CodeEmitter {
                 }
                 self.output.push_str("}\n");
             }
-            ASTNode::PropertyDeclaration { decorators, name, is_static, initializer } => {
+            ASTNode::PropertyDeclaration { decorators, name, is_static, is_abstract, initializer } => {
                 // 输出装饰器（作为注释保留）
                 for decorator in decorators {
                     self.output.push_str("/* @");
@@ -7167,6 +7201,9 @@ impl CodeEmitter {
                 }
                 if *is_static {
                     self.output.push_str("static ");
+                }
+                if *is_abstract {
+                    self.output.push_str("abstract ");
                 }
                 self.output.push_str(name);
                 if let Some(init) = initializer {

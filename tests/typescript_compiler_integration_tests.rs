@@ -997,4 +997,110 @@ const test: string = "hello";
             }
         }
     }
+
+    /// Test abstract class (v0.3.157)
+    #[test]
+    fn test_abstract_class() {
+        let ts_code: _ = r#"
+abstract class Animal {
+    name: string;
+    abstract makeSound(): void;
+    move(): void {
+        console.log("Moving");
+    }
+}
+class Dog extends Animal {
+    makeSound(): void {
+        console.log("Woof!");
+    }
+}
+const dog = new Dog();
+dog.makeSound();
+"#;
+        match compile_typescript(ts_code, "abstract_class.ts") {
+            Ok(output) => {
+                println!("抽象类转译结果:");
+                println!("{}", output.js_code);
+                // 验证 abstract class 被正确处理
+                assert!(output.js_code.contains("abstract class"),
+                    "Should contain abstract class: {}", output.js_code);
+                assert!(output.js_code.contains("abstract makeSound"),
+                    "Should contain abstract method: {}", output.js_code);
+                assert!(output.js_code.contains("class Dog extends Animal"),
+                    "Should contain Dog class: {}", output.js_code);
+                assert!(output.js_code.contains("makeSound"),
+                    "Should contain makeSound method: {}", output.js_code);
+                println!("✅ Abstract class test passed");
+            }
+            Err(e) => {
+                panic!("Abstract class test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test abstract class with abstract properties (v0.3.157)
+    #[test]
+    fn test_abstract_class_with_abstract_properties() {
+        let ts_code: _ = r#"
+abstract class Shape {
+    abstract color: string;
+    abstract calculateArea(): number;
+}
+class Circle extends Shape {
+    color: string = "red";
+    radius: number = 5;
+    calculateArea(): number {
+        return Math.PI * this.radius * this.radius;
+    }
+}
+const circle = new Circle();
+console.log(circle.calculateArea());
+"#;
+        match compile_typescript(ts_code, "abstract_properties.ts") {
+            Ok(output) => {
+                println!("抽象属性转译结果:");
+                println!("{}", output.js_code);
+                // 验证 abstract class 和属性被正确处理
+                assert!(output.js_code.contains("abstract class"),
+                    "Should contain abstract class: {}", output.js_code);
+                assert!(output.js_code.contains("abstract color"),
+                    "Should contain abstract property: {}", output.js_code);
+                println!("✅ Abstract properties test passed");
+            }
+            Err(e) => {
+                panic!("Abstract properties test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test abstract class with static abstract methods (v0.3.157)
+    #[test]
+    fn test_static_abstract_method() {
+        let ts_code: _ = r#"
+abstract class Factory {
+    static abstract create(): void;
+}
+class ConcreteFactory extends Factory {
+    static create(): void {
+        console.log("Creating product");
+    }
+}
+ConcreteFactory.create();
+"#;
+        match compile_typescript(ts_code, "static_abstract.ts") {
+            Ok(output) => {
+                println!("静态抽象方法转译结果:");
+                println!("{}", output.js_code);
+                // 验证 static abstract 被正确处理
+                assert!(output.js_code.contains("static abstract"),
+                    "Should contain static abstract: {}", output.js_code);
+                assert!(output.js_code.contains("static create"),
+                    "Should contain static create: {}", output.js_code);
+                println!("✅ Static abstract method test passed");
+            }
+            Err(e) => {
+                panic!("Static abstract method test failed: {}", e);
+            }
+        }
+    }
 }
