@@ -1,3 +1,30 @@
+### v0.3.178 修复 fast-path 对 enum 和 type 声明的移除 (2025-12-27)
+**进度**: TypeScript 快速路径修复 | ✅ 已提交
+
+#### v0.3.178 修复内容
+- **功能缺口修复**
+  - 问题：`has_raw_typescript()` 检测到 `enum` 和 `type` 关键字，但 `transpile_typescript_to_js()` 没有对应的移除模式
+  - 影响：代码被检测为 TypeScript 但无法正确转译，可能导致 V8 语法错误
+
+#### v0.3.178 代码变更
+- **修改文件**: `src/runtime_minimal.rs` (+24 行)
+  - 添加 `enum` 声明移除模式：支持简单和嵌套的 enum 块
+  - 添加 `type` 别名移除模式：支持单行、多行和联合类型
+
+#### v0.3.178 新增测试
+- `test_typescript_enum_fast_path`: 测试 enum 声明移除
+- `test_typescript_type_alias_fast_path`: 测试 type 别名移除
+- `test_typescript_enum_type_combined`: 测试 enum 和 type 组合
+
+#### v0.3.178 验证
+- ✅ `cargo test --test minimal_tests` 22/22 通过
+- ✅ `cargo test --lib` 220/220 通过
+
+#### v0.3.178 下一步
+- 继续完善 TypeScript 编译器功能
+
+---
+
 ### v0.3.176 实现 abstract 关键字支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 
