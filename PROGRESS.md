@@ -9174,3 +9174,33 @@ console.log(p.name);  // "Alice"
 - Add support for namespace module augmentation
 - Implement namespace merging support
 - Optimize namespace emit for common patterns
+
+---
+
+### v0.3.160 实现模块合并支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.160 新增功能
+- **模块合并 (Module Merging)**
+  - 新增 `merge_modules()` 方法在编译过程中合并同名模块声明
+  - TypeScript 允许同一模块的多次声明，所有成员正确合并
+  - 优化输出：同名模块只生成一个 `declare module`，而非多个
+
+#### v0.3.160 实现细节
+- 在 `compile_source()` 中添加第五步调用 `merge_modules()`
+- 使用 `HashMap<String, ASTStatement>` 按 name 分组
+- 合并后只输出一个合并的模块声明
+
+#### v0.3.160 测试用例
+- `test_module_merging`: 测试同名模块函数合并
+- `test_module_merging_multiple_members`: 测试多成员模块合并
+- `test_different_modules_not_merged`: 测试不同模块不合并
+
+#### 验证
+- ✅ `cargo build --release` 成功编译
+- ✅ `cargo test --lib` 220/220 通过
+- ✅ `cargo test --test typescript_compiler_integration_tests` 42/42 通过
+
+#### 下一步
+- 实现完整的三重合并（接口+命名空间+模块）
+- 添加模块增强 (module augmentation) 完整支持
