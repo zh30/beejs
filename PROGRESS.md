@@ -1,3 +1,35 @@
+### v0.3.156 实现 declare module 语法和命名空间合并支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.156 新增功能
+- **declare module 语法支持**
+  - 新增 `Token::Module` 用于识别 module 关键字
+  - 新增 `ASTStatement::ModuleDeclaration` AST 节点
+  - 实现 `parse_module_declaration()` 解析 `declare module "name" { ... }`
+  - 添加模块声明的 emit 逻辑，输出 `declare module "name" { ... }`
+  - 添加模块声明的类型检查支持
+
+- **命名空间合并测试**
+  - 新增 `test_namespace_merging` 测试同名命名空间多次声明合并
+  - 新增 `test_namespace_nested_merging` 测试嵌套命名空间合并
+  - 验证多个同名 namespace 的成员正确合并到同一个命名空间
+
+#### 集成测试验证 (2025-12-27)
+- ✅ 新增 4 个集成测试用例
+  - `test_namespace_merging`: 测试同名命名空间合并
+  - `test_namespace_nested_merging`: 测试嵌套命名空间合并
+  - `test_declare_module`: 测试 declare module 语法
+  - `test_namespace_augmentation`: 测试接口属性增强
+- ✅ 33/33 集成测试全部通过
+- ✅ 220/220 单元测试全部通过
+
+#### 验证
+- ✅ `cargo test --lib` 220/220 通过
+- ✅ `cargo test --test typescript_compiler_integration_tests` 33/33 通过
+- ✅ `cargo build --release` 成功编译
+
+---
+
 ### v0.3.154 实现函数类型和元组类型解析支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 
