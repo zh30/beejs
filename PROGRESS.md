@@ -25,7 +25,37 @@
 
 #### 下一步
 - 实现完整的三重合并（接口+命名空间+模块）
-- 添加模块增强 (module augmentation) 完整支持
+- 添加模块增强 (module augmentation) 完整支持 ✅ 已完成 (v0.3.161)
+
+---
+
+### v0.3.161 三重合并综合测试用例 (2025-12-27)
+**进度**: TypeScript 编译测试增强 | ✅ 已提交
+
+#### v0.3.161 新增测试用例
+- **三重合并综合测试 (Triple Merging Complete)**
+  - 添加 `test_triple_merging_complete` 测试接口+命名空间+模块的完整合并流程
+  - 验证同名模块的所有函数正确合并
+  - 验证命名空间合并后只生成一个 IIFE
+  - 验证接口属性的正确合并
+
+- **模块增强嵌套测试 (Module Augmentation Nested)**
+  - 添加 `test_module_augmentation_nested` 测试模块内嵌套命名空间的合并
+  - 验证嵌套命名空间在模块合并时正确合并
+
+- **独立声明不合并测试 (Independent Declarations)**
+  - 添加 `test_independent_declarations_not_merged` 测试不同名称声明的独立性
+  - 验证不同命名空间/模块不会错误合并
+  - 验证纯类型声明（interface）被正确移除
+
+#### v0.3.161 验证
+- ✅ `cargo test --lib` 220/220 单元测试通过
+- ✅ `cargo test --test typescript_compiler_integration_tests` 45/45 集成测试通过
+- ✅ 无回归问题
+
+#### v0.3.161 下一步
+- 实现完整的类型推断增强
+- 添加更多边缘情况测试覆盖
 
 ---
 
