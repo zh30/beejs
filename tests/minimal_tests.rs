@@ -1801,4 +1801,76 @@ console.log(result);
         assert!(output.js_code.contains("console.log"), "Should preserve console.log: {}", output.js_code);
         println!("✅ Test 76: Template literal with combined intrinsics");
     }
+
+    /// 测试77: Awaited 工具类型基础支持 (v0.3.201)
+    #[test]
+    fn test_awaited_utility_type_basic() {
+        let ts_code = r#"
+type A = Awaited<Promise<string>>;
+const result: A = "hello";
+console.log(result);
+"#;
+        let result = typescript::compile_typescript(ts_code, "awaited_basic.ts");
+        assert!(result.is_ok(), "Awaited basic should compile successfully");
+        let output = result.unwrap();
+        // 验证 Awaited 被移除，保留内部类型
+        assert!(!output.js_code.contains("Awaited<"),
+            "Should remove Awaited pattern: {}", output.js_code);
+        // 验证类型别名被移除但代码保留
+        assert!(output.js_code.contains("const result"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("console.log"),
+            "Should preserve console.log: {}", output.js_code);
+        println!("✅ Test 77: Awaited utility type basic");
+    }
+
+    /// 测试78: Awaited 工具类型在泛型上下文中 (v0.3.201)
+    #[test]
+    fn test_awaited_utility_type_generic() {
+        let ts_code = r#"
+async function fetchData<T>(promise: Promise<T>): Promise<Awaited<T>> {
+    return promise;
+}
+const result = fetchData(Promise.resolve(42));
+console.log(result);
+"#;
+        let result = typescript::compile_typescript(ts_code, "awaited_generic.ts");
+        assert!(result.is_ok(), "Awaited in generic context should compile");
+        let output = result.unwrap();
+        // 验证 Awaited 被移除
+        assert!(!output.js_code.contains("Awaited<"),
+            "Should remove Awaited pattern: {}", output.js_code);
+        // 验证函数和调用保留
+        assert!(output.js_code.contains("function fetchData"),
+            "Should preserve function: {}", output.js_code);
+        assert!(output.js_code.contains("console.log"),
+            "Should preserve console.log: {}", output.js_code);
+        println!("✅ Test 78: Awaited utility type in generic context");
+    }
+
+    /// 测试79: Awaited 工具类型在类型别名中 (v0.3.201)
+    #[test]
+    fn test_awaited_utility_type_alias() {
+        let ts_code = r#"
+type PromiseValue<T> = Awaited<T>;
+type UserPromise = Promise<{ name: string }>;
+type User = Awaited<UserPromise>;
+const user: User = { name: "Alice" };
+console.log(user);
+"#;
+        let result = typescript::compile_typescript(ts_code, "awaited_type_alias.ts");
+        assert!(result.is_ok(), "Awaited in type alias should compile");
+        let output = result.unwrap();
+        // 验证所有 Awaited 被移除
+        let awaited_count = output.js_code.matches("Awaited<").count();
+        assert_eq!(awaited_count, 0,
+            "Should remove all Awaited patterns, found {}: {}",
+            awaited_count, output.js_code);
+        // 验证代码保留
+        assert!(output.js_code.contains("const user"),
+            "Should preserve const: {}", output.js_code);
+        assert!(output.js_code.contains("console.log"),
+            "Should preserve console.log: {}", output.js_code);
+        println!("✅ Test 79: Awaited utility type in type alias");
+    }
 }

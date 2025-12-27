@@ -2257,6 +2257,13 @@ impl MinimalRuntime {
         ).unwrap();
         js_code = esm_import_dq_pattern.replace_all(&js_code, r"const /* ESM import */ = require('$1')").to_string();
 
+        // v0.3.201: Remove Awaited utility type
+        // Awaited<T> is a TypeScript 4.5+ utility type that unwraps Promise-like types
+        // Pattern: "Awaited<T>" in type annotations, type aliases, or generic constraints
+        // For simple cases, we remove "Awaited<...>" and keep the inner type
+        let awaited_pattern = regex::Regex::new(r"Awaited\s*<([^>]+)>").unwrap();
+        js_code = awaited_pattern.replace_all(&js_code, "$1").to_string();
+
         // v0.3.195: Convert simple ESM export statements to comments
         // v0.3.196: Added abstract for export abstract class support
         // Complex exports (export { a, b }) need variable tracking, so we use placeholders
@@ -2330,7 +2337,8 @@ impl MinimalRuntime {
             || code.contains("${Uppercase<")   // v0.3.200: intrinsic Uppercase in template literal
             || code.contains("${Lowercase<")   // v0.3.200: intrinsic Lowercase in template literal
             || code.contains("${Capitalize<")  // v0.3.200: intrinsic Capitalize in template literal
-            || code.contains("${Uncapitalize<"); // v0.3.200: intrinsic Uncapitalize in template literal
+            || code.contains("${Uncapitalize<") // v0.3.200: intrinsic Uncapitalize in template literal
+            || code.contains("Awaited<"); // v0.3.201: Awaited utility type
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript
