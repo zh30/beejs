@@ -1231,9 +1231,85 @@ impl MinimalRuntime {
         let single_line_pattern = regex::Regex::new(r"//.*?$").unwrap();
         js_code = single_line_pattern.replace_all(&js_code, "").to_string();
 
-        // Remove interface definitions (entire lines with 'interface')
-        let interface_pattern = regex::Regex::new(r"(?m)^interface\s+\w+.*?$").unwrap();
-        js_code = interface_pattern.replace_all(&js_code, "").to_string();
+        // v0.3.181: Remove interface definitions with bodies using bracket matching
+        // This properly handles nested braces, parentheses, and strings
+        fn remove_interfaces(code: &str) -> String {
+            let mut result = String::new();
+            let mut i = 0;
+            let chars: Vec<char> = code.chars().collect();
+            let n = chars.len();
+
+            while i < n {
+                // Look for "interface " followed by an identifier
+                let interface_start = chars[i..].starts_with(&['i', 'n', 't', 'e', 'r', 'f', 'a', 'c', 'e', ' '][..]);
+
+                if interface_start {
+                    // Find the interface name
+                    let name_start = i + 10; // After "interface "
+                    let mut name_end = name_start;
+                    while name_end < n {
+                        if chars[name_end].is_alphanumeric() || chars[name_end] == '_' {
+                            name_end += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                    let interface_name: String = chars[name_start..name_end].iter().collect();
+
+                    // Skip whitespace to find the opening brace
+                    let mut brace_pos = name_end;
+                    while brace_pos < n && chars[brace_pos].is_whitespace() {
+                        brace_pos += 1;
+                    }
+
+                    // Check if we found an opening brace
+                    if brace_pos < n && chars[brace_pos] == '{' {
+                        // Find matching closing brace
+                        let mut depth = 1;
+                        let mut j = brace_pos + 1;
+                        let mut in_string = false;
+                        let mut string_char = '\0';
+
+                        while j < n && depth > 0 {
+                            let c = chars[j];
+                            if in_string {
+                                if c == '\\' && j + 1 < n {
+                                    j += 2;
+                                    continue;
+                                }
+                                if c == string_char {
+                                    in_string = false;
+                                }
+                            } else {
+                                if c == '"' || c == '\'' {
+                                    in_string = true;
+                                    string_char = c;
+                                } else if c == '{' {
+                                    depth += 1;
+                                } else if c == '}' {
+                                    depth -= 1;
+                                }
+                            }
+                            j += 1;
+                        }
+
+                        // Replace the entire interface with a comment
+                        result.push_str(&format!("/* interface {} */", interface_name));
+
+                        // Move i to after the closing brace
+                        i = j;
+                        continue;
+                    }
+                }
+
+                result.push(chars[i]);
+                i += 1;
+            }
+
+            result
+        }
+
+        js_code = remove_interfaces(&js_code);
 
         // v0.3.178: Remove enum declarations
         // Pattern: "enum EnumName { ... }" - comment out entire enum block
