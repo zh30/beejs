@@ -184,6 +184,42 @@
 
 ---
 
+### v0.3.188 实现模板字面量类型快速路径支持 (2025-12-28)
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.188 新增功能
+- **模板字面量类型检测**
+  - 在 `has_raw_typescript()` 中添加 `type ` + `${` 组合模式检测
+  - 识别 `type Greeting = \`Hello ${string}\`;` 等模式
+
+- **模板字面量类型移除**
+  - 添加 `remove_template_literal_types()` 函数
+  - 使用字符级分析正确处理嵌套类型和字符串
+  - 检测 TypeScript 类型关键字：`string`, `number`, `boolean`, `any`, `never`, `unknown`, `symbol`, `bigint`, `void`, `null`, `undefined`
+  - 保留 JavaScript 模板字符串（变量表达式）
+
+#### v0.3.188 实现细节
+- **运行时增强** (`src/runtime_minimal.rs`)
+  - `has_raw_typescript()`: 添加 `code.contains("type ") && code.contains("${")` 检测
+  - `transpile_typescript_to_js()`: 添加 `remove_template_literal_types()` 函数
+  - 字符级分析处理嵌套的 `${}` 和反引号
+
+#### v0.3.188 测试用例
+- `test_typescript_template_literal_type_basic`: 验证基础模板字面量类型
+- `test_typescript_template_literal_type_multiple`: 验证多占位符模板字面量
+- `test_typescript_template_literal_type_mixed`: 验证混合类型关键字
+
+#### v0.3.188 验证
+- ✅ `cargo build` 成功编译
+- ✅ `cargo test --test minimal_tests`: 41/41 通过 (新增 3 个测试)
+
+#### v0.3.188 下一步
+- 继续完善 TypeScript 编译器功能
+- 完善工具类型（Utility Types）实现
+- 实现完整模板字面量类型语法解析（compiler.rs）
+
+---
+
 ### v0.3.186 实现条件类型快速路径支持 (2025-12-28)
 **进度**: TypeScript 快速路径增强 | ✅ 已提交
 

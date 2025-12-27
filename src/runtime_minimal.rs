@@ -1981,6 +1981,92 @@ impl MinimalRuntime {
 
         js_code = remove_conditional_types(&js_code);
 
+        // v0.3.188: Remove template literal type definitions
+        // Pattern: `prefix${Type}suffix` in type alias definitions
+        // Examples:
+        // - type Greeting = `Hello ${string}`;
+        // - type Email = `user-${string}@${string}.com`;
+        // - type Path = `/api/${string}/${string}`;
+        // Template literal types are TypeScript-only and should be removed in JS output
+        fn remove_template_literal_types(code: &str) -> String {
+            let mut result = String::new();
+            let mut i = 0;
+            let chars: Vec<char> = code.chars().collect();
+            let n = chars.len();
+
+            while i < n {
+                // Look for backtick followed by something and ${ (template literal type pattern)
+                // We need to detect TypeScript template literal types vs JS template strings
+                // TypeScript patterns include: ${string}, ${number}, ${boolean}, ${any}, etc.
+                let is_template_start = chars[i] == '`';
+
+                if is_template_start {
+                    // Check if this is a template literal type by looking for type patterns inside ${...}
+                    // TypeScript template literal types use types like ${string}, ${number}, etc.
+                    // JavaScript template strings use expressions like ${variable}
+                    let mut j = i + 1;
+                    let mut has_type_pattern = false;
+
+                    while j < n && chars[j] != '`' {
+                        if chars[j] == '$' && j + 1 < n && chars[j + 1] == '{' {
+                            // Start of template expression
+                            j += 2;
+
+                            // Look for type pattern (identifier followed by } or space then })
+                            // TypeScript types: string, number, boolean, any, never, unknown, symbol, bigint, void, null, undefined
+                            let type_keywords = ["string", "number", "boolean", "any", "never", "unknown", "symbol", "bigint", "void", "null", "undefined"];
+
+                            while j < n && chars[j] != '}' {
+                                // Check if we hit a character that can't be in a type (variable indicator)
+                                // Lowercase start suggests a type keyword
+                                if chars[j].is_alphabetic() && chars[j].is_lowercase() {
+                                    // Potential type keyword - check for match
+                                    for keyword in &type_keywords {
+                                        let kw_len = keyword.len();
+                                        if j + kw_len <= n {
+                                            let candidate: String = chars[j..j + kw_len].iter().collect();
+                                            if candidate == *keyword {
+                                                has_type_pattern = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                j += 1;
+                                if has_type_pattern {
+                                    break;
+                                }
+                            }
+
+                            if j < n && chars[j] == '}' {
+                                j += 1;
+                            }
+                        } else {
+                            j += 1;
+                        }
+                    }
+
+                    if has_type_pattern {
+                        // This is a template literal type - replace with empty string
+                        // Skip to the end of the template
+                        while j < n && chars[j] != '`' {
+                            j += 1;
+                        }
+                        // Don't add anything for template literal types
+                        i = j + 1; // Skip past the closing backtick
+                        continue;
+                    }
+                }
+
+                result.push(chars[i]);
+                i += 1;
+            }
+
+            result
+        }
+
+        js_code = remove_template_literal_types(&js_code);
+
         // v0.3.176: Remove abstract class and abstract method declarations
         // abstract is a TypeScript-only keyword for defining abstract classes and methods
         // Pattern: "abstract class ClassName" and "abstract methodName(): returnType;"
@@ -2044,7 +2130,8 @@ impl MinimalRuntime {
             || code.contains(" in ") && code.contains("[")  // v0.3.184: mapped type [P in keyof T] pattern
             || code.contains("keyof typeof")    // v0.3.185: keyof typeof pattern
             || code.contains("extends keyof")   // v0.3.185: keyof in generic constraints
-            || code.contains(" extends ");      // v0.3.186: conditional type extends pattern
+            || code.contains(" extends ")       // v0.3.186: conditional type extends pattern
+            || (code.contains("type ") && code.contains("${"));  // v0.3.188: template literal type pattern
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript

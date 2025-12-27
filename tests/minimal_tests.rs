@@ -893,4 +893,65 @@ type Result<T> = T extends Promise<infer U> ? U : T;
 
         println!("✅ Test 38: TypeScript conditional type with constraints");
     }
+
+    /// 测试39: TypeScript 模板字面量类型 - 基础支持 (v0.3.188)
+    #[test]
+    fn test_typescript_template_literal_type_basic() {
+        // 测试基础的模板字面量类型
+        let ts_code = r#"
+type Greeting = `Hello ${string}`;
+const greeting: Greeting = "Hello World";
+"#;
+        let result = typescript::compile_typescript(ts_code, "template_literal_test.ts");
+        assert!(result.is_ok(), "Template literal type should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证模板字面量类型被移除（保留 const 声明）
+        assert!(output.js_code.contains("const greeting"),
+            "Should preserve const declaration: {}", output.js_code);
+        // 模板字面量类型定义应该被移除
+        assert!(!output.js_code.contains("`Hello ${string}`"),
+            "Template literal type should be removed: {}", output.js_code);
+
+        println!("✅ Test 39: TypeScript template literal type basic");
+    }
+
+    /// 测试40: TypeScript 模板字面量类型 - 多占位符 (v0.3.188)
+    #[test]
+    fn test_typescript_template_literal_type_multiple() {
+        // 测试带多个占位符的模板字面量类型
+        let ts_code = r#"
+type Email = `user-${string}@${string}.com`;
+type Path = `/api/${string}/${string}`;
+"#;
+        let result = typescript::compile_typescript(ts_code, "template_literal_multi.ts");
+        assert!(result.is_ok(), "Multiple template literal types should compile, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证模板字面量类型被移除
+        assert!(!output.js_code.contains("${string}"),
+            "Template literal type placeholders should be removed: {}", output.js_code);
+
+        println!("✅ Test 40: TypeScript template literal type multiple placeholders");
+    }
+
+    /// 测试41: TypeScript 模板字面量类型 - 混合类型 (v0.3.188)
+    #[test]
+    fn test_typescript_template_literal_type_mixed() {
+        // 测试混合类型关键字的模板字面量类型
+        let ts_code = r#"
+type MixedType = `value-${string | number}-${boolean}`;
+type NumericTemplate = `item-${number}`;
+type AnyTemplate = `${any}`;
+"#;
+        let result = typescript::compile_typescript(ts_code, "template_literal_mixed.ts");
+        assert!(result.is_ok(), "Mixed template literal types should compile, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证模板字面量类型被移除
+        assert!(!output.js_code.contains("${string}") || !output.js_code.contains("${number}") || !output.js_code.contains("${boolean}"),
+            "Template literal type should be removed: {}", output.js_code);
+
+        println!("✅ Test 41: TypeScript template literal type mixed types");
+    }
 }
