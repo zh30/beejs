@@ -1256,6 +1256,15 @@ impl MinimalRuntime {
         let const_pattern = regex::Regex::new(r"(?m)^const\s+(\w+):\s*[^;=]+").unwrap();
         js_code = const_pattern.replace_all(&js_code, "const $1").to_string();
 
+        // v0.3.167: Remove as const assertions: "expr as const" -> "expr"
+        let as_const_pattern = regex::Regex::new(r"\s+as\s+const").unwrap();
+        js_code = as_const_pattern.replace_all(&js_code, "").to_string();
+
+        // v0.3.167: Remove as Type assertions: "expr as TypeName" -> "expr"
+        // This pattern matches "as" followed by a type identifier (capitalized or known type)
+        let as_type_pattern = regex::Regex::new(r"\s+as\s+([A-Z][a-zA-Z0-9<>]*(?:\s*<[^>]+>)?)").unwrap();
+        js_code = as_type_pattern.replace_all(&js_code, "").to_string();
+
         Ok(js_code)
     }
 
@@ -1274,7 +1283,9 @@ impl MinimalRuntime {
             || code.contains(": number")
             || code.contains(": boolean")
             || code.contains(": User")      // custom type in function param
-            || code.contains(": Promise<");
+            || code.contains(": Promise<")
+            || code.contains(" as const")   // as const assertion
+            || code.contains(" as ");       // as Type assertion
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript
