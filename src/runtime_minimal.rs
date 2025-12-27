@@ -2021,8 +2021,7 @@ impl MinimalRuntime {
         // v0.3.170: Enhanced TypeScript detection for module augmentation
         // Note: We avoid transpiling patterns that might exist in already-compiled JS
         // We look for patterns that are DEFINITELY TypeScript, not just JavaScript with colons
-        let has_raw_typescript =
-            code.contains("interface ")    // interface definition
+        let has_raw_typescript = code.contains("interface ")    // interface definition
             || code.contains("enum ")      // enum definition
             || code.contains("type ")       // type alias
             || code.contains(": string")    // type annotation with known type
@@ -2042,7 +2041,7 @@ impl MinimalRuntime {
             || code.contains("abstract class")   // v0.3.176: abstract class declaration
             || code.contains("abstract ")       // v0.3.176: abstract method or class
             || code.contains("this:")           // v0.3.183: this parameter type annotation
-            || code.contains(" in ") && code.contains("[");  // v0.3.184: mapped type [P in keyof T] pattern
+            || code.contains(" in ") && code.contains("[")  // v0.3.184: mapped type [P in keyof T] pattern
             || code.contains("keyof typeof")    // v0.3.185: keyof typeof pattern
             || code.contains("extends keyof")   // v0.3.185: keyof in generic constraints
             || code.contains(" extends ");      // v0.3.186: conditional type extends pattern
