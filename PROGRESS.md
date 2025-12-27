@@ -1,3 +1,35 @@
+### v0.3.204 实现 NonNullable<T> 工具类型快速路径支持（2025-12-28）
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.204 新增功能
+- **NonNullable<T> 工具类型快速路径**
+  - 运行时快速路径识别 `NonNullable<...>` 模式
+  - 正确移除 NonNullable 包装，保留内部类型
+  - 支持泛型上下文和复杂联合类型中的 NonNullable 使用
+
+#### v0.3.204 实现细节
+- **运行时检测增强** (`src/runtime_minimal.rs:2383`)
+  - 在 `has_raw_typescript()` 中添加 `NonNullable<` 模式检测
+
+- **运行时快速路径移除** (`src/runtime_minimal.rs:2295-2300`)
+  - 添加正则表达式 `NonNullable\s*<([^>]+)>` 替换为 `$1`
+  - 提取泛型参数内容直接替换，实现类型擦除
+
+#### v0.3.204 测试用例
+- `test_nonnullable_utility_fast_path`: 独立使用 NonNullable 模式
+- `test_nonnullable_with_union`: 与泛型和联合类型组合使用
+
+#### v0.3.204 测试验证
+- ✅ `cargo test --test minimal_tests`: 88/88 通过 (新增 2 个测试)
+- ✅ `cargo test --lib`: 223/223 通过
+
+#### v0.3.204 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多内建工具类型支持
+- 完善类型推断场景测试
+
+---
+
 ### v0.3.181 实现多行接口定义支持（2025-12-27）
 **进度**: TypeScript 快速路径增强 | ✅ 已提交
 
