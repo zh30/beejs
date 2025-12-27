@@ -1536,4 +1536,61 @@ console.log(point);
 
         println!("✅ Test 61: TypeScript InstanceType<T> utility type");
     }
+
+    /// 测试62: TypeScript import type 语句 (v0.3.193)
+    #[test]
+    fn test_typescript_import_type() {
+        // 测试 import type { ... } from 'module' 语句移除
+        let ts_code = r#"
+import type { User } from './types';
+import type * as Types from './namespace-types';
+import type DefaultType from './default-type';
+
+const x = 1;
+console.log(x);
+"#;
+        let result = typescript::compile_typescript(ts_code, "import_type_test.ts");
+        assert!(result.is_ok(), "import type should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 import type 语句被移除
+        assert!(!output.js_code.contains("import type"),
+            "Should remove import type statements: {}", output.js_code);
+
+        // 验证普通代码保留
+        assert!(output.js_code.contains("const x = 1"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("console.log(x)"),
+            "Should preserve console.log: {}", output.js_code);
+
+        println!("✅ Test 62: TypeScript import type statement");
+    }
+
+    /// 测试63: TypeScript export type 语句 (v0.3.193)
+    #[test]
+    fn test_typescript_export_type() {
+        // 测试 export type { ... } 语句移除
+        let ts_code = r#"
+type Point = { x: number; y: number };
+export type { Point };
+export type { Point as PointType } from './types';
+const x = 1;
+console.log(x);
+"#;
+        let result = typescript::compile_typescript(ts_code, "export_type_test.ts");
+        assert!(result.is_ok(), "export type should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 export type 语句被移除
+        assert!(!output.js_code.contains("export type"),
+            "Should remove export type statements: {}", output.js_code);
+
+        // 验证普通代码保留
+        assert!(output.js_code.contains("const x = 1"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("console.log(x)"),
+            "Should preserve console.log: {}", output.js_code);
+
+        println!("✅ Test 63: TypeScript export type statement");
+    }
 }

@@ -10423,3 +10423,48 @@ console.log(p.name);  // "Alice"
 - 继续完善 TypeScript 编译器功能
 - 实现更多边界情况测试覆盖
 - 优化运行时性能
+
+---
+
+### v0.3.193 实现 import type 和 export type 支持（2025-12-28）
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.193 新增功能
+- **import type 语句支持**
+  - 运行时快速路径识别 `import type { ... } from "module"` 模式
+  - 运行时快速路径识别 `import type * as Namespace from "module"` 模式
+  - 运行时快速路径识别 `import type Alias from "module"` 模式
+  - 正确移除 import type 语句，保留其他代码
+
+- **export type 语句支持**
+  - 运行时快速路径识别 `export type { ... }` 模式
+  - 运行时快速路径识别 `export type { ... } from "module"` 模式
+  - 正确移除 export type 语句，保留其他代码
+
+#### v0.3.193 实现细节
+- **运行时快速路径检测增强** (`src/runtime_minimal.rs`)
+  - 添加 `import type` 模式检测到 `has_raw_typescript()`
+  - 添加 `export type` 模式检测到 `has_raw_typescript()`
+
+- **运行时快速路径移除增强** (`src/runtime_minimal.rs`)
+  - 实现正则表达式移除 `import type ...;` 语句
+  - 实现正则表达式移除 `export type { ... };` 语句
+  - 使用 `(?m)` 多行模式正确处理跨行情况
+
+- **新增测试用例** (`tests/minimal_tests.rs`)
+  - `test_typescript_import_type`: 测试 import type 语句移除
+  - `test_typescript_export_type`: 测试 export type 语句移除
+
+#### v0.3.193 测试验证
+- ✅ `cargo build --release` 成功编译
+- ✅ `cargo test --test minimal_tests`: 63/63 通过 (+2)
+- ✅ `cargo test --lib`: 223/223 通过
+- ✅ 手动测试验证：
+  - `import type { User } from './types';` → 正确移除
+  - `export type { Point };` → 正确移除
+  - 保留普通 JavaScript 代码不受影响
+
+#### v0.3.193 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多边界情况测试覆盖
+- 优化运行时性能

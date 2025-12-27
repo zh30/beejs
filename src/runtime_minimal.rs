@@ -2190,6 +2190,23 @@ impl MinimalRuntime {
         let abstract_method_pattern = regex::Regex::new(r"abstract\s+([a-zA-Z_$][a-zA-Z0-9_$]*)").unwrap();
         js_code = abstract_method_pattern.replace_all(&js_code, "$1").to_string();
 
+        // v0.3.193: Remove import type statements
+        // import type is a TypeScript-only import that only imports type information
+        // Patterns:
+        // - "import type { ... } from 'module';" -> remove entire line
+        // - "import type * as Namespace from 'module';" -> remove entire line
+        // - "import type Alias from 'module';" -> remove entire line
+        let import_type_pattern = regex::Regex::new(r"(?m)^\s*import\s+type\s+.*?;?\s*$").unwrap();
+        js_code = import_type_pattern.replace_all(&js_code, "").to_string();
+
+        // v0.3.193: Remove export type statements
+        // export type is a TypeScript-only export that only exports type information
+        // Patterns:
+        // - "export type { ... };" -> remove entire line
+        // - "export type { ... } from 'module';" -> remove entire line
+        let export_type_pattern = regex::Regex::new(r"(?m)^\s*export\s+type\s+\{[^}]*\}\s*(from\s+[^;]+)?;?\s*$").unwrap();
+        js_code = export_type_pattern.replace_all(&js_code, "").to_string();
+
         // Clean up extra whitespace (especially after removing satisfies)
         let cleanup_pattern = regex::Regex::new(r"\s+([;,})])").unwrap();
         js_code = cleanup_pattern.replace_all(&js_code, "$1").to_string();
@@ -2243,7 +2260,9 @@ impl MinimalRuntime {
             || code.contains("extends keyof")   // v0.3.185: keyof in generic constraints
             || code.contains(" extends ")       // v0.3.186: conditional type extends pattern
             || (code.contains("type ") && code.contains("${"))  // v0.3.188: template literal type pattern
-            || code.contains("[key:");  // v0.3.190: index signature [key: string]: T pattern
+            || code.contains("[key:")   // v0.3.190: index signature [key: string]: T pattern
+            || code.contains("import type")    // v0.3.193: import type statement
+            || code.contains("export type");   // v0.3.193: export type statement
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript
