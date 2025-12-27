@@ -2145,4 +2145,83 @@ console.log(result);
             "Should preserve console.log: {}", output.js_code);
         println!("✅ Test 86: Standalone Uncapitalize intrinsic string type");
     }
+
+    /// 测试87: TypeScript Partial<T> 工具类型基础测试 (v0.3.206)
+    #[test]
+    fn test_partial_utility_type_v2() {
+        // 测试 Partial<T> 使所有属性变为可选
+        let ts_code = r#"
+interface User {
+    name: string;
+    age: number;
+}
+type PartialUser = Partial<User>;
+const user: PartialUser = { name: "John" };
+"#;
+        let result = typescript::compile_typescript(ts_code, "partial_test.ts");
+        assert!(result.is_ok(), "Partial<T> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 Partial 引用被移除
+        assert!(!output.js_code.contains("Partial<"),
+            "Should remove Partial utility type reference: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("const user"),
+            "Should preserve const user: {}", output.js_code);
+
+        println!("✅ Test 87: TypeScript Partial<T> utility type v2");
+    }
+
+    /// 测试88: TypeScript Partial<T> 快速路径测试 (v0.3.206)
+    #[test]
+    fn test_partial_utility_fast_path() {
+        // 测试 Partial 快速路径移除
+        let ts_code = r#"
+type Point = { x: number; y: number };
+type PartialPoint = Partial<Point>;
+const point: PartialPoint = { x: 10 };
+"#;
+        let result = typescript::compile_typescript(ts_code, "partial_fastpath.ts");
+        assert!(result.is_ok(), "Partial fast-path should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 Partial 被快速路径移除
+        assert!(!output.js_code.contains("Partial<"),
+            "Should remove Partial via fast-path: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("const point"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("x: 10"),
+            "Should preserve object property: {}", output.js_code);
+
+        println!("✅ Test 88: TypeScript Partial<T> fast-path");
+    }
+
+    /// 测试89: TypeScript Partial<T> 与嵌套类型 (v0.3.206)
+    #[test]
+    fn test_partial_with_nested_types() {
+        // 测试 Partial 与复杂嵌套类型
+        let ts_code = r#"
+type Nested = {
+    a: { b: { c: string } };
+    d: number;
+};
+type PartialNested = Partial<Nested>;
+const nested: PartialNested = { a: { b: { c: "test" } } };
+"#;
+        let result = typescript::compile_typescript(ts_code, "partial_nested.ts");
+        assert!(result.is_ok(), "Partial with nested types should compile");
+        let output = result.unwrap();
+
+        assert!(!output.js_code.contains("Partial<"),
+            "Should remove Partial: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("const nested"),
+            "Should preserve const nested: {}", output.js_code);
+
+        println!("✅ Test 89: TypeScript Partial<T> with nested types");
+    }
 }

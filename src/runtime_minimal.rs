@@ -2299,6 +2299,13 @@ impl MinimalRuntime {
         let nonnullable_pattern = regex::Regex::new(r"NonNullable\s*<([^>]+)>").unwrap();
         js_code = nonnullable_pattern.replace_all(&js_code, "$1").to_string();
 
+        // v0.3.206: Remove Partial utility type
+        // Partial<T> makes all properties of T optional
+        // For runtime, we remove the wrapper and keep the inner type
+        // Pattern: "Partial<User>" -> "User"
+        let partial_pattern = regex::Regex::new(r"Partial\s*<([^>]+)>").unwrap();
+        js_code = partial_pattern.replace_all(&js_code, "$1").to_string();
+
         // v0.3.195: Convert simple ESM export statements to comments
         // v0.3.196: Added abstract for export abstract class support
         // Complex exports (export { a, b }) need variable tracking, so we use placeholders
@@ -2380,7 +2387,8 @@ impl MinimalRuntime {
             || code.contains("Lowercase<")     // v0.3.203: standalone Lowercase intrinsic type
             || code.contains("Capitalize<")    // v0.3.203: standalone Capitalize intrinsic type
             || code.contains("Uncapitalize<")   // v0.3.203: standalone Uncapitalize intrinsic type
-            || code.contains("NonNullable<");   // v0.3.204: NonNullable utility type
+            || code.contains("NonNullable<")   // v0.3.204: NonNullable utility type
+            || code.contains("Partial<");   // v0.3.206: Partial utility type
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript
