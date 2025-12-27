@@ -1,3 +1,34 @@
+### v0.3.160 实现模块合并支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.160 新增功能
+- **模块合并 (Module Merging)**
+  - 新增 `merge_modules()` 方法在编译过程中合并同名模块声明
+  - TypeScript 允许同一 `declare module` 的多次声明，所有成员正确合并
+  - 不同模块名称保持独立，不会被错误合并
+
+#### v0.3.160 实现细节
+- 在 `compile_source()` 中添加第五步调用 `merge_modules()`
+- 使用 `HashMap<String, ASTStatement>` 按 module name 分组
+- 合并时将后者的 body extend 到前者
+- 只合并声明类型为 `ModuleDeclaration` 的节点
+
+#### v0.3.160 测试用例
+- `test_module_merging`: 测试同名模块合并
+- `test_module_merging_multiple_members`: 测试多成员模块合并
+- `test_different_modules_not_merged`: 测试不同模块不会被合并
+
+#### 验证
+- ✅ `cargo build --lib` 成功编译
+- ✅ 42/42 TypeScript 编译器集成测试通过
+- ✅ 无回归问题
+
+#### 下一步
+- 实现完整的三重合并（接口+命名空间+模块）
+- 添加模块增强 (module augmentation) 完整支持
+
+---
+
 ### v0.3.159 实现接口合并支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 
