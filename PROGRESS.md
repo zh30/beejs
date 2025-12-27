@@ -9792,6 +9792,41 @@ console.log(p.name);  // "Alice"
 
 ---
 
+### v0.3.175 实现 infer 关键字支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.175 新增功能
+- **infer 关键字支持**
+  - 运行时快速路径识别 `infer U` 模式
+  - 支持 `infer U extends Type` 带约束语法
+  - 正确移除 infer 关键字，替换为注释占位符
+  - 保留条件类型结构
+
+#### v0.3.175 实现细节
+- **运行时快速路径增强** (`src/runtime_minimal.rs`)
+  - `has_raw_typescript()` 添加 `infer ` 检测
+  - `transpile_typescript_to_js()` 添加正则表达式移除模式
+  - `infer Identifier` → `/* infer Identifier */`
+  - `infer Identifier extends Type` → `/* infer Identifier extends Type */`
+
+#### v0.3.175 测试用例
+- `test_typescript_infer_keyword`: 测试基本 `infer U` 语法
+- `test_typescript_infer_with_constraint`: 测试 `infer U extends string` 约束
+- `test_typescript_infer_complex`: 测试嵌套条件类型中的 infer
+
+#### v0.3.175 验证
+- ✅ `cargo build --release` 成功编译
+- ✅ `cargo test --test minimal_tests` 16/16 通过
+- ✅ 手动测试验证：
+  - `type UnwrapPromise<T> = T extends Promise<infer U> ? U : T` → 正确移除 infer
+  - `type StringResult<T> = T extends infer U extends string ? U : never` → 正确移除
+
+#### v0.3.175 下一步
+- 继续完善 TypeScript 编译器功能
+- 添加更多运行时优化
+
+---
+
 ### v0.3.173 修复三重合并回归问题 (2025-12-27)
 **进度**: TypeScript 编译修复 | ✅ 已提交
 

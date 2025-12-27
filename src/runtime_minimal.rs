@@ -1524,6 +1524,12 @@ impl MinimalRuntime {
         let typeof_pattern = regex::Regex::new(r"typeof\s+([a-zA-Z_$][a-zA-Z0-9_$]*)").unwrap();
         js_code = typeof_pattern.replace_all(&js_code, "/* typeof $1 */").to_string();
 
+        // v0.3.175: Remove infer type expressions
+        // infer is used in conditional types to extract types: "infer U" or "infer U extends Type"
+        // Pattern: "infer Identifier" or "infer Identifier extends Type"
+        let infer_pattern = regex::Regex::new(r"infer\s+([A-Z][a-zA-Z0-9_]*)(?:\s+extends\s+[^?;=]+)?").unwrap();
+        js_code = infer_pattern.replace_all(&js_code, "/* infer $1 */").to_string();
+
         // Clean up extra whitespace (especially after removing satisfies)
         let cleanup_pattern = regex::Regex::new(r"\s+([;,})])").unwrap();
         js_code = cleanup_pattern.replace_all(&js_code, "$1").to_string();
@@ -1568,7 +1574,8 @@ impl MinimalRuntime {
             || code.contains("declare module \"") // v0.3.170: module declaration
             || code.contains("export") && code.contains('=') // v0.3.172: export = statement
             || code.contains("keyof ")      // v0.3.174: keyof operator
-            || code.contains("typeof ");    // v0.3.174: typeof operator in type context
+            || code.contains("typeof ")     // v0.3.174: typeof operator in type context
+            || code.contains("infer ");     // v0.3.175: infer keyword in conditional types
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript

@@ -259,4 +259,54 @@ type UserType = typeof user;
             "Should preserve user: {}", output.js_code);
         println!("✅ Test 13: TypeScript keyof and typeof combined");
     }
+
+    /// 测试14: TypeScript infer 关键字支持 (v0.3.175)
+    #[test]
+    fn test_typescript_infer_keyword() {
+        let ts_code = r#"
+type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
+type Result = UnwrapPromise<Promise<string>>;
+"#;
+        let result = typescript::compile_typescript(ts_code, "infer_test.ts");
+        assert!(result.is_ok(), "infer keyword should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+        // infer 关键字应该被移除
+        assert!(!output.js_code.contains("infer"),
+            "Should remove infer keyword: {}", output.js_code);
+        // 应该保留类型别名声明（因为它们是 declare 的一部分）
+        println!("✅ Test 14: TypeScript infer keyword support");
+    }
+
+    /// 测试15: TypeScript infer 关键字带约束 (v0.3.175)
+    #[test]
+    fn test_typescript_infer_with_constraint() {
+        let ts_code = r#"
+type StringResult<T> = T extends infer U extends string ? U : never;
+type TestResult = StringResult<"hello">;
+"#;
+        let result = typescript::compile_typescript(ts_code, "infer_constraint_test.ts");
+        assert!(result.is_ok(), "infer with constraint should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+        // infer 和 extends 约束都应该被移除
+        assert!(!output.js_code.contains("infer"),
+            "Should remove infer keyword: {}", output.js_code);
+        println!("✅ Test 15: TypeScript infer with constraint support");
+    }
+
+    /// 测试16: TypeScript infer 在复杂条件类型中 (v0.3.175)
+    #[test]
+    fn test_typescript_infer_complex() {
+        let ts_code = r#"
+type DeepUnwrap<T> = T extends Promise<infer U> ? DeepUnwrap<U> : T;
+type Test1 = DeepUnwrap<Promise<Promise<number>>>;
+type Test2 = DeepUnwrap<string>;
+"#;
+        let result = typescript::compile_typescript(ts_code, "infer_complex_test.ts");
+        assert!(result.is_ok(), "complex infer should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+        // 所有 infer 关键字都应该被移除
+        assert!(!output.js_code.contains("infer"),
+            "Should remove all infer keywords: {}", output.js_code);
+        println!("✅ Test 16: TypeScript infer in complex conditional types");
+    }
 }
