@@ -120,6 +120,39 @@
 
 ---
 
+### v0.3.185 实现映射类型 keyof 关键字完整支持（2025-12-28）
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.185 新增功能
+- **增强 keyof 关键字支持**
+  - 支持 `keyof typeof obj` 模式（运行时获取对象键类型）
+  - 支持 `extends keyof T` 泛型约束模式
+  - 支持 `T[keyof T]` 索引访问中的 keyof 模式
+  - 组合支持 Pick、Readonly、Partial 等复杂映射类型
+
+#### v0.3.185 实现细节
+- **运行时快速路径增强** (`src/runtime_minimal.rs`)
+  - 添加 `keyof typeof` 模式检测和替换
+  - 添加 `extends keyof` 泛型约束模式处理
+  - 添加 `[keyof T]` 索引访问模式替换
+  - 更新 `has_raw_typescript()` 检测新模式
+
+- **新增测试用例** (`tests/minimal_tests.rs`)
+  - `test_typescript_keyof_typeof`: 测试 keyof typeof obj 模式
+  - `test_typescript_keyof_generic_constraint`: 测试泛型约束中的 keyof
+  - `test_typescript_indexed_keyof`: 测试索引访问中的 keyof
+  - `test_typescript_complex_mapped_type`: 测试复杂映射类型组合
+
+#### v0.3.185 测试验证
+- ✅ `keyof typeof obj` → `string`
+- ✅ `T extends keyof U` → `T extends string`
+- ✅ `User[keyof User]` → `User[string]`
+- ✅ `cargo test --test minimal_tests`: 33/33 通过
+
+#### v0.3.185 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现条件类型 `extends ... ? ... : ...` 支持
+
 ### v0.3.179 实现 BigInt 字面量支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 

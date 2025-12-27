@@ -708,4 +708,104 @@ type Result<T, E> = { [P in keyof T]?: T[P] } | { error: E };
 
         println!("✅ Test 29: TypeScript mapped type with optional modifier");
     }
+
+    /// 测试30: TypeScript keyof typeof 模式 (v0.3.185)
+    #[test]
+    fn test_typescript_keyof_typeof() {
+        // 测试 keyof typeof obj 模式
+        let ts_code = r#"
+const obj = { name: "Alice", age: 30 };
+type ObjKeys = keyof typeof obj;
+const keys: ObjKeys = "name";
+"#;
+        let result = typescript::compile_typescript(ts_code, "keyof_typeof_test.ts");
+        assert!(result.is_ok(), "keyof typeof should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 keyof typeof 被替换
+        assert!(!output.js_code.contains("keyof typeof"),
+            "Should remove keyof typeof pattern: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("const obj"),
+            "Should preserve const obj: {}", output.js_code);
+
+        println!("✅ Test 30: TypeScript keyof typeof pattern");
+    }
+
+    /// 测试31: TypeScript keyof 在泛型约束中 (v0.3.185)
+    #[test]
+    fn test_typescript_keyof_generic_constraint() {
+        // 测试 <T extends keyof U> 模式
+        let ts_code = r#"
+interface Config {
+    apiKey: string;
+    timeout: number;
+}
+function getProperty<T extends keyof Config>(key: T): Config[T] {
+    return {} as any;
+}
+"#;
+        let result = typescript::compile_typescript(ts_code, "keyof_constraint_test.ts");
+        assert!(result.is_ok(), "keyof constraint should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 keyof 被处理
+        assert!(!output.js_code.contains("extends keyof"),
+            "Should remove extends keyof pattern: {}", output.js_code);
+
+        // 验证函数保留
+        assert!(output.js_code.contains("getProperty"),
+            "Should preserve getProperty: {}", output.js_code);
+
+        println!("✅ Test 31: TypeScript keyof in generic constraint");
+    }
+
+    /// 测试32: TypeScript 索引访问中的 keyof (v0.3.185)
+    #[test]
+    fn test_typescript_indexed_keyof() {
+        // 测试 T[keyof T] 模式
+        let ts_code = r#"
+type User = { name: string; age: number };
+type UserPropertyTypes = User[keyof User];
+const value: UserPropertyTypes = "test";
+"#;
+        let result = typescript::compile_typescript(ts_code, "indexed_keyof_test.ts");
+        assert!(result.is_ok(), "indexed keyof should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 [keyof T] 被替换为 [string]
+        assert!(output.js_code.contains("[string]") || !output.js_code.contains("keyof"),
+            "Should handle indexed keyof pattern: {}", output.js_code);
+
+        println!("✅ Test 32: TypeScript indexed access with keyof");
+    }
+
+    /// 测试33: TypeScript 复杂映射类型组合 (v0.3.185)
+    #[test]
+    fn test_typescript_complex_mapped_type() {
+        // 测试组合多个特性的复杂映射类型
+        let ts_code = r#"
+type Readonly<T> = { readonly [P in keyof T]: T[P] };
+type Partial<T> = { [P in keyof T]?: T[P] };
+type Pick<T, K extends keyof T> = { [P in K]: T[P] };
+
+interface State {
+    loading: boolean;
+    data: string;
+    error: string | null;
+}
+"#;
+        let result = typescript::compile_typescript(ts_code, "complex_mapped_type_test.ts");
+        assert!(result.is_ok(), "complex mapped type should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证所有映射类型模式被移除
+        assert!(!output.js_code.contains("[P in keyof T]"),
+            "Should remove mapped type syntax: {}", output.js_code);
+        assert!(!output.js_code.contains("[P in K]"),
+            "Should remove pick type syntax: {}", output.js_code);
+
+        println!("✅ Test 33: TypeScript complex mapped type combination");
+    }
 }

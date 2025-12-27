@@ -1847,9 +1847,24 @@ impl MinimalRuntime {
 
         // v0.3.174: Remove keyof Type expressions
         // keyof returns union of string literal types representing property names
-        // Pattern: "keyof TypeName" where TypeName is typically capitalized
+        // v0.3.185: Enhanced to support more complex keyof patterns
+        // Pattern 1: "keyof TypeName" where TypeName is typically capitalized
         let keyof_pattern = regex::Regex::new(r"keyof\s+[A-Z][a-zA-Z0-9_<>]*").unwrap();
         js_code = keyof_pattern.replace_all(&js_code, "string").to_string();
+
+        // v0.3.185: Enhanced keyof typeof pattern - keyof typeof obj -> string
+        // Handles: keyof typeof identifier
+        let keyof_typeof_pattern = regex::Regex::new(r"keyof\s+typeof\s+([a-zA-Z_$][a-zA-Z0-9_$]*)").unwrap();
+        js_code = keyof_typeof_pattern.replace_all(&js_code, "string").to_string();
+
+        // v0.3.185: Remove keyof expressions in mapped type constraints
+        // Handles: <T extends keyof U> or <K extends keyof T>
+        let keyof_constraint_pattern = regex::Regex::new(r"extends\s+keyof\s+[A-Za-z_$][a-zA-Z0-9_$<>]*").unwrap();
+        js_code = keyof_constraint_pattern.replace_all(&js_code, "extends string").to_string();
+
+        // v0.3.185: Handle indexed access with keyof: T[keyof T] -> T[string]
+        let indexed_keyof_pattern = regex::Regex::new(r"\[keyof\s+([A-Z][a-zA-Z0-9_<>]*)\]").unwrap();
+        js_code = indexed_keyof_pattern.replace_all(&js_code, "[string]").to_string();
 
         // v0.3.174: Remove typeof identifier in type context
         // typeof returns the type of a value at compile time
@@ -1925,6 +1940,8 @@ impl MinimalRuntime {
             || code.contains("abstract ")       // v0.3.176: abstract method or class
             || code.contains("this:")           // v0.3.183: this parameter type annotation
             || code.contains(" in ") && code.contains("[");  // v0.3.184: mapped type [P in keyof T] pattern
+            || code.contains("keyof typeof")    // v0.3.185: keyof typeof pattern
+            || code.contains("extends keyof");   // v0.3.185: keyof in generic constraints
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript
