@@ -1265,6 +1265,255 @@ impl MinimalRuntime {
         let as_type_pattern = regex::Regex::new(r"\s+as\s+([A-Z][a-zA-Z0-9<>]*(?:\s*<[^>]+>)?)").unwrap();
         js_code = as_type_pattern.replace_all(&js_code, "").to_string();
 
+        // v0.3.168: Remove satisfies operator: "expr satisfies Type" -> "expr"
+        // The satisfies operator checks type compatibility without changing the inferred type
+        // Handle various type patterns: simple types, object types (including nested), union types, array types
+
+        // Helper function to find matching closing bracket/paren
+        fn find_matching_bracket(s: &str, start: usize, open: char, close: char) -> Option<usize> {
+            let mut depth = 0;
+            let mut in_string = false;
+            let mut string_char = '\0';
+            let mut chars = s.char_indices().skip(start);
+
+            while let Some((i, c)) = chars.next() {
+                if in_string {
+                    if c == '\\' && string_char != '\\' {
+                        // Skip escaped character
+                        if let Some((_, next_c)) = chars.next() {
+                            if next_c == string_char || (string_char == '\'' && next_c == '\'') {
+                                continue;
+                            }
+                        }
+                    } else if c == string_char {
+                        in_string = false;
+                    }
+                } else {
+                    if c == '"' || c == '\'' {
+                        in_string = true;
+                        string_char = c;
+                    } else if c == open {
+                        depth += 1;
+                    } else if c == close {
+                        depth -= 1;
+                        if depth == 0 {
+                            return Some(i + close.len_utf8());
+                        }
+                    }
+                }
+            }
+            None
+        }
+
+        // Remove satisfies with various type patterns using manual parsing
+        // Handle cases like:
+        // - `expr } satisfies Type` (object literal)
+        // - `expr ) satisfies Type` (parenthesized)
+        // - `identifier satisfies Type` (simple value)
+        let mut result = String::new();
+        let mut i = 0;
+        let mut last_processed = 0;
+        let chars: Vec<char> = js_code.chars().collect();
+        let n = chars.len();
+
+        while i < n {
+            // Look for "satisfies"
+            let is_satisfies_start = chars[i..].starts_with(&['s', 'a', 't', 'i', 's', 'f', 'i', 'e', 's'][..]);
+
+            if is_satisfies_start {
+                // Check if preceded by } or ) or ] or identifier/number character (with optional whitespace)
+                let mut j = i;
+                while j > 0 && chars[j - 1].is_whitespace() {
+                    j -= 1;
+                }
+
+                let valid_predecessor = j > 0 && (
+                    chars[j - 1] == '}' ||
+                    chars[j - 1] == ')' ||
+                    chars[j - 1] == ']' ||
+                    chars[j - 1].is_alphanumeric() ||
+                    chars[j - 1] == '_' ||
+                    chars[j - 1] == '$' ||
+                    chars[j - 1] == '\''
+                );
+
+                if valid_predecessor {
+                    // Copy everything from last_processed to i (the code before satisfies)
+                    result.push_str(&js_code[last_processed..i]);
+
+                    // Find the type expression after satisfies and skip it
+                    let mut k = i + 9; // length of "satisfies"
+                    while k < n && chars[k].is_whitespace() {
+                        k += 1;
+                    }
+
+                    // Skip type expression (identifiers, keywords, then optional array suffix [])
+                    while k < n {
+                        // Skip whitespace
+                        if chars[k].is_whitespace() {
+                            k += 1;
+                            continue;
+                        }
+
+                        // Skip array suffix []
+                        if chars[k] == '[' && k + 1 < n && chars[k + 1] == ']' {
+                            k += 2;
+                            continue;
+                        }
+
+                        // Skip [ ] with whitespace
+                        if chars[k] == '[' {
+                            let mut bracket_k = k;
+                            bracket_k += 1;
+                            while bracket_k < n && chars[bracket_k].is_whitespace() {
+                                bracket_k += 1;
+                            }
+                            if bracket_k < n && chars[bracket_k] == ']' {
+                                k = bracket_k + 1;
+                                continue;
+                            }
+                        }
+
+                        // Skip type name (alphanumeric or generic)
+                        if chars[k].is_alphanumeric() || chars[k] == '_' || chars[k] == '$' {
+                            k += 1;
+                            continue;
+                        }
+
+                        // Skip generic type parameters like <T> or <string>
+                        if chars[k] == '<' {
+                            let mut angle_k = k;
+                            angle_k += 1;
+                            let mut depth = 1;
+                            while angle_k < n && depth > 0 {
+                                if chars[angle_k] == '<' {
+                                    depth += 1;
+                                } else if chars[angle_k] == '>' {
+                                    depth -= 1;
+                                }
+                                angle_k += 1;
+                            }
+                            if depth == 0 {
+                                k = angle_k;
+                                continue;
+                            }
+                        }
+
+                        // Stop at statement terminators
+                        if chars[k] == ';' || chars[k] == ',' {
+                            break;
+                        }
+
+                        // Stop at other expression terminators
+                        if matches!(chars[k], ')' | '}' | ']') {
+                            break;
+                        }
+
+                        k += 1;
+                    }
+
+                    if k < n {
+                        match chars[k] {
+                            '{' => {
+                                // Object type - find matching }
+                                if let Some(end_pos) = find_matching_bracket(&js_code, k, '{', '}') {
+                                    k = end_pos;
+                                } else {
+                                    k = n;
+                                }
+                            }
+                            '(' => {
+                                // Parenthesized type - find matching )
+                                if let Some(end_pos) = find_matching_bracket(&js_code, k, '(', ')') {
+                                    k = end_pos;
+                                } else {
+                                    k = n;
+                                }
+                            }
+                            '[' => {
+                                // Array type like number[] - skip until ]
+                                let mut bracket_depth = 0;
+                                while k < n {
+                                    if chars[k] == '[' {
+                                        bracket_depth += 1;
+                                    } else if chars[k] == ']' {
+                                        bracket_depth -= 1;
+                                        if bracket_depth == 0 {
+                                            k += 1;
+                                            break;
+                                        }
+                                    }
+                                    k += 1;
+                                }
+                            }
+                            '<' => {
+                                // Generic type like Array<number> - find matching >
+                                let mut angle_depth = 0;
+                                while k < n {
+                                    if chars[k] == '<' {
+                                        angle_depth += 1;
+                                    } else if chars[k] == '>' {
+                                        angle_depth -= 1;
+                                        if angle_depth == 0 {
+                                            k += 1;
+                                            break;
+                                        }
+                                    } else if chars[k] == '{' || chars[k] == '(' || chars[k] == '[' {
+                                        // Skip nested brackets
+                                        if let Some(end_pos) = find_matching_bracket(&js_code, k, chars[k], match chars[k] {
+                                            '{' => '}',
+                                            '(' => ')',
+                                            '[' => ']',
+                                            _ => ' ',
+                                        }) {
+                                            k = end_pos;
+                                        }
+                                    }
+                                    k += 1;
+                                }
+                            }
+                            _ => {
+                                // Simple type - skip until whitespace or special char
+                                while k < n && !chars[k].is_whitespace() && !matches!(chars[k], ';' | ',' | ')' | '}' | ']' | '|' | '&' | '+' | '-' | '*' | '/' | '%' | '^' | '!' | '?' | ':' | '=' | '<' | '>') {
+                                    k += 1;
+                                }
+                            }
+                        }
+                    }
+
+                    last_processed = k;
+                    i = k;
+                    continue;
+                }
+            }
+
+            i += 1;
+        }
+
+        // Copy the remaining code after the last satisfies
+        if last_processed < n {
+            result.push_str(&js_code[last_processed..n]);
+        }
+
+        js_code = result;
+
+        // Clean up extra whitespace (especially after removing satisfies)
+        let cleanup_pattern = regex::Regex::new(r"\s+([;,})])").unwrap();
+        js_code = cleanup_pattern.replace_all(&js_code, "$1").to_string();
+
+        // Remove type annotations from satisfies object types (e.g., { host: string; port: number } -> { host; port })
+        // This handles the colon-type pattern within object literals
+        let type_annotation_in_satisfies = regex::Regex::new(r":\s*(string|number|boolean|unknown|any|void|null|undefined|never)(?:\s*[;}\n,\]]|$)").unwrap();
+        js_code = type_annotation_in_satisfies.replace_all(&js_code, "").to_string();
+
+        // Clean up extra semicolons at end of lines
+        let cleanup_pattern = regex::Regex::new(r";\s*\n").unwrap();
+        js_code = cleanup_pattern.replace_all(&js_code, "\n").to_string();
+
+        // Remove trailing semicolons before closing braces
+        let trailing_semicolon = regex::Regex::new(r";\s*}").unwrap();
+        js_code = trailing_semicolon.replace_all(&js_code, "}").to_string();
+
         Ok(js_code)
     }
 
@@ -1285,7 +1534,8 @@ impl MinimalRuntime {
             || code.contains(": User")      // custom type in function param
             || code.contains(": Promise<")
             || code.contains(" as const")   // as const assertion
-            || code.contains(" as ");       // as Type assertion
+            || code.contains(" as ")        // as Type assertion
+            || code.contains(" satisfies "); // satisfies operator
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript
