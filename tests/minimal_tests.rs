@@ -1708,4 +1708,97 @@ const x = 1;
         assert!(output.js_code.contains("const x = 1"), "Should preserve following code: {}", output.js_code);
         println!("✅ Test 71: ESM export abstract class");
     }
+
+    /// 测试72: 模板字面量类型中的 Uppercase 内建类型 (v0.3.200)
+    #[test]
+    fn test_template_literal_uppercase_intrinsic() {
+        let ts_code = r#"
+type Greeting = `Hello ${Uppercase<'world'>}`;
+const result: string = "Hello WORLD";
+console.log(result);
+"#;
+        let result = typescript::compile_typescript(ts_code, "uppercase_template.ts");
+        assert!(result.is_ok(), "Uppercase in template literal should compile");
+        let output = result.unwrap();
+        // 验证模板字面量类型被移除
+        assert!(!output.js_code.contains("`Hello ${Uppercase"), "Should remove template literal type: {}", output.js_code);
+        // 验证后面的代码仍然存在
+        assert!(output.js_code.contains("console.log"), "Should preserve console.log: {}", output.js_code);
+        println!("✅ Test 72: Template literal with Uppercase intrinsic");
+    }
+
+    /// 测试73: 模板字面量类型中的 Lowercase 内建类型 (v0.3.200)
+    #[test]
+    fn test_template_literal_lowercase_intrinsic() {
+        let ts_code = r#"
+type Greeting = `Hello ${Lowercase<'WORLD'>}!`;
+const result: string = "Hello world!";
+console.log(result);
+"#;
+        let result = typescript::compile_typescript(ts_code, "lowercase_template.ts");
+        assert!(result.is_ok(), "Lowercase in template literal should compile");
+        let output = result.unwrap();
+        // 验证模板字面量类型被移除
+        assert!(!output.js_code.contains("`Hello ${Lowercase"), "Should remove template literal type: {}", output.js_code);
+        // 验证后面的代码仍然存在
+        assert!(output.js_code.contains("console.log"), "Should preserve console.log: {}", output.js_code);
+        println!("✅ Test 73: Template literal with Lowercase intrinsic");
+    }
+
+    /// 测试74: 模板字面量类型中的 Capitalize 内建类型 (v0.3.200)
+    #[test]
+    fn test_template_literal_capitalize_intrinsic() {
+        let ts_code = r#"
+type Message = `user: ${Capitalize<'john'>}`;
+const result: string = "user: John";
+console.log(result);
+"#;
+        let result = typescript::compile_typescript(ts_code, "capitalize_template.ts");
+        assert!(result.is_ok(), "Capitalize in template literal should compile");
+        let output = result.unwrap();
+        // 验证模板字面量类型被移除
+        assert!(!output.js_code.contains("`user: ${Capitalize"), "Should remove template literal type: {}", output.js_code);
+        // 验证后面的代码仍然存在
+        assert!(output.js_code.contains("console.log"), "Should preserve console.log: {}", output.js_code);
+        println!("✅ Test 74: Template literal with Capitalize intrinsic");
+    }
+
+    /// 测试75: 模板字面量类型中的 Uncapitalize 内建类型 (v0.3.200)
+    #[test]
+    fn test_template_literal_uncapitalize_intrinsic() {
+        let ts_code = r#"
+type Status = `${Uncapitalize<'ACTIVE'>}_status`;
+const result: string = "active_status";
+console.log(result);
+"#;
+        let result = typescript::compile_typescript(ts_code, "uncapitalize_template.ts");
+        assert!(result.is_ok(), "Uncapitalize in template literal should compile");
+        let output = result.unwrap();
+        // 验证模板字面量类型被移除
+        assert!(!output.js_code.contains("`${Uncapitalize"), "Should remove template literal type: {}", output.js_code);
+        // 验证后面的代码仍然存在
+        assert!(output.js_code.contains("console.log"), "Should preserve console.log: {}", output.js_code);
+        println!("✅ Test 75: Template literal with Uncapitalize intrinsic");
+    }
+
+    /// 测试76: 组合内建类型在模板字面量中 (v0.3.200)
+    #[test]
+    fn test_template_literal_combined_intrinsics() {
+        let ts_code = r#"
+type Pattern = `${Uppercase<'a'>}${Lowercase<'BCD'>}${Capitalize<'e'>}${Uncapitalize<'F'>}`;
+const result: string = "ABcDeF";
+console.log(result);
+"#;
+        let result = typescript::compile_typescript(ts_code, "combined_template.ts");
+        assert!(result.is_ok(), "Combined intrinsics in template literal should compile");
+        let output = result.unwrap();
+        // 验证所有模板字面量类型被移除
+        assert!(!output.js_code.contains("${Uppercase"), "Should remove Uppercase: {}", output.js_code);
+        assert!(!output.js_code.contains("${Lowercase"), "Should remove Lowercase: {}", output.js_code);
+        assert!(!output.js_code.contains("${Capitalize"), "Should remove Capitalize: {}", output.js_code);
+        assert!(!output.js_code.contains("${Uncapitalize"), "Should remove Uncapitalize: {}", output.js_code);
+        // 验证后面的代码仍然存在
+        assert!(output.js_code.contains("console.log"), "Should preserve console.log: {}", output.js_code);
+        println!("✅ Test 76: Template literal with combined intrinsics");
+    }
 }

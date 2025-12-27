@@ -2125,9 +2125,24 @@ impl MinimalRuntime {
 
                             // Look for type pattern (identifier followed by } or space then })
                             // TypeScript types: string, number, boolean, any, never, unknown, symbol, bigint, void, null, undefined
+                            // v0.3.200: Also check for intrinsic string types: Uppercase, Lowercase, Capitalize, Uncapitalize
                             let type_keywords = ["string", "number", "boolean", "any", "never", "unknown", "symbol", "bigint", "void", "null", "undefined"];
+                            let intrinsic_types = ["Uppercase", "Lowercase", "Capitalize", "Uncapitalize"];
 
                             while j < n && chars[j] != '}' {
+                                // Check for intrinsic string types (starts with uppercase)
+                                if chars[j].is_alphabetic() && chars[j].is_uppercase() {
+                                    for intrinsic in &intrinsic_types {
+                                        let int_len = intrinsic.len();
+                                        if j + int_len + 1 <= n { // +1 for the < that follows
+                                            let candidate: String = chars[j..j + int_len].iter().collect();
+                                            if candidate == *intrinsic && chars[j + int_len] == '<' {
+                                                has_type_pattern = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
                                 // Check if we hit a character that can't be in a type (variable indicator)
                                 // Lowercase start suggests a type keyword
                                 if chars[j].is_alphabetic() && chars[j].is_lowercase() {
@@ -2311,7 +2326,11 @@ impl MinimalRuntime {
             || code.contains("export function") // v0.3.195: ESM export function
             || code.contains("export class")   // v0.3.195: ESM export class
             || code.contains("export default") // v0.3.195: ESM export default
-            || code.contains("export {");      // v0.3.195: ESM export braces
+            || code.contains("export {")       // v0.3.195: ESM export braces
+            || code.contains("${Uppercase<")   // v0.3.200: intrinsic Uppercase in template literal
+            || code.contains("${Lowercase<")   // v0.3.200: intrinsic Lowercase in template literal
+            || code.contains("${Capitalize<")  // v0.3.200: intrinsic Capitalize in template literal
+            || code.contains("${Uncapitalize<"); // v0.3.200: intrinsic Uncapitalize in template literal
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript
