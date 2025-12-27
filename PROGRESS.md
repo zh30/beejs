@@ -1,3 +1,30 @@
+### v0.3.153 修复 declare namespace emit 逻辑并添加边界测试 (2025-12-27)
+**进度**: TypeScript 编译修复 | ✅ 已提交
+
+#### v0.3.153 修复内容
+- **修复 parse_namespace_declaration 处理 is_declare 参数问题**
+  - 添加 `parse_namespace_declaration_internal()` 内部函数
+  - 修复 `parse_statement` 调用时 `is_declare` 标志正确传递
+  - 解决 declare 关键字被重复检查的问题
+
+- **修复 declare namespace 输出保留 declare 关键字**
+  - 修改 emit 逻辑，`is_declare` 为 true 时输出 `declare namespace { ... }`
+  - 之前的错误实现输出 JavaScript IIFE 模式而非 TypeScript 声明语法
+  - 确保生成的 .d.ts 文件保持正确的类型声明语义
+
+#### v0.3.153 新增测试用例
+- `test_export_declare_function` - export declare function 测试
+- `test_export_declare_const_integration` - export declare const 测试
+- `test_declare_function_overloads` - declare function 重载签名测试
+- `test_declare_class_constructor_signature` - declare class 构造函数签名测试
+- `test_mixed_declare_patterns` - 混合 declare 声明模式测试
+
+#### 验证
+- ✅ `cargo test --lib` 220/220 通过
+- ✅ 23/23 TypeScript 编译器集成测试通过
+
+---
+
 ### v0.3.152 declare const/let/var 和 declare global 支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 
