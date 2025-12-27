@@ -220,7 +220,7 @@
 
 ---
 
-### v0.3.189 工具类型完整支持 (2025-12-28)
+### v0.3.189 工具类型完整支持与构造函数签名 (2025-12-28)
 **进度**: TypeScript 编译器增强 | ✅ 已提交
 
 #### v0.3.189 新增功能
@@ -236,6 +236,15 @@
   - `NonNullable<T>`: 排除 null/undefined
   - 工具类型组合使用
 
+- **构造函数签名支持** (`src/typescript/compiler.rs`)
+  - 添加 `InterfaceDeclaration` 的 `constructor_signature` 字段
+  - 实现 `new(...args): ReturnType` 构造函数签名解析
+  - 运行时快速路径已支持构造函数签名移除 (v0.3.182)
+
+- **泛型接口支持** (`src/typescript/compiler.rs`)
+  - 添加接口泛型类型参数 `<T>` 和 `<T, U>` 解析
+  - 支持泛型接口声明 `interface Container<T> { value: T; }`
+
 #### v0.3.189 修复问题
 - **嵌套泛型参数解析 bug** (`src/typescript/compiler.rs`)
   - 修复 `Pick<User, "name" | "email">` 这类带字符串联合类型的泛型参数解析
@@ -244,26 +253,19 @@
   - 添加嵌套泛型中字符串类型的直接处理
 
 #### v0.3.189 实现细节
-- **TypeScript 编译器增强** (`src/typescript/compiler.rs:7392-7458`)
-  - `parse_basic_type()`: 修复泛型类型参数解析循环
-  - 支持所有嵌套层级的逗号、管道符、`&` 符号处理
-  - 直接处理字符串类型参数（如 `"name"`）
+- **TypeScript 编译器增强** (`src/typescript/compiler.rs:2580-2587`)
+  - 添加 `constructor_signature` 字段到 `InterfaceDeclaration`
+  - 实现构造函数签名解析逻辑 (行 4794-4838)
+  - 实现泛型参数解析逻辑 (行 4718-4740)
 
-#### v0.3.189 测试用例
-- `test_typescript_partial_utility_type`: Partial<T> 测试
-- `test_typescript_required_utility_type`: Required<T> 测试
-- `test_typescript_readonly_utility_type`: Readonly<T> 测试
-- `test_typescript_pick_utility_type`: Pick<T, K> 测试
-- `test_typescript_record_utility_type`: Record<K, T> 测试
-- `test_typescript_omit_utility_type`: Omit<T, K> 测试
-- `test_typescript_exclude_utility_type`: Exclude<T, U> 测试
-- `test_typescript_extract_utility_type`: Extract<T, U> 测试
-- `test_typescript_nonnullable_utility_type`: NonNullable<T> 测试
-- `test_typescript_utility_types_combined`: 工具类型组合测试
+- **测试用例新增**
+  - `test_typescript_constructor_signature`: 构造函数签名测试
+  - `test_typescript_generic_interface`: 泛型接口 `<T>` 测试
+  - `test_typescript_multi_generic_interface`: 多泛型 `<T, U>` 测试
 
 #### v0.3.189 验证
 - ✅ `cargo build` 成功编译
-- ✅ `cargo test --test minimal_tests`: 51/51 通过 (新增 10 个测试)
+- ✅ `cargo test --test minimal_tests`: 54/54 通过 (新增 3 个测试)
 
 #### v0.3.189 下一步
 - 继续完善 TypeScript 编译器功能
