@@ -134,4 +134,75 @@ mod tests {
         assert!(stats.is_some(), "Should have statistics");
         println!("✅ Test 10: Runtime statistics");
     }
+
+    /// 测试11: TypeScript declare global 语法支持 (v0.3.170)
+    #[test]
+    fn test_typescript_declare_global() {
+        let ts_code = r#"
+declare global {
+    interface Window {
+        myPlugin: any;
+    }
+    function myGlobalFunction(): void;
+}
+const x = 1;
+"#;
+        let result = typescript::compile_typescript(ts_code, "declare_global.ts");
+        assert!(result.is_ok(), "declare global should compile successfully");
+        let output = result.unwrap();
+        assert!(output.js_code.contains("/* declare global */"),
+            "Should contain declare global placeholder: {}", output.js_code);
+        assert!(output.js_code.contains("const x = 1"),
+            "Should preserve regular code: {}", output.js_code);
+        println!("✅ Test 11: TypeScript declare global support");
+    }
+
+    /// 测试12: TypeScript declare module 语法支持 (v0.3.170)
+    #[test]
+    fn test_typescript_declare_module() {
+        let ts_code = r#"
+declare module "my-module" {
+    export const someValue: number;
+    export function someFunction(): void;
+}
+const y = 2;
+"#;
+        let result = typescript::compile_typescript(ts_code, "declare_module.ts");
+        assert!(result.is_ok(), "declare module should compile successfully");
+        let output = result.unwrap();
+        assert!(output.js_code.contains("/* declare module */"),
+            "Should contain declare module placeholder: {}", output.js_code);
+        assert!(output.js_code.contains("const y = 2"),
+            "Should preserve regular code: {}", output.js_code);
+        println!("✅ Test 12: TypeScript declare module support");
+    }
+
+    /// 测试13: TypeScript 模块增强组合使用 (v0.3.170)
+    #[test]
+    fn test_typescript_module_augmentation_combined() {
+        let ts_code = r#"
+declare global {
+    interface GlobalEnv {
+        apiKey: string;
+    }
+}
+
+declare module "express" {
+    interface Request {
+        getUser(): User;
+    }
+}
+
+const config = { apiKey: "test" };
+console.log(config);
+"#;
+        let result = typescript::compile_typescript(ts_code, "module_augmentation.ts");
+        assert!(result.is_ok(), "Combined module augmentation should compile");
+        let output = result.unwrap();
+        assert!(output.js_code.contains("/* declare global */"),
+            "Should contain declare global: {}", output.js_code);
+        assert!(output.js_code.contains("/* declare module */"),
+            "Should contain declare module: {}", output.js_code);
+        println!("✅ Test 13: TypeScript module augmentation combined");
+    }
 }

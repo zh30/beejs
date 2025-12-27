@@ -9626,3 +9626,43 @@ console.log(p.name);  // "Alice"
 #### 下一步
 - 实现完整的三重合并（接口+命名空间+模块）
 - 添加模块增强 (module augmentation) 完整支持
+
+---
+
+### v0.3.170 模块增强支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.170 新增功能
+- **declare global 语法支持**
+  - 运行时快速路径识别 `declare global { ... }` 模式
+  - 完整编译器支持 `declare global { ... }` 块转译
+  - 全局声明块转译为 `/* declare global */` 占位符
+
+- **declare module 语法支持**
+  - 运行时快速路径识别 `declare module "name" { ... }` 模式
+  - 完整编译器支持模块声明转译
+  - 模块声明转译为 `/* declare module */` 占位符
+
+#### v0.3.170 实现细节
+- **运行时快速路径增强** (`src/runtime_minimal.rs`)
+  - `has_raw_typescript()` 添加 `declare global` 和 `declare module` 检测
+  - `transpile_typescript_to_js()` 添加正则表达式移除模式
+  - 使用字符类 `[{]` 和 `[}]` 避免 Rust 字符串转义问题
+
+- **TypeScript 编译器增强**
+  - `GlobalDeclaration` AST 节点已完整支持
+  - `ModuleDeclaration` AST 节点已完整支持
+  - 发射器正确输出声明块
+
+#### v0.3.170 测试用例
+- `test_typescript_declare_global`: 测试 `declare global { ... }` 编译
+- `test_typescript_declare_module`: 测试 `declare module "name" { ... }` 编译
+- `test_typescript_module_augmentation_combined`: 测试组合使用
+
+#### v0.3.170 验证
+- ✅ `cargo build --release` 成功编译
+- ✅ 新增测试用例通过
+
+#### v0.3.170 下一步
+- 实现完整的三重合并（接口+命名空间+模块）
+- 继续完善 TypeScript 编译器功能

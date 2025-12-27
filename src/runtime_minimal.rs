@@ -1497,6 +1497,16 @@ impl MinimalRuntime {
 
         js_code = result;
 
+        // v0.3.170: Remove declare global { ... } blocks
+        // Keep the declare keyword for const/let/var inside, remove interface/function types
+        let declare_global_pattern = regex::Regex::new(r"declare\s+global\s*[{][^}]*[}]").unwrap();
+        js_code = declare_global_pattern.replace_all(&js_code, "/* declare global */").to_string();
+
+        // v0.3.170: Remove declare module "name" { ... } blocks
+        // These are type-only declarations for module augmentation
+        let declare_module_pattern = regex::Regex::new(r#"declare\s+module\s+"[^"]+"\s*[{][^}]*[}]"#).unwrap();
+        js_code = declare_module_pattern.replace_all(&js_code, "/* declare module */").to_string();
+
         // Clean up extra whitespace (especially after removing satisfies)
         let cleanup_pattern = regex::Regex::new(r"\s+([;,})])").unwrap();
         js_code = cleanup_pattern.replace_all(&js_code, "$1").to_string();
@@ -1522,6 +1532,7 @@ impl MinimalRuntime {
     pub fn execute_code(&mut self, code: &str) -> Result<String> {
         // Transpile TypeScript to JavaScript if TypeScript features are detected
         // Only transpile raw TypeScript syntax that our proper compiler can't handle
+        // v0.3.170: Enhanced TypeScript detection for module augmentation
         // Note: We avoid transpiling patterns that might exist in already-compiled JS
         // We look for patterns that are DEFINITELY TypeScript, not just JavaScript with colons
         let has_raw_typescript =
@@ -1535,7 +1546,9 @@ impl MinimalRuntime {
             || code.contains(": Promise<")
             || code.contains(" as const")   // as const assertion
             || code.contains(" as ")        // as Type assertion
-            || code.contains(" satisfies "); // satisfies operator
+            || code.contains(" satisfies ") // satisfies operator
+            || code.contains("declare global")  // v0.3.170: global declaration block
+            || code.contains("declare module \""); // v0.3.170: module declaration
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript
