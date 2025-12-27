@@ -301,6 +301,7 @@ impl TypeScriptCompiler {
                     "enum" => Token::Enum,
                     "type" => Token::Type,
                     "namespace" => Token::Namespace,
+                    "declare" => Token::Declare,
                     "import" => Token::Import,
                     "export" => Token::Export,
                     "public" => Token::Public,
@@ -1228,7 +1229,7 @@ impl TypeScriptCompiler {
             }
             ASTStatement::Break { .. } => {}
             ASTStatement::Continue { .. } => {}
-            ASTStatement::Namespace { body, .. } => {
+            ASTStatement::Namespace { body, is_declare: _, .. } => {
                 for stmt in body {
                     self.check_node(stmt, ctx)?;
                 }
@@ -1868,6 +1869,7 @@ pub enum Token {
     Namespace,
     Import,
     Export,
+    Declare,   // declare 关键字（用于类型声明）
     Public,
     Private,
     Protected,
@@ -2398,6 +2400,8 @@ pub enum ASTStatement {
         name: String,
         /// 命名空间内部的语句列表
         body: Vec<ASTNode>,
+        /// 是否为 declare 声明（declare namespace）
+        is_declare: bool,
     },
 }
 /// switch case 结构
@@ -2470,6 +2474,11 @@ impl Parser {
             }
             Token::Type => {
                 self.parse_type_alias_declaration()
+            }
+            Token::Declare => {
+                // declare 关键字 - 委托给命名空间解析器处理
+                // 因为 declare 只能用于 namespace、class、function 等声明前面
+                self.parse_namespace_declaration()
             }
             Token::Namespace => {
                 self.parse_namespace_declaration()
@@ -4287,15 +4296,37 @@ impl Parser {
     /// 支持:
     /// - namespace MyNamespace { ... }
     /// - namespace Outer.Inner { ... } (嵌套命名空间)
+    /// - declare namespace MyLib { ... } (声明式命名空间)
     fn parse_namespace_declaration(&mut self) -> Result<ASTNode> {
+        // 检查是否有 declare 关键字
+        let is_declare = if self.current_token_eq(&Token::Declare) {
+            self.consume(Token::Declare)?;
+            true
+        } else {
+            false
+        };
+
         self.consume(Token::Namespace)?;
 
         // 解析命名空间名称
+        let mut names = Vec::new();
         let name = if let Token::Identifier(name) = self.consume_any_identifier()? {
+            names.push(name.clone());
             name
         } else {
             bail!("Expected namespace name after 'namespace' keyword");
         };
+
+        // 检查是否有嵌套命名空间 (e.g., Outer.Inner)
+        while self.current_token_eq(&Token::Dot) {
+            self.consume(Token::Dot)?;
+            let nested_name = if let Token::Identifier(nested) = self.consume_any_identifier()? {
+                nested
+            } else {
+                bail!("Expected identifier after '.' in namespace name");
+            };
+            names.push(nested_name);
+        }
 
         // 消耗左花括号
         self.consume(Token::LBrace)?;
@@ -4312,6 +4343,7 @@ impl Parser {
         Ok(ASTNode::Statement(ASTStatement::Namespace {
             name,
             body,
+            is_declare,
         }))
     }
 
@@ -4661,6 +4693,16 @@ impl Parser {
             }
             Token::Enum => {
                 let declaration = self.parse_enum_declaration()?;
+                return Ok(ASTNode::ExportDeclaration {
+                    exports: Vec::new(),
+                    is_default: false,
+                    module_specifier: None,
+                    inline_declaration: Some(Box::new(declaration)),
+                });
+            }
+            Token::Namespace => {
+                // 导出命名空间: export namespace MyNamespace { ... }
+                let declaration = self.parse_namespace_declaration()?;
                 return Ok(ASTNode::ExportDeclaration {
                     exports: Vec::new(),
                     is_default: false,
@@ -7086,24 +7128,44 @@ impl CodeEmitter {
                     }
                     // 命名空间编译: namespace MyNamespace { ... }
                     // 编译为: var MyNamespace; (function(MyNamespace) { ... })(MyNamespace || (MyNamespace = {}));
-                    ASTStatement::Namespace { name, body } => {
-                        // 声明命名空间变量
-                        self.output.push_str("var ");
-                        self.output.push_str(&name);
-                        self.output.push_str(";\n");
-                        // IIFE 包装命名空间体
-                        self.output.push_str("(function(");
-                        self.output.push_str(&name);
-                        self.output.push_str(") {\n");
-                        // 发射命名空间内部的语句
-                        for stmt in body {
-                            self.emit_node(stmt);
+                    // declare namespace: 生成声明 + IIFE，但初始化为 {} 不调用
+                    ASTStatement::Namespace { name, body, is_declare } => {
+                        if *is_declare {
+                            // declare namespace - 声明变量 + IIFE（不调用初始化）
+                            self.output.push_str("var ");
+                            self.output.push_str(&name);
+                            self.output.push_str(";\n");
+                            // IIFE 包装命名空间体（不调用）
+                            self.output.push_str("(function(");
+                            self.output.push_str(&name);
+                            self.output.push_str(") {\n");
+                            for stmt in body {
+                                self.emit_node(stmt);
+                            }
+                            self.output.push_str("})(");
+                            self.output.push_str(&name);
+                            self.output.push_str(" || (");
+                            self.output.push_str(&name);
+                            self.output.push_str(" = {}));\n");
+                        } else {
+                            // 普通 namespace - 完整 IIFE 包装并调用
+                            self.output.push_str("var ");
+                            self.output.push_str(&name);
+                            self.output.push_str(";\n");
+                            // IIFE 包装命名空间体
+                            self.output.push_str("(function(");
+                            self.output.push_str(&name);
+                            self.output.push_str(") {\n");
+                            // 发射命名空间内部的语句
+                            for stmt in body {
+                                self.emit_node(stmt);
+                            }
+                            self.output.push_str("})(");
+                            self.output.push_str(&name);
+                            self.output.push_str(" || (");
+                            self.output.push_str(&name);
+                            self.output.push_str(" = {}));\n");
                         }
-                        self.output.push_str("})(");
-                        self.output.push_str(&name);
-                        self.output.push_str(" || (");
-                        self.output.push_str(&name);
-                        self.output.push_str(" = {}));\n");
                     }
                 }
             }
