@@ -1645,4 +1645,178 @@ const mixedMatrix = [[1, "two"], [3, "four"]];
             }
         }
     }
+
+    /// Test deeply nested conditional types with multiple extends
+    #[test]
+    fn test_deeply_nested_conditional_types() {
+        // 测试深度嵌套条件类型（多层 extends）
+        let ts_code = r#"
+type DeepCheck<T> = T extends string
+    ? "string"
+    : T extends number
+        ? "number"
+        : T extends boolean
+            ? "boolean"
+            : "unknown";
+
+const strResult: string = "string";
+const numResult: string = "number";
+const boolResult: string = "boolean";
+const objResult: string = "unknown";
+"#;
+        match compile_typescript(ts_code, "deeply_nested_conditional.ts") {
+            Ok(output) => {
+                println!("深度嵌套条件类型转译结果:");
+                println!("{}", output.js_code);
+                // 验证变量被正确保留
+                assert!(output.js_code.contains("strResult"),
+                    "Should contain strResult: {}", output.js_code);
+                assert!(output.js_code.contains("numResult"),
+                    "Should contain numResult: {}", output.js_code);
+                assert!(output.js_code.contains("boolResult"),
+                    "Should contain boolResult: {}", output.js_code);
+                assert!(output.js_code.contains("objResult"),
+                    "Should contain objResult: {}", output.js_code);
+                // 验证类型别名被移除
+                assert!(!output.js_code.contains("type DeepCheck"),
+                    "Type alias should be removed: {}", output.js_code);
+                println!("✅ Deeply nested conditional types test passed");
+            }
+            Err(e) => {
+                panic!("Deeply nested conditional types test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test conditional types with union types
+    #[test]
+    fn test_conditional_type_with_unions() {
+        // 测试带联合类型的条件类型
+        let ts_code = r#"
+type ToString<T> = T extends any ? string : never;
+type ToNumber<T> = T extends string ? number : never;
+
+const a: string = "hello";
+const b: number = 42;
+const c: string = "world";
+"#;
+        match compile_typescript(ts_code, "conditional_with_unions.ts") {
+            Ok(output) => {
+                println!("条件类型与联合类型转译结果:");
+                println!("{}", output.js_code);
+                // 验证变量被正确保留
+                assert!(output.js_code.contains("a"),
+                    "Should contain a: {}", output.js_code);
+                assert!(output.js_code.contains("b"),
+                    "Should contain b: {}", output.js_code);
+                assert!(output.js_code.contains("c"),
+                    "Should contain c: {}", output.js_code);
+                // 验证类型别名被移除
+                assert!(!output.js_code.contains("type ToString"),
+                    "Type alias should be removed: {}", output.js_code);
+                println!("✅ Conditional type with unions test passed");
+            }
+            Err(e) => {
+                panic!("Conditional type with unions test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test conditional type with keyof and mapped type
+    #[test]
+    fn test_conditional_type_with_keyof_mapped() {
+        // 测试条件类型与 keyof 和映射类型组合
+        let ts_code = r#"
+type ValuesOf<T> = T[keyof T];
+type OptionalKeys<T> = { [P in keyof T]?: T[P] };
+
+const obj = { name: "test", age: 30, active: true };
+const optional = { name: "test" };
+"#;
+        match compile_typescript(ts_code, "conditional_keyof_mapped.ts") {
+            Ok(output) => {
+                println!("条件类型与 keyof/映射类型转译结果:");
+                println!("{}", output.js_code);
+                // 验证变量被正确保留
+                assert!(output.js_code.contains("obj"),
+                    "Should contain obj: {}", output.js_code);
+                assert!(output.js_code.contains("optional"),
+                    "Should contain optional: {}", output.js_code);
+                // 验证类型别名被移除
+                assert!(!output.js_code.contains("type ValuesOf"),
+                    "Type alias should be removed: {}", output.js_code);
+                println!("✅ Conditional type with keyof/mapped test passed");
+            }
+            Err(e) => {
+                panic!("Conditional type with keyof/mapped test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test recursive conditional type (simplified)
+    #[test]
+    fn test_recursive_conditional_type() {
+        // 测试递归条件类型
+        let ts_code = r#"
+type DeepPartial<T> = T extends object
+    ? { [P in keyof T]?: DeepPartial<T[P]> }
+    : T;
+
+const nested = { a: { b: { c: 1 } }, d: 2 };
+const partial = { a: { b: {} } };
+"#;
+        match compile_typescript(ts_code, "recursive_conditional.ts") {
+            Ok(output) => {
+                println!("递归条件类型转译结果:");
+                println!("{}", output.js_code);
+                // 验证变量被正确保留
+                assert!(output.js_code.contains("nested"),
+                    "Should contain nested: {}", output.js_code);
+                assert!(output.js_code.contains("partial"),
+                    "Should contain partial: {}", output.js_code);
+                // 验证类型别名被移除
+                assert!(!output.js_code.contains("type DeepPartial"),
+                    "Type alias should be removed: {}", output.js_code);
+                println!("✅ Recursive conditional type test passed");
+            }
+            Err(e) => {
+                panic!("Recursive conditional type test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test conditional type with template literal types
+    #[test]
+    fn test_conditional_type_with_template_literal() {
+        // 测试条件类型与模板字面量类型组合
+        let ts_code = r#"
+type EventName<T> = T extends `on${string}` ? T : never;
+type ClickEvent = "onClick";
+type HoverEvent = "onHover";
+
+const handler: ClickEvent = "onClick";
+const hover: HoverEvent = "onHover";
+const other: string = "other";
+"#;
+        match compile_typescript(ts_code, "conditional_template_literal.ts") {
+            Ok(output) => {
+                println!("条件类型与模板字面量转译结果:");
+                println!("{}", output.js_code);
+                // 验证变量被正确保留
+                assert!(output.js_code.contains("handler"),
+                    "Should contain handler: {}", output.js_code);
+                assert!(output.js_code.contains("hover"),
+                    "Should contain hover: {}", output.js_code);
+                assert!(output.js_code.contains("other"),
+                    "Should contain other: {}", output.js_code);
+                // 验证类型别名被移除
+                assert!(!output.js_code.contains("type EventName"),
+                    "Type alias should be removed: {}", output.js_code);
+                println!("✅ Conditional type with template literal test passed");
+            }
+            Err(e) => {
+                panic!("Conditional type with template literal test failed: {}", e);
+            }
+        }
+    }
 }
