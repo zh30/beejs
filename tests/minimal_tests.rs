@@ -1226,4 +1226,88 @@ const user: PublicUser = { name: "Alice", email: "alice@test.com" };
 
         println!("✅ Test 51: TypeScript utility types combined");
     }
+
+    /// 测试52: TypeScript 构造函数签名支持 (v0.3.189)
+    #[test]
+    fn test_typescript_constructor_signature() {
+        // 测试构造函数签名 new(props: Type): ReturnType
+        // 构造函数签名是接口的一部分，会被运行时快速路径移除
+        let ts_code = r#"
+interface Constructor<T> {
+    new(...args: any[]): T;
+}
+
+interface Factory {
+    new(x: number, y: string): MyClass;
+}
+
+const factory: Factory = {} as any;
+"#;
+        let result = typescript::compile_typescript(ts_code, "constructor_signature_test.ts");
+        assert!(result.is_ok(), "Constructor signature should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证构造函数签名被移除（运行时快速路径处理）
+        assert!(!output.js_code.contains("new(...args"),
+            "Should remove constructor signature: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("const factory"),
+            "Should preserve factory const: {}", output.js_code);
+
+        println!("✅ Test 52: TypeScript constructor signature support");
+    }
+
+    /// 测试53: TypeScript 简单泛型接口 (v0.3.189)
+    #[test]
+    fn test_typescript_generic_interface() {
+        // 测试泛型接口 <T> - 接口在 JavaScript 中不存在，会被移除
+        let ts_code = r#"
+interface Container<T> {
+    value: T;
+}
+
+const numContainer: Container<number> = { value: 42 };
+"#;
+        let result = typescript::compile_typescript(ts_code, "generic_interface_test.ts");
+        assert!(result.is_ok(), "Generic interface should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 接口在 JavaScript 中不存在，应该被移除
+        // 但运行时快速路径可能会保留接口声明的注释
+        // 验证代码保留
+        assert!(output.js_code.contains("const numContainer"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("value"),
+            "Should preserve value property usage: {}", output.js_code);
+
+        println!("✅ Test 53: TypeScript generic interface");
+    }
+
+    /// 测试54: TypeScript 多泛型参数接口 (v0.3.189)
+    #[test]
+    fn test_typescript_multi_generic_interface() {
+        // 测试多泛型参数接口 <T, U> - 接口在 JavaScript 中不存在，会被移除
+        let ts_code = r#"
+interface Pair<T, U> {
+    first: T;
+    second: U;
+}
+
+const pair: Pair<string, number> = { first: "hello", second: 42 };
+"#;
+        let result = typescript::compile_typescript(ts_code, "multi_generic_test.ts");
+        assert!(result.is_ok(), "Multi generic interface should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证代码保留
+        assert!(output.js_code.contains("const pair"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("first"),
+            "Should preserve first property usage: {}", output.js_code);
+        assert!(output.js_code.contains("second"),
+            "Should preserve second property usage: {}", output.js_code);
+
+        println!("✅ Test 54: TypeScript multi-generic interface");
+    }
 }
