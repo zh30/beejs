@@ -640,8 +640,22 @@ impl TypeScriptCompiler {
                         pos += 1;
                     }
                 }
-                let number: String = chars[start..pos].iter().collect();
-                tokens.push(Token::Number(number));
+                // 检查是否是 BigInt 字面量 (以 n 结尾)
+                // 注意：BigInt 不能有小数点或指数部分，所以只有纯整数才能是 BigInt
+                let has_decimal_or_exponent = {
+                    let s = &chars[start..];
+                    s.contains(&'.') || s.contains(&'e') || s.contains(&'E')
+                };
+                let is_bigint = pos < chars.len() && chars[pos] == 'n' && !has_decimal_or_exponent;
+
+                if is_bigint {
+                    pos += 1;  // consume 'n'
+                    let bigint: String = chars[start..pos].iter().collect();
+                    tokens.push(Token::BigInt(bigint));
+                } else {
+                    let number: String = chars[start..pos].iter().collect();
+                    tokens.push(Token::Number(number));
+                }
                 continue;
             }
             // 处理字符串
@@ -2210,6 +2224,7 @@ fn escape_for_json(s: &str) -> String {
 pub enum Token {
     Identifier(String),
     Number(String),
+    BigInt(String),  // BigInt 字面量，如 123n (v0.3.179)
     String(String, char), // (value, quote_type)
     // 关键字
     Let,
@@ -6141,6 +6156,11 @@ impl Parser {
                 self.advance();
                 Ok(ASTExpression::Literal(num))
             }
+            Token::BigInt(ref num) => {
+                let num: _ = num.clone();
+                self.advance();
+                Ok(ASTExpression::Literal(num))
+            }
             Token::String(ref s, _quote) => {
                 let s: _ = format!("\"{}\"", s.clone());
                 self.advance();
@@ -7487,6 +7507,8 @@ impl Parser {
             (Token::String(val1, quote1), Token::String(val2, quote2)) => val1 == val2 && quote1 == quote2,
             // Number 需要比较字符串内容
             (Token::Number(a), Token::Number(b)) => a == b,
+            // BigInt 需要比较字符串内容 (v0.3.179)
+            (Token::BigInt(a), Token::BigInt(b)) => a == b,
             // 其他 token 只比较 discriminant
             (a, b) => std::mem::discriminant(a) == std::mem::discriminant(b)
         }

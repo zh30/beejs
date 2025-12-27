@@ -2055,4 +2055,275 @@ function getValue<T>(arg: T): T {
             }
         }
     }
+
+    /// Test index signature types (v0.3.179)
+    #[test]
+    fn test_index_signature_types() {
+        // 测试索引签名类型
+        let ts_code = r#"
+interface StringMap {
+    [key: string]: string;
+}
+
+interface NumberMap {
+    [key: number]: number;
+}
+
+const strMap: StringMap = { hello: "world", foo: "bar" };
+const numMap: NumberMap = { 1: 100, 2: 200 };
+
+interface User {
+    name: string;
+    age: number;
+    [key: string]: string | number;
+}
+
+const user: User = { name: "Alice", age: 30, email: "alice@example.com" };
+"#;
+        match compile_typescript(ts_code, "index_signature.ts") {
+            Ok(output) => {
+                println!("索引签名类型测试转译结果:");
+                println!("{}", output.js_code);
+                // 验证变量被保留
+                assert!(output.js_code.contains("strMap"),
+                    "Should contain strMap: {}", output.js_code);
+                assert!(output.js_code.contains("numMap"),
+                    "Should contain numMap: {}", output.js_code);
+                assert!(output.js_code.contains("user"),
+                    "Should contain user: {}", output.js_code);
+                // 验证接口被移除（纯类型声明）
+                assert!(!output.js_code.contains("interface StringMap"),
+                    "Interface should be removed: {}", output.js_code);
+                println!("✅ Index signature types test passed");
+            }
+            Err(e) => {
+                panic!("Index signature types test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test constructor signature types (v0.3.179)
+    #[test]
+    fn test_constructor_signature_types() {
+        // 测试构造函数签名类型
+        let ts_code = r#"
+interface Constructor<T> {
+    new(...args: any[]): T;
+}
+
+interface ComponentConstructor {
+    new(props: { name: string; age: number }): { name: string; age: number; render(): void };
+}
+
+function createInstance<T>(ctor: Constructor<T>): T {
+    return new ctor();
+}
+
+class MyComponent {
+    constructor(props: { name: string; age: number }) {
+        this.name = props.name;
+        this.age = props.age;
+    }
+    name: string = "";
+    age: number = 0;
+    render(): void {
+        console.log("Rendering:", this.name);
+    }
+}
+
+const instance = createInstance(MyComponent);
+"#;
+        match compile_typescript(ts_code, "constructor_signature.ts") {
+            Ok(output) => {
+                println!("构造函数签名类型测试转译结果:");
+                println!("{}", output.js_code);
+                // 验证类和函数被保留
+                assert!(output.js_code.contains("class MyComponent"),
+                    "Should contain MyComponent class: {}", output.js_code);
+                assert!(output.js_code.contains("createInstance"),
+                    "Should contain createInstance: {}", output.js_code);
+                assert!(output.js_code.contains("instance"),
+                    "Should contain instance: {}", output.js_code);
+                // 验证接口被移除（纯类型声明）
+                assert!(!output.js_code.contains("interface Constructor"),
+                    "Interface should be removed: {}", output.js_code);
+                println!("✅ Constructor signature types test passed");
+            }
+            Err(e) => {
+                panic!("Constructor signature types test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test this parameter in methods (v0.3.179)
+    #[test]
+    fn test_this_parameter_in_methods() {
+        // 测试方法中的 this 参数
+        let ts_code = r#"
+const counter = {
+    count: 0,
+    increment(this: { count: number }) {
+        this.count++;
+    },
+    decrement(this: { count: number }) {
+        this.count--;
+    },
+    getValue(this: { count: number }): number {
+        return this.count;
+    }
+};
+
+class Handler {
+    private name: string = "Handler";
+    process(this: Handler, data: string): void {
+        console.log(this.name, data);
+    }
+    asyncProcess(this: Handler, data: string): Promise<void> {
+        console.log(this.name, data);
+    }
+}
+
+counter.increment();
+counter.decrement();
+const value = counter.getValue();
+
+const h = new Handler();
+h.process("test");
+"#;
+        match compile_typescript(ts_code, "this_parameter.ts") {
+            Ok(output) => {
+                println!("this 参数测试转译结果:");
+                println!("{}", output.js_code);
+                // 验证对象和方法被保留
+                assert!(output.js_code.contains("counter"),
+                    "Should contain counter: {}", output.js_code);
+                assert!(output.js_code.contains("increment"),
+                    "Should contain increment: {}", output.js_code);
+                assert!(output.js_code.contains("getValue"),
+                    "Should contain getValue: {}", output.js_code);
+                // 验证类被保留
+                assert!(output.js_code.contains("class Handler"),
+                    "Should contain Handler class: {}", output.js_code);
+                // 验证 this 参数类型被移除
+                assert!(!output.js_code.contains("(this: { count: number })"),
+                    "This parameter type should be removed: {}", output.js_code);
+                println!("✅ This parameter in methods test passed");
+            }
+            Err(e) => {
+                panic!("This parameter in methods test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test optional parameters with default values (v0.3.179)
+    #[test]
+    fn test_optional_parameters_with_defaults() {
+        // 测试带默认值的可选参数
+        let ts_code = r#"
+function greet(name: string, greeting: string = "Hello"): string {
+    return `${greeting}, ${name}!`;
+}
+
+function multiply(a: number, b: number = 2, c: number = 3): number {
+    return a * b * c;
+}
+
+const arrowGreet = (name: string, prefix: string = "Hi"): string => {
+    return `${prefix} ${name}`;
+};
+
+const arrowMultiply = (x: number, factor: number = 10): number => x * factor;
+
+console.log(greet("Alice"));
+console.log(greet("Bob", "Welcome"));
+console.log(multiply(5));
+console.log(multiply(5, 4, 2));
+console.log(arrowGreet("Charlie"));
+console.log(arrowMultiply(7));
+"#;
+        match compile_typescript(ts_code, "optional_params_defaults.ts") {
+            Ok(output) => {
+                println!("可选参数默认值测试转译结果:");
+                println!("{}", output.js_code);
+                // 验证函数被保留
+                assert!(output.js_code.contains("function greet"),
+                    "Should contain greet function: {}", output.js_code);
+                assert!(output.js_code.contains("function multiply"),
+                    "Should contain multiply function: {}", output.js_code);
+                assert!(output.js_code.contains("arrowGreet"),
+                    "Should contain arrowGreet: {}", output.js_code);
+                assert!(output.js_code.contains("arrowMultiply"),
+                    "Should contain arrowMultiply: {}", output.js_code);
+                // 验证类型注解被移除
+                assert!(!output.js_code.contains(": string, greeting"),
+                    "Parameter types should be removed: {}", output.js_code);
+                // 验证函数调用被保留
+                assert!(output.js_code.contains("greet(\"Alice\")"),
+                    "Should contain greet call: {}", output.js_code);
+                println!("✅ Optional parameters with defaults test passed");
+            }
+            Err(e) => {
+                panic!("Optional parameters with defaults test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test BigInt literals (v0.3.179)
+    #[test]
+    fn test_bigint_literals() {
+        // 测试 BigInt 字面量 - 简单版本（无类型注解）
+        let ts_code = r#"
+const a = 123n;
+const b = 456789012345678901234567890n;
+const c = 0n;
+"#;
+        match compile_typescript(ts_code, "bigint_literals_simple.ts") {
+            Ok(output) => {
+                println!("BigInt 字面量简单测试转译结果:");
+                println!("{}", output.js_code);
+                // 验证 BigInt 字面量被保留
+                assert!(output.js_code.contains("123n"),
+                    "Should contain 123n: {}", output.js_code);
+                assert!(output.js_code.contains("456789012345678901234567890n"),
+                    "Should contain large BigInt: {}", output.js_code);
+                assert!(output.js_code.contains("0n"),
+                    "Should contain 0n: {}", output.js_code);
+                println!("✅ BigInt literals simple test passed");
+            }
+            Err(e) => {
+                panic!("BigInt literals simple test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test BigInt literals with type annotations (v0.3.179)
+    #[test]
+    fn test_bigint_literals_with_types() {
+        // 测试带类型注解的 BigInt 字面量
+        let ts_code = r#"
+const a: bigint = 123n;
+const b: bigint = 456789012345678901234567890n;
+const c: bigint = 0n;
+"#;
+        match compile_typescript(ts_code, "bigint_literals.ts") {
+            Ok(output) => {
+                println!("BigInt 字面量测试转译结果:");
+                println!("{}", output.js_code);
+                // 验证 BigInt 字面量被保留
+                assert!(output.js_code.contains("123n"),
+                    "Should contain 123n: {}", output.js_code);
+                assert!(output.js_code.contains("456789012345678901234567890n"),
+                    "Should contain large BigInt: {}", output.js_code);
+                assert!(output.js_code.contains("0n"),
+                    "Should contain 0n: {}", output.js_code);
+                // 验证类型注解被移除
+                assert!(!output.js_code.contains(": bigint"),
+                    "Type annotation should be removed: {}", output.js_code);
+                println!("✅ BigInt literals test passed");
+            }
+            Err(e) => {
+                panic!("BigInt literals test failed: {}", e);
+            }
+        }
+    }
 }
