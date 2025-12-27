@@ -6924,24 +6924,16 @@ impl Parser {
         let mut paren_depth = 0;
         let mut bracket_depth = 0;
         let mut brace_depth = 0;
-        let mut in_string = false;
-        let _string_char = '\0';
 
         // 收集 token 直到遇到顶级逗号或右括号
         while !self.is_at_end() {
             match self.current_token() {
                 Token::LParen => {
-                    if in_string {
-                        value.push('(');
-                    } else {
-                        paren_depth += 1;
-                        value.push('(');
-                    }
+                    paren_depth += 1;
+                    value.push('(');
                 }
                 Token::RParen => {
-                    if in_string {
-                        value.push(')');
-                    } else if paren_depth > 0 {
+                    if paren_depth > 0 {
                         paren_depth -= 1;
                         value.push(')');
                     } else {
@@ -6950,17 +6942,11 @@ impl Parser {
                     }
                 }
                 Token::LBracket => {
-                    if in_string {
-                        value.push('[');
-                    } else {
-                        bracket_depth += 1;
-                        value.push('[');
-                    }
+                    bracket_depth += 1;
+                    value.push('[');
                 }
                 Token::RBracket => {
-                    if in_string {
-                        value.push(']');
-                    } else if bracket_depth > 0 {
+                    if bracket_depth > 0 {
                         bracket_depth -= 1;
                         value.push(']');
                     } else {
@@ -6969,17 +6955,11 @@ impl Parser {
                     }
                 }
                 Token::LBrace => {
-                    if in_string {
-                        value.push('{');
-                    } else {
-                        brace_depth += 1;
-                        value.push('{');
-                    }
+                    brace_depth += 1;
+                    value.push('{');
                 }
                 Token::RBrace => {
-                    if in_string {
-                        value.push('}');
-                    } else if brace_depth > 0 {
+                    if brace_depth > 0 {
                         brace_depth -= 1;
                         value.push('}');
                     } else {
@@ -6988,9 +6968,7 @@ impl Parser {
                     }
                 }
                 Token::Comma => {
-                    if in_string {
-                        value.push(',');
-                    } else if paren_depth == 0 && bracket_depth == 0 && brace_depth == 0 {
+                    if paren_depth == 0 && bracket_depth == 0 && brace_depth == 0 {
                         // 顶级逗号，结束
                         break;
                     } else {
