@@ -2320,6 +2320,27 @@ impl MinimalRuntime {
         let readonly_pattern = regex::Regex::new(r"Readonly\s*<([^>]+)>").unwrap();
         js_code = readonly_pattern.replace_all(&js_code, "$1").to_string();
 
+        // v0.3.208: Remove Pick utility type
+        // Pick<T, K> selects a subset of properties from T
+        // For runtime, we remove the wrapper and keep the inner type (first param)
+        // Pattern: "Pick<User, 'name' | 'age'>" -> "User"
+        let pick_pattern = regex::Regex::new(r"Pick\s*<([^,]+),").unwrap();
+        js_code = pick_pattern.replace_all(&js_code, "$1").to_string();
+
+        // v0.3.208: Remove Omit utility type
+        // Omit<T, K> excludes specified keys from type T
+        // For runtime, we remove the wrapper and keep the inner type (first param)
+        // Pattern: "Omit<User, 'password'>" -> "User"
+        let omit_pattern = regex::Regex::new(r"Omit\s*<([^,]+),").unwrap();
+        js_code = omit_pattern.replace_all(&js_code, "$1").to_string();
+
+        // v0.3.208: Remove Record utility type
+        // Record<K, T> constructs an object type with keys K and values T
+        // For runtime, we remove the wrapper and keep the value type
+        // Pattern: "Record<string, number>" -> "number" (simplified for JS)
+        let record_pattern = regex::Regex::new(r"Record\s*<([^,]+),").unwrap();
+        js_code = record_pattern.replace_all(&js_code, "/* Record< */$1/* > removed */").to_string();
+
         // v0.3.195: Convert simple ESM export statements to comments
         // v0.3.196: Added abstract for export abstract class support
         // Complex exports (export { a, b }) need variable tracking, so we use placeholders
@@ -2404,7 +2425,10 @@ impl MinimalRuntime {
             || code.contains("NonNullable<")   // v0.3.204: NonNullable utility type
             || code.contains("Partial<")        // v0.3.206: Partial utility type
             || code.contains("Required<")       // v0.3.207: Required utility type
-            || code.contains("Readonly<");      // v0.3.207: Readonly utility type
+            || code.contains("Readonly<")       // v0.3.207: Readonly utility type
+            || code.contains("Pick<")           // v0.3.208: Pick utility type
+            || code.contains("Omit<")           // v0.3.208: Omit utility type
+            || code.contains("Record<");        // v0.3.208: Record utility type
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript

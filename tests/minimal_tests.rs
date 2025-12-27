@@ -2387,4 +2387,82 @@ const nested: ReadonlyNested = { a: { b: { c: "nested" } }, d: 100 };
 
         println!("✅ Test 95: TypeScript Readonly<T> with nested types");
     }
+
+    /// 测试96: TypeScript Pick<T, K> 快速路径测试 (v0.3.208)
+    #[test]
+    fn test_pick_utility_fast_path() {
+        // 测试 Pick 快速路径移除
+        let ts_code = r#"
+type User = { name: string; age: number; email: string };
+type UserProfile = Pick<User, "name" | "age">;
+const profile: UserProfile = { name: "Alice", age: 30 };
+"#;
+        let result = typescript::compile_typescript(ts_code, "pick_fastpath.ts");
+        assert!(result.is_ok(), "Pick fast-path should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 Pick 被快速路径移除
+        assert!(!output.js_code.contains("Pick<"),
+            "Should remove Pick via fast-path: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("const profile"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("\"Alice\""),
+            "Should preserve string value: {}", output.js_code);
+
+        println!("✅ Test 96: TypeScript Pick<T, K> fast-path");
+    }
+
+    /// 测试97: TypeScript Omit<T, K> 快速路径测试 (v0.3.208)
+    #[test]
+    fn test_omit_utility_fast_path() {
+        // 测试 Omit 快速路径移除
+        let ts_code = r#"
+type User = { name: string; age: number; password: string; email: string };
+type PublicUser = Omit<User, "password">;
+const user: PublicUser = { name: "Bob", age: 25, email: "bob@test.com" };
+"#;
+        let result = typescript::compile_typescript(ts_code, "omit_fastpath.ts");
+        assert!(result.is_ok(), "Omit fast-path should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 Omit 被快速路径移除
+        assert!(!output.js_code.contains("Omit<"),
+            "Should remove Omit via fast-path: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("const user"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("\"Bob\""),
+            "Should preserve string value: {}", output.js_code);
+
+        println!("✅ Test 97: TypeScript Omit<T, K> fast-path");
+    }
+
+    /// 测试98: TypeScript Record<K, V> 快速路径测试 (v0.3.208)
+    #[test]
+    fn test_record_utility_fast_path() {
+        // 测试 Record 快速路径移除
+        let ts_code = r#"
+type Role = "admin" | "user" | "guest";
+type RolePermissions = Record<Role, string>;
+const permissions: RolePermissions = { admin: "all", user: "read", guest: "none" };
+"#;
+        let result = typescript::compile_typescript(ts_code, "record_fastpath.ts");
+        assert!(result.is_ok(), "Record fast-path should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 Record 被快速路径移除
+        assert!(!output.js_code.contains("Record<"),
+            "Should remove Record via fast-path: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("const permissions"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("\"all\""),
+            "Should preserve string values: {}", output.js_code);
+
+        println!("✅ Test 98: TypeScript Record<K, V> fast-path");
+    }
 }
