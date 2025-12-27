@@ -2264,6 +2264,18 @@ impl MinimalRuntime {
         let awaited_pattern = regex::Regex::new(r"Awaited\s*<([^>]+)>").unwrap();
         js_code = awaited_pattern.replace_all(&js_code, "$1").to_string();
 
+        // v0.3.202: Remove ThisParameterType utility type
+        // ThisParameterType<T> extracts the 'this' parameter type from a function type T
+        // Pattern: "ThisParameterType<...>" - we extract the inner type (the 'this' type)
+        let this_parameter_type_pattern = regex::Regex::new(r"ThisParameterType\s*<([^>]+)>").unwrap();
+        js_code = this_parameter_type_pattern.replace_all(&js_code, "$1").to_string();
+
+        // v0.3.202: Remove OmitThisParameter utility type
+        // OmitThisParameter<T> removes the 'this' parameter from a function type T
+        // For simple cases, we just remove the wrapper and keep the inner function type
+        let omit_this_parameter_pattern = regex::Regex::new(r"OmitThisParameter\s*<([^>]+)>").unwrap();
+        js_code = omit_this_parameter_pattern.replace_all(&js_code, "$1").to_string();
+
         // v0.3.195: Convert simple ESM export statements to comments
         // v0.3.196: Added abstract for export abstract class support
         // Complex exports (export { a, b }) need variable tracking, so we use placeholders
@@ -2338,7 +2350,9 @@ impl MinimalRuntime {
             || code.contains("${Lowercase<")   // v0.3.200: intrinsic Lowercase in template literal
             || code.contains("${Capitalize<")  // v0.3.200: intrinsic Capitalize in template literal
             || code.contains("${Uncapitalize<") // v0.3.200: intrinsic Uncapitalize in template literal
-            || code.contains("Awaited<"); // v0.3.201: Awaited utility type
+            || code.contains("Awaited<")       // v0.3.201: Awaited utility type
+            || code.contains("ThisParameterType<")  // v0.3.202: ThisParameterType utility type
+            || code.contains("OmitThisParameter<"); // v0.3.202: OmitThisParameter utility type
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript

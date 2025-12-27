@@ -1873,4 +1873,109 @@ console.log(user);
             "Should preserve console.log: {}", output.js_code);
         println!("✅ Test 79: Awaited utility type in type alias");
     }
+
+    /// 测试80: TypeScript ThisParameterType<T> 工具类型 (v0.3.202)
+    #[test]
+    fn test_this_parameter_type_utility() {
+        // 测试 ThisParameterType<T> 获取函数 'this' 参数的类型
+        let ts_code = r#"
+type Context = { name: string; id: number };
+function greet(this: Context, message: string): string {
+    return `${this.name}: ${message}`;
+}
+type GreetContext = ThisParameterType<typeof greet>;
+const ctx: GreetContext = { name: "Alice", id: 1 };
+console.log(ctx);
+"#;
+        let result = typescript::compile_typescript(ts_code, "this_parameter_type_test.ts");
+        assert!(result.is_ok(), "ThisParameterType<T> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 ThisParameterType 引用被移除
+        assert!(!output.js_code.contains("ThisParameterType"),
+            "Should remove ThisParameterType utility type reference: {}", output.js_code);
+
+        // 验证函数定义和代码保留
+        assert!(output.js_code.contains("function greet"),
+            "Should preserve function: {}", output.js_code);
+        assert!(output.js_code.contains("const ctx"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("console.log"),
+            "Should preserve console.log: {}", output.js_code);
+
+        println!("✅ Test 80: TypeScript ThisParameterType<T> utility type");
+    }
+
+    /// 测试81: TypeScript OmitThisParameter<T> 工具类型 (v0.3.202)
+    #[test]
+    fn test_omit_this_parameter_utility() {
+        // 测试 OmitThisParameter<T> 移除函数的 'this' 参数
+        let ts_code = r#"
+type Context = { name: string; id: number };
+function process(this: Context, data: string): void {
+    console.log(this.name);
+}
+type ProcessFn = OmitThisParameter<typeof process>;
+const fn: ProcessFn = (data: string) => { console.log("data"); };
+console.log(fn);
+"#;
+        let result = typescript::compile_typescript(ts_code, "omit_this_parameter_test.ts");
+        assert!(result.is_ok(), "OmitThisParameter<T> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 OmitThisParameter 引用被移除
+        assert!(!output.js_code.contains("OmitThisParameter"),
+            "Should remove OmitThisParameter utility type reference: {}", output.js_code);
+
+        // 验证函数定义和代码保留
+        assert!(output.js_code.contains("function process"),
+            "Should preserve function: {}", output.js_code);
+        assert!(output.js_code.contains("const fn"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("console.log"),
+            "Should preserve console.log: {}", output.js_code);
+
+        println!("✅ Test 81: TypeScript OmitThisParameter<T> utility type");
+    }
+
+    /// 测试82: TypeScript 工具类型组合使用 (v0.3.202)
+    #[test]
+    fn test_utility_types_combined_v2() {
+        // 测试多种工具类型组合使用
+        // 验证这些工具类型在复杂场景下的移除逻辑是否正常工作
+        let ts_code = r#"
+type User = { name: string; age: number };
+type PartialUser = Partial<User>;
+type RequiredUser = Required<User>;
+type ReadonlyUser = Readonly<User>;
+type NonNullStr = NonNullable<string | null | undefined>;
+const user: PartialUser = { name: "Alice" };
+const req: RequiredUser = { name: "Bob", age: 30 };
+const ro: ReadonlyUser = { name: "Charlie", age: 25 };
+const str: NonNullStr = "hello";
+console.log(user, req, ro, str);
+"#;
+        let result = typescript::compile_typescript(ts_code, "combined_utilities_v2.ts");
+        assert!(result.is_ok(), "Combined utility types should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证所有工具类型引用被移除
+        assert!(!output.js_code.contains("Partial<"),
+            "Should remove Partial: {}", output.js_code);
+        assert!(!output.js_code.contains("Required<"),
+            "Should remove Required: {}", output.js_code);
+        assert!(!output.js_code.contains("Readonly<"),
+            "Should remove Readonly: {}", output.js_code);
+        assert!(!output.js_code.contains("NonNullable<"),
+            "Should remove NonNullable: {}", output.js_code);
+        // 注意：ThisParameterType 和 OmitThisParameter 在单独的测试中验证
+
+        // 验证代码保留
+        assert!(output.js_code.contains("const user"),
+            "Should preserve const user: {}", output.js_code);
+        assert!(output.js_code.contains("console.log"),
+            "Should preserve console.log: {}", output.js_code);
+
+        println!("✅ Test 82: Combined utility types v2");
+    }
 }

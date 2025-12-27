@@ -10702,3 +10702,73 @@ console.log(p.name);  // "Alice"
 - 继续完善 TypeScript 编译器功能
 - 实现更复杂的类型推断场景测试
 - 完善其他内建类型测试（如 Number, Array）
+
+---
+
+### v0.3.201 实现 Awaited 工具类型快速路径支持 (2025-12-28)
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.201 新增功能
+- **Awaited<T> 工具类型支持**
+  - 运行时快速路径识别 `Awaited<...>` 模式
+  - 正确移除 Awaited 包装，保留内部类型
+  - 支持泛型上下文中的 Awaited 使用
+
+#### v0.3.201 实现细节
+- **运行时检测增强** (`src/runtime_minimal.rs:2334`)
+  - 在 `has_raw_typescript()` 中添加 `Awaited<` 模式检测
+
+- **运行时快速路径移除** (`src/runtime_minimal.rs:2260-2265`)
+  - 添加正则表达式 `Awaited\s*<([^>]+)>` 替换为 `$1`
+  - 提取泛型参数内容直接替换，实现类型擦除
+
+#### v0.3.201 测试用例
+- `test_awaited_utility_type_basic`: 基础 `Awaited<Promise<string>>` 模式
+- `test_awaited_utility_type_generic`: 泛型上下文中 `Awaited<T>` 使用
+- `test_awaited_utility_type_alias`: 类型别名中的 Awaited 嵌套
+
+#### v0.3.201 测试验证
+- ✅ `cargo test --test minimal_tests`: 79/79 通过 (新增 3 个测试)
+- ✅ `cargo test --lib`: 223/223 通过
+
+#### v0.3.201 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多内建工具类型支持
+- 完善类型推断场景测试
+
+---
+
+### v0.3.202 实现 ThisParameterType 和 OmitThisParameter 工具类型快速路径支持 (2025-12-28)
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.202 新增功能
+- **ThisParameterType<T> 工具类型支持**
+  - 运行时快速路径识别 `ThisParameterType<...>` 模式
+  - 提取函数的 `this` 参数类型进行类型擦除
+  
+- **OmitThisParameter<T> 工具类型支持**
+  - 运行时快速路径识别 `OmitThisParameter<...>` 模式
+  - 移除函数类型中的 `this` 参数包装
+
+#### v0.3.202 实现细节
+- **运行时检测增强** (`src/runtime_minimal.rs:2354-2355`)
+  - 在 `has_raw_typescript()` 中添加 `ThisParameterType<` 和 `OmitThisParameter<` 模式检测
+
+- **运行时快速路径移除** (`src/runtime_minimal.rs:2267-2277`)
+  - 添加正则表达式 `ThisParameterType\s*<([^>]+)>` 替换为 `$1`
+  - 添加正则表达式 `OmitThisParameter\s*<([^>]+)>` 替换为 `$1`
+  - 提取泛型参数内容直接替换，实现类型擦除
+
+#### v0.3.202 测试用例
+- `test_this_parameter_type_utility`: 基础 `ThisParameterType<typeof fn>` 模式
+- `test_omit_this_parameter_utility`: 基础 `OmitThisParameter<typeof fn>` 模式
+- `test_utility_types_combined_v2`: 多种工具类型组合使用测试
+
+#### v0.3.202 测试验证
+- ✅ `cargo test --test minimal_tests`: 82/82 通过 (新增 3 个测试)
+- ✅ `cargo test --lib`: 223/223 通过
+
+#### v0.3.202 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多内建工具类型支持（如Uppercase/Lowercase等内建字符串类型）
+- 完善类型推断场景测试
