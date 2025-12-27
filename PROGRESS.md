@@ -1,3 +1,54 @@
+### v0.3.166 实现 import type/export type 支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.166 新增功能
+- **import type 语法支持**
+  - 支持 `import type { x } from "module"` (命名类型导入)
+  - 支持 `import type x from "module"` (默认类型导入)
+  - 支持混合导入 `import x, { type y } from "module"`
+  - 编译时完全移除，不生成运行时代码
+
+- **export type 语法支持**
+  - 支持 `export type { x }` (命名类型导出)
+  - 支持 `export type { x } from "module"` (类型重新导出)
+  - 编译时完全移除，不生成运行时代码
+
+#### v0.3.166 实现细节
+- **AST 增强**
+  - `ImportDeclaration` 添加 `is_type_only: bool` 字段
+  - `ExportDeclaration` 添加 `is_type_only: bool` 字段
+
+- **解析器增强**
+  - `parse_import_declaration()` 检测 `type` 关键字
+  - `parse_export_declaration()` 检测 `type` 关键字
+  - 正确处理所有 import/export 变体
+
+- **转译器增强**
+  - `emit_node()` 对 `is_type_only` 的节点直接返回
+  - 完全移除类型导入/导出语句
+
+#### v0.3.166 测试用例
+- `test_import_type_basic`: 基础命名类型导入
+- `test_import_type_default`: 默认类型导入
+- `test_export_type_alias`: 类型导出
+- `test_mixed_import_and_type`: 混合普通导入和类型导入
+- `test_import_side_effect`: 副作用导入（保持不变）
+- `test_import_type_with_interface`: 带接口的类型导入
+- `test_regular_import`: 普通导入回归测试
+
+#### v0.3.166 验证
+- ✅ `cargo test --lib` 220/220 通过 (+7)
+- ✅ 新增 7 个测试全部通过
+- ✅ 无回归问题
+- ✅ `cargo build --release` 成功编译
+
+#### v0.3.166 下一步
+- 实现 `import type` 和 `export type` 的完整语义支持
+- 添加 `as const` 类型断言支持
+- 继续完善 TypeScript 编译器功能
+
+---
+
 ### v0.3.160 实现模块合并支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 
