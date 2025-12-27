@@ -31,6 +31,40 @@
 
 ---
 
+### v0.3.206 实现 Partial<T> 工具类型快速路径支持（2025-12-28）
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.206 新增功能
+- **Partial<T> 工具类型快速路径**
+  - 运行时快速路径识别 `Partial<...>` 模式
+  - 正确移除 Partial 包装，保留内部类型
+  - 支持接口和类型别名中的 Partial 使用
+
+#### v0.3.206 实现细节
+- **运行时检测增强** (`src/runtime_minimal.rs:2391`)
+  - 在 `has_raw_typescript()` 中添加 `Partial<` 模式检测
+
+- **运行时快速路径移除** (`src/runtime_minimal.rs:2302-2307`)
+  - 添加正则表达式 `Partial\s*<([^>]+)>` 替换为 `$1`
+  - 提取泛型参数内容直接替换，实现类型擦除
+
+#### v0.3.206 测试用例
+- `test_partial_utility_type_v2`: 基础 `Partial<User>` 模式
+- `test_partial_utility_fast_path`: 快速路径移除测试
+- `test_partial_with_nested_types`: 嵌套类型中的 Partial 使用
+
+#### v0.3.206 测试验证
+- ✅ `cargo test --test minimal_tests`: 92/92 通过 (新增 3 个测试)
+- ✅ `cargo build --release`: 编译成功
+- ✅ 端到端测试：`type PartialUser = Partial<User>` 正常执行
+
+#### v0.3.206 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现 Required<T>、Readonly<T> 等工具类型支持
+- 完善类型推断场景测试
+
+---
+
 ### v0.3.204 实现 NonNullable<T> 工具类型快速路径支持（2025-12-28）
 **进度**: TypeScript 快速路径增强 | ✅ 已提交
 
