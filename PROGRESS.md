@@ -1,3 +1,41 @@
+### v0.3.179 实现 BigInt 字面量支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.179 新增功能
+- **BigInt 字面量语法支持**
+  - 支持 `123n`、`456789012345678901234567890n`、`0n` 等 BigInt 字面量
+  - BigInt 字面量不能包含小数点或指数部分
+  - 转译时保留原始 BigInt 语法
+
+#### v0.3.179 实现细节
+- **词法分析器增强** (`src/typescript/compiler.rs`)
+  - 添加 `Token::BigInt(String)` token 变体
+  - 解析数字后检查是否以 `n` 结尾且无小数点/指数
+  - 正确识别并生成 BigInt token
+
+- **解析器增强**
+  - 在 `parse_primary_expression()` 中添加 `Token::BigInt` 处理
+  - BigInt 字面量作为普通字面量表达式处理
+
+- **Token 比较增强**
+  - 更新 `current_token_eq()` 支持 BigInt token 的字符串比较
+
+#### v0.3.179 测试用例
+- `test_bigint_literals`: 简单 BigInt 字面量测试
+- `test_bigint_literals_with_types`: 带类型注解的 BigInt 测试
+
+#### v0.3.179 验证
+- ✅ `cargo test --test typescript_compiler_integration_tests` 2/2 BigInt 测试通过
+- ✅ 所有现有测试继续通过 (62/62)
+
+#### v0.3.179 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现索引签名类型 `[key: string]: T`
+- 实现构造函数签名 `new(...args): T`
+- 实现 this 参数类型注解
+
+---
+
 ### v0.3.178 修复 fast-path 对 enum 和 type 声明的移除 (2025-12-27)
 **进度**: TypeScript 快速路径修复 | ✅ 已提交
 
