@@ -157,7 +157,9 @@ console.log(MyLib.version);
                 assert!(output.js_code.contains("MyLib"));
                 assert!(output.js_code.contains("version"));
                 assert!(output.js_code.contains("greet"));
-                assert!(!output.js_code.contains("declare"));
+                // declare namespace 应该保留 declare 关键字
+                assert!(output.js_code.contains("declare namespace"),
+                    "Should contain declare namespace: {}", output.js_code);
             }
             Err(e) => {
                 panic!("Declare namespace transpilation failed: {}", e);
@@ -510,6 +512,163 @@ declare var declaredVar: boolean;
             }
             Err(e) => {
                 panic!("Variable comparison transpilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test export declare function (v0.3.152)
+    #[test]
+    fn test_export_declare_function() {
+        // 测试 export declare function 声明
+        let ts_code: _ = r#"
+export declare function greet(name: string): string;
+export declare function add(a: number, b: number): number;
+"#;
+        match compile_typescript(ts_code, "export_declare_function.ts") {
+            Ok(output) => {
+                println!("export declare function 转译结果:");
+                println!("{}", output.js_code);
+                assert!(output.js_code.contains("export declare function greet"),
+                    "Should contain export declare function greet: {}", output.js_code);
+                assert!(output.js_code.contains("export declare function add"),
+                    "Should contain export declare function add: {}", output.js_code);
+                // 类型注解应该被移除
+                assert!(!output.js_code.contains(": string"),
+                    "Should not contain type annotation: {}", output.js_code);
+                println!("✅ Export declare function test passed");
+            }
+            Err(e) => {
+                panic!("Export declare function transpilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test export declare const (v0.3.152)
+    #[test]
+    fn test_export_declare_const_integration() {
+        // 测试 export declare const 声明
+        let ts_code: _ = r#"
+export declare const PI: number;
+export declare const API_URL: string;
+"#;
+        match compile_typescript(ts_code, "export_declare_const.ts") {
+            Ok(output) => {
+                println!("export declare const 转译结果:");
+                println!("{}", output.js_code);
+                assert!(output.js_code.contains("export declare const PI"),
+                    "Should contain export declare const PI: {}", output.js_code);
+                assert!(output.js_code.contains("export declare const API_URL"),
+                    "Should contain export declare const API_URL: {}", output.js_code);
+                println!("✅ Export declare const test passed");
+            }
+            Err(e) => {
+                panic!("Export declare const transpilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test declare function with overloads (v0.3.152)
+    #[test]
+    fn test_declare_function_overloads() {
+        // 测试 declare function 重载签名
+        let ts_code: _ = r#"
+declare function greet(name: string): string;
+declare function greet(name: string, formal: boolean): string;
+declare function add(a: number, b: number): number;
+declare function add(a: number, b: number, c: number): number;
+declare function process(value: string): string;
+declare function process(value: number): number;
+"#;
+        match compile_typescript(ts_code, "declare_function_overloads.ts") {
+            Ok(output) => {
+                println!("declare function overloads 转译结果:");
+                println!("{}", output.js_code);
+                // 应该保留所有的重载签名声明
+                let greet_count = output.js_code.matches("declare function greet").count();
+                assert!(greet_count >= 2,
+                    "Should contain at least 2 greet overloads, found {}: {}", greet_count, output.js_code);
+                let add_count = output.js_code.matches("declare function add").count();
+                assert!(add_count >= 2,
+                    "Should contain at least 2 add overloads, found {}: {}", add_count, output.js_code);
+                println!("✅ Declare function overloads test passed");
+            }
+            Err(e) => {
+                panic!("Declare function overloads transpilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test declare class with constructor signature (v0.3.152)
+    #[test]
+    fn test_declare_class_constructor_signature() {
+        // 测试 declare class 带有构造函数签名的声明（简化版本）
+        let ts_code: _ = r#"
+declare class Person {
+    name: string;
+    age: number;
+    constructor(name: string);
+    greet(): string;
+}
+"#;
+        match compile_typescript(ts_code, "declare_class_constructor.ts") {
+            Ok(output) => {
+                println!("declare class with constructor signature 转译结果:");
+                println!("{}", output.js_code);
+                assert!(output.js_code.contains("declare class Person"),
+                    "Should contain declare class Person: {}", output.js_code);
+                assert!(output.js_code.contains("constructor"),
+                    "Should contain constructor: {}", output.js_code);
+                // 验证类型注解被移除
+                assert!(!output.js_code.contains(": string") || output.js_code.contains("constructor"),
+                    "Should not contain type annotation: {}", output.js_code);
+                println!("✅ Declare class with constructor signature test passed");
+            }
+            Err(e) => {
+                panic!("Declare class with constructor signature transpilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test mixed declare patterns (v0.3.152)
+    #[test]
+    fn test_mixed_declare_patterns() {
+        // 测试混合的 declare 声明模式
+        let ts_code: _ = r#"
+declare const PI: number;
+declare function square(n: number): number;
+declare class Logger {
+    log(msg: string): void;
+}
+declare interface Config {
+    debug: boolean;
+}
+declare namespace Utils {
+    export const version: string;
+    export function helper(): void;
+}
+declare global {
+    interface Window {
+        myGlobal: string;
+    }
+}
+"#;
+        match compile_typescript(ts_code, "mixed_declare_patterns.ts") {
+            Ok(output) => {
+                println!("混合 declare 模式转译结果:");
+                println!("{}", output.js_code);
+                // 验证所有 declare 类型都存在
+                assert!(output.js_code.contains("declare const PI"),
+                    "Should contain declare const PI: {}", output.js_code);
+                assert!(output.js_code.contains("declare function square"),
+                    "Should contain declare function square: {}", output.js_code);
+                assert!(output.js_code.contains("declare class Logger"),
+                    "Should contain declare class Logger: {}", output.js_code);
+                assert!(output.js_code.contains("declare namespace Utils"),
+                    "Should contain declare namespace Utils: {}", output.js_code);
+                println!("✅ Mixed declare patterns test passed");
+            }
+            Err(e) => {
+                panic!("Mixed declare patterns transpilation failed: {}", e);
             }
         }
     }

@@ -2507,7 +2507,7 @@ impl Parser {
                 // 查看下一个 token 来确定声明类型
                 let node = match self.current_token() {
                     Token::Namespace => {
-                        self.parse_namespace_declaration()
+                        self.parse_namespace_declaration_internal(is_declare)
                     }
                     Token::Class => {
                         self.parse_class_declaration_internal(is_declare, Vec::new())
@@ -4351,12 +4351,17 @@ impl Parser {
     /// - namespace Outer.Inner { ... } (嵌套命名空间)
     /// - declare namespace MyLib { ... } (声明式命名空间)
     fn parse_namespace_declaration(&mut self) -> Result<ASTNode> {
-        // 检查是否有 declare 关键字
-        let is_declare = if self.current_token_eq(&Token::Declare) {
+        self.parse_namespace_declaration_internal(false)
+    }
+
+    /// 解析命名空间声明（内部函数，可指定 is_declare）
+    fn parse_namespace_declaration_internal(&mut self, is_declare: bool) -> Result<ASTNode> {
+        // 如果 is_declare 为 false，检查是否有 declare 关键字
+        let is_declare = if !is_declare && self.current_token_eq(&Token::Declare) {
             self.consume(Token::Declare)?;
             true
         } else {
-            false
+            is_declare
         };
 
         self.consume(Token::Namespace)?;
@@ -7276,25 +7281,17 @@ impl CodeEmitter {
                     }
                     // 命名空间编译: namespace MyNamespace { ... }
                     // 编译为: var MyNamespace; (function(MyNamespace) { ... })(MyNamespace || (MyNamespace = {}));
-                    // declare namespace: 生成声明 + IIFE，但初始化为 {} 不调用
+                    // declare namespace: 生成 declare namespace 声明语法
                     ASTStatement::Namespace { name, body, is_declare } => {
                         if *is_declare {
-                            // declare namespace - 声明变量 + IIFE（不调用初始化）
-                            self.output.push_str("var ");
+                            // declare namespace - 保留 declare namespace 语法
+                            self.output.push_str("declare namespace ");
                             self.output.push_str(&name);
-                            self.output.push_str(";\n");
-                            // IIFE 包装命名空间体（不调用）
-                            self.output.push_str("(function(");
-                            self.output.push_str(&name);
-                            self.output.push_str(") {\n");
+                            self.output.push_str(" {\n");
                             for stmt in body {
                                 self.emit_node(stmt);
                             }
-                            self.output.push_str("})(");
-                            self.output.push_str(&name);
-                            self.output.push_str(" || (");
-                            self.output.push_str(&name);
-                            self.output.push_str(" = {}));\n");
+                            self.output.push_str("}\n");
                         } else {
                             // 普通 namespace - 完整 IIFE 包装并调用
                             self.output.push_str("var ");
