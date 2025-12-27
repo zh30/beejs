@@ -2465,4 +2465,104 @@ const permissions: RolePermissions = { admin: "all", user: "read", guest: "none"
 
         println!("✅ Test 98: TypeScript Record<K, V> fast-path");
     }
+
+    /// 测试99: TypeScript Exclude<T, U> 快速路径测试 (v0.3.209)
+    #[test]
+    fn test_exclude_utility_fast_path() {
+        // 测试 Exclude 快速路径移除
+        let ts_code = r#"
+type Status = "active" | "inactive" | "pending" | "deleted";
+type ActiveStatus = Exclude<Status, "inactive" | "deleted">;
+const currentStatus: ActiveStatus = "active";
+"#;
+        let result = typescript::compile_typescript(ts_code, "exclude_fastpath.ts");
+        assert!(result.is_ok(), "Exclude fast-path should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 Exclude 被快速路径移除
+        assert!(!output.js_code.contains("Exclude<"),
+            "Should remove Exclude via fast-path: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("const currentStatus"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("\"active\""),
+            "Should preserve string value: {}", output.js_code);
+
+        println!("✅ Test 99: TypeScript Exclude<T, U> fast-path");
+    }
+
+    /// 测试100: TypeScript Extract<T, U> 快速路径测试 (v0.3.209)
+    #[test]
+    fn test_extract_utility_fast_path() {
+        // 测试 Extract 快速路径移除
+        let ts_code = r#"
+type Status = "active" | "inactive" | "pending" | "deleted";
+type ActiveStatus = Extract<Status, "active" | "pending">;
+const currentStatus: ActiveStatus = "pending";
+"#;
+        let result = typescript::compile_typescript(ts_code, "extract_fastpath.ts");
+        assert!(result.is_ok(), "Extract fast-path should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 Extract 被快速路径移除
+        assert!(!output.js_code.contains("Extract<"),
+            "Should remove Extract via fast-path: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("const currentStatus"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("\"pending\""),
+            "Should preserve string value: {}", output.js_code);
+
+        println!("✅ Test 100: TypeScript Extract<T, U> fast-path");
+    }
+
+    /// 测试101: TypeScript Exclude 与联合类型组合测试 (v0.3.209)
+    #[test]
+    fn test_exclude_with_union_types() {
+        // 测试 Exclude 与复杂联合类型组合
+        let ts_code = r#"
+type Numeric = string | number | boolean | null | undefined;
+type NonNullNumeric = Exclude<Numeric, null | undefined>;
+const value: NonNullNumeric = 42;
+"#;
+        let result = typescript::compile_typescript(ts_code, "exclude_complex.ts");
+        assert!(result.is_ok(), "Exclude with complex types should compile");
+        let output = result.unwrap();
+
+        // 验证 Exclude 被移除
+        assert!(!output.js_code.contains("Exclude<"),
+            "Should remove Exclude: {}", output.js_code);
+
+        // 验证代码可执行
+        assert!(output.js_code.contains("const value"),
+            "Should preserve const: {}", output.js_code);
+
+        println!("✅ Test 101: TypeScript Exclude with complex union types");
+    }
+
+    /// 测试102: TypeScript Extract 与联合类型组合测试 (v0.3.209)
+    #[test]
+    fn test_extract_with_union_types() {
+        // 测试 Extract 与复杂联合类型组合
+        let ts_code = r#"
+type Mixed = string | number | boolean;
+type StringOnly = Extract<Mixed, string>;
+const text: StringOnly = "hello";
+"#;
+        let result = typescript::compile_typescript(ts_code, "extract_complex.ts");
+        assert!(result.is_ok(), "Extract with complex types should compile");
+        let output = result.unwrap();
+
+        // 验证 Extract 被移除
+        assert!(!output.js_code.contains("Extract<"),
+            "Should remove Extract: {}", output.js_code);
+
+        // 验证代码可执行
+        assert!(output.js_code.contains("const text"),
+            "Should preserve const: {}", output.js_code);
+
+        println!("✅ Test 102: TypeScript Extract with complex union types");
+    }
 }

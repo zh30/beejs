@@ -2341,6 +2341,20 @@ impl MinimalRuntime {
         let record_pattern = regex::Regex::new(r"Record\s*<([^,]+),").unwrap();
         js_code = record_pattern.replace_all(&js_code, "/* Record< */$1/* > removed */").to_string();
 
+        // v0.3.209: Remove Exclude utility type
+        // Exclude<T, U> excludes types from T that are assignable to U
+        // For runtime, we remove the wrapper and keep the first type parameter
+        // Pattern: "Exclude<string | number, string>" -> "string | number"
+        let exclude_pattern = regex::Regex::new(r"Exclude\s*<([^,]+),").unwrap();
+        js_code = exclude_pattern.replace_all(&js_code, "$1").to_string();
+
+        // v0.3.209: Remove Extract utility type
+        // Extract<T, U> extracts types from T that are assignable to U
+        // For runtime, we remove the wrapper and keep the first type parameter
+        // Pattern: "Extract<string | number, string>" -> "string | number"
+        let extract_pattern = regex::Regex::new(r"Extract\s*<([^,]+),").unwrap();
+        js_code = extract_pattern.replace_all(&js_code, "$1").to_string();
+
         // v0.3.195: Convert simple ESM export statements to comments
         // v0.3.196: Added abstract for export abstract class support
         // Complex exports (export { a, b }) need variable tracking, so we use placeholders
@@ -2428,7 +2442,9 @@ impl MinimalRuntime {
             || code.contains("Readonly<")       // v0.3.207: Readonly utility type
             || code.contains("Pick<")           // v0.3.208: Pick utility type
             || code.contains("Omit<")           // v0.3.208: Omit utility type
-            || code.contains("Record<");        // v0.3.208: Record utility type
+            || code.contains("Record<")         // v0.3.208: Record utility type
+            || code.contains("Exclude<")        // v0.3.209: Exclude utility type
+            || code.contains("Extract<");       // v0.3.209: Extract utility type
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript

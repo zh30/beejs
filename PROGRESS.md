@@ -1,3 +1,43 @@
+### v0.3.209 实现 Exclude<T, U>、Extract<T, U> 工具类型快速路径支持（2025-12-28）
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.209 新增功能
+- **Exclude<T, U> 工具类型快速路径**
+  - 运行时快速路径识别 `Exclude<...>` 模式
+  - Exclude<T, U> 从类型 T 中排除可分配给 U 的类型
+  - 正确移除 Exclude 包装，保留内部类型（第一个参数）
+
+- **Extract<T, U> 工具类型快速路径**
+  - 运行时快速路径识别 `Extract<...>` 模式
+  - Extract<T, U> 从类型 T 中提取可分配给 U 的类型
+  - 正确移除 Extract 包装，保留内部类型（第一个参数）
+
+#### v0.3.209 实现细节
+- **运行时检测增强** (`src/runtime_minimal.rs:2446-2447`)
+  - 在 `has_raw_typescript()` 中添加 `Exclude<`、`Extract<` 模式检测
+
+- **运行时快速路径移除** (`src/runtime_minimal.rs:2344-2356`)
+  - 添加正则表达式 `Exclude\s*<([^,]+),` 替换为 `$1`
+  - 添加正则表达式 `Extract\s*<([^,]+),` 替换为 `$1`
+  - 提取泛型参数内容直接替换，实现类型擦除
+
+#### v0.3.209 测试用例
+- `test_exclude_utility_fast_path`: 基础 `Exclude<Status, "inactive" | "deleted">` 模式测试
+- `test_extract_utility_fast_path`: 基础 `Extract<Status, "active" | "pending">` 模式测试
+- `test_exclude_with_union_types`: Exclude 与复杂联合类型组合测试
+- `test_extract_with_union_types`: Extract 与复杂联合类型组合测试
+
+#### v0.3.209 测试验证
+- ✅ `cargo test --test minimal_tests`: 105/105 通过 (新增 4 个测试)
+- ✅ `cargo build --release`: 编译成功
+
+#### v0.3.209 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多内建工具类型支持（如 InstanceType, Parameters, ReturnType 等）
+- 完善类型推断场景测试
+
+---
+
 ### v0.3.208 实现 Pick<T, K>、Omit<T, K>、Record<K, V> 工具类型快速路径支持（2025-12-28）
 **进度**: TypeScript 快速路径增强 | ✅ 已提交
 
