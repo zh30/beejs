@@ -1,3 +1,44 @@
+### v0.3.150 declare class 声明支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.150 新增功能
+- **declare class 支持**
+  - 添加 `ASTNode::ClassDeclaration` 的 `is_declare` 字段
+  - 实现 `declare class MyClass { ... }` 语法解析
+  - 区分普通 class 和 declare class 的代码生成策略
+  - declare class 生成带 `declare` 关键字的类型声明
+
+- **parse_statement 增强**
+  - 添加 `Token::Declare` 的智能分发逻辑
+  - 支持 `declare class/namespace/function/const/let/var` 等多种声明
+
+- **export declare 支持**
+  - 添加 `export declare class` 语法支持
+  - 在 `parse_export_declaration()` 中处理 `Token::Declare`
+
+#### 实现细节
+- 重构 `parse_class_declaration_internal()` 支持 `is_declare` 参数
+- 更新 `emit` 逻辑处理 declare class 的 `declare` 关键字前缀
+- 修复类成员解析循环的边界检查（添加 `is_at_end()` 检查）
+
+#### 测试用例
+- `test_declare_class_basic` - 基本 declare class 声明
+- `test_declare_class_with_extends` - declare class 继承
+- `test_declare_class_with_methods` - declare class 属性
+- `test_regular_class_vs_declare_class` - 普通类与声明类对比
+
+#### 验证
+- ✅ `cargo test --lib` 216/216 通过
+- ✅ 11/11 TypeScript 编译器集成测试通过
+
+#### 下一步
+- 实现 `declare function` 声明支持
+- 完善类型推导增强（如 infer 类型推导）
+- 增强 Source Map 位置追踪精度
+- 添加更多边界情况测试覆盖
+
+---
+
 ### v0.3.149 declare namespace 和嵌套命名空间支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 

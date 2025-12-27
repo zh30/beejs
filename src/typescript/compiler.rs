@@ -2147,6 +2147,8 @@ pub enum ASTNode {
         return_type: Option<String>,
     },
     ClassDeclaration {
+        /// 是否为 declare 声明（declare class）
+        is_declare: bool,
         /// 类装饰器列表
         decorators: Vec<Decorator>,
         name: String,
@@ -2476,9 +2478,39 @@ impl Parser {
                 self.parse_type_alias_declaration()
             }
             Token::Declare => {
-                // declare 关键字 - 委托给命名空间解析器处理
-                // 因为 declare 只能用于 namespace、class、function 等声明前面
-                self.parse_namespace_declaration()
+                // declare 关键字 - 需要查看后续 token 来确定声明类型
+                // declare 可以用于: namespace, class, function, const, let, var, interface, type, enum
+                let is_declare = true;
+                // 消耗 declare 关键字
+                self.consume(Token::Declare)?;
+                // 查看下一个 token 来确定声明类型
+                match self.current_token() {
+                    Token::Namespace => {
+                        self.parse_namespace_declaration()
+                    }
+                    Token::Class => {
+                        self.parse_class_declaration_internal(is_declare, Vec::new())
+                    }
+                    Token::Function => {
+                        self.parse_function_declaration()
+                    }
+                    Token::Interface => {
+                        self.parse_interface_declaration()
+                    }
+                    Token::Type => {
+                        self.parse_type_alias_declaration()
+                    }
+                    Token::Enum => {
+                        self.parse_enum_declaration()
+                    }
+                    Token::Const | Token::Let | Token::Var => {
+                        // declare const/let/var 声明
+                        self.parse_variable_declaration()
+                    }
+                    _ => {
+                        bail!("Invalid declare declaration: {:?}", self.current_token());
+                    }
+                }
             }
             Token::Namespace => {
                 self.parse_namespace_declaration()
@@ -3729,8 +3761,11 @@ impl Parser {
         Ok(decorators)
     }
 
-    /// 解析带有已解析装饰器列表的类声明
-    fn parse_class_declaration_with_decorators(&mut self, decorators: Vec<Decorator>) -> Result<ASTNode> {
+    /// 解析类声明（支持 declare 关键字）
+    /// declare class 的处理方式：
+    /// - 声明为类型声明，不生成实际代码
+    /// - 或者生成声明语句 declare class X { ... }
+    fn parse_class_declaration_internal(&mut self, is_declare: bool, decorators: Vec<Decorator>) -> Result<ASTNode> {
         self.consume(Token::Class)?;
         let name_token = self.consume_any_identifier()?;
         let name: _ = match name_token {
@@ -3750,7 +3785,7 @@ impl Parser {
         };
         self.consume(Token::LBrace)?;
         let mut members = Vec::new();
-        while !self.current_token_eq(&Token::RBrace) {
+        while !self.is_at_end() && !self.current_token_eq(&Token::RBrace) {
             // 尝试解析类成员（方法或字段）
             match self.parse_class_member() {
                 Ok(Some(node)) => {
@@ -3766,48 +3801,18 @@ impl Parser {
             }
         }
         self.consume(Token::RBrace)?;
-        Ok(ASTNode::ClassDeclaration { decorators, name, extends, members })
+        Ok(ASTNode::ClassDeclaration { is_declare, decorators, name, extends, members })
+    }
+
+    /// 解析带有已解析装饰器列表的类声明
+    fn parse_class_declaration_with_decorators(&mut self, decorators: Vec<Decorator>) -> Result<ASTNode> {
+        self.parse_class_declaration_internal(false, decorators)
     }
 
     fn parse_class_declaration(&mut self) -> Result<ASTNode> {
         // 首先解析装饰器列表
         let decorators = self.parse_decorators()?;
-        self.consume(Token::Class)?;
-        let name_token = self.consume_any_identifier()?;
-        let name: _ = match name_token {
-            Token::Identifier(name) => name,
-            _ => bail!("Expected class name"),
-        };
-        // 检查是否有 extends 子句
-        let extends = if self.current_token_eq(&Token::Extends) {
-            self.consume(Token::Extends)?;
-            let parent_token = self.consume_any_identifier()?;
-            match parent_token {
-                Token::Identifier(parent_name) => Some(parent_name),
-                _ => bail!("Expected parent class name after extends"),
-            }
-        } else {
-            None
-        };
-        self.consume(Token::LBrace)?;
-        let mut members = Vec::new();
-        while !self.current_token_eq(&Token::RBrace) {
-            // 尝试解析类成员（方法或字段）
-            match self.parse_class_member() {
-                Ok(Some(node)) => {
-                    members.push(node);
-                }
-                Ok(None) => {
-                    // 跳过无法解析的成员
-                }
-                Err(_e) => {
-                    // 跳过这个 token 并继续
-                    self.advance();
-                }
-            }
-        }
-        self.consume(Token::RBrace)?;
-        Ok(ASTNode::ClassDeclaration { decorators, name, extends, members })
+        self.parse_class_declaration_internal(false, decorators)
     }
 
     /// 解析类成员（方法或字段）
@@ -4699,6 +4704,50 @@ impl Parser {
                     module_specifier: None,
                     inline_declaration: Some(Box::new(declaration)),
                 });
+            }
+            Token::Declare => {
+                // export declare class/namespace/function 等
+                let is_declare = true;
+                self.consume(Token::Declare)?;
+                match self.current_token() {
+                    Token::Class => {
+                        let declaration = self.parse_class_declaration_internal(is_declare, Vec::new())?;
+                        return Ok(ASTNode::ExportDeclaration {
+                            exports: Vec::new(),
+                            is_default: false,
+                            module_specifier: None,
+                            inline_declaration: Some(Box::new(declaration)),
+                        });
+                    }
+                    Token::Namespace => {
+                        let declaration = self.parse_namespace_declaration()?;
+                        return Ok(ASTNode::ExportDeclaration {
+                            exports: Vec::new(),
+                            is_default: false,
+                            module_specifier: None,
+                            inline_declaration: Some(Box::new(declaration)),
+                        });
+                    }
+                    Token::Function => {
+                        let declaration = self.parse_function_declaration()?;
+                        return Ok(ASTNode::ExportDeclaration {
+                            exports: Vec::new(),
+                            is_default: false,
+                            module_specifier: None,
+                            inline_declaration: Some(Box::new(declaration)),
+                        });
+                    }
+                    Token::Const | Token::Let | Token::Var => {
+                        let declaration = self.parse_variable_declaration()?;
+                        return Ok(ASTNode::ExportDeclaration {
+                            exports: Vec::new(),
+                            is_default: false,
+                            module_specifier: None,
+                            inline_declaration: Some(Box::new(declaration)),
+                        });
+                    }
+                    _ => bail!("Invalid export declare declaration: {:?}", self.current_token()),
+                }
             }
             Token::Namespace => {
                 // 导出命名空间: export namespace MyNamespace { ... }
@@ -6687,7 +6736,7 @@ impl CodeEmitter {
                 }
                 self.output.push_str(") { /* overload */ }\n");
             }
-            ASTNode::ClassDeclaration { decorators, name, extends, members } => {
+            ASTNode::ClassDeclaration { is_declare, decorators, name, extends, members } => {
                 // 输出装饰器（作为注释保留）
                 for decorator in decorators {
                     self.output.push_str("/* @");
@@ -6703,6 +6752,10 @@ impl CodeEmitter {
                         self.output.push(')');
                     }
                     self.output.push_str(" */\n");
+                }
+                // 处理 declare class
+                if *is_declare {
+                    self.output.push_str("declare ");
                 }
                 self.output.push_str("class ");
                 self.output.push_str(name);

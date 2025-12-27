@@ -202,4 +202,117 @@ console.log(Math.add(1, 2), Math.multiply(3, 4));
             }
         }
     }
+
+    #[test]
+    fn test_declare_class_basic() {
+        // 测试 declare class 声明
+        let ts_code: _ = r#"
+declare class MyClass {
+    name: string;
+    age: number;
+}
+"#;
+
+        match compile_typescript(ts_code, "declare_class.ts") {
+            Ok(output) => {
+                println!("declare class 转译结果:");
+                println!("{}", output.js_code);
+                assert!(output.js_code.contains("MyClass"));
+                assert!(output.js_code.contains("declare"));
+                assert!(output.js_code.contains("class MyClass"));
+                // 类型注解应该被移除
+                assert!(!output.js_code.contains(": string"));
+                assert!(!output.js_code.contains(": number"));
+            }
+            Err(e) => {
+                panic!("Declare class transpilation failed: {}", e);
+            }
+        }
+    }
+
+    #[test]
+    fn test_declare_class_with_extends() {
+        // 测试 declare class 继承
+        let ts_code: _ = r#"
+declare class Animal {
+    name: string;
+}
+declare class Dog extends Animal {
+    breed: string;
+}
+"#;
+
+        match compile_typescript(ts_code, "declare_class_extends.ts") {
+            Ok(output) => {
+                println!("declare class with extends 转译结果:");
+                println!("{}", output.js_code);
+                assert!(output.js_code.contains("Animal"));
+                assert!(output.js_code.contains("Dog"));
+                assert!(output.js_code.contains("declare class"));
+                // 验证 extends 保留
+                assert!(output.js_code.contains("extends Animal"));
+            }
+            Err(e) => {
+                panic!("Declare class with extends transpilation failed: {}", e);
+            }
+        }
+    }
+
+    #[test]
+    fn test_declare_class_with_methods() {
+        // 测试 declare class 方法声明
+        let ts_code: _ = r#"
+declare class Calculator {
+    PI: number;
+    VERSION: string;
+}
+"#;
+
+        match compile_typescript(ts_code, "declare_class_methods.ts") {
+            Ok(output) => {
+                println!("declare class with methods 转译结果:");
+                println!("{}", output.js_code);
+                assert!(output.js_code.contains("Calculator"));
+                assert!(output.js_code.contains("declare class Calculator"));
+                assert!(output.js_code.contains("PI"));
+            }
+            Err(e) => {
+                panic!("Declare class with methods transpilation failed: {}", e);
+            }
+        }
+    }
+
+    #[test]
+    fn test_regular_class_vs_declare_class() {
+        // 测试普通 class 和 declare class 的区别
+        let ts_code: _ = r#"
+class RegularClass {
+    constructor() {
+        this.value = 42;
+    }
+    getValue() {
+        return this.value;
+    }
+}
+declare class DeclaredClass {
+    value: number;
+}
+"#;
+
+        match compile_typescript(ts_code, "class_comparison.ts") {
+            Ok(output) => {
+                println!("普通 class vs declare class 转译结果:");
+                println!("{}", output.js_code);
+                // 普通类应该有完整的实现
+                assert!(output.js_code.contains("class RegularClass"));
+                assert!(output.js_code.contains("constructor()"));
+                assert!(output.js_code.contains("this.value"));
+                // 声明类应该有 declare 关键字
+                assert!(output.js_code.contains("declare class DeclaredClass"));
+            }
+            Err(e) => {
+                panic!("Class comparison transpilation failed: {}", e);
+            }
+        }
+    }
 }
