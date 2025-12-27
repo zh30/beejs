@@ -10516,3 +10516,61 @@ console.log(p.name);  // "Alice"
 - 实现 ES 模块 (ESM) 支持
 - 实现 package.json 解析和依赖管理
 - 创建性能基准测试与 Bun 对比
+
+---
+
+### v0.3.195 实现 ES 模块 (ESM) 转 CommonJS 支持（2025-12-28）
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.195 问题背景
+- Beejs 运行时主要支持 CommonJS 模块格式
+- ESM 语法（import/export）在 V8 中无法直接执行
+- 需要将 ESM 语法转换为 CommonJS 才能在运行时执行
+
+#### v0.3.195 解决方案
+- 修改 TypeScript 编译器的 CodeEmitter
+- 将 ESM import 语句转换为 CommonJS require
+- 将 ESM export 语句转换为注释占位符
+- 修复 declare module 内部的 export 语句处理
+
+#### v0.3.195 实现细节
+- **ESM Import 转换** (`src/typescript/compiler.rs`)
+  - `import x from 'module'` → `const x = require('module')`
+  - `import { x } from 'module'` → `const { x } = require('module')`
+  - `import * as ns from 'module'` → `const ns = require('module')`
+  - `import 'module'` (副作用) → `require('module')`
+
+- **ESM Export 转换** (`src/typescript/compiler.rs`)
+  - `export const x = 1` → `/* ESM export: const x = ... */`
+  - `export function foo()` → `/* ESM export: function foo */`
+  - `export { a, b }` → `/* ESM export { a, b } */`
+  - `export default ...` → `/* ESM default export ... */`
+
+- **declare module 内部处理** (`src/typescript/compiler.rs`)
+  - `declare module { export const x; }` → `declare module { declare export const x; }`
+
+- **运行时快速路径增强** (`src/runtime_minimal.rs`)
+  - 添加 `import ` 模式检测
+  - 添加 `export const/function/class` 模式检测
+  - 添加 `export {` 模式检测
+
+#### v0.3.195 新增测试用例
+- `test_esm_default_import`: 默认导入转换
+- `test_esm_named_import`: 命名导入转换
+- `test_esm_namespace_import`: 命名空间导入转换
+- `test_esm_export_const`: export const 转换
+- `test_esm_export_function`: export function 转换
+- `test_esm_export_braces`: export { ... } 转换
+- `test_esm_import_side_effect`: 副作用导入转换
+
+#### v0.3.195 测试验证
+- ✅ `cargo build --release` 成功编译
+- ✅ ESM import 语句正确转换为 require
+- ✅ ESM export 语句正确转换为注释
+- ✅ declare module 内部导出正确处理
+
+#### v0.3.195 下一步
+- 继续完善 Node.js API 兼容性
+- 实现更完整的 ESM 支持（变量追踪）
+- 实现 package.json 解析和依赖管理
+- 创建性能基准测试与 Bun 对比
