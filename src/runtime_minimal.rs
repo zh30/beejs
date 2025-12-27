@@ -1309,6 +1309,122 @@ impl MinimalRuntime {
             result
         }
 
+        // v0.3.182: Remove constructor signatures from interfaces
+        // Pattern: "new (args): ReturnType" - removes the entire constructor signature
+        // This MUST run BEFORE remove_interfaces to handle constructors inside interfaces
+        fn remove_constructor_signatures(code: &str) -> String {
+            let mut result = String::new();
+            let mut i = 0;
+            let chars: Vec<char> = code.chars().collect();
+            let n = chars.len();
+
+            while i < n {
+                // Look for "new (" pattern (constructor signature)
+                let new_ctor_start = chars[i..].starts_with(&['n', 'e', 'w', ' '][..])
+                    && i + 4 < n && chars[i + 4] == '(';
+
+                if new_ctor_start {
+                    // Find the return type after the closing parenthesis and colon
+                    let mut paren_depth = 1;
+                    let mut j = i + 5; // Start after "new ("
+
+                    // Skip parameters inside parentheses, handling nested parens and strings
+                    while j < n && paren_depth > 0 {
+                        let c = chars[j];
+                        if c == '(' {
+                            paren_depth += 1;
+                        } else if c == ')' {
+                            paren_depth -= 1;
+                            if paren_depth == 0 {
+                                j += 1;
+                                break;
+                            }
+                        } else if c == '"' || c == '\'' {
+                            // Skip string contents
+                            let string_char = c;
+                            j += 1;
+                            while j < n && chars[j] != string_char {
+                                if chars[j] == '\\' && j + 1 < n {
+                                    j += 2;
+                                } else {
+                                    j += 1;
+                                }
+                            }
+                            if j < n {
+                                j += 1;
+                            }
+                        }
+                        j += 1;
+                    }
+
+                    // Skip whitespace after closing paren
+                    while j < n && chars[j].is_whitespace() {
+                        j += 1;
+                    }
+
+                    // Skip the colon
+                    if j < n && chars[j] == ':' {
+                        j += 1;
+                    }
+
+                    // Skip whitespace after colon
+                    while j < n && chars[j].is_whitespace() {
+                        j += 1;
+                    }
+
+                    // Extract the return type name (for the comment)
+                    let return_start = j;
+                    let mut return_end = j;
+                    while return_end < n {
+                        let c = chars[return_end];
+                        if c.is_alphanumeric() || c == '_' || c == '<' || c == '>' {
+                            return_end += 1;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    // Handle generic types like Array<T>
+                    if return_end < n && chars[return_end] == '<' {
+                        let mut angle_depth = 1;
+                        return_end += 1;
+                        while return_end < n && angle_depth > 0 {
+                            if chars[return_end] == '<' {
+                                angle_depth += 1;
+                            } else if chars[return_end] == '>' {
+                                angle_depth -= 1;
+                            }
+                            return_end += 1;
+                        }
+                    }
+
+                    let return_type: String = chars[return_start..return_end].iter().collect();
+
+                    // Remove the constructor signature including trailing semicolon
+                    let mut remove_end = return_end;
+                    while remove_end < n && chars[remove_end].is_whitespace() {
+                        remove_end += 1;
+                    }
+                    if remove_end < n && chars[remove_end] == ';' {
+                        remove_end += 1;
+                    }
+
+                    result.push_str(&format!("/* constructor: {} */", return_type));
+                    i = remove_end;
+                    continue;
+                }
+
+                result.push(chars[i]);
+                i += 1;
+            }
+
+            result
+        }
+
+        // Remove constructor signatures BEFORE removing interfaces
+        // This handles constructor signatures inside interfaces
+        js_code = remove_constructor_signatures(&js_code);
+
         js_code = remove_interfaces(&js_code);
 
         // v0.3.178: Remove enum declarations

@@ -1,3 +1,61 @@
+### v0.3.181 实现多行接口定义支持（2025-12-27）
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.181 问题背景
+- **原有正则模式问题**：
+  - `(?m)^interface\s+\w+.*?$` 只匹配单行接口声明
+  - `[\s\S]*?` 非贪婪模式在第一个 `}` 处停止
+  - 导致多行接口 `{...}` body 被部分留下
+
+#### v0.3.181 解决方案
+- **使用括号匹配算法** (`src/runtime_minimal.rs`)
+  - 实现 `remove_interfaces()` 函数进行字符级解析
+  - 正确跟踪嵌套深度（`depth` 计数器）
+  - 忽略字符串内的括号（`in_string` 标志）
+  - 生成 `/* interface InterfaceName */` 形式的注释
+
+#### v0.3.181 测试验证
+- ✅ `interface MathFunc { (x: number): number; }` → `/* interface MathFunc */`
+- ✅ `interface WithThis { greet(this: { name: string }): string; }` → `/* interface WithThis */`
+- ✅ 嵌套的 `{...}` 正确处理
+- ✅ 现有 hello.ts 和 hello.js 继续正常工作
+
+#### v0.3.181 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现构造函数签名 `new(...args): T`
+- 实现 this 参数类型注解
+
+---
+
+### v0.3.182 实现构造函数签名支持（2025-12-27）
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.182 新增功能
+- **构造函数签名支持**
+  - 运行时快速路径识别 `new (args): ReturnType` 模式
+  - 正确移除接口内部的构造函数签名
+  - 保留返回类型信息用于调试
+
+#### v0.3.182 实现细节
+- **运行时快速路径增强** (`src/runtime_minimal.rs`)
+  - 实现 `remove_constructor_signatures()` 函数
+  - 在 `remove_interfaces()` 之前调用，处理接口内部的构造函数
+  - 支持嵌套括号和字符串内的括号
+  - 支持泛型返回类型如 `Array<T>`
+
+#### v0.3.182 测试验证
+- ✅ `interface Creatable { new (name: string): any; }` → 正确移除
+- ✅ `interface Factory { new (x: number, y: string): MyClass; }` → 正确移除
+- ✅ `interface AdvancedFactory { new (config: { type: string }): MyClass; }` → 正确移除
+- ✅ `.js` 文件中的内联 TypeScript 构造函数签名正确处理
+
+#### v0.3.182 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现 this 参数类型注解
+- 完善完整 TypeScript 编译器的构造函数签名支持
+
+---
+
 ### v0.3.179 实现 BigInt 字面量支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 
