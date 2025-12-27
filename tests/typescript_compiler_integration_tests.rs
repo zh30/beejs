@@ -454,6 +454,7 @@ declare var DEBUG_MODE: boolean;
     }
 
     /// Test export declare const (v0.3.152)
+    /// v0.3.198: 更新测试以匹配 ESM → CommonJS 转换后的输出格式
     #[test]
     fn test_export_declare_const() {
         // 测试 export declare const 声明
@@ -465,12 +466,13 @@ export declare const VERSION: string;
             Ok(output) => {
                 println!("export declare const 转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("export"),
-                    "Should contain export keyword: {}", output.js_code);
-                assert!(output.js_code.contains("declare const PLUGIN_NAME"),
-                    "Should contain declare const PLUGIN_NAME: {}", output.js_code);
-                assert!(output.js_code.contains("declare const VERSION"),
-                    "Should contain declare const VERSION: {}", output.js_code);
+                // v0.3.195 之后，ESM export 转换为 CommonJS 注释占位符
+                assert!(output.js_code.contains("/* ESM export"),
+                    "Should contain ESM export comment: {}", output.js_code);
+                assert!(output.js_code.contains("const PLUGIN_NAME"),
+                    "Should contain const PLUGIN_NAME: {}", output.js_code);
+                assert!(output.js_code.contains("const VERSION"),
+                    "Should contain const VERSION: {}", output.js_code);
                 println!("✅ Export declare const test passed");
             }
             Err(e) => {
@@ -577,6 +579,7 @@ declare var declaredVar: boolean;
     }
 
     /// Test export declare function (v0.3.152)
+    /// v0.3.198: 更新测试以匹配 ESM → CommonJS 转换后的输出格式
     #[test]
     fn test_export_declare_function() {
         // 测试 export declare function 声明
@@ -588,10 +591,11 @@ export declare function add(a: number, b: number): number;
             Ok(output) => {
                 println!("export declare function 转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("export declare function greet"),
-                    "Should contain export declare function greet: {}", output.js_code);
-                assert!(output.js_code.contains("export declare function add"),
-                    "Should contain export declare function add: {}", output.js_code);
+                // v0.3.195 之后，ESM export 转换为 CommonJS 注释占位符
+                assert!(output.js_code.contains("/* ESM export: function greet"),
+                    "Should contain ESM export comment for greet: {}", output.js_code);
+                assert!(output.js_code.contains("/* ESM export: function add"),
+                    "Should contain ESM export comment for add: {}", output.js_code);
                 // 类型注解应该被移除
                 assert!(!output.js_code.contains(": string"),
                     "Should not contain type annotation: {}", output.js_code);
@@ -604,6 +608,7 @@ export declare function add(a: number, b: number): number;
     }
 
     /// Test export declare const (v0.3.152)
+    /// v0.3.198: 更新测试以匹配 ESM → CommonJS 转换后的输出格式
     #[test]
     fn test_export_declare_const_integration() {
         // 测试 export declare const 声明
@@ -615,10 +620,11 @@ export declare const API_URL: string;
             Ok(output) => {
                 println!("export declare const 转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("export declare const PI"),
-                    "Should contain export declare const PI: {}", output.js_code);
-                assert!(output.js_code.contains("export declare const API_URL"),
-                    "Should contain export declare const API_URL: {}", output.js_code);
+                // v0.3.195 之后，ESM export 转换为 CommonJS 注释占位符
+                assert!(output.js_code.contains("/* ESM export: const PI"),
+                    "Should contain ESM export comment for PI: {}", output.js_code);
+                assert!(output.js_code.contains("/* ESM export: const API_URL"),
+                    "Should contain ESM export comment for API_URL: {}", output.js_code);
                 println!("✅ Export declare const test passed");
             }
             Err(e) => {

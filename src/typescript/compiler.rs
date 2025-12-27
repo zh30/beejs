@@ -8764,10 +8764,114 @@ impl CodeEmitter {
                                                 self.output.push_str(name);
                                                 self.output.push_str(";\n");
                                             }
+                                            ASTNode::FunctionOverload { name, is_async, params, return_type, .. } => {
+                                                // 处理 export function 重载签名（如 export function foo(): void;）
+                                                self.output.push_str("declare export ");
+                                                if *is_async {
+                                                    self.output.push_str("async ");
+                                                }
+                                                self.output.push_str("function ");
+                                                self.output.push_str(name);
+                                                self.output.push_str("(");
+                                                for (i, param) in params.iter().enumerate() {
+                                                    if i > 0 {
+                                                        self.output.push_str(", ");
+                                                    }
+                                                    match param {
+                                                        FunctionParameter::Simple { name, type_annotation, .. } => {
+                                                            self.output.push_str(name);
+                                                            if let Some(ty) = type_annotation {
+                                                                self.output.push_str(": ");
+                                                                self.output.push_str(ty);
+                                                            }
+                                                        }
+                                                        _ => {
+                                                            self.output.push_str("_");
+                                                        }
+                                                    }
+                                                }
+                                                self.output.push_str(")");
+                                                if let Some(rt) = return_type {
+                                                    self.output.push_str(": ");
+                                                    self.output.push_str(rt);
+                                                }
+                                                self.output.push_str(";\n");
+                                            }
                                             ASTNode::ClassDeclaration { name, .. } => {
                                                 self.output.push_str("declare export class ");
                                                 self.output.push_str(name);
                                                 self.output.push_str(";\n");
+                                            }
+                                            ASTNode::Statement(ASTStatement::Namespace { name, body, .. }) => {
+                                                // 处理 export namespace Inner { ... }
+                                                self.output.push_str("declare export namespace ");
+                                                self.output.push_str(name);
+                                                self.output.push_str(" {\n");
+                                                for stmt in body {
+                                                    match stmt {
+                                                        ASTNode::ExportDeclaration { exports, is_default, module_specifier, inline_declaration, is_type_only } => {
+                                                            // 递归处理嵌套的 export
+                                                            if *is_type_only {
+                                                                continue;
+                                                            }
+                                                            if let Some(ref decl) = inline_declaration {
+                                                                match decl.as_ref() {
+                                                                    ASTNode::FunctionDeclaration { name: fn_name, is_async, .. } => {
+                                                                        self.output.push_str("declare export ");
+                                                                        if *is_async {
+                                                                            self.output.push_str("async ");
+                                                                        }
+                                                                        self.output.push_str("function ");
+                                                                        self.output.push_str(fn_name);
+                                                                        self.output.push_str(";\n");
+                                                                    }
+                                                                    ASTNode::FunctionOverload { name: fn_name, is_async, params, return_type, .. } => {
+                                                                        self.output.push_str("declare export ");
+                                                                        if *is_async {
+                                                                            self.output.push_str("async ");
+                                                                        }
+                                                                        self.output.push_str("function ");
+                                                                        self.output.push_str(fn_name);
+                                                                        self.output.push_str("(");
+                                                                        for (i, param) in params.iter().enumerate() {
+                                                                            if i > 0 {
+                                                                                self.output.push_str(", ");
+                                                                            }
+                                                                            match param {
+                                                                                FunctionParameter::Simple { name: param_name, type_annotation, .. } => {
+                                                                                    self.output.push_str(param_name);
+                                                                                    if let Some(ty) = type_annotation {
+                                                                                        self.output.push_str(": ");
+                                                                                        self.output.push_str(ty);
+                                                                                    }
+                                                                                }
+                                                                                _ => self.output.push_str("_"),
+                                                                            }
+                                                                        }
+                                                                        self.output.push_str(")");
+                                                                        if let Some(rt) = return_type {
+                                                                            self.output.push_str(": ");
+                                                                            self.output.push_str(rt);
+                                                                        }
+                                                                        self.output.push_str(";\n");
+                                                                    }
+                                                                    ASTNode::VariableDeclaration { kind, name: var_name, .. } => {
+                                                                        self.output.push_str("declare export ");
+                                                                        self.output.push_str(kind);
+                                                                        self.output.push_str(" ");
+                                                                        self.output.push_str(var_name);
+                                                                        self.output.push_str(";\n");
+                                                                    }
+                                                                    _ => {}
+                                                                }
+                                                            }
+                                                        }
+                                                        _ => {
+                                                            self.emit_node(&stmt);
+                                                        }
+                                                    }
+                                                }
+                                                self.output.push_str("}\n");
                                             }
                                             _ => {}
                                         }

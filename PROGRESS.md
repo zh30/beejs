@@ -10907,3 +10907,35 @@ console.log(p.name);  // "Alice"
 - 继续完善 TypeScript 编译器功能
 - 实现更多内建工具类型支持
 - 完善类型推断场景测试
+
+### v0.3.198 修复 declare module 中的 export function 处理 (2025-12-28)
+**进度**: TypeScript 编译器修复 | ✅ 已提交
+
+#### v0.3.198 修复内容
+- **修复 declare module 中 export function 丢失问题**
+  - 原因: `export function` 被解析为 `ASTNode::FunctionOverload`，但代码生成器只处理了 `FunctionDeclaration`
+  - 解决: 在 `declare module` 代码生成中添加 `FunctionOverload` 处理
+
+- **添加 declare module 中 export namespace 支持**
+  - 原因: `export namespace Inner { ... }` 内部的 export 未被正确处理
+  - 解决: 递归处理命名空间内部的 export 声明
+
+- **更新测试以匹配 ESM → CommonJS 转换输出**
+  - v0.3.195 之后 ESM export 转换为注释占位符
+  - 更新 4 个测试用例期望值
+
+#### v0.3.198 实现细节
+- **代码生成增强** (`src/typescript/compiler.rs:8767-8899`)
+  - 添加 `ASTNode::FunctionOverload` 处理
+  - 添加 `ASTNode::Statement(ASTStatement::Namespace)` 处理
+  - 递归输出嵌套的 export 声明
+
+#### v0.3.198 测试验证
+- `cargo test --test minimal_tests`: 92/92 通过
+- `cargo test --lib`: 223/223 通过
+- `cargo test --test typescript_compiler_integration_tests`: 66/66 通过
+
+#### v0.3.198 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多内建工具类型支持
+- 完善类型推断场景测试
