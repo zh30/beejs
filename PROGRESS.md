@@ -1,19 +1,45 @@
-### v0.3.147 尖括号类型断言支持 (2025-12-27)
+### v0.3.149 declare namespace 和嵌套命名空间支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 
-#### v0.3.147 新增功能
-- **尖括号类型断言语法**
-  - 实现 `<Type>expr` 旧式类型断言语法
-  - 与 `expr as Type` 语法功能等价
-  - 转译时类型信息被移除，输出原始表达式
-  - 添加 ASTExpression::TSAngleBracketAssertion 节点
+#### v0.3.149 新增功能
+- **declare namespace 支持**
+  - 添加 `Token::Declare` 关键字识别
+  - 实现 `declare namespace MyLib { ... }` 语法解析
+  - 区分普通 namespace 和 declare namespace 的代码生成策略
+  - declare namespace 生成声明但不调用 IIFE 初始化
 
-- **类型标识符智能检测**
-  - 检测 `<` 后面是否为大写字母开头的标识符
-  - 识别常见 TypeScript 类型名（any, string, number, boolean 等）
-  - 避免与小于运算符 `<` 产生歧义
+- **嵌套命名空间支持**
+  - 实现 `namespace Outer.Inner { ... }` 语法
+  - 支持多级嵌套 (A.B.C.D)
+  - 解析时识别点分隔的命名空间名称
 
-#### v0.3.147 测试用例新增
+- **export 关键字增强**
+  - 添加 `export namespace` 声明支持
+  - namespace 内部的 export 语句正确处理
+
+#### 实现细节
+- 在 `ASTStatement::Namespace` 中添加 `is_declare` 字段
+- 在 `parse_statement()` 中添加 `Token::Declare` 处理
+- 在 `parse_export_declaration()` 中添加 `Token::Namespace` 支持
+- emit 逻辑区分 declare 和普通 namespace 的输出
+
+#### 测试用例
+- `test_nested_namespace` - 嵌套命名空间 A.B.C
+- `test_declare_namespace` - declare namespace 声明
+- `test_namespace_with_export_keyword` - namespace 内的 export 关键字
+
+#### 验证
+- ✅ `cargo test --lib` 216/216 通过
+- ✅ 7/7 TypeScript 编译器集成测试通过
+
+#### 下一步
+- 实现 interface 声明支持
+- 实现泛型类型参数完整支持
+- 优化代码生成性能
+
+---
+
+### v0.3.147 尖括号类型断言支持 (2025-12-27)
 - `test_angle_bracket_type_assertion_basic` - 基本类型断言测试
 - `test_angle_bracket_type_assertion_with_number` - 数字类型断言测试
 - `test_angle_bracket_type_assertion_complex_type` - 复杂类型断言测试
