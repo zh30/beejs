@@ -1537,9 +1537,10 @@ impl MinimalRuntime {
         js_code = abstract_class_pattern.replace_all(&js_code, "class $1").to_string();
 
         // Remove abstract modifier from method declarations within classes
-        // Pattern: "abstract methodName(...params): returnType;"
-        let abstract_method_pattern = regex::Regex::new(r"abstract\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(").unwrap();
-        js_code = abstract_method_pattern.replace_all(&js_code, "$1(").to_string();
+        // Pattern: "abstract methodName(): returnType;" -> Just remove "abstract " prefix
+        // The return type annotation will be handled by the existing type annotation removal patterns
+        let abstract_method_pattern = regex::Regex::new(r"abstract\s+([a-zA-Z_$][a-zA-Z0-9_$]*)").unwrap();
+        js_code = abstract_method_pattern.replace_all(&js_code, "$1").to_string();
 
         // Clean up extra whitespace (especially after removing satisfies)
         let cleanup_pattern = regex::Regex::new(r"\s+([;,})])").unwrap();

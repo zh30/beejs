@@ -7604,10 +7604,10 @@ impl CodeEmitter {
                 if *is_declare {
                     self.output.push_str("declare ");
                 }
-                // 处理 abstract class
-                if *is_abstract {
-                    self.output.push_str("abstract ");
-                }
+                // 注意: abstract class 是 TypeScript 特有语法，编译到 JS 时移除
+                // if *is_abstract {
+                //     self.output.push_str("abstract ");
+                // }
                 self.output.push_str("class ");
                 self.output.push_str(name);
                 // 添加 extends 子句（如果有）
@@ -7641,9 +7641,10 @@ impl CodeEmitter {
                 if *is_static {
                     self.output.push_str("static ");
                 }
-                if *is_abstract {
-                    self.output.push_str("abstract ");
-                }
+                // 注意: abstract method 是 TypeScript 特有语法，编译到 JS 时移除
+                // if *is_abstract {
+                //     self.output.push_str("abstract ");
+                // }
                 // 输出 get/set 关键字（如果是 getter/setter）
                 if *kind != "method" {
                     self.output.push_str(kind);
@@ -7711,9 +7712,10 @@ impl CodeEmitter {
                 if *is_static {
                     self.output.push_str("static ");
                 }
-                if *is_abstract {
-                    self.output.push_str("abstract ");
-                }
+                // 注意: abstract property 是 TypeScript 特有语法，编译到 JS 时移除
+                // if *is_abstract {
+                //     self.output.push_str("abstract ");
+                // }
                 self.output.push_str(name);
                 if let Some(init) = initializer {
                     self.output.push_str(" = ");
