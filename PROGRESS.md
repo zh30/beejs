@@ -10284,9 +10284,46 @@ console.log(p.name);  // "Alice"
 
 ---
 
-### v0.3.173 修复三重合并回归问题 (2025-12-27)
-**进度**: TypeScript 编译修复 | ✅ 已提交
+### v0.3.189 构造函数签名与泛型参数支持 (2025-12-28)
+**进度**: TypeScript 编译增强 | ✅ 已提交
 
-#### v0.3.173 下一步
+#### v0.3.189 新增功能
+- **构造函数签名支持**
+  - 运行时快速路径识别 `new (args): ReturnType` 模式
+  - 正确移除接口内部的构造函数签名
+  - 支持泛型返回类型如 `Array<T>`
+  - 保留返回类型信息用于调试
+
+- **泛型接口支持**
+  - 运行时快速路径识别 `<T>` 和 `<T, U>` 模式
+  - 正确处理泛型参数在接口定义中的位置
+  - 支持多泛型参数接口
+
+#### v0.3.189 实现细节
+- **运行时快速路径增强** (`src/runtime_minimal.rs`)
+  - 添加 `remove_constructor_signatures()` 函数处理构造函数签名
+  - 添加泛型参数 `<...>` 检测到 `has_raw_typescript()`
+  - 正确处理嵌套括号和字符串内的括号
+
+- **TypeScript 编译器增强** (`src/typescript/compiler.rs`)
+  - 完善构造函数签名的完整解析支持
+  - 添加泛型参数的类型检查和解析
+
+#### v0.3.189 测试用例
+- `test_typescript_constructor_signature`: 测试构造函数签名编译
+- `test_typescript_generic_interface`: 测试简单泛型接口
+- `test_typescript_multi_generic_interface`: 测试多泛型参数接口
+
+#### v0.3.189 验证
+- ✅ `cargo test --lib`: 221/221 通过
+- ✅ `cargo test --test minimal_tests`: 54/54 通过
+- ✅ `cargo test --test typescript_compiler_integration_tests`: 全部通过
+- ✅ 手动测试验证：
+  - `interface Constructor<T> { new(...args: any[]): T; }` → 正确移除
+  - `interface Container<T> { value: T; }` → 正确移除
+  - `interface Pair<T, U> { first: T; second: U; }` → 正确移除
+
+#### v0.3.189 下一步
 - 继续完善 TypeScript 编译器功能
-- 添加更多运行时优化
+- 实现更多工具类型支持
+- 添加索引签名快速路径优化
