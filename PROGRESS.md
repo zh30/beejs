@@ -9718,3 +9718,42 @@ console.log(p.name);  // "Alice"
 #### v0.3.171 下一步
 - 继续完善 TypeScript 编译器功能
 - 添加更多运行时优化
+---
+
+### v0.3.173 修复三重合并回归问题 (2025-12-27)
+**进度**: TypeScript 编译修复 | ✅ 已提交
+
+#### v0.3.173 修复内容
+- **修复 namespace 内容丢失问题**
+  - 问题：`merge_triple()` 函数将所有 namespace 错误合并为 TripleMergedDeclaration
+  - 影响：`declare namespace` 内的函数（如 `greet`）在输出中丢失
+  - 根因：使用 `name`（如 "MyLib"）作为 key 而不是 `full_name`（如 "MyLib"）
+
+- **修复嵌套命名空间问题**
+  - 问题：`declare namespace Outer.Inner { ... }` 被错误拆分为 `Outer`
+  - 修复：使用 `full_name` 作为 triple_map 的 key
+
+- **修复模块声明重复处理问题**
+  - 问题：ModuleDeclaration 在 `merge_namespaces` 和 `merge_triple` 中都被处理
+  - 修复：移除 `merge_triple` 中对 ModuleDeclaration 的处理
+
+#### v0.3.173 代码变更
+- **src/typescript/compiler.rs**
+  - 第 459-462 行：修改 namespace key 为 `full_name`
+  - 第 471 行：移除 ModuleDeclaration 处理（已由 merge_namespaces 处理）
+  - 第 486-509 行：优化 triple merge 逻辑，只有存在 interface 属性时才创建 TripleMergedDeclaration
+
+- **tests/minimal_tests.rs**
+  - 修复 `test_typescript_declare_module` 期望值（`var my-module` → `declare module "my-module"`）
+  - 修复 `test_typescript_module_augmentation_combined` 期望值
+
+#### v0.3.173 验证
+- ✅ `cargo build --release` 成功编译
+- ✅ `cargo test --lib` 220/220 通过
+- ✅ `cargo test --test typescript_compiler_integration_tests` 60/60 通过
+- ✅ `cargo test --test minimal_tests` 10/10 通过
+- ✅ `cargo test --test typescript_triple_merge_tests` 7/7 通过
+
+#### v0.3.173 下一步
+- 继续完善 TypeScript 编译器功能
+- 添加更多运行时优化

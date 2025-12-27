@@ -41,9 +41,13 @@ const y = 2;
         let result = typescript::compile_typescript(ts_code, "declare_module.ts");
         assert!(result.is_ok(), "declare module should compile successfully");
         let output = result.unwrap();
-        // 验证 declare module 被正确转译
-        assert!(output.js_code.contains("var my-module"),
-            "Should contain module variable declaration: {}", output.js_code);
+        // 验证 declare module 被正确转译（保留 declare module 语法）
+        assert!(output.js_code.contains("declare module \"my-module\""),
+            "Should contain declare module: {}", output.js_code);
+        assert!(output.js_code.contains("someValue"),
+            "Should contain someValue: {}", output.js_code);
+        assert!(output.js_code.contains("someFunction"),
+            "Should contain someFunction: {}", output.js_code);
         assert!(output.js_code.contains("const y = 2"),
             "Should preserve regular code: {}", output.js_code);
         println!("✅ Test 2: TypeScript declare module support");
@@ -70,8 +74,10 @@ const config = { apiKey: "test" };
         let output = result.unwrap();
         assert!(output.js_code.contains("/* declare global"),
             "Should contain declare global: {}", output.js_code);
-        assert!(output.js_code.contains("var express"),
+        assert!(output.js_code.contains("declare module \"express\""),
             "Should contain express module: {}", output.js_code);
+        assert!(output.js_code.contains("version"),
+            "Should contain version: {}", output.js_code);
         println!("✅ Test 3: TypeScript module augmentation combined");
     }
 

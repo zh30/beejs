@@ -456,8 +456,9 @@ impl TypeScriptCompiler {
                     }
                 }
                 // 处理命名空间声明
-                ASTNode::Statement(ASTStatement::Namespace { name, full_name: _, body, is_declare }) => {
-                    let entry = triple_map.entry(name.clone()).or_insert_with(|| {
+                ASTNode::Statement(ASTStatement::Namespace { name: _, full_name, body, is_declare }) => {
+                    // 使用 full_name 作为 key，支持嵌套命名空间
+                    let entry = triple_map.entry(full_name.clone()).or_insert_with(|| {
                         (HashMap::new(), Vec::new(), None, Vec::new(), is_declare)
                     });
                     // 合并命名空间 body
@@ -467,14 +468,7 @@ impl TypeScriptCompiler {
                         entry.4 = true;
                     }
                 }
-                // 处理模块声明
-                ASTNode::Statement(ASTStatement::ModuleDeclaration { name, body }) => {
-                    let entry = triple_map.entry(name.clone()).or_insert_with(|| {
-                        (HashMap::new(), Vec::new(), None, Vec::new(), false)
-                    });
-                    // 合并模块 body
-                    entry.3.extend(body);
-                }
+                // 注意：ModuleDeclaration 已在 merge_namespaces 中处理，这里不需要再次处理
                 _ => {
                     remaining_nodes.push(node);
                 }
@@ -484,8 +478,10 @@ impl TypeScriptCompiler {
         // 重新构建 AST
         let mut merged_statements: Vec<ASTNode> = remaining_nodes;
         for (name, (properties, extends, index_sig, body, is_declare)) in triple_map.into_iter() {
-            // 如果只有接口属性，创建 TripleMergedDeclaration
-            if !properties.is_empty() || !body.is_empty() {
+            // 只有当存在 interface 属性时才创建 TripleMergedDeclaration
+            // 这样可以保留单独的 namespace 声明（只有 body 没有 interface 属性的情况）
+            if !properties.is_empty() {
+                // 有 interface 属性，创建 TripleMergedDeclaration
                 merged_statements.push(ASTNode::Statement(ASTStatement::TripleMergedDeclaration {
                     name,
                     interface_properties: properties,
@@ -494,7 +490,18 @@ impl TypeScriptCompiler {
                     body,
                     is_declare,
                 }));
+            } else if !body.is_empty() {
+                // 没有 interface 属性但有 namespace body，保留原始 Namespace 声明
+                // 重新创建 Namespace 节点
+                let namespace_node = ASTNode::Statement(ASTStatement::Namespace {
+                    name: name.clone(),
+                    full_name: name.clone(),
+                    body,
+                    is_declare,
+                });
+                merged_statements.push(namespace_node);
             }
+            // 如果既没有 properties 也没有 body，不生成任何声明
         }
 
         ASTNode::Program(merged_statements)
