@@ -144,6 +144,29 @@ const myId: ID = "abc123";
         println!("✅ Test 7: TypeScript type alias");
     }
 
+    /// 测试7.1: TypeScript 字符串字面量联合类型 (v0.3.205)
+    #[test]
+    fn test_typescript_string_literal_union_type() {
+        let ts_code = r#"
+type Status = "active" | "inactive" | "pending";
+type UserId = string | number;
+const currentStatus: Status = "active";
+const userId: UserId = 123;
+"#;
+        let result = typescript::compile_typescript(ts_code, "test.ts");
+        assert!(result.is_ok(), "String literal union type should compile, error: {:?}", result.err());
+        let output = result.unwrap();
+        // 验证代码保留
+        assert!(output.js_code.contains("currentStatus"),
+            "Should preserve currentStatus: {}", output.js_code);
+        assert!(output.js_code.contains("userId"),
+            "Should preserve userId: {}", output.js_code);
+        // 验证没有警告输出
+        assert!(!output.diagnostics.iter().any(|d| d.message.contains("invalid type definition")),
+            "Should not have type definition warnings: {:?}", output.diagnostics);
+        println!("✅ Test 7.1: TypeScript string literal union type");
+    }
+
     /// 测试8: TypeScript 泛型函数
     #[test]
     fn test_typescript_generic_function() {

@@ -1884,6 +1884,24 @@ impl TypeScriptCompiler {
 
     /// 检查类型是否有效
     fn is_valid_type(&self, type_name: &str, ctx: &TypeContext) -> bool {
+        // v0.3.205: 修复字符串字面量类型验证
+        // 处理带引号的字符串字面量类型，如 "active"、'hello'
+        let type_name = type_name.trim();
+        if (type_name.starts_with('"') && type_name.ends_with('"'))
+            || (type_name.starts_with('\'') && type_name.ends_with('\'')) {
+            // 字符串字面量类型是有效的
+            return true;
+        }
+
+        // 检查带引号包围的类型（可能是带空格的类型定义中的子类型）
+        // 例如 " active " 在联合类型中被正确解析后应该是有效的
+        let trimmed = type_name.trim();
+        if !trimmed.is_empty()
+            && ((trimmed.starts_with('"') && trimmed.ends_with('"'))
+            || (trimmed.starts_with('\'') && trimmed.ends_with('\''))) {
+            return true;
+        }
+
         // 检查内置类型
         let builtin_types = [
             "string", "number", "boolean", "any", "void", "null", "undefined",
