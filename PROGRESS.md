@@ -9754,6 +9754,47 @@ console.log(p.name);  // "Alice"
 - ✅ `cargo test --test minimal_tests` 10/10 通过
 - ✅ `cargo test --test typescript_triple_merge_tests` 7/7 通过
 
+#### v0.3.174 新增功能
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.174 新增功能
+- **keyof 操作符支持**
+  - 运行时快速路径识别 `keyof Type` 模式
+  - 正确移除 keyof 关键字，将类型替换为 `string`
+  - 支持泛型类型：`keyof T`
+
+- **typeof 操作符支持**
+  - 运行时快速路径识别 `typeof identifier` 模式
+  - 正确移除 typeof 关键字，替换为注释占位符
+  - 保留原始值引用
+
+#### v0.3.174 实现细节
+- **运行时快速路径增强** (`src/runtime_minimal.rs`)
+  - `has_raw_typescript()` 添加 `keyof ` 和 `typeof ` 检测
+  - `transpile_typescript_to_js()` 添加正则表达式移除模式
+  - `keyof Type` → `string`（类型安全转换）
+  - `typeof identifier` → `/* typeof identifier */`
+
+#### v0.3.174 测试用例
+- `test_typescript_keyof_operator`: 测试 `keyof Point` 编译
+- `test_typescript_typeof_operator`: 测试 `typeof myObj` 编译
+- `test_typescript_keyof_typeof_combined`: 测试组合使用
+
+#### v0.3.174 验证
+- ✅ `cargo build --release` 成功编译
+- ✅ 手动测试验证：
+  - `type PointKeys = keyof Point` → 正确移除
+  - `type MyObjType = typeof myObj` → 正确移除
+
+#### v0.3.174 下一步
+- 继续完善 TypeScript 编译器功能
+- 添加更多运行时优化
+
+---
+
+### v0.3.173 修复三重合并回归问题 (2025-12-27)
+**进度**: TypeScript 编译修复 | ✅ 已提交
+
 #### v0.3.173 下一步
 - 继续完善 TypeScript 编译器功能
 - 添加更多运行时优化
