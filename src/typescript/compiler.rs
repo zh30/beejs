@@ -4318,13 +4318,30 @@ impl Parser {
             self.consume(Token::Lt)?;
             let mut params = Vec::new();
             while !self.current_token_eq(&Token::Gt) {
-                if let Token::Identifier(param) = self.consume_any_identifier()? {
-                    params.push(param);
+                // 解析参数名
+                let param_name = if let Token::Identifier(name) = self.consume_any_identifier()? {
+                    name
                 } else {
                     break;
+                };
+                params.push(param_name.clone());
+
+                // 检查是否有 extends 约束
+                if self.current_token_eq(&Token::Extends) {
+                    self.advance(); // 消耗 extends
+                    // 解析约束类型
+                    let _constraint = if let Some(c) = self.parse_type_annotation() {
+                        c
+                    } else {
+                        "unknown".to_string()
+                    };
+                    // 约束类型被忽略，只保留参数名
                 }
+
                 if self.current_token_eq(&Token::Comma) {
                     self.consume(Token::Comma)?;
+                } else {
+                    break;
                 }
             }
             self.consume(Token::Gt)?;
@@ -6021,10 +6038,13 @@ impl Parser {
             }
         }
 
-        // 检查是否是对象类型字面量
+        // 检查是否是对象类型字面量 { ... } 或元组类型 [ ... ]
         let is_lbrace = self.current_token_eq(&Token::LBrace);
+        let is_lbracket = self.current_token_eq(&Token::LBracket);
         let first_type = if is_lbrace {
             self.parse_object_type()
+        } else if is_lbracket {
+            self.parse_tuple_type()
         } else {
             self.parse_basic_type()
         }?;
@@ -6648,15 +6668,142 @@ impl Parser {
                 self.advance();
                 Some("never".to_string())
             }
+            // 处理函数类型: (arg1: type1, arg2: type2) => returnType
+            Token::LParen => {
+                self.parse_function_type()
+            }
             // 处理 unknown 类型（类型安全的 top 类型）
             Token::UnknownType => {
                 self.advance();
                 Some("unknown".to_string())
             }
+            // 处理元组类型: [type1, type2, ...]
+            Token::LBracket => {
+                self.parse_tuple_type()
+            }
             // 注意: 索引访问类型 T[K] 由 parse_type_annotation 处理
             _ => None,
         }
     }
+
+    /// 解析元组类型: [type1, type2, ...]
+    fn parse_tuple_type(&mut self) -> Option<String> {
+        // 消耗 [
+        self.consume(Token::LBracket).ok()?;
+
+        let mut elements = Vec::new();
+
+        // 解析元组元素
+        while !self.current_token_eq(&Token::RBracket) {
+            // 检查是否是 rest 元素 (...T)
+            let is_rest = self.current_token_eq(&Token::DotDotDot);
+            if is_rest {
+                self.advance(); // 消耗 ...
+                if let Some(element_type) = self.parse_type_annotation() {
+                    elements.push(format!("...{}", element_type));
+                } else {
+                    elements.push("...unknown".to_string());
+                }
+            } else {
+                // 解析元素类型
+                let element_type = if let Some(t) = self.parse_type_annotation() {
+                    t
+                } else {
+                    "unknown".to_string()
+                };
+                elements.push(element_type);
+            }
+
+            // 检查是否还有更多元素
+            if self.current_token_eq(&Token::Comma) {
+                self.advance(); // 消耗 ,
+            } else {
+                break;
+            }
+        }
+
+        // 消耗 ]
+        self.consume(Token::RBracket).ok()?;
+
+        Some(format!("[{}]", elements.join(", ")))
+    }
+
+    /// 解析函数类型: (arg1: type1, arg2: type2) => returnType
+    fn parse_function_type(&mut self) -> Option<String> {
+        // 消耗 (
+        self.consume(Token::LParen).ok()?;
+
+        let mut params = Vec::new();
+
+        // 解析参数列表
+        while !self.current_token_eq(&Token::RParen) {
+            // 处理 rest 参数 (...args)
+            let is_rest = self.current_token_eq(&Token::DotDotDot);
+            if is_rest {
+                self.advance(); // 消耗 ...
+            }
+
+            // 解析参数名
+            let param_name = if let Token::Identifier(ref name) = self.current_token() {
+                let name = name.clone();
+                self.advance();
+                name
+            } else if self.current_token_eq(&Token::Question) {
+                // 可选参数
+                self.advance();
+                if let Token::Identifier(ref name) = self.current_token() {
+                    let name = name.clone();
+                    self.advance();
+                    name
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            };
+
+            let param_name = if is_rest {
+                format!("...{}", param_name)
+            } else {
+                param_name
+            };
+
+            // 检查是否有类型注解
+            if self.current_token_eq(&Token::Colon) {
+                self.advance(); // 消耗 :
+                if let Some(param_type) = self.parse_type_annotation() {
+                    params.push(format!("{}: {}", param_name, param_type));
+                } else {
+                    params.push(param_name);
+                }
+            } else {
+                params.push(param_name);
+            }
+
+            // 检查是否还有更多参数
+            if self.current_token_eq(&Token::Comma) {
+                self.advance(); // 消耗 ,
+            } else {
+                break;
+            }
+        }
+
+        // 消耗 )
+        self.consume(Token::RParen).ok()?;
+
+        // 检查 FatArrow =>
+        self.consume(Token::FatArrow).ok()?;
+
+        // 解析返回类型
+        let return_type = if let Some(rt) = self.parse_type_annotation() {
+            rt
+        } else {
+            "void".to_string()
+        };
+
+        Some(format!("({}) => {}", params.join(", "), return_type))
+    }
+
     fn consume(&mut self, expected: Token) -> Result<Token> {
         let current = self.current_token();
         if self.current_token_eq(&expected) {
@@ -12233,8 +12380,9 @@ fn validate_source_map(source_map: &str) -> SourceMapValidationResult {
 
     result
 }
-#[cfg(test)]
+
 impl TypeScriptCompiler {
+    #[cfg(test)]
     pub fn debug_compile(&mut self, source: &str) -> String {
         let result = self.compile_source(source, "test.ts").unwrap();
         result.js_code
