@@ -1323,4 +1323,167 @@ declare module "module-a" {
             }
         }
     }
+
+    /// Test triple merging - interface + namespace + module all together (v0.3.161)
+    #[test]
+    fn test_triple_merging_complete() {
+        let ts_code: _ = r#"
+declare module "augmented-module" {
+    export interface ModuleInterface {
+        initialProp: string;
+    }
+    export function initialFunc(): void;
+}
+interface ModuleInterface {
+    additionalProp: number;
+}
+declare module "augmented-module" {
+    export function extendedFunc(): void;
+    export interface ModuleInterface {
+        extendedProp: boolean;
+    }
+}
+namespace Utils {
+    export const firstValue: number = 1;
+}
+namespace Utils {
+    export const secondValue: number = 2;
+}
+interface Data {
+    id: number;
+}
+interface Data {
+    name: string;
+}
+const result: number = 1;
+"#;
+        match compile_typescript(ts_code, "triple_merging.ts") {
+            Ok(output) => {
+                println!("三重合并完整测试转译结果:");
+                println!("{}", output.js_code);
+                // 验证模块合并 - 所有函数都应该存在
+                assert!(output.js_code.contains("initialFunc"),
+                    "Should contain initialFunc: {}", output.js_code);
+                assert!(output.js_code.contains("extendedFunc"),
+                    "Should contain extendedFunc: {}", output.js_code);
+                // 验证只有一个 declare module
+                let module_count = output.js_code.matches("declare module \"augmented-module\"").count();
+                assert_eq!(module_count, 1, "Should have exactly one module declaration: {}", output.js_code);
+                // 验证命名空间合并 - 两个值都应该存在
+                assert!(output.js_code.contains("firstValue"),
+                    "Should contain firstValue: {}", output.js_code);
+                assert!(output.js_code.contains("secondValue"),
+                    "Should contain secondValue: {}", output.js_code);
+                // 验证接口合并 - 变量应该被保留
+                assert!(output.js_code.contains("result"),
+                    "Should contain result: {}", output.js_code);
+                // 验证没有类型注解
+                assert!(!output.js_code.contains(": number"),
+                    "Should not contain type annotation: {}", output.js_code);
+                println!("✅ Triple merging complete test passed");
+            }
+            Err(e) => {
+                panic!("Triple merging complete test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test module augmentation with nested declarations (v0.3.161)
+    #[test]
+    fn test_module_augmentation_nested() {
+        let ts_code: _ = r#"
+declare module "nested-test" {
+    export namespace Inner {
+        export function innerFunc(): void;
+    }
+}
+declare module "nested-test" {
+    export namespace Inner {
+        export const innerConst: number;
+    }
+}
+const x: number = 1;
+"#;
+        match compile_typescript(ts_code, "module_augmentation_nested.ts") {
+            Ok(output) => {
+                println!("模块增强嵌套测试转译结果:");
+                println!("{}", output.js_code);
+                // 验证嵌套命名空间合并
+                assert!(output.js_code.contains("innerFunc"),
+                    "Should contain innerFunc: {}", output.js_code);
+                assert!(output.js_code.contains("innerConst"),
+                    "Should contain innerConst: {}", output.js_code);
+                // 验证只有一个 declare module
+                let module_count = output.js_code.matches("declare module \"nested-test\"").count();
+                assert_eq!(module_count, 1, "Should have exactly one module: {}", output.js_code);
+                // 验证变量存在
+                assert!(output.js_code.contains("x"),
+                    "Should contain x: {}", output.js_code);
+                println!("✅ Module augmentation nested test passed");
+            }
+            Err(e) => {
+                panic!("Module augmentation nested test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test independent namespace, interface, and module declarations (v0.3.161)
+    #[test]
+    fn test_independent_declarations_not_merged() {
+        let ts_code: _ = r#"
+namespace Alpha {
+    export const a: number = 1;
+}
+namespace Beta {
+    export const b: number = 2;
+}
+// 接口声明在 JS 输出中不可见（纯类型），但应该正确解析
+interface IFace {
+    prop1: string;
+}
+interface JFace {
+    prop2: number;
+}
+declare module "module-X" {
+    export function x(): void;
+}
+declare module "module-Y" {
+    export function y(): void;
+}
+const test: number = 42;
+"#;
+        match compile_typescript(ts_code, "independent_declarations.ts") {
+            Ok(output) => {
+                println!("独立声明不合并测试转译结果:");
+                println!("{}", output.js_code);
+                // 验证不同的命名空间独立存在
+                assert!(output.js_code.contains("Alpha"),
+                    "Should contain Alpha: {}", output.js_code);
+                assert!(output.js_code.contains("Beta"),
+                    "Should contain Beta: {}", output.js_code);
+                // 验证不同的模块独立存在
+                assert!(output.js_code.contains("module-X"),
+                    "Should contain module-X: {}", output.js_code);
+                assert!(output.js_code.contains("module-Y"),
+                    "Should contain module-Y: {}", output.js_code);
+                // 验证变量存在
+                assert!(output.js_code.contains("test"),
+                    "Should contain test: {}", output.js_code);
+                // 验证函数存在
+                assert!(output.js_code.contains("function x()"),
+                    "Should contain function x: {}", output.js_code);
+                assert!(output.js_code.contains("function y()"),
+                    "Should contain function y: {}", output.js_code);
+                // 验证接口声明被正确移除（纯类型声明）
+                assert!(!output.js_code.contains("interface IFace"),
+                    "Interface should be removed: {}", output.js_code);
+                assert!(!output.js_code.contains("interface JFace"),
+                    "Interface should be removed: {}", output.js_code);
+                println!("✅ Independent declarations not merged test passed");
+            }
+            Err(e) => {
+                panic!("Independent declarations not merged test failed: {}", e);
+            }
+        }
+    }
 }
