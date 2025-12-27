@@ -1216,4 +1216,111 @@ const map: StringMap = { key1: "value1", key2: "value2" };
             }
         }
     }
+
+    /// Test module merging - multiple declarations of the same module are merged (v0.3.160)
+    #[test]
+    fn test_module_merging() {
+        let ts_code: _ = r#"
+declare module "my-module" {
+    export function foo(): void;
+}
+declare module "my-module" {
+    export function bar(): void;
+}
+const x: number = 1;
+"#;
+        match compile_typescript(ts_code, "module_merging.ts") {
+            Ok(output) => {
+                println!("模块合并转译结果:");
+                println!("{}", output.js_code);
+                // 验证 foo 和 bar 都被保留
+                assert!(output.js_code.contains("foo"),
+                    "Should contain foo: {}", output.js_code);
+                assert!(output.js_code.contains("bar"),
+                    "Should contain bar: {}", output.js_code);
+                // 变量应该被保留
+                assert!(output.js_code.contains("x"),
+                    "Should contain x: {}", output.js_code);
+                println!("✅ Module merging test passed");
+            }
+            Err(e) => {
+                panic!("Module merging test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test module merging with multiple members (v0.3.160)
+    #[test]
+    fn test_module_merging_multiple_members() {
+        let ts_code: _ = r#"
+declare module "express" {
+    function foo(): void;
+}
+declare module "express" {
+    function bar(): void;
+}
+declare module "express" {
+    function baz(): void;
+}
+"#;
+        match compile_typescript(ts_code, "module_merging_multi.ts") {
+            Ok(output) => {
+                println!("模块合并(多成员)转译结果:");
+                println!("{}", output.js_code);
+                // 验证所有函数都被保留
+                assert!(output.js_code.contains("foo"),
+                    "Should contain foo: {}", output.js_code);
+                assert!(output.js_code.contains("bar"),
+                    "Should contain bar: {}", output.js_code);
+                assert!(output.js_code.contains("baz"),
+                    "Should contain baz: {}", output.js_code);
+                // 验证只有一个 declare module 声明
+                let count = output.js_code.matches("declare module \"express\"").count();
+                assert_eq!(count, 1, "Should have exactly one declare module: {}", output.js_code);
+                println!("✅ Module merging with multiple members test passed");
+            }
+            Err(e) => {
+                panic!("Module merging with multiple members test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test module merging with different modules (v0.3.160)
+    #[test]
+    fn test_different_modules_not_merged() {
+        let ts_code: _ = r#"
+declare module "module-a" {
+    function fromA(): void;
+}
+declare module "module-b" {
+    function fromB(): void;
+}
+declare module "module-a" {
+    function moreFromA(): void;
+}
+"#;
+        match compile_typescript(ts_code, "different_modules.ts") {
+            Ok(output) => {
+                println!("不同模块不合并转译结果:");
+                println!("{}", output.js_code);
+                // module-a 应该合并（包含 fromA 和 moreFromA）
+                // module-b 应该独立存在
+                assert!(output.js_code.contains("fromA"),
+                    "Should contain fromA: {}", output.js_code);
+                assert!(output.js_code.contains("moreFromA"),
+                    "Should contain moreFromA: {}", output.js_code);
+                assert!(output.js_code.contains("fromB"),
+                    "Should contain fromB: {}", output.js_code);
+                // 验证有两个不同的 declare module 声明
+                let count_a = output.js_code.matches("declare module \"module-a\"").count();
+                let count_b = output.js_code.matches("declare module \"module-b\"").count();
+                assert_eq!(count_a, 1, "Should have exactly one module-a: {}", output.js_code);
+                assert_eq!(count_b, 1, "Should have exactly one module-b: {}", output.js_code);
+                println!("✅ Different modules not merged test passed");
+            }
+            Err(e) => {
+                panic!("Different modules not merged test failed: {}", e);
+            }
+        }
+    }
 }

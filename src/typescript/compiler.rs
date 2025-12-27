@@ -218,11 +218,13 @@ impl TypeScriptCompiler {
         let merged_ast = self.merge_namespaces(ast);
         // 第四步：合并同名的接口声明
         let merged_ast = self.merge_interfaces(merged_ast);
-        // 第五步：类型检查（简化实现）
+        // 第五步：合并同名的模块声明
+        let merged_ast = self.merge_modules(merged_ast);
+        // 第六步：类型检查（简化实现）
         self.type_check(&merged_ast, file_name)?;
-        // 第六步：转译为 JavaScript
+        // 第七步：转译为 JavaScript
         let js_code: _ = self.transpile(&merged_ast)?;
-        // 第七步：生成 Source Map
+        // 第八步：生成 Source Map
         let source_map: _ = if self.config.source_map {
             Some(self.generate_source_map(source, &js_code, file_name)?)
         } else {
@@ -351,6 +353,52 @@ impl TypeScriptCompiler {
         let mut merged_statements: Vec<ASTNode> = non_interface_nodes;
         for iface in interface_map.into_values() {
             merged_statements.push(iface);
+        }
+
+        ASTNode::Program(merged_statements)
+    }
+
+    /// 合并同名的模块声明
+    /// TypeScript 允许同一模块的多次声明，所有成员会合并到同一个模块
+    fn merge_modules(&self, ast: ASTNode) -> ASTNode {
+        use std::collections::HashMap;
+
+        // 解包 Program 节点
+        let statements = match ast {
+            ASTNode::Program(stmts) => stmts,
+            _ => return ast,
+        };
+
+        // 收集所有模块声明
+        let mut module_map: HashMap<String, ASTStatement> = HashMap::new();
+        let mut non_module_nodes: Vec<ASTNode> = Vec::new();
+
+        for node in statements {
+            match node {
+                ASTNode::Statement(ASTStatement::ModuleDeclaration { name, body }) => {
+                    if let Some(existing_mod) = module_map.get_mut(&name) {
+                        // 同名模块已存在，合并 body
+                        if let ASTStatement::ModuleDeclaration { body: existing_body, .. } = existing_mod {
+                            existing_body.extend(body);
+                        }
+                    } else {
+                        // 第一次看到这个模块
+                        module_map.insert(name.clone(), ASTStatement::ModuleDeclaration {
+                            name,
+                            body,
+                        });
+                    }
+                }
+                _ => {
+                    non_module_nodes.push(node);
+                }
+            }
+        }
+
+        // 重新构建 AST
+        let mut merged_statements: Vec<ASTNode> = non_module_nodes;
+        for module in module_map.into_values() {
+            merged_statements.push(ASTNode::Statement(module));
         }
 
         ASTNode::Program(merged_statements)
