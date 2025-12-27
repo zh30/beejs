@@ -1553,6 +1553,117 @@ impl MinimalRuntime {
         // This handles { [P in keyof T]: T[P] } patterns
         js_code = remove_mapped_types(&js_code);
 
+        // v0.3.190: Remove index signature definitions
+        // Pattern: [key: string]: Type or [key: number]: Type
+        // Index signatures are TypeScript-only and define dynamic property types
+        // Example: interface StringMap { [key: string]: string; }
+        fn remove_index_signatures(code: &str) -> String {
+            let mut result = String::new();
+            let mut i = 0;
+            let chars: Vec<char> = code.chars().collect();
+            let n = chars.len();
+
+            while i < n {
+                // Look for "[key:" pattern (start of index signature)
+                let is_index_sig_start = chars[i..].starts_with(&['[', 'k', 'e', 'y', ':'][..]);
+
+                if is_index_sig_start {
+                    // Find the end of this index signature line (semicolon or closing brace)
+                    let mut j = i + 5; // After "[key:"
+                    let mut in_string = false;
+                    let mut string_char = '\0';
+                    let mut found_closing_bracket = false;
+
+                    // Skip the key type (string or number)
+                    while j < n {
+                        let c = chars[j];
+                        if in_string {
+                            if c == '\\' && j + 1 < n {
+                                j += 2;
+                                continue;
+                            }
+                            if c == string_char {
+                                in_string = false;
+                            }
+                        } else if c == '"' || c == '\'' {
+                            in_string = true;
+                            string_char = c;
+                        } else if c == ']' {
+                            found_closing_bracket = true;
+                            j += 1;
+                            break;
+                        }
+                        j += 1;
+                    }
+
+                    if found_closing_bracket {
+                        // Skip whitespace
+                        while j < n && chars[j].is_whitespace() {
+                            j += 1;
+                        }
+
+                        // Skip the colon
+                        if j < n && chars[j] == ':' {
+                            j += 1;
+                        }
+
+                        // Skip whitespace after colon
+                        while j < n && chars[j].is_whitespace() {
+                            j += 1;
+                        }
+
+                        // Find the end of the type expression
+                        let mut type_depth = 0;
+                        let mut paren_depth = 0;
+                        while j < n {
+                            let c = chars[j];
+                            if in_string {
+                                if c == '\\' && j + 1 < n {
+                                    j += 2;
+                                    continue;
+                                }
+                                if c == string_char {
+                                    in_string = false;
+                                }
+                            } else if c == '"' || c == '\'' {
+                                in_string = true;
+                                string_char = c;
+                            } else if c == '<' {
+                                type_depth += 1;
+                            } else if c == '>' {
+                                type_depth -= 1;
+                            } else if c == '(' {
+                                paren_depth += 1;
+                            } else if c == ')' {
+                                paren_depth -= 1;
+                            } else if c == ';' && type_depth == 0 && paren_depth == 0 {
+                                j += 1;
+                                break;
+                            } else if c == '\n' && type_depth == 0 && paren_depth == 0 {
+                                break;
+                            } else if c == '}' && type_depth == 0 && paren_depth == 0 {
+                                // Don't consume the closing brace, let the outer loop handle it
+                                break;
+                            }
+                            j += 1;
+                        }
+
+                        // Replace with a comment indicating removed index signature
+                        result.push_str("/* index signature */");
+                        i = j;
+                        continue;
+                    }
+                }
+
+                result.push(chars[i]);
+                i += 1;
+            }
+
+            result
+        }
+
+        js_code = remove_index_signatures(&js_code);
+
         // Remove type annotations from function parameters ONLY
         // This pattern matches: :TypeName followed by , or )
         // Using capturing group instead of lookahead (not supported by regex crate)
@@ -2132,6 +2243,7 @@ impl MinimalRuntime {
             || code.contains("extends keyof")   // v0.3.185: keyof in generic constraints
             || code.contains(" extends ")       // v0.3.186: conditional type extends pattern
             || (code.contains("type ") && code.contains("${"));  // v0.3.188: template literal type pattern
+            || code.contains("[key:");  // v0.3.190: index signature [key: string]: T pattern
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript

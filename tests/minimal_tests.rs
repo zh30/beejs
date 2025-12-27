@@ -1310,4 +1310,94 @@ const pair: Pair<string, number> = { first: "hello", second: 42 };
 
         println!("✅ Test 54: TypeScript multi-generic interface");
     }
+
+    /// 测试55: TypeScript 字符串索引签名快速路径 (v0.3.190)
+    #[test]
+    fn test_typescript_string_index_signature() {
+        // 测试 [key: string]: Type 索引签名移除
+        // 索引签名是 TypeScript 特有的语法，用于定义动态属性类型
+        let ts_code = r#"
+interface StringMap {
+    [key: string]: string;
+}
+
+const strMap: StringMap = { hello: "world", foo: "bar" };
+console.log(strMap.hello);
+"#;
+        let result = typescript::compile_typescript(ts_code, "string_index_test.ts");
+        assert!(result.is_ok(), "String index signature should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证索引签名被移除
+        assert!(!output.js_code.contains("[key: string]"),
+            "Should remove string index signature: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("const strMap"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("hello"),
+            "Should preserve property access: {}", output.js_code);
+
+        println!("✅ Test 55: TypeScript string index signature fast path");
+    }
+
+    /// 测试56: TypeScript 数字索引签名快速路径 (v0.3.190)
+    #[test]
+    fn test_typescript_number_index_signature() {
+        // 测试 [key: number]: Type 索引签名移除
+        let ts_code = r#"
+interface NumberMap {
+    [key: number]: number;
+}
+
+const numMap: NumberMap = { 1: 100, 2: 200 };
+console.log(numMap[1]);
+"#;
+        let result = typescript::compile_typescript(ts_code, "number_index_test.ts");
+        assert!(result.is_ok(), "Number index signature should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证索引签名被移除
+        assert!(!output.js_code.contains("[key: number]"),
+            "Should remove number index signature: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("const numMap"),
+            "Should preserve const declaration: {}", output.js_code);
+
+        println!("✅ Test 56: TypeScript number index signature fast path");
+    }
+
+    /// 测试57: TypeScript 混合属性与索引签名 (v0.3.190)
+    #[test]
+    fn test_typescript_index_signature_with_properties() {
+        // 测试接口同时包含普通属性和索引签名的情况
+        let ts_code = r#"
+interface User {
+    name: string;
+    age: number;
+    [key: string]: string | number;
+}
+
+const user: User = { name: "Alice", age: 30, email: "alice@example.com" };
+console.log(user.name, user.email);
+"#;
+        let result = typescript::compile_typescript(ts_code, "mixed_index_test.ts");
+        assert!(result.is_ok(), "Mixed index signature should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证索引签名被移除
+        assert!(!output.js_code.contains("[key: string]"),
+            "Should remove index signature: {}", output.js_code);
+
+        // 验证普通属性和代码保留
+        assert!(output.js_code.contains("const user"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("name"),
+            "Should preserve name property: {}", output.js_code);
+        assert!(output.js_code.contains("age"),
+            "Should preserve age property: {}", output.js_code);
+
+        println!("✅ Test 57: TypeScript index signature with properties");
+    }
 }
