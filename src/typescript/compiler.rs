@@ -1605,11 +1605,13 @@ impl TypeScriptCompiler {
             ASTExpression::MemberExpression { .. } => {
                 Ok(Some("any".to_string()))
             }
-            ASTExpression::ArrayExpression { .. } => {
-                Ok(Some("any[]".to_string()))
+            ASTExpression::ArrayExpression { elements } => {
+                // v0.3.162: 增强的数组类型推断
+                Ok(self.infer_array_element_type(elements, ctx))
             }
-            ASTExpression::ObjectLiteral { .. } => {
-                Ok(Some("object".to_string()))
+            ASTExpression::ObjectLiteral { properties } => {
+                // v0.3.162: 增强的对象类型推断
+                Ok(self.infer_object_type(properties, ctx))
             }
             ASTExpression::ObjectProperty { .. } => {
                 Ok(Some("any".to_string()))
@@ -1686,6 +1688,119 @@ impl TypeScriptCompiler {
                 Ok(Some(target_type.clone()))
             }
         }
+    }
+
+    /// v0.3.162: 增强的类型推断 - 泛型参数推断
+    /// 推断函数调用中的泛型参数类型
+    fn infer_generic_type(&self, type_name: &str, type_args: &[String], ctx: &TypeContext) -> Option<String> {
+        // 根据泛型参数数量构建类型字符串
+        match type_name {
+            "Array" | "ReadonlyArray" => {
+                let inner = type_args.first().map(|s| s.as_str()).unwrap_or("any");
+                Some(format!("{}[]", inner))
+            }
+            "Promise" => {
+                let inner = type_args.first().map(|s| s.as_str()).unwrap_or("unknown");
+                Some(format!("Promise<{}>", inner))
+            }
+            "Map" => {
+                match type_args.len() {
+                    2 => Some(format!("Map<{}, {}>", type_args[0], type_args[1])),
+                    _ => Some("Map<unknown, unknown>".to_string()),
+                }
+            }
+            "Set" => {
+                let inner = type_args.first().map(|s| s.as_str()).unwrap_or("any");
+                Some(format!("Set<{}>", inner))
+            }
+            "Record" => {
+                match type_args.len() {
+                    2 => Some(format!("Record<{}, {}>", type_args[0], type_args[1])),
+                    _ => Some("Record<string, unknown>".to_string()),
+                }
+            }
+            "Partial" | "Required" | "Readonly" => {
+                let inner = type_args.first().map(|s| s.as_str()).unwrap_or("any");
+                Some(format!("{}<{}>", type_name, inner))
+            }
+            "Pick" | "Omit" => {
+                match type_args.len() {
+                    2 => Some(format!("{}<{}, {}>", type_name, type_args[0], type_args[1])),
+                    _ => Some(format!("{}<any, any>", type_name)),
+                }
+            }
+            "Extract" | "Exclude" => {
+                match type_args.len() {
+                    2 => Some(format!("{}<{}, {}>", type_name, type_args[0], type_args[1])),
+                    _ => Some(format!("{}<any, any>", type_name)),
+                }
+            }
+            _ => None,
+        }
+    }
+
+    /// v0.3.162: 增强的类型推断 - 推断数组元素类型
+    /// 分析数组表达式推断元素类型
+    fn infer_array_element_type(&self, elements: &[Option<ASTExpression>], ctx: &TypeContext) -> Option<String> {
+        let mut element_types: Vec<String> = Vec::new();
+
+        for elem in elements {
+            if let Some(expr) = elem {
+                if let Ok(Some(t)) = self.infer_type(expr, ctx) {
+                    element_types.push(t);
+                }
+            }
+        }
+
+        if element_types.is_empty() {
+            Some("any".to_string())
+        } else {
+            // 去重并构建联合类型
+            element_types.sort();
+            element_types.dedup();
+
+            if element_types.len() == 1 {
+                Some(element_types[0].clone())
+            } else if element_types.len() <= 3 {
+                Some(element_types.join(" | "))
+            } else {
+                // 太多类型时简化为联合类型
+                Some(format!("({})", element_types.join(" | ")))
+            }
+        }
+    }
+
+    /// v0.3.162: 增强的类型推断 - 推断对象属性类型
+    /// 分析对象字面量推断属性类型
+    fn infer_object_type(&self, properties: &[ASTExpression], ctx: &TypeContext) -> Option<String> {
+        let mut props: Vec<String> = Vec::new();
+
+        for prop in properties {
+            match prop {
+                ASTExpression::ObjectProperty { name, value, .. } => {
+                    // 使用 clone 来避免临时值借用问题
+                    let prop_name = name.clone().unwrap_or_else(|| "".to_string());
+                    if let Ok(Some(value_type)) = self.infer_type(value, ctx) {
+                        props.push(format!("{}: {}", prop_name, value_type));
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        if props.is_empty() {
+            Some("object".to_string())
+        } else {
+            Some(format!("{{ {} }}", props.join(", ")))
+        }
+    }
+
+    /// v0.3.162: 增强的类型推断 - 推断模板字符串类型
+    /// 模板字符串的返回值始终是 string
+    fn infer_template_literal_type(&self, parts: &[ASTExpression], ctx: &TypeContext) -> Option<String> {
+        // 模板字符串总是返回 string 类型
+        // 但如果嵌入的表达式有特定的类型信息，可以用于类型推断
+        Some("string".to_string())
     }
 
     /// 检查类型是否有效

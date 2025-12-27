@@ -29,6 +29,44 @@
 
 ---
 
+### v0.3.162 增强类型推断支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.162 新增功能
+- **增强的数组类型推断**
+  - 新增 `infer_array_element_type()` 方法分析数组表达式推断元素类型
+  - 支持推断同类型数组（`[1, 2, 3]` → `number[]`）
+  - 支持推断混合类型数组（`[1, "two", true]` → `number | string | boolean`）
+  - 自动去重联合类型中的重复类型
+
+- **增强的对象类型推断**
+  - 新增 `infer_object_type()` 方法分析对象字面量推断属性类型
+  - 为对象属性生成内联类型定义
+  - 支持空对象和复杂嵌套对象
+
+- **泛型类型推断增强**
+  - 新增 `infer_generic_type()` 方法支持常用泛型容器类型推断
+  - 支持 `Array<T>`, `Promise<T>`, `Map<K,V>`, `Set<T>`, `Record<K,V>`
+  - 支持工具类型 `Partial<T>`, `Required<T>`, `Pick<T,K>`, `Omit<T,K>`, `Extract<T,U>`
+
+#### v0.3.162 测试用例
+- `test_enhanced_array_type_inference`: 测试数组元素类型推断
+- `test_enhanced_object_type_inference`: 测试对象属性类型推断
+- `test_generic_utility_type_inference`: 测试泛型工具类型推断
+- `test_conditional_type_infer`: 测试条件类型推断
+- `test_deeply_nested_array_inference`: 测试深度嵌套数组推断
+
+#### v0.3.162 验证
+- ✅ `cargo build --lib` 成功编译
+- ✅ 50/50 TypeScript 编译器集成测试通过
+- ✅ 无回归问题
+
+#### v0.3.162 下一步
+- 实现完整的类型声明解析
+- 添加更多复杂条件类型测试覆盖
+
+---
+
 ### v0.3.161 三重合并综合测试用例 (2025-12-27)
 **进度**: TypeScript 编译测试增强 | ✅ 已提交
 

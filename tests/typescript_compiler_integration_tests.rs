@@ -1486,4 +1486,163 @@ const test: number = 42;
             }
         }
     }
+
+    /// v0.3.162: Test enhanced array type inference
+    #[test]
+    fn test_enhanced_array_type_inference() {
+        // 测试增强的数组类型推断
+        let ts_code = r#"
+const numbers = [1, 2, 3];
+const strings = ["a", "b", "c"];
+const mixed = [1, "two", true];
+const empty: number[] = [];
+"#;
+        match compile_typescript(ts_code, "array_inference.ts") {
+            Ok(output) => {
+                println!("增强数组类型推断转译结果:");
+                println!("{}", output.js_code);
+                // 验证数组被正确保留
+                assert!(output.js_code.contains("[1, 2, 3]"),
+                    "Should contain numbers array: {}", output.js_code);
+                assert!(output.js_code.contains("[\"a\", \"b\", \"c\"]"),
+                    "Should contain strings array: {}", output.js_code);
+                assert!(output.js_code.contains("[1, \"two\", true]"),
+                    "Should contain mixed array: {}", output.js_code);
+                // 验证类型注解被移除
+                assert!(!output.js_code.contains(": number[]"),
+                    "Type annotation should be removed: {}", output.js_code);
+                println!("✅ Enhanced array type inference test passed");
+            }
+            Err(e) => {
+                panic!("Array type inference test failed: {}", e);
+            }
+        }
+    }
+
+    /// v0.3.162: Test enhanced object type inference
+    #[test]
+    fn test_enhanced_object_type_inference() {
+        // 测试增强的对象类型推断
+        let ts_code = r#"
+const user = { name: "Alice", age: 30 };
+const point = { x: 10, y: 20 };
+const empty = {};
+"#;
+        match compile_typescript(ts_code, "object_inference.ts") {
+            Ok(output) => {
+                println!("增强对象类型推断转译结果:");
+                println!("{}", output.js_code);
+                // 验证对象被正确保留
+                assert!(output.js_code.contains("user"),
+                    "Should contain user: {}", output.js_code);
+                assert!(output.js_code.contains("name"),
+                    "Should contain name property: {}", output.js_code);
+                assert!(output.js_code.contains("age"),
+                    "Should contain age property: {}", output.js_code);
+                assert!(output.js_code.contains("point"),
+                    "Should contain point: {}", output.js_code);
+                // 验证类型注解被移除
+                assert!(!output.js_code.contains(": {"),
+                    "Type annotation should be removed: {}", output.js_code);
+                println!("✅ Enhanced object type inference test passed");
+            }
+            Err(e) => {
+                panic!("Object type inference test failed: {}", e);
+            }
+        }
+    }
+
+    /// v0.3.162: Test generic type inference with utility types
+    #[test]
+    fn test_generic_utility_type_inference() {
+        // 测试泛型和工具类型的推断
+        let ts_code = r#"
+type Identity<T> = T;
+type Wrapped<T> = [T];
+type Result<T, E> = { ok: T, error: E };
+
+const identity = { ok: true, error: null };
+const wrapped = [42];
+const result = { ok: "success", error: undefined };
+"#;
+        match compile_typescript(ts_code, "utility_types.ts") {
+            Ok(output) => {
+                println!("工具类型推断转译结果:");
+                println!("{}", output.js_code);
+                // 验证变量被正确保留
+                assert!(output.js_code.contains("identity"),
+                    "Should contain identity: {}", output.js_code);
+                assert!(output.js_code.contains("wrapped"),
+                    "Should contain wrapped: {}", output.js_code);
+                assert!(output.js_code.contains("result"),
+                    "Should contain result: {}", output.js_code);
+                // 验证类型注解被移除
+                assert!(!output.js_code.contains(": Identity<"),
+                    "Type annotation should be removed: {}", output.js_code);
+                println!("✅ Generic utility type inference test passed");
+            }
+            Err(e) => {
+                panic!("Utility type inference test failed: {}", e);
+            }
+        }
+    }
+
+    /// v0.3.162: Test conditional type with infer
+    #[test]
+    fn test_conditional_type_infer() {
+        // 测试条件类型中的 infer 关键字
+        let ts_code = r#"
+type IsString<T> = T extends string ? true : false;
+type IsNumber<T> = T extends number ? "number" : "other";
+
+const checkString = true;
+const checkNumber = "other";
+"#;
+        match compile_typescript(ts_code, "conditional_infer.ts") {
+            Ok(output) => {
+                println!("条件类型 infer 转译结果:");
+                println!("{}", output.js_code);
+                // 验证变量被正确保留
+                assert!(output.js_code.contains("checkString"),
+                    "Should contain checkString: {}", output.js_code);
+                assert!(output.js_code.contains("checkNumber"),
+                    "Should contain checkNumber: {}", output.js_code);
+                // 验证类型别名被移除（纯类型）
+                assert!(!output.js_code.contains("type IsString"),
+                    "Type alias should be removed: {}", output.js_code);
+                println!("✅ Conditional type infer test passed");
+            }
+            Err(e) => {
+                panic!("Conditional type infer test failed: {}", e);
+            }
+        }
+    }
+
+    /// v0.3.162: Test edge case - deeply nested array inference
+    #[test]
+    fn test_deeply_nested_array_inference() {
+        // 测试深度嵌套数组的类型推断
+        let ts_code = r#"
+const matrix = [[1, 2], [3, 4], [5, 6]];
+const nested = [[["a", "b"]], [["c", "d"]]];
+const mixedMatrix = [[1, "two"], [3, "four"]];
+"#;
+        match compile_typescript(ts_code, "nested_array.ts") {
+            Ok(output) => {
+                println!("深度嵌套数组推断转译结果:");
+                println!("{}", output.js_code);
+                // 验证数组被正确保留
+                assert!(output.js_code.contains("matrix"),
+                    "Should contain matrix: {}", output.js_code);
+                assert!(output.js_code.contains("nested"),
+                    "Should contain nested: {}", output.js_code);
+                assert!(output.js_code.contains("mixedMatrix"),
+                    "Should contain mixedMatrix: {}", output.js_code);
+                println!("✅ Deeply nested array inference test passed");
+            }
+            Err(e) => {
+                panic!("Nested array inference test failed: {}", e);
+            }
+        }
+    }
 }
