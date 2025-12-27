@@ -376,4 +376,58 @@ console.log(circle.getArea());
         // 注意：后续需要修复 Circle 类的解析问题
         println!("✅ Test 18: TypeScript abstract method support");
     }
+
+    /// 测试19: TypeScript 抽象方法后接普通方法 (v0.3.177) - 修复已知问题
+    #[test]
+    fn test_abstract_method_followed_by_regular_method() {
+        // 这个测试用例用于验证修复：抽象方法后面紧跟普通方法时输出正确
+        let ts_code = r#"
+abstract class Base {
+    abstract foo(): void;
+    bar(): void {
+        console.log("bar");
+    }
+    baz(): void {
+        console.log("baz");
+    }
+}
+class Derived extends Base {
+    foo(): void {
+        console.log("foo");
+    }
+}
+const d = new Derived();
+d.foo();
+"#;
+        let result = typescript::compile_typescript(ts_code, "abstract_followed_by_regular.ts");
+        assert!(result.is_ok(), "abstract followed by regular method should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 调试输出
+        println!("编译输出:\n{}", output.js_code);
+
+        // 验证 abstract 关键字被移除
+        assert!(!output.js_code.contains("abstract"),
+            "Should remove abstract keyword: {}", output.js_code);
+
+        // 验证所有类保留
+        assert!(output.js_code.contains("class Base"),
+            "Should preserve Base class: {}", output.js_code);
+        assert!(output.js_code.contains("class Derived"),
+            "Should preserve Derived class: {}", output.js_code);
+
+        // 验证继承保留
+        assert!(output.js_code.contains("extends"),
+            "Should preserve extends: {}", output.js_code);
+
+        // 验证所有方法保留
+        assert!(output.js_code.contains("foo"),
+            "Should preserve foo method: {}", output.js_code);
+        assert!(output.js_code.contains("bar"),
+            "Should preserve bar method: {}", output.js_code);
+        assert!(output.js_code.contains("baz"),
+            "Should preserve baz method: {}", output.js_code);
+
+        println!("✅ Test 19: Abstract method followed by regular method");
+    }
 }

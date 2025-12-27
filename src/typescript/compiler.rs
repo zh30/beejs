@@ -4386,8 +4386,18 @@ impl Parser {
                         self.parse_type_annotation();
                     }
 
-                    // 解析方法体
-                    let body = self.parse_block_body()?;
+                    // v0.3.177: 如果是抽象方法，抽象方法没有方法体，直接跳到分号
+                    let body = if is_abstract {
+                        vec![]
+                    } else {
+                        self.parse_block_body()?
+                    };
+
+                    // v0.3.177: 抽象方法必须以分号结束
+                    if is_abstract && self.current_token_eq(&Token::SemiColon) {
+                        self.consume(Token::SemiColon)?;
+                    }
+
                     return Ok(Some(ASTNode::MethodDeclaration {
                         decorators,
                         name: prop_name,
@@ -4440,8 +4450,18 @@ impl Parser {
                     self.parse_type_annotation();
                 }
 
-                // 解析方法主体
-                let body = self.parse_block_body()?;
+                // v0.3.177: 如果是抽象方法，抽象方法没有方法体，直接跳到分号
+                let body = if is_abstract {
+                    vec![]
+                } else {
+                    self.parse_block_body()?
+                };
+
+                // v0.3.177: 抽象方法必须以分号结束
+                if is_abstract && self.current_token_eq(&Token::SemiColon) {
+                    self.consume(Token::SemiColon)?;
+                }
+
                 return Ok(Some(ASTNode::MethodDeclaration {
                     decorators,
                     name: method_name,
@@ -4471,7 +4491,19 @@ impl Parser {
                 }
 
                 // 解析方法主体
-                let body = self.parse_block_body()?;
+                // v0.3.177: 如果是抽象方法，抽象方法没有方法体，直接跳到分号
+                let body = if is_abstract {
+                    // 抽象方法：跳过方法体（直接跳到分号）
+                    vec![]
+                } else {
+                    self.parse_block_body()?
+                };
+
+                // v0.3.177: 抽象方法必须以分号结束
+                if is_abstract && self.current_token_eq(&Token::SemiColon) {
+                    self.consume(Token::SemiColon)?;
+                }
+
                 return Ok(Some(ASTNode::MethodDeclaration {
                     decorators,
                     name: member_name,

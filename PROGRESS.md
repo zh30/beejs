@@ -28,10 +28,51 @@
 - ✅ `cargo test --test minimal_tests` 18/18 通过
 
 #### v0.3.176 已知问题
-- 解析紧跟在抽象方法后面的普通方法时可能出现输出损坏（需要进一步调查）
+- ~~解析紧跟在抽象方法后面的普通方法时可能出现输出损坏~~ ✅ 已修复
 
 #### v0.3.176 下一步
-- 修复解析器中处理抽象方法后接普通方法的 bug
+- ✅ 修复解析器中处理抽象方法后接普通方法的 bug
+- 继续完善 TypeScript 编译器功能
+
+---
+
+### v0.3.177 修复抽象方法后接普通方法的解析 bug (2025-12-27)
+**进度**: TypeScript 编译器修复 | ✅ 已提交
+
+#### v0.3.177 修复内容
+- **解析器问题修复**
+  - 问题：抽象方法没有方法体，只有分号。原有代码调用 `parse_block_body()` 后未消费分号，导致解析器状态错乱
+  - 症状：抽象方法后的普通方法丢失，输出中出现 `void;`、`console;` 等垃圾 token
+
+#### v0.3.177 代码变更
+- **修改文件**: `src/typescript/compiler.rs` (+28 行)
+  - 普通方法解析：添加 `is_abstract` 判断，抽象方法返回空 body 并消费分号
+  - async 方法解析：同上处理
+  - getter/setter 解析：同上处理
+
+#### v0.3.177 修复逻辑
+```rust
+// 如果是抽象方法，抽象方法没有方法体，直接跳到分号
+let body = if is_abstract {
+    vec![]
+} else {
+    self.parse_block_body()?
+};
+
+// 抽象方法必须以分号结束
+if is_abstract && self.current_token_eq(&Token::SemiColon) {
+    self.consume(Token::SemiColon)?;
+}
+```
+
+#### v0.3.177 测试用例
+- `test_abstract_method_followed_by_regular_method`: 验证抽象方法后紧跟普通方法时输出正确
+
+#### v0.3.177 验证
+- ✅ `cargo build` 成功
+- ✅ `cargo test --test minimal_tests` 19/19 通过
+
+#### v0.3.177 下一步
 - 继续完善 TypeScript 编译器功能
 
 ---
