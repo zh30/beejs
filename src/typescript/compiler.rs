@@ -301,6 +301,7 @@ impl TypeScriptCompiler {
                     "enum" => Token::Enum,
                     "type" => Token::Type,
                     "namespace" => Token::Namespace,
+                    "global" => Token::Global,
                     "declare" => Token::Declare,
                     "import" => Token::Import,
                     "export" => Token::Export,
@@ -1239,6 +1240,11 @@ impl TypeScriptCompiler {
                     self.check_node(stmt, ctx)?;
                 }
             }
+            ASTStatement::GlobalDeclaration { body } => {
+                for stmt in body {
+                    self.check_node(stmt, ctx)?;
+                }
+            }
         }
         Ok(())
     }
@@ -1867,6 +1873,7 @@ pub enum Token {
     Enum,
     Type,
     Namespace,
+    Global,   // global 关键字（用于 declare global { ... }）
     Import,
     Export,
     Declare,   // declare 关键字（用于类型声明）
@@ -2109,6 +2116,8 @@ pub struct IndexSignature {
 pub enum ASTNode {
     Program(Vec<ASTNode>),
     VariableDeclaration {
+        /// 是否为 declare 声明（declare const/let/var）
+        is_declare: bool,
         kind: String,
         /// 变量名（简单标识符）或解构模式
         /// 简单标识符: `name`
@@ -2407,6 +2416,12 @@ pub enum ASTStatement {
         /// 是否为 declare 声明（declare namespace）
         is_declare: bool,
     },
+    /// TypeScript 全局声明块: declare global { ... }
+    /// 用于向全局作用域添加类型声明
+    GlobalDeclaration {
+        /// 全局声明块内部的语句列表
+        body: Vec<ASTNode>,
+    },
 }
 /// switch case 结构
 #[derive(Debug, Clone)]
@@ -2457,7 +2472,7 @@ impl Parser {
                         self.position = saved_position;
                     }
                 }
-                let node = self.parse_variable_declaration()?;
+                let node = self.parse_variable_declaration(false)?;
                 // 消耗分号（对于独立的变量声明）
                 if self.current_token_eq(&Token::SemiColon) {
                     self.consume(Token::SemiColon)?;
@@ -2476,6 +2491,10 @@ impl Parser {
             Token::Enum => {
                 self.parse_enum_declaration()
             }
+            Token::Global => {
+                // declare global { ... }
+                self.parse_global_declaration()
+            }
             Token::Type => {
                 self.parse_type_alias_declaration()
             }
@@ -2486,7 +2505,7 @@ impl Parser {
                 // 消耗 declare 关键字
                 self.consume(Token::Declare)?;
                 // 查看下一个 token 来确定声明类型
-                match self.current_token() {
+                let node = match self.current_token() {
                     Token::Namespace => {
                         self.parse_namespace_declaration()
                     }
@@ -2505,14 +2524,22 @@ impl Parser {
                     Token::Enum => {
                         self.parse_enum_declaration()
                     }
+                    Token::Global => {
+                        self.parse_global_declaration()
+                    }
                     Token::Const | Token::Let | Token::Var => {
                         // declare const/let/var 声明
-                        self.parse_variable_declaration()
+                        self.parse_variable_declaration(is_declare)
                     }
                     _ => {
                         bail!("Invalid declare declaration: {:?}", self.current_token());
                     }
+                }?;
+                // 消耗分号（对于声明语句）
+                if self.current_token_eq(&Token::SemiColon) {
+                    self.consume(Token::SemiColon)?;
                 }
+                Ok(node)
             }
             Token::Namespace => {
                 self.parse_namespace_declaration()
@@ -2605,7 +2632,7 @@ impl Parser {
             || self.current_token_eq(&Token::Const)
             || self.current_token_eq(&Token::Var)
         {
-            Some(Box::new(self.parse_variable_declaration()?))
+            Some(Box::new(self.parse_variable_declaration(false)?))
         } else if !self.current_token_eq(&Token::SemiColon) {
             // 可能是表达式
             let expr = self.parse_expression()?;
@@ -2631,6 +2658,7 @@ impl Parser {
             return Ok(ASTNode::Statement(ASTStatement::ForOf {
                 initializer: initializer.unwrap_or_else(|| {
                     Box::new(ASTNode::VariableDeclaration {
+                        is_declare: false,
                         kind: "let".to_string(),
                         name: "_".to_string(),
                         type_annotation: None,
@@ -2996,7 +3024,7 @@ impl Parser {
         Ok(params)
     }
 
-    fn parse_variable_declaration(&mut self) -> Result<ASTNode> {
+    fn parse_variable_declaration(&mut self, is_declare: bool) -> Result<ASTNode> {
         let kind_token: _ = self.consume_any(&[Token::Let, Token::Const, Token::Var])?;
         let kind: _ = match kind_token {
             Token::Let => "let",
@@ -3031,6 +3059,7 @@ impl Parser {
             self.consume(Token::Eq)?;
             let arrow_expr = self.parse_arrow_function_from_assignment_with_name(name.clone())?;
             return Ok(ASTNode::VariableDeclaration {
+                is_declare,
                 kind: kind.to_string(),
                 name,
                 type_annotation: None,
@@ -3050,6 +3079,7 @@ impl Parser {
         }
 
         Ok(ASTNode::VariableDeclaration {
+            is_declare,
             kind: kind.to_string(),
             name,
             type_annotation: None,
@@ -4370,6 +4400,30 @@ impl Parser {
         }))
     }
 
+    /// 解析全局声明块
+    /// 语法: declare global { ... }
+    /// 用于向全局作用域添加类型声明
+    fn parse_global_declaration(&mut self) -> Result<ASTNode> {
+        // 消耗 global 关键字
+        self.consume(Token::Global)?;
+
+        // 消耗左花括号
+        self.consume(Token::LBrace)?;
+
+        // 解析全局声明块内部的语句
+        let mut body = Vec::new();
+        while !self.current_token_eq(&Token::RBrace) && !self.current_token_eq(&Token::Eof) {
+            body.push(self.parse_statement()?);
+        }
+
+        // 消耗右花括号
+        self.consume(Token::RBrace)?;
+
+        Ok(ASTNode::Statement(ASTStatement::GlobalDeclaration {
+            body,
+        }))
+    }
+
     /// 解析导入语句
     /// 支持:
     /// - import "module" (副作用导入)
@@ -4663,7 +4717,7 @@ impl Parser {
         // 内联导出声明: export const/let/var/function/class
         match self.current_token() {
             Token::Const | Token::Let | Token::Var => {
-                let declaration = self.parse_variable_declaration()?;
+                let declaration = self.parse_variable_declaration(false)?;
                 // 消耗分号
                 if self.current_token_eq(&Token::SemiColon) {
                     self.consume(Token::SemiColon)?;
@@ -4756,7 +4810,11 @@ impl Parser {
                         });
                     }
                     Token::Const | Token::Let | Token::Var => {
-                        let declaration = self.parse_variable_declaration()?;
+                        let declaration = self.parse_variable_declaration(is_declare)?;
+                        // 消耗分号（对于声明语句）
+                        if self.current_token_eq(&Token::SemiColon) {
+                            self.consume(Token::SemiColon)?;
+                        }
                         return Ok(ASTNode::ExportDeclaration {
                             exports: Vec::new(),
                             is_default: false,
@@ -6683,11 +6741,16 @@ impl CodeEmitter {
                 }
             }
             ASTNode::VariableDeclaration {
+                is_declare,
                 kind,
                 name,
                 type_annotation,
                 initializer,
             } => {
+                // 处理 declare const/let/var
+                if *is_declare {
+                    self.output.push_str("declare ");
+                }
                 self.output.push_str(kind);
                 self.output.push(' ');
                 self.output.push_str(name);
@@ -6695,10 +6758,13 @@ impl CodeEmitter {
                 if let Some(_) = type_annotation {
                     // 在转译时移除类型注解
                 }
-                if let Some(init) = initializer {
-                    self.output.push_str(" = ");
-                    if let ASTNode::Expression(expr) = init.as_ref() {
-                        self.emit_expression(expr);
+                // 对于 declare 变量，不输出初始化器
+                if !*is_declare {
+                    if let Some(init) = initializer {
+                        self.output.push_str(" = ");
+                        if let ASTNode::Expression(expr) = init.as_ref() {
+                            self.emit_expression(expr);
+                        }
                     }
                 }
                 self.output.push_str(";\n");
@@ -7248,6 +7314,15 @@ impl CodeEmitter {
                             self.output.push_str(&name);
                             self.output.push_str(" = {}));\n");
                         }
+                    }
+                    // declare global { ... } - 直接输出内部的声明
+                    ASTStatement::GlobalDeclaration { body } => {
+                        // 全局声明块在转译时输出为注释保留声明
+                        self.output.push_str("/* declare global { */\n");
+                        for stmt in body {
+                            self.emit_node(stmt);
+                        }
+                        self.output.push_str("/* } */\n");
                     }
                 }
             }

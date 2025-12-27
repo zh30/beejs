@@ -315,4 +315,202 @@ declare class DeclaredClass {
             }
         }
     }
+
+    /// Test declare const (v0.3.152)
+    #[test]
+    fn test_declare_const() {
+        // 测试 declare const 声明
+        let ts_code: _ = r#"
+declare const API_KEY: string;
+declare const MAX_RETRIES: number = 3;
+"#;
+        match compile_typescript(ts_code, "declare_const.ts") {
+            Ok(output) => {
+                println!("declare const 转译结果:");
+                println!("{}", output.js_code);
+                assert!(output.js_code.contains("declare const API_KEY"),
+                    "Should contain declare const API_KEY: {}", output.js_code);
+                assert!(output.js_code.contains("declare const MAX_RETRIES"),
+                    "Should contain declare const MAX_RETRIES: {}", output.js_code);
+                // 类型注解应该被移除
+                assert!(!output.js_code.contains(": string"),
+                    "Should not contain type annotation: {}", output.js_code);
+                println!("✅ Declare const test passed");
+            }
+            Err(e) => {
+                panic!("Declare const transpilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test declare let (v0.3.152)
+    #[test]
+    fn test_declare_let() {
+        // 测试 declare let 声明
+        let ts_code: _ = r#"
+declare let appVersion: string;
+declare let isReady: boolean;
+"#;
+        match compile_typescript(ts_code, "declare_let.ts") {
+            Ok(output) => {
+                println!("declare let 转译结果:");
+                println!("{}", output.js_code);
+                assert!(output.js_code.contains("declare let appVersion"),
+                    "Should contain declare let appVersion: {}", output.js_code);
+                assert!(output.js_code.contains("declare let isReady"),
+                    "Should contain declare let isReady: {}", output.js_code);
+                println!("✅ Declare let test passed");
+            }
+            Err(e) => {
+                panic!("Declare let transpilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test declare var (v0.3.152)
+    #[test]
+    fn test_declare_var() {
+        // 测试 declare var 声明
+        let ts_code: _ = r#"
+declare var globalConfig: object;
+declare var DEBUG_MODE: boolean;
+"#;
+        match compile_typescript(ts_code, "declare_var.ts") {
+            Ok(output) => {
+                println!("declare var 转译结果:");
+                println!("{}", output.js_code);
+                assert!(output.js_code.contains("declare var globalConfig"),
+                    "Should contain declare var globalConfig: {}", output.js_code);
+                assert!(output.js_code.contains("declare var DEBUG_MODE"),
+                    "Should contain declare var DEBUG_MODE: {}", output.js_code);
+                println!("✅ Declare var test passed");
+            }
+            Err(e) => {
+                panic!("Declare var transpilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test export declare const (v0.3.152)
+    #[test]
+    fn test_export_declare_const() {
+        // 测试 export declare const 声明
+        let ts_code: _ = r#"
+export declare const PLUGIN_NAME: string;
+export declare const VERSION: string;
+"#;
+        match compile_typescript(ts_code, "export_declare_const.ts") {
+            Ok(output) => {
+                println!("export declare const 转译结果:");
+                println!("{}", output.js_code);
+                assert!(output.js_code.contains("export"),
+                    "Should contain export keyword: {}", output.js_code);
+                assert!(output.js_code.contains("declare const PLUGIN_NAME"),
+                    "Should contain declare const PLUGIN_NAME: {}", output.js_code);
+                assert!(output.js_code.contains("declare const VERSION"),
+                    "Should contain declare const VERSION: {}", output.js_code);
+                println!("✅ Export declare const test passed");
+            }
+            Err(e) => {
+                panic!("Export declare const transpilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test declare global (v0.3.152)
+    #[test]
+    fn test_declare_global() {
+        // 测试 declare global 声明块
+        let ts_code: _ = r#"
+declare global {
+    interface Window {
+        myPlugin: any;
+    }
+    function myGlobalFunction(): void;
+}
+"#;
+        match compile_typescript(ts_code, "declare_global.ts") {
+            Ok(output) => {
+                println!("declare global 转译结果:");
+                println!("{}", output.js_code);
+                // 声明块应该被保留（带有注释标记）
+                assert!(output.js_code.contains("declare global"),
+                    "Should contain declare global: {}", output.js_code);
+                // 函数声明应该被保留
+                assert!(output.js_code.contains("myGlobalFunction"),
+                    "Should contain myGlobalFunction: {}", output.js_code);
+                // 接口在 JS 中没有对应，会被跳过
+                println!("✅ Declare global test passed");
+            }
+            Err(e) => {
+                panic!("Declare global transpilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test declare global with variables (v0.3.152)
+    #[test]
+    fn test_declare_global_with_variables() {
+        // 测试 declare global 中的变量声明
+        let ts_code: _ = r#"
+declare global {
+    declare const GLOBAL_API_KEY: string;
+    declare let globalCounter: number;
+}
+"#;
+        match compile_typescript(ts_code, "declare_global_variables.ts") {
+            Ok(output) => {
+                println!("declare global with variables 转译结果:");
+                println!("{}", output.js_code);
+                // 输出应该包含 declare const 和 declare let
+                assert!(output.js_code.contains("declare const GLOBAL_API_KEY"),
+                    "Should contain declare const GLOBAL_API_KEY: {}", output.js_code);
+                assert!(output.js_code.contains("declare let globalCounter"),
+                    "Should contain declare let globalCounter: {}", output.js_code);
+                println!("✅ Declare global with variables test passed");
+            }
+            Err(e) => {
+                panic!("Declare global with variables transpilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test regular variable vs declare variable (v0.3.152)
+    #[test]
+    fn test_regular_variable_vs_declare_variable() {
+        // 测试普通变量和 declare 变量的区别
+        let ts_code: _ = r#"
+const regularConst = "hello";
+let regularLet = 42;
+var regularVar = true;
+
+declare const declaredConst: string;
+declare let declaredLet: number;
+declare var declaredVar: boolean;
+"#;
+        match compile_typescript(ts_code, "variable_comparison.ts") {
+            Ok(output) => {
+                println!("普通变量 vs declare 变量转译结果:");
+                println!("{}", output.js_code);
+                // 普通变量应该没有 declare 关键字
+                assert!(output.js_code.contains("const regularConst"),
+                    "Should contain regular const: {}", output.js_code);
+                assert!(output.js_code.contains("let regularLet"),
+                    "Should contain regular let: {}", output.js_code);
+                assert!(output.js_code.contains("var regularVar"),
+                    "Should contain regular var: {}", output.js_code);
+                // 声明变量应该有 declare 关键字
+                assert!(output.js_code.contains("declare const declaredConst"),
+                    "Should contain declare const: {}", output.js_code);
+                assert!(output.js_code.contains("declare let declaredLet"),
+                    "Should contain declare let: {}", output.js_code);
+                assert!(output.js_code.contains("declare var declaredVar"),
+                    "Should contain declare var: {}", output.js_code);
+                println!("✅ Regular vs declare variable test passed");
+            }
+            Err(e) => {
+                panic!("Variable comparison transpilation failed: {}", e);
+            }
+        }
+    }
 }
