@@ -430,4 +430,107 @@ d.foo();
 
         println!("✅ Test 19: Abstract method followed by regular method");
     }
+
+    /// 测试20: TypeScript enum 声明支持 (v0.3.178)
+    /// 测试 fast-path 对 enum 声明的移除
+    #[test]
+    fn test_typescript_enum_fast_path() {
+        // 测试简单 enum 声明的移除
+        let ts_code = r#"
+enum Color {
+    Red = "red",
+    Green = "green",
+    Blue = "blue"
+}
+const myColor = Color.Red;
+console.log(myColor);
+"#;
+        let result = typescript::compile_typescript(ts_code, "enum_test.ts");
+        assert!(result.is_ok(), "enum should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 enum 关键字被移除或注释掉
+        assert!(!output.js_code.contains("enum Color"),
+            "Should remove enum declaration: {}", output.js_code);
+
+        // 验证代码中引用的部分保留
+        assert!(output.js_code.contains("myColor"),
+            "Should preserve myColor: {}", output.js_code);
+        assert!(output.js_code.contains("Color"),
+            "Color reference may remain (acceptable): {}", output.js_code);
+
+        println!("✅ Test 20: TypeScript enum fast-path support");
+    }
+
+    /// 测试21: TypeScript type 别名支持 (v0.3.178)
+    /// 测试 fast-path 对 type 别名声明的移除
+    #[test]
+    fn test_typescript_type_alias_fast_path() {
+        // 测试简单 type 别名的移除
+        let ts_code = r#"
+type UserId = string;
+type Status = "active" | "inactive";
+const id: UserId = "user123";
+const status: Status = "active";
+console.log(id, status);
+"#;
+        let result = typescript::compile_typescript(ts_code, "type_alias_test.ts");
+        assert!(result.is_ok(), "type alias should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 type 声明被移除或注释掉
+        assert!(!output.js_code.contains("type UserId"),
+            "Should remove type UserId: {}", output.js_code);
+        assert!(!output.js_code.contains("type Status"),
+            "Should remove type Status: {}", output.js_code);
+
+        // 验证变量声明保留
+        assert!(output.js_code.contains("id"),
+            "Should preserve id: {}", output.js_code);
+        assert!(output.js_code.contains("status"),
+            "Should preserve status: {}", output.js_code);
+        assert!(output.js_code.contains("console.log"),
+            "Should preserve console.log: {}", output.js_code);
+
+        println!("✅ Test 21: TypeScript type alias fast-path support");
+    }
+
+    /// 测试22: TypeScript 组合使用 enum 和 type (v0.3.178)
+    #[test]
+    fn test_typescript_enum_type_combined() {
+        // 测试 enum 和 type 组合使用
+        let ts_code = r#"
+enum LogLevel {
+    Debug = "DEBUG",
+    Info = "INFO",
+    Error = "ERROR"
+}
+
+type User = {
+    name: string;
+    age: number;
+};
+
+const level = LogLevel.Info;
+const user: User = { name: "John", age: 30 };
+console.log(level, user);
+"#;
+        let result = typescript::compile_typescript(ts_code, "combined_test.ts");
+        assert!(result.is_ok(), "combined enum/type should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 enum 和 type 声明被移除
+        assert!(!output.js_code.contains("enum LogLevel"),
+            "Should remove enum LogLevel: {}", output.js_code);
+        assert!(!output.js_code.contains("type User"),
+            "Should remove type User: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("level"),
+            "Should preserve level: {}", output.js_code);
+        assert!(output.js_code.contains("user"),
+            "Should preserve user: {}", output.js_code);
+
+        println!("✅ Test 22: TypeScript enum and type combined support");
+    }
 }

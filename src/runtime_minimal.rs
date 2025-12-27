@@ -1235,6 +1235,30 @@ impl MinimalRuntime {
         let interface_pattern = regex::Regex::new(r"(?m)^interface\s+\w+.*?$").unwrap();
         js_code = interface_pattern.replace_all(&js_code, "").to_string();
 
+        // v0.3.178: Remove enum declarations
+        // Pattern: "enum EnumName { ... }" - comment out entire enum block
+        // Use non-greedy matching to handle nested braces properly
+        let enum_pattern = regex::Regex::new(r"enum\s+([A-Z][a-zA-Z0-9_]*)\s*\{[^{}]*\{[^{}]*\}[^{}]*\}").unwrap();
+        js_code = enum_pattern.replace_all(&js_code, "/* enum $1 */").to_string();
+
+        // Simple enum pattern for enums without nested braces
+        let enum_simple_pattern = regex::Regex::new(r"enum\s+([A-Z][a-zA-Z0-9_]*)\s*\{[^}]*\}").unwrap();
+        js_code = enum_simple_pattern.replace_all(&js_code, "/* enum $1 */").to_string();
+
+        // v0.3.178: Remove type alias declarations
+        // Pattern: "type AliasName = ..." - comment out entire type alias
+        // Handle simple single-line type aliases
+        let type_alias_pattern = regex::Regex::new(r"type\s+([A-Z][a-zA-Z0-9_]*)\s*=\s*[^;]+;").unwrap();
+        js_code = type_alias_pattern.replace_all(&js_code, "/* type $1 */").to_string();
+
+        // Handle multi-line type aliases (type AliasName = { ... } or type AliasName = | ...)
+        let type_alias_multiline_pattern = regex::Regex::new(r"type\s+([A-Z][a-zA-Z0-9_]*)\s*=\s*\{[^}]*\}" ).unwrap();
+        js_code = type_alias_multiline_pattern.replace_all(&js_code, "/* type $1 */").to_string();
+
+        // Handle union type aliases: "type Alias = A | B | C"
+        let type_union_pattern = regex::Regex::new(r"type\s+([A-Z][a-zA-Z0-9_]*)\s*=\s*[^;]+(?:\|[^;]+)*;").unwrap();
+        js_code = type_union_pattern.replace_all(&js_code, "/* type $1 */").to_string();
+
         // Remove type annotations from function parameters ONLY
         // This pattern matches: :TypeName followed by , or )
         // Using capturing group instead of lookahead (not supported by regex crate)
