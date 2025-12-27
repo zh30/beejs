@@ -1400,4 +1400,64 @@ console.log(user.name, user.email);
 
         println!("✅ Test 57: TypeScript index signature with properties");
     }
+
+    /// 测试58: TypeScript ReturnType<T> 工具类型 (v0.3.191)
+    #[test]
+    fn test_typescript_return_type_utility() {
+        // 测试 ReturnType<T> 获取函数返回类型
+        let ts_code = r#"
+function getUser(): { id: number; name: string } {
+    return { id: 1, name: "Alice" };
+}
+
+type UserReturn = ReturnType<typeof getUser>;
+const user: UserReturn = { id: 2, name: "Bob" };
+console.log(user);
+"#;
+        let result = typescript::compile_typescript(ts_code, "returntype_test.ts");
+        assert!(result.is_ok(), "ReturnType<T> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 ReturnType 引用被移除
+        assert!(!output.js_code.contains("ReturnType"),
+            "Should remove ReturnType utility type reference: {}", output.js_code);
+
+        // 验证函数和代码保留
+        assert!(output.js_code.contains("function getUser"),
+            "Should preserve function: {}", output.js_code);
+        assert!(output.js_code.contains("const user"),
+            "Should preserve const declaration: {}", output.js_code);
+
+        println!("✅ Test 58: TypeScript ReturnType<T> utility type");
+    }
+
+    /// 测试59: TypeScript Parameters<T> 工具类型 (v0.3.191)
+    #[test]
+    fn test_typescript_parameters_utility() {
+        // 测试 Parameters<T> 获取函数参数类型
+        let ts_code = r#"
+function greet(name: string, age: number): string {
+    return `Hello ${name}, you are ${age} years old`;
+}
+
+type GreetParams = Parameters<typeof greet>;
+const args: GreetParams = ["Alice", 30];
+console.log(args);
+"#;
+        let result = typescript::compile_typescript(ts_code, "parameters_test.ts");
+        assert!(result.is_ok(), "Parameters<T> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 Parameters 引用被移除
+        assert!(!output.js_code.contains("Parameters"),
+            "Should remove Parameters utility type reference: {}", output.js_code);
+
+        // 验证函数和代码保留
+        assert!(output.js_code.contains("function greet"),
+            "Should preserve function: {}", output.js_code);
+        assert!(output.js_code.contains("const args"),
+            "Should preserve const declaration: {}", output.js_code);
+
+        println!("✅ Test 59: TypeScript Parameters<T> utility type");
+    }
 }
