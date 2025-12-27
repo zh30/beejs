@@ -1460,4 +1460,80 @@ console.log(args);
 
         println!("✅ Test 59: TypeScript Parameters<T> utility type");
     }
+
+    /// 测试60: TypeScript ConstructorParameters<T> 工具类型 (v0.3.192)
+    #[test]
+    fn test_typescript_constructor_parameters_utility() {
+        // 测试 ConstructorParameters<T> 获取构造函数参数类型
+        let ts_code = r#"
+class User {
+    name: string;
+    age: number;
+
+    constructor(name: string, age: number) {
+        this.name = name;
+        this.age = age;
+    }
+}
+
+type UserConstructorParams = ConstructorParameters<typeof User>;
+const params: UserConstructorParams = ["Alice", 30];
+console.log(params);
+"#;
+        let result = typescript::compile_typescript(ts_code, "constructor_params_test.ts");
+        assert!(result.is_ok(), "ConstructorParameters<T> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 ConstructorParameters 引用被移除
+        assert!(!output.js_code.contains("ConstructorParameters"),
+            "Should remove ConstructorParameters utility type reference: {}", output.js_code);
+
+        // 验证类定义和代码保留
+        assert!(output.js_code.contains("class User"),
+            "Should preserve class: {}", output.js_code);
+        assert!(output.js_code.contains("constructor"),
+            "Should preserve constructor: {}", output.js_code);
+        assert!(output.js_code.contains("const params"),
+            "Should preserve const declaration: {}", output.js_code);
+
+        println!("✅ Test 60: TypeScript ConstructorParameters<T> utility type");
+    }
+
+    /// 测试61: TypeScript InstanceType<T> 工具类型 (v0.3.192)
+    #[test]
+    fn test_typescript_instance_type_utility() {
+        // 测试 InstanceType<T> 获取构造函数的实例类型
+        let ts_code = r#"
+class Point {
+    x: number;
+    y: number;
+
+    constructor(x: number, y: number) {
+        this.x = x;
+        this.y = y;
+    }
+}
+
+type PointInstance = InstanceType<typeof Point>;
+const point: PointInstance = { x: 10, y: 20 };
+console.log(point);
+"#;
+        let result = typescript::compile_typescript(ts_code, "instance_type_test.ts");
+        assert!(result.is_ok(), "InstanceType<T> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 InstanceType 引用被移除
+        assert!(!output.js_code.contains("InstanceType"),
+            "Should remove InstanceType utility type reference: {}", output.js_code);
+
+        // 验证类定义和代码保留
+        assert!(output.js_code.contains("class Point"),
+            "Should preserve class: {}", output.js_code);
+        assert!(output.js_code.contains("constructor"),
+            "Should preserve constructor: {}", output.js_code);
+        assert!(output.js_code.contains("const point"),
+            "Should preserve const declaration: {}", output.js_code);
+
+        println!("✅ Test 61: TypeScript InstanceType<T> utility type");
+    }
 }

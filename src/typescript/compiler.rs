@@ -12569,6 +12569,76 @@ type GreetParams = Parameters<typeof greet>;
             "Should contain 'greet': {}", result.js_code);
     }
 
+    /// v0.3.192: Test ConstructorParameters<T> utility type
+    #[test]
+    fn test_utility_type_constructor_parameters() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test ConstructorParameters<T> utility type - get constructor parameter types
+        let source = r#"
+class User {
+    name: string;
+    age: number;
+
+    constructor(name: string, age: number) {
+        this.name = name;
+        this.age = age;
+    }
+}
+
+type UserConstructorParams = ConstructorParameters<typeof User>;
+const params: UserConstructorParams = ["Alice", 30];
+console.log(params);
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // ConstructorParameters<T> should be erased
+        assert!(!result.js_code.contains("ConstructorParameters"),
+            "Should not contain 'ConstructorParameters': {}", result.js_code);
+        // Type alias should be removed
+        assert!(!result.js_code.contains("type UserConstructorParams"),
+            "Should not contain 'type UserConstructorParams': {}", result.js_code);
+        // Class should still be present (without type annotations)
+        assert!(result.js_code.contains("class User"),
+            "Should contain 'class User': {}", result.js_code);
+        // Variable should still be present
+        assert!(result.js_code.contains("const params"),
+            "Should contain 'const params': {}", result.js_code);
+    }
+
+    /// v0.3.192: Test InstanceType<T> utility type
+    #[test]
+    fn test_utility_type_instance_type() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test InstanceType<T> utility type - get constructor's instance type
+        let source = r#"
+class Point {
+    x: number;
+    y: number;
+
+    constructor(x: number, y: number) {
+        this.x = x;
+        this.y = y;
+    }
+}
+
+type PointInstance = InstanceType<typeof Point>;
+const point: PointInstance = { x: 10, y: 20 };
+console.log(point);
+"#;
+        let result = compiler.compile_source(source, "test.ts").unwrap();
+        // InstanceType<T> should be erased
+        assert!(!result.js_code.contains("InstanceType"),
+            "Should not contain 'InstanceType': {}", result.js_code);
+        // Type alias should be removed
+        assert!(!result.js_code.contains("type PointInstance"),
+            "Should not contain 'type PointInstance': {}", result.js_code);
+        // Class should still be present (without type annotations)
+        assert!(result.js_code.contains("class Point"),
+            "Should contain 'class Point': {}", result.js_code);
+        // Variable should still be present
+        assert!(result.js_code.contains("const point"),
+            "Should contain 'const point': {}", result.js_code);
+    }
+
     #[test]
     fn test_utility_types_multiple() {
         let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());

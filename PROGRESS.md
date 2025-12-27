@@ -10389,3 +10389,37 @@ console.log(p.name);  // "Alice"
 - 继续完善 TypeScript 编译器功能
 - 实现更多工具类型测试覆盖
 - 优化运行时性能
+
+---
+
+### v0.3.192 添加 ConstructorParameters 和 InstanceType 工具类型测试（2025-12-28）
+**进度**: TypeScript 测试增强 | ✅ 已提交
+
+#### v0.3.192 新增测试用例
+- **ConstructorParameters<T> 工具类型测试**
+  - 测试 `ConstructorParameters<typeof User>` 获取构造函数参数类型
+  - 验证工具类型引用在转译时被正确移除
+  - 保留类定义和构造函数代码
+
+- **InstanceType<T> 工具类型测试**
+  - 测试 `InstanceType<typeof Point>` 获取构造函数的实例类型
+  - 验证工具类型引用在转译时被正确移除
+  - 保留类定义和构造函数代码
+
+#### v0.3.192 测试验证
+- ✅ `cargo test --test minimal_tests`: 61/61 通过 (+2)
+- ✅ `cargo test --lib`: 223/223 通过 (+2)
+- ✅ 所有新测试用例通过
+- ✅ `ConstructorParameters<T>` 和 `InstanceType<T>` 工具类型正确擦除
+
+#### v0.3.192 已支持工具类型
+- 基础工具类型: Partial, Required, Readonly, Pick, Omit, Record
+- 联合类型工具: Exclude, Extract, NonNullable
+- 函数工具类型: ReturnType, Parameters, ConstructorParameters, InstanceType
+- This 工具类型: ThisParameterType, OmitThisParameter
+- 字符串工具: Uppercase, Lowercase, Capitalize, Uncapitalize
+
+#### v0.3.192 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多边界情况测试覆盖
+- 优化运行时性能
