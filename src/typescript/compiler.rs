@@ -8748,7 +8748,7 @@ impl CodeEmitter {
                                     } else if let Some(ref decl) = inline_declaration {
                                         // export const/function/class - 转换为 declare export const/function/class
                                         match decl.as_ref() {
-                                            ASTNode::VariableDeclaration { kind, name, initializer, .. } => {
+                                            ASTNode::VariableDeclaration { kind, name, initializer: _, .. } => {
                                                 self.output.push_str("declare export ");
                                                 self.output.push_str(kind);
                                                 self.output.push_str(" ");
@@ -8809,7 +8809,7 @@ impl CodeEmitter {
                                                 self.output.push_str(" {\n");
                                                 for stmt in body {
                                                     match stmt {
-                                                        ASTNode::ExportDeclaration { exports, is_default, module_specifier, inline_declaration, is_type_only } => {
+                                                        ASTNode::ExportDeclaration { exports: _, is_default: _, module_specifier: _, inline_declaration, is_type_only } => {
                                                             // 递归处理嵌套的 export
                                                             if *is_type_only {
                                                                 continue;
