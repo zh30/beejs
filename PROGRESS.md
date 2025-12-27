@@ -10323,7 +10323,43 @@ console.log(p.name);  // "Alice"
   - `interface Container<T> { value: T; }` → 正确移除
   - `interface Pair<T, U> { first: T; second: U; }` → 正确移除
 
-#### v0.3.189 下一步
+#### v0.3.190 下一步
 - 继续完善 TypeScript 编译器功能
 - 实现更多工具类型支持
-- 添加索引签名快速路径优化
+- 优化运行时性能
+
+---
+
+### v0.3.190 实现索引签名快速路径支持 (2025-12-28)
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.190 新增功能
+- **索引签名快速路径支持**
+  - 运行时快速路径识别 `[key: string]: T` 和 `[key: number]: T` 模式
+  - 正确移除接口内部的索引签名定义
+  - 支持混合属性和索引签名的接口
+
+#### v0.3.190 实现细节
+- **运行时快速路径增强** (`src/runtime_minimal.rs`)
+  - 在 `has_raw_typescript()` 中添加 `[key:` 模式检测
+  - 实现 `remove_index_signatures()` 函数进行字符级解析
+  - 正确处理泛型类型、联合类型和括号嵌套
+  - 忽略字符串内的括号内容
+
+- **新增测试用例** (`tests/minimal_tests.rs`)
+  - `test_typescript_string_index_signature`: 测试字符串索引签名
+  - `test_typescript_number_index_signature`: 测试数字索引签名
+  - `test_typescript_index_signature_with_properties`: 测试混合属性
+
+#### v0.3.190 测试验证
+- ✅ `cargo test --lib`: 221/221 通过
+- ✅ `cargo test --test minimal_tests`: 57/57 通过
+- ✅ 手动测试验证：
+  - `{ [key: string]: string; }` → `/* index signature */`
+  - `{ [key: number]: number; }` → `/* index signature */`
+  - `{ name: string; [key: string]: string | number; }` → 正确保留属性
+
+#### v0.3.190 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多工具类型支持
+- 优化运行时性能
