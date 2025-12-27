@@ -51,4 +51,64 @@ console.log(add(5, 3));
             }
         }
     }
+
+    #[test]
+    fn test_namespace_simple() {
+        // 测试简单命名空间
+        let ts_code: _ = r#"
+namespace MyNamespace {
+    const value: number = 42;
+    export function getValue(): number {
+        return value;
+    }
+}
+console.log(MyNamespace.getValue());
+"#;
+
+        match compile_typescript(ts_code, "namespace_test.ts") {
+            Ok(output) => {
+                println!("命名空间转译结果:");
+                println!("{}", output.js_code);
+                // 验证命名空间语法被正确转换
+                assert!(output.js_code.contains("MyNamespace"));
+                assert!(output.js_code.contains("getValue"));
+                assert!(!output.js_code.contains(": number"));
+            }
+            Err(e) => {
+                panic!("Namespace transpilation failed: {}", e);
+            }
+        }
+    }
+
+    #[test]
+    fn test_namespace_with_multiple_declarations() {
+        // 测试包含多个声明的命名空间（暂不包含 interface）
+        let ts_code: _ = r#"
+namespace Utils {
+    export const PI: number = 3.14159;
+    export function add(a: number, b: number): number {
+        return a + b;
+    }
+    export const double = (x: number) => x * 2;
+}
+const result: number = Utils.add(10, 20);
+console.log(Utils.PI, Utils.double(result));
+"#;
+
+        match compile_typescript(ts_code, "namespace_multi.ts") {
+            Ok(output) => {
+                println!("多声明命名空间转译结果:");
+                println!("{}", output.js_code);
+                assert!(output.js_code.contains("Utils"));
+                assert!(output.js_code.contains("PI"));
+                assert!(output.js_code.contains("add"));
+                assert!(output.js_code.contains("double"));
+                // TypeScript 特有语法应该被移除
+                assert!(!output.js_code.contains(": number"));
+            }
+            Err(e) => {
+                panic!("Multi-declaration namespace transpilation failed: {}", e);
+            }
+        }
+    }
 }

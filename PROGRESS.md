@@ -8757,3 +8757,40 @@ console.log(p.name);  // "Alice"
 ### Next Steps
 - Implement AST node position tracking (full source map precision)
 - Integrate debugger source map support
+
+---
+
+## v0.3.148 (2025-12-27)
+
+### New Features
+- **TypeScript Namespace Support**
+  - Added `namespace` keyword recognition in lexer
+  - Implemented `parse_namespace_declaration()` for parsing namespace declarations
+  - Supports nested namespaces (e.g., `namespace Outer.Inner { ... }`)
+  - Generates IIFE pattern for namespace encapsulation:
+    ```typescript
+    namespace MyNamespace { ... }
+    // Compiles to:
+    var MyNamespace;
+    (function(MyNamespace) { ... })(MyNamespace || (MyNamespace = {}));
+    ```
+
+### AST Enhancements
+- Added `ASTStatement::Namespace` variant with `name` and `body` fields
+- Added `Token::Namespace` to token enum
+- Added namespace checking in `check_node()` method
+
+### Tests
+- Added `test_namespace_simple` - basic namespace transpilation
+- Added `test_namespace_with_multiple_declarations` - multi-declaration namespace
+- All 4 tests pass: `cargo test --test typescript_compiler_integration_tests`
+
+### Verification
+- ✅ `cargo build --release` compiled successfully
+- ✅ 4/4 TypeScript compiler integration tests pass
+- ✅ Namespace syntax correctly transpiled to JavaScript IIFE pattern
+
+### Next Steps
+- Add support for `export` keyword inside namespaces
+- Implement nested namespace support (e.g., `A.B.C`)
+- Add support for `declare namespace` for ambient declarations
