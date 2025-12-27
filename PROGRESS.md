@@ -18,6 +18,15 @@
   - 支持 `<T extends U>` 形式泛型参数约束
   - 条件类型中的 `infer` 关键字解析
 
+#### 集成测试验证 (2025-12-27)
+- ✅ 新增 4 个集成测试用例
+  - `test_function_type`: 测试函数类型注解解析
+  - `test_tuple_type`: 测试元组类型解析
+  - `test_infer_keyword`: 测试 infer 关键字使用
+  - `test_generic_extends_constraint`: 测试泛型约束
+- ✅ 27/27 集成测试全部通过
+- ✅ 200/200 单元测试全部通过
+
 #### 验证
 - ✅ `cargo test --lib` 220/220 通过
 - ✅ 支持 `type ReturnType<T> = T extends (...args) => infer R ? R : never`
