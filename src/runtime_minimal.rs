@@ -2306,6 +2306,20 @@ impl MinimalRuntime {
         let partial_pattern = regex::Regex::new(r"Partial\s*<([^>]+)>").unwrap();
         js_code = partial_pattern.replace_all(&js_code, "$1").to_string();
 
+        // v0.3.207: Remove Required utility type
+        // Required<T> makes all properties of T required (opposite of Partial)
+        // For runtime, we remove the wrapper and keep the inner type
+        // Pattern: "Required<User>" -> "User"
+        let required_pattern = regex::Regex::new(r"Required\s*<([^>]+)>").unwrap();
+        js_code = required_pattern.replace_all(&js_code, "$1").to_string();
+
+        // v0.3.207: Remove Readonly utility type
+        // Readonly<T> makes all properties of T readonly
+        // For runtime, we remove the wrapper and keep the inner type
+        // Pattern: "Readonly<User>" -> "User"
+        let readonly_pattern = regex::Regex::new(r"Readonly\s*<([^>]+)>").unwrap();
+        js_code = readonly_pattern.replace_all(&js_code, "$1").to_string();
+
         // v0.3.195: Convert simple ESM export statements to comments
         // v0.3.196: Added abstract for export abstract class support
         // Complex exports (export { a, b }) need variable tracking, so we use placeholders
@@ -2388,7 +2402,9 @@ impl MinimalRuntime {
             || code.contains("Capitalize<")    // v0.3.203: standalone Capitalize intrinsic type
             || code.contains("Uncapitalize<")   // v0.3.203: standalone Uncapitalize intrinsic type
             || code.contains("NonNullable<")   // v0.3.204: NonNullable utility type
-            || code.contains("Partial<");   // v0.3.206: Partial utility type
+            || code.contains("Partial<")        // v0.3.206: Partial utility type
+            || code.contains("Required<")       // v0.3.207: Required utility type
+            || code.contains("Readonly<");      // v0.3.207: Readonly utility type
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript

@@ -65,6 +65,49 @@
 
 ---
 
+### v0.3.207 实现 Required<T> 和 Readonly<T> 工具类型快速路径支持（2025-12-28）
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.207 新增功能
+- **Required<T> 工具类型快速路径**
+  - 运行时快速路径识别 `Required<...>` 模式
+  - Required<T> 是 Partial<T> 的相反操作，使所有属性为必需
+  - 正确移除 Required 包装，保留内部类型
+
+- **Readonly<T> 工具类型快速路径**
+  - 运行时快速路径识别 `Readonly<...>` 模式
+  - Readonly<T> 使所有属性为只读
+  - 正确移除 Readonly 包装，保留内部类型
+
+#### v0.3.207 实现细节
+- **运行时检测增强** (`src/runtime_minimal.rs:2392-2393`)
+  - 在 `has_raw_typescript()` 中添加 `Required<` 和 `Readonly<` 模式检测
+
+- **运行时快速路径移除** (`src/runtime_minimal.rs:2309-2321`)
+  - 添加正则表达式 `Required\s*<([^>]+)>` 替换为 `$1`
+  - 添加正则表达式 `Readonly\s*<([^>]+)>` 替换为 `$1`
+  - 提取泛型参数内容直接替换，实现类型擦除
+
+#### v0.3.207 测试用例
+- `test_required_utility_type`: 基础 `Required<T>` 模式测试
+- `test_required_utility_fast_path`: Required 快速路径测试
+- `test_readonly_utility_type`: 基础 `Readonly<T>` 模式测试
+- `test_readonly_utility_fast_path`: Readonly 快速路径测试
+- `test_required_with_partial`: Required 与 Partial 组合使用测试
+- `test_readonly_with_nested_types`: Readonly 与嵌套类型测试
+
+#### v0.3.207 测试验证
+- ✅ `cargo test --test minimal_tests`: 98/98 通过 (新增 6 个测试)
+- ✅ `cargo test --lib`: 223/223 通过
+- ✅ `cargo test --test typescript_compiler_integration_tests`: 66/66 通过
+
+#### v0.3.207 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多内建工具类型支持（如 Pick, Omit, Record 等）
+- 完善类型推断场景测试
+
+---
+
 ### v0.3.204 实现 NonNullable<T> 工具类型快速路径支持（2025-12-28）
 **进度**: TypeScript 快速路径增强 | ✅ 已提交
 

@@ -2224,4 +2224,167 @@ const nested: PartialNested = { a: { b: { c: "test" } } };
 
         println!("✅ Test 89: TypeScript Partial<T> with nested types");
     }
+
+    /// 测试90: TypeScript Required<T> 工具类型基础测试 (v0.3.207)
+    #[test]
+    fn test_required_utility_type() {
+        // 测试 Required<T> 使所有属性为必需（与 Partial 相反）
+        let ts_code = r#"
+interface User {
+    name?: string;
+    age?: number;
+    email?: string;
+}
+type RequiredUser = Required<User>;
+const user: RequiredUser = { name: "Alice", age: 30, email: "alice@test.com" };
+"#;
+        let result = typescript::compile_typescript(ts_code, "required_test.ts");
+        assert!(result.is_ok(), "Required<T> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 Required 引用被移除
+        assert!(!output.js_code.contains("Required<"),
+            "Should remove Required utility type reference: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("const user"),
+            "Should preserve const user: {}", output.js_code);
+        assert!(output.js_code.contains("\"Alice\""),
+            "Should preserve string value: {}", output.js_code);
+
+        println!("✅ Test 90: TypeScript Required<T> utility type");
+    }
+
+    /// 测试91: TypeScript Required<T> 快速路径测试 (v0.3.207)
+    #[test]
+    fn test_required_utility_fast_path() {
+        // 测试 Required 快速路径移除
+        let ts_code = r#"
+type Point = { x?: number; y?: number };
+type RequiredPoint = Required<Point>;
+const point: RequiredPoint = { x: 10, y: 20 };
+"#;
+        let result = typescript::compile_typescript(ts_code, "required_fastpath.ts");
+        assert!(result.is_ok(), "Required fast-path should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 Required 被快速路径移除
+        assert!(!output.js_code.contains("Required<"),
+            "Should remove Required via fast-path: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("const point"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("x: 10"),
+            "Should preserve object property: {}", output.js_code);
+
+        println!("✅ Test 91: TypeScript Required<T> fast-path");
+    }
+
+    /// 测试92: TypeScript Readonly<T> 工具类型基础测试 (v0.3.207)
+    #[test]
+    fn test_readonly_utility_type() {
+        // 测试 Readonly<T> 使所有属性为只读
+        let ts_code = r#"
+interface User {
+    name: string;
+    age: number;
+}
+type ReadonlyUser = Readonly<User>;
+const user: ReadonlyUser = { name: "Bob", age: 25 };
+"#;
+        let result = typescript::compile_typescript(ts_code, "readonly_test.ts");
+        assert!(result.is_ok(), "Readonly<T> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 Readonly 引用被移除
+        assert!(!output.js_code.contains("Readonly<"),
+            "Should remove Readonly utility type reference: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("const user"),
+            "Should preserve const user: {}", output.js_code);
+        assert!(output.js_code.contains("\"Bob\""),
+            "Should preserve string value: {}", output.js_code);
+
+        println!("✅ Test 92: TypeScript Readonly<T> utility type");
+    }
+
+    /// 测试93: TypeScript Readonly<T> 快速路径测试 (v0.3.207)
+    #[test]
+    fn test_readonly_utility_fast_path() {
+        // 测试 Readonly 快速路径移除
+        let ts_code = r#"
+type Config = { host: string; port: number };
+type ReadonlyConfig = Readonly<Config>;
+const config: ReadonlyConfig = { host: "localhost", port: 8080 };
+"#;
+        let result = typescript::compile_typescript(ts_code, "readonly_fastpath.ts");
+        assert!(result.is_ok(), "Readonly fast-path should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 Readonly 被快速路径移除
+        assert!(!output.js_code.contains("Readonly<"),
+            "Should remove Readonly via fast-path: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("const config"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("\"localhost\""),
+            "Should preserve string value: {}", output.js_code);
+
+        println!("✅ Test 93: TypeScript Readonly<T> fast-path");
+    }
+
+    /// 测试94: TypeScript Required<T> 与 Partial<T> 组合使用 (v0.3.207)
+    #[test]
+    fn test_required_with_partial() {
+        // 测试 Required 和 Partial 的组合使用
+        let ts_code = r#"
+type User = { name: string; age?: number };
+type UpdatedUser = Required<Partial<User>>;
+const user: UpdatedUser = { name: "Charlie", age: 35 };
+"#;
+        let result = typescript::compile_typescript(ts_code, "required_partial.ts");
+        assert!(result.is_ok(), "Required<Partial<T>> should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 Required 和 Partial 都被移除
+        assert!(!output.js_code.contains("Required<"),
+            "Should remove Required: {}", output.js_code);
+        assert!(!output.js_code.contains("Partial<"),
+            "Should remove Partial: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("const user"),
+            "Should preserve const declaration: {}", output.js_code);
+
+        println!("✅ Test 94: TypeScript Required<T> with Partial<T>");
+    }
+
+    /// 测试95: TypeScript Readonly<T> 与嵌套类型 (v0.3.207)
+    #[test]
+    fn test_readonly_with_nested_types() {
+        // 测试 Readonly 与复杂嵌套类型
+        let ts_code = r#"
+type Nested = {
+    a: { b: { c: string } };
+    d: number;
+};
+type ReadonlyNested = Readonly<Nested>;
+const nested: ReadonlyNested = { a: { b: { c: "nested" } }, d: 100 };
+"#;
+        let result = typescript::compile_typescript(ts_code, "readonly_nested.ts");
+        assert!(result.is_ok(), "Readonly with nested types should compile");
+        let output = result.unwrap();
+
+        assert!(!output.js_code.contains("Readonly<"),
+            "Should remove Readonly: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("const nested"),
+            "Should preserve const nested: {}", output.js_code);
+
+        println!("✅ Test 95: TypeScript Readonly<T> with nested types");
+    }
 }
