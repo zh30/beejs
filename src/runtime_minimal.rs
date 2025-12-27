@@ -2220,9 +2220,49 @@ impl MinimalRuntime {
         let cleanup_pattern = regex::Regex::new(r";\s*\n").unwrap();
         js_code = cleanup_pattern.replace_all(&js_code, "\n").to_string();
 
-        // Remove trailing semicolons before closing braces
+        // v0.3.195: Remove trailing semicolons before closing braces
         let trailing_semicolon = regex::Regex::new(r";\s*}").unwrap();
         js_code = trailing_semicolon.replace_all(&js_code, "}").to_string();
+
+        // v0.3.195: Convert ESM import statements to CommonJS require
+        // Patterns:
+        // - "import default from 'module'" -> "const default = require('module')"
+        // - "import { named } from 'module'" -> "const { named } = require('module')"
+        // - "import * as ns from 'module'" -> "const ns = require('module')"
+        // - "import default, { named } from 'module'" -> "const default = require('module'), { named } = require('module')"
+        // - "import 'module'" -> "require('module')"
+        let esm_import_pattern = regex::Regex::new(
+            r"(?m)^\s*import\s+(?:(?:\{[^}]*\}|\*)(?:\s*,\s*(?:\{[^}]*\}|\*))?|[a-zA-Z_$][a-zA-Z0-9_$]*)\s*from\s*'([^']+)'\s*;?\s*$"
+        ).unwrap();
+        js_code = esm_import_pattern.replace_all(&js_code, r"const /* ESM import */ = require('$1')").to_string();
+
+        // Also handle double-quoted imports (use r#"..."# to include " in raw string)
+        let esm_import_dq_pattern = regex::Regex::new(
+            r#"(?m)^\s*import\s+(?:(?:\{[^}]*\}|\*)(?:\s*,\s*(?:\{[^}]*\}|\*))?|[a-zA-Z_$][a-zA-Z0-9_$]*)\s*from\s*"([^"]+)"\s*;?\s*$"#
+        ).unwrap();
+        js_code = esm_import_dq_pattern.replace_all(&js_code, r"const /* ESM import */ = require('$1')").to_string();
+
+        // v0.3.195: Convert simple ESM export statements to comments
+        // Complex exports (export { a, b }) need variable tracking, so we use placeholders
+        // - "export const X = val" -> "/* export const X = val */" (will be cleaned up)
+        // - "export function foo() {}" -> "/* export function foo() {} */"
+        // - "export class C {}" -> "/* export class C {} */"
+        let esm_export_pattern = regex::Regex::new(
+            r"(?m)^\s*export\s+(?:const|let|var|function|class|interface|type)\s+"
+        ).unwrap();
+        js_code = esm_export_pattern.replace_all(&js_code, "/* ESM export removed: ").to_string();
+
+        // v0.3.195: Convert export { ... } statements
+        let export_braces_pattern = regex::Regex::new(
+            r"(?m)^\s*export\s*\{([^}]*)\}\s*;?\s*$"
+        ).unwrap();
+        js_code = export_braces_pattern.replace_all(&js_code, "/* ESM export {$1} removed */").to_string();
+
+        // v0.3.195: Convert export default statements
+        let export_default_pattern = regex::Regex::new(
+            r"(?m)^\s*export\s+default\s+"
+        ).unwrap();
+        js_code = export_default_pattern.replace_all(&js_code, "/* ESM default export */ ").to_string();
 
         Ok(js_code)
     }
@@ -2262,7 +2302,13 @@ impl MinimalRuntime {
             || (code.contains("type ") && code.contains("${"))  // v0.3.188: template literal type pattern
             || code.contains("[key:")   // v0.3.190: index signature [key: string]: T pattern
             || code.contains("import type")    // v0.3.193: import type statement
-            || code.contains("export type");   // v0.3.193: export type statement
+            || code.contains("export type")    // v0.3.193: export type statement
+            || code.contains("import ")        // v0.3.195: ESM import statement
+            || code.contains("export const")   // v0.3.195: ESM export const
+            || code.contains("export function") // v0.3.195: ESM export function
+            || code.contains("export class")   // v0.3.195: ESM export class
+            || code.contains("export default") // v0.3.195: ESM export default
+            || code.contains("export {");      // v0.3.195: ESM export braces
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript

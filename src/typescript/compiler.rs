@@ -8294,46 +8294,49 @@ impl CodeEmitter {
                     return;
                 }
 
-                // 发射 import 语句
-                self.output.push_str("import ");
-
-                // 命名空间导入
+                // v0.3.195: 将 ESM import 转换为 CommonJS require
+                // 命名空间导入: import * as ns from 'module' -> const ns = require('module')
                 if let Some(alias) = namespace_alias {
-                    self.output.push_str("* as ");
+                    self.output.push_str("const ");
                     self.output.push_str(alias);
-                    self.output.push_str(" from ");
+                    self.output.push_str(" = require(");
                     self.output.push_str(module_specifier);
-                    self.output.push_str(";\n");
+                    self.output.push_str(");\n");
                     return;
                 }
 
                 // 混合导入（默认 + 命名）
                 if *is_default && !imports.is_empty() {
-                    for (i, import) in imports.iter().enumerate() {
-                        if i > 0 {
-                            self.output.push_str(", ");
-                        }
+                    // 默认导入
+                    for import in imports.iter() {
                         if import.is_default {
+                            self.output.push_str("const ");
                             self.output.push_str(&import.imported);
-                        } else {
-                            self.output.push_str("{ ");
+                            self.output.push_str(" = require(");
+                            self.output.push_str(module_specifier);
+                            self.output.push_str(");\n");
+                        }
+                    }
+                    // 命名导入
+                    for import in imports.iter() {
+                        if !import.is_default {
+                            self.output.push_str("const { ");
                             self.output.push_str(&import.imported);
                             if let Some(alias) = &import.alias {
                                 self.output.push_str(" as ");
                                 self.output.push_str(alias);
                             }
-                            self.output.push_str(" }");
+                            self.output.push_str(" } = require(");
+                            self.output.push_str(module_specifier);
+                            self.output.push_str(");\n");
                         }
                     }
-                    self.output.push_str(" from ");
-                    self.output.push_str(module_specifier);
-                    self.output.push_str(";\n");
                     return;
                 }
 
-                // 命名导入
+                // 命名导入: import { a, b } from 'module' -> const { a, b } = require('module')
                 if !imports.is_empty() {
-                    self.output.push_str("{ ");
+                    self.output.push_str("const { ");
                     for (i, import) in imports.iter().enumerate() {
                         if i > 0 {
                             self.output.push_str(", ");
@@ -8344,64 +8347,57 @@ impl CodeEmitter {
                             self.output.push_str(alias);
                         }
                     }
-                    self.output.push_str(" } from ");
+                    self.output.push_str(" } = require(");
                     self.output.push_str(module_specifier);
-                    self.output.push_str(";\n");
+                    self.output.push_str(");\n");
                     return;
                 }
 
-                // 副作用导入
+                // 副作用导入: import 'module' -> require('module')
+                self.output.push_str("require(");
                 self.output.push_str(module_specifier);
-                self.output.push_str(";\n");
+                self.output.push_str(");\n");
             }
             ASTNode::ExportDeclaration { exports, is_default, module_specifier, inline_declaration, is_type_only } => {
                 // export type 在编译时完全移除，不生成任何运行时代码
-                // 但对于 export type { x } from "module" 这种重新导出，需要保留内联声明
-                // 这里我们选择完全移除类型导出
                 if *is_type_only {
                     return;
                 }
 
-                self.output.push_str("export ");
+                // v0.3.195: 将 ESM export 转换为注释占位符
+                // 注意：完整的 export 支持需要变量追踪，这里使用占位符
 
-                // 默认导出
+                // 默认导出: export default ... -> /* ESM default export: ... */
                 if *is_default {
-                    self.output.push_str("default ");
-                    if let Some(decl) = inline_declaration {
-                        self.emit_node(decl);
-                    }
-                    return;
-                }
-
-                // 重新导出 from
-                if let Some(specifier) = module_specifier {
-                    if exports.is_empty() {
-                        // export * from "module"
-                        self.output.push_str("* from ");
-                        self.output.push_str(specifier);
-                        self.output.push_str(";\n");
-                    } else {
-                        self.output.push_str("{ ");
-                        for (i, export) in exports.iter().enumerate() {
-                            if i > 0 {
-                                self.output.push_str(", ");
+                    self.output.push_str("/* ESM default export");
+                    if let Some(ref decl) = inline_declaration {
+                        self.output.push_str(": ");
+                        // 输出内联声明的简略形式
+                        match decl.as_ref() {
+                            ASTNode::FunctionDeclaration { name, is_async, .. } => {
+                                if *is_async {
+                                    self.output.push_str("async function ");
+                                } else {
+                                    self.output.push_str("function ");
+                                }
+                                self.output.push_str(name);
                             }
-                            self.output.push_str(&export.name);
-                            if let Some(alias) = &export.alias {
-                                self.output.push_str(" as ");
-                                self.output.push_str(alias);
+                            ASTNode::ClassDeclaration { name, .. } => {
+                                self.output.push_str("class ");
+                                self.output.push_str(name);
+                            }
+                            _ => {
+                                self.output.push_str("...");
                             }
                         }
-                        self.output.push_str(" } from ");
-                        self.output.push_str(specifier);
-                        self.output.push_str(";\n");
                     }
+                    self.output.push_str(" */\n");
                     return;
                 }
 
-                // 命名导出
-                if !exports.is_empty() {
-                    self.output.push_str("{ ");
+                // 重新导出 from: export { a, b } from 'module' -> /* ESM re-export { a, b } from 'module' */
+                if let Some(specifier) = module_specifier {
+                    self.output.push_str("/* ESM re-export { ");
                     for (i, export) in exports.iter().enumerate() {
                         if i > 0 {
                             self.output.push_str(", ");
@@ -8412,13 +8408,58 @@ impl CodeEmitter {
                             self.output.push_str(alias);
                         }
                     }
-                    self.output.push_str(" };\n");
+                    self.output.push_str(" } from ");
+                    self.output.push_str(specifier);
+                    self.output.push_str(" */\n");
                     return;
                 }
 
-                // 内联导出声明
-                if let Some(decl) = inline_declaration {
-                    self.emit_node(decl);
+                // 命名导出: export { a, b } -> /* ESM export { a, b } */
+                if !exports.is_empty() {
+                    self.output.push_str("/* ESM export { ");
+                    for (i, export) in exports.iter().enumerate() {
+                        if i > 0 {
+                            self.output.push_str(", ");
+                        }
+                        self.output.push_str(&export.name);
+                        if let Some(alias) = &export.alias {
+                            self.output.push_str(" as ");
+                            self.output.push_str(alias);
+                        }
+                    }
+                    self.output.push_str(" } */\n");
+                    return;
+                }
+
+                // 内联导出声明: export const x = 1 -> /* ESM export: const x = 1 */
+                if let Some(ref decl) = inline_declaration {
+                    self.output.push_str("/* ESM export: ");
+                    match decl.as_ref() {
+                        ASTNode::VariableDeclaration { kind, name, initializer, .. } => {
+                            self.output.push_str(kind);
+                            self.output.push_str(" ");
+                            self.output.push_str(name);
+                            if initializer.is_some() {
+                                self.output.push_str(" = ...");
+                            }
+                        }
+                        ASTNode::FunctionDeclaration { name, is_async, .. } => {
+                            if *is_async {
+                                self.output.push_str("async function ");
+                            } else {
+                                self.output.push_str("function ");
+                            }
+                            self.output.push_str(name);
+                        }
+                        ASTNode::ClassDeclaration { name, .. } => {
+                            self.output.push_str("class ");
+                            self.output.push_str(name);
+                        }
+                        _ => {
+                            self.output.push_str("...");
+                        }
+                    }
+                    self.output.push_str(" */\n");
                 }
             }
             ASTNode::Expression(expr) => {
@@ -8605,11 +8646,104 @@ impl CodeEmitter {
                     // declare module "name" { ... } - 模块声明
                     ASTStatement::ModuleDeclaration { name, body } => {
                         // 模块声明在转译时保留声明语法
+                        // 内部的 export 语句需要转换为 declare export 格式
                         self.output.push_str("declare module \"");
                         self.output.push_str(name);
                         self.output.push_str("\" {\n");
                         for stmt in body {
-                            self.emit_node(stmt);
+                            match stmt {
+                                ASTNode::ExportDeclaration { exports, is_default, module_specifier, inline_declaration, is_type_only } => {
+                                    // 在 declare module 内部，将 export 转换为 declare export
+                                    if *is_type_only {
+                                        // export type 应该完全移除
+                                        continue;
+                                    }
+                                    if let Some(specifier) = module_specifier {
+                                        // export { ... } from 'module' - 重新导出
+                                        if exports.is_empty() {
+                                            self.output.push_str("declare export * from ");
+                                        } else {
+                                            self.output.push_str("declare export { ");
+                                            for (i, export) in exports.iter().enumerate() {
+                                                if i > 0 {
+                                                    self.output.push_str(", ");
+                                                }
+                                                self.output.push_str(&export.name);
+                                                if let Some(alias) = &export.alias {
+                                                    self.output.push_str(" as ");
+                                                    self.output.push_str(alias);
+                                                }
+                                            }
+                                            self.output.push_str(" } from ");
+                                        }
+                                        self.output.push_str(specifier);
+                                        self.output.push_str(";\n");
+                                    } else if *is_default {
+                                        // export default - 转换为 declare export default
+                                        self.output.push_str("declare export default");
+                                        if let Some(ref decl) = inline_declaration {
+                                            match decl.as_ref() {
+                                                ASTNode::FunctionDeclaration { name, is_async, .. } => {
+                                                    if *is_async {
+                                                        self.output.push_str(" async");
+                                                    }
+                                                    self.output.push_str(" function ");
+                                                    self.output.push_str(name);
+                                                }
+                                                ASTNode::ClassDeclaration { name, .. } => {
+                                                    self.output.push_str(" class ");
+                                                    self.output.push_str(name);
+                                                }
+                                                _ => {}
+                                            }
+                                        }
+                                        self.output.push_str(";\n");
+                                    } else if !exports.is_empty() {
+                                        // export { a, b } - 转换为 declare export { a, b }
+                                        self.output.push_str("declare export { ");
+                                        for (i, export) in exports.iter().enumerate() {
+                                            if i > 0 {
+                                                self.output.push_str(", ");
+                                            }
+                                            self.output.push_str(&export.name);
+                                            if let Some(alias) = &export.alias {
+                                                self.output.push_str(" as ");
+                                                self.output.push_str(alias);
+                                            }
+                                        }
+                                        self.output.push_str(" };\n");
+                                    } else if let Some(ref decl) = inline_declaration {
+                                        // export const/function/class - 转换为 declare export const/function/class
+                                        match decl.as_ref() {
+                                            ASTNode::VariableDeclaration { kind, name, initializer, .. } => {
+                                                self.output.push_str("declare export ");
+                                                self.output.push_str(kind);
+                                                self.output.push_str(" ");
+                                                self.output.push_str(name);
+                                                self.output.push_str(";\n");
+                                            }
+                                            ASTNode::FunctionDeclaration { name, is_async, .. } => {
+                                                self.output.push_str("declare export ");
+                                                if *is_async {
+                                                    self.output.push_str("async ");
+                                                }
+                                                self.output.push_str("function ");
+                                                self.output.push_str(name);
+                                                self.output.push_str(";\n");
+                                            }
+                                            ASTNode::ClassDeclaration { name, .. } => {
+                                                self.output.push_str("declare export class ");
+                                                self.output.push_str(name);
+                                                self.output.push_str(";\n");
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    self.emit_node(stmt);
+                                }
+                            }
                         }
                         self.output.push_str("}\n");
                     }
