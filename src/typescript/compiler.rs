@@ -2408,9 +2408,13 @@ pub enum ASTStatement {
     },
     /// TypeScript 命名空间: namespace MyNamespace { ... }
     /// 编译为: var MyNamespace; (function(MyNamespace) { ... })(MyNamespace || (MyNamespace = {}));
+    /// 嵌套命名空间: namespace A.B.C { ... }
+    /// 编译为: var A; (function(A) { var B; (function(B) { ... })(B || (B = {})); })(A || (A = {}));
     Namespace {
-        /// 命名空间名称
+        /// 命名空间名称（顶层名称）
         name: String,
+        /// 完整命名空间路径（支持嵌套，如 "A.B.C"）
+        full_name: String,
         /// 命名空间内部的语句列表
         body: Vec<ASTNode>,
         /// 是否为 declare 声明（declare namespace）
@@ -4415,8 +4419,12 @@ impl Parser {
         // 消耗右花括号
         self.consume(Token::RBrace)?;
 
+        // 构建完整命名空间路径（如 "A.B.C"）
+        let full_name = names.join(".");
+
         Ok(ASTNode::Statement(ASTStatement::Namespace {
             name,
+            full_name,
             body,
             is_declare,
         }))
@@ -7428,35 +7436,42 @@ impl CodeEmitter {
                     }
                     // 命名空间编译: namespace MyNamespace { ... }
                     // 编译为: var MyNamespace; (function(MyNamespace) { ... })(MyNamespace || (MyNamespace = {}));
+                    // 嵌套命名空间: namespace A.B.C { ... }
+                    // 编译为: var A; (function(A) { var B; (function(B) { var C; (function(C) { ... })(C || (C = {})); })(B || (B = {})); })(A || (A = {}));
                     // declare namespace: 生成 declare namespace 声明语法
-                    ASTStatement::Namespace { name, body, is_declare } => {
+                    ASTStatement::Namespace { name, full_name, body, is_declare } => {
                         if *is_declare {
                             // declare namespace - 保留 declare namespace 语法
                             self.output.push_str("declare namespace ");
-                            self.output.push_str(&name);
+                            self.output.push_str(&full_name);
                             self.output.push_str(" {\n");
                             for stmt in body {
                                 self.emit_node(stmt);
                             }
                             self.output.push_str("}\n");
                         } else {
-                            // 普通 namespace - 完整 IIFE 包装并调用
-                            self.output.push_str("var ");
-                            self.output.push_str(&name);
-                            self.output.push_str(";\n");
-                            // IIFE 包装命名空间体
-                            self.output.push_str("(function(");
-                            self.output.push_str(&name);
-                            self.output.push_str(") {\n");
-                            // 发射命名空间内部的语句
-                            for stmt in body {
-                                self.emit_node(stmt);
+                            // 检查是否为嵌套命名空间
+                            let names: Vec<&str> = full_name.split('.').collect();
+                            if names.len() == 1 {
+                                // 简单命名空间
+                                self.output.push_str("var ");
+                                self.output.push_str(&name);
+                                self.output.push_str(";\n");
+                                self.output.push_str("(function(");
+                                self.output.push_str(&name);
+                                self.output.push_str(") {\n");
+                                for stmt in body {
+                                    self.emit_node(stmt);
+                                }
+                                self.output.push_str("})(");
+                                self.output.push_str(&name);
+                                self.output.push_str(" || (");
+                                self.output.push_str(&name);
+                                self.output.push_str(" = {}));\n");
+                            } else {
+                                // 嵌套命名空间 - 递归创建嵌套 IIFE
+                                self.emit_nested_namespace(&names, 0, body);
                             }
-                            self.output.push_str("})(");
-                            self.output.push_str(&name);
-                            self.output.push_str(" || (");
-                            self.output.push_str(&name);
-                            self.output.push_str(" = {}));\n");
                         }
                     }
                     // declare global { ... } - 直接输出内部的声明
@@ -7481,6 +7496,48 @@ impl CodeEmitter {
                 self.emit_expression(source);
                 self.output.push_str(";\n");
             }
+        }
+    }
+
+    /// 发射嵌套命名空间
+    /// 递归生成嵌套 IIFE 结构
+    /// 例如: namespace A.B.C { ... }
+    /// 编译为: var A; (function(A) { var B; (function(B) { var C; (function(C) { ... })(C || (C = {})); })(B || (B = {})); })(A || (A = {}));
+    fn emit_nested_namespace(&mut self, names: &[&str], index: usize, body: &[ASTNode]) {
+        let current_name = names[index];
+        let is_last = index == names.len() - 1;
+
+        if is_last {
+            // 最后一层命名空间 - 输出变量声明和 IIFE
+            self.output.push_str("var ");
+            self.output.push_str(current_name);
+            self.output.push_str(";\n");
+            self.output.push_str("(function(");
+            self.output.push_str(current_name);
+            self.output.push_str(") {\n");
+            for stmt in body {
+                self.emit_node(stmt);
+            }
+            self.output.push_str("})(");
+            self.output.push_str(current_name);
+            self.output.push_str(" || (");
+            self.output.push_str(current_name);
+            self.output.push_str(" = {}));\n");
+        } else {
+            // 中间层 - 输出变量声明和 IIFE，IIFE 内部递归处理下一层
+            self.output.push_str("var ");
+            self.output.push_str(current_name);
+            self.output.push_str(";\n");
+            self.output.push_str("(function(");
+            self.output.push_str(current_name);
+            self.output.push_str(") {\n");
+            // 递归处理下一层命名空间
+            self.emit_nested_namespace(names, index + 1, body);
+            self.output.push_str("})(");
+            self.output.push_str(current_name);
+            self.output.push_str(" || (");
+            self.output.push_str(current_name);
+            self.output.push_str(" = {}));\n");
         }
     }
 

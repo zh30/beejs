@@ -9013,6 +9013,42 @@ console.log(p.name);  // "Alice"
 - ✅ Namespace syntax correctly transpiled to JavaScript IIFE pattern
 
 ### Next Steps
-- Add support for `export` keyword inside namespaces
-- Implement nested namespace support (e.g., `A.B.C`)
-- Add support for `declare namespace` for ambient declarations
+- Add support for `export` keyword inside namespaces ✅ (already supported via Implement nested namespace support parse_statement)
+- (e.g., `A.B.C`) ✅ v0.3.155
+- Add support for `declare namespace` for ambient declarations ✅ (already supported)
+
+---
+
+## v0.3.155 (2025-12-27)
+
+### New Features
+- **Shorthand Nested Namespace Support**
+  - Added `full_name` field to `ASTStatement::Namespace` to store complete namespace path
+  - Implemented `emit_nested_namespace()` helper function for recursive IIFE generation
+  - Supports shorthand syntax: `namespace A.B.C { ... }`
+  - Supports declare nested namespace: `declare namespace Outer.Inner { ... }`
+
+### AST Enhancements
+- Added `full_name: String` field to `ASTStatement::Namespace` enum variant
+- Stores complete namespace path (e.g., "A.B.C") for proper emit
+
+### Emitter Improvements
+- New `emit_nested_namespace()` function generates correct nested IIFE structure:
+  ```javascript
+  // Input: namespace A.B.C { export const x = 1; }
+  // Output: var A; (function(A) { var B; (function(B) { var C; (function(C) { ... })(C || (C = {})); })(B || (B = {})); })(A || (A = {}));
+  ```
+
+### Tests
+- Added `test_shorthand_nested_namespace` - tests `namespace A.B.C { ... }` shorthand syntax
+- Added `test_declare_nested_namespace` - tests `declare namespace Outer.Inner { ... }` syntax
+
+### Verification
+- ✅ `cargo test --lib` 220/220 passed
+- ✅ `cargo test --test typescript_compiler_integration_tests` 29/29 passed (+2)
+- ✅ `cargo build` compiled successfully
+
+### Next Steps
+- Add support for namespace module augmentation
+- Implement namespace merging support
+- Optimize namespace emit for common patterns

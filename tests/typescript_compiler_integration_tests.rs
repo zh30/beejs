@@ -139,6 +139,66 @@ console.log(Outer.Inner.getValue());
         }
     }
 
+    /// Test shorthand nested namespace (v0.3.155)
+    #[test]
+    fn test_shorthand_nested_namespace() {
+        // 测试简写嵌套命名空间 A.B.C { ... }
+        let ts_code: _ = r#"
+namespace A.B.C {
+    export const value: number = 42;
+    export function getValue(): number {
+        return value;
+    }
+}
+console.log(A.B.C.getValue());
+"#;
+
+        match compile_typescript(ts_code, "shorthand_nested_namespace.ts") {
+            Ok(output) => {
+                println!("简写嵌套命名空间转译结果:");
+                println!("{}", output.js_code);
+                // 验证所有命名空间层级都存在
+                assert!(output.js_code.contains("var A"), "Should declare var A");
+                assert!(output.js_code.contains("var B"), "Should declare var B");
+                assert!(output.js_code.contains("var C"), "Should declare var C");
+                assert!(output.js_code.contains("value"), "Should contain value");
+                assert!(output.js_code.contains("getValue"), "Should contain getValue");
+                // TypeScript 类型注解应该被移除
+                assert!(!output.js_code.contains(": number"), "Should not contain type annotation");
+                println!("✅ Shorthand nested namespace test passed");
+            }
+            Err(e) => {
+                panic!("Shorthand nested namespace transpilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test declare namespace with nested names (v0.3.155)
+    #[test]
+    fn test_declare_nested_namespace() {
+        // 测试 declare 嵌套命名空间
+        let ts_code: _ = r#"
+declare namespace Outer.Inner {
+    export const value: number;
+    export function getValue(): number;
+}
+"#;
+
+        match compile_typescript(ts_code, "declare_nested_namespace.ts") {
+            Ok(output) => {
+                println!("declare 嵌套命名空间转译结果:");
+                println!("{}", output.js_code);
+                // 验证 declare 关键字和完整命名空间路径
+                assert!(output.js_code.contains("declare namespace Outer.Inner"),
+                    "Should contain declare namespace Outer.Inner: {}", output.js_code);
+                println!("✅ Declare nested namespace test passed");
+            }
+            Err(e) => {
+                panic!("Declare nested namespace transpilation failed: {}", e);
+            }
+        }
+    }
+
     #[test]
     fn test_declare_namespace() {
         // 测试 declare namespace 声明
