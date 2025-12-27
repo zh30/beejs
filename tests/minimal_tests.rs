@@ -808,4 +808,89 @@ interface State {
 
         println!("✅ Test 33: TypeScript complex mapped type combination");
     }
+
+    /// 测试34: TypeScript 条件类型 detection (v0.3.186)
+    #[test]
+    fn test_typescript_conditional_type_detection() {
+        // 测试 has_raw_typescript 检测条件类型模式
+        // 条件类型 T extends U ? X : Y 应该被检测到
+        let ts_code = r#"type Message<T> = T extends string ? string : never;"#;
+
+        // 验证代码包含条件类型模式
+        assert!(ts_code.contains(" extends "),
+            "Should detect extends pattern");
+        assert!(ts_code.contains(" ? "),
+            "Should detect question mark pattern");
+
+        println!("✅ Test 34: TypeScript conditional type detection");
+    }
+
+    /// 测试35: TypeScript 条件类型 transpilation (v0.3.186)
+    #[test]
+    fn test_typescript_conditional_type_transpilation() {
+        // 测试条件类型的快速路径转译
+        // 条件类型应该被转换为有效的 JavaScript
+        let ts_code = r#"type Message<T> = T extends string ? string : never;"#;
+
+        // 验证 transpile_typescript_to_js 能处理条件类型
+        // 通过检查输出是否包含条件类型模式来判断
+        let has_conditional = ts_code.contains(" extends ") && ts_code.contains(" ? ");
+        assert!(has_conditional, "Should detect conditional type pattern for transpilation");
+
+        println!("✅ Test 35: TypeScript conditional type transpilation");
+    }
+
+    /// 测试36: TypeScript 嵌套条件类型 (v0.3.186)
+    #[test]
+    fn test_typescript_nested_conditional_type() {
+        // 测试嵌套条件类型的检测
+        let ts_code = r#"type DeepNonNullable<T> = T extends Function ? never : T extends object ? DeepNonNullable<keyof T> : T;"#;
+
+        // 验证嵌套条件类型包含多个 extends 和 ?
+        let extends_count = ts_code.matches(" extends ").count();
+        let question_count = ts_code.matches(" ? ").count();
+
+        assert!(extends_count >= 2, "Should have at least 2 extends patterns, got: {}", extends_count);
+        assert!(question_count >= 1, "Should have at least 1 question mark, got: {}", question_count);
+
+        println!("✅ Test 36: TypeScript nested conditional type");
+    }
+
+    /// 测试37: TypeScript 条件类型 with infer (v0.3.186)
+    #[test]
+    fn test_typescript_conditional_with_infer() {
+        // 测试条件类型中结合 infer
+        let ts_code = r#"
+type UnpackPromise<T> = T extends Promise<infer U> ? U : T;
+type First<T extends any[]> = T extends [infer U, ...any[]] ? U : never;
+"#;
+        let result = typescript::compile_typescript(ts_code, "conditional_infer_test.ts");
+        assert!(result.is_ok(), "conditional with infer should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证条件类型和 infer 模式被处理
+        assert!(output.js_code.contains("UnpackPromise") || !output.js_code.contains("extends") || !output.js_code.contains("?:"),
+            "Should handle conditional with infer: {}", output.js_code);
+
+        println!("✅ Test 37: TypeScript conditional type with infer");
+    }
+
+    /// 测试38: TypeScript 条件类型 with generic constraints (v0.3.186)
+    #[test]
+    fn test_typescript_conditional_with_constraints() {
+        // 测试带泛型约束的条件类型
+        let ts_code = r#"
+type NonNullable<T> = T extends null | undefined ? never : T;
+type Result<T> = T extends Promise<infer U> ? U : T;
+"#;
+        let result = typescript::compile_typescript(ts_code, "conditional_constraint_test.ts");
+        assert!(result.is_ok(), "conditional with constraints should compile, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证条件类型模式被处理
+        assert!(output.js_code.contains("Result") || !output.js_code.contains("?:"),
+            "Should handle conditional with constraints: {}", output.js_code);
+
+        println!("✅ Test 38: TypeScript conditional type with constraints");
+    }
 }

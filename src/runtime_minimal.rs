@@ -1878,6 +1878,109 @@ impl MinimalRuntime {
         let infer_pattern = regex::Regex::new(r"infer\s+([A-Z][a-zA-Z0-9_]*)(?:\s+extends\s+[^?;=]+)?").unwrap();
         js_code = infer_pattern.replace_all(&js_code, "/* infer $1 */").to_string();
 
+        // v0.3.186: Remove conditional type expressions
+        // Pattern: "T extends U ? X : Y" in type alias definitions
+        // This handles basic conditional types like: type A<T> = T extends string ? "yes" : "no";
+        // We remove the entire conditional type expression and replace with a comment
+        // Uses a character-level approach to handle nested types correctly
+        fn remove_conditional_types(code: &str) -> String {
+            let mut result = String::new();
+            let mut i = 0;
+            let chars: Vec<char> = code.chars().collect();
+            let n = chars.len();
+
+            while i < n {
+                // Look for " extends " pattern in type context
+                let extends_start = chars[i..].starts_with(&['e', 'x', 't', 'e', 'n', 'd', 's', ' '][..]);
+
+                if extends_start && i > 0 {
+                    // Check if we're in a type alias context (after "=")
+                    let mut j = i;
+                    let mut found_equals = false;
+                    while j > 0 {
+                        if chars[j] == '=' {
+                            found_equals = true;
+                            break;
+                        }
+                        if chars[j] == ';' || chars[j] == '\n' {
+                            break;
+                        }
+                        j -= 1;
+                    }
+
+                    if found_equals {
+                        // Find the end of the conditional type expression
+                        // We need to match: extends <type> ? <type> : <type> ;
+                        let mut k = i + 7; // Skip "extends "
+                        let mut depth = 0;
+                        let mut paren_depth = 0;
+                        let mut angle_depth = 0;
+                        let mut in_string = false;
+                        let mut string_char = '\0';
+                        let mut found_question = false;
+                        let mut found_colon = false;
+
+                        while k < n {
+                            let c = chars[k];
+                            if in_string {
+                                if c == '\\' && k + 1 < n {
+                                    k += 2;
+                                    continue;
+                                }
+                                if c == string_char {
+                                    in_string = false;
+                                }
+                            } else if c == '"' || c == '\'' || c == '`' {
+                                in_string = true;
+                                string_char = c;
+                            } else if c == '<' {
+                                angle_depth += 1;
+                            } else if c == '>' {
+                                angle_depth -= 1;
+                            } else if c == '{' {
+                                depth += 1;
+                            } else if c == '}' {
+                                if depth > 0 {
+                                    depth -= 1;
+                                } else if angle_depth == 0 {
+                                    break;
+                                }
+                            } else if c == '(' {
+                                paren_depth += 1;
+                            } else if c == ')' {
+                                if paren_depth > 0 {
+                                    paren_depth -= 1;
+                                } else if depth == 0 && angle_depth == 0 {
+                                    break;
+                                }
+                            } else if c == '?' && depth == 0 && paren_depth == 0 && angle_depth == 0 {
+                                found_question = true;
+                            } else if c == ':' && depth == 0 && paren_depth == 0 && angle_depth == 0 && found_question {
+                                found_colon = true;
+                            } else if c == ';' && found_colon && depth == 0 {
+                                k += 1;
+                                break;
+                            } else if c == '\n' && found_colon && depth == 0 {
+                                break;
+                            }
+                            k += 1;
+                        }
+
+                        result.push_str("/* conditional type */");
+                        i = k;
+                        continue;
+                    }
+                }
+
+                result.push(chars[i]);
+                i += 1;
+            }
+
+            result
+        }
+
+        js_code = remove_conditional_types(&js_code);
+
         // v0.3.176: Remove abstract class and abstract method declarations
         // abstract is a TypeScript-only keyword for defining abstract classes and methods
         // Pattern: "abstract class ClassName" and "abstract methodName(): returnType;"
@@ -1941,7 +2044,8 @@ impl MinimalRuntime {
             || code.contains("this:")           // v0.3.183: this parameter type annotation
             || code.contains(" in ") && code.contains("[");  // v0.3.184: mapped type [P in keyof T] pattern
             || code.contains("keyof typeof")    // v0.3.185: keyof typeof pattern
-            || code.contains("extends keyof");   // v0.3.185: keyof in generic constraints
+            || code.contains("extends keyof")   // v0.3.185: keyof in generic constraints
+            || code.contains(" extends ");      // v0.3.186: conditional type extends pattern
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript

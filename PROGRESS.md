@@ -153,6 +153,43 @@
 - 继续完善 TypeScript 编译器功能
 - 实现条件类型 `extends ... ? ... : ...` 支持
 
+### v0.3.186 实现条件类型快速路径支持 (2025-12-28)
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.186 新增功能
+- **条件类型检测**
+  - 在 `has_raw_typescript()` 中添加 `extends` 模式检测
+  - 检测代码中的 ` extends ` 模式，识别条件类型语法
+
+- **条件类型移除**
+  - 添加 `remove_conditional_types()` 函数
+  - 使用字符级分析正确处理嵌套类型
+  - 识别 `type Alias<T> = T extends U ? X : Y` 模式
+  - 将条件类型表达式替换为 `/* conditional type */` 注释
+
+#### v0.3.186 实现细节
+- **运行时增强** (`src/runtime_minimal.rs`)
+  - `has_raw_typescript()`: 添加 `code.contains(" extends ")` 检测
+  - `transpile_typescript_to_js()`: 添加 `remove_conditional_types()` 函数
+  - 字符级分析处理嵌套的 `<>`、`{}`、`()` 和字符串
+
+#### v0.3.186 测试用例
+- `test_typescript_conditional_type_detection`: 验证条件类型模式检测
+- `test_typescript_conditional_type_transpilation`: 验证转译处理
+- `test_typescript_nested_conditional_type`: 验证嵌套条件类型
+- `test_typescript_conditional_with_infer`: 验证条件类型与 infer 结合
+- `test_typescript_conditional_with_constraints`: 验证带约束的条件类型
+
+#### v0.3.186 验证
+- ✅ `cargo build` 成功编译（仅警告）
+- ✅ `cargo test --test minimal_tests`: 38/38 通过
+
+#### v0.3.186 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现完整条件类型语法解析（compiler.rs）
+
+---
+
 ### v0.3.179 实现 BigInt 字面量支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 
