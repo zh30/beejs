@@ -9666,3 +9666,55 @@ console.log(p.name);  // "Alice"
 #### v0.3.170 下一步
 - 实现完整的三重合并（接口+命名空间+模块）
 - 继续完善 TypeScript 编译器功能
+
+---
+
+### v0.3.171 三重合并支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.171 新增功能
+- **三重合并（Triple Merge）支持**
+  - 支持同名 `interface` + `namespace` 声明合并
+  - 支持多个同名的 interface 声明合并（TypeScript 规范）
+  - 支持多个同名的 namespace 声明合并
+  - 支持 `declare interface` + `declare namespace` 组合
+  - 支持嵌套命名空间合并
+
+#### v0.3.171 实现细节
+- **AST 增强** (`src/typescript/compiler.rs`)
+  - 新增 `TripleMergedDeclaration` AST 节点类型
+  - 包含：`name`、`interface_properties`、`interface_extends`、`interface_index_signature`、`body`、`is_declare`
+  - 用于表示 interface + namespace 的合并声明
+
+- **合并逻辑增强**
+  - `merge_triple()` 方法：收集同名的 interface 和 namespace
+  - 按名称分组收集 interface 的属性签名
+  - 按名称分组收集 namespace/module 的函数和变量
+  - 为每个名称创建 `TripleMergedDeclaration` 节点
+
+- **编译器管道更新**
+  - `compile_source()` 新增第6步：调用 `merge_triple()`
+  - 在 namespace 和 module 合并之后执行
+
+- **发射器增强**
+  - `emit_node()` 添加 `TripleMergedDeclaration` 处理
+  - 正确输出合并后的 namespace 结构
+
+#### v0.3.171 测试用例
+- `test_triple_merge_interface_namespace`: 基础 interface + namespace 合并
+- `test_multiple_triple_merge`: 多个同名 interface + namespace 合并
+- `test_namespace_multiple_merge`: namespace 多次合并
+- `test_interface_multiple_merge`: interface 多次合并
+- `test_triple_merge_with_declare`: declare + triple merge 组合
+- `test_nested_namespace_merge`: 嵌套命名空间合并
+- `test_interface_extends_merge`: interface 继承合并
+
+#### v0.3.171 验证
+- ✅ `cargo build --release` 成功编译
+- ✅ `cargo test --test minimal_tests` 8/8 通过
+- ✅ `cargo test --test typescript_triple_merge_tests` 7/7 通过
+- ✅ 新增 7 个测试全部通过
+
+#### v0.3.171 下一步
+- 继续完善 TypeScript 编译器功能
+- 添加更多运行时优化

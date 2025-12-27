@@ -220,11 +220,13 @@ impl TypeScriptCompiler {
         let merged_ast = self.merge_interfaces(merged_ast);
         // 第五步：合并同名的模块声明
         let merged_ast = self.merge_modules(merged_ast);
-        // 第六步：类型检查（简化实现）
+        // 第六步：三重合并 - 合并同名的接口、命名空间、模块
+        let merged_ast = self.merge_triple(merged_ast);
+        // 第七步：类型检查（简化实现）
         self.type_check(&merged_ast, file_name)?;
-        // 第七步：转译为 JavaScript
+        // 第八步：转译为 JavaScript
         let js_code: _ = self.transpile(&merged_ast)?;
-        // 第八步：生成 Source Map
+        // 第九步：生成 Source Map
         let source_map: _ = if self.config.source_map {
             Some(self.generate_source_map(source, &js_code, file_name)?)
         } else {
@@ -399,6 +401,100 @@ impl TypeScriptCompiler {
         let mut merged_statements: Vec<ASTNode> = non_module_nodes;
         for module in module_map.into_values() {
             merged_statements.push(ASTNode::Statement(module));
+        }
+
+        ASTNode::Program(merged_statements)
+    }
+
+    /// 三重合并：合并同名的接口、命名空间、模块声明
+    /// TypeScript 允许同一个名称同时作为 interface、namespace、module 声明
+    /// 所有声明的内容会被合并到同一个 TripleMergedDeclaration 中
+    fn merge_triple(&self, ast: ASTNode) -> ASTNode {
+        use std::collections::HashMap;
+
+        // 解包 Program 节点
+        let statements = match ast {
+            ASTNode::Program(stmts) => stmts,
+            _ => return ast,
+        };
+
+        // 使用 HashMap 按名称分组接口、命名空间、模块
+        // value 是 (interface_props, interface_extends, interface_index, namespace_body, is_declare)
+        type TripleData = (
+            HashMap<String, String>,  // interface properties
+            Vec<String>,               // interface extends
+            Option<Box<IndexSignature>>, // interface index signature
+            Vec<ASTNode>,              // namespace/module body
+            bool,                      // is_declare
+        );
+        let mut triple_map: HashMap<String, TripleData> = HashMap::new();
+        let mut remaining_nodes: Vec<ASTNode> = Vec::new();
+
+        for node in statements {
+            match node {
+                // 处理接口声明
+                ASTNode::InterfaceDeclaration {
+                    name,
+                    extends,
+                    properties,
+                    index_signature,
+                } => {
+                    let entry = triple_map.entry(name.clone()).or_insert_with(|| {
+                        (HashMap::new(), Vec::new(), None, Vec::new(), false)
+                    });
+                    // 合并接口属性
+                    entry.0.extend(properties);
+                    // 合并继承列表（去重）
+                    for ext in extends {
+                        if !entry.1.contains(&ext) {
+                            entry.1.push(ext);
+                        }
+                    }
+                    // 保留第一个非 None 的索引签名
+                    if index_signature.is_some() && entry.2.is_none() {
+                        entry.2 = index_signature;
+                    }
+                }
+                // 处理命名空间声明
+                ASTNode::Statement(ASTStatement::Namespace { name, full_name: _, body, is_declare }) => {
+                    let entry = triple_map.entry(name.clone()).or_insert_with(|| {
+                        (HashMap::new(), Vec::new(), None, Vec::new(), is_declare)
+                    });
+                    // 合并命名空间 body
+                    entry.3.extend(body);
+                    // 更新 is_declare 状态
+                    if is_declare {
+                        entry.4 = true;
+                    }
+                }
+                // 处理模块声明
+                ASTNode::Statement(ASTStatement::ModuleDeclaration { name, body }) => {
+                    let entry = triple_map.entry(name.clone()).or_insert_with(|| {
+                        (HashMap::new(), Vec::new(), None, Vec::new(), false)
+                    });
+                    // 合并模块 body
+                    entry.3.extend(body);
+                }
+                _ => {
+                    remaining_nodes.push(node);
+                }
+            }
+        }
+
+        // 重新构建 AST
+        let mut merged_statements: Vec<ASTNode> = remaining_nodes;
+        for (name, (properties, extends, index_sig, body, is_declare)) in triple_map.into_iter() {
+            // 如果只有接口属性，创建 TripleMergedDeclaration
+            if !properties.is_empty() || !body.is_empty() {
+                merged_statements.push(ASTNode::Statement(ASTStatement::TripleMergedDeclaration {
+                    name,
+                    interface_properties: properties,
+                    interface_extends: extends,
+                    interface_index_signature: index_sig,
+                    body,
+                    is_declare,
+                }));
+            }
         }
 
         ASTNode::Program(merged_statements)
@@ -1423,6 +1519,12 @@ impl TypeScriptCompiler {
                 }
             }
             ASTStatement::ModuleDeclaration { body, .. } => {
+                for stmt in body {
+                    self.check_node(stmt, ctx)?;
+                }
+            }
+            // 三重合并声明的类型检查
+            ASTStatement::TripleMergedDeclaration { body, .. } => {
                 for stmt in body {
                     self.check_node(stmt, ctx)?;
                 }
@@ -2697,6 +2799,23 @@ pub enum ASTStatement {
         name: String,
         /// 模块内部的语句列表
         body: Vec<ASTNode>,
+    },
+    /// 三重合并声明：interface + namespace + module 同名合并
+    /// TypeScript 允许同一个名称同时作为接口、命名空间和模块声明
+    /// 所有声明的内容会被合并到同一个实体中
+    TripleMergedDeclaration {
+        /// 合并后的名称
+        name: String,
+        /// 接口属性（来自 interface 声明）
+        interface_properties: HashMap<String, String>,
+        /// 接口继承列表
+        interface_extends: Vec<String>,
+        /// 接口索引签名
+        interface_index_signature: Option<Box<IndexSignature>>,
+        /// 命名空间/模块体（来自 namespace 和 module 声明）
+        body: Vec<ASTNode>,
+        /// 是否为 declare 声明
+        is_declare: bool,
     },
 }
 /// switch case 结构
@@ -7958,6 +8077,39 @@ impl CodeEmitter {
                             self.emit_node(stmt);
                         }
                         self.output.push_str("}\n");
+                    }
+                    // 三重合并声明 - interface + namespace + module 同名合并
+                    ASTStatement::TripleMergedDeclaration {
+                        name,
+                        interface_properties: _,
+                        interface_extends: _,
+                        interface_index_signature: _,
+                        body,
+                        is_declare,
+                    } => {
+                        // 对于 declare 声明，输出注释占位符
+                        if *is_declare {
+                            self.output.push_str("/* triple merged declare ");
+                            self.output.push_str(name);
+                            self.output.push_str(" */\n");
+                        } else {
+                            // 非 declare 情况：输出命名空间结构
+                            self.output.push_str("var ");
+                            self.output.push_str(name);
+                            self.output.push_str(";\n");
+                            self.output.push_str("(function(");
+                            self.output.push_str(name);
+                            self.output.push_str(") {\n");
+                            // 输出 body（来自 namespace/module 的内容）
+                            for stmt in body {
+                                self.emit_node(stmt);
+                            }
+                            self.output.push_str("})(");
+                            self.output.push_str(name);
+                            self.output.push_str(" || (");
+                            self.output.push_str(name);
+                            self.output.push_str(" = {}));\n");
+                        }
                     }
                 }
             }
