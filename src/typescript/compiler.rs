@@ -7615,7 +7615,7 @@ impl CodeEmitter {
                 }
                 self.output.push_str(") { /* overload */ }\n");
             }
-            ASTNode::ClassDeclaration { is_declare, is_abstract, decorators, name, extends, members } => {
+            ASTNode::ClassDeclaration { is_declare, is_abstract: _, decorators, name, extends, members } => {
                 // 输出装饰器（作为注释保留）
                 for decorator in decorators {
                     self.output.push_str("/* @");
@@ -7653,7 +7653,7 @@ impl CodeEmitter {
                 }
                 self.output.push_str("}\n");
             }
-            ASTNode::MethodDeclaration { decorators, name, kind, is_async, is_static, is_abstract, params, body } => {
+            ASTNode::MethodDeclaration { decorators, name, kind, is_async, is_static, is_abstract: _, params, body } => {
                 // 输出装饰器（作为注释保留）
                 for decorator in decorators {
                     self.output.push_str("/* @");
@@ -7724,7 +7724,7 @@ impl CodeEmitter {
                 }
                 self.output.push_str("}\n");
             }
-            ASTNode::PropertyDeclaration { decorators, name, is_static, is_abstract, initializer } => {
+            ASTNode::PropertyDeclaration { decorators, name, is_static, is_abstract: _, initializer } => {
                 // 输出装饰器（作为注释保留）
                 for decorator in decorators {
                     self.output.push_str("/* @");
