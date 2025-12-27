@@ -302,6 +302,7 @@ impl TypeScriptCompiler {
                     "type" => Token::Type,
                     "namespace" => Token::Namespace,
                     "global" => Token::Global,
+                    "module" => Token::Module,
                     "declare" => Token::Declare,
                     "import" => Token::Import,
                     "export" => Token::Export,
@@ -1245,6 +1246,11 @@ impl TypeScriptCompiler {
                     self.check_node(stmt, ctx)?;
                 }
             }
+            ASTStatement::ModuleDeclaration { body, .. } => {
+                for stmt in body {
+                    self.check_node(stmt, ctx)?;
+                }
+            }
         }
         Ok(())
     }
@@ -1874,6 +1880,7 @@ pub enum Token {
     Type,
     Namespace,
     Global,   // global 关键字（用于 declare global { ... }）
+    Module,   // module 关键字（用于 declare module "name" { ... }）
     Import,
     Export,
     Declare,   // declare 关键字（用于类型声明）
@@ -2426,6 +2433,14 @@ pub enum ASTStatement {
         /// 全局声明块内部的语句列表
         body: Vec<ASTNode>,
     },
+    /// TypeScript 模块声明: declare module "module-name" { ... }
+    /// 用于声明模块的类型定义
+    ModuleDeclaration {
+        /// 模块名称（如 "my-module"）
+        name: String,
+        /// 模块内部的语句列表
+        body: Vec<ASTNode>,
+    },
 }
 /// switch case 结构
 #[derive(Debug, Clone)]
@@ -2504,7 +2519,7 @@ impl Parser {
             }
             Token::Declare => {
                 // declare 关键字 - 需要查看后续 token 来确定声明类型
-                // declare 可以用于: namespace, class, function, const, let, var, interface, type, enum
+                // declare 可以用于: namespace, class, function, const, let, var, interface, type, enum, module
                 let is_declare = true;
                 // 消耗 declare 关键字
                 self.consume(Token::Declare)?;
@@ -2530,6 +2545,10 @@ impl Parser {
                     }
                     Token::Global => {
                         self.parse_global_declaration()
+                    }
+                    Token::Module => {
+                        // declare module "name" { ... }
+                        self.parse_module_declaration()
                     }
                     Token::Const | Token::Let | Token::Var => {
                         // declare const/let/var 声明
@@ -4450,6 +4469,43 @@ impl Parser {
         self.consume(Token::RBrace)?;
 
         Ok(ASTNode::Statement(ASTStatement::GlobalDeclaration {
+            body,
+        }))
+    }
+
+    /// 解析模块声明
+    /// 语法: declare module "module-name" { ... }
+    /// 用于声明模块的类型定义
+    fn parse_module_declaration(&mut self) -> Result<ASTNode> {
+        // 消耗 module 关键字
+        self.consume(Token::Module)?;
+
+        // 解析模块名称（应该是字符串字面量）
+        let name = match self.current_token() {
+            Token::String(s, _) => {
+                let name = s.clone();
+                self.advance();
+                name
+            }
+            _ => {
+                bail!("Expected string literal for module name after 'module' keyword");
+            }
+        };
+
+        // 消耗左花括号
+        self.consume(Token::LBrace)?;
+
+        // 解析模块内部的语句
+        let mut body = Vec::new();
+        while !self.current_token_eq(&Token::RBrace) && !self.current_token_eq(&Token::Eof) {
+            body.push(self.parse_statement()?);
+        }
+
+        // 消耗右花括号
+        self.consume(Token::RBrace)?;
+
+        Ok(ASTNode::Statement(ASTStatement::ModuleDeclaration {
+            name,
             body,
         }))
     }
@@ -7482,6 +7538,17 @@ impl CodeEmitter {
                             self.emit_node(stmt);
                         }
                         self.output.push_str("/* } */\n");
+                    }
+                    // declare module "name" { ... } - 模块声明
+                    ASTStatement::ModuleDeclaration { name, body } => {
+                        // 模块声明在转译时保留声明语法
+                        self.output.push_str("declare module \"");
+                        self.output.push_str(name);
+                        self.output.push_str("\" {\n");
+                        for stmt in body {
+                            self.emit_node(stmt);
+                        }
+                        self.output.push_str("}\n");
                     }
                 }
             }

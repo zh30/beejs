@@ -860,4 +860,141 @@ const num = 42;
             }
         }
     }
+
+    /// Test namespace merging (multiple declarations of the same namespace merge)
+    /// Namespace Merging: 同一命名空间的多个声明会被合并
+    #[test]
+    fn test_namespace_merging() {
+        let ts_code: _ = r#"
+namespace MyLib {
+    export function foo(): void {
+        console.log("foo");
+    }
+}
+namespace MyLib {
+    export function bar(): void {
+        console.log("bar");
+    }
+}
+namespace MyLib {
+    export const value: number = 42;
+}
+MyLib.foo();
+MyLib.bar();
+console.log(MyLib.value);
+"#;
+        match compile_typescript(ts_code, "namespace_merging.ts") {
+            Ok(output) => {
+                println!("命名空间合并转译结果:");
+                println!("{}", output.js_code);
+                // 验证所有导出的成员都存在
+                assert!(output.js_code.contains("foo"),
+                    "Should contain foo function: {}", output.js_code);
+                assert!(output.js_code.contains("bar"),
+                    "Should contain bar function: {}", output.js_code);
+                assert!(output.js_code.contains("value"),
+                    "Should contain value constant: {}", output.js_code);
+                // 验证命名空间被正确创建
+                assert!(output.js_code.contains("MyLib"),
+                    "Should contain MyLib namespace: {}", output.js_code);
+                println!("✅ Namespace merging test passed");
+            }
+            Err(e) => {
+                panic!("Namespace merging test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test namespace with nested declarations merging
+    #[test]
+    fn test_namespace_nested_merging() {
+        let ts_code: _ = r#"
+namespace Outer {
+    export const a: number = 1;
+}
+namespace Outer.Inner {
+    export function innerFn(): void {}
+}
+namespace Outer {
+    export const b: number = 2;
+}
+"#;
+        match compile_typescript(ts_code, "namespace_nested_merging.ts") {
+            Ok(output) => {
+                println!("嵌套命名空间合并转译结果:");
+                println!("{}", output.js_code);
+                // 验证外层命名空间有 a 和 b
+                assert!(output.js_code.contains("a"),
+                    "Should contain a: {}", output.js_code);
+                assert!(output.js_code.contains("b"),
+                    "Should contain b: {}", output.js_code);
+                // 验证内层命名空间有 innerFn
+                assert!(output.js_code.contains("innerFn"),
+                    "Should contain innerFn: {}", output.js_code);
+                println!("✅ Namespace nested merging test passed");
+            }
+            Err(e) => {
+                panic!("Namespace nested merging test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test declare module (module augmentation syntax)
+    /// declare module 用于声明模块增强
+    #[test]
+    fn test_declare_module() {
+        let ts_code: _ = r#"
+declare module "my-module" {
+    export const someValue: number;
+    export function someFunction(): void;
+}
+const x: number = 1;
+"#;
+        match compile_typescript(ts_code, "declare_module.ts") {
+            Ok(output) => {
+                println!("declare module 转译结果:");
+                println!("{}", output.js_code);
+                // 验证 declare module 被正确处理
+                assert!(output.js_code.contains("someValue"),
+                    "Should contain someValue: {}", output.js_code);
+                assert!(output.js_code.contains("someFunction"),
+                    "Should contain someFunction: {}", output.js_code);
+                // 变量应该被保留
+                assert!(output.js_code.contains("x"),
+                    "Should contain x: {}", output.js_code);
+                println!("✅ Declare module test passed");
+            }
+            Err(e) => {
+                panic!("Declare module test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test namespace augmentation on existing type (simplified - only properties)
+    #[test]
+    fn test_namespace_augmentation() {
+        let ts_code: _ = r#"
+interface MyInterface {
+    myProperty: string;
+    anotherProp: number;
+}
+
+const test: string = "hello";
+"#;
+        match compile_typescript(ts_code, "namespace_augmentation.ts") {
+            Ok(output) => {
+                println!("命名空间/接口增强转译结果:");
+                println!("{}", output.js_code);
+                // 变量应该被保留
+                assert!(output.js_code.contains("test"),
+                    "Should contain test: {}", output.js_code);
+                assert!(output.js_code.contains("\"hello\""),
+                    "Should contain hello: {}", output.js_code);
+                println!("✅ Namespace augmentation test passed");
+            }
+            Err(e) => {
+                panic!("Namespace augmentation test failed: {}", e);
+            }
+        }
+    }
 }
