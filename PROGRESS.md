@@ -10468,3 +10468,51 @@ console.log(p.name);  // "Alice"
 - 继续完善 TypeScript 编译器功能
 - 实现更多边界情况测试覆盖
 - 优化运行时性能
+
+---
+
+### v0.3.194 修复 CommonJS require() 返回实际模块对象（2025-12-28）
+**进度**: Node.js 兼容性修复 | ✅ 已提交
+
+#### v0.3.194 问题背景
+- `require("events")` 返回 `{ message: "events module available as global.events" }` 而不是实际模块
+- 这导致 `require("events").EventEmitter` 无法工作，因为返回对象没有 EventEmitter 属性
+
+#### v0.3.194 解决方案
+- 修改 `runtime_minimal.rs` 中的 `setup_module_system` 函数
+- builtin 模块（events, os, crypto 等）现在从 global 对象返回实际模块
+- 使用 `scope.get_current_context()` 获取全局上下文，避免 V8 闭包复杂度限制
+
+#### v0.3.194 实现细节
+- 修改 require 函数中的 builtin 模块匹配分支
+- 在返回前检查模块是否存在于 global 对象
+- 如果存在则返回实际模块，否则返回回退消息
+
+#### v0.3.194 测试验证
+- ✅ `require("events").EventEmitter` 现在正常工作
+- ✅ `new (require("events").EventEmitter)()` 可以创建 EventEmitter 实例
+- ✅ `require("os").platform()` 返回正确的平台信息
+- ✅ `require("path").join()` 返回正确的路径
+- ✅ `cargo test --test minimal_tests`: 63/63 通过
+
+#### v0.3.194 已支持 CommonJS 模块
+- `require("events")` - 事件模块 (EventEmitter)
+- `require("os")` - 操作系统模块
+- `require("crypto")` - 加密模块
+- `require("path")` - 路径模块
+- `require("fs")` - 文件系统模块 (部分实现)
+- `require("http")` - HTTP 模块 (部分实现)
+- `require("buffer")` - Buffer 模块
+- `require("util")` - 工具模块
+- `require("url")` - URL 模块
+- `require("querystring")` - 查询字符串模块
+- `require("net")` - 网络模块
+- `require("dns")` - DNS 模块
+- `require("child_process")` - 子进程模块
+- `require("stream")` - 流模块
+
+#### v0.3.194 下一步
+- 继续完善 Node.js API 兼容性
+- 实现 ES 模块 (ESM) 支持
+- 实现 package.json 解析和依赖管理
+- 创建性能基准测试与 Bun 对比
