@@ -1,3 +1,30 @@
+### v0.3.158 实现命名空间合并支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.158 新增功能
+- **命名空间合并 (Namespace Merging)**
+  - 新增 `merge_namespaces()` 方法在编译过程中合并同名命名空间
+  - TypeScript 允许同一命名空间的多次声明，所有成员正确合并
+  - 优化输出：同名命名空间只生成一个 IIFE，而非多个
+
+#### v0.3.158 实现细节
+- 在 `compile_source()` 中添加合并步骤
+- 使用 `HashMap<String, ASTStatement>` 按 full_name 分组
+- 合并后只输出一个合并的命名空间 IIFE
+
+#### v0.3.158 测试用例
+- `test_namespace_merging`: 测试同名命名空间合并
+- `test_namespace_nested_merging`: 测试嵌套命名空间合并
+
+#### 验证
+- ✅ `cargo build --release` 成功编译
+
+#### 下一步
+- 添加接口合并 (interface merging) 支持
+- 实现模块增强 (module augmentation)
+
+---
+
 ### v0.3.156 实现 declare module 语法和命名空间合并支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 

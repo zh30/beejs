@@ -214,11 +214,13 @@ impl TypeScriptCompiler {
         let tokens: _ = self.lexical_analysis(source, file_name)?;
         // 第二步：语法分析
         let ast: _ = self.syntax_analysis(&tokens, file_name)?;
-        // 第三步：类型检查（简化实现）
-        self.type_check(&ast, file_name)?;
-        // 第四步：转译为 JavaScript
-        let js_code: _ = self.transpile(&ast)?;
-        // 第五步：生成 Source Map
+        // 第三步：合并同名的命名空间声明
+        let merged_ast = self.merge_namespaces(ast);
+        // 第四步：类型检查（简化实现）
+        self.type_check(&merged_ast, file_name)?;
+        // 第五步：转译为 JavaScript
+        let js_code: _ = self.transpile(&merged_ast)?;
+        // 第六步：生成 Source Map
         let source_map: _ = if self.config.source_map {
             Some(self.generate_source_map(source, &js_code, file_name)?)
         } else {
@@ -229,6 +231,54 @@ impl TypeScriptCompiler {
             source_map,
             diagnostics: self.diagnostics.clone(),
         })
+    }
+
+    /// 合并同名的命名空间声明
+    /// TypeScript 允许同一命名空间的多次声明，所有成员会合并到同一个命名空间
+    fn merge_namespaces(&self, ast: ASTNode) -> ASTNode {
+        use std::collections::HashMap;
+
+        // 解包 Program 节点
+        let statements = match ast {
+            ASTNode::Program(stmts) => stmts,
+            _ => return ast,
+        };
+
+        // 收集所有命名空间声明
+        let mut namespace_map: HashMap<String, ASTStatement> = HashMap::new();
+        let mut non_namespace_nodes: Vec<ASTNode> = Vec::new();
+
+        for node in statements {
+            match node {
+                ASTNode::Statement(ASTStatement::Namespace { name, full_name, body, is_declare }) => {
+                    if let Some(existing_ns) = namespace_map.get_mut(&full_name) {
+                        // 同名命名空间已存在，合并 body
+                        if let ASTStatement::Namespace { body: existing_body, .. } = existing_ns {
+                            existing_body.extend(body);
+                        }
+                    } else {
+                        // 第一次看到这个命名空间
+                        namespace_map.insert(full_name.clone(), ASTStatement::Namespace {
+                            name,
+                            full_name,
+                            body,
+                            is_declare,
+                        });
+                    }
+                }
+                _ => {
+                    non_namespace_nodes.push(node);
+                }
+            }
+        }
+
+        // 重新构建 AST
+        let mut merged_statements: Vec<ASTNode> = non_namespace_nodes;
+        for ns in namespace_map.into_values() {
+            merged_statements.push(ASTNode::Statement(ns));
+        }
+
+        ASTNode::Program(merged_statements)
     }
     /// 词法分析 - 将源代码分解为记号
     fn lexical_analysis(&self, source: &str, _file_name: &str) -> Result<Vec<Token>> {
