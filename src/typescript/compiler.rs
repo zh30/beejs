@@ -5482,6 +5482,21 @@ impl Parser {
                     is_type_only,
                 });
             }
+            Token::Abstract => {
+                // export abstract class X { ... }
+                let declaration = self.parse_class_declaration()?;
+                // 消耗分号
+                if self.current_token_eq(&Token::SemiColon) {
+                    self.consume(Token::SemiColon)?;
+                }
+                return Ok(ASTNode::ExportDeclaration {
+                    exports: Vec::new(),
+                    is_default: false,
+                    module_specifier: None,
+                    inline_declaration: Some(Box::new(declaration)),
+                    is_type_only,
+                });
+            }
             Token::Interface => {
                 let declaration = self.parse_interface_declaration()?;
                 // 消耗分号

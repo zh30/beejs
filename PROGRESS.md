@@ -10606,3 +10606,29 @@ console.log(p.name);  // "Alice"
 - 实现更完整的 ESM 支持（变量追踪）
 - 实现 package.json 解析和依赖管理
 - 创建性能基准测试与 Bun 对比
+
+---
+
+### v0.3.197 修复 export abstract class 编译器解析 (2025-12-28)
+**进度**: TypeScript 编译器修复 | ✅ 已提交
+
+#### v0.3.197 问题背景
+- 测试 `test_esm_export_abstract_class` 失败
+- 错误信息: `Invalid export declaration`
+- 原因是 `parse_export_declaration` 未处理 `Token::Abstract`
+
+#### v0.3.197 解决方案
+- **TypeScript 编译器修复** (`src/typescript/compiler.rs`)
+  - 在 `parse_export_declaration` 中添加 `Token::Abstract` case
+  - 复用已有的 `parse_class_declaration()` 处理抽象类
+  - 保持与 `Token::Class` 相同的导出声明结构
+
+#### v0.3.197 测试修复
+- 修正测试断言：移除不合理的 `abstract` 关键字保留期望
+- JavaScript 不支持抽象类，输出中不应包含 `abstract`
+- 验证 ESM 导出转换和后续代码保留
+
+#### v0.3.197 测试验证
+- ✅ `cargo test --test minimal_tests`: 71/71 通过
+- ✅ `export abstract class Animal {}` 正确解析为导出声明
+- ✅ 与现有 ESM 导出模式完全兼容
