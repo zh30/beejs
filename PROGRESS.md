@@ -220,6 +220,58 @@
 
 ---
 
+### v0.3.189 工具类型完整支持 (2025-12-28)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.189 新增功能
+- **工具类型（Utility Types）测试覆盖**
+  - `Partial<T>`: 所有属性可选
+  - `Required<T>`: 所有属性必需
+  - `Readonly<T>`: 所有属性只读
+  - `Pick<T, K>`: 选取部分属性
+  - `Record<K, T>`: 构造对象类型
+  - `Omit<T, K>`: 排除部分属性
+  - `Exclude<T, U>`: 排除联合类型
+  - `Extract<T, U>`: 提取联合类型
+  - `NonNullable<T>`: 排除 null/undefined
+  - 工具类型组合使用
+
+#### v0.3.189 修复问题
+- **嵌套泛型参数解析 bug** (`src/typescript/compiler.rs`)
+  - 修复 `Pick<User, "name" | "email">` 这类带字符串联合类型的泛型参数解析
+  - 原问题：`Expected SemiColon but found Comma/Gt`
+  - 解决方案：将逗号、管道符、`&` 符号处理从 `depth == 1` 改为 `depth > 0`
+  - 添加嵌套泛型中字符串类型的直接处理
+
+#### v0.3.189 实现细节
+- **TypeScript 编译器增强** (`src/typescript/compiler.rs:7392-7458`)
+  - `parse_basic_type()`: 修复泛型类型参数解析循环
+  - 支持所有嵌套层级的逗号、管道符、`&` 符号处理
+  - 直接处理字符串类型参数（如 `"name"`）
+
+#### v0.3.189 测试用例
+- `test_typescript_partial_utility_type`: Partial<T> 测试
+- `test_typescript_required_utility_type`: Required<T> 测试
+- `test_typescript_readonly_utility_type`: Readonly<T> 测试
+- `test_typescript_pick_utility_type`: Pick<T, K> 测试
+- `test_typescript_record_utility_type`: Record<K, T> 测试
+- `test_typescript_omit_utility_type`: Omit<T, K> 测试
+- `test_typescript_exclude_utility_type`: Exclude<T, U> 测试
+- `test_typescript_extract_utility_type`: Extract<T, U> 测试
+- `test_typescript_nonnullable_utility_type`: NonNullable<T> 测试
+- `test_typescript_utility_types_combined`: 工具类型组合测试
+
+#### v0.3.189 验证
+- ✅ `cargo build` 成功编译
+- ✅ `cargo test --test minimal_tests`: 51/51 通过 (新增 10 个测试)
+
+#### v0.3.189 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更复杂的类型推断支持
+- 完善内置工具类型实现
+
+---
+
 ### v0.3.186 实现条件类型快速路径支持 (2025-12-28)
 **进度**: TypeScript 快速路径增强 | ✅ 已提交
 

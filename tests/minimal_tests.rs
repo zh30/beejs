@@ -954,4 +954,276 @@ type AnyTemplate = `${any}`;
 
         println!("✅ Test 41: TypeScript template literal type mixed types");
     }
+
+    /// 测试42: TypeScript Partial<T> 工具类型 (v0.3.189)
+    #[test]
+    fn test_typescript_partial_utility_type() {
+        // 测试 Partial<T> 所有属性可选
+        let ts_code = r#"
+type User = {
+    name: string;
+    age: number;
+    email: string;
+};
+type PartialUser = Partial<User>;
+const user: PartialUser = { name: "Alice" };
+"#;
+        let result = typescript::compile_typescript(ts_code, "partial_test.ts");
+        assert!(result.is_ok(), "Partial<T> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 Partial 映射类型语法被移除
+        assert!(!output.js_code.contains("Partial"),
+            "Should remove Partial utility type reference: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("const user"),
+            "Should preserve const user: {}", output.js_code);
+
+        println!("✅ Test 42: TypeScript Partial<T> utility type");
+    }
+
+    /// 测试43: TypeScript Required<T> 工具类型 (v0.3.189)
+    #[test]
+    fn test_typescript_required_utility_type() {
+        // 测试 Required<T> 所有属性必需
+        let ts_code = r#"
+type Props = {
+    title?: string;
+    content?: string;
+};
+type RequiredProps = Required<Props>;
+"#;
+        let result = typescript::compile_typescript(ts_code, "required_test.ts");
+        assert!(result.is_ok(), "Required<T> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 Required 引用被移除
+        assert!(!output.js_code.contains("Required"),
+            "Should remove Required utility type reference: {}", output.js_code);
+
+        println!("✅ Test 43: TypeScript Required<T> utility type");
+    }
+
+    /// 测试44: TypeScript Readonly<T> 工具类型 (v0.3.189)
+    #[test]
+    fn test_typescript_readonly_utility_type() {
+        // 测试 Readonly<T> 所有属性只读
+        let ts_code = r#"
+type Config = {
+    apiKey: string;
+    timeout: number;
+};
+type ReadonlyConfig = Readonly<Config>;
+const config: ReadonlyConfig = { apiKey: "secret", timeout: 30 };
+"#;
+        let result = typescript::compile_typescript(ts_code, "readonly_test.ts");
+        assert!(result.is_ok(), "Readonly<T> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 Readonly 引用被移除
+        assert!(!output.js_code.contains("Readonly"),
+            "Should remove Readonly utility type reference: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("config"),
+            "Should preserve config: {}", output.js_code);
+
+        println!("✅ Test 44: TypeScript Readonly<T> utility type");
+    }
+
+    /// 测试45: TypeScript Pick<T, K> 工具类型 (v0.3.189)
+    #[test]
+    fn test_typescript_pick_utility_type() {
+        // 测试 Pick<T, K> 选取部分属性
+        let ts_code = r#"
+type User = {
+    name: string;
+    age: number;
+    email: string;
+    address: string;
+};
+type UserNameAndAge = Pick<User, "name" | "age">;
+const userInfo: UserNameAndAge = { name: "Alice", age: 30 };
+"#;
+        let result = typescript::compile_typescript(ts_code, "pick_test.ts");
+        assert!(result.is_ok(), "Pick<T, K> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 Pick 引用被移除
+        assert!(!output.js_code.contains("Pick"),
+            "Should remove Pick utility type reference: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("userInfo"),
+            "Should preserve userInfo: {}", output.js_code);
+
+        println!("✅ Test 45: TypeScript Pick<T, K> utility type");
+    }
+
+    /// 测试46: TypeScript Record<K, T> 工具类型 (v0.3.189)
+    #[test]
+    fn test_typescript_record_utility_type() {
+        // 测试 Record<K, T> 构造对象类型
+        let ts_code = r#"
+type Role = "admin" | "user" | "guest";
+type RolePermissions = Record<Role, string>;
+const permissions: RolePermissions = {
+    admin: "all",
+    user: "read",
+    guest: "none"
+};
+"#;
+        let result = typescript::compile_typescript(ts_code, "record_test.ts");
+        assert!(result.is_ok(), "Record<K, T> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 Record 引用被移除
+        assert!(!output.js_code.contains("Record"),
+            "Should remove Record utility type reference: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("permissions"),
+            "Should preserve permissions: {}", output.js_code);
+
+        println!("✅ Test 46: TypeScript Record<K, T> utility type");
+    }
+
+    /// 测试47: TypeScript Omit<T, K> 工具类型 (v0.3.189)
+    #[test]
+    fn test_typescript_omit_utility_type() {
+        // 测试 Omit<T, K> 排除部分属性
+        let ts_code = r#"
+type User = {
+    name: string;
+    age: number;
+    email: string;
+    password: string;
+};
+type PublicUser = Omit<User, "password">;
+const publicUser: PublicUser = { name: "Alice", age: 30, email: "alice@test.com" };
+"#;
+        let result = typescript::compile_typescript(ts_code, "omit_test.ts");
+        assert!(result.is_ok(), "Omit<T, K> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 Omit 引用被移除
+        assert!(!output.js_code.contains("Omit"),
+            "Should remove Omit utility type reference: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("publicUser"),
+            "Should preserve publicUser: {}", output.js_code);
+
+        println!("✅ Test 47: TypeScript Omit<T, K> utility type");
+    }
+
+    /// 测试48: TypeScript Exclude<T, U> 工具类型 (v0.3.189)
+    #[test]
+    fn test_typescript_exclude_utility_type() {
+        // 测试 Exclude<T, U> 排除联合类型
+        let ts_code = r#"
+type T0 = Exclude<"a" | "b" | "c", "a">;
+type T1 = Exclude<number, string>;
+const value0: T0 = "b";
+"#;
+        let result = typescript::compile_typescript(ts_code, "exclude_test.ts");
+        assert!(result.is_ok(), "Exclude<T, U> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 Exclude 引用被移除
+        assert!(!output.js_code.contains("Exclude"),
+            "Should remove Exclude utility type reference: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("value0"),
+            "Should preserve value0: {}", output.js_code);
+
+        println!("✅ Test 48: TypeScript Exclude<T, U> utility type");
+    }
+
+    /// 测试49: TypeScript Extract<T, U> 工具类型 (v0.3.189)
+    #[test]
+    fn test_typescript_extract_utility_type() {
+        // 测试 Extract<T, U> 提取联合类型
+        let ts_code = r#"
+type T0 = Extract<"a" | "b" | "c", "a" | "f">;
+type T1 = Extract<number, string>;
+const value0: T0 = "a";
+"#;
+        let result = typescript::compile_typescript(ts_code, "extract_test.ts");
+        assert!(result.is_ok(), "Extract<T, U> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 Extract 引用被移除
+        assert!(!output.js_code.contains("Extract"),
+            "Should remove Extract utility type reference: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("value0"),
+            "Should preserve value0: {}", output.js_code);
+
+        println!("✅ Test 49: TypeScript Extract<T, U> utility type");
+    }
+
+    /// 测试50: TypeScript NonNullable<T> 工具类型 (v0.3.189)
+    #[test]
+    fn test_typescript_nonnullable_utility_type() {
+        // 测试 NonNullable<T> 排除 null 和 undefined
+        let ts_code = r#"
+type T0 = NonNullable<string | number | null | undefined>;
+const value: T0 = "hello";
+"#;
+        let result = typescript::compile_typescript(ts_code, "nonnullable_test.ts");
+        assert!(result.is_ok(), "NonNullable<T> should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 NonNullable 引用被移除
+        assert!(!output.js_code.contains("NonNullable"),
+            "Should remove NonNullable utility type reference: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("const value"),
+            "Should preserve const value: {}", output.js_code);
+
+        println!("✅ Test 50: TypeScript NonNullable<T> utility type");
+    }
+
+    /// 测试51: TypeScript 工具类型组合使用 (v0.3.189)
+    #[test]
+    fn test_typescript_utility_types_combined() {
+        // 测试多个工具类型组合使用
+        let ts_code = r#"
+type User = {
+    name: string;
+    age: number;
+    email: string;
+    password?: string;
+};
+
+type PublicUser = Readonly<Pick<User, "name" | "email">>;
+type UpdateUser = Partial<Omit<User, "password">>;
+
+const user: PublicUser = { name: "Alice", email: "alice@test.com" };
+"#;
+        let result = typescript::compile_typescript(ts_code, "utility_combined_test.ts");
+        assert!(result.is_ok(), "Combined utility types should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证工具类型引用被移除
+        assert!(!output.js_code.contains("Readonly"),
+            "Should remove Readonly: {}", output.js_code);
+        assert!(!output.js_code.contains("Pick"),
+            "Should remove Pick: {}", output.js_code);
+        assert!(!output.js_code.contains("Partial"),
+            "Should remove Partial: {}", output.js_code);
+        assert!(!output.js_code.contains("Omit"),
+            "Should remove Omit: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("const user"),
+            "Should preserve const user: {}", output.js_code);
+
+        println!("✅ Test 51: TypeScript utility types combined");
+    }
 }

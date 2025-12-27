@@ -7403,9 +7403,21 @@ impl Parser {
 
                     // 循环解析类型参数，直到 depth 回到 0（遇到对应的 >）
                     while depth > 0 {
-                        // 检查是否是逗号（在 depth == 1 时才处理逗号分隔）
-                        if depth == 1 && self.current_token_eq(&Token::Comma) {
+                        // v0.3.189: 检查是否是逗号（处理所有嵌套层级的参数分隔）
+                        if self.current_token_eq(&Token::Comma) {
                             self.consume(Token::Comma).ok()?;
+                            continue;
+                        }
+
+                        // v0.3.189: 检查是否是管道符 |（处理字符串联合类型）
+                        if self.current_token_eq(&Token::Pipe) {
+                            self.consume(Token::Pipe).ok()?;
+                            continue;
+                        }
+
+                        // v0.3.189: 检查是否是 & 符号（处理交叉类型）
+                        if self.current_token_eq(&Token::Ampersand) {
+                            self.consume(Token::Ampersand).ok()?;
                             continue;
                         }
 
@@ -7420,6 +7432,15 @@ impl Parser {
                         if self.current_token_eq(&Token::Gt) {
                             self.consume(Token::Gt).ok()?;
                             depth -= 1;
+                            continue;
+                        }
+
+                        // v0.3.189: 处理字符串类型（如 "name"）
+                        if let Token::String(ref s, quote) = self.current_token() {
+                            let s = s.clone();
+                            let quote_char = *quote;
+                            self.advance();
+                            type_args.push(format!("{}{}{}", quote_char, s, quote_char));
                             continue;
                         }
 
