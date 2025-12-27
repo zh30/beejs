@@ -2469,6 +2469,8 @@ pub enum ASTNode {
         is_default: bool,
         /// 命名空间导入别名 (import * as name)
         namespace_alias: Option<String>,
+        /// 是否为仅类型导入 (import type)
+        is_type_only: bool,
     },
     /// 导出语句: export { a, b } | export default x | export const x = 1
     ExportDeclaration {
@@ -2480,6 +2482,8 @@ pub enum ASTNode {
         module_specifier: Option<String>,
         /// 内联导出声明（用于 export const x = 1）
         inline_declaration: Option<Box<ASTNode>>,
+        /// 是否为仅类型导出 (export type)
+        is_type_only: bool,
     },
     Expression(ASTExpression),
     Statement(ASTStatement),
@@ -4774,15 +4778,26 @@ impl Parser {
     /// - import "module" (副作用导入)
     /// - import defaultExport from "module" (默认导入)
     /// - import { a, b } from "module" (命名导入)
+    /// - import type { a, b } from "module" (仅类型导入)
     /// - import defaultExport, { a, b } from "module" (混合导入)
     /// - import * as namespace from "module" (命名空间导入)
+    /// - import type * as namespace from "module" (类型命名空间导入)
     fn parse_import_declaration(&mut self) -> Result<ASTNode> {
         self.consume(Token::Import)?;
+
+        // 检查是否为 import type (仅类型导入)
+        let is_type_only = if self.current_token_eq(&Token::Type) {
+            self.consume(Token::Type)?;
+            true
+        } else {
+            false
+        };
 
         // 检查是否为默认导入（import x from ...）
         // 如果后面是字符串字面量，则是副作用导入或默认导入
         if let Token::String(ref s, _) = self.current_token() {
             // 副作用导入: import "module"
+            // 注意：import type "module" 是无效语法，所以这里直接处理
             let module_specifier = format!("\"{}\"", s);
             self.advance();
             self.consume(Token::SemiColon)?;
@@ -4791,6 +4806,7 @@ impl Parser {
                 imports: Vec::new(),
                 is_default: false,
                 namespace_alias: None,
+                is_type_only,
             });
         }
 
@@ -4813,6 +4829,7 @@ impl Parser {
                     imports: Vec::new(),
                     is_default: false,
                     namespace_alias: Some(alias),
+                    is_type_only,
                 });
             }
         }
@@ -4863,6 +4880,7 @@ impl Parser {
                 imports,
                 is_default: false,
                 namespace_alias: None,
+                is_type_only,
             });
         }
 
@@ -4890,6 +4908,7 @@ impl Parser {
                     }],
                     is_default: true,
                     namespace_alias: None,
+                    is_type_only,
                 });
             }
 
@@ -4950,6 +4969,7 @@ impl Parser {
                         imports: all_imports,
                         is_default: true,
                         namespace_alias: None,
+                        is_type_only,
                     });
                 }
             }
@@ -4963,12 +4983,22 @@ impl Parser {
     /// 解析导出语句
     /// 支持:
     /// - export { a, b } (命名导出)
+    /// - export type { a, b } (仅类型导出)
     /// - export default expr (默认导出)
     /// - export const x = 1 (内联导出声明)
     /// - export { a, b } from "module" (重新导出)
+    /// - export type { a, b } from "module" (仅类型重新导出)
     /// - export * from "module" (重新导出所有)
     fn parse_export_declaration(&mut self) -> Result<ASTNode> {
         self.consume(Token::Export)?;
+
+        // 检查是否为 export type (仅类型导出)
+        let is_type_only = if self.current_token_eq(&Token::Type) {
+            self.consume(Token::Type)?;
+            true
+        } else {
+            false
+        };
 
         // 检查 default
         if self.current_token_eq(&Token::Default) {
@@ -4981,6 +5011,7 @@ impl Parser {
                 is_default: true,
                 module_specifier: None,
                 inline_declaration: Some(Box::new(ASTNode::Expression(expr))),
+                is_type_only,
             });
         }
 
@@ -5000,6 +5031,7 @@ impl Parser {
                 is_default: false,
                 module_specifier: Some(module_specifier),
                 inline_declaration: None,
+                is_type_only,
             });
         }
 
@@ -5047,6 +5079,7 @@ impl Parser {
                     is_default: false,
                     module_specifier: Some(module_specifier),
                     inline_declaration: None,
+                    is_type_only,
                 });
             }
 
@@ -5056,6 +5089,7 @@ impl Parser {
                 is_default: false,
                 module_specifier: None,
                 inline_declaration: None,
+                is_type_only,
             });
         }
 
@@ -5072,6 +5106,7 @@ impl Parser {
                     is_default: false,
                     module_specifier: None,
                     inline_declaration: Some(Box::new(declaration)),
+                    is_type_only,
                 });
             }
             Token::Function => {
@@ -5085,6 +5120,7 @@ impl Parser {
                     is_default: false,
                     module_specifier: None,
                     inline_declaration: Some(Box::new(declaration)),
+                    is_type_only,
                 });
             }
             Token::Class => {
@@ -5098,6 +5134,7 @@ impl Parser {
                     is_default: false,
                     module_specifier: None,
                     inline_declaration: Some(Box::new(declaration)),
+                    is_type_only,
                 });
             }
             Token::Interface => {
@@ -5111,6 +5148,7 @@ impl Parser {
                     is_default: false,
                     module_specifier: None,
                     inline_declaration: Some(Box::new(declaration)),
+                    is_type_only,
                 });
             }
             Token::Enum => {
@@ -5120,6 +5158,7 @@ impl Parser {
                     is_default: false,
                     module_specifier: None,
                     inline_declaration: Some(Box::new(declaration)),
+                    is_type_only,
                 });
             }
             Token::Declare => {
@@ -5134,6 +5173,7 @@ impl Parser {
                             is_default: false,
                             module_specifier: None,
                             inline_declaration: Some(Box::new(declaration)),
+                            is_type_only,
                         });
                     }
                     Token::Namespace => {
@@ -5143,6 +5183,7 @@ impl Parser {
                             is_default: false,
                             module_specifier: None,
                             inline_declaration: Some(Box::new(declaration)),
+                            is_type_only,
                         });
                     }
                     Token::Function => {
@@ -5152,6 +5193,7 @@ impl Parser {
                             is_default: false,
                             module_specifier: None,
                             inline_declaration: Some(Box::new(declaration)),
+                            is_type_only,
                         });
                     }
                     Token::Const | Token::Let | Token::Var => {
@@ -5165,6 +5207,7 @@ impl Parser {
                             is_default: false,
                             module_specifier: None,
                             inline_declaration: Some(Box::new(declaration)),
+                            is_type_only,
                         });
                     }
                     _ => bail!("Invalid export declare declaration: {:?}", self.current_token()),
@@ -5178,6 +5221,7 @@ impl Parser {
                     is_default: false,
                     module_specifier: None,
                     inline_declaration: Some(Box::new(declaration)),
+                    is_type_only,
                 });
             }
             _ => bail!("Invalid export declaration"),
@@ -7506,7 +7550,12 @@ impl CodeEmitter {
                 }
                 self.output.push_str("\n};\n");
             }
-            ASTNode::ImportDeclaration { module_specifier, imports, is_default, namespace_alias } => {
+            ASTNode::ImportDeclaration { module_specifier, imports, is_default, namespace_alias, is_type_only } => {
+                // import type 在编译时完全移除，不生成任何运行时代码
+                if *is_type_only {
+                    return;
+                }
+
                 // 发射 import 语句
                 self.output.push_str("import ");
 
@@ -7567,7 +7616,14 @@ impl CodeEmitter {
                 self.output.push_str(module_specifier);
                 self.output.push_str(";\n");
             }
-            ASTNode::ExportDeclaration { exports, is_default, module_specifier, inline_declaration } => {
+            ASTNode::ExportDeclaration { exports, is_default, module_specifier, inline_declaration, is_type_only } => {
+                // export type 在编译时完全移除，不生成任何运行时代码
+                // 但对于 export type { x } from "module" 这种重新导出，需要保留内联声明
+                // 这里我们选择完全移除类型导出
+                if *is_type_only {
+                    return;
+                }
+
                 self.output.push_str("export ");
 
                 // 默认导出
