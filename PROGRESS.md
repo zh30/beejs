@@ -63,7 +63,42 @@
 
 #### v0.3.162 下一步
 - 实现完整的类型声明解析
-- 添加更多复杂条件类型测试覆盖
+- 添加更多复杂条件类型测试覆盖 ✅ 已完成 (v0.3.163)
+
+---
+
+### v0.3.163 复杂条件类型测试覆盖 (2025-12-27)
+**进度**: TypeScript 编译测试增强 | ✅ 已提交
+
+#### v0.3.163 新增测试用例
+- **深度嵌套条件类型测试 (Deeply Nested Conditional Types)**
+  - 添加 `test_deeply_nested_conditional_types` 测试多层 extends 链
+  - 验证 `T extends string ? "string" : T extends number ? "number" : ...` 语法
+
+- **条件类型与联合类型测试 (Conditional Types with Unions)**
+  - 添加 `test_conditional_type_with_unions` 测试条件类型与联合类型组合
+  - 验证 `T extends any ? string : never` 等复杂表达式
+
+- **条件类型与 keyof/映射类型测试 (Conditional Type with keyof/Mapped)**
+  - 添加 `test_conditional_type_with_keyof_mapped` 测试 keyof 和映射类型组合
+  - 验证 `{ [P in keyof T]?: T[P] }` 语法的正确处理
+
+- **递归条件类型测试 (Recursive Conditional Type)**
+  - 添加 `test_recursive_conditional_type` 测试递归条件类型定义
+  - 验证 `DeepPartial<T>` 等递归类型别名
+
+- **条件类型与模板字面量测试 (Conditional Type with Template Literal)**
+  - 添加 `test_conditional_type_with_template_literal` 测试模板字面量条件类型
+  - 验证 `` T extends `on${string}` ? T : never `` 模式
+
+#### v0.3.163 验证
+- ✅ `cargo test --test typescript_compiler_integration_tests` 55/55 通过
+- ✅ 新增 5 个复杂条件类型测试全部通过
+- ✅ 无回归问题
+
+#### v0.3.163 下一步
+- 实现完整的类型声明解析
+- 继续增强边缘情况测试覆盖
 
 ---
 
