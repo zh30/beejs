@@ -300,6 +300,7 @@ impl TypeScriptCompiler {
                     "interface" => Token::Interface,
                     "enum" => Token::Enum,
                     "type" => Token::Type,
+                    "namespace" => Token::Namespace,
                     "import" => Token::Import,
                     "export" => Token::Export,
                     "public" => Token::Public,
@@ -1227,6 +1228,11 @@ impl TypeScriptCompiler {
             }
             ASTStatement::Break { .. } => {}
             ASTStatement::Continue { .. } => {}
+            ASTStatement::Namespace { body, .. } => {
+                for stmt in body {
+                    self.check_node(stmt, ctx)?;
+                }
+            }
             ASTStatement::Block(statements) => {
                 for stmt in statements {
                     self.check_node(stmt, ctx)?;
@@ -1859,6 +1865,7 @@ pub enum Token {
     Interface,
     Enum,
     Type,
+    Namespace,
     Import,
     Export,
     Public,
@@ -2384,6 +2391,14 @@ pub enum ASTStatement {
     Throw {
         expression: ASTExpression,
     },
+    /// TypeScript 命名空间: namespace MyNamespace { ... }
+    /// 编译为: var MyNamespace; (function(MyNamespace) { ... })(MyNamespace || (MyNamespace = {}));
+    Namespace {
+        /// 命名空间名称
+        name: String,
+        /// 命名空间内部的语句列表
+        body: Vec<ASTNode>,
+    },
 }
 /// switch case 结构
 #[derive(Debug, Clone)]
@@ -2455,6 +2470,9 @@ impl Parser {
             }
             Token::Type => {
                 self.parse_type_alias_declaration()
+            }
+            Token::Namespace => {
+                self.parse_namespace_declaration()
             }
             Token::Return => {
                 self.parse_return_statement()
@@ -4263,6 +4281,38 @@ impl Parser {
             type_params,
             type_definition: type_definition.unwrap_or_else(|| "unknown".to_string()),
         })
+    }
+
+    /// 解析命名空间声明
+    /// 支持:
+    /// - namespace MyNamespace { ... }
+    /// - namespace Outer.Inner { ... } (嵌套命名空间)
+    fn parse_namespace_declaration(&mut self) -> Result<ASTNode> {
+        self.consume(Token::Namespace)?;
+
+        // 解析命名空间名称
+        let name = if let Token::Identifier(name) = self.consume_any_identifier()? {
+            name
+        } else {
+            bail!("Expected namespace name after 'namespace' keyword");
+        };
+
+        // 消耗左花括号
+        self.consume(Token::LBrace)?;
+
+        // 解析命名空间内部的语句
+        let mut body = Vec::new();
+        while !self.current_token_eq(&Token::RBrace) && !self.current_token_eq(&Token::Eof) {
+            body.push(self.parse_statement()?);
+        }
+
+        // 消耗右花括号
+        self.consume(Token::RBrace)?;
+
+        Ok(ASTNode::Statement(ASTStatement::Namespace {
+            name,
+            body,
+        }))
     }
 
     /// 解析导入语句
@@ -7033,6 +7083,27 @@ impl CodeEmitter {
                         self.output.push_str("throw ");
                         self.emit_expression(expression);
                         self.output.push_str(";\n");
+                    }
+                    // 命名空间编译: namespace MyNamespace { ... }
+                    // 编译为: var MyNamespace; (function(MyNamespace) { ... })(MyNamespace || (MyNamespace = {}));
+                    ASTStatement::Namespace { name, body } => {
+                        // 声明命名空间变量
+                        self.output.push_str("var ");
+                        self.output.push_str(&name);
+                        self.output.push_str(";\n");
+                        // IIFE 包装命名空间体
+                        self.output.push_str("(function(");
+                        self.output.push_str(&name);
+                        self.output.push_str(") {\n");
+                        // 发射命名空间内部的语句
+                        for stmt in body {
+                            self.emit_node(stmt);
+                        }
+                        self.output.push_str("})(");
+                        self.output.push_str(&name);
+                        self.output.push_str(" || (");
+                        self.output.push_str(&name);
+                        self.output.push_str(" = {}));\n");
                     }
                 }
             }
@@ -11569,6 +11640,151 @@ function wrap<T = string>(value: T): T[] {
         // Single line should not have semicolons
         assert!(!mappings.contains(';'), "Single line should not have semicolons");
         assert!(!mappings.is_empty(), "Should generate mappings");
+    }
+
+    /// Test basic namespace compilation (v0.3.148)
+    #[test]
+    fn test_namespace_basic() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        let source = r#"
+namespace MyNamespace {
+    export const x = 5;
+}
+"#;
+        println!("\n========== Testing: basic namespace ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Should compile to JavaScript
+                assert!(result.js_code.contains("var MyNamespace"), "Should declare namespace variable");
+                assert!(result.js_code.contains("function"), "Should have IIFE");
+                println!("✅ Basic namespace test passed");
+            }
+            Err(e) => {
+                panic!("Compilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test namespace with multiple declarations (v0.3.148)
+    #[test]
+    fn test_namespace_multiple_declarations() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        let source = r#"
+namespace Utils {
+    export function greet(name: string): string {
+        return "Hello, " + name;
+    }
+    export const version = "1.0";
+    export let count = 0;
+}
+"#;
+        println!("\n========== Testing: namespace with multiple declarations ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Should compile namespace to JavaScript IIFE
+                assert!(result.js_code.contains("var Utils"), "Should declare namespace variable");
+                assert!(result.js_code.contains("function"), "Should have IIFE");
+                assert!(result.js_code.contains("Utils"), "Should reference namespace");
+                println!("✅ Multiple declarations namespace test passed");
+            }
+            Err(e) => {
+                panic!("Compilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test nested namespace (v0.3.148)
+    #[test]
+    fn test_namespace_nested() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        let source = r#"
+namespace Outer {
+    export const outerValue = 1;
+    namespace Inner {
+        export const innerValue = 2;
+    }
+}
+"#;
+        println!("\n========== Testing: nested namespace ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                // Should compile both namespaces
+                assert!(result.js_code.contains("var Outer"), "Should declare outer namespace");
+                assert!(result.js_code.contains("var Inner"), "Should declare inner namespace");
+                println!("✅ Nested namespace test passed");
+            }
+            Err(e) => {
+                panic!("Compilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test namespace with class (v0.3.148)
+    #[test]
+    fn test_namespace_with_class() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        let source = r#"
+namespace MyNamespace {
+    export class Calculator {
+        add(a: number, b: number): number {
+            return a + b;
+        }
+    }
+}
+"#;
+        println!("\n========== Testing: namespace with class ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("var MyNamespace"), "Should declare namespace");
+                assert!(result.js_code.contains("function"), "Should have IIFE");
+                println!("✅ Namespace with class test passed");
+            }
+            Err(e) => {
+                panic!("Compilation failed: {}", e);
+            }
+        }
+    }
+
+    /// Test namespace with interface (v0.3.148)
+    #[test]
+    fn test_namespace_with_interface() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        let source = r#"
+namespace MyNamespace {
+    interface Person {
+        name: string;
+        age: number;
+    }
+    export const person: Person = { name: "John", age: 30 };
+}
+"#;
+        println!("\n========== Testing: namespace with interface ==========\n");
+
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Compiled successfully!");
+                println!("JS Code:\n{}", result.js_code);
+                assert!(result.js_code.contains("var MyNamespace"), "Should declare namespace");
+                // Interface should be stripped, but person should remain
+                assert!(result.js_code.contains("person"), "Should have person variable");
+                println!("✅ Namespace with interface test passed");
+            }
+            Err(e) => {
+                panic!("Compilation failed: {}", e);
+            }
+        }
     }
 }
 

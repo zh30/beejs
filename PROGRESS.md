@@ -1,3 +1,40 @@
+### v0.3.147 尖括号类型断言支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.147 新增功能
+- **尖括号类型断言语法**
+  - 实现 `<Type>expr` 旧式类型断言语法
+  - 与 `expr as Type` 语法功能等价
+  - 转译时类型信息被移除，输出原始表达式
+  - 添加 ASTExpression::TSAngleBracketAssertion 节点
+
+- **类型标识符智能检测**
+  - 检测 `<` 后面是否为大写字母开头的标识符
+  - 识别常见 TypeScript 类型名（any, string, number, boolean 等）
+  - 避免与小于运算符 `<` 产生歧义
+
+#### v0.3.147 测试用例新增
+- `test_angle_bracket_type_assertion_basic` - 基本类型断言测试
+- `test_angle_bracket_type_assertion_with_number` - 数字类型断言测试
+- `test_angle_bracket_type_assertion_complex_type` - 复杂类型断言测试
+- `test_angle_bracket_vs_as_assertion_equivalence` - 两种断言语法等价性测试
+- `test_angle_bracket_in_expression` - 函数内类型断言测试
+
+#### v0.3.147 验证
+- ✅ `cargo test --lib` 191/191 通过 (+5)
+- ✅ `cargo build --release` 成功编译，零警告
+- ✅ 尖括号类型断言正确解析和转译
+- ✅ 与 as 类型断言输出等价的 JavaScript 代码
+
+#### v0.3.147 代码变更
+- `src/typescript/compiler.rs`: +228 行
+  - 添加 `TSAngleBracketAssertion` AST 节点
+  - 实现 `parse_primary_expression` 中的尖括号断言解析
+  - 更新 `emit_expression` 处理新节点类型
+  - 更新 `infer_type` 支持类型推断
+
+---
+
 ### v0.3.146 Source Map 精确位置追踪 (2025-12-27)
 **进度**: Source Map 增强 | ✅ 已提交
 
