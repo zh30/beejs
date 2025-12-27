@@ -1021,11 +1021,14 @@ dog.makeSound();
             Ok(output) => {
                 println!("抽象类转译结果:");
                 println!("{}", output.js_code);
-                // 验证 abstract class 被正确处理
-                assert!(output.js_code.contains("abstract class"),
-                    "Should contain abstract class: {}", output.js_code);
-                assert!(output.js_code.contains("abstract makeSound"),
-                    "Should contain abstract method: {}", output.js_code);
+                // 验证 abstract 关键字被移除（因为是 TS 特有语法）
+                assert!(!output.js_code.contains("abstract class"),
+                    "Should NOT contain abstract class (should be removed): {}", output.js_code);
+                assert!(!output.js_code.contains("abstract makeSound"),
+                    "Should NOT contain abstract method (should be removed): {}", output.js_code);
+                // 验证类和方法保留
+                assert!(output.js_code.contains("class Animal"),
+                    "Should contain Animal class: {}", output.js_code);
                 assert!(output.js_code.contains("class Dog extends Animal"),
                     "Should contain Dog class: {}", output.js_code);
                 assert!(output.js_code.contains("makeSound"),
@@ -1060,11 +1063,21 @@ console.log(circle.calculateArea());
             Ok(output) => {
                 println!("抽象属性转译结果:");
                 println!("{}", output.js_code);
-                // 验证 abstract class 和属性被正确处理
-                assert!(output.js_code.contains("abstract class"),
-                    "Should contain abstract class: {}", output.js_code);
-                assert!(output.js_code.contains("abstract color"),
-                    "Should contain abstract property: {}", output.js_code);
+                // 验证 abstract 关键字被移除
+                assert!(!output.js_code.contains("abstract class"),
+                    "Should NOT contain abstract class (should be removed): {}", output.js_code);
+                assert!(!output.js_code.contains("abstract color"),
+                    "Should NOT contain abstract property (should be removed): {}", output.js_code);
+                // 验证类保留
+                assert!(output.js_code.contains("class Shape"),
+                    "Should contain Shape class: {}", output.js_code);
+                assert!(output.js_code.contains("class Circle extends Shape"),
+                    "Should contain Circle class: {}", output.js_code);
+                // 验证属性和方法保留（没有 abstract）
+                assert!(output.js_code.contains("color"),
+                    "Should contain color property: {}", output.js_code);
+                assert!(output.js_code.contains("calculateArea"),
+                    "Should contain calculateArea method: {}", output.js_code);
                 println!("✅ Abstract properties test passed");
             }
             Err(e) => {
@@ -1091,11 +1104,16 @@ ConcreteFactory.create();
             Ok(output) => {
                 println!("静态抽象方法转译结果:");
                 println!("{}", output.js_code);
-                // 验证 static abstract 被正确处理
-                assert!(output.js_code.contains("static abstract"),
-                    "Should contain static abstract: {}", output.js_code);
+                // 验证 abstract 关键字被移除
+                assert!(!output.js_code.contains("static abstract"),
+                    "Should NOT contain static abstract (should be removed): {}", output.js_code);
+                // 验证 static 方法保留
                 assert!(output.js_code.contains("static create"),
                     "Should contain static create: {}", output.js_code);
+                assert!(output.js_code.contains("class Factory"),
+                    "Should contain Factory class: {}", output.js_code);
+                assert!(output.js_code.contains("class ConcreteFactory extends Factory"),
+                    "Should contain ConcreteFactory class: {}", output.js_code);
                 println!("✅ Static abstract method test passed");
             }
             Err(e) => {
