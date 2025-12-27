@@ -1,3 +1,49 @@
+### v0.3.152 declare const/let/var 和 declare global 支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.152 新增功能
+- **declare const/let/var 声明支持**
+  - 为 `ASTNode::VariableDeclaration` 添加 `is_declare` 字段
+  - 修改 `parse_variable_declaration()` 接收 `is_declare` 参数
+  - 实现 emit 逻辑输出 `declare` 关键字前缀
+  - declare 变量不输出初始化器
+
+- **export declare const/let/var 支持**
+  - 在 `parse_export_declaration()` 中添加分号消费逻辑
+  - 支持 `export declare const` 语法
+
+- **declare global 声明块支持**
+  - 添加 `Token::Global` 关键字识别
+  - 新增 `ASTStatement::GlobalDeclaration` 节点类型
+  - 实现 `parse_global_declaration()` 解析 `declare global { ... }`
+  - emit 逻辑输出带注释标记的全局声明块
+
+#### 实现细节
+- 重构 `parse_variable_declaration()` 支持 `is_declare` 参数
+- 在 `parse_statement()` 的 `Token::Declare` 分支添加分号消费
+- 在 `parse_export_declaration()` 中添加 `Token::Global` 处理
+- 更新类型检查逻辑支持 `GlobalDeclaration`
+
+#### 测试用例
+- `test_declare_const` - declare const 声明测试
+- `test_declare_let` - declare let 声明测试
+- `test_declare_var` - declare var 声明测试
+- `test_export_declare_const` - export declare const 测试
+- `test_declare_global` - declare global 声明块测试
+- `test_declare_global_with_variables` - 全局声明中的变量测试
+- `test_regular_variable_vs_declare_variable` - 普通变量与声明变量对比
+
+#### 验证
+- ✅ `cargo test --lib` 220/220 通过
+- ✅ 18/18 TypeScript 编译器集成测试通过
+
+#### 下一步
+- 完善类型推导增强（如 infer 类型推导）
+- 增强 Source Map 位置追踪精度
+- 添加更多边界情况测试覆盖
+
+---
+
 ### v0.3.151 declare function 声明支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 
