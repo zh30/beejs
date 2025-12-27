@@ -1,3 +1,36 @@
+### v0.3.205 修复字符串字面量类型验证 bug（2025-12-28）
+**进度**: TypeScript 编译器修复 | ✅ 已提交
+
+#### v0.3.205 问题
+- TypeScript 代码中的字符串字面量联合类型（如 `type Status = "active" | "inactive" | "pending"`）
+- 在类型检查时会触发警告："Type alias 'Status' has invalid type definition"
+
+#### v0.3.205 原因分析
+- `is_valid_type()` 函数无法正确识别带引号的字符串字面量类型
+- 联合类型分割时，字符串字面量（如 `"active"`）被判定为无效类型
+
+#### v0.3.205 解决方案
+- **类型验证增强** (`src/typescript/compiler.rs:1886-1903`)
+  - 在 `is_valid_type()` 函数开头添加字符串字面量类型识别逻辑
+  - 支持双引号和单引号包围的字符串字面量
+  - 正确处理带空格的类型定义
+
+#### v0.3.205 测试用例
+- `test_typescript_string_literal_union_type`: 验证字符串字面量联合类型编译正常
+- 确认不产生 "invalid type definition" 警告
+
+#### v0.3.205 测试验证
+- ✅ `cargo test --test minimal_tests`: 89/89 通过 (新增 1 个测试)
+- ✅ `cargo build --release`: 编译成功
+- ✅ 端到端测试：`type Status = "active" | "inactive"` 正常执行
+
+#### v0.3.205 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多内建工具类型支持
+- 完善类型推断场景测试
+
+---
+
 ### v0.3.204 实现 NonNullable<T> 工具类型快速路径支持（2025-12-28）
 **进度**: TypeScript 快速路径增强 | ✅ 已提交
 
