@@ -4023,10 +4023,11 @@ impl Parser {
 
                 FunctionParameter::Destructuring { pattern, default_value }
             } else {
-                // 解析简单参数
-                let param_name_token = self.consume_any_identifier()?;
+                // 解析简单参数（包括 this 关键字）
+                let param_name_token = self.consume_param_name()?;
                 let param_name: _ = match param_name_token {
                     Token::Identifier(name) => name,
+                    Token::This => "this".to_string(),
                     _ => bail!("Expected parameter name"),
                 };
                 // 跳过可选参数标记 ?
@@ -12823,6 +12824,27 @@ class Counter {
             "Should contain increment method: {}", result.js_code);
         assert!(!result.js_code.contains(": this"),
             "Should not contain this parameter type: {}", result.js_code);
+    }
+
+    #[test]
+    fn test_this_parameter_in_function() {
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        // Test this parameter in standalone function
+        let source = r#"
+function bound(this: any, x: number): void {
+    console.log(this, x);
+}
+"#;
+        match compiler.compile_source(source, "test.ts") {
+            Ok(result) => {
+                println!("Test this parameter in function passed: {}", result.js_code);
+                assert!(result.js_code.contains("bound"), "Should contain bound function");
+            }
+            Err(e) => {
+                println!("Test this parameter in function failed: {:?}", e);
+                panic!("Should compile successfully");
+            }
+        }
     }
 
     #[test]

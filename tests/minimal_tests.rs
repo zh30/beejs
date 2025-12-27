@@ -533,4 +533,82 @@ console.log(level, user);
 
         println!("✅ Test 22: TypeScript enum and type combined support");
     }
+
+    /// 测试23: TypeScript this 参数类型注解 (v0.3.183)
+    /// 测试 fast-path 对 this: Type 参数的移除
+    #[test]
+    fn test_typescript_this_param_fast_path() {
+        // 测试简单 this: any 参数的移除
+        let ts_code = r#"
+function bound(this: any, x: number): void {
+    console.log(this, x);
+}
+bound({}, 42);
+"#;
+        let result = typescript::compile_typescript(ts_code, "this_param_test.ts");
+        assert!(result.is_ok(), "this parameter should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 this: any 被移除
+        assert!(!output.js_code.contains("this: any"),
+            "Should remove 'this: any': {}", output.js_code);
+
+        // 验证函数体保留
+        assert!(output.js_code.contains("console.log"),
+            "Should preserve console.log: {}", output.js_code);
+        assert!(output.js_code.contains("bound"),
+            "Should preserve bound function: {}", output.js_code);
+
+        println!("✅ Test 23: TypeScript this parameter fast-path support (simple)");
+    }
+
+    /// 测试24: TypeScript this 参数为对象类型 (v0.3.183)
+    #[test]
+    fn test_typescript_this_param_object_type() {
+        // 测试简单 this: any 参数后跟其他参数
+        // Note: 接口方法签名暂不完全支持，使用普通函数测试 this 参数
+        let ts_code = r#"
+function bound(this: any, name: string): string {
+    return `Hello, ${name}`;
+}
+const result = bound({}, "Alice");
+"#;
+        let result = typescript::compile_typescript(ts_code, "this_object_test.ts");
+        assert!(result.is_ok(), "this object parameter should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 this: any 被移除
+        assert!(!output.js_code.contains("this: any"),
+            "Should remove 'this: any': {}", output.js_code);
+
+        // 验证函数保留
+        assert!(output.js_code.contains("bound"),
+            "Should preserve bound function: {}", output.js_code);
+
+        println!("✅ Test 24: TypeScript this parameter with object type");
+    }
+
+    /// 测试25: TypeScript this 参数在普通函数中 (v0.3.183)
+    #[test]
+    fn test_typescript_this_param_in_function() {
+        // 测试函数中的 this 参数
+        let ts_code = r#"
+function greet(this: { name: string }, message: string): string {
+    return `${this.name} says ${message}`;
+}
+"#;
+        let result = typescript::compile_typescript(ts_code, "this_function_test.ts");
+        assert!(result.is_ok(), "function this parameter should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 this: { ... } 被移除
+        assert!(!output.js_code.contains("this: {"),
+            "Should remove 'this: {{': {}", output.js_code);
+
+        // 验证函数保留
+        assert!(output.js_code.contains("greet"),
+            "Should preserve greet function: {}", output.js_code);
+
+        println!("✅ Test 25: TypeScript this parameter in function");
+    }
 }

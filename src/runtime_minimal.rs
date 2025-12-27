@@ -1461,6 +1461,21 @@ impl MinimalRuntime {
         let simple_type_pattern = regex::Regex::new(r":\s*([A-Z][a-zA-Z0-9]*)([,\)])").unwrap();
         js_code = simple_type_pattern.replace_all(&js_code, "$1$2").to_string();
 
+        // v0.3.183: Remove this parameter type annotations
+        // Pattern: "this: Type," or "this: Type)" - removes the entire this parameter
+        // This handles: function greet(this: { name: string }, msg: string) {}
+        // And: interface Config { greet(this: { name: string }): string; }
+        let this_param_pattern = regex::Regex::new(r"this:\s*\{[^}]*\}([,\)])").unwrap();
+        js_code = this_param_pattern.replace_all(&js_code, "$1").to_string();
+
+        // Handle simple this: Type patterns (this: any, this: Context, etc.)
+        let this_simple_pattern = regex::Regex::new(r"this:\s*[a-zA-Z<>][a-zA-Z0-9<>]*([,\)])").unwrap();
+        js_code = this_simple_pattern.replace_all(&js_code, "$1").to_string();
+
+        // Handle object type in this parameter with nested braces
+        let this_object_pattern = regex::Regex::new(r"this:\s*\{[^{}]*\{[^{}]*\}[^{}]*\}([,\)])").unwrap();
+        js_code = this_object_pattern.replace_all(&js_code, "$1").to_string();
+
         // Remove return type annotations: -> type
         let return_pattern = regex::Regex::new(r"->\s*[^;{]+").unwrap();
         js_code = return_pattern.replace_all(&js_code, "").to_string();
@@ -1805,7 +1820,8 @@ impl MinimalRuntime {
             || code.contains("typeof ")     // v0.3.174: typeof operator in type context
             || code.contains("infer ")      // v0.3.175: infer keyword in conditional types
             || code.contains("abstract class")   // v0.3.176: abstract class declaration
-            || code.contains("abstract ");      // v0.3.176: abstract method or class
+            || code.contains("abstract ")       // v0.3.176: abstract method or class
+            || code.contains("this:");          // v0.3.183: this parameter type annotation
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript
