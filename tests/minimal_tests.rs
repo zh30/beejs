@@ -1978,4 +1978,96 @@ console.log(user, req, ro, str);
 
         println!("✅ Test 82: Combined utility types v2");
     }
+
+    /// 测试83: 独立使用的 Uppercase 内建字符串类型 (v0.3.203)
+    #[test]
+    fn test_intrinsic_uppercase_standalone() {
+        // 测试独立使用的 Uppercase<'hello'> 而非在模板字面量中
+        let ts_code = r#"
+type Upper = Uppercase<'hello'>;
+const result: string = "HELLO";
+console.log(result);
+"#;
+        let result = typescript::compile_typescript(ts_code, "uppercase_standalone.ts");
+        assert!(result.is_ok(), "Standalone Uppercase should compile successfully");
+        let output = result.unwrap();
+        // 验证 Uppercase 被移除
+        assert!(!output.js_code.contains("Uppercase<"),
+            "Should remove Uppercase pattern: {}", output.js_code);
+        // 验证代码保留
+        assert!(output.js_code.contains("const result"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("console.log"),
+            "Should preserve console.log: {}", output.js_code);
+        println!("✅ Test 83: Standalone Uppercase intrinsic string type");
+    }
+
+    /// 测试84: 独立使用的 Lowercase 内建字符串类型 (v0.3.203)
+    #[test]
+    fn test_intrinsic_lowercase_standalone() {
+        // 测试独立使用的 Lowercase<'WORLD'> 而非在模板字面量中
+        let ts_code = r#"
+type Lower = Lowercase<'WORLD'>;
+const result: string = "world";
+console.log(result);
+"#;
+        let result = typescript::compile_typescript(ts_code, "lowercase_standalone.ts");
+        assert!(result.is_ok(), "Standalone Lowercase should compile successfully");
+        let output = result.unwrap();
+        // 验证 Lowercase 被移除
+        assert!(!output.js_code.contains("Lowercase<"),
+            "Should remove Lowercase pattern: {}", output.js_code);
+        // 验证代码保留
+        assert!(output.js_code.contains("const result"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("console.log"),
+            "Should preserve console.log: {}", output.js_code);
+        println!("✅ Test 84: Standalone Lowercase intrinsic string type");
+    }
+
+    /// 测试85: 独立使用的 Capitalize 内建字符串类型 (v0.3.203)
+    #[test]
+    fn test_intrinsic_capitalize_standalone() {
+        // 测试独立使用的 Capitalize 而非在模板字面量中
+        let ts_code = r#"
+type Cap = Capitalize<'hello'>;
+const result: string = "Hello";
+console.log(result);
+"#;
+        let result = typescript::compile_typescript(ts_code, "capitalize_standalone.ts");
+        assert!(result.is_ok(), "Standalone Capitalize should compile successfully");
+        let output = result.unwrap();
+        // 验证 Capitalize 被移除
+        assert!(!output.js_code.contains("Capitalize<"),
+            "Should remove Capitalize pattern: {}", output.js_code);
+        // 验证代码保留
+        assert!(output.js_code.contains("const result"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("console.log"),
+            "Should preserve console.log: {}", output.js_code);
+        println!("✅ Test 85: Standalone Capitalize intrinsic string type");
+    }
+
+    /// 测试86: 独立使用的 Uncapitalize 内建字符串类型 (v0.3.203)
+    #[test]
+    fn test_intrinsic_uncapitalize_standalone() {
+        // 测试独立使用的 Uncapitalize 而非在模板字面量中
+        let ts_code = r#"
+type Uncap = Uncapitalize<'Hello'>;
+const result: string = "hello";
+console.log(result);
+"#;
+        let result = typescript::compile_typescript(ts_code, "uncapitalize_standalone.ts");
+        assert!(result.is_ok(), "Standalone Uncapitalize should compile successfully");
+        let output = result.unwrap();
+        // 验证 Uncapitalize 被移除
+        assert!(!output.js_code.contains("Uncapitalize<"),
+            "Should remove Uncapitalize pattern: {}", output.js_code);
+        // 验证代码保留
+        assert!(output.js_code.contains("const result"),
+            "Should preserve const declaration: {}", output.js_code);
+        assert!(output.js_code.contains("console.log"),
+            "Should preserve console.log: {}", output.js_code);
+        println!("✅ Test 86: Standalone Uncapitalize intrinsic string type");
+    }
 }

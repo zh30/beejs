@@ -10772,3 +10772,39 @@ console.log(p.name);  // "Alice"
 - 继续完善 TypeScript 编译器功能
 - 实现更多内建工具类型支持（如Uppercase/Lowercase等内建字符串类型）
 - 完善类型推断场景测试
+
+---
+
+### v0.3.203 实现内建字符串类型独立使用快速路径支持 (2025-12-28)
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.203 新增功能
+- **独立使用的内建字符串类型支持**
+  - 运行时快速路径识别独立使用的 `Uppercase<T>`, `Lowercase<T>`, `Capitalize<T>`, `Uncapitalize<T>`
+  - 这些类型现在可以在模板字面量之外独立使用
+  - 正确移除包装类型，保留内部字符串字面量
+
+#### v0.3.203 实现细节
+- **运行时检测增强** (`src/runtime_minimal.rs:2356-2359`)
+  - 在 `has_raw_typescript()` 中添加 `Uppercase<`, `Lowercase<`, `Capitalize<`, `Uncapitalize<` 模式检测
+
+- **运行时快速路径移除** (`src/runtime_minimal.rs:2279-2293`)
+  - 添加正则表达式 `Uppercase\s*<([^>]+)>` 替换为 `$1`
+  - 添加正则表达式 `Lowercase\s*<([^>]+)>` 替换为 `$1`
+  - 添加正则表达式 `Capitalize\s*<([^>]+)>` 替换为 `$1`
+  - 添加正则表达式 `Uncapitalize\s*<([^>]+)>` 替换为 `$1`
+
+#### v0.3.203 测试用例
+- `test_intrinsic_uppercase_standalone`: 独立使用 `Uppercase<'hello'>` 模式
+- `test_intrinsic_lowercase_standalone`: 独立使用 `Lowercase<'WORLD'>` 模式
+- `test_intrinsic_capitalize_standalone`: 独立使用 `Capitalize<'hello'>` 模式
+- `test_intrinsic_uncapitalize_standalone`: 独立使用 `Uncapitalize<'Hello'>` 模式
+
+#### v0.3.203 测试验证
+- ✅ `cargo test --test minimal_tests`: 86/86 通过 (新增 4 个测试)
+- ✅ `cargo test --lib`: 223/223 通过
+
+#### v0.3.203 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多内建工具类型支持
+- 完善类型推断场景测试

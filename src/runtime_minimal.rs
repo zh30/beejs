@@ -2276,6 +2276,22 @@ impl MinimalRuntime {
         let omit_this_parameter_pattern = regex::Regex::new(r"OmitThisParameter\s*<([^>]+)>").unwrap();
         js_code = omit_this_parameter_pattern.replace_all(&js_code, "$1").to_string();
 
+        // v0.3.203: Remove intrinsic string types (Uppercase, Lowercase, Capitalize, Uncapitalize)
+        // These are TypeScript 4.1+ intrinsic string manipulation types
+        // For runtime, we remove the wrapper and keep the inner string literal
+        // Pattern: "Uppercase<'hello'>" -> "'hello'", "Lowercase<'WORLD'>" -> "'WORLD'", etc.
+        let uppercase_pattern = regex::Regex::new(r"Uppercase\s*<([^>]+)>").unwrap();
+        js_code = uppercase_pattern.replace_all(&js_code, "$1").to_string();
+
+        let lowercase_pattern = regex::Regex::new(r"Lowercase\s*<([^>]+)>").unwrap();
+        js_code = lowercase_pattern.replace_all(&js_code, "$1").to_string();
+
+        let capitalize_pattern = regex::Regex::new(r"Capitalize\s*<([^>]+)>").unwrap();
+        js_code = capitalize_pattern.replace_all(&js_code, "$1").to_string();
+
+        let uncapitalize_pattern = regex::Regex::new(r"Uncapitalize\s*<([^>]+)>").unwrap();
+        js_code = uncapitalize_pattern.replace_all(&js_code, "$1").to_string();
+
         // v0.3.195: Convert simple ESM export statements to comments
         // v0.3.196: Added abstract for export abstract class support
         // Complex exports (export { a, b }) need variable tracking, so we use placeholders
@@ -2352,7 +2368,11 @@ impl MinimalRuntime {
             || code.contains("${Uncapitalize<") // v0.3.200: intrinsic Uncapitalize in template literal
             || code.contains("Awaited<")       // v0.3.201: Awaited utility type
             || code.contains("ThisParameterType<")  // v0.3.202: ThisParameterType utility type
-            || code.contains("OmitThisParameter<"); // v0.3.202: OmitThisParameter utility type
+            || code.contains("OmitThisParameter<") // v0.3.202: OmitThisParameter utility type
+            || code.contains("Uppercase<")     // v0.3.203: standalone Uppercase intrinsic type
+            || code.contains("Lowercase<")     // v0.3.203: standalone Lowercase intrinsic type
+            || code.contains("Capitalize<")    // v0.3.203: standalone Capitalize intrinsic type
+            || code.contains("Uncapitalize<"); // v0.3.203: standalone Uncapitalize intrinsic type
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript
