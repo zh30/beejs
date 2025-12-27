@@ -9080,6 +9080,41 @@ console.log(p.name);  // "Alice"
 - ✅ `cargo test --test typescript_compiler_integration_tests` 29/29 passed (+2)
 - ✅ `cargo build` compiled successfully
 
+---
+
+## v0.3.157 (2025-12-27)
+
+### New Features
+- **Abstract Class Support**
+  - Added `Token::Abstract` keyword recognition in lexer
+  - Added `is_abstract` field to `ClassDeclaration`, `MethodDeclaration`, and `PropertyDeclaration` AST nodes
+  - Implemented `abstract class` syntax parsing
+  - Implemented `abstract` method and property parsing
+  - Supports `static abstract` methods
+
+### AST Enhancements
+- `ClassDeclaration` now has `is_abstract: bool` field
+- `MethodDeclaration` now has `is_abstract: bool` field
+- `PropertyDeclaration` now has `is_abstract: bool` field
+- Updated `parse_class_declaration_internal()` to parse abstract modifier
+- Updated `parse_class_member()` to parse abstract modifier for members
+
+### Emitter Improvements
+- Abstract class outputs `abstract class` syntax
+- Abstract method outputs `abstract methodName()` syntax
+- Abstract property outputs `abstract propertyName` syntax
+- Static abstract outputs `static abstract` syntax
+
+### Tests
+- Added `test_abstract_class` - tests basic `abstract class` with abstract methods
+- Added `test_abstract_class_with_abstract_properties` - tests abstract properties
+- Added `test_static_abstract_method` - tests `static abstract` methods
+
+### Verification
+- ✅ `cargo build` compiled successfully
+- ✅ 36/36 TypeScript compiler integration tests pass (+3)
+- ✅ 200/200 lib tests pass
+
 ### Next Steps
 - Add support for namespace module augmentation
 - Implement namespace merging support
