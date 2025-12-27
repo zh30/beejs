@@ -59,6 +59,50 @@
 
 ---
 
+### v0.3.169 完善复杂类型注解处理 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.169 新增功能
+- **泛型类型参数识别扩展**
+  - 支持 `IsString<string>` 等泛型类型引用
+  - 扩展识别 `<...>` 后跟 `;` `)` `}` `,` 运算符等 token
+  - 修复 `IsString<string>;` 被错误解析为比较表达式的问题
+
+- **泛型类参数支持**
+  - 支持 `class Container<T> { ... }`
+  - 正确跳过类名后的泛型参数 `<T>`
+
+- **接口修饰符支持**
+  - 支持 `port?: number` 可选属性修饰符
+  - 支持 `readonly id: string` 只读属性修饰符
+
+- **条件类型解析修复**
+  - 修复 `type IsString<T> = T extends string ? true : false;`
+  - 正确解析 `extends ... ? ... : ...` 语法
+
+#### v0.3.169 测试用例
+- `test_nested_object_type`: 嵌套对象类型
+- `test_intersection_type`: 交叉类型 A & B
+- `test_generic_function_type`: 泛型函数 `function identity<T>`
+- `test_mapped_type`: 映射类型 `{ [P in keyof T]: T[P] }`
+- `test_conditional_type`: 条件类型 `T extends U ? X : Y`
+- `test_template_literal_type`: 模板字面量类型
+- `test_indexed_access_type`: 索引访问类型 `Person["name"]`
+- `test_infer_type`: infer 类型推断
+- `test_constructor_type`: 泛型类 `class Container<T>`
+- `test_modifiers`: 可选和 readonly 修饰符
+
+#### v0.3.169 验证
+- ✅ `cargo test --test typescript_complex_types_tests` 10/10 通过
+- ✅ 所有复杂类型测试用例通过
+- ✅ `cargo build --release` 成功编译
+
+#### v0.3.169 下一步
+- 实现更多 TypeScript 高级类型支持
+- 优化运行时类型转译性能
+
+---
+
 ### v0.3.167 实现 as const 类型断言支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 
