@@ -1,3 +1,30 @@
+### v0.3.154 实现函数类型和元组类型解析支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.154 新增功能
+- **函数类型解析支持**
+  - 新增 `parse_function_type()` 方法
+  - 支持解析 `(arg1: type1, arg2: type2) => returnType` 形式
+  - 在 `parse_basic_type` 中添加 `Token::LParen` 处理
+
+- **元组类型解析支持**
+  - 新增 `parse_tuple_type()` 方法
+  - 支持解析 `[type1, type2, ...restType]` 形式
+  - 支持 rest 元素 `...any[]` 语法
+  - 在 `parse_type_annotation` 中添加 `Token::LBracket` 处理
+
+- **泛型约束支持**
+  - 修改 `parse_type_alias_declaration()` 支持 `extends` 约束
+  - 支持 `<T extends U>` 形式泛型参数约束
+  - 条件类型中的 `infer` 关键字解析
+
+#### 验证
+- ✅ `cargo test --lib` 220/220 通过
+- ✅ 支持 `type ReturnType<T> = T extends (...args) => infer R ? R : never`
+- ✅ 支持 `type First<T extends any[]> = T extends [infer F, ...any[]] ? F : never`
+
+---
+
 ### v0.3.153 修复 declare namespace emit 逻辑并添加边界测试 (2025-12-27)
 **进度**: TypeScript 编译修复 | ✅ 已提交
 
