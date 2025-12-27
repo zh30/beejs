@@ -4111,6 +4111,19 @@ impl Parser {
             Token::Identifier(name) => name,
             _ => bail!("Expected class name"),
         };
+        // v0.3.169: 支持泛型类参数，如 class Container<T>
+        if self.current_token_eq(&Token::Lt) {
+            // 消费 <T>
+            self.consume(Token::Lt)?;
+            let mut depth = 1;
+            while depth > 0 && !self.is_at_end() {
+                match self.current_token() {
+                    Token::Lt => { depth += 1; self.advance(); }
+                    Token::Gt => { depth -= 1; if depth > 0 { self.advance(); } else { self.advance(); } }
+                    _ => { self.advance(); }
+                }
+            }
+        }
         // 检查是否有 extends 子句
         let extends = if self.current_token_eq(&Token::Extends) {
             self.consume(Token::Extends)?;
@@ -5369,15 +5382,16 @@ impl Parser {
         expr = self.parse_postfix(expr)?;
 
         // 在检查箭头函数之前，先处理泛型类型参数调用
-        // 例如: identity<string>("hello")
-        // 通过检查 < 后面是否有标识符、> 和 ( 来判断是否是泛型调用
+        // 例如: identity<string>("hello") 或 IsString<string>
+        // v0.3.169: 扩展支持泛型类型参数后跟各种 token (如 ; ) } , 运算符等)
         if self.current_token_eq(&Token::Lt) {
-            // 简单的启发式：如果 < 后面是标识符，> 后面是 (，则是泛型调用
+            // 简单的启发式：如果 < 后面是标识符，> 后面是 ( ; ) } , 运算符，则是泛型类型参数
             let mut lookahead = self.position;
             let mut depth = 0;
             let mut found_type_args = false;
+            let mut terminated_without_paren = false;
 
-            // 快速扫描检查是否是 <Type> 或 <T, U> 后面跟着 (
+            // 快速扫描检查是否是 <Type> 或 <T, U>
             while lookahead < self.tokens.len() {
                 match &self.tokens[lookahead] {
                     Token::Lt => {
@@ -5388,11 +5402,27 @@ impl Parser {
                     Token::Gt if depth > 0 => {
                         depth -= 1;
                         if depth == 0 {
-                            // 找到完整的 <...>
                             lookahead += 1;
-                            // 检查是否是 (
-                            if lookahead < self.tokens.len() && matches!(self.tokens[lookahead], Token::LParen) {
-                                found_type_args = true;
+                            // v0.3.169: 扩展检查，支持泛型类型参数后跟各种 token
+                            if lookahead < self.tokens.len() {
+                                match &self.tokens[lookahead] {
+                                    Token::LParen => {
+                                        found_type_args = true;
+                                    }
+                                    Token::SemiColon | Token::RParen | Token::RBrace
+                                    | Token::Comma | Token::FatArrow | Token::Question
+                                    | Token::Plus | Token::Minus | Token::Star | Token::Slash
+                                    | Token::Percent | Token::Caret | Token::Ampersand
+                                    | Token::Pipe | Token::QuestionQuestion | Token::Dot
+                                    | Token::PlusEq | Token::MinusEq | Token::StarEq
+                                    | Token::SlashEq | Token::PercentEq | Token::AmpersanderEq
+                                    | Token::PipeEq | Token::CaretEq | Token::LtEq
+                                    | Token::GtEq | Token::Eq | Token::EqEq | Token::NotEqEq
+                                    | Token::Bang | Token::Colon | Token::RBracket => {
+                                        terminated_without_paren = true;
+                                    }
+                                    _ => {}
+                                }
                             }
                             break;
                         }
@@ -5408,8 +5438,8 @@ impl Parser {
                 }
             }
 
-            // 如果是泛型调用，则处理
-            if found_type_args {
+            // 如果是泛型类型参数，则跳过类型参数部分
+            if found_type_args || terminated_without_paren {
                 // 消费 < Type >
                 self.consume(Token::Lt)?;
                 let mut depth = 1;
@@ -5420,8 +5450,8 @@ impl Parser {
                         _ => { self.advance(); }
                     }
                 }
-                // 处理函数调用
-                if self.current_token_eq(&Token::LParen) {
+                // 如果是泛型函数调用，继续处理函数调用
+                if found_type_args && self.current_token_eq(&Token::LParen) {
                     self.advance();
                     let mut arguments = Vec::new();
                     while !self.current_token_eq(&Token::RParen) {
