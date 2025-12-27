@@ -1,9 +1,6 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
 #[cfg(test)]
 mod typescript_compiler_integration_tests {
-    use beejs::typescript::{compile_typescript, TypeScriptCompiler, TypeScriptCompilerConfig};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+    use beejs::typescript::compile_typescript;
 
     #[test]
     fn test_simple_typescript_transpilation() {
