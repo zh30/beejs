@@ -10632,3 +10632,37 @@ console.log(p.name);  // "Alice"
 - ✅ `cargo test --test minimal_tests`: 71/71 通过
 - ✅ `export abstract class Animal {}` 正确解析为导出声明
 - ✅ 与现有 ESM 导出模式完全兼容
+
+---
+
+### v0.3.198 修复 ESM 转 CommonJS 测试断言 (2025-12-28)
+**进度**: 测试修复 | ✅ 已提交
+
+#### v0.3.198 问题背景
+- 6 个 TypeScript 编译器测试失败
+- 原因: v0.3.195 实现 ESM → CommonJS 转换后，测试仍期望 ESM 格式
+- 失败的测试:
+  - `test_import_statement`
+  - `test_import_default`
+  - `test_import_namespace`
+  - `test_import_side_effect`
+  - `test_import_with_alias`
+  - `test_export_declare_function`
+
+#### v0.3.198 解决方案
+- **更新测试断言以匹配 CommonJS 输出** (`src/typescript/compiler.rs`)
+  - `import { a, b } from "module"` → `const { a, b } = require("module")`
+  - `import foo from "module"` → `const foo = require("module")`
+  - `import * as utils from "module"` → `const utils = require("module")`
+  - `import "module"` → `require("module")`
+  - `export declare function` → `/* ESM export: function ... */`
+
+#### v0.3.198 测试验证
+- ✅ `cargo test --lib`: 223/223 通过
+- ✅ 所有 ESM → CommonJS 转换测试正确验证输出格式
+- ✅ 与 v0.3.195 ESM 转 CommonJS 功能保持一致
+
+#### v0.3.198 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多 ESM 特性完整支持
+- 完善工具类型（Utility Types）实现

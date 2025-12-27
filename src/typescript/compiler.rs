@@ -10652,7 +10652,7 @@ class Animal {
     #[test]
     fn test_import_statement() {
         let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
-        // Test named import
+        // Test named import - v0.3.195: ESM imports are converted to CommonJS
         let source = r#"import { a, b } from "module";"#;
         println!("\n========== Testing: {} ==========\n", source);
 
@@ -10660,12 +10660,11 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("import"),
-                    "Should contain import: {}", result.js_code);
-                assert!(result.js_code.contains("{ a, b }"),
-                    "Should contain {{ a, b }}: {}", result.js_code);
-                assert!(result.js_code.contains("from"),
-                    "Should contain from: {}", result.js_code);
+                // v0.3.195: ESM import -> CommonJS require
+                assert!(result.js_code.contains("require"),
+                    "Should contain require (ESM -> CommonJS): {}", result.js_code);
+                assert!(result.js_code.contains("a, b"),
+                    "Should contain a, b: {}", result.js_code);
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10677,7 +10676,7 @@ class Animal {
     #[test]
     fn test_import_default() {
         let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
-        // Test default import
+        // Test default import - v0.3.195: ESM imports are converted to CommonJS
         let source = r#"import foo from "module";"#;
         println!("\n========== Testing: {} ==========\n", source);
 
@@ -10685,8 +10684,9 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("import"),
-                    "Should contain import: {}", result.js_code);
+                // v0.3.195: ESM import -> CommonJS require
+                assert!(result.js_code.contains("require"),
+                    "Should contain require (ESM -> CommonJS): {}", result.js_code);
                 assert!(result.js_code.contains("foo"),
                     "Should contain foo: {}", result.js_code);
             }
@@ -10700,7 +10700,7 @@ class Animal {
     #[test]
     fn test_import_namespace() {
         let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
-        // Test namespace import
+        // Test namespace import - v0.3.195: ESM imports are converted to CommonJS
         let source = r#"import * as utils from "module";"#;
         println!("\n========== Testing: {} ==========\n", source);
 
@@ -10708,10 +10708,11 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("import"),
-                    "Should contain import: {}", result.js_code);
-                assert!(result.js_code.contains("* as utils"),
-                    "Should contain * as utils: {}", result.js_code);
+                // v0.3.195: ESM import * as ns -> CommonJS const ns = require()
+                assert!(result.js_code.contains("require"),
+                    "Should contain require (ESM -> CommonJS): {}", result.js_code);
+                assert!(result.js_code.contains("utils"),
+                    "Should contain utils: {}", result.js_code);
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10723,7 +10724,7 @@ class Animal {
     #[test]
     fn test_import_side_effect() {
         let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
-        // Test side-effect import
+        // Test side-effect import - v0.3.195: ESM imports are converted to CommonJS
         let source = r#"import "module";"#;
         println!("\n========== Testing: {} ==========\n", source);
 
@@ -10731,8 +10732,9 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("import"),
-                    "Should contain import: {}", result.js_code);
+                // v0.3.195: ESM side-effect import -> CommonJS require()
+                assert!(result.js_code.contains("require"),
+                    "Should contain require (ESM -> CommonJS): {}", result.js_code);
                 assert!(result.js_code.contains("module"),
                     "Should contain module: {}", result.js_code);
             }
@@ -10746,7 +10748,7 @@ class Animal {
     #[test]
     fn test_import_with_alias() {
         let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
-        // Test import with alias
+        // Test import with alias - v0.3.195: ESM imports are converted to CommonJS
         let source = r#"import { original as alias } from "module";"#;
         println!("\n========== Testing: {} ==========\n", source);
 
@@ -10754,10 +10756,13 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("import"),
-                    "Should contain import: {}", result.js_code);
-                assert!(result.js_code.contains("original as alias"),
-                    "Should contain original as alias: {}", result.js_code);
+                // v0.3.195: ESM import { x as y } -> CommonJS const { x: y } = require()
+                assert!(result.js_code.contains("require"),
+                    "Should contain require (ESM -> CommonJS): {}", result.js_code);
+                assert!(result.js_code.contains("original"),
+                    "Should contain original: {}", result.js_code);
+                assert!(result.js_code.contains("alias"),
+                    "Should contain alias: {}", result.js_code);
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -13693,7 +13698,7 @@ declare function logMessage(msg: string, level: string): void;
         }
     }
 
-    /// Test export declare function (v0.3.151)
+    /// Test export declare function (v0.3.151, v0.3.197: updated for ESM comment format)
     #[test]
     fn test_export_declare_function() {
         let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
@@ -13708,12 +13713,13 @@ export declare function getVersion(): string;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("export"),
-                    "Should contain export keyword: {}", result.js_code);
-                assert!(result.js_code.contains("declare function calculate"),
-                    "Should contain export declare function calculate: {}", result.js_code);
-                assert!(result.js_code.contains("declare function getVersion"),
-                    "Should contain export declare function getVersion: {}", result.js_code);
+                // v0.3.197: ESM exports are converted to comments
+                assert!(result.js_code.contains("ESM export"),
+                    "Should contain ESM export comment: {}", result.js_code);
+                assert!(result.js_code.contains("calculate"),
+                    "Should contain calculate: {}", result.js_code);
+                assert!(result.js_code.contains("getVersion"),
+                    "Should contain getVersion: {}", result.js_code);
                 println!("✅ Export declare function test passed");
             }
             Err(e) => {
