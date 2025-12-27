@@ -1,3 +1,31 @@
+### v0.3.159 实现接口合并支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.159 新增功能
+- **接口合并 (Interface Merging)**
+  - 新增 `merge_interfaces()` 方法在编译过程中合并同名接口
+  - TypeScript 允许同一接口的多次声明，所有属性正确合并
+  - 合并时保留第一个索引签名（如果存在）
+  - 继承列表自动去重合并
+
+#### v0.3.159 实现细节
+- 在 `compile_source()` 中添加第四步调用 `merge_interfaces()`
+- 使用 `HashMap<String, ASTNode>` 按 name 分组接口
+- 合并属性时后者覆盖前者（TypeScript 规范）
+- 合并继承列表时自动去重
+
+#### v0.3.159 测试用例
+- `test_interface_merging`: 测试同名接口属性合并
+- `test_interface_merging_with_extends`: 测试接口合并与 extends 组合
+- `test_interface_merging_with_index_signature`: 测试接口合并与索引签名组合
+
+#### 验证
+- ✅ `cargo build --lib` 成功编译
+- ✅ 39/39 TypeScript 编译器集成测试通过
+- ✅ 无回归问题
+
+---
+
 ### v0.3.158 实现命名空间合并支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 
@@ -20,7 +48,7 @@
 - ✅ `cargo build --release` 成功编译
 
 #### 下一步
-- 添加接口合并 (interface merging) 支持
+- 添加接口合并 (interface merging) 支持 ✅ 已完成 (v0.3.159)
 - 实现模块增强 (module augmentation)
 
 ---

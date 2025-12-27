@@ -216,11 +216,13 @@ impl TypeScriptCompiler {
         let ast: _ = self.syntax_analysis(&tokens, file_name)?;
         // 第三步：合并同名的命名空间声明
         let merged_ast = self.merge_namespaces(ast);
-        // 第四步：类型检查（简化实现）
+        // 第四步：合并同名的接口声明
+        let merged_ast = self.merge_interfaces(merged_ast);
+        // 第五步：类型检查（简化实现）
         self.type_check(&merged_ast, file_name)?;
-        // 第五步：转译为 JavaScript
+        // 第六步：转译为 JavaScript
         let js_code: _ = self.transpile(&merged_ast)?;
-        // 第六步：生成 Source Map
+        // 第七步：生成 Source Map
         let source_map: _ = if self.config.source_map {
             Some(self.generate_source_map(source, &js_code, file_name)?)
         } else {
@@ -280,6 +282,80 @@ impl TypeScriptCompiler {
 
         ASTNode::Program(merged_statements)
     }
+
+    /// 合并同名的接口声明
+    /// TypeScript 允许同一接口的多次声明，所有成员会合并到同一个接口
+    fn merge_interfaces(&self, ast: ASTNode) -> ASTNode {
+        use std::collections::HashMap;
+
+        // 解包 Program 节点
+        let statements = match ast {
+            ASTNode::Program(stmts) => stmts,
+            _ => return ast,
+        };
+
+        // 收集所有接口声明
+        let mut interface_map: HashMap<String, ASTNode> = HashMap::new();
+        let mut non_interface_nodes: Vec<ASTNode> = Vec::new();
+
+        for node in statements {
+            match node {
+                ASTNode::InterfaceDeclaration {
+                    name,
+                    extends,
+                    properties,
+                    index_signature,
+                } => {
+                    if let Some(existing_iface) = interface_map.get_mut(&name) {
+                        // 同名接口已存在，合并属性
+                        if let ASTNode::InterfaceDeclaration {
+                            name: _,
+                            extends: existing_extends,
+                            properties: existing_properties,
+                            index_signature: existing_index,
+                        } = existing_iface
+                        {
+                            // 合并属性（后者覆盖前者）
+                            existing_properties.extend(properties);
+                            // 合并继承列表（去重）
+                            for ext in extends {
+                                if !existing_extends.contains(&ext) {
+                                    existing_extends.push(ext);
+                                }
+                            }
+                            // 保留第一个非 None 的索引签名
+                            if index_signature.is_some() && existing_index.is_none() {
+                                *existing_index = index_signature;
+                            }
+                        }
+                    } else {
+                        // 第一次看到这个接口
+                        interface_map.insert(
+                            name.clone(),
+                            ASTNode::InterfaceDeclaration {
+                                name,
+                                extends,
+                                properties,
+                                index_signature,
+                            },
+                        );
+                    }
+                }
+                _ => {
+                    non_interface_nodes.push(node);
+                }
+            }
+        }
+
+        // 重新构建 AST
+        let mut merged_statements: Vec<ASTNode> = non_interface_nodes;
+        for iface in interface_map.into_values() {
+            merged_statements.push(iface);
+        }
+
+        ASTNode::Program(merged_statements)
+    }
+
     /// 词法分析 - 将源代码分解为记号
     fn lexical_analysis(&self, source: &str, _file_name: &str) -> Result<Vec<Token>> {
         let mut tokens = Vec::new();

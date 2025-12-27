@@ -1103,4 +1103,117 @@ ConcreteFactory.create();
             }
         }
     }
+
+    /// Test interface merging (multiple declarations of the same interface merge)
+    /// Interface Merging: 同一接口的多个声明会被合并
+    #[test]
+    fn test_interface_merging() {
+        let ts_code: _ = r#"
+interface Point {
+    x: number;
+    y: number;
+}
+interface Point {
+    z: number;
+}
+interface Point {
+    label: string;
+}
+const p: Point = { x: 1, y: 2, z: 3, label: "origin" };
+"#;
+        match compile_typescript(ts_code, "interface_merging.ts") {
+            Ok(output) => {
+                println!("接口合并转译结果:");
+                println!("{}", output.js_code);
+                // 验证变量 p 被正确创建
+                assert!(output.js_code.contains("p"),
+                    "Should contain p variable: {}", output.js_code);
+                // 验证对象包含所有属性
+                assert!(output.js_code.contains("x"),
+                    "Should contain x property: {}", output.js_code);
+                assert!(output.js_code.contains("y"),
+                    "Should contain y property: {}", output.js_code);
+                assert!(output.js_code.contains("z"),
+                    "Should contain z property: {}", output.js_code);
+                assert!(output.js_code.contains("label"),
+                    "Should contain label property: {}", output.js_code);
+                // 类型注解应该被移除
+                assert!(!output.js_code.contains(": number"),
+                    "Should not contain type annotation: {}", output.js_code);
+                println!("✅ Interface merging test passed");
+            }
+            Err(e) => {
+                panic!("Interface merging test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test interface merging with extends (v0.3.159)
+    #[test]
+    fn test_interface_merging_with_extends() {
+        let ts_code: _ = r#"
+interface Animal {
+    name: string;
+}
+interface Animal {
+    age: number;
+}
+interface Dog extends Animal {
+    breed: string;
+}
+const dog: Dog = { name: "Buddy", age: 3, breed: "Labrador" };
+"#;
+        match compile_typescript(ts_code, "interface_merging_extends.ts") {
+            Ok(output) => {
+                println!("接口合并(含继承)转译结果:");
+                println!("{}", output.js_code);
+                // 验证变量 dog 被正确创建
+                assert!(output.js_code.contains("dog"),
+                    "Should contain dog variable: {}", output.js_code);
+                // 验证所有属性存在
+                assert!(output.js_code.contains("name"),
+                    "Should contain name: {}", output.js_code);
+                assert!(output.js_code.contains("age"),
+                    "Should contain age: {}", output.js_code);
+                assert!(output.js_code.contains("breed"),
+                    "Should contain breed: {}", output.js_code);
+                println!("✅ Interface merging with extends test passed");
+            }
+            Err(e) => {
+                panic!("Interface merging with extends test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test interface merging with index signature (v0.3.159)
+    #[test]
+    fn test_interface_merging_with_index_signature() {
+        let ts_code: _ = r#"
+interface StringMap {
+    key1: string;
+}
+interface StringMap {
+    [key: string]: string;
+}
+const map: StringMap = { key1: "value1", key2: "value2" };
+"#;
+        match compile_typescript(ts_code, "interface_merging_index.ts") {
+            Ok(output) => {
+                println!("接口合并(含索引签名)转译结果:");
+                println!("{}", output.js_code);
+                // 验证变量 map 被正确创建
+                assert!(output.js_code.contains("map"),
+                    "Should contain map variable: {}", output.js_code);
+                // 验证属性存在
+                assert!(output.js_code.contains("key1"),
+                    "Should contain key1: {}", output.js_code);
+                assert!(output.js_code.contains("key2"),
+                    "Should contain key2: {}", output.js_code);
+                println!("✅ Interface merging with index signature test passed");
+            }
+            Err(e) => {
+                panic!("Interface merging with index signature test failed: {}", e);
+            }
+        }
+    }
 }
