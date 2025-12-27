@@ -1,3 +1,51 @@
+### v0.3.167 实现 as const 类型断言支持 (2025-12-27)
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.167 新增功能
+- **as const 语法支持**
+  - 支持 `expr as const` 字面量只读类型断言
+  - 支持 `as const` 用于对象、数组、元组、嵌套结构
+  - 转译时正确移除类型断言，保留原始表达式
+
+#### v0.3.167 实现细节
+- **AST 增强**
+  - `TSAsExpression` 添加 `is_const: bool` 字段
+  - 用于区分 `as Type` 和 `as const` 断言
+
+- **解析器增强**
+  - `parse_postfix()` 中检测 `as const` 模式
+  - 解析 `const` 关键字并设置 `is_const: true`
+  - 目标类型设置为 `"const"` 字符串
+
+- **转译器**
+  - 保持原有逻辑，直接输出内部表达式
+  - 类型断言在转译过程中被移除
+
+#### v0.3.167 测试用例
+- `test_as_const_basic`: 基础对象 as const 断言
+- `test_as_const_array`: 数组 as const 断言
+- `test_as_const_nested_object`: 嵌套对象 as const 断言
+- `test_as_const_string_literal`: 字符串字面量 as const
+- `test_as_const_number_literal`: 数字字面量 as const
+- `test_as_const_in_function`: 函数内 as const 返回值
+- `test_as_type_assertion`: 常规 as Type 断言回归测试
+- `test_as_const_tuple`: 元组 as const 断言
+- `test_as_const_enum_like`: 枚举对象 as const 断言
+
+#### v0.3.167 验证
+- ✅ `cargo test --lib` 220/220 通过 (+9)
+- ✅ `cargo test --test typescript_as_const_tests` 9/9 通过
+- ✅ 新增 9 个测试全部通过
+- ✅ 无回归问题
+- ✅ `cargo build --release` 成功编译
+
+#### v0.3.167 下一步
+- 实现 `satisfies` 操作符支持
+- 添加更多类型守卫支持
+- 继续完善 TypeScript 编译器功能
+
+---
+
 ### v0.3.166 实现 import type/export type 支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 
@@ -44,7 +92,7 @@
 
 #### v0.3.166 下一步
 - 实现 `import type` 和 `export type` 的完整语义支持
-- 添加 `as const` 类型断言支持
+- 添加 `as const` 类型断言支持 ✅ 已完成 (v0.3.167)
 - 继续完善 TypeScript 编译器功能
 
 ---

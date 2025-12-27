@@ -2576,11 +2576,13 @@ pub enum ASTExpression {
     },
     /// super 关键字
     SuperExpression,
-    /// TypeScript 类型断言: value as Type
+    /// TypeScript 类型断言: value as Type 或 value as const
     /// 转译时类型信息被移除，直接输出原始表达式
+    /// is_const 标记是否为 as const 断言（语义上表示只读字面量类型）
     TSAsExpression {
         expression: Box<ASTExpression>,
         target_type: String,
+        is_const: bool,
     },
     /// TypeScript 尖括号类型断言: <Type>value
     /// 转译时类型信息被移除，直接输出原始表达式
@@ -5470,16 +5472,25 @@ impl Parser {
                         index: Box::new(index),
                     };
                 }
-                // TypeScript 类型断言: expr as Type
+                // TypeScript 类型断言: expr as Type 或 expr as const
                 // 必须在索引访问之后处理，因为 < 可能被解释为泛型或小于运算符
                 Token::As => {
                     self.consume(Token::As)?;
-                    // 解析目标类型
-                    let target_type = self.parse_type_annotation()
-                        .unwrap_or_else(|| "unknown".to_string());
+                    // 检查是否为 as const
+                    let is_const = self.current_token_eq(&Token::Const);
+                    let (target_type, const_flag) = if is_const {
+                        self.consume(Token::Const)?;
+                        ("const".to_string(), true)
+                    } else {
+                        // 解析目标类型
+                        let target_type = self.parse_type_annotation()
+                            .unwrap_or_else(|| "unknown".to_string());
+                        (target_type, false)
+                    };
                     expr = ASTExpression::TSAsExpression {
                         expression: Box::new(expr),
                         target_type,
+                        is_const: const_flag,
                     };
                 }
                 // 二元运算符
@@ -8242,9 +8253,9 @@ impl CodeEmitter {
             ASTExpression::SuperExpression => {
                 self.output.push_str("super");
             }
-            // TypeScript 类型断言: value as Type
+            // TypeScript 类型断言: value as Type 或 value as const
             // 转译时移除类型信息，直接输出原始表达式
-            ASTExpression::TSAsExpression { expression, target_type: _ } => {
+            ASTExpression::TSAsExpression { expression, target_type: _, is_const: _ } => {
                 self.emit_expression(expression);
             }
             // TypeScript 尖括号类型断言: <Type>value
