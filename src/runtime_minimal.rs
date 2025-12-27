@@ -2242,7 +2242,7 @@ impl MinimalRuntime {
             || code.contains("keyof typeof")    // v0.3.185: keyof typeof pattern
             || code.contains("extends keyof")   // v0.3.185: keyof in generic constraints
             || code.contains(" extends ")       // v0.3.186: conditional type extends pattern
-            || (code.contains("type ") && code.contains("${"));  // v0.3.188: template literal type pattern
+            || (code.contains("type ") && code.contains("${"))  // v0.3.188: template literal type pattern
             || code.contains("[key:");  // v0.3.190: index signature [key: string]: T pattern
 
         let js_code = if has_raw_typescript {

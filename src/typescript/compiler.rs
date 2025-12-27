@@ -6744,6 +6744,7 @@ impl Parser {
                 });
             } else {
                 // 普通属性名: { name: value } 或 { "string": value } 或 { number: value }
+                // 或者方法简写: { methodName(params) { ... } }
                 let prop_name = self.consume_property_name()?;
                 let name_str = match prop_name {
                     Token::Identifier(name) => name,
@@ -6754,13 +6755,85 @@ impl Parser {
                     Token::Number(n) => n.clone(),
                     _ => bail!("Expected property name (identifier, string, or number)"),
                 };
-                self.consume(Token::Colon)?;
-                let prop_value = self.parse_expression()?;
-                properties.push(ASTExpression::ObjectProperty {
-                    name: Some(name_str),
-                    key_expr: None,
-                    value: Box::new(prop_value),
-                });
+
+                // 检查是否是方法简写语法: { methodName(params) { ... } }
+                if self.current_token_eq(&Token::LParen) {
+                    // 解析方法参数 - 使用 3 元素元组格式 (name, type, default)
+                    let mut params: Vec<(String, Option<String>, Option<String>)> = Vec::new();
+                    self.consume(Token::LParen)?;
+                    while !self.current_token_eq(&Token::RParen) {
+                        // 解析参数名（支持 this 关键字）
+                        let param_name = if self.current_token_eq(&Token::This) {
+                            self.consume(Token::This)?;
+                            "this".to_string()
+                        } else {
+                            let ident = self.consume_any_identifier()?;
+                            if let Token::Identifier(name) = ident {
+                                name
+                            } else {
+                                bail!("Expected parameter name");
+                            }
+                        };
+                        // 跳过类型注解
+                        if self.current_token_eq(&Token::Colon) {
+                            self.consume(Token::Colon)?;
+                            self.parse_type_annotation();
+                        }
+                        // 跳过默认值
+                        if self.current_token_eq(&Token::Eq) {
+                            self.consume(Token::Eq)?;
+                            self.parse_expression()?;
+                        }
+                        params.push((param_name, None, None));
+                        // 处理逗号
+                        if self.current_token_eq(&Token::Comma) {
+                            self.consume(Token::Comma)?;
+                        }
+                    }
+                    self.consume(Token::RParen)?;
+
+                    // 跳过返回类型注解 (如果有)
+                    let return_type = if self.current_token_eq(&Token::Colon) {
+                        self.consume(Token::Colon)?;
+                        self.parse_type_annotation()
+                    } else {
+                        None
+                    };
+
+                    // 解析方法体
+                    let body: ASTNode = if self.current_token_eq(&Token::LBrace) {
+                        self.consume(Token::LBrace)?;
+                        let mut statements = Vec::new();
+                        while !self.current_token_eq(&Token::RBrace) {
+                            statements.push(self.parse_statement()?);
+                        }
+                        self.consume(Token::RBrace)?;
+                        ASTNode::Statement(ASTStatement::Block(statements))
+                    } else {
+                        // 方法体为空或是抽象方法签名，跳过
+                        ASTNode::Statement(ASTStatement::Block(vec![]))
+                    };
+
+                    properties.push(ASTExpression::ObjectProperty {
+                        name: Some(name_str),
+                        key_expr: None,
+                        value: Box::new(ASTExpression::ArrowFunctionExpression {
+                            params,
+                            body: Box::new(body),
+                            return_type,
+                            is_async: false,
+                        }),
+                    });
+                } else {
+                    // 普通属性: { name: value }
+                    self.consume(Token::Colon)?;
+                    let prop_value = self.parse_expression()?;
+                    properties.push(ASTExpression::ObjectProperty {
+                        name: Some(name_str),
+                        key_expr: None,
+                        value: Box::new(prop_value),
+                    });
+                }
             }
             // 处理逗号分隔符
             if self.current_token_eq(&Token::Comma) {
@@ -7205,12 +7278,31 @@ impl Parser {
                 continue;
             }
 
-            // 解析属性名（标识符或字符串）
+            // 解析属性名（标识符或字符串）或方法名
             let prop_name = match self.current_token() {
                 Token::Identifier(ref name) => {
                     let name = name.clone();
                     self.advance();
-                    name
+                    // 检查是否是方法语法 (Identifier followed by LParen)
+                    if self.current_token_eq(&Token::LParen) {
+                        // 方法声明: name(params): returnType
+                        let method_params = self.parse_function_type_params();
+                        // 跳过返回类型注解
+                        if self.current_token_eq(&Token::Colon) {
+                            self.consume(Token::Colon).ok()?;
+                            self.parse_type_annotation();
+                        }
+                        properties.push(format!("{}: {}", name, method_params.unwrap_or_else(|| "any".to_string())));
+                        // 处理分号或逗号分隔符
+                        if self.current_token_eq(&Token::SemiColon) {
+                            self.advance();
+                        } else if self.current_token_eq(&Token::Comma) {
+                            self.advance();
+                        }
+                        continue; // 已处理完整的方法签名，跳过后续的属性解析
+                    } else {
+                        name
+                    }
                 }
                 Token::String(ref s, _) => {
                     let s = s.clone();
@@ -7744,6 +7836,73 @@ impl Parser {
         };
 
         Some(format!("({}) => {}", params.join(", "), return_type))
+    }
+
+    /// 解析函数类型参数列表: (arg1: type1, arg2: type2) - 用于对象类型中的方法签名
+    fn parse_function_type_params(&mut self) -> Option<String> {
+        // 当前 token 应该是 LParen
+        self.consume(Token::LParen).ok()?;
+
+        let mut params = Vec::new();
+
+        // 解析参数列表
+        while !self.current_token_eq(&Token::RParen) {
+            // 处理 rest 参数 (...args)
+            if self.current_token_eq(&Token::DotDotDot) {
+                self.advance(); // 消耗 ...
+                if let Token::Identifier(ref name) = self.current_token() {
+                    let name = name.clone();
+                    self.advance();
+                    // 检查类型注解
+                    if self.current_token_eq(&Token::Colon) {
+                        self.advance();
+                        if let Some(t) = self.parse_type_annotation() {
+                            params.push(format!("...{}: {}", name, t));
+                        } else {
+                            params.push(format!("...{}", name));
+                        }
+                    } else {
+                        params.push(format!("...{}", name));
+                    }
+                }
+            } else if let Token::Identifier(ref name) = self.current_token() {
+                let name = name.clone();
+                self.advance();
+                // 检查类型注解
+                if self.current_token_eq(&Token::Colon) {
+                    self.advance();
+                    if let Some(t) = self.parse_type_annotation() {
+                        params.push(format!("{}: {}", name, t));
+                    } else {
+                        params.push(name);
+                    }
+                } else {
+                    params.push(name);
+                }
+            } else if self.current_token_eq(&Token::Question) {
+                // 可选参数
+                self.advance();
+                if let Token::Identifier(ref name) = self.current_token() {
+                    let name = name.clone();
+                    self.advance();
+                    params.push(format!("{}?", name));
+                }
+            } else {
+                break;
+            }
+
+            // 检查是否还有更多参数
+            if self.current_token_eq(&Token::Comma) {
+                self.advance();
+            } else {
+                break;
+            }
+        }
+
+        // 消耗 )
+        self.consume(Token::RParen).ok()?;
+
+        Some(format!("({})", params.join(", ")))
     }
 
     fn consume(&mut self, expected: Token) -> Result<Token> {
