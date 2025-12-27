@@ -56,6 +56,37 @@
 
 ---
 
+### v0.3.183 实现 this 参数类型注解支持（2025-12-28）
+**进度**: TypeScript 编译增强 | ✅ 已提交
+
+#### v0.3.183 新增功能
+- **this 参数类型注解支持**
+  - 运行时快速路径支持 `this: Type` 参数类型注解移除
+  - 独立函数中的 `this` 参数解析支持
+
+#### v0.3.183 实现细节
+- **运行时快速路径增强** (`src/runtime_minimal.rs`)
+  - 添加 `this:` 模式检测到 `has_raw_typescript()`
+  - 添加正则表达式移除 `this: { ... }` 和 `this: Type` 模式
+  - 支持嵌套花括号的对象类型
+
+- **TypeScript 编译器修复** (`src/typescript/compiler.rs`)
+  - 修复 `parse_function_declaration()` 中对 `Token::This` 的支持
+  - 使用 `consume_param_name()` 替代 `consume_any_identifier()`
+  - 正确处理 `this` 作为函数参数名
+
+#### v0.3.183 测试验证
+- ✅ `function bound(this: any, x: number): void {}` → 正确移除 this 参数
+- ✅ `function greet(this: { name: string }, msg: string): string {}` → 正确移除
+- ✅ `cargo test --test minimal_tests`: 25/25 通过
+- ✅ `cargo test --lib`: 220/220 通过
+
+#### v0.3.183 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现映射类型 `in` 关键字支持
+
+---
+
 ### v0.3.179 实现 BigInt 字面量支持 (2025-12-27)
 **进度**: TypeScript 编译增强 | ✅ 已提交
 
