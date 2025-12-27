@@ -309,6 +309,7 @@ impl TypeScriptCompiler {
                     extends,
                     properties,
                     index_signature,
+                    constructor_signature,
                 } => {
                     if let Some(existing_iface) = interface_map.get_mut(&name) {
                         // 同名接口已存在，合并属性
@@ -317,6 +318,7 @@ impl TypeScriptCompiler {
                             extends: existing_extends,
                             properties: existing_properties,
                             index_signature: existing_index,
+                            constructor_signature: _,
                         } = existing_iface
                         {
                             // 合并属性（后者覆盖前者）
@@ -341,6 +343,7 @@ impl TypeScriptCompiler {
                                 extends,
                                 properties,
                                 index_signature,
+                                constructor_signature,
                             },
                         );
                     }
@@ -438,6 +441,7 @@ impl TypeScriptCompiler {
                     extends,
                     properties,
                     index_signature,
+                    constructor_signature: _,
                 } => {
                     let entry = triple_map.entry(name.clone()).or_insert_with(|| {
                         (HashMap::new(), Vec::new(), None, Vec::new(), false)
@@ -1393,7 +1397,7 @@ impl TypeScriptCompiler {
             ASTNode::PropertyDeclaration { .. } => {
                 // 属性检查
             }
-            ASTNode::InterfaceDeclaration { name, extends: _, properties, index_signature } => {
+            ASTNode::InterfaceDeclaration { name, extends: _, properties, index_signature, constructor_signature: _ } => {
                 // 注册接口
                 ctx.interfaces.insert(name.clone(), properties.clone());
 
@@ -2580,6 +2584,8 @@ pub enum ASTNode {
         properties: HashMap<String, String>,
         /// 索引签名：[key: string]: T 或 [key: number]: T
         index_signature: Option<Box<IndexSignature>>,
+        /// v0.3.189: 构造函数签名: new(...args): T
+        constructor_signature: Option<String>,
     },
     EnumDeclaration {
         name: String,
@@ -4709,6 +4715,30 @@ impl Parser {
             _ => bail!("Expected interface name"),
         };
 
+        // v0.3.189: 解析泛型类型参数 <T> 或 <T, U>
+        let mut type_params = Vec::new();
+        if self.current_token_eq(&Token::Lt) {
+            self.consume(Token::Lt)?;
+            loop {
+                if self.current_token_eq(&Token::Gt) {
+                    self.consume(Token::Gt)?;
+                    break;
+                }
+                let param_name = self.consume_any_identifier()?;
+                if let Token::Identifier(n) = param_name {
+                    type_params.push(n);
+                }
+                if self.current_token_eq(&Token::Comma) {
+                    self.consume(Token::Comma)?;
+                } else if self.current_token_eq(&Token::Gt) {
+                    self.consume(Token::Gt)?;
+                    break;
+                } else {
+                    break;
+                }
+            }
+        }
+
         // 检查是否有 extends 子句
         let mut extends = Vec::new();
         if self.current_token_eq(&Token::Extends) {
@@ -4733,6 +4763,8 @@ impl Parser {
         self.consume(Token::LBrace)?;
         let mut properties = HashMap::new();
         let mut index_signature = None;
+        // v0.3.189: 存储构造函数签名
+        let mut constructor_signature = None;
 
         while !self.current_token_eq(&Token::RBrace) {
             // 检测索引签名语法：[keyName: keyType]: valueType
@@ -4762,6 +4794,48 @@ impl Parser {
                     key_type,
                     value_type: value_type_str,
                 }));
+            } else if self.current_token_eq(&Token::New) {
+                // v0.3.189: 解析构造函数签名 new(props: Type): ReturnType
+                self.consume(Token::New)?;
+                self.consume(Token::LParen)?; // 消耗 (
+                // 解析参数列表: 参数名: 类型, 参数名: 类型
+                let mut params = Vec::new();
+                while !self.current_token_eq(&Token::RParen) {
+                    // 跳过 rest 参数标记 ...
+                    if self.current_token_eq(&Token::DotDotDot) {
+                        self.consume(Token::DotDotDot)?;
+                    }
+                    // 解析参数名
+                    let param_name = if let Token::Identifier(name) = self.current_token() {
+                        let name = name.clone();
+                        self.advance();
+                        name
+                    } else if self.current_token_eq(&Token::This) {
+                        self.advance();
+                        "this".to_string()
+                    } else {
+                        break;
+                    };
+                    // 消耗类型注解的 :
+                    self.consume(Token::Colon)?;
+                    // 解析参数类型
+                    let param_type = self.parse_type_annotation();
+                    let param_type_str = param_type.unwrap_or_else(|| "any".to_string());
+                    params.push(format!("{}: {}", param_name, param_type_str));
+                    // 处理逗号分隔符
+                    if self.current_token_eq(&Token::Comma) {
+                        self.consume(Token::Comma)?;
+                    } else {
+                        break;
+                    }
+                }
+                self.consume(Token::RParen)?; // 消耗 )
+                self.consume(Token::Colon)?; // 消耗 :
+                // 解析返回类型
+                let return_type = self.parse_type_annotation();
+                let return_type_str = return_type.unwrap_or_else(|| "any".to_string());
+
+                constructor_signature = Some(format!("new({}) => {}", params.join(", "), return_type_str));
             } else {
                 // 解析普通属性 (v0.3.169: 支持 ? 可选修饰符和 readonly 修饰符)
                 // 先检查是否有 readonly 修饰符
@@ -4797,7 +4871,7 @@ impl Parser {
             }
         }
         self.consume(Token::RBrace)?;
-        Ok(ASTNode::InterfaceDeclaration { name, extends, properties, index_signature })
+        Ok(ASTNode::InterfaceDeclaration { name, extends, properties, index_signature, constructor_signature })
     }
     fn parse_enum_declaration(&mut self) -> Result<ASTNode> {
         self.consume(Token::Enum)?;
@@ -6451,8 +6525,8 @@ impl Parser {
                             // 空的 {} - 可能是对象字面量
                             is_object_literal = true;
                         }
-                        Token::Identifier(_) | Token::String(_, _) => {
-                            // 找到属性名，检查下一个是否是 :
+                        Token::Identifier(_) | Token::String(_, _) | Token::Number(_) => {
+                            // 找到属性名（标识符、字符串或数字），检查下一个是否是 :
                             if lookahead + 1 < self.tokens.len() {
                                 if matches!(self.tokens[lookahead + 1], Token::Colon) {
                                     is_object_literal = true;
@@ -6669,7 +6743,7 @@ impl Parser {
                     value: Box::new(value),
                 });
             } else {
-                // 普通属性名: { name: value } 或 { "string": value }
+                // 普通属性名: { name: value } 或 { "string": value } 或 { number: value }
                 let prop_name = self.consume_property_name()?;
                 let name_str = match prop_name {
                     Token::Identifier(name) => name,
@@ -6677,7 +6751,8 @@ impl Parser {
                         // 字符串属性名需要保留引号
                         format!("{}{}{}", quote, s, quote)
                     }
-                    _ => bail!("Expected property name (identifier or string)"),
+                    Token::Number(n) => n.clone(),
+                    _ => bail!("Expected property name (identifier, string, or number)"),
                 };
                 self.consume(Token::Colon)?;
                 let prop_value = self.parse_expression()?;
@@ -7703,11 +7778,11 @@ impl Parser {
             _ => bail!("Expected parameter name"),
         }
     }
-    /// 消耗属性名（Identifier 或 String）
+    /// 消耗属性名（Identifier、String 或 Number）
     fn consume_property_name(&mut self) -> Result<Token> {
         match self.current_token() {
-            Token::Identifier(_) | Token::String(_, _) => Ok(self.advance()),
-            _ => bail!("Expected property name (identifier or string)"),
+            Token::Identifier(_) | Token::String(_, _) | Token::Number(_) => Ok(self.advance()),
+            _ => bail!("Expected property name (identifier, string, or number)"),
         }
     }
     fn current_token(&self) -> &Token {
