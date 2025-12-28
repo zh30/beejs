@@ -7594,7 +7594,7 @@ impl Parser {
             | "Exclude" | "Extract" | "NonNullable" | "ReturnType" | "Parameters"
             | "ConstructorParameters" | "InstanceType" | "ThisParameterType"
             | "OmitThisParameter" | "Uppercase" | "Lowercase" | "Capitalize"
-            | "Uncapitalize" | "NoInfer" | "Infer" | "Awaited"
+            | "Uncapitalize" | "NoInfer" | "Infer" | "Awaited" | "ThisType"
         )
     }
 
