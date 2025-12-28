@@ -1068,6 +1068,7 @@ mod tests {
             dependencies: None,
             dev_dependencies: None,
             peer_dependencies: None,
+            optional_dependencies: None,
             author: None,
             license: None,
             repository: None,
