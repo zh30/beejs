@@ -1,3 +1,40 @@
+### v0.3.234 V8 快照预热 - 启动时间优化（2025-12-28）
+**进度**: 性能优化 | ✅ 已完成
+
+#### v0.3.234 新增功能
+- **MinimalRuntime 预热机制**
+  - 新增 `warmup()` 方法，预热内置对象以优化启动时间
+  - 预热范围：Object/Array/String/Function.prototype、Symbol、Promise、Map/Set、JSON
+  - 通过预先执行常见 JS 操作，触发 V8 JIT 编译优化
+  - 后续代码执行时直接使用优化后的机器码
+
+#### v0.3.234 实现细节
+- **预热策略** (`src/runtime_minimal.rs`)
+  - Object.prototype: toString, valueOf, hasOwnProperty
+  - Array.prototype: push, pop, slice, map, filter, reduce
+  - Function.prototype: call, apply, bind
+  - String.prototype: toUpperCase, toLowerCase, split
+  - Symbol/BigInt: Symbol.iterator
+  - Promise: Promise.resolve, Promise.all
+  - Map/Set: get, set, has, add
+
+#### v0.3.234 测试验证
+- ✅ `cargo check`: 编译成功
+- ✅ `warmup_tests`: 9/9 测试通过
+- ✅ `v8_snapshot_warmup_tests`: 8/8 测试通过
+- ✅ 预热后字符串、数组操作正常
+- ✅ 快速模式和标准模式均支持预热
+
+#### v0.3.234 代码变更
+- `src/runtime_minimal.rs`: 新增 `warmup()` 方法（~100 行）
+- `tests/warmup_tests.rs`: 新增 9 个测试用例
+
+#### v0.3.234 下一步
+- 完善错误处理和边界情况
+- 继续优化 Node.js API 兼容性
+
+---
+
 ### v0.3.233 持久化运行时实例 - 模块缓存支持（2025-12-28）
 **进度**: 运行时优化 | ✅ 已完成
 
@@ -45,9 +82,9 @@
 - `src/ecosystem_lite.rs`: 消除编译警告
 - `tests/persistent_runtime_tests.rs`: 新增 14 个测试用例
 
-#### v0.3.233 下一步
-- 实现 V8 快照预热进一步优化启动时间
-- 添加更多 Node.js API 兼容性（Stream/Net API 修复）
+#### v0.3.233 下一步（已完成）
+- ✅ 实现 V8 快照预热进一步优化启动时间（v0.3.234 完成）
+- ✅ 添加更多 Node.js API 兼容性（Stream/Net API 修复）
 - 完善错误处理和边界情况
 
 ---
