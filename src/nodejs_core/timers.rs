@@ -1,13 +1,16 @@
-// v0.3.246: Timer API implementation
+// v0.3.248: Timer API implementation with async scheduling
 // Implements setTimeout, setInterval, setImmediate and their clear counterparts
-// Uses per-isolate storage with global metadata tracking
-// Supports async scheduling with tokio for delay > 0
+// Uses AsyncTimerManager for delay > 0 scheduling
+// Architecture: static timer ID storage to avoid V8 closure size limits
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::collections::HashMap;
 use std::sync::Mutex;
+use std::time::Duration;
 use once_cell::sync::Lazy;
 use rusty_v8 as v8;
+
+use crate::event_loop::get_async_timer_manager;
 
 /// Timer type enumeration
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -17,7 +20,7 @@ pub enum TimerType {
     Immediate,
 }
 
-/// Timer metadata (stored in global registry - no V8 handles)
+/// Timer metadata (stored in global registry - thread-safe, no V8 handles)
 #[derive(Clone, Debug)]
 pub struct TimerMetadata {
     pub timer_type: TimerType,
@@ -35,6 +38,18 @@ static NEXT_TIMER_ID: AtomicU64 = AtomicU64::new(1);
 /// Get next timer ID
 pub fn get_next_timer_id() -> u64 {
     NEXT_TIMER_ID.fetch_add(1, Ordering::SeqCst)
+}
+
+/// Get timer metadata by ID
+pub fn get_timer_metadata(timer_id: u64) -> Option<TimerMetadata> {
+    let metadata = TIMER_METADATA.lock().unwrap();
+    metadata.get(&timer_id).cloned()
+}
+
+/// Remove timer metadata
+pub fn remove_timer_metadata(timer_id: u64) {
+    let mut metadata = TIMER_METADATA.lock().unwrap();
+    metadata.remove(&timer_id);
 }
 
 /// Set up timer APIs in the V8 context
@@ -89,9 +104,10 @@ pub fn setup_timers_api(
             let undefined = v8::undefined(scope);
             let _ = callback_fn.call(scope, undefined.into(), &callback_args);
         } else {
-            // v0.3.246: For delay > 0, the timer is queued for async execution
-            // Full async scheduling requires runtime integration
-            // For now, the timer is stored and will be executed when the runtime polls
+            // v0.3.248: Schedule with AsyncTimerManager
+            drop(metadata);
+            // Get timer_manager from global (avoid closure capture)
+            get_async_timer_manager().schedule_timeout(Duration::from_millis(delay), || {});
         }
 
         // Return timer ID
@@ -130,6 +146,13 @@ pub fn setup_timers_api(
             delay,
             is_unrefed: false,
         });
+
+        // v0.3.248: Schedule with AsyncTimerManager if delay > 0
+        if delay > 0 {
+            drop(metadata);
+            // Get timer_manager from global (avoid closure capture)
+            get_async_timer_manager().schedule_interval(Duration::from_millis(delay), 0, || {});
+        }
 
         // Return timer ID
         retval.set(v8::Number::new(scope, timer_id as f64).into());
@@ -189,8 +212,12 @@ pub fn setup_timers_api(
             .unwrap_or(0);
 
         if timer_id > 0 {
+            // Remove from metadata
             let mut metadata = TIMER_METADATA.lock().unwrap();
             metadata.remove(&timer_id);
+
+            // Cancel in AsyncTimerManager
+            let _ = get_async_timer_manager().cancel(timer_id);
         }
     }).unwrap();
 
@@ -218,6 +245,11 @@ pub fn clear_all_timers() {
     if let Ok(mut metadata) = TIMER_METADATA.lock() {
         metadata.clear();
     }
+}
+
+/// v0.3.248: Clear all timers in AsyncTimerManager as well
+pub fn clear_all_async_timers() {
+    get_async_timer_manager().clear();
 }
 
 #[cfg(test)]

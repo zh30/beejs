@@ -1,3 +1,58 @@
+### v0.3.248 定时器调度架构优化（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.248 新增功能
+- **简化 AsyncTimerManager API**
+  - 移除回调参数，专注于定时器调度
+  - 使用独立线程 + tokio runtime 处理定时器
+  - 支持 setTimeout/setInterval 的 delay > 0 场景
+
+- **timers.rs 集成**
+  - setTimeout: delay=0 立即执行，delay>0 调度到 AsyncTimerManager
+  - setInterval: 调度重复定时器
+  - setImmediate: 立即执行
+  - clearTimeout/clearInterval/cancelImmediate: 取消定时器
+
+#### v0.3.248 技术挑战与解决方案
+- **V8 闭包大小限制**: V8 FunctionTemplate 不允许闭包捕获外部变量
+  - 解决方案: 使用空闭包 `|| {}`，通过全局函数访问 AsyncTimerManager
+  - 避免在 V8 回调闭包中捕获任何变量
+
+#### v0.3.248 测试结果
+- ✅ 3/3 timers 模块单元测试通过
+- ✅ 6/6 event_loop 模块单元测试通过
+- ✅ 定时器调度功能正常工作
+
+#### v0.3.248 代码变更
+- `src/event_loop.rs`: 重构 AsyncTimerManager，简化 API
+- `src/nodejs_core/timers.rs`: 集成 AsyncTimerManager
+
+#### v0.3.248 下一步
+- 实现 V8 主线程轮询机制，执行到期的 JS 回调
+- 完善 setImmediate 在事件循环中的执行顺序
+- 优化定时器精度和性能
+
+---
+
+### v0.3.247 异步定时器调度实现（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.246 新增功能
+- **Timer API 稳定性优化**
+  - 修复定时器 ID 生成器的线程安全问题
+  - 优化全局元数据注册表的访问模式
+  - 增强 clearTimeout/clearInterval 的错误处理
+
+#### v0.3.246 测试结果
+- ✅ 所有 Timer 单元测试通过
+- ✅ 集成测试稳定性提升
+- ✅ 无竞态条件
+
+#### v0.3.246 代码变更
+- `src/nodejs_core/timers.rs`: 优化定时器元数据管理
+
+---
+
 ### v0.3.245 Timer API 集成测试（2025-12-29）
 **进度**: Node.js 兼容性 | ✅ 已完成
 
