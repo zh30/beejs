@@ -39,8 +39,47 @@
 - ✅ `cargo build --release`: 编译成功
 
 #### v0.3.224 下一步
-- 添加 bunx 命令支持（无需安装运行包）
+- ✅ 添加 bunx 命令支持（无需安装运行包）
 - 实现包锁定文件 package-lock.json
+- 添加 `--save-exact` 精确版本安装
+
+---
+
+### v0.3.225 实现 bunx 命令（无需安装运行包）（2025-12-28）
+**进度**: CLI 功能增强 | ✅ 已完成
+
+#### v0.3.225 新增功能
+- **bunx 子命令**
+  - 用法：`beejs bunx <package> [args]...`
+  - 支持包名格式：`lodash`, `lodash@4.17.21`, `typescript@latest`
+  - 自动下载包到缓存并执行 bin 入口
+  - 自动传递参数给包的可执行文件
+
+- **bin 执行支持**
+  - 支持 package.json 中 `bin` 字段为 string 格式
+  - 支持 package.json 中 `bin` 字段为 object 格式
+  - 自动查找并执行正确的二进制文件
+
+#### v0.3.225 使用示例
+```bash
+# 运行 typescript 并查看版本
+beejs bunx typescript --version
+
+# 运行 prettier 格式化文件
+beejs bunx prettier --write src/*.js
+
+# 运行特定版本的包
+beejs bunx esbuild@0.19.0 --version
+```
+
+#### v0.3.225 测试验证
+- ✅ `cargo build`: 编译成功
+- ✅ `beejs bunx --help`: 帮助信息正常显示
+- ✅ `cargo test --test minimal_tests`: 130/130 通过
+
+#### v0.3.225 下一步
+- 实现包锁定文件 package-lock.json
+- 添加 `beejs upgrade` 命令
 - 添加 `--save-exact` 精确版本安装
 
 ---
