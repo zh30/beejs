@@ -1,3 +1,39 @@
+### v0.3.213 实现 Infer<T> 工具类型快速路径支持（2025-12-28）
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.213 新增功能
+- **Infer<T> 工具类型快速路径**
+  - 运行时快速路径识别 `Infer<...>` 模式
+  - Infer<T> 用于条件类型中推断类型
+  - 正确移除 Infer 包装，保留内部类型
+
+#### v0.3.213 实现细节
+- **TypeScript 编译器注册** (`src/typescript/compiler.rs:181-182`)
+  - 在 `TypeContext::new()` 中注册 `Infer` 为 utility 类型
+
+- **运行时检测增强** (`src/runtime_minimal.rs:2488`)
+  - 在 `has_raw_typescript()` 中添加 `Infer<` 模式检测
+
+- **运行时快速路径移除** (`src/runtime_minimal.rs:2393-2398`)
+  - 添加正则表达式 `Infer\s*<([^>]+)>` 替换为 `$1`
+  - 提取泛型参数内容直接替换，实现类型擦除
+
+#### v0.3.213 测试用例
+- 测试112: TypeScript Infer<T> 快速路径测试
+- 测试113: Infer 与条件类型组合测试
+- 测试114: Infer 在复杂类型中使用测试
+
+#### v0.3.213 测试验证
+- ✅ `cargo test --test minimal_tests`: 117/117 通过 (新增 3 个测试)
+- ✅ `cargo build --release`: 编译成功
+
+#### v0.3.213 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多内建工具类型支持
+- 完善类型推断场景测试
+
+---
+
 ### v0.3.212 实现 NoInfer<T> 工具类型快速路径支持（2025-12-28）
 **进度**: TypeScript 快速路径增强 | ✅ 已提交
 
