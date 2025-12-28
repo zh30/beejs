@@ -2390,6 +2390,13 @@ impl MinimalRuntime {
         let noinfer_pattern = regex::Regex::new(r"NoInfer\s*<([^>]+)>").unwrap();
         js_code = noinfer_pattern.replace_all(&js_code, "$1").to_string();
 
+        // v0.3.213: Remove Infer utility type
+        // Infer<T> is used in conditional types to infer types
+        // For runtime, we remove the wrapper and keep the inner type
+        // Pattern: "Infer<T>" -> "T"
+        let infer_pattern = regex::Regex::new(r"Infer\s*<([^>]+)>").unwrap();
+        js_code = infer_pattern.replace_all(&js_code, "$1").to_string();
+
         // v0.3.195: Convert simple ESM export statements to comments
         // v0.3.196: Added abstract for export abstract class support
         // Complex exports (export { a, b }) need variable tracking, so we use placeholders
@@ -2484,7 +2491,8 @@ impl MinimalRuntime {
             || code.contains("ReturnType<")     // v0.3.211: ReturnType utility type
             || code.contains("Parameters<")     // v0.3.211: Parameters utility type
             || code.contains("ConstructorParameters<")  // v0.3.211: ConstructorParameters utility type
-            || code.contains("NoInfer<");               // v0.3.212: NoInfer utility type
+            || code.contains("NoInfer<")                // v0.3.212: NoInfer utility type
+            || code.contains("Infer<");                  // v0.3.213: Infer utility type
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript

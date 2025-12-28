@@ -2861,4 +2861,88 @@ const data: NoInfer<Data> = { id: 1, name: "test" };
 
         println!("✅ Test 111: NoInfer in complex types");
     }
+
+    /// 测试112: TypeScript Infer<T> 快速路径测试 (v0.3.213)
+    #[test]
+    fn test_infer_utility_fast_path() {
+        // 测试 Infer 快速路径移除
+        // Infer<T> 用于条件类型中推断类型
+        let ts_code = r#"
+type ReturnType<T> = T extends (...args: any[]) => infer R ? R : any;
+type FirstArg<T> = T extends (arg1: infer A, ...args: any[]) => any ? A : never;
+const x: ReturnType<() => number> = 42;
+const y: FirstArg<(name: string, age: number) => void> = "hello";
+"#;
+        let result = typescript::compile_typescript(ts_code, "infer_fastpath.ts");
+        assert!(result.is_ok(), "Infer fast-path should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 Infer 被快速路径移除
+        assert!(!output.js_code.contains("Infer<"),
+            "Should remove Infer via fast-path: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("const x"),
+            "Should preserve const x declaration: {}", output.js_code);
+        assert!(output.js_code.contains("const y"),
+            "Should preserve const y declaration: {}", output.js_code);
+
+        println!("✅ Test 112: TypeScript Infer<T> fast-path");
+    }
+
+    /// 测试113: Infer 与条件类型组合测试 (v0.3.213)
+    #[test]
+    fn test_infer_with_conditional_types() {
+        // 测试 Infer 在条件类型中的基本使用
+        let ts_code = r#"
+type MyReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
+type MyFirstArg<T> = T extends (arg1: infer A, ...args: any[]) => any ? A : never;
+
+const fn1 = () => 42;
+const fn2 = (name: string, age: number) => {};
+
+const result1: MyReturnType<typeof fn1> = 100;
+const result2: MyFirstArg<typeof fn2> = "test";
+"#;
+        let result = typescript::compile_typescript(ts_code, "infer_conditional.ts");
+        assert!(result.is_ok(), "Infer with conditional types should compile");
+        let output = result.unwrap();
+
+        // 验证 Infer 被移除
+        assert!(!output.js_code.contains("Infer<"),
+            "Should remove all Infer: {}", output.js_code);
+
+        // 验证代码可执行
+        assert!(output.js_code.contains("const result1"),
+            "Should preserve const result1: {}", output.js_code);
+        assert!(output.js_code.contains("const result2"),
+            "Should preserve const result2: {}", output.js_code);
+
+        println!("✅ Test 113: Infer with conditional types");
+    }
+
+    /// 测试114: Infer 在复杂类型中使用测试 (v0.3.213)
+    #[test]
+    fn test_infer_in_complex_types() {
+        // 测试 Infer 在复杂类型定义中的使用
+        let ts_code = r#"
+type ExtractPromiseValue<T> = T extends Promise<infer U> ? U : T;
+
+const promiseVal: ExtractPromiseValue<Promise<string>> = "hello";
+const plainVal: ExtractPromiseValue<number> = 42;
+"#;
+        let result = typescript::compile_typescript(ts_code, "infer_complex.ts");
+        assert!(result.is_ok(), "Infer in complex types should compile");
+        let output = result.unwrap();
+
+        // 验证 Infer 被移除
+        assert!(!output.js_code.contains("Infer<"),
+            "Should remove all Infer: {}", output.js_code);
+
+        // 验证类型参数保留
+        assert!(output.js_code.contains("const promiseVal"),
+            "Should preserve const promiseVal: {}", output.js_code);
+
+        println!("✅ Test 114: Infer in complex types");
+    }
 }

@@ -178,6 +178,8 @@ impl TypeContext {
         self.variables.insert("Capitalize".to_string(), "utility".to_string());
         // Uncapitalize<StringType> - 首字母小写
         self.variables.insert("Uncapitalize".to_string(), "utility".to_string());
+        // Infer<T> - 条件类型中推断类型（v0.3.213）
+        self.variables.insert("Infer".to_string(), "utility".to_string());
     }
 
     fn get_variable_type(&self, name: &str) -> Option<&String> {
