@@ -255,4 +255,56 @@ console.log(u, l, c, uc);
             }
         }
     }
+
+    /// Test template literal with intrinsic types without warnings (v0.3.219)
+    #[test]
+    fn test_template_literal_intrinsic_no_warnings() {
+        // v0.3.219: 验证模板字面量中的内建字符串类型不会产生警告
+        let ts_code = r#"
+type UpperTemplate = `PREFIX_${Uppercase<'hello'>}_SUFFIX`;
+type LowerTemplate = `prefix_${Lowercase<'WORLD'>}_suffix`;
+type CapTemplate = `Prefix_${Capitalize<'hello'>}_Suffix`;
+type UncapTemplate = `pREFIX_${Uncapitalize<'Hello'>}_sUFFIX`;
+type Combined = `${Uppercase<'a'>}${Lowercase<'B'>}${Capitalize<'c'>}${Uncapitalize<'D'>}`;
+
+const t1 = "PREFIX_HELLO_SUFFIX";
+const t2 = "prefix_world_suffix";
+const t3 = "Prefix_Hello_Suffix";
+const t4 = "pREFIX_hello_sUFFIX";
+const t5 = "AaBbCcDd";
+
+console.log(t1, t2, t3, t4, t5);
+"#;
+        match compile_typescript(ts_code, "template_intrinsic_no_warnings.ts") {
+            Ok(output) => {
+                println!("模板字面量内建类型无警告测试结果:");
+                println!("{}", output.js_code);
+
+                // 验证没有警告（diagnostics 列表应该为空或只包含非错误信息）
+                let has_warnings = output.diagnostics.iter().any(|d| {
+                    d.message.contains("has invalid type definition")
+                });
+                assert!(!has_warnings,
+                    "Should not have invalid type definition warnings, got: {:?}",
+                    output.diagnostics);
+
+                // 验证代码保留
+                assert!(output.js_code.contains("const t1"),
+                    "Should contain const t1: {}", output.js_code);
+                assert!(output.js_code.contains("console.log"),
+                    "Should contain console.log: {}", output.js_code);
+
+                // 验证类型别名被移除
+                assert!(!output.js_code.contains("type UpperTemplate"),
+                    "Should not contain type UpperTemplate: {}", output.js_code);
+                assert!(!output.js_code.contains("type Combined"),
+                    "Should not contain type Combined: {}", output.js_code);
+
+                println!("✅ Template literal intrinsic types without warnings test passed");
+            }
+            Err(e) => {
+                panic!("Template literal intrinsic no warnings test failed: {}", e);
+            }
+        }
+    }
 }

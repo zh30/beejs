@@ -1896,6 +1896,12 @@ impl TypeScriptCompiler {
     fn is_valid_type(&self, type_name: &str, ctx: &TypeContext) -> bool {
         // v0.3.205: 修复字符串字面量类型验证
         // 处理带引号的字符串字面量类型，如 "active"、'hello'
+
+        // v0.3.219: 模板字面量类型返回空字符串，这是有效的
+        if type_name.is_empty() {
+            return true;
+        }
+
         let type_name = type_name.trim();
         if (type_name.starts_with('"') && type_name.ends_with('"'))
             || (type_name.starts_with('\'') && type_name.ends_with('\'')) {
@@ -1987,6 +1993,52 @@ impl TypeScriptCompiler {
         if type_name.contains('&') {
             let types: Vec<&str> = type_name.split('&').map(|s| s.trim()).collect();
             return types.iter().all(|t| self.is_valid_type(t, ctx));
+        }
+
+        // v0.3.219: 添加模板字面量类型支持
+        // 模板字面量类型格式: `prefix${Type}suffix`
+        // 需要验证 ${...} 中的类型是否为有效类型
+        if type_name.starts_with('`') && type_name.ends_with('`') {
+            // 提取模板内容
+            let content = &type_name[1..type_name.len() - 1];
+            // 解析 ${...} 部分
+            let mut depth = 0;
+            let mut in_placeholder = false;
+            let mut placeholder_content = String::new();
+
+            for c in content.chars() {
+                if c == '$' && !in_placeholder && content.chars().nth(content.find(c).unwrap() + 1) == Some('{') {
+                    // 进入 ${...} 占位符
+                    depth = 1;
+                    in_placeholder = true;
+                    placeholder_content.clear();
+                } else if in_placeholder {
+                    if c == '{' {
+                        depth += 1;
+                        placeholder_content.push(c);
+                    } else if c == '}' {
+                        depth -= 1;
+                        if depth == 0 {
+                            // 占位符结束，验证其中的类型
+                            // 移除末尾的 >
+                            if let Some(endoftype) = placeholder_content.rfind('>') {
+                                let type_part = &placeholder_content[..=endoftype];
+                                if !self.is_valid_type(type_part, ctx) {
+                                    return false;
+                                }
+                            }
+                            in_placeholder = false;
+                            placeholder_content.clear();
+                        } else {
+                            placeholder_content.push(c);
+                        }
+                    } else if depth > 0 {
+                        placeholder_content.push(c);
+                    }
+                }
+            }
+            // 模板字面量类型本身是有效的
+            return true;
         }
 
         // 检查只读修饰符

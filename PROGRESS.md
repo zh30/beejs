@@ -11339,3 +11339,39 @@ console.log(p.name);  // "Alice"
 - 继续完善 TypeScript 编译器功能
 - 实现更多内建工具类型支持
 - 完善类型推断场景测试
+
+---
+
+### v0.3.219 模板字面量内建字符串类型警告消除 (2025-12-28)
+**进度**: TypeScript 编译器增强 | ✅ 已提交
+
+#### v0.3.219 新增功能
+- **消除模板字面量类型警告**
+  - 修复模板字面量类型（如 `` `PREFIX_${Uppercase<'hello'>}_SUFFIX` ``）的类型别名验证问题
+  - 模板字面量类型定义现在被正确识别为有效类型
+  - 消除了 "Type alias 'xxx' has invalid type definition" 警告
+
+#### v0.3.219 实现细节
+- **类型验证增强** (`src/typescript/compiler.rs:1900-1903`)
+  - 在 `is_valid_type()` 函数中添加空字符串类型检查
+  - 模板字面量类型解析后返回空字符串，这是有效的类型定义
+
+- **模板字面量类型完整支持** (`src/typescript/compiler.rs:1992-2036`)
+  - 添加模板字面量类型检测和验证逻辑
+  - 正确解析 `${...}` 占位符中的类型
+  - 支持嵌套的大括号和复杂的类型表达式
+
+#### v0.3.219 测试用例
+- `test_template_literal_intrinsic_no_warnings`: 验证模板字面量中的内建字符串类型不会产生警告
+- 测试覆盖 Uppercase、Lowercase、Capitalize、Uncapitalize 在模板字面量中的使用
+- 测试组合多个内建字符串类型的场景
+
+#### v0.3.219 测试验证
+- `cargo test --test minimal_tests`: 126/126 通过
+- `cargo test --test typescript_compiler_integration_tests`: 66/66 通过
+- `cargo test --test typescript_intrinsic_string_types_tests`: 10/10 通过 (新增 1 个测试)
+
+#### v0.3.219 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多内建工具类型支持
+- 完善类型推断场景测试
