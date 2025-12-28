@@ -210,3 +210,123 @@ fn test_uptime_returns_positive() {
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "process.uptime() should return >= 0");
 }
+
+// v0.3.242: process.setMaxListeners() and getMaxListeners() tests
+
+/// Test process.setMaxListeners() exists
+#[test]
+#[serial]
+fn test_set_max_listeners_exists() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof process.setMaxListeners;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "function", "process.setMaxListeners should be a function");
+}
+
+/// Test process.getMaxListeners() exists
+#[test]
+#[serial]
+fn test_get_max_listeners_exists() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        typeof process.getMaxListeners;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "function", "process.getMaxListeners should be a function");
+}
+
+/// Test process.getMaxListeners() returns default value (10)
+#[test]
+#[serial]
+fn test_get_max_listeners_default() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        process.getMaxListeners();
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "10", "Default max listeners should be 10");
+}
+
+/// Test process.setMaxListeners() returns process object (chainable)
+#[test]
+#[serial]
+fn test_set_max_listeners_returns_process() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        let result = process.setMaxListeners('uncaughtException', 20);
+        result === process;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "setMaxListeners should return process for chaining");
+}
+
+/// Test process.setMaxListeners() sets value for specific event
+#[test]
+#[serial]
+fn test_set_max_listeners_sets_value() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        process.setMaxListeners('uncaughtException', 25);
+        process.getMaxListeners('uncaughtException') === 25;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "setMaxListeners should set value for specific event");
+}
+
+/// Test process.setMaxListeners() with 0 means unlimited
+#[test]
+#[serial]
+fn test_set_max_listeners_unlimited() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        process.setMaxListeners('testEvent', 0);
+        process.getMaxListeners('testEvent') === 0;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "0 should mean unlimited");
+}
+
+/// Test process.setMaxListeners() with negative value becomes 0
+#[test]
+#[serial]
+fn test_set_max_listeners_negative_becomes_zero() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        process.setMaxListeners('testEvent', -5);
+        process.getMaxListeners('testEvent') === 0;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "Negative values should become 0 (unlimited)");
+}
+
+/// Test process.setMaxListeners() with no arguments defaults to unlimited
+#[test]
+#[serial]
+fn test_set_max_listeners_no_args() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Execution failed");
+    let code = r#"
+        process.setMaxListeners();
+        process.getMaxListeners() === 0;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "No arguments should default to unlimited");
+}
+
+/// Test process.setMaxListeners() supports chaining
+#[test]
+#[serial]
+fn test_set_max_listeners_chainable() {
+    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        process.setMaxListeners('event1', 15)
+              .setMaxListeners('event2', 20)
+              .setMaxListeners('event3', 0);
+        process.getMaxListeners('event1') === 15 &&
+        process.getMaxListeners('event2') === 20 &&
+        process.getMaxListeners('event3') === 0;
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(result.trim(), "true", "setMaxListeners should be chainable");
+}

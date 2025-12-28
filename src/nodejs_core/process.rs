@@ -36,6 +36,13 @@ thread_local! {
     static NEXT_TICK_QUEUE: Mutex<Vec<NextTickCallback>> = Mutex::new(Vec::new());
 }
 
+// v0.3.242: setMaxListeners 存储
+// 存储每个事件类型的最大监听器数量，0 表示无限制
+thread_local! {
+    static MAX_LISTENERS: Mutex<std::collections::HashMap<String, i32>> =
+        Mutex::new(std::collections::HashMap::new());
+}
+
 /// 设置 process 全局对象
 pub fn setup_process_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -123,6 +130,18 @@ pub fn setup_process_api(
     let remove_listener_instance = remove_listener_func.get_function(scope).unwrap();
     let remove_listener_key = v8::String::new(scope, "removeListener").unwrap();
     process_obj.set(scope, remove_listener_key.into(), remove_listener_instance.into());
+
+    // v0.3.242: process.setMaxListeners() - 设置最大监听器数量
+    let set_max_listeners_func = v8::FunctionTemplate::new(scope, process_set_max_listeners_callback);
+    let set_max_listeners_instance = set_max_listeners_func.get_function(scope).unwrap();
+    let set_max_listeners_key = v8::String::new(scope, "setMaxListeners").unwrap();
+    process_obj.set(scope, set_max_listeners_key.into(), set_max_listeners_instance.into());
+
+    // v0.3.242: process.getMaxListeners() - 获取最大监听器数量
+    let get_max_listeners_func = v8::FunctionTemplate::new(scope, process_get_max_listeners_callback);
+    let get_max_listeners_instance = get_max_listeners_func.get_function(scope).unwrap();
+    let get_max_listeners_key = v8::String::new(scope, "getMaxListeners").unwrap();
+    process_obj.set(scope, get_max_listeners_key.into(), get_max_listeners_instance.into());
 
     // process.pid - 进程 ID
     let pid_key = v8::String::new(scope, "pid").unwrap();
@@ -750,6 +769,83 @@ fn process_remove_listener_callback(
     retval.set(scope.get_current_context().global(scope).into());
 }
 
+/// v0.3.242: process.setMaxListeners() 回调
+/// 设置指定事件的最大监听器数量
+/// n 为 0 表示无限制
+fn process_set_max_listeners_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    // 获取事件名称
+    let event_name = if args.length() > 0 {
+        let name = args.get(0);
+        if name.is_string() || name.is_null_or_undefined() {
+            name.to_string(scope).unwrap().to_rust_string_lossy(scope)
+        } else {
+            String::from("__default__")
+        }
+    } else {
+        String::from("__default__")
+    };
+
+    // 获取 n 值（最大监听器数量）
+    let n = if args.length() > 1 {
+        args.get(1).int32_value(scope).unwrap_or(0)
+    } else {
+        0
+    };
+
+    // 验证 n 值（必须 >= 0）
+    let max_listeners = if n < 0 {
+        0  // 负数视为 0（无限制）
+    } else {
+        n
+    };
+
+    // 存储到线程本地
+    MAX_LISTENERS.with(|map| {
+        let mut map = map.lock().unwrap();
+        if max_listeners == 0 {
+            // 0 表示无限制，移除限制
+            map.remove(&event_name);
+        } else {
+            map.insert(event_name, max_listeners);
+        }
+    });
+
+    // 返回 process 对象（支持链式调用）
+    retval.set(scope.get_current_context().global(scope).into());
+}
+
+/// v0.3.242: process.getMaxListeners() 回调
+/// 获取指定事件的最大监听器数量
+fn process_get_max_listeners_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    // 获取事件名称
+    let event_name = if args.length() > 0 {
+        let name = args.get(0);
+        if name.is_string() || name.is_null_or_undefined() {
+            name.to_string(scope).unwrap().to_rust_string_lossy(scope)
+        } else {
+            String::from("__default__")
+        }
+    } else {
+        String::from("__default__")
+    };
+
+    // 从线程本地获取
+    let max_listeners = MAX_LISTENERS.with(|map| {
+        let map = map.lock().unwrap();
+        map.get(&event_name).copied().unwrap_or(10)  // 默认值是 10
+    });
+
+    retval.set(v8::Integer::new(scope, max_listeners).into());
+}
+
 /// 触发未捕获异常事件
 pub fn emit_uncaught_exception(
     scope: &mut v8::HandleScope,
@@ -823,6 +919,11 @@ pub fn reset_process_state() {
     });
     EXIT_CODE.with(|code| {
         *code.lock().unwrap() = 0;
+    });
+    // v0.3.242: 重置 setMaxListeners 状态
+    MAX_LISTENERS.with(|map| {
+        let mut m = map.lock().unwrap();
+        m.clear();
     });
 }
 

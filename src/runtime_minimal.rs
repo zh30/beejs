@@ -28,6 +28,11 @@ thread_local! {
     static ONCE_LISTENERS: Mutex<HashMap<String, Vec<v8::Global<v8::Function>>>> = Mutex::new(HashMap::new());
 }
 
+// v0.3.242: Max listeners storage per event type (for process.setMaxListeners)
+thread_local! {
+    static MAX_LISTENERS: Mutex<HashMap<String, i32>> = Mutex::new(HashMap::new());
+}
+
 /// Timer tracking structure for unref/ref functionality (v0.3.18)
 #[allow(dead_code)]
 struct TimerInfo {
@@ -11666,6 +11671,69 @@ impl MinimalRuntime {
             retval.set(v8::Object::new(_scope).into());
         }).unwrap();
         process_obj.set(scope, remove_listener_key.into(), remove_listener_func.into());
+
+        // v0.3.242: Add process.setMaxListeners() for setting max listeners per event
+        // Returns process object for chaining
+        let set_max_listeners_key = v8::String::new(scope, "setMaxListeners").unwrap();
+        let set_max_listeners_func = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Get event name (defaults to "__default__")
+            let event_name = if args.length() > 0 {
+                let name = args.get(0);
+                if name.is_string() || name.is_null_or_undefined() {
+                    name.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "__default__".to_string())
+                } else {
+                    "__default__".to_string()
+                }
+            } else {
+                "__default__".to_string()
+            };
+
+            // Get n value (max listeners)
+            let n = if args.length() > 1 {
+                args.get(1).int32_value(scope).unwrap_or(0)
+            } else {
+                0
+            };
+
+            // Validate n (must be >= 0)
+            let max_listeners = if n < 0 { 0 } else { n };
+
+            // Store in thread_local (always store the value, even if 0)
+            MAX_LISTENERS.with(|map| {
+                let mut map = map.lock().unwrap();
+                map.insert(event_name, max_listeners);
+            });
+
+            // Return process object for chaining
+            retval.set(args.this().into());
+        }).unwrap();
+        process_obj.set(scope, set_max_listeners_key.into(), set_max_listeners_func.into());
+
+        // v0.3.242: Add process.getMaxListeners() for getting max listeners per event
+        // Returns number (default 10)
+        let get_max_listeners_key = v8::String::new(scope, "getMaxListeners").unwrap();
+        let get_max_listeners_func = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Get event name (defaults to "__default__")
+            let event_name = if args.length() > 0 {
+                let name = args.get(0);
+                if name.is_string() || name.is_null_or_undefined() {
+                    name.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "__default__".to_string())
+                } else {
+                    "__default__".to_string()
+                }
+            } else {
+                "__default__".to_string()
+            };
+
+            // Get from thread_local (default 10)
+            let max_listeners = MAX_LISTENERS.with(|map| {
+                let map = map.lock().unwrap();
+                map.get(&event_name).copied().unwrap_or(10)
+            });
+
+            retval.set(v8::Integer::new(scope, max_listeners).into());
+        }).unwrap();
+        process_obj.set(scope, get_max_listeners_key.into(), get_max_listeners_func.into());
 
         // v0.3.238: Add process.stdout (basic implementation)
         // v0.3.239: Add stdout.write() method
