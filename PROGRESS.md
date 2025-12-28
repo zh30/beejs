@@ -103,39 +103,58 @@
 
 ---
 
-### v0.3.239 nextTick API 和 process 流完善（计划中）
-**进度**: Node.js 兼容性 | 🔄 规划中
+### v0.3.239 nextTick API 和 process 流完善（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
 
-#### v0.3.239 目标
+#### v0.3.239 新增功能
 - **process.nextTick() 实现**
   - 添加 `process.nextTick(callback, ...args)` 方法
-  - 实现微任务队列优先级（nextTick > microtasks > macrotasks）
-  - 与 Promise 和 setImmediate 的正确顺序
+  - 使用 Promise 微任务队列实现延迟执行
+  - 支持传递额外参数给回调函数
+  - 参数验证：非函数类型抛出 TypeError
 
-- **process.stdout 完善**
-  - 实现 `process.stdout.write()` 方法
-  - 支持 String 和 Buffer 类型
-  - 正确的流式输出到控制台
+- **process.stdout.write() 实现**
+  - 添加 `process.stdout.write(data)` 方法
+  - 支持 String 和数字类型自动转换
+  - 正确输出到标准输出并刷新
+  - 返回 boolean 表示写入成功
 
-- **process.stderr 完善**
-  - 实现 `process.stderr.write()` 方法
-  - 错误输出分离
+- **process.stderr.write() 实现**
+  - 添加 `process.stderr.write(data)` 方法
+  - 支持 String 和数字类型自动转换
+  - 正确输出到标准错误并刷新
+  - 返回 boolean 表示写入成功
 
-- **process stdin 基础支持**
-  - 添加 stdin 读取能力基础架构
+#### v0.3.239 实现细节
+- **nextTick 实现** (`src/nodejs_core/process.rs`)
+  - 使用 `v8::FunctionTemplate` 创建回调
+  - 收集额外参数并存储在 `NEXT_TICK_QUEUE`
+  - 通过 Promise 微任务实现延迟执行
 
-#### v0.3.239 实现计划
-1. 在 `process.rs` 中添加 `next_tick_func` 回调函数
-2. 实现微任务队列管理（V8 MicrotaskQueue）
-3. 添加 `stdout.write()` 和 `stderr.write()` 的 native function
-4. 完善流的互操作
+- **I/O 实现** (`src/runtime_minimal.rs`)
+  - 使用 `std::io::stdout()` 和 `std::io::stderr()` 进行实际输出
+  - 自动刷新确保输出立即可见
+  - 错误处理：无法转换的类型显示 "[object]"
 
-#### v0.3.239 测试计划
-- 添加 `next_tick_tests.rs`：测试 nextTick 执行顺序
-- 增强 `process_io_tests.rs`：测试 stdout/stderr 写入
-- 验证 nextTick 与 Promise 的执行顺序
+#### v0.3.239 代码变更
+- `src/nodejs_core/process.rs`: 添加 nextTick 和 I/O 实现 (~100 行)
+- `src/runtime_minimal.rs`: 添加 stdout/stderr.write() 实现 (~50 行)
+- `tests/process_next_tick_tests.rs`: 新增 10 个测试用例
 
-**v0.3.239 状态**: 🔄 待开始
+#### v0.3.239 测试验证
+- ✅ `cargo test --lib`: 234/234 测试通过
+- ✅ `test_next_tick_exists`: nextTick 函数存在
+- ✅ `test_next_tick_with_args`: 参数传递正确
+- ✅ `test_stdout_write_exists`: stdout.write 函数存在
+- ✅ `test_stderr_write_exists`: stderr.write 函数存在
+- ✅ `test_stdout_write_returns_boolean`: 正确返回 boolean
+
+#### v0.3.239 下一步
+- 完善 process.stdin 读取能力
+- 实现 process.hrtime() 高精度时间
+- 继续完善 Node.js API 兼容性
+
+**v0.3.239 状态**: ✅ 已完成
 **目标**: 完善 process 模块核心 API，提升 Node.js 兼容性
 
 ---
