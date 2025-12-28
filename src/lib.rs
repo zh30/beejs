@@ -72,7 +72,7 @@ pub mod watcher_websocket;  // v0.3.103: WebSocket hot reload for cross-client b
 // pub mod debugger;  // Temporarily disabled - compilation issues
 // pub mod observability;  // Temporarily disabled - compilation issues
 // pub mod runtime_config;  // Temporarily disabled - compilation issues
-// pub mod ecosystem_lite;  // Temporarily disabled - compilation issues
+pub mod ecosystem_lite;  // v0.3.233: Enabled for package manager tests
 // pub mod security;  // Stage 84: 企业级安全与合规 - temporarily disabled
 // pub mod aiops;  // Stage 85: AI 驱动运维 (AIOps) - temporarily disabled
 // pub mod ai_inference;  // Temporarily disabled - compilation issues
