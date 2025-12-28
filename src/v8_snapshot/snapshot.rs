@@ -1,16 +1,13 @@
 // V8 快照数据结构
 // 表示一个 V8 引擎快照
 
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex};
-use rusty_v8 as v8;
 use std::time::SystemTime;
 
 /// V8 快照结构体
 #[derive(Debug, Clone)]
 pub struct V8Snapshot {
     /// 快照数据
-    pub snapshot_data: Arc<Vec<u8>>,
+    pub snapshot_data: Vec<u8>,
     /// 快照版本
     pub version: String,
     /// 创建时间
@@ -33,7 +30,7 @@ impl V8Snapshot {
         let size_bytes: _ = snapshot_data.len();
         let created_at: _ = SystemTime::now();
         Self {
-            snapshot_data: Arc::new(Mutex::new(snapshot_data)),
+            snapshot_data,
             version,
             created_at,
             size_bytes,
@@ -58,16 +55,6 @@ impl V8Snapshot {
             && !self.version.is_empty()
             && self.size_bytes > 0
     }
-    /// 从快照创建 V8 Isolate 参数
-    pub fn to_create_params(&self) -> CreateParams {
-        let mut params = CreateParams::default();
-        // Note: SnapshotBlob 构造需要根据 V8 API 调整
-        // params.snapshot_blob = Some(v8::SnapshotBlob {
-        //     data: &self.snapshot_data,
-        //     is_writable: false,
-        // });
-        params
-    }
 }
 /// 格式化文件大小为人类可读格式
 fn human_file_size(size: usize) -> String {
@@ -82,6 +69,7 @@ fn human_file_size(size: usize) -> String {
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
     #[test]
     fn test_v8_snapshot_creation() {
         let data: _ = vec![1, 2, 3, 4, 5];

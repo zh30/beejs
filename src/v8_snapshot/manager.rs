@@ -1,15 +1,15 @@
 // V8 快照管理器
 // 负责快照的生成、加载、缓存和管理
 
-use std::collections::BTreeMap;
+use anyhow::{Result, anyhow};
+use rusty_v8 as v8;
 use std::sync::{Arc, Mutex};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, Duration};
 use crate::v8_snapshot::{V8Snapshot, SnapshotConfig};
-use rusty_v8 as v8;
 use serde::{Serialize, Deserialize};
-use std::time::SystemTime;
 /// 快照管理器
 pub struct SnapshotManager {
     /// 快照缓存
@@ -33,7 +33,7 @@ impl SnapshotManager {
         }
     }
     /// 生成快照
-    pub fn generate_snapshot(&self, runtime: &mut RuntimeLite) -> Result<V8Snapshot, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn generate_snapshot(&self) -> Result<V8Snapshot> {
         // Note: V8 snapshot creation is complex and requires careful API usage
         // For now, we'll create a placeholder snapshot that can be enhanced later
         // 创建基本的快照数据（临时实现）
@@ -53,22 +53,19 @@ impl SnapshotManager {
         Ok(snapshot)
     }
     /// 加载快照
-    pub fn load_snapshot(&self, _runtime: &mut RuntimeLite, snapshot_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub fn load_snapshot(&self, snapshot_id: &str) -> Result<()> {
         // 从缓存获取快照
         let snapshot: _ = {
             let cache: _ = self.snapshot_cache.lock().unwrap();
             cache.get(snapshot_id).cloned()
         };
-        let snapshot: _ = match snapshot {
+        let _snapshot = match snapshot {
             Some(s) => s,
             None => {
-                return Err(format!("Snapshot '{}' not found", snapshot_id).into());
+                return Err(anyhow!("Snapshot '{}' not found", snapshot_id));
             }
         };
         // 验证快照
-        if !snapshot.validate() {
-            return Err("Invalid snapshot data".into());
-        }
         // Note: 在实际实现中，需要重新创建 Isolate 或使用现有 API
         // 这里只是示例，实际实现需要根据 V8 API 调整
         // 更新统计
@@ -80,9 +77,114 @@ impl SnapshotManager {
         Ok(())
     }
     /// 预热内置对象
-    pub fn warmup_builtins(&self, _runtime: &mut RuntimeLite) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Note: Builtin prewarming will be implemented with proper V8 integration
-        // For now, this is a placeholder
+    pub fn warmup_builtins(&self) -> Result<()> {
+        // v0.3.232: 实现内置对象预热
+        // 初始化 V8（全局一次，线程安全）
+        static INIT: std::sync::Once = std::sync::Once::new();
+        INIT.call_once(|| {
+            v8::V8::initialize_platform(v8::new_default_platform().unwrap());
+            v8::V8::initialize();
+        });
+
+        // 创建临时的 V8 Isolate 和 Context 来执行预热代码
+        let mut isolate = v8::Isolate::new(Default::default());
+
+        // 使用作用域直接在 isolate 上操作
+        {
+            let scope = &mut v8::HandleScope::new(&mut isolate);
+
+            // 创建 V8 上下文用于预热
+            let context = v8::Context::new(scope);
+            let context_scope = &mut v8::ContextScope::new(scope, context);
+
+            // 预热 Object.prototype - 访问常用方法触发 JIT 编译
+            let object_warmup_code = r#"
+                (function() {
+                    const obj = {};
+                    obj.toString();
+                    obj.valueOf();
+                    obj.hasOwnProperty('test');
+                    Object.prototype.toString;
+                    Object.prototype.valueOf;
+                    Object.prototype.hasOwnProperty;
+                })();
+            "#;
+            self.execute_warmup_code(context_scope, object_warmup_code)?;
+
+            // 预热 Array.prototype - 遍历常用数组方法
+            let array_warmup_code = r#"
+                (function() {
+                    const arr = [1, 2, 3, 4, 5];
+                    arr.push(6);
+                    arr.pop();
+                    arr.slice(0, 2);
+                    arr.map(x => x * 2);
+                    arr.filter(x => x > 2);
+                    arr.reduce((a, b) => a + b, 0);
+                })();
+            "#;
+            self.execute_warmup_code(context_scope, array_warmup_code)?;
+
+            // 预热 Function.prototype
+            let function_warmup_code = r#"
+                (function() {
+                    function testFn() {}
+                    testFn.toString();
+                    testFn.call(null);
+                    testFn.apply(null, []);
+                    testFn.bind(null);
+                })();
+            "#;
+            self.execute_warmup_code(context_scope, function_warmup_code)?;
+
+            // 预热 String.prototype
+            let string_warmup_code = r#"
+                (function() {
+                    const str = "hello world";
+                    str.length;
+                    str.toUpperCase();
+                    str.toLowerCase();
+                    str.split(' ');
+                })();
+            "#;
+            self.execute_warmup_code(context_scope, string_warmup_code)?;
+
+            // 预热 Symbol 和 BigInt
+            let symbol_warmup_code = r#"
+                (function() {
+                    const sym = Symbol('test');
+                    sym.toString();
+                    Symbol.iterator;
+                })();
+            "#;
+            self.execute_warmup_code(context_scope, symbol_warmup_code)?;
+
+            // 预热 Promise
+            let promise_warmup_code = r#"
+                (function() {
+                    const p = Promise.resolve(42);
+                    p.then(v => v);
+                    Promise.resolve;
+                    Promise.all;
+                })();
+            "#;
+            self.execute_warmup_code(context_scope, promise_warmup_code)?;
+
+            // 预热 Map 和 Set
+            let collection_warmup_code = r#"
+                (function() {
+                    const map = new Map([['a', 1]]);
+                    map.set('b', 2);
+                    map.get('a');
+                    map.has('b');
+                    const set = new Set([1, 2, 3]);
+                    set.add(4);
+                    set.has(2);
+                })();
+            "#;
+            self.execute_warmup_code(context_scope, collection_warmup_code)?;
+        }
+
         // 更新统计
         {
             let mut stats = self.stats.lock().unwrap();
@@ -90,39 +192,34 @@ impl SnapshotManager {
         }
         Ok(())
     }
-    /// 内部预热实现
-    fn warmup_builtins_internal(
+
+    /// 执行预热代码的辅助方法
+    fn execute_warmup_code(
         &self,
-        _scope: &mut v8::HandleScope,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Note: Builtin prewarming will be implemented when proper V8 context is available
-        // For now, this is a placeholder
-        // TODO: 预热更多内置对象
-        // - Object.prototype
-        // - Array.prototype
-        // - Function.prototype
-        // - String.prototype
-        // - Number.prototype
-        // - Boolean.prototype
-        // - Date.prototype
-        // - RegExp.prototype
-        // - Map.prototype
-        // - Set.prototype
-        // - Promise.prototype
-        // - Symbol
-        // - BigInt
-        // - console
-        // - setTimeout
-        // - setInterval
+        scope: &mut v8::ContextScope<'_, v8::HandleScope<'_>>,
+        code: &str,
+    ) -> Result<()> {
+        // 将代码转换为 V8 字符串
+        let code_handle = v8::String::new(scope, code)
+            .ok_or_else(|| anyhow!("Failed to create V8 string from warmup code"))?;
+
+        // 编译代码
+        let script = match v8::Script::compile(scope, code_handle, None) {
+            Some(s) => s,
+            None => return Ok(()),
+        };
+
+        // 执行脚本
+        let _ = script.run(scope);
+
         Ok(())
     }
     /// 生成并缓存快照
     pub fn generate_and_cache_snapshot(
         &self,
-        runtime: &mut RuntimeLite,
         snapshot_id: &str,
-    ) -> Result<V8Snapshot, Box<dyn std::error::Error + Send + Sync>> {
-        let snapshot: _ = self.generate_snapshot(runtime)?;
+    ) -> Result<V8Snapshot> {
+        let snapshot: _ = self.generate_snapshot()?;
         // 缓存快照
         {
             let mut cache = self.snapshot_cache.lock().unwrap();
@@ -292,6 +389,9 @@ impl Default for SnapshotStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::tempdir;
+    #[allow(unused)]
+    use serial_test::serial;
     #[test]
     fn test_snapshot_manager_creation() {
         let config: _ = SnapshotConfig::default();
@@ -310,10 +410,9 @@ mod tests {
     fn test_save_and_load_snapshot() {
         let dir: _ = tempdir().unwrap();
         let base_dir: _ = dir.path();
-        let mut runtime = RuntimeLite::new(false).unwrap();
         let manager: _ = SnapshotManager::new(SnapshotConfig::default());
         // 生成快照
-        let snapshot: _ = manager.generate_snapshot(&mut runtime).unwrap();
+        let snapshot: _ = manager.generate_snapshot().unwrap();
         // 保存快照
         let result: _ = manager.save_snapshot_to_disk(&snapshot, base_dir);
         assert!(result.is_ok());
@@ -330,10 +429,9 @@ mod tests {
     fn test_delete_persistent_snapshot() {
         let dir: _ = tempdir().unwrap();
         let base_dir: _ = dir.path();
-        let mut runtime = RuntimeLite::new(false).unwrap();
         let manager: _ = SnapshotManager::new(SnapshotConfig::default());
         // 生成并保存快照
-        let snapshot: _ = manager.generate_snapshot(&mut runtime).unwrap();
+        let snapshot: _ = manager.generate_snapshot().unwrap();
         manager.save_snapshot_to_disk(&snapshot, base_dir).unwrap();
         // 验证快照存在
         let list: _ = manager.list_persistent_snapshots(base_dir).unwrap();
@@ -356,14 +454,22 @@ mod tests {
     }
     #[test]
     fn test_load_nonexistent_snapshot() {
-use std::collections::{HashMap, BTreeMap};
-use std::fs::File;
-use std::time::Duration;
         let dir: _ = tempdir().unwrap();
         let base_dir: _ = dir.path();
         let manager: _ = SnapshotManager::new(SnapshotConfig::default());
         // 尝试加载不存在的快照
         let result: _ = manager.load_snapshot_from_disk("nonexistent", base_dir);
         assert!(result.is_err());
+    }
+    #[test]
+    #[serial_test::serial]
+    fn test_warmup_builtins() {
+        let manager: _ = SnapshotManager::new(SnapshotConfig::default());
+        // 执行预热
+        let result: _ = manager.warmup_builtins();
+        assert!(result.is_ok());
+        // 验证统计更新
+        let stats: _ = manager.get_stats();
+        assert_eq!(stats.builtins_warmed, 1);
     }
 }

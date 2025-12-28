@@ -1,6 +1,3 @@
-
-use std::collections::{BTreeMap, HashMap};
-
 // V8 快照配置
 // 管理快照生成和加载的各种配置参数
 /// V8 快照配置
@@ -23,7 +20,7 @@ impl Default for SnapshotConfig {
     fn default() -> Self {
         Self {
             max_snapshots: 3,
-            enable_compression: true,
+            enable_compression: false,
             builtin_warmup: true,
             version: format!("v{}", env!("CARGO_PKG_VERSION")),
             enable_lazy_loading: true,
