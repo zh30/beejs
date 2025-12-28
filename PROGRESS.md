@@ -1,3 +1,48 @@
+### v0.3.241 process.memory() 和 cpuUsage() 真实数据（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.241 新增功能
+- **process.memory() 真实数据**
+  - 使用 V8 `HeapStatistics` API 获取真实的堆内存统计
+  - `heapUsed`: 已使用的堆内存（字节）
+  - `heapTotal`: 总堆内存（字节）
+  - `external`: 外部内存（字节）
+  - 不再返回硬编码的估计值
+
+- **process.cpuUsage() 真实数据**
+  - Linux: 读取 `/proc/self/stat` 获取用户/系统 CPU 时间
+  - macOS: 使用 `getrusage()` 系统调用
+  - Windows: 使用 `GetProcessTimes()` API
+  - 支持传入 previous value 计算差值
+  - 返回 `{ user: 微秒数, system: 微秒数 }`
+
+#### v0.3.241 实现细节
+- **V8 堆统计** (`src/nodejs_core/process.rs`)
+  - 使用 `v8::HeapStatistics` 和 `scope.get_heap_statistics()`
+  - 安全地通过 `MaybeUninit` 初始化堆统计结构
+
+- **CPU 时间获取**
+  - `get_cpu_times()` 函数针对不同平台实现
+  - Linux: 解析 `/proc/self/stat` 的 utime/stime 字段
+  - macOS: 使用 `rusage` 结构获取用户/内核时间
+  - 自动将时钟滴答数转换为微秒
+
+#### v0.3.241 测试验证
+- ✅ `cargo test --lib`: 250/250 测试通过
+- ✅ `process_resource_tests`: 16/16 测试通过
+- ✅ 真实内存数据验证: heapUsed <= heapTotal
+- ✅ 真实 CPU 差值计算: cpuUsage(previous) 返回正确的增量
+
+#### v0.3.241 代码变更
+- `src/nodejs_core/process.rs`: 添加真实数据获取 (~180 行)
+- `tests/process_resource_tests.rs`: 新增 16 个测试用例
+
+#### v0.3.241 下一步
+- 完善 process.setMaxListeners() 方法
+- 继续完善其他 Node.js API
+
+---
+
 ### v0.3.234 V8 快照预热 - 启动时间优化（2025-12-28）
 **进度**: 性能优化 | ✅ 已完成
 

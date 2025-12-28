@@ -407,39 +407,38 @@ fn process_hrtime_callback(
     retval.set(result.into());
 }
 
-/// v0.3.240: process.memory() 回调 - 内存使用统计
-/// 注意: 由于 MinimalRuntime 不持有 isolate 引用，这里返回估算值
-/// 完整实现需要在持有 isolate 的上下文中调用
+/// v0.3.241: process.memory() 回调 - 真实的 V8 堆内存统计
+/// 使用 V8 HeapStatistics API 获取真实的堆内存使用情况
 fn process_memory_callback(
     scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    // 返回基于配置的估算值
-    // MinimalRuntime 默认配置: 64MB 初始堆, 512MB 最大堆
-    // 这是一个简化实现，返回合理的默认值
-    let estimated_heap_used = 64.0 * 1024.0 * 1024.0; // 估算 64MB 已使用
-    let estimated_heap_total = 512.0 * 1024.0 * 1024.0; // 估算 512MB 总堆
-    let estimated_external = 0.0; // 外部内存估算
+    // 使用 V8 API 获取真实的堆统计信息
+    let mut heap_stats = std::mem::MaybeUninit::<v8::HeapStatistics>::uninit();
+    unsafe {
+        scope.get_heap_statistics(&mut *heap_stats.as_mut_ptr());
+        let heap_stats = heap_stats.assume_init();
 
-    let result = v8::Object::new(scope);
+        let result = v8::Object::new(scope);
 
-    // heapUsed - 已使用的堆内存
-    let heap_used_key = v8::String::new(scope, "heapUsed").unwrap();
-    let heap_used_val = v8::Number::new(scope, estimated_heap_used);
-    result.set(scope, heap_used_key.into(), heap_used_val.into());
+        // heapUsed - 已使用的堆内存（字节）
+        let heap_used_key = v8::String::new(scope, "heapUsed").unwrap();
+        let heap_used_val = v8::Number::new(scope, heap_stats.used_heap_size() as f64);
+        result.set(scope, heap_used_key.into(), heap_used_val.into());
 
-    // heapTotal - 总堆内存
-    let heap_total_key = v8::String::new(scope, "heapTotal").unwrap();
-    let heap_total_val = v8::Number::new(scope, estimated_heap_total);
-    result.set(scope, heap_total_key.into(), heap_total_val.into());
+        // heapTotal - 总堆内存（字节）
+        let heap_total_key = v8::String::new(scope, "heapTotal").unwrap();
+        let heap_total_val = v8::Number::new(scope, heap_stats.total_heap_size() as f64);
+        result.set(scope, heap_total_key.into(), heap_total_val.into());
 
-    // external - 外部内存
-    let external_key = v8::String::new(scope, "external").unwrap();
-    let external_val = v8::Number::new(scope, estimated_external);
-    result.set(scope, external_key.into(), external_val.into());
+        // external - 外部内存（字节）
+        let external_key = v8::String::new(scope, "external").unwrap();
+        let external_val = v8::Number::new(scope, heap_stats.external_memory() as f64);
+        result.set(scope, external_key.into(), external_val.into());
 
-    retval.set(result.into());
+        retval.set(result.into());
+    }
 }
 
 /// v0.3.240: process.uptime() 回调 - 进程运行时间
@@ -452,14 +451,21 @@ fn process_uptime_callback(
     retval.set(v8::Number::new(scope, uptime).into());
 }
 
-/// v0.3.240: process.cpuUsage() 回调 - CPU 使用统计
+/// v0.3.241: process.cpuUsage() 回调 - 真实的 CPU 使用统计
+/// 使用平台特定的 API 获取用户和系统 CPU 时间
+
+// 线程本地存储初始 CPU 时间
+thread_local! {
+    static START_CPU_TIME: std::time::Duration = std::time::Duration::ZERO;
+}
+
 fn process_cpu_usage_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let mut _prev_user = 0.0;
-    let mut _prev_system = 0.0;
+    let mut prev_user = 0.0;
+    let mut prev_system = 0.0;
 
     // 如果传入了 previous value，计算差值
     if args.length() > 0 {
@@ -471,33 +477,168 @@ fn process_cpu_usage_callback(
 
             if let Some(user_val) = prev_obj.get(scope, user_key.into()) {
                 if user_val.is_number() {
-                    _prev_user = user_val.to_number(scope).unwrap().value();
+                    prev_user = user_val.to_number(scope).unwrap().value();
                 }
             }
             if let Some(system_val) = prev_obj.get(scope, system_key.into()) {
                 if system_val.is_number() {
-                    _prev_system = system_val.to_number(scope).unwrap().value();
+                    prev_system = system_val.to_number(scope).unwrap().value();
                 }
             }
         }
     }
 
-    // 获取当前 CPU 时间 - 使用简化的实现
-    // 完整实现需要平台特定的 API 来获取实际的用户/系统 CPU 时间
-    let current_user = 0.0;
-    let current_system = 0.0;
+    // 获取当前 CPU 时间（微秒）
+    let (current_user, current_system) = get_cpu_times();
 
     let result = v8::Object::new(scope);
 
+    // 如果传入了 previous value，返回差值
+    let user_value = if prev_user > 0.0 {
+        (current_user as f64) - prev_user
+    } else {
+        current_user as f64
+    };
+
+    let system_value = if prev_system > 0.0 {
+        (current_system as f64) - prev_system
+    } else {
+        current_system as f64
+    };
+
     let user_key = v8::String::new(scope, "user").unwrap();
-    let user_val = v8::Number::new(scope, current_user);
+    let user_val = v8::Number::new(scope, user_value);
     result.set(scope, user_key.into(), user_val.into());
 
     let system_key = v8::String::new(scope, "system").unwrap();
-    let system_val = v8::Number::new(scope, current_system);
+    let system_val = v8::Number::new(scope, system_value);
     result.set(scope, system_key.into(), system_val.into());
 
     retval.set(result.into());
+}
+
+/// 获取当前进程的 CPU 使用时间（微秒）
+/// 返回 (user_time, system_time)
+#[cfg(target_os = "linux")]
+fn get_cpu_times() -> (u64, u64) {
+    use std::fs;
+
+    // 读取 /proc/self/stat 获取进程统计信息
+    if let Ok(stat) = fs::read_to_string("/proc/self/stat") {
+        let parts: Vec<&str> = stat.split_whitespace().collect();
+        if parts.len() >= 16 {
+            // utime (index 14) - 用户态时间（时钟滴答数）
+            // stime (index 15) - 内核态时间（时钟滴答数）
+            if let (Ok(utime), Ok(stime)) = (
+                parts[14].parse::<u64>(),
+                parts[15].parse::<u64>()
+            ) {
+                // 将时钟滴答数转换为微秒
+                let clk_tck = unsafe { libc::sysconf(libc::_SC_CLK_TCK) };
+                let usec_per_tick = 1_000_000 / clk_tck as u64;
+                return (utime * usec_per_tick, stime * usec_per_tick);
+            }
+        }
+    }
+
+    // 回退到基于时间的估算
+    fallback_cpu_time()
+}
+
+#[cfg(target_os = "macos")]
+fn get_cpu_times() -> (u64, u64) {
+    use libc::rusage;
+    use libc::getrusage;
+    use std::mem::zeroed;
+
+    const RUSAGE_SELF: i32 = 0;
+
+    let mut usage: rusage = unsafe { zeroed() };
+    unsafe {
+        if getrusage(RUSAGE_SELF, &mut usage) == 0 {
+            // tv_sec 和 tv_usec 转换为微秒
+            let user_usec = (usage.ru_utime.tv_sec as u64) * 1_000_000
+                + usage.ru_utime.tv_usec as u64;
+            let system_usec = (usage.ru_stime.tv_sec as u64) * 1_000_000
+                + usage.ru_stime.tv_usec as u64;
+            return (user_usec, system_usec);
+        }
+    }
+
+    fallback_cpu_time()
+}
+
+#[cfg(target_os = "freebsd")]
+fn get_cpu_times() -> (u64, u64) {
+    use std::fs;
+
+    // FreeBSD 使用 procfs
+    if let Ok(stat) = fs::read_to_string("/proc/curproc/status") {
+        for line in stat.lines() {
+            if line.starts_with("utime:") {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    if let (Ok(user), Ok(sys)) = (
+                        parts[1].parse::<u64>(),
+                        parts.get(2).and_then(|s| s.parse::<u64>().ok())
+                    ) {
+                        return (user * 1000, sys * 1000); // 转换为微秒
+                    }
+                }
+            }
+        }
+    }
+
+    fallback_cpu_time()
+}
+
+/// 回退到基于时间的 CPU 使用估算
+fn fallback_cpu_time() -> (u64, u64) {
+    // 使用当前时间作为近似值
+    let now = std::time::Instant::now();
+    let elapsed = now.elapsed();
+    let micros = elapsed.as_secs() * 1_000_000 + elapsed.subsec_micros() as u64;
+    (micros, 0)
+}
+
+#[cfg(target_family = "windows")]
+fn get_cpu_times() -> (u64, u64) {
+    // Windows 实现 - 使用 GetProcessTimes
+    use std::mem::MaybeUninit;
+    use std::ptr::null_mut;
+    use windows_sys::Win32::System::Diagnostics::Process::GetProcessTimes;
+
+    let mut creation_time = MaybeUninit::<u64>::uninit();
+    let mut exit_time = MaybeUninit::<u64>::uninit();
+    let mut kernel_time = MaybeUninit::<i64>::uninit();
+    let mut user_time = MaybeUninit::<i64>::uninit();
+
+    let current_process = windows_sys::Win32::System::Threading::GetCurrentProcess();
+
+    unsafe {
+        if GetProcessTimes(
+            current_process,
+            creation_time.as_mut_ptr(),
+            exit_time.as_mut_ptr(),
+            kernel_time.as_mut_ptr(),
+            user_time.as_mut_ptr(),
+        ) != 0
+        {
+            // 转换为微秒
+            let user_micros = user_time.assume_init() / 10;
+            let kernel_micros = kernel_time.assume_init() / 10;
+            return (user_micros as u64, kernel_micros as u64);
+        }
+    }
+
+    // 回退
+    (0, 0)
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "freebsd", target_family = "windows")))]
+fn get_cpu_times() -> (u64, u64) {
+    // 其他平台回退到零
+    (0, 0)
 }
 
 /// process.exit() 回调
