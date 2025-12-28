@@ -164,6 +164,8 @@ impl TypeContext {
         self.variables.insert("ConstructorParameters".to_string(), "utility".to_string());
         // InstanceType<T> - 获取构造函数类型的实例类型
         self.variables.insert("InstanceType".to_string(), "utility".to_string());
+        // NoInfer<T> - 防止类型推断并强制使用特定类型
+        self.variables.insert("NoInfer".to_string(), "utility".to_string());
         // ThisParameterType<T> - 获取函数类型 T 的 this 参数类型
         self.variables.insert("ThisParameterType".to_string(), "utility".to_string());
         // OmitThisParameter<T> - 移除函数类型 T 的 this 参数

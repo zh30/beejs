@@ -2767,4 +2767,98 @@ const params = ["Alice", 30];
 
         println!("✅ Test 108: TypeScript ConstructorParameters<T> fast-path");
     }
+
+    /// 测试109: NoInfer<T> 快速路径测试 (v0.3.212)
+    #[test]
+    fn test_noinfer_utility_fast_path() {
+        // 测试 NoInfer 快速路径移除
+        // NoInfer<T> 防止类型推断并强制使用特定类型
+        let ts_code = r#"
+function processData<T>(data: NoInfer<T>): T {
+    return data;
+}
+
+const result = processData("hello");
+"#;
+        let result = typescript::compile_typescript(ts_code, "noinfer_fastpath.ts");
+        assert!(result.is_ok(), "NoInfer fast-path should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 NoInfer 被快速路径移除
+        assert!(!output.js_code.contains("NoInfer<"),
+            "Should remove NoInfer via fast-path: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("processData"),
+            "Should preserve function declaration: {}", output.js_code);
+        assert!(output.js_code.contains("return data"),
+            "Should preserve function body: {}", output.js_code);
+        assert!(output.js_code.contains("const result"),
+            "Should preserve const declaration: {}", output.js_code);
+
+        println!("✅ Test 109: TypeScript NoInfer<T> fast-path");
+    }
+
+    /// 测试110: NoInfer 与泛型函数组合测试 (v0.3.212)
+    #[test]
+    fn test_noinfer_with_generic_function() {
+        // 测试 NoInfer 与泛型函数组合
+        let ts_code = r#"
+interface Config {
+    ttl: number;
+}
+
+function process<T>(data: NoInfer<T>): T {
+    return data;
+}
+
+const result = process("hello");
+"#;
+        let result = typescript::compile_typescript(ts_code, "noinfer_with_generic.ts");
+        assert!(result.is_ok(), "NoInfer with generic should compile successfully");
+        let output = result.unwrap();
+
+        // 验证所有 NoInfer 被移除
+        assert!(!output.js_code.contains("NoInfer<"),
+            "Should remove all NoInfer: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("process"),
+            "Should preserve function: {}", output.js_code);
+        assert!(output.js_code.contains("return data"),
+            "Should preserve return statement: {}", output.js_code);
+
+        println!("✅ Test 110: NoInfer with generic functions");
+    }
+
+    /// 测试111: NoInfer 在复杂类型中测试 (v0.3.212)
+    #[test]
+    fn test_noinfer_in_complex_types() {
+        // 测试 NoInfer 在复杂类型中使用
+        let ts_code = r#"
+type Data = {
+    id: number;
+    name: string;
+};
+
+function create<T>(value: NoInfer<T>): T {
+    return value;
+}
+
+const data: NoInfer<Data> = { id: 1, name: "test" };
+"#;
+        let result = typescript::compile_typescript(ts_code, "noinfer_complex.ts");
+        assert!(result.is_ok(), "NoInfer complex should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 NoInfer 被移除
+        assert!(!output.js_code.contains("NoInfer<"),
+            "Should remove all NoInfer: {}", output.js_code);
+
+        // 验证类型参数保留
+        assert!(output.js_code.contains("create"),
+            "Should preserve create function: {}", output.js_code);
+
+        println!("✅ Test 111: NoInfer in complex types");
+    }
 }

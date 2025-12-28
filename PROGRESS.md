@@ -1,3 +1,28 @@
+### v0.3.212 实现 NoInfer<T> 工具类型快速路径支持（2025-12-28）
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.212 新增功能
+- **NoInfer<T> 工具类型快速路径**
+  - 运行时快速路径识别 `NoInfer<...>` 模式
+  - NoInfer<T> 防止类型推断并强制使用特定类型
+  - 正确移除 NoInfer 包装，保留内部类型
+
+#### v0.3.212 实现细节
+- **运行时检测增强** (`src/runtime_minimal.rs:2480`)
+  - 在 `has_raw_typescript()` 中添加 `NoInfer<` 模式检测
+
+- **运行时快速路径移除** (`src/runtime_minimal.rs:2386-2391`)
+  - 添加正则表达式 `NoInfer\s*<([^>]+)>` 替换为 `$1`
+  - 提取泛型参数内容直接替换，实现类型擦除
+
+- **TypeScript 编译器注册** (`src/typescript/compiler.rs:167-168`)
+  - 在 `TypeContext::new()` 中注册 `NoInfer` 为 utility 类型
+
+#### v0.3.212 测试用例
+- 测试109: TypeScript NoInfer<T> 快速路径测试
+- 测试110: NoInfer 与泛型函数组合测试
+- 测试111: NoInfer 在复杂类型中测试
+
 ### v0.3.211 实现 ReturnType/Parameters/ConstructorParameters 工具类型快速路径支持（2025-12-28）
 **进度**: TypeScript 快速路径增强 | ✅ 已提交
 
