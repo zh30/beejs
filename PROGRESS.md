@@ -1,3 +1,50 @@
+### v0.3.224 实现完整包下载和安装功能（2025-12-28）
+**进度**: 包管理器增强 | ✅ 已完成
+
+#### v0.3.224 新增功能
+- **npm registry 集成**
+  - `fetch_package_info()` 从 npm registry 获取包元数据
+  - 支持 https://registry.npmjs.org/ 官方源
+  - 超时控制和错误处理
+
+- **包下载和缓存**
+  - `download_package()` 下载 tarball 到本地缓存
+  - 缓存目录 `.beejs_cache/{package}/{version}.tgz`
+  - 避免重复下载已缓存的包
+
+- **Tarball 解压**
+  - `extract_package()` 将 npm 包解压到 node_modules
+  - 支持 `.tgz` 格式（gzip + tar）
+  - 自动创建正确的目录结构
+
+- **版本解析**
+  - `resolve_version()` 版本范围解析
+  - 支持 `^` (caret), `~` (tilde) 范围
+  - 支持 `>=`, `<=`, `>`, `<` 比较符
+  - 自动选择最新兼容版本
+
+- **完整安装流程**
+  - `install_package()` 单个包完整安装
+  - `install_dependencies()` 从 package.json 安装所有依赖
+  - 支持 dependencies, devDependencies, peerDependencies
+
+#### v0.3.224 依赖变更
+- 新增 `flate2 = "1.0"` - gzip 解压
+- 新增 `tar = "0.4"` - tar 归档处理
+
+#### v0.3.224 测试验证
+- ✅ `cargo test --test install_command_tests`: 6/6 通过
+- ✅ `cargo test --test remove_command_tests`: 6/6 通过
+- ✅ `cargo test --test minimal_tests`: 130/130 通过
+- ✅ `cargo build --release`: 编译成功
+
+#### v0.3.224 下一步
+- 添加 bunx 命令支持（无需安装运行包）
+- 实现包锁定文件 package-lock.json
+- 添加 `--save-exact` 精确版本安装
+
+---
+
 ### v0.3.222 实现 Trim/TrimLeft/TrimRight 工具类型快速路径支持（2025-12-28）
 **进度**: TypeScript 快速路径增强 | ✅ 已完成
 
