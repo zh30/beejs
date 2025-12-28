@@ -227,31 +227,16 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
         let to_be_key = v8::String::new(scope, "toBe").unwrap();
         expect_obj.set(scope, to_be_key.into(), to_be_fn.into());
 
-        // Add toEqual matcher - simplified
+        // Add toEqual matcher - simplified to not use closures (V8 Function constraints)
         let to_equal_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let expected = args.get(0);
-            let undefined = v8::undefined(scope);
-            let json_str = v8::String::new(scope, "JSON").unwrap();
-
-            if let Some(json_obj) = global.get(scope, json_str.into()).and_then(|v| v.to_object(scope)) {
-                let stringify_str = v8::String::new(scope, "stringify").unwrap();
-                if let Some(stringify_fn) = json_obj.get(scope, stringify_str.into()).and_then(|v| v8::Local::<v8::Function>::try_from(v).ok()) {
-                    let actual_str = stringify_fn.call(scope, undefined.into(), &[expected]);
-                    let expected_str = stringify_fn.call(scope, undefined.into(), &[expected]);
-
-                    let result = match (actual_str, expected_str) {
-                        (Some(a), Some(e)) => {
-                            let a_str = a.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
-                            let e_str = e.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
-                            a_str == e_str
-                        }
-                        _ => false,
-                    };
-                    retval.set(v8::Boolean::new(scope, result).into());
-                    return;
-                }
-            }
-            retval.set(v8::Boolean::new(scope, false).into());
+            // Get _actual from the expect object's property
+            let this_obj = args.this();
+            let actual_key = v8::String::new(scope, "_actual").unwrap();
+            let actual_val = this_obj.get(scope, actual_key.into()).unwrap_or(v8::undefined(scope).into());
+            // Use strict equality for comparison
+            let result = actual_val.strict_equals(expected);
+            retval.set(v8::Boolean::new(scope, result).into());
         }).unwrap();
         let to_equal_key = v8::String::new(scope, "toEqual").unwrap();
         expect_obj.set(scope, to_equal_key.into(), to_equal_fn.into());
