@@ -5,6 +5,7 @@ use anyhow::Result;
 use base64::Engine;
 use rand::Rng;
 use rusty_v8 as v8;
+use std::io::Write;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::collections::HashMap;
@@ -11639,13 +11640,53 @@ impl MinimalRuntime {
         process_obj.set(scope, remove_listener_key.into(), remove_listener_func.into());
 
         // v0.3.238: Add process.stdout (basic implementation)
+        // v0.3.239: Add stdout.write() method
         let stdout_key = v8::String::new(scope, "stdout").unwrap();
         let stdout_obj = v8::Object::new(scope);
+        let stdout_write_key = v8::String::new(scope, "write").unwrap();
+        let stdout_write_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let data = args.get(0);
+            let output = if let Some(str_val) = data.to_string(scope) {
+                str_val.to_rust_string_lossy(scope)
+            } else if data.is_null_or_undefined() {
+                String::new()
+            } else {
+                String::from("[object]")
+            };
+            // 输出到 stdout 并刷新
+            let mut stdout = std::io::stdout();
+            let _ = std::write!(stdout, "{}", output);
+            let _ = stdout.flush();
+            let result = v8::Boolean::new(scope, true);
+            retval.set(result.into());
+        });
+        let stdout_write_instance = stdout_write_fn.get_function(scope).unwrap();
+        stdout_obj.set(scope, stdout_write_key.into(), stdout_write_instance.into());
         process_obj.set(scope, stdout_key.into(), stdout_obj.into());
 
         // v0.3.238: Add process.stderr (basic implementation)
+        // v0.3.239: Add stderr.write() method
         let stderr_key = v8::String::new(scope, "stderr").unwrap();
         let stderr_obj = v8::Object::new(scope);
+        let stderr_write_key = v8::String::new(scope, "write").unwrap();
+        let stderr_write_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let data = args.get(0);
+            let output = if let Some(str_val) = data.to_string(scope) {
+                str_val.to_rust_string_lossy(scope)
+            } else if data.is_null_or_undefined() {
+                String::new()
+            } else {
+                String::from("[object]")
+            };
+            // 输出到 stderr 并刷新
+            let mut stderr = std::io::stderr();
+            let _ = std::write!(stderr, "{}", output);
+            let _ = stderr.flush();
+            let result = v8::Boolean::new(scope, true);
+            retval.set(result.into());
+        });
+        let stderr_write_instance = stderr_write_fn.get_function(scope).unwrap();
+        stderr_obj.set(scope, stderr_write_key.into(), stderr_write_instance.into());
         process_obj.set(scope, stderr_key.into(), stderr_obj.into());
 
         // v0.3.238: Add process.stdin (basic implementation)

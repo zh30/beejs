@@ -1,7 +1,8 @@
 // Node.js process 模块实现
 // v0.3.237: 全局未捕获异常处理器和 process 对象
-// 支持 process.on('uncaughtException') 和 process.on('unhandledRejection')
+// v0.3.239: 完善 nextTick 和 stdout/stderr.write()
 
+use std::io::Write;
 use std::sync::Mutex;
 use anyhow::Result;
 use rusty_v8 as v8;
@@ -15,6 +16,17 @@ thread_local! {
     static SHOULD_EXIT: Mutex<bool> = Mutex::new(false);
     /// 退出码
     static EXIT_CODE: Mutex<i32> = Mutex::new(0);
+}
+
+/// v0.3.239: nextTick 回调数据结构
+struct NextTickCallback {
+    callback: v8::Global<v8::Value>,
+    args: Vec<v8::Global<v8::Value>>,
+}
+
+// v0.3.239: nextTick 队列（线程本地）
+thread_local! {
+    static NEXT_TICK_QUEUE: Mutex<Vec<NextTickCallback>> = Mutex::new(Vec::new());
 }
 
 /// 设置 process 全局对象
@@ -75,6 +87,12 @@ pub fn setup_process_api(
     let cwd_key = v8::String::new(scope, "cwd").unwrap();
     process_obj.set(scope, cwd_key.into(), cwd_instance.into());
 
+    // v0.3.239: process.nextTick() - 微任务队列优先级
+    let next_tick_func = v8::FunctionTemplate::new(scope, process_next_tick_callback);
+    let next_tick_instance = next_tick_func.get_function(scope).unwrap();
+    let next_tick_key = v8::String::new(scope, "nextTick").unwrap();
+    process_obj.set(scope, next_tick_key.into(), next_tick_instance.into());
+
     // process.exit() - 退出程序
     let exit_func = v8::FunctionTemplate::new(scope, process_exit_callback);
     let exit_instance = exit_func.get_function(scope).unwrap();
@@ -129,14 +147,22 @@ pub fn setup_process_api(
     release_obj.set(scope, name_key.into(), name_val.into());
     process_obj.set(scope, release_key.into(), release_obj.into());
 
-    // process.stdout - 标准输出
+    // v0.3.239: process.stdout - 标准输出（带 write() 方法）
     let stdout_key = v8::String::new(scope, "stdout").unwrap();
     let stdout_obj = v8::Object::new(scope);
+    let stdout_write_func = v8::FunctionTemplate::new(scope, stdout_write_callback);
+    let stdout_write_instance = stdout_write_func.get_function(scope).unwrap();
+    let stdout_write_key = v8::String::new(scope, "write").unwrap();
+    stdout_obj.set(scope, stdout_write_key.into(), stdout_write_instance.into());
     process_obj.set(scope, stdout_key.into(), stdout_obj.into());
 
-    // process.stderr - 标准错误
+    // v0.3.239: process.stderr - 标准错误（带 write() 方法）
     let stderr_key = v8::String::new(scope, "stderr").unwrap();
     let stderr_obj = v8::Object::new(scope);
+    let stderr_write_func = v8::FunctionTemplate::new(scope, stderr_write_callback);
+    let stderr_write_instance = stderr_write_func.get_function(scope).unwrap();
+    let stderr_write_key = v8::String::new(scope, "write").unwrap();
+    stderr_obj.set(scope, stderr_write_key.into(), stderr_write_instance.into());
     process_obj.set(scope, stderr_key.into(), stderr_obj.into());
 
     // process.stdin - 标准输入
@@ -162,6 +188,128 @@ fn process_cwd_callback(
         .unwrap_or_else(|_| "/".to_string());
     let cwd_str = v8::String::new(scope, &cwd).unwrap();
     retval.set(cwd_str.into());
+}
+
+/// v0.3.239: process.nextTick() 回调
+/// 简化实现：使用 V8 的 MicrotaskQueue 来执行 nextTick 回调
+fn process_next_tick_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _retval: v8::ReturnValue,
+) {
+    let callback = args.get(0);
+
+    if !callback.is_function() {
+        let error = v8::String::new(scope, "process.nextTick: callback must be a function").unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
+    // 收集额外参数
+    let callback_args: Vec<v8::Global<v8::Value>> = (1..args.length())
+        .map(|i| args.get(i))
+        .filter(|v| !v.is_undefined())
+        .map(|v| v8::Global::new(scope, v))
+        .collect();
+
+    // 保存到 nextTick 队列
+    let callback_global = v8::Global::new(scope, callback);
+    NEXT_TICK_QUEUE.with(|queue| {
+        let mut q = queue.lock().unwrap();
+        q.push(NextTickCallback {
+            callback: callback_global,
+            args: callback_args,
+        });
+    });
+
+    // 使用 Promise 来实现微任务排队
+    // nextTick 回调将在当前同步代码执行完毕后、Promise 回调之前执行
+    let promise_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+        // 执行所有 nextTick 回调
+        NEXT_TICK_QUEUE.with(|q| {
+            let mut queue_ref = q.lock().unwrap();
+            let callbacks: Vec<NextTickCallback> = std::mem::take(&mut *queue_ref);
+
+            for NextTickCallback { callback, args } in callbacks {
+                let callback_local = v8::Local::new(scope, callback);
+                if let Ok(func) = v8::Local::<v8::Function>::try_from(callback_local) {
+                    let undefined = v8::undefined(scope);
+                    let args_local: Vec<v8::Local<v8::Value>> =
+                        args.iter().map(|a| v8::Local::new(scope, a)).collect();
+                    let _ = func.call(scope, undefined.into(), &args_local);
+                }
+            }
+        });
+    });
+
+    let promise_func_instance = promise_func.get_function(scope).unwrap();
+    let promise_ctor_key = v8::String::new(scope, "Promise").unwrap();
+    let promise_ctor = context(scope).global(scope).get(scope, promise_ctor_key.into()).unwrap();
+    if promise_ctor.is_function() {
+        let promise_ctor_func = v8::Local::<v8::Function>::try_from(promise_ctor).unwrap();
+        let undefined = v8::undefined(scope);
+        let _ = promise_ctor_func.call(scope, undefined.into(), &[promise_func_instance.into()]);
+    }
+}
+
+// 获取 context 的辅助函数
+fn context<'s>(scope: &mut v8::HandleScope<'s>) -> v8::Local<'s, v8::Context> {
+    scope.get_current_context()
+}
+
+/// v0.3.239: stdout.write() 回调
+fn stdout_write_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let data = args.get(0);
+
+    // 将 V8 值转换为字符串并输出到 stdout
+    let output = if let Some(str_val) = data.to_string(scope) {
+        str_val.to_rust_string_lossy(scope)
+    } else if data.is_null_or_undefined() {
+        String::new()
+    } else {
+        String::from("[object]")
+    };
+
+    // 输出到 stdout 并刷新
+    let mut stdout = std::io::stdout();
+    let _ = write!(stdout, "{}", output);
+    let _ = stdout.flush();
+
+    // 返回 true（表示写入成功）
+    let result = v8::Boolean::new(scope, true);
+    retval.set(result.into());
+}
+
+/// v0.3.239: stderr.write() 回调
+fn stderr_write_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let data = args.get(0);
+
+    // 将 V8 值转换为字符串并输出到 stderr
+    let output = if let Some(str_val) = data.to_string(scope) {
+        str_val.to_rust_string_lossy(scope)
+    } else if data.is_null_or_undefined() {
+        String::new()
+    } else {
+        String::from("[object]")
+    };
+
+    // 输出到 stderr 并刷新
+    let mut stderr = std::io::stderr();
+    let _ = write!(stderr, "{}", output);
+    let _ = stderr.flush();
+
+    // 返回 true（表示写入成功）
+    let result = v8::Boolean::new(scope, true);
+    retval.set(result.into());
 }
 
 /// process.exit() 回调
