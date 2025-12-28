@@ -12606,3 +12606,38 @@ console.log(p.name);  // "Alice"
 - 完善 Promise 和 async/await 测试支持
 - 添加 not matcher（取反）
 - 实现 test runner 统计和覆盖率功能
+
+---
+
+### v0.3.256 增强 Console API 实现（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.256 新增功能
+- **console.table 列选择功能**
+  - 支持第二个参数过滤显示的列
+  - `console.table(data, ['a', 'c'])` 只显示 a 和 c 列
+  - 适用于对象数组和普通对象
+
+- **console.timeEnd 真实计时**
+  - 使用 `std::time::Instant` 跟踪开始时间
+  - `OnceLock<Mutex<HashMap>>` 线程安全存储计时器状态
+  - 显示精确到毫秒的耗时（如 `0.35ms`）
+
+#### v0.3.256 代码清理
+- 移除 `v8_test_executor.rs` 中未使用的代码
+  - `NEXT_ISOLATE_ID` 静态变量
+  - `current_isolate` 字段
+  - `get_isolate` 方法
+  - `v8_value_to_string` 和 `global_get` 函数
+- 清理 `test_timeout.rs` 中未使用的字段
+
+#### v0.3.256 测试验证
+- ✅ 15/15 console_enhanced_tests 测试通过
+- ✅ 248/248 cargo test --lib 测试通过
+- ✅ 130/130 minimal_tests 测试通过
+- ✅ 编译警告从 59 减少到 54
+
+#### v0.3.256 下一步
+- 继续完善 Node.js API 兼容性
+- 优化性能和启动时间
+- 添加更多测试覆盖
