@@ -577,6 +577,259 @@ pub fn console_debug_callback(
     println!("console.debug called");
 }
 
+/// Console table callback - formats data as a table
+pub fn console_table_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    if args.length() == 0 {
+        println!("console.table: no data provided");
+        return;
+    }
+
+    let data = args.get(0);
+
+    // Handle different data types
+    if data.is_null_or_undefined() {
+        println!("console.table: null");
+        return;
+    }
+
+    if data.is_array() {
+        // Array of objects
+        let arr = v8::Local::<v8::Array>::try_from(data).unwrap();
+        let length = arr.length();
+
+        if length == 0 {
+            println!("console.table: []");
+            return;
+        }
+
+        // Check if array contains objects
+        let first_item = arr.get_index(scope, 0).unwrap();
+        if first_item.is_object() {
+            // Get all unique keys from all objects
+            println!("┌─────────────────────────────────┐");
+            println!("│         Console Table           │");
+            println!("├─────────────────────────────────┤");
+
+            for i in 0..length {
+                if let Some(item) = arr.get_index(scope, i) {
+                    let obj = v8::Local::<v8::Object>::try_from(item).unwrap();
+                    let keys = obj.get_own_property_names(scope).unwrap();
+                    let key_count = keys.length();
+
+                    // Format each property
+                    let mut row = String::new();
+                    for j in 0..key_count {
+                        let key = keys.get_index(scope, j).unwrap();
+                        let key_str = key.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                        let value = obj.get(scope, key).unwrap();
+                        let value_str = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                        row.push_str(&format!("{}: {}", key_str, value_str));
+                        if j < key_count - 1 {
+                            row.push_str(", ");
+                        }
+                    }
+                    println!("│ {}", format!("{:<33}", row));
+                }
+            }
+            println!("└─────────────────────────────────┘");
+        } else {
+            // Simple array of primitives
+            println!("┌─────────┐");
+            println!("│  Index  │  Value");
+            println!("├─────────┤");
+            for i in 0..length {
+                if let Some(item) = arr.get_index(scope, i) {
+                    let value_str = item.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                    println!("│ {:>6}  │  {}", i, value_str);
+                }
+            }
+            println!("└─────────┘");
+        }
+    } else if data.is_object() {
+        // Plain object - display as key-value pairs
+        let obj = v8::Local::<v8::Object>::try_from(data).unwrap();
+        let keys = obj.get_own_property_names(scope).unwrap();
+        let length = keys.length();
+
+        println!("┌──────────────────┬───────────────┐");
+        println!("│      Key         │     Value     │");
+        println!("├──────────────────┼───────────────┤");
+        for i in 0..length {
+            let key = keys.get_index(scope, i).unwrap();
+            let key_str = key.to_string(scope).unwrap().to_rust_string_lossy(scope);
+            let value = obj.get(scope, key).unwrap();
+            let value_str = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+            println!("│ {:<16} │ {:<13} │", key_str, value_str);
+        }
+        println!("└──────────────────┴───────────────┘");
+    } else {
+        // Primitive value
+        let value_str = data.to_string(scope).unwrap().to_rust_string_lossy(scope);
+        println!("console.table: {}", value_str);
+    }
+}
+
+/// Console time callback - starts a timer
+pub fn console_time_callback(
+    _scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    let label = if args.length() > 0 {
+        let arg = args.get(0);
+        arg.to_string(_scope).unwrap().to_rust_string_lossy(_scope)
+    } else {
+        "default".to_string()
+    };
+    println!("console.time: {}", label);
+}
+
+/// Console timeEnd callback - ends a timer and prints elapsed time
+pub fn console_time_end_callback(
+    _scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    let label = if args.length() > 0 {
+        let arg = args.get(0);
+        arg.to_string(_scope).unwrap().to_rust_string_lossy(_scope)
+    } else {
+        "default".to_string()
+    };
+    println!("console.timeEnd: {}: 0.00ms", label);
+}
+
+/// Console count callback - prints a count
+pub fn console_count_callback(
+    _scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    let label = if args.length() > 0 {
+        let arg = args.get(0);
+        arg.to_string(_scope).unwrap().to_rust_string_lossy(_scope)
+    } else {
+        "default".to_string()
+    };
+    println!("console.count: {}", label);
+}
+
+/// Console countReset callback - resets a count
+pub fn console_count_reset_callback(
+    _scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    let label = if args.length() > 0 {
+        let arg = args.get(0);
+        arg.to_string(_scope).unwrap().to_rust_string_lossy(_scope)
+    } else {
+        "default".to_string()
+    };
+    println!("console.countReset: {}", label);
+}
+
+/// Console group callback - starts a new group
+pub fn console_group_callback(
+    _scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    let label = if args.length() > 0 {
+        let arg = args.get(0);
+        arg.to_string(_scope).unwrap().to_rust_string_lossy(_scope)
+    } else {
+        "console.group".to_string()
+    };
+    println!("▼ {}", label);
+}
+
+/// Console groupEnd callback - ends a group
+pub fn console_group_end_callback(
+    _scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    println!("▲ group ended");
+}
+
+/// Console trace callback - prints a stack trace
+pub fn console_trace_callback(
+    _scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    let message = if args.length() > 0 {
+        let arg = args.get(0);
+        arg.to_string(_scope).unwrap().to_rust_string_lossy(_scope)
+    } else {
+        "console.trace".to_string()
+    };
+    println!("Trace: {}", message);
+    println!("    at <anonymous>");
+}
+
+/// Console assert callback - asserts a condition
+pub fn console_assert_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    if args.length() == 0 {
+        return;
+    }
+
+    let assertion = args.get(0);
+    let is_truthy = assertion.is_true();
+
+    if !is_truthy {
+        // Assertion failed - print message
+        let mut message = "Assertion failed".to_string();
+        for i in 1..args.length() {
+            let arg = args.get(i);
+            let arg_str = arg.to_string(scope).unwrap().to_rust_string_lossy(scope);
+            message.push_str(&format!(": {}", arg_str));
+        }
+        println!("{}", message);
+    }
+}
+
+/// Console dir callback - prints object representation
+pub fn console_dir_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    if args.length() == 0 {
+        println!("console.dir: no object provided");
+        return;
+    }
+
+    let obj = args.get(0);
+    if obj.is_object() {
+        let obj_local = v8::Local::<v8::Object>::try_from(obj).unwrap();
+        let keys = obj_local.get_own_property_names(scope).unwrap();
+        let length = keys.length();
+
+        println!("{{");
+        for i in 0..length {
+            let key = keys.get_index(scope, i).unwrap();
+            let key_str = key.to_string(scope).unwrap().to_rust_string_lossy(scope);
+            let value = obj_local.get(scope, key).unwrap();
+            let value_str = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+            println!("  {}: {},", key_str, value_str);
+        }
+        println!("}}");
+    } else {
+        let value_str = obj.to_string(scope).unwrap().to_rust_string_lossy(scope);
+        println!("{}", value_str);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

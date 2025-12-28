@@ -2932,6 +2932,66 @@ impl MinimalRuntime {
         let debug_key = v8::String::new(scope, "debug").unwrap().into();
         console_object.set(scope, debug_key, console_debug_fn.into());
 
+        // Create console.table function
+        let console_table_fn = v8::Function::new(scope, crate::console_table_callback)
+            .ok_or_else(|| anyhow::anyhow!("Failed to create console.table function"))?;
+        let table_key = v8::String::new(scope, "table").unwrap().into();
+        console_object.set(scope, table_key, console_table_fn.into());
+
+        // Create console.time function
+        let console_time_fn = v8::Function::new(scope, crate::console_time_callback)
+            .ok_or_else(|| anyhow::anyhow!("Failed to create console.time function"))?;
+        let time_key = v8::String::new(scope, "time").unwrap().into();
+        console_object.set(scope, time_key, console_time_fn.into());
+
+        // Create console.timeEnd function
+        let console_time_end_fn = v8::Function::new(scope, crate::console_time_end_callback)
+            .ok_or_else(|| anyhow::anyhow!("Failed to create console.timeEnd function"))?;
+        let time_end_key = v8::String::new(scope, "timeEnd").unwrap().into();
+        console_object.set(scope, time_end_key, console_time_end_fn.into());
+
+        // Create console.count function
+        let console_count_fn = v8::Function::new(scope, crate::console_count_callback)
+            .ok_or_else(|| anyhow::anyhow!("Failed to create console.count function"))?;
+        let count_key = v8::String::new(scope, "count").unwrap().into();
+        console_object.set(scope, count_key, console_count_fn.into());
+
+        // Create console.countReset function
+        let console_count_reset_fn = v8::Function::new(scope, crate::console_count_reset_callback)
+            .ok_or_else(|| anyhow::anyhow!("Failed to create console.countReset function"))?;
+        let count_reset_key = v8::String::new(scope, "countReset").unwrap().into();
+        console_object.set(scope, count_reset_key, console_count_reset_fn.into());
+
+        // Create console.group function
+        let console_group_fn = v8::Function::new(scope, crate::console_group_callback)
+            .ok_or_else(|| anyhow::anyhow!("Failed to create console.group function"))?;
+        let group_key = v8::String::new(scope, "group").unwrap().into();
+        console_object.set(scope, group_key, console_group_fn.into());
+
+        // Create console.groupEnd function
+        let console_group_end_fn = v8::Function::new(scope, crate::console_group_end_callback)
+            .ok_or_else(|| anyhow::anyhow!("Failed to create console.groupEnd function"))?;
+        let group_end_key = v8::String::new(scope, "groupEnd").unwrap().into();
+        console_object.set(scope, group_end_key, console_group_end_fn.into());
+
+        // Create console.trace function
+        let console_trace_fn = v8::Function::new(scope, crate::console_trace_callback)
+            .ok_or_else(|| anyhow::anyhow!("Failed to create console.trace function"))?;
+        let trace_key = v8::String::new(scope, "trace").unwrap().into();
+        console_object.set(scope, trace_key, console_trace_fn.into());
+
+        // Create console.assert function
+        let console_assert_fn = v8::Function::new(scope, crate::console_assert_callback)
+            .ok_or_else(|| anyhow::anyhow!("Failed to create console.assert function"))?;
+        let assert_key = v8::String::new(scope, "assert").unwrap().into();
+        console_object.set(scope, assert_key, console_assert_fn.into());
+
+        // Create console.dir function
+        let console_dir_fn = v8::Function::new(scope, crate::console_dir_callback)
+            .ok_or_else(|| anyhow::anyhow!("Failed to create console.dir function"))?;
+        let dir_key = v8::String::new(scope, "dir").unwrap().into();
+        console_object.set(scope, dir_key, console_dir_fn.into());
+
         // Add console to global object
         let console_key = v8::String::new(scope, "console").unwrap().into();
         global.set(scope, console_key, console_object.into());
