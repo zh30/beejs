@@ -61,6 +61,7 @@ pub struct PackageJson {
     pub dependencies: Option<HashMap<String, String>>,
     pub dev_dependencies: Option<HashMap<String, String>>,
     pub peer_dependencies: Option<HashMap<String, String>>,
+    pub optional_dependencies: Option<HashMap<String, String>>,
     pub author: Option<String>,
     pub license: Option<String>,
     pub repository: Option<Repository>,
@@ -332,6 +333,23 @@ impl PackageManager {
     /// Parse version range and return exact version
     pub fn resolve_version(&self, name: &str, version_range: &str) -> Result<String> {
         let info = self.fetch_package_info(name)?;
+
+        // Handle "latest" special tag
+        if version_range == "latest" {
+            let dist_tags = info.get("dist-tags")
+                .ok_or(anyhow!("No dist-tags found"))?
+                .as_object()
+                .ok_or(anyhow!("Invalid dist-tags format"))?;
+
+            let latest_version = dist_tags.get("latest")
+                .ok_or(anyhow!("No 'latest' tag found"))?
+                .as_str()
+                .ok_or(anyhow!("Invalid latest tag format"))?
+                .to_string();
+
+            return Ok(latest_version);
+        }
+
         let versions = info.get("versions")
             .ok_or(anyhow!("No versions found"))?
             .as_object()
@@ -411,6 +429,7 @@ impl PackageManager {
             dependencies: None,
             dev_dependencies: None,
             peer_dependencies: None,
+            optional_dependencies: None,
             author: None,
             license: Some("MIT".to_string()),
             repository: None,
@@ -447,7 +466,7 @@ impl PackageManager {
             }
         }
         // Install optional dependencies
-        if let Some(deps) = &package_json.peer_dependencies {
+        if let Some(deps) = &package_json.optional_dependencies {
             for (name, version) in deps {
                 match self.install_package(name, version) {
                     Ok(resolution) => results.push(resolution),

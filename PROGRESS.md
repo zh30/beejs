@@ -1,3 +1,55 @@
+### v0.3.229 包管理器增强 - install 命令和 optionalDependencies 支持（2025-12-28）
+**进度**: 包管理器 CLI 增强 | ✅ 已完成
+
+#### v0.3.229 新增功能
+- **Install 命令**
+  - `beejs install` - 从 package.json 安装所有依赖
+  - 自动安装 dependencies, devDependencies, optionalDependencies
+  - 生成/更新 package-lock.json 锁文件
+  - 显示安装的包列表
+
+- **optionalDependencies 支持**
+  - PackageJson 结构添加 optional_dependencies 字段
+  - install_dependencies() 正确处理可选依赖
+  - 失败时使用 debug 级别日志（非 error）
+
+- **latest 版本解析修复**
+  - resolve_version() 支持 "latest" 特殊标签
+  - 从 npm registry dist-tags 获取最新版本
+  - 修复 add 命令无法安装 "latest" 版本的问题
+
+#### v0.3.229 使用示例
+```bash
+# 安装所有依赖
+beejs install
+
+# 初始化新项目
+beejs init my-project
+
+# 添加带可选依赖
+beejs add fsevents --dev
+```
+
+#### v0.3.229 测试验证
+- ✅ `cargo build`: 编译成功
+- ✅ `beejs install --help`: 命令正常显示
+- ✅ `cargo test --test minimal_tests`: 130/130 通过
+- ✅ `cargo test --test install_command_cli_tests`: 5/5 通过
+- ✅ `cargo test --test package_lock_tests`: 7/7 通过
+- ✅ `cargo test --test remove_command_tests`: 6/6 通过
+
+#### v0.3.229 代码变更
+- `src/main.rs`: 添加 Install 命令处理逻辑
+- `src/package_manager.rs`: 添加 optional_dependencies 字段，修复 latest 版本解析
+- `tests/install_command_cli_tests.rs`: 新增 CLI 测试文件
+
+#### v0.3.229 下一步
+- 添加 `beejs prune` 命令（清理未使用依赖）
+- 添加 Node.js Stream/Net API 兼容性
+- 性能优化：启动时间进一步优化
+
+---
+
 ### v0.3.228 CLI 增强 - --save-exact 和 upgrade 命令（2025-12-28）
 **进度**: 包管理器 CLI 增强 | ✅ 已完成
 
@@ -38,9 +90,9 @@ beejs upgrade lodash
 - ✅ `cargo test --test install_command_tests`: 6/6 通过
 
 #### v0.3.228 下一步
-- 实现 `beejs install` 命令（从 package.json 安装所有依赖）
+- ✅ 实现 `beejs install` 命令（从 package.json 安装所有依赖）
 - 添加 `beejs prune` 命令（清理未使用依赖）
-- 支持 optionalDependencies
+- ✅ 支持 optionalDependencies
 
 ---
 

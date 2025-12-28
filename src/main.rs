@@ -105,6 +105,8 @@ enum Command {
         /// Package name to remove
         package: String,
     },
+    /// Install dependencies from package.json
+    Install,
     /// Create new project
     Create {
         /// Template type (js/ts)
@@ -727,6 +729,71 @@ async fn main() -> Result<()> {
 
             println!("✅ Removed '{}' from {}", package, removed_from.join(", "));
             println!("💡 Run 'beejs install' to update node_modules");
+
+            return Ok(());
+        }
+        Some(Command::Install) => {
+            println!("📦 Installing dependencies from package.json...");
+
+            // Check if package.json exists
+            let package_json_path = std::path::Path::new("package.json");
+            if !package_json_path.exists() {
+                return Err(anyhow!("package.json not found in current directory. Run 'beejs init' first."));
+            }
+
+            // Read package.json
+            let content = std::fs::read_to_string(package_json_path)
+                .map_err(|e| anyhow!("Failed to read package.json: {}", e))?;
+
+            // Parse package.json
+            let package_data: serde_json::Value = serde_json::from_str(&content)
+                .map_err(|e| anyhow!("Failed to parse package.json: {}", e))?;
+
+            // Create package manager
+            let config = beejs::package_manager::PackageManagerConfig::default();
+            let pm = beejs::package_manager::PackageManager::new(config)
+                .map_err(|e| anyhow!("Failed to create package manager: {}", e))?;
+
+            // Parse package.json using PackageManager's method
+            let package_json = pm.parse_package_json(package_json_path)
+                .map_err(|e| anyhow!("Failed to parse package.json: {}", e))?;
+
+            println!("  Project: {}@{}", package_json.name, package_json.version);
+
+            // Install all dependencies
+            match pm.install_dependencies(&package_json) {
+                Ok(results) => {
+                    println!("✅ Installed {} dependencies", results.len());
+
+                    // Show installed packages
+                    for result in &results {
+                        println!("  - {}@{}", result.package.name, result.package.version);
+                    }
+
+                    // Generate/update package-lock.json
+                    let lock_path = std::path::Path::new("package-lock.json");
+                    if let Some(project_name) = package_data.get("name").and_then(|n| n.as_str()) {
+                        let project_version = package_data.get("version")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("1.0.0");
+
+                        if lock_path.exists() {
+                            // Update existing lock file
+                            pm.generate_package_lock(lock_path, project_name, project_version)?;
+                        } else {
+                            // Generate new lock file
+                            pm.generate_package_lock(lock_path, project_name, project_version)?;
+                        }
+                        println!("✅ Generated package-lock.json");
+                    }
+
+                    println!("\n📦 node_modules directory ready!");
+                    println!("💡 Run 'beejs run <script>' to execute scripts");
+                }
+                Err(e) => {
+                    return Err(anyhow!("Failed to install dependencies: {}", e));
+                }
+            }
 
             return Ok(());
         }
