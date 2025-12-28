@@ -16,6 +16,7 @@ pub mod child_process;
 pub mod dns; // v0.3.67: DNS lookup and resolve API
 pub mod require; // v0.3.54: CommonJS module loader extracted to独立模块
 pub mod tcp_async; // v0.3.71: Async TCP connection module
+pub mod process; // v0.3.237: process 对象和未捕获异常处理器
 use anyhow::Result;
 use rusty_v8 as v8;
 /// 设置所有Node.js核心API
@@ -40,6 +41,7 @@ pub fn setup_nodejs_core_apis(
     url::setup_url_api(scope, context)?;
     querystring::setup_querystring_api(scope, context)?;
     child_process::setup_child_process_api(scope, context)?;
+    process::setup_process_api(scope, context)?; // v0.3.237: process 对象
     // v0.3.54: 设置 CommonJS require 模块（必须最后设置，因为它依赖其他模块）
     require::setup_require_api(scope, context)?;
     Ok(())

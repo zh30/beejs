@@ -65,6 +65,54 @@
 
 ---
 
+### v0.3.237 process 对象和未捕获异常处理器（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.237 新增功能
+- **process 全局对象**
+  - `process.version` - Node.js 版本字符串
+  - `process.platform` - 操作系统平台 (darwin/linux/win32)
+  - `process.arch` - CPU 架构 (x64/arm64)
+  - `process.pid` / `process.ppid` - 进程 ID
+  - `process.argv` - 命令行参数数组
+  - `process.env` - 环境变量对象
+  - `process.cwd()` - 获取当前工作目录
+  - `process.exit(code)` - 退出程序
+  - `process.release.name` - 发布名称
+
+- **全局事件处理器**
+  - `process.on('uncaughtException', handler)` - 捕获未处理的同步异常
+  - `process.on('unhandledRejection', handler)` - 捕获未处理的 Promise rejection
+  - `process.off()` / `process.removeListener()` - 移除事件监听器
+
+#### v0.3.237 实现细节
+- **线程本地状态** (`src/nodejs_core/process.rs`)
+  - `UNCAUGHT_EXCEPTION_HANDLERS` - 未捕获异常处理器列表
+  - `UNHANDLED_REJECTION_HANDLERS` - 未处理 rejection 处理器列表
+  - `SHOULD_EXIT` / `EXIT_CODE` - 退出状态标记
+
+- **事件触发函数**
+  - `emit_uncaught_exception(scope, error)` - 触发未捕获异常事件
+  - `emit_unhandled_rejection(scope, reason, promise)` - 触发 rejection 事件
+  - 使用 `v8::Local::<v8::Function>::try_from()` 安全转换函数类型
+
+#### v0.3.237 代码变更
+- `src/nodejs_core/process.rs`: 新模块 (~360 行)
+- `src/nodejs_core/mod.rs`: 添加 process 模块声明和初始化
+- 新增导出函数: `emit_uncaught_exception`, `emit_unhandled_rejection`, `should_exit`, `get_exit_code`
+
+#### v0.3.237 测试验证
+- ✅ `cargo build`: 编译成功（零警告）
+- ✅ `cargo test --lib`: 234/234 测试通过
+- ✅ `cargo test --test minimal_tests`: 130/130 测试通过
+- ✅ `cargo test --test typescript_compiler_integration_tests`: 66/66 测试通过
+- ✅ `cargo test --test error_handling_tests`: 20/20 测试通过
+
+#### v0.3.237 下一步
+- 完善 process 事件的集成测试
+- 添加 process.stdout / process.stderr 支持
+- 继续完善 Node.js API 兼容性
+
 ### v0.3.233 持久化运行时实例 - 模块缓存支持（2025-12-28）
 **进度**: 运行时优化 | ✅ 已完成
 
