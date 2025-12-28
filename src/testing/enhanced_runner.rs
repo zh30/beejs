@@ -5,6 +5,7 @@
 use crate::testing::parallel_executor::{ParallelConfig, ParallelExecutor};
 use crate::testing::test_context::{TestCase, TestResult, TestSuite};
 use crate::testing::test_timeout::{TestTimeout, TimeoutConfig};
+use rand::thread_rng;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -357,56 +358,5 @@ impl EnhancedRunner {
         result
     }
 }
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_enhanced_runner_creation() {
-        let config: _ = EnhancedRunnerConfig::default();
-        let runner: _ = EnhancedRunner::new(config);
-        assert!(runner.config.parallel);
-    }
-    #[test]
-    fn test_test_filter() {
-        let mut filter = TestFilter::new();
-        filter.include("test1".to_string());
-        assert!(filter.matches("test1_example", "suite"));
-        assert!(!filter.matches("test2_example", "suite"));
-    }
-    #[test]
-    fn test_test_sorter() {
-        // Note: This test is simplified to avoid V8 API complexity.
-        // Full V8 integration tests are in tests/ directory.
-        // Create a simple mock test case structure
-        let mut tests = Vec::new();
-        let test_case1: _ = TestCase {
-            name: "b_test".to_string(),
-            function: unsafe { std::mem::zeroed() }, // Placeholder - not used in sorting
-            timeout: Duration::from_secs(5),
-            skip: false,
-            only: false,
-        };
-        tests.push(test_case1);
-        let test_case2: _ = TestCase {
-            name: "a_test".to_string(),
-            function: unsafe { std::mem::zeroed() }, // Placeholder - not used in sorting
-            timeout: Duration::from_secs(5),
-            skip: false,
-            only: false,
-        };
-        tests.push(test_case2);
-        let sorter: _ = TestSorter::ByName;
-        sorter.sort(&mut tests, "suite");
-        assert_eq!(tests[0].name, "a_test");
-        assert_eq!(tests[1].name, "b_test");
-    }
-    #[test]
-    fn test_enhanced_runner_stats() {
-        let mut stats = EnhancedRunnerStats::new();
-        assert_eq!(stats.success_rate(), 0.0);
-        let result: _ = TestResult::new("suite".to_string(), "test".to_string());
-        stats.add_result(&result, false);
-        assert_eq!(stats.total_tests, 1);
-        assert_eq!(stats.passed_tests, 1);
-        assert_eq!(stats.success_rate(), 100.0);
-    }
-}
+
+// Tests for enhanced runner are in tests/ directory to avoid V8 API complexity

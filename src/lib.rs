@@ -128,7 +128,7 @@ pub mod typescript;  // v0.3.102: TypeScript 转译支持
 // pub mod stage_48_optimized_process_pool;
 // pub mod stage_48_ai_workload_optimizer;
 // Stage 56.4: Testing Framework
-// pub mod testing;  // Temporarily disabled - compilation issues
+pub mod testing;  // v0.3.251: Testing framework enabled
 // 重新导出 REPL 相关类型
 // pub use repl::{Repl, ReplConfig};  // Temporarily disabled
 // 重新导出 WebAssembly 相关类型

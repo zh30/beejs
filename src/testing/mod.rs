@@ -17,6 +17,7 @@ pub mod assertions;
 pub mod test_runner;
 pub mod test_discoverer;
 pub mod v8_bindings;
+pub mod v8_test_executor; // v0.3.251: V8 test execution support
 // Stage 93 Phase 3.3 - Enhanced features
 pub mod enhanced_runner;
 pub mod parallel_executor;
@@ -24,6 +25,7 @@ pub mod test_timeout;
 
 pub use v8_bindings::*;
 pub use test_context::TestSuite;
+pub use v8_test_executor::V8TestExecutor;
 pub use enhanced_runner::{EnhancedRunner, EnhancedRunnerConfig};
 pub use parallel_executor::{ParallelExecutor, ParallelConfig};
 pub use test_timeout::{TestTimeout, TimeoutConfig};

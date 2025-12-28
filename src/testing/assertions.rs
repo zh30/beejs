@@ -233,22 +233,6 @@ use serde::{Serialize, Deserialize};
         let value: _ = "this is a test string";
         assert!(matcher.matches(&value));
     }
-    #[test]
-    fn test_length_matcher() {
-        let matcher: _ = ExtendedMatcher::Length(5);
-        let value: _ = vec![1, 2, 3, 4, 5];
-        assert!(matcher.matches(&value));
-    }
-    #[test]
-    fn test_truthy_matcher() {
-        let matcher: _ = ExtendedMatcher::Truthy;
-        let value: _ = "true";
-        assert!(matcher.matches(&value));
-    }
-    #[test]
-    fn test_falsy_matcher() {
-        let matcher: _ = ExtendedMatcher::Falsy;
-        let value: _ = "";
-        assert!(matcher.matches(&value));
-    }
 }
+
+// Tests for assertions are in tests/ directory

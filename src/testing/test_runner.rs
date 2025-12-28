@@ -1,7 +1,11 @@
 // Test Runner
 // Executes test suites and collects results
+//
+// v0.3.251: Enhanced to use V8TestExecutor for actual JS test execution
 
 use crate::testing::test_context::{TestCase, TestResult, TestSuite};
+use crate::testing::v8_test_executor::V8TestExecutor;
+use rusty_v8 as v8;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -57,18 +61,27 @@ impl TestRunnerStats {
     }
 }
 /// Test runner
+/// v0.3.251: Uses V8TestExecutor for actual JS test execution
 pub struct TestRunner {
     pub config: TestRunnerConfig,
+    executor: V8TestExecutor, // v0.3.251: V8 executor for running tests
 }
+
 impl TestRunner {
     pub fn new(config: TestRunnerConfig) -> Self {
-        TestRunner { config }
+        TestRunner {
+            config,
+            executor: V8TestExecutor::new(),
+        }
     }
-    /// Run a single test case
+    /// Run a single test case using V8 executor
+    /// v0.3.251: Now actually executes the JS test function
     pub fn run_test(
-        &self,
+        &mut self,
         suite_name: &str,
         test: &TestCase,
+        before_each: Option<&[v8::Global<v8::Function>]>,
+        after_each: Option<&[v8::Global<v8::Function>]>,
     ) -> TestResult {
         let start: _ = Instant::now();
         let mut result = TestResult::new(suite_name.to_string(), test.name.clone());
@@ -78,26 +91,32 @@ impl TestRunner {
             result.duration = duration;
             return result;
         }
-        // TODO: Execute the actual test function using V8
-        // For now, we'll just simulate execution
-        let duration: _ = start.elapsed();
-        result.duration = duration;
+        // v0.3.251: Execute test using V8
+        result = self.executor.execute_test(suite_name, test, before_each, after_each);
         result
     }
     /// Run a test suite
     pub fn run_suite(
-        &self,
+        &mut self,
         suite: &TestSuite,
         stats: Arc<Mutex<TestRunnerStats>>,
     ) -> Vec<TestResult> {
         let mut results = Vec::new();
-        // Run beforeAll hook if present
+        // Run beforeAll hook if present (using V8 executor)
         if let Some(before_all) = &suite.before_all {
-            // TODO: Execute beforeAll hook
+            // Execute beforeAll in V8
+            let isolate = v8::Isolate::new();
+            let mut scope = v8::HandleScope::new(&mut isolate);
+            let context = v8::Context::new(&mut scope);
+            let scope = &mut v8::ContextScope::new(&mut scope, context);
+
+            let hook_fn = v8::Local::new(scope, before_all);
+            let undefined = v8::undefined(scope);
+            let _ = hook_fn.call(scope, undefined.into(), &[]);
         }
         // Run tests in the suite
         for test in &suite.tests {
-            let result: _ = self.run_test(&suite.name, test);
+            let result = self.run_test(&suite.name, test, Some(&suite.before_each), Some(&suite.after_each));
             {
                 let mut locked_stats = stats.lock().unwrap();
                 locked_stats.add_result(&result);
@@ -109,15 +128,22 @@ impl TestRunner {
             }
             results.push(result);
         }
-        // Run afterAll hook if present
+        // Run afterAll hook if present (using V8 executor)
         if let Some(after_all) = &suite.after_all {
-            // TODO: Execute afterAll hook
+            let isolate = v8::Isolate::new();
+            let mut scope = v8::HandleScope::new(&mut isolate);
+            let context = v8::Context::new(&mut scope);
+            let scope = &mut v8::ContextScope::new(&mut scope, context);
+
+            let hook_fn = v8::Local::new(scope, after_all);
+            let undefined = v8::undefined(scope);
+            let _ = hook_fn.call(scope, undefined.into(), &[]);
         }
         results
     }
     /// Run multiple test suites
     pub fn run_suites(
-        &self,
+        &mut self,
         suites: Vec<TestSuite>,
     ) -> (Vec<TestResult>, TestRunnerStats) {
         let stats = Arc::new(Mutex::new(TestRunnerStats::new()));

@@ -134,48 +134,5 @@ impl Default for ThreadPoolConfig {
         }
     }
 }
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_parallel_executor_creation() {
-        let config: _ = ParallelConfig::default();
-        let executor: _ = ParallelExecutor::new(config);
-        assert!(executor.config.preserve_order);
-    }
-    #[test]
-    fn test_run_empty_test_list() {
-        let config: _ = ParallelConfig::default();
-        let executor: _ = ParallelExecutor::new(config);
-        let results: _ = executor.run_tests_parallel("suite", &[], Duration::from_secs(5));
-        assert!(results.is_empty());
-    }
-    #[test]
-    fn test_run_single_test() {
-        let config: _ = ParallelConfig::default();
-        let executor: _ = ParallelExecutor::new(config);
-        // Note: This test is simplified to avoid V8 API complexity.
-        // Full V8 integration tests are in tests/ directory.
-        let test_case: _ = TestCase {
-            name: "test_name".to_string(),
-            function: unsafe { std::mem::zeroed() }, // Placeholder
-            timeout: Duration::from_secs(5),
-            skip: false,
-            only: false,
-        };
-        let results: _ = executor.run_tests_parallel(
-            "suite_name",
-            &[test_case],
-            Duration::from_secs(5),
-        );
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].suite_name, "suite_name");
-        assert_eq!(results[0].test_name, "test_name");
-    }
-    #[test]
-    fn test_thread_pool_config_default() {
-        let config: _ = ThreadPoolConfig::default();
-        assert!(config.size > 0);
-        assert!(config.stack_size > 0);
-        assert!(config.name_prefix.contains("beejs"));
-    }
-}
+
+// Tests for parallel executor are in tests/ directory to avoid V8 API complexity

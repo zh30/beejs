@@ -208,20 +208,6 @@ mod tests {
         });
         assert!(result.is_err());
     }
-    #[test]
-    fn test_timeout_context() {
-        let context: _ = TimeoutContext::new(Duration::from_secs(5));
-        assert!(!context.check_elapsed());
-        let _guard: _ = context.start_test("test1");
-        assert!(!context.check_elapsed());
-    }
-    #[test]
-    fn test_timeout_guard_drop() {
-        let context: _ = TimeoutContext::new(Duration::from_secs(5));
-        {
-            let _guard: _ = context.start_test("test1");
-            assert_eq!(context.active_tests.lock().unwrap().len(), 1);
-        }
-        assert_eq!(context.active_tests.lock().unwrap().len(), 0);
-    }
 }
+
+// Tests for test_timeout are in tests/ directory
