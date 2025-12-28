@@ -3,16 +3,15 @@
 // v0.3.247: 添加异步定时器调度支持 (setTimeout/setInterval/setImmediate)
 // v0.3.248: 使用 fired timer 队列简化架构
 
-use rusty_v8 as v8;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
-use tokio::time::{timeout, sleep};
-use once_cell::sync::Lazy;
-use std::collections::HashMap;
-use std::sync::Arc;
 use std::thread;
 use std::sync::atomic::{AtomicU64, Ordering};
+use once_cell::sync::Lazy;
+use std::collections::HashMap;
 use tokio::sync::mpsc;
+use tokio::time::{timeout, sleep};
+use rusty_v8 as v8;
 
 /// 事件循环状态
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -224,7 +223,7 @@ impl V8EventLoop {
 }
 
 // v0.3.247: 异步定时器调度器（纯 tokio 异步实现）
-// v0.3.248: 使用 fired timer 队列简化架构
+// v0.3.249: 添加 fired timer 通知通道，支持 V8 主线程轮询执行回调
 // ============================================================
 
 /// 定时器命令（用于与工作线程通信）
@@ -245,12 +244,18 @@ pub struct AsyncTimerManager {
     _worker_thread: std::thread::JoinHandle<()>,
     // 下一个定时器 ID（本地缓存，用于立即返回）
     next_timer_id: AtomicU64,
+    // Fired 定时器队列（使用 Arc<RwLock> 实现线程安全共享）
+    // 工作线程写入，主线程读取
+    fired_timers: Arc<RwLock<Vec<u64>>>,
 }
 
 impl AsyncTimerManager {
     /// 创建新的定时器管理器
     pub fn new() -> Self {
         let (cmd_tx, mut cmd_rx) = mpsc::channel::<TimerCommand>(100);
+        // 创建 fired 定时器队列（共享状态）
+        let fired_timers = Arc::new(RwLock::new(Vec::new()));
+        let fired_timers_clone = fired_timers.clone();
 
         // 创建工作线程
         let worker_thread = thread::spawn(move || {
@@ -265,11 +270,15 @@ impl AsyncTimerManager {
                     tokio::select! {
                         _ = interval.tick() => {
                             let now = Instant::now();
+                            let mut fired_ids = Vec::new();
                             let mut to_reschedule = Vec::new();
                             let mut to_remove = Vec::new();
 
                             for (id, (scheduled_time, delay, remaining)) in &scheduled_timers {
                                 if *scheduled_time <= now {
+                                    // 记录触发的定时器
+                                    fired_ids.push(*id);
+
                                     if *remaining > 1 {
                                         // 重复定时器，准备重新调度
                                         to_reschedule.push((*id, *delay, *remaining - 1));
@@ -278,6 +287,12 @@ impl AsyncTimerManager {
                                         to_remove.push(*id);
                                     }
                                 }
+                            }
+
+                            // 更新 fired 定时器队列
+                            if !fired_ids.is_empty() {
+                                let mut fired = fired_timers_clone.write().unwrap();
+                                fired.extend(fired_ids);
                             }
 
                             // 移除到期的非重复定时器
@@ -328,6 +343,7 @@ impl AsyncTimerManager {
             cmd_tx,
             _worker_thread: worker_thread,
             next_timer_id: AtomicU64::new(1),
+            fired_timers,
         }
     }
 
@@ -380,6 +396,21 @@ impl AsyncTimerManager {
     pub fn shutdown(&self) {
         let _ = self.cmd_tx.try_send(TimerCommand::Shutdown);
     }
+
+    /// v0.3.249: 轮询并获取已触发的定时器 ID 列表
+    /// 供 V8 主线程调用，返回自上次轮询以来触发的所有定时器 ID
+    pub fn poll_fired_timers(&self) -> Vec<u64> {
+        let mut fired = self.fired_timers.write().unwrap();
+        let ids = fired.clone();
+        fired.clear();
+        ids
+    }
+
+    /// v0.3.249: 获取 fired 定时器数量（不清除）
+    pub fn has_fired_timers(&self) -> bool {
+        let fired = self.fired_timers.read().unwrap();
+        !fired.is_empty()
+    }
 }
 
 impl Drop for AsyncTimerManager {
@@ -410,7 +441,7 @@ pub async fn async_sleep(delay: Duration) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::atomic::AtomicUsize;
     use std::time::Duration;
 
     #[tokio::test]
@@ -461,7 +492,7 @@ mod tests {
 
         // 验证取消后再取消可能返回 true（因为命令已被处理）
         // 这是异步系统的预期行为
-        let cancelled_again = manager.cancel(id);
+        let _cancelled_again = manager.cancel(id);
         // 注意：由于异步性质，第二次取消也可能返回 true
         // 关键是验证定时器确实被取消了（通过安排新定时器）
     }
@@ -483,7 +514,7 @@ mod tests {
         assert!(id > 0, "Should be able to schedule after clear");
 
         // 验证取消已清除的定时器返回 false
-        let cancelled = manager.cancel(id);
+        let _cancelled = manager.cancel(id);
         // 注意：清除后立即取消可能返回 true 或 false，取决于时序
     }
 

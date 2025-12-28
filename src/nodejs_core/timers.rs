@@ -1,4 +1,5 @@
 // v0.3.248: Timer API implementation with async scheduling
+// v0.3.249: 添加回调存储和执行机制
 // Implements setTimeout, setInterval, setImmediate and their clear counterparts
 // Uses AsyncTimerManager for delay > 0 scheduling
 // Architecture: static timer ID storage to avoid V8 closure size limits
@@ -31,6 +32,45 @@ pub struct TimerMetadata {
 /// Global timer metadata registry (thread-safe, no V8 handles)
 static TIMER_METADATA: Lazy<Mutex<HashMap<u64, TimerMetadata>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
+
+/// Timer callback storage - V8 Global handles (only accessed from V8 main thread)
+/// Wrapped in a struct to allow unsafe Send/Sync (only used on main thread)
+pub struct TimerCallbackStorage {
+    callbacks: HashMap<u64, v8::Global<v8::Function>>,
+    args: HashMap<u64, Vec<v8::Global<v8::Value>>>,
+}
+
+impl TimerCallbackStorage {
+    fn new() -> Self {
+        Self {
+            callbacks: HashMap::new(),
+            args: HashMap::new(),
+        }
+    }
+
+    fn insert(&mut self, timer_id: u64, callback: v8::Global<v8::Function>, args: Vec<v8::Global<v8::Value>>) {
+        self.callbacks.insert(timer_id, callback);
+        self.args.insert(timer_id, args);
+    }
+
+    fn remove(&mut self, timer_id: u64) -> Option<(v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)> {
+        if let Some(callback) = self.callbacks.remove(&timer_id) {
+            let args = self.args.remove(&timer_id).unwrap_or_default();
+            Some((callback, args))
+        } else {
+            None
+        }
+    }
+}
+
+// SAFETY: TimerCallbackStorage is only ever accessed from the V8 main thread
+// where the isolate is running. This is guaranteed by the design of the runtime.
+unsafe impl Send for TimerCallbackStorage {}
+unsafe impl Sync for TimerCallbackStorage {}
+
+/// Global timer callback registry (only accessed from V8 main thread)
+static TIMER_CALLBACKS: Lazy<Mutex<TimerCallbackStorage>> =
+    Lazy::new(|| Mutex::new(TimerCallbackStorage::new()));
 
 /// Next timer ID counter (shared, thread-safe)
 static NEXT_TIMER_ID: AtomicU64 = AtomicU64::new(1);
@@ -89,24 +129,44 @@ pub fn setup_timers_api(
         // Get timer ID
         let timer_id = get_next_timer_id();
 
-        // Store metadata in global registry
-        let mut metadata = TIMER_METADATA.lock().unwrap();
-        metadata.insert(timer_id, TimerMetadata {
-            timer_type: TimerType::Timeout,
-            delay,
-            is_unrefed: false,
-        });
-
         // For delay = 0, execute callback immediately
         if delay == 0 {
+            // Store metadata
+            let mut metadata = TIMER_METADATA.lock().unwrap();
+            metadata.insert(timer_id, TimerMetadata {
+                timer_type: TimerType::Timeout,
+                delay,
+                is_unrefed: false,
+            });
             drop(metadata);
+
+            // Execute immediately
             let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
             let undefined = v8::undefined(scope);
             let _ = callback_fn.call(scope, undefined.into(), &callback_args);
         } else {
-            // v0.3.248: Schedule with AsyncTimerManager
+            // v0.3.249: Store callback in global registry before scheduling
+            // Convert callback to Global<Function> and store with arguments
+            let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
+            let callback_global = v8::Global::new(scope, callback_fn);
+            let args_global: Vec<v8::Global<v8::Value>> = callback_args
+                .iter()
+                .map(|v| v8::Global::new(scope, v.clone()))
+                .collect();
+
+            // Store metadata
+            let mut metadata = TIMER_METADATA.lock().unwrap();
+            metadata.insert(timer_id, TimerMetadata {
+                timer_type: TimerType::Timeout,
+                delay,
+                is_unrefed: false,
+            });
             drop(metadata);
-            // Get timer_manager from global (avoid closure capture)
+
+            // Store callback and args in global registry
+            store_timer_callback(timer_id, callback_global, args_global);
+
+            // Schedule with AsyncTimerManager (no callback needed - we'll poll for fired timers)
             get_async_timer_manager().schedule_timeout(Duration::from_millis(delay), || {});
         }
 
@@ -139,19 +199,43 @@ pub fn setup_timers_api(
         // Get timer ID
         let timer_id = get_next_timer_id();
 
-        // Store metadata in global registry
-        let mut metadata = TIMER_METADATA.lock().unwrap();
-        metadata.insert(timer_id, TimerMetadata {
-            timer_type: TimerType::Interval,
-            delay,
-            is_unrefed: false,
-        });
-
-        // v0.3.248: Schedule with AsyncTimerManager if delay > 0
+        // v0.3.249: For delay > 0, store callback in global registry
         if delay > 0 {
+            // Collect arguments for the callback
+            let callback_args: Vec<v8::Local<v8::Value>> = (2..args.length())
+                .map(|i| args.get(i))
+                .collect();
+
+            // Convert callback to Global<Function> and store with arguments
+            let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
+            let callback_global = v8::Global::new(scope, callback_fn);
+            let args_global: Vec<v8::Global<v8::Value>> = callback_args
+                .iter()
+                .map(|v| v8::Global::new(scope, v.clone()))
+                .collect();
+
+            // Store metadata
+            let mut metadata = TIMER_METADATA.lock().unwrap();
+            metadata.insert(timer_id, TimerMetadata {
+                timer_type: TimerType::Interval,
+                delay,
+                is_unrefed: false,
+            });
             drop(metadata);
-            // Get timer_manager from global (avoid closure capture)
+
+            // Store callback and args in global registry
+            store_timer_callback(timer_id, callback_global, args_global);
+
+            // Schedule with AsyncTimerManager
             get_async_timer_manager().schedule_interval(Duration::from_millis(delay), 0, || {});
+        } else {
+            // Store metadata for delay = 0 (edge case - should execute immediately)
+            let mut metadata = TIMER_METADATA.lock().unwrap();
+            metadata.insert(timer_id, TimerMetadata {
+                timer_type: TimerType::Interval,
+                delay,
+                is_unrefed: false,
+            });
         }
 
         // Return timer ID
@@ -250,6 +334,70 @@ pub fn clear_all_timers() {
 /// v0.3.248: Clear all timers in AsyncTimerManager as well
 pub fn clear_all_async_timers() {
     get_async_timer_manager().clear();
+}
+
+/// v0.3.249: Store timer callback in global registry
+/// Must be called from V8 main thread (where isolate is available)
+pub fn store_timer_callback(
+    timer_id: u64,
+    callback: v8::Global<v8::Function>,
+    args: Vec<v8::Global<v8::Value>>,
+) {
+    let mut storage = TIMER_CALLBACKS.lock().unwrap();
+    storage.insert(timer_id, callback, args);
+}
+
+/// v0.3.249: Get and remove timer callback from registry
+/// Returns None if timer_id not found or already executed
+pub fn take_timer_callback(
+    timer_id: u64,
+) -> Option<(v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)> {
+    let mut storage = TIMER_CALLBACKS.lock().unwrap();
+    storage.remove(timer_id)
+}
+
+/// v0.3.249: Execute a fired timer callback
+/// Must be called from V8 main thread with valid isolate scope
+pub fn execute_timer_callback(
+    scope: &mut v8::HandleScope,
+    timer_id: u64,
+) -> bool {
+    if let Some((callback, args)) = take_timer_callback(timer_id) {
+        let callback = v8::Local::<v8::Function>::new(scope, callback);
+
+        // Convert stored args back to Local
+        let args: Vec<v8::Local<v8::Value>> = args
+            .into_iter()
+            .map(|arg| v8::Local::new(scope, arg))
+            .collect();
+
+        let undefined = v8::undefined(scope);
+        let result = callback.call(scope, undefined.into(), &args);
+
+        // Remove from metadata (for non-interval timers)
+        let metadata = TIMER_METADATA.lock().unwrap();
+        if let Some(meta) = metadata.get(&timer_id) {
+            if meta.timer_type != TimerType::Interval {
+                drop(metadata);
+                remove_timer_metadata(timer_id);
+            }
+        }
+
+        result.is_some()
+    } else {
+        false
+    }
+}
+
+/// v0.3.249: Execute all fired timer callbacks
+/// Called from V8 main thread event loop
+pub fn execute_fired_timers(scope: &mut v8::HandleScope) {
+    let timer_manager = get_async_timer_manager();
+    let fired_timers = timer_manager.poll_fired_timers();
+
+    for timer_id in fired_timers {
+        let _ = execute_timer_callback(scope, timer_id);
+    }
 }
 
 #[cfg(test)]
