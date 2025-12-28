@@ -94,6 +94,11 @@ enum Command {
         /// Package name
         package: String,
     },
+    /// Remove dependency package
+    Remove {
+        /// Package name to remove
+        package: String,
+    },
     /// Create new project
     Create {
         /// Template type (js/ts)
@@ -551,6 +556,67 @@ async fn main() -> Result<()> {
             println!("📦 Adding dependency: {}", package);
             println!("⚠️  Package manager feature is under development...");
             println!("💡 Tip: Manually edit package.json to add dependencies");
+            return Ok(());
+        }
+        Some(Command::Remove { package }) => {
+            println!("🗑️  Removing dependency: {}", package);
+
+            // Check if package.json exists
+            let package_json_path = std::path::Path::new("package.json");
+            if !package_json_path.exists() {
+                return Err(anyhow!("package.json not found in current directory"));
+            }
+
+            // Read package.json
+            let content = std::fs::read_to_string(package_json_path)
+                .map_err(|e| anyhow!("Failed to read package.json: {}", e))?;
+
+            // Parse JSON
+            let mut package_data: serde_json::Value = serde_json::from_str(&content)
+                .map_err(|e| anyhow!("Failed to parse package.json: {}", e))?;
+
+            // Track what was removed
+            let mut removed_from = Vec::new();
+
+            // Remove from dependencies
+            if let Some(deps) = package_data.get_mut("dependencies") {
+                if deps.is_object() && deps.get(&package).is_some() {
+                    deps.as_object_mut().unwrap().remove(&package);
+                    removed_from.push("dependencies");
+                }
+            }
+
+            // Remove from devDependencies
+            if let Some(dev_deps) = package_data.get_mut("devDependencies") {
+                if dev_deps.is_object() && dev_deps.get(&package).is_some() {
+                    dev_deps.as_object_mut().unwrap().remove(&package);
+                    removed_from.push("devDependencies");
+                }
+            }
+
+            // Remove from optionalDependencies
+            if let Some(optional_deps) = package_data.get_mut("optionalDependencies") {
+                if optional_deps.is_object() && optional_deps.get(&package).is_some() {
+                    optional_deps.as_object_mut().unwrap().remove(&package);
+                    removed_from.push("optionalDependencies");
+                }
+            }
+
+            if removed_from.is_empty() {
+                println!("⚠️  Package '{}' not found in package.json", package);
+                println!("💡 Tip: Check if the package is listed in dependencies");
+                return Ok(());
+            }
+
+            // Write updated package.json
+            let updated_content = serde_json::to_string_pretty(&package_data)
+                .map_err(|e| anyhow!("Failed to serialize package.json: {}", e))?;
+            std::fs::write(package_json_path, updated_content)
+                .map_err(|e| anyhow!("Failed to write package.json: {}", e))?;
+
+            println!("✅ Removed '{}' from {}", package, removed_from.join(", "));
+            println!("💡 Run 'beejs install' to update node_modules");
+
             return Ok(());
         }
         Some(Command::Create { template, name }) => {
