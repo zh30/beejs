@@ -1,3 +1,51 @@
+### v0.3.255 增强 Console API（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.255 新增功能
+- **console.table**: 格式化数组和对象为 ASCII 表格输出
+  - 支持对象数组的表格展示
+  - 支持简单数组的索引-值表格
+  - 支持普通对象的键值对表格
+  - 优雅的处理 Map 和 Set 类型
+
+- **console.time/timeEnd**: 计时器功能
+  - `console.time(label)`: 启动计时器
+  - `console.timeEnd(label)`: 结束计时器并输出耗时
+
+- **console.count/countReset**: 计数器功能
+  - `console.count(label)`: 输出计数器值
+  - `console.countReset(label)`: 重置计数器
+
+- **console.group/groupEnd**: 分组输出
+  - `console.group(label)`: 开始分组
+  - `console.groupEnd()`: 结束分组
+
+- **console.trace**: 堆栈跟踪
+  - 输出调用堆栈信息
+
+- **console.assert**: 断言功能
+  - 条件为 false 时输出错误消息
+
+- **console.dir**: 对象格式化输出
+  - 以 JSON 格式输出对象属性
+
+#### v0.3.255 测试结果
+- ✅ 15/15 console_enhanced_tests 测试通过
+- ✅ 248/248 cargo test --lib 测试通过
+- ✅ 所有新的 console API 正常工作
+
+#### v0.3.255 代码变更
+- `src/lib.rs`: 添加 11 个新的 console 回调函数 (~250 行)
+- `src/runtime_minimal.rs`: 在 setup_console 中注册新 API (~60 行)
+- `tests/console_enhanced_tests.rs`: 新建完整测试套件 (~275 行)
+
+#### v0.3.255 下一步
+- 完善 console.table 的列选择功能
+- 实现 console.timeEnd 的真实计时
+- 添加更多 console 变体（console.table 有columns 参数）
+
+---
+
 ### v0.3.249 V8 主线程定时器回调执行机制（2025-12-29）
 **进度**: Node.js 兼容性 | ✅ 已完成
 
