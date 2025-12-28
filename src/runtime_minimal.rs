@@ -1255,6 +1255,113 @@ impl MinimalRuntime {
         Ok(Self { isolate, context: None })
     }
 
+    /// v0.3.234: 预热内置对象以优化启动时间
+    /// 通过预先执行常见的 JavaScript 操作，触发 V8 的 JIT 编译优化
+    /// 后续代码执行时可以直接使用优化后的机器码
+    pub fn warmup(&mut self) -> Result<()> {
+        let scope = &mut v8::HandleScope::new(&mut self.isolate);
+        let context = v8::Context::new(scope);
+        let context_scope = &mut v8::ContextScope::new(scope, context);
+
+        // 辅助闭包：执行预热代码
+        let run_warmup = |scope: &mut v8::ContextScope<'_, v8::HandleScope<'_>>, code: &str| {
+            let source = v8::String::new(scope, code).unwrap();
+            if let Some(script) = v8::Script::compile(scope, source, None) {
+                let _ = script.run(scope);
+            }
+        };
+
+        // 预热 Object.prototype
+        run_warmup(context_scope, r#"
+            (function() {
+                const obj = {};
+                obj.toString();
+                obj.valueOf();
+                obj.hasOwnProperty('test');
+                Object.prototype.toString;
+                Object.prototype.valueOf;
+                Object.prototype.hasOwnProperty;
+            })();
+        "#);
+
+        // 预热 Array.prototype
+        run_warmup(context_scope, r#"
+            (function() {
+                const arr = [1, 2, 3, 4, 5];
+                arr.push(6);
+                arr.pop();
+                arr.slice(0, 2);
+                arr.map(x => x * 2);
+                arr.filter(x => x > 2);
+                arr.reduce((a, b) => a + b, 0);
+            })();
+        "#);
+
+        // 预热 Function.prototype
+        run_warmup(context_scope, r#"
+            (function() {
+                function testFn() {}
+                testFn.toString();
+                testFn.call(null);
+                testFn.apply(null, []);
+                testFn.bind(null);
+            })();
+        "#);
+
+        // 预热 String.prototype
+        run_warmup(context_scope, r#"
+            (function() {
+                const str = "hello world";
+                str.length;
+                str.toUpperCase();
+                str.toLowerCase();
+                str.split(' ');
+            })();
+        "#);
+
+        // 预热 Symbol 和 BigInt
+        run_warmup(context_scope, r#"
+            (function() {
+                const sym = Symbol('test');
+                sym.toString();
+                Symbol.iterator;
+            })();
+        "#);
+
+        // 预热 Promise
+        run_warmup(context_scope, r#"
+            (function() {
+                const p = Promise.resolve(42);
+                p.then(v => v);
+                Promise.resolve;
+                Promise.all;
+            })();
+        "#);
+
+        // 预热 Map 和 Set
+        run_warmup(context_scope, r#"
+            (function() {
+                const map = new Map([['a', 1]]);
+                map.set('b', 2);
+                map.get('a');
+                map.has('b');
+                const set = new Set([1, 2, 3]);
+                set.add(4);
+                set.has(2);
+            })();
+        "#);
+
+        // 预热 JSON
+        run_warmup(context_scope, r#"
+            (function() {
+                JSON.parse('{"test": 123}');
+                JSON.stringify({test: 123});
+            })();
+        "#);
+
+        Ok(())
+    }
+
     /// 获取或创建 V8 Context
     /// v0.3.93: 确保 Context 存在且可被复用
     fn get_context(&mut self) -> v8::Global<v8::Context> {

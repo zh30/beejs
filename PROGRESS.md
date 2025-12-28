@@ -1,3 +1,57 @@
+### v0.3.233 持久化运行时实例 - 模块缓存支持（2025-12-28）
+**进度**: 运行时优化 | ✅ 已完成
+
+#### v0.3.233 新增功能
+- **持久化运行时实例**
+  - `Runtime` 结构体内部持有 `MinimalRuntime` 实例
+  - 多次调用 `execute_code()` 复用同一个 V8 Isolate
+  - 支持模块缓存，函数定义跨调用保持
+  - 支持循环依赖的正确处理
+
+- **ecosystem_lite 模块重新启用**
+  - 为包管理器测试提供支持
+  - 修复编译警告实现零警告编译
+
+#### v0.3.233 实现细节
+- **Runtime 结构体增强** (`src/lib.rs`)
+  ```rust
+  pub struct Runtime {
+      config: PerformanceConfig,
+      _verbose: bool,
+      /// 持久化的运行时实例，用于保持模块缓存
+      lite_runtime: std::cell::RefCell<Option<MinimalRuntime>>,
+  }
+  ```
+
+- **execute_code 复用机制**
+  - 使用 `RefCell::get_or_insert_with()` 延迟初始化
+  - 首次执行时创建 MinimalRuntime，后续调用复用
+
+#### v0.3.233 测试验证
+- ✅ `cargo build`: 编译成功（零警告）
+- ✅ `test_runtime_persists_minimal_runtime`: 运行时实例正确复用
+- ✅ `test_module_cache_persists_across_executions`: 模块缓存跨调用保持
+- ✅ `test_multiple_executions_same_runtime`: 10 次连续执行正常
+- ✅ `test_different_runtime_instances_are_independent`: 实例间状态隔离
+- ✅ `test_persistent_runtime_typescript_support`: TypeScript 语法支持
+- ✅ `test_persistent_runtime_nodejs_api`: Node.js API 正常工作
+- ✅ `test_execute_file_reuses_runtime`: 文件执行复用运行时
+- ✅ `test_fast_mode_runtime_persistence`: 快速模式持久化正常
+- ✅ `test_error_isolation_in_persistent_runtime`: 错误隔离正常
+- ✅ `test_global_state_management`: 全局状态管理正常
+
+#### v0.3.233 代码变更
+- `src/lib.rs`: Runtime 结构体添加 `lite_runtime` 字段，优化 `execute_code()` 和 `execute_file()`
+- `src/ecosystem_lite.rs`: 消除编译警告
+- `tests/persistent_runtime_tests.rs`: 新增 14 个测试用例
+
+#### v0.3.233 下一步
+- 实现 V8 快照预热进一步优化启动时间
+- 添加更多 Node.js API 兼容性（Stream/Net API 修复）
+- 完善错误处理和边界情况
+
+---
+
 ### v0.3.231 启动时间优化 - 快速启动模式（2025-12-28）
 **进度**: 性能优化 | ✅ 已完成
 
