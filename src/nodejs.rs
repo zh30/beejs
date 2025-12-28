@@ -616,10 +616,14 @@ fn resolve_module_path(scope: &mut v8::HandleScope, module_name: &str) -> Result
     // Get current file's directory from __filename
     let filename_key: _ = v8::String::new(scope, "__filename").unwrap();
     let current_file: _ = if let Some(filename) = global.get(scope, filename_key.into()) {
-        filename
-            .to_string(scope)
-            .map(|s| s.to_rust_string_lossy(scope))
-            .unwrap_or_default()
+        if filename.is_undefined() || filename.is_null() {
+            String::new()
+        } else {
+            filename
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default()
+        }
     } else {
         String::new()
     };
@@ -632,10 +636,14 @@ fn resolve_module_path(scope: &mut v8::HandleScope, module_name: &str) -> Result
         // Fallback to __dirname
         let dirname_key: _ = v8::String::new(scope, "__dirname").unwrap();
         if let Some(dirname) = global.get(scope, dirname_key.into()) {
-            let dirname_str: _ = dirname
-                .to_string(scope)
-                .map(|s| s.to_rust_string_lossy(scope))
-                .unwrap_or_default();
+            let dirname_str: _ = if dirname.is_undefined() || dirname.is_null() {
+                String::new()
+            } else {
+                dirname
+                    .to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_default()
+            };
             if !dirname_str.is_empty() {
                 PathBuf::from(dirname_str)
             } else {

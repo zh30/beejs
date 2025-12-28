@@ -11064,13 +11064,35 @@ impl MinimalRuntime {
                         return;
                     }
                     _ => {
-                        // Check if module_id is a file path (absolute or relative path)
-                        let module_path = std::path::Path::new(&module_id_str);
+                        // First, try to get __dirname from global context for relative path resolution
+                        let context = scope.get_current_context();
+                        let global = context.global(scope);
+                        let dirname_key = v8::String::new(scope, "__dirname").unwrap();
+                        let current_dirname = global.get(scope, dirname_key.into())
+                            .and_then(|v| v.to_string(scope))
+                            .map(|s| s.to_rust_string_lossy(scope))
+                            .unwrap_or_else(|| String::from("."));
+
+                        // Resolve relative paths using __dirname as base
+                        let resolved_path = if module_id_str.starts_with("./") || module_id_str.starts_with("../") {
+                            let base_dir = std::path::Path::new(&current_dirname);
+                            let trimmed = module_id_str.trim_start_matches("./");
+                            base_dir.join(trimmed)
+                        } else {
+                            std::path::Path::new(&module_id_str).to_path_buf()
+                        };
+
+                        // Try with .js extension if no extension
+                        let module_path = if resolved_path.extension().is_none() {
+                            resolved_path.with_extension("js")
+                        } else {
+                            resolved_path
+                        };
 
                         // Try to resolve as file path
                         if module_path.exists() && module_path.is_file() {
                             // Read and execute the module file
-                            match std::fs::read_to_string(module_path) {
+                            match std::fs::read_to_string(&module_path) {
                                 Ok(code) => {
                                     // Create new module and exports objects for this module
                                     let module_obj = v8::Object::new(scope);
@@ -11085,7 +11107,6 @@ impl MinimalRuntime {
                                     let module_filename = module_path.to_string_lossy().to_string();
 
                                     // Create a wrapper function to execute the module code
-                                    // The wrapper provides module, exports, __dirname, __filename
                                     let wrapper_code = format!(
                                         r#"(function(module, exports, __dirname, __filename) {{ {} }})"#,
                                         code
@@ -11110,58 +11131,11 @@ impl MinimalRuntime {
                                     return;
                                 }
                                 Err(e) => {
-                                    let error_msg = format!("Error loading module '{}': {}", module_id_str, e);
+                                    let error_msg = format!("Error loading module '{}': {}", module_path.display(), e);
                                     let error_str = v8::String::new(scope, &error_msg).unwrap();
                                     let error_obj = v8::Exception::error(scope, error_str);
                                     scope.throw_exception(error_obj.into());
                                     return;
-                                }
-                            }
-                        }
-
-                        // Check if it's a relative path that needs resolution
-                        if module_id_str.starts_with("./") || module_id_str.starts_with("../") {
-                            // Try adding .js extension
-                            let js_path = format!("{}.js", module_id_str);
-                            let js_module_path = std::path::Path::new(&js_path);
-                            if js_module_path.exists() && js_module_path.is_file() {
-                                match std::fs::read_to_string(js_module_path) {
-                                    Ok(code) => {
-                                        let module_obj = v8::Object::new(scope);
-                                        let exports_obj = v8::Object::new(scope);
-                                        let module_exports_key = v8::String::new(scope, "exports").unwrap().into();
-                                        module_obj.set(scope, module_exports_key, exports_obj.clone().into());
-
-                                        let module_dirname = js_module_path.parent()
-                                            .map(|p| p.to_string_lossy().to_string())
-                                            .unwrap_or_else(|| "/".to_string());
-                                        let module_filename = js_module_path.to_string_lossy().to_string();
-
-                                        let wrapper_code = format!(
-                                            r#"(function(module, exports, __dirname, __filename) {{ {} }})"#,
-                                            code
-                                        );
-
-                                        let script_source = v8::String::new(scope, &wrapper_code).unwrap();
-                                        let script = v8::Script::compile(scope, script_source, None).unwrap();
-                                        let wrapper_func_val = script.run(scope).unwrap();
-
-                                        let wrapper_func = v8::Local::<v8::Function>::try_from(wrapper_func_val).unwrap();
-                                        let undefined = v8::undefined(scope);
-                                        let dirname_val = v8::String::new(scope, &module_dirname).unwrap().into();
-                                        let filename_val = v8::String::new(scope, &module_filename).unwrap().into();
-                                        let _ = wrapper_func.call(scope, undefined.into(), &[module_obj.into(), exports_obj.clone().into(), dirname_val, filename_val]);
-
-                                        retval.set(exports_obj.into());
-                                        return;
-                                    }
-                                    Err(e) => {
-                                        let error_msg = format!("Error loading module '{}': {}", js_path, e);
-                                        let error_str = v8::String::new(scope, &error_msg).unwrap();
-                                        let error_obj = v8::Exception::error(scope, error_str);
-                                        scope.throw_exception(error_obj.into());
-                                        return;
-                                    }
                                 }
                             }
                         }

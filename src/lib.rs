@@ -449,7 +449,22 @@ impl Runtime {
     pub fn execute_file(&self, path: &std::path::Path) -> Result<String> {
         let code: _ = std::fs::read_to_string(path)
             .map_err(|e| anyhow!("Failed to read file {}: {}", path.display(), e))?;
-        self.execute_code(&code)
+
+        // Get the directory and file path for __dirname and __filename
+        let dir_path = path.parent()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|| String::from("."));
+        let file_path = path.to_string_lossy().to_string();
+
+        // Wrap code to set __dirname and __filename correctly
+        let wrapped_code = format!(
+            "(function() {{ globalThis.__dirname = '{}'; globalThis.__filename = '{}'; }})();\n{}",
+            dir_path.replace("\\", "\\\\"),
+            file_path.replace("\\", "\\\\"),
+            code
+        );
+
+        self.execute_code(&wrapped_code)
     }
 }
 /// 获取智能运行时（根据代码特征自动优化）
