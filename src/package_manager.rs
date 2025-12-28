@@ -543,6 +543,306 @@ impl PackageManager {
         &self.config
     }
 }
+
+// ============================================================================
+// Package-lock.json Support (v0.3.226)
+// ============================================================================
+
+/// Package-lock.json structure (npm lockfile v3 format)
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PackageLock {
+    pub name: String,
+    pub version: String,
+    #[serde(rename = "lockfileVersion", default)]
+    pub lockfile_version: u32,
+    #[serde(default)]
+    pub requires: bool,
+    #[serde(default)]
+    pub dependencies: Option<HashMap<String, LockedDependency>>,
+}
+
+/// Locked dependency entry in package-lock.json
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct LockedDependency {
+    pub version: String,
+    #[serde(default)]
+    pub resolved: Option<String>,
+    #[serde(default)]
+    pub integrity: Option<String>,
+    #[serde(default)]
+    pub dev: Option<bool>,
+    #[serde(default)]
+    pub dependencies: Option<HashMap<String, LockedDependency>>,
+}
+
+/// Represents an installed package for lock file generation
+#[derive(Debug, Clone)]
+pub struct InstalledPackage {
+    pub name: String,
+    pub version: String,
+    pub resolved: Option<String>,
+    pub integrity: Option<String>,
+    pub dev: bool,
+    pub dependencies: Vec<InstalledPackage>,
+}
+
+impl PackageManager {
+    /// Read and parse existing package-lock.json
+    pub fn read_package_lock(&self) -> Result<PackageLock> {
+        let lock_path = self.config.node_modules_dir.join("package-lock.json");
+
+        if !lock_path.exists() {
+            return Err(anyhow!("package-lock.json not found at {:?}", lock_path));
+        }
+
+        let content = fs::read_to_string(&lock_path)
+            .map_err(|e| anyhow!("Failed to read package-lock.json: {}", e))?;
+
+        let lock: PackageLock = serde_json::from_str(&content)
+            .map_err(|e| anyhow!("Failed to parse package-lock.json: {}", e))?;
+
+        // Validate lockfile version
+        if lock.lockfile_version < 2 || lock.lockfile_version > 3 {
+            tracing::warn!(
+                "Unsupported lockfile version: {}, expected 2 or 3",
+                lock.lockfile_version
+            );
+        }
+
+        Ok(lock)
+    }
+
+    /// Generate package-lock.json from installed packages
+    pub fn generate_package_lock(
+        &self,
+        lock_path: &Path,
+        project_name: &str,
+        project_version: &str,
+    ) -> Result<()> {
+        let mut dependencies = HashMap::new();
+
+        // Scan installed packages
+        if self.config.node_modules_dir.exists() {
+            for entry in fs::read_dir(&self.config.node_modules_dir)
+                .map_err(|e| anyhow!("Failed to read node_modules: {}", e))?
+            {
+                let entry = entry.map_err(|e| anyhow!("Failed to read directory entry: {}", e))?;
+                let path = entry.path();
+
+                if path.is_dir() && path.file_name().map(|n| n.to_str()) == Some(Some("node_modules")) {
+                    continue; // Skip the node_modules directory itself
+                }
+
+                if path.is_dir() {
+                    if let Some(pkg) = self.scan_installed_package(&path)? {
+                        let nested_deps: HashMap<String, LockedDependency> = pkg.dependencies
+                            .iter()
+                            .map(|d| (d.name.clone(), LockedDependency {
+                                version: d.version.clone(),
+                                resolved: d.resolved.clone(),
+                                integrity: d.integrity.clone(),
+                                dev: Some(d.dev),
+                                dependencies: None, // Simplified: no recursive nesting for now
+                            }))
+                            .collect();
+
+                        dependencies.insert(pkg.name.clone(), LockedDependency {
+                            version: pkg.version.clone(),
+                            resolved: pkg.resolved.clone(),
+                            integrity: pkg.integrity.clone(),
+                            dev: Some(pkg.dev),
+                            dependencies: Some(nested_deps),
+                        });
+                    }
+                }
+            }
+        }
+
+        let lock = PackageLock {
+            name: project_name.to_string(),
+            version: project_version.to_string(),
+            lockfile_version: 3,
+            requires: true,
+            dependencies: Some(dependencies),
+        };
+
+        let content = serde_json::to_string_pretty(&lock)
+            .map_err(|e| anyhow!("Failed to serialize package-lock.json: {}", e))?;
+
+        fs::write(lock_path, content)
+            .map_err(|e| anyhow!("Failed to write package-lock.json: {}", e))?;
+
+        tracing::info!("Generated package-lock.json at {:?}", lock_path);
+        Ok(())
+    }
+
+    /// Update existing package-lock.json with new dependencies
+    pub fn update_package_lock(
+        &self,
+        lock_path: &Path,
+        project_name: &str,
+        project_version: &str,
+        updated_deps: Vec<(String, LockedDependency)>,
+    ) -> Result<()> {
+        let mut lock = if lock_path.exists() {
+            let content = fs::read_to_string(lock_path)
+                .map_err(|e| anyhow!("Failed to read package-lock.json: {}", e))?;
+            serde_json::from_str(&content)
+                .map_err(|e| anyhow!("Failed to parse package-lock.json: {}", e))?
+        } else {
+            PackageLock {
+                name: project_name.to_string(),
+                version: project_version.to_string(),
+                lockfile_version: 3,
+                requires: true,
+                dependencies: Some(HashMap::new()),
+            }
+        };
+
+        // Update dependencies
+        if lock.dependencies.is_none() {
+            lock.dependencies = Some(HashMap::new());
+        }
+        let deps = lock.dependencies.as_mut().unwrap();
+
+        for (name, dep) in updated_deps {
+            deps.insert(name, dep);
+        }
+
+        let content = serde_json::to_string_pretty(&lock)
+            .map_err(|e| anyhow!("Failed to serialize package-lock.json: {}", e))?;
+
+        fs::write(lock_path, content)
+            .map_err(|e| anyhow!("Failed to write package-lock.json: {}", e))?;
+
+        Ok(())
+    }
+
+    /// Scan an installed package and return its info
+    fn scan_installed_package(&self, path: &Path) -> Result<Option<InstalledPackage>> {
+        let package_json_path = path.join("package.json");
+        if !package_json_path.exists() {
+            return Ok(None);
+        }
+
+        let content = fs::read_to_string(&package_json_path)
+            .map_err(|e| anyhow!("Failed to read package.json: {}", e))?;
+
+        let package: serde_json::Value = serde_json::from_str(&content)
+            .map_err(|e| anyhow!("Failed to parse package.json: {}", e))?;
+
+        let name = package["name"]
+            .as_str()
+            .ok_or(anyhow!("Package missing name field"))?
+            .to_string();
+
+        let version = package["version"]
+            .as_str()
+            .ok_or(anyhow!("Package {} missing version field", name))?
+            .to_string();
+
+        // Check if this is a dev dependency (would be in devDependencies of root)
+        let is_dev = false; // Simplified - in full impl, check parent context
+
+        // Collect nested dependencies
+        let mut nested_deps = Vec::new();
+        if let Some(nested) = path.join("node_modules").read_dir().ok() {
+            for entry in nested.flatten() {
+                if let Some(pkg) = self.scan_installed_package(&entry.path())? {
+                    nested_deps.push(pkg);
+                }
+            }
+        }
+
+        Ok(Some(InstalledPackage {
+            name,
+            version,
+            resolved: None,
+            integrity: None,
+            dev: is_dev,
+            dependencies: nested_deps,
+        }))
+    }
+
+    /// Install a package with exact version (--save-exact behavior)
+    pub fn install_package_exact(
+        &self,
+        name: &str,
+        version: &str,
+    ) -> Result<ResolutionResult> {
+        // Resolve to exact version first
+        let exact_version = self.resolve_version(name, version)?;
+
+        // Download and extract
+        let tarball_path = self.download_package(name, &exact_version)?;
+        self.extract_package(&tarball_path, name)?;
+
+        // If package.json exists in current directory, update it with exact version
+        let package_json_path = PathBuf::from("package.json");
+        if package_json_path.exists() {
+            let mut package = self.parse_package_json(&package_json_path)?;
+
+            // Update the dependency in the correct section
+            let version_str = format!("{}", exact_version);
+
+            if let Some(deps) = &mut package.dependencies {
+                if deps.contains_key(name) {
+                    deps.insert(name.to_string(), version_str.clone());
+                }
+            }
+            if let Some(deps) = &mut package.dev_dependencies {
+                if deps.contains_key(name) {
+                    deps.insert(name.to_string(), version_str);
+                }
+            }
+
+            // Write back with exact version
+            let content = serde_json::to_string_pretty(&package)
+                .map_err(|e| anyhow!("Failed to serialize package.json: {}", e))?;
+            fs::write(&package_json_path, content)
+                .map_err(|e| anyhow!("Failed to write package.json: {}", e))?;
+        }
+
+        Ok(ResolutionResult {
+            package: PackageVersion {
+                name: name.to_string(),
+                version: exact_version,
+            },
+            path: self.config.node_modules_dir.join(name),
+            resolved: true,
+        })
+    }
+
+    /// Generate a lock file for a single package (for bunx command)
+    pub fn generate_lock_for_package(
+        &self,
+        package_name: &str,
+        package_version: &str,
+    ) -> Result<PackageLock> {
+        let lock = PackageLock {
+            name: format!("@beejs/temp-{}", package_name),
+            version: "0.0.0".to_string(),
+            lockfile_version: 3,
+            requires: true,
+            dependencies: Some(vec![(
+                package_name.to_string(),
+                LockedDependency {
+                    version: package_version.to_string(),
+                    resolved: Some(format!(
+                        "https://registry.npmjs.org/{}/-/{}-{}.tgz",
+                        package_name, package_name, package_version
+                    )),
+                    integrity: None,
+                    dev: Some(false),
+                    dependencies: None,
+                },
+            )].into_iter().collect()),
+        };
+
+        Ok(lock)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
