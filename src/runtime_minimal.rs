@@ -2177,7 +2177,7 @@ impl MinimalRuntime {
                                 if chars[j].is_alphabetic() && chars[j].is_uppercase() {
                                     for intrinsic in &intrinsic_types {
                                         let int_len = intrinsic.len();
-                                        if j + int_len + 1 <= n { // +1 for the < that follows
+                                        if j + int_len < n { // < instead of +1 <=
                                             let candidate: String = chars[j..j + int_len].iter().collect();
                                             if candidate == *intrinsic && chars[j + int_len] == '<' {
                                                 has_type_pattern = true;
@@ -3052,7 +3052,7 @@ impl MinimalRuntime {
                     let callback_args: Vec<v8::Local<v8::Value>> = (2..args.length())
                         .map(|i| args.get(i))
                         .collect();
-                    let _: _ = callback_func.call(scope, undefined.into(), &callback_args);
+                    let _ = callback_func.call(scope, undefined.into(), &callback_args);
                 } else {
                     println!("⚠️ setTimeout with delay {}ms - async mode (timer ID: {})", delay, timer_id);
                 }
@@ -3172,7 +3172,7 @@ impl MinimalRuntime {
             // Execute callback immediately
             let callback_func = v8::Local::<v8::Function>::try_from(callback).unwrap();
             let undefined = v8::undefined(scope);
-            let _: _ = callback_func.call(scope, undefined.into(), &callback_args);
+            let _ = callback_func.call(scope, undefined.into(), &callback_args);
 
             // Return timer object with unref/ref/refresh methods (v0.3.36)
             let timer_obj = create_timer_object(scope, timer_id, TimerType::Immediate);
@@ -11416,7 +11416,7 @@ impl MinimalRuntime {
             // In a full async runtime, this would be queued to the microtask queue
             let callback_func = v8::Local::<v8::Function>::try_from(callback).unwrap();
             let undefined = v8::undefined(scope);
-            let _: _ = callback_func.call(scope, undefined.into(), &callback_args);
+            let _ = callback_func.call(scope, undefined.into(), &callback_args);
         });
 
         // Get function instances
