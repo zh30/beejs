@@ -3251,4 +3251,74 @@ function assertInRange(value: number): asserts value {
 
         println!("✅ Test 125: asserts with conditional type guard");
     }
+
+    /// 测试126: 运行时性能基准测试 (v0.3.221)
+    #[test]
+    #[serial_test::serial]
+    fn test_runtime_benchmark() {
+        use beejs::MinimalRuntime;
+
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+
+        // 简单计算基准测试
+        let simple_code = "1 + 2 + 3 + 4 + 5";
+        let result = runtime.benchmark(simple_code, 1000);
+        assert!(result.is_ok(), "Benchmark should succeed");
+        let bench = result.unwrap();
+
+        // 验证结果
+        bench.print("Simple Addition");
+        assert_eq!(bench.errors, 0, "Should have no errors");
+        assert!(bench.iterations > 0, "Should have iterations");
+
+        // 循环基准测试 - 使用不同的变量名避免重复声明错误
+        let loop_code = r#"
+let total = 0;
+let counter = 0;
+while (counter < 100) {
+    total += counter;
+    counter++;
+}
+total"#;
+        let result = runtime.benchmark(loop_code, 100);
+        assert!(result.is_ok(), "Loop benchmark should succeed: {:?}", result.err());
+        let bench = result.unwrap();
+        bench.print("Loop Execution");
+
+        // TypeScript 编译基准测试
+        let ts_code = r#"
+interface Person {
+    name: string;
+    age: number;
+}
+const person: Person = { name: "test", age: 30 };
+person.name"#;
+        let result = runtime.benchmark(ts_code, 100);
+        assert!(result.is_ok(), "TS benchmark should succeed");
+        let bench = result.unwrap();
+        bench.print("TypeScript Execution");
+
+        println!("✅ Test 126: Runtime benchmark functionality");
+    }
+
+    /// 测试127: 定时执行测试 (v0.3.221)
+    #[test]
+    #[serial_test::serial]
+    fn test_execute_timed() {
+        use beejs::MinimalRuntime;
+
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+
+        let code = "Math.PI * 2";
+        let result = runtime.execute_timed(code);
+
+        assert!(result.is_ok(), "Timed execution should succeed");
+        let (output, duration) = result.unwrap();
+
+        assert_eq!(output.trim(), String::from(std::f64::consts::TAU.to_string()),
+            "Should compute correct value");
+        assert!(duration.as_nanos() > 0, "Duration should be positive");
+
+        println!("✅ Test 127: Timed execution - {}ns", duration.as_nanos());
+    }
 }

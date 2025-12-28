@@ -324,12 +324,13 @@ pub fn initialize_v8() -> Result<()> {
     // Only initialize if not already done
     if !initialized_flag.load(std::sync::atomic::Ordering::SeqCst) {
         use rusty_v8 as v8;
-        // Stage 65: V8 初始化优化 - 只使用有效的 V8 标志
+        // Stage 92: V8 初始化优化 - 使用高性能运行时配置
+        // 参考 Bun 和 Node.js 的优化策略
         let v8_flags: _ = vec![
+            // JIT 编译器优化（使用稳定支持的标志）
             "--opt".to_string(),                          // 启用优化
-            "--max-old-space-size=2048".to_string(),      // 设置堆大小限制
-            "--max-heap-size=2048".to_string(),           // 最大堆大小
-            "--gc-interval=100".to_string(),              // GC 间隔优化
+            "--max-old-space-size=4096".to_string(),      // 4GB 老生代堆（生产环境）
+            "--gc-interval=240".to_string(),              // GC 间隔（降低频率提升吞吐量）
         ];
         let v8_flags_str: _ = v8_flags.join(" ");
         v8::V8::set_flags_from_string(&v8_flags_str);

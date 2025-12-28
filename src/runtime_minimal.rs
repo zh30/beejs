@@ -1172,6 +1172,31 @@ fn hkdf_derive(digest: &str, ikm: &str, salt: &str, info: &str, keylen: usize) -
     okm
 }
 
+/// Benchmark result structure
+/// v0.3.221: 用于存储性能测试结果
+#[derive(Debug, Clone)]
+pub struct BenchmarkResult {
+    pub iterations: usize,
+    pub total_time_ns: u128,
+    pub avg_time_ns: u128,
+    pub ops_per_sec: f64,
+    pub errors: usize,
+}
+
+impl BenchmarkResult {
+    /// Print formatted benchmark results
+    pub fn print(&self, name: &str) {
+        println!("\n📊 Benchmark: {}", name);
+        println!("   Iterations: {}", self.iterations);
+        println!("   Total time: {:.2}ms", self.total_time_ns as f64 / 1_000_000.0);
+        println!("   Avg per iteration: {}ns", self.avg_time_ns);
+        println!("   Throughput: {:.2} ops/sec", self.ops_per_sec);
+        if self.errors > 0 {
+            println!("   ⚠️  Errors: {}", self.errors);
+        }
+    }
+}
+
 /// A minimal runtime that only provides basic JavaScript execution
 /// This version avoids complex dependencies for faster startup
 /// v0.3.93: 添加 Context 存储以支持跨 Context 共享 handler
@@ -1183,15 +1208,33 @@ pub struct MinimalRuntime {
 }
 
 impl MinimalRuntime {
-    /// Create a new minimal runtime
+    /// Create a new minimal runtime with optimized settings
+    /// v0.3.221: 增强 Isolate 配置以提升性能
     pub fn new() -> Result<Self> {
         // Initialize V8 (idempotent - safe to call multiple times)
         crate::initialize_v8()?;
 
-        // Create a new isolate with default parameters
-        let isolate = v8::Isolate::new(v8::CreateParams::default());
+        // Create optimized isolate parameters
+        let create_params = v8::CreateParams::default()
+            .heap_limits(256 * 1024 * 1024, 4096 * 1024 * 1024); // 256MB initial, 4GB max
+
+        // Create a new isolate with optimized parameters
+        let isolate = v8::Isolate::new(create_params);
 
         // v0.3.93: Context 将在第一次调用 get_context() 时创建
+        Ok(Self { isolate, context: None })
+    }
+
+    /// Create a new minimal runtime with custom heap limits
+    /// v0.3.221: 支持自定义内存配置
+    pub fn with_heap_limits(initial: usize, maximum: usize) -> Result<Self> {
+        crate::initialize_v8()?;
+
+        let create_params = v8::CreateParams::default()
+            .heap_limits(initial, maximum);
+
+        let isolate = v8::Isolate::new(create_params);
+
         Ok(Self { isolate, context: None })
     }
 
@@ -2612,6 +2655,55 @@ impl MinimalRuntime {
             .ok_or_else(|| anyhow::anyhow!("Failed to convert result to string"))?;
 
         Ok(result_str.to_rust_string_lossy(scope))
+    }
+
+    /// Execute code multiple times and measure performance
+    /// v0.3.221: 添加性能基准测试功能
+    /// Note: 每次迭代会重新创建 Context 以避免变量重复声明错误
+    pub fn benchmark(&mut self, code: &str, iterations: usize) -> Result<BenchmarkResult> {
+        let _start = std::time::Instant::now();
+
+        // Warmup runs (not counted) - 每次都重新创建 Context
+        for _ in 0..3 {
+            self.recreate_context();
+            self.execute_code(code)?;
+        }
+
+        let bench_start = std::time::Instant::now();
+        let mut errors = 0;
+
+        for _ in 0..iterations {
+            self.recreate_context();
+            if self.execute_code(code).is_err() {
+                errors += 1;
+            }
+        }
+
+        let elapsed = bench_start.elapsed();
+        let nanos = elapsed.as_nanos() as f64;
+        let avg_ns = nanos / iterations as f64;
+        let ops_per_sec = if avg_ns > 0.0 {
+            1_000_000_000.0 / avg_ns
+        } else {
+            0.0
+        };
+
+        Ok(BenchmarkResult {
+            iterations,
+            total_time_ns: nanos as u128,
+            avg_time_ns: avg_ns as u128,
+            ops_per_sec,
+            errors,
+        })
+    }
+
+    /// Execute code and return execution time
+    /// v0.3.221: 添加带时间的执行方法
+    pub fn execute_timed(&mut self, code: &str) -> Result<(String, std::time::Duration)> {
+        let start = std::time::Instant::now();
+        let result = self.execute_code(code)?;
+        let elapsed = start.elapsed();
+        Ok((result, elapsed))
     }
 
     /// Set up console object in the V8 context
