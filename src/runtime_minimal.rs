@@ -11614,6 +11614,45 @@ impl MinimalRuntime {
         let release_key = v8::String::new(scope, "release").unwrap();
         process_obj.set(scope, release_key.into(), release_obj.into());
 
+        // v0.3.238: Add process.on() for event handlers (uncaughtException, unhandledRejection)
+        // Returns process object for chaining (Node.js standard behavior)
+        let on_key = v8::String::new(scope, "on").unwrap();
+        let on_func = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Return the process object (this) for chaining
+            retval.set(args.this().into());
+        }).unwrap();
+        process_obj.set(scope, on_key.into(), on_func.into());
+
+        // v0.3.238: Add process.off() for removing event handlers
+        // Returns process object for chaining
+        let off_key = v8::String::new(scope, "off").unwrap();
+        let off_func = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            retval.set(args.this().into());
+        }).unwrap();
+        process_obj.set(scope, off_key.into(), off_func.into());
+
+        // v0.3.238: Add process.removeListener() for removing specific event handlers
+        let remove_listener_key = v8::String::new(scope, "removeListener").unwrap();
+        let remove_listener_func = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            retval.set(v8::Object::new(_scope).into());
+        }).unwrap();
+        process_obj.set(scope, remove_listener_key.into(), remove_listener_func.into());
+
+        // v0.3.238: Add process.stdout (basic implementation)
+        let stdout_key = v8::String::new(scope, "stdout").unwrap();
+        let stdout_obj = v8::Object::new(scope);
+        process_obj.set(scope, stdout_key.into(), stdout_obj.into());
+
+        // v0.3.238: Add process.stderr (basic implementation)
+        let stderr_key = v8::String::new(scope, "stderr").unwrap();
+        let stderr_obj = v8::Object::new(scope);
+        process_obj.set(scope, stderr_key.into(), stderr_obj.into());
+
+        // v0.3.238: Add process.stdin (basic implementation)
+        let stdin_key = v8::String::new(scope, "stdin").unwrap();
+        let stdin_obj = v8::Object::new(scope);
+        process_obj.set(scope, stdin_key.into(), stdin_obj.into());
+
         // Set process as global
         global.set(scope, process_key.into(), process_obj.into());
 
