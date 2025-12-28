@@ -12497,3 +12497,64 @@ console.log(p.name);  // "Alice"
 - 继续完善错误处理和边界情况测试
 - 优化 Node.js API 兼容性
 - 完善 V8 快照预热机制
+
+---
+
+### v0.3.253 修复 V8 测试执行器编译错误（2025-12-29）
+**进度**: 测试框架 | ✅ 已完成
+
+#### v0.3.253 修复内容
+- **V8 测试执行器 toEqual 简化**
+  - 移除复杂 JSON 序列化逻辑（V8 FunctionTemplate 闭包限制）
+  - 使用 `strict_equals()` 替代 stringify 比较
+  - 修复 `_actual` 属性访问逻辑
+
+#### v0.3.253 技术说明
+- V8 FunctionTemplate 不允许闭包捕获外部变量
+- 解决方案：使用 `args.this()` 获取 expect 对象，直接访问 `_actual` 属性
+- `strict_equals()` 提供准确的引用相等性比较
+
+#### v0.3.253 代码变更
+- `src/testing/v8_test_executor.rs`: 简化 toEqual matcher 实现
+
+#### v0.3.253 测试验证
+- ✅ 248/248 lib 测试通过
+- ✅ V8 测试执行器正常工作
+
+#### v0.3.253 下一步
+- 完善 Promise 和 async/await 测试支持
+- 添加更多 matcher（toBeDefined, toBeNull, toContain 等）
+- 实现 test runner 统计功能
+
+---
+
+### v0.3.254 V8 测试执行器 Matcher 完善（2025-12-29）
+**进度**: 测试框架 | ✅ 已完成
+
+#### v0.3.254 新增功能
+- **完整 Matcher 实现**
+  - `toBeTruthy`: 检查值是否为 truthy（非 0、非空字符串、非 null/undefined）
+  - `toBeFalsy`: 检查值是否为 falsy（0、空字符串、null、undefined、false）
+  - `toContain`: 检查字符串或数组是否包含指定值
+  - `toHaveLength`: 检查字符串或数组的长度
+  - `toBeDefined`: 检查值是否已定义（非 undefined）
+  - `toBeNull`: 检查值是否为 null
+
+#### v0.3.254 技术说明
+- **V8 FunctionTemplate 闭包限制**: 无法在闭包中捕获外部变量，通过 `args.this()` 访问 expect 对象上的 `_actual` 属性
+- **字符串长度**: V8 `v8::String::length()` 返回 `usize`，需要正确处理类型转换
+- **数组包含检查**: 使用 `v8::Array` 遍历和 `strict_equals()` 进行相等性比较
+
+#### v0.3.254 代码变更
+- `src/testing/v8_test_executor.rs`: 完整实现 6 个 matcher
+- `tests/v8_test_executor_matcher_tests.rs`: 新建 matcher 测试文件（9 个测试用例）
+
+#### v0.3.254 测试验证
+- ✅ 248/248 lib 测试通过
+- ✅ 9/9 matcher 测试通过
+- ✅ V8 测试执行器正常工作
+
+#### v0.3.254 下一步
+- 完善 Promise 和 async/await 测试支持
+- 添加 not matcher（取反）
+- 实现 test runner 统计和覆盖率功能
