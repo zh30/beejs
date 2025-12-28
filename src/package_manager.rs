@@ -23,7 +23,13 @@ use std::hash::Hash;
 #[allow(unused)]
 use std::io::Write;
 #[allow(unused)]
+use std::process::Command;
+#[allow(unused)]
 use tempfile::{NamedTempFile, TempDir};
+#[allow(unused)]
+use flate2::read::GzDecoder;
+#[allow(unused)]
+use tar::Archive;
 
 #[allow(unused_imports)]
 /// Package manager configuration
@@ -95,6 +101,72 @@ pub struct ResolutionResult {
 pub struct PackageManager {
     config: PackageManagerConfig,
 }
+
+/// Resolve caret range (^1.2.3 -> >=1.2.3 <2.0.0)
+fn resolve_caret_range(versions: Vec<String>, base: &str) -> String {
+    // Simple implementation - return latest compatible version
+    let parsed: Vec<&str> = base.split('.').collect();
+    if parsed.len() >= 1 {
+        let major: u32 = parsed[0].parse().unwrap_or(0);
+        let latest_major: Vec<String> = versions.iter()
+            .filter(|v| {
+                let parts: Vec<&str> = v.split('.').collect();
+                parts.get(0).map(|p| p.parse::<u32>().unwrap_or(0)) == Some(major)
+            })
+            .cloned()
+            .collect();
+        latest_major.last().map(|s| s.to_string()).unwrap_or_else(|| base.to_string())
+    } else {
+        base.to_string()
+    }
+}
+
+/// Resolve tilde range (~1.2.3 -> >=1.2.3 <1.3.0)
+fn resolve_tilde_range(versions: Vec<String>, base: &str) -> String {
+    let parsed: Vec<&str> = base.split('.').collect();
+    if parsed.len() >= 2 {
+        let major: u32 = parsed[0].parse().unwrap_or(0);
+        let minor: u32 = parsed[1].parse().unwrap_or(0);
+        let latest: Vec<String> = versions.iter()
+            .filter(|v| {
+                let parts: Vec<&str> = v.split('.').collect();
+                parts.get(0).map(|p| p.parse::<u32>().unwrap_or(0)) == Some(major)
+                    && parts.get(1).map(|p| p.parse::<u32>().unwrap_or(0)) == Some(minor)
+            })
+            .cloned()
+            .collect();
+        latest.last().map(|s| s.to_string()).unwrap_or_else(|| base.to_string())
+    } else {
+        base.to_string()
+    }
+}
+
+/// Resolve greater than version
+fn resolve_greater_than(versions: Vec<String>, min: &str) -> String {
+    let min_parsed: Vec<u32> = min.split('.').map(|p| p.parse().unwrap_or(0)).collect();
+    let latest: Vec<String> = versions.iter()
+        .filter(|v| {
+            let parts: Vec<u32> = v.split('.').map(|p| p.parse().unwrap_or(0)).collect();
+            parts >= min_parsed
+        })
+        .cloned()
+        .collect();
+    latest.last().map(|s| s.to_string()).unwrap_or_else(|| min.to_string())
+}
+
+/// Resolve less than version
+fn resolve_less_than(versions: Vec<String>, max: &str) -> String {
+    let max_parsed: Vec<u32> = max.split('.').map(|p| p.parse().unwrap_or(u32::MAX)).collect();
+    let latest: Vec<String> = versions.iter()
+        .filter(|v| {
+            let parts: Vec<u32> = v.split('.').map(|p| p.parse().unwrap_or(u32::MAX)).collect();
+            parts <= max_parsed
+        })
+        .cloned()
+        .collect();
+    latest.last().map(|s| s.to_string()).unwrap_or_else(|| max.to_string())
+}
+
 impl PackageManager {
     /// Create a new package manager instance
     pub fn new(config: PackageManagerConfig) -> Result<Self> {
@@ -109,6 +181,216 @@ impl PackageManager {
                 .map_err(|e| anyhow!("Failed to create node_modules directory: {}", e))?;
         }
         Ok(PackageManager { config })
+    }
+
+    /// Fetch package information from npm registry
+    pub fn fetch_package_info(&self, name: &str) -> Result<serde_json::Value> {
+        let url = format!(
+            "{}/{}",
+            self.config.registry_url.trim_end_matches('/'),
+            name
+        );
+
+        // Use curl to fetch package info
+        let output = Command::new("curl")
+            .args(&[
+                "-sL",
+                "--max-time",
+                &self.config.timeout_secs.to_string(),
+                &url,
+            ])
+            .output()
+            .map_err(|e| anyhow!("Failed to execute curl: {}", e))?;
+
+        if !output.status.success() {
+            return Err(anyhow!(
+                "Failed to fetch package info: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
+        }
+
+        let response = String::from_utf8_lossy(&output.stdout);
+        let info: serde_json::Value = serde_json::from_str(&response)
+            .map_err(|e| anyhow!("Failed to parse package info: {}", e))?;
+
+        Ok(info)
+    }
+
+    /// Download package tarball from npm registry
+    pub fn download_package(&self, name: &str, version: &str) -> Result<PathBuf> {
+        // Check cache first
+        let cached_path = self.config.cache_dir.join(name).join(format!("{}.tgz", version));
+        if cached_path.exists() {
+            return Ok(cached_path);
+        }
+
+        // Fetch package info to get tarball URL
+        let info = self.fetch_package_info(name)?;
+        let versions = info.get("versions").ok_or(anyhow!("No versions found"))?;
+
+        let version_info = versions.get(version).ok_or(anyhow!(
+            "Version {} not found for package {}",
+            version,
+            name
+        ))?;
+
+        let tarball_url = version_info
+            .get("dist")
+            .and_then(|d| d.get("tarball"))
+            .and_then(|t| t.as_str())
+            .ok_or(anyhow!("No tarball URL found"))?
+            .to_string();
+
+        // Create cache directory
+        let package_cache_dir = self.config.cache_dir.join(name);
+        if !package_cache_dir.exists() {
+            fs::create_dir_all(&package_cache_dir)
+                .map_err(|e| anyhow!("Failed to create cache directory: {}", e))?;
+        }
+
+        // Download tarball
+        let tarball_path = package_cache_dir.join(format!("{}.tgz", version));
+        let output = Command::new("curl")
+            .args(&[
+                "-sL",
+                "--max-time",
+                &self.config.timeout_secs.to_string(),
+                "-o",
+                tarball_path.to_str().ok_or(anyhow!("Invalid path"))?,
+                &tarball_url,
+            ])
+            .output()
+            .map_err(|e| anyhow!("Failed to download tarball: {}", e))?;
+
+        if !output.status.success() {
+            return Err(anyhow!(
+                "Failed to download tarball: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
+        }
+
+        Ok(tarball_path)
+    }
+
+    /// Extract tarball to node_modules
+    pub fn extract_package(&self, tarball_path: &Path, package_name: &str) -> Result<PathBuf> {
+        let target_dir = self.config.node_modules_dir.join(package_name);
+
+        // Remove existing package if present
+        if target_dir.exists() {
+            fs::remove_dir_all(&target_dir)
+                .map_err(|e| anyhow!("Failed to remove existing package: {}", e))?;
+        }
+
+        // Create parent directory
+        if let Some(parent) = target_dir.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent)
+                    .map_err(|e| anyhow!("Failed to create parent directory: {}", e))?;
+            }
+        }
+
+        // Extract tarball
+        let tarball_file = fs::File::open(tarball_path)
+            .map_err(|e| anyhow!("Failed to open tarball: {}", e))?;
+        let decoder = GzDecoder::new(tarball_file);
+        let mut archive = Archive::new(decoder);
+
+        for entry in archive.entries()
+            .map_err(|e| anyhow!("Failed to read archive: {}", e))?
+        {
+            let mut entry = entry.map_err(|e| anyhow!("Failed to read entry: {}", e))?;
+            let path = entry.path()?.into_owned();
+
+            // Skip package directory in archive (usually "package/")
+            let stripped_path: PathBuf = if let Ok(rel_path) = path.strip_prefix("package") {
+                rel_path.to_path_buf()
+            } else {
+                continue;
+            };
+
+            let target_path = target_dir.join(&stripped_path);
+
+            if entry.header().entry_type().is_dir() {
+                fs::create_dir_all(&target_path)
+                    .map_err(|e| anyhow!("Failed to create directory: {}", e))?;
+            } else {
+                if let Some(parent) = target_path.parent() {
+                    if !parent.exists() {
+                        fs::create_dir_all(parent)
+                            .map_err(|e| anyhow!("Failed to create parent: {}", e))?;
+                    }
+                }
+                entry.unpack(&target_path)
+                    .map_err(|e| anyhow!("Failed to unpack entry: {}", e))?;
+            }
+        }
+
+        Ok(target_dir)
+    }
+
+    /// Parse version range and return exact version
+    pub fn resolve_version(&self, name: &str, version_range: &str) -> Result<String> {
+        let info = self.fetch_package_info(name)?;
+        let versions = info.get("versions")
+            .ok_or(anyhow!("No versions found"))?
+            .as_object()
+            .ok_or(anyhow!("Invalid versions format"))?;
+
+        let all_versions: Vec<String> = versions.keys().cloned().collect();
+
+        // Parse version range
+        let exact_version = if version_range.starts_with('^') {
+            // Caret range: ^1.2.3 -> >=1.2.3 <2.0.0
+            let base = &version_range[1..];
+            resolve_caret_range(all_versions, base)
+        } else if version_range.starts_with('~') {
+            // Tilde range: ~1.2.3 -> >=1.2.3 <1.3.0
+            let base = &version_range[1..];
+            resolve_tilde_range(all_versions, base)
+        } else if version_range.starts_with(">=") {
+            // Greater than or equal
+            let min = &version_range[2..];
+            resolve_greater_than(all_versions, min)
+        } else if version_range.starts_with('>') {
+            // Greater than
+            let min = &version_range[1..];
+            resolve_greater_than(all_versions, min)
+        } else if version_range.starts_with("<=") {
+            // Less than or equal
+            let max = &version_range[2..];
+            resolve_less_than(all_versions, max)
+        } else if version_range.starts_with('<') {
+            // Less than
+            let max = &version_range[1..];
+            resolve_less_than(all_versions, max)
+        } else {
+            // Exact version
+            version_range.to_string()
+        };
+
+        Ok(exact_version)
+    }
+
+    /// Install a single package
+    pub fn install_package(&self, name: &str, version_range: &str) -> Result<ResolutionResult> {
+        // Resolve version
+        let version = self.resolve_version(name, version_range)?;
+
+        // Download tarball
+        let tarball_path = self.download_package(name, &version)?;
+
+        // Extract to node_modules
+        self.extract_package(&tarball_path, name)?;
+
+        Ok(ResolutionResult {
+            package: PackageVersion {
+                name: name.to_string(),
+                version,
+            },
+            path: self.config.node_modules_dir.join(name),
+            resolved: true,
+        })
     }
     /// Parse package.json file
     pub fn parse_package_json(&self, path: &Path) -> Result<PackageJson> {
@@ -140,7 +422,7 @@ impl PackageManager {
         fs::write(&path, content).map_err(|e| anyhow!("Failed to write package.json: {}", e))?;
         Ok(package)
     }
-    /// Install dependencies from package.json
+    /// Install dependencies from package.json (with actual npm registry download)
     pub fn install_dependencies(
         &self,
         package_json: &PackageJson,
@@ -149,15 +431,28 @@ impl PackageManager {
         // Install regular dependencies
         if let Some(deps) = &package_json.dependencies {
             for (name, version) in deps {
-                let resolution: _ = self.resolve_package(name, version)?;
-                results.push(resolution);
+                match self.install_package(name, version) {
+                    Ok(resolution) => results.push(resolution),
+                    Err(e) => tracing::warn!("Failed to install {}@{}: {}", name, version, e),
+                }
             }
         }
         // Install dev dependencies
         if let Some(deps) = &package_json.dev_dependencies {
             for (name, version) in deps {
-                let resolution: _ = self.resolve_package(name, version)?;
-                results.push(resolution);
+                match self.install_package(name, version) {
+                    Ok(resolution) => results.push(resolution),
+                    Err(e) => tracing::warn!("Failed to install dev {}@{}: {}", name, version, e),
+                }
+            }
+        }
+        // Install optional dependencies
+        if let Some(deps) = &package_json.peer_dependencies {
+            for (name, version) in deps {
+                match self.install_package(name, version) {
+                    Ok(resolution) => results.push(resolution),
+                    Err(e) => tracing::debug!("Failed to install optional {}@{}: {}", name, version, e),
+                }
             }
         }
         Ok(results)

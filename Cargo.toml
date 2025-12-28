@@ -49,6 +49,10 @@ windows-sys = { version = "0.52", features = ["Win32_System_Diagnostics_Debug"] 
 # Temporary file support
 tempfile = "3.0"
 
+# Tarball extraction for npm packages
+flate2 = "1.0"
+tar = "0.4"
+
 # WebSocket support (with TLS)
 tokio-tungstenite = { version = "0.21", features = ["native-tls"] }
 tungstenite = "0.21"
