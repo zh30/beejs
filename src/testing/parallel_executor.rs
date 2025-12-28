@@ -2,8 +2,9 @@
 // Executes tests concurrently using thread pools
 
 use crate::testing::test_context::{TestCase, TestResult, TestSuite};
+use rayon::prelude::*;
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 /// Parallel execution configuration
@@ -42,7 +43,7 @@ impl ParallelExecutor {
         }
         // Create a shared result vector with thread-safe access
         let results = Arc::new(Mutex::new(Vec::with_capacity(tests.len())));
-        let results_clone: _ = Arc::clone(results);
+        let results_clone: Arc<Mutex<Vec<TestResult>>> = Arc::clone(&results);
         // Execute tests in parallel using Rayon
         tests.par_iter()
             .chunks(self.config.chunk_size)
@@ -51,7 +52,7 @@ impl ParallelExecutor {
                     .map(|test| self.run_single_test(suite_name, test, timeout))
                     .collect();
                 // Insert results maintaining order if requested
-                let mut locked = results_clone.lock().unwrap();
+                let mut locked: MutexGuard<'_, Vec<TestResult>> = results_clone.lock().unwrap();
                 if self.config.preserve_order {
                     locked.extend(chunk_results);
                 } else {

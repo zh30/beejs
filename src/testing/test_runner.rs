@@ -105,7 +105,7 @@ impl TestRunner {
         // Run beforeAll hook if present (using V8 executor)
         if let Some(before_all) = &suite.before_all {
             // Execute beforeAll in V8
-            let isolate = v8::Isolate::new();
+            let mut isolate = v8::Isolate::new(Default::default());
             let mut scope = v8::HandleScope::new(&mut isolate);
             let context = v8::Context::new(&mut scope);
             let scope = &mut v8::ContextScope::new(&mut scope, context);
@@ -130,7 +130,7 @@ impl TestRunner {
         }
         // Run afterAll hook if present (using V8 executor)
         if let Some(after_all) = &suite.after_all {
-            let isolate = v8::Isolate::new();
+            let mut isolate = v8::Isolate::new(Default::default());
             let mut scope = v8::HandleScope::new(&mut isolate);
             let context = v8::Context::new(&mut scope);
             let scope = &mut v8::ContextScope::new(&mut scope, context);
@@ -160,7 +160,7 @@ impl TestRunner {
             // Create a filtered suite for execution
             let mut filtered_suite = suite;
             filtered_suite.tests = suite_to_run;
-            let results: _ = self.run_suite(&filtered_suite, Arc::clone(stats));
+            let results: _ = self.run_suite(&filtered_suite, Arc::clone(&stats));
             all_results.extend(results);
         }
         let final_stats: _ = Arc::try_unwrap(stats)

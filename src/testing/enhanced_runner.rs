@@ -5,6 +5,7 @@
 use crate::testing::parallel_executor::{ParallelConfig, ParallelExecutor};
 use crate::testing::test_context::{TestCase, TestResult, TestSuite};
 use crate::testing::test_timeout::{TestTimeout, TimeoutConfig};
+use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
@@ -316,7 +317,7 @@ impl EnhancedRunner {
             // Create filtered suite
             let mut filtered_suite = suite;
             filtered_suite.tests = suite_to_run;
-            let results: _ = self.run_suite(&filtered_suite, Arc::clone(stats));
+            let results: _ = self.run_suite(&filtered_suite, Arc::clone(&stats));
             all_results.extend(results);
         }
         let final_stats: _ = Arc::try_unwrap(stats)

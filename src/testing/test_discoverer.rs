@@ -99,8 +99,8 @@ impl TestDiscoverer {
         let file_name: _ = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
         for pattern in &self.config.test_patterns {
             // Simple pattern matching - could be enhanced with glob patterns
-            let pattern = pattern.clone().trim_start_matches('*');
-            if file_name.ends_with(pattern) {
+            let pattern_str = pattern.trim_start_matches('*').to_string();
+            if file_name.ends_with(&pattern_str) {
                 return true;
             }
         }

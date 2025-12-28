@@ -188,6 +188,9 @@ impl Drop for TestTimeoutGuard {
 }
 #[cfg(test)]
 mod tests {
+    use super::{TestTimeout, TimeoutConfig};
+    use std::time::Duration;
+
     #[test]
     fn test_timeout_creation() {
         let timeout: _ = TestTimeout::default();
