@@ -389,6 +389,8 @@ impl Default for PerformanceConfig {
 pub struct Runtime {
     config: PerformanceConfig,
     _verbose: bool,
+    /// 持久化的运行时实例，用于保持模块缓存
+    lite_runtime: std::cell::RefCell<Option<MinimalRuntime>>,
 }
 impl Runtime {
     /// 创建新的运行时实例
@@ -401,6 +403,7 @@ impl Runtime {
                 performance_monitoring: true,
             },
             _verbose: verbose,
+            lite_runtime: std::cell::RefCell::new(None),
         }
     }
     /// 创建默认配置的运行时
@@ -439,13 +442,17 @@ impl Runtime {
     pub fn context(self, _msg: &str) -> Result<Self, anyhow::Error> {
         Ok(self)
     }
-    /// 执行 JavaScript 代码
+    /// 执行 JavaScript 代码（复用运行时实例以保持模块缓存）
     pub fn execute_code(&self, code: &str) -> Result<String> {
-        // 使用 MinimalRuntime 来执行代码
-        let mut lite_runtime: _ = crate::runtime_minimal::MinimalRuntime::new()?;
-        lite_runtime.execute_code(code)
+        // 获取或创建持久化的运行时实例
+        let mut runtime_ref = self.lite_runtime.borrow_mut();
+        let runtime = runtime_ref.get_or_insert_with(|| {
+            crate::runtime_minimal::MinimalRuntime::new()
+                .expect("Failed to create MinimalRuntime")
+        });
+        runtime.execute_code(code)
     }
-    /// 执行 JavaScript 文件
+    /// 执行 JavaScript 文件（复用运行时实例以支持循环依赖）
     pub fn execute_file(&self, path: &std::path::Path) -> Result<String> {
         let code: _ = std::fs::read_to_string(path)
             .map_err(|e| anyhow!("Failed to read file {}: {}", path.display(), e))?;
