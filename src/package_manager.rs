@@ -860,6 +860,136 @@ impl PackageManager {
 
         Ok(lock)
     }
+
+    /// Prune unused dependencies from node_modules
+    /// Removes packages that are not declared in package.json
+    pub fn prune(&self, package_json: &PackageJson) -> Result<Vec<String>> {
+        let mut removed = Vec::new();
+
+        // Collect all declared dependencies (owned Strings for easier handling)
+        let mut declared_deps: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+        if let Some(deps) = &package_json.dependencies {
+            for name in deps.keys() {
+                declared_deps.insert(name.clone());
+            }
+        }
+        if let Some(deps) = &package_json.dev_dependencies {
+            for name in deps.keys() {
+                declared_deps.insert(name.clone());
+            }
+        }
+        if let Some(deps) = &package_json.optional_dependencies {
+            for name in deps.keys() {
+                declared_deps.insert(name.clone());
+            }
+        }
+
+        // Also add packages from package-lock.json if it exists
+        if let Ok(lock) = self.read_package_lock() {
+            if let Some(deps) = &lock.dependencies {
+                for name in deps.keys() {
+                    declared_deps.insert(name.clone());
+                }
+            }
+        }
+
+        // Scan node_modules and remove undeclared packages
+        if self.config.node_modules_dir.exists() {
+            for entry in fs::read_dir(&self.config.node_modules_dir)
+                .map_err(|e| anyhow!("Failed to read node_modules: {}", e))?
+            {
+                let entry = entry.map_err(|e| anyhow!("Failed to read directory entry: {}", e))?;
+                let path = entry.path();
+                let name = path.file_name()
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.to_string());
+
+                // Skip special directories
+                if name == Some(".bin".to_string()) || name == Some(".cache".to_string()) {
+                    continue;
+                }
+
+                // Check if package is in node_modules (not nested)
+                if path.is_dir() {
+                    if let Some(pkg_name) = &name {
+                        // Check if this package is declared
+                        if !declared_deps.contains(pkg_name.as_str()) {
+                            // Also check if it's a nested dependency (inside @scope)
+                            let is_scope = pkg_name.starts_with('@');
+                            if !is_scope {
+                                tracing::info!("Removing undeclared package: {}", pkg_name);
+
+                                // Remove the package directory
+                                fs::remove_dir_all(&path)
+                                    .map_err(|e| anyhow!("Failed to remove {}: {}", pkg_name, e))?;
+
+                                removed.push(pkg_name.clone());
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Handle scoped packages (@org/pkg) - check if parent @org is declared
+            let org_dirs: std::collections::HashSet<String> = if let Ok(entries) = fs::read_dir(&self.config.node_modules_dir) {
+                entries
+                    .filter_map(|e| e.ok())
+                    .filter_map(|e| {
+                        let name = e.file_name().to_str()?.to_string();
+                        if name.starts_with('@') && e.path().is_dir() {
+                            Some(name)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            } else {
+                std::collections::HashSet::new()
+            };
+
+            for org in org_dirs {
+                // Check if this org/pkg should exist
+                let org_path = self.config.node_modules_dir.join(&org);
+                let mut org_has_valid_pkgs = false;
+
+                if let Ok(pkg_entries) = fs::read_dir(&org_path) {
+                    for pkg_entry in pkg_entries.flatten() {
+                        if pkg_entry.path().is_dir() {
+                            let pkg_name = pkg_entry.file_name().to_str().unwrap_or("").to_string();
+                            let full_name = format!("{}/{}", org, pkg_name);
+
+                            if declared_deps.contains(&full_name) {
+                                org_has_valid_pkgs = true;
+                            } else {
+                                // Remove this package
+                                tracing::info!("Removing undeclared package: {}", full_name);
+                                if let Err(e) = fs::remove_dir_all(pkg_entry.path()) {
+                                    tracing::warn!("Failed to remove {}: {}", full_name, e);
+                                } else {
+                                    removed.push(full_name);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Remove empty @org directory
+                if !org_has_valid_pkgs {
+                    if let Ok(entries) = fs::read_dir(&org_path) {
+                        if entries.count() == 0 {
+                            tracing::info!("Removing empty scope directory: {}", org);
+                            if let Err(e) = fs::remove_dir(&org_path) {
+                                tracing::warn!("Failed to remove empty scope {}: {}", org, e);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(removed)
+    }
 }
 
 #[cfg(test)]

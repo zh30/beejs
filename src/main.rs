@@ -107,6 +107,8 @@ enum Command {
     },
     /// Install dependencies from package.json
     Install,
+    /// Remove unused dependencies from node_modules
+    Prune,
     /// Create new project
     Create {
         /// Template type (js/ts)
@@ -792,6 +794,51 @@ async fn main() -> Result<()> {
                 }
                 Err(e) => {
                     return Err(anyhow!("Failed to install dependencies: {}", e));
+                }
+            }
+
+            return Ok(());
+        }
+        Some(Command::Prune) => {
+            println!("✂️ Pruning unused dependencies from node_modules...");
+
+            // Check if package.json exists
+            let package_json_path = std::path::Path::new("package.json");
+            if !package_json_path.exists() {
+                return Err(anyhow!("package.json not found in current directory. Run 'beejs init' first."));
+            }
+
+            // Check if node_modules exists
+            let node_modules_path = std::path::Path::new("node_modules");
+            if !node_modules_path.exists() {
+                println!("✅ No node_modules directory found - nothing to prune");
+                return Ok(());
+            }
+
+            // Create package manager
+            let config = beejs::package_manager::PackageManagerConfig::default();
+            let pm = beejs::package_manager::PackageManager::new(config)
+                .map_err(|e| anyhow!("Failed to create package manager: {}", e))?;
+
+            // Parse package.json using PackageManager's method
+            let package_json = pm.parse_package_json(package_json_path)
+                .map_err(|e| anyhow!("Failed to parse package.json: {}", e))?;
+
+            // Prune unused dependencies
+            match pm.prune(&package_json) {
+                Ok(removed) => {
+                    if removed.is_empty() {
+                        println!("✅ No unused dependencies found - node_modules is clean");
+                    } else {
+                        println!("✅ Removed {} unused package(s):", removed.len());
+                        for pkg in &removed {
+                            println!("  - {}", pkg);
+                        }
+                    }
+                    println!("\n💡 Run 'beejs install' to restore dependencies if needed");
+                }
+                Err(e) => {
+                    return Err(anyhow!("Failed to prune dependencies: {}", e));
                 }
             }
 

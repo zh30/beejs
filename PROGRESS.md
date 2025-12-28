@@ -1,3 +1,55 @@
+### v0.3.230 包管理器增强 - prune 命令实现（2025-12-28）
+**进度**: 包管理器 CLI 增强 | ✅ 已完成
+
+#### v0.3.230 新增功能
+- **Prune 命令**
+  - `beejs prune` - 清理 node_modules 中未使用的依赖
+  - 自动识别 package.json 中声明的依赖
+  - 支持 scoped packages（@org/pkg）
+  - 保留 .bin 和 .cache 目录
+  - 与 package-lock.json 集成
+
+- **智能清理算法**
+  - 扫描 node_modules 目录
+  - 对比 package.json 声明的 dependencies/devDependencies/optionalDependencies
+  - 移除未声明的包及其嵌套依赖
+  - 清理空的 @scope 目录
+
+#### v0.3.230 使用示例
+```bash
+# 清理未使用的依赖
+beejs prune
+
+# 输出示例
+✂️ Pruning unused dependencies from node_modules...
+✅ Removed 3 unused package(s):
+  - undeclared-package
+  - old-dependency
+✅ No unused dependencies found - node_modules is clean
+```
+
+#### v0.3.230 测试验证
+- ✅ `cargo build`: 编译成功
+- ✅ `beejs prune --help`: 命令正常显示
+- ✅ `cargo test --test minimal_tests`: 130/130 通过
+- ✅ `cargo test --test prune_command_tests`: 7/7 通过
+- ✅ 无 package.json 时错误提示
+- ✅ 无 node_modules 时正常退出
+- ✅ 保留声明的依赖
+- ✅ 移除未声明的包
+- ✅ 正确处理 scoped packages
+
+#### v0.3.230 代码变更
+- `src/package_manager.rs`: 添加 prune() 方法
+- `src/main.rs`: 添加 Prune 命令处理
+- `tests/prune_command_tests.rs`: 新增测试文件
+
+#### v0.3.230 下一步
+- 添加 Node.js Stream/Net API 兼容性
+- 性能优化：启动时间进一步优化
+
+---
+
 ### v0.3.229 包管理器增强 - install 命令和 optionalDependencies 支持（2025-12-28）
 **进度**: 包管理器 CLI 增强 | ✅ 已完成
 
@@ -44,7 +96,7 @@ beejs add fsevents --dev
 - `tests/install_command_cli_tests.rs`: 新增 CLI 测试文件
 
 #### v0.3.229 下一步
-- 添加 `beejs prune` 命令（清理未使用依赖）
+- ✅ 添加 `beejs prune` 命令（清理未使用依赖）
 - 添加 Node.js Stream/Net API 兼容性
 - 性能优化：启动时间进一步优化
 
