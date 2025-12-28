@@ -14231,6 +14231,69 @@ impl MinimalRuntime {
             let on_key = v8::String::new(scope, "on").unwrap();
             emitter_obj.set(scope, on_key.into(), on_instance.into());
 
+            // v0.3.257: prependListener(eventName, listener) - adds listener to the beginning of the listener array
+            let prepend_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let event_name = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+                let listener = args.get(1);
+
+                if !listener.is_function() {
+                    retval.set(v8::null(scope).into());
+                    return;
+                }
+
+                let listener_func = v8::Local::<v8::Function>::try_from(listener).unwrap();
+                let function_global = v8::Global::new(scope, listener_func);
+
+                // v0.3.257: Check if adding listener exceeds maxListeners and emit warning
+                let current_count = EVENT_LISTENERS.with(|map| {
+                    let map_ref = map.lock().unwrap();
+                    map_ref.get(&event_name).map(|v| v.len()).unwrap_or(0)
+                });
+
+                // Get maxListeners from the emitter
+                let max_key = v8::String::new(scope, "_maxListeners").unwrap();
+                let max_listeners = this.get(scope, max_key.into())
+                    .and_then(|v| v.to_integer(scope))
+                    .map(|v| v.value() as usize)
+                    .unwrap_or(10);
+
+                // Emit warning if exceeding maxListeners
+                if max_listeners > 0 && current_count >= max_listeners {
+                    let warning_msg = format!(
+                        "MaxListenersExceededWarning: Possible EventEmitter memory leak detected. {} listeners added to {} event. Use emitter.setMaxListeners() to increase limit",
+                        current_count + 1,
+                        event_name
+                    );
+                    // Call console.warn
+                    let console_key = v8::String::new(scope, "console").unwrap();
+                    let console = scope.get_current_context().global(scope).get(scope, console_key.into());
+                    if let Some(console_obj) = console.and_then(|c| c.to_object(scope)) {
+                        let warn_key = v8::String::new(scope, "warn").unwrap();
+                        if let Some(warn_func) = console_obj.get(scope, warn_key.into()).and_then(|f| v8::Local::<v8::Function>::try_from(f).ok()) {
+                            let msg_str = v8::String::new(scope, &warning_msg).unwrap();
+                            let _ = warn_func.call(scope, console_obj.into(), &[msg_str.into()]);
+                        }
+                    }
+                }
+
+                // v0.3.257: Add listener to the BEGINNING of the listener array (unlike on which adds to the end)
+                EVENT_LISTENERS.with(|map| {
+                    let mut map_ref = map.lock().unwrap();
+                    let listeners = map_ref.entry(event_name.clone()).or_insert_with(Vec::new);
+                    listeners.insert(0, function_global);  // Insert at beginning
+                });
+
+                // Set event flag on object
+                let prop_key = v8::String::new(scope, &event_name).unwrap();
+                let val = v8::Boolean::new(scope, true);
+                this.set(scope, prop_key.into(), val.into());
+                retval.set(this.into());
+            });
+            let prepend_instance = prepend_func.get_function(scope).unwrap();
+            let prepend_key = v8::String::new(scope, "prependListener").unwrap();
+            emitter_obj.set(scope, prepend_key.into(), prepend_instance.into());
+
             // once(eventName, listener)
             let once_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
                 let this = args.this();

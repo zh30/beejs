@@ -48,6 +48,13 @@ fn event_emitter_constructor_callback(
     let on_instance = on_func.get_function(scope).unwrap();
     let on_key = v8::String::new(scope, "on").unwrap();
     emitter_obj.set(scope, on_key.into(), on_instance.into());
+
+    // v0.3.257: prependListener(eventName, listener) - 添加到队列开头
+    let prepend_func = v8::FunctionTemplate::new(scope, event_emitter_prepend_listener_callback);
+    let prepend_instance = prepend_func.get_function(scope).unwrap();
+    let prepend_key = v8::String::new(scope, "prependListener").unwrap();
+    emitter_obj.set(scope, prepend_key.into(), prepend_instance.into());
+
     // once(eventName, listener)
     let once_func = v8::FunctionTemplate::new(scope, event_emitter_once_callback);
     let once_instance = once_func.get_function(scope).unwrap();
@@ -163,6 +170,58 @@ fn event_emitter_on_callback(
     this.set(scope, prop_key.into(), val);
     retval.set(this.into());
 }
+
+/// v0.3.257: prependListener 回调
+/// 与 on 类似，但将监听器添加到事件队列的开头（优先执行）
+fn event_emitter_prepend_listener_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this: _ = args.this();
+    let event_name: _ = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    let listener: _ = args.get(1);
+    if !listener.is_function() {
+        retval.set(v8::null(scope).into());
+        return;
+    }
+    // 创建持久化函数引用
+    let listener_func: _ = v8::Local::<v8::Function>::try_from(listener).unwrap();
+    let function_global: _ = v8::Global::new(scope, listener_func);
+
+    // 检查 maxListeners 警告
+    let current_count = EVENT_LISTENERS.with(|map| {
+        let map_ref = map.lock().unwrap();
+        map_ref.get(&event_name).map(|v| v.len()).unwrap_or(0)
+    });
+
+    let max_key: _ = v8::String::new(scope, "_maxListeners").unwrap();
+    let max_listeners = this.get(scope, max_key.into())
+        .and_then(|v| v.to_integer(scope))
+        .map(|v| v.value() as usize)
+        .unwrap_or(10);
+
+    if max_listeners > 0 && current_count >= max_listeners {
+        emit_max_listeners_warning(scope, &this, &event_name, current_count + 1, max_listeners);
+    }
+
+    // 添加监听器到队列开头（与 on 的区别）
+    EVENT_LISTENERS.with(|map| {
+        let mut map_ref = map.lock().unwrap();
+        let listeners = map_ref.entry(event_name.clone()).or_insert_with(Vec::new);
+        listeners.insert(0, function_global);  // 插入到开头
+    });
+
+    let prop_key: _ = v8::String::new(scope, &event_name).unwrap();
+    let val: _ = v8::Boolean::new(scope, true).into();
+    this.set(scope, prop_key.into(), val);
+    retval.set(this.into());
+}
+
 fn event_emitter_once_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
