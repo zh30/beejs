@@ -118,7 +118,7 @@ fn path_join_callback(
             }
         }
     }
-    let mut result = String::new(); // TODO: Check if result is actually used
+    let mut result = String::new(); // Accumulates normalized path parts
     let is_windows: _ = cfg!(windows);
     for (i, path) in paths.iter().enumerate() {
         if i > 0 {
@@ -150,7 +150,7 @@ fn path_resolve_callback(
         }
     }
     let is_windows: _ = cfg!(windows);
-    let mut result = String::new(); // TODO: Check if result is actually used
+    let mut result = String::new(); // Accumulates normalized path parts
     // 如果没有路径，返回当前目录
     if paths.is_empty() {
         result = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")).to_string_lossy().to_string();
@@ -204,7 +204,7 @@ fn path_relative_callback(
     } else {
         to.split('/').filter(|s| !s.is_empty()).collect()
     };
-    let mut result = String::new(); // TODO: Check if result is actually used
+    let mut result = String::new(); // Accumulates normalized path parts
     let mut i = 0;
     // 找到共同前缀
     while i < from_parts.len() && i < to_parts.len() && from_parts[i] == to_parts[i] {
@@ -485,7 +485,7 @@ fn path_normalize_callback(
 }
 // 辅助函数：规范化路径
 fn normalize_path(path: &str, is_windows: bool) -> String {
-    let mut result = String::new(); // TODO: Check if result is actually used
+    let mut result = String::with_capacity(path.len()); // Accumulates normalized path parts
     let separator: _ = if is_windows { '\\' } else { '/' };
     let other_separator: _ = if is_windows { '/' } else { '\\' };
     let separator_str: _ = separator.to_string();
