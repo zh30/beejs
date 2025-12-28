@@ -1,3 +1,46 @@
+### v0.3.242 process.setMaxListeners() 和 getMaxListeners()（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.242 新增功能
+- **process.setMaxListeners(n)**
+  - 设置事件的最大监听器数量
+  - `n = 0` 表示无限制
+  - 负数会自动转为 0
+  - 返回 process 对象，支持链式调用
+
+- **process.getMaxListeners(event)**
+  - 获取指定事件的最大监听器数量
+  - 默认值 10，与 Node.js 行为一致
+  - 事件名称默认为 `"__default__"`
+
+#### v0.3.242 实现细节
+- **线程本地存储** (`src/nodejs_core/process.rs` 和 `src/runtime_minimal.rs`)
+  - 使用 `thread_local!` 宏存储每个事件的限制
+  - `HashMap<String, i32>` 存储事件名到限制值的映射
+  - 多 V8 Isolate 隔离，避免状态污染
+
+- **双实现**
+  - `nodejs_core/process.rs`: 完整功能实现
+  - `runtime_minimal.rs`: MinimalRuntime 的简化实现
+
+#### v0.3.242 测试验证
+- ✅ `cargo test --lib`: 234/234 测试通过
+- ✅ `process_resource_tests`: 25/25 测试通过
+- ✅ 基础存在性检查通过
+- ✅ 链式调用正常工作
+- ✅ 0 和负数处理正确
+
+#### v0.3.242 代码变更
+- `src/nodejs_core/process.rs`: 添加完整实现 (~80 行)
+- `src/runtime_minimal.rs`: 添加简化实现 (~80 行)
+- `tests/process_resource_tests.rs`: 新增 9 个测试用例
+
+#### v0.3.242 下一步
+- 继续完善其他 Node.js API（如 Buffer、Stream）
+- 优化事件监听器警告机制
+
+---
+
 ### v0.3.241 process.memory() 和 cpuUsage() 真实数据（2025-12-29）
 **进度**: Node.js 兼容性 | ✅ 已完成
 
