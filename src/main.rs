@@ -91,8 +91,14 @@ enum Command {
     },
     /// Add dependency package
     Add {
-        /// Package name
+        /// Package name (with optional version, e.g., "lodash@4.17.21")
         package: String,
+        /// Install exact version (no caret/tilde prefix)
+        #[arg(long)]
+        save_exact: bool,
+        /// Install as devDependency
+        #[arg(long)]
+        dev: bool,
     },
     /// Remove dependency package
     Remove {
@@ -113,6 +119,11 @@ enum Command {
         package: String,
         /// Arguments to pass to the package
         args: Vec<String>,
+    },
+    /// Upgrade dependencies to latest versions
+    Upgrade {
+        /// Package to upgrade (all if not specified)
+        package: Option<String>,
     },
 }
 
@@ -559,11 +570,104 @@ async fn main() -> Result<()> {
             println!("\nRun 'cd {} && beejs run index.js' to start", project_name);
             return Ok(());
         }
-        Some(Command::Add { package }) => {
+        Some(Command::Add { package, save_exact, dev }) => {
             println!("📦 Adding dependency: {}", package);
-            println!("⚠️  Package manager feature is under development...");
-            println!("💡 Tip: Manually edit package.json to add dependencies");
-            return Ok(());
+            println!("  Save exact: {}", save_exact);
+            println!("  As devDependency: {}", dev);
+
+            // Parse package name and version
+            let (name, version) = if package.contains('@') {
+                let parts: Vec<&str> = package.splitn(2, '@').collect();
+                let ver = parts.get(1).map(|s| s.to_string()).unwrap_or_else(|| "latest".to_string());
+                (parts[0].to_string(), ver)
+            } else {
+                (package.clone(), "latest".to_string())
+            };
+
+            println!("  Package: {}", name);
+            println!("  Version: {}", version);
+
+            // Check if package.json exists
+            let package_json_path = std::path::Path::new("package.json");
+            if !package_json_path.exists() {
+                return Err(anyhow!("package.json not found in current directory. Run 'beejs init' first."));
+            }
+
+            // Create package manager
+            let config = beejs::package_manager::PackageManagerConfig::default();
+            let pm = beejs::package_manager::PackageManager::new(config)
+                .map_err(|e| anyhow!("Failed to create package manager: {}", e))?;
+
+            // Install the package
+            match pm.install_package(&name, &version) {
+                Ok(result) => {
+                    println!("✅ Installed {}@{}", name, result.package.version);
+
+                    // Read existing package.json
+                    let content = std::fs::read_to_string(package_json_path)
+                        .map_err(|e| anyhow!("Failed to read package.json: {}", e))?;
+
+                    let mut package_data: serde_json::Value = serde_json::from_str(&content)
+                        .map_err(|e| anyhow!("Failed to parse package.json: {}", e))?;
+
+                    // Determine version string to save
+                    let version_to_save = if save_exact {
+                        result.package.version.clone()
+                    } else {
+                        format!("^{}", result.package.version)
+                    };
+
+                    // Add to appropriate dependencies section
+                    let dep_key = if dev { "devDependencies" } else { "dependencies" };
+
+                    if let Some(deps) = package_data.get_mut(dep_key) {
+                        if deps.is_object() {
+                            deps.as_object_mut().unwrap().insert(name.clone(), serde_json::Value::String(version_to_save));
+                        }
+                    } else {
+                        // Create the dependencies section if it doesn't exist
+                        package_data[dep_key] = serde_json::json!({ &name: version_to_save });
+                    }
+
+                    // Write updated package.json
+                    let updated_content = serde_json::to_string_pretty(&package_data)
+                        .map_err(|e| anyhow!("Failed to serialize package.json: {}", e))?;
+                    std::fs::write(package_json_path, updated_content)
+                        .map_err(|e| anyhow!("Failed to write package.json: {}", e))?;
+
+                    println!("✅ Added '{}' to {}", name, dep_key);
+
+                    // Generate/update package-lock.json
+                    let lock_path = std::path::Path::new("package-lock.json");
+                    if let Some(project_name) = package_data.get("name").and_then(|n| n.as_str()) {
+                        let project_version = package_data.get("version")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("1.0.0");
+
+                        if lock_path.exists() {
+                            // Update existing lock file with new dependency
+                            let locked_dep = beejs::package_manager::LockedDependency {
+                                version: result.package.version.clone(),
+                                resolved: Some(format!("https://registry.npmjs.org/{}/-/{}-{}.tgz",
+                                    name, name, result.package.version)),
+                                integrity: None,
+                                dev: Some(dev),
+                                dependencies: None,
+                            };
+                            pm.update_package_lock(lock_path, project_name, project_version, vec![(name, locked_dep)])?;
+                        } else {
+                            // Generate new lock file
+                            pm.generate_package_lock(lock_path, project_name, project_version)?;
+                        }
+                        println!("✅ Updated package-lock.json");
+                    }
+
+                    return Ok(());
+                }
+                Err(e) => {
+                    return Err(anyhow!("Failed to install package: {}", e));
+                }
+            }
         }
         Some(Command::Remove { package }) => {
             println!("🗑️  Removing dependency: {}", package);
@@ -734,6 +838,120 @@ async fn main() -> Result<()> {
                 }
             }
         }
+        Some(Command::Upgrade { package }) => {
+            println!("⬆️  Upgrading dependencies...");
+
+            // Check if package.json exists
+            let package_json_path = std::path::Path::new("package.json");
+            if !package_json_path.exists() {
+                return Err(anyhow!("package.json not found in current directory"));
+            }
+
+            // Read package.json
+            let content = std::fs::read_to_string(package_json_path)
+                .map_err(|e| anyhow!("Failed to read package.json: {}", e))?;
+
+            let mut package_data: serde_json::Value = serde_json::from_str(&content)
+                .map_err(|e| anyhow!("Failed to parse package.json: {}", e))?;
+
+            // Create package manager
+            let config = beejs::package_manager::PackageManagerConfig::default();
+            let pm = beejs::package_manager::PackageManager::new(config)
+                .map_err(|e| anyhow!("Failed to create package manager: {}", e))?;
+
+            // Determine which dependencies to upgrade
+            let dep_types = vec!["dependencies", "devDependencies"];
+            let mut upgraded = Vec::new();
+            let mut errors = Vec::new();
+
+            for dep_type in dep_types {
+                if let Some(deps) = package_data.get_mut(dep_type) {
+                    if let Some(deps_obj) = deps.as_object_mut() {
+                        let packages: Vec<(String, String)> = deps_obj.iter()
+                            .filter(|(name, _)| {
+                                package.as_ref().map(|p| p == *name).unwrap_or(true)
+                            })
+                            .map(|(name, v)| (name.clone(), v.as_str().unwrap_or("latest").to_string()))
+                            .collect();
+
+                        for (pkg_name, _current_version) in packages {
+                            print!("  Checking {}...", pkg_name);
+                            std::io::stdout().flush()?;
+
+                            // Fetch latest version from registry
+                            match pm.fetch_package_info(&pkg_name) {
+                                Ok(info) => {
+                                    // Get latest version from dist-tags
+                                    let latest_version = info.get("dist-tags")
+                                        .and_then(|tags| tags.get("latest"))
+                                        .and_then(|v| v.as_str())
+                                        .ok_or(anyhow!("No latest version found"))?
+                                        .to_string();
+                                    let current_version = deps_obj.get(&pkg_name)
+                                        .and_then(|v| v.as_str())
+                                        .map(|v| v.trim_start_matches('^').trim_start_matches('~').to_string())
+                                        .unwrap_or_else(|| "unknown".to_string());
+
+                                    if current_version != latest_version {
+                                        // Reinstall with latest version
+                                        match pm.install_package(&pkg_name, &latest_version) {
+                                            Ok(result) => {
+                                                // Update package.json
+                                                let new_version_str = format!("^{}", result.package.version);
+                                                deps_obj.insert(pkg_name.clone(), serde_json::Value::String(new_version_str));
+                                                println!(" {} → {}", current_version, result.package.version);
+                                                upgraded.push((pkg_name, current_version, result.package.version));
+                                            }
+                                            Err(e) => {
+                                                println!(" failed");
+                                                errors.push(format!("{}: {}", pkg_name, e));
+                                            }
+                                        }
+                                    } else {
+                                        println!(" up to date ({})", current_version);
+                                    }
+                                }
+                                Err(e) => {
+                                    println!(" failed to fetch info");
+                                    errors.push(format!("{}: {}", pkg_name, e));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Write updated package.json
+            let updated_content = serde_json::to_string_pretty(&package_data)
+                .map_err(|e| anyhow!("Failed to serialize package.json: {}", e))?;
+            std::fs::write(package_json_path, updated_content)
+                .map_err(|e| anyhow!("Failed to write package.json: {}", e))?;
+
+            // Generate new package-lock.json
+            let lock_path = std::path::Path::new("package-lock.json");
+            if let Some(project_name) = package_data.get("name").and_then(|n| n.as_str()) {
+                let project_version = package_data.get("version")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("1.0.0");
+                pm.generate_package_lock(lock_path, project_name, project_version)?;
+            }
+
+            println!("\n✅ Upgrade complete!");
+            if !upgraded.is_empty() {
+                println!("  Upgraded packages:");
+                for (name, old_ver, new_ver) in &upgraded {
+                    println!("    {}: {} → {}", name, old_ver, new_ver);
+                }
+            }
+            if !errors.is_empty() {
+                println!("  Errors:");
+                for error in &errors {
+                    println!("    - {}", error);
+                }
+            }
+
+            return Ok(());
+        }
         None => {
             // No command provided, show help
             println!("🐝 Beejs - High-performance JavaScript/TypeScript runtime");
@@ -753,6 +971,7 @@ async fn main() -> Result<()> {
             println!("  remove <package> Remove dependency package");
             println!("  create [type]    Create new project");
             println!("  bunx <package>   Run a package without installing");
+            println!("  upgrade [pkg]    Upgrade dependencies to latest");
             println!("  version          Display version information");
             println!();
             println!("Examples:");
@@ -764,9 +983,10 @@ async fn main() -> Result<()> {
             println!("  beejs debug script.ts");
             println!("  beejs serve --port 8080");
             println!("  beejs init my-project");
-            println!("  beejs create ts my-ts-app");
-            println!("  beejs add lodash");
-            println!("  beejs bunx typescript --version");
+            println!("  beejs add react --save-exact");
+            println!("  beejs add typescript --dev");
+            println!("  beejs upgrade");
+            println!("  beejs upgrade lodash");
             return Ok(());
         }
     }

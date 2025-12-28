@@ -1,3 +1,49 @@
+### v0.3.228 CLI 增强 - --save-exact 和 upgrade 命令（2025-12-28）
+**进度**: 包管理器 CLI 增强 | ✅ 已完成
+
+#### v0.3.228 新增功能
+- **Add 命令增强**
+  - `--save-exact` 参数：安装精确版本（无 ^/~ 前缀）
+  - `--dev` 参数：安装为 devDependency
+  - 自动更新 package.json 依赖版本
+  - 自动生成/更新 package-lock.json
+
+- **Upgrade 命令**
+  - `beejs upgrade` - 升级所有依赖到最新版本
+  - `beejs upgrade <package>` - 升级指定包
+  - 从 npm registry 获取最新版本信息
+  - 比较当前版本和最新版本，提示升级
+
+#### v0.3.228 使用示例
+```bash
+# 添加依赖（带精确版本）
+beejs add react --save-exact
+
+# 添加为开发依赖
+beejs add typescript --dev
+
+# 升级所有依赖
+beejs upgrade
+
+# 升级指定包
+beejs upgrade lodash
+```
+
+#### v0.3.228 测试验证
+- ✅ `cargo build`: 编译成功
+- ✅ `beejs add --help`: 参数正常显示
+- ✅ `beejs upgrade --help`: 命令正常显示
+- ✅ `cargo test --test minimal_tests`: 130/130 通过
+- ✅ `cargo test --test package_lock_tests`: 7/7 通过
+- ✅ `cargo test --test install_command_tests`: 6/6 通过
+
+#### v0.3.228 下一步
+- 实现 `beejs install` 命令（从 package.json 安装所有依赖）
+- 添加 `beejs prune` 命令（清理未使用依赖）
+- 支持 optionalDependencies
+
+---
+
 ### v0.3.224 实现完整包下载和安装功能（2025-12-28）
 **进度**: 包管理器增强 | ✅ 已完成
 
