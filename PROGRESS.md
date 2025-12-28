@@ -1,3 +1,29 @@
+### v0.3.217 修复 is_utility_type 缺失 ThisType（2025-12-28）
+**进度**: TypeScript 编译器修复 | ✅ 已提交
+
+#### v0.3.217 修复内容
+- **修复 `is_utility_type()` 缺失 `ThisType`**
+  - `ThisType` 在 `register_builtin_types()` 中已注册，但在 `is_utility_type()` 中缺失
+  - 这会导致类型系统不一致，编译器可能走不同分支处理类型
+  - 现在所有工具类型在两处都保持一致
+
+#### v0.3.217 实现细节
+- **编译器修复** (`src/typescript/compiler.rs:7597`)
+  - 在 `is_utility_type()` 中添加 `ThisType` 到 utility 类型列表
+  - 确保类型系统一致性
+
+#### v0.3.217 测试验证
+- ✅ `cargo test --test minimal_tests`: 123/123 通过
+- ✅ `cargo test --lib`: 223/223 通过
+- ✅ `cargo build --release`: 编译成功
+
+#### v0.3.217 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多内建工具类型支持
+- 完善类型推断场景测试
+
+---
+
 ### v0.3.216 实现 ThisType<T> 工具类型快速路径支持（2025-12-28）
 **进度**: TypeScript 快速路径增强 | ✅ 已提交
 
