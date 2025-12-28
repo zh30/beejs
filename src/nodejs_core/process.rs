@@ -352,7 +352,6 @@ pub fn reset_process_state() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serial_test::serial;
 
     #[test]
     fn test_reset_process_state() {
