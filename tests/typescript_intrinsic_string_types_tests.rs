@@ -444,4 +444,91 @@ console.log(t, tl, tr);
             }
         }
     }
+
+    /// Test Capitalize/Uncapitalize in conditional types (v0.3.223)
+    #[test]
+    fn test_capitalize_uncapitalize_in_conditional_types() {
+        // v0.3.223: 验证 Capitalize/Uncapitalize 在条件类型中的处理
+        let ts_code = r#"
+type ToCapitalize<T extends string> = T extends string ? Capitalize<T> : never;
+type ToUncapitalize<T extends string> = T extends string ? Uncapitalize<T> : never;
+
+type CapResult = ToCapitalize<'hello'>;
+type UncapResult = ToUncapitalize<'HELLO'>;
+
+const cap: string = "Hello";
+const uncap: string = "hELLO";
+
+console.log(cap, uncap);
+"#;
+        match compile_typescript(ts_code, "capitalize_conditional.ts") {
+            Ok(output) => {
+                println!("Capitalize/Uncapitalize 在条件类型中的转译结果:");
+                println!("{}", output.js_code);
+
+                // 验证类型别名被移除
+                assert!(!output.js_code.contains("type ToCapitalize"),
+                    "Should not contain type ToCapitalize: {}", output.js_code);
+                assert!(!output.js_code.contains("type ToUncapitalize"),
+                    "Should not contain type ToUncapitalize: {}", output.js_code);
+                assert!(!output.js_code.contains("type CapResult"),
+                    "Should not contain type CapResult: {}", output.js_code);
+                assert!(!output.js_code.contains("type UncapResult"),
+                    "Should not contain type UncapResult: {}", output.js_code);
+
+                // 验证代码保留
+                assert!(output.js_code.contains("const cap"),
+                    "Should contain const cap: {}", output.js_code);
+                assert!(output.js_code.contains("console.log"),
+                    "Should contain console.log: {}", output.js_code);
+
+                println!("✅ Capitalize/Uncapitalize in conditional types test passed");
+            }
+            Err(e) => {
+                panic!("Capitalize/Uncapitalize in conditional types test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test deeply nested intrinsic string types (v0.3.223)
+    #[test]
+    fn test_deeply_nested_intrinsic_types() {
+        // v0.3.223: 验证深层嵌套的内建字符串类型处理
+        let ts_code = r#"
+type Nested1 = Uppercase<Lowercase<'HELLO'>>;
+type Nested2 = Capitalize<Uncapitalize<'Hello'>>;
+type Nested3 = Trim<Uppercase<'  hello  '>>;
+
+const n1: string = "hello";
+const n2: string = "Hello";
+const n3: string = "HELLO";
+
+console.log(n1, n2, n3);
+"#;
+        match compile_typescript(ts_code, "nested_intrinsic.ts") {
+            Ok(output) => {
+                println!("深层嵌套内建字符串类型转译结果:");
+                println!("{}", output.js_code);
+
+                // 验证类型别名被移除
+                assert!(!output.js_code.contains("type Nested1"),
+                    "Should not contain type Nested1: {}", output.js_code);
+                assert!(!output.js_code.contains("type Nested2"),
+                    "Should not contain type Nested2: {}", output.js_code);
+                assert!(!output.js_code.contains("type Nested3"),
+                    "Should not contain type Nested3: {}", output.js_code);
+
+                // 验证代码保留
+                assert!(output.js_code.contains("const n1"),
+                    "Should contain const n1: {}", output.js_code);
+                assert!(output.js_code.contains("console.log"),
+                    "Should contain console.log: {}", output.js_code);
+
+                println!("✅ Deeply nested intrinsic types test passed");
+            }
+            Err(e) => {
+                panic!("Deeply nested intrinsic types test failed: {}", e);
+            }
+        }
+    }
 }
