@@ -12663,7 +12663,38 @@ console.log(p.name);  // "Alice"
   - ✅ 10/10 timer_tests 测试通过
   - ✅ 248/248 cargo test --lib 测试通过
 
-#### v0.3.256 下一步
+### v0.3.257 EventEmitter prependListener 实现（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.257 新增功能
+- **EventEmitter.prependListener API**
+  - 将事件监听器添加到队列开头，确保优先执行
+  - 与 `on()` 方法行为一致，但插入位置不同
+  - 完整的 maxListeners 警告机制
+
+#### v0.3.257 测试覆盖
+- `test_prepend_listener_exists`: 验证方法存在性
+- `test_prepend_listener_basic`: 验证基本功能
+- `test_prepend_listener_execution_order`: 验证执行顺序优先级
+- `test_prepend_listener_with_data`: 验证参数传递
+- `test_prepend_listener_returns_emitter`: 验证返回 emitter 实例
+- `test_prepend_listener_requires_function`: 验证参数验证
+- `test_prepend_listener_count`: 验证监听器计数
+- `test_prepend_listener_warning_exceeds_max`: 验证 maxListeners 警告
+
+#### v0.3.257 代码变更
+- `src/runtime_minimal.rs`: 添加 prependListener 函数模板 (~80 行)
+- `src/nodejs_core/events.rs`: 添加 prependListener 到 events 模块 (~50 行)
+- `tests/events_module_tests.rs`: 新增 8 个测试用例 (~100 行)
+
+#### v0.3.257 测试结果
+- ✅ 34/34 events_module_tests 测试通过
+- ✅ 248/248 cargo test --lib 测试通过
+
+#### v0.3.257 下一步
 - 继续完善 Node.js API 兼容性
 - 优化性能和启动时间
 - 添加更多测试覆盖
+
+---
+
