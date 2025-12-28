@@ -182,6 +182,8 @@ impl TypeContext {
         self.variables.insert("Infer".to_string(), "utility".to_string());
         // Awaited<T> - TypeScript 4.5+ 获取 Promise 解析后的类型（v0.3.215）
         self.variables.insert("Awaited".to_string(), "utility".to_string());
+        // ThisType<T> - 提供对象方法中 'this' 的类型（v0.3.216）
+        self.variables.insert("ThisType".to_string(), "utility".to_string());
     }
 
     fn get_variable_type(&self, name: &str) -> Option<&String> {

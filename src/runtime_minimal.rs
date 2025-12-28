@@ -2397,6 +2397,13 @@ impl MinimalRuntime {
         let infer_pattern = regex::Regex::new(r"Infer\s*<([^>]+)>").unwrap();
         js_code = infer_pattern.replace_all(&js_code, "$1").to_string();
 
+        // v0.3.216: Remove ThisType utility type
+        // ThisType<T> provides the type of 'this' within an object method
+        // For runtime, we completely remove this type-level construct
+        // Pattern: "ThisType<T>" -> "" (completely removed)
+        let thistype_pattern = regex::Regex::new(r"ThisType\s*<[^>]+>").unwrap();
+        js_code = thistype_pattern.replace_all(&js_code, "").to_string();
+
         // v0.3.195: Convert simple ESM export statements to comments
         // v0.3.196: Added abstract for export abstract class support
         // Complex exports (export { a, b }) need variable tracking, so we use placeholders
@@ -2492,7 +2499,8 @@ impl MinimalRuntime {
             || code.contains("Parameters<")     // v0.3.211: Parameters utility type
             || code.contains("ConstructorParameters<")  // v0.3.211: ConstructorParameters utility type
             || code.contains("NoInfer<")                // v0.3.212: NoInfer utility type
-            || code.contains("Infer<");                  // v0.3.213: Infer utility type
+            || code.contains("Infer<")                   // v0.3.213: Infer utility type
+            || code.contains("ThisType<");               // v0.3.216: ThisType utility type
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript

@@ -3022,4 +3022,92 @@ const mixed: Mixed = true;
 
         println!("✅ Test 117: Awaited with union types");
     }
+
+    /// 测试118: TypeScript ThisType<T> 工具类型快速路径测试 (v0.3.216)
+    #[test]
+    fn test_thistype_utility_fast_path() {
+        // 测试 ThisType<T> 工具类型快速路径
+        // ThisType is a special utility type that provides 'this' type in object methods
+        let ts_code = r#"
+type MyContext = ThisType<{ value: number; name: string }>;
+const ctx = { value: 42, name: "test" };
+"#;
+        let result = typescript::compile_typescript(ts_code, "thistype_test.ts");
+        assert!(result.is_ok(), "ThisType should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 ThisType 被移除
+        assert!(!output.js_code.contains("ThisType<"),
+            "Should remove ThisType: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("const ctx"),
+            "Should preserve const ctx: {}", output.js_code);
+
+        println!("✅ Test 118: ThisType<T> utility fast path");
+    }
+
+    /// 测试119: ThisType 与对象方法组合测试 (v0.3.216)
+    #[test]
+    fn test_thistype_with_methods() {
+        // 测试 ThisType 与对象方法的组合使用
+        let ts_code = r#"
+type ControllerContext = ThisType<{
+    userId: string;
+    getUser(): string;
+}>;
+
+const controller = {
+    userId: "123",
+    getUser() { return this.userId; }
+};
+"#;
+        let result = typescript::compile_typescript(ts_code, "thistype_methods.ts");
+        assert!(result.is_ok(), "ThisType with methods should compile, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 ThisType 被移除
+        assert!(!output.js_code.contains("ThisType<"),
+            "Should remove ThisType: {}", output.js_code);
+
+        // 验证对象保留
+        assert!(output.js_code.contains("const controller"),
+            "Should preserve const controller: {}", output.js_code);
+
+        println!("✅ Test 119: ThisType with methods");
+    }
+
+    /// 测试120: ThisType 嵌套类型测试 (v0.3.216)
+    #[test]
+    fn test_thistype_nested() {
+        // 测试 ThisType 嵌套使用场景
+        let ts_code = r#"
+type DeepContext = ThisType<{
+    nested: {
+        value: number;
+    };
+    deep: {
+        inner: string;
+    };
+}>;
+
+const deep = {
+    nested: { value: 42 },
+    deep: { inner: "test" }
+};
+"#;
+        let result = typescript::compile_typescript(ts_code, "thistype_nested.ts");
+        assert!(result.is_ok(), "Nested ThisType should compile, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 ThisType 被移除
+        assert!(!output.js_code.contains("ThisType<"),
+            "Should remove ThisType: {}", output.js_code);
+
+        // 验证变量保留
+        assert!(output.js_code.contains("const deep"),
+            "Should preserve const deep: {}", output.js_code);
+
+        println!("✅ Test 120: ThisType nested usage");
+    }
 }
