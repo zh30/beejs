@@ -3110,4 +3110,79 @@ const deep = {
 
         println!("✅ Test 120: ThisType nested usage");
     }
+
+    /// 测试121: TypeScript Mutable<T> 工具类型快速路径测试 (v0.3.218)
+    #[test]
+    fn test_mutable_utility_fast_path() {
+        // 测试 Mutable<T> 工具类型快速路径
+        // Mutable<T> makes all properties of T mutable (opposite of Readonly)
+        // Note: Using interface to avoid readonly keyword parsing issues
+        let ts_code = r#"
+type User = { name: string; age: number };
+type MutableUser = Mutable<User>;
+const user: MutableUser = { name: "Alice", age: 30 };
+"#;
+        let result = typescript::compile_typescript(ts_code, "mutable_test.ts");
+        assert!(result.is_ok(), "Mutable should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 Mutable 被移除
+        assert!(!output.js_code.contains("Mutable<"),
+            "Should remove Mutable: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("const user"),
+            "Should preserve const user: {}", output.js_code);
+
+        println!("✅ Test 121: Mutable<T> utility fast path");
+    }
+
+    /// 测试122: Mutable 与泛型类型组合测试 (v0.3.218)
+    #[test]
+    fn test_mutable_with_generic_type() {
+        // 测试 Mutable 与泛型类型的组合使用
+        let ts_code = r#"
+type Config<T> = { data: T; id: number };
+type MutableConfig<T> = Mutable<Config<T>>;
+const config: MutableConfig<string> = { data: "test", id: 1 };
+"#;
+        let result = typescript::compile_typescript(ts_code, "mutable_generic.ts");
+        assert!(result.is_ok(), "Mutable with generic type should compile, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 Mutable 被移除
+        assert!(!output.js_code.contains("Mutable<"),
+            "Should remove Mutable: {}", output.js_code);
+
+        // 验证代码保留
+        assert!(output.js_code.contains("const config"),
+            "Should preserve const config: {}", output.js_code);
+
+        println!("✅ Test 122: Mutable with generic type");
+    }
+
+    /// 测试123: Mutable 嵌套类型测试 (v0.3.218)
+    #[test]
+    fn test_mutable_nested() {
+        // 测试 Mutable 嵌套使用场景
+        let ts_code = r#"
+type Inner = { value: number };
+type Outer = { inner: Inner; name: string };
+type MutableOuter = Mutable<Outer>;
+const nested: MutableOuter = { inner: { value: 42 }, name: "test" };
+"#;
+        let result = typescript::compile_typescript(ts_code, "mutable_nested.ts");
+        assert!(result.is_ok(), "Nested Mutable should compile, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 Mutable 被移除
+        assert!(!output.js_code.contains("Mutable<"),
+            "Should remove Mutable: {}", output.js_code);
+
+        // 验证变量保留
+        assert!(output.js_code.contains("const nested"),
+            "Should preserve const nested: {}", output.js_code);
+
+        println!("✅ Test 123: Mutable nested usage");
+    }
 }

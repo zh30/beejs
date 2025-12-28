@@ -2299,6 +2299,13 @@ impl MinimalRuntime {
         let nonnullable_pattern = regex::Regex::new(r"NonNullable\s*<([^>]+)>").unwrap();
         js_code = nonnullable_pattern.replace_all(&js_code, "$1").to_string();
 
+        // v0.3.218: Remove Mutable utility type
+        // Mutable<T> makes all properties of T mutable (opposite of Readonly)
+        // For runtime, we remove the wrapper and keep the inner type
+        // Pattern: "Mutable<readonly User>" -> "User"
+        let mutable_pattern = regex::Regex::new(r"Mutable\s*<([^>]+)>").unwrap();
+        js_code = mutable_pattern.replace_all(&js_code, "$1").to_string();
+
         // v0.3.206: Remove Partial utility type
         // Partial<T> makes all properties of T optional
         // For runtime, we remove the wrapper and keep the inner type
@@ -2500,7 +2507,8 @@ impl MinimalRuntime {
             || code.contains("ConstructorParameters<")  // v0.3.211: ConstructorParameters utility type
             || code.contains("NoInfer<")                // v0.3.212: NoInfer utility type
             || code.contains("Infer<")                   // v0.3.213: Infer utility type
-            || code.contains("ThisType<");               // v0.3.216: ThisType utility type
+            || code.contains("ThisType<")                 // v0.3.216: ThisType utility type
+            || code.contains("Mutable<");                 // v0.3.218: Mutable utility type
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript

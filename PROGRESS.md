@@ -1,3 +1,41 @@
+### v0.3.218 实现 Mutable<T> 工具类型快速路径支持（2025-12-28）
+**进度**: TypeScript 快速路径增强 | ✅ 已完成
+
+#### v0.3.218 新增功能
+- **Mutable<T> 工具类型快速路径**
+  - 运行时快速路径识别 `Mutable<...>` 模式
+  - Mutable<T> 使所有属性可变（与 Readonly<T> 相反）
+  - 正确移除 Mutable 包装，保留内部类型
+
+#### v0.3.218 实现细节
+- **TypeScript 编译器注册** (`src/typescript/compiler.rs:187-188`)
+  - 在 `register_builtin_types()` 中添加 `Mutable` 为 utility 类型
+  - 在 `is_utility_type()` 中添加 `Mutable` 到类型检查列表
+
+- **运行时检测增强** (`src/runtime_minimal.rs:2511`)
+  - 在 `has_raw_typescript()` 中添加 `Mutable<` 模式检测
+
+- **运行时快速路径移除** (`src/runtime_minimal.rs:2302-2307`)
+  - 添加正则表达式 `Mutable\s*<([^>]+)>` 替换为 `$1`
+  - 提取泛型参数内容直接替换，实现类型擦除
+
+#### v0.3.218 测试用例
+- 测试121: Mutable<T> 工具类型快速路径测试
+- 测试122: Mutable 与泛型类型组合测试
+- 测试123: Mutable 嵌套类型测试
+
+#### v0.3.218 测试验证
+- ✅ `cargo test --test minimal_tests`: 126/126 通过 (新增 3 个测试)
+- ✅ `cargo test --lib`: 223/223 通过
+- ✅ `cargo build --release`: 编译成功
+
+#### v0.3.218 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多内建工具类型支持
+- 完善类型推断场景测试
+
+---
+
 ### v0.3.217 修复 is_utility_type 缺失 ThisType（2025-12-28）
 **进度**: TypeScript 编译器修复 | ✅ 已提交
 

@@ -184,6 +184,8 @@ impl TypeContext {
         self.variables.insert("Awaited".to_string(), "utility".to_string());
         // ThisType<T> - 提供对象方法中 'this' 的类型（v0.3.216）
         self.variables.insert("ThisType".to_string(), "utility".to_string());
+        // Mutable<T> - 使所有属性可变（与 Readonly<T> 相反）（v0.3.218）
+        self.variables.insert("Mutable".to_string(), "utility".to_string());
     }
 
     fn get_variable_type(&self, name: &str) -> Option<&String> {
@@ -7595,6 +7597,7 @@ impl Parser {
             | "ConstructorParameters" | "InstanceType" | "ThisParameterType"
             | "OmitThisParameter" | "Uppercase" | "Lowercase" | "Capitalize"
             | "Uncapitalize" | "NoInfer" | "Infer" | "Awaited" | "ThisType"
+            | "Mutable"
         )
     }
 
