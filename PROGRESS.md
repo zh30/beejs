@@ -1,3 +1,49 @@
+### v0.3.211 实现 ReturnType/Parameters/ConstructorParameters 工具类型快速路径支持（2025-12-28）
+**进度**: TypeScript 快速路径增强 | ✅ 已提交
+
+#### v0.3.211 新增功能
+- **ReturnType<T> 工具类型快速路径**
+  - 运行时快速路径识别 `ReturnType<...>` 模式
+  - ReturnType<T> 获取函数类型 T 的返回类型
+  - 正确移除 ReturnType 包装，保留内部类型
+
+- **Parameters<T> 工具类型快速路径**
+  - 运行时快速路径识别 `Parameters<...>` 模式
+  - Parameters<T> 获取函数类型 T 的参数类型
+  - 正确移除 Parameters 包装，保留内部类型
+
+- **ConstructorParameters<T> 工具类型快速路径**
+  - 运行时快速路径识别 `ConstructorParameters<...>` 模式
+  - ConstructorParameters<T> 获取构造函数类型 T 的参数类型
+  - 正确移除 ConstructorParameters 包装，保留内部类型
+
+#### v0.3.211 实现细节
+- **运行时检测增强** (`src/runtime_minimal.rs:2456-2458`)
+  - 在 `has_raw_typescript()` 中添加 `ReturnType<`、`Parameters<`、`ConstructorParameters<` 模式检测
+
+- **运行时快速路径移除** (`src/runtime_minimal.rs:2365-2384`)
+  - 添加正则表达式 `ReturnType\s*<([^>]+)>` 替换为 `$1`
+  - 添加正则表达式 `Parameters\s*<([^>]+)>` 替换为 `$1`
+  - 添加正则表达式 `ConstructorParameters\s*<([^>]+)>` 替换为 `$1`
+  - 提取泛型参数内容直接替换，实现类型擦除
+
+#### v0.3.211 测试用例
+- `test_returntype_utility_fast_path`: 基础 `ReturnType<typeof getUser>` 模式测试
+- `test_parameters_utility_fast_path`: 基础 `Parameters<typeof greet>` 模式测试
+- `test_constructor_parameters_utility_fast_path`: 基础 `ConstructorParameters<typeof User>` 模式测试
+
+#### v0.3.211 测试验证
+- ✅ `cargo test --test minimal_tests`: 111/111 通过 (新增 3 个测试)
+- ✅ `cargo test --lib`: 223/223 通过
+- ✅ `cargo build --release`: 编译成功
+
+#### v0.3.211 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多内建工具类型支持
+- 完善类型推断场景测试
+
+---
+
 ### v0.3.210 实现 InstanceType<T> 工具类型快速路径支持（2025-12-28）
 **进度**: TypeScript 快速路径增强 | ✅ 已提交
 
