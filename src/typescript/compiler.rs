@@ -7582,6 +7582,7 @@ impl Parser {
         }
     }
     /// 检查是否是 Utility Type
+    /// v0.3.214: 添加缺失的 NoInfer、Infer、Awaited
     fn is_utility_type(name: &str) -> bool {
         matches!(
             name,
@@ -7589,7 +7590,7 @@ impl Parser {
             | "Exclude" | "Extract" | "NonNullable" | "ReturnType" | "Parameters"
             | "ConstructorParameters" | "InstanceType" | "ThisParameterType"
             | "OmitThisParameter" | "Uppercase" | "Lowercase" | "Capitalize"
-            | "Uncapitalize"
+            | "Uncapitalize" | "NoInfer" | "Infer" | "Awaited"
         )
     }
 
