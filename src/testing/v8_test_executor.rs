@@ -9,19 +9,12 @@
 
 use crate::testing::test_context::{TestCase, TestResult, TestSuite};
 use rusty_v8 as v8;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
-
-/// V8 Isolate pool for test execution (v0.3.251)
-/// Reuses isolates for better performance in test suites
-static NEXT_ISOLATE_ID: AtomicU64 = AtomicU64::new(1);
 
 /// Executor for running tests in V8 isolate
 pub struct V8TestExecutor {
     /// Isolates created for this executor
     isolates: Vec<v8::OwnedIsolate>,
-    /// Current isolate being used
-    current_isolate: usize,
 }
 
 impl V8TestExecutor {
@@ -29,32 +22,12 @@ impl V8TestExecutor {
     pub fn new() -> Self {
         V8TestExecutor {
             isolates: Vec::new(),
-            current_isolate: 0,
         }
     }
 
     /// Get the number of isolates created (for testing)
     pub fn isolate_count(&self) -> usize {
         self.isolates.len()
-    }
-
-    /// Get or create an isolate for test execution
-    fn get_isolate(&mut self) -> &mut v8::OwnedIsolate {
-        // Try to reuse an existing isolate
-        if let Some(idx) = self.isolates.iter().position(|_| true) {
-            // Found an isolate to reuse
-            return self.isolates.get_mut(idx).unwrap();
-        }
-
-        // Create a new isolate
-        let isolate = v8::Isolate::new(Default::default());
-        let id = NEXT_ISOLATE_ID.fetch_add(1, Ordering::SeqCst);
-        if cfg!(feature = "verbose_logging") {
-            eprintln!("[V8TestExecutor] Created isolate #{}", id);
-        }
-        self.isolates.push(isolate);
-        self.current_isolate = self.isolates.len() - 1;
-        self.isolates.last_mut().unwrap()
     }
 
     /// Execute a single test case in V8
@@ -452,48 +425,6 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
     }).unwrap();
     let after_all_key = v8::String::new(scope, "afterAll").unwrap();
     global.set(scope, after_all_key.into(), after_all_fn.into());
-}
-
-/// Helper function to convert V8 value to string for comparison
-fn v8_value_to_string(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>, value: v8::Local<v8::Value>) -> Option<String> {
-    if value.is_string() {
-        Some(value.to_string(scope).unwrap().to_rust_string_lossy(scope))
-    } else if value.is_null() {
-        Some("null".to_string())
-    } else if value.is_undefined() {
-        Some("undefined".to_string())
-    } else if value.is_number() {
-        let num = value.to_number(scope).unwrap();
-        Some(format!("{}", num.value()))
-    } else if value.is_boolean() {
-        let bool_val = value.to_boolean(scope);
-        Some(format!("{}", bool_val.is_true()))
-    } else {
-        // Try JSON.stringify for objects/arrays
-        let json_fn = v8::String::new(scope, "JSON").unwrap();
-        // Chain get and to_object to avoid multiple mutable borrows of scope
-        if let Some(json_obj) = global.get(scope, json_fn.into()).and_then(|v| v.to_object(scope)) {
-            let stringify_key = v8::String::new(scope, "stringify").unwrap();
-            if let Some(stringify_fn_val) = json_obj.get(scope, stringify_key.into()) {
-                if let Ok(stringify_fn) = v8::Local::<v8::Function>::try_from(stringify_fn_val) {
-                    let undefined = v8::undefined(scope);
-                    let result = stringify_fn.call(scope, undefined.into(), &[value]);
-                    result.and_then(|r| r.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
-                } else {
-                    Some("[object]".to_string())
-                }
-            } else {
-                Some("[value]".to_string())
-            }
-        } else {
-            Some("[value]".to_string())
-        }
-    }
-}
-
-/// Helper to get property from global object
-fn global_get<'a>(scope: &'a mut v8::HandleScope, global: v8::Local<v8::Object>, key: v8::Local<v8::String>) -> v8::Local<'a, v8::Value> {
-    global.get(scope, key.into()).unwrap_or_else(|| v8::undefined(scope).into())
 }
 
 // V8 test executor tests are in the tests/ directory to avoid V8 API compatibility issues

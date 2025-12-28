@@ -139,8 +139,8 @@ pub struct TimeoutContext {
 }
 struct TestTimeoutHandle {
     test_name: String,
-    start_time: Instant,
-    timeout: Duration,
+    // start_time and timeout removed - stored but never read
+    // Keeping minimal structure for potential future use
 }
 impl TimeoutContext {
     pub fn new(timeout: Duration) -> Self {
@@ -154,8 +154,6 @@ impl TimeoutContext {
     pub fn start_test(&self, test_name: &str) -> TestTimeoutGuard {
         let handle: _ = TestTimeoutHandle {
             test_name: test_name.to_string(),
-            start_time: Instant::now(),
-            timeout: self.timeout,
         };
         {
             let mut active = self.active_tests.lock().unwrap();

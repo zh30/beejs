@@ -1,5 +1,9 @@
 // Clean imports - removing unused ones
 use std::sync::Once;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Mutex, OnceLock};
+use std::collections::HashMap;
+use std::time::{Duration, Instant};
 // Beejs: 高性能 JavaScript/TypeScript 运行时
 //
 // Stage 92: 企业级性能突破与 AI 原生优化
@@ -578,6 +582,7 @@ pub fn console_debug_callback(
 }
 
 /// Console table callback - formats data as a table
+/// Supports optional columns parameter for column filtering
 pub fn console_table_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -589,6 +594,28 @@ pub fn console_table_callback(
     }
 
     let data = args.get(0);
+
+    // Handle optional columns parameter (second argument)
+    let columns: Vec<String> = if args.length() > 1 {
+        let cols_arg = args.get(1);
+        if cols_arg.is_array() {
+            let cols_arr = v8::Local::<v8::Array>::try_from(cols_arg).unwrap();
+            let cols_len = cols_arr.length();
+            let mut cols = Vec::new();
+            for i in 0..cols_len {
+                if let Some(col) = cols_arr.get_index(scope, i) {
+                    let col_str = col.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                    cols.push(col_str);
+                }
+            }
+            cols
+        } else {
+            Vec::new()
+        }
+    } else {
+        Vec::new()
+    };
+    let use_columns = !columns.is_empty();
 
     // Handle different data types
     if data.is_null_or_undefined() {
@@ -609,33 +636,60 @@ pub fn console_table_callback(
         // Check if array contains objects
         let first_item = arr.get_index(scope, 0).unwrap();
         if first_item.is_object() {
-            // Get all unique keys from all objects
-            println!("┌─────────────────────────────────┐");
-            println!("│         Console Table           │");
-            println!("├─────────────────────────────────┤");
+            // Print table header
+            if use_columns {
+                println!("┌─────────────────────────────────┐");
+                println!("│         Console Table           │");
+                println!("├─────────────────────────────────┤");
 
-            for i in 0..length {
-                if let Some(item) = arr.get_index(scope, i) {
-                    let obj = v8::Local::<v8::Object>::try_from(item).unwrap();
-                    let keys = obj.get_own_property_names(scope).unwrap();
-                    let key_count = keys.length();
-
-                    // Format each property
-                    let mut row = String::new();
-                    for j in 0..key_count {
-                        let key = keys.get_index(scope, j).unwrap();
-                        let key_str = key.to_string(scope).unwrap().to_rust_string_lossy(scope);
-                        let value = obj.get(scope, key).unwrap();
-                        let value_str = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
-                        row.push_str(&format!("{}: {}", key_str, value_str));
-                        if j < key_count - 1 {
-                            row.push_str(", ");
+                for i in 0..length {
+                    if let Some(item) = arr.get_index(scope, i) {
+                        let obj = v8::Local::<v8::Object>::try_from(item).unwrap();
+                        let mut row = String::new();
+                        for (j, col_name) in columns.iter().enumerate() {
+                            let key = v8::String::new(scope, col_name).unwrap().into();
+                            let value = obj.get(scope, key);
+                            let value_str = match value {
+                                Some(v) => v.to_string(scope).unwrap().to_rust_string_lossy(scope),
+                                None => String::from("undefined"),
+                            };
+                            row.push_str(&format!("{}: {}", col_name, value_str));
+                            if j < columns.len() - 1 {
+                                row.push_str(", ");
+                            }
                         }
+                        println!("│ {}", format!("{:<33}", row));
                     }
-                    println!("│ {}", format!("{:<33}", row));
                 }
+                println!("└─────────────────────────────────┘");
+            } else {
+                // Original behavior - show all keys
+                println!("┌─────────────────────────────────┐");
+                println!("│         Console Table           │");
+                println!("├─────────────────────────────────┤");
+
+                for i in 0..length {
+                    if let Some(item) = arr.get_index(scope, i) {
+                        let obj = v8::Local::<v8::Object>::try_from(item).unwrap();
+                        let keys = obj.get_own_property_names(scope).unwrap();
+                        let key_count = keys.length();
+
+                        let mut row = String::new();
+                        for j in 0..key_count {
+                            let key = keys.get_index(scope, j).unwrap();
+                            let key_str = key.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                            let value = obj.get(scope, key).unwrap();
+                            let value_str = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                            row.push_str(&format!("{}: {}", key_str, value_str));
+                            if j < key_count - 1 {
+                                row.push_str(", ");
+                            }
+                        }
+                        println!("│ {}", format!("{:<33}", row));
+                    }
+                }
+                println!("└─────────────────────────────────┘");
             }
-            println!("└─────────────────────────────────┘");
         } else {
             // Simple array of primitives
             println!("┌─────────┐");
@@ -661,6 +715,12 @@ pub fn console_table_callback(
         for i in 0..length {
             let key = keys.get_index(scope, i).unwrap();
             let key_str = key.to_string(scope).unwrap().to_rust_string_lossy(scope);
+
+            // Filter by columns if specified
+            if use_columns && !columns.contains(&key_str) {
+                continue;
+            }
+
             let value = obj.get(scope, key).unwrap();
             let value_str = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
             println!("│ {:<16} │ {:<13} │", key_str, value_str);
@@ -671,6 +731,14 @@ pub fn console_table_callback(
         let value_str = data.to_string(scope).unwrap().to_rust_string_lossy(scope);
         println!("console.table: {}", value_str);
     }
+}
+
+/// Timer storage for console.time/timeEnd (v0.3.256)
+static TIMER_STORAGE: OnceLock<Mutex<HashMap<String, Instant>>> = OnceLock::new();
+
+/// Get the timer storage, initializing if needed
+fn get_timer_storage() -> &'static Mutex<HashMap<String, Instant>> {
+    TIMER_STORAGE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 /// Console time callback - starts a timer
@@ -685,6 +753,12 @@ pub fn console_time_callback(
     } else {
         "default".to_string()
     };
+
+    // Store the start time
+    let storage = get_timer_storage();
+    let mut timers = storage.lock().unwrap();
+    timers.insert(label.clone(), Instant::now());
+
     println!("console.time: {}", label);
 }
 
@@ -700,7 +774,18 @@ pub fn console_time_end_callback(
     } else {
         "default".to_string()
     };
-    println!("console.timeEnd: {}: 0.00ms", label);
+
+    // Calculate elapsed time
+    let storage = get_timer_storage();
+    let mut timers = storage.lock().unwrap();
+    let elapsed = if let Some(start_time) = timers.remove(&label) {
+        let duration = start_time.elapsed();
+        duration.as_secs_f64() * 1000.0 // Convert to milliseconds
+    } else {
+        0.0
+    };
+
+    println!("console.timeEnd: {}: {:.2}ms", label, elapsed);
 }
 
 /// Console count callback - prints a count
