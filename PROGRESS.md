@@ -12637,6 +12637,32 @@ console.log(p.name);  // "Alice"
 - ✅ 130/130 minimal_tests 测试通过
 - ✅ 编译警告从 59 减少到 54
 
+#### v0.3.256 V8 Global 句柄清理修复
+- **问题**: 6 个定时器测试因 "Handle hosted by disposed Isolate" 错误失败
+  - `test_clear_timeout_exists`
+  - `test_set_timeout_returns_timer_id`
+  - `test_timer_has_refresh_method_alias`
+  - `test_timer_ids_are_numbers`
+  - `test_timer_unref_ref_chain`
+  - `test_timer_zero_delay`
+
+- **根因**: `TIMER_CALLBACKS` 和 `IMMEDIATE_CALLBACKS` 存储 V8 Global 句柄
+  - 测试创建 delay > 0 定时器时存储回调
+  - Runtime drop 时 isolate 先于清理被销毁
+
+- **解决方案**:
+  - 添加 `clear_all_timer_callbacks()` 清理函数 (timers.rs)
+  - 添加 `cleanup_all_timers()` 完整清理函数 (timers.rs)
+  - 添加 `MinimalRuntime::cleanup()` 方法 (runtime_minimal.rs)
+  - 添加 `Drop` 实现自动清理 (runtime_minimal.rs)
+  - 测试调用 `cleanup_timers()` 显式清理
+
+- **测试结果**:
+  - ✅ 27/27 timers_enhanced_tests 测试通过
+  - ✅ 14/14 timer_integration_test 测试通过
+  - ✅ 10/10 timer_tests 测试通过
+  - ✅ 248/248 cargo test --lib 测试通过
+
 #### v0.3.256 下一步
 - 继续完善 Node.js API 兼容性
 - 优化性能和启动时间

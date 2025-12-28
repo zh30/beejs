@@ -1,9 +1,18 @@
 // Tests for timers API (setTimeout, setInterval) - v0.4.0
 // Enhanced timer functionality for AI workloads
 // v0.3.249: Updated to accept number return type from timers.rs
+// v0.3.256: Added cleanup calls to prevent V8 handle errors
 
 use serial_test::serial;
-use beejs::nodejs_core::timers::{clear_all_timers, clear_all_async_timers};
+use beejs::nodejs_core::timers::{clear_all_timers, clear_all_async_timers, clear_all_timer_callbacks};
+
+/// Helper function to clean up timer state before runtime is dropped
+/// This prevents "Handle hosted by disposed Isolate" errors
+fn cleanup_timers() {
+    clear_all_timer_callbacks();
+    clear_all_timers();
+    clear_all_async_timers();
+}
 
 #[test]
 #[serial]
@@ -14,6 +23,7 @@ fn test_set_timeout_exists() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "function", "setTimeout should be a function");
+    cleanup_timers();
 }
 
 #[test]
@@ -27,6 +37,7 @@ fn test_set_timeout_returns_timer_id() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "setTimeout should return a timer number ID");
+    cleanup_timers();
 }
 
 #[test]
@@ -41,6 +52,7 @@ fn test_set_timeout_basic_execution() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "setTimeout callback should execute synchronously with delay 0");
+    cleanup_timers();
 }
 
 #[test]
@@ -53,6 +65,7 @@ fn test_set_timeout_with_delay() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "setTimeout should accept delay parameter");
+    cleanup_timers();
 }
 
 #[test]
@@ -66,6 +79,7 @@ fn test_set_timeout_with_arguments() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "setTimeout should pass arguments to callback");
+    cleanup_timers();
 }
 
 #[test]
@@ -77,6 +91,7 @@ fn test_clear_timeout_exists() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "function", "clearTimeout should be a function");
+    cleanup_timers();
 }
 
 #[test]
@@ -91,6 +106,7 @@ fn test_clear_timeout_basic() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "number", "clearTimeout should accept timer number ID");
+    cleanup_timers();
 }
 
 #[test]
@@ -102,6 +118,7 @@ fn test_set_interval_exists() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "function", "setInterval should be a function");
+    cleanup_timers();
 }
 
 #[test]
@@ -115,6 +132,7 @@ fn test_set_interval_returns_timer_id() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "setInterval should return a timer number ID");
+    cleanup_timers();
 }
 
 #[test]
@@ -129,6 +147,7 @@ fn test_set_interval_basic_execution() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "setInterval should return valid timer ID");
+    cleanup_timers();
 }
 
 #[test]
@@ -140,6 +159,7 @@ fn test_clear_interval_exists() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "function", "clearInterval should be a function");
+    cleanup_timers();
 }
 
 #[test]
@@ -154,6 +174,7 @@ fn test_clear_interval_basic() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "number", "clearInterval should accept timer number ID");
+    cleanup_timers();
 }
 
 #[test]
@@ -168,6 +189,7 @@ fn test_timer_ids_are_numbers() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "Both timer IDs should be numbers");
+    cleanup_timers();
 }
 
 #[test]
@@ -184,6 +206,7 @@ fn test_multiple_timers() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "Multiple timers should be created");
+    cleanup_timers();
 }
 
 #[test]
@@ -197,6 +220,7 @@ fn test_timer_zero_delay() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "Timer with 0ms delay should execute synchronously");
+    cleanup_timers();
 }
 
 // v0.3.249: Tests for timer ID functionality (number-based)
@@ -211,6 +235,7 @@ fn test_settimeout_returns_number() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "setTimeout should return a timer number ID");
+    cleanup_timers();
 }
 
 #[test]
@@ -224,6 +249,7 @@ fn test_setinterval_returns_number() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "setInterval should return a timer number ID");
+    cleanup_timers();
 }
 
 #[test]
@@ -237,6 +263,7 @@ fn test_setimmediate_returns_number() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "setImmediate should return a timer number ID");
+    cleanup_timers();
 }
 
 #[test]
@@ -250,6 +277,7 @@ fn test_timer_ids_are_unique() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "Each timer should have a unique ID");
+    cleanup_timers();
 }
 
 // v0.3.249: Basic timer functionality tests
@@ -267,6 +295,7 @@ fn test_timer_has_unref_method() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "Timer should be created as number ID");
+    cleanup_timers();
 }
 
 #[test]
@@ -279,6 +308,7 @@ fn test_timer_has_ref_method() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "Timer should be a number");
+    cleanup_timers();
 }
 
 #[test]
@@ -293,6 +323,7 @@ fn test_timer_unref_is_callable() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "success", "clearTimeout should work with number ID");
+    cleanup_timers();
 }
 
 #[test]
@@ -306,6 +337,7 @@ fn test_timer_ref_is_callable() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "success", "clearTimeout should work with number ID");
+    cleanup_timers();
 }
 
 #[test]
@@ -321,6 +353,7 @@ fn test_timer_unref_ref_chain() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "success", "Multiple clearTimeout calls should work");
+    cleanup_timers();
 }
 
 #[test]
@@ -333,6 +366,7 @@ fn test_interval_timer_has_unref_ref() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "setInterval should return number ID");
+    cleanup_timers();
 }
 
 #[test]
@@ -345,6 +379,7 @@ fn test_immediate_timer_has_unref_ref() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "setImmediate should return number ID");
+    cleanup_timers();
 }
 
 #[test]
@@ -359,4 +394,5 @@ fn test_timer_has_refresh_method_alias() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "Timer should be created as number");
+    cleanup_timers();
 }

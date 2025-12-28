@@ -465,6 +465,25 @@ pub fn clear_all_timers() {
     }
 }
 
+/// v0.3.256: Clear all timer callbacks - must be called before Isolate is disposed
+/// This clears V8 Global handles to prevent "Handle hosted by disposed Isolate" errors
+pub fn clear_all_timer_callbacks() {
+    let mut storage = TIMER_CALLBACKS.lock().unwrap();
+    storage.callbacks.clear();
+    storage.args.clear();
+
+    let mut immediate_storage = IMMEDIATE_CALLBACKS.lock().unwrap();
+    immediate_storage.callbacks.clear();
+}
+
+/// v0.3.256: Complete cleanup - clears both callbacks and metadata
+/// Call this before Isolate is disposed to avoid V8 handle errors
+pub fn cleanup_all_timers() {
+    clear_all_timer_callbacks();
+    clear_all_timers();
+    clear_all_async_timers();
+}
+
 /// v0.3.249: Store timer callback in global registry
 /// Must be called from V8 main thread (where isolate is available)
 pub fn store_timer_callback(

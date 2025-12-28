@@ -1206,7 +1206,7 @@ impl BenchmarkResult {
 
 /// A minimal runtime that only provides basic JavaScript execution
 /// This version avoids complex dependencies for faster startup
-/// v0.3.93: 添加 Context 存储以支持跨 Context 共享 handler
+/// v0.3.93: 添加 Context 存储以支持跨 Context 共享数据
 pub struct MinimalRuntime {
     // V8 Isolate - the core JavaScript execution engine
     isolate: v8::OwnedIsolate,
@@ -15017,6 +15017,27 @@ impl MinimalRuntime {
             .ok_or_else(|| anyhow::anyhow!("Failed to run handler"))?;
 
         Ok(())
+    }
+
+    /// v0.3.256: Clean up all V8 Global handles before Isolate disposal
+    /// Call this explicitly before dropping the runtime to avoid
+    /// "Handle hosted by disposed Isolate" errors
+    pub fn cleanup(&mut self) {
+        use crate::nodejs_core::timers::cleanup_all_timers;
+
+        // Clear all V8 Global handles in timer callbacks
+        cleanup_all_timers();
+    }
+}
+
+impl Drop for MinimalRuntime {
+    fn drop(&mut self) {
+        // Clean up all V8 Global handles before isolate is disposed
+        use crate::nodejs_core::timers::cleanup_all_timers;
+        cleanup_all_timers();
+
+        // Context will be dropped first (v8::Global)
+        // Then isolate will be disposed automatically
     }
 }
 
