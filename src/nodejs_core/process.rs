@@ -1,11 +1,18 @@
 // Node.js process 模块实现
 // v0.3.237: 全局未捕获异常处理器和 process 对象
 // v0.3.239: 完善 nextTick 和 stdout/stderr.write()
+// v0.3.240: 完善 hrtime、stdin、memory、uptime、cpuUsage
 
 use std::io::Write;
 use std::sync::Mutex;
+use std::time::Instant;
 use anyhow::Result;
 use rusty_v8 as v8;
+
+thread_local! {
+    /// 进程启动时间（用于计算 uptime）
+    static START_TIME: Instant = Instant::now();
+}
 
 thread_local! {
     /// 未捕获异常处理器
@@ -165,10 +172,43 @@ pub fn setup_process_api(
     stderr_obj.set(scope, stderr_write_key.into(), stderr_write_instance.into());
     process_obj.set(scope, stderr_key.into(), stderr_obj.into());
 
-    // process.stdin - 标准输入
+    // v0.3.240: process.stdin - 标准输入
     let stdin_key = v8::String::new(scope, "stdin").unwrap();
     let stdin_obj = v8::Object::new(scope);
+    // stdin.fd - 标准输入的文件描述符 (0)
+    let stdin_fd_key = v8::String::new(scope, "fd").unwrap();
+    let stdin_fd_val = v8::Integer::new(scope, 0);
+    stdin_obj.set(scope, stdin_fd_key.into(), stdin_fd_val.into());
+    // stdin.read() - 读取输入（同步版本返回 null）
+    let stdin_read_func = v8::FunctionTemplate::new(scope, stdin_read_callback);
+    let stdin_read_instance = stdin_read_func.get_function(scope).unwrap();
+    let stdin_read_key = v8::String::new(scope, "read").unwrap();
+    stdin_obj.set(scope, stdin_read_key.into(), stdin_read_instance.into());
     process_obj.set(scope, stdin_key.into(), stdin_obj.into());
+
+    // v0.3.240: process.hrtime() - 高精度时间
+    let hrtime_func = v8::FunctionTemplate::new(scope, process_hrtime_callback);
+    let hrtime_instance = hrtime_func.get_function(scope).unwrap();
+    let hrtime_key = v8::String::new(scope, "hrtime").unwrap();
+    process_obj.set(scope, hrtime_key.into(), hrtime_instance.into());
+
+    // v0.3.240: process.memory() - 内存使用统计
+    let memory_func = v8::FunctionTemplate::new(scope, process_memory_callback);
+    let memory_instance = memory_func.get_function(scope).unwrap();
+    let memory_key = v8::String::new(scope, "memory").unwrap();
+    process_obj.set(scope, memory_key.into(), memory_instance.into());
+
+    // v0.3.240: process.uptime() - 进程运行时间
+    let uptime_func = v8::FunctionTemplate::new(scope, process_uptime_callback);
+    let uptime_instance = uptime_func.get_function(scope).unwrap();
+    let uptime_key = v8::String::new(scope, "uptime").unwrap();
+    process_obj.set(scope, uptime_key.into(), uptime_instance.into());
+
+    // v0.3.240: process.cpuUsage() - CPU 使用统计
+    let cpu_usage_func = v8::FunctionTemplate::new(scope, process_cpu_usage_callback);
+    let cpu_usage_instance = cpu_usage_func.get_function(scope).unwrap();
+    let cpu_usage_key = v8::String::new(scope, "cpuUsage").unwrap();
+    process_obj.set(scope, cpu_usage_key.into(), cpu_usage_instance.into());
 
     // 将 process 对象设置为全局
     let process_key = v8::String::new(scope, "process").unwrap();
@@ -309,6 +349,154 @@ fn stderr_write_callback(
 
     // 返回 true（表示写入成功）
     let result = v8::Boolean::new(scope, true);
+    retval.set(result.into());
+}
+
+/// v0.3.240: stdin.read() 回调
+/// 同步读取不支持，返回 null（需要异步运行时支持）
+fn stdin_read_callback(
+    scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    // 同步模式下无法读取 stdin，返回 null
+    let null_val = v8::null(scope);
+    retval.set(null_val.into());
+}
+
+/// v0.3.240: process.hrtime() 回调 - 高精度时间
+fn process_hrtime_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    // 获取当前时间（纳秒精度）
+    let now = std::time::UNIX_EPOCH.elapsed().unwrap();
+    let seconds = now.as_secs() as f64;
+    let nanos = now.subsec_nanos() as f64;
+
+    // 如果传入了 previous timestamp，计算差值
+    if args.length() > 0 {
+        let prev = args.get(0);
+        if prev.is_array() {
+            let prev_array = v8::Local::<v8::Array>::try_from(prev).unwrap();
+            if prev_array.length() >= 2 {
+                let prev_sec = prev_array.get_index(scope, 0).unwrap().to_number(scope).unwrap().value();
+                let prev_nano = prev_array.get_index(scope, 1).unwrap().to_number(scope).unwrap().value();
+
+                let diff_sec = seconds - prev_sec;
+                let diff_nano = nanos - prev_nano;
+
+                let diff_sec_num = v8::Number::new(scope, diff_sec);
+                let diff_nano_num = v8::Number::new(scope, diff_nano);
+                let result = v8::Array::new(scope, 2);
+                result.set_index(scope, 0, diff_sec_num.into());
+                result.set_index(scope, 1, diff_nano_num.into());
+                retval.set(result.into());
+                return;
+            }
+        }
+    }
+
+    // 返回 [seconds, nanoseconds] 数组
+    let seconds_num = v8::Number::new(scope, seconds);
+    let nanos_num = v8::Number::new(scope, nanos);
+    let result = v8::Array::new(scope, 2);
+    result.set_index(scope, 0, seconds_num.into());
+    result.set_index(scope, 1, nanos_num.into());
+    retval.set(result.into());
+}
+
+/// v0.3.240: process.memory() 回调 - 内存使用统计
+/// 注意: 由于 MinimalRuntime 不持有 isolate 引用，这里返回估算值
+/// 完整实现需要在持有 isolate 的上下文中调用
+fn process_memory_callback(
+    scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    // 返回基于配置的估算值
+    // MinimalRuntime 默认配置: 64MB 初始堆, 512MB 最大堆
+    // 这是一个简化实现，返回合理的默认值
+    let estimated_heap_used = 64.0 * 1024.0 * 1024.0; // 估算 64MB 已使用
+    let estimated_heap_total = 512.0 * 1024.0 * 1024.0; // 估算 512MB 总堆
+    let estimated_external = 0.0; // 外部内存估算
+
+    let result = v8::Object::new(scope);
+
+    // heapUsed - 已使用的堆内存
+    let heap_used_key = v8::String::new(scope, "heapUsed").unwrap();
+    let heap_used_val = v8::Number::new(scope, estimated_heap_used);
+    result.set(scope, heap_used_key.into(), heap_used_val.into());
+
+    // heapTotal - 总堆内存
+    let heap_total_key = v8::String::new(scope, "heapTotal").unwrap();
+    let heap_total_val = v8::Number::new(scope, estimated_heap_total);
+    result.set(scope, heap_total_key.into(), heap_total_val.into());
+
+    // external - 外部内存
+    let external_key = v8::String::new(scope, "external").unwrap();
+    let external_val = v8::Number::new(scope, estimated_external);
+    result.set(scope, external_key.into(), external_val.into());
+
+    retval.set(result.into());
+}
+
+/// v0.3.240: process.uptime() 回调 - 进程运行时间
+fn process_uptime_callback(
+    scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let uptime = START_TIME.with(|start| start.elapsed().as_secs_f64());
+    retval.set(v8::Number::new(scope, uptime).into());
+}
+
+/// v0.3.240: process.cpuUsage() 回调 - CPU 使用统计
+fn process_cpu_usage_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let mut _prev_user = 0.0;
+    let mut _prev_system = 0.0;
+
+    // 如果传入了 previous value，计算差值
+    if args.length() > 0 {
+        let prev = args.get(0);
+        if prev.is_object() {
+            let prev_obj = v8::Local::<v8::Object>::try_from(prev).unwrap();
+            let user_key = v8::String::new(scope, "user").unwrap();
+            let system_key = v8::String::new(scope, "system").unwrap();
+
+            if let Some(user_val) = prev_obj.get(scope, user_key.into()) {
+                if user_val.is_number() {
+                    _prev_user = user_val.to_number(scope).unwrap().value();
+                }
+            }
+            if let Some(system_val) = prev_obj.get(scope, system_key.into()) {
+                if system_val.is_number() {
+                    _prev_system = system_val.to_number(scope).unwrap().value();
+                }
+            }
+        }
+    }
+
+    // 获取当前 CPU 时间 - 使用简化的实现
+    // 完整实现需要平台特定的 API 来获取实际的用户/系统 CPU 时间
+    let current_user = 0.0;
+    let current_system = 0.0;
+
+    let result = v8::Object::new(scope);
+
+    let user_key = v8::String::new(scope, "user").unwrap();
+    let user_val = v8::Number::new(scope, current_user);
+    result.set(scope, user_key.into(), user_val.into());
+
+    let system_key = v8::String::new(scope, "system").unwrap();
+    let system_val = v8::Number::new(scope, current_system);
+    result.set(scope, system_key.into(), system_val.into());
+
     retval.set(result.into());
 }
 

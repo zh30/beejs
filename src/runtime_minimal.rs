@@ -11331,6 +11331,7 @@ impl MinimalRuntime {
         let abort_key = v8::String::new(scope, "abort").unwrap();
         let config_key = v8::String::new(scope, "config").unwrap();
         let memory_usage_key = v8::String::new(scope, "memoryUsage").unwrap();
+        let memory_key = v8::String::new(scope, "memory").unwrap(); // v0.3.240: Add memory() alias
         let uptime_key = v8::String::new(scope, "uptime").unwrap();
         let hrtime_key = v8::String::new(scope, "hrtime").unwrap();
         let exit_key = v8::String::new(scope, "exit").unwrap();
@@ -11458,6 +11459,31 @@ impl MinimalRuntime {
 
             retval.set(result_obj.into());
         });
+
+        // v0.3.240: Add process.memory() - alias for memoryUsage
+        let memory_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Reuse the same logic as memoryUsage
+            let rss = get_rss_memory();
+            let result_obj = v8::Object::new(scope);
+            let rss_f64 = rss as f64;
+            let estimated_heap_total = ((rss_f64 * 0.25).min(100.0 * 1024.0 * 1024.0)).max(2.0 * 1024.0 * 1024.0) as u64;
+            let estimated_heap_used = ((estimated_heap_total as f64) / 2.0).max(512.0 * 1024.0) as u64;
+
+            let heap_total = v8::String::new(scope, "heapTotal").unwrap();
+            let heap_total_val = v8::Number::new(scope, estimated_heap_total as f64);
+            result_obj.set(scope, heap_total.into(), heap_total_val.into());
+
+            let heap_used = v8::String::new(scope, "heapUsed").unwrap();
+            let heap_used_val = v8::Number::new(scope, estimated_heap_used as f64);
+            result_obj.set(scope, heap_used.into(), heap_used_val.into());
+
+            let external = v8::String::new(scope, "external").unwrap();
+            let external_val = v8::Number::new(scope, 0.0);
+            result_obj.set(scope, external.into(), external_val.into());
+
+            retval.set(result_obj.into());
+        });
+
         let uptime_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             // Returns seconds since Unix epoch (same as before)
             let uptime = std::time::SystemTime::now()
@@ -11531,6 +11557,7 @@ impl MinimalRuntime {
         let umask_func = umask_fn.get_function(scope).unwrap();
         let abort_func = abort_fn.get_function(scope).unwrap();
         let memory_usage_func = memory_usage_fn.get_function(scope).unwrap();
+        let memory_func = memory_fn.get_function(scope).unwrap(); // v0.3.240
         let uptime_func = uptime_fn.get_function(scope).unwrap();
         let exit_func = exit_fn.get_function(scope).unwrap();
         let next_tick_func = next_tick_fn.get_function(scope).unwrap();
@@ -11598,6 +11625,7 @@ impl MinimalRuntime {
         process_obj.set(scope, abort_key.into(), abort_func.into());
         process_obj.set(scope, config_key.into(), config_obj.into());
         process_obj.set(scope, memory_usage_key.into(), memory_usage_func.into());
+        process_obj.set(scope, memory_key.into(), memory_func.into()); // v0.3.240
         process_obj.set(scope, uptime_key.into(), uptime_func.into());
         process_obj.set(scope, hrtime_key.into(), hrtime_func.into());
         process_obj.set(scope, exit_key.into(), exit_func.into());
@@ -11690,9 +11718,38 @@ impl MinimalRuntime {
         process_obj.set(scope, stderr_key.into(), stderr_obj.into());
 
         // v0.3.238: Add process.stdin (basic implementation)
+        // v0.3.240: Add stdin.fd and stdin.read()
         let stdin_key = v8::String::new(scope, "stdin").unwrap();
         let stdin_obj = v8::Object::new(scope);
+        // stdin.fd - file descriptor (0 for stdin)
+        let stdin_fd_key = v8::String::new(scope, "fd").unwrap();
+        let stdin_fd_value = v8::Integer::new(scope, 0);
+        stdin_obj.set(scope, stdin_fd_key.into(), stdin_fd_value.into());
+        // stdin.read() - returns null (sync mode can't read stdin)
+        let stdin_read_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let null_val = v8::null(_scope);
+            retval.set(null_val.into());
+        });
+        let stdin_read_key = v8::String::new(scope, "read").unwrap();
+        let stdin_read_instance = stdin_read_fn.get_function(scope).unwrap();
+        stdin_obj.set(scope, stdin_read_key.into(), stdin_read_instance.into());
         process_obj.set(scope, stdin_key.into(), stdin_obj.into());
+
+        // v0.3.240: Add process.cpuUsage()
+        let cpu_usage_key = v8::String::new(scope, "cpuUsage").unwrap();
+        let cpu_usage_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let _args = args; // Suppress unused warning - cpuUsage() could accept previous value in future
+            let result = v8::Object::new(scope);
+            let user_key = v8::String::new(scope, "user").unwrap();
+            let system_key = v8::String::new(scope, "system").unwrap();
+            let user_val = v8::Number::new(scope, 0.0); // Simplified - returns 0
+            let system_val = v8::Number::new(scope, 0.0); // Simplified - returns 0
+            result.set(scope, user_key.into(), user_val.into());
+            result.set(scope, system_key.into(), system_val.into());
+            retval.set(result.into());
+        });
+        let cpu_usage_instance = cpu_usage_fn.get_function(scope).unwrap();
+        process_obj.set(scope, cpu_usage_key.into(), cpu_usage_instance.into());
 
         // Set process as global
         global.set(scope, process_key.into(), process_obj.into());
