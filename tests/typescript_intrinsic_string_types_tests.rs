@@ -307,4 +307,141 @@ console.log(t1, t2, t3, t4, t5);
             }
         }
     }
+
+    /// Test Trim intrinsic type (v0.3.222)
+    #[test]
+    fn test_trim_basic() {
+        let ts_code = r#"
+type TTrim1 = Trim<'  hello  '>;
+const result: TTrim1 = 'hello';
+console.log(result);
+"#;
+        match compile_typescript(ts_code, "trim_basic.ts") {
+            Ok(output) => {
+                println!("Trim 基础转译结果:");
+                println!("{}", output.js_code);
+                assert!(!output.js_code.contains("type TTrim1"),
+                    "Should not contain type alias: {}", output.js_code);
+                assert!(output.js_code.contains("const result"),
+                    "Should contain const result: {}", output.js_code);
+                assert!(output.js_code.contains("console.log"),
+                    "Should contain console.log: {}", output.js_code);
+                println!("✅ Trim basic test passed");
+            }
+            Err(e) => {
+                panic!("Trim basic test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test TrimLeft intrinsic type (v0.3.222)
+    #[test]
+    fn test_trim_left_basic() {
+        let ts_code = r#"
+type TTrimLeft1 = TrimLeft<'  hello  '>;
+const result: TTrimLeft1 = 'hello  ';
+console.log(result);
+"#;
+        match compile_typescript(ts_code, "trim_left_basic.ts") {
+            Ok(output) => {
+                println!("TrimLeft 基础转译结果:");
+                println!("{}", output.js_code);
+                assert!(!output.js_code.contains("type TTrimLeft1"),
+                    "Should not contain type alias: {}", output.js_code);
+                assert!(output.js_code.contains("const result"),
+                    "Should contain const result: {}", output.js_code);
+                assert!(output.js_code.contains("console.log"),
+                    "Should contain console.log: {}", output.js_code);
+                println!("✅ TrimLeft basic test passed");
+            }
+            Err(e) => {
+                panic!("TrimLeft basic test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test TrimRight intrinsic type (v0.3.222)
+    #[test]
+    fn test_trim_right_basic() {
+        let ts_code = r#"
+type TTrimRight1 = TrimRight<'  hello  '>;
+const result: TTrimRight1 = '  hello';
+console.log(result);
+"#;
+        match compile_typescript(ts_code, "trim_right_basic.ts") {
+            Ok(output) => {
+                println!("TrimRight 基础转译结果:");
+                println!("{}", output.js_code);
+                assert!(!output.js_code.contains("type TTrimRight1"),
+                    "Should not contain type alias: {}", output.js_code);
+                assert!(output.js_code.contains("const result"),
+                    "Should contain const result: {}", output.js_code);
+                assert!(output.js_code.contains("console.log"),
+                    "Should contain console.log: {}", output.js_code);
+                println!("✅ TrimRight basic test passed");
+            }
+            Err(e) => {
+                panic!("TrimRight basic test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test Trim types with union types (v0.3.222)
+    #[test]
+    fn test_trim_with_union() {
+        let ts_code = r#"
+type TUnion = '  foo  ' | '  bar  ';
+type TTrim = Trim<TUnion>;
+const result: string = 'foo';
+console.log(result);
+"#;
+        match compile_typescript(ts_code, "trim_union.ts") {
+            Ok(output) => {
+                println!("Trim 与联合类型转译结果:");
+                println!("{}", output.js_code);
+                assert!(!output.js_code.contains("type TTrim"),
+                    "Should not contain type TTrim: {}", output.js_code);
+                assert!(output.js_code.contains("const result"),
+                    "Should contain const result: {}", output.js_code);
+                println!("✅ Trim with union test passed");
+            }
+            Err(e) => {
+                panic!("Trim with union test failed: {}", e);
+            }
+        }
+    }
+
+    /// Test all Trim types in single file (v0.3.222)
+    #[test]
+    fn test_all_trim_types() {
+        let ts_code = r#"
+type TrimStr = Trim<'  hello  '>;
+type TrimLeftStr = TrimLeft<'  hello  '>;
+type TrimRightStr = TrimRight<'  hello  '>;
+
+const t: string = 'hello';
+const tl: string = 'hello  ';
+const tr: string = '  hello';
+
+console.log(t, tl, tr);
+"#;
+        match compile_typescript(ts_code, "all_trim.ts") {
+            Ok(output) => {
+                println!("所有 Trim 类型转译结果:");
+                println!("{}", output.js_code);
+                assert!(!output.js_code.contains("type TrimStr"),
+                    "Should not contain type TrimStr: {}", output.js_code);
+                assert!(!output.js_code.contains("type TrimLeftStr"),
+                    "Should not contain type TrimLeftStr: {}", output.js_code);
+                assert!(!output.js_code.contains("type TrimRightStr"),
+                    "Should not contain type TrimRightStr: {}", output.js_code);
+                assert!(output.js_code.contains("console.log"),
+                    "Should contain console.log: {}", output.js_code);
+                println!("✅ All Trim types test passed");
+            }
+            Err(e) => {
+                panic!("All Trim types test failed: {}", e);
+            }
+        }
+    }
 }

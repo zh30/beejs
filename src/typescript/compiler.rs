@@ -186,6 +186,12 @@ impl TypeContext {
         self.variables.insert("ThisType".to_string(), "utility".to_string());
         // Mutable<T> - 使所有属性可变（与 Readonly<T> 相反）（v0.3.218）
         self.variables.insert("Mutable".to_string(), "utility".to_string());
+        // Trim<T> - 移除字符串类型中的首尾空白（v0.3.222）
+        self.variables.insert("Trim".to_string(), "utility".to_string());
+        // TrimLeft<T> - 移除字符串类型中的左侧空白（v0.3.222）
+        self.variables.insert("TrimLeft".to_string(), "utility".to_string());
+        // TrimRight<T> - 移除字符串类型中的右侧空白（v0.3.222）
+        self.variables.insert("TrimRight".to_string(), "utility".to_string());
     }
 
     fn get_variable_type(&self, name: &str) -> Option<&String> {
@@ -7677,7 +7683,7 @@ impl Parser {
             | "ConstructorParameters" | "InstanceType" | "ThisParameterType"
             | "OmitThisParameter" | "Uppercase" | "Lowercase" | "Capitalize"
             | "Uncapitalize" | "NoInfer" | "Infer" | "Awaited" | "ThisType"
-            | "Mutable"
+            | "Mutable" | "Trim" | "TrimLeft" | "TrimRight"
         )
     }
 

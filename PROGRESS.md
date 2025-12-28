@@ -1,3 +1,55 @@
+### v0.3.222 实现 Trim/TrimLeft/TrimRight 工具类型快速路径支持（2025-12-28）
+**进度**: TypeScript 快速路径增强 | ✅ 已完成
+
+#### v0.3.222 新增功能
+- **Trim<T> 工具类型快速路径**
+  - 运行时快速路径识别 `Trim<...>` 模式
+  - Trim<T> 用于移除字符串类型中的首尾空白字符
+  - 正确移除 Trim 包装，保留内部字符串类型
+
+- **TrimLeft<T> 工具类型快速路径**
+  - 运行时快速路径识别 `TrimLeft<...>` 模式
+  - TrimLeft<T> 用于移除字符串类型中的左侧空白字符
+  - 正确移除 TrimLeft 包装，保留内部字符串类型
+
+- **TrimRight<T> 工具类型快速路径**
+  - 运行时快速路径识别 `TrimRight<...>` 模式
+  - TrimRight<T> 用于移除字符串类型中的右侧空白字符
+  - 正确移除 TrimRight 包装，保留内部字符串类型
+
+#### v0.3.222 实现细节
+- **TypeScript 编译器注册** (`src/typescript/compiler.rs:189-194`)
+  - 在 `register_builtin_types()` 中添加 `Trim`、`TrimLeft`、`TrimRight` 为 utility 类型
+  - 在 `is_utility_type()` 中添加 `Trim`、`TrimLeft`、`TrimRight` 到类型检查列表
+
+- **运行时检测增强** (`src/runtime_minimal.rs:2551-2553`)
+  - 在 `has_raw_typescript()` 中添加 `Trim<`、`TrimLeft<`、`TrimRight<` 模式检测
+
+- **运行时快速路径移除** (`src/runtime_minimal.rs:2338-2349`)
+  - 添加正则表达式 `Trim\s*<([^>]+)>` 替换为 `$1`
+  - 添加正则表达式 `TrimLeft\s*<([^>]+)>` 替换为 `$1`
+  - 添加正则表达式 `TrimRight\s*<([^>]+)>` 替换为 `$1`
+  - 提取泛型参数内容直接替换，实现类型擦除
+
+#### v0.3.222 测试用例
+- 测试: Trim<T> 工具类型快速路径测试
+- 测试: TrimLeft<T> 工具类型快速路径测试
+- 测试: TrimRight<T> 工具类型快速路径测试
+- 测试: Trim 与联合类型组合测试
+- 测试: 所有 Trim 类型组合测试
+
+#### v0.3.222 测试验证
+- ✅ `cargo test --test typescript_intrinsic_string_types_tests`: 15/15 通过 (新增 5 个测试)
+- ✅ `cargo test --test minimal_tests`: 130/130 通过
+- ✅ `cargo build --release`: 编译成功
+
+#### v0.3.222 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多内建工具类型支持
+- 完善类型推断场景测试
+
+---
+
 ### v0.3.218 实现 Mutable<T> 工具类型快速路径支持（2025-12-28）
 **进度**: TypeScript 快速路径增强 | ✅ 已完成
 

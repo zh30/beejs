@@ -2335,6 +2335,19 @@ impl MinimalRuntime {
         let uncapitalize_pattern = regex::Regex::new(r"Uncapitalize\s*<([^>]+)>").unwrap();
         js_code = uncapitalize_pattern.replace_all(&js_code, "$1").to_string();
 
+        // v0.3.222: Remove intrinsic string types (Trim, TrimLeft, TrimRight)
+        // These are TypeScript 4.1+ intrinsic string manipulation types
+        // For runtime, we remove the wrapper and keep the inner string literal
+        // Pattern: "Trim<' hello '>" -> "' hello '", etc.
+        let trim_pattern = regex::Regex::new(r"Trim\s*<([^>]+)>").unwrap();
+        js_code = trim_pattern.replace_all(&js_code, "$1").to_string();
+
+        let trim_left_pattern = regex::Regex::new(r"TrimLeft\s*<([^>]+)>").unwrap();
+        js_code = trim_left_pattern.replace_all(&js_code, "$1").to_string();
+
+        let trim_right_pattern = regex::Regex::new(r"TrimRight\s*<([^>]+)>").unwrap();
+        js_code = trim_right_pattern.replace_all(&js_code, "$1").to_string();
+
         // v0.3.204: Remove NonNullable utility type
         // NonNullable<T> removes null and undefined from type T
         // For runtime, we remove the wrapper and keep the inner type
@@ -2535,6 +2548,9 @@ impl MinimalRuntime {
             || code.contains("Lowercase<")     // v0.3.203: standalone Lowercase intrinsic type
             || code.contains("Capitalize<")    // v0.3.203: standalone Capitalize intrinsic type
             || code.contains("Uncapitalize<")   // v0.3.203: standalone Uncapitalize intrinsic type
+            || code.contains("Trim<")           // v0.3.222: Trim intrinsic type
+            || code.contains("TrimLeft<")       // v0.3.222: TrimLeft intrinsic type
+            || code.contains("TrimRight<")      // v0.3.222: TrimRight intrinsic type
             || code.contains("NonNullable<")   // v0.3.204: NonNullable utility type
             || code.contains("Partial<")        // v0.3.206: Partial utility type
             || code.contains("Required<")       // v0.3.207: Required utility type
