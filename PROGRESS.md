@@ -1,3 +1,33 @@
+### v0.3.215 修复 Awaited 工具类型注册缺失（2025-12-28）
+**进度**: TypeScript 编译器修复 | ✅ 已提交
+
+#### v0.3.215 修复内容
+- **修复 `register_builtin_types()` 缺失 Awaited**
+  - `Awaited<T>` 在 `is_utility_type()` 中已注册，但在 `register_builtin_types()` 中缺失
+  - 这会导致类型系统不一致，编译器可能走不同分支处理类型
+  - 现在所有工具类型在两处都保持一致
+
+#### v0.3.215 实现细节
+- **编译器注册修复** (`src/typescript/compiler.rs:183-184`)
+  - 在 `register_builtin_types()` 中添加 `Awaited` 为 utility 类型
+  - 确保类型系统一致性
+
+#### v0.3.215 测试用例
+- 测试115: Awaited<T> 工具类型测试
+- 测试116: Awaited 与 Promise 嵌套类型测试
+- 测试117: Awaited 与联合类型测试
+
+#### v0.3.215 测试验证
+- ✅ `cargo test --test minimal_tests`: 120/120 通过 (新增 3 个测试)
+- ✅ `cargo build --release`: 编译成功
+
+#### v0.3.215 下一步
+- 继续完善 TypeScript 编译器功能
+- 实现更多内建工具类型支持
+- 完善类型推断场景测试
+
+---
+
 ### v0.3.213 实现 Infer<T> 工具类型快速路径支持（2025-12-28）
 **进度**: TypeScript 快速路径增强 | ✅ 已提交
 

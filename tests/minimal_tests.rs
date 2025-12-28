@@ -2945,4 +2945,81 @@ const plainVal: ExtractPromiseValue<number> = 42;
 
         println!("✅ Test 114: Infer in complex types");
     }
+
+    /// 测试115: Awaited<T> 工具类型测试 (v0.3.215)
+    #[test]
+    fn test_awaited_utility_type() {
+        // 测试 Awaited 工具类型编译
+        let ts_code = r#"
+type Result = Awaited<Promise<string>>;
+const value: Result = "hello";
+"#;
+        let result = typescript::compile_typescript(ts_code, "awaited_test.ts");
+        assert!(result.is_ok(), "Awaited utility type should compile");
+        let output = result.unwrap();
+
+        // 验证 Awaited 被移除
+        assert!(!output.js_code.contains("Awaited<"),
+            "Should remove Awaited: {}", output.js_code);
+
+        // 验证类型参数保留
+        assert!(output.js_code.contains("const value"),
+            "Should preserve const value: {}", output.js_code);
+
+        println!("✅ Test 115: Awaited utility type");
+    }
+
+    /// 测试116: Awaited 与 Promise 嵌套类型测试 (v0.3.215)
+    #[test]
+    fn test_awaited_with_nested_promises() {
+        // 测试 Awaited 处理嵌套 Promise
+        let ts_code = r#"
+type NestedPromise = Awaited<Promise<Promise<number>>>;
+const nested: NestedPromise = 42;
+
+type DeepPromise = Awaited<Promise<string[]>>;
+const deep: DeepPromise = ["a", "b"];
+"#;
+        let result = typescript::compile_typescript(ts_code, "awaited_nested.ts");
+        assert!(result.is_ok(), "Awaited with nested promises should compile");
+        let output = result.unwrap();
+
+        // 验证 Awaited 被移除
+        assert!(!output.js_code.contains("Awaited<"),
+            "Should remove all Awaited: {}", output.js_code);
+
+        // 验证变量保留
+        assert!(output.js_code.contains("const nested"),
+            "Should preserve const nested: {}", output.js_code);
+        assert!(output.js_code.contains("const deep"),
+            "Should preserve const deep: {}", output.js_code);
+
+        println!("✅ Test 116: Awaited with nested promises");
+    }
+
+    /// 测试117: Awaited 与联合类型测试 (v0.3.215)
+    #[test]
+    fn test_awaited_with_union_types() {
+        // 测试 Awaited 处理联合类型
+        let ts_code = r#"
+type UnionPromise = Awaited<Promise<string> | number>;
+const union: UnionPromise = "test";
+
+type Mixed = Awaited<Promise<boolean> | null>;
+const mixed: Mixed = true;
+"#;
+        let result = typescript::compile_typescript(ts_code, "awaited_union.ts");
+        assert!(result.is_ok(), "Awaited with union types should compile");
+        let output = result.unwrap();
+
+        // 验证 Awaited 被移除
+        assert!(!output.js_code.contains("Awaited<"),
+            "Should remove all Awaited: {}", output.js_code);
+
+        // 验证变量保留
+        assert!(output.js_code.contains("const union"),
+            "Should preserve const union: {}", output.js_code);
+
+        println!("✅ Test 117: Awaited with union types");
+    }
 }
