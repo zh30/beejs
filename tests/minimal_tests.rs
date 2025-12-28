@@ -3185,4 +3185,70 @@ const nested: MutableOuter = { inner: { value: 42 }, name: "test" };
 
         println!("✅ Test 123: Mutable nested usage");
     }
+
+    /// 测试124: TypeScript asserts 关键字支持 (v0.3.220)
+    #[test]
+    fn test_asserts_keyword() {
+        // 测试 asserts 关键字用于类型守卫
+        let ts_code = r#"
+function assert(condition: any): asserts condition {
+    if (condition === false) throw new Error("Assertion failed");
+}
+function assertIsString(value: unknown): asserts value is string {
+    let check = typeof value === "string";
+    if (check === false) throw new Error("Not a string");
+}
+function assertPositive(n: number): asserts n {
+    if (n <= 0) throw new Error("Not positive");
+}
+"#;
+        let result = typescript::compile_typescript(ts_code, "asserts_test.ts");
+        assert!(result.is_ok(), "asserts keyword should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 asserts 关键字和类型注解被移除
+        assert!(!output.js_code.contains("asserts"),
+            "Should remove asserts keyword: {}", output.js_code);
+        assert!(!output.js_code.contains(": any"),
+            "Should remove type annotation: {}", output.js_code);
+
+        // 验证函数体保留
+        assert!(output.js_code.contains("function assert"),
+            "Should preserve function: {}", output.js_code);
+        assert!(output.js_code.contains("throw new Error"),
+            "Should preserve function body: {}", output.js_code);
+
+        println!("✅ Test 124: TypeScript asserts keyword support");
+    }
+
+    /// 测试125: asserts 条件类型守卫测试 (v0.3.220)
+    #[test]
+    fn test_asserts_conditional_guard() {
+        // 测试 asserts 与泛型组合使用
+        let ts_code = r#"
+function assertNotNull<T>(value: T): asserts value is NonNullable<T> {
+    if (value == null) throw new Error("Value is null");
+}
+function assertInRange(value: number): asserts value {
+    if (value < 0) throw new Error("Out of range");
+}
+"#;
+        let result = typescript::compile_typescript(ts_code, "asserts_guard.ts");
+        assert!(result.is_ok(), "asserts with generics should compile successfully, error: {:?}", result.err());
+        let output = result.unwrap();
+
+        // 验证 asserts 和类型注解被移除
+        assert!(!output.js_code.contains("asserts"),
+            "Should remove asserts keyword: {}", output.js_code);
+        assert!(!output.js_code.contains("NonNullable"),
+            "Should remove NonNullable type: {}", output.js_code);
+
+        // 验证函数体保留
+        assert!(output.js_code.contains("function assertNotNull"),
+            "Should preserve function: {}", output.js_code);
+        assert!(output.js_code.contains("throw new Error"),
+            "Should preserve throw statement: {}", output.js_code);
+
+        println!("✅ Test 125: asserts with conditional type guard");
+    }
 }

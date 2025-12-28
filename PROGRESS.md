@@ -11375,3 +11375,45 @@ console.log(p.name);  // "Alice"
 - 继续完善 TypeScript 编译器功能
 - 实现更多内建工具类型支持
 - 完善类型推断场景测试
+
+---
+
+### v0.3.220 实现 asserts 关键字支持（2025-12-28）
+**进度**: TypeScript 编译器增强 | ✅ 已完成
+
+#### v0.3.220 新增功能
+- **asserts 关键字支持**
+  - TypeScript 3.7+ 引入的类型守卫关键字
+  - 支持 `asserts condition` 简单断言类型
+  - 支持 `asserts value is Type` 带类型谓词的断言
+  - 用于函数参数/返回值的类型收窄
+
+#### v0.3.220 实现细节
+- **Token 枚举扩展** (`src/typescript/compiler.rs:2365`)
+  - 添加 `Asserts` 令牌类型
+
+- **词法分析器增强** (`src/typescript/compiler.rs:628`)
+  - 添加 `asserts` 关键字识别
+
+- **类型注解解析增强** (`src/typescript/compiler.rs:6987-7011`)
+  - 在 `parse_type_annotation()` 中添加 `asserts` 类型处理
+  - 支持解析 `asserts condition` 和 `asserts value is Type` 模式
+  - 正确处理 asserts 返回类型的类型擦除
+
+#### v0.3.220 测试用例
+- 测试124: TypeScript asserts 关键字基本支持测试
+  - 测试 `asserts condition` 简单断言
+  - 测试 `asserts value is string` 类型谓词断言
+  - 测试 `asserts n` 参数断言
+- 测试125: asserts 与泛型组合测试
+  - 测试 `asserts value is NonNullable<T>` 与泛型组合
+  - 验证类型注解正确移除
+
+#### v0.3.220 测试验证
+- `cargo test --test minimal_tests`: 128/128 通过 (新增 2 个测试)
+- `cargo build --release`: 编译成功
+
+#### v0.3.220 下一步
+- 继续完善 TypeScript 编译器功能
+- 添加更多类型守卫相关测试
+- 完善边缘情况处理

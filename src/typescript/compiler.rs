@@ -625,6 +625,7 @@ impl TypeScriptCompiler {
                     "never" => Token::Never,
                     "unknown" => Token::UnknownType,
                     "is" => Token::Is,
+                    "asserts" => Token::Asserts,  // v0.3.220
                     _ => Token::Identifier(ident),
                 };
                 tokens.push(token);
@@ -2362,6 +2363,7 @@ pub enum Token {
     Never,        // never 类型（表示永远不返回的值）
     UnknownType,  // unknown 类型（类型安全的 top 类型）
     Is,           // is 关键字（类型谓词，用于类型守卫）
+    Asserts,      // asserts 关键字（类型守卫，用于 asserts 条件） (v0.3.220)
     UnknownChar(String), // 未知字符（用于词法分析 fallback）
     // 符号
     LParen,
@@ -6982,6 +6984,32 @@ impl Parser {
         Ok(ASTExpression::ArrayExpression { elements })
     }
     fn parse_type_annotation(&mut self) -> Option<String> {
+        // v0.3.220: 检查是否是 asserts 断言类型
+        // asserts condition - 简单断言
+        // asserts value is Type - 带类型谓词的断言
+        if self.current_token_eq(&Token::Asserts) {
+            self.advance(); // 消耗 asserts 关键字
+            // 检查是否是 asserts value is Type
+            if let Token::Identifier(ref param_name) = self.current_token() {
+                let param_name = param_name.clone();
+                self.advance(); // 消耗参数名
+                // 检查是否有 is 关键字
+                if self.current_token_eq(&Token::Is) {
+                    self.advance(); // 消耗 is 关键字
+                    let target_type = if let Some(t) = self.parse_type_annotation() {
+                        t
+                    } else {
+                        "unknown".to_string()
+                    };
+                    return Some(format!("asserts {} is {}", param_name, target_type));
+                }
+                // 简单 asserts condition
+                return Some(format!("asserts {}", param_name));
+            }
+            // 没有参数名的情况
+            return Some("asserts unknown".to_string());
+        }
+
         // 检查是否是模板字面量类型: `prefix${Type}suffix`
         if self.current_token_eq(&Token::TemplateStart) {
             return self.parse_template_literal_type();
