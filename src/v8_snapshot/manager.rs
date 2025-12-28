@@ -79,12 +79,9 @@ impl SnapshotManager {
     /// 预热内置对象
     pub fn warmup_builtins(&self) -> Result<()> {
         // v0.3.232: 实现内置对象预热
-        // 初始化 V8（全局一次，线程安全）
-        static INIT: std::sync::Once = std::sync::Once::new();
-        INIT.call_once(|| {
-            v8::V8::initialize_platform(v8::new_default_platform().unwrap());
-            v8::V8::initialize();
-        });
+        // v0.3.236: 修复 V8 重复初始化问题，使用 lib.rs 的初始化函数
+        // 使用 lib.rs 的全局初始化函数来避免重复初始化
+        crate::initialize_v8()?;
 
         // 创建临时的 V8 Isolate 和 Context 来执行预热代码
         let mut isolate = v8::Isolate::new(Default::default());
