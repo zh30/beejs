@@ -1,15 +1,18 @@
 // v0.3.245: Integration test for async timer functionality
 // Tests setTimeout, setInterval, clearTimeout, and clearImmediate
 
+use serial_test::serial;
 use beejs::MinimalRuntime;
 use beejs::nodejs_core::timers::clear_all_timers;
 
 fn cleanup_global_state() {
     // Clear timer metadata between tests
+    // Use ignore_poisoned to handle mutex poison edge cases
     clear_all_timers();
 }
 
 #[test]
+#[serial]
 fn test_settimeout_zero_delay_executes() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
@@ -19,6 +22,7 @@ fn test_settimeout_zero_delay_executes() {
 }
 
 #[test]
+#[serial]
 fn test_settimeout_nonzero_delay_queued() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
@@ -33,6 +37,7 @@ fn test_settimeout_nonzero_delay_queued() {
 }
 
 #[test]
+#[serial]
 fn test_cleartimer_prevents_execution() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
@@ -48,6 +53,7 @@ fn test_cleartimer_prevents_execution() {
 }
 
 #[test]
+#[serial]
 fn test_setinterval_returns_timer() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
@@ -60,6 +66,7 @@ fn test_setinterval_returns_timer() {
 }
 
 #[test]
+#[serial]
 fn test_setimmediate_basic() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
@@ -74,6 +81,7 @@ fn test_setimmediate_basic() {
 }
 
 #[test]
+#[serial]
 fn test_timer_with_arguments() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
@@ -87,6 +95,7 @@ fn test_timer_with_arguments() {
 }
 
 #[test]
+#[serial]
 fn test_timer_metadata_storage() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
@@ -101,6 +110,7 @@ fn test_timer_metadata_storage() {
 }
 
 #[test]
+#[serial]
 fn test_cleartimer_with_invalid_id() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
@@ -109,6 +119,7 @@ fn test_cleartimer_with_invalid_id() {
 }
 
 #[test]
+#[serial]
 fn test_multiple_timers_metadata() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();

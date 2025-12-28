@@ -14,11 +14,11 @@ mod cicd_integration_tests {
         PipelineCache, PipelineArtifact, PipelineSecret, Error as PipelineError,
     };
     use beejs::cloud_native::cicd::deployment::{
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
         DeploymentStrategy, BlueGreenDeployment, CanaryDeployment, RollingDeployment,
         DeploymentConfig, DeploymentStatus, Error as DeploymentError,
     };
+    use std::sync::{Arc, Mutex, RwLock};
+    use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_argocd_application_creation() {
