@@ -2362,6 +2362,27 @@ impl MinimalRuntime {
         let instancetype_pattern = regex::Regex::new(r"InstanceType\s*<([^>]+)>").unwrap();
         js_code = instancetype_pattern.replace_all(&js_code, "$1").to_string();
 
+        // v0.3.211: Remove ReturnType utility type
+        // ReturnType<T> gets the return type of a function type T
+        // For runtime, we remove the wrapper and keep the inner type
+        // Pattern: "ReturnType<typeof getUser>" -> "getUser"
+        let returntype_pattern = regex::Regex::new(r"ReturnType\s*<([^>]+)>").unwrap();
+        js_code = returntype_pattern.replace_all(&js_code, "$1").to_string();
+
+        // v0.3.211: Remove Parameters utility type
+        // Parameters<T> gets the parameter types of a function type T
+        // For runtime, we remove the wrapper and keep the inner type
+        // Pattern: "Parameters<typeof greet>" -> "greet"
+        let parameters_pattern = regex::Regex::new(r"Parameters\s*<([^>]+)>").unwrap();
+        js_code = parameters_pattern.replace_all(&js_code, "$1").to_string();
+
+        // v0.3.211: Remove ConstructorParameters utility type
+        // ConstructorParameters<T> gets the constructor parameter types of a constructor type T
+        // For runtime, we remove the wrapper and keep the inner type
+        // Pattern: "ConstructorParameters<typeof User>" -> "User"
+        let constructorparams_pattern = regex::Regex::new(r"ConstructorParameters\s*<([^>]+)>").unwrap();
+        js_code = constructorparams_pattern.replace_all(&js_code, "$1").to_string();
+
         // v0.3.195: Convert simple ESM export statements to comments
         // v0.3.196: Added abstract for export abstract class support
         // Complex exports (export { a, b }) need variable tracking, so we use placeholders
@@ -2452,7 +2473,10 @@ impl MinimalRuntime {
             || code.contains("Record<")         // v0.3.208: Record utility type
             || code.contains("Exclude<")        // v0.3.209: Exclude utility type
             || code.contains("Extract<")        // v0.3.209: Extract utility type
-            || code.contains("InstanceType<");  // v0.3.210: InstanceType utility type
+            || code.contains("InstanceType<")   // v0.3.210: InstanceType utility type
+            || code.contains("ReturnType<")     // v0.3.211: ReturnType utility type
+            || code.contains("Parameters<")     // v0.3.211: Parameters utility type
+            || code.contains("ConstructorParameters<");  // v0.3.211: ConstructorParameters utility type
 
         let js_code = if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript

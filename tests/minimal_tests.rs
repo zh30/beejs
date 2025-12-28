@@ -2667,4 +2667,104 @@ const user: UserType = new User("test", "test@example.com");
 
         println!("✅ Test 105: TypeScript InstanceType with typeof combination");
     }
+
+    /// 测试106: ReturnType<T> 快速路径测试 (v0.3.211)
+    #[test]
+    fn test_returntype_utility_fast_path() {
+        // 测试 ReturnType 快速路径移除
+        // ReturnType<T> 获取函数类型 T 的返回类型
+        let ts_code = r#"
+function getUser(): { id: number; name: string } {
+    return { id: 1, name: "Alice" };
+}
+
+type UserReturn = ReturnType<typeof getUser>;
+const user = getUser();
+"#;
+        let result = typescript::compile_typescript(ts_code, "returntype_fastpath.ts");
+        assert!(result.is_ok(), "ReturnType fast-path should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 ReturnType 被快速路径移除
+        assert!(!output.js_code.contains("ReturnType<"),
+            "Should remove ReturnType via fast-path: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("function getUser"),
+            "Should preserve function declaration: {}", output.js_code);
+        assert!(output.js_code.contains("getUser()"),
+            "Should preserve function call: {}", output.js_code);
+        assert!(output.js_code.contains("const user"),
+            "Should preserve const declaration: {}", output.js_code);
+
+        println!("✅ Test 106: TypeScript ReturnType<T> fast-path");
+    }
+
+    /// 测试107: Parameters<T> 快速路径测试 (v0.3.211)
+    #[test]
+    fn test_parameters_utility_fast_path() {
+        // 测试 Parameters 快速路径移除
+        // Parameters<T> 获取函数类型 T 的参数类型
+        let ts_code = r#"
+function greet(name: string, age: number): string {
+    return `Hello ${name}, you are ${age} years old`;
+}
+
+type GreetParams = Parameters<typeof greet>;
+const args = ["Alice", 30];
+"#;
+        let result = typescript::compile_typescript(ts_code, "parameters_fastpath.ts");
+        assert!(result.is_ok(), "Parameters fast-path should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 Parameters 被快速路径移除
+        assert!(!output.js_code.contains("Parameters<"),
+            "Should remove Parameters via fast-path: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("function greet"),
+            "Should preserve function declaration: {}", output.js_code);
+        assert!(output.js_code.contains("const args"),
+            "Should preserve const declaration: {}", output.js_code);
+
+        println!("✅ Test 107: TypeScript Parameters<T> fast-path");
+    }
+
+    /// 测试108: ConstructorParameters<T> 快速路径测试 (v0.3.211)
+    #[test]
+    fn test_constructor_parameters_utility_fast_path() {
+        // 测试 ConstructorParameters 快速路径移除
+        // ConstructorParameters<T> 获取构造函数类型 T 的参数类型
+        let ts_code = r#"
+class User {
+    name: string;
+    age: number;
+
+    constructor(name: string, age: number) {
+        this.name = name;
+        this.age = age;
+    }
+}
+
+type UserConstructorParams = ConstructorParameters<typeof User>;
+const params = ["Alice", 30];
+"#;
+        let result = typescript::compile_typescript(ts_code, "constructor_params_fastpath.ts");
+        assert!(result.is_ok(), "ConstructorParameters fast-path should compile successfully");
+        let output = result.unwrap();
+
+        // 验证 ConstructorParameters 被快速路径移除
+        assert!(!output.js_code.contains("ConstructorParameters<"),
+            "Should remove ConstructorParameters via fast-path: {}", output.js_code);
+
+        // 验证运行时代码保留
+        assert!(output.js_code.contains("class User"),
+            "Should preserve class declaration: {}", output.js_code);
+        assert!(output.js_code.contains("constructor"),
+            "Should preserve constructor: {}", output.js_code);
+        assert!(output.js_code.contains("const params"),
+            "Should preserve const declaration: {}", output.js_code);
+
+        println!("✅ Test 108: TypeScript ConstructorParameters<T> fast-path");
+    }
 }
