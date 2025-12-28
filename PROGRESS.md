@@ -1,3 +1,33 @@
+### v0.3.245 Timer API 集成测试（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.245 新增功能
+- **Timer 集成测试套件** (`tests/timer_integration_test.rs`)
+  - `test_settimeout_zero_delay_executes`: 验证 delay=0 的 setTimeout 立即执行
+  - `test_settimeout_nonzero_delay_queued`: 验证 delay>0 的 timer 正确排队
+  - `test_cleartimer_prevents_execution`: 验证 clearTimeout 阻止回调执行
+  - `test_setinterval_returns_timer`: 验证 setInterval 返回 timer 对象
+  - `test_setimmediate_basic`: 验证 setImmediate 基本功能
+  - `test_timer_with_arguments`: 验证 timer 回调参数传递
+  - `test_timer_metadata_storage`: 验证 timer 元数据正确存储
+  - `test_cleartimer_with_invalid_id`: 验证无效 ID 不会崩溃
+  - `test_multiple_timers_metadata`: 验证多个 timer 同时注册
+
+#### v0.3.245 测试结果
+- ✅ 9/9 集成测试通过
+- ✅ 所有测试用例验证 timer API 的核心行为
+- ✅ 全局状态正确隔离（使用 `clear_all_timers()` 清理）
+
+#### v0.3.245 代码变更
+- `tests/timer_integration_test.rs`: 新建集成测试文件 (~120 行)
+
+#### v0.3.245 下一步
+- 实现真正的异步定时器调度（与 tokio 集成）
+- 支持 delay > 0 的 setTimeout/setInterval 实际延迟执行
+- 完善 process.nextTick() 与 Timer 的执行顺序
+
+---
+
 ### v0.3.244 Timer API 实现（2025-12-29）
 **进度**: Node.js 兼容性 | ✅ 已完成
 
