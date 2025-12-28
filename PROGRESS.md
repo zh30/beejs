@@ -65,6 +65,81 @@
 
 ---
 
+### v0.3.238 完善 process 对象事件处理器（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.238 新增功能
+- **process.on() 方法完善**
+  - 添加 `process.on('uncaughtException', handler)` 返回 process 对象
+  - 添加 `process.on('unhandledRejection', handler)` 返回 process 对象
+  - 支持 Node.js 风格的链式调用
+
+- **process.off() 方法**
+  - 添加 `process.off(eventName, handler)` 移除事件处理器
+  - 支持 uncaughtException 和 unhandledRejection 事件
+
+- **process.removeListener() 方法**
+  - 添加 `process.removeListener(eventName, handler)` 移除特定监听器
+  - 与 Node.js API 保持兼容
+
+- **I/O 流对象**
+  - 添加 `process.stdout` 基础对象
+  - 添加 `process.stderr` 基础对象
+  - 添加 `process.stdin` 基础对象
+
+#### v0.3.238 代码变更
+- `src/runtime_minimal.rs`: 添加事件处理器支持代码（39 行）
+- `tests/process_event_handler_tests.rs`: 新增 233 行测试代码
+
+#### v0.3.238 测试验证
+- ✅ `cargo test --lib`: 234/234 测试通过
+- ✅ 事件处理器注册和移除正常
+- ✅ 链式调用正常
+
+#### v0.3.238 下一步
+- 完善 process.stdout/stderr/stdin 实现
+- 实现 nextTick() API
+- 继续完善 Node.js API 兼容性
+
+---
+
+### v0.3.239 nextTick API 和 process 流完善（计划中）
+**进度**: Node.js 兼容性 | 🔄 规划中
+
+#### v0.3.239 目标
+- **process.nextTick() 实现**
+  - 添加 `process.nextTick(callback, ...args)` 方法
+  - 实现微任务队列优先级（nextTick > microtasks > macrotasks）
+  - 与 Promise 和 setImmediate 的正确顺序
+
+- **process.stdout 完善**
+  - 实现 `process.stdout.write()` 方法
+  - 支持 String 和 Buffer 类型
+  - 正确的流式输出到控制台
+
+- **process.stderr 完善**
+  - 实现 `process.stderr.write()` 方法
+  - 错误输出分离
+
+- **process stdin 基础支持**
+  - 添加 stdin 读取能力基础架构
+
+#### v0.3.239 实现计划
+1. 在 `process.rs` 中添加 `next_tick_func` 回调函数
+2. 实现微任务队列管理（V8 MicrotaskQueue）
+3. 添加 `stdout.write()` 和 `stderr.write()` 的 native function
+4. 完善流的互操作
+
+#### v0.3.239 测试计划
+- 添加 `next_tick_tests.rs`：测试 nextTick 执行顺序
+- 增强 `process_io_tests.rs`：测试 stdout/stderr 写入
+- 验证 nextTick 与 Promise 的执行顺序
+
+**v0.3.239 状态**: 🔄 待开始
+**目标**: 完善 process 模块核心 API，提升 Node.js 兼容性
+
+---
+
 ### v0.3.237 process 对象和未捕获异常处理器（2025-12-29）
 **进度**: Node.js 兼容性 | ✅ 已完成
 
