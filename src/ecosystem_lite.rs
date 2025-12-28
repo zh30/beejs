@@ -4,7 +4,6 @@
 // 自包含的生态系统集成模块，不依赖可能有问题的其他模块
 
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -69,7 +68,7 @@ impl TypeDefinitionGenerator {
         Self { config }
     }
     /// 为 JavaScript 代码生成 TypeScript 类型定义
-    pub async fn generate_types(&self, source: &str) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn generate_types(&self, _source: &str) -> Result<String, Box<dyn std::error::Error>> {
         // 简化的类型生成器实现
         // 实际实现需要解析 JavaScript 代码并生成 .d.ts 文件
         let mut dts_content = String::new();
@@ -107,7 +106,7 @@ impl TypeDefinitionGenerator {
         // 模块声明
         dts_content.push_str(&format!("declare module '{}' {{\n", package.name));
         // 主入口
-        if let Some(main) = &package.main {
+        if let Some(_main) = &package.main {
             dts_content.push_str(&format!("  const value: any;\n"));
             dts_content.push_str(&format!("  export = value;\n"));
         }
@@ -263,7 +262,7 @@ impl ReactRuntime {
     /// 渲染 React 组件
     pub async fn render_component(
         &self,
-        component_code: &str,
+        _component_code: &str,
     ) -> Result<String, Box<dyn std::error::Error>> {
         // 简化的 React 渲染实现
         // 实际实现需要 JSX 转换、组件编译等
