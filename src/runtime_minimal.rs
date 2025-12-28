@@ -1210,18 +1210,35 @@ pub struct MinimalRuntime {
 impl MinimalRuntime {
     /// Create a new minimal runtime with optimized settings
     /// v0.3.221: 增强 Isolate 配置以提升性能
+    /// v0.3.231: 使用更小的初始堆以加快启动速度
     pub fn new() -> Result<Self> {
         // Initialize V8 (idempotent - safe to call multiple times)
         crate::initialize_v8()?;
 
-        // Create optimized isolate parameters
+        // v0.3.231: 使用更小的初始堆 (128MB) 以加快启动速度
+        // 最大堆保持 2GB 以提供足够的运行空间
         let create_params = v8::CreateParams::default()
-            .heap_limits(256 * 1024 * 1024, 4096 * 1024 * 1024); // 256MB initial, 4GB max
+            .heap_limits(128 * 1024 * 1024, 2048 * 1024 * 1024);
 
         // Create a new isolate with optimized parameters
         let isolate = v8::Isolate::new(create_params);
 
         // v0.3.93: Context 将在第一次调用 get_context() 时创建
+        Ok(Self { isolate, context: None })
+    }
+
+    /// v0.3.231: 快速启动模式 - 使用最小堆配置
+    /// 适用于短生命周期脚本，减少内存分配开销
+    pub fn new_fast() -> Result<Self> {
+        crate::initialize_v8()?;
+
+        // 最小初始堆 (64MB) + 较小的最大堆 (512MB)
+        // 这种配置可以减少启动时的内存分配开销
+        let create_params = v8::CreateParams::default()
+            .heap_limits(64 * 1024 * 1024, 512 * 1024 * 1024);
+
+        let isolate = v8::Isolate::new(create_params);
+
         Ok(Self { isolate, context: None })
     }
 
