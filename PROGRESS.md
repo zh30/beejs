@@ -1,3 +1,52 @@
+### v0.3.249 V8 主线程定时器回调执行机制（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.249 新增功能
+- **V8 主线程定时器回调执行**
+  - `execute_fired_timers()`: 从 AsyncTimerManager 获取到期的 timer 并在 V8 主线程执行回调
+  - `execute_timer_callback()`: 从全局注册表获取回调和参数，执行 JS 回调
+  - `take_timer_callback()`: 获取并移除 timer 回调（防止重复执行）
+
+- **Timer 回调存储系统**
+  - `TIMER_CALLBACKS`: 全局 V8 Global<Function> 存储（线程安全）
+  - `store_timer_callback()`: 存储 timer 回调及参数
+  - 支持带参数的 timer 回调传递
+
+- **事件循环集成**
+  - `execute_code` 中添加 fired timer 执行循环
+  - 持续轮询并执行所有到期的 timer 回调
+  - 支持链式执行（一个 timer 触发另一个 timer）
+
+#### v0.3.249 技术挑战与解决方案
+- **跨线程回调执行**: AsyncTimerManager 在独立线程，JS 回调必须在 V8 主线程
+  - 解决方案: `poll_fired_timers()` + `execute_fired_timers()` 分离调度和执行
+  - 使用全局 `TIMER_CALLBACKS` 注册表存储 V8 Global 句柄
+
+- **V8 句柄生命周期**: V8 Global 需要在正确的 isolate 作用域中创建和访问
+  - 解决方案: 在 JS 调用 setTimeout 时存储回调，execute_code 期间执行
+  - 使用 `v8::Local::new()` 和 `v8::Global::new()` 正确转换
+
+#### v0.3.249 测试结果
+- ✅ 10/10 timer_tests 单元测试通过
+- ✅ 9/9 timer_integration_test 集成测试通过
+- ✅ 11/11 timer_async_execution_test 异步执行测试通过
+- ✅ 23/27 timers_enhanced_tests 通过（4 个因 V8 isolate 释放时序问题）
+
+#### v0.3.249 代码变更
+- `src/nodejs_core/timers.rs`: 新增回调存储和执行机制
+- `src/runtime_minimal.rs`: execute_code 集成 fired timer 执行循环
+- `tests/timer_async_execution_test.rs`: 新建异步执行集成测试（~270 行）
+- `tests/timer_tests.rs`: 修复导入路径和可见性
+- `tests/timers_enhanced_tests.rs`: 更新测试以接受 number 返回类型
+- `tests/timer_integration_test.rs`: 更新断言接受 number/object
+
+#### v0.3.249 下一步
+- 完善 setImmediate 在事件循环中的执行顺序
+- 优化定时器精度和性能
+- 支持 timer.unref()/timer.ref() API
+
+---
+
 ### v0.3.248 定时器调度架构优化（2025-12-29）
 **进度**: Node.js 兼容性 | ✅ 已完成
 

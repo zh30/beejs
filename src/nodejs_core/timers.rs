@@ -30,7 +30,8 @@ pub struct TimerMetadata {
 }
 
 /// Global timer metadata registry (thread-safe, no V8 handles)
-static TIMER_METADATA: Lazy<Mutex<HashMap<u64, TimerMetadata>>> =
+/// pub for access from integration tests
+pub static TIMER_METADATA: Lazy<Mutex<HashMap<u64, TimerMetadata>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
 /// Timer callback storage - V8 Global handles (only accessed from V8 main thread)
@@ -86,10 +87,23 @@ pub fn get_timer_metadata(timer_id: u64) -> Option<TimerMetadata> {
     metadata.get(&timer_id).cloned()
 }
 
+/// Get all timer metadata (for testing)
+#[cfg(test)]
+pub fn get_all_timer_metadata() -> Vec<(u64, TimerMetadata)> {
+    let metadata = TIMER_METADATA.lock().unwrap();
+    metadata.iter().map(|(id, meta)| (*id, meta.clone())).collect()
+}
+
 /// Remove timer metadata
 pub fn remove_timer_metadata(timer_id: u64) {
     let mut metadata = TIMER_METADATA.lock().unwrap();
     metadata.remove(&timer_id);
+}
+
+/// Remove timer callback from registry
+pub fn remove_timer_callback(timer_id: u64) -> Option<(v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)> {
+    let mut storage = TIMER_CALLBACKS.lock().unwrap();
+    storage.remove(timer_id)
 }
 
 /// Set up timer APIs in the V8 context

@@ -3,9 +3,7 @@
 
 #[cfg(test)]
 mod timer_tests {
-    use crate::nodejs_core::timers::{get_next_timer_id, TimerType, TimerMetadata, TIMER_METADATA};
-    use std::sync::{Arc, Mutex};
-    use once_cell::sync::Lazy;
+    use beejs::nodejs_core::timers::{get_next_timer_id, TimerType, TimerMetadata, TIMER_METADATA};
 
     #[test]
     fn test_timer_id_generation() {

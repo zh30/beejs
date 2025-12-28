@@ -20,6 +20,7 @@ use crate::nodejs_core::fs::setup_fs_api;
 use crate::nodejs_core::crypto::setup_crypto_api;
 use crate::nodejs_core::net::setup_net_api;
 use crate::nodejs_core::http::setup_http_api;
+use crate::nodejs_core::timers::{setup_timers_api, execute_fired_timers};
 
 // Event listener storage using thread_local (v0.3.46)
 // Note: rustdoc does not generate documentation for macro invocations
@@ -2759,6 +2760,7 @@ impl MinimalRuntime {
             Self::setup_string_decoder_api(scope, &context)?;
             setup_crypto_api(scope, &context)?;
             Self::setup_module_system(scope, &context)?;
+            setup_timers_api(scope, &context)?; // v0.3.249: Timer API with async scheduling
         }
 
         // Create a string from the transpiled code
@@ -2799,6 +2801,30 @@ impl MinimalRuntime {
                 }
             }
         };
+
+        // v0.3.249: Execute fired timer callbacks (event loop tick)
+        // Poll and execute all fired timers until no more timers fire
+        // Using do-while pattern: execute at least once, then continue if new timers fire
+        loop {
+            let had_timers_before = {
+                let timer_manager = crate::event_loop::get_async_timer_manager();
+                timer_manager.has_fired_timers()
+            };
+
+            // Execute all currently fired timers
+            execute_fired_timers(scope);
+
+            // Check if new timers fired during callback execution
+            let has_new_timers = {
+                let timer_manager = crate::event_loop::get_async_timer_manager();
+                timer_manager.has_fired_timers()
+            };
+
+            // Continue if there were timers before or new timers fired
+            if !had_timers_before && !has_new_timers {
+                break;
+            }
+        }
 
         // Process microtasks (Promises, queueMicrotask callbacks)
         scope.perform_microtask_checkpoint();
