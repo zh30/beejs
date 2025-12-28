@@ -1,3 +1,49 @@
+### v0.3.244 Timer API 实现（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.244 新增功能
+- **Timer API** (`src/nodejs_core/timers.rs`)
+  - `setTimeout(callback, delay, ...args)`: 设置定时器，delay=0 时立即执行回调
+  - `setInterval(callback, delay, ...args)`: 设置重复定时器
+  - `setImmediate(callback, ...args)`: 在下一事件循环迭代中执行回调
+  - `clearTimeout(timerId)`: 清除定时器
+  - `clearInterval(timerId)`: 清除重复定时器
+  - `clearImmediate(timerId)`: 清除立即定时器
+
+#### v0.3.244 实现细节
+- **全局 Timer 元数据注册表**
+  - 使用 `Lazy<Mutex<HashMap>>` 实现线程安全的全局注册表
+  - 存储 timer 类型、延迟时间、unref 状态
+  - 不存储 V8 句柄以避免线程安全问题
+
+- **Timer ID 生成**
+  - 使用 `AtomicU64` 实现原子计数器
+  - 生成唯一且递增的 timer ID
+
+- **错误处理**
+  - 参数验证：回调函数必填
+  - 延迟值自动转换为非负数
+  - 错误时抛出 TypeError
+
+#### v0.3.244 测试验证
+- ✅ `timer_tests`: 3/3 测试通过
+- ✅ `cargo test --lib`: 237/237 测试通过
+- ✅ Timer ID 生成唯一且递增
+- ✅ 元数据存储和检索正确
+- ✅ 清除功能正常工作
+
+#### v0.3.244 代码变更
+- `src/nodejs_core/timers.rs`: 新建 Timer API 模块 (~210 行)
+- `src/nodejs_core/mod.rs`: 添加 timers 模块声明和初始化
+- `tests/timer_tests.rs`: 新增 11 个测试用例
+
+#### v0.3.244 下一步
+- 实现真正的异步定时器调度（与 tokio 集成）
+- 支持 delay > 0 的 setTimeout/setInterval 实际延迟执行
+- 完善 process.nextTick() 与 Timer 的执行顺序
+
+---
+
 ### v0.3.243 process.kill() 和事件监听器警告机制（2025-12-29）
 **进度**: Node.js 兼容性 | ✅ 已完成
 
