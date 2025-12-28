@@ -11674,34 +11674,46 @@ impl MinimalRuntime {
 
         // v0.3.242: Add process.setMaxListeners() for setting max listeners per event
         // Returns process object for chaining
+        // v0.3.243: Fix - process.setMaxListeners(n) with single arg sets global default
         let set_max_listeners_key = v8::String::new(scope, "setMaxListeners").unwrap();
         let set_max_listeners_func = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            // Get event name (defaults to "__default__")
-            let event_name = if args.length() > 0 {
-                let name = args.get(0);
-                if name.is_string() || name.is_null_or_undefined() {
-                    name.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "__default__".to_string())
+            // Determine event name and n value
+            // If first arg is a number, treat it as n (set global default)
+            // If first arg is a string, treat it as event name, second arg is n
+            let (event_name, n) = if args.length() > 0 {
+                let first = args.get(0);
+                if first.is_number() {
+                    // Single argument: setMaxListeners(n) - sets "__default__"
+                    let n = first.int32_value(scope).unwrap_or(0);
+                    ("__default__".to_string(), n)
+                } else if first.is_string() || first.is_null_or_undefined() {
+                    // First arg is event name
+                    let name = first.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "__default__".to_string());
+                    let n = if args.length() > 1 {
+                        args.get(1).int32_value(scope).unwrap_or(0)
+                    } else {
+                        0
+                    };
+                    (name, n)
                 } else {
-                    "__default__".to_string()
+                    // First arg is neither number nor string, treat as event name with default n
+                    ("__default__".to_string(), 0)
                 }
             } else {
-                "__default__".to_string()
-            };
-
-            // Get n value (max listeners)
-            let n = if args.length() > 1 {
-                args.get(1).int32_value(scope).unwrap_or(0)
-            } else {
-                0
+                ("__default__".to_string(), 0)
             };
 
             // Validate n (must be >= 0)
             let max_listeners = if n < 0 { 0 } else { n };
 
-            // Store in thread_local (always store the value, even if 0)
+            // Store in thread_local
             MAX_LISTENERS.with(|map| {
                 let mut map = map.lock().unwrap();
-                map.insert(event_name, max_listeners);
+                if max_listeners == 0 {
+                    map.remove(&event_name);
+                } else {
+                    map.insert(event_name, max_listeners);
+                }
             });
 
             // Return process object for chaining
@@ -11818,6 +11830,80 @@ impl MinimalRuntime {
         });
         let cpu_usage_instance = cpu_usage_fn.get_function(scope).unwrap();
         process_obj.set(scope, cpu_usage_key.into(), cpu_usage_instance.into());
+
+        // v0.3.243: Add process.kill(pid, signal) - Send signal to process
+        let kill_key = v8::String::new(scope, "kill").unwrap();
+        let kill_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            // Get PID
+            let pid = args.get(0).int32_value(scope).unwrap_or(0);
+
+            // Get signal (can be string or number)
+            let signal = if args.length() > 1 {
+                let sig_arg = args.get(1);
+                if sig_arg.is_number() {
+                    sig_arg.int32_value(scope).unwrap_or(15) as u32
+                } else if let Some(str_val) = sig_arg.to_string(scope) {
+                    let sig_str = str_val.to_rust_string_lossy(scope);
+                    match sig_str.to_uppercase().as_str() {
+                        "SIGHUP" | "HUP" => 1,
+                        "SIGINT" | "INT" => 2,
+                        "SIGQUIT" | "QUIT" => 3,
+                        "SIGILL" | "ILL" => 4,
+                        "SIGTRAP" | "TRAP" => 5,
+                        "SIGABRT" | "ABRT" => 6,
+                        "SIGFPE" | "FPE" => 8,
+                        "SIGKILL" | "KILL" => 9,
+                        "SIGUSR1" | "USR1" => 10,
+                        "SIGSEGV" | "SEGV" => 11,
+                        "SIGUSR2" | "USR2" => 12,
+                        "SIGPIPE" | "PIPE" => 13,
+                        "SIGALRM" | "ALRM" => 14,
+                        "SIGTERM" | "TERM" => 15,
+                        "SIGCHLD" | "CHLD" => 17,
+                        "SIGCONT" | "CONT" => 18,
+                        "SIGSTOP" | "STOP" => 19,
+                        "SIGTSTP" | "TSTP" => 20,
+                        "SIGTTIN" | "TTIN" => 21,
+                        "SIGTTOU" | "TTOU" => 22,
+                        _ => 15, // Default SIGTERM
+                    }
+                } else {
+                    15 // Default signal
+                }
+            } else {
+                15 // Default signal
+            };
+
+            // Send signal
+            let result = if pid > 0 {
+                #[cfg(target_family = "unix")]
+                {
+                    // Don't send signals to ourselves (would terminate the process)
+                    let current_pid = unsafe { libc::getpid() };
+                    if pid == current_pid as i32 {
+                        false  // Can't send signal to self in this context
+                    } else {
+                        unsafe {
+                            libc::kill(pid as libc::pid_t, signal as libc::c_int) == 0
+                        }
+                    }
+                }
+                #[cfg(target_family = "windows")]
+                {
+                    // Windows doesn't support Unix signals
+                    false
+                }
+                #[cfg(not(any(target_family = "unix", target_family = "windows")))]
+                {
+                    false
+                }
+            } else {
+                false
+            };
+
+            retval.set(v8::Boolean::new(scope, result).into());
+        }).unwrap();
+        process_obj.set(scope, kill_key.into(), kill_fn.into());
 
         // Set process as global
         global.set(scope, process_key.into(), process_obj.into());
@@ -14003,6 +14089,38 @@ impl MinimalRuntime {
                 let listener_func = v8::Local::<v8::Function>::try_from(listener).unwrap();
                 let function_global = v8::Global::new(scope, listener_func);
 
+                // v0.3.243: Check if adding listener exceeds maxListeners and emit warning
+                let current_count = EVENT_LISTENERS.with(|map| {
+                    let map_ref = map.lock().unwrap();
+                    map_ref.get(&event_name).map(|v| v.len()).unwrap_or(0)
+                });
+
+                // Get maxListeners from the emitter
+                let max_key = v8::String::new(scope, "_maxListeners").unwrap();
+                let max_listeners = this.get(scope, max_key.into())
+                    .and_then(|v| v.to_integer(scope))
+                    .map(|v| v.value() as usize)
+                    .unwrap_or(10);
+
+                // Emit warning if exceeding maxListeners
+                if max_listeners > 0 && current_count >= max_listeners {
+                    let warning_msg = format!(
+                        "MaxListenersExceededWarning: Possible EventEmitter memory leak detected. {} listeners added to {} event. Use emitter.setMaxListeners() to increase limit",
+                        current_count + 1,
+                        event_name
+                    );
+                    // Call console.warn
+                    let console_key = v8::String::new(scope, "console").unwrap();
+                    let console = scope.get_current_context().global(scope).get(scope, console_key.into());
+                    if let Some(console_obj) = console.and_then(|c| c.to_object(scope)) {
+                        let warn_key = v8::String::new(scope, "warn").unwrap();
+                        if let Some(warn_func) = console_obj.get(scope, warn_key.into()).and_then(|f| v8::Local::<v8::Function>::try_from(f).ok()) {
+                            let msg_str = v8::String::new(scope, &warning_msg).unwrap();
+                            let _ = warn_func.call(scope, console_obj.into(), &[msg_str.into()]);
+                        }
+                    }
+                }
+
                 EVENT_LISTENERS.with(|map| {
                     let mut map_ref = map.lock().unwrap();
                     map_ref.entry(event_name.clone()).or_insert_with(Vec::new).push(function_global);
@@ -14031,6 +14149,38 @@ impl MinimalRuntime {
 
                 let listener_func = v8::Local::<v8::Function>::try_from(listener).unwrap();
                 let function_global = v8::Global::new(scope, listener_func);
+
+                // v0.3.243: Check if adding listener exceeds maxListeners and emit warning
+                let current_count = ONCE_LISTENERS.with(|map| {
+                    let map_ref = map.lock().unwrap();
+                    map_ref.get(&event_name).map(|v| v.len()).unwrap_or(0)
+                });
+
+                // Get maxListeners from the emitter
+                let max_key = v8::String::new(scope, "_maxListeners").unwrap();
+                let max_listeners = this.get(scope, max_key.into())
+                    .and_then(|v| v.to_integer(scope))
+                    .map(|v| v.value() as usize)
+                    .unwrap_or(10);
+
+                // Emit warning if exceeding maxListeners
+                if max_listeners > 0 && current_count >= max_listeners {
+                    let warning_msg = format!(
+                        "MaxListenersExceededWarning: Possible EventEmitter memory leak detected. {} once listeners added to {} event. Use emitter.setMaxListeners() to increase limit",
+                        current_count + 1,
+                        event_name
+                    );
+                    // Call console.warn
+                    let console_key = v8::String::new(scope, "console").unwrap();
+                    let console = scope.get_current_context().global(scope).get(scope, console_key.into());
+                    if let Some(console_obj) = console.and_then(|c| c.to_object(scope)) {
+                        let warn_key = v8::String::new(scope, "warn").unwrap();
+                        if let Some(warn_func) = console_obj.get(scope, warn_key.into()).and_then(|f| v8::Local::<v8::Function>::try_from(f).ok()) {
+                            let msg_str = v8::String::new(scope, &warning_msg).unwrap();
+                            let _ = warn_func.call(scope, console_obj.into(), &[msg_str.into()]);
+                        }
+                    }
+                }
 
                 ONCE_LISTENERS.with(|map| {
                     let mut map_ref = map.lock().unwrap();

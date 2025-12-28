@@ -1,3 +1,53 @@
+### v0.3.243 process.kill() 和事件监听器警告机制（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.243 新增功能
+- **process.kill(pid, signal)**
+  - 向指定进程发送信号
+  - 支持信号名称（如 `"SIGTERM"`、`"SIGINT"`）和数字（如 `15`、`2`）
+  - 自动阻止向自身发送信号（避免进程终止）
+  - 支持常见信号：SIGHUP(1), SIGINT(2), SIGQUIT(3), SIGKILL(9), SIGTERM(15), SIGUSR1(10), SIGUSR2(12), 等等
+
+- **事件监听器警告机制** (`events.rs`)
+  - 当添加的监听器数量超过 `maxListeners` 时自动发出 `MaxListenersExceededWarning`
+  - 通过 `console.warn()` 输出警告信息
+  - 警告包含事件名称和当前监听器数量
+
+#### v0.3.243 Bug 修复
+- **process.setMaxListeners(n) 单参数支持**
+  - 修复：`setMaxListeners(15)` 现在正确设置全局默认限制为 15
+  - 之前错误地将单个数字参数解释为事件名称
+  - 保持向后兼容：`setMaxListeners('event', 10)` 仍然正常工作
+
+#### v0.3.243 实现细节
+- **信号处理** (`src/nodejs_core/process.rs` 和 `src/runtime_minimal.rs`)
+  - Unix: 使用 `libc::kill()` 系统调用
+  - Windows: 返回 `false`（不支持 Unix 信号）
+  - 防止自杀：检测 `pid == getpid()` 并返回 `false`
+
+- **MaxListenersExceededWarning** (`src/nodejs_core/events.rs`)
+  - 在 `on()` 和 `once()` 回调中检查监听器数量
+  - 当 `current_count >= max_listeners` 时调用 `console.warn()`
+
+#### v0.3.243 测试验证
+- ✅ `event_listener_warning_tests`: 8/8 测试通过
+- ✅ `process_kill_tests`: 8/8 测试通过
+- ✅ 单参数 `setMaxListeners(n)` 正确工作
+- ✅ 双参数 `setMaxListeners(event, n)` 保持兼容
+
+#### v0.3.243 代码变更
+- `src/nodejs_core/process.rs`: 添加 `process.kill()` 和修复 `setMaxListeners()` (~100 行)
+- `src/nodejs_core/events.rs`: 添加 `emit_max_listeners_warning()` (~40 行)
+- `src/runtime_minimal.rs`: 添加 `process.kill()` 和修复 `setMaxListeners()` (~100 行)
+- `tests/event_listener_warning_tests.rs`: 新增 8 个测试用例
+- `tests/process_kill_tests.rs`: 新增 8 个测试用例
+
+#### v0.3.243 下一步
+- 继续完善其他 Node.js API（如 Buffer、Stream）
+- 完善 EventEmitter 的事件系统
+
+---
+
 ### v0.3.242 process.setMaxListeners() 和 getMaxListeners()（2025-12-29）
 **进度**: Node.js 兼容性 | ✅ 已完成
 

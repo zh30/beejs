@@ -114,6 +114,25 @@ fn event_emitter_on_callback(
     // 创建持久化函数引用
     let listener_func: _ = v8::Local::<v8::Function>::try_from(listener).unwrap();
     let function_global: _ = v8::Global::new(scope, listener_func);
+
+    // v0.3.243: 检查是否超过 maxListeners 并发出警告
+    let current_count = EVENT_LISTENERS.with(|map| {
+        let map_ref = map.lock().unwrap();
+        map_ref.get(&event_name).map(|v| v.len()).unwrap_or(0)
+    });
+
+    // 获取 maxListeners
+    let max_key: _ = v8::String::new(scope, "_maxListeners").unwrap();
+    let max_listeners = this.get(scope, max_key.into())
+        .and_then(|v| v.to_integer(scope))
+        .map(|v| v.value() as usize)
+        .unwrap_or(10);
+
+    // 如果超过限制，发出警告
+    if max_listeners > 0 && current_count >= max_listeners {
+        emit_max_listeners_warning(scope, &this, &event_name, current_count + 1, max_listeners);
+    }
+
     // 获取当前的监听器数组
     let listeners_key: _ = v8::String::new(scope, "_listeners").unwrap();
     let existing_listeners: _ = this.get(scope, listeners_key.into());
@@ -162,6 +181,25 @@ fn event_emitter_once_callback(
     }
     let listener_func: _ = v8::Local::<v8::Function>::try_from(listener).unwrap();
     let function_global: _ = v8::Global::new(scope, listener_func);
+
+    // v0.3.243: 检查是否超过 maxListeners 并发出警告
+    let current_count = ONCE_LISTENERS.with(|map| {
+        let map_ref = map.lock().unwrap();
+        map_ref.get(&event_name).map(|v| v.len()).unwrap_or(0)
+    });
+
+    // 获取 maxListeners
+    let max_key: _ = v8::String::new(scope, "_maxListeners").unwrap();
+    let max_listeners = this.get(scope, max_key.into())
+        .and_then(|v| v.to_integer(scope))
+        .map(|v| v.value() as usize)
+        .unwrap_or(10);
+
+    // 如果超过限制，发出警告
+    if max_listeners > 0 && current_count >= max_listeners {
+        emit_max_listeners_warning(scope, &this, &event_name, current_count + 1, max_listeners);
+    }
+
     // 添加一次性监听器
     ONCE_LISTENERS.with(|map| {
         let mut map_ref = map.lock().unwrap();
@@ -353,4 +391,42 @@ fn event_emitter_set_max_callback(
     let max_key_val: _ = v8::Integer::new(scope, n).into();
     this.set(scope, max_key.into(), max_key_val);
     retval.set(this.into());
+}
+
+/// v0.3.243: 发出 MaxListenersExceededWarning 警告
+/// 当添加的监听器数量超过 maxListeners 时调用 console.warn
+fn emit_max_listeners_warning(
+    scope: &mut v8::HandleScope,
+    _emitter: &v8::Local<v8::Object>,
+    event_name: &str,
+    current_count: usize,
+    _max_listeners: usize,
+) {
+    // 构建警告消息
+    let warning_msg = format!(
+        "MaxListenersExceededWarning: Possible EventEmitter memory leak detected. {} listeners added to {} event. Use emitter.setMaxListeners() to increase limit",
+        current_count,
+        event_name
+    );
+
+    // 调用 console.warn
+    let console_key = v8::String::new(scope, "console").unwrap();
+    let console = scope.get_current_context().global(scope).get(scope, console_key.into());
+
+    if let Some(console_obj) = console {
+        if console_obj.is_object() {
+            let console_obj = console_obj.to_object(scope).unwrap();
+            let warn_key = v8::String::new(scope, "warn").unwrap();
+            let warn_method = console_obj.get(scope, warn_key.into());
+
+            if let Some(warn_func) = warn_method {
+                if warn_func.is_function() {
+                    let warn_func = v8::Local::<v8::Function>::try_from(warn_func).unwrap();
+                    let msg_str = v8::String::new(scope, &warning_msg).unwrap();
+                    let _console = console_obj;
+                    let _ = warn_func.call(scope, _console.into(), &[msg_str.into()]);
+                }
+            }
+        }
+    }
 }

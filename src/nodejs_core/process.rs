@@ -229,6 +229,12 @@ pub fn setup_process_api(
     let cpu_usage_key = v8::String::new(scope, "cpuUsage").unwrap();
     process_obj.set(scope, cpu_usage_key.into(), cpu_usage_instance.into());
 
+    // v0.3.243: process.kill(pid, signal) - 向进程发送信号
+    let kill_func = v8::FunctionTemplate::new(scope, process_kill_callback);
+    let kill_instance = kill_func.get_function(scope).unwrap();
+    let kill_key = v8::String::new(scope, "kill").unwrap();
+    process_obj.set(scope, kill_key.into(), kill_instance.into());
+
     // 将 process 对象设置为全局
     let process_key = v8::String::new(scope, "process").unwrap();
     global.set(scope, process_key.into(), process_obj.into());
@@ -772,31 +778,38 @@ fn process_remove_listener_callback(
 /// v0.3.242: process.setMaxListeners() 回调
 /// 设置指定事件的最大监听器数量
 /// n 为 0 表示无限制
+/// v0.3.243: Fix - process.setMaxListeners(n) with single arg sets global default
 fn process_set_max_listeners_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    // 获取事件名称
-    let event_name = if args.length() > 0 {
-        let name = args.get(0);
-        if name.is_string() || name.is_null_or_undefined() {
-            name.to_string(scope).unwrap().to_rust_string_lossy(scope)
+    // Determine event name and n value
+    // If first arg is a number, treat it as n (set global default)
+    // If first arg is a string, treat it as event name, second arg is n
+    let (event_name, n) = if args.length() > 0 {
+        let first = args.get(0);
+        if first.is_number() {
+            // Single argument: setMaxListeners(n) - sets "__default__"
+            let n = first.int32_value(scope).unwrap_or(0);
+            (String::from("__default__"), n)
+        } else if first.is_string() || first.is_null_or_undefined() {
+            // First arg is event name
+            let name = first.to_string(scope).unwrap().to_rust_string_lossy(scope);
+            let n = if args.length() > 1 {
+                args.get(1).int32_value(scope).unwrap_or(0)
+            } else {
+                0
+            };
+            (name, n)
         } else {
-            String::from("__default__")
+            (String::from("__default__"), 0)
         }
     } else {
-        String::from("__default__")
+        (String::from("__default__"), 0)
     };
 
-    // 获取 n 值（最大监听器数量）
-    let n = if args.length() > 1 {
-        args.get(1).int32_value(scope).unwrap_or(0)
-    } else {
-        0
-    };
-
-    // 验证 n 值（必须 >= 0）
+    // Validate n (must be >= 0)
     let max_listeners = if n < 0 {
         0  // 负数视为 0（无限制）
     } else {
@@ -844,6 +857,103 @@ fn process_get_max_listeners_callback(
     });
 
     retval.set(v8::Integer::new(scope, max_listeners).into());
+}
+
+/// v0.3.243: process.kill(pid, signal) 回调
+/// 向指定进程发送信号
+fn process_kill_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    // 获取 PID
+    let pid = args.get(0).int32_value(scope).unwrap_or(0);
+
+    // 获取信号（可以是字符串或数字）
+    let signal = if args.length() > 1 {
+        let sig_arg = args.get(1);
+        if sig_arg.is_number() {
+            sig_arg.int32_value(scope).unwrap_or(15) as u32
+        } else if let Some(str_val) = sig_arg.to_string(scope) {
+            let sig_str = str_val.to_rust_string_lossy(scope);
+            signal_name_to_number(&sig_str)
+        } else {
+            15 // 默认 SIGTERM
+        }
+    } else {
+        15 // 默认信号
+    };
+
+    // 发送信号
+    let result = if pid > 0 {
+        send_signal_to_process(pid as u32, signal)
+    } else {
+        false
+    };
+
+    retval.set(v8::Boolean::new(scope, result).into());
+}
+
+/// 将信号名称转换为信号编号
+fn signal_name_to_number(signal_name: &str) -> u32 {
+    match signal_name.to_uppercase().as_str() {
+        "SIGHUP" | "HUP" => 1,
+        "SIGINT" | "INT" => 2,
+        "SIGQUIT" | "QUIT" => 3,
+        "SIGILL" | "ILL" => 4,
+        "SIGTRAP" | "TRAP" => 5,
+        "SIGABRT" | "ABRT" => 6,
+        "SIGFPE" | "FPE" => 8,
+        "SIGKILL" | "KILL" => 9,
+        "SIGUSR1" | "USR1" => 10,
+        "SIGSEGV" | "SEGV" => 11,
+        "SIGUSR2" | "USR2" => 12,
+        "SIGPIPE" | "PIPE" => 13,
+        "SIGALRM" | "ALRM" => 14,
+        "SIGTERM" | "TERM" => 15,
+        "SIGCHLD" | "CHLD" => 17,
+        "SIGCONT" | "CONT" => 18,
+        "SIGSTOP" | "STOP" => 19,
+        "SIGTSTP" | "TSTP" => 20,
+        "SIGTTIN" | "TTIN" => 21,
+        "SIGTTOU" | "TTOU" => 22,
+        "SIGBUS" | "BUS" => 10,  // FreeBSD uses 10, Linux uses 7
+        _ => 15, // 默认 SIGTERM
+    }
+}
+
+/// 向进程发送信号
+fn send_signal_to_process(pid: u32, signal: u32) -> bool {
+    #[cfg(target_family = "unix")]
+    {
+        use libc::kill;
+
+        unsafe {
+            kill(pid as libc::pid_t, signal as libc::c_int) == 0
+        }
+    }
+    #[cfg(target_family = "windows")]
+    {
+        // Windows 不支持 Unix 信号，这里简化处理
+        // 对于当前进程，标记退出
+        if pid == std::process::id() as i32 {
+            if signal == 15 || signal == 2 || signal == 1 { // SIGTERM, SIGINT, SIGHUP
+                // 标记退出（实际退出由运行时处理）
+                SHOULD_EXIT.with(|exit| {
+                    *exit.lock().unwrap() = true;
+                });
+                EXIT_CODE.with(|code| {
+                    *code.lock().unwrap() = 128 + signal as i32;
+                });
+                return true;
+            }
+        }
+        false
+    }
+    #[cfg(not(any(target_family = "unix", target_family = "windows")))]
+    {
+        false
+    }
 }
 
 /// 触发未捕获异常事件
