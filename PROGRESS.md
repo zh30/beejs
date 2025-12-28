@@ -1,3 +1,44 @@
+### v0.3.231 启动时间优化 - 快速启动模式（2025-12-28）
+**进度**: 性能优化 | ✅ 已完成
+
+#### v0.3.231 新增功能
+- **快速启动模式**
+  - `MinimalRuntime::new_fast()` - 使用最小堆配置的快速构造函数
+  - 初始堆从 256MB 减少到 128MB（标准模式）
+  - 快速模式使用 64MB 初始堆 + 512MB 最大堆
+  - 减少短生命周期脚本的内存分配开销
+
+- **堆内存优化**
+  - 标准模式: 128MB 初始堆, 2GB 最大堆
+  - 快速模式: 64MB 初始堆, 512MB 最大堆
+  - 适用于 CLI 脚本、一次性任务等场景
+
+#### v0.3.231 使用示例
+```rust
+// 标准模式 - 平衡性能
+let runtime = MinimalRuntime::new()?;
+
+// 快速模式 - 最小内存占用
+let runtime = MinimalRuntime::new_fast()?;
+```
+
+#### v0.3.231 测试验证
+- ✅ `cargo check -p beejs`: 编译成功
+- ✅ `cargo test --test minimal_runtime_fast_tests`: 6/6 通过
+- ✅ 快速模式执行基本 JS 操作正常
+- ✅ 快速模式字符串、数组操作正常
+- ✅ 快速模式定时器 API 可用
+
+#### v0.3.231 代码变更
+- `src/runtime_minimal.rs`: 添加 new_fast() 方法, 优化 new() 堆配置
+- `tests/minimal_runtime_fast_tests.rs`: 新增测试文件
+
+#### v0.3.231 下一步
+- 实现 V8 快照预热进一步优化启动时间
+- 添加更多 Node.js API 兼容性
+
+---
+
 ### v0.3.230 包管理器增强 - prune 命令实现（2025-12-28）
 **进度**: 包管理器 CLI 增强 | ✅ 已完成
 
@@ -45,8 +86,8 @@ beejs prune
 - `tests/prune_command_tests.rs`: 新增测试文件
 
 #### v0.3.230 下一步
-- 添加 Node.js Stream/Net API 兼容性
-- 性能优化：启动时间进一步优化
+- ✅ 添加 Node.js Stream/Net API 兼容性（v0.3.230 修复）
+- ✅ 性能优化：启动时间进一步优化（v0.3.231 完成）
 
 ---
 
