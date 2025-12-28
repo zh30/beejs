@@ -20,7 +20,7 @@ use crate::nodejs_core::fs::setup_fs_api;
 use crate::nodejs_core::crypto::setup_crypto_api;
 use crate::nodejs_core::net::setup_net_api;
 use crate::nodejs_core::http::setup_http_api;
-use crate::nodejs_core::timers::{setup_timers_api, execute_fired_timers};
+use crate::nodejs_core::timers::{setup_timers_api, execute_fired_timers, execute_immediate_callbacks};
 
 // Event listener storage using thread_local (v0.3.46)
 // Note: rustdoc does not generate documentation for macro invocations
@@ -2814,14 +2814,23 @@ impl MinimalRuntime {
             // Execute all currently fired timers
             execute_fired_timers(scope);
 
+            // v0.3.250: Also execute any setImmediate callbacks that were queued
+            execute_immediate_callbacks(scope);
+
             // Check if new timers fired during callback execution
             let has_new_timers = {
                 let timer_manager = crate::event_loop::get_async_timer_manager();
                 timer_manager.has_fired_timers()
             };
 
-            // Continue if there were timers before or new timers fired
-            if !had_timers_before && !has_new_timers {
+            // v0.3.250: Also check for new setImmediates
+            let has_new_immediates = {
+                use crate::nodejs_core::timers::has_pending_immediates;
+                has_pending_immediates()
+            };
+
+            // Continue if there were timers before or new timers/immediates fired
+            if !had_timers_before && !has_new_timers && !has_new_immediates {
                 break;
             }
         }

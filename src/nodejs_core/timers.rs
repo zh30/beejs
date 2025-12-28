@@ -73,6 +73,50 @@ unsafe impl Sync for TimerCallbackStorage {}
 static TIMER_CALLBACKS: Lazy<Mutex<TimerCallbackStorage>> =
     Lazy::new(|| Mutex::new(TimerCallbackStorage::new()));
 
+/// v0.3.250: Immediate callbacks queue - stores setImmediate callbacks
+/// These execute in the next event loop iteration, after current code completes
+pub struct ImmediateCallbackStorage {
+    callbacks: Vec<(u64, v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)>,
+}
+
+impl ImmediateCallbackStorage {
+    fn new() -> Self {
+        Self {
+            callbacks: Vec::new(),
+        }
+    }
+
+    fn push(&mut self, timer_id: u64, callback: v8::Global<v8::Function>, args: Vec<v8::Global<v8::Value>>) {
+        self.callbacks.push((timer_id, callback, args));
+    }
+
+    fn drain(&mut self) -> Vec<(u64, v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)> {
+        self.callbacks.drain(..).collect()
+    }
+
+    fn remove(&mut self, timer_id: u64) -> bool {
+        if let Some(pos) = self.callbacks.iter().position(|(id, _, _)| *id == timer_id) {
+            self.callbacks.remove(pos);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.callbacks.is_empty()
+    }
+}
+
+// SAFETY: ImmediateCallbackStorage is only ever accessed from the V8 main thread
+// where the isolate is running. This is guaranteed by the design of the runtime.
+unsafe impl Send for ImmediateCallbackStorage {}
+unsafe impl Sync for ImmediateCallbackStorage {}
+
+/// Global immediate callbacks queue (only accessed from V8 main thread)
+static IMMEDIATE_CALLBACKS: Lazy<Mutex<ImmediateCallbackStorage>> =
+    Lazy::new(|| Mutex::new(ImmediateCallbackStorage::new()));
+
 /// Next timer ID counter (shared, thread-safe)
 static NEXT_TIMER_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -256,7 +300,7 @@ pub fn setup_timers_api(
         retval.set(v8::Number::new(scope, timer_id as f64).into());
     }).unwrap();
 
-    // setImmediate - executes callback in next event loop iteration
+    // setImmediate - v0.3.250: executes callback in next event loop iteration
     let set_immediate_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
         if args.length() < 1 {
             let error = v8::String::new(scope, "setImmediate requires at least 1 argument").unwrap();
@@ -290,10 +334,15 @@ pub fn setup_timers_api(
         });
         drop(metadata);
 
-        // Execute callback immediately (setImmediate executes in next tick, but for now execute synchronously)
+        // v0.3.250: Store callback for next event loop iteration (not immediate execution)
         let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
-        let undefined = v8::undefined(scope);
-        let _ = callback_fn.call(scope, undefined.into(), &callback_args);
+        let callback_global = v8::Global::new(scope, callback_fn);
+        let args_global: Vec<v8::Global<v8::Value>> = callback_args
+            .iter()
+            .map(|v| v8::Global::new(scope, v.clone()))
+            .collect();
+
+        store_immediate_callback(timer_id, callback_global, args_global);
 
         retval.set(v8::Number::new(scope, timer_id as f64).into());
     }).unwrap();
@@ -316,16 +365,61 @@ pub fn setup_timers_api(
 
             // Cancel in AsyncTimerManager
             let _ = get_async_timer_manager().cancel(timer_id);
+
+            // v0.3.250: Also remove from immediate callbacks if it's a setImmediate
+            let _ = remove_immediate_callback(timer_id);
         }
     }).unwrap();
 
     // Create string keys first to avoid mutable borrow conflicts
+    // v0.3.250: timer.unref() - allow event loop to exit if this is the only timer
+    let unref_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        if args.length() < 1 {
+            retval.set(v8::Boolean::new(_scope, false).into());
+            return;
+        }
+
+        let timer_id_val = args.get(0);
+        let timer_id = timer_id_val.to_integer(_scope)
+            .map(|i| i.value() as u64)
+            .unwrap_or(0);
+
+        if timer_id > 0 {
+            let result = set_timer_unrefed(timer_id, true);
+            retval.set(v8::Boolean::new(_scope, result).into());
+        } else {
+            retval.set(v8::Boolean::new(_scope, false).into());
+        }
+    }).unwrap();
+
+    // v0.3.250: timer.ref() - ensure event loop stays alive for this timer
+    let ref_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        if args.length() < 1 {
+            retval.set(v8::Boolean::new(_scope, false).into());
+            return;
+        }
+
+        let timer_id_val = args.get(0);
+        let timer_id = timer_id_val.to_integer(_scope)
+            .map(|i| i.value() as u64)
+            .unwrap_or(0);
+
+        if timer_id > 0 {
+            let result = set_timer_unrefed(timer_id, false);
+            retval.set(v8::Boolean::new(_scope, result).into());
+        } else {
+            retval.set(v8::Boolean::new(_scope, false).into());
+        }
+    }).unwrap();
+
     let set_timeout_key = v8::String::new(scope, "setTimeout").unwrap();
     let set_interval_key = v8::String::new(scope, "setInterval").unwrap();
     let set_immediate_key = v8::String::new(scope, "setImmediate").unwrap();
     let clear_timeout_key = v8::String::new(scope, "clearTimeout").unwrap();
     let clear_interval_key = v8::String::new(scope, "clearInterval").unwrap();
     let clear_immediate_key = v8::String::new(scope, "clearImmediate").unwrap();
+    let unref_key = v8::String::new(scope, "unref").unwrap();
+    let ref_key = v8::String::new(scope, "ref").unwrap();
 
     // Register functions on global object
     global.set(scope, set_timeout_key.into(), set_timeout_fn.into());
@@ -334,20 +428,41 @@ pub fn setup_timers_api(
     global.set(scope, clear_timeout_key.into(), clear_timer_fn.into());
     global.set(scope, clear_interval_key.into(), clear_timer_fn.into());
     global.set(scope, clear_immediate_key.into(), clear_timer_fn.into());
+    global.set(scope, unref_key.into(), unref_fn.into());
+    global.set(scope, ref_key.into(), ref_fn.into());
 
     Ok(())
 }
 
-/// Clear all timer metadata (pub for external use)
-pub fn clear_all_timers() {
-    if let Ok(mut metadata) = TIMER_METADATA.lock() {
-        metadata.clear();
+/// v0.3.250: Set timer unref state
+pub fn set_timer_unrefed(timer_id: u64, unrefed: bool) -> bool {
+    let mut metadata = TIMER_METADATA.lock().unwrap();
+    if let Some(meta) = metadata.get_mut(&timer_id) {
+        meta.is_unrefed = unrefed;
+        true
+    } else {
+        false
     }
+}
+
+/// v0.3.250: Get timer unref state
+pub fn is_timer_unrefed(timer_id: u64) -> bool {
+    let metadata = TIMER_METADATA.lock().unwrap();
+    metadata.get(&timer_id)
+        .map(|meta| meta.is_unrefed)
+        .unwrap_or(false)
 }
 
 /// v0.3.248: Clear all timers in AsyncTimerManager as well
 pub fn clear_all_async_timers() {
     get_async_timer_manager().clear();
+}
+
+/// v0.3.250: Clear all timer metadata
+pub fn clear_all_timers() {
+    if let Ok(mut metadata) = TIMER_METADATA.lock() {
+        metadata.clear();
+    }
 }
 
 /// v0.3.249: Store timer callback in global registry
@@ -412,6 +527,52 @@ pub fn execute_fired_timers(scope: &mut v8::HandleScope) {
     for timer_id in fired_timers {
         let _ = execute_timer_callback(scope, timer_id);
     }
+}
+
+/// v0.3.250: Execute all pending setImmediate callbacks
+/// These execute in the next event loop iteration (after current code)
+/// Called from V8 main thread event loop, after fired timers
+pub fn execute_immediate_callbacks(scope: &mut v8::HandleScope) {
+    let mut storage = IMMEDIATE_CALLBACKS.lock().unwrap();
+    let callbacks = storage.drain();
+
+    for (timer_id, callback, args) in callbacks {
+        let callback = v8::Local::<v8::Function>::new(scope, callback);
+
+        // Convert stored args back to Local
+        let args: Vec<v8::Local<v8::Value>> = args
+            .into_iter()
+            .map(|arg| v8::Local::new(scope, arg))
+            .collect();
+
+        let undefined = v8::undefined(scope);
+        let _ = callback.call(scope, undefined.into(), &args);
+
+        // Remove from metadata
+        remove_timer_metadata(timer_id);
+    }
+}
+
+/// v0.3.250: Check if there are pending setImmediate callbacks
+pub fn has_pending_immediates() -> bool {
+    let storage = IMMEDIATE_CALLBACKS.lock().unwrap();
+    !storage.is_empty()
+}
+
+/// v0.3.250: Store setImmediate callback for next event loop iteration
+pub fn store_immediate_callback(
+    timer_id: u64,
+    callback: v8::Global<v8::Function>,
+    args: Vec<v8::Global<v8::Value>>,
+) {
+    let mut storage = IMMEDIATE_CALLBACKS.lock().unwrap();
+    storage.push(timer_id, callback, args);
+}
+
+/// v0.3.250: Remove a pending setImmediate callback (for clearImmediate)
+pub fn remove_immediate_callback(timer_id: u64) -> bool {
+    let mut storage = IMMEDIATE_CALLBACKS.lock().unwrap();
+    storage.remove(timer_id)
 }
 
 #[cfg(test)]
