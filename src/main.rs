@@ -107,6 +107,13 @@ enum Command {
         /// Project name
         name: String,
     },
+    /// Run a package without installing it (like bunx/npm exec)
+    Bunx {
+        /// Package name (with optional version, e.g., "lodash@4.17.21")
+        package: String,
+        /// Arguments to pass to the package
+        args: Vec<String>,
+    },
 }
 
 /// Read and compile source code (JavaScript or TypeScript)
@@ -642,6 +649,91 @@ async fn main() -> Result<()> {
             println!("\nRun 'cd {} && beejs run index.{}' to start", name, template);
             return Ok(());
         }
+        Some(Command::Bunx { package, args }) => {
+            println!("🚀 Running package: {}", package);
+            println!("  Args: {:?}", args);
+
+            // Parse package name and version (e.g., "lodash@4.17.21" or "typescript")
+            let (name, version) = if package.contains('@') {
+                let parts: Vec<&str> = package.splitn(2, '@').collect();
+                (parts[0].to_string(), parts.get(1).map(|s| s.to_string()).unwrap_or_else(|| "latest".to_string()))
+            } else {
+                (package.clone(), "latest".to_string())
+            };
+
+            println!("  Package: {}", name);
+            println!("  Version: {}", version);
+
+            // Create temporary package manager
+            let config = beejs::package_manager::PackageManagerConfig::default();
+            let pm = beejs::package_manager::PackageManager::new(config)
+                .map_err(|e| anyhow!("Failed to create package manager: {}", e))?;
+
+            // Install and get the package bin
+            match pm.install_package(&name, &version) {
+                Ok(result) => {
+                    println!("✅ Installed {}@{}", name, result.package.version);
+
+                    // Find and run the bin
+                    let package_json_path = result.path.join("package.json");
+                    if package_json_path.exists() {
+                        let content = std::fs::read_to_string(&package_json_path)
+                            .map_err(|e| anyhow!("Failed to read package.json: {}", e))?;
+                        let package_info: serde_json::Value = serde_json::from_str(&content)
+                            .map_err(|e| anyhow!("Failed to parse package.json: {}", e))?;
+
+                        // Get bin entry
+                        if let Some(bin) = package_info.get("bin") {
+                            let bin_path = if bin.is_string() {
+                                result.path.join(bin.as_str().unwrap())
+                            } else if let Some(bin_obj) = bin.as_object() {
+                                // Handle bin as object (multiple binaries)
+                                let bin_name = bin_obj.keys().next()
+                                    .ok_or(anyhow!("No bin entry found"))?;
+                                let bin_value = bin_obj.get(bin_name)
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("");
+                                result.path.join(bin_value)
+                            } else {
+                                return Err(anyhow!("Invalid bin format"));
+                            };
+
+                            if bin_path.exists() {
+                                println!("\n📦 Executing: {}", bin_path.display());
+                                println!("---");
+
+                                // Execute the binary
+                                let output = std::process::Command::new(&bin_path)
+                                    .args(&args)
+                                    .current_dir(&result.path)
+                                    .output()
+                                    .map_err(|e| anyhow!("Failed to execute: {}", e))?;
+
+                                // Print output
+                                if !output.stdout.is_empty() {
+                                    print!("{}", String::from_utf8_lossy(&output.stdout));
+                                }
+                                if !output.stderr.is_empty() {
+                                    eprint!("{}", String::from_utf8_lossy(&output.stderr));
+                                }
+
+                                // Exit with the same code
+                                std::process::exit(output.status.code().unwrap_or(0));
+                            } else {
+                                return Err(anyhow!("Binary file not found: {}", bin_path.display()));
+                            }
+                        } else {
+                            return Err(anyhow!("Package {} has no bin entry", name));
+                        }
+                    } else {
+                        return Err(anyhow!("package.json not found in installed package"));
+                    }
+                }
+                Err(e) => {
+                    return Err(anyhow!("Failed to install package: {}", e));
+                }
+            }
+        }
         None => {
             // No command provided, show help
             println!("🐝 Beejs - High-performance JavaScript/TypeScript runtime");
@@ -658,7 +750,9 @@ async fn main() -> Result<()> {
             println!("  serve [options]  Start HTTP server");
             println!("  init [name]      Initialize new project");
             println!("  add <package>    Add dependency package");
+            println!("  remove <package> Remove dependency package");
             println!("  create [type]    Create new project");
+            println!("  bunx <package>   Run a package without installing");
             println!("  version          Display version information");
             println!();
             println!("Examples:");
@@ -672,6 +766,7 @@ async fn main() -> Result<()> {
             println!("  beejs init my-project");
             println!("  beejs create ts my-ts-app");
             println!("  beejs add lodash");
+            println!("  beejs bunx typescript --version");
             return Ok(());
         }
     }
