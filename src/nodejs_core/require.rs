@@ -456,34 +456,25 @@ pub fn setup_require_api(
                     result_obj.set(scope, fs_default_key, fs_obj.into());
                 }
                 // v0.3.99: Handle builtin modules that are set as global objects
-                // v0.3.281: Added readline support - return actual global object
+                // v0.3.281: Fixed readline support - directly return the global object
                 // These modules are set up as global objects in the runtime
                 "os" | "crypto" | "events" | "net" | "http" | "util" | "url" |
                 "querystring" | "dns" | "child_process" | "tcp_async" | "stream" |
                 "readline" => {
-                    // Get the global object and return the requested module from it
+                    // Get the global object and directly return the module from it
                     let global = scope.get_current_context().global(scope);
                     let module_key = v8::String::new(scope, &module_id_str).unwrap().into();
 
                     if let Some(module_val) = global.get(scope, module_key) {
                         if !module_val.is_undefined() && !module_val.is_null() {
-                            // Set as 'default' property for CommonJS compatibility
-                            let default_key = v8::String::new(scope, "default").unwrap().into();
-                            result_obj.set(scope, default_key, module_val);
-                        } else {
-                            // Fallback if module value is undefined
-                            let message_key = v8::String::new(scope, "message").unwrap();
-                            let msg = format!("{} module value is undefined", module_id_str);
-                            let fallback_msg = v8::String::new(scope, &msg).unwrap();
-                            result_obj.set(scope, message_key.into(), fallback_msg.into());
+                            // Directly return the module object (not wrapped in { default: ... })
+                            retval.set(module_val);
+                            return;
                         }
-                    } else {
-                        // Fallback if module not found in global
-                        let message_key = v8::String::new(scope, "message").unwrap();
-                        let msg = format!("{} module not available", module_id_str);
-                        let fallback_msg = v8::String::new(scope, &msg).unwrap();
-                        result_obj.set(scope, message_key.into(), fallback_msg.into());
                     }
+                    // Fallback if module not found - return null
+                    let null_val = v8::null(scope);
+                    retval.set(null_val.into());
                 }
                 _ => {
                     // Check if module_id is a file path (absolute or relative path)

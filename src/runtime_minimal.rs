@@ -11758,8 +11758,10 @@ impl MinimalRuntime {
                         return;
                     }
                     // v0.3.194: Fixed to return actual global objects instead of fallback messages
+                    // v0.3.281: Added readline to the list of builtin modules
                     "os" | "crypto" | "events" | "net" | "http" | "util" | "url" |
-                    "querystring" | "dns" | "child_process" | "tcp_async" | "stream" => {
+                    "querystring" | "dns" | "child_process" | "tcp_async" | "stream" |
+                    "readline" => {
                         // Get context and global object
                         let ctx = scope.get_current_context();
                         let global_obj = ctx.global(scope);
