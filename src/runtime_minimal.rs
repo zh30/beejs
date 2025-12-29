@@ -3004,6 +3004,7 @@ impl MinimalRuntime {
             Self::setup_module_system(scope, &context)?;
             setup_timers_api(scope, &context)?; // v0.3.249: Timer API with async scheduling
             setup_performance_api(scope, &context)?; // v0.3.275: Performance API
+            crate::nodejs_core::readline::setup_readline_api(scope, &context)?; // v0.3.277: Readline API
         }
 
         // v0.3.261: Store the original code for potential re-evaluation

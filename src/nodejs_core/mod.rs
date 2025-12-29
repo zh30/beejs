@@ -19,6 +19,7 @@ pub mod tcp_async; // v0.3.71: Async TCP connection module
 pub mod process; // v0.3.237: process 对象和未捕获异常处理器
 pub mod timers; // v0.3.244: Timer API (setTimeout, setInterval, setImmediate)
 pub mod performance; // v0.3.275: Performance API (performance.now, performance.mark, etc.)
+pub mod readline; // v0.3.277: Readline API (createInterface, Interface.question, etc.)
 use anyhow::Result;
 use rusty_v8 as v8;
 /// 设置所有Node.js核心API
@@ -46,6 +47,7 @@ pub fn setup_nodejs_core_apis(
     process::setup_process_api(scope, context)?; // v0.3.237: process 对象
     timers::setup_timers_api(scope, context)?; // v0.3.244: Timer API
     performance::setup_performance_api(scope, context)?; // v0.3.275: Performance API
+    readline::setup_readline_api(scope, context)?; // v0.3.277: Readline API
     // v0.3.54: 设置 CommonJS require 模块（必须最后设置，因为它依赖其他模块）
     require::setup_require_api(scope, context)?;
     Ok(())
