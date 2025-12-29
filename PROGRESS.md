@@ -1,3 +1,36 @@
+# Beejs 高性能 JavaScript 运行时 - 开发进度
+
+## 当前版本: v0.3.273 (2025-12-29)
+
+### 项目状态摘要
+
+**核心功能**: ✅ 已完成
+- V8 JavaScript 引擎集成
+- 事件循环 (nextTick → microtasks → timers → setImmediate)
+- Timer API (setTimeout/setInterval/setImmediate + Timer 对象)
+- queueMicrotask API
+- process 对象 (版本、平台、argv、cwd、env、stdout/stderr、nextTick 等)
+
+**Node.js 模块支持**: ✅ 已完成
+- buffer, child_process, crypto, dns, events
+- fs, http, net, os, path, querystring
+- require, stream, tcp_async, timers, url, util
+
+**包管理**: ✅ 已完成
+- package.json 解析
+- npm 兼容命令 (install, add, remove, prune)
+- 依赖版本解析
+
+**测试**: ✅ 248/248 测试通过
+- cargo test --lib: 全部通过
+- 集成测试: 运行正常
+
+**CLI 命令**:
+- run, eval, repl, test, bundle, debug
+- version, serve, init, add, remove, install, prune, create, bunx, upgrade
+
+---
+
 ### v0.3.235 错误处理增强（2025-12-29）
 **进度**: 错误处理 | ✅ 已完成
 
