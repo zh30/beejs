@@ -4,8 +4,6 @@
 /// representing form fields and their values, which can be sent using fetch().
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::collections::{HashMap, BTreeMap};
-use std::task::Context;
 pub fn setup_form_data_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
     context: &v8::Local<v8::Context>,

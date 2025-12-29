@@ -1,6 +1,5 @@
 // Web API modules - Stage 43.0 / Stage 74.0
 /// Web标准API实现
-use std::task::Context;
 pub mod fetch;
 pub mod websocket;
 pub mod crypto;
@@ -28,8 +27,6 @@ use streams::setup_streams_api;
 use timers::setup_timer_api;
 use url::setup_url_api;
 use websocket::setup_websocket_api;
-use std::collections::{HashMap, BTreeMap};
-use std::fs::File;
 /// 初始化所有 Web API 到 V8 上下文
 pub fn init_web_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,

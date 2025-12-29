@@ -1,13 +1,11 @@
 // Fetch API implementation for Web standard
 // Provides fetch(), Request, Response, Headers API
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use anyhow::{Result, Error};
+use anyhow::Result;
 use rusty_v8 as v8;
-use std::time::Duration;
-use std::task::Context;
 use tokio::runtime::Runtime;
 use std::sync::OnceLock;
 
@@ -145,7 +143,7 @@ fn fetch_callback(
 ) {
     // Parse fetch arguments
     let input: _ = args.get(0);
-    let init: _ = args.get(1);
+    let _init: _ = args.get(1); // TODO: Parse init options - currently unused
     // Convert to string for URL
     let url_str: _ = if input.is_string() {
         input.to_string(scope).unwrap().to_rust_string_lossy(scope)
@@ -299,7 +297,7 @@ async fn execute_fetch(
 /// Request constructor callback
 fn request_constructor_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let request_obj: _ = v8::Object::new(scope);
@@ -334,7 +332,7 @@ fn response_constructor_callback(
 /// Headers constructor callback
 fn headers_constructor_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let headers_obj: _ = v8::Object::new(scope);

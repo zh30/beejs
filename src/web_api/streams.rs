@@ -4,7 +4,7 @@
 //
 // Optimized for streaming LLM responses and AI data processing pipelines
 //
-// v0.3.283: Enhanced with start() callback and controller.enqueue() support
+// v0.3.285: Enhanced TransformStream with transform() logic and actual data flow
 
 use anyhow::Result;
 use rusty_v8 as v8;
@@ -453,34 +453,188 @@ fn writable_stream_constructor(
 // TransformStream Implementation
 // ============================================================
 
-/// TransformStream constructor
+/// TransformStream constructor - enhanced with transform() support
+/// Connects writable stream writes to readable stream output via transformer
 fn transform_stream_constructor(
     scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
+    args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let transform_obj: v8::Local<v8::Object> = v8::Object::new(scope);
 
+    // Create queue for transformed chunks (shared between writable and readable)
+    let transform_queue = v8::Array::new(scope, 0);
+    let queue_key = v8::String::new(scope, "_transformQueue").unwrap();
+    transform_obj.set(scope, queue_key.into(), transform_queue.into());
+
+    // Create read index for readable side
+    let read_index_key = v8::String::new(scope, "_readIndex").unwrap();
+    let read_index_val: v8::Local<v8::Value> = v8::Integer::new(scope, 0).into();
+    transform_obj.set(scope, read_index_key.into(), read_index_val);
+
+    // Create state: 0=readable, 1=error, 2=closed
+    let ts_state_key = v8::String::new(scope, "_transformState").unwrap();
+    let ts_state_val: v8::Local<v8::Value> = v8::Integer::new(scope, 0).into();
+    transform_obj.set(scope, ts_state_key.into(), ts_state_val);
+
+    // Store transformer reference if provided
+    if args.length() > 0 {
+        let transformer = args.get(0);
+        if transformer.is_object() {
+            let transformer_obj = v8::Local::<v8::Object>::try_from(transformer).unwrap();
+
+            // Check for transform() method
+            let transform_key = v8::String::new(scope, "transform").unwrap();
+            if let Some(transform_fn_val) = transformer_obj.get(scope, transform_key.into()) {
+                if transform_fn_val.is_function() {
+                    // Store transform function on transform object for closure access
+                    let tf_key = v8::String::new(scope, "_transformFn").unwrap();
+                    transform_obj.set(scope, tf_key.into(), transform_fn_val);
+                }
+            }
+
+            // Create transform controller with enqueue method
+            let controller = v8::Object::new(scope);
+            let controller_queue_key = v8::String::new(scope, "_queue").unwrap();
+            controller.set(scope, controller_queue_key.into(), transform_queue.into());
+            let controller_state_key = v8::String::new(scope, "_state").unwrap();
+            controller.set(scope, controller_state_key.into(), ts_state_val);
+            let controller_readable_key = v8::String::new(scope, "_readable").unwrap();
+            controller.set(scope, controller_readable_key.into(), transform_obj.into());
+
+            // Store controller on transform object for closure access
+            let ctrl_key = v8::String::new(scope, "_controller").unwrap();
+            transform_obj.set(scope, ctrl_key.into(), controller.into());
+
+            // enqueue(chunk) - adds to the transform queue
+            let enqueue_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
+                if args.length() > 0 {
+                    let chunk = args.get(0);
+                    let ctrl = args.this();
+                    let queue_key = v8::String::new(scope, "_queue").unwrap();
+                    if let Some(queue_val) = ctrl.get(scope, queue_key.into()) {
+                        if let Ok(queue) = v8::Local::<v8::Array>::try_from(queue_val) {
+                            let length = queue.length();
+                            queue.set_index(scope, length, chunk);
+                        }
+                    }
+                }
+            }).unwrap();
+            let enqueue_key = v8::String::new(scope, "enqueue").unwrap();
+            controller.set(scope, enqueue_key.into(), enqueue_fn.into());
+
+            // close() - marks transform as done
+            let close_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
+                let ctrl = args.this();
+                let state_key = v8::String::new(scope, "_state").unwrap();
+                let state_val: v8::Local<v8::Value> = v8::Integer::new(scope, 2).into(); // 2 = Closed
+                ctrl.set(scope, state_key.into(), state_val);
+            }).unwrap();
+            let close_key = v8::String::new(scope, "close").unwrap();
+            controller.set(scope, close_key.into(), close_fn.into());
+
+            // error(e) - marks transform as errored
+            let error_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
+                let ctrl = args.this();
+                let state_key = v8::String::new(scope, "_state").unwrap();
+                let state_val: v8::Local<v8::Value> = v8::Integer::new(scope, 1).into(); // 1 = Errored
+                ctrl.set(scope, state_key.into(), state_val);
+            }).unwrap();
+            let error_key = v8::String::new(scope, "error").unwrap();
+            controller.set(scope, error_key.into(), error_fn.into());
+
+            // Call start(controller) if provided
+            let start_key = v8::String::new(scope, "start").unwrap();
+            if let Some(start_fn_val) = transformer_obj.get(scope, start_key.into()) {
+                if start_fn_val.is_function() {
+                    let start_fn = v8::Local::<v8::Function>::try_from(start_fn_val).unwrap();
+                    let undefined = v8::undefined(scope).into();
+                    let _ = start_fn.call(scope, undefined, &[controller.into()]);
+                }
+            }
+        }
+    }
+
     // Create readable stream with getReader method
     let readable_stream: v8::Local<v8::Object> = v8::Object::new(scope);
 
+    // Store transform reference on readable
+    let readable_transform_key = v8::String::new(scope, "_transform").unwrap();
+    readable_stream.set(scope, readable_transform_key.into(), transform_obj.into());
+
     // Create getReader template for readable stream
-    let readable_get_reader_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+    let readable_get_reader_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
         let reader: v8::Local<v8::Object> = v8::Object::new(_scope);
 
-        // Setup read() method
+        // Store transform reference on reader
+        let reader_transform_key = v8::String::new(_scope, "_transform").unwrap();
+        let this_stream = args.this();
+        if let Some(transform_val) = this_stream.get(_scope, reader_transform_key.into()) {
+            reader.set(_scope, reader_transform_key.into(), transform_val);
+        }
+
+        // Setup read() method - reads from transform queue
         let read_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, _a: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
             let promise: v8::Local<v8::PromiseResolver> = v8::PromiseResolver::new(__scope).unwrap();
             let result: v8::Local<v8::Object> = v8::Object::new(__scope);
             let done_key: v8::Local<v8::String> = v8::String::new(__scope, "done").unwrap();
             let value_key: v8::Local<v8::String> = v8::String::new(__scope, "value").unwrap();
 
+            // Get transform from reader
+            let reader_this = _a.this();
+            let transform_key = v8::String::new(__scope, "_transform").unwrap();
+
+            if let Some(transform_val) = reader_this.get(__scope, transform_key.into()).filter(|s| s.is_object()) {
+                if let Ok(transform) = v8::Local::<v8::Object>::try_from(transform_val) {
+                    let queue_key = v8::String::new(__scope, "_transformQueue").unwrap();
+                    let idx_key = v8::String::new(__scope, "_readIndex").unwrap();
+                    let state_key = v8::String::new(__scope, "_transformState").unwrap();
+
+                    if let Some(queue_val) = transform.get(__scope, queue_key.into()) {
+                        if let Ok(queue) = v8::Local::<v8::Array>::try_from(queue_val) {
+                            let read_index = transform.get(__scope, idx_key.into())
+                                .and_then(|i| i.to_integer(__scope))
+                                .map(|i| i.value() as u32)
+                                .unwrap_or(0);
+                            let state = transform.get(__scope, state_key.into())
+                                .and_then(|s| s.to_integer(__scope))
+                                .map(|i| i.value() as i32)
+                                .unwrap_or(0);
+                            let queue_len = queue.length();
+
+                            if read_index < queue_len {
+                                let chunk = queue.get_index(__scope, read_index).unwrap_or_else(|| v8::undefined(__scope).into());
+                                let new_idx: v8::Local<v8::Value> = v8::Integer::new(__scope, read_index as i32 + 1).into();
+                                transform.set(__scope, idx_key.into(), new_idx);
+
+                                let done_val: v8::Local<v8::Value> = v8::Boolean::new(__scope, false).into();
+                                result.set(__scope, done_key.into(), done_val);
+                                result.set(__scope, value_key.into(), chunk);
+                                let _ = promise.resolve(__scope, result.into());
+                                _r.set(promise.into());
+                                return;
+                            }
+
+                            // Check if transform is closed
+                            if state == 2 {
+                                let done_val: v8::Local<v8::Value> = v8::Boolean::new(__scope, true).into();
+                                let undefined_val: v8::Local<v8::Value> = v8::undefined(__scope).into();
+                                result.set(__scope, done_key.into(), done_val);
+                                result.set(__scope, value_key.into(), undefined_val);
+                                let _ = promise.resolve(__scope, result.into());
+                                _r.set(promise.into());
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Default: not done, no value
             let done_val: v8::Local<v8::Value> = v8::Boolean::new(__scope, true).into();
             let undefined_val: v8::Local<v8::Value> = v8::undefined(__scope).into();
-
             result.set(__scope, done_key.into(), done_val);
             result.set(__scope, value_key.into(), undefined_val);
-
             let _ = promise.resolve(__scope, result.into());
             _r.set(promise.into());
         });
@@ -508,7 +662,7 @@ fn transform_stream_constructor(
 
         retval.set(reader.into());
     });
-    readable_get_reader_fn.set_class_name(v8::String::new(scope, "ReadableStreamReader").unwrap());
+    readable_get_reader_fn.set_class_name(v8::String::new(scope, "TransformReadableStreamReader").unwrap());
 
     // Setup getReader on readable stream
     let readable_get_reader_key: v8::Local<v8::String> = v8::String::new(scope, "getReader").unwrap();
@@ -523,13 +677,52 @@ fn transform_stream_constructor(
     // Create writable stream with getWriter method
     let writable_stream: v8::Local<v8::Object> = v8::Object::new(scope);
 
+    // Store transform reference on writable
+    let writable_transform_key = v8::String::new(scope, "_transform").unwrap();
+    writable_stream.set(scope, writable_transform_key.into(), transform_obj.into());
+
     // Create getWriter template for writable stream
-    let writable_get_writer_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+    let writable_get_writer_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
         let writer: v8::Local<v8::Object> = v8::Object::new(_scope);
 
-        // Setup write() method
-        let write_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, _a: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
+        // Store transform reference on writer
+        let writer_transform_key = v8::String::new(_scope, "_transform").unwrap();
+        let this_writable = args.this();
+        if let Some(transform_val) = this_writable.get(_scope, writer_transform_key.into()) {
+            writer.set(_scope, writer_transform_key.into(), transform_val);
+        }
+
+        // Setup write() method - calls transform() and enqueues result
+        // Transform function and controller are stored on transform object for closure access
+        let write_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, a: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
             let promise: v8::Local<v8::PromiseResolver> = v8::PromiseResolver::new(__scope).unwrap();
+
+            // Get transform from writer
+            let writer_this = a.this();
+            let transform_key = v8::String::new(__scope, "_transform").unwrap();
+
+            if let Some(transform_val) = writer_this.get(__scope, transform_key.into()).filter(|s| s.is_object()) {
+                if let Ok(transform) = v8::Local::<v8::Object>::try_from(transform_val) {
+                    // Get transform function from transform object
+                    let tf_key = v8::String::new(__scope, "_transformFn").unwrap();
+                    if let Some(tf_val) = transform.get(__scope, tf_key.into()) {
+                        if let Ok(tf) = v8::Local::<v8::Function>::try_from(tf_val) {
+                            // Get controller from transform
+                            let ctrl_key = v8::String::new(__scope, "_controller").unwrap();
+                            if let Some(ctrl_val) = transform.get(__scope, ctrl_key.into()) {
+                                if let Ok(ctrl) = v8::Local::<v8::Object>::try_from(ctrl_val) {
+                                    if a.length() > 0 {
+                                        let chunk = a.get(0);
+                                        let undefined = v8::undefined(__scope).into();
+                                        let _ = tf.call(__scope, undefined, &[chunk, ctrl.into()]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             let undefined_val: v8::Local<v8::Value> = v8::undefined(__scope).into();
             let _ = promise.resolve(__scope, undefined_val);
             _r.set(promise.into());

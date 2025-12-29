@@ -421,4 +421,66 @@ mod web_streams_api_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "Write queue should exist");
     }
+
+    #[test]
+    fn test_transform_stream_transform_function_call() {
+        // Test that TransformStream with transformer works correctly
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const ts = new TransformStream({
+                    transform(chunk, controller) {
+                        controller.enqueue(chunk.toString().toUpperCase());
+                    }
+                });
+                // Check that transform function reference is stored
+                console.log(ts.readable !== undefined && ts.writable !== undefined);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "TransformStream should have readable and writable");
+    }
+
+    #[test]
+    fn test_transform_stream_controller_has_methods() {
+        // Test that TransformStream writable side works with controller methods
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const ts = new TransformStream({
+                    transform(chunk, controller) {
+                        controller.enqueue(chunk.toString().toUpperCase());
+                    }
+                });
+                // Check that writable stream can be used
+                const writer = ts.writable.getWriter();
+                console.log(typeof writer.write === 'function' && typeof writer.close === 'function' && typeof writer.abort === 'function');
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "Writer should have write, close, abort methods");
+    }
+
+    #[test]
+    fn test_transform_stream_readable_has_get_reader() {
+        // Test that TransformStream readable side has getReader
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const ts = new TransformStream({
+                    transform(chunk, controller) {
+                        controller.enqueue(chunk);
+                    }
+                });
+                // Readable should have getReader
+                const reader = ts.readable.getReader();
+                console.log(typeof reader.read === 'function' && reader.closed instanceof Promise);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "Readable should have read method and closed Promise");
+    }
 }

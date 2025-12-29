@@ -1,13 +1,12 @@
 // Timer API implementation for Web standard
 // Provides setTimeout, setInterval, clearTimeout, clearInterval
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::sync::atomic::AtomicU64;
-use std::task::Context;
 use once_cell::sync::Lazy;
 
 /// Global timer ID counter

@@ -1,11 +1,10 @@
 // EventTarget and Event API implementation for Web standard
 // Provides addEventListener, removeEventListener, dispatchEvent
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::task::Context;
 
 /// Event type enum
 #[derive(Debug, Clone)]
@@ -100,7 +99,7 @@ pub fn setup_events_api(
 /// EventTarget constructor callback
 fn event_target_constructor_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     let event_target_obj: _ = v8::Object::new(scope);

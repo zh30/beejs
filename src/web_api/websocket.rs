@@ -2,15 +2,13 @@
 // Provides real WebSocket client with network connectivity
 
 use futures_util::{SinkExt, StreamExt};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::{Message, CloseFrame}};
-use anyhow::{Result, Error};
+use anyhow::Result;
 use rusty_v8 as v8;
 use std::sync::atomic::AtomicU64;
-use std::task::Poll;
-use std::task::Context;
 use tokio::sync::mpsc;
 use tokio::runtime::Runtime;
 use std::borrow::Cow;

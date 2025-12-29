@@ -2,7 +2,6 @@
 /// Provides text encoding and decoding functionality per Web standards
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::task::Context;
 use base64::Engine;
 /// Setup TextEncoder and TextDecoder APIs in V8 context
 pub fn setup_encoding_api(
