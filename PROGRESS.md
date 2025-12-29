@@ -13081,3 +13081,21 @@ timer.delay(500); // 改为 500ms 后执行
 - 继续添加更多 Node.js API 兼容性
 
 ---
+
+### v0.3.278 代码质量优化 - 清理编译警告（2025-12-29）
+**进度**: 代码质量 | ✅ 已完成
+
+#### v0.3.278 修复内容
+- **移除未使用的导入**: 从 `performance.rs` 移除 `AtomicU64` 和 `Ordering` 导入
+- **修复变量警告**: 将 `mut retval` 改为 `_retval`，移除不必要的 mut
+- **修复未使用变量**: 清理 `m` 变量警告
+- **添加 dead_code 属性**: 为 `InterfaceState` 和 `PerformanceState.next_id` 添加 `#[allow(dead_code)]`
+
+#### v0.3.278 测试结果
+- ✅ `cargo build --release` 编译成功，零警告
+- ✅ 代码质量提升
+
+#### v0.3.278 代码变更
+- `src/nodejs_core/performance.rs`: 移除未使用导入，修复变量 (~8 行)
+- `src/nodejs_core/readline.rs`: 修复未使用导入 (~3 行)
+
