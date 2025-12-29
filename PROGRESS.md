@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.282 (2025-12-30)
+## 当前版本: v0.3.283 (2025-12-30)
 
 ### 项目状态摘要
 
@@ -187,11 +187,45 @@ const writer = textStream.pipeTo(new WritableStream({
 ```
 
 #### v0.3.282 下一步
-- 实现 ReadableStream.start() 和 controller.enqueue() 回调
-- 实现 WritableStream 底层存储队列
-- 实现 TransformStream 的 transform() 逻辑
-- 增强 TextDecoderStream 的实际解码功能
-- 支持 pipeTo() 和 pipeThrough() 操作
+- [x] 实现 ReadableStream.start() 和 controller.enqueue() 回调
+- [x] 实现流状态管理和数据队列
+- [ ] 实现 WritableStream 底层存储队列
+- [ ] 实现 TransformStream 的 transform() 逻辑
+- [ ] 增强 TextDecoderStream 的实际解码功能
+- [ ] 支持 pipeTo() 和 pipeThrough() 操作
+
+---
+
+### v0.3.283 ReadableStream.start() 和控制器方法增强（2025-12-30）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.283 新增功能
+
+**ReadableStream.start() 回调**:
+- `new ReadableStream({ start(controller) {...} })`: 初始化时调用 start 回调
+- `controller.enqueue(chunk)`: 将数据块加入队列
+- `controller.close()`: 关闭流
+- `controller.error(e)`: 标记流为错误状态
+
+**流状态管理**:
+- `_state`: 0=Open, 1=Closed, 2=Errored
+- `_queue`: JavaScript 数组存储数据块
+- `_readIndex`: 读取位置索引
+- 正确处理关闭后的数据读取
+
+#### v0.3.283 实现细节
+- 使用 JavaScript 对象属性存储流状态 (避免 Send 限制)
+- 控制器方法通过 `_stream` 引用访问流对象
+- 修复 Promise 解析和 V8 句柄生命周期管理
+- 优先级逻辑: 队列数据 > 关闭状态 > 等待数据
+
+#### v0.3.283 测试结果
+- ✅ 20 个集成测试通过 (6 个新增测试)
+- 测试覆盖 start/enqueue/close/error 和多 chunk 读取
+
+#### v0.3.283 代码变更
+- `src/web_api/streams.rs`: 增强 ReadableStream 实现 (~720 行)
+- `tests/web_streams_api_tests.rs`: 新增 6 个测试 (~90 行)
 
 ---
 
