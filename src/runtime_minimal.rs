@@ -1444,6 +1444,7 @@ impl MinimalRuntime {
     /// Create a new minimal runtime with optimized settings
     /// v0.3.221: 增强 Isolate 配置以提升性能
     /// v0.3.231: 使用更小的初始堆以加快启动速度
+    /// v0.3.270: 设置显式微任务策略，确保 nextTick 在 Promise 之前执行
     pub fn new() -> Result<Self> {
         // Initialize V8 (idempotent - safe to call multiple times)
         crate::initialize_v8()?;
@@ -1454,7 +1455,12 @@ impl MinimalRuntime {
             .heap_limits(128 * 1024 * 1024, 2048 * 1024 * 1024);
 
         // Create a new isolate with optimized parameters
-        let isolate = v8::Isolate::new(create_params);
+        let mut isolate = v8::Isolate::new(create_params);
+
+        // v0.3.270: 设置显式微任务策略
+        // Explicit 模式下，V8 只在调用 perform_microtask_checkpoint 时执行微任务
+        // 这样可以确保 nextTick 回调在 Promise microtasks 之前执行
+        isolate.set_microtasks_policy(v8::MicrotasksPolicy::Explicit);
 
         // v0.3.93: Context 将在第一次调用 get_context() 时创建
         Ok(Self { isolate, context: None })
@@ -1462,6 +1468,7 @@ impl MinimalRuntime {
 
     /// v0.3.231: 快速启动模式 - 使用最小堆配置
     /// 适用于短生命周期脚本，减少内存分配开销
+    /// v0.3.270: 设置显式微任务策略，确保 nextTick 在 Promise 之前执行
     pub fn new_fast() -> Result<Self> {
         crate::initialize_v8()?;
 
@@ -1470,20 +1477,27 @@ impl MinimalRuntime {
         let create_params = v8::CreateParams::default()
             .heap_limits(64 * 1024 * 1024, 512 * 1024 * 1024);
 
-        let isolate = v8::Isolate::new(create_params);
+        let mut isolate = v8::Isolate::new(create_params);
+
+        // v0.3.270: 设置显式微任务策略
+        isolate.set_microtasks_policy(v8::MicrotasksPolicy::Explicit);
 
         Ok(Self { isolate, context: None })
     }
 
     /// Create a new minimal runtime with custom heap limits
     /// v0.3.221: 支持自定义内存配置
+    /// v0.3.270: 设置显式微任务策略，确保 nextTick 在 Promise 之前执行
     pub fn with_heap_limits(initial: usize, maximum: usize) -> Result<Self> {
         crate::initialize_v8()?;
 
         let create_params = v8::CreateParams::default()
             .heap_limits(initial, maximum);
 
-        let isolate = v8::Isolate::new(create_params);
+        let mut isolate = v8::Isolate::new(create_params);
+
+        // v0.3.270: 设置显式微任务策略
+        isolate.set_microtasks_policy(v8::MicrotasksPolicy::Explicit);
 
         Ok(Self { isolate, context: None })
     }
@@ -3218,7 +3232,12 @@ impl MinimalRuntime {
             }
 
             // If no pending work after waiting, break
+            // v0.3.270: With MicrotasksPolicy::Explicit, we must run microtasks before breaking
+            // This ensures Promise callbacks are executed even if there are no fired timers
             if !has_pending_work {
+                // Run microtasks before exiting the event loop
+                // This handles Promise callbacks that were queued during sync code
+                scope.perform_microtask_checkpoint();
                 break;
             }
 
@@ -3253,7 +3272,10 @@ impl MinimalRuntime {
             // v0.3.261: Continue if there are pending nextTicks or VALID fired timers
             // Note: setImmediate callbacks are executed AFTER the loop (outside the wait condition)
             // We only wait inside the loop for nextTicks and timers with valid metadata
+            // v0.3.270: With MicrotasksPolicy::Explicit, run microtasks before breaking
             if !has_pending_next_ticks_now && !has_new_timers {
+                // Run any remaining microtasks before exiting
+                scope.perform_microtask_checkpoint();
                 break;
             }
 
