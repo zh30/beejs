@@ -5,7 +5,6 @@ use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
 use std::io::{self, Write};
 use std::path::{PathBuf, Path};
-use tokio;
 
 #[derive(Parser, Debug)]
 #[command(name = "beejs")]
@@ -498,7 +497,7 @@ async fn main() -> Result<()> {
                 }
             } else {
                 // Run built-in test suite with filtering
-                let test_cases = vec![
+                let test_cases = [
                     ("1 + 1", "2"),
                     ("'Hello World'", "Hello World"),
                     ("[1, 2, 3].length", "3"),
@@ -977,7 +976,7 @@ async fn main() -> Result<()> {
                     std::fs::write(format!("{}/index.ts", name), ts_code)?;
                     println!("✅ TypeScript project created");
                 }
-                "js" | _ => {
+                _ => {
                     let js_code = "console.log('Hello from Beejs!');\n";
                     std::fs::write(format!("{}/index.js", name), js_code)?;
                     println!("✅ JavaScript project created");

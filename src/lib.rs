@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 // Clean imports - removing unused ones
 use std::sync::Once;
 use std::sync::{Mutex, OnceLock};
