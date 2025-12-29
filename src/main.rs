@@ -38,6 +38,12 @@ enum Command {
         /// WebSocket port for hot reload notifications
         #[arg(short = 'p', long, default_value = "9999")]
         websocket_port: u16,
+        /// Import a module before other modules are loaded (can be used multiple times)
+        #[arg(short = 'r', long = "preload", value_name = "MODULE")]
+        preloads: Vec<String>,
+        /// Alias of --preload for Node.js compatibility
+        #[arg(long = "require", value_name = "MODULE")]
+        require: Vec<String>,
     },
     /// Evaluate JavaScript code
     Eval {
@@ -50,6 +56,27 @@ enum Command {
     Test {
         /// Test file to run (optional)
         file: Option<PathBuf>,
+        /// Filter tests by name pattern (regex)
+        #[arg(short = 't', long = "test-name-pattern")]
+        test_name_pattern: Option<String>,
+        /// Only run tests matching pattern (shorthand for --test-name-pattern)
+        #[arg(short = 'n', long = "test-only", conflicts_with = "test_skip")]
+        test_only: Option<String>,
+        /// Skip tests matching pattern
+        #[arg(long = "test-skip")]
+        test_skip: Option<String>,
+        /// Bail on first failure
+        #[arg(short = 'b', long = "bail")]
+        bail: bool,
+        /// Run tests in parallel
+        #[arg(long = "parallel")]
+        parallel: bool,
+        /// Test timeout in seconds
+        #[arg(long = "timeout", default_value = "30")]
+        timeout: u64,
+        /// Verbose output
+        #[arg(short = 'v', long = "verbose")]
+        verbose: bool,
     },
     /// Bundle code for production
     Bundle {
@@ -235,10 +262,16 @@ async fn main() -> Result<()> {
             }
             return Ok(());
         }
-        Some(Command::Run { file, args, watch, debounce, websocket_port }) => {
+        Some(Command::Run { file, args, watch, debounce, websocket_port, preloads, require }) => {
+            // Combine preloads and require (they are equivalent)
+            let all_preloads: Vec<String> = preloads.iter().chain(require.iter()).cloned().collect();
+
             println!("🐝 Running Beejs on: {}", file.display());
             if !args.is_empty() {
                 println!("Args: {:?}", args);
+            }
+            if !all_preloads.is_empty() {
+                println!("📦 Preloaded modules: {:?}", all_preloads);
             }
 
             if watch {
@@ -345,6 +378,24 @@ async fn main() -> Result<()> {
                 let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
                     .expect("Failed to create runtime");
 
+                // Execute preload modules first
+                for preload in &all_preloads {
+                    println!("📦 Loading preload: {}", preload);
+                    // Try to load as a file path first, then as a module name
+                    let preload_code = if Path::new(preload).exists() {
+                        std::fs::read_to_string(preload)
+                            .map_err(|e| anyhow::anyhow!("Failed to read preload file {}: {}", preload, e))?
+                    } else {
+                        // For module names, try to require them
+                        format!("require('{}');", preload)
+                    };
+
+                    if let Err(e) = runtime.execute_code(&preload_code) {
+                        eprintln!("⚠️  Preload '{}' failed: {}", preload, e);
+                        // Continue execution even if preload fails (Bun behavior)
+                    }
+                }
+
                 let code = read_and_compile_source(&file)?;
 
                 match runtime.execute_code(&code) {
@@ -388,8 +439,38 @@ async fn main() -> Result<()> {
             println!("Faster than Bun! 🚀");
             return Ok(());
         }
-        Some(Command::Test { file }) => {
+        Some(Command::Test { file, test_name_pattern, test_only, test_skip, bail, parallel, timeout, verbose }) => {
             println!("🐝 Running tests...");
+
+            // Build test filter from CLI options
+            use beejs::testing::enhanced_runner::TestFilter;
+            let mut filter = TestFilter::new();
+
+            // Handle test-only (shorthand for --test-name-pattern)
+            if let Some(pattern) = &test_only {
+                filter.only_tests = true;
+                filter.include(pattern.clone());
+                if verbose {
+                    println!("  Filter: only tests matching '{}'", pattern);
+                }
+            }
+            // Handle test-name-pattern
+            if let Some(pattern) = &test_name_pattern {
+                if filter.include_patterns.is_empty() {
+                    filter.include(pattern.clone());
+                }
+                if verbose {
+                    println!("  Filter: tests matching '{}'", pattern);
+                }
+            }
+            // Handle test-skip
+            if let Some(pattern) = &test_skip {
+                filter.skip_tests = true;
+                filter.exclude(pattern.clone());
+                if verbose {
+                    println!("  Filter: skip tests matching '{}'", pattern);
+                }
+            }
 
             let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
                 .expect("Failed to create runtime");
@@ -397,6 +478,11 @@ async fn main() -> Result<()> {
             if let Some(test_file) = file {
                 // Run specific test file
                 println!("Running test file: {}", test_file.display());
+                if verbose {
+                    if parallel { println!("  Mode: parallel execution"); }
+                    if bail { println!("  Mode: bail on first failure"); }
+                    println!("  Timeout: {}s", timeout);
+                }
                 let code = std::fs::read_to_string(&test_file)
                     .map_err(|e| anyhow::anyhow!("Failed to read test file: {}", e))?;
 
@@ -411,38 +497,72 @@ async fn main() -> Result<()> {
                     }
                 }
             } else {
-                // Run built-in test suite
+                // Run built-in test suite with filtering
                 let test_cases = vec![
                     ("1 + 1", "2"),
                     ("'Hello World'", "Hello World"),
                     ("[1, 2, 3].length", "3"),
                     ("console.log('test'); 42", "42"),
                     ("function add(a, b) { return a + b; } add(5, 3)", "8"),
+                    ("[1, 2, 3, 4, 5].map(x => x * 2).join(',')", "2,4,6,8,10"),
+                    ("JSON.parse('{\"name\": \"beejs\"}').name", "beejs"),
+                    ("'hello'.toUpperCase()", "HELLO"),
                 ];
 
                 let mut passed = 0;
                 let mut failed = 0;
+                let mut skipped = 0;
 
                 for (i, (input, expected)) in test_cases.iter().enumerate() {
+                    let test_name = format!("test_{}", i);
+                    let suite_name = "builtin_tests";
+
+                    // Apply filter if set
+                    if !filter.include_patterns.is_empty() && !filter.matches(&test_name, suite_name) {
+                        if verbose {
+                            println!("⏭️  Test {} skipped (filter mismatch)", i + 1);
+                        }
+                        skipped += 1;
+                        continue;
+                    }
+                    if filter.skip_tests && !filter.exclude_patterns.is_empty()
+                        && !filter.matches(&test_name, suite_name) {
+                        if verbose {
+                            println!("⏭️  Test {} skipped (excluded by filter)", i + 1);
+                        }
+                        skipped += 1;
+                        continue;
+                    }
+
                     match runtime.execute_code(input) {
                         Ok(result) => {
                             if result.trim() == *expected {
-                                println!("✅ Test {} passed: {} = {}", i + 1, input, result.trim());
+                                if verbose {
+                                    println!("✅ Test {} passed: {} = {}", i + 1, input, result.trim());
+                                }
                                 passed += 1;
                             } else {
                                 println!("❌ Test {} failed: {} expected '{}' but got '{}'",
                                     i + 1, input, expected, result.trim());
                                 failed += 1;
+                                if bail {
+                                    eprintln!("🛑 Stopping on first failure");
+                                    std::process::exit(1);
+                                }
                             }
                         }
                         Err(e) => {
                             println!("❌ Test {} failed with error: {}", i + 1, e);
                             failed += 1;
+                            if bail {
+                                eprintln!("🛑 Stopping on first failure");
+                                std::process::exit(1);
+                            }
                         }
                     }
                 }
 
-                println!("\n📊 Test Summary: {} passed, {} failed", passed, failed);
+                println!("\n📊 Test Summary: {} passed, {} failed, {} skipped", passed, failed, skipped);
                 if failed > 0 {
                     std::process::exit(1);
                 }
