@@ -456,43 +456,34 @@ pub fn setup_require_api(
                     result_obj.set(scope, fs_default_key, fs_obj.into());
                 }
                 // v0.3.99: Handle builtin modules that are set as global objects
+                // v0.3.281: Added readline support - return actual global object
                 // These modules are set up as global objects in the runtime
                 "os" | "crypto" | "events" | "net" | "http" | "util" | "url" |
-                "querystring" | "dns" | "child_process" | "tcp_async" | "stream" => {
-                    // Create a minimal fallback object with a message
-                    let fallback_obj = v8::Object::new(scope);
-                    let message_key = v8::String::new(scope, "message").unwrap();
+                "querystring" | "dns" | "child_process" | "tcp_async" | "stream" |
+                "readline" => {
+                    // Get the global object and return the requested module from it
+                    let global = scope.get_current_context().global(scope);
+                    let module_key = v8::String::new(scope, &module_id_str).unwrap().into();
 
-                    // Create message based on module name
-                    let msg = if module_id_str == "os" {
-                        "os module available as global.os"
-                    } else if module_id_str == "crypto" {
-                        "crypto module available as global.crypto"
-                    } else if module_id_str == "events" {
-                        "events module available as global.events"
-                    } else if module_id_str == "net" {
-                        "net module available as global.net"
-                    } else if module_id_str == "http" {
-                        "http module available as global.http"
-                    } else if module_id_str == "util" {
-                        "util module available as global.util"
-                    } else if module_id_str == "url" {
-                        "url module available as global.url"
-                    } else if module_id_str == "querystring" {
-                        "querystring module available as global.querystring"
-                    } else if module_id_str == "dns" {
-                        "dns module available as global.dns"
-                    } else if module_id_str == "child_process" {
-                        "child_process module available as global.child_process"
-                    } else if module_id_str == "tcp_async" {
-                        "tcp_async module available as global.tcp_async"
+                    if let Some(module_val) = global.get(scope, module_key) {
+                        if !module_val.is_undefined() && !module_val.is_null() {
+                            // Set as 'default' property for CommonJS compatibility
+                            let default_key = v8::String::new(scope, "default").unwrap().into();
+                            result_obj.set(scope, default_key, module_val);
+                        } else {
+                            // Fallback if module value is undefined
+                            let message_key = v8::String::new(scope, "message").unwrap();
+                            let msg = format!("{} module value is undefined", module_id_str);
+                            let fallback_msg = v8::String::new(scope, &msg).unwrap();
+                            result_obj.set(scope, message_key.into(), fallback_msg.into());
+                        }
                     } else {
-                        "stream module available as global.stream"
-                    };
-                    let fallback_msg = v8::String::new(scope, msg).unwrap();
-                    fallback_obj.set(scope, message_key.into(), fallback_msg.into());
-
-                    retval.set(fallback_obj.into());
+                        // Fallback if module not found in global
+                        let message_key = v8::String::new(scope, "message").unwrap();
+                        let msg = format!("{} module not available", module_id_str);
+                        let fallback_msg = v8::String::new(scope, &msg).unwrap();
+                        result_obj.set(scope, message_key.into(), fallback_msg.into());
+                    }
                 }
                 _ => {
                     // Check if module_id is a file path (absolute or relative path)

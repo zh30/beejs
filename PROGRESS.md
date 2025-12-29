@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.275 (2025-12-29)
+## 当前版本: v0.3.281 (2025-12-29)
 
 ### 项目状态摘要
 
@@ -15,7 +15,7 @@
 **Node.js 模块支持**: ✅ 已完成
 - buffer, child_process, crypto, dns, events
 - fs, http, net, os, path, performance, querystring
-- require, stream, tcp_async, timers, url, util
+- readline, require, stream, tcp_async, timers, url, util
 
 **包管理**: ✅ 已完成
 - package.json 解析
@@ -81,6 +81,28 @@ const decoder = new string_decoder.StringDecoder('utf8');
 // 解码文本
 decoder.write('hello'); // 'hello'
 decoder.end(); // ''
+```
+
+#### v0.3.281 readline require 支持（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.281 新增功能
+- **readline 模块 require 支持**: `require('readline')` 现在可以正常工作
+  - 返回包含 `default` 属性的对象
+  - `default` 属性包含 `Interface` 和 `createInterface`
+- **MinimalRuntime 集成**: 在 `runtime_minimal.rs` 中添加 readline 模块处理
+
+#### v0.3.281 代码变更
+- `src/nodejs_core/require.rs`: 添加 readline 到内置模块列表
+- `src/runtime_minimal.rs`: 添加 readline 模块的 require 处理 (~20 行)
+- `tests/readline_require_test.rs`: 新建 readline require 测试 (~70 行)
+
+#### v0.3.281 API 使用示例
+```javascript
+// 通过 require 访问 readline
+const rl = require('readline');
+console.log(rl.default.Interface); // function
+console.log(rl.default.createInterface); // function
 ```
 
 #### v0.3.276 下一步

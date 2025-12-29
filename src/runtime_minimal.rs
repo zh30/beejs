@@ -11859,6 +11859,26 @@ impl MinimalRuntime {
                             }
                         }
 
+                        // v0.3.281: Handle readline module - return from global.readline
+                        if module_id_str == "readline" {
+                            let readline_key = v8::String::new(scope, "readline").unwrap().into();
+                            if let Some(readline_val) = global.get(scope, readline_key) {
+                                if !readline_val.is_undefined() && !readline_val.is_null() {
+                                    // Set as 'default' property for CommonJS compatibility
+                                    let default_key = v8::String::new(scope, "default").unwrap().into();
+                                    result_obj.set(scope, default_key, readline_val);
+                                    retval.set(result_obj.into());
+                                    return;
+                                }
+                            }
+                            // Fallback if readline not found
+                            let error_msg = "Cannot find module 'readline' - readline API not available";
+                            let error_str = v8::String::new(scope, error_msg).unwrap();
+                            let error_obj = v8::Exception::error(scope, error_str);
+                            scope.throw_exception(error_obj.into());
+                            return;
+                        }
+
                         // Throw error for unknown modules
                         let error_msg = format!("Cannot find module '{}'", module_id_str);
                         let error_str = v8::String::new(scope, &error_msg).unwrap();
