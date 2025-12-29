@@ -12861,3 +12861,50 @@ console.log(p.name);  // "Alice"
 - 添加更多 Node.js API 兼容性
 
 ---
+
+### v0.3.271 Timer 对象返回和 queueMicrotask 支持（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.271 新增功能
+- **Timer 对象返回**: setTimeout/setInterval/setImmediate 现在返回 Timer 对象
+  - `timer.ref()`: 确保事件循环保持活动
+  - `timer.unref()`: 允许事件循环退出
+  - `timer.refresh()`: 刷新定时器（重新调度）
+  - `timer.hasRef()`: 检查是否有引用
+  - `valueOf()`: 支持 Number(timer) 转换
+
+- **queueMicrotask API**: 将回调排入微任务队列
+  - 与 `Promise.resolve().then()` 类似但无需创建 Promise
+  - 通过 V8 的 `enqueue_microtask` 实现
+  - 在微任务检查点执行
+
+- **向后兼容的 clearTimer**: 同时支持 Timer 对象和数字 ID
+
+#### v0.3.271 技术实现
+- **create_timer_object 函数**: 创建完整的 Timer 对象
+  - 存储 `_timerId` 和 `_timerType` 内部属性
+  - 所有方法返回 Timer 对象支持链式调用
+  - `valueOf()` 返回 timer ID 保持兼容性
+
+- **clearTimer 增强**: 智能检测参数类型
+  - 如果参数是数字，直接使用
+  - 如果参数是对象，从 `_timerId` 属性获取 ID
+
+#### v0.3.271 测试结果
+- ✅ 15/17 nextTick/Timer 执行顺序测试通过
+- ✅ test_timer_ref_unref - Timer 对象有 `.ref()` 方法
+- ✅ test_queueMicrotask_integration - queueMicrotask API 可用
+
+#### v0.3.271 代码变更
+- `src/nodejs_core/timers.rs`: 添加 ~170 行代码
+  - `create_timer_object()` 函数创建 Timer 对象
+  - `setTimeout`/`setInterval`/`setImmediate` 返回 Timer 对象
+  - `clearTimer` 支持对象和数字两种参数形式
+  - `queueMicrotask` API 实现
+
+#### v0.3.271 下一步
+- 优化定时器执行顺序（FIFO）
+- 实现延迟 > 0 定时器的正确行为
+- 添加更多 Node.js API 兼容性
+
+---
