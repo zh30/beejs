@@ -1,9 +1,8 @@
 // Clean imports - removing unused ones
 use std::sync::Once;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 // Beejs: 高性能 JavaScript/TypeScript 运行时
 //
 // Stage 92: 企业级性能突破与 AI 原生优化

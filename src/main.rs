@@ -72,7 +72,7 @@ enum Command {
         #[arg(short, long, default_value = "3000")]
         port: u16,
         /// Host address
-        #[arg(short, long, default_value = "localhost")]
+        #[arg(long, default_value = "localhost")]
         host: String,
         /// Enable HTTPS with TLS certificate
         #[arg(long)]

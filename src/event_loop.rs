@@ -441,7 +441,6 @@ pub async fn async_sleep(delay: Duration) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::AtomicUsize;
     use std::time::Duration;
 
     #[tokio::test]

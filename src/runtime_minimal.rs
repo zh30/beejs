@@ -2806,12 +2806,19 @@ impl MinimalRuntime {
 
         // v0.3.249: Execute fired timer callbacks (event loop tick)
         // Poll and execute all fired timers until no more timers fire
+        // v0.3.260: Wait for timers to fire before checking (avoid race condition)
         // Using do-while pattern: execute at least once, then continue if new timers fire
         loop {
             let had_timers_before = {
                 let timer_manager = crate::event_loop::get_async_timer_manager();
                 timer_manager.has_fired_timers()
             };
+
+            // v0.3.260: If no timers fired yet, wait a bit for background thread to process
+            if !had_timers_before {
+                // Small sleep to allow async timer thread to fire timers
+                std::thread::sleep(std::time::Duration::from_millis(20));
+            }
 
             // Execute all currently fired timers
             execute_fired_timers(scope);

@@ -218,8 +218,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
-use serde::{Serialize, Deserialize};
     #[test]
     fn test_equal_matcher() {
         let matcher: _ = ExtendedMatcher::Equal(42);

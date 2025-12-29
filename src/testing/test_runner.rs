@@ -6,7 +6,6 @@
 use crate::testing::test_context::{TestCase, TestResult, TestSuite};
 use crate::testing::v8_test_executor::V8TestExecutor;
 use rusty_v8 as v8;
-use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 

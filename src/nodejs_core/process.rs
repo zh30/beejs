@@ -476,8 +476,8 @@ fn process_uptime_callback(
     retval.set(v8::Number::new(scope, uptime).into());
 }
 
-/// v0.3.241: process.cpuUsage() 回调 - 真实的 CPU 使用统计
-/// 使用平台特定的 API 获取用户和系统 CPU 时间
+// v0.3.241: process.cpuUsage() 回调 - 真实的 CPU 使用统计
+// 使用平台特定的 API 获取用户和系统 CPU 时间
 
 // 线程本地存储初始 CPU 时间
 thread_local! {
