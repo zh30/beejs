@@ -185,7 +185,7 @@ impl Drop for TestTimeoutGuard {
 }
 #[cfg(test)]
 mod tests {
-    use super::{TestTimeout, TimeoutConfig};
+    use super::TestTimeout;
     use std::time::Duration;
 
     #[test]
