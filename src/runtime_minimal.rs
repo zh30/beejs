@@ -20,7 +20,9 @@ use crate::nodejs_core::fs::setup_fs_api;
 use crate::nodejs_core::crypto::setup_crypto_api;
 use crate::nodejs_core::net::setup_net_api;
 use crate::nodejs_core::http::setup_http_api;
-use crate::nodejs_core::timers::{setup_timers_api, execute_fired_timers, execute_immediate_callbacks};
+use crate::nodejs_core::timers::{setup_timers_api, execute_fired_timers, execute_immediate_callbacks, mark_immediate_callbacks_deferred, TIMER_METADATA};
+// v0.3.261: Import process module for nextTick support
+use crate::nodejs_core::process::{execute_next_tick_callbacks, has_pending_next_ticks};
 
 // Event listener storage using thread_local (v0.3.46)
 // Note: rustdoc does not generate documentation for macro invocations
@@ -2765,9 +2767,143 @@ impl MinimalRuntime {
             setup_timers_api(scope, &context)?; // v0.3.249: Timer API with async scheduling
         }
 
-        // Create a string from the transpiled code
+        // v0.3.261: Store the original code for potential re-evaluation
+        // We'll run the code first, then re-evaluate the last expression after callbacks
         let code = v8::String::new(scope, &js_code)
             .ok_or_else(|| anyhow::anyhow!("Failed to create V8 string from code"))?;
+
+        // v0.3.261: Extract the last expression for re-evaluation after callbacks
+        // We'll use this to get the final value after nextTick callbacks run
+        let last_expr = if js_code.contains("return ") {
+            // Code has explicit return, use the return expression
+            let return_pos = js_code.rfind("return ").unwrap();
+            js_code[return_pos + 7..].trim().trim_end_matches(';').to_string()
+        } else {
+            // No explicit return, the last statement is the expression to evaluate
+            // Find the position after the last statement terminator
+            // We search backwards from the end to find the last expression
+
+            // Strategy: Find the last NEWLINE that separates complete statements
+            // (not newlines inside function calls like setTimeout/setImmediate callbacks)
+            //
+            // We search backwards tracking depth. When we find a newline at depth 0,
+            // we check if there's a real statement after it (not just whitespace).
+            // If the statement after starts with setImmediate/setTimeout, we extract
+            // the arrow function body. Otherwise, we use the content after the newline.
+
+            // First, find the last newline in the code
+            // We'll store both the expression string and its position
+            let mut last_expr: Option<String> = None;
+
+            // Find all newline positions and work backwards
+            let mut newline_positions: Vec<usize> = js_code
+                .char_indices()
+                .filter(|(_, c)| *c == '\n')
+                .map(|(i, _)| i)
+                .collect();
+
+            // If the code ends with a newline, skip it (trailing whitespace/newline)
+            while newline_positions.last() == Some(&js_code.len().saturating_sub(1))
+                || js_code[newline_positions.last().copied().unwrap_or(0)..]
+                    .trim()
+                    .is_empty()
+            {
+                newline_positions.pop();
+            }
+
+            if let Some(&last_newline_pos) = newline_positions.last() {
+                let last_line_content = js_code[last_newline_pos + 1..].trim();
+
+                // Check if last line is a setImmediate/setTimeout call
+                if last_line_content.starts_with("setImmediate")
+                    || last_line_content.starts_with("setTimeout")
+                {
+                    // Find the => in the ORIGINAL string, starting from last_newline_pos
+                    if let Some(arrow_global_pos) = js_code[last_newline_pos..].rfind("=>") {
+                        let arrow_pos_in_line = last_newline_pos + arrow_global_pos;
+
+                        // Get content after the arrow in the original string (NOT trimmed yet)
+                        let after_arrow_raw = &js_code[arrow_pos_in_line + 2..];
+
+                        // Find where this expression ends in the ORIGINAL string
+                        // (semicolon, or closing paren that closes the setImmediate/setTimeout call)
+                        let mut end_pos_in_raw = None;
+                        let mut paren_depth: i32 = 0;
+
+                        for (i, c) in after_arrow_raw.char_indices() {
+                            match c {
+                                '(' => paren_depth += 1,
+                                ')' => {
+                                    if paren_depth == 0 {
+                                        // This is the closing paren of setImmediate/setTimeout
+                                        end_pos_in_raw = Some(i);
+                                        break;
+                                    }
+                                    paren_depth = paren_depth.saturating_sub(1);
+                                }
+                                ';' => {
+                                    if paren_depth == 0 {
+                                        end_pos_in_raw = Some(i);
+                                        break;
+                                    }
+                                }
+                                '{' => paren_depth = paren_depth.saturating_sub(1), // entering block
+                                '}' => paren_depth += 1, // leaving block
+                                _ => {}
+                            }
+                        }
+
+                        let end_pos = end_pos_in_raw.unwrap_or(after_arrow_raw.len());
+                        let expr = after_arrow_raw[..end_pos].trim().trim_end_matches(';').trim().to_string();
+
+                        if !expr.is_empty() {
+                            // Store the extracted expression directly
+                            last_expr = Some(expr);
+                        }
+                    }
+                } else if !last_line_content.is_empty() {
+                    // Last line is not a setImmediate/setTimeout, use content after newline
+                    let content_after_newline = js_code[last_newline_pos + 1..].trim().to_string();
+                    if !content_after_newline.is_empty() {
+                        last_expr = Some(content_after_newline);
+                    }
+                }
+            }
+
+            // If no expression found via newline, fall back to searching for top-level semicolon
+            if last_expr.is_none() {
+                // Search backwards for top-level semicolon
+                let mut brace_depth: i32 = 0;
+                let mut paren_depth: i32 = 0;
+
+                for i in (0..js_code.len()).rev() {
+                    let c = js_code.as_bytes()[i] as char;
+                    match c {
+                        '}' => brace_depth += 1,
+                        '{' => brace_depth = brace_depth.saturating_sub(1),
+                        ')' => paren_depth += 1,
+                        '(' => paren_depth = paren_depth.saturating_sub(1),
+                        ';' => {
+                            if brace_depth == 0 && paren_depth == 0 {
+                                let after = js_code[i + 1..].trim();
+                                if !after.is_empty() && after != ";"
+                                    && !after.starts_with("setImmediate")
+                                    && !after.starts_with("setTimeout")
+                                {
+                                    last_expr = Some(after.to_string());
+                                    break;
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
+            // If still no expression, use the whole code
+            let expr = last_expr.unwrap_or_else(|| js_code.trim().to_string());
+            expr
+        };
 
         // Use TryCatch for proper error handling
         let scope = &mut v8::TryCatch::new(scope);
@@ -2786,7 +2922,7 @@ impl MinimalRuntime {
             }
         };
 
-        // Run the script
+        // Run the script - we capture the result handle but will re-evaluate after callbacks
         let result = match script.run(scope) {
             Some(result) => result,
             None => {
@@ -2804,27 +2940,75 @@ impl MinimalRuntime {
             }
         };
 
-        // v0.3.249: Execute fired timer callbacks (event loop tick)
-        // Poll and execute all fired timers until no more timers fire
-        // v0.3.260: Wait for timers to fire before checking (avoid race condition)
-        // Using do-while pattern: execute at least once, then continue if new timers fire
-        loop {
-            let had_timers_before = {
-                let timer_manager = crate::event_loop::get_async_timer_manager();
-                timer_manager.has_fired_timers()
-            };
+        // v0.3.261: Execute nextTick callbacks FIRST to process any queued callbacks
+        // This ensures nextTick has highest priority after sync code completes
+        execute_next_tick_callbacks(scope);
 
-            // v0.3.260: If no timers fired yet, wait a bit for background thread to process
-            if !had_timers_before {
-                // Small sleep to allow async timer thread to fire timers
-                std::thread::sleep(std::time::Duration::from_millis(20));
+        // v0.3.249: Execute fired timer callbacks (event loop tick)
+        // v0.3.261: Refactor - correct execution order: nextTick -> microtasks -> timers -> setImmediate
+        //
+        // Node.js event loop phases:
+        // 1. nextTick queue (highest priority)
+        // 2. Microtasks (Promises, queueMicrotask)
+        // 3. Timers (setTimeout/setInterval with delay > 0)
+        // 4. setImmediate callbacks (check phase)
+        //
+        // This loop continues until: no pending nextTicks, no fired timers
+        // Note: setImmediate callbacks are processed AFTER this loop (in the "next iteration")
+        //
+        loop {
+            // v0.3.261: Wait for background timer thread to process
+            // We need to wait until at least one timer has fired
+            let mut has_pending_work = false;
+            let mut iterations_without_progress = 0;
+            const MAX_WAIT_ITERATIONS: usize = 50; // Max ~1 second of waiting
+
+            while iterations_without_progress < MAX_WAIT_ITERATIONS {
+                let has_fired = {
+                    let timer_manager = crate::event_loop::get_async_timer_manager();
+                    timer_manager.has_fired_timers()
+                };
+                let has_next_ticks = has_pending_next_ticks();
+
+                // v0.3.261: Only wait for nextTicks and fired timers inside the loop
+                // setImmediate callbacks are processed AFTER the loop (in the "next iteration")
+                if has_fired || has_next_ticks {
+                    has_pending_work = true;
+                    break;
+                }
+
+                // Sleep briefly to allow background timer thread to fire timers
+                // v0.3.261: Use 25ms sleep to ensure worker thread has time to tick and fire timers
+                std::thread::sleep(std::time::Duration::from_millis(25));
+                iterations_without_progress += 1;
             }
 
-            // Execute all currently fired timers
+            // If no pending work after waiting, break
+            if !has_pending_work {
+                break;
+            }
+
+            // v0.3.261: Additional wait to ensure worker thread has processed any pending timers
+            // This handles the case where a timer was just scheduled and hasn't fired yet
+            std::thread::sleep(std::time::Duration::from_millis(5));
+
+            // v0.3.261: Execute nextTick callbacks FIRST (before timers and microtasks)
+            // This ensures nextTick has highest priority after sync code completes
+            execute_next_tick_callbacks(scope);
+
+            // Process microtasks (Promises, queueMicrotask callbacks)
+            // nextTick callbacks were already executed, now process Promises
+            scope.perform_microtask_checkpoint();
+
+            // Execute all currently fired timers (setTimeout/setInterval with delay > 0)
             execute_fired_timers(scope);
 
-            // v0.3.250: Also execute any setImmediate callbacks that were queued
-            execute_immediate_callbacks(scope);
+            // v0.3.261: NOTE - setImmediate callbacks are NOT executed inside this loop
+            // They are processed after the loop (in the "next iteration") to match Node.js behavior
+
+            // v0.3.261: Check if there are still pending nextTicks in the queue
+            // (could be added during callback execution)
+            let has_pending_next_ticks_now = has_pending_next_ticks();
 
             // Check if new timers fired during callback execution
             let has_new_timers = {
@@ -2832,26 +3016,84 @@ impl MinimalRuntime {
                 timer_manager.has_fired_timers()
             };
 
-            // v0.3.250: Also check for new setImmediates
-            let has_new_immediates = {
-                use crate::nodejs_core::timers::has_pending_immediates;
-                has_pending_immediates()
-            };
-
-            // Continue if there were timers before or new timers/immediates fired
-            if !had_timers_before && !has_new_timers && !has_new_immediates {
+            // v0.3.261: Continue if there are pending nextTicks or VALID fired timers
+            // Note: setImmediate callbacks are executed AFTER the loop (outside the wait condition)
+            // We only wait inside the loop for nextTicks and timers with valid metadata
+            if !has_pending_next_ticks_now && !has_new_timers {
                 break;
+            }
+
+            // v0.3.261: If there are fired timers, check if any are valid
+            // Timer IDs now include epoch offset, so stale timers have different IDs
+            if has_new_timers {
+                let timer_manager = crate::event_loop::get_async_timer_manager();
+                let fired_timers = timer_manager.poll_fired_timers();
+
+                // Execute only valid timer callbacks (check if callback exists)
+                for timer_id in fired_timers {
+                    // Skip if timer callback doesn't exist (was already executed or cleared)
+                    if crate::nodejs_core::timers::take_timer_callback(timer_id).is_none() {
+                        continue;
+                    }
+                    let _ = crate::nodejs_core::timers::execute_timer_callback(scope, timer_id);
+                }
+            }
+
+            // If we need to wait for timers, do a brief wait
+            if has_new_timers {
+                std::thread::sleep(std::time::Duration::from_millis(50));
             }
         }
 
-        // Process microtasks (Promises, queueMicrotask callbacks)
+        // v0.3.261: Execute setImmediate callbacks AFTER the main loop
+        // This represents the "check phase" of the current event loop iteration
+        // Timers and nextTicks have already executed in the current iteration
+        execute_immediate_callbacks(scope);
+
+        // v0.3.261: Mark any callbacks registered during execution as deferred
+        // This ensures callbacks registered from within setImmediate run in NEXT iteration
+        mark_immediate_callbacks_deferred();
+
+        // Final cleanup: execute any remaining nextTicks and microtasks
+        // This ensures all pending callbacks are processed before returning
+        execute_next_tick_callbacks(scope);
         scope.perform_microtask_checkpoint();
 
-        // Convert the result to a string
-        let result_str = result.to_string(scope)
-            .ok_or_else(|| anyhow::anyhow!("Failed to convert result to string"))?;
+        // v0.3.261: CRITICAL FIX - Capture result AFTER the full event loop
+        // This ensures that code like `order.join(',')` captures the final state after
+        // all callbacks (nextTick, timers, setImmediate) have executed.
+        // We evaluate the last expression here to get the final value
+        let final_result = {
+            let eval_code = v8::String::new(scope, &last_expr)
+                .ok_or_else(|| anyhow::anyhow!("Failed to create V8 string from eval code"))?;
 
-        Ok(result_str.to_rust_string_lossy(scope))
+            let eval_scope = &mut v8::TryCatch::new(scope);
+            match v8::Script::compile(eval_scope, eval_code, None) {
+                Some(script) => {
+                    match script.run(eval_scope) {
+                        Some(res) => {
+                            Some(res.to_string(eval_scope)
+                                .ok_or_else(|| anyhow::anyhow!("Failed to convert result to string"))?
+                                .to_rust_string_lossy(eval_scope))
+                        }
+                        None => None,
+                    }
+                }
+                None => None,
+            }
+        };
+
+        // Return the result captured after the full event loop
+        // This reflects the state after all callbacks have executed
+        if let Some(result_str) = final_result {
+            Ok(result_str)
+        } else {
+            // Fallback: convert original result if eval failed
+            let result_str = result.to_string(scope)
+                .ok_or_else(|| anyhow::anyhow!("Failed to convert result to string"))?
+                .to_rust_string_lossy(scope);
+            Ok(result_str)
+        }
     }
 
     /// Execute code multiple times and measure performance
@@ -11641,6 +11883,7 @@ impl MinimalRuntime {
             std::process::exit(code);
         });
         let next_tick_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+            // v0.3.261: Use the same implementation as nodejs_core/process.rs
             // Get callback function
             let callback = args.get(0);
             if !callback.is_function() {
@@ -11650,14 +11893,14 @@ impl MinimalRuntime {
                 return;
             }
             // Collect any additional arguments to pass to the callback
-            let callback_args: Vec<v8::Local<v8::Value>> = (1..args.length())
+            let callback_args: Vec<v8::Global<v8::Value>> = (1..args.length())
                 .map(|i| args.get(i))
+                .filter(|v| !v.is_undefined())
+                .map(|v| v8::Global::new(scope, v))
                 .collect();
-            // Execute callback immediately (simplified implementation)
-            // In a full async runtime, this would be queued to the microtask queue
-            let callback_func = v8::Local::<v8::Function>::try_from(callback).unwrap();
-            let undefined = v8::undefined(scope);
-            let _ = callback_func.call(scope, undefined.into(), &callback_args);
+            // Save to nextTick queue - callbacks will be executed by execute_next_tick_callbacks
+            let callback_global = v8::Global::new(scope, callback);
+            crate::nodejs_core::process::push_next_tick_callback(callback_global, callback_args);
         });
 
         // Get function instances

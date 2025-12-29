@@ -233,6 +233,8 @@ enum TimerCommand {
     Cancel { timer_id: u64 },
     Clear,
     Shutdown,
+    /// v0.3.261: Clear with acknowledgement
+    ClearWithAck(tokio::sync::oneshot::Sender<()>),
 }
 
 /// 异步定时器管理器
@@ -276,7 +278,6 @@ impl AsyncTimerManager {
 
                             for (id, (scheduled_time, delay, remaining)) in &scheduled_timers {
                                 if *scheduled_time <= now {
-                                    // 记录触发的定时器
                                     fired_ids.push(*id);
 
                                     if *remaining > 1 {
@@ -313,6 +314,8 @@ impl AsyncTimerManager {
                                 Some(TimerCommand::ScheduleTimeout { timer_id, delay }) => {
                                     let scheduled_time = Instant::now() + delay;
                                     scheduled_timers.insert(timer_id, (scheduled_time, delay, 1));
+                                    // v0.3.261: Removed immediate firing - let the interval tick handle it
+                                    // This avoids a race condition where the callback isn't stored yet
                                 }
                                 Some(TimerCommand::ScheduleInterval { timer_id, delay, repeat_count }) => {
                                     let scheduled_time = Instant::now() + delay;
@@ -324,6 +327,11 @@ impl AsyncTimerManager {
                                 }
                                 Some(TimerCommand::Clear) => {
                                     scheduled_timers.clear();
+                                }
+                                Some(TimerCommand::ClearWithAck(sender)) => {
+                                    scheduled_timers.clear();
+                                    // v0.3.261: Send acknowledgement after clearing
+                                    let _ = sender.send(());
                                 }
                                 Some(TimerCommand::Shutdown) => {
                                     scheduled_timers.clear();
@@ -353,28 +361,22 @@ impl AsyncTimerManager {
     }
 
     /// 安排一个一次性定时器
-    pub fn schedule_timeout(&self, delay: Duration, _callback: impl Fn() + Send + 'static) -> u64 {
-        let timer_id = self.next_id();
-
+    /// v0.3.261: Accept external timer_id to use epoch-based IDs for test isolation
+    pub fn schedule_timeout(&self, delay: Duration, timer_id: u64, _callback: impl Fn() + Send + 'static) {
         let _ = self.cmd_tx.try_send(TimerCommand::ScheduleTimeout {
             timer_id,
             delay,
         });
-
-        timer_id
     }
 
     /// 安排一个重复定时器
-    pub fn schedule_interval(&self, delay: Duration, repeat_count: u32, _callback: impl Fn() + Send + 'static) -> u64 {
-        let timer_id = self.next_id();
-
+    /// v0.3.261: Accept external timer_id to use epoch-based IDs for test isolation
+    pub fn schedule_interval(&self, delay: Duration, repeat_count: u32, timer_id: u64, _callback: impl Fn() + Send + 'static) {
         let _ = self.cmd_tx.try_send(TimerCommand::ScheduleInterval {
             timer_id,
             delay,
             repeat_count,
         });
-
-        timer_id
     }
 
     /// 取消定时器
@@ -390,6 +392,27 @@ impl AsyncTimerManager {
     /// 清除所有定时器
     pub fn clear(&self) {
         let _ = self.cmd_tx.try_send(TimerCommand::Clear);
+        // Also clear fired timers to prevent stale timers from previous tests
+        let mut fired = self.fired_timers.write().unwrap();
+        fired.clear();
+    }
+
+    /// v0.3.261: 清除已触发的定时器列表
+    pub fn clear_fired_timers(&self) {
+        let mut fired = self.fired_timers.write().unwrap();
+        fired.clear();
+    }
+
+    /// v0.3.261: 清除所有定时器并等待确认
+    /// 使用同步通道确保清除命令被处理后才返回
+    pub fn clear_with_ack(&self) {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let _ = self.cmd_tx.blocking_send(TimerCommand::ClearWithAck(tx));
+        // Also clear fired timers to prevent stale timers from previous tests
+        let mut fired = self.fired_timers.write().unwrap();
+        fired.clear();
+        // Wait for the worker to acknowledge the clear
+        let _ = rx.blocking_recv();
     }
 
     /// 关闭定时器管理器

@@ -27,12 +27,27 @@ pub struct TimerMetadata {
     pub timer_type: TimerType,
     pub delay: u64, // in milliseconds
     pub is_unrefed: bool,
+    pub epoch: u64, // v0.3.261: generation counter to distinguish stale timers
 }
 
 /// Global timer metadata registry (thread-safe, no V8 handles)
 /// pub for access from integration tests
 pub static TIMER_METADATA: Lazy<Mutex<HashMap<u64, TimerMetadata>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
+
+/// v0.3.261: Epoch counter to distinguish timers from different test runs
+/// Incremented on cleanup to invalidate all previously scheduled timers
+static TIMER_EPOCH: AtomicU64 = AtomicU64::new(0);
+
+/// v0.3.261: Get current timer epoch
+pub fn get_timer_epoch() -> u64 {
+    TIMER_EPOCH.load(Ordering::SeqCst)
+}
+
+/// v0.3.261: Increment epoch to invalidate all stale timers
+pub fn increment_timer_epoch() {
+    TIMER_EPOCH.fetch_add(1, Ordering::SeqCst);
+}
 
 /// Timer callback storage - V8 Global handles (only accessed from V8 main thread)
 /// Wrapped in a struct to allow unsafe Send/Sync (only used on main thread)
@@ -75,8 +90,13 @@ static TIMER_CALLBACKS: Lazy<Mutex<TimerCallbackStorage>> =
 
 /// v0.3.250: Immediate callbacks queue - stores setImmediate callbacks
 /// These execute in the next event loop iteration, after current code completes
+/// v0.3.261: Store callbacks with a flag to distinguish "deferred" callbacks
+/// Callbacks marked as "deferred" run in the next iteration
 pub struct ImmediateCallbackStorage {
-    callbacks: Vec<(u64, v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)>,
+    /// Callbacks stored with deferred flag
+    /// Tuple: (timer_id, callback, args, is_deferred)
+    /// is_deferred = true means this callback should run in the NEXT iteration
+    callbacks: Vec<(u64, v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>, bool)>,
 }
 
 impl ImmediateCallbackStorage {
@@ -86,16 +106,37 @@ impl ImmediateCallbackStorage {
         }
     }
 
-    fn push(&mut self, timer_id: u64, callback: v8::Global<v8::Function>, args: Vec<v8::Global<v8::Value>>) {
-        self.callbacks.push((timer_id, callback, args));
+    fn push(&mut self, timer_id: u64, callback: v8::Global<v8::Function>, args: Vec<v8::Global<v8::Value>>, is_deferred: bool) {
+        self.callbacks.push((timer_id, callback, args, is_deferred));
+    }
+
+    /// v0.3.261: Mark all non-deferred callbacks as deferred
+    /// Called after executing callbacks to defer newly added ones to next iteration
+    fn mark_all_as_deferred(&mut self) {
+        for (_, _, _, deferred) in self.callbacks.iter_mut() {
+            *deferred = true;
+        }
+    }
+
+    /// v0.3.261: Drain non-deferred callbacks (those that should run now)
+    fn drain_non_deferred(&mut self) -> Vec<(u64, v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)> {
+        let (non_deferred, remaining): (Vec<_>, Vec<_>) = self.callbacks
+            .drain(..)
+            .partition(|(_, _, _, deferred)| !*deferred);
+
+        // Put back deferred callbacks (they run next iteration)
+        self.callbacks.extend(remaining);
+
+        // Return only non-deferred callbacks for execution
+        non_deferred.into_iter().map(|(id, cb, args, _)| (id, cb, args)).collect()
     }
 
     fn drain(&mut self) -> Vec<(u64, v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)> {
-        self.callbacks.drain(..).collect()
+        self.callbacks.drain(..).map(|(id, cb, args, _)| (id, cb, args)).collect()
     }
 
     fn remove(&mut self, timer_id: u64) -> bool {
-        if let Some(pos) = self.callbacks.iter().position(|(id, _, _)| *id == timer_id) {
+        if let Some(pos) = self.callbacks.iter().position(|(id, _, _, _)| *id == timer_id) {
             self.callbacks.remove(pos);
             true
         } else {
@@ -105,6 +146,11 @@ impl ImmediateCallbackStorage {
 
     fn is_empty(&self) -> bool {
         self.callbacks.is_empty()
+    }
+
+    /// v0.3.261: Clear all callbacks and reset state
+    fn clear_all(&mut self) {
+        self.callbacks.clear();
     }
 }
 
@@ -118,11 +164,19 @@ static IMMEDIATE_CALLBACKS: Lazy<Mutex<ImmediateCallbackStorage>> =
     Lazy::new(|| Mutex::new(ImmediateCallbackStorage::new()));
 
 /// Next timer ID counter (shared, thread-safe)
-static NEXT_TIMER_ID: AtomicU64 = AtomicU64::new(1);
+/// v0.3.261: Made public for timer validation in event loop
+pub static NEXT_TIMER_ID: AtomicU64 = AtomicU64::new(1);
 
-/// Get next timer ID
+/// v0.3.261: Timer ID offset per epoch to prevent ID conflicts between tests
+const TIMER_ID_EPOCH_OFFSET: u64 = 10000;
+
+/// Get next timer ID (includes epoch offset for test isolation)
 pub fn get_next_timer_id() -> u64 {
-    NEXT_TIMER_ID.fetch_add(1, Ordering::SeqCst)
+    let base_id = NEXT_TIMER_ID.fetch_add(1, Ordering::SeqCst);
+    let epoch = get_timer_epoch();
+    // Include epoch in timer ID to prevent conflicts between tests
+    let id = base_id + (epoch * TIMER_ID_EPOCH_OFFSET);
+    id
 }
 
 /// Get timer metadata by ID
@@ -187,46 +241,37 @@ pub fn setup_timers_api(
         // Get timer ID
         let timer_id = get_next_timer_id();
 
-        // For delay = 0, execute callback immediately
-        if delay == 0 {
-            // Store metadata
-            let mut metadata = TIMER_METADATA.lock().unwrap();
-            metadata.insert(timer_id, TimerMetadata {
-                timer_type: TimerType::Timeout,
-                delay,
-                is_unrefed: false,
-            });
-            drop(metadata);
+        // v0.3.261: Always schedule timer, even for delay = 0
+        // In Node.js, setTimeout(fn, 0) still executes in the next event loop iteration,
+        // after current synchronous code, nextTick, and microtasks complete.
+        // This ensures proper execution order: nextTick -> microtasks -> timers -> setImmediate
 
-            // Execute immediately
-            let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
-            let undefined = v8::undefined(scope);
-            let _ = callback_fn.call(scope, undefined.into(), &callback_args);
-        } else {
-            // v0.3.249: Store callback in global registry before scheduling
-            // Convert callback to Global<Function> and store with arguments
-            let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
-            let callback_global = v8::Global::new(scope, callback_fn);
-            let args_global: Vec<v8::Global<v8::Value>> = callback_args
-                .iter()
-                .map(|v| v8::Global::new(scope, v.clone()))
-                .collect();
+        // Store callback in global registry before scheduling
+        // Convert callback to Global<Function> and store with arguments
+        let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
+        let callback_global = v8::Global::new(scope, callback_fn);
+        let args_global: Vec<v8::Global<v8::Value>> = callback_args
+            .iter()
+            .map(|v| v8::Global::new(scope, v.clone()))
+            .collect();
 
-            // Store metadata
-            let mut metadata = TIMER_METADATA.lock().unwrap();
-            metadata.insert(timer_id, TimerMetadata {
-                timer_type: TimerType::Timeout,
-                delay,
-                is_unrefed: false,
-            });
-            drop(metadata);
+        // Store metadata
+        let mut metadata = TIMER_METADATA.lock().unwrap();
+        metadata.insert(timer_id, TimerMetadata {
+            timer_type: TimerType::Timeout,
+            delay,
+            is_unrefed: false,
+            epoch: get_timer_epoch(),
+        });
+        drop(metadata);
 
-            // Store callback and args in global registry
-            store_timer_callback(timer_id, callback_global, args_global);
+        // Store callback and args in global registry
+        store_timer_callback(timer_id, callback_global, args_global);
 
-            // Schedule with AsyncTimerManager (no callback needed - we'll poll for fired timers)
-            get_async_timer_manager().schedule_timeout(Duration::from_millis(delay), || {});
-        }
+        // Schedule with AsyncTimerManager
+        // For delay = 0, still schedule (minimum 1ms to ensure proper ordering)
+        let effective_delay = if delay == 0 { 1 } else { delay };
+        get_async_timer_manager().schedule_timeout(Duration::from_millis(effective_delay), timer_id, || {});
 
         // Return timer ID
         retval.set(v8::Number::new(scope, timer_id as f64).into());
@@ -278,6 +323,7 @@ pub fn setup_timers_api(
                 timer_type: TimerType::Interval,
                 delay,
                 is_unrefed: false,
+                epoch: get_timer_epoch(),
             });
             drop(metadata);
 
@@ -285,7 +331,7 @@ pub fn setup_timers_api(
             store_timer_callback(timer_id, callback_global, args_global);
 
             // Schedule with AsyncTimerManager
-            get_async_timer_manager().schedule_interval(Duration::from_millis(delay), 0, || {});
+            get_async_timer_manager().schedule_interval(Duration::from_millis(delay), 0, timer_id, || {});
         } else {
             // Store metadata for delay = 0 (edge case - should execute immediately)
             let mut metadata = TIMER_METADATA.lock().unwrap();
@@ -293,6 +339,7 @@ pub fn setup_timers_api(
                 timer_type: TimerType::Interval,
                 delay,
                 is_unrefed: false,
+                epoch: get_timer_epoch(),
             });
         }
 
@@ -331,6 +378,7 @@ pub fn setup_timers_api(
             timer_type: TimerType::Immediate,
             delay: 0,
             is_unrefed: false,
+            epoch: get_timer_epoch(),
         });
         drop(metadata);
 
@@ -454,8 +502,16 @@ pub fn is_timer_unrefed(timer_id: u64) -> bool {
 }
 
 /// v0.3.248: Clear all timers in AsyncTimerManager as well
+/// v0.3.261: Full reset of timer system for test isolation
 pub fn clear_all_async_timers() {
-    get_async_timer_manager().clear();
+    let manager = get_async_timer_manager();
+    // Clear scheduled timers and fired queue
+    manager.clear();
+    manager.clear_fired_timers();
+    // Reset timer ID counter
+    NEXT_TIMER_ID.store(1, Ordering::SeqCst);
+    // Increment epoch to generate unique timer IDs in next test
+    increment_timer_epoch();
 }
 
 /// v0.3.250: Clear all timer metadata
@@ -473,7 +529,7 @@ pub fn clear_all_timer_callbacks() {
     storage.args.clear();
 
     let mut immediate_storage = IMMEDIATE_CALLBACKS.lock().unwrap();
-    immediate_storage.callbacks.clear();
+    immediate_storage.clear_all();
 }
 
 /// v0.3.256: Complete cleanup - clears both callbacks and metadata
@@ -539,21 +595,35 @@ pub fn execute_timer_callback(
 
 /// v0.3.249: Execute all fired timer callbacks
 /// Called from V8 main thread event loop
+/// v0.3.261: Timer IDs now include epoch offset, so no epoch check needed
 pub fn execute_fired_timers(scope: &mut v8::HandleScope) {
     let timer_manager = get_async_timer_manager();
     let fired_timers = timer_manager.poll_fired_timers();
 
     for timer_id in fired_timers {
+        // Skip if timer callback doesn't exist (was already executed or cleared)
+        let callback_exists = {
+            let storage = TIMER_CALLBACKS.lock().unwrap();
+            storage.callbacks.contains_key(&timer_id)
+        };
+
+        if !callback_exists {
+            continue;
+        }
+
+        // Execute callback
         let _ = execute_timer_callback(scope, timer_id);
     }
 }
 
 /// v0.3.250: Execute all pending setImmediate callbacks
-/// These execute in the next event loop iteration (after current code)
-/// Called from V8 main thread event loop, after fired timers
+/// v0.3.261: Modified to only execute non-deferred callbacks
+/// This ensures setImmediate callbacks registered during sync code run in same iteration,
+/// while callbacks registered from within other callbacks run in the next iteration
 pub fn execute_immediate_callbacks(scope: &mut v8::HandleScope) {
     let mut storage = IMMEDIATE_CALLBACKS.lock().unwrap();
-    let callbacks = storage.drain();
+    // Only execute non-deferred callbacks (those registered during sync code)
+    let callbacks = storage.drain_non_deferred();
 
     for (timer_id, callback, args) in callbacks {
         let callback = v8::Local::<v8::Function>::new(scope, callback);
@@ -579,13 +649,25 @@ pub fn has_pending_immediates() -> bool {
 }
 
 /// v0.3.250: Store setImmediate callback for next event loop iteration
+/// v0.3.261: Store with deferred=false so they run in the same iteration
+/// (after timers). Callbacks registered from within other callbacks will be
+/// marked deferred by mark_all_as_deferred() after execution.
 pub fn store_immediate_callback(
     timer_id: u64,
     callback: v8::Global<v8::Function>,
     args: Vec<v8::Global<v8::Value>>,
 ) {
     let mut storage = IMMEDIATE_CALLBACKS.lock().unwrap();
-    storage.push(timer_id, callback, args);
+    // Initially not deferred - will be marked deferred after execution
+    storage.push(timer_id, callback, args, false);
+}
+
+/// v0.3.261: Mark all callbacks as deferred
+/// Called after executing setImmediate callbacks to defer any callbacks
+/// registered during execution to the NEXT iteration
+pub fn mark_immediate_callbacks_deferred() {
+    let mut storage = IMMEDIATE_CALLBACKS.lock().unwrap();
+    storage.mark_all_as_deferred();
 }
 
 /// v0.3.250: Remove a pending setImmediate callback (for clearImmediate)

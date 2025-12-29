@@ -25,15 +25,81 @@ thread_local! {
     static EXIT_CODE: Mutex<i32> = Mutex::new(0);
 }
 
-/// v0.3.239: nextTick 回调数据结构
-struct NextTickCallback {
-    callback: v8::Global<v8::Value>,
-    args: Vec<v8::Global<v8::Value>>,
+// v0.3.239: nextTick 队列（线程本地）
+// Note: thread_local doesn't have pub(crate) on individual items, so we export the whole thing
+mod next_tick_queue_mod {
+    use std::sync::Mutex;
+    use rusty_v8 as v8;
+
+    pub(crate) struct NextTickCallback {
+        pub(crate) callback: v8::Global<v8::Value>,
+        pub(crate) args: Vec<v8::Global<v8::Value>>,
+    }
+
+    thread_local! {
+        pub(crate) static NEXT_TICK_QUEUE: Mutex<Vec<NextTickCallback>> = Mutex::new(Vec::new());
+    }
 }
 
-// v0.3.239: nextTick 队列（线程本地）
-thread_local! {
-    static NEXT_TICK_QUEUE: Mutex<Vec<NextTickCallback>> = Mutex::new(Vec::new());
+use next_tick_queue_mod::{NextTickCallback, NEXT_TICK_QUEUE};
+
+/// v0.3.261: 添加 nextTick 回调到队列（供 runtime_minimal.rs 使用）
+pub fn push_next_tick_callback(callback: v8::Global<v8::Value>, args: Vec<v8::Global<v8::Value>>) {
+    NEXT_TICK_QUEUE.with(|queue| {
+        let mut q = queue.lock().unwrap();
+        q.push(NextTickCallback { callback, args });
+    });
+}
+
+/// v0.3.261: 执行所有 pending 的 nextTick 回调
+/// 必须在 V8 主线程调用，在 perform_microtask_checkpoint 之前执行
+/// 这样 nextTick 回调会在 Promise microtasks 之前执行（符合 Node.js 行为）
+/// 关键：使用 while 循环确保所有链式添加的 nextTick 都能执行
+pub fn execute_next_tick_callbacks(scope: &mut v8::HandleScope) {
+    NEXT_TICK_QUEUE.with(|q| {
+        let mut queue_ref = q.lock().unwrap();
+
+        // 使用 while 循环处理链式添加的 nextTicks
+        // 每次迭代取出当前所有回调，执行它们
+        // 如果回调中添加了新的 nextTick，它们会在下一轮迭代中执行
+        while !queue_ref.is_empty() {
+            // 取出当前所有回调（使用 take 清空队列）
+            let callbacks: Vec<NextTickCallback> = std::mem::take(&mut *queue_ref);
+
+            // 释放锁以便回调中可以安全地添加新的 nextTick
+            drop(queue_ref);
+
+            // 执行当前这批回调
+            for NextTickCallback { callback, args } in callbacks.into_iter() {
+                let callback_local = v8::Local::new(scope, callback);
+                if let Ok(func) = v8::Local::<v8::Function>::try_from(callback_local) {
+                    let undefined = v8::undefined(scope);
+                    // Convert Global args to Local args for the function call
+                    let args_local: Vec<v8::Local<v8::Value>> = args.iter().map(|g| v8::Local::new(scope, g)).collect();
+                    let _ = func.call(scope, undefined.into(), &args_local);
+                }
+            }
+
+            // 重新获取锁，继续处理可能添加的新回调
+            queue_ref = q.lock().unwrap();
+        }
+    });
+}
+
+/// v0.3.261: 检查是否有 pending 的 nextTick 回调
+pub fn has_pending_next_ticks() -> bool {
+    NEXT_TICK_QUEUE.with(|q| {
+        let queue = q.lock().unwrap();
+        !queue.is_empty()
+    })
+}
+
+/// v0.3.261: 清空 nextTick 队列（用于测试清理）
+pub fn clear_next_tick_queue() {
+    NEXT_TICK_QUEUE.with(|q| {
+        let mut queue = q.lock().unwrap();
+        queue.clear();
+    });
 }
 
 // v0.3.242: setMaxListeners 存储
@@ -256,7 +322,8 @@ fn process_cwd_callback(
 }
 
 /// v0.3.239: process.nextTick() 回调
-/// 简化实现：使用 V8 的 MicrotaskQueue 来执行 nextTick 回调
+/// v0.3.261: 重构 - 只将回调添加到队列，由事件循环在正确时机执行
+/// 正确的执行顺序: nextTick -> microtasks (Promises) -> timers -> setImmediate
 fn process_next_tick_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -279,6 +346,7 @@ fn process_next_tick_callback(
         .collect();
 
     // 保存到 nextTick 队列
+    // 回调将在事件循环的 execute_next_tick_callbacks 中执行
     let callback_global = v8::Global::new(scope, callback);
     NEXT_TICK_QUEUE.with(|queue| {
         let mut q = queue.lock().unwrap();
@@ -287,35 +355,6 @@ fn process_next_tick_callback(
             args: callback_args,
         });
     });
-
-    // 使用 Promise 来实现微任务排队
-    // nextTick 回调将在当前同步代码执行完毕后、Promise 回调之前执行
-    let promise_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-        // 执行所有 nextTick 回调
-        NEXT_TICK_QUEUE.with(|q| {
-            let mut queue_ref = q.lock().unwrap();
-            let callbacks: Vec<NextTickCallback> = std::mem::take(&mut *queue_ref);
-
-            for NextTickCallback { callback, args } in callbacks {
-                let callback_local = v8::Local::new(scope, callback);
-                if let Ok(func) = v8::Local::<v8::Function>::try_from(callback_local) {
-                    let undefined = v8::undefined(scope);
-                    let args_local: Vec<v8::Local<v8::Value>> =
-                        args.iter().map(|a| v8::Local::new(scope, a)).collect();
-                    let _ = func.call(scope, undefined.into(), &args_local);
-                }
-            }
-        });
-    });
-
-    let promise_func_instance = promise_func.get_function(scope).unwrap();
-    let promise_ctor_key = v8::String::new(scope, "Promise").unwrap();
-    let promise_ctor = context(scope).global(scope).get(scope, promise_ctor_key.into()).unwrap();
-    if promise_ctor.is_function() {
-        let promise_ctor_func = v8::Local::<v8::Function>::try_from(promise_ctor).unwrap();
-        let undefined = v8::undefined(scope);
-        let _ = promise_ctor_func.call(scope, undefined.into(), &[promise_func_instance.into()]);
-    }
 }
 
 // 获取 context 的辅助函数
