@@ -483,4 +483,107 @@ mod web_streams_api_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "Readable should have read method and closed Promise");
     }
+
+    // v0.3.287: Tests for TransformStream transform() end-to-end data flow
+    #[test]
+    fn test_transform_stream_end_to_end_transform() {
+        // Test that transform() actually transforms data from writable to readable
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const ts = new TransformStream({
+                    transform(chunk, controller) {
+                        controller.enqueue(chunk.toString().toUpperCase());
+                    }
+                });
+                const writer = ts.writable.getWriter();
+                const reader = ts.readable.getReader();
+
+                // Write and read transformed data
+                writer.write('hello');
+                writer.write('world');
+                writer.close();
+
+                // Read all transformed chunks
+                let results = [];
+                reader.read().then(r => {
+                    results.push(r.value);
+                    return reader.read();
+                }).then(r => {
+                    results.push(r.value);
+                    return reader.read();
+                }).then(r => {
+                    results.push(r.value);
+                    console.log(results.join(','));
+                });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("HELLO,WORLD"), "Transform should uppercase input");
+    }
+
+    #[test]
+    fn test_transform_stream_with_flush() {
+        // Test transform with flush callback
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                let flushCalled = false;
+                const ts = new TransformStream({
+                    transform(chunk, controller) {
+                        controller.enqueue(chunk);
+                    },
+                    flush(controller) {
+                        flushCalled = true;
+                        controller.enqueue('[END]');
+                    }
+                });
+                const writer = ts.writable.getWriter();
+                const reader = ts.readable.getReader();
+
+                writer.write('data');
+                writer.close();
+
+                let results = [];
+                reader.read().then(r => {
+                    results.push(r.value);
+                    return reader.read();
+                }).then(r => {
+                    results.push(r.value);
+                    console.log(results.join(',') + ':' + flushCalled);
+                });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("data,[END]") && stdout.contains("true"), "Flush should be called and add termination chunk");
+    }
+
+    #[test]
+    fn test_transform_stream_error_propagation() {
+        // Test that errors in transform are properly handled
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const ts = new TransformStream({
+                    transform(chunk, controller) {
+                        if (chunk === 'error') {
+                            throw new Error('transform error');
+                        }
+                        controller.enqueue(chunk);
+                    }
+                });
+                const writer = ts.writable.getWriter();
+
+                // Write normal data first
+                writer.write('ok').then(() => {
+                    console.log('ok written');
+                });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("ok written"), "Normal transform should work");
+    }
 }

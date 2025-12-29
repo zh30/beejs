@@ -493,6 +493,16 @@ fn transform_stream_constructor(
                 }
             }
 
+            // v0.3.287: Check for flush() method
+            let flush_key = v8::String::new(scope, "flush").unwrap();
+            if let Some(flush_fn_val) = transformer_obj.get(scope, flush_key.into()) {
+                if flush_fn_val.is_function() {
+                    // Store flush function for calling during close
+                    let flush_key_name = v8::String::new(scope, "_flushFn").unwrap();
+                    transform_obj.set(scope, flush_key_name.into(), flush_fn_val);
+                }
+            }
+
             // Create transform controller with enqueue method
             let controller = v8::Object::new(scope);
             let controller_queue_key = v8::String::new(scope, "_queue").unwrap();
@@ -728,9 +738,38 @@ fn transform_stream_constructor(
             _r.set(promise.into());
         });
 
-        // Setup close() method
-        let close_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, _a: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
+        // v0.3.287: Setup close() method - calls flush callback before closing
+        let close_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, a: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
             let promise: v8::Local<v8::PromiseResolver> = v8::PromiseResolver::new(__scope).unwrap();
+
+            // Get transform from writer
+            let writer_this = a.this();
+            let transform_key = v8::String::new(__scope, "_transform").unwrap();
+
+            if let Some(transform_val) = writer_this.get(__scope, transform_key.into()).filter(|s| s.is_object()) {
+                if let Ok(transform) = v8::Local::<v8::Object>::try_from(transform_val) {
+                    // v0.3.287: Call flush callback if provided
+                    let flush_key = v8::String::new(__scope, "_flushFn").unwrap();
+                    if let Some(flush_val) = transform.get(__scope, flush_key.into()) {
+                        if let Ok(flush) = v8::Local::<v8::Function>::try_from(flush_val) {
+                            // Get controller
+                            let ctrl_key = v8::String::new(__scope, "_controller").unwrap();
+                            if let Some(ctrl_val) = transform.get(__scope, ctrl_key.into()) {
+                                if let Ok(ctrl) = v8::Local::<v8::Object>::try_from(ctrl_val) {
+                                    let undefined = v8::undefined(__scope).into();
+                                    let _ = flush.call(__scope, undefined, &[ctrl.into()]);
+                                }
+                            }
+                        }
+                    }
+
+                    // Mark transform as closed
+                    let state_key = v8::String::new(__scope, "_transformState").unwrap();
+                    let state_val: v8::Local<v8::Value> = v8::Integer::new(__scope, 2).into(); // 2 = Closed
+                    transform.set(__scope, state_key.into(), state_val);
+                }
+            }
+
             let undefined_val: v8::Local<v8::Value> = v8::undefined(__scope).into();
             let _ = promise.resolve(__scope, undefined_val);
             _r.set(promise.into());
