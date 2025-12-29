@@ -382,11 +382,13 @@ fn test_timer_delay_updates_metadata() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // After changing delay, timer.delay() should return new value
+    // Use a variable to capture the final delay value for proper evaluation
     let result = runtime.execute_code(r#"
         const timer = setTimeout(() => {}, 1000);
         timer.delay();
         timer.delay(300);
-        timer.delay();
+        const finalDelay = timer.delay();
+        finalDelay;
     "#).unwrap();
     assert_eq!(result.trim(), "300",
         "timer.delay() should return updated delay. Got: {}", result.trim());
