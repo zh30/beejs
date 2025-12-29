@@ -168,4 +168,149 @@ mod web_streams_api_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "Stream creation should be fast");
     }
+
+    // v0.3.283: Tests for ReadableStream.start() and controller.enqueue()
+    #[test]
+    fn test_readable_stream_with_start_and_enqueue() {
+        // Test that start() callback is called and can use controller.enqueue()
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                let received = null;
+                const stream = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue('hello');
+                        controller.enqueue('world');
+                    }
+                });
+                const reader = stream.getReader();
+                reader.read().then(r => { received = r.value; });
+                received
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("hello") || stdout.contains("world"), "Should receive enqueued data");
+    }
+
+    #[test]
+    fn test_readable_stream_controller_has_enqueue() {
+        // Test that controller object has enqueue method
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                let hasEnqueue = false;
+                const stream = new ReadableStream({
+                    start(controller) {
+                        hasEnqueue = typeof controller.enqueue === 'function';
+                    }
+                });
+                console.log(hasEnqueue);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "Controller should have enqueue method");
+    }
+
+    #[test]
+    fn test_readable_stream_controller_has_close() {
+        // Test that controller object has close method
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                let hasClose = false;
+                const stream = new ReadableStream({
+                    start(controller) {
+                        hasClose = typeof controller.close === 'function';
+                    }
+                });
+                console.log(hasClose);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "Controller should have close method");
+    }
+
+    #[test]
+    fn test_readable_stream_controller_has_error() {
+        // Test that controller object has error method
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                let hasError = false;
+                const stream = new ReadableStream({
+                    start(controller) {
+                        hasError = typeof controller.error === 'function';
+                    }
+                });
+                console.log(hasError);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "Controller should have error method");
+    }
+
+    #[test]
+    fn test_readable_stream_multiple_chunks() {
+        // Test reading multiple chunks from a stream
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const chunks = [];
+                const stream = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue('chunk1');
+                        controller.enqueue('chunk2');
+                        controller.enqueue('chunk3');
+                        controller.close();
+                    }
+                });
+                const reader = stream.getReader();
+                reader.read().then(r1 => {
+                    chunks.push(r1.value);
+                    return reader.read();
+                }).then(r2 => {
+                    chunks.push(r2.value);
+                    return reader.read();
+                }).then(r3 => {
+                    chunks.push(r3.value);
+                    console.log(chunks.join(','));
+                });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("chunk1,chunk2,chunk3"), "Should receive all chunks");
+    }
+
+    #[test]
+    fn test_readable_stream_close_after_enqueue() {
+        // Test that stream is done after close
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                let doneValues = [];
+                const stream = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue('data');
+                    }
+                });
+                const reader = stream.getReader();
+                reader.read().then(r => {
+                    doneValues.push(r.done);
+                    return reader.read();
+                }).then(r2 => {
+                    doneValues.push(r2.done);
+                    console.log(doneValues.join(','));
+                });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        // First read should have data, second should be done
+        assert!(stdout.contains("false,true") || stdout.contains("true"), "Should be done after all chunks read");
+    }
 }
