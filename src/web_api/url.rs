@@ -2,6 +2,7 @@
 /// Provides URL, URLSearchParams API
 use anyhow::Result;
 use rusty_v8 as v8;
+use std::collections::HashMap;
 use std::task::Context;
 /// URL class implementation
 #[derive(Debug, Clone)]
@@ -51,7 +52,7 @@ impl Url {
                 } else {
                     (host_part.clone(), "".to_string())
                 };
-                let origin: _ = format!("{}://{} protocol", scheme, host_part);
+                let origin: _ = format!("{}://{} protocol", protocol, host_part);
                 (
                     url_str.to_string(),
                     protocol,
@@ -305,4 +306,3 @@ mod tests {
         assert!(!params.has("key"));
     }
 }
-use std::collections::{BTreeMap, HashMap};

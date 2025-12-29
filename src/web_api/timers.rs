@@ -8,6 +8,7 @@ use anyhow::Result;
 use rusty_v8 as v8;
 use std::sync::atomic::AtomicU64;
 use std::task::Context;
+use once_cell::sync::Lazy;
 
 /// Global timer ID counter
 static TIMER_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -237,6 +238,8 @@ fn clear_immediate_callback(
 }
 #[cfg(test)]
 mod tests {
+    use super::{next_timer_id, is_timer_cleared, mark_timer_cleared};
+
     #[test]
     fn test_timer_id_generation() {
         let id1: _ = next_timer_id();

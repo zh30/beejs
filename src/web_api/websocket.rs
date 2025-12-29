@@ -5,12 +5,16 @@ use futures_util::{SinkExt, StreamExt};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
-use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
+use tokio_tungstenite::{connect_async, tungstenite::protocol::{Message, CloseFrame}};
 use anyhow::{Result, Error};
 use rusty_v8 as v8;
 use std::sync::atomic::AtomicU64;
 use std::task::Poll;
 use std::task::Context;
+use tokio::sync::mpsc;
+use tokio::runtime::Runtime;
+use std::borrow::Cow;
+use once_cell::sync::Lazy;
 
 /// WebSocket ready state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -56,7 +60,7 @@ impl WebSocketManager {
         Self {
             connections: Arc::new(Mutex::new(HashMap::new())),
             next_id: AtomicU64::new(1),
-            runtime: Arc::new(Mutex::new(runtime)),
+            runtime: Arc::new(runtime),
         }
     }
     /// Create a new WebSocket connection
@@ -544,6 +548,9 @@ fn websocket_update_ready_state_callback(
 }
 #[cfg(test)]
 mod tests {
+    use super::{ReadyState, WebSocketManager};
+    use std::sync::atomic::Ordering;
+
     #[test]
     fn test_ready_state_constants() {
         assert_eq!(ReadyState::Connecting as u8, 0);

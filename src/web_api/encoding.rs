@@ -3,6 +3,7 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::task::Context;
+use base64::Engine;
 /// Setup TextEncoder and TextDecoder APIs in V8 context
 pub fn setup_encoding_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -289,18 +290,19 @@ fn btoa_callback(
     // Convert to bytes (Latin-1 encoding)
     let bytes: Vec<u8> = to_encode.chars().map(|c| c as u8).collect();
     // Encode to base64
-    let encoded: _ = STANDARD.encode(&bytes);
+    let encoded: _ = base64::engine::general_purpose::STANDARD.encode(&bytes);
     let result: _ = v8::String::new(scope, &encoded).unwrap();
     retval.set(result.into());
 }
 #[cfg(test)]
 mod tests {
+    use base64::Engine;
+
     #[test]
     fn test_base64_encode_decode() {
-use std::collections::{HashMap, BTreeMap};
         let original: _ = "Hello, World!";
-        let encoded: _ = STANDARD.encode(original);
-        let decoded_bytes: _ = STANDARD.decode(&encoded).unwrap();
+        let encoded: _ = base64::engine::general_purpose::STANDARD.encode(original);
+        let decoded_bytes: _ = base64::engine::general_purpose::STANDARD.decode(&encoded).unwrap();
         let decoded: _ = String::from_utf8(decoded_bytes).unwrap();
         assert_eq!(original, decoded);
     }

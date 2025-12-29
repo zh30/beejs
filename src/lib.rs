@@ -72,7 +72,7 @@ pub mod watcher_websocket;  // v0.3.103: WebSocket hot reload for cross-client b
 // pub mod repl;  // Temporarily disabled - compilation issues
 // pub mod cli;  // Stage 93: CLI tools - Temporarily disabled due to compilation errors
 // pub mod edge;  // Temporarily disabled - incomplete implementation
-// pub mod web_api;  // Temporarily disabled - compilation issues
+pub mod web_api;  // Stage 75: Web Streams API for AI workloads - enabled
 // pub mod debugger;  // Temporarily disabled - compilation issues
 // pub mod observability;  // Temporarily disabled - compilation issues
 // pub mod runtime_config;  // Temporarily disabled - compilation issues

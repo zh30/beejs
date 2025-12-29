@@ -5,6 +5,7 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::task::Context;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 /// Global start time for performance.now()
 static PERFORMANCE_START: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
 /// Get or initialize the performance start time
@@ -158,9 +159,8 @@ pub fn setup_performance_api(
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
-use std::time::{Instant, SystemTime};
+    use super::get_start_time;
+
     #[test]
     fn test_start_time_initialization() {
         let start: _ = get_start_time();

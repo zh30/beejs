@@ -129,6 +129,9 @@ fn event_target_constructor_callback(
 }
 #[cfg(test)]
 mod tests {
+    use super::{Event, EventTarget};
+    use std::sync::{Arc, Mutex};
+
     #[test]
     fn test_event_creation() {
         let event: _ = Event::new("click".to_string());
@@ -144,7 +147,7 @@ mod tests {
     #[test]
     fn test_event_listener_management() {
         let target: _ = EventTarget::new();
-        let event_called: _ = std::sync::Arc::new(Mutex::new(std::sync::Mutex::new(false)));
+        let event_called: _ = Arc::new(Mutex::new(false));
         let event_called_clone: _ = event_called.clone();
         let listener: _ = Box::new(move |event: &Event| {
             if event.event_type == "test" {

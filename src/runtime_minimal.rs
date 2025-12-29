@@ -25,6 +25,8 @@ use crate::nodejs_core::timers::{setup_timers_api, execute_fired_timers, execute
 use crate::nodejs_core::process::{execute_next_tick_callbacks, has_pending_next_ticks};
 // v0.3.275: Import performance API
 use crate::nodejs_core::performance::setup_performance_api;
+// v0.3.282: Import Web Streams API for AI workloads
+use crate::web_api::streams::setup_streams_api;
 
 // Event listener storage using thread_local (v0.3.46)
 // Note: rustdoc does not generate documentation for macro invocations
@@ -3004,6 +3006,7 @@ impl MinimalRuntime {
             Self::setup_module_system(scope, &context)?;
             setup_timers_api(scope, &context)?; // v0.3.249: Timer API with async scheduling
             setup_performance_api(scope, &context)?; // v0.3.275: Performance API
+            setup_streams_api(scope, &context)?; // v0.3.282: Web Streams API for AI workloads
             crate::nodejs_core::readline::setup_readline_api(scope, &context)?; // v0.3.277: Readline API
         }
 

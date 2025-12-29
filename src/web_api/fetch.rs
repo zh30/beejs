@@ -8,9 +8,16 @@ use anyhow::{Result, Error};
 use rusty_v8 as v8;
 use std::time::Duration;
 use std::task::Context;
+use tokio::runtime::Runtime;
+use std::sync::OnceLock;
 
 /// Thread-safe response cache for json() and text() methods
-static RESPONSE_CACHE: Mutex<HashMap<usize, (String, Vec<u8>)>> = Mutex::new(HashMap::new());
+static RESPONSE_CACHE: OnceLock<Mutex<HashMap<usize, (String, Vec<u8>)>>> = OnceLock::new();
+
+/// Get the response cache mutex
+fn get_response_cache() -> &'static Mutex<HashMap<usize, (String, Vec<u8>)>> {
+    RESPONSE_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
 
 /// Fetch API configuration
 #[derive(Debug, Clone)]
@@ -189,12 +196,12 @@ fn fetch_callback(
             // Store body in cache for json() and text() methods
             let response_ptr = &*response_obj as *const v8::Object as usize;
             let body_vec = response.body.unwrap_or_default();
-            let mut cache = RESPONSE_CACHE.lock().unwrap();
-            cache.insert(response_ptr, (response.url.clone(), body_vec));
+            let body_str = String::from_utf8_lossy(&body_vec);
+            let mut cache = get_response_cache().lock().unwrap();
+            cache.insert(response_ptr, (response.url.clone(), body_vec.clone()));
             drop(cache);
 
             // Add body string for direct access
-            let body_str: _ = String::from_utf8_lossy(&body_vec);
             let body_key: _ = v8::String::new(scope, "body").unwrap();
             let body_val: _ = v8::String::new(scope, &body_str).unwrap().into();
             response_obj.set(scope, body_key.into(), body_val);
@@ -360,7 +367,7 @@ fn json_callback(
 
     // Get the pointer to look up in cache
     let this_ptr = &*this_obj as *const v8::Object as usize;
-    let cache = RESPONSE_CACHE.lock().unwrap();
+    let cache = get_response_cache().lock().unwrap();
 
     if let Some((url, body)) = cache.get(&this_ptr) {
         // Try to parse and format JSON prettily
@@ -394,7 +401,7 @@ fn text_callback(
 
     // Get the pointer to look up in cache
     let this_ptr = &*this_obj as *const v8::Object as usize;
-    let cache = RESPONSE_CACHE.lock().unwrap();
+    let cache = get_response_cache().lock().unwrap();
 
     if let Some((_url, body)) = cache.get(&this_ptr) {
         let body_str = String::from_utf8_lossy(body);
@@ -408,6 +415,8 @@ fn text_callback(
 }
 #[cfg(test)]
 mod tests {
+    use super::{HttpMethod, FetchConfig};
+
     #[test]
     fn test_http_method_from_string() {
         let method: HttpMethod = "GET".to_string().into();
