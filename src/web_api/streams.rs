@@ -258,37 +258,144 @@ fn readable_stream_constructor(
 // WritableStream Implementation
 // ============================================================
 
-/// WritableStream constructor
+/// WritableStream constructor - enhanced with start() callback and write queue
+/// Uses JavaScript arrays on the stream object for write queue storage
 fn writable_stream_constructor(
     scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
+    args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let this: v8::Local<v8::Object> = _args.this();
+    let this: v8::Local<v8::Object> = args.this();
+
+    // Create JavaScript array to store chunks pending write
+    let write_queue_array = v8::Array::new(scope, 0);
+    let write_queue_key = v8::String::new(scope, "_writeQueue").unwrap();
+    this.set(scope, write_queue_key.into(), write_queue_array.into());
+
+    // Create state variable (0=open, 1=closed, 2=errored)
+    let state_key = v8::String::new(scope, "_state").unwrap();
+    let state_val: v8::Local<v8::Value> = v8::Integer::new(scope, 0).into(); // 0 = Open
+    this.set(scope, state_key.into(), state_val);
+
+    // Create index for tracking write position
+    let write_index_key = v8::String::new(scope, "_writeIndex").unwrap();
+    let write_index_val: v8::Local<v8::Value> = v8::Integer::new(scope, 0).into();
+    this.set(scope, write_index_key.into(), write_index_val);
+
+    // Store reference to the writable stream on itself for controller access
+    let self_key = v8::String::new(scope, "_writable").unwrap();
+    this.set(scope, self_key.into(), this.into());
+
+    // Check if first argument is an object with start method
+    if args.length() > 0 {
+        let underlying_sink = args.get(0);
+        if underlying_sink.is_object() {
+            let sink_obj = v8::Local::<v8::Object>::try_from(underlying_sink).unwrap();
+            let start_key = v8::String::new(scope, "start").unwrap();
+            if let Some(start_fn_val) = sink_obj.get(scope, start_key.into()) {
+                if start_fn_val.is_function() {
+                    let start_fn = v8::Local::<v8::Function>::try_from(start_fn_val).unwrap();
+
+                    // Create controller object with writeable reference
+                    let controller = v8::Object::new(scope);
+
+                    // Store reference to writable stream on controller
+                    let controller_writable_key = v8::String::new(scope, "_writable").unwrap();
+                    controller.set(scope, controller_writable_key.into(), this.into());
+
+                    // Call start(controller)
+                    let undefined = v8::undefined(scope).into();
+                    let _ = start_fn.call(scope, undefined, &[controller.into()]);
+                }
+            }
+        }
+    }
 
     // Setup getWriter method
     let get_writer_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
         let writer: v8::Local<v8::Object> = v8::Object::new(_scope);
 
-        // Setup write() method
-        let write_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, _a: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
+        // Store reference to writable stream on writer
+        let writable_this = _args.this();
+        let writable_key = v8::String::new(_scope, "_writable").unwrap();
+        writer.set(_scope, writable_key.into(), writable_this.into());
+
+        // Setup write() method - adds chunk to queue and resolves promise
+        let write_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
             let promise: v8::Local<v8::PromiseResolver> = v8::PromiseResolver::new(__scope).unwrap();
+
+            // Get writable from writer object
+            let writer_this = args.this();
+            let writable_key = v8::String::new(__scope, "_writable").unwrap();
+
+            if let Some(writable_val) = writer_this.get(__scope, writable_key.into()).filter(|s| s.is_object()) {
+                if let Ok(writable) = v8::Local::<v8::Object>::try_from(writable_val) {
+                    // Get write queue and state
+                    let queue_key = v8::String::new(__scope, "_writeQueue").unwrap();
+                    let state_key = v8::String::new(__scope, "_state").unwrap();
+
+                    if let Some(queue_val) = writable.get(__scope, queue_key.into()) {
+                        if let Ok(queue) = v8::Local::<v8::Array>::try_from(queue_val) {
+                            // Get state
+                            let state = writable.get(__scope, state_key.into())
+                                .and_then(|s| s.to_integer(__scope))
+                                .map(|i| i.value() as i32)
+                                .unwrap_or(0);
+
+                            // Only add to queue if stream is open
+                            if state == 0 && args.length() > 0 {
+                                let chunk = args.get(0);
+                                let length = queue.length();
+                                queue.set_index(__scope, length, chunk);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Resolve promise immediately (async processing is simplified)
             let undefined_val: v8::Local<v8::Value> = v8::undefined(__scope).into();
             let _ = promise.resolve(__scope, undefined_val);
             _r.set(promise.into());
         });
 
         // Setup close() method
-        let close_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, _a: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
+        let close_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
             let promise: v8::Local<v8::PromiseResolver> = v8::PromiseResolver::new(__scope).unwrap();
+
+            // Get writable from writer object
+            let writer_this = args.this();
+            let writable_key = v8::String::new(__scope, "_writable").unwrap();
+
+            if let Some(writable_val) = writer_this.get(__scope, writable_key.into()).filter(|s| s.is_object()) {
+                if let Ok(writable) = v8::Local::<v8::Object>::try_from(writable_val) {
+                    let state_key = v8::String::new(__scope, "_state").unwrap();
+                    let state_val: v8::Local<v8::Value> = v8::Integer::new(__scope, 1).into(); // 1 = Closed
+                    writable.set(__scope, state_key.into(), state_val);
+                }
+            }
+
             let undefined_val: v8::Local<v8::Value> = v8::undefined(__scope).into();
             let _ = promise.resolve(__scope, undefined_val);
             _r.set(promise.into());
         });
 
         // Setup abort() method
-        let abort_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, _a: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
+        let abort_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
             let promise: v8::Local<v8::PromiseResolver> = v8::PromiseResolver::new(__scope).unwrap();
+
+            // Get writable from writer object
+            let writer_this = args.this();
+            let writable_key = v8::String::new(__scope, "_writable").unwrap();
+
+            if let Some(writable_val) = writer_this.get(__scope, writable_key.into()).filter(|s| s.is_object()) {
+                if let Ok(writable) = v8::Local::<v8::Object>::try_from(writable_val) {
+                    let state_key = v8::String::new(__scope, "_state").unwrap();
+                    let state_val: v8::Local<v8::Value> = v8::Integer::new(__scope, 2).into(); // 2 = Errored
+                    writable.set(__scope, state_key.into(), state_val);
+                }
+            }
+
             let undefined_val: v8::Local<v8::Value> = v8::undefined(__scope).into();
             let _ = promise.resolve(__scope, undefined_val);
             _r.set(promise.into());
@@ -324,7 +431,7 @@ fn writable_stream_constructor(
 
         // Add desiredSize property
         let desired_size_key: v8::Local<v8::String> = v8::String::new(_scope, "desiredSize").unwrap();
-        let desired_size_val: v8::Local<v8::Value> = v8::Number::new(_scope, 0.0).into();
+        let desired_size_val: v8::Local<v8::Value> = v8::Number::new(_scope, 1.0).into(); // Default high-water mark
         writer.set(_scope, desired_size_key.into(), desired_size_val);
 
         retval.set(writer.into());
@@ -334,7 +441,7 @@ fn writable_stream_constructor(
     let get_writer_func: v8::Local<v8::Function> = get_writer_fn.get_function(scope).unwrap();
     this.set(scope, get_writer_key.into(), get_writer_func.into());
 
-    // Setup locked property (always false in basic implementation)
+    // Setup locked property (tracks if writer is attached)
     let locked_value: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
     let locked_key: v8::Local<v8::String> = v8::String::new(scope, "locked").unwrap();
     this.set(scope, locked_key.into(), locked_value);

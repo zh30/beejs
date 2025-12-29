@@ -189,10 +189,54 @@ const writer = textStream.pipeTo(new WritableStream({
 #### v0.3.282 下一步
 - [x] 实现 ReadableStream.start() 和 controller.enqueue() 回调
 - [x] 实现流状态管理和数据队列
-- [ ] 实现 WritableStream 底层存储队列
+- [x] 实现 WritableStream 底层存储队列 (v0.3.284)
 - [ ] 实现 TransformStream 的 transform() 逻辑
 - [ ] 增强 TextDecoderStream 的实际解码功能
 - [ ] 支持 pipeTo() 和 pipeThrough() 操作
+
+---
+
+### v0.3.284 WritableStream 底层存储队列（2025-12-30）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.284 新增功能
+
+**WritableStream.start() 回调**:
+- `new WritableStream({ start(controller) {...} })`: 初始化时调用 start 回调
+- 支持 underlying sink 的 start() 方法
+
+**写入队列管理**:
+- `_writeQueue`: JavaScript 数组存储待写入数据块
+- `_state`: 0=Open, 1=Closed, 2=Errored (与 ReadableStream 一致)
+- `_writeIndex`: 写入位置索引
+- `write(chunk)`: 将数据块加入写入队列
+
+**状态控制**:
+- `writer.close()`: 将状态设为 Closed (1)，阻止新数据写入
+- `writer.abort(reason)`: 将状态设为 Errored (2)，标记流错误
+- `writer.ready`: Promise，指示写入器是否准备好接受新数据
+- `writer.closed`: Promise，指示流是否已关闭
+
+#### v0.3.284 实现细节
+- 使用 JavaScript 对象属性存储写入队列 (避免 Send 限制)
+- writer 通过 `_writable` 引用访问底层流对象
+- 状态变化自动更新，关闭后拒绝新写入
+
+#### v0.3.284 测试验证
+```javascript
+const stream = new WritableStream();
+const writer = stream.getWriter();
+console.log(stream._state); // 0 (Open)
+writer.write('test1');
+writer.write('test2');
+console.log(stream._writeQueue.length); // 2
+writer.close();
+console.log(stream._state); // 1 (Closed)
+```
+
+#### v0.3.284 代码变更
+- `src/web_api/streams.rs`: 增强 WritableStream 实现 (~190 行)
+- `tests/web_streams_api_tests.rs`: 新增 5 个测试 (~110 行)
 
 ---
 
