@@ -27,6 +27,8 @@ use crate::nodejs_core::timers::{setup_timers_api, execute_fired_timers, execute
 thread_local! {
     static EVENT_LISTENERS: Mutex<HashMap<String, Vec<v8::Global<v8::Function>>>> = Mutex::new(HashMap::new());
     static ONCE_LISTENERS: Mutex<HashMap<String, Vec<v8::Global<v8::Function>>>> = Mutex::new(HashMap::new());
+    // v0.3.258: Separate storage for prependOnceListener to ensure correct execution order
+    static PREPEND_ONCE_LISTENERS: Mutex<HashMap<String, Vec<v8::Global<v8::Function>>>> = Mutex::new(HashMap::new());
 }
 
 // v0.3.242: Max listeners storage per event type (for process.setMaxListeners)
@@ -14309,7 +14311,11 @@ impl MinimalRuntime {
                 let function_global = v8::Global::new(scope, listener_func);
 
                 // v0.3.243: Check if adding listener exceeds maxListeners and emit warning
+                // Count both ONCE_LISTENERS and PREPEND_ONCE_LISTENERS for maxListeners
                 let current_count = ONCE_LISTENERS.with(|map| {
+                    let map_ref = map.lock().unwrap();
+                    map_ref.get(&event_name).map(|v| v.len()).unwrap_or(0)
+                }) + PREPEND_ONCE_LISTENERS.with(|map| {
                     let map_ref = map.lock().unwrap();
                     map_ref.get(&event_name).map(|v| v.len()).unwrap_or(0)
                 });
@@ -14340,6 +14346,7 @@ impl MinimalRuntime {
                     }
                 }
 
+                // Add to ONCE_LISTENERS (append at end)
                 ONCE_LISTENERS.with(|map| {
                     let mut map_ref = map.lock().unwrap();
                     map_ref.entry(event_name.clone()).or_insert_with(Vec::new).push(function_global);
@@ -14366,35 +14373,122 @@ impl MinimalRuntime {
 
                 let mut emitted = false;
 
-                // Call regular listeners
-                EVENT_LISTENERS.with(|map| {
-                    let map_ref = map.lock().unwrap();
-                    if let Some(listeners) = map_ref.get(&event_name) {
-                        for listener in listeners {
+                // v0.3.258: Correct execution order: prependOnce -> prepend -> once -> on
+                // PREPEND_ONCE_LISTENERS -> EVENT_LISTENERS -> ONCE_LISTENERS
+
+                // Execute PREPEND_ONCE_LISTENERS (prependOnceListener) first
+                let mut prepend_once_to_remove: Vec<v8::Global<v8::Function>> = Vec::new();
+                PREPEND_ONCE_LISTENERS.with(|map| {
+                    let mut map_ref = map.lock().unwrap();
+                    if let Some(listeners) = map_ref.get_mut(&event_name) {
+                        for listener in listeners.iter() {
                             let listener_func = v8::Local::new(scope, listener);
                             listener_func.call(scope, this.into(), &event_args);
+                            prepend_once_to_remove.push(listener.clone());
                             emitted = true;
                         }
+                        listeners.retain(|l| !prepend_once_to_remove.contains(l));
                     }
                 });
 
-                // Call once listeners and remove them
-                let mut executed_once: Vec<v8::Global<v8::Function>> = Vec::new();
+                // Execute EVENT_LISTENERS (prependListener and on) second
+                let mut regular_to_execute: Vec<v8::Global<v8::Function>> = Vec::new();
+                EVENT_LISTENERS.with(|map| {
+                    let map_ref = map.lock().unwrap();
+                    if let Some(listeners) = map_ref.get(&event_name) {
+                        for listener in listeners.iter() {
+                            regular_to_execute.push(listener.clone());
+                        }
+                    }
+                });
+                for listener in regular_to_execute.iter() {
+                    let listener_func = v8::Local::new(scope, listener);
+                    listener_func.call(scope, this.into(), &event_args);
+                    emitted = true;
+                }
+
+                // Execute ONCE_LISTENERS (once) last
+                let mut once_to_remove: Vec<v8::Global<v8::Function>> = Vec::new();
                 ONCE_LISTENERS.with(|map| {
                     let mut map_ref = map.lock().unwrap();
                     if let Some(listeners) = map_ref.get_mut(&event_name) {
                         for listener in listeners.iter() {
                             let listener_func = v8::Local::new(scope, listener);
                             listener_func.call(scope, this.into(), &event_args);
-                            executed_once.push(listener.clone());
+                            once_to_remove.push(listener.clone());
                             emitted = true;
                         }
-                        listeners.retain(|l| !executed_once.contains(l));
+                        listeners.retain(|l| !once_to_remove.contains(l));
                     }
                 });
 
                 retval.set(v8::Boolean::new(scope, emitted).into());
             });
+            // once_instance and once_key are already set above at lines 14353-14355
+
+            // v0.3.258: prependOnceListener - one-time listener added to the front of the queue
+            let _prepend_once_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let event_name = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+                let listener = args.get(1);
+
+                if !listener.is_function() {
+                    retval.set(v8::null(scope).into());
+                    return;
+                }
+
+                let listener_func = v8::Local::<v8::Function>::try_from(listener).unwrap();
+                let function_global = v8::Global::new(scope, listener_func);
+
+                // Check maxListeners (count both ONCE_LISTENERS and PREPEND_ONCE_LISTENERS)
+                let max_key = v8::String::new(scope, "_maxListeners").unwrap();
+                let max_listeners = this.get(scope, max_key.into())
+                    .and_then(|v| v.to_integer(scope))
+                    .map(|v| v.value() as usize)
+                    .unwrap_or(10);
+
+                let current_count = ONCE_LISTENERS.with(|map| {
+                    let map_ref = map.lock().unwrap();
+                    map_ref.get(&event_name).map(|v| v.len()).unwrap_or(0)
+                }) + PREPEND_ONCE_LISTENERS.with(|map| {
+                    let map_ref = map.lock().unwrap();
+                    map_ref.get(&event_name).map(|v| v.len()).unwrap_or(0)
+                });
+
+                // Emit warning if exceeding maxListeners
+                if max_listeners > 0 && current_count >= max_listeners {
+                    let warning_msg = format!(
+                        "MaxListenersExceededWarning: Possible EventEmitter memory leak detected. {} once listeners added to {} event. Use emitter.setMaxListeners() to increase limit",
+                        current_count + 1,
+                        event_name
+                    );
+                    // Call console.warn
+                    let console_key = v8::String::new(scope, "console").unwrap();
+                    let console = scope.get_current_context().global(scope).get(scope, console_key.into());
+                    if let Some(console_obj) = console.and_then(|c| c.to_object(scope)) {
+                        let warn_key = v8::String::new(scope, "warn").unwrap();
+                        if let Some(warn_func) = console_obj.get(scope, warn_key.into()).and_then(|f| v8::Local::<v8::Function>::try_from(f).ok()) {
+                            let msg_str = v8::String::new(scope, &warning_msg).unwrap();
+                            let _ = warn_func.call(scope, console_obj.into(), &[msg_str.into()]);
+                        }
+                    }
+                }
+
+                // Add to PREPEND_ONCE_LISTENERS (append at end - will be executed before EVENT_LISTENERS)
+                PREPEND_ONCE_LISTENERS.with(|map| {
+                    let mut map_ref = map.lock().unwrap();
+                    map_ref.entry(event_name.clone()).or_insert_with(Vec::new).push(function_global);
+                });
+
+                let prop_key = v8::String::new(scope, &event_name).unwrap();
+                let prop_val = v8::Boolean::new(scope, true);
+                this.set(scope, prop_key.into(), prop_val.into());
+                retval.set(this.into());
+            });
+            let prepend_once_instance = _prepend_once_func.get_function(scope).unwrap();
+            let prepend_once_key = v8::String::new(scope, "prependOnceListener").unwrap();
+            emitter_obj.set(scope, prepend_once_key.into(), prepend_once_instance.into());
+
             let emit_instance = emit_func.get_function(scope).unwrap();
             let emit_key = v8::String::new(scope, "emit").unwrap();
             emitter_obj.set(scope, emit_key.into(), emit_instance.into());
@@ -14548,12 +14642,30 @@ impl MinimalRuntime {
             let event_name = args.get(1).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
             let mut count = 0;
 
+            // Count regular listeners
             EVENT_LISTENERS.with(|map| {
                 let map_ref = map.lock().unwrap();
                 if let Some(listeners) = map_ref.get(&event_name) {
-                    count = listeners.len();
+                    count += listeners.len();
                 }
             });
+
+            // Count prependOnce listeners
+            PREPEND_ONCE_LISTENERS.with(|map| {
+                let map_ref = map.lock().unwrap();
+                if let Some(listeners) = map_ref.get(&event_name) {
+                    count += listeners.len();
+                }
+            });
+
+            // Count once listeners
+            ONCE_LISTENERS.with(|map| {
+                let map_ref = map.lock().unwrap();
+                if let Some(listeners) = map_ref.get(&event_name) {
+                    count += listeners.len();
+                }
+            });
+
             retval.set(v8::Integer::new(scope, count as i32).into());
         });
         let listener_count_instance = listener_count_func.get_function(scope).unwrap();

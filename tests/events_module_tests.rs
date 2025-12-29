@@ -468,3 +468,168 @@ fn test_prepend_listener_warning_exceeds_max() {
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "3");
 }
+
+// v0.3.258: prependOnceListener tests
+
+#[test]
+#[serial]
+fn test_prepend_once_listener_exists() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(r#"
+        const emitter = new events.EventEmitter();
+        typeof emitter.prependOnceListener
+    "#);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "function");
+}
+
+#[test]
+#[serial]
+fn test_prepend_once_listener_basic() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(r#"
+        const emitter = new events.EventEmitter();
+        let called = false;
+        emitter.prependOnceListener('test', () => { called = true; });
+        emitter.emit('test');
+        called
+    "#);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_prepend_once_listener_only_fires_once() {
+    // v0.3.258: prependOnceListener 只执行一次
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(r#"
+        const emitter = new events.EventEmitter();
+        let count = 0;
+        emitter.prependOnceListener('once', () => { count++; });
+        emitter.emit('once');
+        emitter.emit('once');
+        emitter.emit('once');
+        count
+    "#);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "1");
+}
+
+#[test]
+#[serial]
+fn test_prepend_once_listener_execution_order() {
+    // v0.3.258: prependOnceListener 的执行顺序优先级
+    // prependOnceListener 应该比 once 先执行
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(r#"
+        const emitter = new events.EventEmitter();
+        const order = [];
+        emitter.once('test', () => { order.push('second'); });
+        emitter.prependOnceListener('test', () => { order.push('first'); });
+        emitter.emit('test');
+        JSON.stringify(order)
+    "#);
+    assert!(result.is_ok());
+    let output = result.unwrap();
+    assert!(output.contains("first") && output.contains("second"),
+        "prependOnceListener should execute before once, got: {}", output);
+    // Verify order: first element should be 'first'
+    assert!(output.starts_with("[\"first\""),
+        "prependOnceListener should be first in execution order, got: {}", output);
+}
+
+#[test]
+#[serial]
+fn test_prepend_once_listener_with_data() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(r#"
+        const emitter = new events.EventEmitter();
+        let receivedData = null;
+        emitter.prependOnceListener('data', (data) => { receivedData = data; });
+        emitter.emit('data', 'hello prependOnce');
+        receivedData
+    "#);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "hello prependOnce");
+}
+
+#[test]
+#[serial]
+fn test_prepend_once_listener_returns_emitter() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(r#"
+        const emitter = new events.EventEmitter();
+        const result = emitter.prependOnceListener('test', () => {});
+        result === emitter
+    "#);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_prepend_once_listener_requires_function() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    // v0.3.258: prependOnceListener returns null when callback is not a function
+    let result = runtime.execute_code(r#"
+        const emitter = new events.EventEmitter();
+        const result = emitter.prependOnceListener('test', 'not a function');
+        result === null
+    "#);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_prepend_once_listener_count() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(r#"
+        const emitter = new events.EventEmitter();
+        emitter.prependOnceListener('test', () => {});
+        emitter.once('test', () => {});
+        events.EventEmitter.listenerCount(emitter, 'test')
+    "#);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "2");
+}
+
+#[test]
+#[serial]
+fn test_prepend_once_listener_warning_exceeds_max() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(r#"
+        const emitter = new events.EventEmitter();
+        emitter.setMaxListeners(2);
+        emitter.prependOnceListener('test', () => {});
+        emitter.once('test', () => {});
+        // This should trigger warning but still work
+        emitter.prependOnceListener('test', () => {});
+        events.EventEmitter.listenerCount(emitter, 'test')
+    "#);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "3");
+}
+
+#[test]
+#[serial]
+fn test_prepend_once_listener_mixed_with_prepend_listener() {
+    // v0.3.258: 混合使用 prependOnceListener 和 prependListener
+    // 执行顺序: prependOnceListener -> prependListener -> once
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime.execute_code(r#"
+        const emitter = new events.EventEmitter();
+        const order = [];
+        emitter.once('test', () => { order.push('once'); });
+        emitter.prependListener('test', () => { order.push('prepend'); });
+        emitter.prependOnceListener('test', () => { order.push('prependOnce'); });
+        emitter.emit('test');
+        JSON.stringify(order)
+    "#);
+    assert!(result.is_ok());
+    let output = result.unwrap();
+    // Expected order: prependOnce, prepend, once
+    assert!(output.starts_with("[\"prependOnce\",\"prepend\",\"once\""),
+        "Expected prependOnce -> prepend -> once order, got: {}", output);
+}
