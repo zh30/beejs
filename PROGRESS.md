@@ -1,3 +1,59 @@
+### v0.3.235 错误处理增强（2025-12-29）
+**进度**: 错误处理 | ✅ 已完成
+
+#### v0.3.235 新增功能
+- **RuntimeErrorType 枚举**: 8 种错误类型
+  - SyntaxError: 语法错误
+  - ReferenceError: 引用错误（未定义变量/函数）
+  - TypeError: 类型错误
+  - RangeError: 范围错误
+  - EvalError: 评估错误
+  - InternalError: 内部运行时错误
+  - ResourceLimit: 资源限制超出
+  - Unknown: 未知错误
+
+- **RuntimeError 结构体**: 结构化错误信息
+  - error_type: 错误类型
+  - message: 人类可读的错误消息
+  - code: 错误码（如 "SYNTAX_ERROR"）
+  - location: 源码位置（文件:行:列）
+  - context: 堆栈跟踪信息
+
+- **v8_exception_to_runtime_error() 函数**
+  - 从 V8 异常对象提取结构化错误信息
+  - 自动识别错误类型
+  - 提取堆栈跟踪和位置信息
+
+- **改进的错误消息**
+  - 编译错误：提供语法检查提示
+  - 运行时错误：基于错误类型提供针对性建议
+  - ReferenceError: "确保变量或函数在使用前已定义"
+  - TypeError: "检查值的类型和操作的有效性"
+  - RangeError: "检查数组边界或数值范围"
+
+#### v0.3.235 实现细节
+- **execute_code 错误处理** (`src/runtime_minimal.rs`)
+  - 语法错误消息：[Beejs Error] SyntaxError: {message}\\nHint: 检查括号、引号或无效语法
+  - 运行时错误消息：[Beejs Error] {CODE}: {message}\\nHint: 根据错误类型提供针对性建议
+
+#### v0.3.235 测试结果
+- ✅ cargo build --release 编译成功
+- ✅ 现有 error_handling_tests.rs 测试套件兼容
+
+#### v0.3.235 代码变更
+- `src/runtime_minimal.rs`: 添加 ~230 行代码
+  - RuntimeErrorType 枚举定义
+  - RuntimeError 结构体及实现
+  - v8_exception_to_runtime_error() 函数
+  - 改进的 execute_code 错误消息
+
+#### v0.3.235 下一步
+- 完善错误码文档
+- 添加更多边界情况测试
+- 考虑添加错误恢复机制
+
+---
+
 ### v0.3.266 代码质量优化（2025-12-29）
 **进度**: 基础设施 | ✅ 已完成
 
