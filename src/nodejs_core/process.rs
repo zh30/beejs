@@ -357,8 +357,9 @@ fn process_next_tick_callback(
     });
 }
 
-// 获取 context 的辅助函数
-fn context<'s>(scope: &mut v8::HandleScope<'s>) -> v8::Local<'s, v8::Context> {
+// 获取 context 的辅助函数 - v0.3.265: 预留用于未来使用
+#[allow(dead_code)]
+fn _context<'s>(scope: &mut v8::HandleScope<'s>) -> v8::Local<'s, v8::Context> {
     scope.get_current_context()
 }
 

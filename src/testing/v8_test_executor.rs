@@ -81,8 +81,8 @@ impl V8TestExecutor {
         let undefined = v8::undefined(scope);
 
         // Execute the test function with TryCatch for error handling
-        let test_passed: bool;
-        let duration = start.elapsed();
+        let _test_passed: bool;
+        let _duration = start.elapsed();
         let mut error_message: Option<String> = None;
 
         {
@@ -102,9 +102,9 @@ impl V8TestExecutor {
                 } else {
                     Some("Unknown error".to_string())
                 };
-                test_passed = false;
+                _test_passed = false;
             } else {
-                test_passed = true;
+                _test_passed = true;
             }
         } // TryCatch is dropped here, scope is available again
 
@@ -317,7 +317,7 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
         expect_obj.set(scope, to_contain_key.into(), to_contain_fn.into());
 
         // Add toThrow matcher - v0.3.254: Check if function throws (not applicable in this context)
-        let to_throw_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let to_throw_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             // toThrow is typically used with expect(() => fn()).toThrow()
             // For now, return true (passes) as we can't easily check if a function threw
             // In a full implementation, this would need to wrap the call in try-catch

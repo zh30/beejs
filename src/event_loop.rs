@@ -244,7 +244,8 @@ pub struct AsyncTimerManager {
     cmd_tx: mpsc::Sender<TimerCommand>,
     // 工作线程句柄
     _worker_thread: std::thread::JoinHandle<()>,
-    // 下一个定时器 ID（本地缓存，用于立即返回）
+    // 下一个定时器 ID（本地缓存，用于立即返回）- v0.3.265: 预留用于外部 ID 模式
+    #[allow(dead_code)]
     next_timer_id: AtomicU64,
     // Fired 定时器队列（使用 Arc<RwLock> 实现线程安全共享）
     // 工作线程写入，主线程读取
@@ -355,8 +356,9 @@ impl AsyncTimerManager {
         }
     }
 
-    /// 获取下一个定时器 ID
-    fn next_id(&self) -> u64 {
+    /// 获取下一个定时器 ID - v0.3.265: 预留用于外部 ID 模式
+    #[allow(dead_code)]
+    fn _next_id(&self) -> u64 {
         self.next_timer_id.fetch_add(1, Ordering::SeqCst)
     }
 

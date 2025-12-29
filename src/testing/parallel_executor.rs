@@ -3,7 +3,6 @@
 
 use crate::testing::test_context::{TestCase, TestResult, TestSuite};
 use rayon::prelude::*;
-use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 

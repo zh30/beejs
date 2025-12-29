@@ -7,7 +7,6 @@ use crate::testing::test_context::{TestCase, TestResult, TestSuite};
 use crate::testing::test_timeout::{TestTimeout, TimeoutConfig};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -99,7 +98,7 @@ pub enum TestSorter {
     Random,
 }
 impl TestSorter {
-    pub fn sort(&self, tests: &mut [TestCase], suite_name: &str) {
+    pub fn sort(&self, tests: &mut [TestCase], _suite_name: &str) {
         match self {
             TestSorter::ByName => {
                 tests.sort_by(|a, b| a.name.cmp(&b.name));
@@ -249,7 +248,7 @@ impl EnhancedRunner {
             return results;
         }
         // Run beforeAll hook
-        if let Some(ref before_all) = suite.before_all {
+        if let Some(ref _before_all) = suite.before_all {
             // TODO: Execute beforeAll hook
         }
         // Run tests
@@ -294,7 +293,7 @@ impl EnhancedRunner {
             }
         }
         // Run afterAll hook
-        if let Some(ref after_all) = suite.after_all {
+        if let Some(ref _after_all) = suite.after_all {
             // TODO: Execute afterAll hook
         }
         results

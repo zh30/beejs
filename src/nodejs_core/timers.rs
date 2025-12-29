@@ -131,6 +131,8 @@ impl ImmediateCallbackStorage {
         non_deferred.into_iter().map(|(id, cb, args, _)| (id, cb, args)).collect()
     }
 
+    /// v0.3.265: Drain all callbacks (reserved for future use)
+    #[allow(dead_code)]
     fn drain(&mut self) -> Vec<(u64, v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)> {
         self.callbacks.drain(..).map(|(id, cb, args, _)| (id, cb, args)).collect()
     }

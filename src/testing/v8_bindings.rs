@@ -9,6 +9,8 @@ pub fn register_testing_api(_scope: &mut v8::HandleScope, _global: v8::Local<v8:
         eprintln!("✅ Registered testing API in V8 context");
     }
 }
+
+#[allow(dead_code)]
 /// test() callback - registers a test case
 fn test_callback(
     scope: &mut v8::HandleScope,
@@ -31,6 +33,8 @@ fn test_callback(
     }
     retval.set(v8::undefined(scope).into());
 }
+
+#[allow(dead_code)]
 /// describe() callback - creates a test suite
 fn describe_callback(
     scope: &mut v8::HandleScope,
@@ -42,14 +46,18 @@ fn describe_callback(
     // TODO: Implement suite registration
     retval.set(v8::undefined(scope).into());
 }
+
+#[allow(dead_code)]
 /// it() callback - alias for test()
 fn it_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
-    mut retval: v8::ReturnValue,
+    retval: v8::ReturnValue,
 ) {
     test_callback(scope, args, retval);
 }
+
+#[allow(dead_code)]
 /// expect() callback - creates an expectation object
 fn expect_callback(
     scope: &mut v8::HandleScope,
@@ -61,10 +69,12 @@ fn expect_callback(
     let expect_obj: _ = v8::Object::new(scope);
     retval.set(expect_obj.into());
 }
+
+#[allow(dead_code)]
 /// beforeEach() callback
 fn before_each_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     // Store beforeEach hook for the current suite
@@ -73,10 +83,12 @@ fn before_each_callback(
     }
     retval.set(v8::undefined(scope).into());
 }
+
+#[allow(dead_code)]
 /// afterEach() callback
 fn after_each_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     if cfg!(feature = "verbose_logging") {
@@ -84,10 +96,12 @@ fn after_each_callback(
     }
     retval.set(v8::undefined(scope).into());
 }
+
+#[allow(dead_code)]
 /// beforeAll() callback
 fn before_all_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     if cfg!(feature = "verbose_logging") {
@@ -95,10 +109,12 @@ fn before_all_callback(
     }
     retval.set(v8::undefined(scope).into());
 }
+
+#[allow(dead_code)]
 /// afterAll() callback
 fn after_all_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     if cfg!(feature = "verbose_logging") {
@@ -106,18 +122,22 @@ fn after_all_callback(
     }
     retval.set(v8::undefined(scope).into());
 }
+
+#[allow(dead_code)]
 /// skip() callback
 fn skip_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     retval.set(v8::undefined(scope).into());
 }
+
+#[allow(dead_code)]
 /// only() callback
 fn only_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     retval.set(v8::undefined(scope).into());
@@ -148,7 +168,7 @@ fn to_equal_matcher(
 #[allow(dead_code)]
 fn to_be_truthy_matcher(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     retval.set(v8::Boolean::new(scope, true).into());
@@ -157,7 +177,7 @@ fn to_be_truthy_matcher(
 #[allow(dead_code)]
 fn to_be_falsy_matcher(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     retval.set(v8::Boolean::new(scope, true).into());

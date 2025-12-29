@@ -108,7 +108,7 @@ impl<'a> ExecutionContext<'a> {
         let suite_stack: _ = vec![suite];
         let current: _ = suite;
         // Build suite stack from root to current
-        while let Some(parent_name) = &current.parent {
+        while let Some(_parent_name) = &current.parent {
             // In real implementation, we'd look up parent from registry
             // For now, just track current suite
             break;
