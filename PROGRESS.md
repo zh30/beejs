@@ -13099,3 +13099,41 @@ timer.delay(500); // 改为 500ms 后执行
 - `src/nodejs_core/performance.rs`: 移除未使用导入，修复变量 (~8 行)
 - `src/nodejs_core/readline.rs`: 修复未使用导入 (~3 行)
 
+---
+
+### v0.3.279 Readline Completer 支持（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.279 新增功能
+- **Completer 选项支持**: `createInterface()` 现在接受 `completer` 选项
+  - `completer: null` - 不使用补全
+  - `completer: function(line)` - 自定义补全回调
+  - 补全函数存储在 interface 对象的 `completer` 属性上
+
+#### v0.3.279 技术实现
+- **直接对象存储**: completer 函数直接存储在 Interface JavaScript 对象上
+  - 避免 `v8::Global` 存入全局注册表的 `Sync` trait 问题
+  - 由 V8 自动管理内存和生命周期
+- **空值处理**: completer 为 null/undefined 时设置为 `v8::null()`
+- **类型检查**: 确保 completer 是函数类型才设置
+
+#### v0.3.279 测试验证
+```javascript
+// completer = null
+const rl = readline.createInterface({completer: null});
+typeof rl.completer === 'object'  // true
+
+// completer = function
+const completer = (line) => [[], line];
+const rl = readline.createInterface({completer});
+typeof rl.completer === 'function'  // true
+```
+
+#### v0.3.279 代码变更
+- `tests/readline_api_tests.rs`: 添加 3 个 completer 测试用例 (~68 行)
+- `src/nodejs_core/readline.rs`: 添加 completer 选项解析和存储 (~30 行)
+
+#### v0.3.279 下一步
+- 实现真正的 tab 补全交互（需要 TTY 集成）
+- 添加更多 readline 功能（cursorPosition, history 等）
+

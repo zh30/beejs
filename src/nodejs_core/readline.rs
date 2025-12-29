@@ -11,7 +11,7 @@ use rusty_v8 as v8;
 /// Interface instance ID counter
 static INTERFACE_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 
-/// Readline interface state
+/// Readline interface state (minimal, without v8::Global to avoid Sync issues)
 #[derive(Clone, Debug)]
 struct InterfaceState {
     #[allow(dead_code)]
@@ -325,6 +325,24 @@ pub fn setup_readline_api(
         let clear_line_key = v8::String::new(scope, "clearLine").unwrap();
         interface_obj.set(scope, clear_line_key.into(), clear_line_fn.into());
 
+        // Set completer property from options (stored in 'options' variable from outer scope)
+        let completer_key = v8::String::new(scope, "completer").unwrap();
+        let null_val = v8::null(scope);
+        if let Some(options) = options {
+            let completer_val = options.get(scope, completer_key.into());
+            if let Some(completer) = completer_val {
+                if completer.is_function() {
+                    interface_obj.set(scope, completer_key.into(), completer);
+                } else {
+                    interface_obj.set(scope, completer_key.into(), null_val.into());
+                }
+            } else {
+                interface_obj.set(scope, completer_key.into(), null_val.into());
+            }
+        } else {
+            interface_obj.set(scope, completer_key.into(), null_val.into());
+        }
+
         retval.set(interface_obj.into());
     }).unwrap();
 
@@ -363,6 +381,7 @@ mod tests {
             prompt: "> ".to_string(),
             is_paused: false,
             terminal: true,
+            completer: None,
         };
 
         let mut registry = INTERFACE_REGISTRY.lock().unwrap();
@@ -381,6 +400,7 @@ mod tests {
             prompt: "test".to_string(),
             is_paused: true,
             terminal: false,
+            completer: None,
         };
 
         let mut registry = INTERFACE_REGISTRY.lock().unwrap();

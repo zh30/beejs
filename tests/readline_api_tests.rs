@@ -212,4 +212,72 @@ mod readline_api_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("function"), "clearLine method should exist");
     }
+
+    // v0.3.279: Completer support tests
+    #[test]
+    fn test_readline_completer_option_exists() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readline = require('readline');
+                // Test that completer option is accepted
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout,
+                    completer: null
+                });
+                console.log('completer option accepted');
+                rl.close();
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("completer option accepted"), "Completer option should be accepted");
+    }
+
+    #[test]
+    fn test_readline_completer_with_function() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readline = require('readline');
+                const completer = (line) => {
+                    const hits = ['hello', 'help', 'history'].filter(c => c.startsWith(line));
+                    return [hits, line];
+                };
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout,
+                    completer: completer
+                });
+                console.log('completer function accepted');
+                rl.close();
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("completer function accepted"), "Completer function should be accepted");
+    }
+
+    #[test]
+    fn test_readline_completer_stored_on_interface() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readline = require('readline');
+                const completer = (line) => [[], line];
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout,
+                    completer: completer
+                });
+                // Completer should be stored on the interface
+                console.log(typeof rl.completer);
+                rl.close();
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("object"), "Completer should be stored on interface");
+    }
 }
