@@ -1,3 +1,24 @@
+### v0.3.264 代码质量优化（2025-12-29）
+**进度**: 基础设施 | ✅ 已完成
+
+#### v0.3.264 修复内容
+- **移除未使用的导入**: 从 `runtime_minimal.rs` 中移除 `TIMER_METADATA` 导入
+- **预留代码标记**: 为 `v8_bindings.rs` 中预留的 matcher 函数添加 `#[allow(dead_code)]` 属性
+- **Cargo features 定义**: 在 `Cargo.toml` 中添加 `[features]` 部分
+  - `verbose_logging`: 启用详细日志输出
+  - `tch`: 启用 PyTorch/Tch 支持（用于 ML 工作负载）
+
+#### v0.3.264 测试结果
+- ✅ 248/248 cargo test --lib 测试通过
+- ✅ 所有编译警告已修复
+
+#### v0.3.264 代码变更
+- `Cargo.toml`: 添加 [features] 部分（~5 行）
+- `src/runtime_minimal.rs`: 移除未使用的导入（1 行删除）
+- `src/testing/v8_bindings.rs`: 添加 4 个 `#[allow(dead_code)]` 属性（~5 行）
+
+---
+
 ### v0.3.255 增强 Console API（2025-12-29）
 **进度**: Node.js 兼容性 | ✅ 已完成
 
