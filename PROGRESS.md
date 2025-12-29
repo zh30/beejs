@@ -59,6 +59,35 @@
 - ✅ cargo test --lib: 253/253 通过
 - ✅ 总测试数: 269/269 通过
 
+#### v0.3.276 代码维护和验证（2025-12-29）
+**进度**: 代码质量 | ✅ 已完成
+
+#### v0.3.276 工作内容
+- **构建警告修复**: 为 `get_high_res_time_us()` 添加 `#[allow(dead_code)]` 属性
+- **string_decoder API 验证**: 确认现有实现已正确集成
+  - 通过 `string_decoder` 全局对象访问
+  - 包含 `StringDecoder` 构造函数
+  - 支持 `write()` 和 `end()` 方法
+- **测试套件验证**: 253/253 测试通过
+
+#### v0.3.276 API 使用示例
+```javascript
+// 访问 string_decoder 模块
+console.log(string_decoder.StringDecoder); // function
+
+// 创建 StringDecoder 实例
+const decoder = new string_decoder.StringDecoder('utf8');
+
+// 解码文本
+decoder.write('hello'); // 'hello'
+decoder.end(); // ''
+```
+
+#### v0.3.276 下一步
+- 继续添加更多 Node.js API 兼容性
+- 优化定时器精度和性能
+- 增强 AI 工作负载支持
+
 #### v0.3.275 代码变更
 - `src/nodejs_core/performance.rs`: 新建性能 API 模块 (~460 行)
 - `src/nodejs_core/mod.rs`: 添加 performance 模块声明和初始化

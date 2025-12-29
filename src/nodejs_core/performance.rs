@@ -107,6 +107,7 @@ fn get_high_res_time() -> f64 {
 }
 
 /// Get high-resolution time in microseconds
+#[allow(dead_code)]
 fn get_high_res_time_us() -> f64 {
     let now = SystemTime::now();
     let duration = now.duration_since(SystemTime::UNIX_EPOCH).unwrap_or(Duration::ZERO);
