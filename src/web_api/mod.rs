@@ -12,6 +12,7 @@ pub mod blob;        // Stage 74: Blob/File API
 pub mod timers;      // Stage 74: Timer APIs
 pub mod encoding;    // Stage 74: TextEncoder/TextDecoder
 pub mod performance; // Stage 74: Performance API
+pub mod streams;     // Stage 75: Web Streams API for AI workloads
 use anyhow::Result;
 use rusty_v8 as v8;
 // 从各模块导入设置函数
@@ -23,6 +24,7 @@ use events::setup_events_api;
 use fetch::setup_fetch_api;
 use form_data::setup_form_data_api;
 use performance::setup_performance_api;
+use streams::setup_streams_api;
 use timers::setup_timer_api;
 use url::setup_url_api;
 use websocket::setup_websocket_api;
@@ -72,6 +74,10 @@ pub fn init_web_api(
     eprintln!("🔧 [STAGE74] Setting up WebSocket API...");
     setup_websocket_api(scope, context)?;
     eprintln!("✅ [STAGE74] WebSocket API done");
-    eprintln!("🎉 [STAGE74] All Web APIs initialized!");
+    // 6. Streams API（AI 工作负载，流式处理 LLM 响应）
+    eprintln!("🔧 [STAGE75] Setting up Streams API...");
+    setup_streams_api(scope, context)?;
+    eprintln!("✅ [STAGE75] Streams API done");
+    eprintln!("🎉 [STAGE74/75] All Web APIs initialized!");
     Ok(())
 }
