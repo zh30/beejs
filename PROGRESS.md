@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.283 (2025-12-30)
+## 当前版本: v0.3.287 (2025-12-30)
 
 ### 项目状态摘要
 
@@ -190,8 +190,9 @@ const writer = textStream.pipeTo(new WritableStream({
 - [x] 实现 ReadableStream.start() 和 controller.enqueue() 回调
 - [x] 实现流状态管理和数据队列
 - [x] 实现 WritableStream 底层存储队列 (v0.3.284)
-- [ ] 实现 TransformStream 的 transform() 逻辑
-- [ ] 增强 TextDecoderStream 的实际解码功能
+- [x] 实现 TransformStream 的 transform() 逻辑 (v0.3.287)
+- [x] 增强 TextDecoderStream 的实际解码功能 (v0.3.286)
+- [x] 支持 TransformStream flush() 回调 (v0.3.287)
 - [ ] 支持 pipeTo() 和 pipeThrough() 操作
 
 ---
@@ -237,6 +238,57 @@ console.log(stream._state); // 1 (Closed)
 #### v0.3.284 代码变更
 - `src/web_api/streams.rs`: 增强 WritableStream 实现 (~190 行)
 - `tests/web_streams_api_tests.rs`: 新增 5 个测试 (~110 行)
+
+---
+
+### v0.3.287 TransformStream flush() 回调支持（2025-12-30）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.287 新增功能
+
+**TransformStream flush() 回调**:
+- `new TransformStream({ transform(chunk, controller) {...}, flush(controller) {...} })`
+- `flush(controller)`: 在流关闭前调用，用于添加终止标记或清理
+- 支持在 flush 中通过 `controller.enqueue()` 添加最终数据
+
+**端到端数据转换测试**:
+- 验证 transform 函数正确处理数据流
+- 验证 flush 回调在 close() 时被调用
+- 验证错误处理正常工作
+
+#### v0.3.287 实现细节
+- 在 TransformStream 构造函数中检测并存储 flush 函数
+- 在 `writer.close()` 方法中调用 flush 回调
+- 保持与 Web Streams API 规范兼容
+
+#### v0.3.287 测试结果
+- ✅ 3 个新测试通过 (end-to-end transform, flush, error propagation)
+- ✅ 31/31 Web Streams API 测试通过
+
+#### v0.3.287 代码变更
+- `src/web_api/streams.rs`: 添加 flush 函数存储和调用 (~30 行)
+- `tests/web_streams_api_tests.rs`: 新增 3 个集成测试 (~90 行)
+
+#### v0.3.287 API 使用示例
+```javascript
+const ts = new TransformStream({
+    transform(chunk, controller) {
+        controller.enqueue(chunk.toString().toUpperCase());
+    },
+    flush(controller) {
+        controller.enqueue('[END]');  // 添加终止标记
+    }
+});
+
+const writer = ts.writable.getWriter();
+const reader = ts.readable.getReader();
+
+writer.write('hello');
+writer.write('world');
+writer.close();  // flush() 会在关闭前被调用
+
+// 读取: 'HELLO', 'WORLD', '[END]'
+```
 
 ---
 
