@@ -23,6 +23,8 @@ use crate::nodejs_core::http::setup_http_api;
 use crate::nodejs_core::timers::{setup_timers_api, execute_fired_timers, execute_immediate_callbacks, mark_immediate_callbacks_deferred};
 // v0.3.261: Import process module for nextTick support
 use crate::nodejs_core::process::{execute_next_tick_callbacks, has_pending_next_ticks};
+// v0.3.275: Import performance API
+use crate::nodejs_core::performance::setup_performance_api;
 
 // Event listener storage using thread_local (v0.3.46)
 // Note: rustdoc does not generate documentation for macro invocations
@@ -3001,6 +3003,7 @@ impl MinimalRuntime {
             setup_crypto_api(scope, &context)?;
             Self::setup_module_system(scope, &context)?;
             setup_timers_api(scope, &context)?; // v0.3.249: Timer API with async scheduling
+            setup_performance_api(scope, &context)?; // v0.3.275: Performance API
         }
 
         // v0.3.261: Store the original code for potential re-evaluation
