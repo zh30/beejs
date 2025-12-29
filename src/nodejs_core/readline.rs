@@ -21,6 +21,10 @@ struct InterfaceState {
     is_paused: bool,
     #[allow(dead_code)]
     terminal: bool,
+    #[allow(dead_code)]
+    completer: Option<String>, // Store completer function reference (for v8::Global we'd need different approach)
+    #[allow(dead_code)]
+    history: Vec<String>, // Command history for readline
 }
 
 /// Global registry of readline interfaces (thread-safe)
@@ -79,6 +83,8 @@ pub fn setup_readline_api(
             prompt: "> ".to_string(),
             is_paused: false,
             terminal: is_terminal,
+            completer: None,
+            history: Vec::new(),
         };
 
         // Store in registry
@@ -198,7 +204,7 @@ pub fn setup_readline_api(
             return;
         }
 
-        // Parse terminal option
+        // Parse terminal and historySize options
         let options = args.get(0).to_object(scope);
         let is_terminal = if let Some(options) = options {
             let terminal_key = v8::String::new(scope, "terminal");
@@ -212,6 +218,19 @@ pub fn setup_readline_api(
             true
         };
 
+        // Parse historySize option (default: 30, Node.js compatible)
+        let _history_size = if let Some(options) = options {
+            let history_size_key = v8::String::new(scope, "historySize");
+            if let Some(history_size_key) = history_size_key {
+                let history_size = options.get(scope, history_size_key.into());
+                history_size.and_then(|v| v.to_integer(scope)).map(|v| v.value() as usize).unwrap_or(30)
+            } else {
+                30
+            }
+        } else {
+            30
+        };
+
         // Generate interface ID
         let interface_id = get_next_interface_id();
 
@@ -221,6 +240,8 @@ pub fn setup_readline_api(
             prompt: "> ".to_string(),
             is_paused: false,
             terminal: is_terminal,
+            completer: None,
+            history: Vec::new(),
         };
 
         // Store in registry
@@ -295,10 +316,20 @@ pub fn setup_readline_api(
         let cursor_key = v8::String::new(scope, "cursor").unwrap();
         interface_obj.set(scope, cursor_key.into(), zero_val.into());
 
+        // v0.3.280: Add history array property (empty by default)
+        let history_key = v8::String::new(scope, "history").unwrap();
+        let history_arr = v8::Array::new(scope, 0);
+        interface_obj.set(scope, history_key.into(), history_arr.into());
+
         // Store interface_id on the object for method access
         let id_key = v8::String::new(scope, "_interfaceId").unwrap();
         let id_val = v8::Number::new(scope, interface_id as f64);
         interface_obj.set(scope, id_key.into(), id_val.into());
+
+        // v0.3.280: Initialize _events object for event system
+        let events_key = v8::String::new(scope, "_events").unwrap();
+        let events_obj = v8::Object::new(scope);
+        interface_obj.set(scope, events_key.into(), events_obj.into());
 
         // Set methods
         let question_key = v8::String::new(scope, "question").unwrap();
@@ -324,6 +355,78 @@ pub fn setup_readline_api(
 
         let clear_line_key = v8::String::new(scope, "clearLine").unwrap();
         interface_obj.set(scope, clear_line_key.into(), clear_line_fn.into());
+
+        // v0.3.280: Add on() method for event handling (line, close events)
+        let on_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() < 2 {
+                let undefined = v8::undefined(scope);
+                retval.set(undefined.into());
+                return;
+            }
+
+            let event_name = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+            let listener = args.get(1);
+
+            if !listener.is_function() {
+                let undefined = v8::undefined(scope);
+                retval.set(undefined.into());
+                return;
+            }
+
+            // Get interface from 'this' object
+            let this = args.this();
+
+            // Get _events object from interface
+            let events_key = v8::String::new(scope, "_events").unwrap();
+            let events_obj = this.get(scope, events_key.into());
+
+            if let Some(e) = events_obj {
+                if e.is_object() {
+                    let events = e.to_object(scope).unwrap();
+                    // Store listener on events object
+                    let event_key = v8::String::new(scope, &event_name).unwrap();
+                    events.set(scope, event_key.into(), listener);
+                }
+            }
+
+            retval.set(this.into());
+        }).unwrap();
+
+        let on_key = v8::String::new(scope, "on").unwrap();
+        interface_obj.set(scope, on_key.into(), on_fn.into());
+
+        // v0.3.280: Add emit() method for triggering events
+        let emit_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+            if args.length() < 1 {
+                return;
+            }
+
+            let event_name = args.get(0).to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+
+            // Get _events object
+            let this = args.this();
+            let events_key = v8::String::new(scope, "_events").unwrap();
+            if let Some(events_obj) = this.get(scope, events_key.into()) {
+                if events_obj.is_object() {
+                    let events = events_obj.to_object(scope).unwrap();
+                    let event_key = v8::String::new(scope, &event_name).unwrap();
+                    if let Some(listener) = events.get(scope, event_key.into()) {
+                        if listener.is_function() {
+                            // Build arguments array (skip event name)
+                            let mut emit_args: Vec<v8::Local<v8::Value>> = Vec::new();
+                            for i in 1..args.length() {
+                                emit_args.push(args.get(i));
+                            }
+                            let _listener_func = v8::Local::<v8::Function>::try_from(listener.to_object(scope).unwrap()).unwrap();
+                            let _ = _listener_func.call(scope, this.into(), &emit_args);
+                        }
+                    }
+                }
+            }
+        }).unwrap();
+
+        let emit_key = v8::String::new(scope, "emit").unwrap();
+        interface_obj.set(scope, emit_key.into(), emit_fn.into());
 
         // Set completer property from options (stored in 'options' variable from outer scope)
         let completer_key = v8::String::new(scope, "completer").unwrap();
@@ -382,6 +485,7 @@ mod tests {
             is_paused: false,
             terminal: true,
             completer: None,
+            history: Vec::new(),
         };
 
         let mut registry = INTERFACE_REGISTRY.lock().unwrap();
@@ -401,6 +505,7 @@ mod tests {
             is_paused: true,
             terminal: false,
             completer: None,
+            history: Vec::new(),
         };
 
         let mut registry = INTERFACE_REGISTRY.lock().unwrap();

@@ -280,4 +280,163 @@ mod readline_api_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("object"), "Completer should be stored on interface");
     }
+
+    // v0.3.280: History and cursorPosition support tests
+    #[test]
+    fn test_readline_history_property_exists() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readline = require('readline');
+                const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+                console.log(Array.isArray(rl.history));
+                rl.close();
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "history should be an array");
+    }
+
+    #[test]
+    fn test_readline_history_size_option() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readline = require('readline');
+                // historySize option should be accepted
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout,
+                    historySize: 100
+                });
+                console.log('historySize option accepted');
+                rl.close();
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("historySize option accepted"), "historySize option should be accepted");
+    }
+
+    #[test]
+    fn test_readline_cursor_property_exists() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readline = require('readline');
+                const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+                console.log(typeof rl.cursor);
+                rl.close();
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("number"), "cursor should be a number");
+    }
+
+    #[test]
+    fn test_readline_column_property_exists() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readline = require('readline');
+                const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+                console.log(typeof rl.column);
+                rl.close();
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("number"), "column should be a number");
+    }
+
+    #[test]
+    fn test_readline_line_property_exists() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readline = require('readline');
+                const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+                console.log(typeof rl.line);
+                rl.close();
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("string"), "line should be a string");
+    }
+
+    // v0.3.280: Event system tests
+    #[test]
+    fn test_readline_on_method_exists() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readline = require('readline');
+                const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+                console.log(typeof rl.on);
+                rl.close();
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("function"), "on method should exist");
+    }
+
+    #[test]
+    fn test_readline_emit_method_exists() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readline = require('readline');
+                const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+                console.log(typeof rl.emit);
+                rl.close();
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("function"), "emit method should exist");
+    }
+
+    #[test]
+    fn test_readline_event_system() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readline = require('readline');
+                const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+                let event_received = false;
+                rl.on('testEvent', (arg) => {
+                    event_received = true;
+                    console.log('event received: ' + arg);
+                });
+                rl.emit('testEvent', 'hello');
+                rl.close();
+                console.log('event system works: ' + event_received);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("event received: hello"), "Event should be received");
+        assert!(stdout.contains("event system works: true"), "Event system should work");
+    }
+
+    #[test]
+    fn test_readline_on_returns_interface() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readline = require('readline');
+                const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+                const result = rl.on('event', () => {});
+                console.log(result === rl);
+                rl.close();
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "on() should return the interface for chaining");
+    }
 }
