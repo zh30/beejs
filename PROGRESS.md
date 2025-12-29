@@ -12698,3 +12698,43 @@ console.log(p.name);  // "Alice"
 
 ---
 
+### v0.3.259 console.count/countReset 状态管理实现（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.259 新增功能
+- **console.count 计数功能完善**
+  - `console.count(label)`: 每次调用递增计数器并输出 "console.count: label N"
+  - 默认标签为 "default"
+  - 多个标签独立计数
+
+- **console.countReset 重置功能**
+  - `console.countReset(label)`: 将指定标签的计数器重置为 0
+  - 默认标签为 "default"
+
+#### v0.3.259 实现细节
+- **线程安全计数器存储**
+  - 使用 `OnceLock<Mutex<HashMap<String, u32>>>` 实现
+  - `COUNTER_STORAGE`: 全局计数器存储
+  - `get_counter_storage()`: 获取计数器存储的辅助函数
+
+- **与 console.time 模式一致**
+  - 遵循与 `TIMER_STORAGE` 相同的设计模式
+  - 确保多线程环境下的正确性
+
+#### v0.3.259 代码变更
+- `src/lib.rs`: 添加 `COUNTER_STORAGE` 和 `get_counter_storage()` (~10 行)
+- `src/lib.rs`: 修改 `console_count_callback` 实现计数逻辑 (~15 行)
+- `src/lib.rs`: 修改 `console_count_reset_callback` 实现重置逻辑 (~10 行)
+
+#### v0.3.259 测试结果
+- ✅ 15/15 console_enhanced_tests 测试通过
+- ✅ 248/248 cargo test --lib 测试通过
+- ✅ console.count 正确输出递增计数
+- ✅ console.countReset 正确重置计数器
+
+#### v0.3.259 下一步
+- 完善 process.nextTick() 与 Timer 的执行顺序
+- 优化定时器精度和性能
+- 添加更多 Node.js API 兼容性
+
+---

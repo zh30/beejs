@@ -735,10 +735,16 @@ pub fn console_table_callback(
 
 /// Timer storage for console.time/timeEnd (v0.3.256)
 static TIMER_STORAGE: OnceLock<Mutex<HashMap<String, Instant>>> = OnceLock::new();
-
 /// Get the timer storage, initializing if needed
 fn get_timer_storage() -> &'static Mutex<HashMap<String, Instant>> {
     TIMER_STORAGE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Counter storage for console.count/countReset (v0.3.259)
+static COUNTER_STORAGE: OnceLock<Mutex<HashMap<String, u32>>> = OnceLock::new();
+/// Get the counter storage, initializing if needed
+fn get_counter_storage() -> &'static Mutex<HashMap<String, u32>> {
+    COUNTER_STORAGE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 /// Console time callback - starts a timer
@@ -788,7 +794,7 @@ pub fn console_time_end_callback(
     println!("console.timeEnd: {}: {:.2}ms", label, elapsed);
 }
 
-/// Console count callback - prints a count
+/// Console count callback - increments and prints a count (v0.3.259)
 pub fn console_count_callback(
     _scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -800,10 +806,16 @@ pub fn console_count_callback(
     } else {
         "default".to_string()
     };
-    println!("console.count: {}", label);
+
+    // Increment the counter
+    let counter_storage = get_counter_storage();
+    let mut counters = counter_storage.lock().unwrap();
+    let count = counters.entry(label.clone()).or_insert(0);
+    *count += 1;
+    println!("console.count: {} {}", label, count);
 }
 
-/// Console countReset callback - resets a count
+/// Console countReset callback - resets a count (v0.3.259)
 pub fn console_count_reset_callback(
     _scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -815,6 +827,11 @@ pub fn console_count_reset_callback(
     } else {
         "default".to_string()
     };
+
+    // Reset the counter to 0
+    let counter_storage = get_counter_storage();
+    let mut counters = counter_storage.lock().unwrap();
+    counters.insert(label.clone(), 0);
     println!("console.countReset: {}", label);
 }
 
