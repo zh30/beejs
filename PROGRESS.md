@@ -12827,6 +12827,37 @@ console.log(p.name);  // "Alice"
 #### v0.3.259 下一步
 - 完善 process.nextTick() 与 Timer 的执行顺序
 - 优化定时器精度和性能
+
+---
+
+### v0.3.260 nextTick/Timer 执行顺序增强测试（2025-12-29）
+**进度**: 测试覆盖 | ✅ 已完成
+
+#### v0.3.260 新增功能
+- **增强测试套件**: 创建 `next_tick_timer_order_enhanced_test.rs`
+  - 验证 Node.js 事件循环行为: nextTick -> microtasks -> timers -> setImmediate
+
+- **测试覆盖场景**
+  - `nextTick vs Promise` 优先级测试
+  - `嵌套 nextTick` FIFO 顺序保证
+  - `timer vs setImmediate` 执行顺序
+  - `nextTick 回调参数` 正确传递
+  - `混合回调` 场景执行顺序
+  - `queueMicrotask` 集成测试
+  - `定时器 ref/unref` 功能测试
+  - `多定时器` 创建顺序测试
+  - `clearImmediate` 功能测试
+
+#### v0.3.260 代码变更
+- `tests/next_tick_timer_order_enhanced_test.rs`: 新建完整测试套件 (~312 行)
+  - 17 个测试用例覆盖各种执行顺序场景
+  - 使用 serial_test 确保测试隔离
+  - 完整的全局状态清理
+
+#### v0.3.260 下一步
+- 运行完整的测试套件验证
+- 根据测试结果优化执行顺序
+- 添加更多边界情况测试
 - 添加更多 Node.js API 兼容性
 
 ---
