@@ -2,7 +2,6 @@
 // Provides high-resolution timing for AI workloads and performance monitoring
 // Implements Web Performance API compatible with Node.js/Bun
 
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime};
 use once_cell::sync::Lazy;
@@ -48,6 +47,7 @@ struct PerformanceState {
     /// Marks by name
     marks: Vec<PerformanceMark>,
     /// Next entry ID
+    #[allow(dead_code)]
     next_id: u64,
 }
 
@@ -86,6 +86,7 @@ static PERFORMANCE_STATE: Lazy<Mutex<PerformanceState>> = Lazy::new(|| Mutex::ne
 
 /// High-resolution time origin (time since system boot for macOS, or Unix epoch for others)
 #[cfg(target_os = "macos")]
+#[allow(dead_code)]
 fn get_time_origin() -> Instant {
     // On macOS, use std::time::UNIX_EPOCH and calculate boot time
     // For simplicity, we use the Unix epoch as reference
@@ -93,6 +94,7 @@ fn get_time_origin() -> Instant {
 }
 
 #[cfg(not(target_os = "macos"))]
+#[allow(dead_code)]
 fn get_time_origin() -> Instant {
     Instant::now()
 }
@@ -169,7 +171,7 @@ pub fn setup_performance_api(
     }).unwrap();
 
     // performance.measure(name, startMark, endMark) - creates a performance measure
-    let measure_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+    let measure_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
         if args.length() < 1 {
             let error = v8::String::new(scope, "performance.measure requires at least 1 argument").unwrap();
             let error_obj = v8::Exception::type_error(scope, error);
@@ -208,10 +210,7 @@ pub fn setup_performance_api(
     // performance.clearMarks() - removes all marks
     let clear_marks_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
         let mut state = PERFORMANCE_STATE.lock().unwrap();
-        state.marks.retain(|m| {
-            // Keep marks that are used by measures
-            false // For simplicity, clear all for now
-        });
+        state.marks.clear();
         state.entries.retain(|e| e.entry_type != PerformanceEntryType::Mark);
     }).unwrap();
 

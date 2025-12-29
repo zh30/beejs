@@ -2,7 +2,7 @@
 // Implements readline.createInterface() and Interface class for interactive input
 // Compatible with Node.js readline API
 
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::AtomicU64;
 use std::sync::Mutex;
 use std::collections::HashMap;
 use once_cell::sync::Lazy;
@@ -14,9 +14,12 @@ static INTERFACE_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 /// Readline interface state
 #[derive(Clone, Debug)]
 struct InterfaceState {
+    #[allow(dead_code)]
     id: u64,
     prompt: String,
+    #[allow(dead_code)]
     is_paused: bool,
+    #[allow(dead_code)]
     terminal: bool,
 }
 
@@ -26,7 +29,7 @@ static INTERFACE_REGISTRY: Lazy<Mutex<HashMap<u64, InterfaceState>>> =
 
 /// Get next interface ID
 fn get_next_interface_id() -> u64 {
-    INTERFACE_ID_COUNTER.fetch_add(1, Ordering::SeqCst)
+    INTERFACE_ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
 }
 
 /// Setup readline API in the V8 context
