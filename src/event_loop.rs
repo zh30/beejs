@@ -426,8 +426,11 @@ impl AsyncTimerManager {
     /// 供 V8 主线程调用，返回自上次轮询以来触发的所有定时器 ID
     pub fn poll_fired_timers(&self) -> Vec<u64> {
         let mut fired = self.fired_timers.write().unwrap();
-        let ids = fired.clone();
+        let mut ids = fired.clone();
         fired.clear();
+        // Sort by timer ID to ensure FIFO execution order
+        // Timer IDs are generated sequentially, so sorting by ID preserves creation order
+        ids.sort();
         ids
     }
 

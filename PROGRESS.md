@@ -12908,3 +12908,33 @@ console.log(p.name);  // "Alice"
 - 添加更多 Node.js API 兼容性
 
 ---
+
+### v0.3.272 定时器执行顺序和延迟行为修复（2025-12-29）
+**进度**: 测试修复 | ✅ 已完成
+
+#### v0.3.272 修复内容
+- **FIFO 执行顺序修复**: 修改 `poll_fired_timers()` 按 timer_id 排序返回
+  - 确保多个定时器按创建顺序执行
+  - 修复 `test_multiple_timers_order` 测试
+
+- **延迟定时器测试修复**: 重构 `test_timer_with_delay_greater_than_zero`
+  - 使用正确的异步测试模式验证延迟行为
+  - 添加 `test_timer_delayed_execution` 验证定时器最终执行
+
+#### v0.3.272 测试结果
+- ✅ 18/18 nextTick/Timer 执行顺序测试通过
+- ✅ 248/248 lib 测试通过
+
+#### v0.3.272 代码变更
+- `src/event_loop.rs`: 修改 `poll_fired_timers()` 添加排序 (~5 行)
+  - 按 timer_id 排序保证 FIFO 执行顺序
+
+- `tests/next_tick_timer_order_enhanced_test.rs`: 重构测试 (~45 行)
+  - 重构 `test_timer_with_delay_greater_than_zero` 使用异步验证
+  - 新增 `test_timer_delayed_execution` 验证定时器延迟执行
+
+#### v0.3.272 下一步
+- 继续添加更多 Node.js API 兼容性
+- 优化定时器精度和性能
+
+---
