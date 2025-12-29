@@ -1208,6 +1208,228 @@ impl BenchmarkResult {
     }
 }
 
+/// v0.3.235: Enhanced error types for better error handling and debugging
+/// Provides structured error information including error codes, messages, and stack traces
+
+/// Error types for runtime execution
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum RuntimeErrorType {
+    /// Syntax error in the code (e.g., missing parenthesis, invalid syntax)
+    SyntaxError,
+    /// Reference to undefined variable or function
+    ReferenceError,
+    /// Type mismatch or type operation error
+    TypeError,
+    /// Range error (e.g., array index out of bounds)
+    RangeError,
+    /// Evaluation error (e.g., eval with invalid code)
+    EvalError,
+    /// Internal runtime error
+    InternalError,
+    /// Resource limit exceeded (memory, stack, etc.)
+    ResourceLimit,
+    /// Other unknown error
+    Unknown,
+}
+
+/// Enhanced runtime error with structured information
+/// v0.3.235: Provides better error reporting with error codes and context
+#[derive(Debug, Clone)]
+pub struct RuntimeError {
+    /// The type of error
+    pub error_type: RuntimeErrorType,
+    /// Human-readable error message
+    pub message: String,
+    /// Error code for programmatic handling
+    pub code: &'static str,
+    /// Source location (file:line:col) if available
+    pub location: Option<String>,
+    /// Stack trace or additional context
+    pub context: Option<String>,
+}
+
+impl RuntimeError {
+    /// Create a new RuntimeError
+    pub fn new(
+        error_type: RuntimeErrorType,
+        message: String,
+        code: &'static str,
+        location: Option<String>,
+        context: Option<String>,
+    ) -> Self {
+        RuntimeError {
+            error_type,
+            message,
+            code,
+            location,
+            context,
+        }
+    }
+
+    /// Create a syntax error
+    pub fn syntax_error(message: String, location: Option<String>) -> Self {
+        RuntimeError::new(
+            RuntimeErrorType::SyntaxError,
+            message,
+            "SYNTAX_ERROR",
+            location,
+            None,
+        )
+    }
+
+    /// Create a reference error
+    pub fn reference_error(message: String, location: Option<String>) -> Self {
+        RuntimeError::new(
+            RuntimeErrorType::ReferenceError,
+            message,
+            "REFERENCE_ERROR",
+            location,
+            None,
+        )
+    }
+
+    /// Create a type error
+    pub fn type_error(message: String, location: Option<String>) -> Self {
+        RuntimeError::new(
+            RuntimeErrorType::TypeError,
+            message,
+            "TYPE_ERROR",
+            location,
+            None,
+        )
+    }
+
+    /// Create a range error
+    pub fn range_error(message: String, location: Option<String>) -> Self {
+        RuntimeError::new(
+            RuntimeErrorType::RangeError,
+            message,
+            "RANGE_ERROR",
+            location,
+            None,
+        )
+    }
+
+    /// Create an internal error
+    pub fn internal_error(message: String, context: Option<String>) -> Self {
+        RuntimeError::new(
+            RuntimeErrorType::InternalError,
+            message,
+            "INTERNAL_ERROR",
+            None,
+            context,
+        )
+    }
+
+    /// Get a user-friendly error summary
+    pub fn summary(&self) -> String {
+        let mut summary = format!("[{}] {}", self.code, self.message);
+        if let Some(loc) = &self.location {
+            summary.push_str(&format!(" at {}", loc));
+        }
+        summary
+    }
+}
+
+impl std::fmt::Display for RuntimeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.summary())
+    }
+}
+
+impl std::error::Error for RuntimeError {}
+
+/// Convert V8 exception to RuntimeError
+/// v0.3.235: Extract structured error information from V8 exceptions
+pub fn v8_exception_to_runtime_error(
+    scope: &mut v8::HandleScope,
+    exception: v8::Local<v8::Value>,
+) -> RuntimeError {
+    // Try to extract error type from the exception
+    if let Some(error_obj) = exception.to_object(scope) {
+        // Check if it's an Error object by checking the constructor
+        // In V8, Error objects have a specific structure
+        let message_key = v8::String::new(scope, "message").unwrap();
+        let name_key = v8::String::new(scope, "name").unwrap();
+
+        // Get the name property to determine error type
+        let name_val = error_obj.get(scope, name_key.into());
+        let name_str = name_val
+            .map(|n| n.to_rust_string_lossy(scope))
+            .unwrap_or_default();
+
+        // Determine error type from name property
+        let error_type = match name_str.as_str() {
+            "SyntaxError" => RuntimeErrorType::SyntaxError,
+            "ReferenceError" => RuntimeErrorType::ReferenceError,
+            "TypeError" => RuntimeErrorType::TypeError,
+            "RangeError" => RuntimeErrorType::RangeError,
+            "EvalError" => RuntimeErrorType::EvalError,
+            _ => RuntimeErrorType::Unknown,
+        };
+
+        // Extract message
+        let message = if let Some(msg_val) = error_obj.get(scope, message_key.into()) {
+            msg_val.to_rust_string_lossy(scope)
+        } else {
+            exception.to_string(scope)
+                .unwrap_or_else(|| v8::String::new(scope, "<unknown error>").unwrap())
+                .to_rust_string_lossy(scope)
+        };
+
+        // Extract stack trace
+        let stack_key = v8::String::new(scope, "stack").unwrap();
+        let stack_trace = if let Some(stack_val) = error_obj.get(scope, stack_key.into()) {
+            Some(stack_val.to_rust_string_lossy(scope))
+        } else {
+            None
+        };
+
+        // Extract location from stack trace
+        let location = stack_trace.as_ref().and_then(|s| {
+            // Parse first line of stack trace for location
+            s.lines().next().and_then(|line| {
+                // Format is typically: "at functionName (file:line:col)"
+                if line.contains("at ") {
+                    Some(line.to_string())
+                } else {
+                    None
+                }
+            })
+        });
+
+        RuntimeError {
+            error_type,
+            message,
+            code: match error_type {
+                RuntimeErrorType::SyntaxError => "SYNTAX_ERROR",
+                RuntimeErrorType::ReferenceError => "REFERENCE_ERROR",
+                RuntimeErrorType::TypeError => "TYPE_ERROR",
+                RuntimeErrorType::RangeError => "RANGE_ERROR",
+                RuntimeErrorType::EvalError => "EVAL_ERROR",
+                RuntimeErrorType::InternalError => "INTERNAL_ERROR",
+                RuntimeErrorType::ResourceLimit => "RESOURCE_LIMIT",
+                RuntimeErrorType::Unknown => "UNKNOWN_ERROR",
+            },
+            location,
+            context: stack_trace,
+        }
+    } else {
+        // Not an object, just convert to string
+        let message = exception.to_string(scope)
+            .unwrap_or_else(|| v8::String::new(scope, "<unknown error>").unwrap())
+            .to_rust_string_lossy(scope);
+
+        RuntimeError::new(
+            RuntimeErrorType::Unknown,
+            message,
+            "UNKNOWN_ERROR",
+            None,
+            None,
+        )
+    }
+}
+
 /// A minimal runtime that only provides basic JavaScript execution
 /// This version avoids complex dependencies for faster startup
 /// v0.3.93: 添加 Context 存储以支持跨 Context 共享数据
@@ -2909,16 +3131,18 @@ impl MinimalRuntime {
         let scope = &mut v8::TryCatch::new(scope);
 
         // Compile the code
+        // v0.3.235: Enhanced error handling with detailed messages
         let script = match v8::Script::compile(scope, code, None) {
             Some(script) => script,
             None => {
                 // Get the exception from TryCatch
                 let exception = scope.exception()
                     .unwrap_or_else(|| v8::String::new(scope, "Unknown compilation error").unwrap().into());
-                let error_message = exception.to_string(scope)
-                    .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-                    .to_rust_string_lossy(scope);
-                return Err(anyhow::anyhow!("JavaScript compilation error: {}", error_message));
+
+                // v0.3.235: Create enhanced RuntimeError with structured information
+                let runtime_error = v8_exception_to_runtime_error(scope, exception);
+
+                return Err(anyhow::anyhow!("[Beejs Error] SyntaxError: {}\nHint: Check for missing parentheses, brackets, or invalid syntax.", runtime_error.message));
             }
         };
 
@@ -2930,12 +3154,22 @@ impl MinimalRuntime {
                     // Get the exception from TryCatch
                     let exception = scope.exception()
                         .unwrap_or_else(|| v8::String::new(scope, "Unknown runtime error").unwrap().into());
-                    let error_message = exception.to_string(scope)
-                        .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-                        .to_rust_string_lossy(scope);
-                    return Err(anyhow::anyhow!("JavaScript execution error: {}", error_message));
+
+                    // v0.3.235: Create enhanced RuntimeError with structured information
+                    let runtime_error = v8_exception_to_runtime_error(scope, exception);
+
+                    // Provide more helpful error message based on error type
+                    let hint = match runtime_error.error_type {
+                        RuntimeErrorType::ReferenceError => "\nHint: Make sure the variable or function is defined before using it.",
+                        RuntimeErrorType::TypeError => "\nHint: Check the types of values and ensure operations are valid (e.g., calling a function on null/undefined).",
+                        RuntimeErrorType::RangeError => "\nHint: Check array bounds or numeric ranges.",
+                        RuntimeErrorType::SyntaxError => "\nHint: Check the syntax of your code.",
+                        _ => "",
+                    };
+
+                    return Err(anyhow::anyhow!("[Beejs Error] {}: {}{}", runtime_error.code, runtime_error.message, hint));
                 } else {
-                    return Err(anyhow::anyhow!("Script execution returned no result"));
+                    return Err(anyhow::anyhow!("[Beejs Error] InternalError: Script execution returned no result\nHint: This may indicate an internal runtime issue."));
                 }
             }
         };
