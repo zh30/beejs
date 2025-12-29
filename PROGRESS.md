@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.273 (2025-12-29)
+## 当前版本: v0.3.275 (2025-12-29)
 
 ### 项目状态摘要
 
@@ -10,10 +10,11 @@
 - Timer API (setTimeout/setInterval/setImmediate + Timer 对象)
 - queueMicrotask API
 - process 对象 (版本、平台、argv、cwd、env、stdout/stderr、nextTick 等)
+- performance API (高精度计时，AI 工作负载优化)
 
 **Node.js 模块支持**: ✅ 已完成
 - buffer, child_process, crypto, dns, events
-- fs, http, net, os, path, querystring
+- fs, http, net, os, path, performance, querystring
 - require, stream, tcp_async, timers, url, util
 
 **包管理**: ✅ 已完成
@@ -21,13 +22,58 @@
 - npm 兼容命令 (install, add, remove, prune)
 - 依赖版本解析
 
-**测试**: ✅ 248/248 测试通过
-- cargo test --lib: 全部通过
+**测试**: ✅ 269/269 测试通过
+- cargo test --lib: 253/253 通过
+- performance_api_tests: 16/16 通过
 - 集成测试: 运行正常
 
 **CLI 命令**:
 - run, eval, repl, test, bundle, debug
 - version, serve, init, add, remove, install, prune, create, bunx, upgrade
+
+---
+
+### v0.3.275 Performance API - 高精度计时支持 AI 工作负载（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.275 新增功能
+- **performance.now()**: 高精度时间戳（毫秒，亚微秒精度）
+- **performance.timeOrigin**: 时间起源戳（Unix epoch 毫秒）
+- **performance.mark(name)**: 创建性能标记
+- **performance.measure(name, startMark, endMark)**: 创建性能测量
+- **performance.getEntries()**: 获取所有性能条目
+- **performance.getEntriesByName(name)**: 按名称过滤条目
+- **performance.getEntriesByType(type)**: 按类型过滤条目
+- **performance.clearMarks() / clearMeasures()**: 清除性能条目
+- **performance.toJSON()**: JSON 序列化
+
+#### v0.3.275 实现细节
+- 使用 `std::time::SystemTime` 获取高精度时间
+- 线程安全的 `Mutex<PerformanceState>` 全局状态管理
+- 兼容 Node.js/Bun 的 Web Performance API 规范
+- 亚微秒级计时精度（测试显示 ~2 微秒）
+
+#### v0.3.275 测试结果
+- ✅ 5 个单元测试通过（performance.rs）
+- ✅ 16 个集成测试通过（performance_api_tests.rs）
+- ✅ cargo test --lib: 253/253 通过
+- ✅ 总测试数: 269/269 通过
+
+#### v0.3.275 代码变更
+- `src/nodejs_core/performance.rs`: 新建性能 API 模块 (~460 行)
+- `src/nodejs_core/mod.rs`: 添加 performance 模块声明和初始化
+- `src/runtime_minimal.rs`: 集成 performance API
+- `tests/performance_api_tests.rs`: 新建完整集成测试 (~200 行)
+
+#### v0.3.275 AI 工作负载示例
+```javascript
+performance.mark('model_load_start');
+// 模拟模型推理
+for(let i=0; i<500000; i++) { result += i * i; }
+performance.mark('model_load_end');
+performance.measure('model_load', 'model_load_start', 'model_load_end');
+// 输出: AI inference time: 3.02 ms
+```
 
 ---
 
