@@ -465,15 +465,22 @@ pub async fn async_sleep(delay: Duration) {
 mod tests {
     use super::*;
     use std::time::Duration;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    // Simple ID generator for tests
+    fn next_test_id(id: &AtomicU64) -> u64 {
+        id.fetch_add(1, Ordering::SeqCst)
+    }
 
     #[tokio::test]
     async fn test_schedule_timeout() {
         let manager = AsyncTimerManager::new();
+        let test_id = AtomicU64::new(1000);
 
-        let id = manager.schedule_timeout(Duration::from_millis(10), || {});
+        let id = next_test_id(&test_id);
+        manager.schedule_timeout(Duration::from_millis(10), id, || {});
 
         assert!(id > 0, "Timer ID should be positive");
-        assert!(id <= 10, "Timer IDs should be sequential");
 
         // 等待定时器调度完成
         tokio::time::sleep(Duration::from_millis(50)).await;
@@ -486,8 +493,10 @@ mod tests {
     #[tokio::test]
     async fn test_schedule_interval() {
         let manager = AsyncTimerManager::new();
+        let test_id = AtomicU64::new(2000);
 
-        let id = manager.schedule_interval(Duration::from_millis(10), 3, || {});
+        let id = next_test_id(&test_id);
+        manager.schedule_interval(Duration::from_millis(10), 3, id, || {});
 
         assert!(id > 0, "Timer ID should be positive");
 
@@ -502,8 +511,10 @@ mod tests {
     #[tokio::test]
     async fn test_cancel_timeout() {
         let manager = AsyncTimerManager::new();
+        let test_id = AtomicU64::new(3000);
 
-        let id = manager.schedule_timeout(Duration::from_millis(50), || {});
+        let id = next_test_id(&test_id);
+        manager.schedule_timeout(Duration::from_millis(50), id, || {});
 
         // 立即取消
         let cancelled = manager.cancel(id);
@@ -522,17 +533,19 @@ mod tests {
     #[tokio::test]
     async fn test_clear_timers() {
         let manager = AsyncTimerManager::new();
+        let test_id = AtomicU64::new(4000);
 
         // 安排多个定时器
-        manager.schedule_timeout(Duration::from_millis(100), || {});
-        manager.schedule_timeout(Duration::from_millis(200), || {});
-        manager.schedule_timeout(Duration::from_millis(300), || {});
+        manager.schedule_timeout(Duration::from_millis(100), next_test_id(&test_id), || {});
+        manager.schedule_timeout(Duration::from_millis(200), next_test_id(&test_id), || {});
+        manager.schedule_timeout(Duration::from_millis(300), next_test_id(&test_id), || {});
 
         // 清除所有定时器
         manager.clear();
 
         // 验证清除后可以安排新定时器
-        let id = manager.schedule_timeout(Duration::from_millis(10), || {});
+        let id = next_test_id(&test_id);
+        manager.schedule_timeout(Duration::from_millis(10), id, || {});
         assert!(id > 0, "Should be able to schedule after clear");
 
         // 验证取消已清除的定时器返回 false
@@ -543,9 +556,11 @@ mod tests {
     #[tokio::test]
     async fn test_zero_delay_timeout() {
         let manager = AsyncTimerManager::new();
+        let test_id = AtomicU64::new(5000);
 
         // 安排延迟为 0 的定时器
-        let id = manager.schedule_timeout(Duration::from_millis(0), || {});
+        let id = next_test_id(&test_id);
+        manager.schedule_timeout(Duration::from_millis(0), id, || {});
 
         assert!(id > 0, "Timer ID should be positive");
 
@@ -559,10 +574,15 @@ mod tests {
     #[tokio::test]
     async fn test_timer_id_sequential() {
         let manager = AsyncTimerManager::new();
+        let test_id = AtomicU64::new(6000);
 
-        let id1 = manager.schedule_timeout(Duration::from_millis(100), || {});
-        let id2 = manager.schedule_timeout(Duration::from_millis(200), || {});
-        let id3 = manager.schedule_timeout(Duration::from_millis(300), || {});
+        let id1 = next_test_id(&test_id);
+        let id2 = next_test_id(&test_id);
+        let id3 = next_test_id(&test_id);
+
+        manager.schedule_timeout(Duration::from_millis(100), id1, || {});
+        manager.schedule_timeout(Duration::from_millis(200), id2, || {});
+        manager.schedule_timeout(Duration::from_millis(300), id3, || {});
 
         assert_eq!(id2, id1 + 1, "Timer IDs should be sequential");
         assert_eq!(id3, id2 + 1, "Timer IDs should be sequential");

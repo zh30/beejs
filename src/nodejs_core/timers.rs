@@ -693,6 +693,7 @@ mod tests {
             timer_type: TimerType::Timeout,
             delay: 1000,
             is_unrefed: false,
+            epoch: get_timer_epoch(),
         });
         assert!(metadata.contains_key(&1));
     }

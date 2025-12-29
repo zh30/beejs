@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod timer_tests {
-    use beejs::nodejs_core::timers::{get_next_timer_id, TimerType, TimerMetadata, TIMER_METADATA};
+    use beejs::nodejs_core::timers::{get_next_timer_id, TimerType, TimerMetadata, TIMER_METADATA, get_timer_epoch};
 
     #[test]
     fn test_timer_id_generation() {
@@ -27,6 +27,7 @@ mod timer_tests {
                 timer_type: TimerType::Timeout,
                 delay: 1000,
                 is_unrefed: false,
+                epoch: get_timer_epoch(),
             });
         }
 
@@ -59,6 +60,7 @@ mod timer_tests {
                 timer_type: TimerType::Interval,
                 delay: 500,
                 is_unrefed: false,
+                epoch: get_timer_epoch(),
             });
         }
 
@@ -80,6 +82,7 @@ mod timer_tests {
                 timer_type: TimerType::Immediate,
                 delay: 0,
                 is_unrefed: false,
+                epoch: get_timer_epoch(),
             });
         }
 
@@ -102,6 +105,7 @@ mod timer_tests {
                 timer_type: TimerType::Timeout,
                 delay: 1000,
                 is_unrefed: false,
+                epoch: get_timer_epoch(),
             });
         }
 
@@ -134,6 +138,7 @@ mod timer_tests {
                 timer_type: if i % 2 == 0 { TimerType::Interval } else { TimerType::Timeout },
                 delay: i * 100,
                 is_unrefed: false,
+                epoch: get_timer_epoch(),
             });
         }
 
@@ -166,6 +171,7 @@ mod timer_tests {
                 timer_type: TimerType::Timeout,
                 delay: 1000,
                 is_unrefed: false,
+                epoch: get_timer_epoch(),
             });
         }
 
@@ -218,6 +224,7 @@ mod timer_tests {
                 timer_type: TimerType::Timeout,
                 delay: *delay,
                 is_unrefed: false,
+                epoch: get_timer_epoch(),
             });
 
             // Verify
