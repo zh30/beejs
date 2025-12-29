@@ -345,3 +345,79 @@ fn test_next_tick_isolation_between_contexts() {
     assert_eq!(result.trim(), "a,b",
         "nextTick should work correctly. Got: {}", result.trim());
 }
+
+// v0.3.273: Timer.delay() API tests
+#[test]
+#[serial]
+fn test_timer_delay_getter() {
+    cleanup_global_state();
+    let mut runtime = MinimalRuntime::new().unwrap();
+    // timer.delay() should return the initial delay
+    let result = runtime.execute_code(r#"
+        const timer = setTimeout(() => {}, 1500);
+        timer.delay();
+    "#).unwrap();
+    assert_eq!(result.trim(), "1500",
+        "timer.delay() should return initial delay. Got: {}", result.trim());
+}
+
+#[test]
+#[serial]
+fn test_timer_delay_setter() {
+    cleanup_global_state();
+    let mut runtime = MinimalRuntime::new().unwrap();
+    // timer.delay(ms) should change the delay and return timer for chaining
+    let result = runtime.execute_code(r#"
+        const timer = setTimeout(() => {}, 2000);
+        const result = timer.delay(500);
+        result === timer;
+    "#).unwrap();
+    assert_eq!(result.trim(), "true",
+        "timer.delay(ms) should return timer for chaining. Got: {}", result.trim());
+}
+
+#[test]
+#[serial]
+fn test_timer_delay_updates_metadata() {
+    cleanup_global_state();
+    let mut runtime = MinimalRuntime::new().unwrap();
+    // After changing delay, timer.delay() should return new value
+    let result = runtime.execute_code(r#"
+        const timer = setTimeout(() => {}, 1000);
+        timer.delay();
+        timer.delay(300);
+        timer.delay();
+    "#).unwrap();
+    assert_eq!(result.trim(), "300",
+        "timer.delay() should return updated delay. Got: {}", result.trim());
+}
+
+#[test]
+#[serial]
+fn test_timer_delay_chaining() {
+    cleanup_global_state();
+    let mut runtime = MinimalRuntime::new().unwrap();
+    // timer.delay() should support chaining with ref/unref
+    let result = runtime.execute_code(r#"
+        const timer = setTimeout(() => {}, 1000);
+        const result = timer.delay(500).ref().unref();
+        result === timer;
+    "#).unwrap();
+    assert_eq!(result.trim(), "true",
+        "timer.delay() should support chaining. Got: {}", result.trim());
+}
+
+#[test]
+#[serial]
+fn test_timer_delay_zero() {
+    cleanup_global_state();
+    let mut runtime = MinimalRuntime::new().unwrap();
+    // timer.delay(0) should work
+    let result = runtime.execute_code(r#"
+        const timer = setTimeout(() => {}, 500);
+        timer.delay(0);
+        timer.delay();
+    "#).unwrap();
+    assert_eq!(result.trim(), "0",
+        "timer.delay(0) should set delay to 0. Got: {}", result.trim());
+}

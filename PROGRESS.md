@@ -12938,3 +12938,38 @@ console.log(p.name);  // "Alice"
 - 优化定时器精度和性能
 
 ---
+
+### v0.3.273 Timer.delay() API 实现（2025-12-29）
+**进度**: Node.js 兼容性 | ✅ 已完成
+
+#### v0.3.273 新增功能
+- **timer.delay() 方法（无参数）**: 返回当前定时器的延迟时间（毫秒）
+  - `timer.delay()` 返回设置时的延迟值
+  - 返回 number 类型
+
+- **timer.delay(ms) 方法（有参数）**: 设置新的延迟时间并重新调度定时器
+  - `timer.delay(100)` 将定时器延迟改为 100ms
+  - 自动重新调度定时器
+  - 返回 Timer 对象支持链式调用
+  - 对 setImmediate 不生效（无延迟概念）
+
+#### v0.3.273 技术实现
+- **单一方法实现 get/set**: 使用 `args.length()` 判断是 get 还是 set
+  - `args.length() == 0`: 获取当前延迟值
+  - `args.length() > 0`: 设置新延迟并重新调度
+  - 更新 `TimerMetadata.delay` 值
+  - 调用 `AsyncTimerManager.schedule_timeout()` 重新调度
+  - 链式调用返回 Timer 对象
+
+#### v0.3.273 使用示例
+```javascript
+const timer = setTimeout(() => console.log('hello'), 1000);
+console.log(timer.delay()); // 1000
+timer.delay(500); // 改为 500ms 后执行
+```
+
+#### v0.3.273 下一步
+- 完善定时器精度和性能
+- 继续添加更多 Node.js API 兼容性
+
+---

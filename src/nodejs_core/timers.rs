@@ -315,6 +315,58 @@ fn create_timer_object<'a>(
     let value_of_key = v8::String::new(scope, "valueOf").unwrap();
     timer_obj.set(scope, value_of_key.into(), value_of_fn.into());
 
+    // v0.3.273: Add delay() method - get delay when no args, set delay when args provided
+    let delay_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let this = args.this();
+
+        // Get timer ID
+        let id_key = v8::String::new(scope, "_timerId").unwrap();
+        let id_val = this.get(scope, id_key.into()).unwrap();
+        let timer_id_val = id_val.to_integer(scope).unwrap().value() as u64;
+
+        if args.length() == 0 {
+            // Get current delay
+            let metadata = TIMER_METADATA.lock().unwrap();
+            let delay = metadata.get(&timer_id_val).map(|m| m.delay).unwrap_or(0);
+            retval.set(v8::Number::new(scope, delay as f64).into());
+        } else {
+            // Set new delay
+            let new_delay = args.get(0)
+                .to_integer(scope)
+                .map(|i| i.value().max(0) as u64)
+                .unwrap_or(0);
+
+            // Update metadata delay
+            {
+                let mut metadata = TIMER_METADATA.lock().unwrap();
+                if let Some(info) = metadata.get_mut(&timer_id_val) {
+                    info.delay = new_delay;
+                }
+            }
+
+            // For setTimeout/setInterval with delay > 0, reschedule the timer
+            // Get the timer type first
+            let type_key = v8::String::new(scope, "_timerType").unwrap();
+            let type_val = this.get(scope, type_key.into()).unwrap();
+            let type_str = type_val.to_string(scope).unwrap().to_rust_string_lossy(scope);
+
+            if type_str != "Immediate" && new_delay > 0 {
+                // Reschedule with new delay
+                let effective_delay = if new_delay == 0 { 1 } else { new_delay };
+                let _ = get_async_timer_manager().schedule_timeout(
+                    Duration::from_millis(effective_delay),
+                    timer_id_val,
+                    || {},
+                );
+            }
+
+            // Return timer object for chaining
+            retval.set(this.into());
+        }
+    }).unwrap();
+    let delay_key = v8::String::new(scope, "delay").unwrap();
+    timer_obj.set(scope, delay_key.into(), delay_fn.into());
+
     timer_obj
 }
 
