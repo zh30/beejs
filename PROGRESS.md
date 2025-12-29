@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.287 (2025-12-30)
+## 当前版本: v0.3.288 (2025-12-30)
 
 ### 项目状态摘要
 
@@ -30,6 +30,76 @@
 **CLI 命令**:
 - run, eval, repl, test, bundle, debug
 - version, serve, init, add, remove, install, prune, create, bunx, upgrade
+
+---
+
+### v0.3.288 Web Streams API - pipeTo() 和 pipeThrough() 实现（2025-12-30）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.288 新增功能
+- **ReadableStream.pipeTo()**: 将可读流管道连接到可写流
+  - 返回 Promise<void>，在管道完成时 resolve
+  - 自动将数据从 ReadableStream 传输到 WritableStream
+  - 调用 WritableStream 的 write 回调处理每个数据块
+
+- **ReadableStream.pipeThrough()**: 将可读流管道连接到转换流
+  - 返回 `{ readable: ReadableStream }` 对象
+  - 支持链式数据处理（source → transform → destination）
+  - 保持 TransformStream 的可读端供后续读取
+
+- **WritableStream write 回调增强**: 现在会调用用户提供的 write 回调函数
+
+#### v0.3.288 实现细节
+- 使用 PromiseResolver 实现异步管道操作
+- 遍历 ReadableStream 队列，依次写入 WritableStream
+- 自动处理流关闭和状态同步
+- 兼容 Web Streams API 标准
+
+#### v0.3.288 使用示例
+```javascript
+// pipeTo: 将数据从可读流传输到可写流
+const readable = new ReadableStream({
+    start(controller) {
+        controller.enqueue('hello');
+        controller.enqueue('world');
+        controller.close();
+    }
+});
+
+const writable = new WritableStream({
+    write(chunk) {
+        console.log('Received:', chunk);
+    }
+});
+
+await readable.pipeTo(writable);
+
+// pipeThrough: 通过转换流处理数据
+const upperCaseStream = new TransformStream({
+    transform(chunk, controller) {
+        controller.enqueue(chunk.toString().toUpperCase());
+    }
+});
+
+const result = readable.pipeThrough(upperCaseStream);
+// result.readable 是一个新的 ReadableStream
+const reader = result.readable.getReader();
+```
+
+#### v0.3.288 测试验证
+```bash
+$ ./beejs eval "const rs = new ReadableStream(); console.log(typeof rs.pipeTo, typeof rs.pipeThrough)"
+function function
+```
+
+#### v0.3.288 代码变更
+- `src/web_api/streams.rs`: 添加 ~140 行 pipeTo/pipeThrough 实现
+- `tests/web_streams_api_tests.rs`: 添加 ~151 行集成测试
+
+#### v0.3.288 下一步
+- 完善管道操作的错误处理
+- 支持 pipeTo() 的 preventClose 选项
+- 实现 BYOB (Bring Your Own Buffer) 读取
 
 ---
 
