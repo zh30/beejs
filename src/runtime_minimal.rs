@@ -20,7 +20,7 @@ use crate::nodejs_core::fs::setup_fs_api;
 use crate::nodejs_core::crypto::setup_crypto_api;
 use crate::nodejs_core::net::setup_net_api;
 use crate::nodejs_core::http::setup_http_api;
-use crate::nodejs_core::timers::{setup_timers_api, execute_fired_timers, execute_immediate_callbacks, mark_immediate_callbacks_deferred, TIMER_METADATA};
+use crate::nodejs_core::timers::{setup_timers_api, execute_fired_timers, execute_immediate_callbacks, mark_immediate_callbacks_deferred};
 // v0.3.261: Import process module for nextTick support
 use crate::nodejs_core::process::{execute_next_tick_callbacks, has_pending_next_ticks};
 

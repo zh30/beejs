@@ -123,6 +123,7 @@ fn only_callback(
     retval.set(v8::undefined(scope).into());
 }
 /// toBe matcher - strict equality
+#[allow(dead_code)]
 fn to_be_matcher(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -133,6 +134,7 @@ fn to_be_matcher(
     retval.set(v8::Boolean::new(scope, true).into());
 }
 /// toEqual matcher - deep equality
+#[allow(dead_code)]
 fn to_equal_matcher(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -143,6 +145,7 @@ fn to_equal_matcher(
     retval.set(v8::Boolean::new(scope, true).into());
 }
 /// toBeTruthy matcher
+#[allow(dead_code)]
 fn to_be_truthy_matcher(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -151,6 +154,7 @@ fn to_be_truthy_matcher(
     retval.set(v8::Boolean::new(scope, true).into());
 }
 /// toBeFalsy matcher
+#[allow(dead_code)]
 fn to_be_falsy_matcher(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -159,6 +163,7 @@ fn to_be_falsy_matcher(
     retval.set(v8::Boolean::new(scope, true).into());
 }
 /// toContain matcher
+#[allow(dead_code)]
 fn to_contain_matcher(
     scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,

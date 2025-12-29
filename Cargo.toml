@@ -196,6 +196,11 @@ path = "src/main.rs"
 # name = "test_stage95_phase5_integration"
 # path = "test_stage95_phase5_integration.rs"
 
+[features]
+default = []
+verbose_logging = []  # Enable verbose logging for debugging
+tch = ["dep:tch"]     # Enable PyTorch/Tch support for ML workloads
+
 [profile.release]
 opt-level = 3
 lto = true
