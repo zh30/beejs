@@ -115,6 +115,13 @@ try {
 - ✅ 错误属性：error.name === "DataCloneError"
 - ✅ 错误消息：包含 "Symbol cannot be cloned" 描述
 
+#### v0.3.306 Bug 修复（2025-12-31）
+**Map/Set 克隆修复**:
+- 修复 Map/Set 包含对象值时 size 属性不正确的问题
+- 根本原因：标记条目（MAP_VAL/SET_VAL）的对象值被跳过处理
+- 解决方案：仅对原始值跳过标记条目，对象值正常克隆处理
+- 测试结果：45/45 通过（原来 4 个失败的测试全部修复）
+
 #### v0.3.306 下一步
 - Promise 克隆支持（已解决/已拒绝状态的 Promise）
 - V8 底层 ArrayBuffer transfer 支持（实现真正的零拷贝 detach）
