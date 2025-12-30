@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.306 (2025-12-31)
+## 当前版本: v0.3.307 (2025-12-31)
 
 ### 项目状态摘要
 
@@ -122,9 +122,27 @@ try {
 - 解决方案：仅对原始值跳过标记条目，对象值正常克隆处理
 - 测试结果：45/45 通过（原来 4 个失败的测试全部修复）
 
-#### v0.3.306 下一步
-- Promise 克隆支持（已解决/已拒绝状态的 Promise）
+#### v0.3.307 Promise 克隆支持（2025-12-31）
+**Promise 克隆实现**:
+- 根据 WHATWG 规范，Promise 不能被结构化克隆
+- 已解决/已拒绝的 Promise 抛出 DataCloneError
+- 待处理的 Promise 同样抛出 DataCloneError
+- 原因：JavaScript 无法同步检测 Promise 状态
+
+**测试覆盖**:
+- `tests/structured_clone_tests.rs`: 添加 3 个新测试
+  - `test_clone_resolved_promise_throws()`: 已解决 Promise 测试
+  - `test_clone_rejected_promise_throws()`: 已拒绝 Promise 测试
+  - `test_clone_pending_promise_throws()`: 待处理 Promise 测试
+
+**测试验证**:
+- ✅ 48/48 structuredClone 测试通过
+- ✅ Promise 克隆：正确抛出 DataCloneError
+- ✅ 错误消息：包含 "Promise cannot be cloned" 描述
+
+#### v0.3.307 下一步
 - V8 底层 ArrayBuffer transfer 支持（实现真正的零拷贝 detach）
+- Promise 状态克隆（需要 V8 引擎级别支持）
 
 ---
 

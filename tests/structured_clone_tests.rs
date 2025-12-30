@@ -1046,4 +1046,73 @@ mod structured_clone_tests {
         assert!(stdout.contains("error thrown: true"), "Expected error to be thrown. Got: {}", stdout);
         assert!(stdout.contains("error name: true"), "Expected error name to be DataCloneError. Got: {}", stdout);
     }
+
+    /// Test 46: structuredClone with resolved Promise throws DataCloneError (v0.3.307)
+    #[test]
+    fn test_clone_resolved_promise_throws() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = Promise.resolve(42);
+                try {
+                    structuredClone(original);
+                    console.log('no error: false');
+                } catch (err) {
+                    console.log('error thrown:', true);
+                    console.log('error name:', err.name === "DataCloneError");
+                    console.log('error message:', err.message === "Promise cannot be cloned");
+                }
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("error thrown: true"), "Expected error to be thrown. Got: {}", stdout);
+        assert!(stdout.contains("error name: true"), "Expected error name to be DataCloneError. Got: {}", stdout);
+        assert!(stdout.contains("error message: true"), "Expected error message about Promise. Got: {}", stdout);
+    }
+
+    /// Test 47: structuredClone with rejected Promise throws DataCloneError (v0.3.307)
+    #[test]
+    fn test_clone_rejected_promise_throws() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = Promise.reject(new Error("test error"));
+                try {
+                    structuredClone(original);
+                    console.log('no error: false');
+                } catch (err) {
+                    console.log('error thrown:', true);
+                    console.log('error name:', err.name === "DataCloneError");
+                    console.log('error message:', err.message === "Promise cannot be cloned");
+                }
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("error thrown: true"), "Expected error to be thrown. Got: {}", stdout);
+        assert!(stdout.contains("error name: true"), "Expected error name to be DataCloneError. Got: {}", stdout);
+    }
+
+    /// Test 48: structuredClone with pending Promise throws DataCloneError (v0.3.307)
+    #[test]
+    fn test_clone_pending_promise_throws() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = new Promise(() => {});
+                try {
+                    structuredClone(original);
+                    console.log('no error: false');
+                } catch (err) {
+                    console.log('error thrown:', true);
+                    console.log('error name:', err.name === "DataCloneError");
+                }
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("error thrown: true"), "Expected error to be thrown. Got: {}", stdout);
+        assert!(stdout.contains("error name: true"), "Expected error name to be DataCloneError. Got: {}", stdout);
+    }
 }

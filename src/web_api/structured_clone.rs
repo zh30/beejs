@@ -128,6 +128,17 @@ fn setup_internal_clone_func(
                         return cloned;
                     } else if (Array.isArray(obj)) {
                         return new Array(obj.length);
+                    } else if (obj instanceof Promise) {
+                        // Clone Promise based on its state
+                        // Per WHATWG spec: fulfilled clones value, rejected clones reason as Error
+                        // Pending promises throw DataCloneError
+
+                        // Synchronously try to determine Promise state
+                        // For now, throw DataCloneError since we cannot synchronously
+                        // determine Promise state without engine-level support
+                        const err = new Error("Promise cannot be cloned");
+                        err.name = "DataCloneError";
+                        throw err;
                     } else {
                         return {};
                     }
