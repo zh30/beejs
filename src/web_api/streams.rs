@@ -595,7 +595,7 @@ fn writable_stream_constructor(
         let writable_key = v8::String::new(_scope, "_writable").unwrap();
         writer.set(_scope, writable_key.into(), writable_this.into());
 
-        // Setup write() method - adds chunk to queue and calls write callback
+        // v0.3.292: Setup write() method - adds chunk to queue and calls write callback
         let write_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
             let promise: v8::Local<v8::PromiseResolver> = v8::PromiseResolver::new(__scope).unwrap();
 
@@ -603,36 +603,107 @@ fn writable_stream_constructor(
             let writer_this = args.this();
             let writable_key = v8::String::new(__scope, "_writable").unwrap();
 
-            if let Some(writable_val) = writer_this.get(__scope, writable_key.into()).filter(|s| s.is_object()) {
-                if let Ok(writable) = v8::Local::<v8::Object>::try_from(writable_val) {
-                    // Get write queue and state
-                    let queue_key = v8::String::new(__scope, "_writeQueue").unwrap();
-                    let state_key = v8::String::new(__scope, "_state").unwrap();
+            if let Some(writable_val) = writer_this.get(__scope, writable_key.into()) {
+                if writable_val.is_object() {
+                    if let Ok(writable) = v8::Local::<v8::Object>::try_from(writable_val) {
+                        // Get write queue and state
+                        let queue_key = v8::String::new(__scope, "_writeQueue").unwrap();
+                        let state_key = v8::String::new(__scope, "_state").unwrap();
 
-                    // Get the stored write callback
-                    let write_cb_key = v8::String::new(__scope, "_writeCallback").unwrap();
-                    let write_callback = writable.get(__scope, write_cb_key.into());
+                        // Get the stored write callback
+                        let write_cb_key = v8::String::new(__scope, "_writeCallback").unwrap();
+                        let write_callback = writable.get(__scope, write_cb_key.into());
 
-                    if let Some(queue_val) = writable.get(__scope, queue_key.into()) {
-                        if let Ok(queue) = v8::Local::<v8::Array>::try_from(queue_val) {
-                            // Get state
-                            let state = writable.get(__scope, state_key.into())
-                                .and_then(|s| s.to_integer(__scope))
-                                .map(|i| i.value() as i32)
-                                .unwrap_or(0);
+                        if let Some(queue_val) = writable.get(__scope, queue_key.into()) {
+                            if let Ok(queue) = v8::Local::<v8::Array>::try_from(queue_val) {
+                                // Get state
+                                let state = writable.get(__scope, state_key.into())
+                                    .and_then(|s| s.to_integer(__scope))
+                                    .map(|i| i.value() as i32)
+                                    .unwrap_or(0);
 
-                            // Only add to queue if stream is open
-                            if state == 0 && args.length() > 0 {
-                                let chunk = args.get(0);
-                                let length = queue.length();
-                                queue.set_index(__scope, length, chunk);
+                                // Only add to queue if stream is open
+                                if state == 0 && args.length() > 0 {
+                                    let chunk = args.get(0);
+                                    let length = queue.length();
+                                    queue.set_index(__scope, length, chunk);
 
-                                // Call the user's write callback if provided
-                                if let Some(cb) = write_callback {
-                                    if cb.is_function() {
-                                        if let Ok(cb_fn) = v8::Local::<v8::Function>::try_from(cb) {
-                                            let undefined = v8::undefined(__scope).into();
-                                            let _ = cb_fn.call(__scope, undefined, &[chunk]);
+                                    // v0.3.292: Call the user's write callback if provided
+                                    if let Some(cb) = write_callback {
+                                        if cb.is_function() {
+                                            if let Ok(cb_fn) = v8::Local::<v8::Function>::try_from(cb) {
+                                                let undefined = v8::undefined(__scope).into();
+                                                // Call the write callback and get the return value
+                                                let cb_result = cb_fn.call(__scope, undefined, &[chunk]);
+
+                                                // v0.3.292: Check if callback returned a Promise and handle async
+                                                if let Some(result_val) = cb_result {
+                                                    if result_val.is_object() {
+                                                        // Check if callback result is thenable
+                                                        if let Ok(result_obj) = v8::Local::<v8::Object>::try_from(result_val) {
+                                                            let then_key = v8::String::new(__scope, "then").unwrap();
+                                                            if let Some(then_fn_val) = result_obj.get(__scope, then_key.into()) {
+                                                                if then_fn_val.is_function() {
+                                                                    if let Ok(then_fn) = v8::Local::<v8::Function>::try_from(then_fn_val) {
+                                                                        // Create a Promise in JavaScript that we'll chain to the callback's Promise
+                                                                        // This is more reliable than trying to access V8's PromiseResolver from JS
+                                                                        let promise_code = r#"
+                                                                            (function() {
+                                                                                var resolver = null;
+                                                                                var promise = new Promise(function(resolve, reject) {
+                                                                                    resolver = { resolve: resolve, reject: reject };
+                                                                                });
+                                                                                return { promise: promise, resolver: resolver };
+                                                                            })
+                                                                        "#;
+                                                                        let promise_str = v8::String::new(__scope, promise_code).unwrap();
+                                                                        if let Some(promise_compiled) = v8::Script::compile(__scope, promise_str, None) {
+                                                                            if let Some(promise_run) = promise_compiled.run(__scope) {
+                                                                                if let Ok(promise_fn) = v8::Local::<v8::Function>::try_from(promise_run) {
+                                                                                    if let Some(result) = promise_fn.call(__scope, undefined.into(), &[]) {
+                                                                                        // Get the promise and its resolver
+                                                                                        if let Ok(result_obj) = v8::Local::<v8::Object>::try_from(result) {
+                                                                                            let promise_key = v8::String::new(__scope, "promise").unwrap();
+                                                                                            let resolver_key = v8::String::new(__scope, "resolver").unwrap();
+
+                                                                                            let inner_promise = result_obj.get(__scope, promise_key.into()).unwrap();
+                                                                                            let inner_resolver = result_obj.get(__scope, resolver_key.into()).unwrap();
+
+                                                                                            // Chain the callback's Promise to our resolver
+                                                                                            let chain_code = r#"
+                                                                                                (function(thenFn, callbackResult, resolver) {
+                                                                                                    if (resolver && resolver.resolve) {
+                                                                                                        thenFn.call(callbackResult,
+                                                                                                            function(v) { resolver.resolve(v); },
+                                                                                                            function(e) { resolver.reject(e); }
+                                                                                                        );
+                                                                                                    }
+                                                                                                })
+                                                                                            "#;
+                                                                                            let chain_str = v8::String::new(__scope, chain_code).unwrap();
+                                                                                            if let Some(chain_compiled) = v8::Script::compile(__scope, chain_str, None) {
+                                                                                                if let Some(chain_run) = chain_compiled.run(__scope) {
+                                                                                                    if let Ok(chain_fn) = v8::Local::<v8::Function>::try_from(chain_run) {
+                                                                                                        let _ = chain_fn.call(__scope, undefined.into(), &[then_fn.into(), result_val, inner_resolver]);
+
+                                                                                                        // Return the inner promise
+                                                                                                        _r.set(inner_promise);
+                                                                                                        return;
+                                                                                                    }
+                                                                                                }
+                                                                                            }
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -642,7 +713,7 @@ fn writable_stream_constructor(
                 }
             }
 
-            // Resolve promise immediately (async processing is simplified)
+            // Resolve promise immediately for sync case
             let undefined_val: v8::Local<v8::Value> = v8::undefined(__scope).into();
             let _ = promise.resolve(__scope, undefined_val);
             _r.set(promise.into());

@@ -1066,4 +1066,113 @@ mod web_streams_api_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "pipeTo with signal and preventAbort should not abort writable");
     }
+
+    // v0.3.292: WritableStream.write() async enhancement tests
+    #[test]
+    fn test_writable_stream_write_waits_for_async_callback() {
+        // Test that write() waits for async write callback to complete
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                let writeCompleted = false;
+                const stream = new WritableStream({
+                    write(chunk) {
+                        // Return a promise that resolves after a delay
+                        return new Promise(resolve => {
+                            setTimeout(() => {
+                                writeCompleted = true;
+                                resolve();
+                            }, 50);
+                        });
+                    }
+                });
+                const writer = stream.getWriter();
+                const writePromise = writer.write('test');
+
+                // Before the promise resolves, write should not be complete
+                console.log('before:', writeCompleted);
+
+                // Wait for the write to complete
+                writePromise.then(() => {
+                    console.log('after:', writeCompleted);
+                });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        // Check that async write works: false before, true after
+        assert!(stdout.contains("before: false") && stdout.contains("after: true"),
+            "write() should wait for async write callback");
+    }
+
+    #[test]
+    fn test_writable_stream_write_rejects_on_callback_error() {
+        // Test that write() rejects when write callback rejects
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const stream = new WritableStream({
+                    write(chunk) {
+                        return Promise.reject(new Error('Write failed'));
+                    }
+                });
+                const writer = stream.getWriter();
+                writer.write('test').then(
+                    () => console.log('resolved'),
+                    (err) => console.log('rejected:', err.message)
+                );
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("rejected: Write failed"),
+            "write() should reject when write callback rejects");
+    }
+
+    #[test]
+    fn test_writable_stream_write_with_sync_callback() {
+        // Test that write() resolves immediately for synchronous callbacks
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                let callbackCalled = false;
+                const stream = new WritableStream({
+                    write(chunk) {
+                        callbackCalled = true;
+                        // No return value = synchronous completion
+                    }
+                });
+                const writer = stream.getWriter();
+                const writePromise = writer.write('test');
+
+                // Callback should be called immediately
+                console.log('callbackCalled:', callbackCalled);
+
+                writePromise.then(() => {
+                    console.log('promiseResolved: true');
+                });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("callbackCalled: true") && stdout.contains("promiseResolved: true"),
+            "write() should resolve immediately for sync callbacks");
+    }
+
+    #[test]
+    fn test_writable_stream_write_returns_promise() {
+        // Test that write() returns a Promise
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const stream = new WritableStream();
+                const writer = stream.getWriter();
+                const result = writer.write('test');
+                console.log(result instanceof Promise);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "write() should return a Promise");
+    }
 }
