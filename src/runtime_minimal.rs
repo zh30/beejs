@@ -27,6 +27,8 @@ use crate::nodejs_core::process::{execute_next_tick_callbacks, has_pending_next_
 use crate::nodejs_core::performance::setup_performance_api;
 // v0.3.282: Import Web Streams API for AI workloads
 use crate::web_api::streams::setup_streams_api;
+// v0.3.305: Import Blob API for binary data handling
+use crate::web_api::blob::setup_blob_api;
 // v0.3.295: Import CompressionStream API
 use crate::web_api::compression::setup_compression_api;
 // v0.3.299: Import structuredClone API
@@ -3011,6 +3013,7 @@ impl MinimalRuntime {
             setup_timers_api(scope, &context)?; // v0.3.249: Timer API with async scheduling
             setup_performance_api(scope, &context)?; // v0.3.275: Performance API
             setup_streams_api(scope, &context)?; // v0.3.282: Web Streams API for AI workloads
+            setup_blob_api(scope, &context)?; // v0.3.305: Blob API for binary data handling
             setup_compression_api(scope, &context)?; // v0.3.295: CompressionStream API (gzip/deflate)
             setup_structured_clone_api(scope, &context)?; // v0.3.299: structuredClone global function
             crate::nodejs_core::readline::setup_readline_api(scope, &context)?; // v0.3.277: Readline API

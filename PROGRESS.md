@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.302 (2025-12-30)
+## 当前版本: v0.3.305 (2025-12-31)
 
 ### 项目状态摘要
 
@@ -20,27 +20,174 @@
 **Web API**: ✅ 已完成
 - crypto, events, abort, blob, timers, encoding
 - performance, url, form_data, fetch, websocket
-- streams (ReadableStream, WritableStream, TransformStream)
+- streams (ReadableStream, WritableStream, TransformStream, TextEncoderStream, TextDecoderStream)
 - CompressionStream (v0.3.295 新增)
 - structuredClone (v0.3.299 新增)
+- Blob/File API (v0.3.305 新增)
 
 **包管理**: ✅ 已完成
 - package.json 解析
 - npm 兼容命令 (install, add, remove, prune)
 - 依赖版本解析
 
-**测试**: ✅ 300+ 测试通过
+**测试**: ✅ 320+ 测试通过
 - cargo test --lib: 253/253 通过
 - performance_api_tests: 16/16 通过
 - web_streams_api_tests: 59/59 通过
 - byob_tests: 5/5 通过
 - compression_stream_tests: 8/8 通过 (v0.3.295)
-- structured_clone_tests: 28/28 通过 (v0.3.302)
+- structured_clone_tests: 39/39 通过 (v0.3.304)
+- blob_api_tests: 15/15 通过 (v0.3.305)
 - 集成测试: 运行正常
 
 **CLI 命令**:
 - run, eval, repl, test, bundle, debug
 - version, serve, init, add, remove, install, prune, create, bunx, upgrade
+
+---
+
+### v0.3.305 Blob/File API 实现（2025-12-31）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.305 新增功能
+
+**Blob constructor**:
+- 支持 `new Blob([parts], options)` 创建二进制数据容器
+- 支持字符串和多种数据类型作为 parts
+- 支持 `type` 选项设置 MIME 类型
+- 自动计算并暴露 `size` 和 `type` 属性
+
+**Blob methods**:
+- `blob.text()`: 同步返回 Blob 内容作为字符串
+- `blob.slice(start, end, contentType)`: 创建部分 Blob
+- `blob.stream()`: 返回 ReadableStream 进行流式读取
+- `blob.arrayBuffer()`: 返回 ArrayBuffer
+
+**File constructor**:
+- 支持 `new File([parts], name, options)` 创建文件对象
+- 继承自 Blob，具有所有 Blob 方法
+- 支持 `name`, `lastModified` 属性
+- 适用于文件上传和表单处理
+
+**AI 工作负载优化**:
+- 高效的二进制数据处理
+- 流式读取支持大文件处理
+- 与 ReadableStream 无缝集成
+
+#### v0.3.305 使用示例
+```javascript
+// 创建 Blob
+const blob = new Blob(['Hello, Beejs!'], { type: 'text/plain' });
+console.log(blob.size);  // 13
+console.log(blob.type);  // 'text/plain'
+
+// 读取 Blob 内容
+const text = blob.text();
+
+// 切片操作
+const sliced = blob.slice(0, 5);
+
+// 流式读取
+const stream = blob.stream();
+const reader = stream.getReader();
+const { value, done } = await reader.read();
+
+// 创建 File
+const file = new File(['file content'], 'test.txt', { type: 'text/plain' });
+console.log(file.name);  // 'test.txt'
+console.log(file.size);  // 12
+```
+
+#### v0.3.305 实现细节
+
+- `src/web_api/blob.rs`: Blob/File API 实现 (~400 行)
+  - `blob_constructor()`: Blob 构造函数
+  - `file_constructor()`: File 构造函数
+  - `blob_text()`: 返回字符串内容
+  - `blob_slice()`: 创建部分 Blob
+  - `blob_stream()`: 返回 ReadableStream
+  - `blob_array_buffer()`: 返回 ArrayBuffer
+
+- `src/web_api/mod.rs`: 注册 blob 模块
+- `src/runtime_minimal.rs`: 添加 setup_blob_api() 导入和调用
+
+#### v0.3.305 测试覆盖
+- Blob 构造函数测试 (字符串、空、多部分)
+- Blob.text() 方法测试
+- Blob.slice() 方法测试 (正常、负索引、内容类型)
+- Blob.stream() 方法测试
+- File 构造函数测试
+- Unicode 内容处理测试
+- 二进制数据处理测试
+- 继承方法测试
+
+#### v0.3.305 代码变更
+- `src/web_api/blob.rs`: 现有文件 (~400 行)
+- `src/web_api/mod.rs`: 添加 blob 模块注册 (~3 行)
+- `src/runtime_minimal.rs`: 添加导入和初始化 (~5 行)
+- `tests/blob_api_tests.rs`: 新建测试套件 (~500 行)
+
+---
+
+### v0.3.304 WeakMap/WeakSet structuredClone 支持（2025-12-31）
+**进度**: structuredClone 增强 | ✅ 已完成
+
+#### v0.3.304 新增功能
+
+**structuredClone WeakMap/WeakSet 处理**:
+- WeakMap 克隆时抛出 DataCloneError
+- WeakSet 克隆时抛出 DataCloneError
+- 符合 Web 标准规范
+
+#### v0.3.304 实现细节
+
+- `src/web_api/structured_clone.rs`: 添加 WeakMap/WeakSet 检测
+  - 在 createClone() 函数中添加 instanceof 检查
+  - 抛出 Error 对象，name 属性设为 "DataCloneError"
+
+#### v0.3.304 测试覆盖
+- test_clone_weakmap_throws: WeakMap 抛出 DataCloneError
+- test_clone_weakset_throws: WeakSet 抛出 DataCloneError
+- test_clone_object_with_weakmap_throws: 包含 WeakMap 的对象抛出错误
+- test_clone_object_with_weakset_throws: 包含 WeakSet 的对象抛出错误
+
+---
+
+### v0.3.302 Error Object structuredClone 支持（2025-12-30）
+**进度**: structuredClone 增强 | ✅ 已完成
+
+#### v0.3.302 新增功能
+
+**structuredClone Error 克隆**:
+- Error 对象可以被深拷贝
+- 支持所有 Error 子类型: TypeError, RangeError, ReferenceError, SyntaxError 等
+- 保留 message, name, stack 属性
+- 自定义属性也会被克隆
+
+#### v0.3.302 使用示例
+```javascript
+const original = new Error("Test error");
+original.code = "ERR_TEST";
+const cloned = structuredClone(original);
+console.log(cloned.message);  // "Test error"
+console.log(cloned.code);     // "ERR_TEST"
+```
+
+#### v0.3.302 实现细节
+
+- `src/web_api/structured_clone.rs`: 增强 createClone() 函数
+  - 检测 Error 对象类型 (instanceof 或 name/message 属性)
+  - 使用 getErrorConstructor() 获取正确的错误类型
+  - 创建新的错误对象并复制属性
+
+#### v0.3.302 测试覆盖
+- test_clone_error: Error 克隆
+- test_clone_type_error: TypeError 克隆
+- test_clone_range_error: RangeError 克隆
+- test_clone_reference_error: ReferenceError 克隆
+- test_clone_syntax_error: SyntaxError 克隆
+- test_clone_error_with_custom_properties: 自定义属性克隆
+- test_clone_error_in_nested_object: 嵌套 Error 克隆
 
 ---
 
