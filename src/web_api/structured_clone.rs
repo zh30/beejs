@@ -1,5 +1,5 @@
 // structuredClone API implementation
-// v0.3.301: Enhanced with transfer option support for zero-copy transfer
+// v0.3.302: Enhanced with Error object cloning support
 // Optimized for AI workloads - enables safe deep cloning with transfer semantics
 
 use anyhow::Result;
@@ -134,6 +134,44 @@ fn setup_internal_clone_func(
                             });
                         }
                         return c;
+                    }
+
+                    // Check for Error objects (Error, TypeError, RangeError, etc.)
+                    // This handles both native Error and our custom Error implementation
+                    const isError = obj instanceof Error ||
+                        (typeof obj.name === 'string' && typeof obj.message === 'string');
+                    if (isError) {
+                        // Get the error constructor based on name
+                        let ErrorConstructor = Error;
+                        if (obj instanceof TypeError) ErrorConstructor = TypeError;
+                        else if (obj instanceof RangeError) ErrorConstructor = RangeError;
+                        else if (obj instanceof ReferenceError) ErrorConstructor = ReferenceError;
+                        else if (obj instanceof SyntaxError) ErrorConstructor = SyntaxError;
+                        else if (obj instanceof EvalError) ErrorConstructor = EvalError;
+                        else if (obj instanceof URIError) ErrorConstructor = URIError;
+
+                        // Create new error with message
+                        const cloned = new ErrorConstructor(obj.message);
+
+                        // Copy name property
+                        if (typeof obj.name === 'string') {
+                            cloned.name = obj.name;
+                        }
+
+                        // Copy stack property if available
+                        if (typeof obj.stack === 'string') {
+                            cloned.stack = obj.stack;
+                        }
+
+                        // Copy any additional custom properties
+                        for (const key in obj) {
+                            if (Object.prototype.hasOwnProperty.call(obj, key) &&
+                                key !== 'name' && key !== 'message' && key !== 'stack') {
+                                cloned[key] = deepClone(obj[key]);
+                            }
+                        }
+
+                        return cloned;
                     }
 
                     if (Array.isArray(obj)) {

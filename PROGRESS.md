@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.301 (2025-12-30)
+## 当前版本: v0.3.302 (2025-12-30)
 
 ### 项目状态摘要
 
@@ -29,13 +29,13 @@
 - npm 兼容命令 (install, add, remove, prune)
 - 依赖版本解析
 
-**测试**: ✅ 293+ 测试通过
+**测试**: ✅ 300+ 测试通过
 - cargo test --lib: 253/253 通过
 - performance_api_tests: 16/16 通过
 - web_streams_api_tests: 59/59 通过
 - byob_tests: 5/5 通过
 - compression_stream_tests: 8/8 通过 (v0.3.295)
-- structured_clone_tests: 21/21 通过 (v0.3.301)
+- structured_clone_tests: 28/28 通过 (v0.3.302)
 - 集成测试: 运行正常
 
 **CLI 命令**:
@@ -14017,7 +14017,86 @@ console.log(clonedBuffer.byteLength); // 1048576
 #### v0.3.301 下一步
 - V8 底层 ArrayBuffer transfer 支持（实现真正的零拷贝 detach）
 - 性能优化：使用迭代器替代递归减少栈开销
-- Error 对象克隆支持
+- ✅ Error 对象克隆支持
+
+---
+
+### v0.3.302 structuredClone 增强 - Error 对象克隆支持（2025-12-30）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.302 新增功能
+
+**Error 对象克隆**:
+- 支持 Error、TypeError、RangeError、ReferenceError、SyntaxError、EvalError、URIError
+- 保留 `name`、`message`、`stack` 等关键属性
+- 支持自定义属性的深拷贝
+- 嵌套对象中的 Error 正确克隆
+
+#### v0.3.302 使用示例
+```javascript
+// 基本 Error 克隆
+const original = new Error("Test error message");
+const cloned = structuredClone(original);
+console.log(cloned instanceof Error); // true
+console.log(cloned.message); // "Test error message"
+
+// TypeError 克隆
+const typeError = new TypeError("Invalid type");
+const clonedType = structuredClone(typeError);
+console.log(clonedType instanceof TypeError); // true
+
+// 带自定义属性的 Error
+const customError = new Error("Custom error");
+customError.code = "ERR_CUSTOM";
+customError.statusCode = 500;
+const clonedCustom = structuredClone(customError);
+console.log(clonedCustom.code); // "ERR_CUSTOM"
+console.log(clonedCustom.statusCode); // 500
+
+// 嵌套对象中的 Error
+const response = {
+    success: false,
+    error: new Error("Operation failed"),
+    metadata: { timestamp: Date.now() }
+};
+const clonedResponse = structuredClone(response);
+console.log(clonedResponse.error instanceof Error); // true
+```
+
+#### v0.3.302 实现细节
+
+- `src/web_api/structured_clone.rs`: 重写 clone 函数 (~+40/-0 行)
+  - 添加 Error 类型检测（`instanceof Error` 或 `name` + `message` 属性）
+  - 根据 `obj instanceof TypeError/RangeError/etc.` 选择正确的错误构造函数
+  - 复制 `name`、`message`、`stack` 标准属性
+  - 递归复制自定义属性（排除标准属性）
+
+#### v0.3.302 代码变更
+- `src/web_api/structured_clone.rs`: 添加 Error 克隆支持 (~+40 行)
+  - `isError` 检测逻辑：支持原生 Error 和自定义实现
+  - 错误构造函数映射：Error → TypeError → RangeError → ReferenceError → SyntaxError → EvalError → URIError
+  - 自定义属性递归深拷贝
+
+- `tests/structured_clone_tests.rs`: 添加 7 个新测试 (~150 行)
+  - `test_clone_error()`: 基本 Error 克隆测试
+  - `test_clone_type_error()`: TypeError 克隆测试
+  - `test_clone_range_error()`: RangeError 克隆测试
+  - `test_clone_reference_error()`: ReferenceError 克隆测试
+  - `test_clone_syntax_error()`: SyntaxError 克隆测试
+  - `test_clone_error_with_custom_properties()`: 自定义属性测试
+  - `test_clone_error_in_nested_object()`: 嵌套对象测试
+
+#### v0.3.302 验证
+- ✅ Error 克隆：类型、message、stack 正确保留
+- ✅ TypeError/RangeError/等派生类型：正确识别并克隆为相同类型
+- ✅ 自定义属性：code、statusCode 等正确复制
+- ✅ 嵌套结构：对象中的 Error 正确深拷贝
+- ✅ 独立引用：克隆的 Error 与原始对象引用不同
+
+#### v0.3.302 下一步
+- V8 底层 ArrayBuffer transfer 支持（实现真正的零拷贝 detach）
+- 性能优化：使用迭代器替代递归减少栈开销
+- 其他内置对象克隆支持（WeakMap、WeakSet、Promise 等）
 
 ---
 

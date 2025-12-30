@@ -655,4 +655,156 @@ mod structured_clone_tests {
         assert!(stdout.contains("scores type: true"), "Expected scores as Uint8Array. Got: {}", stdout);
         assert!(stdout.contains("deep copy: true"), "Expected deep copy. Got: {}", stdout);
     }
+
+    /// Test 29: structuredClone with Error object (v0.3.302)
+    #[test]
+    fn test_clone_error() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = new Error("Test error message");
+                const cloned = structuredClone(original);
+                console.log('error cloned:', cloned instanceof Error);
+                console.log('error message:', cloned.message === "Test error message");
+                console.log('error different ref:', cloned !== original);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("error cloned: true"), "Expected Error to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("error message: true"), "Expected error message preserved. Got: {}", stdout);
+        assert!(stdout.contains("error different ref: true"), "Expected different reference. Got: {}", stdout);
+    }
+
+    /// Test 30: structuredClone with TypeError (v0.3.302)
+    #[test]
+    fn test_clone_type_error() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = new TypeError("Invalid type error");
+                const cloned = structuredClone(original);
+                console.log('typeError cloned:', cloned instanceof TypeError);
+                console.log('typeError message:', cloned.message === "Invalid type error");
+                console.log('typeError different ref:', cloned !== original);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("typeError cloned: true"), "Expected TypeError to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("typeError message: true"), "Expected TypeError message preserved. Got: {}", stdout);
+        assert!(stdout.contains("typeError different ref: true"), "Expected different reference. Got: {}", stdout);
+    }
+
+    /// Test 31: structuredClone with RangeError (v0.3.302)
+    #[test]
+    fn test_clone_range_error() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = new RangeError("Value out of range");
+                const cloned = structuredClone(original);
+                console.log('rangeError cloned:', cloned instanceof RangeError);
+                console.log('rangeError message:', cloned.message === "Value out of range");
+                console.log('rangeError different ref:', cloned !== original);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("rangeError cloned: true"), "Expected RangeError to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("rangeError message: true"), "Expected RangeError message preserved. Got: {}", stdout);
+        assert!(stdout.contains("rangeError different ref: true"), "Expected different reference. Got: {}", stdout);
+    }
+
+    /// Test 32: structuredClone with ReferenceError (v0.3.302)
+    #[test]
+    fn test_clone_reference_error() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = new ReferenceError("Undefined variable");
+                const cloned = structuredClone(original);
+                console.log('refError cloned:', cloned instanceof ReferenceError);
+                console.log('refError message:', cloned.message === "Undefined variable");
+                console.log('refError different ref:', cloned !== original);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("refError cloned: true"), "Expected ReferenceError to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("refError message: true"), "Expected ReferenceError message preserved. Got: {}", stdout);
+        assert!(stdout.contains("refError different ref: true"), "Expected different reference. Got: {}", stdout);
+    }
+
+    /// Test 33: structuredClone with SyntaxError (v0.3.302)
+    #[test]
+    fn test_clone_syntax_error() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = new SyntaxError("Invalid syntax");
+                const cloned = structuredClone(original);
+                console.log('syntaxError cloned:', cloned instanceof SyntaxError);
+                console.log('syntaxError message:', cloned.message === "Invalid syntax");
+                console.log('syntaxError different ref:', cloned !== original);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("syntaxError cloned: true"), "Expected SyntaxError to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("syntaxError message: true"), "Expected SyntaxError message preserved. Got: {}", stdout);
+        assert!(stdout.contains("syntaxError different ref: true"), "Expected different reference. Got: {}", stdout);
+    }
+
+    /// Test 34: structuredClone with Error with custom properties (v0.3.302)
+    #[test]
+    fn test_clone_error_with_custom_properties() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = new Error("Custom error");
+                original.code = "ERR_CUSTOM";
+                original.statusCode = 500;
+                const cloned = structuredClone(original);
+                console.log('custom error cloned:', cloned instanceof Error);
+                console.log('custom message:', cloned.message === "Custom error");
+                console.log('custom code:', cloned.code === "ERR_CUSTOM");
+                console.log('custom statusCode:', cloned.statusCode === 500);
+                console.log('different ref:', cloned !== original);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("custom error cloned: true"), "Expected Error with custom props to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("custom message: true"), "Expected custom message preserved. Got: {}", stdout);
+        assert!(stdout.contains("custom code: true"), "Expected custom code preserved. Got: {}", stdout);
+        assert!(stdout.contains("custom statusCode: true"), "Expected custom statusCode preserved. Got: {}", stdout);
+        assert!(stdout.contains("different ref: true"), "Expected different reference. Got: {}", stdout);
+    }
+
+    /// Test 35: structuredClone with Error in nested object (v0.3.302)
+    #[test]
+    fn test_clone_error_in_nested_object() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = {
+                    success: false,
+                    error: new Error("Operation failed"),
+                    metadata: { timestamp: Date.now() }
+                };
+                const cloned = structuredClone(original);
+                console.log('nested error type:', cloned.error instanceof Error);
+                console.log('nested error message:', cloned.error.message === "Operation failed");
+                console.log('nested metadata preserved:', cloned.metadata.timestamp === original.metadata.timestamp);
+                console.log('deep copy:', original.error !== cloned.error);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("nested error type: true"), "Expected nested Error to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("nested error message: true"), "Expected nested Error message preserved. Got: {}", stdout);
+        assert!(stdout.contains("nested metadata preserved: true"), "Expected metadata preserved. Got: {}", stdout);
+        assert!(stdout.contains("deep copy: true"), "Expected deep copy. Got: {}", stdout);
+    }
 }
