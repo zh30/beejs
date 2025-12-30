@@ -62,6 +62,17 @@ fn setup_internal_clone_func(
                     return null;
                 }
 
+                function isDataView(obj) {
+                    // DataView is a distinct type from TypedArray
+                    // Check using instanceof and byteLength/getInt8 methods
+                    return obj instanceof DataView ||
+                           (typeof obj === 'object' &&
+                            typeof obj.byteLength === 'number' &&
+                            typeof obj.getInt8 === 'function' &&
+                            typeof obj.getUint8 === 'function' &&
+                            !obj.includes); // TypedArrays have includes, DataView doesn't
+                }
+
                 function getErrorConstructor(obj) {
                     if (obj instanceof TypeError) return TypeError;
                     if (obj instanceof RangeError) return RangeError;
@@ -108,6 +119,16 @@ fn setup_internal_clone_func(
                             return obj;
                         }
                         return new TypedArrayConstructor(obj);
+                    } else if (isDataView(obj)) {
+                        // Clone DataView by copying its underlying ArrayBuffer
+                        const byteLength = obj.byteLength;
+                        const byteOffset = obj.byteOffset;
+                        const cloned = new DataView(new ArrayBuffer(byteLength));
+                        // Copy all bytes using getInt8/setInt8 loop
+                        for (let i = 0; i < byteLength; i++) {
+                            cloned.setInt8(i, obj.getInt8(i));
+                        }
+                        return cloned;
                     } else if (obj instanceof Date ||
                         (typeof obj.getTime === 'function' && obj.timestamp !== undefined)) {
                         // Get timestamp from either getTime() or timestamp property
@@ -151,6 +172,12 @@ fn setup_internal_clone_func(
                             return cloned;
                         }
                     } else if (obj instanceof ArrayBuffer) {
+                        // Check if it's a SharedArrayBuffer - cannot be cloned
+                        if (typeof SharedArrayBuffer !== 'undefined' && obj instanceof SharedArrayBuffer) {
+                            const err = new Error("SharedArrayBuffer cannot be cloned");
+                            err.name = "DataCloneError";
+                            throw err;
+                        }
                         const bytes = new Uint8Array(obj);
                         const cloned = new ArrayBuffer(obj.byteLength);
                         new Uint8Array(cloned).set(bytes);
