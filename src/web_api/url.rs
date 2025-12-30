@@ -20,7 +20,7 @@ pub struct Url {
 }
 impl Url {
     /// Parse URL string
-    pub fn parse(url_str: &str, base: Option<&str>) -> Result<Self> {
+    pub fn parse(url_str: &str, _base: Option<&str>) -> Result<Self> {
         // Simple URL parsing - in production would use url crate
         let (href, protocol, host, hostname, port, pathname, search, hash, origin, username, password) =
             if url_str.contains("://") {

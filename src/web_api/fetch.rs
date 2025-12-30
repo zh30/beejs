@@ -159,8 +159,8 @@ fn fetch_callback(
     }
     // Parse init options if provided
     let method: _ = HttpMethod::GET;
-    let mut headers: HashMap<String, String> = HashMap::new();
-    let mut body: Option<Vec<u8>> = None;
+    let headers: HashMap<String, String> = HashMap::new();
+    let body: Option<Vec<u8>> = None;
     // TODO: Parse init options - simplified for now to avoid type issues
     // In a full implementation, we would parse:
     // - method (GET, POST, etc.)
@@ -367,7 +367,7 @@ fn json_callback(
     let this_ptr = &*this_obj as *const v8::Object as usize;
     let cache = get_response_cache().lock().unwrap();
 
-    if let Some((url, body)) = cache.get(&this_ptr) {
+    if let Some((_url, body)) = cache.get(&this_ptr) {
         // Try to parse and format JSON prettily
         let body_str = String::from_utf8_lossy(body);
 

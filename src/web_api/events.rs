@@ -3,7 +3,6 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use anyhow::Result;
 use rusty_v8 as v8;
 
 /// Event type enum
@@ -66,7 +65,7 @@ impl EventTarget {
     }
     /// Dispatch event
     pub fn dispatch_event(&self, event: &Event) -> bool {
-        let mut result = true;
+        let result = true;
         if let Ok(listeners) = self.listeners.lock() {
             if let Some(event_listeners) = listeners.get(&event.event_type) {
                 for listener in event_listeners {

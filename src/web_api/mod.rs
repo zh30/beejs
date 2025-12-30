@@ -25,7 +25,6 @@ use events::setup_events_api;
 use fetch::setup_fetch_api;
 use form_data::setup_form_data_api;
 use performance::setup_performance_api;
-use streams::setup_streams_api;
 use timers::setup_timer_api;
 use url::setup_url_api;
 use websocket::setup_websocket_api;

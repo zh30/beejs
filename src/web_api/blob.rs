@@ -30,7 +30,7 @@ pub fn setup_blob_api(
 fn blob_constructor(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
-    mut retval: v8::ReturnValue,
+    _retval: v8::ReturnValue,
 ) {
     // Parse blob parts array
     let mut data = Vec::new();
@@ -109,7 +109,7 @@ fn blob_constructor(
 fn file_constructor(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
-    mut retval: v8::ReturnValue,
+    _retval: v8::ReturnValue,
 ) {
     // Parse file parts (same as Blob)
     let mut data = Vec::new();

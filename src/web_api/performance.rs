@@ -4,7 +4,7 @@
 
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::Instant;
 /// Global start time for performance.now()
 static PERFORMANCE_START: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
 /// Get or initialize the performance start time
@@ -20,23 +20,6 @@ fn performance_now_callback(
     let elapsed: _ = get_start_time().elapsed();
     let millis: _ = elapsed.as_secs_f64() * 1000.0;
     rv.set(v8::Number::new(scope, millis).into());
-}
-/// performance.timeOrigin getter callback
-fn performance_time_origin_callback(
-    scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
-    mut rv: v8::ReturnValue,
-) {
-    // Return Unix timestamp in milliseconds when the runtime started
-    let start: _ = get_start_time();
-    let now: _ = Instant::now();
-    let system_now: _ = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
-    // Calculate when the runtime started
-    let elapsed_since_start: _ = now.duration_since(*start);
-    let origin_millis: _ = (system_now - elapsed_since_start).as_secs_f64() * 1000.0;
-    rv.set(v8::Number::new(scope, origin_millis).into());
 }
 /// performance.mark() callback - creates a named timestamp marker
 fn performance_mark_callback(

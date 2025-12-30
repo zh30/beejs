@@ -4,7 +4,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
-use anyhow::Result;
 use rusty_v8 as v8;
 use std::sync::atomic::AtomicU64;
 use once_cell::sync::Lazy;
@@ -20,6 +19,7 @@ fn next_timer_id() -> u64 {
 /// This is a simplified synchronous implementation
 static CLEARED_TIMERS: Lazy<Arc<Mutex<HashMap<u64, bool>>>> = Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
 /// Check if a timer has been cleared
+#[allow(dead_code)]
 fn is_timer_cleared(id: u64) -> bool {
     CLEARED_TIMERS.lock().unwrap().get(&id).copied().unwrap_or(false)
 }

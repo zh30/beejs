@@ -80,7 +80,7 @@ fn form_data_constructor(
 }
 /// FormData.append() method
 fn form_data_append(
-    scope: &mut v8::HandleScope,
+    _scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
     _retval: v8::ReturnValue,
 ) {
@@ -89,7 +89,7 @@ fn form_data_append(
 }
 /// FormData.delete() method
 fn form_data_delete(
-    scope: &mut v8::HandleScope,
+    _scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
     _retval: v8::ReturnValue,
 ) {
@@ -98,7 +98,7 @@ fn form_data_delete(
 /// FormData.get() method
 fn form_data_get(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     // Return null as stub
@@ -127,7 +127,7 @@ fn form_data_has(
 }
 /// FormData.set() method
 fn form_data_set(
-    scope: &mut v8::HandleScope,
+    _scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
     _retval: v8::ReturnValue,
 ) {
@@ -165,7 +165,7 @@ fn form_data_values(
 }
 /// FormData.forEach() method
 fn form_data_for_each(
-    scope: &mut v8::HandleScope,
+    _scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
     _retval: v8::ReturnValue,
 ) {
