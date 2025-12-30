@@ -246,63 +246,91 @@ fn readable_stream_constructor(
     let get_reader_func: v8::Local<v8::Function> = get_reader_fn.get_function(scope).unwrap();
     this.set(scope, get_reader_key.into(), get_reader_func.into());
 
-    // v0.3.288: Setup pipeTo() method - pipes this readable to a writable stream
+    // v0.3.289: Setup pipeTo() method - pipes this readable to a writable stream
+    // Supports options: { preventClose: boolean }
     let pipe_to_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        // Create a promise that will resolve when piping is complete
-        let promise: v8::Local<v8::PromiseResolver> = v8::PromiseResolver::new(_scope).unwrap();
-
         // Get the destination writable stream
         let dest_writable = args.get(0);
         if !dest_writable.is_object() {
-            let reject_reason = v8::String::new(_scope, "Destination must be a WritableStream").unwrap();
-            let _ = promise.reject(_scope, reject_reason.into());
-            retval.set(promise.into());
+            let error = v8::String::new(_scope, "Destination must be a WritableStream").unwrap();
+            retval.set(error.into());
             return;
         }
 
-        // Store references for the pump operation
-        let this_stream = args.this();
-        let context = _scope.get_current_context();
-
-        // Create JavaScript code for the pump operation
-        let pump_code = r#"
-            (function(readable, writable) {
-                var reader = readable.getReader();
-                var writer = writable.getWriter();
-
-                function pump() {
-                    return reader.read().then(function(result) {
-                        if (result.done) {
-                            return writer.close();
-                        }
-                        return writer.write(result.value).then(pump);
-                    });
+        // Parse options (second argument) for preventClose
+        let mut prevent_close = false;
+        if args.length() > 1 {
+            let options = args.get(1);
+            if options.is_object() {
+                let options_obj = v8::Local::<v8::Object>::try_from(options).unwrap();
+                let prevent_close_key = v8::String::new(_scope, "preventClose").unwrap();
+                if let Some(prevent_val) = options_obj.get(_scope, prevent_close_key.into()) {
+                    prevent_close = prevent_val.is_true();
                 }
+            }
+        }
 
-                return pump();
-            })
-        "#;
+        // Store reference to this stream
+        let this_stream = args.this();
+
+        // Create pump code that returns a promise chain
+        // The pump function returns a promise that resolves when piping is complete
+        let pump_code = if prevent_close {
+            r#"
+                (function(readable, writable) {
+                    var reader = readable.getReader();
+                    var writer = writable.getWriter();
+
+                    function pump() {
+                        return reader.read().then(function(result) {
+                            if (result.done) {
+                                return;
+                            }
+                            return writer.write(result.value).then(pump);
+                        });
+                    }
+
+                    return pump();
+                })
+            "#
+        } else {
+            r#"
+                (function(readable, writable) {
+                    var reader = readable.getReader();
+                    var writer = writable.getWriter();
+
+                    function pump() {
+                        return reader.read().then(function(result) {
+                            if (result.done) {
+                                return writer.close();
+                            }
+                            return writer.write(result.value).then(pump);
+                        });
+                    }
+
+                    return pump();
+                })
+            "#
+        };
 
         let pump_fn_str = v8::String::new(_scope, pump_code).unwrap();
         let pump_fn_val = v8::Script::compile(_scope, pump_fn_str, None).unwrap().run(_scope).unwrap();
 
         if let Ok(pump_fn) = v8::Local::<v8::Function>::try_from(pump_fn_val) {
             let undefined = v8::undefined(_scope).into();
-            // Call the pump function with this stream and destination
             let this_stream_val: v8::Local<v8::Value> = this_stream.into();
             let dest_writable_val: v8::Local<v8::Value> = dest_writable.into();
-            let result = pump_fn.call(_scope, undefined, &[this_stream_val, dest_writable_val]);
 
-            // The promise we return will resolve when the pump completes
-            // For now, just resolve immediately since the pump runs async
-            let undefined_val: v8::Local<v8::Value> = v8::undefined(_scope).into();
-            let _ = promise.resolve(_scope, undefined_val);
-        } else {
-            let undefined_val: v8::Local<v8::Value> = v8::undefined(_scope).into();
-            let _ = promise.resolve(_scope, undefined_val);
+            // Call pump to get the pump promise
+            let pump_promise_val = pump_fn.call(_scope, undefined, &[this_stream_val, dest_writable_val]);
+
+            // Return the pump promise directly - this is the promise that will resolve/reject
+            // when piping is complete
+            retval.set(pump_promise_val.unwrap_or(undefined));
+            return;
         }
 
-        retval.set(promise.into());
+        retval.set(v8::undefined(_scope).into());
     });
     let pipe_to_key: v8::Local<v8::String> = v8::String::new(scope, "pipeTo").unwrap();
     let pipe_to_func: v8::Local<v8::Function> = pipe_to_fn.get_function(scope).unwrap();

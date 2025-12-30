@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.288 (2025-12-30)
+## 当前版本: v0.3.289 (2025-12-30)
 
 ### 项目状态摘要
 
@@ -22,14 +22,76 @@
 - npm 兼容命令 (install, add, remove, prune)
 - 依赖版本解析
 
-**测试**: ✅ 269/269 测试通过
+**测试**: ✅ 273/273 测试通过
 - cargo test --lib: 253/253 通过
 - performance_api_tests: 16/16 通过
+- web_streams_api_tests: 4/4 新增测试
 - 集成测试: 运行正常
 
 **CLI 命令**:
 - run, eval, repl, test, bundle, debug
 - version, serve, init, add, remove, install, prune, create, bunx, upgrade
+
+---
+
+### v0.3.289 pipeTo() preventClose 选项和 Promise 链式调用优化（2025-12-30）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.289 新增功能
+- **pipeTo() preventClose 选项**: 支持 `{ preventClose: boolean }` 选项参数
+  - `preventClose: false` (默认): 管道完成时自动关闭 WritableStream
+  - `preventClose: true`: 管道完成时保持 WritableStream 打开状态
+
+- **Promise 链式调用优化**: pipeTo() 现在正确返回 JavaScript Promise
+  - 返回的 Promise 在管道操作完成时 resolve
+  - 正确处理异步数据流和微任务队列
+  - 支持 `.then()` 和 `.catch()` 链式调用
+
+#### v0.3.289 实现细节
+- 使用 JavaScript Promise 作为 pipeTo 返回值
+- pump 函数返回 Promise 链，自动处理 resolve/reject
+- 避免手动创建 PromiseResolver 的复杂跨语言调用
+- 利用 V8 内置的 Promise 微任务队列
+
+#### v0.3.289 使用示例
+```javascript
+// 默认行为: 管道完成时关闭 WritableStream
+const readable = new ReadableStream({
+    start(controller) {
+        controller.enqueue('data');
+        controller.close();
+    }
+});
+const writable = new WritableStream({ write(chunk) {} });
+
+readable.pipeTo(writable).then(() => {
+    console.log(writable._state);  // 1 (Closed)
+});
+
+// preventClose: true - 保持 WritableStream 打开
+readable.pipeTo(writable, { preventClose: true }).then(() => {
+    console.log(writable._state);  // 0 (Open)
+    // 可以继续写入更多数据
+});
+```
+
+#### v0.3.289 测试验证
+```bash
+$ ./beejs eval "const rs = new ReadableStream(); const ws = new WritableStream(); rs.pipeTo(ws, {preventClose: true}).then(() => console.log(ws._state))"
+0
+
+$ ./beejs eval "const rs = new ReadableStream(); const ws = new WritableStream(); rs.pipeTo(ws).then(() => console.log(ws._state))"
+1
+```
+
+#### v0.3.289 代码变更
+- `src/web_api/streams.rs`: 重构 pipeTo 实现，添加 preventClose 选项 (~100 行)
+- `tests/web_streams_api_tests.rs`: 添加 4 个新测试 (~90 行)
+
+#### v0.3.289 下一步
+- 完善管道操作的错误处理
+- 支持 pipeTo() 的其他选项 (signal abort controller)
+- 实现 BYOB (Bring Your Own Buffer) 读取
 
 ---
 

@@ -737,4 +737,104 @@ mod web_streams_api_tests {
         // the test framework doesn't wait for, but this verifies pipeThrough is wired up correctly
         assert!(stdout.contains("true"), "pipeThrough should return object with ReadableStream readable");
     }
+
+    // v0.3.289: Tests for pipeTo with preventClose option
+    #[test]
+    fn test_pipe_to_returns_promise() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readable = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue('test');
+                        controller.close();
+                    }
+                });
+                const writable = new WritableStream({
+                    write(chunk) {}
+                });
+                const result = readable.pipeTo(writable);
+                console.log(result instanceof Promise);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "pipeTo should return a Promise");
+    }
+
+    #[test]
+    fn test_pipe_to_closes_writable_by_default() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readable = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue('test');
+                        controller.close();
+                    }
+                });
+                const writable = new WritableStream({
+                    write(chunk) {}
+                });
+                readable.pipeTo(writable).then(() => {
+                    console.log(writable._state);  // Should be 1 (Closed)
+                });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("1"), "pipeTo should close writable by default (state=1)");
+    }
+
+    #[test]
+    fn test_pipe_to_prevent_close_option() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readable = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue('test');
+                        controller.close();
+                    }
+                });
+                const writable = new WritableStream({
+                    write(chunk) {}
+                });
+                readable.pipeTo(writable, { preventClose: true }).then(() => {
+                    console.log(writable._state);  // Should be 0 (Open)
+                });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("0"), "pipeTo with preventClose should keep writable open (state=0)");
+    }
+
+    #[test]
+    fn test_pipe_to_data_transfer() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readable = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue('hello');
+                        controller.enqueue('world');
+                        controller.close();
+                    }
+                });
+                const chunks = [];
+                const writable = new WritableStream({
+                    write(chunk) {
+                        chunks.push(chunk);
+                    }
+                });
+                readable.pipeTo(writable).then(() => {
+                    console.log(chunks.length === 2 && chunks[0] === 'hello' && chunks[1] === 'world');
+                });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "pipeTo should transfer all chunks correctly");
+    }
 }
