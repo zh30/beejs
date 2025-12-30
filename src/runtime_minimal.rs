@@ -27,6 +27,8 @@ use crate::nodejs_core::process::{execute_next_tick_callbacks, has_pending_next_
 use crate::nodejs_core::performance::setup_performance_api;
 // v0.3.282: Import Web Streams API for AI workloads
 use crate::web_api::streams::setup_streams_api;
+// v0.3.295: Import CompressionStream API
+use crate::web_api::compression::setup_compression_api;
 
 // Event listener storage using thread_local (v0.3.46)
 // Note: rustdoc does not generate documentation for macro invocations
@@ -3007,6 +3009,7 @@ impl MinimalRuntime {
             setup_timers_api(scope, &context)?; // v0.3.249: Timer API with async scheduling
             setup_performance_api(scope, &context)?; // v0.3.275: Performance API
             setup_streams_api(scope, &context)?; // v0.3.282: Web Streams API for AI workloads
+            setup_compression_api(scope, &context)?; // v0.3.295: CompressionStream API (gzip/deflate)
             crate::nodejs_core::readline::setup_readline_api(scope, &context)?; // v0.3.277: Readline API
 
             // v0.3.291: Initialize AbortController API (needed for pipeTo signal option)
