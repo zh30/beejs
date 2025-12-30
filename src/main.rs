@@ -414,7 +414,7 @@ async fn main() -> Result<()> {
         Some(Command::Eval { code }) => {
             println!("🐝 Evaluating JavaScript code");
 
-            // Create a minimal runtime
+            // Create a minimal runtime with Web API support
             let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
                 .expect("Failed to create runtime");
 

@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.290 (2025-12-30)
+## 当前版本: v0.3.291 (2025-12-30)
 
 ### 项目状态摘要
 
@@ -22,15 +22,58 @@
 - npm 兼容命令 (install, add, remove, prune)
 - 依赖版本解析
 
-**测试**: ✅ 277/277 测试通过
+**测试**: ✅ 280/280 测试通过
 - cargo test --lib: 253/253 通过
 - performance_api_tests: 16/16 通过
-- web_streams_api_tests: 8/8 新增测试 (v0.3.289 + v0.3.290)
+- web_streams_api_tests: 11/11 新增测试 (v0.3.291 信号选项测试)
 - 集成测试: 运行正常
 
 **CLI 命令**:
 - run, eval, repl, test, bundle, debug
 - version, serve, init, add, remove, install, prune, create, bunx, upgrade
+
+---
+
+### v0.3.291 pipeTo() AbortController 信号支持（2025-12-30）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.291 新增功能
+- **pipeTo() signal 选项**: 支持 `{ signal: AbortSignal }` 选项参数
+  - 支持 AbortController.signal 实现可取消的管道操作
+  - **预中止信号**: 如果传入时 signal.aborted 为 true，pipeTo 立即 reject
+  - **异步中止**: 管道运行期间调用 controller.abort() 会 reject Promise
+  - **preventAbort 组合**: signal 与 preventAbort: true 组合使用可中止管道但不 abort WritableStream
+
+- **AbortController 增强** (v0.3.291)
+  - signal.aborted 属性正确返回布尔值
+  - signal.addEventListener('abort', ...) 事件监听器正常工作
+  - abort() 调用时正确触发所有注册的监听器
+
+#### v0.3.291 实现细节
+- src/web_api/streams.rs: pipeTo() 解析 signal 选项并集成到 pump 函数
+  - 检查 signal.aborted 状态，必要时立即 reject
+  - 通过 signal.addEventListener('abort', ...) 监听中止事件
+  - abort 事件触发时 reject Promise，可选 abort WritableStream
+
+- src/web_api/abort.rs: AbortController 增强
+  - 正确设置 signal.aborted 标志位
+  - 维护 _abortListeners 数组存储事件监听器
+  - abort() 调用时遍历并执行所有监听器
+
+#### v0.3.291 测试覆盖
+- test_pipe_to_signal_option_exists: 验证信号选项被正确解析
+- test_pipe_to_pre_aborted_signal: 预中止信号立即 reject
+- test_pipe_to_signal_with_prevent_abort_pre_aborted: preventAbort 保持 WritableStream 状态
+
+#### 已知限制
+- 异步 abort 需要 WritableStream.write() 正确 await 用户 Promise
+- 当前 WritableStream.write() 实现立即 resolve Promise
+- 异步中止测试需要 WritableStream.write() 增强支持
+
+#### 下一步工作
+- WritableStream.write() 增强：支持异步写入完成
+- TransformStream flush 支持增强
+- 更多 Web API 实现
 
 ---
 

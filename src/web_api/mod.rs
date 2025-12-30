@@ -71,10 +71,8 @@ pub fn init_web_api(
     eprintln!("🔧 [STAGE74] Setting up WebSocket API...");
     setup_websocket_api(scope, context)?;
     eprintln!("✅ [STAGE74] WebSocket API done");
-    // 6. Streams API（AI 工作负载，流式处理 LLM 响应）
-    eprintln!("🔧 [STAGE75] Setting up Streams API...");
-    setup_streams_api(scope, context)?;
-    eprintln!("✅ [STAGE75] Streams API done");
-    eprintln!("🎉 [STAGE74/75] All Web APIs initialized!");
+    // Note: Streams API is initialized separately in runtime_minimal.rs
+    // to avoid duplicate initialization
+    eprintln!("🎉 [STAGE74/75] All Web APIs initialized (streams via runtime)!");
     Ok(())
 }

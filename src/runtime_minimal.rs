@@ -3008,6 +3008,11 @@ impl MinimalRuntime {
             setup_performance_api(scope, &context)?; // v0.3.275: Performance API
             setup_streams_api(scope, &context)?; // v0.3.282: Web Streams API for AI workloads
             crate::nodejs_core::readline::setup_readline_api(scope, &context)?; // v0.3.277: Readline API
+
+            // v0.3.291: Initialize AbortController API (needed for pipeTo signal option)
+            // Use direct call to avoid duplicating other API initialization
+            use crate::web_api::abort::setup_abort_api;
+            setup_abort_api(scope, &context)?;
         }
 
         // v0.3.261: Store the original code for potential re-evaluation

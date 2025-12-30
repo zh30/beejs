@@ -969,4 +969,101 @@ mod web_streams_api_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "pipeTo should accept both preventClose and preventAbort options");
     }
+
+    // v0.3.291: AbortController/signal tests
+    #[test]
+    fn test_pipe_to_signal_option_exists() {
+        // Test that pipeTo accepts signal option
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const controller = new AbortController();
+                const readable = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue('test');
+                    }
+                });
+                const writable = new WritableStream({
+                    write(chunk) {
+                        return Promise.resolve();
+                    }
+                });
+                // pipeTo should accept signal option without error
+                const result = readable.pipeTo(writable, { signal: controller.signal });
+                console.log(result instanceof Promise);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "pipeTo should accept signal option");
+    }
+
+    #[test]
+    fn test_pipe_to_pre_aborted_signal() {
+        // Test that already aborted signal immediately rejects
+        // Note: Async abort tests require WritableStream.write() to properly await
+        // user Promises, which is a separate enhancement.
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const controller = new AbortController();
+                controller.abort(); // Abort immediately
+
+                const readable = new ReadableStream({
+                    start(ctrl) {
+                        ctrl.enqueue('test');
+                    }
+                });
+                const writable = new WritableStream({
+                    write(chunk) {
+                        return Promise.resolve();
+                    }
+                });
+
+                // Should reject immediately since signal is already aborted
+                readable.pipeTo(writable, { signal: controller.signal })
+                    .then(() => console.log('should not reach here'))
+                    .catch(err => {
+                        console.log(err.name);
+                    });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("AbortError"), "pipeTo should reject immediately for already aborted signal");
+    }
+
+    #[test]
+    fn test_pipe_to_signal_with_prevent_abort_pre_aborted() {
+        // Test preventAbort with pre-aborted signal
+        // This works because rejection happens synchronously at pipeTo start
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const controller = new AbortController();
+                controller.abort(); // Abort immediately
+
+                const readable = new ReadableStream({
+                    start(ctrl) {
+                        ctrl.enqueue('test');
+                    }
+                });
+                const writable = new WritableStream({
+                    write(chunk) {
+                        return Promise.resolve();
+                    }
+                });
+
+                // With preventAbort: true, writable should not be aborted
+                readable.pipeTo(writable, { signal: controller.signal, preventAbort: true })
+                    .then(() => console.log('should not reach here'))
+                    .catch(err => {
+                        console.log(err.name === 'AbortError' && writable._state === 0);
+                    });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "pipeTo with signal and preventAbort should not abort writable");
+    }
 }

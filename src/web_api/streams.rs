@@ -246,7 +246,7 @@ fn readable_stream_constructor(
     let get_reader_func: v8::Local<v8::Function> = get_reader_fn.get_function(scope).unwrap();
     this.set(scope, get_reader_key.into(), get_reader_func.into());
 
-    // v0.3.290: Setup pipeTo() method - pipes this readable to a writable stream
+    // v0.3.291: Setup pipeTo() method - pipes this readable to a writable stream
     // Supports options: { preventClose: boolean, preventAbort: boolean, signal: AbortSignal }
     // Returns a Promise that resolves when piping completes or rejects on error
     let pipe_to_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
@@ -261,7 +261,7 @@ fn readable_stream_constructor(
         // Parse options (second argument) for preventClose, preventAbort, and signal
         let mut prevent_close = false;
         let mut prevent_abort = false;
-        let _has_signal = false;
+        let mut signal_obj: Option<v8::Local<v8::Object>> = None;
         if args.length() > 1 {
             let options = args.get(1);
             if options.is_object() {
@@ -276,25 +276,42 @@ fn readable_stream_constructor(
                 if let Some(abort_val) = options_obj.get(_scope, prevent_abort_key.into()) {
                     prevent_abort = abort_val.is_true();
                 }
+
+                let signal_key = v8::String::new(_scope, "signal").unwrap();
+                if let Some(sig_val) = options_obj.get(_scope, signal_key.into()) {
+                    if sig_val.is_object() {
+                        signal_obj = Some(v8::Local::<v8::Object>::try_from(sig_val).unwrap());
+                    }
+                }
             }
         }
 
         // Store reference to this stream
         let this_stream = args.this();
 
-        // Create pump code with error handling
+        // v0.3.291: Create pump code with signal handling
         // The pump function handles errors, state transitions, and promise resolution/rejection
+        // It also monitors the abort signal and rejects appropriately
         let pump_code = if prevent_close {
             r#"
-                (function(readable, writable, preventAbort) {
+                (function(readable, writable, preventAbort, signal) {
                     var reader = readable.getReader();
                     var writer = writable.getWriter();
                     var rejected = false;
+                    var done = false;
+
+                    // v0.3.291: Check if already aborted
+                    if (signal && signal.aborted) {
+                        var err = new Error('Aborted');
+                        err.name = 'AbortError';
+                        return Promise.reject(err);
+                    }
 
                     function pump() {
                         return reader.read().then(function(result) {
-                            if (rejected) return;
+                            if (rejected || done) return;
                             if (result.done) {
+                                done = true;
                                 return;
                             }
                             return writer.write(result.value).then(function() {
@@ -312,20 +329,48 @@ fn readable_stream_constructor(
                         });
                     }
 
-                    return pump();
+                    var pumpPromise = pump();
+
+                    // v0.3.291: Set up abort listener if signal provided
+                    if (signal && signal.addEventListener) {
+                        signal.addEventListener('abort', function() {
+                            if (rejected) return;
+                            rejected = true;
+                            var err = new Error('Aborted');
+                            err.name = 'AbortError';
+                            if (preventAbort) {
+                                pumpPromise = Promise.reject(err);
+                            } else {
+                                pumpPromise = writer.abort(err).then(function() {
+                                    return Promise.reject(err);
+                                });
+                            }
+                        });
+                    }
+
+                    return pumpPromise;
                 })
             "#
         } else {
             r#"
-                (function(readable, writable, preventAbort) {
+                (function(readable, writable, preventAbort, signal) {
                     var reader = readable.getReader();
                     var writer = writable.getWriter();
                     var rejected = false;
+                    var done = false;
+
+                    // v0.3.291: Check if already aborted
+                    if (signal && signal.aborted) {
+                        var err = new Error('Aborted');
+                        err.name = 'AbortError';
+                        return Promise.reject(err);
+                    }
 
                     function pump() {
                         return reader.read().then(function(result) {
-                            if (rejected) return;
+                            if (rejected || done) return;
                             if (result.done) {
+                                done = true;
                                 return writer.close().catch(function(err) {
                                     if (rejected) return;
                                     rejected = true;
@@ -361,7 +406,26 @@ fn readable_stream_constructor(
                         });
                     }
 
-                    return pump();
+                    var pumpPromise = pump();
+
+                    // v0.3.291: Set up abort listener if signal provided
+                    if (signal && signal.addEventListener) {
+                        signal.addEventListener('abort', function() {
+                            if (rejected) return;
+                            rejected = true;
+                            var err = new Error('Aborted');
+                            err.name = 'AbortError';
+                            if (preventAbort) {
+                                pumpPromise = Promise.reject(err);
+                            } else {
+                                pumpPromise = writer.abort(err).then(function() {
+                                    return Promise.reject(err);
+                                });
+                            }
+                        });
+                    }
+
+                    return pumpPromise;
                 })
             "#
         };
@@ -375,8 +439,15 @@ fn readable_stream_constructor(
             let dest_writable_val: v8::Local<v8::Value> = dest_writable.into();
             let prevent_abort_val: v8::Local<v8::Value> = v8::Boolean::new(_scope, prevent_abort).into();
 
+            // v0.3.291: Pass signal to pump function (as undefined if not provided)
+            let signal_val: v8::Local<v8::Value> = if let Some(ref sig) = signal_obj {
+                sig.clone().into()
+            } else {
+                v8::undefined(_scope).into()
+            };
+
             // Call pump to get the pump promise
-            let pump_promise_val = pump_fn.call(_scope, undefined, &[this_stream_val, dest_writable_val, prevent_abort_val]);
+            let pump_promise_val = pump_fn.call(_scope, undefined, &[this_stream_val, dest_writable_val, prevent_abort_val, signal_val]);
 
             // Return the pump promise directly - this is the promise that will resolve/reject
             // when piping is complete or encounters an error
