@@ -66,6 +66,19 @@ fn setup_internal_clone_func(
                 function createClone(obj) {
                     const TypedArrayConstructor = getTypedArrayConstructor(obj);
 
+                    // Check for WeakMap/WeakSet first - these cannot be cloned per spec
+                    // They throw DataCloneError (using Error with name property per spec)
+                    if (obj instanceof WeakMap) {
+                        const err = new Error("WeakMap cannot be cloned");
+                        err.name = "DataCloneError";
+                        throw err;
+                    }
+                    if (obj instanceof WeakSet) {
+                        const err = new Error("WeakSet cannot be cloned");
+                        err.name = "DataCloneError";
+                        throw err;
+                    }
+
                     if (TypedArrayConstructor) {
                         if (obj.buffer instanceof ArrayBuffer && transfers.has(obj.buffer)) {
                             transfers.delete(obj.buffer);

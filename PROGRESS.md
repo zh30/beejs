@@ -14158,6 +14158,65 @@ console.log(clonedCircular.self === clonedCircular); // true
 
 ---
 
+### v0.3.304 structuredClone 增强 - WeakMap/WeakSet 支持（2025-12-31）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.304 新增功能
+
+**WeakMap/WeakSet 克隆支持**:
+- 根据 WHATWG 结构化克隆规范，WeakMap 和 WeakSet 无法被克隆
+- 尝试克隆时抛出 `DataCloneError`（使用 Error 对象，name 属性设为 "DataCloneError"）
+- 支持检测嵌套对象中的 WeakMap/WeakSet 并正确抛出异常
+
+#### v0.3.304 实现细节
+
+- `src/web_api/structured_clone.rs`: 添加 WeakMap/WeakSet 检测逻辑 (~+15 行)
+  - 在 `createClone()` 函数开头添加类型检测
+  - 使用 `obj instanceof WeakMap` 和 `obj instanceof WeakSet` 进行检测
+  - 抛出带有 `name: "DataCloneError"` 的 Error 对象
+
+```javascript
+// WeakMap 克隆测试
+const original = new WeakMap();
+try {
+    structuredClone(original);
+} catch (err) {
+    console.log(err.name); // "DataCloneError"
+    console.log(err.message); // "WeakMap cannot be cloned"
+}
+
+// WeakSet 克隆测试
+const original = new WeakSet();
+try {
+    structuredClone(original);
+} catch (err) {
+    console.log(err.name); // "DataCloneError"
+    console.log(err.message); // "WeakSet cannot be cloned"
+}
+```
+
+#### v0.3.304 测试用例
+
+- `tests/structured_clone_tests.rs`: 添加 4 个新测试 (~90 行)
+  - `test_clone_weakmap_throws()`: 独立 WeakMap 克隆测试
+  - `test_clone_weakset_throws()`: 独立 WeakSet 克隆测试
+  - `test_clone_object_with_weakmap_throws()`: 嵌套 WeakMap 测试
+  - `test_clone_object_with_weakset_throws()`: 嵌套 WeakSet 测试
+
+#### v0.3.304 测试验证
+- ✅ WeakMap 克隆：正确抛出 DataCloneError
+- ✅ WeakSet 克隆：正确抛出 DataCloneError
+- ✅ 嵌套对象：对象中的 WeakMap/WeakSet 正确检测
+- ✅ 错误属性：error.name === "DataCloneError"
+- ✅ 错误消息：包含 "cannot be cloned" 描述
+
+#### v0.3.304 下一步
+- V8 底层 ArrayBuffer transfer 支持（实现真正的零拷贝 detach）
+- Promise 克隆支持（处理已解决/已拒绝状态的 Promise）
+- Symbol 克隆支持
+
+---
+
 #### v0.3.302 下一步
 - V8 底层 ArrayBuffer transfer 支持（实现真正的零拷贝 detach）
 - 性能优化：使用迭代器替代递归减少栈开销
