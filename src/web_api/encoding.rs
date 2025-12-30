@@ -182,10 +182,16 @@ fn text_decoder_decode(
     }
     // Get bytes from input (Uint8Array, ArrayBuffer, etc.)
     let bytes: Vec<u8> = if input.is_uint8_array() {
-        let array: _ = v8::Local::<v8::Uint8Array>::try_from(input).unwrap();
-        let len: _ = array.byte_length();
+        let array: v8::Local<v8::Uint8Array> = v8::Local::<v8::Uint8Array>::try_from(input).unwrap();
+        let len = array.byte_length();
+        let byte_offset = array.byte_offset();
+        let array_buffer = array.buffer(scope).unwrap();
+        let backing_store = array_buffer.get_backing_store();
         let mut buffer = vec![0u8; len];
-        array.copy_contents(&mut buffer);
+        unsafe {
+            let src_ptr = backing_store.data().add(byte_offset) as *const u8;
+            std::ptr::copy_nonoverlapping(src_ptr, buffer.as_mut_ptr(), len);
+        }
         buffer
     } else if input.is_array_buffer() {
         let array_buffer: _ = v8::Local::<v8::ArrayBuffer>::try_from(input).unwrap();

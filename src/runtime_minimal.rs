@@ -10124,7 +10124,14 @@ impl MinimalRuntime {
                     if let Ok(uint8_array) = v8::Local::<v8::Uint8Array>::try_from(input) {
                         let byte_len = uint8_array.byte_length();
                         if byte_len > 0 {
-                            let bytes = vec![0u8; byte_len];
+                            let byte_offset = uint8_array.byte_offset();
+                            let array_buffer = uint8_array.buffer(scope).unwrap();
+                            let backing_store = array_buffer.get_backing_store();
+                            let mut bytes = vec![0u8; byte_len];
+                            unsafe {
+                                let src_ptr = backing_store.data().add(byte_offset) as *const u8;
+                                std::ptr::copy_nonoverlapping(src_ptr, bytes.as_mut_ptr(), byte_len);
+                            }
 
                             // Decode using encoding_rs (utf-8 default)
                             let encoding_rs_encoding = encoding_rs::Encoding::for_label(b"utf-8").unwrap();
