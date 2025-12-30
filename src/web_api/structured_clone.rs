@@ -100,14 +100,47 @@ fn setup_internal_clone_func(
                         }
                         return new TypedArrayConstructor(obj);
                     } else if (obj instanceof Date ||
-                        (typeof obj.getTime === 'function' && typeof obj.getMonth === 'function')) {
+                        (typeof obj.getTime === 'function' && obj.timestamp !== undefined)) {
+                        // Get timestamp from either getTime() or timestamp property
                         const timestamp = (typeof obj.getTime === 'function')
                             ? obj.getTime()
                             : obj.timestamp;
-                        return new Date(timestamp);
+                        try {
+                            // Try to create native Date
+                            return new Date(timestamp);
+                        } catch (e) {
+                            // Fallback to object with Date-like properties
+                            const cloned = { timestamp: timestamp };
+                            cloned.getTime = function() { return this.timestamp; };
+                            cloned.getMonth = function() {
+                                const d = new Date(this.timestamp);
+                                return d.getMonth();
+                            };
+                            cloned.getDate = function() {
+                                const d = new Date(this.timestamp);
+                                return d.getDate();
+                            };
+                            cloned.getFullYear = function() {
+                                const d = new Date(this.timestamp);
+                                return d.getFullYear();
+                            };
+                            return cloned;
+                        }
                     } else if (obj instanceof RegExp ||
                         (typeof obj.source === 'string' && typeof obj.flags === 'string')) {
-                        return new RegExp(obj.source || obj.patternSource, obj.flags || obj.patternFlags || '');
+                        // Try to create a native RegExp clone
+                        const source = obj.source || obj.patternSource;
+                        const flags = obj.flags || obj.patternFlags || '';
+                        try {
+                            return new RegExp(source, flags);
+                        } catch (e) {
+                            // Fallback to object with RegExp-like properties
+                            const cloned = { source, flags };
+                            cloned.test = function(str) { return new RegExp(this.source, this.flags).test(str); };
+                            cloned.exec = function(str) { return new RegExp(this.source, this.flags).exec(str); };
+                            cloned.toString = function() { return '/' + this.source + '/' + this.flags; };
+                            return cloned;
+                        }
                     } else if (obj instanceof ArrayBuffer) {
                         const bytes = new Uint8Array(obj);
                         const cloned = new ArrayBuffer(obj.byteLength);
@@ -194,6 +227,20 @@ fn setup_internal_clone_func(
                             pendingProps.push([cloned, idx.toString(), val]);
                         });
                     } else if (typeof source === 'object') {
+                        // Check for Date objects - these have no enumerable properties
+                        if (source instanceof Date ||
+                            (typeof source.getTime === 'function' && typeof source.getMonth === 'function')) {
+                            // Date objects have no enumerable properties to copy
+                            // The timestamp was already set in createClone
+                            return;
+                        }
+                        // Check for RegExp objects - these have no enumerable properties
+                        if (source instanceof RegExp ||
+                            (typeof source.source === 'string' && typeof source.flags === 'string')) {
+                            // RegExp objects have no enumerable properties to copy
+                            // The pattern was already set in createClone
+                            return;
+                        }
                         // Check for Symbol properties - these cannot be cloned
                         const symbolProps = Object.getOwnPropertySymbols(source);
                         if (symbolProps.length > 0) {

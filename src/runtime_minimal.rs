@@ -2,6 +2,7 @@
 //! This is a simplified version of RuntimeLite without complex dependencies
 
 use anyhow::Result;
+use chrono::Datelike;
 use base64::Engine;
 use rand::Rng;
 use rusty_v8 as v8;
@@ -4665,6 +4666,65 @@ impl MinimalRuntime {
             }).ok_or_else(|| anyhow::anyhow!("Failed to create toISOString function")).unwrap();
             let to_iso_key = v8::String::new(scope, "toISOString").unwrap().into();
             date_obj.set(scope, to_iso_key, to_iso_string_fn.into());
+
+            // Add getMonth method (0-indexed, like JavaScript Date)
+            let get_month_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let timestamp_key = v8::String::new(scope, "timestamp").unwrap().into();
+                if let Some(timestamp_val) = this.get(scope, timestamp_key) {
+                    if let Some(timestamp_num) = timestamp_val.to_number(scope) {
+                        let timestamp_ms = timestamp_num.value() as i64;
+                        if let Some(dt) = chrono::DateTime::from_timestamp_millis(timestamp_ms) {
+                            let naive = dt.naive_utc().date();
+                            // month() is 1-indexed, convert to 0-indexed
+                            retval.set(v8::Number::new(scope, (naive.month() as i32 - 1) as f64).into());
+                            return;
+                        }
+                    }
+                }
+                retval.set(v8::Number::new(scope, 0.0).into());
+            }).ok_or_else(|| anyhow::anyhow!("Failed to create getMonth function")).unwrap();
+            let get_month_key = v8::String::new(scope, "getMonth").unwrap().into();
+            date_obj.set(scope, get_month_key, get_month_fn.into());
+
+            // Add getFullYear method
+            let get_full_year_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let timestamp_key = v8::String::new(scope, "timestamp").unwrap().into();
+                if let Some(timestamp_val) = this.get(scope, timestamp_key) {
+                    if let Some(timestamp_num) = timestamp_val.to_number(scope) {
+                        let timestamp_ms = timestamp_num.value() as i64;
+                        if let Some(dt) = chrono::DateTime::from_timestamp_millis(timestamp_ms) {
+                            let naive = dt.naive_utc().date();
+                            retval.set(v8::Number::new(scope, naive.year() as f64).into());
+                            return;
+                        }
+                    }
+                }
+                retval.set(v8::Number::new(scope, 1970.0).into());
+            }).ok_or_else(|| anyhow::anyhow!("Failed to create getFullYear function")).unwrap();
+            let get_full_year_key = v8::String::new(scope, "getFullYear").unwrap().into();
+            date_obj.set(scope, get_full_year_key, get_full_year_fn.into());
+
+            // Add getDate method (1-indexed, like JavaScript Date)
+            let get_date_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let timestamp_key = v8::String::new(scope, "timestamp").unwrap().into();
+                if let Some(timestamp_val) = this.get(scope, timestamp_key) {
+                    if let Some(timestamp_num) = timestamp_val.to_number(scope) {
+                        let timestamp_ms = timestamp_num.value() as i64;
+                        if let Some(dt) = chrono::DateTime::from_timestamp_millis(timestamp_ms) {
+                            let naive = dt.naive_utc().date();
+                            // day() is already 1-indexed
+                            retval.set(v8::Number::new(scope, naive.day() as f64).into());
+                            return;
+                        }
+                    }
+                }
+                retval.set(v8::Number::new(scope, 1.0).into());
+            }).ok_or_else(|| anyhow::anyhow!("Failed to create getDate function")).unwrap();
+            let get_date_key = v8::String::new(scope, "getDate").unwrap().into();
+            date_obj.set(scope, get_date_key, get_date_fn.into());
 
             retval.set(date_obj.into());
         }).ok_or_else(|| anyhow::anyhow!("Failed to create Date function"))?;
