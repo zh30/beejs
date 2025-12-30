@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.293 (2025-12-30)
+## 当前版本: v0.3.294 (2025-12-30)
 
 ### 项目状态摘要
 
@@ -22,10 +22,11 @@
 - npm 兼容命令 (install, add, remove, prune)
 - 依赖版本解析
 
-**测试**: ✅ 280/280 测试通过
+**测试**: ✅ 285/285 测试通过
 - cargo test --lib: 253/253 通过
 - performance_api_tests: 16/16 通过
-- web_streams_api_tests: 59/59 通过 (v0.3.293 TextEncoderStream 测试)
+- web_streams_api_tests: 59/59 通过
+- byob_tests: 5/5 通过 (v0.3.294 BYOB 测试)
 - 集成测试: 运行正常
 
 **CLI 命令**:
@@ -34,7 +35,80 @@
 
 ---
 
-### v0.3.291 pipeTo() AbortController 信号支持（2025-12-30）
+### v0.3.294 BYOB (Bring Your Own Buffer) 支持（2025-12-30）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.294 新增功能
+
+**ReadableStream.getReader().read(view) BYOB 模式**:
+- 支持传入 TypedArray/ArrayBufferView 作为读取目标缓冲区
+- 数据直接复制到用户提供的缓冲区，减少内存分配
+- 返回 `bytesRead` 属性指示复制的字节数
+- 提升 AI 工作负载的内存效率
+
+#### v0.3.294 实现细节
+
+- `src/web_api/streams.rs`: 修改 read() 函数支持 BYOB 模式
+  - 检测并解析 view 参数的 buffer, byteOffset, byteLength
+  - 使用 `std::ptr::copy_nonoverlapping` 直接内存复制
+  - 返回 bytesRead 符合 Web Streams API 规范
+
+#### v0.3.294 测试结果
+```javascript
+const stream = new ReadableStream({
+  start(controller) {
+    controller.enqueue(new Uint8Array([72, 101, 108, 108, 111])); // "Hello"
+    controller.close();
+  }
+});
+const reader = stream.getReader();
+const buffer = new Uint8Array(10);
+reader.read(buffer).then(result => {
+  console.log(result.done);      // false
+  console.log(result.value);     // Uint8Array with copied data
+  console.log(result.bytesRead); // 5
+});
+```
+
+#### v0.3.294 代码变更
+- `src/web_api/streams.rs`: 添加 BYOB 支持 (~90 行)
+- `tests/byob_tests.rs`: 新建 BYOB 测试套件 (~120 行)
+
+#### v0.3.294 下一步
+- 优化流式操作的内存使用
+- 更多 Web API 实现
+
+---
+
+### v0.3.293 TextEncoderStream 实现（2025-12-30）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.293 新增功能
+- **TextEncoderStream constructor**: 支持 `new TextEncoderStream()`
+- **流式 UTF-8 编码**: 将字符串分块编码为字节
+- **getReader() 方法**: 返回 ReadableStreamReader
+- **与 ReadableStream 管道集成**: 支持 `.pipeThrough(new TextEncoderStream())`
+
+#### v0.3.293 使用示例
+```javascript
+// 文本编码
+const stream = new ReadableStream({
+    start(controller) {
+        controller.enqueue("Hello");
+        controller.enqueue(" World");
+        controller.close();
+    }
+}).pipeThrough(new TextEncoderStream());
+
+// 读取编码后的字节
+const reader = stream.getReader();
+const { value } = await reader.read();
+// value 是 Uint8Array [72, 101, 108, 108, 111, ...]
+```
+
+---
+
+### v0.3.292 WritableStream.write() 异步写入增强（2025-12-30）
 **进度**: Web API 扩展 | ✅ 已完成
 
 #### v0.3.291 新增功能
