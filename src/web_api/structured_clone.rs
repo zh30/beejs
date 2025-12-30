@@ -204,16 +204,17 @@ fn setup_internal_clone_func(
                 clonedObjects.set(v, rootCloned);
                 queueProperties(v, rootCloned);
 
-                // Process pending properties
+                // Process pending properties FIRST
+                // This ensures all nested objects are cloned before Map/Set entries are processed
                 while (pendingProps.length > 0) {
                     const [parent, key, value] = pendingProps.pop();
 
-                    // Skip marker entries
-                    if (key === 'MAP_KEY' || key === 'MAP_VAL' || key === 'SET_VAL') {
-                        // For Map/Set keys/values, track in clonedObjects
-                        if (value === null || typeof value !== "object") {
-                            clonedObjects.set(value, value);  // Primitives clone to themselves
-                        }
+                    // Handle Map/Set marker entries - but only skip for primitives
+                    // For object values, we need to process them to clone them
+                    if ((key === 'MAP_KEY' || key === 'MAP_VAL' || key === 'SET_VAL') &&
+                        (value === null || typeof value !== "object")) {
+                        // For primitives, track in clonedObjects
+                        clonedObjects.set(value, value);
                         continue;
                     }
 
@@ -255,7 +256,8 @@ fn setup_internal_clone_func(
                     queueProperties(value, cloned);
                 }
 
-                // Now process Map entries using cloned keys and values
+                // AFTER all pending properties are processed, THEN process Map/Set entries
+                // This ensures all nested objects have been cloned and registered in clonedObjects
                 for (const [map, origKey, origVal] of mapEntries) {
                     const clonedKey = clonedObjects.get(origKey);
                     const clonedVal = clonedObjects.get(origVal);
