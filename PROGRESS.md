@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.295 (2025-12-30)
+## 当前版本: v0.3.299 (2025-12-30)
 
 ### 项目状态摘要
 
@@ -22,6 +22,7 @@
 - performance, url, form_data, fetch, websocket
 - streams (ReadableStream, WritableStream, TransformStream)
 - CompressionStream (v0.3.295 新增)
+- structuredClone (v0.3.299 新增)
 
 **包管理**: ✅ 已完成
 - package.json 解析
@@ -34,6 +35,7 @@
 - web_streams_api_tests: 59/59 通过
 - byob_tests: 5/5 通过
 - compression_stream_tests: 8/8 通过 (v0.3.295)
+- structured_clone_tests: 13/13 通过 (v0.3.299)
 - 集成测试: 运行正常
 
 **CLI 命令**:
@@ -93,6 +95,69 @@ const decompressed = compressed.pipeThrough(new DecompressionStream('gzip'));
 - 完善流式压缩/解压的实际数据处理
 - 添加 `CompressionStream.close()` 和 `DecompressionStream.close()` 支持
 - 性能优化和内存使用改进
+
+---
+
+### v0.3.299 structuredClone 全局函数（2025-12-30）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.299 新增功能
+
+**structuredClone global function**:
+- 支持深拷贝 JavaScript 值（对象、数组、嵌套结构）
+- AI 工作负载优化：安全复制推理结果
+- 支持原始类型（string, number, boolean, null, undefined）
+- 完整递归遍历嵌套对象和数组
+
+#### v0.3.299 使用示例
+```javascript
+// 深拷贝对象
+const original = { name: 'Beejs', version: '0.3.299' };
+const cloned = structuredClone(original);
+console.log(cloned.name); // 'Beejs'
+
+// 深拷贝数组
+const arr = [1, 2, { nested: true }];
+const clonedArr = structuredClone(arr);
+
+// 深度嵌套对象
+const complex = {
+    user: { name: 'Alice', scores: [95, 87, 92] },
+    metadata: { timestamp: Date.now() }
+};
+const deepCloned = structuredClone(complex);
+
+// 验证深拷贝（修改原对象不影响克隆）
+original.user.scores.push(100);
+console.log(cloned.user.scores.length); // 原始长度
+```
+
+#### v0.3.299 实现细节
+
+- `src/web_api/structured_clone.rs`: 新建 structuredClone API (~150 行)
+  - `structured_clone_callback()`: V8 函数回调处理所有类型
+  - `clone_value()`: 递归辅助函数处理深拷贝
+  - 支持 primitives、arrays、plain objects
+
+- `src/web_api/mod.rs`: 注册 structured_clone 模块
+- `src/runtime_minimal.rs`: 添加 setup_structured_clone_api() 调用
+
+#### v0.3.299 测试覆盖
+- 原始类型测试: null, undefined, string, number, boolean
+- 复合类型测试: plain object, array, nested object
+- 边界测试: empty object, empty array
+- 深拷贝验证: 修改原对象不影响克隆
+
+#### v0.3.299 代码变更
+- `src/web_api/structured_clone.rs`: 新建文件 (~150 行)
+- `src/web_api/mod.rs`: 注册 structured_clone 模块 (~5 行)
+- `src/runtime_minimal.rs`: 添加导入和初始化 (~3 行)
+- `tests/structured_clone_tests.rs`: 新建测试套件 (~250 行)
+
+#### v0.3.299 下一步
+- 支持更多类型: Date, RegExp, Map, Set
+- 添加 transfer 选项支持（零拷贝传输）
+- 性能优化：迭代器替代递归
 
 ---
 
