@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.307 (2025-12-31)
+## 当前版本: v0.3.310 (2025-12-31)
 
 ### 项目状态摘要
 
@@ -18,7 +18,7 @@
 - readline, require, stream, tcp_async, timers, url, util
 
 **Web API**: ✅ 已完成
-- crypto, events, abort, blob, timers, encoding
+- crypto, events, abort, blob, timers, encoding (TextEncoder, TextDecoder, atob, btoa)
 - performance, url, form_data, fetch, websocket
 - streams (ReadableStream, WritableStream, TransformStream, TextEncoderStream, TextDecoderStream)
 - CompressionStream (v0.3.295 新增)
@@ -30,19 +30,57 @@
 - npm 兼容命令 (install, add, remove, prune)
 - 依赖版本解析
 
-**测试**: ✅ 320+ 测试通过
+**测试**: ✅ 330+ 测试通过
 - cargo test --lib: 253/253 通过
 - performance_api_tests: 16/16 通过
 - web_streams_api_tests: 59/59 通过
 - byob_tests: 5/5 通过
 - compression_stream_tests: 8/8 通过 (v0.3.295)
-- structured_clone_tests: 45/49 通过 (v0.3.306, 4个已知问题待修复)
+- structured_clone_tests: 54/54 通过 (v0.3.309)
 - blob_api_tests: 15/15 通过 (v0.3.305)
+- text_encoding_tests: 13/13 通过 (v0.3.310, 新增 atob/btoa 测试)
 - 集成测试: 运行正常
 
 **CLI 命令**:
 - run, eval, repl, test, bundle, debug
 - version, serve, init, add, remove, install, prune, create, bunx, upgrade
+
+---
+
+### v0.3.310 atob/btoa 集成测试（2025-12-31）
+**进度**: Web API 测试增强 | ✅ 已完成
+
+#### v0.3.310 新增功能
+
+**atob/btoa 测试覆盖**:
+- `btoa()` 编码基本字符串测试
+- `atob()` 解码基本字符串测试
+- `btoa/atob` round-trip 测试
+- `btoa()` 编码空字符串测试
+- `btoa()` 编码特殊 base64 字符测试（+, /, =）
+- `btoa()` 非 Latin-1 字符错误测试
+- `atob()` 无效 base64 输入错误测试
+- `atob()` undefined 输入错误测试
+- `btoa()` undefined 输入错误测试
+
+#### v0.3.310 实现细节
+
+- `src/web_api/encoding.rs`: atob/btoa 实现已存在（使用 base64 crate）
+  - `atob_callback()`: base64 解码函数
+  - `btoa_callback()`: base64 编码函数
+  - 支持 Latin-1 字符集验证
+  - 适当的错误处理
+
+#### v0.3.310 测试验证
+- ✅ 13/13 text_encoding_tests 通过
+- ✅ btoa("Hello") === "SGVsbG8="
+- ✅ atob("SGVsbG8=") === "Hello"
+- ✅ round-trip 编码解码正确
+- ✅ 错误处理正常
+
+#### v0.3.310 下一步
+- V8 底层 ArrayBuffer transfer 支持（实现真正的零拷贝 detach）
+- Promise 状态克隆（需要 V8 引擎级别支持）
 
 ---
 
