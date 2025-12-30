@@ -1,6 +1,6 @@
 // structuredClone API implementation
-// v0.3.300: Enhanced with Date, RegExp, Map, Set support
-// Optimized for AI workloads - enables safe deep cloning of inference results
+// v0.3.301: Enhanced with transfer option support for zero-copy transfer
+// Optimized for AI workloads - enables safe deep cloning with transfer semantics
 
 use anyhow::Result;
 use rusty_v8 as v8;
@@ -16,14 +16,75 @@ fn setup_internal_clone_func(
     let code = r#"
         (function() {
             "use strict";
-            function clone(v) {
+            function clone(v, transferList) {
                 if (v === null || typeof v !== "object") return v;
 
                 const seen = new WeakSet();
+                const transfers = new Map();
+
+                // Process transfer list - mark objects as transferred
+                if (Array.isArray(transferList)) {
+                    for (const obj of transferList) {
+                        if (obj && typeof obj === 'object') {
+                            // Get the underlying buffer/transferable
+                            const transferable = obj.buffer || obj;
+                            if (transferable && typeof transferable === 'object') {
+                                transfers.set(transferable, obj);
+                            }
+                        }
+                    }
+                }
+
+                function isTypedArray(obj) {
+                    return obj && typeof obj === 'object' &&
+                        obj.buffer instanceof ArrayBuffer &&
+                        typeof obj.byteLength === 'number' &&
+                        typeof obj.byteOffset === 'number';
+                }
+
+                function getTypedArrayConstructor(obj) {
+                    // Detect TypedArray type and return appropriate constructor
+                    if (obj instanceof Uint8Array) return Uint8Array;
+                    if (obj instanceof Int8Array) return Int8Array;
+                    if (obj instanceof Uint16Array) return Uint16Array;
+                    if (obj instanceof Int16Array) return Int16Array;
+                    if (obj instanceof Uint32Array) return Uint32Array;
+                    if (obj instanceof Int32Array) return Int32Array;
+                    if (obj instanceof Float32Array) return Float32Array;
+                    if (obj instanceof Float64Array) return Float64Array;
+                    if (obj instanceof Uint8ClampedArray) return Uint8ClampedArray;
+                    return null;
+                }
+
                 function deepClone(obj) {
                     if (obj === null || typeof obj !== "object") return obj;
                     if (seen.has(obj)) return obj;
                     seen.add(obj);
+
+                    // Check if this object is being transferred
+                    const transferTarget = transfers.get(obj);
+                    if (transferTarget) {
+                        // Remove from transfers map and return as-is (transfer semantics)
+                        transfers.delete(obj);
+                        return obj;
+                    }
+
+                    // Check for ArrayBuffer being transferred
+                    if (obj instanceof ArrayBuffer && transfers.has(obj)) {
+                        return obj;
+                    }
+
+                    // Handle TypedArray (before Array check, since TypedArrays are not true arrays)
+                    const TypedArrayConstructor = getTypedArrayConstructor(obj);
+                    if (TypedArrayConstructor) {
+                        if (obj.buffer instanceof ArrayBuffer && transfers.has(obj.buffer)) {
+                            // Transfer the buffer
+                            transfers.delete(obj.buffer);
+                            return obj;
+                        }
+                        // Clone by creating new TypedArray with same values
+                        return new TypedArrayConstructor(obj);
+                    }
 
                     // Check for Date using both instanceof and timestamp property
                     // This handles both native Date and our custom Date implementation
@@ -40,6 +101,15 @@ fn setup_internal_clone_func(
                     if (obj instanceof RegExp ||
                         (typeof obj.source === 'string' && typeof obj.flags === 'string')) {
                         return new RegExp(obj.source || obj.patternSource, obj.flags || obj.patternFlags || '');
+                    }
+
+                    // Check for ArrayBuffer (non-transfer case)
+                    if (obj instanceof ArrayBuffer) {
+                        // Copy the actual data from the source buffer
+                        const bytes = new Uint8Array(obj);
+                        const cloned = new ArrayBuffer(obj.byteLength);
+                        new Uint8Array(cloned).set(bytes);
+                        return cloned;
                     }
 
                     // Check for Map (native or custom with forEach)
@@ -101,6 +171,24 @@ fn structured_clone_callback(
 ) {
     let value = args.get(0);
 
+    // Extract transfer list from options object (second argument)
+    let transfer_list = if args.length() > 1 {
+        let options = args.get(1);
+        if options.is_object() {
+            let options_obj = v8::Local::<v8::Object>::try_from(options).ok();
+            if let Some(obj) = options_obj {
+                let transfer_key = v8::String::new(scope, "transfer").unwrap();
+                obj.get(scope, transfer_key.into()).unwrap_or(v8::null(scope).into())
+            } else {
+                v8::null(scope).into()
+            }
+        } else {
+            v8::null(scope).into()
+        }
+    } else {
+        v8::null(scope).into()
+    };
+
     let global = scope.get_current_context().global(scope);
     let key = v8::String::new(scope, CLONE_FUNC_KEY).unwrap();
 
@@ -109,7 +197,7 @@ fn structured_clone_callback(
     let func: v8::Local<v8::Function> = clone_func.try_into().unwrap();
 
     let undefined = v8::undefined(scope);
-    let result = func.call(scope, undefined.into(), &[value]);
+    let result = func.call(scope, undefined.into(), &[value, transfer_list]);
     retval.set(result.unwrap_or(v8::null(scope).into()));
 }
 

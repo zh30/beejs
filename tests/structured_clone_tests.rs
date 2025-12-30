@@ -463,4 +463,196 @@ mod structured_clone_tests {
         assert!(stdout.contains("circular preserved: true"), "Expected circular reference preserved. Got: {}", stdout);
         assert!(stdout.contains("map preserved: true"), "Expected Map type preserved. Got: {}", stdout);
     }
+
+    /// Test 21: structuredClone with Uint8Array
+    #[test]
+    fn test_clone_uint8array() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = new Uint8Array([1, 2, 3, 4, 5]);
+                const cloned = structuredClone(original);
+                console.log('uint8array cloned:', cloned instanceof Uint8Array);
+                console.log('uint8array length:', cloned.length === 5);
+                console.log('uint8array values:', cloned[0] === 1 && cloned[4] === 5);
+                console.log('uint8array different buffer:', original.buffer !== cloned.buffer);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("uint8array cloned: true"), "Expected Uint8Array to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("uint8array length: true"), "Expected Uint8Array length preserved. Got: {}", stdout);
+        assert!(stdout.contains("uint8array values: true"), "Expected Uint8Array values preserved. Got: {}", stdout);
+        assert!(stdout.contains("uint8array different buffer: true"), "Expected different buffer. Got: {}", stdout);
+    }
+
+    /// Test 22: structuredClone with Int32Array
+    #[test]
+    fn test_clone_int32array() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = new Int32Array([-1, 0, 1, 2147483647]);
+                const cloned = structuredClone(original);
+                console.log('int32array cloned:', cloned instanceof Int32Array);
+                console.log('int32array length:', cloned.length === 4);
+                console.log('int32array max value:', cloned[3] === 2147483647);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("int32array cloned: true"), "Expected Int32Array to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("int32array length: true"), "Expected Int32Array length preserved. Got: {}", stdout);
+        assert!(stdout.contains("int32array max value: true"), "Expected Int32Array max value preserved. Got: {}", stdout);
+    }
+
+    /// Test 23: structuredClone with Float64Array
+    #[test]
+    fn test_clone_float64array() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = new Float64Array([1.5, Math.PI, Number.MAX_VALUE]);
+                const cloned = structuredClone(original);
+                console.log('float64array cloned:', cloned instanceof Float64Array);
+                console.log('float64array length:', cloned.length === 3);
+                console.log('float64array pi:', cloned[1] === Math.PI);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("float64array cloned: true"), "Expected Float64Array to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("float64array length: true"), "Expected Float64Array length preserved. Got: {}", stdout);
+        assert!(stdout.contains("float64array pi: true"), "Expected Float64Array PI preserved. Got: {}", stdout);
+    }
+
+    /// Test 24: structuredClone with ArrayBuffer
+    #[test]
+    fn test_clone_arraybuffer() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = new ArrayBuffer(32);
+                const view = new Uint8Array(original);
+                view[0] = 42;
+                view[31] = 99;
+                const cloned = structuredClone(original);
+                console.log('arraybuffer cloned:', cloned instanceof ArrayBuffer);
+                console.log('arraybuffer size:', cloned.byteLength === 32);
+                console.log('arraybuffer data preserved:', new Uint8Array(cloned)[0] === 42 && new Uint8Array(cloned)[31] === 99);
+                console.log('arraybuffer different ref:', cloned !== original);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("arraybuffer cloned: true"), "Expected ArrayBuffer to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("arraybuffer size: true"), "Expected ArrayBuffer size preserved. Got: {}", stdout);
+        assert!(stdout.contains("arraybuffer data preserved: true"), "Expected ArrayBuffer data preserved. Got: {}", stdout);
+        assert!(stdout.contains("arraybuffer different ref: true"), "Expected different reference. Got: {}", stdout);
+    }
+
+    /// Test 25: structuredClone with object containing ArrayBuffer
+    #[test]
+    fn test_clone_object_with_arraybuffer() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const buf = new ArrayBuffer(16);
+                const view = new Int32Array(buf);
+                view[0] = 42;
+                view[1] = -2147483648;
+                const original = { buffer: buf, name: 'test' };
+                const cloned = structuredClone(original);
+                console.log('obj buffer type:', cloned.buffer instanceof ArrayBuffer);
+                console.log('obj buffer size:', cloned.buffer.byteLength === 16);
+                console.log('obj buffer data:', new Int32Array(cloned.buffer)[0] === 42);
+                console.log('obj name:', cloned.name === 'test');
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("obj buffer type: true"), "Expected ArrayBuffer in object. Got: {}", stdout);
+        assert!(stdout.contains("obj buffer size: true"), "Expected ArrayBuffer size preserved. Got: {}", stdout);
+        assert!(stdout.contains("obj buffer data: true"), "Expected ArrayBuffer data preserved. Got: {}", stdout);
+        assert!(stdout.contains("obj name: true"), "Expected name preserved. Got: {}", stdout);
+    }
+
+    /// Test 26: structuredClone with large ArrayBuffer
+    #[test]
+    fn test_clone_large_arraybuffer() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const size = 1024 * 1024; // 1MB
+                const original = new ArrayBuffer(size);
+                const view = new Uint8Array(original);
+                view[0] = 255;
+                view[size - 1] = 0;
+                const cloned = structuredClone(original);
+                console.log('large buffer cloned:', cloned.byteLength === size);
+                console.log('large buffer start:', new Uint8Array(cloned)[0] === 255);
+                console.log('large buffer end:', new Uint8Array(cloned)[size - 1] === 0);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("large buffer cloned: true"), "Expected large ArrayBuffer to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("large buffer start: true"), "Expected large ArrayBuffer start preserved. Got: {}", stdout);
+        assert!(stdout.contains("large buffer end: true"), "Expected large ArrayBuffer end preserved. Got: {}", stdout);
+    }
+
+    /// Test 27: structuredClone with transfer option (basic - cloning works)
+    #[test]
+    fn test_clone_with_transfer_option() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = new ArrayBuffer(16);
+                const view = new Uint8Array(original);
+                view[0] = 42;
+                // Note: Full transfer semantics require V8-level support
+                // This test verifies the option is accepted and cloning works
+                const cloned = structuredClone(original, { transfer: [original] });
+                console.log('transfer accepted:', cloned instanceof ArrayBuffer);
+                console.log('transfer data preserved:', new Uint8Array(cloned)[0] === 42);
+                console.log('transfer size:', cloned.byteLength === 16);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("transfer accepted: true"), "Expected transfer option to be accepted. Got: {}", stdout);
+        assert!(stdout.contains("transfer data preserved: true"), "Expected data preserved with transfer option. Got: {}", stdout);
+        assert!(stdout.contains("transfer size: true"), "Expected size preserved. Got: {}", stdout);
+    }
+
+    /// Test 28: structuredClone with nested object and TypedArray
+    #[test]
+    fn test_clone_nested_with_typedarray() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const aiResult = {
+                    embeddings: new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5]),
+                    metadata: {
+                        model: 'gpt-4',
+                        tokens: 100
+                    },
+                    scores: new Uint8Array([95, 87, 92])
+                };
+                const cloned = structuredClone(aiResult);
+                console.log('embeddings type:', cloned.embeddings instanceof Float32Array);
+                console.log('embeddings length:', cloned.embeddings.length === 5);
+                console.log('metadata preserved:', cloned.metadata.model === 'gpt-4');
+                console.log('scores type:', cloned.scores instanceof Uint8Array);
+                console.log('deep copy:', aiResult.embeddings !== cloned.embeddings);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("embeddings type: true"), "Expected embeddings as Float32Array. Got: {}", stdout);
+        assert!(stdout.contains("embeddings length: true"), "Expected embeddings length. Got: {}", stdout);
+        assert!(stdout.contains("metadata preserved: true"), "Expected metadata preserved. Got: {}", stdout);
+        assert!(stdout.contains("scores type: true"), "Expected scores as Uint8Array. Got: {}", stdout);
+        assert!(stdout.contains("deep copy: true"), "Expected deep copy. Got: {}", stdout);
+    }
 }

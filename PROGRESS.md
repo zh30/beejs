@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.299 (2025-12-30)
+## 当前版本: v0.3.301 (2025-12-30)
 
 ### 项目状态摘要
 
@@ -29,13 +29,13 @@
 - npm 兼容命令 (install, add, remove, prune)
 - 依赖版本解析
 
-**测试**: ✅ 285+ 测试通过
+**测试**: ✅ 293+ 测试通过
 - cargo test --lib: 253/253 通过
 - performance_api_tests: 16/16 通过
 - web_streams_api_tests: 59/59 通过
 - byob_tests: 5/5 通过
 - compression_stream_tests: 8/8 通过 (v0.3.295)
-- structured_clone_tests: 13/13 通过 (v0.3.299)
+- structured_clone_tests: 21/21 通过 (v0.3.301)
 - 集成测试: 运行正常
 
 **CLI 命令**:
@@ -13966,7 +13966,59 @@ const clonedSet = structuredClone(set);
 - ✅ 深度拷贝：修改原对象不影响克隆
 - ✅ 嵌套结构：复杂对象正确克隆
 
-#### v0.3.300 下一步
-- 添加更多 Date 方法（getMonth, getDate, getFullYear 等）
-- 完善 structuredClone transfer 选项支持
-- 性能优化：减少不必要的对象创建
+#### v0.3.301 下一步
+- ✅ TypedArray 支持：Uint8Array、Int8Array、Uint16Array、Int16Array、Uint32Array、Int32Array、Float32Array、Float64Array、Uint8ClampedArray
+- ✅ ArrayBuffer 支持：完整的数据复制，而非仅创建空缓冲区
+- ✅ transfer 选项：接受 transfer 参数，为零拷贝传输奠定基础
+- ✅ AI 工作负载优化：支持 embedding 数据结构（Float32Array）、大模型推理结果深拷贝
+
+#### v0.3.301 使用示例
+```javascript
+// AI 推理结果克隆
+const aiResult = {
+    embeddings: new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5]),
+    metadata: { model: 'gpt-4', tokens: 100 },
+    scores: new Uint8Array([95, 87, 92])
+};
+const cloned = structuredClone(aiResult);
+console.log(cloned.embeddings instanceof Float32Array); // true
+
+// 大型 ArrayBuffer 克隆（1MB 数据）
+const largeBuffer = new ArrayBuffer(1024 * 1024);
+const clonedBuffer = structuredClone(largeBuffer);
+console.log(clonedBuffer.byteLength); // 1048576
+```
+
+#### v0.3.301 代码变更
+- `src/web_api/structured_clone.rs`: 重写 clone 函数 (~+80/-20 行)
+  - 添加 `getTypedArrayConstructor()` 检测所有 TypedArray 类型
+  - 实现 ArrayBuffer 数据复制（使用 Uint8Array.set()）
+  - 添加 `transferList` 参数解析和 transfer Map 构建
+  - 支持 TypedArray 作为 transfer 对象
+
+- `tests/structured_clone_tests.rs`: 添加 8 个新测试 (~200 行)
+  - `test_clone_uint8array()`: Uint8Array 克隆测试
+  - `test_clone_int32array()`: Int32Array 克隆测试
+  - `test_clone_float64array()`: Float64Array 克隆测试
+  - `test_clone_arraybuffer()`: ArrayBuffer 数据复制测试
+  - `test_clone_object_with_arraybuffer()`: 嵌套对象中的 ArrayBuffer 测试
+  - `test_clone_large_arraybuffer()`: 1MB 大文件克隆测试
+  - `test_clone_with_transfer_option()`: transfer 选项接受测试
+  - `test_clone_nested_with_typedarray()`: AI 结果结构克隆测试
+
+#### v0.3.301 验证
+- ✅ Uint8Array 克隆：类型、大小、值正确
+- ✅ Int32Array 克隆：支持最大整数值 2147483647
+- ✅ Float64Array 克隆：支持浮点数精度（PI 等）
+- ✅ ArrayBuffer 克隆：数据完整复制，非仅大小复制
+- ✅ 大文件克隆：1MB 数据正确处理
+- ✅ transfer 选项：参数正确解析，克隆正常
+
+#### v0.3.301 下一步
+- V8 底层 ArrayBuffer transfer 支持（实现真正的零拷贝 detach）
+- 性能优化：使用迭代器替代递归减少栈开销
+- Error 对象克隆支持
+
+---
+
+### v0.3.300 structuredClone 增强 - Date/RegExp/Map/Set 支持（2025-12-30）
