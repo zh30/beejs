@@ -1175,4 +1175,143 @@ mod web_streams_api_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "write() should return a Promise");
     }
+
+    // v0.3.293: TextEncoderStream tests
+    #[test]
+    fn test_text_encoder_stream_creation() {
+        // Test that TextEncoderStream can be created
+        let output = Command::new(beejs_path())
+            .args(["eval", "console.log(typeof TextEncoderStream)"])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("function"), "TextEncoderStream should exist");
+    }
+
+    #[test]
+    fn test_text_encoder_stream_has_encoding() {
+        // Test that TextEncoderStream has encoding property
+        let output = Command::new(beejs_path())
+            .args(["eval", "const e = new TextEncoderStream(); console.log(e.encoding)"])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("utf-8"), "TextEncoderStream should have utf-8 encoding");
+    }
+
+    #[test]
+    fn test_text_encoder_stream_has_readable_writable() {
+        // Test that TextEncoderStream has readable and writable properties
+        let output = Command::new(beejs_path())
+            .args(["eval", "const e = new TextEncoderStream(); console.log(typeof e.readable && typeof e.writable)"])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("object"), "TextEncoderStream should have readable and writable");
+    }
+
+    #[test]
+    fn test_text_encoder_stream_encodes_to_bytes() {
+        // Test that TextEncoderStream actually encodes strings to bytes
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                async function test() {
+                    const encoder = new TextEncoderStream();
+                    const writer = encoder.writable.getWriter();
+                    await writer.write('hello');
+                    await writer.close();
+                    const reader = encoder.readable.getReader();
+                    const { done, value } = await reader.read();
+                    // Check that we got Uint8Array bytes for 'hello'
+                    console.log(value instanceof Uint8Array && value.length === 5);
+                    console.log(value[0] === 104 && value[4] === 111); // 'h' = 104, 'o' = 111
+                }
+                test();
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "TextEncoderStream should encode strings to Uint8Array bytes");
+    }
+
+    #[test]
+    fn test_text_encoder_stream_multibyte_characters() {
+        // Test that TextEncoderStream handles multibyte UTF-8 characters correctly
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                async function test() {
+                    const encoder = new TextEncoderStream();
+                    const writer = encoder.writable.getWriter();
+                    await writer.write('你好'); // Chinese characters
+                    await writer.close();
+                    const reader = encoder.readable.getReader();
+                    const { done, value } = await reader.read();
+                    // Each Chinese character is 3 bytes in UTF-8
+                    console.log(value instanceof Uint8Array && value.length === 6);
+                }
+                test();
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "TextEncoderStream should handle multibyte UTF-8 characters");
+    }
+
+    #[test]
+    fn test_text_encoder_stream_empty_string() {
+        // Test that TextEncoderStream handles empty string
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                async function test() {
+                    const encoder = new TextEncoderStream();
+                    const writer = encoder.writable.getWriter();
+                    await writer.write('');
+                    await writer.close();
+                    const reader = encoder.readable.getReader();
+                    const { done, value } = await reader.read();
+                    console.log(value instanceof Uint8Array && value.length === 0);
+                }
+                test();
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "TextEncoderStream should handle empty string");
+    }
+
+    #[test]
+    fn test_text_encoder_stream_pipe_from_readable() {
+        // Test piping from ReadableStream through TextEncoderStream
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                async function test() {
+                    const readable = new ReadableStream({
+                        start(controller) {
+                            controller.enqueue('test string');
+                            controller.close();
+                        }
+                    });
+                    const encoder = new TextEncoderStream();
+                    const promise = readable.pipeTo(encoder.writable);
+                    promise.then(() => {
+                        const reader = encoder.readable.getReader();
+                        reader.read().then(r => {
+                            console.log(r.value instanceof Uint8Array && r.value.length === 11);
+                        });
+                    });
+                }
+                test();
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "TextEncoderStream should work with pipeTo");
+    }
 }

@@ -1527,6 +1527,304 @@ fn text_decoder_stream_constructor(
 }
 
 // ============================================================
+// TextEncoderStream Implementation
+// ============================================================
+
+/// TextEncoderStream constructor for streaming UTF-8 encoding
+/// Uses TransformStream internally for AI workloads
+fn text_encoder_stream_constructor(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    // Parse options
+    let mut encoding = "utf-8".to_string();
+
+    if args.length() > 0 {
+        let options = args.get(0);
+        if !options.is_undefined() && options.is_object() {
+            let options_obj = v8::Local::<v8::Object>::try_from(options).unwrap();
+            let enc_key = v8::String::new(scope, "encoding").unwrap();
+            if let Some(enc_val) = options_obj.get(scope, enc_key.into()) {
+                if enc_val.is_string() {
+                    encoding = enc_val.to_string(scope).unwrap().to_rust_string_lossy(scope).to_lowercase();
+                }
+            }
+        }
+    }
+
+    // Only support UTF-8 for now
+    if encoding != "utf-8" && encoding != "utf8" {
+        let error = v8::String::new(scope, &format!("TextEncoderStream: encoding '{}' not supported", encoding)).unwrap();
+        let error_obj = v8::Exception::range_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
+    let encoder_obj: v8::Local<v8::Object> = v8::Object::new(scope);
+
+    // Create output chunks queue for encoded bytes
+    let output_queue = v8::Array::new(scope, 0);
+    let output_key = v8::String::new(scope, "_outputQueue").unwrap();
+    encoder_obj.set(scope, output_key.into(), output_queue.into());
+
+    // Create read index for output
+    let read_index_key = v8::String::new(scope, "_readIndex").unwrap();
+    let read_index_val: v8::Local<v8::Value> = v8::Integer::new(scope, 0).into();
+    encoder_obj.set(scope, read_index_key.into(), read_index_val);
+
+    // Create closed flag to track when writer is closed
+    let closed_key = v8::String::new(scope, "_closed").unwrap();
+    let closed_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+    encoder_obj.set(scope, closed_key.into(), closed_val);
+
+    // Create readable stream with getReader
+    let readable_stream: v8::Local<v8::Object> = v8::Object::new(scope);
+
+    // Store encoder reference on readable
+    let readable_encoder_key = v8::String::new(scope, "encoderRef").unwrap();
+    readable_stream.set(scope, readable_encoder_key.into(), encoder_obj.into());
+
+    let readable_get_reader_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let reader: v8::Local<v8::Object> = v8::Object::new(_scope);
+
+        // Store encoder on reader
+        let this_obj = args.this();
+        let encoder_key = v8::String::new(_scope, "encoderRef").unwrap();
+        if let Some(encoder_val) = this_obj.get(_scope, encoder_key.into()) {
+            let reader_encoder_key = v8::String::new(_scope, "encoderRef").unwrap();
+            reader.set(_scope, reader_encoder_key.into(), encoder_val);
+        }
+
+        let read_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, _a: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
+            let promise: v8::Local<v8::PromiseResolver> = v8::PromiseResolver::new(__scope).unwrap();
+            let result: v8::Local<v8::Object> = v8::Object::new(__scope);
+            let done_key: v8::Local<v8::String> = v8::String::new(__scope, "done").unwrap();
+            let value_key: v8::Local<v8::String> = v8::String::new(__scope, "value").unwrap();
+
+            // Get encoder from reader
+            let reader_encoder_key = v8::String::new(__scope, "encoderRef").unwrap();
+            if let Some(encoder_val) = _a.this().get(__scope, reader_encoder_key.into()) {
+                if let Ok(encoder) = v8::Local::<v8::Object>::try_from(encoder_val) {
+                    let output_queue_key = v8::String::new(__scope, "_outputQueue").unwrap();
+                    let read_index_key = v8::String::new(__scope, "_readIndex").unwrap();
+                    let closed_key = v8::String::new(__scope, "_closed").unwrap();
+
+                    // Check if stream is closed and has no data
+                    let is_closed = if let Some(closed_val) = encoder.get(__scope, closed_key.into()) {
+                        closed_val.is_true()
+                    } else {
+                        false
+                    };
+
+                    if let Some(output_val) = encoder.get(__scope, output_queue_key.into()) {
+                        if let Ok(queue) = v8::Local::<v8::Array>::try_from(output_val) {
+                            if let Some(index_val) = encoder.get(__scope, read_index_key.into()) {
+                                let index = index_val.integer_value(__scope).unwrap_or(0) as u32;
+                                let length = queue.length();
+
+                                if index < length {
+                                    // Collect bytes from queue
+                                    let byte_count = length - index;
+                                    let mut bytes: Vec<u8> = Vec::with_capacity(byte_count as usize);
+                                    for i in index..length {
+                                        if let Some(byte_val) = queue.get_index(__scope, i) {
+                                            if let Some(byte) = byte_val.integer_value(__scope) {
+                                                bytes.push(byte as u8);
+                                            }
+                                        }
+                                    }
+
+                                    // Create ArrayBuffer and Uint8Array view
+                                    let buffer = v8::ArrayBuffer::new(__scope, bytes.len());
+                                    let buffer_store = buffer.get_backing_store();
+                                    let target_ptr = buffer_store.data() as *mut u8;
+                                    unsafe {
+                                        std::ptr::copy_nonoverlapping(bytes.as_ptr(), target_ptr, bytes.len());
+                                    }
+                                    let uint8_array = v8::Uint8Array::new(__scope, buffer, 0, bytes.len());
+                                    if let Some(uint8) = uint8_array {
+                                        let done_val: v8::Local<v8::Value> = v8::Boolean::new(__scope, false).into();
+                                        result.set(__scope, done_key.into(), done_val);
+                                        result.set(__scope, value_key.into(), uint8.into());
+                                        let next_index: v8::Local<v8::Value> = v8::Integer::new(__scope, length as i32).into();
+                                        encoder.set(__scope, read_index_key.into(), next_index);
+                                        let _ = promise.resolve(__scope, result.into());
+                                        _r.set(promise.into());
+                                        return;
+                                    }
+                                } else if is_closed {
+                                    // Stream is closed and queue is empty - return empty Uint8Array
+                                    let empty_buffer = v8::ArrayBuffer::new(__scope, 0);
+                                    let empty_uint8 = v8::Uint8Array::new(__scope, empty_buffer, 0, 0).unwrap();
+                                    let done_val: v8::Local<v8::Value> = v8::Boolean::new(__scope, false).into();
+                                    result.set(__scope, done_key.into(), done_val);
+                                    result.set(__scope, value_key.into(), empty_uint8.into());
+                                    let _ = promise.resolve(__scope, result.into());
+                                    _r.set(promise.into());
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // No data available yet, resolve with done=true
+            let done_val: v8::Local<v8::Value> = v8::Boolean::new(__scope, true).into();
+            result.set(__scope, done_key.into(), done_val);
+            let _ = promise.resolve(__scope, result.into());
+            _r.set(promise.into());
+        });
+
+        // releaseLock function - no-op for TextEncoderStream reader
+        let release_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, _a: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
+            // releaseLock is a no-op for TextEncoderStream
+            let undefined_val: v8::Local<v8::Value> = v8::undefined(__scope).into();
+            _r.set(undefined_val);
+        });
+
+        let read_key: v8::Local<v8::String> = v8::String::new(_scope, "read").unwrap();
+        let read_fn_func = read_fn.get_function(_scope).unwrap();
+        reader.set(_scope, read_key.into(), read_fn_func.into());
+
+        let release_fn_func = release_fn.get_function(_scope).unwrap();
+        let release_key: v8::Local<v8::String> = v8::String::new(_scope, "releaseLock").unwrap();
+        reader.set(_scope, release_key.into(), release_fn_func.into());
+
+        retval.set(reader.into());
+    });
+
+    let readable_get_reader_key: v8::Local<v8::String> = v8::String::new(scope, "getReader").unwrap();
+    let readable_get_reader_func: v8::Local<v8::Function> = readable_get_reader_fn.get_function(scope).unwrap();
+    readable_stream.set(scope, readable_get_reader_key.into(), readable_get_reader_func.into());
+
+    // Create writable stream
+    let writable_stream: v8::Local<v8::Object> = v8::Object::new(scope);
+
+    // Store encoder reference on writable
+    let writable_encoder_key = v8::String::new(scope, "encoderRef").unwrap();
+    writable_stream.set(scope, writable_encoder_key.into(), encoder_obj.into());
+
+    let writable_get_writer_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        let writer: v8::Local<v8::Object> = v8::Object::new(_scope);
+
+        // Store encoder on writer
+        let this_obj = args.this();
+        let encoder_key = v8::String::new(_scope, "encoderRef").unwrap();
+        if let Some(encoder_val) = this_obj.get(_scope, encoder_key.into()) {
+            let writer_encoder_key = v8::String::new(_scope, "encoderRef").unwrap();
+            writer.set(_scope, writer_encoder_key.into(), encoder_val);
+        }
+
+        let write_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, a: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
+            let promise: v8::Local<v8::PromiseResolver> = v8::PromiseResolver::new(__scope).unwrap();
+
+            // Get encoder from writer
+            let writer_encoder_key = v8::String::new(__scope, "encoderRef").unwrap();
+            if let Some(encoder_val) = a.this().get(__scope, writer_encoder_key.into()) {
+                if let Ok(encoder) = v8::Local::<v8::Object>::try_from(encoder_val) {
+                    if a.length() > 0 {
+                        let chunk = a.get(0);
+
+                        // Convert string to UTF-8 bytes
+                        if chunk.is_string() {
+                            let str_val = chunk.to_string(__scope).unwrap();
+                            let rust_str = str_val.to_rust_string_lossy(__scope);
+
+                            // Encode to UTF-8 bytes
+                            let utf8_bytes: Vec<u8> = rust_str.into_bytes();
+
+                            // Add bytes to output queue as individual integers (following TextDecoderStream pattern)
+                            let output_queue_key = v8::String::new(__scope, "_outputQueue").unwrap();
+                            if let Some(queue_val) = encoder.get(__scope, output_queue_key.into()) {
+                                if let Ok(queue) = v8::Local::<v8::Array>::try_from(queue_val) {
+                                    let queue_len = queue.length();
+                                    for (i, &byte) in utf8_bytes.iter().enumerate() {
+                                        let byte_val: v8::Local<v8::Value> = v8::Integer::new(__scope, byte as i32).into();
+                                        queue.set_index(__scope, queue_len + (i as u32), byte_val);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    let undefined_val: v8::Local<v8::Value> = v8::undefined(__scope).into();
+                    let _ = promise.resolve(__scope, undefined_val);
+                    _r.set(promise.into());
+                    return;
+                }
+            }
+
+            let undefined_val: v8::Local<v8::Value> = v8::undefined(__scope).into();
+            let _ = promise.resolve(__scope, undefined_val);
+            _r.set(promise.into());
+        });
+
+        // TextEncoderStream close function - sets closed flag
+        let close_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, a: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
+            let promise: v8::Local<v8::PromiseResolver> = v8::PromiseResolver::new(__scope).unwrap();
+
+            // Set closed flag on encoder
+            let writer_encoder_key = v8::String::new(__scope, "encoderRef").unwrap();
+            if let Some(encoder_val) = a.this().get(__scope, writer_encoder_key.into()) {
+                if let Ok(encoder) = v8::Local::<v8::Object>::try_from(encoder_val) {
+                    let closed_key = v8::String::new(__scope, "_closed").unwrap();
+                    let true_val: v8::Local<v8::Value> = v8::Boolean::new(__scope, true).into();
+                    encoder.set(__scope, closed_key.into(), true_val);
+                }
+            }
+
+            let undefined_val: v8::Local<v8::Value> = v8::undefined(__scope).into();
+            let _ = promise.resolve(__scope, undefined_val);
+            _r.set(promise.into());
+        });
+
+        let abort_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, _a: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
+            let promise: v8::Local<v8::PromiseResolver> = v8::PromiseResolver::new(__scope).unwrap();
+            let undefined_val: v8::Local<v8::Value> = v8::undefined(__scope).into();
+            let _ = promise.resolve(__scope, undefined_val);
+            _r.set(promise.into());
+        });
+
+        let write_fn_func = write_fn.get_function(_scope).unwrap();
+        let write_key: v8::Local<v8::String> = v8::String::new(_scope, "write").unwrap();
+        writer.set(_scope, write_key.into(), write_fn_func.into());
+
+        let close_fn_func = close_fn.get_function(_scope).unwrap();
+        let close_key: v8::Local<v8::String> = v8::String::new(_scope, "close").unwrap();
+        writer.set(_scope, close_key.into(), close_fn_func.into());
+
+        let abort_fn_func = abort_fn.get_function(_scope).unwrap();
+        let abort_key: v8::Local<v8::String> = v8::String::new(_scope, "abort").unwrap();
+        writer.set(_scope, abort_key.into(), abort_fn_func.into());
+
+        retval.set(writer.into());
+    });
+
+    let writable_get_writer_key: v8::Local<v8::String> = v8::String::new(scope, "getWriter").unwrap();
+    let writable_get_writer_func: v8::Local<v8::Function> = writable_get_writer_fn.get_function(scope).unwrap();
+    writable_stream.set(scope, writable_get_writer_key.into(), writable_get_writer_func.into());
+
+    let writable_locked_key: v8::Local<v8::String> = v8::String::new(scope, "locked").unwrap();
+    let writable_locked_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+    writable_stream.set(scope, writable_locked_key.into(), writable_locked_val);
+
+    // Add properties
+    let encoding_value: v8::Local<v8::Value> = v8::String::new(scope, "utf-8").unwrap().into();
+
+    let readable_key: v8::Local<v8::String> = v8::String::new(scope, "readable").unwrap();
+    let writable_key: v8::Local<v8::String> = v8::String::new(scope, "writable").unwrap();
+    let encoding_key: v8::Local<v8::String> = v8::String::new(scope, "encoding").unwrap();
+
+    encoder_obj.set(scope, readable_key.into(), readable_stream.into());
+    encoder_obj.set(scope, writable_key.into(), writable_stream.into());
+    encoder_obj.set(scope, encoding_key.into(), encoding_value);
+
+    retval.set(encoder_obj.into());
+}
+
+// ============================================================
 // Setup Functions
 // ============================================================
 
@@ -1578,6 +1876,18 @@ fn setup_text_decoder_stream(
     global.set(scope, text_decoder_stream_key.into(), text_decoder_stream_constructor.into());
 }
 
+/// Setup TextEncoderStream constructor in V8 context
+fn setup_text_encoder_stream(
+    scope: &mut v8::ContextScope<v8::HandleScope>,
+    context: v8::Local<v8::Context>,
+) {
+    let global: v8::Local<v8::Object> = context.global(scope);
+    let text_encoder_stream_template: v8::Local<v8::FunctionTemplate> = v8::FunctionTemplate::new(scope, text_encoder_stream_constructor);
+    let text_encoder_stream_constructor: v8::Local<v8::Function> = text_encoder_stream_template.get_function(scope).unwrap();
+    let text_encoder_stream_key: v8::Local<v8::String> = v8::String::new(scope, "TextEncoderStream").unwrap();
+    global.set(scope, text_encoder_stream_key.into(), text_encoder_stream_constructor.into());
+}
+
 /// Setup all Streams APIs in V8 context
 pub fn setup_streams_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -1598,6 +1908,10 @@ pub fn setup_streams_api(
     eprintln!("[STAGE75] Setting up TextDecoderStream...");
     setup_text_decoder_stream(scope, *context);
     eprintln!("[STAGE75] TextDecoderStream done");
+
+    eprintln!("[STAGE75] Setting up TextEncoderStream...");
+    setup_text_encoder_stream(scope, *context);
+    eprintln!("[STAGE75] TextEncoderStream done");
 
     eprintln!("[STAGE75] All Streams APIs initialized!");
     Ok(())
