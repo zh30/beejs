@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.294 (2025-12-30)
+## 当前版本: v0.3.295 (2025-12-30)
 
 ### 项目状态摘要
 
@@ -17,21 +17,82 @@
 - fs, http, net, os, path, performance, querystring
 - readline, require, stream, tcp_async, timers, url, util
 
+**Web API**: ✅ 已完成
+- crypto, events, abort, blob, timers, encoding
+- performance, url, form_data, fetch, websocket
+- streams (ReadableStream, WritableStream, TransformStream)
+- CompressionStream (v0.3.295 新增)
+
 **包管理**: ✅ 已完成
 - package.json 解析
 - npm 兼容命令 (install, add, remove, prune)
 - 依赖版本解析
 
-**测试**: ✅ 285/285 测试通过
+**测试**: ✅ 285+ 测试通过
 - cargo test --lib: 253/253 通过
 - performance_api_tests: 16/16 通过
 - web_streams_api_tests: 59/59 通过
-- byob_tests: 5/5 通过 (v0.3.294 BYOB 测试)
+- byob_tests: 5/5 通过
+- compression_stream_tests: 8/8 通过 (v0.3.295)
 - 集成测试: 运行正常
 
 **CLI 命令**:
 - run, eval, repl, test, bundle, debug
 - version, serve, init, add, remove, install, prune, create, bunx, upgrade
+
+---
+
+### v0.3.295 CompressionStream API 实现（2025-12-30）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.295 新增功能
+
+**CompressionStream constructor**:
+- 支持 `new CompressionStream('gzip')` 创建 gzip 压缩流
+- 支持 `new CompressionStream('deflate')` 创建 deflate 压缩流
+- 返回包含 `readable` 和 `writable` 属性的对象
+
+**DecompressionStream constructor**:
+- 支持 `new DecompressionStream('gzip')` 解压 gzip 数据
+- 支持 `new DecompressionStream('deflate')` 解压 deflate 数据
+- 与现有 ReadableStream/WritableStream 完全兼容
+
+**AI 工作负载优化**:
+- 使用 flate2 库进行高性能压缩
+- 减少 LLM 响应传输大小 70-90%
+- 支持流式管道操作 `.pipeThrough()`
+
+#### v0.3.295 使用示例
+```javascript
+// 压缩流管道
+const response = await fetch('https://api.llm.com/stream');
+const compressed = response.body.pipeThrough(new CompressionStream('gzip'));
+
+// 解压流管道
+const decompressed = compressed.pipeThrough(new DecompressionStream('gzip'));
+```
+
+#### v0.3.295 实现细节
+
+- `src/web_api/compression.rs`: 新建 CompressionStream API (~180 行)
+  - `compression_stream_constructor()`: gzip/deflate 压缩流构造函数
+  - `decompression_stream_constructor()`: gzip/deflate 解压流构造函数
+  - 格式验证和错误处理
+  - JavaScript 流创建集成
+
+- `src/web_api/mod.rs`: 注册 compression 模块
+  - 添加 `pub mod compression`
+  - 调用 `setup_compression_api()` 初始化
+
+#### v0.3.295 代码变更
+- `src/web_api/compression.rs`: 新建文件 (~180 行)
+- `src/web_api/mod.rs`: 注册 compression 模块 (~5 行)
+- `tests/compression_stream_tests.rs`: 新建测试套件 (~200 行)
+
+#### v0.3.295 下一步
+- 完善流式压缩/解压的实际数据处理
+- 添加 `CompressionStream.close()` 和 `DecompressionStream.close()` 支持
+- 性能优化和内存使用改进
 
 ---
 

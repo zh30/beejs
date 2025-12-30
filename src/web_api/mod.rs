@@ -12,11 +12,13 @@ pub mod timers;      // Stage 74: Timer APIs
 pub mod encoding;    // Stage 74: TextEncoder/TextDecoder
 pub mod performance; // Stage 74: Performance API
 pub mod streams;     // Stage 75: Web Streams API for AI workloads
+pub mod compression; // v0.3.295: CompressionStream API (gzip/deflate)
 use anyhow::Result;
 use rusty_v8 as v8;
 // 从各模块导入设置函数
 use abort::setup_abort_api;
 use blob::setup_blob_api;
+use compression::setup_compression_api;
 use crypto::setup_crypto_api;
 use encoding::setup_encoding_api;
 use events::setup_events_api;
@@ -71,6 +73,10 @@ pub fn init_web_api(
     eprintln!("🔧 [STAGE74] Setting up WebSocket API...");
     setup_websocket_api(scope, context)?;
     eprintln!("✅ [STAGE74] WebSocket API done");
+    // v0.3.295: CompressionStream API（依赖 Web Streams）
+    eprintln!("🔧 [v0.3.295] Setting up CompressionStream API...");
+    setup_compression_api(scope, context)?;
+    eprintln!("✅ [v0.3.295] CompressionStream API done");
     // Note: Streams API is initialized separately in runtime_minimal.rs
     // to avoid duplicate initialization
     eprintln!("🎉 [STAGE74/75] All Web APIs initialized (streams via runtime)!");
