@@ -1,13 +1,57 @@
 // CompressionStream API implementation
 // v0.3.295: Streaming compression/decompression (gzip/deflate)
-// v0.3.297: Full compression/decompression implementation
+// v0.3.297: Full compression/decompression implementation with close() support
 // Optimized for AI workloads - reduces network transfer by 70-90%
 
 use anyhow::Result;
 use rusty_v8 as v8;
 use flate2::Compression;
 use flate2::bufread::{GzEncoder, GzDecoder};
-use std::io::{Read, Write, Cursor};
+use std::io::{Read, Cursor};
+
+/// Close method for compression stream - closes the writable stream
+fn compression_close_method(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _retval: v8::ReturnValue,
+) {
+    let this_obj: v8::Local<v8::Object> = args.this();
+
+    // Get writable stream and close it
+    let writable_key = v8::String::new(scope, "writable").unwrap();
+    if let Some(writable_val) = this_obj.get(scope, writable_key.into()) {
+        if let Ok(writable) = v8::Local::<v8::Object>::try_from(writable_val) {
+            let close_key = v8::String::new(scope, "close").unwrap();
+            if let Some(close_fn) = writable.get(scope, close_key.into()) {
+                if let Ok(close_fn_local) = v8::Local::<v8::Function>::try_from(close_fn) {
+                    let _ = close_fn_local.call(scope, writable.into(), &[]);
+                }
+            }
+        }
+    }
+}
+
+/// Close method for decompression stream
+fn decompression_close_method(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _retval: v8::ReturnValue,
+) {
+    let this_obj: v8::Local<v8::Object> = args.this();
+
+    // Get writable stream and close it
+    let writable_key = v8::String::new(scope, "writable").unwrap();
+    if let Some(writable_val) = this_obj.get(scope, writable_key.into()) {
+        if let Ok(writable) = v8::Local::<v8::Object>::try_from(writable_val) {
+            let close_key = v8::String::new(scope, "close").unwrap();
+            if let Some(close_fn) = writable.get(scope, close_key.into()) {
+                if let Ok(close_fn_local) = v8::Local::<v8::Function>::try_from(close_fn) {
+                    let _ = close_fn_local.call(scope, writable.into(), &[]);
+                }
+            }
+        }
+    }
+}
 
 /// Helper to create Uint8Array from bytes
 fn create_uint8_array<'a>(scope: &mut v8::HandleScope<'a>, data: &[u8]) -> Option<v8::Local<'a, v8::Uint8Array>> {
@@ -23,6 +67,24 @@ fn create_uint8_array<'a>(scope: &mut v8::HandleScope<'a>, data: &[u8]) -> Optio
     v8::Uint8Array::new(scope, buffer, 0, data.len())
 }
 
+/// Attach close method to compression stream instance
+fn attach_compression_close_method(scope: &mut v8::HandleScope, this_obj: v8::Local<v8::Object>) {
+    let close_key = v8::String::new(scope, "close").unwrap();
+    let close_fn_template = v8::FunctionTemplate::new(scope, compression_close_method);
+    if let Some(close_fn) = close_fn_template.get_function(scope) {
+        this_obj.set(scope, close_key.into(), close_fn.into());
+    }
+}
+
+/// Attach close method to decompression stream instance
+fn attach_decompression_close_method(scope: &mut v8::HandleScope, this_obj: v8::Local<v8::Object>) {
+    let close_key = v8::String::new(scope, "close").unwrap();
+    let close_fn_template = v8::FunctionTemplate::new(scope, decompression_close_method);
+    if let Some(close_fn) = close_fn_template.get_function(scope) {
+        this_obj.set(scope, close_key.into(), close_fn.into());
+    }
+}
+
 /// Setup CompressionStream and DecompressionStream APIs
 pub fn setup_compression_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -30,8 +92,11 @@ pub fn setup_compression_api(
 ) -> Result<()> {
     let global: _ = context.global(scope);
 
-    // Setup CompressionStream constructor
+    // Setup CompressionStream constructor with instance method for close
     let compression_template: _ = v8::FunctionTemplate::new(scope, compression_stream_constructor);
+
+    // Add instance method for close by setting it on instances after construction
+    // We'll add it directly to each instance in the constructor
     let compression_constructor: _ = compression_template.get_function(scope).unwrap();
     let compression_key: _ = v8::String::new(scope, "CompressionStream").unwrap();
     global.set(scope, compression_key.into(), compression_constructor.into());
@@ -182,7 +247,6 @@ fn compression_stream_constructor(
     this_obj.set(scope, setup_key.into(), setup_val);
 
     // Create streams with proper compression logic
-    // We use a JS factory that has access to both controllers
     let factory_code = format!(r#"
 (function() {{
     const format = '{}';
@@ -258,6 +322,9 @@ fn compression_stream_constructor(
             }
         }
     }
+
+    // Attach close method to this object
+    attach_compression_close_method(scope, this_obj);
 
     retval.set(this_obj.into());
 }
@@ -362,11 +429,13 @@ fn decompression_stream_constructor(
                 let undefined = v8::undefined(scope).into();
                 if let Some(result) = factory.call(scope, undefined, &[]) {
                     if let Ok(result_obj) = v8::Local::<v8::Object>::try_from(result) {
+                        // Extract readable stream
                         let readable_key = v8::String::new(scope, "readable").unwrap();
                         if let Some(readable_val) = result_obj.get(scope, readable_key.into()) {
                             this_obj.set(scope, readable_key.into(), readable_val);
                         }
 
+                        // Extract writable stream
                         let writable_key = v8::String::new(scope, "writable").unwrap();
                         if let Some(writable_val) = result_obj.get(scope, writable_key.into()) {
                             this_obj.set(scope, writable_key.into(), writable_val);
@@ -376,6 +445,9 @@ fn decompression_stream_constructor(
             }
         }
     }
+
+    // Attach close method to this object
+    attach_decompression_close_method(scope, this_obj);
 
     retval.set(this_obj.into());
 }

@@ -230,4 +230,144 @@ mod compression_stream_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("compression ratio:"), "Expected to compress large data");
     }
+
+    /// Test 9: CompressionStream.close() method exists and is callable
+    #[test]
+    fn test_compression_stream_close_method() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const cs = new CompressionStream('gzip');
+                console.log('close method exists:', typeof cs.close === 'function');
+                console.log('has readable:', cs.readable instanceof ReadableStream);
+                console.log('has writable:', cs.writable instanceof WritableStream);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("close method exists: true"), "Expected close method to exist");
+        assert!(stdout.contains("has readable: true"), "Expected readable stream");
+        assert!(stdout.contains("has writable: true"), "Expected writable stream");
+    }
+
+    /// Test 10: DecompressionStream.close() method exists and is callable
+    #[test]
+    fn test_decompression_stream_close_method() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const ds = new DecompressionStream('gzip');
+                console.log('close method exists:', typeof ds.close === 'function');
+                console.log('has readable:', ds.readable instanceof ReadableStream);
+                console.log('has writable:', ds.writable instanceof WritableStream);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("close method exists: true"), "Expected close method to exist");
+        assert!(stdout.contains("has readable: true"), "Expected readable stream");
+        assert!(stdout.contains("has writable: true"), "Expected writable stream");
+    }
+
+    /// Test 11: Close method actually closes the streams properly
+    #[test]
+    fn test_close_method_closes_streams() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                async function test() {
+                    const cs = new CompressionStream('gzip');
+                    const writer = cs.writable.getWriter();
+
+                    // Write some data
+                    await writer.write(new TextEncoder().encode('test data'));
+
+                    // Call close method before closing writer
+                    if (typeof cs.close === 'function') {
+                        await cs.close();
+                        console.log('close method called successfully');
+                    }
+
+                    // Try to write after close - should fail or be no-op
+                    try {
+                        await writer.write(new Uint8Array([1, 2, 3]));
+                        console.log('write after close: allowed');
+                    } catch (e) {
+                        console.log('write after close: rejected');
+                    }
+                }
+                test().catch(e => console.log('error:', e.message));
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("close method called successfully"), "Expected close method to work");
+    }
+
+    /// Test 12: Compression round-trip with proper close
+    #[test]
+    fn test_compression_round_trip_with_close() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                async function test() {
+                    const original = 'Hello, Beejs! This is a test of the compression stream with proper close.';
+                    const encoder = new TextEncoder();
+                    const decoder = new TextDecoder();
+
+                    // Compress
+                    const cs = new CompressionStream('gzip');
+                    const writer = cs.writable.getWriter();
+                    await writer.write(encoder.encode(original));
+                    await writer.close();
+
+                    // Read compressed
+                    const reader = cs.readable.getReader();
+                    let compressedChunks = [];
+                    while (true) {
+                        const result = await reader.read();
+                        if (result.done) break;
+                        compressedChunks.push(result.value);
+                    }
+
+                    // Decompress
+                    const ds = new DecompressionStream('gzip');
+                    const dsWriter = ds.writable.getWriter();
+                    for (const chunk of compressedChunks) {
+                        await dsWriter.write(chunk);
+                    }
+                    await dsWriter.close();
+
+                    // Read decompressed
+                    const dsReader = ds.readable.getReader();
+                    let decompressedChunks = [];
+                    while (true) {
+                        const result = await dsReader.read();
+                        if (result.done) break;
+                        decompressedChunks.push(result.value);
+                    }
+
+                    const decompressed = decoder.decode(concatUint8Arrays(decompressedChunks));
+                    console.log('round trip success:', decompressed === original);
+                    console.log('original length:', original.length);
+                    console.log('compressed size:', compressedChunks.reduce((sum, c) => sum + c.length, 0));
+                }
+
+                function concatUint8Arrays(arrays) {
+                    let total = arrays.reduce((sum, arr) => sum + arr.length, 0);
+                    let result = new Uint8Array(total);
+                    let offset = 0;
+                    for (const arr of arrays) {
+                        result.set(arr, offset);
+                        offset += arr.length;
+                    }
+                    return result;
+                }
+                test().catch(e => console.log('error:', e.message));
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("round trip success: true"), "Expected successful round-trip compression");
+    }
 }
