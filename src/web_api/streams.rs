@@ -125,12 +125,48 @@ fn readable_stream_constructor(
         let stream_key = v8::String::new(_scope, "_stream").unwrap();
         reader.set(_scope, stream_key.into(), stream_this.into());
 
-        // Setup read() method - returns Promise<{done, value}>
+        // v0.3.294: Setup read() method - returns Promise<{done, value}>
+        // Supports BYOB (Bring Your Own Buffer) when a TypedArray view is passed
         let read_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, _a: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
             let promise: v8::Local<v8::PromiseResolver> = v8::PromiseResolver::new(__scope).unwrap();
             let result: v8::Local<v8::Object> = v8::Object::new(__scope);
             let done_key: v8::Local<v8::String> = v8::String::new(__scope, "done").unwrap();
             let value_key: v8::Local<v8::String> = v8::String::new(__scope, "value").unwrap();
+
+            // v0.3.294: Check for BYOB view parameter (TypedArray/ArrayBufferView)
+            let mut byob_view: Option<v8::Local<v8::Object>> = None;
+            let mut byob_buffer: Option<v8::Local<v8::ArrayBuffer>> = None;
+            let mut byob_byte_offset = 0u64;
+            let mut byob_byte_length = 0u64;
+
+            if _a.length() > 0 {
+                let view_arg = _a.get(0);
+                if view_arg.is_object() {
+                    if let Ok(view_obj) = v8::Local::<v8::Object>::try_from(view_arg) {
+                        // Check if it's a TypedArray or ArrayBufferView
+                        let buffer_key = v8::String::new(__scope, "buffer").unwrap();
+                        if let Some(buffer_val) = view_obj.get(__scope, buffer_key.into()) {
+                            if buffer_val.is_array_buffer() {
+                                if let Ok(buffer) = v8::Local::<v8::ArrayBuffer>::try_from(buffer_val) {
+                                    byob_view = Some(view_obj);
+                                    byob_buffer = Some(buffer);
+
+                                    // Get byteOffset and byteLength
+                                    let byte_offset_key = v8::String::new(__scope, "byteOffset").unwrap();
+                                    let byte_length_key = v8::String::new(__scope, "byteLength").unwrap();
+
+                                    if let Some(offset_val) = view_obj.get(__scope, byte_offset_key.into()) {
+                                        byob_byte_offset = offset_val.integer_value(__scope).unwrap_or(0) as u64;
+                                    }
+                                    if let Some(length_val) = view_obj.get(__scope, byte_length_key.into()) {
+                                        byob_byte_length = length_val.integer_value(__scope).unwrap_or(0) as u64;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // Get stream from reader object
             let reader_this = _a.this();
@@ -166,7 +202,49 @@ fn readable_stream_constructor(
                                 stream.set(__scope, idx_key.into(), new_idx);
                                 let done_val: v8::Local<v8::Value> = v8::Boolean::new(__scope, false).into();
                                 result.set(__scope, done_key.into(), done_val);
-                                result.set(__scope, value_key.into(), chunk);
+
+                                // v0.3.294: Handle BYOB (Bring Your Own Buffer)
+                                if let (Some(view_obj), Some(buffer)) = (byob_view, byob_buffer) {
+                                    // BYOB mode: copy chunk data to the provided buffer
+                                    let chunk_is_uint8array = chunk.is_uint8_array();
+
+                                    if chunk_is_uint8array {
+                                        // Get the chunk's buffer and copy data
+                                        if let Ok(chunk_uint8) = v8::Local::<v8::Uint8Array>::try_from(chunk) {
+                                            let chunk_buffer = chunk_uint8.buffer(__scope).unwrap();
+                                            let chunk_store = chunk_buffer.get_backing_store();
+                                            let chunk_data_ptr = chunk_store.data() as *const u8;
+                                            let chunk_len = chunk_uint8.byte_length();
+
+                                            // Get target buffer info
+                                            let buffer_store = buffer.get_backing_store();
+                                            let target_ptr = buffer_store.data() as *mut u8;
+
+                                            // Calculate how many bytes we can copy
+                                            let bytes_to_copy = std::cmp::min(chunk_len as u64, byob_byte_length) as usize;
+
+                                            // Copy data to BYOB buffer
+                                            unsafe {
+                                                std::ptr::copy_nonoverlapping(chunk_data_ptr, target_ptr.add(byob_byte_offset as usize), bytes_to_copy);
+                                            }
+
+                                            // Return the BYOB view (same view that was passed in)
+                                            result.set(__scope, value_key.into(), view_obj.into());
+
+                                            // Add bytesRead to result (Web Streams API BYOB specification)
+                                            let bytes_read_key = v8::String::new(__scope, "bytesRead").unwrap();
+                                            let bytes_read_val: v8::Local<v8::Value> = v8::Integer::new(__scope, bytes_to_copy as i32).into();
+                                            result.set(__scope, bytes_read_key.into(), bytes_read_val);
+                                        }
+                                    } else {
+                                        // Non-Uint8Array chunk, return as-is but still in BYOB mode
+                                        result.set(__scope, value_key.into(), chunk);
+                                    }
+                                } else {
+                                    // Normal mode: return the chunk directly
+                                    result.set(__scope, value_key.into(), chunk);
+                                }
+
                                 let _ = promise.resolve(__scope, result.into());
                                 _r.set(promise.into());
                                 return;
