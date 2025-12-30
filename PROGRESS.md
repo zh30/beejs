@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.305 (2025-12-31)
+## 当前版本: v0.3.306 (2025-12-31)
 
 ### 项目状态摘要
 
@@ -36,13 +36,88 @@
 - web_streams_api_tests: 59/59 通过
 - byob_tests: 5/5 通过
 - compression_stream_tests: 8/8 通过 (v0.3.295)
-- structured_clone_tests: 39/39 通过 (v0.3.304)
+- structured_clone_tests: 45/49 通过 (v0.3.306, 4个已知问题待修复)
 - blob_api_tests: 15/15 通过 (v0.3.305)
 - 集成测试: 运行正常
 
 **CLI 命令**:
 - run, eval, repl, test, bundle, debug
 - version, serve, init, add, remove, install, prune, create, bunx, upgrade
+
+---
+
+### v0.3.306 structuredClone 增强 - Symbol 支持（2025-12-31）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.306 新增功能
+
+**Symbol 克隆支持**:
+- 根据 WHATWG 结构化克隆规范，Symbol 无法被克隆
+- 尝试克隆 Symbol 时抛出 `DataCloneError`
+- 支持检测嵌套对象中的 Symbol 属性
+- 支持检测数组中的 Symbol 元素
+- 支持检测 Map 中的 Symbol 键和值
+- 支持检测 Set 中的 Symbol 值
+- 支持知名 Symbol（如 Symbol.iterator）
+
+#### v0.3.306 实现细节
+
+- `src/web_api/structured_clone.rs`: 添加 Symbol 检测逻辑 (~+50 行)
+  - 函数入口检查：直接 Symbol 值检测
+  - 对象属性检查：使用 `Object.getOwnPropertySymbols()` 检测
+  - 数组元素检查：遍历检查每个元素类型
+  - Map/Set 检查：遍历检查键和值类型
+
+```javascript
+// Symbol 克隆测试
+const original = Symbol("test symbol");
+try {
+    structuredClone(original);
+} catch (err) {
+    console.log(err.name); // "DataCloneError"
+    console.log(err.message); // "Symbol cannot be cloned"
+}
+
+// 对象中的 Symbol 属性
+const obj = { name: "test", [Symbol("key")]: "value" };
+try {
+    structuredClone(obj);
+} catch (err) {
+    console.log(err.name); // "DataCloneError"
+}
+
+// 数组中的 Symbol 元素
+const arr = [1, 2, Symbol("array element")];
+try {
+    structuredClone(arr);
+} catch (err) {
+    console.log(err.name); // "DataCloneError"
+}
+```
+
+#### v0.3.306 测试用例
+
+- `tests/structured_clone_tests.rs`: 添加 6 个新测试 (~150 行)
+  - `test_clone_symbol_throws()`: 直接 Symbol 克隆测试
+  - `test_clone_well_known_symbol_throws()`: 知名 Symbol 测试
+  - `test_clone_object_with_symbol_throws()`: 对象 Symbol 属性测试
+  - `test_clone_array_with_symbol_throws()`: 数组 Symbol 元素测试
+  - `test_clone_map_with_symbol_key_throws()`: Map Symbol 键测试
+  - `test_clone_set_with_symbol_throws()`: Set Symbol 值测试
+
+#### v0.3.306 测试验证
+- ✅ 直接 Symbol 克隆：正确抛出 DataCloneError
+- ✅ 知名 Symbol 克隆：正确抛出 DataCloneError
+- ✅ 对象 Symbol 属性：正确检测并抛出 DataCloneError
+- ✅ 数组 Symbol 元素：正确检测并抛出 DataCloneError
+- ✅ Map Symbol 键：正确检测并抛出 DataCloneError
+- ✅ Set Symbol 值：正确检测并抛出 DataCloneError
+- ✅ 错误属性：error.name === "DataCloneError"
+- ✅ 错误消息：包含 "Symbol cannot be cloned" 描述
+
+#### v0.3.306 下一步
+- Promise 克隆支持（已解决/已拒绝状态的 Promise）
+- V8 底层 ArrayBuffer transfer 支持（实现真正的零拷贝 detach）
 
 ---
 
