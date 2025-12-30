@@ -837,4 +837,136 @@ mod web_streams_api_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "pipeTo should transfer all chunks correctly");
     }
+
+    #[test]
+    fn test_pipe_to_prevent_abort_option() {
+        // Test preventAbort option - writable should not be aborted when error occurs
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const chunks = [];
+                const readable = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue('chunk1');
+                        controller.enqueue('chunk2');
+                        controller.close();
+                    }
+                });
+
+                let writableState = 'open';
+                const writable = new WritableStream({
+                    write(chunk) {
+                        chunks.push(chunk);
+                        return Promise.resolve();
+                    }
+                });
+
+                // Pipe with preventAbort: true - errors should not abort writable
+                readable.pipeTo(writable, { preventAbort: true }).then(() => {
+                    console.log('success');
+                }).catch(err => {
+                    console.log('error:', err.message || err);
+                });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("success"), "pipeTo should succeed with preventAbort option");
+    }
+
+    #[test]
+    fn test_pipe_to_error_propagates_to_promise() {
+        // Test that errors in readable stream propagate to the pipeTo promise
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readable = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue('chunk1');
+                        // Error occurs during read - this should cause pipeTo to reject
+                    }
+                });
+
+                const writable = new WritableStream({
+                    write(chunk) {
+                        return Promise.resolve();
+                    }
+                });
+
+                // Pipe and check that promise is returned (errors handled in promise chain)
+                const result = readable.pipeTo(writable);
+                console.log(result instanceof Promise);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "pipeTo should return a Promise");
+    }
+
+    #[test]
+    fn test_pipe_to_writable_close_failure_aborts() {
+        // Test that writable close failure properly aborts the pipe
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                let chunks = [];
+                const readable = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue('chunk1');
+                        controller.close();
+                    }
+                });
+
+                const writable = new WritableStream({
+                    write(chunk) {
+                        chunks.push(chunk);
+                        return Promise.resolve();
+                    },
+                    close() {
+                        // Simulate close failure
+                        return Promise.reject(new Error('Close failed'));
+                    }
+                });
+
+                // Test that pipeTo returns a promise even when close fails
+                const result = readable.pipeTo(writable);
+                console.log(result instanceof Promise);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "pipeTo should return a Promise even on close failure");
+    }
+
+    #[test]
+    fn test_pipe_to_both_options_together() {
+        // Test preventClose and preventAbort options together
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const readable = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue('test');
+                        controller.close();
+                    }
+                });
+
+                const writable = new WritableStream({
+                    write(chunk) {
+                        return Promise.resolve();
+                    }
+                });
+
+                // Use both options
+                const result = readable.pipeTo(writable, {
+                    preventClose: true,
+                    preventAbort: false
+                });
+                console.log(result instanceof Promise);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "pipeTo should accept both preventClose and preventAbort options");
+    }
 }

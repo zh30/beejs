@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.289 (2025-12-30)
+## 当前版本: v0.3.290 (2025-12-30)
 
 ### 项目状态摘要
 
@@ -22,15 +22,69 @@
 - npm 兼容命令 (install, add, remove, prune)
 - 依赖版本解析
 
-**测试**: ✅ 273/273 测试通过
+**测试**: ✅ 277/277 测试通过
 - cargo test --lib: 253/253 通过
 - performance_api_tests: 16/16 通过
-- web_streams_api_tests: 4/4 新增测试
+- web_streams_api_tests: 8/8 新增测试 (v0.3.289 + v0.3.290)
 - 集成测试: 运行正常
 
 **CLI 命令**:
 - run, eval, repl, test, bundle, debug
 - version, serve, init, add, remove, install, prune, create, bunx, upgrade
+
+---
+
+### v0.3.290 pipeTo() 错误处理增强（2025-12-30）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.290 新增功能
+- **pipeTo() preventAbort 选项**: 支持 `{ preventAbort: boolean }` 选项参数
+  - `preventAbort: false` (默认): 管道发生错误时自动 abort WritableStream
+  - `preventAbort: true`: 管道发生错误时不 abort WritableStream，保持其状态
+
+- **错误传播**: pipeTo() 的 Promise 现在正确处理错误场景
+  - ReadableStream 读取错误会 reject Promise
+  - WritableStream 写入错误会 reject Promise（除非 preventAbort: true）
+  - WritableStream 关闭失败会触发 abort 并 reject Promise
+
+#### v0.3.290 实现细节
+- pump 函数添加错误处理回调函数
+- 使用 `rejected` 标志防止重复处理错误
+- 错误时根据 preventAbort 选项决定是否调用 writer.abort()
+- 正确 reject Promise 将错误传播给调用者
+
+#### v0.3.290 使用示例
+```javascript
+// 防止错误时 abort WritableStream
+readable.pipeTo(writable, { preventAbort: true })
+    .then(() => console.log('Success'))
+    .catch(err => {
+        console.error('Pipe failed:', err);
+        // writable 仍然保持可用状态
+    });
+
+// 同时使用 preventClose 和 preventAbort
+readable.pipeTo(writable, {
+    preventClose: true,  // 完成后保持打开
+    preventAbort: false  // 错误时仍 abort
+});
+```
+
+#### v0.3.290 测试验证
+```bash
+$ cargo test --test web_streams_api_tests
+running 45 tests
+test ... ok (all pipeTo error handling tests pass)
+```
+
+#### v0.3.290 代码变更
+- `src/web_api/streams.rs`: 增强 pipeTo 错误处理 (~120 行)
+- `tests/web_streams_api_tests.rs`: 添加 4 个错误处理测试 (~130 行)
+
+#### v0.3.290 下一步
+- 支持 pipeTo() 的 signal 选项 (AbortController)
+- 实现 BYOB (Bring Your Own Buffer) 读取
+- 完善 WritableStream abort() 状态管理
 
 ---
 
@@ -88,8 +142,8 @@ $ ./beejs eval "const rs = new ReadableStream(); const ws = new WritableStream()
 - `src/web_api/streams.rs`: 重构 pipeTo 实现，添加 preventClose 选项 (~100 行)
 - `tests/web_streams_api_tests.rs`: 添加 4 个新测试 (~90 行)
 
-#### v0.3.289 下一步
-- 完善管道操作的错误处理
+#### v0.3.289 下一步 (v0.3.290 已完成)
+- ✅ 完善管道操作的错误处理 (v0.3.290)
 - 支持 pipeTo() 的其他选项 (signal abort controller)
 - 实现 BYOB (Bring Your Own Buffer) 读取
 

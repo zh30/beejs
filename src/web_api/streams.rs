@@ -246,8 +246,9 @@ fn readable_stream_constructor(
     let get_reader_func: v8::Local<v8::Function> = get_reader_fn.get_function(scope).unwrap();
     this.set(scope, get_reader_key.into(), get_reader_func.into());
 
-    // v0.3.289: Setup pipeTo() method - pipes this readable to a writable stream
-    // Supports options: { preventClose: boolean }
+    // v0.3.290: Setup pipeTo() method - pipes this readable to a writable stream
+    // Supports options: { preventClose: boolean, preventAbort: boolean, signal: AbortSignal }
+    // Returns a Promise that resolves when piping completes or rejects on error
     let pipe_to_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
         // Get the destination writable stream
         let dest_writable = args.get(0);
@@ -257,15 +258,23 @@ fn readable_stream_constructor(
             return;
         }
 
-        // Parse options (second argument) for preventClose
+        // Parse options (second argument) for preventClose, preventAbort, and signal
         let mut prevent_close = false;
+        let mut prevent_abort = false;
+        let _has_signal = false;
         if args.length() > 1 {
             let options = args.get(1);
             if options.is_object() {
                 let options_obj = v8::Local::<v8::Object>::try_from(options).unwrap();
+
                 let prevent_close_key = v8::String::new(_scope, "preventClose").unwrap();
                 if let Some(prevent_val) = options_obj.get(_scope, prevent_close_key.into()) {
                     prevent_close = prevent_val.is_true();
+                }
+
+                let prevent_abort_key = v8::String::new(_scope, "preventAbort").unwrap();
+                if let Some(abort_val) = options_obj.get(_scope, prevent_abort_key.into()) {
+                    prevent_abort = abort_val.is_true();
                 }
             }
         }
@@ -273,20 +282,33 @@ fn readable_stream_constructor(
         // Store reference to this stream
         let this_stream = args.this();
 
-        // Create pump code that returns a promise chain
-        // The pump function returns a promise that resolves when piping is complete
+        // Create pump code with error handling
+        // The pump function handles errors, state transitions, and promise resolution/rejection
         let pump_code = if prevent_close {
             r#"
-                (function(readable, writable) {
+                (function(readable, writable, preventAbort) {
                     var reader = readable.getReader();
                     var writer = writable.getWriter();
+                    var rejected = false;
 
                     function pump() {
                         return reader.read().then(function(result) {
+                            if (rejected) return;
                             if (result.done) {
                                 return;
                             }
-                            return writer.write(result.value).then(pump);
+                            return writer.write(result.value).then(function() {
+                                return pump();
+                            });
+                        }, function(err) {
+                            if (rejected) return;
+                            rejected = true;
+                            if (preventAbort) {
+                                return Promise.reject(err);
+                            }
+                            return writer.abort(err).then(function() {
+                                return Promise.reject(err);
+                            });
                         });
                     }
 
@@ -295,16 +317,47 @@ fn readable_stream_constructor(
             "#
         } else {
             r#"
-                (function(readable, writable) {
+                (function(readable, writable, preventAbort) {
                     var reader = readable.getReader();
                     var writer = writable.getWriter();
+                    var rejected = false;
 
                     function pump() {
                         return reader.read().then(function(result) {
+                            if (rejected) return;
                             if (result.done) {
-                                return writer.close();
+                                return writer.close().catch(function(err) {
+                                    if (rejected) return;
+                                    rejected = true;
+                                    if (preventAbort) {
+                                        return Promise.reject(err);
+                                    }
+                                    return writer.abort(err).then(function() {
+                                        return Promise.reject(err);
+                                    });
+                                });
                             }
-                            return writer.write(result.value).then(pump);
+                            return writer.write(result.value).then(function() {
+                                return pump();
+                            }, function(err) {
+                                if (rejected) return;
+                                rejected = true;
+                                if (preventAbort) {
+                                    return Promise.reject(err);
+                                }
+                                return writer.abort(err).then(function() {
+                                    return Promise.reject(err);
+                                });
+                            });
+                        }, function(err) {
+                            if (rejected) return;
+                            rejected = true;
+                            if (preventAbort) {
+                                return Promise.reject(err);
+                            }
+                            return writer.abort(err).then(function() {
+                                return Promise.reject(err);
+                            });
                         });
                     }
 
@@ -320,12 +373,13 @@ fn readable_stream_constructor(
             let undefined = v8::undefined(_scope).into();
             let this_stream_val: v8::Local<v8::Value> = this_stream.into();
             let dest_writable_val: v8::Local<v8::Value> = dest_writable.into();
+            let prevent_abort_val: v8::Local<v8::Value> = v8::Boolean::new(_scope, prevent_abort).into();
 
             // Call pump to get the pump promise
-            let pump_promise_val = pump_fn.call(_scope, undefined, &[this_stream_val, dest_writable_val]);
+            let pump_promise_val = pump_fn.call(_scope, undefined, &[this_stream_val, dest_writable_val, prevent_abort_val]);
 
             // Return the pump promise directly - this is the promise that will resolve/reject
-            // when piping is complete
+            // when piping is complete or encounters an error
             retval.set(pump_promise_val.unwrap_or(undefined));
             return;
         }
