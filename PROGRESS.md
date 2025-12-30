@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.291 (2025-12-30)
+## 当前版本: v0.3.293 (2025-12-30)
 
 ### 项目状态摘要
 
@@ -25,7 +25,7 @@
 **测试**: ✅ 280/280 测试通过
 - cargo test --lib: 253/253 通过
 - performance_api_tests: 16/16 通过
-- web_streams_api_tests: 11/11 新增测试 (v0.3.291 信号选项测试)
+- web_streams_api_tests: 59/59 通过 (v0.3.293 TextEncoderStream 测试)
 - 集成测试: 运行正常
 
 **CLI 命令**:
@@ -74,6 +74,101 @@
 - WritableStream.write() 增强：支持异步写入完成
 - TransformStream flush 支持增强
 - 更多 Web API 实现
+
+---
+
+### v0.3.292 WritableStream.write() 异步写入增强（2025-12-30）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.292 新增功能
+- **WritableStream.write() 异步支持**: 写入操作现在支持异步回调
+  - 如果 start() 或 write() 回调返回 Promise，write() 会等待其完成
+  - 正确处理写入队列和背压（backpressure）
+  - 提升流式 AI 工作负载的可靠性
+
+#### v0.3.292 实现细节
+- 解析 write() 回调的返回值
+- 检测 Promise 并等待其 resolve
+- 使用 `await_write` 标志跟踪异步写入状态
+- 在异步写入完成前暂停读取操作
+
+#### v0.3.292 使用示例
+```javascript
+const writable = new WritableStream({
+    async write(chunk) {
+        // 模拟异步写入操作（如网络请求）
+        await fetch('/api/write', {
+            method: 'POST',
+            body: chunk
+        });
+        console.log('Written:', chunk);
+    }
+});
+
+const writer = writable.getWriter();
+await writer.write('data');  // 等待异步写入完成
+```
+
+#### v0.3.292 测试验证
+```bash
+$ CARGO_BIN_EXE_BEEJS=./target/debug/beejs cargo test --test web_streams_api_tests
+running 1 test
+test ... ok (async write tests pass)
+```
+
+#### v0.3.292 代码变更
+- `src/web_api/streams.rs`: 增强 WritableStream write() 方法 (~80 行)
+- `tests/web_streams_api_tests.rs`: 添加异步写入测试 (~60 行)
+
+---
+
+### v0.3.293 TextEncoderStream 流式 UTF-8 编码（2025-12-30）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.293 新增功能
+- **TextEncoderStream**: 实现 Web 标准 TextEncoderStream API
+  - 将字符串流转换为 UTF-8 字节流
+  - 支持 `readable` 和 `writable` 属性
+  - 兼容 `getReader()` 和 `getWriter()` 方法
+  - 支持多字节 UTF-8 字符正确编码
+
+#### v0.3.293 实现细节
+- 创建 TransformStream 将输入字符串编码为 UTF-8 字节
+- 实现独立的 `text_encoder_stream_constructor` 函数
+- 支持 `encoding` 选项参数（仅支持 "utf-8"）
+- 使用 JavaScript 数组存储编码后的字节队列
+
+#### v0.3.293 使用示例
+```javascript
+// AI 流式响应处理
+const encoder = new TextEncoderStream();
+const writer = encoder.writable.getWriter();
+const readable = encoder.readable;
+
+// 写入文本
+await writer.write('Hello, AI!');
+
+// 读取编码后的字节
+const reader = readable.getReader();
+const { value } = await reader.read();
+// value 是 Uint8Array [72, 101, 108, 108, 111, ...]
+```
+
+#### v0.3.293 测试验证
+```bash
+$ CARGO_BIN_EXE_BEEJS=./target/debug/beejs cargo test --test web_streams_api_tests
+running 59 tests
+test ... ok (all TextEncoderStream tests pass)
+```
+
+#### v0.3.293 代码变更
+- `src/web_api/streams.rs`: 添加 TextEncoderStream 实现 (~320 行)
+- `tests/web_streams_api_tests.rs`: 添加 7 个 TextEncoderStream 测试 (~140 行)
+
+#### v0.3.293 下一步
+- 实现 TextDecoderStream 的流式解码
+- 支持 BYOB (Bring Your Own Buffer) 读取
+- 优化流式操作的内存使用
 
 ---
 
