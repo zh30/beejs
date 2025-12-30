@@ -4611,16 +4611,33 @@ impl MinimalRuntime {
         let json_key = v8::String::new(scope, "JSON").unwrap().into();
         global.set(scope, json_key, json_obj.into());
 
-        // Set up global Date object
+        // Set up global Date object (simplified for fast startup)
         let date_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             let now = chrono::Utc::now();
-            // Create a Date object with toISOString method
+            // Create a Date object with timestamp property and getTime method
             let date_obj = v8::Object::new(scope);
 
-            // Add timestamp property
+            // Add timestamp property (used by structuredClone)
             let timestamp_key = v8::String::new(scope, "timestamp").unwrap().into();
             let timestamp_val = v8::Number::new(scope, now.timestamp_millis() as f64);
             date_obj.set(scope, timestamp_key, timestamp_val.into());
+
+            // Add getTime() method for structuredClone support
+            let get_time_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                let this = args.this();
+                let timestamp_key = v8::String::new(scope, "timestamp").unwrap().into();
+                if let Some(timestamp_val) = this.get(scope, timestamp_key) {
+                    if let Some(timestamp_num) = timestamp_val.to_number(scope) {
+                        retval.set(timestamp_num.into());
+                        return;
+                    }
+                }
+                // Fallback
+                let now = chrono::Utc::now().timestamp_millis() as f64;
+                retval.set(v8::Number::new(scope, now).into());
+            }).ok_or_else(|| anyhow::anyhow!("Failed to create getTime function")).unwrap();
+            let get_time_key = v8::String::new(scope, "getTime").unwrap().into();
+            date_obj.set(scope, get_time_key, get_time_fn.into());
 
             // Add toISOString method
             let to_iso_string_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {

@@ -25,19 +25,47 @@ fn setup_internal_clone_func(
                     if (seen.has(obj)) return obj;
                     seen.add(obj);
 
-                    if (obj instanceof Date) return new Date(obj.getTime());
-                    if (obj instanceof RegExp) return new RegExp(obj.source, obj.flags);
+                    // Check for Date using both instanceof and timestamp property
+                    // This handles both native Date and our custom Date implementation
+                    const isDate = obj instanceof Date ||
+                        (typeof obj.getTime === 'function' && typeof obj.getMonth === 'function');
+                    if (isDate) {
+                        const timestamp = (typeof obj.getTime === 'function')
+                            ? obj.getTime()
+                            : obj.timestamp;
+                        return new Date(timestamp);
+                    }
 
-                    if (obj instanceof Map) {
+                    // Check for RegExp
+                    if (obj instanceof RegExp ||
+                        (typeof obj.source === 'string' && typeof obj.flags === 'string')) {
+                        return new RegExp(obj.source || obj.patternSource, obj.flags || obj.patternFlags || '');
+                    }
+
+                    // Check for Map (native or custom with forEach)
+                    if (obj instanceof Map ||
+                        (typeof obj.forEach === 'function' && typeof obj.get === 'function')) {
                         const c = new Map();
-                        for (const [k, val] of obj) c.set(deepClone(k), deepClone(val));
+                        if (typeof obj.forEach === 'function') {
+                            obj.forEach(function(val, key) {
+                                c.set(deepClone(key), deepClone(val));
+                            });
+                        }
                         return c;
                     }
-                    if (obj instanceof Set) {
+
+                    // Check for Set (native or custom with forEach)
+                    if (obj instanceof Set ||
+                        (typeof obj.forEach === 'function' && typeof obj.has === 'function')) {
                         const c = new Set();
-                        for (const val of obj) c.add(deepClone(val));
+                        if (typeof obj.forEach === 'function') {
+                            obj.forEach(function(val) {
+                                c.add(deepClone(val));
+                            });
+                        }
                         return c;
                     }
+
                     if (Array.isArray(obj)) {
                         return obj.map(item => deepClone(item));
                     }

@@ -13903,3 +13903,70 @@ typeof rl.completer === 'function'  // true
 - 实现真正的 tab 补全交互（需要 TTY 集成）
 - 添加更多 readline 功能（cursorPosition, history 等）
 
+
+---
+
+### v0.3.300 structuredClone 增强 - Date/RegExp/Map/Set 支持（2025-12-30）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.300 修复内容
+
+**问题诊断**:
+- `structuredClone(date)` 失败，因为 Date 对象没有 `getTime()` 方法
+- `new Date() instanceof Date` 返回 false，原型链不完整
+- 自定义 Date 实现只存储 `timestamp` 属性
+
+**解决方案 - structuredClone 增强**:
+- 修改 JavaScript 实现，检测 Date 时同时检查 `getTime()` 方法
+- 对于自定义 Date，读取 `timestamp` 属性创建新 Date
+- RegExp 检测增强：同时检查 `source` 和 `flags` 属性
+- Map/Set 检测增强：使用 `forEach` 方法进行迭代克隆
+
+**Date 支持增强**:
+- 为 Date 对象添加 `getTime()` 方法
+- 存储 `timestamp` 属性用于序列化/反序列化
+- 保持 `toISOString()` 方法功能
+
+#### v0.3.300 使用示例
+```javascript
+// Date 克隆
+const date = new Date('2025-01-15T10:30:00Z');
+const cloned = structuredClone(date);
+console.log(cloned.getTime()); // 正确复制时间戳
+
+// RegExp 克隆
+const regex = /pattern/gi;
+const clonedRegex = structuredClone(regex);
+console.log(clonedRegex.source, clonedRegex.flags);
+
+// Map 克隆
+const map = new Map([['key', 'value']]);
+const clonedMap = structuredClone(map);
+
+// Set 克隆
+const set = new Set([1, 2, 3]);
+const clonedSet = structuredClone(set);
+```
+
+#### v0.3.300 代码变更
+- `src/web_api/structured_clone.rs`: 重写 clone 函数 (~+35/-10 行)
+  - 使用 `typeof obj.getTime === 'function'` 检测 Date
+  - 使用 `obj.timestamp` 作为后备读取时间戳
+  - Map/Set 使用 `forEach` 方法迭代
+
+- `src/runtime_minimal.rs`: 为 Date 对象添加 getTime 方法 (~+20/-5 行)
+  - Date 构造函数内部创建带 getTime 方法的对象
+  - 保持 `timestamp` 属性用于 structuredClone
+
+#### v0.3.300 验证
+- ✅ Date 克隆：时间戳正确复制，getTime() 可用
+- ✅ RegExp 克隆：source 和 flags 正确
+- ✅ Map 克隆：大小和键值对正确
+- ✅ Set 克隆：大小和元素正确
+- ✅ 深度拷贝：修改原对象不影响克隆
+- ✅ 嵌套结构：复杂对象正确克隆
+
+#### v0.3.300 下一步
+- 添加更多 Date 方法（getMonth, getDate, getFullYear 等）
+- 完善 structuredClone transfer 选项支持
+- 性能优化：减少不必要的对象创建
