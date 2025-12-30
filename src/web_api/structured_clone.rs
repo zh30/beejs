@@ -18,6 +18,12 @@ fn setup_internal_clone_func(
         (function() {
             "use strict";
             function clone(v, transferList) {
+                // Symbol cannot be cloned - throw DataCloneError per spec
+                if (typeof v === 'symbol') {
+                    const err = new Error("Symbol cannot be cloned");
+                    err.name = "DataCloneError";
+                    throw err;
+                }
                 if (v === null || typeof v !== "object") return v;
 
                 const transfers = new Map();
@@ -66,7 +72,15 @@ fn setup_internal_clone_func(
                 function createClone(obj) {
                     const TypedArrayConstructor = getTypedArrayConstructor(obj);
 
-                    // Check for WeakMap/WeakSet first - these cannot be cloned per spec
+                    // Check for Symbol first - cannot be cloned per spec
+                    // Symbol cannot be cloned because it's unique and non-transferable
+                    if (typeof obj === 'symbol') {
+                        const err = new Error("Symbol cannot be cloned");
+                        err.name = "DataCloneError";
+                        throw err;
+                    }
+
+                    // Check for WeakMap/WeakSet next - these cannot be cloned per spec
                     // They throw DataCloneError (using Error with name property per spec)
                     if (obj instanceof WeakMap) {
                         const err = new Error("WeakMap cannot be cloned");
@@ -121,6 +135,14 @@ fn setup_internal_clone_func(
 
                 function queueProperties(source, cloned) {
                     if (source instanceof Map) {
+                        // Check for Symbol keys/values - these cannot be cloned
+                        source.forEach((val, key) => {
+                            if (typeof key === 'symbol' || typeof val === 'symbol') {
+                                const err = new Error("Map containing Symbol cannot be cloned");
+                                err.name = "DataCloneError";
+                                throw err;
+                            }
+                        });
                         source.forEach((val, key) => {
                             // Queue for Map processing after cloning
                             mapEntries.push([cloned, key, val]);
@@ -129,6 +151,14 @@ fn setup_internal_clone_func(
                             pendingProps.push([cloned, 'MAP_VAL', val]);
                         });
                     } else if (source instanceof Set) {
+                        // Check for Symbol values - these cannot be cloned
+                        source.forEach(val => {
+                            if (typeof val === 'symbol') {
+                                const err = new Error("Set containing Symbol cannot be cloned");
+                                err.name = "DataCloneError";
+                                throw err;
+                            }
+                        });
                         source.forEach(val => {
                             setValues.push([cloned, val]);
                             pendingProps.push([cloned, 'SET_VAL', val]);
@@ -141,10 +171,26 @@ fn setup_internal_clone_func(
                             }
                         }
                     } else if (Array.isArray(source)) {
+                        // Check for Symbol elements - these cannot be cloned
+                        for (let i = 0; i < source.length; i++) {
+                            if (typeof source[i] === 'symbol') {
+                                const err = new Error("Array containing Symbol cannot be cloned");
+                                err.name = "DataCloneError";
+                                throw err;
+                            }
+                        }
                         source.forEach((val, idx) => {
                             pendingProps.push([cloned, idx.toString(), val]);
                         });
                     } else if (typeof source === 'object') {
+                        // Check for Symbol properties - these cannot be cloned
+                        const symbolProps = Object.getOwnPropertySymbols(source);
+                        if (symbolProps.length > 0) {
+                            const err = new Error("Object containing Symbol cannot be cloned");
+                            err.name = "DataCloneError";
+                            throw err;
+                        }
+                        // Queue string properties
                         for (const key in source) {
                             if (Object.prototype.hasOwnProperty.call(source, key)) {
                                 pendingProps.push([cloned, key, source[key]]);
@@ -171,8 +217,14 @@ fn setup_internal_clone_func(
                         continue;
                     }
 
-                    // Handle primitives
+                    // Handle primitives (but Symbol cannot be cloned)
                     if (value === null || typeof value !== "object") {
+                        // Symbol cannot be cloned - throw DataCloneError
+                        if (typeof value === 'symbol') {
+                            const err = new Error("Symbol cannot be cloned");
+                            err.name = "DataCloneError";
+                            throw err;
+                        }
                         parent[key] = value;
                         continue;
                     }
