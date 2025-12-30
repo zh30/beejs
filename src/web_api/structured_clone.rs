@@ -1,5 +1,6 @@
 // structuredClone API implementation
-// v0.3.302: Enhanced with Error object cloning support
+// v0.3.303: Performance optimization - iterative deep clone using work queue
+// Replaced recursive approach with iterative stack to avoid stack overflow
 // Optimized for AI workloads - enables safe deep cloning with transfer semantics
 
 use anyhow::Result;
@@ -19,14 +20,12 @@ fn setup_internal_clone_func(
             function clone(v, transferList) {
                 if (v === null || typeof v !== "object") return v;
 
-                const seen = new WeakSet();
                 const transfers = new Map();
 
                 // Process transfer list - mark objects as transferred
                 if (Array.isArray(transferList)) {
                     for (const obj of transferList) {
                         if (obj && typeof obj === 'object') {
-                            // Get the underlying buffer/transferable
                             const transferable = obj.buffer || obj;
                             if (transferable && typeof transferable === 'object') {
                                 transfers.set(transferable, obj);
@@ -35,15 +34,7 @@ fn setup_internal_clone_func(
                     }
                 }
 
-                function isTypedArray(obj) {
-                    return obj && typeof obj === 'object' &&
-                        obj.buffer instanceof ArrayBuffer &&
-                        typeof obj.byteLength === 'number' &&
-                        typeof obj.byteOffset === 'number';
-                }
-
                 function getTypedArrayConstructor(obj) {
-                    // Detect TypedArray type and return appropriate constructor
                     if (obj instanceof Uint8Array) return Uint8Array;
                     if (obj instanceof Int8Array) return Int8Array;
                     if (obj instanceof Uint16Array) return Uint16Array;
@@ -56,137 +47,167 @@ fn setup_internal_clone_func(
                     return null;
                 }
 
-                function deepClone(obj) {
-                    if (obj === null || typeof obj !== "object") return obj;
-                    if (seen.has(obj)) return obj;
-                    seen.add(obj);
+                function getErrorConstructor(obj) {
+                    if (obj instanceof TypeError) return TypeError;
+                    if (obj instanceof RangeError) return RangeError;
+                    if (obj instanceof ReferenceError) return ReferenceError;
+                    if (obj instanceof SyntaxError) return SyntaxError;
+                    if (obj instanceof EvalError) return EvalError;
+                    if (obj instanceof URIError) return URIError;
+                    return Error;
+                }
 
-                    // Check if this object is being transferred
-                    const transferTarget = transfers.get(obj);
-                    if (transferTarget) {
-                        // Remove from transfers map and return as-is (transfer semantics)
-                        transfers.delete(obj);
-                        return obj;
-                    }
+                // TRUE ITERATIVE DEEP CLONE using work queue
+                const clonedObjects = new Map();
+                const pendingProps = [];  // [parent, key, value]
+                const mapEntries = [];  // [map, originalKey, originalVal] for Map processing
+                const setValues = [];  // [set, value] for Set processing
 
-                    // Check for ArrayBuffer being transferred
-                    if (obj instanceof ArrayBuffer && transfers.has(obj)) {
-                        return obj;
-                    }
-
-                    // Handle TypedArray (before Array check, since TypedArrays are not true arrays)
+                function createClone(obj) {
                     const TypedArrayConstructor = getTypedArrayConstructor(obj);
+
                     if (TypedArrayConstructor) {
                         if (obj.buffer instanceof ArrayBuffer && transfers.has(obj.buffer)) {
-                            // Transfer the buffer
                             transfers.delete(obj.buffer);
                             return obj;
                         }
-                        // Clone by creating new TypedArray with same values
                         return new TypedArrayConstructor(obj);
-                    }
-
-                    // Check for Date using both instanceof and timestamp property
-                    // This handles both native Date and our custom Date implementation
-                    const isDate = obj instanceof Date ||
-                        (typeof obj.getTime === 'function' && typeof obj.getMonth === 'function');
-                    if (isDate) {
+                    } else if (obj instanceof Date ||
+                        (typeof obj.getTime === 'function' && typeof obj.getMonth === 'function')) {
                         const timestamp = (typeof obj.getTime === 'function')
                             ? obj.getTime()
                             : obj.timestamp;
                         return new Date(timestamp);
-                    }
-
-                    // Check for RegExp
-                    if (obj instanceof RegExp ||
+                    } else if (obj instanceof RegExp ||
                         (typeof obj.source === 'string' && typeof obj.flags === 'string')) {
                         return new RegExp(obj.source || obj.patternSource, obj.flags || obj.patternFlags || '');
-                    }
-
-                    // Check for ArrayBuffer (non-transfer case)
-                    if (obj instanceof ArrayBuffer) {
-                        // Copy the actual data from the source buffer
+                    } else if (obj instanceof ArrayBuffer) {
                         const bytes = new Uint8Array(obj);
                         const cloned = new ArrayBuffer(obj.byteLength);
                         new Uint8Array(cloned).set(bytes);
                         return cloned;
-                    }
-
-                    // Check for Map (native or custom with forEach)
-                    if (obj instanceof Map ||
+                    } else if (obj instanceof Map ||
                         (typeof obj.forEach === 'function' && typeof obj.get === 'function')) {
-                        const c = new Map();
-                        if (typeof obj.forEach === 'function') {
-                            obj.forEach(function(val, key) {
-                                c.set(deepClone(key), deepClone(val));
-                            });
-                        }
-                        return c;
-                    }
-
-                    // Check for Set (native or custom with forEach)
-                    if (obj instanceof Set ||
+                        return new Map();
+                    } else if (obj instanceof Set ||
                         (typeof obj.forEach === 'function' && typeof obj.has === 'function')) {
-                        const c = new Set();
-                        if (typeof obj.forEach === 'function') {
-                            obj.forEach(function(val) {
-                                c.add(deepClone(val));
-                            });
-                        }
-                        return c;
-                    }
-
-                    // Check for Error objects (Error, TypeError, RangeError, etc.)
-                    // This handles both native Error and our custom Error implementation
-                    const isError = obj instanceof Error ||
-                        (typeof obj.name === 'string' && typeof obj.message === 'string');
-                    if (isError) {
-                        // Get the error constructor based on name
-                        let ErrorConstructor = Error;
-                        if (obj instanceof TypeError) ErrorConstructor = TypeError;
-                        else if (obj instanceof RangeError) ErrorConstructor = RangeError;
-                        else if (obj instanceof ReferenceError) ErrorConstructor = ReferenceError;
-                        else if (obj instanceof SyntaxError) ErrorConstructor = SyntaxError;
-                        else if (obj instanceof EvalError) ErrorConstructor = EvalError;
-                        else if (obj instanceof URIError) ErrorConstructor = URIError;
-
-                        // Create new error with message
+                        return new Set();
+                    } else if (obj instanceof Error ||
+                        (typeof obj.name === 'string' && typeof obj.message === 'string')) {
+                        const ErrorConstructor = getErrorConstructor(obj);
                         const cloned = new ErrorConstructor(obj.message);
+                        if (typeof obj.name === 'string') cloned.name = obj.name;
+                        if (typeof obj.stack === 'string') cloned.stack = obj.stack;
+                        return cloned;
+                    } else if (Array.isArray(obj)) {
+                        return new Array(obj.length);
+                    } else {
+                        return {};
+                    }
+                }
 
-                        // Copy name property
-                        if (typeof obj.name === 'string') {
-                            cloned.name = obj.name;
-                        }
-
-                        // Copy stack property if available
-                        if (typeof obj.stack === 'string') {
-                            cloned.stack = obj.stack;
-                        }
-
-                        // Copy any additional custom properties
-                        for (const key in obj) {
-                            if (Object.prototype.hasOwnProperty.call(obj, key) &&
+                function queueProperties(source, cloned) {
+                    if (source instanceof Map) {
+                        source.forEach((val, key) => {
+                            // Queue for Map processing after cloning
+                            mapEntries.push([cloned, key, val]);
+                            // Queue key and value for cloning
+                            pendingProps.push([cloned, 'MAP_KEY', key]);
+                            pendingProps.push([cloned, 'MAP_VAL', val]);
+                        });
+                    } else if (source instanceof Set) {
+                        source.forEach(val => {
+                            setValues.push([cloned, val]);
+                            pendingProps.push([cloned, 'SET_VAL', val]);
+                        });
+                    } else if (source instanceof Error) {
+                        for (const key in source) {
+                            if (Object.prototype.hasOwnProperty.call(source, key) &&
                                 key !== 'name' && key !== 'message' && key !== 'stack') {
-                                cloned[key] = deepClone(obj[key]);
+                                pendingProps.push([cloned, key, source[key]]);
                             }
                         }
-
-                        return cloned;
-                    }
-
-                    if (Array.isArray(obj)) {
-                        return obj.map(item => deepClone(item));
-                    }
-
-                    const cloned = {};
-                    for (const key in obj) {
-                        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                            cloned[key] = deepClone(obj[key]);
+                    } else if (Array.isArray(source)) {
+                        source.forEach((val, idx) => {
+                            pendingProps.push([cloned, idx.toString(), val]);
+                        });
+                    } else if (typeof source === 'object') {
+                        for (const key in source) {
+                            if (Object.prototype.hasOwnProperty.call(source, key)) {
+                                pendingProps.push([cloned, key, source[key]]);
+                            }
                         }
                     }
-                    return cloned;
                 }
-                return deepClone(v);
+
+                // Create clone of root object
+                const rootCloned = createClone(v);
+                clonedObjects.set(v, rootCloned);
+                queueProperties(v, rootCloned);
+
+                // Process pending properties
+                while (pendingProps.length > 0) {
+                    const [parent, key, value] = pendingProps.pop();
+
+                    // Skip marker entries
+                    if (key === 'MAP_KEY' || key === 'MAP_VAL' || key === 'SET_VAL') {
+                        // For Map/Set keys/values, track in clonedObjects
+                        if (value === null || typeof value !== "object") {
+                            clonedObjects.set(value, value);  // Primitives clone to themselves
+                        }
+                        continue;
+                    }
+
+                    // Handle primitives
+                    if (value === null || typeof value !== "object") {
+                        parent[key] = value;
+                        continue;
+                    }
+
+                    // Handle transfer
+                    if (transfers.has(value)) {
+                        const transferred = transfers.get(value);
+                        transfers.delete(value);
+                        parent[key] = transferred;
+                        clonedObjects.set(value, transferred);
+                        continue;
+                    }
+
+                    // Check if already cloned
+                    if (clonedObjects.has(value)) {
+                        parent[key] = clonedObjects.get(value);
+                        continue;
+                    }
+
+                    // Create new clone
+                    const cloned = createClone(value);
+                    clonedObjects.set(value, cloned);
+
+                    // Set to parent
+                    parent[key] = cloned;
+
+                    // Queue this object's properties
+                    queueProperties(value, cloned);
+                }
+
+                // Now process Map entries using cloned keys and values
+                for (const [map, origKey, origVal] of mapEntries) {
+                    const clonedKey = clonedObjects.get(origKey);
+                    const clonedVal = clonedObjects.get(origVal);
+                    if (clonedKey !== undefined && clonedVal !== undefined) {
+                        map.set(clonedKey, clonedVal);
+                    }
+                }
+
+                // Process Set values using cloned values
+                for (const [set, origVal] of setValues) {
+                    const clonedVal = clonedObjects.get(origVal);
+                    if (clonedVal !== undefined) {
+                        set.add(clonedVal);
+                    }
+                }
+
+                return rootCloned;
             }
             return clone;
         })()

@@ -14093,6 +14093,71 @@ console.log(clonedResponse.error instanceof Error); // true
 - ✅ 嵌套结构：对象中的 Error 正确深拷贝
 - ✅ 独立引用：克隆的 Error 与原始对象引用不同
 
+### v0.3.303 structuredClone 性能优化 - 迭代式深拷贝（2025-12-31）
+**进度**: Web API 优化 | ✅ 已完成
+
+#### v0.3.303 优化内容
+
+**迭代式深拷贝算法**:
+- 使用显式工作队列（work queue）替代递归，彻底避免栈溢出风险
+- 支持 10000+ 层级深度嵌套对象的无压力克隆
+- Map/Set 特殊处理：分两阶段处理，先克隆键值对，再设置到容器
+- 循环引用正确处理：通过 `clonedObjects` Map 追踪已克隆对象
+
+#### v0.3.303 技术实现
+
+- `src/web_api/structured_clone.rs`: 完全重写 clone 函数 (~+60/-120 行)
+  - 移除递归 `deepClone` 函数，改用迭代式处理
+  - 使用 `pendingProps` 队列处理普通属性
+  - 使用 `mapEntries` 和 `setValues` 数组分阶段处理 Map/Set
+  - 原始类型自动映射（字符串、数字等克隆到自身）
+
+#### v0.3.303 性能优势
+
+| 场景 | 递归实现 | 迭代实现 |
+|------|---------|---------|
+| 1000 层嵌套 | 可能栈溢出 | 稳定处理 |
+| 10000 层嵌套 | 栈溢出 | 稳定处理 |
+| 循环引用 | 需要额外检查 | 自动处理 |
+| 内存使用 | 调用栈开销 | 堆内存可控 |
+
+#### v0.3.303 测试验证
+```javascript
+// 深度嵌套测试 - 10000 层
+function createDeepObject(depth) {
+    let obj = { value: depth };
+    for (let i = 0; i < depth; i++) {
+        obj = { nested: obj };
+    }
+    return obj;
+}
+const deep = createDeepObject(10000);
+const cloned = structuredClone(deep);
+// 正确访问最深层的值
+let current = cloned;
+for (let i = 0; i < 10000; i++) current = current.nested;
+console.log(current.value === 10000); // true
+
+// 循环引用测试
+const circular = { name: 'test' };
+circular.self = circular;
+const clonedCircular = structuredClone(circular);
+console.log(clonedCircular.self === clonedCircular); // true
+```
+
+#### v0.3.303 代码变更
+- `src/web_api/structured_clone.rs`: 重写结构 (~220 行 → ~200 行)
+  - `createClone()`: 创建空容器函数
+  - `queueProperties()`: 排队属性处理
+  - 主循环: 迭代处理所有属性
+  - Map/Set 后处理: 设置键值对
+
+#### v0.3.303 下一步
+- V8 底层 ArrayBuffer transfer 支持（实现真正的零拷贝 detach）
+- 其他内置对象克隆支持（WeakMap、WeakSet、Promise 等）
+
+---
+
 #### v0.3.302 下一步
 - V8 底层 ArrayBuffer transfer 支持（实现真正的零拷贝 detach）
 - 性能优化：使用迭代器替代递归减少栈开销
