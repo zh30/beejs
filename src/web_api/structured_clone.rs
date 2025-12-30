@@ -1,9 +1,69 @@
 // structuredClone API implementation
-// v0.3.299: Global structuredClone function for deep cloning objects
+// v0.3.300: Enhanced with Date, RegExp, Map, Set support
 // Optimized for AI workloads - enables safe deep cloning of inference results
 
 use anyhow::Result;
 use rusty_v8 as v8;
+
+/// Internal key for storing the clone function in global
+const CLONE_FUNC_KEY: &str = "__beejs_internal_clone_func";
+
+/// Setup the internal clone function in the global object
+fn setup_internal_clone_func(
+    scope: &mut v8::HandleScope,
+    global: v8::Local<v8::Object>,
+) -> Result<()> {
+    let code = r#"
+        (function() {
+            "use strict";
+            function clone(v) {
+                if (v === null || typeof v !== "object") return v;
+
+                const seen = new WeakSet();
+                function deepClone(obj) {
+                    if (obj === null || typeof obj !== "object") return obj;
+                    if (seen.has(obj)) return obj;
+                    seen.add(obj);
+
+                    if (obj instanceof Date) return new Date(obj.getTime());
+                    if (obj instanceof RegExp) return new RegExp(obj.source, obj.flags);
+
+                    if (obj instanceof Map) {
+                        const c = new Map();
+                        for (const [k, val] of obj) c.set(deepClone(k), deepClone(val));
+                        return c;
+                    }
+                    if (obj instanceof Set) {
+                        const c = new Set();
+                        for (const val of obj) c.add(deepClone(val));
+                        return c;
+                    }
+                    if (Array.isArray(obj)) {
+                        return obj.map(item => deepClone(item));
+                    }
+
+                    const cloned = {};
+                    for (const key in obj) {
+                        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                            cloned[key] = deepClone(obj[key]);
+                        }
+                    }
+                    return cloned;
+                }
+                return deepClone(v);
+            }
+            return clone;
+        })()
+    "#;
+
+    let code = v8::String::new(scope, code).unwrap();
+    let script = v8::Script::compile(scope, code, None).unwrap();
+    let func = script.run(scope).unwrap();
+
+    let key = v8::String::new(scope, CLONE_FUNC_KEY).unwrap();
+    global.set(scope, key.into(), func);
+    Ok(())
+}
 
 /// structuredClone callback function
 fn structured_clone_callback(
@@ -13,111 +73,16 @@ fn structured_clone_callback(
 ) {
     let value = args.get(0);
 
-    // Handle primitives and null/undefined directly
-    if value.is_null_or_undefined()
-        || value.is_string()
-        || value.is_number()
-        || value.is_boolean()
-        || value.is_symbol()
-    {
-        retval.set(value);
-        return;
-    }
+    let global = scope.get_current_context().global(scope);
+    let key = v8::String::new(scope, CLONE_FUNC_KEY).unwrap();
 
-    // Handle arrays
-    if value.is_array() {
-        let arr = v8::Local::<v8::Array>::try_from(value).unwrap();
-        let length = arr.length();
-        let new_arr = v8::Array::new(scope, length as i32);
+    // Get the internal clone function (set up during initialization)
+    let clone_func = global.get(scope, key.into()).unwrap();
+    let func: v8::Local<v8::Function> = clone_func.try_into().unwrap();
 
-        for i in 0..length {
-            if let Some(elem) = arr.get_index(scope, i as u32) {
-                let cloned = clone_value(scope, elem);
-                if let Some(c) = cloned {
-                    new_arr.set_index(scope, i as u32, c);
-                }
-            }
-        }
-        retval.set(new_arr.into());
-        return;
-    }
-
-    // Handle objects
-    if let Some(obj) = value.to_object(scope) {
-        let new_obj = v8::Object::new(scope);
-        let prop_names = obj.get_property_names(scope).unwrap();
-        let length = prop_names.length();
-
-        for i in 0..length {
-            if let Some(key) = prop_names.get_index(scope, i as u32) {
-                if let Some(value_local) = obj.get(scope, key) {
-                    let cloned_key = clone_value(scope, key);
-                    let cloned_value = clone_value(scope, value_local);
-
-                    if let (Some(k), Some(v)) = (cloned_key, cloned_value) {
-                        new_obj.set(scope, k, v);
-                    }
-                }
-            }
-        }
-        retval.set(new_obj.into());
-        return;
-    }
-
-    // Fallback for unsupported types
-    retval.set(v8::null(scope).into());
-}
-
-/// Helper to clone a single value (primitives and simple objects)
-fn clone_value<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    value: v8::Local<'a, v8::Value>,
-) -> Option<v8::Local<'a, v8::Value>> {
-    if value.is_null_or_undefined()
-        || value.is_string()
-        || value.is_number()
-        || value.is_boolean()
-        || value.is_symbol()
-    {
-        return Some(value);
-    }
-
-    if value.is_array() {
-        let arr = v8::Local::<v8::Array>::try_from(value).unwrap();
-        let length = arr.length();
-        let new_arr = v8::Array::new(scope, length as i32);
-
-        for i in 0..length {
-            if let Some(elem) = arr.get_index(scope, i as u32) {
-                if let Some(cloned) = clone_value(scope, elem) {
-                    new_arr.set_index(scope, i as u32, cloned);
-                }
-            }
-        }
-        return Some(new_arr.into());
-    }
-
-    if let Some(obj) = value.to_object(scope) {
-        let new_obj = v8::Object::new(scope);
-        let prop_names = obj.get_property_names(scope).unwrap();
-        let length = prop_names.length();
-
-        for i in 0..length {
-            if let Some(key) = prop_names.get_index(scope, i as u32) {
-                if let Some(value_local) = obj.get(scope, key) {
-                    let cloned_key = clone_value(scope, key);
-                    let cloned_value = clone_value(scope, value_local);
-
-                    if let (Some(k), Some(v)) = (cloned_key, cloned_value) {
-                        new_obj.set(scope, k, v);
-                    }
-                }
-            }
-        }
-        return Some(new_obj.into());
-    }
-
-    None
+    let undefined = v8::undefined(scope);
+    let result = func.call(scope, undefined.into(), &[value]);
+    retval.set(result.unwrap_or(v8::null(scope).into()));
 }
 
 /// Setup structuredClone global function
@@ -126,6 +91,9 @@ pub fn setup_structured_clone_api(
     context: &v8::Local<v8::Context>,
 ) -> Result<()> {
     let global: _ = context.global(scope);
+
+    // Setup the internal clone function in the same context
+    setup_internal_clone_func(scope, global)?;
 
     let structured_clone_template: _ = v8::FunctionTemplate::new(scope, structured_clone_callback);
     let structured_clone_func: _ = structured_clone_template.get_function(scope).unwrap();
