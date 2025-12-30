@@ -15,11 +15,13 @@ pub mod streams;     // Stage 75: Web Streams API for AI workloads
 pub mod compression; // v0.3.295: CompressionStream API (gzip/deflate)
 pub mod structured_clone; // v0.3.299: structuredClone global function
 pub mod array_buffer_transfer; // v0.3.311: ArrayBuffer transfer (zero-copy detach)
+pub mod broadcast_channel; // v0.3.312: BroadcastChannel API (cross-tab communication)
 use anyhow::Result;
 use rusty_v8 as v8;
 // 从各模块导入设置函数
 use abort::setup_abort_api;
 use blob::setup_blob_api;
+use broadcast_channel::setup_broadcast_channel_api;
 use compression::setup_compression_api;
 use crypto::setup_crypto_api;
 use encoding::setup_encoding_api;
@@ -88,6 +90,10 @@ pub fn init_web_api(
     eprintln!("🔧 [v0.3.311] Setting up ArrayBuffer transfer API...");
     setup_array_buffer_transfer_api(scope, context)?;
     eprintln!("✅ [v0.3.311] ArrayBuffer transfer API done");
+    // v0.3.312: BroadcastChannel API (cross-tab communication)
+    eprintln!("🔧 [v0.3.312] Setting up BroadcastChannel API...");
+    setup_broadcast_channel_api(scope, context)?;
+    eprintln!("✅ [v0.3.312] BroadcastChannel API done");
     // Note: Streams API is initialized separately in runtime_minimal.rs
     // to avoid duplicate initialization
     eprintln!("🎉 [STAGE74/75] All Web APIs initialized (streams via runtime)!");
