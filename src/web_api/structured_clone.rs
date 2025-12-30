@@ -24,6 +24,15 @@ fn setup_internal_clone_func(
                     err.name = "DataCloneError";
                     throw err;
                 }
+
+                // Functions cannot be cloned - throw DataCloneError per spec
+                // Must check before the object check because typeof function === 'function', not 'object'
+                if (typeof v === 'function') {
+                    const err = new Error("Function cannot be cloned");
+                    err.name = "DataCloneError";
+                    throw err;
+                }
+
                 if (v === null || typeof v !== "object") return v;
 
                 const transfers = new Map();
@@ -179,10 +188,15 @@ fn setup_internal_clone_func(
 
                 function queueProperties(source, cloned) {
                     if (source instanceof Map) {
-                        // Check for Symbol keys/values - these cannot be cloned
+                        // Check for Symbol and Function keys/values - these cannot be cloned
                         source.forEach((val, key) => {
                             if (typeof key === 'symbol' || typeof val === 'symbol') {
                                 const err = new Error("Map containing Symbol cannot be cloned");
+                                err.name = "DataCloneError";
+                                throw err;
+                            }
+                            if (typeof key === 'function' || typeof val === 'function') {
+                                const err = new Error("Map containing Function cannot be cloned");
                                 err.name = "DataCloneError";
                                 throw err;
                             }
@@ -195,10 +209,15 @@ fn setup_internal_clone_func(
                             pendingProps.push([cloned, 'MAP_VAL', val]);
                         });
                     } else if (source instanceof Set) {
-                        // Check for Symbol values - these cannot be cloned
+                        // Check for Symbol and Function values - these cannot be cloned
                         source.forEach(val => {
                             if (typeof val === 'symbol') {
                                 const err = new Error("Set containing Symbol cannot be cloned");
+                                err.name = "DataCloneError";
+                                throw err;
+                            }
+                            if (typeof val === 'function') {
+                                const err = new Error("Set containing Function cannot be cloned");
                                 err.name = "DataCloneError";
                                 throw err;
                             }
@@ -215,10 +234,15 @@ fn setup_internal_clone_func(
                             }
                         }
                     } else if (Array.isArray(source)) {
-                        // Check for Symbol elements - these cannot be cloned
+                        // Check for Symbol and Function elements - these cannot be cloned
                         for (let i = 0; i < source.length; i++) {
                             if (typeof source[i] === 'symbol') {
                                 const err = new Error("Array containing Symbol cannot be cloned");
+                                err.name = "DataCloneError";
+                                throw err;
+                            }
+                            if (typeof source[i] === 'function') {
+                                const err = new Error("Array containing Function cannot be cloned");
                                 err.name = "DataCloneError";
                                 throw err;
                             }
@@ -251,6 +275,12 @@ fn setup_internal_clone_func(
                         // Queue string properties
                         for (const key in source) {
                             if (Object.prototype.hasOwnProperty.call(source, key)) {
+                                // Check if property value is a function - cannot be cloned
+                                if (typeof source[key] === 'function') {
+                                    const err = new Error("Object containing Function cannot be cloned");
+                                    err.name = "DataCloneError";
+                                    throw err;
+                                }
                                 pendingProps.push([cloned, key, source[key]]);
                             }
                         }
@@ -405,8 +435,7 @@ pub fn setup_structured_clone_api(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
+    // No imports needed for basic compile test
     #[test]
     fn test_clone_value_primitives() {
         // Tests would require V8 isolate setup

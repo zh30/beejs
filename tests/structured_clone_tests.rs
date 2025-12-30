@@ -1115,4 +1115,140 @@ mod structured_clone_tests {
         assert!(stdout.contains("error thrown: true"), "Expected error to be thrown. Got: {}", stdout);
         assert!(stdout.contains("error name: true"), "Expected error name to be DataCloneError. Got: {}", stdout);
     }
+
+    /// Test 49: structuredClone with function throws DataCloneError (v0.3.309)
+    #[test]
+    fn test_clone_function_throws() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = function() { return 42; };
+                try {
+                    structuredClone(original);
+                    console.log('no error: false');
+                } catch (err) {
+                    console.log('error thrown:', true);
+                    console.log('error name:', err.name === "DataCloneError");
+                    console.log('error message:', err.message === "Function cannot be cloned");
+                }
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("error thrown: true"), "Expected error to be thrown. Got: {}", stdout);
+        assert!(stdout.contains("error name: true"), "Expected error name to be DataCloneError. Got: {}", stdout);
+        assert!(stdout.contains("error message: true"), "Expected error message about Function. Got: {}", stdout);
+    }
+
+    /// Test 50: structuredClone with arrow function throws DataCloneError (v0.3.309)
+    #[test]
+    fn test_clone_arrow_function_throws() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = () => 'arrow';
+                try {
+                    structuredClone(original);
+                    console.log('no error: false');
+                } catch (err) {
+                    console.log('error thrown:', true);
+                    console.log('error name:', err.name === "DataCloneError");
+                }
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("error thrown: true"), "Expected error to be thrown. Got: {}", stdout);
+        assert!(stdout.contains("error name: true"), "Expected error name to be DataCloneError. Got: {}", stdout);
+    }
+
+    /// Test 51: structuredClone object containing function throws DataCloneError (v0.3.309)
+    #[test]
+    fn test_clone_object_with_function_throws() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = { name: "test", method: function() {} };
+                try {
+                    structuredClone(original);
+                    console.log('no error: false');
+                } catch (err) {
+                    console.log('error thrown:', true);
+                    console.log('error name:', err.name === "DataCloneError");
+                    console.log('error message:', err.message === "Object containing Function cannot be cloned");
+                }
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("error thrown: true"), "Expected error to be thrown. Got: {}", stdout);
+        assert!(stdout.contains("error name: true"), "Expected error name to be DataCloneError. Got: {}", stdout);
+        assert!(stdout.contains("error message: true"), "Expected error message about Object containing Function. Got: {}", stdout);
+    }
+
+    /// Test 52: structuredClone array containing function throws DataCloneError (v0.3.309)
+    #[test]
+    fn test_clone_array_with_function_throws() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = [1, 2, function() {}];
+                try {
+                    structuredClone(original);
+                    console.log('no error: false');
+                } catch (err) {
+                    console.log('error thrown:', true);
+                    console.log('error name:', err.name === "DataCloneError");
+                }
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("error thrown: true"), "Expected error to be thrown. Got: {}", stdout);
+        assert!(stdout.contains("error name: true"), "Expected error name to be DataCloneError. Got: {}", stdout);
+    }
+
+    /// Test 53: structuredClone Map containing function throws DataCloneError (v0.3.309)
+    #[test]
+    fn test_clone_map_with_function_throws() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = new Map([['key', function() {}]]);
+                try {
+                    structuredClone(original);
+                    console.log('no error: false');
+                } catch (err) {
+                    console.log('error thrown:', true);
+                    console.log('error name:', err.name === "DataCloneError");
+                }
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("error thrown: true"), "Expected error to be thrown. Got: {}", stdout);
+        assert!(stdout.contains("error name: true"), "Expected error name to be DataCloneError. Got: {}", stdout);
+    }
+
+    /// Test 54: structuredClone Set containing function throws DataCloneError (v0.3.309)
+    #[test]
+    fn test_clone_set_with_function_throws() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = new Set([function() {}]);
+                try {
+                    structuredClone(original);
+                    console.log('no error: false');
+                } catch (err) {
+                    console.log('error thrown:', true);
+                    console.log('error name:', err.name === "DataCloneError");
+                }
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("error thrown: true"), "Expected error to be thrown. Got: {}", stdout);
+        assert!(stdout.contains("error name: true"), "Expected error name to be DataCloneError. Got: {}", stdout);
+    }
 }
