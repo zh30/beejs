@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.310 (2025-12-31)
+## 当前版本: v0.3.311 (2025-12-31)
 
 ### 项目状态摘要
 
@@ -24,13 +24,14 @@
 - CompressionStream (v0.3.295 新增)
 - structuredClone (v0.3.299 新增)
 - Blob/File API (v0.3.305 新增)
+- ArrayBuffer Transfer API (v0.3.311 新增): transferToAttached, detachArrayBuffer, transferFromAttached
 
 **包管理**: ✅ 已完成
 - package.json 解析
 - npm 兼容命令 (install, add, remove, prune)
 - 依赖版本解析
 
-**测试**: ✅ 330+ 测试通过
+**测试**: ✅ 340+ 测试通过
 - cargo test --lib: 253/253 通过
 - performance_api_tests: 16/16 通过
 - web_streams_api_tests: 59/59 通过
@@ -38,7 +39,8 @@
 - compression_stream_tests: 8/8 通过 (v0.3.295)
 - structured_clone_tests: 54/54 通过 (v0.3.309)
 - blob_api_tests: 15/15 通过 (v0.3.305)
-- text_encoding_tests: 13/13 通过 (v0.3.310, 新增 atob/btoa 测试)
+- text_encoding_tests: 13/13 通过 (v0.3.310)
+- array_buffer_transfer_tests: 11/11 通过 (v0.3.311 新增)
 - 集成测试: 运行正常
 
 **CLI 命令**:
@@ -47,7 +49,27 @@
 
 ---
 
-### v0.3.310 atob/btoa 集成测试（2025-12-31）
+### v0.3.311 ArrayBuffer Transfer API（2025-12-31）
+
+**新增功能**: 零拷贝 ArrayBuffer 传输支持
+
+新增 API 函数：
+- `transferToAttached(buffer)`: 将 ArrayBuffer 转移到 Attached 状态，实现零拷贝传输
+- `detachArrayBuffer(buffer)`: 分离 ArrayBuffer，释放 backing store
+- `transferFromAttached(buffer)`: 从 Attached 状态接收 ArrayBuffer
+
+**技术实现**:
+- 使用 V8 的 `detach()` 方法实现真正的零拷贝分离
+- 分离后 ArrayBuffer 的 `byteLength` 变为 0
+- 访问已分离的缓冲区会抛出错误
+- 适用于 AI 工作负载中的大型张量数据传输
+
+**测试覆盖**:
+- 基本传输功能测试
+- 大缓冲区传输（10MB）性能测试
+- 错误处理测试
+- 多缓冲区独立传输测试
+- 与 structuredClone 的集成测试
 **进度**: Web API 测试增强 | ✅ 已完成
 
 #### v0.3.310 新增功能

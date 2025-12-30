@@ -34,6 +34,8 @@ use crate::web_api::blob::setup_blob_api;
 use crate::web_api::compression::setup_compression_api;
 // v0.3.299: Import structuredClone API
 use crate::web_api::structured_clone::setup_structured_clone_api;
+// v0.3.311: Import ArrayBuffer transfer API
+use crate::web_api::array_buffer_transfer::setup_array_buffer_transfer_api;
 
 // Event listener storage using thread_local (v0.3.46)
 // Note: rustdoc does not generate documentation for macro invocations
@@ -3017,6 +3019,7 @@ impl MinimalRuntime {
             setup_blob_api(scope, &context)?; // v0.3.305: Blob API for binary data handling
             setup_compression_api(scope, &context)?; // v0.3.295: CompressionStream API (gzip/deflate)
             setup_structured_clone_api(scope, &context)?; // v0.3.299: structuredClone global function
+            setup_array_buffer_transfer_api(scope, &context)?; // v0.3.311: ArrayBuffer transfer API
             crate::nodejs_core::readline::setup_readline_api(scope, &context)?; // v0.3.277: Readline API
 
             // v0.3.291: Initialize AbortController API (needed for pipeTo signal option)
