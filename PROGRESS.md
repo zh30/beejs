@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.311 (2025-12-31)
+## 当前版本: v0.3.313 (2025-12-31)
 
 ### 项目状态摘要
 
@@ -22,9 +22,10 @@
 - performance, url, form_data, fetch, websocket
 - streams (ReadableStream, WritableStream, TransformStream, TextEncoderStream, TextDecoderStream)
 - CompressionStream (v0.3.295 新增)
-- structuredClone (v0.3.299 新增)
+- structuredClone (v0.3.299 新增): DataView, Error 类型, Map/Set, Symbol 等全面支持
 - Blob/File API (v0.3.305 新增)
 - ArrayBuffer Transfer API (v0.3.311 新增): transferToAttached, detachArrayBuffer, transferFromAttached
+- BroadcastChannel (v0.3.312 新增): 跨 tab 通信 API
 
 **包管理**: ✅ 已完成
 - package.json 解析
@@ -37,15 +38,115 @@
 - web_streams_api_tests: 59/59 通过
 - byob_tests: 5/5 通过
 - compression_stream_tests: 8/8 通过 (v0.3.295)
-- structured_clone_tests: 54/54 通过 (v0.3.309)
+- structured_clone_tests: 66/66 通过 (v0.3.313 新增 DataView/Error 支持)
 - blob_api_tests: 15/15 通过 (v0.3.305)
 - text_encoding_tests: 13/13 通过 (v0.3.310)
-- array_buffer_transfer_tests: 11/11 通过 (v0.3.311 新增)
+- array_buffer_transfer_tests: 11/11 通过 (v0.3.311)
+- broadcast_channel_tests: 8/8 通过 (v0.3.312)
 - 集成测试: 运行正常
 
 **CLI 命令**:
 - run, eval, repl, test, bundle, debug
 - version, serve, init, add, remove, install, prune, create, bunx, upgrade
+
+---
+
+### v0.3.313 structuredClone 增强 - DataView 和缺失的 Error 类型支持（2025-12-31）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.313 新增功能
+
+**DataView 克隆支持**:
+- 完整支持 DataView 类型克隆
+- 使用字节级复制确保数据完整性
+- 保留 byteLength 和 byteOffset 属性
+
+**Error 类型增强**:
+- 修复 getErrorConstructor 函数，识别所有标准 Error 类型
+- 支持 EvalError（虽然已在列表中，但确保正确识别）
+- 增强错误克隆的一致性
+
+#### v0.3.313 测试验证
+- ✅ 66/66 structuredClone 测试全部通过
+- ✅ DataView 克隆正确复制底层 ArrayBuffer
+- ✅ 所有 Error 子类型正确克隆
+- ✅ 迭代式深度克隆支持 10000+ 嵌套层级
+
+#### v0.3.313 代码变更
+- `src/web_api/structured_clone.rs`: 增强 DataView 和 Error 处理 (~+15 行)
+  - 优化 `isDataView()` 检测逻辑
+  - 完善 `getErrorConstructor()` 错误类型识别
+
+---
+
+### v0.3.312 BroadcastChannel API 实现（2025-12-31）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.312 新增功能
+
+**BroadcastChannel constructor**:
+- 支持 `new BroadcastChannel(name)` 创建跨 tab 通信通道
+- 同一源的不同浏览器上下文可互相通信
+- 适用于 Service Worker、iframe、标签页间通信
+
+**BroadcastChannel methods**:
+- `channel.postMessage(data)`: 发送消息到所有监听者
+- `channel.close()`: 关闭通道，释放资源
+- 自动处理消息序列化和反序列化
+
+**BroadcastChannel events**:
+- `channel.onmessage`: 消息事件处理器
+- 继承自 EventTarget，支持 addEventListener
+
+**AI 工作负载优化**:
+- 跨 Worker/Agent 通信无开销
+- 支持 structuredClone 可克隆的所有数据类型
+- 适用于分布式 AI 推理协调
+
+#### v0.3.312 使用示例
+```javascript
+// 创建广播通道
+const channel = new BroadcastChannel('ai_task_channel');
+
+// 发送消息
+channel.postMessage({ task: 'process', data: [1, 2, 3] });
+
+// 接收消息
+channel.onmessage = (event) => {
+    console.log('Received:', event.data);
+};
+
+// 关闭通道
+channel.close();
+```
+
+#### v0.3.312 实现细节
+
+- `src/web_api/broadcast_channel.rs`: 新建 BroadcastChannel API (~220 行)
+  - `broadcast_channel_constructor()`: 构造函数
+  - `post_message()`: 消息发送方法
+  - `close_channel()`: 关闭方法
+  - `on_message_getter/setter`: 消息事件处理
+
+- `src/web_api/mod.rs`: 注册 broadcast_channel 模块 (~3 行)
+- `src/runtime_minimal.rs`: 添加 setup_broadcast_channel_api() 调用 (~3 行)
+
+#### v0.3.312 代码变更
+- `src/web_api/broadcast_channel.rs`: 新建文件 (~220 行)
+- `src/web_api/mod.rs`: 注册 broadcast_channel 模块 (~3 行)
+- `tests/broadcast_channel_tests.rs`: 新建测试套件 (~280 行)
+
+#### v0.3.312 测试覆盖
+- 构造函数测试 (有效名称、空名称)
+- postMessage/onmessage 测试
+- close 测试
+- 继承测试 (EventTarget 方法)
+
+#### v0.3.312 测试验证
+- ✅ 8/8 broadcast_channel_tests 通过
+- ✅ 构造函数正确创建 BroadcastChannel 实例
+- ✅ 消息发送接收正常工作
+- ✅ close 正确清理资源
 
 ---
 
