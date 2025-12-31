@@ -14782,12 +14782,77 @@ try {
 - ✅ v0.3.306: Symbol 克隆支持 - 根据 WHATWG 规范抛出 DataCloneError
 - ✅ v0.3.312: BroadcastChannel API - 跨 tab 通信
 - ✅ v0.3.315: MessageChannel API - 端口消息传递
+- ✅ v0.3.322: SharedArrayBuffer API - 跨 Worker 共享内存
 
-**v0.3.320 下一步**:
-- Worker API 实现（Web Worker 支持）
+**v0.3.322 下一步**:
 - ServiceWorker API 实现
-- SharedArrayBuffer 支持
 - V8 底层序列化性能优化
+
+---
+
+### v0.3.322 SharedArrayBuffer API 实现（2025-12-31）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.322 新增功能
+
+**SharedArrayBuffer 构造函数**:
+- `new SharedArrayBuffer(byteLength)` 创建可共享的内存缓冲区
+- 支持任意字节长度（0 到 1GB）
+- 自动检测 V8 内置支持，若不可用则提供 polyfill
+
+**SharedArrayBuffer 特性**:
+- 可在多个 Worker 之间共享内存，无需序列化
+- 支持所有 TypedArray 视图（Int32Array, Uint8Array, Float64Array 等）
+- 支持 DataView 进行字节级操作
+- 支持 slice() 方法创建子缓冲区
+
+**AI 工作负载优化**:
+- 多 Worker 并行处理共享张量数据
+- 零拷贝数据交换，大幅降低推理延迟
+- 适用于分布式 AI 推理协调
+
+#### v0.3.322 使用示例
+```javascript
+// 创建 1MB 共享缓冲区
+const sab = new SharedArrayBuffer(1024 * 1024);
+
+// 使用 Int32Array 进行并行计算
+const data = new Int32Array(sab);
+data[0] = 42;
+
+// 在 Worker 中可以直接访问相同内存
+const worker = new Worker('worker.js');
+worker.postMessage({ sab });
+```
+
+#### v0.3.322 实现细节
+
+- `src/web_api/shared_array_buffer.rs`: 新建 SharedArrayBuffer API (~120 行)
+  - `setup_shared_array_buffer_api()`: 初始化并检测 V8 内置支持
+  - `shared_array_buffer_callback()`: 构造函数回调
+  - `get_shared_buffer_byte_length()`: 获取缓冲区大小
+  - `is_shared_array_buffer()`: 类型检查辅助函数
+  - 内存分配跟踪计数器
+
+- `src/web_api/mod.rs`: 注册 shared_array_buffer 模块 (~+10 行)
+- `src/runtime_minimal.rs`: 添加 API 初始化 (~+5 行)
+
+#### v0.3.322 测试验证
+- ✅ 11/11 SharedArrayBuffer 测试全部通过
+- ✅ 构造函数存在性测试
+- ✅ 基本创建和 byteLength 测试
+- ✅ 空缓冲区测试（size 0）
+- ✅ TypedArray 视图测试（Int32Array, Uint8Array）
+- ✅ DataView 测试
+- ✅ slice() 方法测试
+- ✅ 大内存分配测试（1MB）
+- ✅ 多缓冲区创建测试
+
+#### v0.3.322 代码变更
+- `src/web_api/shared_array_buffer.rs`: 新建文件 (~120 行)
+- `src/web_api/mod.rs`: 添加模块声明和初始化 (~+10 行)
+- `src/runtime_minimal.rs`: 添加 API 初始化 (~+5 行)
+- `tests/shared_array_buffer_tests.rs`: 新测试文件 (~310 行，11 个测试)
 
 ---
 

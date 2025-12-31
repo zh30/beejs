@@ -42,6 +42,8 @@ use crate::web_api::broadcast_channel::setup_broadcast_channel_api;
 use crate::web_api::message_channel::setup_message_channel_api;
 // v0.3.320: Import Worker API
 use crate::web_api::worker::setup_worker_api;
+// v0.3.322: Import SharedArrayBuffer API
+use crate::web_api::shared_array_buffer::setup_shared_array_buffer_api;
 
 // Event listener storage using thread_local (v0.3.46)
 // Note: rustdoc does not generate documentation for macro invocations
@@ -3029,6 +3031,7 @@ impl MinimalRuntime {
             setup_broadcast_channel_api(scope, &context)?; // v0.3.312: BroadcastChannel API (cross-tab communication)
             setup_message_channel_api(scope, &context)?; // v0.3.315: MessageChannel API (port-based communication)
             setup_worker_api(scope, &context)?; // v0.3.320: Worker API (Web Worker support for parallel execution)
+            setup_shared_array_buffer_api(scope, &context)?; // v0.3.322: SharedArrayBuffer API (cross-Worker shared memory)
             crate::nodejs_core::readline::setup_readline_api(scope, &context)?; // v0.3.277: Readline API
 
             // v0.3.291: Initialize AbortController API (needed for pipeTo signal option)
