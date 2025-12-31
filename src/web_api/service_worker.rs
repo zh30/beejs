@@ -283,6 +283,7 @@ fn create_service_worker_event(
 }
 
 /// ExtendableEvent.waitUntil() callback (shared by install/activate)
+#[allow(dead_code)]
 fn extendable_event_wait_until_callback(
     scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
@@ -295,6 +296,7 @@ fn extendable_event_wait_until_callback(
 }
 
 /// FetchEvent.respondWith() callback - v0.3.328: Full Response object integration
+#[allow(dead_code)]
 fn fetch_event_respond_with_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -310,7 +312,7 @@ fn fetch_event_respond_with_callback(
 
     // Create a property to store the response on the event object
     // The response can be a Response object or a Promise that resolves to Response
-    let respond_with_key = v8::String::new(scope, "_respondWithResponse").unwrap();
+    let _respond_with_key = v8::String::new(scope, "_respondWithResponse").unwrap();
 
     // Get the event object (this is called as a method on the event)
     // In V8, when a function template is used as a method, 'this' is available
@@ -322,6 +324,7 @@ fn fetch_event_respond_with_callback(
 }
 
 /// FetchEvent.clientId property getter - v0.3.328: Track client origin
+#[allow(dead_code)]
 fn fetch_event_client_id_getter(
     scope: &mut v8::HandleScope,
     _args: v8::PropertyCallbackArguments,
