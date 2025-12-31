@@ -201,16 +201,9 @@ fn setup_internal_clone_func(
                     } else if (Array.isArray(obj)) {
                         return new Array(obj.length);
                     } else if (obj instanceof Promise) {
-                        // Clone Promise based on its state
-                        // Per WHATWG spec: fulfilled clones value, rejected clones reason as Error
-                        // Pending promises throw DataCloneError
-
-                        // Synchronously try to determine Promise state
-                        // For now, throw DataCloneError since we cannot synchronously
-                        // determine Promise state without engine-level support
-                        const err = new Error("Promise cannot be cloned");
-                        err.name = "DataCloneError";
-                        throw err;
+                        // Promise cloning is handled by Rust side using V8 PromiseState API
+                        // Return a marker object that will be processed by the callback
+                        return { __promiseMarker__: true, __promiseObj__: obj };
                     } else {
                         return {};
                     }
@@ -442,7 +435,103 @@ fn structured_clone_callback(
 
     let undefined = v8::undefined(scope);
     let result = func.call(scope, undefined.into(), &[value, transfer_list]);
-    retval.set(result.unwrap_or(v8::null(scope).into()));
+
+    // v0.3.316: Handle Promise cloning using V8 PromiseState API
+    let cloned_result = match result {
+        Some(res) if res.is_object() => {
+            let obj = v8::Local::<v8::Object>::try_from(res).ok();
+            if let Some(obj) = obj {
+                let marker_key = v8::String::new(scope, "__promiseMarker__").unwrap();
+                let promise_key = v8::String::new(scope, "__promiseObj__").unwrap();
+
+                if let Some(marker) = obj.get(scope, marker_key.into()) {
+                    if marker.is_true() {
+                        // This is a Promise marker object - clone the Promise state
+                        let promise_obj = obj.get(scope, promise_key.into()).unwrap();
+
+                        if let Ok(promise) = v8::Local::<v8::Promise>::try_from(promise_obj) {
+                            let promise_state = promise.state();
+
+                            match promise_state {
+                                v8::PromiseState::Fulfilled => {
+                                    // Clone the fulfilled value
+                                    let value = promise.result(scope);
+                                    let value_cloned = func.call(scope, undefined.into(), &[value, transfer_list]).unwrap_or(v8::null(scope).into());
+                                    // Return a new resolved Promise with the cloned value
+                                    let promise_resolver = v8::PromiseResolver::new(scope).unwrap();
+                                    promise_resolver.resolve(scope, value_cloned);
+                                    promise_resolver.get_promise(scope).into()
+                                }
+                                v8::PromiseState::Rejected => {
+                                    // Clone the rejection reason as Error, preserving all properties
+                                    let reason = promise.result(scope);
+
+                                    // Create Error with reason as message
+                                    let error_ctor_key = v8::String::new(scope, "Error").unwrap();
+                                    let error_ctor: v8::Local<v8::Function> = global.get(scope, error_ctor_key.into()).unwrap().try_into().unwrap();
+
+                                    // Convert reason to string for message
+                                    let reason_str = reason.to_string(scope).unwrap_or(v8::String::new(scope, "Unknown error").unwrap());
+
+                                    // Create error with undefined first, then set message
+                                    let undefined = v8::undefined(scope);
+                                    let error = error_ctor.new_instance(scope, &[undefined.into()]).unwrap();
+                                    let message_key = v8::String::new(scope, "message").unwrap();
+                                    error.set(scope, message_key.into(), reason_str.into());
+
+                                    // If reason was an object, copy its properties to the Error
+                                    if reason.is_object() {
+                                        let reason_obj = v8::Local::<v8::Object>::try_from(reason).ok();
+                                        if let Some(obj) = reason_obj {
+                                            let prop_names = obj.get_own_property_names(scope).unwrap();
+                                            for i in 0..prop_names.length() {
+                                                if let Some(key) = prop_names.get_index(scope, i) {
+                                                    if let Some(val) = obj.get(scope, key) {
+                                                        error.set(scope, key, val);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Return a new rejected Promise with the cloned Error
+                                    let promise_resolver = v8::PromiseResolver::new(scope).unwrap();
+                                    promise_resolver.reject(scope, error.into());
+                                    promise_resolver.get_promise(scope).into()
+                                }
+                                v8::PromiseState::Pending => {
+                                    // Pending Promise cannot be cloned - throw DataCloneError
+                                    let err_msg = v8::String::new(scope, "Promise cannot be cloned").unwrap();
+                                    let err_ctor_key = v8::String::new(scope, "Error").unwrap();
+                                    let err_ctor: v8::Local<v8::Function> = global.get(scope, err_ctor_key.into()).unwrap().try_into().unwrap();
+                                    let err = err_ctor.new_instance(scope, &[err_msg.into()]).unwrap();
+                                    let name_key = v8::String::new(scope, "name").unwrap();
+                                    let name_val = v8::String::new(scope, "DataCloneError").unwrap();
+                                    err.set(scope, name_key.into(), name_val.into());
+
+                                    // Throw the error using V8's throw_exception
+                                    scope.throw_exception(err.into());
+                                    v8::null(scope).into()
+                                }
+                            }
+                        } else {
+                            // Not a valid Promise object, return as-is
+                            res
+                        }
+                    } else {
+                        res
+                    }
+                } else {
+                    res
+                }
+            } else {
+                res
+            }
+        }
+        _ => result.unwrap_or(v8::null(scope).into()),
+    };
+
+    retval.set(cloned_result);
 }
 
 /// Setup structuredClone global function

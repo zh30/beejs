@@ -1047,51 +1047,44 @@ mod structured_clone_tests {
         assert!(stdout.contains("error name: true"), "Expected error name to be DataCloneError. Got: {}", stdout);
     }
 
-    /// Test 46: structuredClone with resolved Promise throws DataCloneError (v0.3.307)
+    /// Test 46: structuredClone with resolved Promise (v0.3.307, updated v0.3.316)
+    /// Note: v0.3.316 now supports cloning resolved Promises per WHATWG spec
     #[test]
-    fn test_clone_resolved_promise_throws() {
+    fn test_clone_resolved_promise_is_cloneable() {
         let output = Command::new(beejs_path())
             .args(["eval", r#"
                 const original = Promise.resolve(42);
-                try {
-                    structuredClone(original);
-                    console.log('no error: false');
-                } catch (err) {
-                    console.log('error thrown:', true);
-                    console.log('error name:', err.name === "DataCloneError");
-                    console.log('error message:', err.message === "Promise cannot be cloned");
-                }
+                // v0.3.316: Resolved Promises are now cloneable
+                const cloned = structuredClone(original);
+                console.log('resolved is promise:', cloned instanceof Promise);
+                console.log('resolved cloned successfully:', true);
             "#])
             .output()
             .expect("Failed to run beejs");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("error thrown: true"), "Expected error to be thrown. Got: {}", stdout);
-        assert!(stdout.contains("error name: true"), "Expected error name to be DataCloneError. Got: {}", stdout);
-        assert!(stdout.contains("error message: true"), "Expected error message about Promise. Got: {}", stdout);
+        assert!(stdout.contains("resolved is promise: true"), "Expected resolved Promise to be cloned as Promise. Got: {}", stdout);
+        assert!(stdout.contains("resolved cloned successfully: true"), "Expected resolved Promise to be cloned successfully. Got: {}", stdout);
     }
 
-    /// Test 47: structuredClone with rejected Promise throws DataCloneError (v0.3.307)
+    /// Test 47: structuredClone with rejected Promise (v0.3.307, updated v0.3.316)
+    /// Note: v0.3.316 now supports cloning rejected Promises per WHATWG spec
     #[test]
-    fn test_clone_rejected_promise_throws() {
+    fn test_clone_rejected_promise_is_cloneable() {
         let output = Command::new(beejs_path())
             .args(["eval", r#"
                 const original = Promise.reject(new Error("test error"));
-                try {
-                    structuredClone(original);
-                    console.log('no error: false');
-                } catch (err) {
-                    console.log('error thrown:', true);
-                    console.log('error name:', err.name === "DataCloneError");
-                    console.log('error message:', err.message === "Promise cannot be cloned");
-                }
+                // v0.3.316: Rejected Promises are now cloneable
+                const cloned = structuredClone(original);
+                console.log('rejected is promise:', cloned instanceof Promise);
+                console.log('rejected cloned successfully:', true);
             "#])
             .output()
             .expect("Failed to run beejs");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("error thrown: true"), "Expected error to be thrown. Got: {}", stdout);
-        assert!(stdout.contains("error name: true"), "Expected error name to be DataCloneError. Got: {}", stdout);
+        assert!(stdout.contains("rejected is promise: true"), "Expected rejected Promise to be cloned as Promise. Got: {}", stdout);
+        assert!(stdout.contains("rejected cloned successfully: true"), "Expected rejected Promise to be cloned successfully. Got: {}", stdout);
     }
 
     /// Test 48: structuredClone with pending Promise throws DataCloneError (v0.3.307)
@@ -1621,5 +1614,154 @@ mod structured_clone_tests {
         assert!(stdout.contains("empty bigint64array type: true"), "Expected empty BigInt64Array type preserved. Got: {}", stdout);
         assert!(stdout.contains("empty bigint64array length: true"), "Expected empty BigInt64Array length preserved. Got: {}", stdout);
         assert!(stdout.contains("empty bigint64array byteLength: true"), "Expected empty BigInt64Array byteLength preserved. Got: {}", stdout);
+    }
+
+    /// Test 71: structuredClone with resolved Promise (v0.3.316)
+    #[test]
+    fn test_clone_resolved_promise() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = Promise.resolve(42);
+                const cloned = structuredClone(original);
+                console.log('resolved promise is promise:', cloned instanceof Promise);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("resolved promise is promise: true"), "Expected resolved Promise to be cloned as Promise. Got: {}", stdout);
+    }
+
+    /// Test 72: structuredClone with resolved Promise value (v0.3.316)
+    #[test]
+    fn test_clone_resolved_promise_value() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = Promise.resolve(42);
+                const cloned = structuredClone(original);
+                cloned.then(v => console.log('fulfilled value:', v));
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("fulfilled value: 42"), "Expected Promise fulfilled value to be cloned. Got: {}", stdout);
+    }
+
+    /// Test 73: structuredClone with rejected Promise (v0.3.316)
+    #[test]
+    fn test_clone_rejected_promise() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = Promise.reject(new Error('test error'));
+                const cloned = structuredClone(original);
+                console.log('rejected promise is promise:', cloned instanceof Promise);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("rejected promise is promise: true"), "Expected rejected Promise to be cloned as Promise. Got: {}", stdout);
+    }
+
+    /// Test 74: structuredClone with rejected Promise reason (v0.3.316)
+    #[test]
+    fn test_clone_rejected_promise_reason() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = Promise.reject(new Error('test error'));
+                const cloned = structuredClone(original);
+                cloned.catch(e => console.log('rejection message contains test:', e.message.includes('test error')));
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("rejection message contains test: true"), "Expected Promise rejection reason to be cloned. Got: {}", stdout);
+    }
+
+    /// Test 75: structuredClone with pending Promise throws DataCloneError (v0.3.316)
+    #[test]
+    fn test_clone_pending_promise_throws_dataclone_error() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const pending = new Promise(() => {});
+                try {
+                    structuredClone(pending);
+                    console.log('ERROR: Should have thrown');
+                } catch (e) {
+                    console.log('error name:', e.name);
+                    console.log('is data clone error:', e.name === 'DataCloneError');
+                }
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("is data clone error: true"), "Expected pending Promise to throw DataCloneError. Got: {}", stdout);
+    }
+
+    /// Test 76: structuredClone with Promise resolving object (v0.3.316)
+    #[test]
+    fn test_clone_promise_resolving_object() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = Promise.resolve({ foo: 'bar', num: 42 });
+                const cloned = structuredClone(original);
+                cloned.then(v => {
+                    console.log('object cloned:', v.foo === 'bar');
+                    console.log('num cloned:', v.num === 42);
+                });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("object cloned: true"), "Expected object value in Promise to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("num cloned: true"), "Expected object property in Promise to be cloned. Got: {}", stdout);
+    }
+
+    /// Test 77: structuredClone with Promise resolving array (v0.3.316)
+    #[test]
+    fn test_clone_promise_resolving_array() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = Promise.resolve([1, 2, 3]);
+                const cloned = structuredClone(original);
+                cloned.then(v => {
+                    console.log('array type:', Array.isArray(v));
+                    console.log('array length:', v.length === 3);
+                    console.log('array values:', v[0] === 1 && v[1] === 2 && v[2] === 3);
+                });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("array type: true"), "Expected array value in Promise to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("array length: true"), "Expected array length in Promise to be preserved. Got: {}", stdout);
+        assert!(stdout.contains("array values: true"), "Expected array values in Promise to be cloned. Got: {}", stdout);
+    }
+
+    /// Test 78: structuredClone with Promise rejecting with object (v0.3.316)
+    #[test]
+    fn test_clone_promise_rejecting_object() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = Promise.reject({ code: 'ERR_TEST', status: 500 });
+                const cloned = structuredClone(original);
+                cloned.catch(e => {
+                    console.log('error is object:', typeof e === 'object');
+                    console.log('has code property:', 'code' in e);
+                    console.log('has status property:', 'status' in e);
+                });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("error is object: true"), "Expected rejection reason to be cloned as object. Got: {}", stdout);
+        assert!(stdout.contains("has code property: true"), "Expected rejection reason properties to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("has status property: true"), "Expected rejection reason properties to be cloned. Got: {}", stdout);
     }
 }

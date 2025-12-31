@@ -14709,6 +14709,77 @@ try {
 
 ---
 
+### v0.3.316 structuredClone 增强 - Promise 克隆支持（2025-12-31）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.316 新增功能
+
+**Promise 克隆支持**:
+- 已解决（fulfilled）的 Promise：克隆其值，返回新的已解决 Promise
+- 已拒绝（rejected）的 Promise：克隆其原因（reason），作为 Error 对象返回新的已拒绝 Promise
+- 待处理（pending）的 Promise：抛出 DataCloneError（符合 WHATWG 规范）
+
+**技术实现**:
+- Rust 端使用 V8 PromiseState API 异步检测 Promise 状态
+- JS 端返回标记对象 `{ __promiseMarker__: true, __promiseObj__: obj }`
+- Rust 回调处理标记对象，根据状态创建新的 Promise
+- 已拒绝 Promise 的原因对象属性会被保留并复制到 Error 对象
+
+#### v0.3.316 使用示例
+```javascript
+// 已解决 Promise 克隆
+const original = Promise.resolve(42);
+const cloned = structuredClone(original);
+cloned.then(v => console.log(v)); // 42
+
+// 已拒绝 Promise 克隆（保留错误属性）
+const original = Promise.reject({ code: 'ERR_TEST', status: 500 });
+const cloned = structuredClone(original);
+cloned.catch(e => {
+    console.log(e.code);      // 'ERR_TEST'
+    console.log(e.status);    // 500
+});
+
+// 待处理 Promise 抛出 DataCloneError
+const pending = new Promise(() => {});
+try {
+    structuredClone(pending);
+} catch (e) {
+    console.log(e.name);      // "DataCloneError"
+}
+```
+
+#### v0.3.316 代码变更
+- `src/web_api/structured_clone.rs`: 添加 Promise 克隆支持 (~+80 行)
+  - JS 端返回 Promise 标记对象
+  - Rust 回调处理 PromiseState::Fulfilled/::Rejected/::Pending
+  - 使用 `PromiseResolver` 创建新的 Promise
+  - 复制拒绝原因的所有属性到 Error 对象
+
+- `tests/structured_clone_tests.rs`: 添加 8 个新测试 (~180 行)
+  - `test_clone_resolved_promise()`: 已解决 Promise 类型验证
+  - `test_clone_resolved_promise_value()`: 已解决 Promise 值克隆
+  - `test_clone_rejected_promise()`: 已拒绝 Promise 类型验证
+  - `test_clone_rejected_promise_reason()`: 已拒绝 Promise 原因克隆
+  - `test_clone_pending_promise_throws_dataclone_error()`: 待处理 Promise 错误
+  - `test_clone_promise_resolving_object()`: Promise 解析对象克隆
+  - `test_clone_promise_resolving_array()`: Promise 解析数组克隆
+  - `test_clone_promise_rejecting_object()`: Promise 拒绝对象克隆（保留属性）
+
+#### v0.3.316 验证
+- ✅ 已解决 Promise：类型正确，值正确克隆
+- ✅ 已拒绝 Promise：类型正确，原因正确克隆，属性保留
+- ✅ 待处理 Promise：正确抛出 DataCloneError
+- ✅ 嵌套结构：对象中的 Promise 正确处理
+- ✅ 独立引用：克隆的 Promise 与原始对象引用不同
+
+#### v0.3.317 下一步
+- V8 底层 ArrayBuffer transfer 支持（实现真正的零拷贝 detach）
+- Symbol 克隆支持（根据 WHATWG 规范抛出 DataCloneError）
+- BroadcastChannel API 实现
+
+---
+
 #### v0.3.302 下一步
 - V8 底层 ArrayBuffer transfer 支持（实现真正的零拷贝 detach）
 - 性能优化：使用迭代器替代递归减少栈开销
