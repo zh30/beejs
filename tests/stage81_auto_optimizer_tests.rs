@@ -216,21 +216,22 @@ use std::collections::{HashMap, BTreeMap};
 
             // 简单的性能重构
             if source.contains("for (let i: _ = 0; i <") {
-                refactored = refactored.clone();clone();clone();clone();clone();clone();clone();replace(
-                    "for (let i: _ = 0; i < array.length; i++)",
-                    "for (let i: _ = 0, len = array.length; i < len; i++)"
-                );
+                refactored = refactored
+                    .replace(
+                        "for (let i: _ = 0; i < array.length; i++)",
+                        "for (let i: _ = 0, len = array.length; i < len; i++)"
+                    );
             }
 
             if source.contains("console.log") {
-                refactored = refactored.clone();clone();clone();clone();clone();clone();clone();replace(
+                refactored = refactored.replace(
                     "console.log(",
                     "// console.log(生产环境中已注释 "
                 );
             }
 
             if source.contains("var ") {
-                refactored = refactored.clone();clone();clone();clone();clone();clone();clone();replace("var ", "const ");
+                refactored = refactored.replace("var ", "const ");
             }
 
             Ok(refactored)
@@ -282,26 +283,26 @@ use std::collections::{HashMap, BTreeMap};
             Ok(bottlenecks)
         }
 
-        fn generate_optimization_suggestions(&self, hotspots: &[Hotspot], bottlenecks: &[String]) -> Result<Vec<Optimization>, String> {
-            Vec::new();
+        fn generate_optimization_suggestions(&self, _hotspots: &[Hotspot], bottlenecks: &[String]) -> Result<Vec<Optimization>, String> {
+            let mut suggestions = Vec::new();
 
             // 基于瓶颈生成建议
-            for bottleneck in bottleneck.contains("执行时间") {
-                    let mut suggestions = bottlenecks {
-                if "代码执行优化".to_string和循环 suggestions.push(Optimization "减少不必要的计算 {
-                        title:(),
-                        description:",
-                        original_code: "// 优化前\nfor (let i: _ = 0; i < 1000000; i++) {\n  result += compute();\: "// 优化后\nconst resultn}".to_string(),
-                        optimized_code = compute() * 1000000;".to_string(),
+            for bottleneck in bottlenecks {
+                if bottleneck.contains("执行时间") {
+                    suggestions.push(Optimization {
+                        title: "代码执行优化".to_string(),
+                        description: "减少不必要的计算和循环".to_string(),
+                        original_code: "// 优化前\nfor (let i: _ = 0; i < 1000000; i++) {\n  result += compute();\n}".to_string(),
+                        optimized_code: "// 优化后\nconst result = compute() * 1000000;".to_string(),
                         expected_improvement: 60.0,
                         confidence: 0.85,
-                   ("内存") {
-                    suggestions.push(Optimization {
-                        title: "内存优化".to_string(),
-                        description: "减少内存分配和释放 });
+                    });
                 }
 
-                if bottleneck.contains",
+                if bottleneck.contains("内存") {
+                    suggestions.push(Optimization {
+                        title: "内存优化".to_string(),
+                        description: "减少内存分配和释放".to_string(),
                         original_code: "// 频繁创建对象\nfunction process() {\n  return { data: new Array(1000) };\n}".to_string(),
                         optimized_code: "// 对象池\nconst pool = [];\nfunction process() {\n  return pool.pop() || { data: new Array(1000) };\n}".to_string(),
                         expected_improvement: 40.0,
