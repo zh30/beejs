@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.313 (2025-12-31)
+## 当前版本: v0.3.314 (2025-12-31)
 
 ### 项目状态摘要
 
@@ -22,7 +22,7 @@
 - performance, url, form_data, fetch, websocket
 - streams (ReadableStream, WritableStream, TransformStream, TextEncoderStream, TextDecoderStream)
 - CompressionStream (v0.3.295 新增)
-- structuredClone (v0.3.299 新增): DataView, Error 类型, Map/Set, Symbol 等全面支持
+- structuredClone (v0.3.299 新增): DataView, Error 类型, Map/Set, Symbol, BigInt64Array, BigUint64Array 全面支持
 - Blob/File API (v0.3.305 新增)
 - ArrayBuffer Transfer API (v0.3.311 新增): transferToAttached, detachArrayBuffer, transferFromAttached
 - BroadcastChannel (v0.3.312 新增): 跨 tab 通信 API
@@ -32,13 +32,13 @@
 - npm 兼容命令 (install, add, remove, prune)
 - 依赖版本解析
 
-**测试**: ✅ 340+ 测试通过
+**测试**: ✅ 344+ 测试通过
 - cargo test --lib: 253/253 通过
 - performance_api_tests: 16/16 通过
 - web_streams_api_tests: 59/59 通过
 - byob_tests: 5/5 通过
 - compression_stream_tests: 8/8 通过 (v0.3.295)
-- structured_clone_tests: 66/66 通过 (v0.3.313 新增 DataView/Error 支持)
+- structured_clone_tests: 70/70 通过 (v0.3.314 新增 BigInt64Array/BigUint64Array 支持)
 - blob_api_tests: 15/15 通过 (v0.3.305)
 - text_encoding_tests: 13/13 通过 (v0.3.310)
 - array_buffer_transfer_tests: 11/11 通过 (v0.3.311)
@@ -76,6 +76,39 @@
 - `src/web_api/structured_clone.rs`: 增强 DataView 和 Error 处理 (~+15 行)
   - 优化 `isDataView()` 检测逻辑
   - 完善 `getErrorConstructor()` 错误类型识别
+
+---
+
+### v0.3.314 BigInt64Array 和 BigUint64Array 支持（2025-12-31）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.314 新增功能
+
+**BigInt64Array 克隆支持**:
+- 完整支持 BigInt64Array 类型克隆
+- 支持最小值 -9223372036854775808 到最大值 9223372036854775807
+- 使用 `new BigInt64Array(obj)` 进行深拷贝
+
+**BigUint64Array 克隆支持**:
+- 完整支持 BigUint64Array 类型克隆
+- 支持从 0 到 18446744073709551615 的无符号 64 位整数
+- 适用于 AI/ML 工作负载中的大整数张量运算
+
+#### v0.3.314 测试验证
+- ✅ 70/70 structuredClone 测试全部通过
+- ✅ BigInt64Array 正确克隆并保留所有值
+- ✅ BigUint64Array 正确克隆并保留所有值
+- ✅ 嵌套在对象中的 BigInt64Array/BigUint64Array 正确处理
+
+#### v0.3.314 代码变更
+- `src/web_api/structured_clone.rs`: 添加 BigInt64Array 和 BigUint64Array 支持 (~+6 行)
+  - 在 `getTypedArrayConstructor()` 中添加 BigInt64Array 和 BigUint64Array 检测
+
+#### v0.3.314 测试覆盖
+- BigInt64Array 基本克隆测试
+- BigUint64Array 基本克隆测试
+- 嵌套在对象中的 BigInt64Array 测试
+- 空 BigInt64Array 测试
 
 ---
 
