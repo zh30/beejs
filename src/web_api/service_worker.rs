@@ -79,12 +79,18 @@ fn setup_navigator_service_worker(
     let ready_key = v8::String::new(scope, "ready").unwrap();
     service_worker_container.set(scope, ready_key.into(), undefined);
 
-    // Add to navigator
+    // Add to navigator (create navigator if it doesn't exist)
     let navigator_key = v8::String::new(scope, "navigator").unwrap();
-    if let Some(navigator) = global.get(scope, navigator_key.into()).and_then(|v| v.to_object(scope)) {
-        let service_worker_key = v8::String::new(scope, "serviceWorker").unwrap();
-        navigator.set(scope, service_worker_key.into(), service_worker_container.into());
-    }
+    let navigator = if let Some(nav) = global.get(scope, navigator_key.into()).and_then(|v| v.to_object(scope)) {
+        nav
+    } else {
+        // Create navigator object if it doesn't exist
+        let new_navigator = v8::Object::new(scope);
+        global.set(scope, navigator_key.into(), new_navigator.into());
+        new_navigator
+    };
+    let service_worker_key = v8::String::new(scope, "serviceWorker").unwrap();
+    navigator.set(scope, service_worker_key.into(), service_worker_container.into());
 
     eprintln!("✅ [v0.3.324] ServiceWorker API initialized");
     Ok(())
@@ -158,22 +164,7 @@ fn setup_cache_api(
     _context: &v8::Local<v8::Context>,
     global: v8::Local<v8::Object>,
 ) -> Result<()> {
-    // CacheStorage at global level
-    let cache_storage_constructor = v8::FunctionTemplate::new(scope, cache_storage_constructor_callback);
-    let cache_storage_key = v8::String::new(scope, "caches").unwrap();
-    let cache_storage_func = cache_storage_constructor.get_function(scope).unwrap();
-    global.set(scope, cache_storage_key.into(), cache_storage_func.into());
-
-    eprintln!("✅ [v0.3.324] Cache API initialized");
-    Ok(())
-}
-
-/// CacheStorage constructor callback
-fn cache_storage_constructor_callback(
-    scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
-    mut rv: v8::ReturnValue,
-) {
+    // CacheStorage at global level as singleton (not constructor like browsers)
     let cache_storage_obj = v8::Object::new(scope);
 
     // open method
@@ -200,15 +191,32 @@ fn cache_storage_constructor_callback(
     let delete_func = delete_fn.get_function(scope).unwrap();
     cache_storage_obj.set(scope, delete_key.into(), delete_func.into());
 
-    rv.set(cache_storage_obj.into());
+    // Set as global `caches` object (singleton like in browsers)
+    let cache_storage_key = v8::String::new(scope, "caches").unwrap();
+    global.set(scope, cache_storage_key.into(), cache_storage_obj.into());
+
+    eprintln!("✅ [v0.3.324] Cache API initialized");
+    Ok(())
 }
 
-/// CacheStorage.open callback
+/// CacheStorage.open callback - returns a Promise that resolves to a Cache
 fn cache_storage_open_callback(
     scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
     mut rv: v8::ReturnValue,
 ) {
+    // Create Promise resolver
+    let resolver = match v8::PromiseResolver::new(scope) {
+        Some(r) => r,
+        None => {
+            let error = v8::String::new(scope, "Failed to create promise resolver").unwrap();
+            scope.throw_exception(error.into());
+            return;
+        }
+    };
+    let promise = resolver.get_promise(scope);
+    rv.set(promise.into());
+
     // Create Cache object
     let cache_obj = v8::Object::new(scope);
 
@@ -242,7 +250,8 @@ fn cache_storage_open_callback(
     let keys_func = keys_fn.get_function(scope).unwrap();
     cache_obj.set(scope, keys_key.into(), keys_func.into());
 
-    rv.set(cache_obj.into());
+    // Resolve the promise with the Cache object
+    resolver.resolve(scope, cache_obj.into());
 }
 
 /// Cache.addAll callback
