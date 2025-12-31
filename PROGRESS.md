@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.314 (2025-12-31)
+## 当前版本: v0.3.315 (2025-12-31)
 
 ### 项目状态摘要
 
@@ -26,6 +26,7 @@
 - Blob/File API (v0.3.305 新增)
 - ArrayBuffer Transfer API (v0.3.311 新增): transferToAttached, detachArrayBuffer, transferFromAttached
 - BroadcastChannel (v0.3.312 新增): 跨 tab 通信 API
+- MessageChannel (v0.3.315 新增): 基于端口的消息传递 API
 
 **包管理**: ✅ 已完成
 - package.json 解析
@@ -43,6 +44,7 @@
 - text_encoding_tests: 13/13 通过 (v0.3.310)
 - array_buffer_transfer_tests: 11/11 通过 (v0.3.311)
 - broadcast_channel_tests: 8/8 通过 (v0.3.312)
+- message_channel_tests: 14/14 通过 (v0.3.315)
 - 集成测试: 运行正常
 
 **CLI 命令**:
@@ -109,6 +111,55 @@
 - BigUint64Array 基本克隆测试
 - 嵌套在对象中的 BigInt64Array 测试
 - 空 BigInt64Array 测试
+
+---
+
+### v0.3.315 MessageChannel API 实现（2025-12-31）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.315 新增功能
+
+**MessageChannel API**:
+- `new MessageChannel()` 创建两个连接的 MessagePort
+- `port1` 和 `port2` 分别代表通道的两端
+- 支持通过 `postMessage()` 发送结构化克隆消息
+- `start()` 方法启动消息接收
+- `close()` 方法关闭端口
+- 完整消息队列支持（start() 前发送的消息会被缓存）
+
+**MessagePort 事件处理程序**:
+- `onmessage`: 消息到达时调用的处理程序
+- `onmessageerror`: 消息反序列化失败时调用
+
+#### v0.3.315 测试验证
+- ✅ 14/14 MessageChannel 测试全部通过
+- ✅ MessageChannel 构造函数正确创建
+- ✅ port1 和 port2 属性正确暴露
+- ✅ postMessage/start/close 方法可用
+- ✅ onmessage/onmessageerror/closed 属性存在
+- ✅ 基本消息传递功能正常
+- ✅ 端口关闭后阻止进一步消息
+- ✅ 结构化克隆兼容对象传递
+- ✅ MessageEvent 属性正确 (type, origin, data, ports)
+- ✅ start() 前发送的消息在 start() 后正确投递
+
+#### v0.3.315 代码变更
+- `src/web_api/message_channel.rs`: 新文件 (~259 行)
+  - `setup_message_channel_api()`: 设置 MessageChannel 全局构造函数
+  - `setup_message_port_properties()`: 配置 MessagePort 方法和属性
+  - `dispatch_message_event()`: 派发消息事件到 onmessage 处理程序
+- `src/web_api/mod.rs`: 添加模块声明和初始化 (~+3 行)
+- `src/runtime_minimal.rs`: 添加 API 初始化 (~+2 行)
+- `tests/message_channel_tests.rs`: 新测试文件 (~215 行，14 个测试)
+
+#### v0.3.315 测试覆盖
+- MessageChannel 创建和属性测试
+- MessagePort 方法存在性测试
+- 基本消息传递测试
+- 端口关闭行为测试
+- 结构化克隆兼容性测试
+- MessageEvent 属性测试
+- start() 前消息队列测试
 
 ---
 
