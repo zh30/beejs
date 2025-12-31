@@ -21,6 +21,8 @@ pub mod worker; // v0.3.320: Worker API (Web Worker support for parallel executi
 pub mod shared_array_buffer; // v0.3.322: SharedArrayBuffer API (cross-Worker shared memory)
 pub mod service_worker; // v0.3.324: ServiceWorker API (background tasks, push, offline)
 pub mod background_sync; // v0.3.327: Background Sync API (SyncManager, SyncEvent)
+pub mod notification; // v0.3.328: Notification API (system notifications)
+pub mod payment_request; // v0.3.328: Payment Request API (payment processing)
 use anyhow::Result;
 use rusty_v8 as v8;
 // 从各模块导入设置函数
@@ -35,6 +37,8 @@ use events::setup_events_api;
 use fetch::setup_fetch_api;
 use form_data::setup_form_data_api;
 use message_channel::setup_message_channel_api;
+use notification::setup_notification_api;
+use payment_request::setup_payment_request_api;
 use shared_array_buffer::setup_shared_array_buffer_api;
 use service_worker::setup_service_worker_api;
 use worker::setup_worker_api;
@@ -49,6 +53,7 @@ pub fn init_web_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
     context: &v8::Local<v8::Context>,
 ) -> Result<()> {
+    let global = context.global(scope);
     // 按照依赖顺序初始化各个 API
     // 1. 基础 API（无依赖）
     eprintln!("🔧 [STAGE74] Setting up crypto API...");
@@ -124,6 +129,14 @@ pub fn init_web_api(
     eprintln!("🔧 [v0.3.327] Setting up Background Sync API...");
     setup_background_sync_api(scope, context)?;
     eprintln!("✅ [v0.3.327] Background Sync API done");
+    // v0.3.328: Notification API (system notifications)
+    eprintln!("🔧 [v0.3.328] Setting up Notification API...");
+    setup_notification_api(scope, context, global)?;
+    eprintln!("✅ [v0.3.328] Notification API done");
+    // v0.3.328: Payment Request API (payment processing)
+    eprintln!("🔧 [v0.3.328] Setting up Payment Request API...");
+    setup_payment_request_api(scope, context, global)?;
+    eprintln!("✅ [v0.3.328] Payment Request API done");
     // Note: Streams API is initialized separately in runtime_minimal.rs
     // to avoid duplicate initialization
     eprintln!("🎉 [STAGE74/75] All Web APIs initialized (streams via runtime)!");

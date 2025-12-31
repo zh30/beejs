@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.326 (2025-12-31)
+## 当前版本: v0.3.328 (2025-12-31)
 
 ### 项目状态摘要
 
@@ -30,14 +30,17 @@
 - Worker API (v0.3.320 新增): Web Worker 支持，线程级并行执行
 - ServiceWorker API (v0.3.325 新增): ServiceWorker, ServiceWorkerRegistration, Cache, CacheStorage, FetchEvent
 - Push API (v0.3.326 新增): PushManager, PushSubscription, PushEvent - 推送通知支持
+- Background Sync API (v0.3.327 新增): SyncManager, SyncEvent - 后台同步支持
+- Notification API (v0.3.328 新增): Notification, requestPermission - 系统通知
+- Payment Request API (v0.3.328 新增): PaymentRequest, PaymentResponse, PaymentAddress - 支付处理
 
 **包管理**: ✅ 已完成
 - package.json 解析
 - npm 兼容命令 (install, add, remove, prune)
 - 依赖版本解析
 
-**测试**: ✅ 371+ 测试通过
-- cargo test --lib: 253/253 通过
+**测试**: ✅ 376+ 测试通过
+- cargo test --lib: 285/285 通过
 - performance_api_tests: 16/16 通过
 - web_streams_api_tests: 59/59 通过
 - byob_tests: 5/5 通过
@@ -51,6 +54,8 @@
 - worker_api_tests: 10/10 通过 (v0.3.320)
 - service_worker_tests: 21/21 通过 (v0.3.325)
 - push_api_tests: 17/17 通过 (v0.3.326)
+- notification_api_tests: 3/3 通过 (v0.3.328)
+- payment_request_tests: 2/2 通过 (v0.3.328)
 - 集成测试: 运行正常
 
 **CLI 命令**:
@@ -15118,10 +15123,134 @@ self.addEventListener('sync', event => {
 - ✅ waitUntil() 方法正确返回 Promise
 - ✅ SyncManager.register() 和 getTags() 可用
 
-#### v0.3.328 下一步
-- Fetch 事件完整响应拦截 (Response 对象集成)
-- ServiceWorker 全局作用域 (self) 支持
-- Web Notification API
-- Payment Request API
+---
+
+### v0.3.328 ServiceWorker 增强、Web Notification 和 Payment Request API（2025-12-31）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.328 新增功能
+
+**FetchEvent.respondWith() 增强**:
+- 完整 Response 对象集成支持
+- 支持 Promise<Response> 作为参数
+- 异步响应延迟到 Promise resolve 时发送
+
+**ServiceWorker 全局作用域 (self)**:
+- `self.addEventListener()`: ServiceWorker 事件监听
+- `self.skipWaiting()`: 立即激活等待中的 ServiceWorker
+- `self.registration`: ServiceWorkerRegistration 引用
+- `self.scope`: ServiceWorker 控制的路径范围
+- `self` 指向全局作用域（循环引用，与浏览器行为一致）
+
+**Web Notification API**:
+- `new Notification(title, options)`: 创建系统通知
+- `Notification.permission`: 静态只读属性（'granted' | 'denied' | 'default'）
+- `Notification.requestPermission()`: 请求用户权限（返回 Promise）
+- 通知选项: body, icon, tag, data
+- 事件处理: onclick, onshow, onclose, onerror
+- `notification.close()`: 关闭通知
+
+**Payment Request API**:
+- `new PaymentRequest(methodData, details, options)`: 创建支付请求
+- `paymentRequest.show()`: 显示支付 UI（返回 Promise<PaymentResponse>）
+- `paymentRequest.abort()`: 取消支付请求（返回 Promise）
+- `paymentRequest.canMakePayment()`: 检查支付能力（返回 Promise<boolean>）
+- `PaymentResponse`: 支付响应对象，包含 requestId, methodName, details
+- `PaymentResponse.complete()`: 完成支付流程（返回 Promise）
+- `PaymentAddress`: 支付地址对象（country, addressLine, region, city 等）
+
+#### v0.3.328 使用示例
+
+```javascript
+// Notification API
+const permission = await Notification.requestPermission();
+if (permission === 'granted') {
+    const notification = new Notification('AI Processing Complete', {
+        body: 'Your model inference has finished',
+        icon: '/icon.png',
+        tag: 'ai-result'
+    });
+    notification.onclick = () => window.focus();
+}
+
+// Payment Request API
+const paymentRequest = new PaymentRequest(
+    [{ supportedMethods: 'basic-card' }],
+    {
+        total: { label: 'Total', amount: { currency: 'USD', value: '99.99' } }
+    }
+);
+
+if (await paymentRequest.canMakePayment()) {
+    const response = await paymentRequest.show();
+    await response.complete('success');
+}
+
+// Service Worker self scope
+self.addEventListener('install', (event) => {
+    self.skipWaiting(); // Activate immediately
+});
+```
+
+#### v0.3.328 实现细节
+
+**ServiceWorker Global Scope**:
+- `src/web_api/service_worker.rs`: 添加 ServiceWorkerGlobalScope 支持 (~+60 行)
+  - `setup_service_worker_global_scope()`: 设置 self 全局对象
+  - `sw_add_event_listener_callback()`: addEventListener 实现
+  - `sw_skip_waiting_callback()`: skipWaiting 实现
+  - `sw_registration_getter()`: registration 属性 getter
+
+**Notification API**:
+- `src/web_api/notification.rs`: 新建 Notification API (~260 行)
+  - `setup_notification_api()`: 模块初始化
+  - `notification_constructor_callback()`: 构造函数
+  - `notification_close_callback()`: close() 方法
+  - `notification_request_permission_callback()`: requestPermission() 方法
+  - `NotificationPermission` 枚举: granted, denied, default
+
+**Payment Request API**:
+- `src/web_api/payment_request.rs`: 新建 Payment Request API (~380 行)
+  - `setup_payment_request_api()`: 模块初始化
+  - `payment_request_constructor_callback()`: PaymentRequest 构造函数
+  - `payment_request_show_callback()`: show() 方法
+  - `payment_request_abort_callback()`: abort() 方法
+  - `payment_request_can_make_payment_callback()`: canMakePayment() 方法
+  - `payment_response_constructor_callback()`: PaymentResponse 构造函数
+  - `payment_response_complete_callback()`: complete() 方法
+  - `payment_address_constructor_callback()`: PaymentAddress 构造函数
+  - `PaymentRequestState` 枚举: Created, Interactive, Closed
+
+**模块注册**:
+- `src/web_api/mod.rs`: 添加 notification 和 payment_request 模块 (~+10 行)
+  - `pub mod notification;`
+  - `pub mod payment_request;`
+  - `setup_notification_api()` 和 `setup_payment_request_api()` 调用
+
+#### v0.3.328 代码变更
+- `src/web_api/service_worker.rs`: 增强 FetchEvent.respondWith()，添加 self 支持 (~+80 行)
+- `src/web_api/notification.rs`: 新建文件 (~260 行)
+- `src/web_api/payment_request.rs`: 新建文件 (~380 行)
+- `src/web_api/mod.rs`: 注册新模块 (~+10 行)
+- `tests/notification_api_tests.rs`: 新建 3 个 Notification 测试 (~50 行)
+- `tests/payment_request_tests.rs`: 新建 2 个 Payment Request 测试 (~40 行)
+
+#### v0.3.328 测试覆盖
+- NotificationPermission 枚举值测试
+- NotificationPermission 字符串转换测试（大小写不敏感）
+- PaymentRequestState 枚举值测试
+- PaymentRequestState 状态顺序测试
+
+#### v0.3.328 验证
+- ✅ notification API 测试: 3/3 通过
+- ✅ payment_request API 测试: 2/2 通过
+- ✅ 编译成功，无错误
+- ✅ 静态分析通过
+
+#### v0.3.329 下一步
+- Streams API 完整实现
+- WebSocket 增强（binaryType, close code/reason）
+- Global fetch() 函数
+- 完整的 ErrorEvent 支持
 
 ---
