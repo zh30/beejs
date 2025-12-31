@@ -4,8 +4,6 @@
 
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::collections::HashMap;
-use std::time::Instant;
 
 // ServiceWorker state
 #[derive(Debug, Clone, PartialEq)]
@@ -16,32 +14,6 @@ pub enum ServiceWorkerState {
     Activating,
     Activated,
     Redundant,
-}
-
-// ServiceWorker registration info
-struct ServiceWorkerRegistrationInfo {
-    scope: String,
-    script_url: String,
-    update_found_callback: Option<v8::Global<v8::Function>>,
-    state: ServiceWorkerState,
-    active: Option<ServiceWorkerInfo>,
-    installing: Option<ServiceWorkerInfo>,
-    waiting: Option<ServiceWorkerInfo>,
-    created_at: Instant,
-}
-
-// ServiceWorker instance info
-struct ServiceWorkerInfo {
-    script_url: String,
-    state: ServiceWorkerState,
-    post_message_callback: Option<v8::Global<v8::Function>>,
-}
-
-// Cache storage
-struct CacheInfo {
-    name: String,
-    requests: HashMap<String, Vec<u8>>, // URL -> response body
-    created_at: Instant,
 }
 
 /// Setup ServiceWorker API in V8 context
@@ -340,16 +312,5 @@ mod tests {
         assert_eq!(ServiceWorkerState::Parsing as u8, 0);
         assert_eq!(ServiceWorkerState::Installing as u8, 1);
         assert_eq!(ServiceWorkerState::Activated as u8, 4);
-    }
-
-    #[test]
-    fn test_cache_info_creation() {
-        let cache = CacheInfo {
-            name: "test-cache".to_string(),
-            requests: HashMap::new(),
-            created_at: Instant::now(),
-        };
-        assert_eq!(cache.name, "test-cache");
-        assert!(cache.requests.is_empty());
     }
 }
