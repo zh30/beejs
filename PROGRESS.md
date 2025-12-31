@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.320 (2025-12-31)
+## 当前版本: v0.3.325 (2025-12-31)
 
 ### 项目状态摘要
 
@@ -47,6 +47,7 @@
 - broadcast_channel_tests: 8/8 通过 (v0.3.312)
 - message_channel_tests: 14/14 通过 (v0.3.315)
 - worker_api_tests: 10/10 通过 (v0.3.320)
+- service_worker_tests: 21/21 通过 (v0.3.325)
 - 集成测试: 运行正常
 
 **CLI 命令**:
