@@ -14864,3 +14864,76 @@ worker.postMessage({ sab });
 ---
 
 ### v0.3.300 structuredClone 增强 - Date/RegExp/Map/Set 支持（2025-12-30）
+
+---
+
+### v0.3.324 ServiceWorker API 实现（2025-12-31）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.324 新增功能
+
+**ServiceWorkerRegistration API**:
+- `navigator.serviceWorker.register(scriptURL, options)` 注册 ServiceWorker
+- 返回 Promise resolve 到 ServiceWorkerRegistration 对象
+- 支持可选的 scope 参数控制 ServiceWorker 控制范围
+- registration.scope 属性返回注册的作用域
+
+**ServiceWorkerRegistration 属性**:
+- `scope`: ServiceWorker 作用域路径
+- `active`: 当前活动的 ServiceWorker（暂为 null）
+- `installing`: 正在安装的 ServiceWorker（暂为 null）
+- `waiting`: 等待激活的 ServiceWorker（暂为 null）
+
+**Cache/CacheStorage API**:
+- `caches.open(cacheName)`: 打开或创建指定名称的缓存
+- `caches.keys()`: 返回所有缓存名称
+- `caches.has(cacheName)`: 检查指定缓存是否存在
+- `caches.delete(cacheName)`: 删除指定缓存
+
+**Cache API 方法**:
+- `cache.addAll(requests)`: 添加请求数组到缓存
+- `cache.match(request)`: 在缓存中查找匹配的请求
+- `cache.put(request, response)`: 添加请求/响应对到缓存
+- `cache.delete(request)`: 从缓存中删除匹配的请求
+- `cache.keys()`: 返回缓存中所有请求的 URL
+
+#### v0.3.324 使用示例
+```javascript
+// 注册 ServiceWorker
+navigator.serviceWorker.register('/sw.js', { scope: './' })
+  .then(registration => {
+    console.log('ServiceWorker registered:', registration.scope);
+  })
+  .catch(error => {
+    console.error('Registration failed:', error);
+  });
+
+// 使用 Cache API 进行离线缓存
+caches.open('my-cache').then(cache => {
+  cache.addAll(['/', '/index.html', '/styles.css']);
+});
+
+caches.match('/index.html').then(response => {
+  if (response) {
+    console.log('Found in cache:', response);
+  }
+});
+```
+
+#### v0.3.324 代码变更
+- `src/web_api/service_worker.rs`: 新建 ServiceWorker API (~340 行)
+  - `setup_service_worker_api()`: 初始化 ServiceWorker 和 Cache API
+  - `setup_navigator_service_worker()`: 设置 navigator.serviceWorker
+  - `service_worker_register_callback()`: 处理注册回调
+  - `setup_cache_api()`: 设置 Cache/CacheStorage API
+  - `cache_storage_constructor_callback()`: CacheStorage 构造函数
+  - `cache_storage_open_callback()`: 打开缓存，返回 Cache 对象
+- `src/web_api/mod.rs`: 添加模块声明和初始化 (~+10 行)
+
+#### v0.3.324 下一步
+- ServiceWorker 生命周期事件 (install, activate, fetch)
+- Push 通知 API
+- Background Sync API
+- Fetch 事件拦截
+
+---
