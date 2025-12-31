@@ -123,11 +123,6 @@ mod tests {
         assert_eq!(get_shared_buffer_count(), 0);
     }
 
-    #[test]
-    fn test_is_shared_array_buffer_false_for_regular_value() {
-        // This test verifies the function compiles correctly
-        // Full V8 tests require isolate setup
-        let test_value: v8::Local<v8::Value> = v8::null().into();
-        assert!(!is_shared_array_buffer(test_value));
-    }
+    // Note: is_shared_array_buffer tests require V8 isolate setup
+    // See shared_array_buffer_tests.rs for full integration tests
 }

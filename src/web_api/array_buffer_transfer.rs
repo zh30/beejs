@@ -145,8 +145,6 @@ fn detach_array_buffer_callback(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_module_compiles() {
         // Verify the module compiles without errors
