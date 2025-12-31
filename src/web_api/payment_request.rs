@@ -138,8 +138,7 @@ fn payment_request_show_callback(
     // Create a mock PaymentResponse
     let response_obj = v8::Object::new(scope);
 
-    // Store undefined in a local
-    let undefined_val: v8::Local<v8::Value> = v8::undefined(scope).into();
+    // Store null value
     let null_val: v8::Local<v8::Value> = v8::null(scope).into();
 
     // response properties

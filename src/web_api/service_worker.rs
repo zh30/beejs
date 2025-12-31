@@ -128,7 +128,7 @@ fn setup_service_worker_global_scope(
 /// ServiceWorkerGlobalScope.addEventListener callback
 fn sw_add_event_listener_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut rv: v8::ReturnValue,
 ) {
     // Placeholder - in a full implementation, this would register event listeners
@@ -190,6 +190,7 @@ fn setup_service_worker_events(
 }
 
 /// InstallEvent constructor
+#[allow(unused_mut)]
 fn install_event_constructor_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -199,6 +200,7 @@ fn install_event_constructor_callback(
 }
 
 /// ActivateEvent constructor
+#[allow(unused_mut)]
 fn activate_event_constructor_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -303,7 +305,7 @@ fn fetch_event_respond_with_callback(
     mut rv: v8::ReturnValue,
 ) {
     // Get the Response object or Promise that resolves to Response
-    let response_arg = if args.length() > 0 {
+    let _response_arg = if args.length() > 0 {
         args.get(0)
     } else {
         rv.set(v8::undefined(scope).into());
