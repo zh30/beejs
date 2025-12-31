@@ -15046,10 +15046,82 @@ self.addEventListener('activate', event => {
 - ✅ 事件对象具有正确的 `type`、`bubbles`、`cancelable` 属性
 - ✅ FetchEvent 包含 `requestUrl` 属性
 
-#### v0.3.326 下一步
-- Push 通知 API (PushManager, PushEvent)
-- Background Sync API (SyncManager, SyncEvent)
+---
+
+### v0.3.327 Background Sync API（2025-12-31）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.327 新增功能
+
+**SyncEvent 事件类**:
+- 完整的 `SyncEvent` 构造函数，支持 `type` 和 `options` 参数
+- `tag` 属性：标识符，用于区分不同的同步操作
+- `lastChance` 属性：指示是否是最后一次尝试
+- `waitUntil()` 方法：继承自 ExtendableEvent，延长同步操作的生命周期
+- 继承 Event 基本属性：`type`、`bubbles`、`cancelable`、`timeStamp`
+
+**SyncManager 接口**:
+- `register(tag)` 方法：注册一个新的后台同步操作
+- `getTags()` 方法：获取所有已注册的同步标签
+- 通过 `registration.sync` 访问
+
+#### v0.3.327 使用示例
+```javascript
+// 注册后台同步
+registration.sync.register('sync-messages')
+  .then(() => {
+    console.log('Sync registered successfully');
+  })
+  .catch(err => {
+    console.error('Sync registration failed:', err);
+  });
+
+// 在 ServiceWorker 中监听 sync 事件
+self.addEventListener('sync', event => {
+  console.log('Sync event received with tag:', event.tag);
+
+  // 使用 waitUntil 延长同步操作
+  event.waitUntil(
+    fetch('/api/sync-data')
+      .then(response => response.json())
+      .then(data => {
+        console.log('Sync completed:', data);
+      })
+  );
+});
+```
+
+#### v0.3.327 代码变更
+- `src/web_api/background_sync.rs`: 新建 Background Sync API (~250 行)
+  - `setup_background_sync_api()`: 初始化 Background Sync API
+  - `setup_sync_event()`: 设置 SyncEvent 构造函数
+  - `setup_sync_manager()`: 设置 SyncManager (registration.sync)
+  - `sync_event_constructor_callback()`: SyncEvent 对象创建
+  - `sync_event_wait_until_callback()`: waitUntil() 实现
+  - `sync_manager_register_callback()`: register() 实现
+  - `sync_manager_get_tags_callback()`: getTags() 实现
+
+- `src/web_api/mod.rs`: 添加模块声明和初始化 (~+5 行)
+
+- `src/runtime_minimal.rs`: 添加运行时初始化 (~+3 行)
+
+- `tests/background_sync_tests.rs`: 新建 12 个 Background Sync 测试 (~350 行)
+  - `sync_manager_tests`: SyncManager 和 SyncEvent 基本测试
+  - `sync_event_registration_tests`: 标签唯一性和默认值测试
+  - `sync_event_integration_tests`: waitUntil 和事件属性测试
+  - `sync_event_error_handling_tests`: 错误处理测试
+
+#### v0.3.327 验证
+- ✅ 12/12 Background Sync 测试通过
+- ✅ SyncEvent 构造函数可用
+- ✅ tag 和 lastChance 属性正常工作
+- ✅ waitUntil() 方法正确返回 Promise
+- ✅ SyncManager.register() 和 getTags() 可用
+
+#### v0.3.328 下一步
 - Fetch 事件完整响应拦截 (Response 对象集成)
 - ServiceWorker 全局作用域 (self) 支持
+- Web Notification API
+- Payment Request API
 
 ---

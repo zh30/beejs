@@ -20,10 +20,12 @@ pub mod message_channel; // v0.3.315: MessageChannel API (port-based communicati
 pub mod worker; // v0.3.320: Worker API (Web Worker support for parallel execution)
 pub mod shared_array_buffer; // v0.3.322: SharedArrayBuffer API (cross-Worker shared memory)
 pub mod service_worker; // v0.3.324: ServiceWorker API (background tasks, push, offline)
+pub mod background_sync; // v0.3.327: Background Sync API (SyncManager, SyncEvent)
 use anyhow::Result;
 use rusty_v8 as v8;
 // 从各模块导入设置函数
 use abort::setup_abort_api;
+use background_sync::setup_background_sync_api;
 use blob::setup_blob_api;
 use broadcast_channel::setup_broadcast_channel_api;
 use compression::setup_compression_api;
@@ -118,6 +120,10 @@ pub fn init_web_api(
     eprintln!("🔧 [v0.3.324] Setting up ServiceWorker API...");
     setup_service_worker_api(scope, context)?;
     eprintln!("✅ [v0.3.324] ServiceWorker API done");
+    // v0.3.327: Background Sync API (SyncManager, SyncEvent)
+    eprintln!("🔧 [v0.3.327] Setting up Background Sync API...");
+    setup_background_sync_api(scope, context)?;
+    eprintln!("✅ [v0.3.327] Background Sync API done");
     // Note: Streams API is initialized separately in runtime_minimal.rs
     // to avoid duplicate initialization
     eprintln!("🎉 [STAGE74/75] All Web APIs initialized (streams via runtime)!");

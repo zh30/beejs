@@ -3038,6 +3038,9 @@ impl MinimalRuntime {
             use crate::web_api::events::setup_events_api as setup_web_events_api;
             setup_web_events_api(scope, &context)?;
             setup_service_worker_api(scope, &context)?; // v0.3.324: ServiceWorker API (background tasks, push notifications, offline caching)
+            // v0.3.327: Background Sync API (SyncManager, SyncEvent)
+            use crate::web_api::background_sync::setup_background_sync_api;
+            setup_background_sync_api(scope, &context)?;
             crate::nodejs_core::readline::setup_readline_api(scope, &context)?; // v0.3.277: Readline API
 
             // v0.3.291: Initialize AbortController API (needed for pipeTo signal option)
