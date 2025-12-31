@@ -3034,6 +3034,9 @@ impl MinimalRuntime {
             setup_message_channel_api(scope, &context)?; // v0.3.315: MessageChannel API (port-based communication)
             setup_worker_api(scope, &context)?; // v0.3.320: Worker API (Web Worker support for parallel execution)
             setup_shared_array_buffer_api(scope, &context)?; // v0.3.322: SharedArrayBuffer API (cross-Worker shared memory)
+            // v0.3.326: Setup web Event API (Event, ExtendableEvent) before ServiceWorker
+            use crate::web_api::events::setup_events_api as setup_web_events_api;
+            setup_web_events_api(scope, &context)?;
             setup_service_worker_api(scope, &context)?; // v0.3.324: ServiceWorker API (background tasks, push notifications, offline caching)
             crate::nodejs_core::readline::setup_readline_api(scope, &context)?; // v0.3.277: Readline API
 
