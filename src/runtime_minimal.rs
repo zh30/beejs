@@ -12019,6 +12019,24 @@ impl MinimalRuntime {
             }
         }).ok_or_else(|| anyhow::anyhow!("Failed to create require function"))?;
 
+        // v0.3.329: Add resolve method to require function for CommonJS compatibility
+        let resolve_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let specifier = args.get(0);
+                if let Some(s) = specifier.to_string(scope) {
+                    let specifier_str = s.to_rust_string_lossy(scope);
+                    // Basic path resolution - just return the specifier for now
+                    let resolved_str = v8::String::new(scope, &specifier_str).unwrap();
+                    retval.set(resolved_str.into());
+                    return;
+                }
+            }
+            let empty_str = v8::String::new(scope, "").unwrap();
+            retval.set(empty_str.into());
+        }).unwrap();
+        let resolve_key = v8::String::new(scope, "resolve").unwrap().into();
+        require_fn.set(scope, resolve_key, resolve_fn.into());
+
         // Set global objects
         let require_key = v8::String::new(scope, "require").unwrap().into();
         global.set(scope, require_key, require_fn.into());
@@ -12040,6 +12058,49 @@ impl MinimalRuntime {
         let filename_val = v8::String::new(scope, "/workspace/script.js").unwrap().into();
         let filename_key = v8::String::new(scope, "__filename").unwrap().into();
         global.set(scope, filename_key, filename_val);
+
+        // v0.3.329: Add module.children array for tracking loaded sub-modules
+        let children_key = v8::String::new(scope, "children").unwrap().into();
+        let children_array = v8::Array::new(scope, 0);
+        module_obj.set(scope, children_key, children_array.into());
+
+        // v0.3.329: Add module.require for CommonJS compatibility
+        let module_require_key = v8::String::new(scope, "require").unwrap().into();
+        module_obj.set(scope, module_require_key, require_fn.into());
+
+        // v0.3.329: Set up import.meta object with url property
+        let import_meta_key = v8::String::new(scope, "import").unwrap().into();
+        let import_meta_obj = v8::Object::new(scope);
+
+        // Add import.meta.url
+        let url_key = v8::String::new(scope, "url").unwrap().into();
+        let url_val = v8::String::new(scope, "file:///workspace/script.js").unwrap().into();
+        import_meta_obj.set(scope, url_key, url_val);
+
+        // Add import.meta.resolve (basic implementation)
+        let resolve_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let specifier = args.get(0);
+                if let Some(s) = specifier.to_string(scope) {
+                    let specifier_str = s.to_rust_string_lossy(scope);
+                    // Basic path resolution - just return the specifier as-is for now
+                    let resolved = if specifier_str.starts_with('.') {
+                        specifier_str
+                    } else {
+                        format!("/node_modules/{}", specifier_str)
+                    };
+                    let resolved_str = v8::String::new(scope, &resolved).unwrap();
+                    retval.set(resolved_str.into());
+                    return;
+                }
+            }
+            let empty_str = v8::String::new(scope, "").unwrap();
+            retval.set(empty_str.into());
+        }).unwrap();
+        let resolve_key = v8::String::new(scope, "resolve").unwrap().into();
+        import_meta_obj.set(scope, resolve_key, resolve_fn.into());
+
+        global.set(scope, import_meta_key, import_meta_obj.into());
 
         Ok(())
     }
