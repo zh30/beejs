@@ -19,6 +19,7 @@ pub mod broadcast_channel; // v0.3.312: BroadcastChannel API (cross-tab communic
 pub mod message_channel; // v0.3.315: MessageChannel API (port-based communication)
 pub mod worker; // v0.3.320: Worker API (Web Worker support for parallel execution)
 pub mod shared_array_buffer; // v0.3.322: SharedArrayBuffer API (cross-Worker shared memory)
+pub mod service_worker; // v0.3.324: ServiceWorker API (background tasks, push, offline)
 use anyhow::Result;
 use rusty_v8 as v8;
 // 从各模块导入设置函数
@@ -33,6 +34,7 @@ use fetch::setup_fetch_api;
 use form_data::setup_form_data_api;
 use message_channel::setup_message_channel_api;
 use shared_array_buffer::setup_shared_array_buffer_api;
+use service_worker::setup_service_worker_api;
 use worker::setup_worker_api;
 use performance::setup_performance_api;
 use structured_clone::setup_structured_clone_api;
@@ -112,6 +114,10 @@ pub fn init_web_api(
     eprintln!("🔧 [v0.3.322] Setting up SharedArrayBuffer API...");
     setup_shared_array_buffer_api(scope, context)?;
     eprintln!("✅ [v0.3.322] SharedArrayBuffer API done");
+    // v0.3.324: ServiceWorker API (background tasks, push notifications, offline caching)
+    eprintln!("🔧 [v0.3.324] Setting up ServiceWorker API...");
+    setup_service_worker_api(scope, context)?;
+    eprintln!("✅ [v0.3.324] ServiceWorker API done");
     // Note: Streams API is initialized separately in runtime_minimal.rs
     // to avoid duplicate initialization
     eprintln!("🎉 [STAGE74/75] All Web APIs initialized (streams via runtime)!");
