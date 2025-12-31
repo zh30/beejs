@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.315 (2025-12-31)
+## 当前版本: v0.3.320 (2025-12-31)
 
 ### 项目状态摘要
 
@@ -27,13 +27,14 @@
 - ArrayBuffer Transfer API (v0.3.311 新增): transferToAttached, detachArrayBuffer, transferFromAttached
 - BroadcastChannel (v0.3.312 新增): 跨 tab 通信 API
 - MessageChannel (v0.3.315 新增): 基于端口的消息传递 API
+- Worker API (v0.3.320 新增): Web Worker 支持，线程级并行执行
 
 **包管理**: ✅ 已完成
 - package.json 解析
 - npm 兼容命令 (install, add, remove, prune)
 - 依赖版本解析
 
-**测试**: ✅ 344+ 测试通过
+**测试**: ✅ 354+ 测试通过
 - cargo test --lib: 253/253 通过
 - performance_api_tests: 16/16 通过
 - web_streams_api_tests: 59/59 通过
@@ -45,6 +46,7 @@
 - array_buffer_transfer_tests: 11/11 通过 (v0.3.311)
 - broadcast_channel_tests: 8/8 通过 (v0.3.312)
 - message_channel_tests: 14/14 通过 (v0.3.315)
+- worker_api_tests: 10/10 通过 (v0.3.320)
 - 集成测试: 运行正常
 
 **CLI 命令**:

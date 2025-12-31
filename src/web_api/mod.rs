@@ -17,6 +17,7 @@ pub mod structured_clone; // v0.3.299: structuredClone global function
 pub mod array_buffer_transfer; // v0.3.311: ArrayBuffer transfer (zero-copy detach)
 pub mod broadcast_channel; // v0.3.312: BroadcastChannel API (cross-tab communication)
 pub mod message_channel; // v0.3.315: MessageChannel API (port-based communication)
+pub mod worker; // v0.3.320: Worker API (Web Worker support for parallel execution)
 use anyhow::Result;
 use rusty_v8 as v8;
 // 从各模块导入设置函数
@@ -30,6 +31,7 @@ use events::setup_events_api;
 use fetch::setup_fetch_api;
 use form_data::setup_form_data_api;
 use message_channel::setup_message_channel_api;
+use worker::setup_worker_api;
 use performance::setup_performance_api;
 use structured_clone::setup_structured_clone_api;
 use array_buffer_transfer::setup_array_buffer_transfer_api;
@@ -100,6 +102,10 @@ pub fn init_web_api(
     eprintln!("🔧 [v0.3.315] Setting up MessageChannel API...");
     setup_message_channel_api(scope, context)?;
     eprintln!("✅ [v0.3.315] MessageChannel API done");
+    // v0.3.320: Worker API (Web Worker support for parallel execution)
+    eprintln!("🔧 [v0.3.320] Setting up Worker API...");
+    setup_worker_api(scope, context)?;
+    eprintln!("✅ [v0.3.320] Worker API done");
     // Note: Streams API is initialized separately in runtime_minimal.rs
     // to avoid duplicate initialization
     eprintln!("🎉 [STAGE74/75] All Web APIs initialized (streams via runtime)!");
