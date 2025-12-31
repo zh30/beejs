@@ -59,6 +59,9 @@ fn setup_internal_clone_func(
                     if (obj instanceof Float32Array) return Float32Array;
                     if (obj instanceof Float64Array) return Float64Array;
                     if (obj instanceof Uint8ClampedArray) return Uint8ClampedArray;
+                    // v0.3.314: Add BigInt64Array and BigUint64Array support
+                    if (obj instanceof BigInt64Array) return BigInt64Array;
+                    if (obj instanceof BigUint64Array) return BigUint64Array;
                     return null;
                 }
 

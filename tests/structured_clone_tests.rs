@@ -1521,4 +1521,105 @@ mod structured_clone_tests {
         assert!(stdout.contains("float32array length: true"), "Expected Float32Array length preserved. Got: {}", stdout);
         assert!(stdout.contains("float32array pi: true"), "Expected Float32Array PI preserved. Got: {}", stdout);
     }
+
+    /// Test 67: structuredClone with BigInt64Array (v0.3.314)
+    #[test]
+    fn test_clone_bigint64array() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const arr = new BigInt64Array(3);
+                arr[0] = BigInt('-9223372036854775808');
+                arr[1] = BigInt('0');
+                arr[2] = BigInt('9223372036854775807');
+                const original = arr;
+                const cloned = structuredClone(original);
+                console.log('bigint64array cloned:', cloned instanceof BigInt64Array);
+                console.log('bigint64array length:', cloned.length === 3);
+                console.log('bigint64array min:', cloned[0] === BigInt('-9223372036854775808'));
+                console.log('bigint64array max:', cloned[2] === BigInt('9223372036854775807'));
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("bigint64array cloned: true"), "Expected BigInt64Array to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("bigint64array length: true"), "Expected BigInt64Array length preserved. Got: {}", stdout);
+        assert!(stdout.contains("bigint64array min: true"), "Expected BigInt64Array min value preserved. Got: {}", stdout);
+        assert!(stdout.contains("bigint64array max: true"), "Expected BigInt64Array max value preserved. Got: {}", stdout);
+    }
+
+    /// Test 68: structuredClone with BigUint64Array (v0.3.314)
+    #[test]
+    fn test_clone_biguint64array() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const arr = new BigUint64Array(3);
+                arr[0] = BigInt('0');
+                arr[1] = BigInt('100');
+                arr[2] = BigInt('18446744073709551615');
+                const original = arr;
+                const cloned = structuredClone(original);
+                console.log('biguint64array cloned:', cloned instanceof BigUint64Array);
+                console.log('biguint64array length:', cloned.length === 3);
+                console.log('biguint64array zero:', cloned[0] === BigInt('0'));
+                console.log('biguint64array max:', cloned[2] === BigInt('18446744073709551615'));
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("biguint64array cloned: true"), "Expected BigUint64Array to be cloned. Got: {}", stdout);
+        assert!(stdout.contains("biguint64array length: true"), "Expected BigUint64Array length preserved. Got: {}", stdout);
+        assert!(stdout.contains("biguint64array zero: true"), "Expected BigUint64Array zero value preserved. Got: {}", stdout);
+        assert!(stdout.contains("biguint64array max: true"), "Expected BigUint64Array max value preserved. Got: {}", stdout);
+    }
+
+    /// Test 69: structuredClone with BigInt64Array in object (v0.3.314)
+    #[test]
+    fn test_clone_bigint64array_in_object() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const arr = new BigInt64Array(3);
+                arr[0] = BigInt('1');
+                arr[1] = BigInt('2');
+                arr[2] = BigInt('3');
+                const original = {
+                    data: arr,
+                    count: 3
+                };
+                const cloned = structuredClone(original);
+                console.log('obj bigint64array type:', cloned.data instanceof BigInt64Array);
+                console.log('obj bigint64array length:', cloned.data.length === 3);
+                console.log('obj bigint64array values:', cloned.data[0] === BigInt('1') && cloned.data[1] === BigInt('2') && cloned.data[2] === BigInt('3'));
+                console.log('obj count preserved:', cloned.count === 3);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("obj bigint64array type: true"), "Expected BigInt64Array type preserved in object. Got: {}", stdout);
+        assert!(stdout.contains("obj bigint64array length: true"), "Expected BigInt64Array length preserved in object. Got: {}", stdout);
+        assert!(stdout.contains("obj bigint64array values: true"), "Expected BigInt64Array values preserved in object. Got: {}", stdout);
+        assert!(stdout.contains("obj count preserved: true"), "Expected count preserved in object. Got: {}", stdout);
+    }
+
+    /// Test 70: structuredClone with empty BigInt64Array (v0.3.314)
+    #[test]
+    fn test_clone_empty_bigint64array() {
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                const original = new BigInt64Array(0);
+                const cloned = structuredClone(original);
+                console.log('empty bigint64array type:', cloned instanceof BigInt64Array);
+                console.log('empty bigint64array length:', cloned.length === 0);
+                console.log('empty bigint64array byteLength:', cloned.byteLength === 0);
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("empty bigint64array type: true"), "Expected empty BigInt64Array type preserved. Got: {}", stdout);
+        assert!(stdout.contains("empty bigint64array length: true"), "Expected empty BigInt64Array length preserved. Got: {}", stdout);
+        assert!(stdout.contains("empty bigint64array byteLength: true"), "Expected empty BigInt64Array byteLength preserved. Got: {}", stdout);
+    }
 }
