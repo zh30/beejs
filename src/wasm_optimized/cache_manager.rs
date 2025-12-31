@@ -261,6 +261,14 @@ impl WasmCacheManager {
         let total_size: u64 = cache.iter().map(|(_, e)| e.size_bytes).sum();
         total_size + entry.size_bytes <= self.config.max_memory_mb * 1024 * 1024
     }
+
+    /// 查找访问次数最少的条目 (用于 LFU 淘汰)
+    fn find_lfu_entry(cache: &LruCache<String, CacheEntry>) -> Option<(String, &CacheEntry)> {
+        cache.iter()
+            .min_by_key(|(_, entry)| entry.access_count)
+            .map(|(name, entry)| (name.clone(), entry))
+    }
+
     /// 在需要时逐出
     async fn evict_if_needed(&self, cache: &mut LruCache<String, CacheEntry>) -> Result<()> {
         match &self.config.strategy {
@@ -268,7 +276,14 @@ impl WasmCacheManager {
                 // LRU 会自动处理
             }
             CacheStrategy::LFU => {
-                // TODO: 实现 LFU 策略
+                // LFU: 淘汰访问次数最少的条目
+                if let Some((lfu_key, _)) = Self::find_lfu_entry(cache) {
+                    if let Some(evicted) = cache.pop(&lfu_key) {
+                        let mut stats = self.statistics.write().await;
+                        stats.evictions += 1;
+                        info!("🗑️ LFU 淘汰条目: {} (访问次数: {})", lfu_key, evicted.access_count);
+                    }
+                }
             }
             CacheStrategy::TTL => {
                 // 清理过期条目
@@ -276,8 +291,24 @@ impl WasmCacheManager {
             }
             CacheStrategy::Adaptive => {
                 // 自适应策略：根据访问模式调整
-                let _patterns: _ = self.access_patterns.read().await;
-                // TODO: 实现自适应逐出策略
+                let patterns = self.access_patterns.read().await;
+                // 基于访问频率和间隔的自适应淘汰
+                if let Some((lfu_key, _)) = Self::find_lfu_entry(cache) {
+                    // 对于访问频率低且间隔长的条目优先淘汰
+                    let should_evict = patterns.get(&lfu_key)
+                        .map(|p| p.access_count < 3 && p.avg_interval.as_secs() > 300)
+                        .unwrap_or(false);
+
+                    if should_evict {
+                        if let Some(evicted) = cache.pop(&lfu_key) {
+                            let mut stats = self.statistics.write().await;
+                            stats.evictions += 1;
+                            info!("🧠 自适应淘汰: {} (访问次数: {}, 间隔: {:?})",
+                                  lfu_key, evicted.access_count,
+                                  patterns.get(&lfu_key).map(|p| p.avg_interval).unwrap_or_default());
+                        }
+                    }
+                }
             }
         }
         Ok(())
