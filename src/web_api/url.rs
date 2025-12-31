@@ -47,11 +47,11 @@ impl Url {
                 };
                 let (hostname, port) = if let Some(port_pos) = host_part.find(':') {
                     let (h, p) = host_part.split_at(port_pos);
-                    (h.to_string(), p.to_string())
+                    (h.to_string(), p[1..].to_string()) // Skip the ':' prefix
                 } else {
                     (host_part.clone(), "".to_string())
                 };
-                let origin: _ = format!("{}://{} protocol", protocol, host_part);
+                let origin: _ = format!("{}://{}", protocol, host_part);
                 (
                     url_str.to_string(),
                     protocol,
@@ -116,7 +116,7 @@ impl UrlSearchParams {
             }
             let (key, value) = if let Some(eq_pos) = pair.find('=') {
                 let (k, v) = pair.split_at(eq_pos);
-                (k.to_string(), v.to_string())
+                (k.to_string(), v[1..].to_string()) // Skip the '=' prefix
             } else {
                 (pair.to_string(), "".to_string())
             };
