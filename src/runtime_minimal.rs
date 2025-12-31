@@ -38,6 +38,8 @@ use crate::web_api::structured_clone::setup_structured_clone_api;
 use crate::web_api::array_buffer_transfer::setup_array_buffer_transfer_api;
 // v0.3.312: Import BroadcastChannel API
 use crate::web_api::broadcast_channel::setup_broadcast_channel_api;
+// v0.3.315: Import MessageChannel API
+use crate::web_api::message_channel::setup_message_channel_api;
 
 // Event listener storage using thread_local (v0.3.46)
 // Note: rustdoc does not generate documentation for macro invocations
@@ -3023,6 +3025,7 @@ impl MinimalRuntime {
             setup_structured_clone_api(scope, &context)?; // v0.3.299: structuredClone global function
             setup_array_buffer_transfer_api(scope, &context)?; // v0.3.311: ArrayBuffer transfer API
             setup_broadcast_channel_api(scope, &context)?; // v0.3.312: BroadcastChannel API (cross-tab communication)
+            setup_message_channel_api(scope, &context)?; // v0.3.315: MessageChannel API (port-based communication)
             crate::nodejs_core::readline::setup_readline_api(scope, &context)?; // v0.3.277: Readline API
 
             // v0.3.291: Initialize AbortController API (needed for pipeTo signal option)
