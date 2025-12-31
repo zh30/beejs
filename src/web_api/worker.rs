@@ -12,6 +12,32 @@ use once_cell::sync::Lazy;
 static WORKER_REGISTRY: Lazy<Arc<Mutex<HashMap<u32, WorkerStateInfo>>>> =
     Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
 
+/// Get worker information for debugging/monitoring
+/// Uses fields from WorkerStateInfo that were previously unused
+pub fn get_worker_info(worker_id: u32) -> Option<WorkerInfoResponse> {
+    let registry = WORKER_REGISTRY.lock().unwrap();
+    registry.get(&worker_id).map(|info| WorkerInfoResponse {
+        worker_id: info.worker_id,
+        script_url: info.script_url.clone(),
+        is_terminated: info.is_terminated,
+        uptime_seconds: info.created_at.elapsed().as_secs_f64(),
+    })
+}
+
+/// Get count of active workers
+pub fn get_active_worker_count() -> usize {
+    let registry = WORKER_REGISTRY.lock().unwrap();
+    registry.values().filter(|info| !info.is_terminated).count()
+}
+
+#[derive(Debug)]
+pub struct WorkerInfoResponse {
+    pub worker_id: u32,
+    pub script_url: String,
+    pub is_terminated: bool,
+    pub uptime_seconds: f64,
+}
+
 struct WorkerStateInfo {
     worker_id: u32,
     script_url: String,

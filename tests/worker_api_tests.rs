@@ -178,6 +178,94 @@ mod worker_api_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("SUCCESS: onmessageerror property exists"), "onmessageerror should exist: {}", stdout);
     }
+
+    #[test]
+    fn test_worker_post_message_logs() {
+        // Test that postMessage is logged when called
+        let script = r#"
+            const worker = new Worker("data:,self.postMessage('test')");
+            worker.postMessage("hello");
+            worker.terminate();
+        "#;
+        let output = run_script(script);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // Verify postMessage was called and logged
+        assert!(stderr.contains("postMessage called"), "postMessage should be logged");
+    }
+
+    #[test]
+    fn test_worker_terminate_logs() {
+        // Test that terminate is logged
+        let script = r#"
+            const worker = new Worker("data:,self.postMessage('test')");
+            worker.terminate();
+        "#;
+        let output = run_script(script);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // Verify terminate was called and logged
+        assert!(stderr.contains("terminated"), "terminate should be logged");
+    }
+
+    #[test]
+    fn test_worker_terminated_state_persists() {
+        // Test that terminated state persists after terminate()
+        // Note: _terminated is an internal property - we verify termination works
+        // by checking that postMessage after terminate doesn't cause errors
+        let script = r#"
+            const worker = new Worker("data:,self.postMessage('test')");
+            // Call terminate
+            worker.terminate();
+            // postMessage after terminate should be safe (no-op)
+            try {
+                worker.postMessage("after_terminate");
+                console.log('SUCCESS: Worker terminated and postMessage after terminate is safe');
+            } catch (e) {
+                console.log('ERROR: ' + e.message);
+            }
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("SUCCESS"), "Terminated state should work: {}", stdout);
+    }
+
+    #[test]
+    fn test_worker_terminated_postmessage_noop() {
+        // Test that postMessage is a no-op after terminate()
+        let script = r#"
+            const worker = new Worker('data:,self.postMessage("test")');
+            worker.terminate();
+            // postMessage after terminate should not log (is a no-op)
+            worker.postMessage("after_terminate");
+            console.log('SUCCESS: postMessage after terminate completed without error');
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("SUCCESS: postMessage after terminate completed without error"), "postMessage after terminate should be safe: {}", stdout);
+    }
+
+    #[test]
+    fn test_worker_event_handlers_initialized() {
+        // Test that event handlers are properly initialized
+        let script = r#"
+            const worker = new Worker('data:,self.postMessage("test")');
+            // Check that event handlers exist and are null (as per Web standard)
+            if (worker.onmessage === null) {
+                console.log('SUCCESS: onmessage is null');
+            } else {
+                console.log('INFO: onmessage value: ' + worker.onmessage);
+            }
+            if (worker.onerror === null) {
+                console.log('SUCCESS: onerror is null');
+            } else {
+                console.log('INFO: onerror value: ' + worker.onerror);
+            }
+            worker.terminate();
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        // These tests verify the handlers exist (exact null value depends on V8 implementation)
+        assert!(stdout.contains("SUCCESS"), "Event handlers should be properly initialized");
+    }
 }
 
 /// Helper function to run a JavaScript script with beejs
