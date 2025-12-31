@@ -1,19 +1,54 @@
 // ServiceWorker API implementation for Web standard
 // v0.3.324: ServiceWorker support for background tasks, push notifications, and offline caching
+// v0.3.325: ServiceWorker lifecycle events (install, activate, fetch)
 // Provides ServiceWorkerRegistration, ServiceWorker, Cache, and CacheStorage APIs
 
 use anyhow::Result;
 use rusty_v8 as v8;
+use std::sync::{Arc, Mutex};
 
 // ServiceWorker state
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ServiceWorkerState {
-    Parsing,
-    Installing,
-    Installed,
-    Activating,
-    Activated,
-    Redundant,
+    Parsing,      // 0: Script is being parsed
+    Installing,   // 1: Script is being installed
+    Installed,    // 2: Installation completed, waiting for activation
+    Activating,   // 3: Service worker is being activated
+    Activated,    // 4: Service worker is active and can handle events
+    Redundant,    // 5: Service worker has been replaced
+}
+
+impl ServiceWorkerState {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ServiceWorkerState::Parsing => "parsing",
+            ServiceWorkerState::Installing => "installing",
+            ServiceWorkerState::Installed => "installed",
+            ServiceWorkerState::Activating => "activating",
+            ServiceWorkerState::Activated => "activated",
+            ServiceWorkerState::Redundant => "redundant",
+        }
+    }
+}
+
+/// ServiceWorker registration info
+#[derive(Debug, Clone)]
+pub struct ServiceWorkerRegistrationInfo {
+    pub scope: String,
+    pub script_url: String,
+    pub state: ServiceWorkerState,
+    pub listeners: Arc<Mutex<Vec<(String, v8::Global<v8::Function>)>>>,
+}
+
+impl ServiceWorkerRegistrationInfo {
+    pub fn new(scope: String, script_url: String) -> Self {
+        Self {
+            scope,
+            script_url,
+            state: ServiceWorkerState::Parsing,
+            listeners: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
 }
 
 /// Setup ServiceWorker API in V8 context
@@ -23,6 +58,9 @@ pub fn setup_service_worker_api(
 ) -> Result<()> {
     let global = context.global(scope);
 
+    // Setup Event classes (Event, ExtendableEvent) for lifecycle events
+    setup_service_worker_events(scope, context)?;
+
     // Setup navigator.serviceWorker
     setup_navigator_service_worker(scope, context, global)?;
 
@@ -30,6 +68,155 @@ pub fn setup_service_worker_api(
     setup_cache_api(scope, context, global)?;
 
     Ok(())
+}
+
+/// Setup ServiceWorker lifecycle event classes
+fn setup_service_worker_events(
+    scope: &mut v8::ContextScope<v8::HandleScope>,
+    context: &v8::Local<v8::Context>,
+) -> Result<()> {
+    let global = context.global(scope);
+
+    // InstallEvent constructor
+    let install_event_fn = v8::FunctionTemplate::new(scope, install_event_constructor_callback);
+    let install_event_constructor = install_event_fn.get_function(scope).unwrap();
+
+    // ActivateEvent constructor
+    let activate_event_fn = v8::FunctionTemplate::new(scope, activate_event_constructor_callback);
+    let activate_event_constructor = activate_event_fn.get_function(scope).unwrap();
+
+    // FetchEvent constructor
+    let fetch_event_fn = v8::FunctionTemplate::new(scope, fetch_event_constructor_callback);
+    let fetch_event_constructor = fetch_event_fn.get_function(scope).unwrap();
+
+    // Register constructors globally
+    let install_event_key = v8::String::new(scope, "InstallEvent").unwrap();
+    global.set(scope, install_event_key.into(), install_event_constructor.into());
+
+    let activate_event_key = v8::String::new(scope, "ActivateEvent").unwrap();
+    global.set(scope, activate_event_key.into(), activate_event_constructor.into());
+
+    let fetch_event_key = v8::String::new(scope, "FetchEvent").unwrap();
+    global.set(scope, fetch_event_key.into(), fetch_event_constructor.into());
+
+    eprintln!("✅ [v0.3.325] ServiceWorker lifecycle events initialized");
+    Ok(())
+}
+
+/// InstallEvent constructor
+fn install_event_constructor_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut rv: v8::ReturnValue,
+) {
+    create_service_worker_event(scope, args, "install", rv);
+}
+
+/// ActivateEvent constructor
+fn activate_event_constructor_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut rv: v8::ReturnValue,
+) {
+    create_service_worker_event(scope, args, "activate", rv);
+}
+
+/// FetchEvent constructor
+fn fetch_event_constructor_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut rv: v8::ReturnValue,
+) {
+    let event_obj = v8::Object::new(scope);
+
+    // Get request URL from arguments
+    let request_url = if args.length() > 0 {
+        args.get(0).to_string(scope).unwrap_or_else(|| v8::String::new(scope, "").unwrap())
+            .to_rust_string_lossy(scope)
+    } else {
+        "".to_string()
+    };
+
+    // Store internal properties - extract values first to avoid scope borrow issues
+    let type_key = v8::String::new(scope, "_type").unwrap();
+    let type_val = v8::String::new(scope, "fetch").unwrap();
+    event_obj.set(scope, type_key.into(), type_val.into());
+
+    let type_prop_key = v8::String::new(scope, "type").unwrap();
+    event_obj.set(scope, type_prop_key.into(), type_val.into());
+
+    let request_url_val = v8::String::new(scope, &request_url).unwrap();
+    let request_url_key = v8::String::new(scope, "requestUrl").unwrap();
+    event_obj.set(scope, request_url_key.into(), request_url_val.into());
+
+    let bubbles_false = v8::Boolean::new(scope, false);
+    let bubbles_key = v8::String::new(scope, "bubbles").unwrap();
+    event_obj.set(scope, bubbles_key.into(), bubbles_false.into());
+
+    let cancelable_true = v8::Boolean::new(scope, true);
+    let cancelable_key = v8::String::new(scope, "cancelable").unwrap();
+    event_obj.set(scope, cancelable_key.into(), cancelable_true.into());
+
+    rv.set(event_obj.into());
+}
+
+/// Common helper to create service worker events
+fn create_service_worker_event(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    event_type: &str,
+    mut rv: v8::ReturnValue,
+) {
+    let event_obj = v8::Object::new(scope);
+
+    // Get event type from arguments (usually same as event name)
+    let event_type_str = if args.length() > 0 {
+        args.get(0).to_string(scope).unwrap_or_else(|| v8::String::new(scope, event_type).unwrap())
+            .to_rust_string_lossy(scope)
+    } else {
+        event_type.to_string()
+    };
+
+    // Store internal properties - extract values first to avoid scope borrow issues
+    let type_key = v8::String::new(scope, "_type").unwrap();
+    let type_val = v8::String::new(scope, &event_type_str).unwrap();
+    event_obj.set(scope, type_key.into(), type_val.into());
+
+    let type_prop_key = v8::String::new(scope, "type").unwrap();
+    event_obj.set(scope, type_prop_key.into(), type_val.into());
+
+    let bubbles_false = v8::Boolean::new(scope, false);
+    let bubbles_key = v8::String::new(scope, "bubbles").unwrap();
+    event_obj.set(scope, bubbles_key.into(), bubbles_false.into());
+
+    let cancelable_true = v8::Boolean::new(scope, true);
+    let cancelable_key = v8::String::new(scope, "cancelable").unwrap();
+    event_obj.set(scope, cancelable_key.into(), cancelable_true.into());
+
+    rv.set(event_obj.into());
+}
+
+/// ExtendableEvent.waitUntil() callback (shared by install/activate)
+fn extendable_event_wait_until_callback(
+    scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    mut rv: v8::ReturnValue,
+) {
+    // waitUntil() extends the event lifetime until the promise resolves/rejects
+    // For now, we just return undefined
+    // In a full implementation, this would track pending promises
+    rv.set(v8::undefined(scope).into());
+}
+
+/// FetchEvent.respondWith() callback
+fn fetch_event_respond_with_callback(
+    scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    mut rv: v8::ReturnValue,
+) {
+    // respondWith() is used to provide a response to the fetch event
+    // For now, we just return undefined
+    rv.set(v8::undefined(scope).into());
 }
 
 /// Setup navigator.serviceWorker

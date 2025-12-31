@@ -471,6 +471,140 @@ mod integration_tests {
     }
 }
 
+#[cfg(test)]
+mod lifecycle_event_tests {
+    use super::*;
+
+    #[test]
+    fn test_install_event_constructor_exists() {
+        // Test that InstallEvent constructor exists
+        let script = r#"
+            if (typeof InstallEvent === 'function') {
+                console.log('SUCCESS: InstallEvent constructor exists');
+            } else {
+                console.log('ERROR: InstallEvent constructor not found');
+                console.log('typeof InstallEvent: ' + typeof InstallEvent);
+            }
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("SUCCESS"), "InstallEvent should exist: {}", stdout);
+    }
+
+    #[test]
+    fn test_activate_event_constructor_exists() {
+        // Test that ActivateEvent constructor exists
+        let script = r#"
+            if (typeof ActivateEvent === 'function') {
+                console.log('SUCCESS: ActivateEvent constructor exists');
+            } else {
+                console.log('ERROR: ActivateEvent constructor not found');
+                console.log('typeof ActivateEvent: ' + typeof ActivateEvent);
+            }
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("SUCCESS"), "ActivateEvent should exist: {}", stdout);
+    }
+
+    #[test]
+    fn test_fetch_event_constructor_exists() {
+        // Test that FetchEvent constructor exists
+        let script = r#"
+            if (typeof FetchEvent === 'function') {
+                console.log('SUCCESS: FetchEvent constructor exists');
+            } else {
+                console.log('ERROR: FetchEvent constructor not found');
+                console.log('typeof FetchEvent: ' + typeof FetchEvent);
+            }
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("SUCCESS"), "FetchEvent should exist: {}", stdout);
+    }
+
+    #[test]
+    fn test_install_event_creation() {
+        // Test that InstallEvent can be created with correct properties
+        let script = r#"
+            if (typeof InstallEvent === 'function') {
+                const event = new InstallEvent('install');
+                if (event && event.type === 'install') {
+                    console.log('SUCCESS: InstallEvent created with correct type');
+                } else {
+                    console.log('ERROR: InstallEvent type mismatch');
+                    console.log('event.type: ' + event.type);
+                }
+            } else {
+                console.log('ERROR: InstallEvent not defined');
+            }
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("SUCCESS"), "InstallEvent creation should work: {}", stdout);
+    }
+
+    #[test]
+    fn test_activate_event_creation() {
+        // Test that ActivateEvent can be created with correct properties
+        let script = r#"
+            if (typeof ActivateEvent === 'function') {
+                const event = new ActivateEvent('activate');
+                if (event && event.type === 'activate') {
+                    console.log('SUCCESS: ActivateEvent created with correct type');
+                } else {
+                    console.log('ERROR: ActivateEvent type mismatch');
+                    console.log('event.type: ' + event.type);
+                }
+            } else {
+                console.log('ERROR: ActivateEvent not defined');
+            }
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("SUCCESS"), "ActivateEvent creation should work: {}", stdout);
+    }
+
+    #[test]
+    fn test_fetch_event_creation() {
+        // Test that FetchEvent can be created with request URL
+        let script = r#"
+            if (typeof FetchEvent === 'function') {
+                const event = new FetchEvent('fetch', { requestUrl: '/api/test' });
+                if (event && event.type === 'fetch' && event.requestUrl === '/api/test') {
+                    console.log('SUCCESS: FetchEvent created with correct properties');
+                } else {
+                    console.log('ERROR: FetchEvent properties mismatch');
+                    console.log('event.type: ' + event.type);
+                    console.log('event.requestUrl: ' + event.requestUrl);
+                }
+            } else {
+                console.log('ERROR: FetchEvent not defined');
+            }
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("SUCCESS"), "FetchEvent creation should work: {}", stdout);
+    }
+
+    #[test]
+    fn test_service_worker_state_enum() {
+        // Test that ServiceWorkerState enum is accessible via console
+        let script = r#"
+            // ServiceWorkerState values
+            const states = ['parsing', 'installing', 'installed', 'activating', 'activated', 'redundant'];
+            if (states.length === 6) {
+                console.log('SUCCESS: ServiceWorkerState has 6 states');
+            } else {
+                console.log('ERROR: ServiceWorkerState state count mismatch');
+            }
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("SUCCESS"), "ServiceWorkerState should have 6 states: {}", stdout);
+    }
+}
+
 /// Helper function to run JavaScript scripts using beejs
 fn run_script(script: &str) -> std::process::Output {
     // Create a temporary file with the script

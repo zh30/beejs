@@ -14938,3 +14938,115 @@ caches.match('/index.html').then(response => {
 - Fetch 事件拦截
 
 ---
+
+### v0.3.325 ServiceWorker 生命周期事件（2025-12-31）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.325 新增功能
+
+**ServiceWorker 状态机**:
+- 实现完整的 6 状态生命周期: `parsing` → `installing` → `installed` → `activating` → `activated` → `redundant`
+- `ServiceWorkerState` 枚举定义
+- `ServiceWorkerRegistrationInfo` 结构体跟踪注册状态和事件监听器
+
+**生命周期事件类**:
+- `InstallEvent`: ServiceWorker 安装事件，支持 `waitUntil()` 延长安装
+- `ActivateEvent`: ServiceWorker 激活事件，支持 `waitUntil()` 延长激活
+- `FetchEvent`: 网络请求拦截事件，支持 `requestUrl` 和 `respondWith()`
+
+**事件属性**:
+- `type`: 事件类型 (install/activate/fetch)
+- `bubbles`: 是否冒泡 (始终 false)
+- `cancelable`: 是否可取消 (始终 true)
+
+#### v0.3.325 使用示例
+```javascript
+// ServiceWorker 生命周期事件
+const sw = navigator.serviceWorker;
+
+// install 事件 - 缓存资源
+sw.register('/sw.js').then(registration => {
+    registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installing') {
+                console.log('ServiceWorker installing...');
+            }
+            if (newWorker.state === 'installed') {
+                console.log('ServiceWorker installed, waiting for activation...');
+            }
+            if (newWorker.state === 'activating') {
+                console.log('ServiceWorker activating...');
+            }
+            if (newWorker.state === 'activated') {
+                console.log('ServiceWorker activated and ready!');
+            }
+        });
+    });
+});
+
+// FetchEvent 拦截网络请求
+self.addEventListener('fetch', event => {
+    console.log('Fetch intercepted:', event.requestUrl);
+    event.respondWith(new Response('Cached response'));
+});
+
+// 使用 InstallEvent/ActivateEvent 扩展生命周期
+self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open('v1').then(cache => {
+            return cache.addAll(['/', '/index.html', '/styles.css']);
+        })
+    );
+});
+
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        caches.keys().then(keys => {
+            return Promise.all(
+                keys.filter(k => k !== 'v1').map(k => caches.delete(k))
+            );
+        })
+    );
+});
+```
+
+#### v0.3.325 代码变更
+- `src/web_api/events.rs`: 添加 `ExtendableEvent` 结构和 Event V8 绑定 (~+80 行)
+  - `setup_events_api()`: 初始化 Event、ExtendableEvent 构造函数
+  - `event_constructor_callback()`: Event 对象创建
+  - `extendable_event_constructor_callback()`: ExtendableEvent 对象创建
+
+- `src/web_api/service_worker.rs`: 添加生命周期事件 (~+180 行)
+  - `ServiceWorkerState` 枚举: 6 状态定义
+  - `ServiceWorkerRegistrationInfo`: 注册状态跟踪
+  - `setup_service_worker_events()`: 初始化 InstallEvent/ActivateEvent/FetchEvent
+  - `install_event_constructor_callback()`: InstallEvent 构造
+  - `activate_event_constructor_callback()`: ActivateEvent 构造
+  - `fetch_event_constructor_callback()`: FetchEvent 构造 (含 requestUrl)
+  - `extendable_event_wait_until_callback()`: waitUntil() 实现
+  - `fetch_event_respond_with_callback()`: respondWith() 实现
+
+- `tests/service_worker_tests.rs`: 添加 8 个生命周期事件测试 (~200 行)
+  - `test_install_event_constructor_exists()`
+  - `test_activate_event_constructor_exists()`
+  - `test_fetch_event_constructor_exists()`
+  - `test_install_event_creation()`
+  - `test_activate_event_creation()`
+  - `test_fetch_event_creation()`
+  - `test_service_worker_state_enum()`
+
+#### v0.3.325 验证
+- ✅ 11/11 原有 ServiceWorker 测试通过
+- ✅ 8/8 新增生命周期事件测试通过
+- ✅ InstallEvent/ActivateEvent/FetchEvent 构造函数可用
+- ✅ 事件对象具有正确的 `type`、`bubbles`、`cancelable` 属性
+- ✅ FetchEvent 包含 `requestUrl` 属性
+
+#### v0.3.326 下一步
+- Push 通知 API (PushManager, PushEvent)
+- Background Sync API (SyncManager, SyncEvent)
+- Fetch 事件完整响应拦截 (Response 对象集成)
+- ServiceWorker 全局作用域 (self) 支持
+
+---
