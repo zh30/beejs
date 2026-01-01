@@ -15247,10 +15247,33 @@ self.addEventListener('install', (event) => {
 - ✅ 编译成功，无错误
 - ✅ 静态分析通过
 
-#### v0.3.329 下一步
-- Streams API 完整实现
-- WebSocket 增强（binaryType, close code/reason）
-- Global fetch() 函数
-- 完整的 ErrorEvent 支持
+#### v0.3.330 功能验证（2026-01-01）
+**验证状态**: ✅ 已完成
+
+**WebSocket 增强验证**:
+- ✅ `binaryType` 属性可读写（默认 "arraybuffer"）
+  ```javascript
+  const ws = new WebSocket('ws://example.com');
+  ws.binaryType = 'blob';  // ✓ 设置成功
+  console.log(ws.binaryType); // ✓ 读取正确
+  ```
+- ✅ `close(code, reason)` 支持关闭码和原因
+  ```javascript
+  ws.close(1000, 'Connection closed');  // ✓ 支持 code 和 reason
+  ```
+- ✅ `onclose` 事件包含 `code` 和 `reason` 属性
+
+**Global fetch() 验证**:
+- ✅ `typeof fetch === 'function'` - 全局 fetch 已注册
+- ✅ fetch API 可用于 HTTP 请求
+
+**Streams API 验证**:
+- ✅ ReadableStream/WritableStream/TransformStream 完整支持
+- ✅ TextEncoderStream/TextDecoderStream 正常工作
+
+#### v0.3.330 下一步
+- 实现完整的 ErrorEvent 支持
+- 完善 WebSocket 二进制消息处理（ArrayBuffer 返回类型）
+- 继续优化性能和稳定性
 
 ---
