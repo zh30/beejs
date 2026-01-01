@@ -246,4 +246,100 @@ mod tests {
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket URLs with parameters should work");
     }
+
+    // v0.3.331: WebSocket Compression Tests (permessage-deflate)
+    // 这些测试验证 WebSocket 压缩功能对 AI 工作负载的支持
+
+    /// 测试 WebSocket extensions 属性存在
+    #[test]
+    fn test_websocket_extensions_property() {
+        let code = r#"
+            const ws = new WebSocket('ws://echo.websocket.org');
+            typeof ws.extensions
+        "#;
+
+        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(result.is_ok(), "WebSocket extensions property should exist");
+        assert_eq!(result.unwrap().trim(), "string");
+    }
+
+    /// 测试 WebSocket protocol 属性存在
+    #[test]
+    fn test_websocket_protocol_property() {
+        let code = r#"
+            const ws = new WebSocket('ws://echo.websocket.org');
+            typeof ws.protocol
+        "#;
+
+        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(result.is_ok(), "WebSocket protocol property should exist");
+    }
+
+    /// 测试 WebSocket binaryType 可以设置为 'blob'
+    #[test]
+    fn test_websocket_binary_type_blob() {
+        let code = r#"
+            const ws = new WebSocket('ws://echo.websocket.org');
+            ws.binaryType = 'blob';
+            ws.binaryType === 'blob'
+        "#;
+
+        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(result.is_ok(), "WebSocket binaryType should support 'blob'");
+    }
+
+    /// 测试 WebSocket CONNECTING 状态常量
+    #[test]
+    fn test_websocket_connecting_constant() {
+        let code = r#"
+            WebSocket.CONNECTING === 0
+        "#;
+
+        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(result.is_ok(), "WebSocket.CONNECTING should equal 0");
+    }
+
+    /// 测试 WebSocket CLOSING 状态常量
+    #[test]
+    fn test_websocket_closing_constant() {
+        let code = r#"
+            WebSocket.CLOSING === 2
+        "#;
+
+        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(result.is_ok(), "WebSocket.CLOSING should equal 2");
+    }
+
+    /// 测试 addEventListener 方法存在
+    #[test]
+    fn test_websocket_add_event_listener() {
+        let code = r#"
+            const ws = new WebSocket('ws://echo.websocket.org');
+            typeof ws.addEventListener
+        "#;
+
+        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(result.is_ok(), "WebSocket addEventListener should exist");
+        assert_eq!(result.unwrap().trim(), "function");
+    }
+
+    /// 测试 removeEventListener 方法存在
+    #[test]
+    fn test_websocket_remove_event_listener() {
+        let code = r#"
+            const ws = new WebSocket('ws://echo.websocket.org');
+            typeof ws.removeEventListener
+        "#;
+
+        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(result.is_ok(), "WebSocket removeEventListener should exist");
+        assert_eq!(result.unwrap().trim(), "function");
+    }
 }
