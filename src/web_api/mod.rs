@@ -23,6 +23,7 @@ pub mod service_worker; // v0.3.324: ServiceWorker API (background tasks, push, 
 pub mod background_sync; // v0.3.327: Background Sync API (SyncManager, SyncEvent)
 pub mod notification; // v0.3.328: Notification API (system notifications)
 pub mod payment_request; // v0.3.328: Payment Request API (payment processing)
+pub mod error_event; // v0.3.333: ErrorEvent API (script error handling)
 use anyhow::Result;
 use rusty_v8 as v8;
 // 从各模块导入设置函数
@@ -39,6 +40,7 @@ use form_data::setup_form_data_api;
 use message_channel::setup_message_channel_api;
 use notification::setup_notification_api;
 use payment_request::setup_payment_request_api;
+use error_event::setup_error_event_api;
 use shared_array_buffer::setup_shared_array_buffer_api;
 use service_worker::setup_service_worker_api;
 use worker::setup_worker_api;
@@ -137,6 +139,10 @@ pub fn init_web_api(
     eprintln!("🔧 [v0.3.328] Setting up Payment Request API...");
     setup_payment_request_api(scope, context, global)?;
     eprintln!("✅ [v0.3.328] Payment Request API done");
+    // v0.3.333: ErrorEvent API (script error handling for WebSocket, Worker, etc.)
+    eprintln!("🔧 [v0.3.333] Setting up ErrorEvent API...");
+    setup_error_event_api(scope, context);
+    eprintln!("✅ [v0.3.333] ErrorEvent API done");
     // Note: Streams API is initialized separately in runtime_minimal.rs
     // to avoid duplicate initialization
     eprintln!("🎉 [STAGE74/75] All Web APIs initialized (streams via runtime)!");

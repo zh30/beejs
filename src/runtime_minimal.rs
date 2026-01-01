@@ -3047,6 +3047,10 @@ impl MinimalRuntime {
             // Use direct call to avoid duplicating other API initialization
             use crate::web_api::abort::setup_abort_api;
             setup_abort_api(scope, &context)?;
+
+            // v0.3.333: ErrorEvent API (script error handling for WebSocket, Worker, etc.)
+            use crate::web_api::error_event::setup_error_event_api;
+            setup_error_event_api(scope, &context);
         }
 
         // v0.3.261: Store the original code for potential re-evaluation
