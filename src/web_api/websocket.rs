@@ -14,6 +14,9 @@ use tokio::runtime::Runtime;
 use std::borrow::Cow;
 use once_cell::sync::Lazy;
 
+// v0.3.334: Import error_event for ErrorEvent integration
+use crate::web_api::error_event::create_error_event_object;
+
 /// WebSocket ready state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReadyState {
@@ -489,7 +492,7 @@ fn websocket_poll_events_callback(
     let context: _ = scope.get_current_context();
     let global: _ = context.global(scope);
     for (i, event) in events.iter().enumerate() {
-        let event_obj: _ = v8::Object::new(scope);
+        let mut event_obj: _ = v8::Object::new(scope);
         match event {
             WebSocketEvent::Open => {
                 let type_key: _ = v8::String::new(scope, "type").unwrap();
@@ -599,12 +602,21 @@ fn websocket_poll_events_callback(
                 }
             }
             WebSocketEvent::Error(msg) => {
-                let type_key: _ = v8::String::new(scope, "type").unwrap();
-                let type_val: _ = v8::String::new(scope, "error").unwrap();
-                event_obj.set(scope, type_key.into(), type_val.into());
-                let msg_key: _ = v8::String::new(scope, "message").unwrap();
-                let msg_val: _ = v8::String::new(scope, msg).unwrap();
-                event_obj.set(scope, msg_key.into(), msg_val.into());
+                // v0.3.334: Use ErrorEvent for proper error event structure
+                // This provides type, message, filename, lineno, colno, and error properties
+                let error_event = create_error_event_object(
+                    scope,
+                    msg,
+                    "WebSocket",
+                    0,
+                    0,
+                    None,
+                );
+                // Copy ErrorEvent properties to the event object
+                let type_key = v8::String::new(scope, "type").unwrap();
+                let error_type = v8::String::new(scope, "error").unwrap();
+                error_event.set(scope, type_key.into(), error_type.into());
+                event_obj = error_event;
             }
         }
         arr.set_index(scope, i as u32, event_obj.into());

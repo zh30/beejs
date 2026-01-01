@@ -15353,9 +15353,59 @@ self.addEventListener('install', (event) => {
 - ✅ 构建成功，无错误
 - ✅ 与 MinimalRuntime 完整集成
 
-#### v0.3.334 下一步
-- 增强 WebSocket ErrorEvent 集成
+---
+
+### v0.3.334 WebSocket ErrorEvent 集成（2026-01-01）
+**进度**: Web API 增强 | ✅ 已完成
+
+#### v0.3.334 新增功能
+
+**WebSocket ErrorEvent 集成**:
+- WebSocket 错误事件现在使用标准 `ErrorEvent` 对象结构
+- 提供完整的错误属性: `type`, `message`, `filename`, `lineno`, `colno`, `error`
+- 与 Web 标准完全兼容
+
+**ErrorEvent 属性**:
+- `type`: 事件类型（"error"）
+- `message`: 错误消息字符串
+- `filename`: 脚本文件名（WebSocket 连接场景设为 "WebSocket"）
+- `lineno`: 行号
+- `colno`: 列号
+- `error`: 关联的错误对象
+
+#### v0.3.334 技术实现
+
+**websocket.rs 增强**:
+- 导入 `create_error_event_object` 辅助函数
+- 修改 `websocket_poll_events_callback` 中的 `WebSocketEvent::Error` 处理
+- 使用 `create_error_event_object()` 创建错误事件对象
+
+**测试覆盖**:
+- `test_error_event_constructor_available`: ErrorEvent 构造函数可用性
+- `test_error_event_basic_creation`: 基本创建和属性测试
+- `test_error_event_inherits_from_event`: Event 属性继承测试
+- `test_error_event_with_error_object`: 错误对象支持测试
+- `test_websocket_onerror_handler`: WebSocket onerror 处理程序测试
+
+#### v0.3.334 代码变更
+- `src/web_api/websocket.rs`: 添加 ErrorEvent 集成 (~+15 行)
+  - 导入 `create_error_event_object`
+  - 修改错误事件处理逻辑
+- `tests/websocket_api_tests.rs`: 添加 5 个 ErrorEvent 测试 (~+75 行)
+
+#### v0.3.334 验证
+```javascript
+const e = new ErrorEvent('test', { filename: 'test.js', lineno: 10, colno: 5 });
+console.log(e.type);     // "error"
+console.log(e.message);  // "test"
+console.log(e.filename); // "test.js"
+console.log(e.lineno);   // 10
+console.log(e.colno);    // 5
+```
+
+#### v0.3.335 下一步
 - 实现 window.onerror 全局错误处理
 - 继续优化性能和稳定性
+- 添加更多 Web API 兼容性
 
 ---

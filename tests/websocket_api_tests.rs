@@ -439,4 +439,86 @@ mod tests {
         assert!(result.is_ok(), "Blob creation should work");
         assert_eq!(result.unwrap().trim(), "true");
     }
+
+    // v0.3.334: WebSocket ErrorEvent Integration Tests
+
+    /// Test ErrorEvent constructor is available
+    #[test]
+    fn test_error_event_constructor_available() {
+        let code = r#"
+            typeof ErrorEvent
+        "#;
+
+        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(result.is_ok(), "ErrorEvent constructor should be available");
+        assert_eq!(result.unwrap().trim(), "function");
+    }
+
+    /// Test ErrorEvent basic creation
+    #[test]
+    fn test_error_event_basic_creation() {
+        let code = r#"
+            const event = new ErrorEvent('test error', {
+                filename: 'test.js',
+                lineno: 10,
+                colno: 5
+            });
+            event.type === 'error' &&
+            event.message === 'test error' &&
+            event.filename === 'test.js' &&
+            event.lineno === 10 &&
+            event.colno === 5
+        "#;
+
+        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(result.is_ok(), "ErrorEvent creation should work");
+        assert_eq!(result.unwrap().trim(), "true");
+    }
+
+    /// Test ErrorEvent inherits from Event
+    #[test]
+    fn test_error_event_inherits_from_event() {
+        let code = r#"
+            const event = new ErrorEvent('test');
+            typeof event.bubbles === 'boolean' &&
+            typeof event.cancelable === 'boolean' &&
+            typeof event.composed === 'boolean'
+        "#;
+
+        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(result.is_ok(), "ErrorEvent should inherit Event properties");
+        assert_eq!(result.unwrap().trim(), "true");
+    }
+
+    /// Test ErrorEvent with error object
+    #[test]
+    fn test_error_event_with_error_object() {
+        let code = r#"
+            const err = new Error('original error');
+            const event = new ErrorEvent('error message', { error: err });
+            event.error === err
+        "#;
+
+        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(result.is_ok(), "ErrorEvent should contain error object");
+        assert_eq!(result.unwrap().trim(), "true");
+    }
+
+    /// Test WebSocket has onerror handler
+    #[test]
+    fn test_websocket_onerror_handler() {
+        let code = r#"
+            const ws = new WebSocket('ws://example.com');
+            typeof ws.onerror === 'function'
+        "#;
+
+        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(result.is_ok(), "WebSocket should have onerror handler");
+        assert_eq!(result.unwrap().trim(), "true");
+    }
 }
