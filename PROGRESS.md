@@ -15304,8 +15304,58 @@ self.addEventListener('install', (event) => {
 
 ---
 
-#### v0.3.331 下一步
-- 实现完整的 ErrorEvent 支持
+### v0.3.333 ErrorEvent API 实现（2026-01-01）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.333 新增功能
+
+**ErrorEvent 构造函数**:
+- `new ErrorEvent(message, eventInitDict)` 创建错误事件
+- `message`: 错误消息字符串
+- `eventInitDict.filename`: 发生错误的脚本文件
+- `eventInitDict.lineno`: 行号
+- `eventInitDict.colno`: 列号
+- `eventInitDict.error`: 错误对象
+
+**ErrorEvent 属性**:
+- `type`: 事件类型（总是 "error"）
+- `message`: 错误消息
+- `filename`: 脚本文件名
+- `lineno`: 行号
+- `colno`: 列号
+- `error`: 关联的错误对象
+- 继承 Event 的 bubbles, cancelable, composed 等属性
+
+**辅助函数**:
+- `create_error_event_object()`: 创建 ErrorEvent 对象的辅助函数
+- 供 WebSocket、Worker 等模块使用
+
+#### v0.3.333 代码变更
+- `src/web_api/error_event.rs`: 新建 ErrorEvent API (~245 行)
+  - `setup_error_event_api()`: 模块初始化
+  - `error_event_constructor_callback()`: 构造函数实现
+  - `create_error_event_object()`: 创建错误事件的辅助函数
+- `src/web_api/mod.rs`: 添加 error_event 模块注册 (~+6 行)
+- `src/runtime_minimal.rs`: 添加 ErrorEvent API 初始化 (~+5 行)
+- `tests/error_event_tests.rs`: 新建 7 个 ErrorEvent 测试 (~85 行)
+
+#### v0.3.333 测试覆盖
+- `test_error_event_constructor`: ErrorEvent 构造函数可用性测试
+- `test_error_event_basic_creation`: 基本创建和属性测试
+- `test_error_event_defaults`: 默认值测试
+- `test_error_event_inherits_from_event`: Event 属性继承测试
+- `test_error_event_with_error_object`: 错误对象支持测试
+- `test_error_event_readonly_properties`: 只读属性测试
+- `test_error_event_as_event_type`: 事件类型测试
+
+#### v0.3.333 验证
+- ✅ 7/7 ErrorEvent 测试全部通过
+- ✅ 构建成功，无错误
+- ✅ 与 MinimalRuntime 完整集成
+
+#### v0.3.334 下一步
+- 增强 WebSocket ErrorEvent 集成
+- 实现 window.onerror 全局错误处理
 - 继续优化性能和稳定性
 
 ---
