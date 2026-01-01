@@ -485,6 +485,9 @@ fn websocket_poll_events_callback(
     };
     let events: _ = WS_MANAGER.poll_events(ws_id);
     let arr: _ = v8::Array::new(scope, events.len() as i32);
+    // Get global context for accessing Blob constructor
+    let context: _ = scope.get_current_context();
+    let global: _ = context.global(scope);
     for (i, event) in events.iter().enumerate() {
         let event_obj: _ = v8::Object::new(scope);
         match event {
@@ -505,11 +508,80 @@ fn websocket_poll_events_callback(
                 let type_key: _ = v8::String::new(scope, "type").unwrap();
                 let type_val: _ = v8::String::new(scope, "message").unwrap();
                 event_obj.set(scope, type_key.into(), type_val.into());
-                // Convert to ArrayBuffer (simplified as string for now)
                 let data_key: _ = v8::String::new(scope, "data").unwrap();
-                let data_str: _ = String::from_utf8_lossy(data);
-                let data_val: _ = v8::String::new(scope, &data_str).unwrap();
-                event_obj.set(scope, data_key.into(), data_val.into());
+
+                // v0.3.332: Check binaryType and return appropriate type
+                // For AI workloads, binaryType='arraybuffer' is essential for
+                // passing model weights, tensor data, and other binary content
+                let binary_type_key: _ = v8::String::new(scope, "binaryType").unwrap();
+                let binary_type_val: _ = this.get(scope, binary_type_key.into());
+
+                if let Some(bt) = binary_type_val {
+                    let bt_str: _ = bt.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                    if bt_str == "arraybuffer" {
+                        // Create ArrayBuffer from binary data
+                        let buffer: _ = v8::ArrayBuffer::new(scope, data.len());
+                        // Copy data into ArrayBuffer's backing store
+                        let store = buffer.get_backing_store();
+                        unsafe {
+                            let ptr = store.data() as *mut u8;
+                            std::slice::from_raw_parts_mut(ptr, data.len())
+                                .copy_from_slice(&data);
+                        }
+                        event_obj.set(scope, data_key.into(), buffer.into());
+                    } else if bt_str == "blob" {
+                        // Create Blob from binary data
+                        // Blob constructor: new Blob([data], { type: 'application/octet-stream' })
+                        let blob_ctor_key: _ = v8::String::new(scope, "Blob").unwrap();
+                        let blob_ctor: _ = global.get(scope, blob_ctor_key.into()).unwrap();
+                        if blob_ctor.is_function() {
+                            let blob_ctor_func: v8::Local<v8::Function> = blob_ctor.try_into().unwrap();
+                            // Create buffer first to avoid borrow issues
+                            let buffer: _ = v8::ArrayBuffer::new(scope, data.len());
+                            let buffer_val: v8::Local<v8::Value> = buffer.into();
+                            let data_array: _ = v8::Array::new_with_elements(scope, &[buffer_val]);
+                            let options_key: _ = v8::String::new(scope, "type").unwrap();
+                            let options_val: _ = v8::Object::new(scope);
+                            let mime_type: _ = v8::String::new(scope, "application/octet-stream").unwrap();
+                            options_val.set(scope, options_key.into(), mime_type.into());
+
+                            let blob_args: &[v8::Local<v8::Value>] = &[data_array.into(), options_val.into()];
+                            if let Some(blob) = blob_ctor_func.new_instance(scope, blob_args) {
+                                event_obj.set(scope, data_key.into(), blob.into());
+                            } else {
+                                // Fallback: set data as ArrayBuffer using the buffer we already created
+                                // Copy data into the buffer's backing store
+                                let store = buffer.get_backing_store();
+                                unsafe {
+                                    let ptr = store.data() as *mut u8;
+                                    std::slice::from_raw_parts_mut(ptr, data.len())
+                                        .copy_from_slice(&data);
+                                }
+                                event_obj.set(scope, data_key.into(), buffer.into());
+                            }
+                        } else {
+                            // Fallback to ArrayBuffer
+                            let buffer: _ = v8::ArrayBuffer::new(scope, data.len());
+                            let store = buffer.get_backing_store();
+                            unsafe {
+                                let ptr = store.data() as *mut u8;
+                                std::slice::from_raw_parts_mut(ptr, data.len())
+                                    .copy_from_slice(&data);
+                            }
+                            event_obj.set(scope, data_key.into(), buffer.into());
+                        }
+                    } else {
+                        // Default: treat as string (legacy behavior)
+                        let data_str: _ = String::from_utf8_lossy(data);
+                        let data_val: _ = v8::String::new(scope, &data_str).unwrap();
+                        event_obj.set(scope, data_key.into(), data_val.into());
+                    }
+                } else {
+                    // Default: treat as string (legacy behavior)
+                    let data_str: _ = String::from_utf8_lossy(data);
+                    let data_val: _ = v8::String::new(scope, &data_str).unwrap();
+                    event_obj.set(scope, data_key.into(), data_val.into());
+                }
             }
             WebSocketEvent::Close(code, reason) => {
                 let type_key: _ = v8::String::new(scope, "type").unwrap();

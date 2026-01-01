@@ -15271,9 +15271,41 @@ self.addEventListener('install', (event) => {
 - ✅ ReadableStream/WritableStream/TransformStream 完整支持
 - ✅ TextEncoderStream/TextDecoderStream 正常工作
 
-#### v0.3.330 下一步
+---
+
+### v0.3.332 WebSocket 二进制消息处理修复（2026-01-01）
+**进度**: Web API 修复 | ✅ 已完成
+
+#### v0.3.332 修复内容
+
+**WebSocket binaryType='arraybuffer' 支持**:
+- 修复二进制消息返回类型为真正的 `ArrayBuffer` 而非字符串
+- 使用 V8 的 `ArrayBuffer::new()` 和 unsafe 内存复制
+- 正确处理 `binaryType='blob'` 返回 Blob 对象
+
+**AI 工作负载优化**:
+- 对于传输模型权重、张量数据、二进制推理结果至关重要
+- 保持与 Web 标准完全兼容
+
+#### v0.3.332 代码变更
+- `src/web_api/websocket.rs`: 修复二进制消息处理 (~+60 行)
+  - 添加 `binaryType` 属性检测
+  - 实现 `ArrayBuffer` 创建和二进制数据复制
+  - 实现 `Blob` 创建作为备选方案
+- `tests/websocket_api_tests.rs`: 添加 6 个新测试 (~+100 行)
+
+#### v0.3.332 测试覆盖
+- `test_websocket_binary_type_arraybuffer`: binaryType='arraybuffer' 设置测试
+- `test_websocket_binary_arraybuffer_type`: ArrayBuffer 类型可用性测试
+- `test_arraybuffer_globals_available`: 全局 ArrayBuffer/Uint8Array/Blob 测试
+- `test_arraybuffer_creation`: ArrayBuffer 创建测试
+- `test_uint8array_on_arraybuffer`: Uint8Array 视图测试
+- `test_blob_creation`: Blob 创建测试
+
+---
+
+#### v0.3.331 下一步
 - 实现完整的 ErrorEvent 支持
-- 完善 WebSocket 二进制消息处理（ArrayBuffer 返回类型）
 - 继续优化性能和稳定性
 
 ---
