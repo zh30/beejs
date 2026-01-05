@@ -3,6 +3,11 @@
 // Used by window.onerror, WebSocket onerror, Worker onerror, etc.
 
 use rusty_v8 as v8;
+use std::sync::atomic::AtomicBool;
+
+/// Global flag to track if window.onerror has been set
+/// This is used to avoid expensive lookups on every error
+pub static ONERROR_IS_SET: AtomicBool = AtomicBool::new(false);
 
 /// Setup ErrorEvent API in V8 context
 /// ErrorEvent provides detailed information about script errors
