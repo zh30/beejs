@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.328 (2025-12-31)
+## 当前版本: v0.3.335 (2025-01-09)
 
 ### 项目状态摘要
 
@@ -33,13 +33,15 @@
 - Background Sync API (v0.3.327 新增): SyncManager, SyncEvent - 后台同步支持
 - Notification API (v0.3.328 新增): Notification, requestPermission - 系统通知
 - Payment Request API (v0.3.328 新增): PaymentRequest, PaymentResponse, PaymentAddress - 支付处理
+- ErrorEvent API (v0.3.333 新增): ErrorEvent 接口用于脚本错误处理
+- WebSocket ErrorEvent 集成 (v0.3.334): WebSocket 错误事件使用 ErrorEvent 格式
 
 **包管理**: ✅ 已完成
 - package.json 解析
 - npm 兼容命令 (install, add, remove, prune)
 - 依赖版本解析
 
-**测试**: ✅ 376+ 测试通过
+**测试**: ✅ 385+ 测试通过
 - cargo test --lib: 285/285 通过
 - performance_api_tests: 16/16 通过
 - web_streams_api_tests: 59/59 通过
@@ -56,11 +58,113 @@
 - push_api_tests: 17/17 通过 (v0.3.326)
 - notification_api_tests: 3/3 通过 (v0.3.328)
 - payment_request_tests: 2/2 通过 (v0.3.328)
+- error_event_tests: 7/7 通过 (v0.3.333)
+- websocket_api_tests: 32/32 通过 (v0.3.334 新增 ErrorEvent 集成测试)
 - 集成测试: 运行正常
 
 **CLI 命令**:
 - run, eval, repl, test, bundle, debug
 - version, serve, init, add, remove, install, prune, create, bunx, upgrade
+
+---
+
+### v0.3.335 ErrorEvent 代码清理（2025-01-09）
+**进度**: 代码清理 | ✅ 已完成
+
+#### v0.3.335 代码变更
+- `src/web_api/error_event.rs`: 移除未使用的导入
+  - 清理 `create_error_event_object` 函数中未使用的 `v8::ContextScope` 和 `v8::HandleScope` 类型导入
+  - 简化函数签名，移除不必要的泛型参数
+
+#### v0.3.335 验证
+- ✅ 代码编译无警告
+- ✅ cargo check --lib 通过
+- ✅ 保留所有 ErrorEvent 功能
+
+---
+
+### v0.3.334 WebSocket ErrorEvent 集成（2025-01-09）
+**进度**: Web API 集成 | ✅ 已完成
+
+#### v0.3.334 新增功能
+
+**ErrorEvent 与 WebSocket 集成**:
+- WebSocket 错误事件现在使用 ErrorEvent 格式派发
+- 提供完整的错误信息结构：`type`, `message`, `filename`, `lineno`, `colno`, `error`
+- 统一的错误事件接口适用于 `window.onerror`, WebSocket `onerror`, Worker `onerror` 等
+
+**技术实现**:
+- 在 `websocket.rs` 中集成 `create_error_event_object` 函数
+- 错误事件对象现在包含：`type: "error"`, `message`, `filename`, `lineno`, `colno`, `error` 属性
+- 继承自 Event 的属性：`bubbles`, `cancelable`, `composed`, `defaultPrevented`, `isTrusted`
+
+#### v0.3.334 代码变更
+- `src/web_api/websocket.rs`: 集成 ErrorEvent (~+20 行)
+  - 导入 `create_error_event_object` 函数
+  - 在 `WebSocketEvent::Error` 处理中使用 ErrorEvent 格式
+- `tests/websocket_api_tests.rs`: 添加 ErrorEvent 集成测试 (~+90 行)
+  - `test_error_event_constructor_available`: 验证 ErrorEvent 可用
+  - `test_error_event_basic_creation`: 验证 ErrorEvent 基本创建
+  - `test_error_event_inherits_from_event`: 验证 Event 继承
+  - `test_error_event_with_error_object`: 验证 error 对象支持
+  - `test_websocket_onerror_handler`: 验证 WebSocket onerror 处理程序
+
+#### v0.3.334 测试验证
+- ✅ 32/32 websocket_api_tests 通过
+- ✅ ErrorEvent 构造函数可用
+- ✅ ErrorEvent 属性完整 (message, filename, lineno, colno, error)
+- ✅ ErrorEvent 继承 Event 属性 (bubbles, cancelable, composed)
+
+---
+
+### v0.3.333 ErrorEvent API 实现（2025-01-09）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.333 新增功能
+
+**ErrorEvent 接口**:
+- `new ErrorEvent(type, eventInitDict)` 构造函数
+- `eventInitDict` 支持:
+  - `message`: 错误消息 (默认: "")
+  - `filename`: 发生错误的脚本文件 (默认: "")
+  - `lineno`: 行号 (默认: 0)
+  - `colno`: 列号 (默认: 0)
+  - `error`: 错误对象 (默认: null)
+
+**ErrorEvent 属性**:
+- `type`: 事件类型
+- `message`: 错误消息
+- `filename`: 脚本文件名
+- `lineno`: 行号
+- `colno`: 列号
+- `error`: 关联的 Error 对象
+- 继承自 Event: `bubbles`, `cancelable`, `composed`, `defaultPrevented`, `isTrusted`
+
+#### v0.3.333 代码变更
+- `src/web_api/error_event.rs`: 新建 ErrorEvent API (~245 行)
+  - `setup_error_event_api()`: 设置 ErrorEvent 全局构造函数
+  - `error_event_constructor()`: ErrorEvent 构造函数回调
+  - `create_error_event_object()`: 创建 ErrorEvent 对象的辅助函数
+  - `ONERROR_IS_SET`: 跟踪 onerror 是否已设置的原子标志
+- `src/web_api/mod.rs`: 注册 error_event 模块 (~+3 行)
+- `src/runtime_minimal.rs`: 添加 setup_error_event_api() 调用 (~+3 行)
+- `tests/error_event_tests.rs`: 新建测试套件 (~130 行, 7 个测试)
+
+#### v0.3.333 测试覆盖
+- ErrorEvent 构造函数可用性测试
+- ErrorEvent 基本创建测试
+- ErrorEvent 默认值测试
+- Event 继承测试
+- error 对象支持测试
+- 只读属性存在性测试
+- 错误事件类型测试
+
+#### v0.3.333 测试验证
+- ✅ 7/7 error_event_tests 通过
+- ✅ ErrorEvent 构造函数可用 (typeof ErrorEvent === "function")
+- ✅ ErrorEvent 属性正确设置
+- ✅ Event 继承正确 (cancelable, bubbles 等)
+- ✅ error 对象正确关联
 
 ---
 
