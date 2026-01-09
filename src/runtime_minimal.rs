@@ -28,6 +28,8 @@ use crate::nodejs_core::process::{execute_next_tick_callbacks, has_pending_next_
 use crate::nodejs_core::performance::setup_performance_api;
 // v0.3.282: Import Web Streams API for AI workloads
 use crate::web_api::streams::setup_streams_api;
+// v0.3.335: Import error event API for window.onerror
+use crate::web_api::error_event::call_onerror_handler;
 // v0.3.305: Import Blob API for binary data handling
 use crate::web_api::blob::setup_blob_api;
 // v0.3.295: Import CompressionStream API
@@ -3221,6 +3223,33 @@ impl MinimalRuntime {
 
                     // v0.3.235: Create enhanced RuntimeError with structured information
                     let runtime_error = v8_exception_to_runtime_error(scope, exception);
+
+                    // v0.3.335: Call window.onerror handler if set
+                    // Extract error info for onerror
+                    let error_message = exception.to_string(scope)
+                        .unwrap_or_else(|| v8::String::new(scope, "Unknown error").unwrap())
+                        .to_rust_string_lossy(scope);
+                    let error_location = runtime_error.location.clone().unwrap_or_else(|| "".to_string());
+                    let (filename, lineno, colno) = if !error_location.is_empty() {
+                        // Try to parse location like "at line X column Y" or filename:line:column
+                        let parts: Vec<&str> = error_location.split(':').collect();
+                        if parts.len() >= 3 {
+                            (parts[0].to_string(), parts[1].parse().unwrap_or(0), parts[2].parse().unwrap_or(0))
+                        } else {
+                            (error_location.clone(), 0, 0)
+                        }
+                    } else {
+                        ("".to_string(), 0, 0)
+                    };
+
+                    // Call window.onerror if set, and check if it handled the error
+                    let error_handled = call_onerror_handler(scope, &error_message, &filename, lineno as u32, colno as u32, Some(exception));
+
+                    // If onerror handled the error (returned true), don't propagate the error
+                    if error_handled {
+                        // Return "undefined" as the string result since the error was handled
+                        return Ok("undefined".to_string());
+                    }
 
                     // Provide more helpful error message based on error type
                     let hint = match runtime_error.error_type {

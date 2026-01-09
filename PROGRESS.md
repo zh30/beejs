@@ -15513,3 +15513,38 @@ console.log(e.colno);    // 5
 - 添加更多 Web API 兼容性
 
 ---
+
+---
+
+### v0.3.336 window.onerror 全局错误处理实现（2025-01-09）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.336 新增功能
+
+**window.onerror 全局错误处理**:
+- `window.onerror = function(message, filename, lineno, colno, error) { ... }`
+- 当发生未捕获的异常时自动调用
+- 返回 `true` 可阻止错误传播和默认处理
+- 适用于 AI 工作负载中的错误监控和日志记录
+
+**ErrorEvent 修复**:
+- 修复 `message` 属性从 `eventInitDict` 正确提取
+- 确保 ErrorEvent 构造函数符合 Web 标准
+
+**window 别名**:
+- 设置 `window` 作为 `globalThis` 的别名
+- 提高浏览器兼容性
+
+#### v0.3.336 代码变更
+- `src/web_api/error_event.rs`: 重构 ErrorEvent 构造函数
+- `src/web_api/error_event.rs`: 添加 `call_onerror_handler()` 函数
+- `src/runtime_minimal.rs`: 集成 window.onerror
+- `tests/error_event_tests.rs`: 添加 window.onerror 测试
+
+#### v0.3.336 测试验证
+- ✅ window.onerror 可设置为函数
+- ✅ 未捕获的错误触发 onerror 处理程序
+- ✅ onerror 接收完整的错误信息
+- ✅ onerror 返回 true 阻止错误传播
+- ✅ ErrorEvent.message 正确从 eventInitDict 提取
+- ✅ window 是 globalThis 的别名

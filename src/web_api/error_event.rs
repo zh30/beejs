@@ -3,11 +3,6 @@
 // Used by window.onerror, WebSocket onerror, Worker onerror, etc.
 
 use rusty_v8 as v8;
-use std::sync::atomic::AtomicBool;
-
-/// Global flag to track if window.onerror has been set
-/// This is used to avoid expensive lookups on every error
-pub static ONERROR_IS_SET: AtomicBool = AtomicBool::new(false);
 
 /// Setup ErrorEvent API in V8 context
 /// ErrorEvent provides detailed information about script errors
@@ -43,10 +38,27 @@ pub fn setup_error_event_api(scope: &mut v8::ContextScope<v8::HandleScope>, cont
 
     // Set up ErrorEvent as global constructor (for instanceof checks)
     global.set(scope, error_event_name.into(), error_event_func.into());
+
+    // Set up window.onerror property
+    setup_window_onerror(scope, global);
+}
+
+/// Set up window.onerror property
+/// Simply initializes it as a property on window that JavaScript can set/get
+fn setup_window_onerror(scope: &mut v8::ContextScope<v8::HandleScope>, global: v8::Local<v8::Object>) {
+    let onerror_key = v8::String::new(scope, "onerror").unwrap();
+
+    // Initialize onerror as undefined
+    let undefined = v8::undefined(scope).into();
+    global.set(scope, onerror_key.into(), undefined);
+
+    // Set window as an alias to globalThis for browser compatibility
+    let window_key = v8::String::new(scope, "window").unwrap();
+    global.set(scope, window_key.into(), global.into());
 }
 
 /// ErrorEvent constructor callback
-/// ErrorEvent(message, eventInitDict)
+/// ErrorEvent(type, eventInitDict)
 ///
 /// eventInitDict:
 ///   - message: Error message (default: "")
@@ -59,28 +71,26 @@ fn error_event_constructor(
     args: v8::FunctionCallbackArguments,
     mut rv: v8::ReturnValue,
 ) {
-    // Extract arguments
-    let message = if args.length() > 0 {
-        let msg = args.get(0);
-        if msg.is_string() {
-            msg.to_string(scope).unwrap().to_rust_string_lossy(scope)
-        } else {
-            String::new()
-        }
-    } else {
-        String::new()
-    };
-
-    // Parse eventInitDict if second argument is provided
+    // Initialize default values
+    let mut message = String::new();
     let mut filename = String::new();
     let mut lineno = 0;
     let mut colno = 0;
     let mut error_obj: Option<v8::Local<v8::Value>> = None;
 
+    // Parse eventInitDict if second argument is provided
     if args.length() > 1 {
         let dict = args.get(1);
         if dict.is_object() {
             let dict: v8::Local<v8::Object> = unsafe { v8::Local::cast(dict) };
+
+            // Get message
+            let message_key = v8::String::new(scope, "message").unwrap();
+            if let Some(val) = dict.get(scope, message_key.into()) {
+                if val.is_string() {
+                    message = val.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                }
+            }
 
             // Get filename
             let filename_key = v8::String::new(scope, "filename").unwrap();
@@ -242,4 +252,59 @@ pub fn create_error_event_object<'a>(
     event_obj.set(scope, is_trusted_key.into(), is_trusted_val.into());
 
     event_obj
+}
+
+/// Call window.onerror handler with error information
+/// Returns true if the error was handled (onerror returned true), false otherwise
+/// This function is called from the runtime when an uncaught exception occurs
+pub fn call_onerror_handler(
+    scope: &mut v8::HandleScope,
+    message: &str,
+    filename: &str,
+    lineno: u32,
+    colno: u32,
+    error: Option<v8::Local<v8::Value>>,
+) -> bool {
+    // Get the context and global object
+    let context = scope.get_current_context();
+    let global = context.global(scope);
+
+    // Get window.onerror from JavaScript
+    let onerror_key = v8::String::new(scope, "onerror").unwrap();
+    let onerror_val = global.get(scope, onerror_key.into()).unwrap();
+
+    // Check if onerror is a function
+    if !onerror_val.is_function() {
+        return false;
+    }
+
+    let handler: v8::Local<v8::Function> = unsafe { v8::Local::cast(onerror_val) };
+
+    // Prepare arguments for onerror callback:
+    // (message, filename, lineno, colno, error)
+    let message_str = v8::String::new(scope, message).unwrap();
+    let filename_str = v8::String::new(scope, filename).unwrap();
+    let lineno_val = v8::Integer::new(scope, lineno as i32);
+    let colno_val = v8::Integer::new(scope, colno as i32);
+    let error_val = error.unwrap_or_else(|| v8::null(scope).into());
+
+    let args = vec![
+        message_str.into(),
+        filename_str.into(),
+        lineno_val.into(),
+        colno_val.into(),
+        error_val,
+    ];
+
+    let recv = v8::undefined(scope).into();
+
+    // Call the onerror handler - call returns a Value
+    let result_val = handler.call(scope, recv, &args);
+
+    // Check if the handler returned true (error was handled)
+    if let Some(result) = result_val {
+        return result.is_true();
+    }
+
+    false
 }
