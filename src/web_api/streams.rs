@@ -1176,17 +1176,16 @@ fn transform_stream_constructor(
             _r.set(promise.into());
         });
 
-        // v0.3.287: Setup close() method - calls flush callback before closing
+        // v0.3.338: Enhanced close() method - properly handles async flush with Promise support
+        // If flush returns a Promise, we chain it and return the chained Promise to JavaScript
         let close_fn = v8::FunctionTemplate::new(_scope, |__scope: &mut v8::HandleScope, a: v8::FunctionCallbackArguments, mut _r: v8::ReturnValue| {
-            let promise: v8::Local<v8::PromiseResolver> = v8::PromiseResolver::new(__scope).unwrap();
-
             // Get transform from writer
             let writer_this = a.this();
             let transform_key = v8::String::new(__scope, "_transform").unwrap();
 
             if let Some(transform_val) = writer_this.get(__scope, transform_key.into()).filter(|s| s.is_object()) {
                 if let Ok(transform) = v8::Local::<v8::Object>::try_from(transform_val) {
-                    // v0.3.287: Call flush callback if provided
+                    // v0.3.338: Call flush callback if provided
                     let flush_key = v8::String::new(__scope, "_flushFn").unwrap();
                     if let Some(flush_val) = transform.get(__scope, flush_key.into()) {
                         if let Ok(flush) = v8::Local::<v8::Function>::try_from(flush_val) {
@@ -1195,19 +1194,64 @@ fn transform_stream_constructor(
                             if let Some(ctrl_val) = transform.get(__scope, ctrl_key.into()) {
                                 if let Ok(ctrl) = v8::Local::<v8::Object>::try_from(ctrl_val) {
                                     let undefined = v8::undefined(__scope).into();
-                                    let _ = flush.call(__scope, undefined, &[ctrl.into()]);
+                                    let flush_result = flush.call(__scope, undefined, &[ctrl.into()]);
+
+                                    // v0.3.338: Check if flush returned a Promise and handle async properly
+                                    if let Some(result_val) = flush_result {
+                                        if result_val.is_promise() {
+                                            // Flush returned a Promise - we need to wait for it
+                                            // Create a Promise that chains the flush Promise and updates state when done
+                                            let then_code = r#"
+                                                (flushPromise, transformObj) => {
+                                                    transformObj._transformState = 1; // Mark as closing
+                                                    return new Promise((resolve, reject) => {
+                                                        Promise.resolve(flushPromise).then(() => {
+                                                            transformObj._transformState = 2; // Closed
+                                                            resolve(undefined);
+                                                        }).catch(reject);
+                                                    });
+                                                }
+                                            "#;
+
+                                            let then_source = v8::String::new(__scope, then_code).unwrap();
+
+                                            // Create a function from the code (ScriptOrigin is None)
+                                            let origin: Option<&v8::ScriptOrigin<'_>> = None;
+                                            let script = v8::Script::compile(__scope, then_source, origin).unwrap();
+                                            let script_fn = script.run(__scope).unwrap();
+                                            let then_func = v8::Local::<v8::Function>::try_from(script_fn).unwrap();
+
+                                            // Call the then function with the flush Promise and transform
+                                            let args = [result_val, transform.into()];
+                                            let chained_promise_val = then_func.call(__scope, undefined, &args);
+
+                                            // Return the chained Promise - JavaScript will await this
+                                            // The event loop will process timers and microtasks correctly
+                                            if let Some(p) = chained_promise_val {
+                                                _r.set(p);
+                                                return;
+                                            }
+                                        }
+                                    }
+
+                                    // Non-Promise result - just update state and create resolved Promise
+                                    let state_key = v8::String::new(__scope, "_transformState").unwrap();
+                                    let state_val: v8::Local<v8::Value> = v8::Integer::new(__scope, 2).into(); // 2 = Closed
+                                    transform.set(__scope, state_key.into(), state_val);
                                 }
                             }
                         }
+                    } else {
+                        // No flush callback, just mark as closed
+                        let state_key = v8::String::new(__scope, "_transformState").unwrap();
+                        let state_val: v8::Local<v8::Value> = v8::Integer::new(__scope, 2).into(); // 2 = Closed
+                        transform.set(__scope, state_key.into(), state_val);
                     }
-
-                    // Mark transform as closed
-                    let state_key = v8::String::new(__scope, "_transformState").unwrap();
-                    let state_val: v8::Local<v8::Value> = v8::Integer::new(__scope, 2).into(); // 2 = Closed
-                    transform.set(__scope, state_key.into(), state_val);
                 }
             }
 
+            // Return a resolved Promise
+            let promise: v8::Local<v8::PromiseResolver> = v8::PromiseResolver::new(__scope).unwrap();
             let undefined_val: v8::Local<v8::Value> = v8::undefined(__scope).into();
             let _ = promise.resolve(__scope, undefined_val);
             _r.set(promise.into());

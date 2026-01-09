@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.337 (2025-01-09)
+## 当前版本: v0.3.339 (2025-01-09)
 
 ### 项目状态摘要
 
@@ -15600,3 +15600,68 @@ console.log(e.colno);    // 5
 - ✅ onerror 返回 true 阻止错误传播
 - ✅ ErrorEvent.message 正确从 eventInitDict 提取
 - ✅ window 是 globalThis 的别名
+
+---
+
+### v0.3.339 TransformStream flush async 支持增强（2025-01-09）
+**进度**: 事件循环修复 | ✅ 已完成
+
+#### v0.3.339 问题描述
+
+**核心问题**:
+- 在 Promise 微任务中调用的 setTimeout 回调无法执行
+- 事件循环在微任务调度新定时器后提前退出
+- 导致依赖微任务调度定时器的 AI 工作流失败
+
+**问题根因**:
+- `AsyncTimerManager` 的 `scheduled_timer_count` 在定时器触发时未正确递减
+- 事件循环无法检测到已调度的定时器是否已全部触发
+- 导致事件循环过早退出，遗漏已触发但未执行的定时器
+
+#### v0.3.339 解决方案
+
+**1. 修复 scheduled_timer_count 递减逻辑** (`src/event_loop.rs`):
+- 在定时器触发并从 `scheduled_timers` 中移除时，正确递减计数
+- 确保 `has_scheduled_timers()` 返回准确的定时器状态
+
+**2. 优化事件循环退出条件** (`src/runtime_minimal.rs`):
+- 移除 `has_pending_work` 标志在退出条件中的使用
+- 改为直接检查实际状态: `!has_pending_next_ticks && !has_new_timers && !has_scheduled_timers`
+- 避免因存储过期值导致的无限循环
+
+#### v0.3.339 代码变更
+
+**`src/event_loop.rs`**:
+- `AsyncTimerManager` 结构体: 添加 `scheduled_timer_count` 字段
+- `schedule_timeout()`: 新增计数递增逻辑
+- 定时器触发路径: 添加计数递减逻辑（修复关键 bug）
+
+**`src/runtime_minimal.rs`**:
+- 事件循环: 优化退出条件检查
+- 添加 `has_scheduled_timers()` 调用检测微任务中调度的定时器
+
+#### v0.3.339 验证测试
+
+```javascript
+// 测试: 微任务中调度的定时器
+console.log("START");
+Promise.resolve().then(() => {
+    console.log("IN MICROTASK - about to schedule timer");
+    setTimeout(() => {
+        console.log("TIMEOUT INSIDE MICROTASK FIRED");
+    }, 10);
+    console.log("MICROTASK COMPLETE");
+});
+console.log("END");
+// 期望输出:
+// START
+// END
+// IN MICROTASK - about to schedule timer
+// MICROTASK COMPLETE
+// TIMEOUT INSIDE MICROTASK FIRED
+```
+
+**测试结果**: ✅ 所有测试通过
+- 直接调度的定时器正常工作
+- 微任务中调度的定时器正常工作
+- 事件循环正确等待所有定时器触发后才退出

@@ -1,5 +1,6 @@
 //! Minimal Runtime implementation for fast startup and basic JavaScript execution
 //! This is a simplified version of RuntimeLite without complex dependencies
+//! MARKER_V3 - This file has been modified
 
 use anyhow::Result;
 use chrono::Datelike;
@@ -2979,6 +2980,7 @@ impl MinimalRuntime {
             code.to_string()
         };
 
+
         // 创建 HandleScope（整个函数只创建一次）
         let scope = &mut v8::HandleScope::new(&mut self.isolate);
 
@@ -2999,7 +3001,8 @@ impl MinimalRuntime {
         // 检查是否需要设置 API（第一次调用时）
         let global = context.global(scope);
         let http_key = v8::String::new(scope, "http").unwrap();
-        let needs_setup = global.get(scope, http_key.into()).unwrap().is_undefined();
+        let http_val = global.get(scope, http_key.into()).unwrap();
+        let needs_setup = http_val.is_undefined();
 
         if needs_setup {
             // 第一次调用，设置所有 API
@@ -3288,22 +3291,23 @@ impl MinimalRuntime {
         // Note: setImmediate callbacks are processed AFTER this loop (in the "next iteration")
         //
         loop {
-            // v0.3.261: Wait for background timer thread to process
-            // We need to wait until at least one timer has fired
+            // v0.3.339: Reset pending work flag at start of each iteration
+            // This ensures we re-check the actual state rather than using stale values
             let mut has_pending_work = false;
+
+            // v0.3.261: Wait for background timer thread to process
             let mut iterations_without_progress = 0;
             const MAX_WAIT_ITERATIONS: usize = 50; // Max ~1 second of waiting
 
             while iterations_without_progress < MAX_WAIT_ITERATIONS {
-                let has_fired = {
-                    let timer_manager = crate::event_loop::get_async_timer_manager();
-                    timer_manager.has_fired_timers()
-                };
+                let timer_manager = crate::event_loop::get_async_timer_manager();
+                let has_fired = timer_manager.has_fired_timers();
+                let has_scheduled = timer_manager.has_scheduled_timers();
                 let has_next_ticks = has_pending_next_ticks();
 
-                // v0.3.261: Only wait for nextTicks and fired timers inside the loop
-                // setImmediate callbacks are processed AFTER the loop (in the "next iteration")
-                if has_fired || has_next_ticks {
+                // v0.3.339: Wait if there are fired timers OR scheduled timers (not yet fired)
+                // This handles the case where microtasks schedule new timers
+                if has_fired || has_scheduled || has_next_ticks {
                     has_pending_work = true;
                     break;
                 }
@@ -3314,15 +3318,9 @@ impl MinimalRuntime {
                 iterations_without_progress += 1;
             }
 
-            // If no pending work after waiting, break
-            // v0.3.270: With MicrotasksPolicy::Explicit, we must run microtasks before breaking
-            // This ensures Promise callbacks are executed even if there are no fired timers
-            if !has_pending_work {
-                // Run microtasks before exiting the event loop
-                // This handles Promise callbacks that were queued during sync code
-                scope.perform_microtask_checkpoint();
-                break;
-            }
+            // v0.3.339: If no work was found after waiting, we still need to check if
+            // microtasks scheduled any timers. Continue processing to handle those.
+            // The break below was moved to after processing.
 
             // v0.3.261: Additional wait to ensure worker thread has processed any pending timers
             // This handles the case where a timer was just scheduled and hasn't fired yet
@@ -3336,8 +3334,23 @@ impl MinimalRuntime {
             // nextTick callbacks were already executed, now process Promises
             scope.perform_microtask_checkpoint();
 
+            // v0.3.339: Check if microtasks scheduled any new timers
+            // If so, we need to continue the outer loop to wait for them to fire
+            let timers_scheduled_in_microtasks = {
+                let timer_manager = crate::event_loop::get_async_timer_manager();
+                timer_manager.has_scheduled_timers()
+            };
+            if timers_scheduled_in_microtasks {
+                has_pending_work = true;
+            }
+
             // Execute all currently fired timers (setTimeout/setInterval with delay > 0)
             execute_fired_timers(scope);
+
+            // v0.3.339: Process microtasks after timer execution
+            // Timer callbacks may resolve Promises (e.g., setTimeout callbacks that call resolve())
+            // These Promises need to be processed before continuing
+            scope.perform_microtask_checkpoint();
 
             // v0.3.261: NOTE - setImmediate callbacks are NOT executed inside this loop
             // They are processed after the loop (in the "next iteration") to match Node.js behavior
@@ -3352,11 +3365,23 @@ impl MinimalRuntime {
                 timer_manager.has_fired_timers()
             };
 
-            // v0.3.261: Continue if there are pending nextTicks or VALID fired timers
+            // v0.3.261: Continue if there are pending nextTicks or fired timers
             // Note: setImmediate callbacks are executed AFTER the loop (outside the wait condition)
             // We only wait inside the loop for nextTicks and timers with valid metadata
             // v0.3.270: With MicrotasksPolicy::Explicit, run microtasks before breaking
-            if !has_pending_next_ticks_now && !has_new_timers {
+            // v0.3.339: Only break if there's truly no work left. Check actual state:
+            // - No pending nextTicks
+            // - No newly fired timers
+            // - No scheduled timers waiting to fire
+            // - No pending work from wait loop or microtasks
+            let has_scheduled_timers = {
+                let timer_manager = crate::event_loop::get_async_timer_manager();
+                let result = timer_manager.has_scheduled_timers();
+                result
+            };
+            // v0.3.339: Don't include has_pending_work in break condition since it's a stored value
+            // that may be stale. Instead, check the actual state of timers and nextTicks.
+            if !has_pending_next_ticks_now && !has_new_timers && !has_scheduled_timers {
                 // Run any remaining microtasks before exiting
                 scope.perform_microtask_checkpoint();
                 break;
@@ -3376,10 +3401,14 @@ impl MinimalRuntime {
                     }
                     let _ = crate::nodejs_core::timers::execute_timer_callback(scope, timer_id);
                 }
+
+                // v0.3.339: Process microtasks after timer execution
+                // This handles Promises resolved by timer callbacks
+                scope.perform_microtask_checkpoint();
             }
 
             // If we need to wait for timers, do a brief wait
-            if has_new_timers {
+            if has_new_timers || has_pending_work {
                 std::thread::sleep(std::time::Duration::from_millis(50));
             }
         }

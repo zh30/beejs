@@ -250,6 +250,9 @@ pub struct AsyncTimerManager {
     // Fired 定时器队列（使用 Arc<RwLock> 实现线程安全共享）
     // 工作线程写入，主线程读取
     fired_timers: Arc<RwLock<Vec<u64>>>,
+    // v0.3.339: 已调度定时器计数（使用原子计数实现线程安全共享）
+    // 工作线程在调度时递增，主线程可以检查是否有待处理的定时器
+    scheduled_timer_count: Arc<AtomicU64>,
 }
 
 impl AsyncTimerManager {
@@ -259,6 +262,9 @@ impl AsyncTimerManager {
         // 创建 fired 定时器队列（共享状态）
         let fired_timers = Arc::new(RwLock::new(Vec::new()));
         let fired_timers_clone = fired_timers.clone();
+        // v0.3.339: 创建已调度定时器计数（共享状态）
+        let scheduled_timer_count = Arc::new(AtomicU64::new(0));
+        let scheduled_count_clone = scheduled_timer_count.clone();
 
         // 创建工作线程
         let worker_thread = thread::spawn(move || {
@@ -291,8 +297,14 @@ impl AsyncTimerManager {
                                 }
                             }
 
+                            // v0.3.339: Debug - log fired timers
+                            let fired_count = fired_ids.len();
+                            if fired_count > 0 {
+                                eprintln!("[WORKER] Firing timers: {:?}", fired_ids);
+                            }
+
                             // 更新 fired 定时器队列
-                            if !fired_ids.is_empty() {
+                            if fired_count > 0 {
                                 let mut fired = fired_timers_clone.write().unwrap();
                                 fired.extend(fired_ids);
                             }
@@ -300,6 +312,7 @@ impl AsyncTimerManager {
                             // 移除到期的非重复定时器
                             for id in &to_remove {
                                 scheduled_timers.remove(id);
+                                scheduled_count_clone.fetch_sub(1, Ordering::SeqCst);
                             }
 
                             // 重新调度重复定时器
@@ -314,28 +327,44 @@ impl AsyncTimerManager {
                             match cmd {
                                 Some(TimerCommand::ScheduleTimeout { timer_id, delay }) => {
                                     let scheduled_time = Instant::now() + delay;
+                                    let is_new = !scheduled_timers.contains_key(&timer_id);
                                     scheduled_timers.insert(timer_id, (scheduled_time, delay, 1));
+                                    if is_new {
+                                        scheduled_count_clone.fetch_add(1, Ordering::SeqCst);
+                                    }
                                     // v0.3.261: Removed immediate firing - let the interval tick handle it
                                     // This avoids a race condition where the callback isn't stored yet
                                 }
                                 Some(TimerCommand::ScheduleInterval { timer_id, delay, repeat_count }) => {
                                     let scheduled_time = Instant::now() + delay;
                                     let repeats = if repeat_count == 0 { u32::MAX } else { repeat_count };
+                                    let is_new = !scheduled_timers.contains_key(&timer_id);
                                     scheduled_timers.insert(timer_id, (scheduled_time, delay, repeats));
+                                    if is_new {
+                                        scheduled_count_clone.fetch_add(1, Ordering::SeqCst);
+                                    }
                                 }
                                 Some(TimerCommand::Cancel { timer_id }) => {
-                                    scheduled_timers.remove(&timer_id);
+                                    if scheduled_timers.remove(&timer_id).is_some() {
+                                        scheduled_count_clone.fetch_sub(1, Ordering::SeqCst);
+                                    }
                                 }
                                 Some(TimerCommand::Clear) => {
+                                    let count = scheduled_timers.len() as u64;
                                     scheduled_timers.clear();
+                                    scheduled_count_clone.fetch_sub(count, Ordering::SeqCst);
                                 }
                                 Some(TimerCommand::ClearWithAck(sender)) => {
+                                    let count = scheduled_timers.len() as u64;
                                     scheduled_timers.clear();
+                                    scheduled_count_clone.fetch_sub(count, Ordering::SeqCst);
                                     // v0.3.261: Send acknowledgement after clearing
                                     let _ = sender.send(());
                                 }
                                 Some(TimerCommand::Shutdown) => {
+                                    let count = scheduled_timers.len() as u64;
                                     scheduled_timers.clear();
+                                    scheduled_count_clone.fetch_sub(count, Ordering::SeqCst);
                                     break;
                                 }
                                 None => {
@@ -353,6 +382,7 @@ impl AsyncTimerManager {
             _worker_thread: worker_thread,
             next_timer_id: AtomicU64::new(1),
             fired_timers,
+            scheduled_timer_count,
         }
     }
 
@@ -438,6 +468,12 @@ impl AsyncTimerManager {
     pub fn has_fired_timers(&self) -> bool {
         let fired = self.fired_timers.read().unwrap();
         !fired.is_empty()
+    }
+
+    /// v0.3.339: 检查是否有已调度但尚未触发的定时器
+    /// 用于事件循环判断是否需要继续等待
+    pub fn has_scheduled_timers(&self) -> bool {
+        self.scheduled_timer_count.load(Ordering::SeqCst) > 0
     }
 }
 

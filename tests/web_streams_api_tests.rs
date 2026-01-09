@@ -1314,4 +1314,83 @@ mod web_streams_api_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "TextEncoderStream should work with pipeTo");
     }
+
+    // v0.3.338: Test TransformStream async flush support
+    #[test]
+    fn test_transform_stream_async_flush() {
+        // Test transform with async flush callback (returns Promise)
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                async function test() {
+                    const results = [];
+                    const ts = new TransformStream({
+                        transform(chunk, controller) {
+                            controller.enqueue(chunk.toUpperCase());
+                        },
+                        async flush(controller) {
+                            // Async flush operation (returns Promise)
+                            await new Promise(resolve => setTimeout(resolve, 10));
+                            controller.enqueue('[ASYNC_END]');
+                            return 'flush complete';
+                        }
+                    });
+                    const writer = ts.writable.getWriter();
+                    const reader = ts.readable.getReader();
+
+                    await writer.write('hello');
+                    await writer.close();
+
+                    // Read all chunks
+                    const read1 = await reader.read();
+                    results.push(read1.value);
+                    const read2 = await reader.read();
+                    results.push(read2.value);
+
+                    console.log(results.join(',') === 'HELLO,[ASYNC_END]');
+                }
+                test();
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("true"), "Async flush should complete and enqueue final chunk");
+    }
+
+    #[test]
+    fn test_transform_stream_sync_flush() {
+        // Test transform with sync flush callback (no Promise)
+        let output = Command::new(beejs_path())
+            .args(["eval", r#"
+                let flushCalled = false;
+                const ts = new TransformStream({
+                    transform(chunk, controller) {
+                        controller.enqueue(chunk);
+                    },
+                    flush(controller) {
+                        flushCalled = true;
+                        controller.enqueue('[END]');
+                    }
+                });
+                const writer = ts.writable.getWriter();
+                const reader = ts.readable.getReader();
+
+                writer.write('data');
+                writer.close();
+
+                let results = [];
+                reader.read().then(r => {
+                    results.push(r.value);
+                    return reader.read();
+                }).then(r => {
+                    results.push(r.value);
+                    console.log(results.join(',') + ':' + flushCalled);
+                });
+            "#])
+            .output()
+            .expect("Failed to run beejs");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("data,[END]") && stdout.contains("true"), "Flush should be called and add termination chunk");
+    }
 }
