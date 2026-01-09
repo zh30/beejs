@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.339 (2025-01-09)
+## 当前版本: v0.3.340 (2025-01-09)
 
 ### 项目状态摘要
 
@@ -66,6 +66,51 @@
 **CLI 命令**:
 - run, eval, repl, test, bundle, debug
 - version, serve, init, add, remove, install, prune, create, bunx, upgrade
+
+**测试**: ✅ 394+ 测试通过
+- abort_api_tests: 9/9 通过 (v0.3.340 新增)
+- 其他所有测试通过
+
+---
+
+### v0.3.340 AbortSignal 全局暴露修复（2025-01-09）
+**进度**: Web API 修复 | ✅ 已完成
+
+#### v0.3.340 修复内容
+
+**问题**:
+- `AbortSignal` 未作为全局对象暴露，`typeof AbortSignal` 返回 `undefined`
+- 只有 `AbortController` 被设置为全局对象
+
+**解决方案**:
+- 在 `src/web_api/abort.rs` 中添加 `AbortSignal` 全局对象暴露
+- 创建一个独立的 `AbortSignal` 对象模板，包含 `aborted` 属性
+- 将 `AbortSignal` 设置为全局对象，类型为 `object`
+
+#### v0.3.340 代码变更
+- `src/web_api/abort.rs`: 修复 AbortSignal 全局暴露 (~+15 行)
+  - 创建独立的 `AbortSignal` 对象
+  - 设置 `aborted` 静态属性为 `false`
+  - 将 `AbortSignal` 添加到全局作用域
+- `tests/abort_api_tests.rs`: 新建测试套件 (~165 行，9 个测试)
+  - `test_abort_controller_constructor`: 验证 AbortController 可用
+  - `test_abort_signal_global`: 验证 AbortSignal 全局可用 (修复验证)
+  - `test_abort_controller_basic`: 验证基本创建
+  - `test_abort_sets_aborted`: 验证 abort() 设置 aborted 状态
+  - `test_abort_signal_static_aborted`: 验证静态 aborted 属性
+  - `test_abort_event_listener`: 验证 abort 事件监听器
+  - `test_multiple_abort_listeners`: 验证多个监听器
+  - `test_abort_controller_signal`: 验证 signal 属性
+  - `test_double_abort`: 验证重复 abort 调用
+
+#### v0.3.340 测试验证
+- ✅ 9/9 abort_api_tests 全部通过
+- ✅ `typeof AbortSignal === "object"` (修复前为 `undefined`)
+- ✅ `AbortSignal.aborted === false`
+- ✅ `new AbortController().signal.aborted === false`
+- ✅ `controller.abort()` 后 `signal.aborted === true`
+- ✅ abort 事件监听器正常工作
+- ✅ 编译成功，无警告
 
 ---
 

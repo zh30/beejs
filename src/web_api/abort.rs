@@ -97,10 +97,20 @@ pub fn setup_abort_api(
 
     let abort_controller_constructor: v8::Local<v8::Function> = abort_controller_template.get_function(scope).unwrap();
 
+    // Create AbortSignal as a separate global object (v0.3.340)
+    let abort_signal_obj: v8::Local<v8::Object> = v8::Object::new(scope);
+    let aborted_key = v8::String::new(scope, "aborted").unwrap();
+    let false_bool: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+    abort_signal_obj.set(scope, aborted_key.into(), false_bool);
+
     let global: v8::Local<v8::Object> = context.global(scope);
     let abort_controller_key: v8::Local<v8::String> = v8::String::new(scope, "AbortController").unwrap();
     let abort_controller_val: v8::Local<v8::Value> = abort_controller_constructor.into();
     global.set(scope, abort_controller_key.into(), abort_controller_val.into());
+
+    // Expose AbortSignal as global (v0.3.340)
+    let abort_signal_key: v8::Local<v8::String> = v8::String::new(scope, "AbortSignal").unwrap();
+    global.set(scope, abort_signal_key.into(), abort_signal_obj.into());
 
     Ok(())
 }
