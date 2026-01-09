@@ -24,6 +24,7 @@ pub mod background_sync; // v0.3.327: Background Sync API (SyncManager, SyncEven
 pub mod notification; // v0.3.328: Notification API (system notifications)
 pub mod payment_request; // v0.3.328: Payment Request API (payment processing)
 pub mod error_event; // v0.3.333: ErrorEvent API (script error handling)
+pub mod custom_event; // v0.3.337: CustomEvent API (custom event handling)
 use anyhow::Result;
 use rusty_v8 as v8;
 // 从各模块导入设置函数
@@ -33,6 +34,7 @@ use blob::setup_blob_api;
 use broadcast_channel::setup_broadcast_channel_api;
 use compression::setup_compression_api;
 use crypto::setup_crypto_api;
+use custom_event::setup_custom_event_api;
 use encoding::setup_encoding_api;
 use events::setup_events_api;
 use fetch::setup_fetch_api;
@@ -143,6 +145,10 @@ pub fn init_web_api(
     eprintln!("🔧 [v0.3.333] Setting up ErrorEvent API...");
     setup_error_event_api(scope, context);
     eprintln!("✅ [v0.3.333] ErrorEvent API done");
+    // v0.3.337: CustomEvent API (custom event handling for AI agents and UI frameworks)
+    eprintln!("🔧 [v0.3.337] Setting up CustomEvent API...");
+    setup_custom_event_api(scope, context);
+    eprintln!("✅ [v0.3.337] CustomEvent API done");
     // Note: Streams API is initialized separately in runtime_minimal.rs
     // to avoid duplicate initialization
     eprintln!("🎉 [STAGE74/75] All Web APIs initialized (streams via runtime)!");

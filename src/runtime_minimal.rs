@@ -3053,6 +3053,10 @@ impl MinimalRuntime {
             // v0.3.333: ErrorEvent API (script error handling for WebSocket, Worker, etc.)
             use crate::web_api::error_event::setup_error_event_api;
             setup_error_event_api(scope, &context);
+
+            // v0.3.337: CustomEvent API (custom event handling for AI agents and UI frameworks)
+            use crate::web_api::custom_event::setup_custom_event_api;
+            setup_custom_event_api(scope, &context);
         }
 
         // v0.3.261: Store the original code for potential re-evaluation
@@ -10944,55 +10948,8 @@ impl MinimalRuntime {
         let event_key = v8::String::new(scope, "Event").unwrap().into();
         global.set(scope, event_key, event_fn.into());
 
-        // Set up global CustomEvent constructor (for more flexible events)
-        let custom_event_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let event_obj = v8::Object::new(scope);
-
-            let event_type = if args.length() >= 1 {
-                args.get(0).to_string(scope)
-                    .map(|s| s.to_rust_string_lossy(scope))
-                    .unwrap_or_default()
-            } else {
-                "CustomEvent".to_string()
-            };
-
-            let event_type_key = v8::String::new(scope, "type").unwrap().into();
-            let event_type_val = v8::String::new(scope, &event_type).unwrap().into();
-            event_obj.set(scope, event_type_key, event_type_val);
-
-            // Add detail property (for custom event data)
-            let detail_key = v8::String::new(scope, "detail").unwrap().into();
-            // Pre-create null value to avoid borrow conflict
-            let null_val = v8::null(scope).into();
-            if args.length() >= 2 {
-                event_obj.set(scope, detail_key, args.get(1));
-            } else {
-                event_obj.set(scope, detail_key, null_val);
-            }
-
-            // Add standard event properties
-            let bubbles_key = v8::String::new(scope, "bubbles").unwrap().into();
-            let bubbles_val = v8::Boolean::new(scope, false);
-            event_obj.set(scope, bubbles_key, bubbles_val.into());
-
-            let cancelable_key = v8::String::new(scope, "cancelable").unwrap().into();
-            let cancelable_val = v8::Boolean::new(scope, true);
-            event_obj.set(scope, cancelable_key, cancelable_val.into());
-
-            // Add preventDefault method
-            let prevent_default_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-                let this = args.this();
-                let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap().into();
-                let true_val = v8::Boolean::new(scope, true);
-                this.set(scope, default_prevented_key, true_val.into());
-            }).ok_or_else(|| anyhow::anyhow!("Failed to create preventDefault function")).unwrap();
-            let prevent_default_key = v8::String::new(scope, "preventDefault").unwrap().into();
-            event_obj.set(scope, prevent_default_key, prevent_default_fn.into());
-
-            retval.set(event_obj.into());
-        }).ok_or_else(|| anyhow::anyhow!("Failed to create CustomEvent function"))?;
-        let custom_event_key = v8::String::new(scope, "CustomEvent").unwrap().into();
-        global.set(scope, custom_event_key, custom_event_fn.into());
+        // Note: CustomEvent is now set up in web_api/mod.rs via init_web_api()
+        // v0.3.337: Extracted to web_api/custom_event.rs for better modularity
 
         // Set up globalThis for ES2020 compatibility
         // In V8, globalThis should already point to the global object,

@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.335 (2025-01-09)
+## 当前版本: v0.3.337 (2025-01-09)
 
 ### 项目状态摘要
 
@@ -35,6 +35,7 @@
 - Payment Request API (v0.3.328 新增): PaymentRequest, PaymentResponse, PaymentAddress - 支付处理
 - ErrorEvent API (v0.3.333 新增): ErrorEvent 接口用于脚本错误处理
 - WebSocket ErrorEvent 集成 (v0.3.334): WebSocket 错误事件使用 ErrorEvent 格式
+- CustomEvent API (v0.3.337 新增): 自定义事件接口，适用于 AI 代理系统和 UI 框架
 
 **包管理**: ✅ 已完成
 - package.json 解析
@@ -65,6 +66,57 @@
 **CLI 命令**:
 - run, eval, repl, test, bundle, debug
 - version, serve, init, add, remove, install, prune, create, bunx, upgrade
+
+---
+
+### v0.3.337 CustomEvent API 提取和测试（2025-01-09）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.337 新增功能
+
+**CustomEvent API 提取**:
+- 将 CustomEvent 从 runtime_minimal.rs 提取到独立模块 `src/web_api/custom_event.rs`
+- 遵循其他 Web API 的模块化模式
+- 提供 `setup_custom_event_api()` 初始化函数
+- 提供 `create_custom_event_object()` 辅助函数用于创建自定义事件
+
+**CustomEvent 功能**:
+- `new CustomEvent(type, eventInitDict)` 构造函数
+- `eventInitDict.detail`: 自定义事件数据 (默认: null)
+- `eventInitDict.bubbles`: 是否冒泡 (默认: false)
+- `eventInitDict.cancelable`: 是否可取消 (默认: true)
+- 继承 Event 的所有属性和方法 (type, bubbles, cancelable, preventDefault 等)
+- `detail` 属性用于传递自定义数据
+
+#### v0.3.337 代码变更
+- `src/web_api/custom_event.rs`: 新建 CustomEvent API (~215 行)
+  - `setup_custom_event_api()`: 设置 CustomEvent 全局构造函数
+  - `custom_event_constructor()`: CustomEvent 构造函数回调
+  - `create_custom_event_object()`: 创建 CustomEvent 对象的辅助函数
+- `src/web_api/mod.rs`: 注册 custom_event 模块 (~+8 行)
+  - 添加 `pub mod custom_event`
+  - 添加 `use custom_event::setup_custom_event_api`
+  - 在 `init_web_api()` 中调用初始化
+- `src/runtime_minimal.rs`: 移除内联实现，添加模块导入 (~-50 行)
+  - 添加 `use crate::web_api::custom_event::setup_custom_event_api`
+  - 调用 `setup_custom_event_api(scope, &context)`
+- `tests/custom_event_tests.rs`: 新建测试套件 (~260 行，13 个测试)
+
+#### v0.3.337 测试覆盖
+- CustomEvent 构造函数可用性测试
+- 基本创建和 type 属性测试
+- detail 属性测试（复杂数据、null、空值）
+- 默认值测试 (detail: null, bubbles: false, cancelable: true)
+- Event 继承测试 (preventDefault, cancelable, bubbles)
+- 只读属性存在性测试
+- AI 工作负载场景测试（代理事件数据传递）
+
+#### v0.3.337 测试验证
+- ✅ 13/13 custom_event_tests 全部通过
+- ✅ CustomEvent 构造函数可用 (typeof CustomEvent === "function")
+- ✅ detail 属性正确设置和传递
+- ✅ 继承的 Event 方法正常工作
+- ✅ 编译成功，无警告
 
 ---
 
