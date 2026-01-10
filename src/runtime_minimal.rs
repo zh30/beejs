@@ -3066,6 +3066,12 @@ impl MinimalRuntime {
             use crate::web_api::dom_parser::setup_dom_parser_api;
             setup_dom_parser_api(scope, &context)?;
             eprintln!("✅ [v0.3.341] DOMParser API done");
+
+            // v0.3.342: Clipboard API (copy/paste for AI workloads)
+            eprintln!("🔧 [v0.3.342] Setting up Clipboard API...");
+            use crate::web_api::clipboard::setup_clipboard_api;
+            setup_clipboard_api(scope, &context)?;
+            eprintln!("✅ [v0.3.342] Clipboard API done");
         }
 
         // v0.3.261: Store the original code for potential re-evaluation
