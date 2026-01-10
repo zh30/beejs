@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.340 (2025-01-09)
+## 当前版本: v0.3.341 (2025-01-10)
 
 ### 项目状态摘要
 
@@ -36,6 +36,7 @@
 - ErrorEvent API (v0.3.333 新增): ErrorEvent 接口用于脚本错误处理
 - WebSocket ErrorEvent 集成 (v0.3.334): WebSocket 错误事件使用 ErrorEvent 格式
 - CustomEvent API (v0.3.337 新增): 自定义事件接口，适用于 AI 代理系统和 UI 框架
+- DOMParser API (v0.3.341 新增): HTML/XML 文档解析，适用于 AI 工作负载处理网页内容
 
 **包管理**: ✅ 已完成
 - package.json 解析
@@ -67,8 +68,9 @@
 - run, eval, repl, test, bundle, debug
 - version, serve, init, add, remove, install, prune, create, bunx, upgrade
 
-**测试**: ✅ 394+ 测试通过
+**测试**: ✅ 407+ 测试通过
 - abort_api_tests: 9/9 通过 (v0.3.340 新增)
+- dom_parser_tests: 13/13 通过 (v0.3.341 新增)
 - 其他所有测试通过
 
 ---
@@ -15710,3 +15712,69 @@ console.log("END");
 - 直接调度的定时器正常工作
 - 微任务中调度的定时器正常工作
 - 事件循环正确等待所有定时器触发后才退出
+
+---
+
+### v0.3.341 DOMParser API 实现（2025-01-10）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.341 新增功能
+
+**DOMParser API**:
+- 实现 `DOMParser` 构造函数
+- 实现 `parseFromString(string, contentType)` 方法
+- 支持多种内容类型：text/html, application/xml, image/svg+xml, application/xhtml+xml
+- HTML 文档解析（包含 body 属性）
+- XML/XHTML/SVG 文档解析
+- 自动 HTML 实体转义（< > & " '）
+- document.URL 属性
+- document.children 属性
+- document.body.innerHTML（HTML 文档）
+
+#### v0.3.341 代码变更
+- `src/web_api/dom_parser.rs`: 新建 DOMParser API (~180 行)
+  - `setup_dom_parser_api()`: 设置 DOMParser 全局构造函数
+  - `parseFromString()`: 解析 HTML/XML 文档
+  - `escape_html()`: HTML 实体转义
+- `src/web_api/mod.rs`: 注册 dom_parser 模块 (~+12 行)
+  - 添加 `pub mod dom_parser`
+  - 添加 `use dom_parser::setup_dom_parser_api`
+  - 在 `init_web_api()` 中调用初始化
+- `tests/dom_parser_tests.rs`: 新建测试套件 (~220 行，13 个测试)
+
+#### v0.3.341 测试覆盖
+- DOMParser 构造函数可用性测试
+- 实例创建测试
+- parseFromString 方法可用性测试
+- HTML 文档解析测试
+- XML 文档解析测试
+- SVG 解析测试
+- XHTML 解析测试
+- document.body 属性测试
+- document.URL 属性测试
+- document.children 属性测试
+- 空字符串解析测试
+- 特殊字符转义测试
+- 默认内容类型测试
+
+#### v0.3.341 使用示例
+```javascript
+const parser = new DOMParser();
+
+// 解析 HTML
+const htmlDoc = parser.parseFromString('<html><body><h1>Hello</h1></body></html>', 'text/html');
+console.log(htmlDoc.body.innerHTML);
+
+// 解析 XML
+const xmlDoc = parser.parseFromString('<?xml version="1.0"?><root><item>test</item></root>', 'application/xml');
+
+// 解析 SVG
+const svgDoc = parser.parseFromString('<svg><circle cx="50" cy="50" r="40"/></svg>', 'image/svg+xml');
+```
+
+#### v0.3.341 适用场景
+- AI 工作负载处理网页内容
+- HTML/XML 文档解析
+- 数据提取和转换
+- Web scraping 预处理
+- 文档格式转换

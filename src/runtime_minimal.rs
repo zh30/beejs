@@ -3060,6 +3060,12 @@ impl MinimalRuntime {
             // v0.3.337: CustomEvent API (custom event handling for AI agents and UI frameworks)
             use crate::web_api::custom_event::setup_custom_event_api;
             setup_custom_event_api(scope, &context);
+
+            // v0.3.341: DOMParser API (HTML/XML document parsing for AI workloads)
+            eprintln!("🔧 [v0.3.341] Setting up DOMParser API...");
+            use crate::web_api::dom_parser::setup_dom_parser_api;
+            setup_dom_parser_api(scope, &context)?;
+            eprintln!("✅ [v0.3.341] DOMParser API done");
         }
 
         // v0.3.261: Store the original code for potential re-evaluation

@@ -25,6 +25,7 @@ pub mod notification; // v0.3.328: Notification API (system notifications)
 pub mod payment_request; // v0.3.328: Payment Request API (payment processing)
 pub mod error_event; // v0.3.333: ErrorEvent API (script error handling)
 pub mod custom_event; // v0.3.337: CustomEvent API (custom event handling)
+pub mod dom_parser; // v0.3.341: DOMParser API (HTML/XML document parsing for AI workloads)
 use anyhow::Result;
 use rusty_v8 as v8;
 // 从各模块导入设置函数
@@ -35,6 +36,7 @@ use broadcast_channel::setup_broadcast_channel_api;
 use compression::setup_compression_api;
 use crypto::setup_crypto_api;
 use custom_event::setup_custom_event_api;
+use dom_parser::setup_dom_parser_api;
 use encoding::setup_encoding_api;
 use events::setup_events_api;
 use fetch::setup_fetch_api;
@@ -149,6 +151,10 @@ pub fn init_web_api(
     eprintln!("🔧 [v0.3.337] Setting up CustomEvent API...");
     setup_custom_event_api(scope, context);
     eprintln!("✅ [v0.3.337] CustomEvent API done");
+    // v0.3.341: DOMParser API (HTML/XML document parsing for AI workloads)
+    eprintln!("🔧 [v0.3.341] Setting up DOMParser API...");
+    setup_dom_parser_api(scope, context)?;
+    eprintln!("✅ [v0.3.341] DOMParser API done");
     // Note: Streams API is initialized separately in runtime_minimal.rs
     // to avoid duplicate initialization
     eprintln!("🎉 [STAGE74/75] All Web APIs initialized (streams via runtime)!");
