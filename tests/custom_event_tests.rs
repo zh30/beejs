@@ -6,9 +6,12 @@
 #[cfg(test)]
 mod tests {
     use beejs::MinimalRuntime;
+    use serial_test::serial;
 
     /// 测试 CustomEvent 构造函数可用性
     #[test]
+    #[serial]
+    #[serial]
     fn test_custom_event_constructor() {
         let code = r#"
             typeof CustomEvent
@@ -22,6 +25,7 @@ mod tests {
 
     /// 测试 CustomEvent 基本创建
     #[test]
+    #[serial]
     fn test_custom_event_basic_creation() {
         let code = r#"
             const event = new CustomEvent('test');
@@ -36,6 +40,7 @@ mod tests {
 
     /// 测试 CustomEvent detail 属性
     #[test]
+    #[serial]
     fn test_custom_event_detail() {
         let code = r#"
             const event = new CustomEvent('data', {
@@ -54,6 +59,7 @@ mod tests {
 
     /// 测试 CustomEvent 默认值
     #[test]
+    #[serial]
     fn test_custom_event_defaults() {
         let code = r#"
             const event = new CustomEvent('test');
@@ -70,6 +76,7 @@ mod tests {
 
     /// 测试 CustomEvent 继承自 Event
     #[test]
+    #[serial]
     fn test_custom_event_inherits_from_event() {
         let code = r#"
             const event = new CustomEvent('test');
@@ -84,6 +91,7 @@ mod tests {
 
     /// 测试 CustomEvent preventDefault 方法
     #[test]
+    #[serial]
     fn test_custom_event_prevent_default() {
         let code = r#"
             const event = new CustomEvent('test');
@@ -100,6 +108,7 @@ mod tests {
 
     /// 测试 CustomEvent 与复杂数据
     #[test]
+    #[serial]
     fn test_custom_event_complex_data() {
         let code = r#"
             const data = {
@@ -123,6 +132,7 @@ mod tests {
 
     /// 测试 CustomEvent 只读属性
     #[test]
+    #[serial]
     fn test_custom_event_readonly_properties() {
         let code = r#"
             const event = new CustomEvent('test', { detail: { data: 123 } });
@@ -138,6 +148,7 @@ mod tests {
 
     /// 测试 CustomEvent 作为事件类型
     #[test]
+    #[serial]
     fn test_custom_event_as_event_type() {
         let code = r#"
             const event = new CustomEvent('custom', { detail: { message: 'hello' } });
@@ -152,6 +163,7 @@ mod tests {
 
     /// 测试 CustomEvent EventTarget 兼容性
     #[test]
+    #[serial]
     fn test_custom_event_with_event_target() {
         let code = r#"
             const event = new CustomEvent('test');
@@ -166,6 +178,7 @@ mod tests {
 
     /// 测试 CustomEvent 空 detail
     #[test]
+    #[serial]
     fn test_custom_event_empty_detail() {
         let code = r#"
             const event = new CustomEvent('empty', { detail: null });
@@ -180,6 +193,7 @@ mod tests {
 
     /// 测试 CustomEvent 无参数
     #[test]
+    #[serial]
     fn test_custom_event_no_args() {
         let code = r#"
             const event = new CustomEvent();
@@ -194,6 +208,7 @@ mod tests {
 
     /// 测试 CustomEvent AI 工作负载场景
     #[test]
+    #[serial]
     fn test_custom_event_ai_workload() {
         let code = r#"
             // 模拟 AI 代理事件

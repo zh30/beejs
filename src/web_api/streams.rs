@@ -577,13 +577,20 @@ fn readable_stream_constructor(
             }
         }
 
-        // Return the transform's readable side directly (per Web Streams API spec)
+        // Return an object with readable and writable properties (per Web Streams API spec)
+        let result_obj: v8::Local<v8::Object> = v8::Object::new(_scope);
+
         if let Some(readable) = transform_readable {
-            retval.set(readable);
-        } else {
-            let undefined = v8::undefined(_scope).into();
-            retval.set(undefined);
+            let readable_key = v8::String::new(_scope, "readable").unwrap();
+            result_obj.set(_scope, readable_key.into(), readable);
         }
+
+        if let Some(writable) = transform_writable {
+            let writable_key = v8::String::new(_scope, "writable").unwrap();
+            result_obj.set(_scope, writable_key.into(), writable);
+        }
+
+        retval.set(result_obj.into());
     });
     let pipe_through_key: v8::Local<v8::String> = v8::String::new(scope, "pipeThrough").unwrap();
     let pipe_through_func: v8::Local<v8::Function> = pipe_through_fn.get_function(scope).unwrap();

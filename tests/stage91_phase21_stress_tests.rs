@@ -90,8 +90,9 @@ impl StressTestRunner {
         println!("  平均性能: {:.2} ops/sec", ops_per_sec);
         println!("  测试时长: {:?}", elapsed);
 
-        // 验证：错误率应小于 1%
-        assert!(错误率过高");
+        // Verify: error rate should be less than 1%
+        let error_rate = total_errors as f64 / (total_operations + total_errors) as f64;
+        assert!(error_rate < 0.01, "Error rate too high: {:.2}%", error_rate * 100.0);
 
         Ok(())
     }
