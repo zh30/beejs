@@ -114,4 +114,60 @@ mod http_tests {
         assert!(status == "404" || status == "200",
             "Expected 404 or 200 for invalid URL, got: {}", status);
     }
+
+    // v0.3.344: Tests for Response.arrayBuffer() and Response.blob() Body mixin methods
+    #[test]
+    #[serial_test::serial]
+    fn test_response_array_buffer_method_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const response = fetch('https://httpbin.org/bytes/10');
+            typeof response.arrayBuffer;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        // arrayBuffer 方法应该存在且类型为 'function'
+        assert!(output == "function",
+            "Expected arrayBuffer to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_response_blob_method_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const response = fetch('https://httpbin.org/bytes/10');
+            typeof response.blob;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        // blob 方法应该存在且类型为 'function'
+        assert!(output == "function",
+            "Expected blob to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_response_blob_returns_object_with_size_and_type() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const response = fetch('https://httpbin.org/bytes/10');
+            const blob = response.blob();
+            typeof blob === 'object' && typeof blob.size === 'number' && typeof blob.type === 'string';
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        // blob 应该返回包含 size 和 type 属性的对象
+        assert!(output == "true",
+            "Expected blob to return object with size and type, got: {}", output);
+    }
 }

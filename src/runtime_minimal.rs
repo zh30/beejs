@@ -4147,6 +4147,55 @@ impl MinimalRuntime {
                 let text_key = v8::String::new(scope, "text").unwrap().into();
                 response_obj.set(scope, text_key, text_fn.into());
 
+                // v0.3.344: Add arrayBuffer() method (Body mixin)
+                let array_buffer_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    let this_obj: v8::Local<v8::Object> = args.this();
+                    if let Some(body_val) = this_obj.get_internal_field(_scope, 0) {
+                        let body_str = body_val.to_string(_scope).unwrap().to_rust_string_lossy(_scope);
+                        let body_bytes = body_str.as_bytes();
+                        let buffer = v8::ArrayBuffer::new(_scope, body_bytes.len());
+                        let store = buffer.get_backing_store();
+                        let store_ptr = store.as_ref().as_ptr() as *mut u8;
+                        unsafe {
+                            std::ptr::copy_nonoverlapping(body_bytes.as_ptr(), store_ptr, body_bytes.len());
+                        }
+                        retval.set(buffer.into());
+                    } else {
+                        let buffer = v8::ArrayBuffer::new(_scope, 0);
+                        retval.set(buffer.into());
+                    }
+                }).ok_or_else(|| anyhow::anyhow!("Failed to create arrayBuffer function")).unwrap();
+                let array_buffer_key = v8::String::new(scope, "arrayBuffer").unwrap().into();
+                response_obj.set(scope, array_buffer_key, array_buffer_fn.into());
+
+                // v0.3.344: Add blob() method (Body mixin)
+                let blob_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+                    let this_obj: v8::Local<v8::Object> = args.this();
+                    let blob_obj = v8::Object::new(_scope);
+
+                    // Get body from internal field
+                    let body_len = if let Some(body_val) = this_obj.get_internal_field(_scope, 0) {
+                        let body_str = body_val.to_string(_scope).unwrap().to_rust_string_lossy(_scope);
+                        body_str.len()
+                    } else {
+                        0
+                    };
+
+                    // Set size property
+                    let size_key = v8::String::new(_scope, "size").unwrap().into();
+                    let size_val = v8::Integer::new_from_unsigned(_scope, body_len as u32).into();
+                    blob_obj.set(_scope, size_key, size_val);
+
+                    // Set type property
+                    let type_key = v8::String::new(_scope, "type").unwrap().into();
+                    let type_val = v8::String::new(_scope, "application/octet-stream").unwrap().into();
+                    blob_obj.set(_scope, type_key, type_val);
+
+                    retval.set(blob_obj.into());
+                }).ok_or_else(|| anyhow::anyhow!("Failed to create blob function")).unwrap();
+                let blob_key = v8::String::new(scope, "blob").unwrap().into();
+                response_obj.set(scope, blob_key, blob_fn.into());
+
                 println!("🌐 fetch() called for URL: {} (status: {}, body_len: {})", url_string, status, response_body.len());
 
                 retval.set(response_obj.into());
