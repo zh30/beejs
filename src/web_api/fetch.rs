@@ -479,7 +479,6 @@ async fn execute_fetch(
         let client: _ = reqwest::Client::builder()
             .user_agent("Beejs/0.1.0")
             .timeout(std::time::Duration::from_secs(30))
-            .follow_redirects(false) // Handle redirects manually
             .build()?;
 
         let request: _ = client
@@ -536,11 +535,11 @@ async fn execute_fetch(
                 }
                 "manual" => {
                     // Return the redirect response without following
-                    let mut response_headers = HashMap::new();
+                    let mut response_headers: HashMap<String, String> = HashMap::new();
                     for (key, value) in response.headers() {
                         response_headers.insert(key.to_string(), value.to_str().unwrap_or("").to_string());
                     }
-                    let body_vec = response.bytes().await?.to_vec();
+                    let body_vec: Vec<u8> = response.bytes().await?.to_vec();
                     return Ok(FetchResponse {
                         url: current_url.clone(),
                         status,
@@ -572,11 +571,11 @@ async fn execute_fetch(
                         continue;
                     } else {
                         // No location header - treat as normal response
-                        let mut response_headers = HashMap::new();
+                        let mut response_headers: HashMap<String, String> = HashMap::new();
                         for (key, value) in response.headers() {
                             response_headers.insert(key.to_string(), value.to_str().unwrap_or("").to_string());
                         }
-                        let body_vec = response.bytes().await?.to_vec();
+                        let body_vec: Vec<u8> = response.bytes().await?.to_vec();
                         return Ok(FetchResponse {
                             url: current_url.clone(),
                             status,
@@ -594,12 +593,12 @@ async fn execute_fetch(
         }
 
         // Extract headers BEFORE consuming the response
-        let mut response_headers = HashMap::new();
+        let mut response_headers: HashMap<String, String> = HashMap::new();
         for (key, value) in response.headers() {
             response_headers.insert(key.to_string(), value.to_str().unwrap_or("").to_string());
         }
         // Get response body
-        let body_vec: _ = response.bytes().await?.to_vec();
+        let body_vec: Vec<u8> = response.bytes().await?.to_vec();
 
         // Determine response type
         let response_type = if redirected {
