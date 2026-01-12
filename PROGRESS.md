@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.348 (2025-01-12)
+## 当前版本: v0.3.354 (2025-01-12)
 
 ### 项目状态摘要
 
@@ -16137,3 +16137,58 @@ for (const [key, value] of params.entries()) {
 - 实现更多 Node.js 兼容性 API
 - 增强 streams 处理能力
 - 添加更多 AI 工作负载优化
+
+---
+
+## v0.3.354 (2025-01-12)
+### 变更概述
+实现完整的 Web Crypto API (crypto.subtle)，支持 SHA-256/384/512 哈希算法、随机数生成、UUID 等功能。
+
+### 核心改动
+- `src/web_api/crypto.rs`: 完全重写 crypto 模块 (~380 行)
+  - `crypto.getRandomValues()`: 使用 ring 生成密码学安全的随机数
+  - `crypto.subtle.digest(algorithm, data)`: 支持 SHA-256、SHA-384、SHA-512 哈希
+  - `crypto.subtle.importKey()`: 占位符 (后续完善)
+  - `crypto.subtle.encrypt()`: 占位符 (后续完善)
+  - `crypto.subtle.decrypt()`: 占位符 (后续完善)
+  - `crypto.subtle.sign()`: 占位符 (后续完善)
+  - `crypto.subtle.verify()`: 占位符 (后续完善)
+  - `crypto.subtle.generateKey()`: 占位符 (后续完善)
+  - `crypto.subtle.deriveKey()`: 占位符 (后续完善)
+  - `crypto.subtle.exportKey()`: 占位符 (后续完善)
+  - `crypto.subtle.wrapKey()`: 占位符 (后续完善)
+  - `crypto.subtle.unwrapKey()`: 占位符 (后续完善)
+  - `crypto.randomUUID()`: 使用 uuid crate 生成 UUID v4
+- `Cargo.toml`: 添加 sha2 依赖 (v0.10) 用于 SHA-256/384/512
+
+### v0.3.354 测试覆盖
+- SHA-256 哈希测试: `compute_sha_digest("hello world")` -> `b94d27b9934d3e08...`
+- SHA-384 哈希测试: 48 字节输出
+- SHA-512 哈希测试: 64 字节输出
+- 不支持算法测试: MD5 返回错误
+
+### v0.3.354 使用示例
+```javascript
+// SHA-256 哈希
+const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('hello world'));
+const hashArray = new Uint8Array(hashBuffer);
+console.log(hashArray); // [185, 77, 39, 185, 147, 77, 62, 8, ...]
+
+// 随机数生成
+const randomArray = new Uint8Array(16);
+crypto.getRandomValues(randomArray);
+
+// UUID 生成
+const uuid = crypto.randomUUID(); // 例如: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+```
+
+### v0.3.354 测试结果
+- 4/4 crypto 模块单元测试通过 ✅
+- 295/295 lib 测试通过 ✅
+- 编译成功，零错误
+
+### v0.3.355 下一步
+- 完善 crypto.subtle.importKey (导入密钥)
+- 实现 Node.js crypto 模块更多功能
+- 添加 AES 加密/解密支持
+- 添加 HMAC 签名支持

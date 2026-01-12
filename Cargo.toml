@@ -149,6 +149,7 @@ git2 = "0.18"
 
 # Stage 84: Security & Compliance dependencies
 rust-crypto = "0.2"
+sha2 = "0.10"  # v0.3.354: SHA-256/384/512 for crypto.subtle.digest
 ring = "0.17"
 jsonwebtoken = "9.0"
 oauth2 = "1.0"
