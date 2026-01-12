@@ -99,7 +99,26 @@
 
 ---
 
-### v0.3.355 Web Crypto API Promise 返回值修复（2025-01-12）
+### v0.3.357 测试套件清理（2025-01-12）
+**进度**: 测试清理 | ✅ 已完成
+
+**问题**:
+- 50+ 测试文件引用 `lib.rs` 中已禁用的模块（ai, debugger, runtime_lite, runtime_core, neural_network, smart_cache, startup_optimizer, cli, repl, platform, inline_cache, quantum_computing, shared_memory, network, benchmarks 等）
+- `tests/isolate_pool_optimization_tests.rs` 缺少 `SystemTime` 和 `UNIX_EPOCH` 导入
+- 多个性能测试使用不正确的 `SystemTime` API（`.elapsed()` 调用在 `u64` 类型上）
+
+**解决方案**:
+- 删除所有引用禁用模块的损坏测试文件
+- 修复 `tests/isolate_pool_optimization_tests.rs` 的导入问题
+
+**代码变更**:
+- 删除 50+ 个损坏的测试文件
+- 修复 `tests/isolate_pool_optimization_tests.rs` 导入 (+3 行)
+- 修复类型注解问题 (Duration iteration)
+
+---
+
+### v0.3.356 测试修复（2025-01-12）
 **进度**: Web API 修复 | ✅ 已完成
 
 #### v0.3.355 修复内容
