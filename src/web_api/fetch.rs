@@ -390,88 +390,93 @@ fn request_constructor_callback(
     let mut init_body: Option<String> = None;
     let mut init_headers: Vec<(String, String)> = Vec::new();
 
-    if let Some(init) = args.get(1).to_object(scope) {
-        // Parse method from init
-        let method_key = v8::String::new(scope, "method").unwrap().into();
-        if let Some(method_val) = init.get(scope, method_key) {
-            if let Some(method_str) = method_val.to_string(scope) {
-                method = method_str.to_rust_string_lossy(scope);
+    // Parse init object (second argument) for additional properties
+    // Note: args.get(1) returns undefined if not provided, so we need to check
+    let init_arg = args.get(1);
+    if init_arg.is_object() {
+        if let Some(init) = init_arg.to_object(scope) {
+            // Parse method from init
+            let method_key = v8::String::new(scope, "method").unwrap().into();
+            if let Some(method_val) = init.get(scope, method_key) {
+                if let Some(method_str) = method_val.to_string(scope) {
+                    method = method_str.to_rust_string_lossy(scope);
+                }
             }
-        }
 
-        // Parse cache
-        let cache_key = v8::String::new(scope, "cache").unwrap().into();
-        if let Some(cache_val) = init.get(scope, cache_key) {
-            if let Some(cache_str) = cache_val.to_string(scope) {
-                init_cache = cache_str.to_rust_string_lossy(scope);
+            // Parse cache
+            let cache_key = v8::String::new(scope, "cache").unwrap().into();
+            if let Some(cache_val) = init.get(scope, cache_key) {
+                if let Some(cache_str) = cache_val.to_string(scope) {
+                    init_cache = cache_str.to_rust_string_lossy(scope);
+                }
             }
-        }
 
-        // Parse credentials
-        let cred_key = v8::String::new(scope, "credentials").unwrap().into();
-        if let Some(cred_val) = init.get(scope, cred_key) {
-            if let Some(cred_str) = cred_val.to_string(scope) {
-                init_credentials = cred_str.to_rust_string_lossy(scope);
+            // Parse credentials
+            let cred_key = v8::String::new(scope, "credentials").unwrap().into();
+            if let Some(cred_val) = init.get(scope, cred_key) {
+                if let Some(cred_str) = cred_val.to_string(scope) {
+                    init_credentials = cred_str.to_rust_string_lossy(scope);
+                }
             }
-        }
 
-        // Parse mode
-        let mode_key = v8::String::new(scope, "mode").unwrap().into();
-        if let Some(mode_val) = init.get(scope, mode_key) {
-            if let Some(mode_str) = mode_val.to_string(scope) {
-                init_mode = mode_str.to_rust_string_lossy(scope);
+            // Parse mode
+            let mode_key = v8::String::new(scope, "mode").unwrap().into();
+            if let Some(mode_val) = init.get(scope, mode_key) {
+                if let Some(mode_str) = mode_val.to_string(scope) {
+                    init_mode = mode_str.to_rust_string_lossy(scope);
+                }
             }
-        }
 
-        // Parse redirect
-        let redirect_key = v8::String::new(scope, "redirect").unwrap().into();
-        if let Some(redirect_val) = init.get(scope, redirect_key) {
-            if let Some(redirect_str) = redirect_val.to_string(scope) {
-                init_redirect = redirect_str.to_rust_string_lossy(scope);
+            // Parse redirect
+            let redirect_key = v8::String::new(scope, "redirect").unwrap().into();
+            if let Some(redirect_val) = init.get(scope, redirect_key) {
+                if let Some(redirect_str) = redirect_val.to_string(scope) {
+                    init_redirect = redirect_str.to_rust_string_lossy(scope);
+                }
             }
-        }
 
-        // Parse referrer
-        let referrer_key = v8::String::new(scope, "referrer").unwrap().into();
-        if let Some(referrer_val) = init.get(scope, referrer_key) {
-            if let Some(referrer_str) = referrer_val.to_string(scope) {
-                init_referrer = referrer_str.to_rust_string_lossy(scope);
+            // Parse referrer
+            let referrer_key = v8::String::new(scope, "referrer").unwrap().into();
+            if let Some(referrer_val) = init.get(scope, referrer_key) {
+                if let Some(referrer_str) = referrer_val.to_string(scope) {
+                    init_referrer = referrer_str.to_rust_string_lossy(scope);
+                }
             }
-        }
 
-        // Parse referrerPolicy
-        let policy_key = v8::String::new(scope, "referrerPolicy").unwrap().into();
-        if let Some(policy_val) = init.get(scope, policy_key) {
-            if let Some(policy_str) = policy_val.to_string(scope) {
-                init_policy = policy_str.to_rust_string_lossy(scope);
+            // Parse referrerPolicy
+            let policy_key = v8::String::new(scope, "referrerPolicy").unwrap().into();
+            if let Some(policy_val) = init.get(scope, policy_key) {
+                if let Some(policy_str) = policy_val.to_string(scope) {
+                    init_policy = policy_str.to_rust_string_lossy(scope);
+                }
             }
-        }
 
-        // Parse integrity
-        let integrity_key = v8::String::new(scope, "integrity").unwrap().into();
-        if let Some(integrity_val) = init.get(scope, integrity_key) {
-            if let Some(integrity_str) = integrity_val.to_string(scope) {
-                init_integrity = integrity_str.to_rust_string_lossy(scope);
+            // Parse integrity
+            let integrity_key = v8::String::new(scope, "integrity").unwrap().into();
+            if let Some(integrity_val) = init.get(scope, integrity_key) {
+                if let Some(integrity_str) = integrity_val.to_string(scope) {
+                    init_integrity = integrity_str.to_rust_string_lossy(scope);
+                }
             }
-        }
 
-        // Parse keepalive
-        let keepalive_key = v8::String::new(scope, "keepalive").unwrap().into();
-        if let Some(keepalive_val) = init.get(scope, keepalive_key) {
-            init_keepalive = keepalive_val.is_true();
-        }
+            // Parse keepalive
+            let keepalive_key = v8::String::new(scope, "keepalive").unwrap().into();
+            if let Some(keepalive_val) = init.get(scope, keepalive_key) {
+                init_keepalive = keepalive_val.is_true();
+            }
 
-        // Parse body
-        let body_key = v8::String::new(scope, "body").unwrap().into();
-        if let Some(body_val) = init.get(scope, body_key) {
-            if let Some(body_str) = body_val.to_string(scope) {
-                init_body = Some(body_str.to_rust_string_lossy(scope));
+            // Parse body
+            let body_key = v8::String::new(scope, "body").unwrap().into();
+            if let Some(body_val) = init.get(scope, body_key) {
+                if let Some(body_str) = body_val.to_string(scope) {
+                    init_body = Some(body_str.to_rust_string_lossy(scope));
+                }
             }
         }
     }
 
     // Create request object
-    let request_obj: _ = v8::Object::new(scope);
+    let request_obj: v8::Local<v8::Object> = v8::Object::new(scope);
 
     // Store request data in cache
     let request_ptr = &*request_obj as *const v8::Object as usize;
@@ -678,25 +683,51 @@ fn response_constructor_callback(
     }
     retval.set(response_obj.into());
 }
-/// Headers constructor callback
+/// Headers constructor callback - uses ObjectTemplate with internal fields
 fn headers_constructor_callback(
     scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let headers_obj: v8::Local<v8::Object> = v8::Object::new(scope);
+    // Create ObjectTemplate with internal field for storing headers index
+    let headers_template = v8::ObjectTemplate::new(scope);
+    headers_template.set_internal_field_count(1);
 
-    // Store pointer to headers data in object (will be initialized on first use)
-    let headers_ptr = &*headers_obj as *const v8::Object as usize;
+    let headers_obj: v8::Local<v8::Object> = match headers_template.new_instance(scope) {
+        Some(obj) => obj,
+        None => {
+            retval.set(v8::null(scope).into());
+            return;
+        }
+    };
+
+    // Get next available index for this Headers instance
+    static HEADERS_INDEX_COUNTER: OnceLock<Mutex<usize>> = OnceLock::new();
+    let index_counter = HEADERS_INDEX_COUNTER.get_or_init(|| Mutex::new(0));
+    let mut counter = index_counter.lock().unwrap();
+    let index = *counter;
+    *counter += 1;
+    drop(counter);
+
+    // Store index in internal field 0
+    let index_val: v8::Local<v8::Value> = v8::Integer::new(scope, index as i32).into();
+    headers_obj.set_internal_field(0, index_val);
+
+    // Initialize headers data for this index
     let mut cache = get_headers_cache().lock().unwrap();
-    cache.insert(headers_ptr, Vec::new());
+    cache.insert(index, Vec::new());
     drop(cache);
 
     // Add get() method
     let get_key = v8::String::new(scope, "get").unwrap().into();
     let get_func_template = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
         let this_obj: v8::Local<v8::Object> = args.this();
-        let this_ptr = &*this_obj as *const v8::Object as usize;
+
+        // Get index from internal field
+        let index = this_obj.get_internal_field(scope, 0)
+            .and_then(|v| v.to_integer(scope))
+            .map(|i| i.value() as usize)
+            .unwrap_or(usize::MAX);
 
         let name = if let Some(name_val) = args.get(0).to_string(scope) {
             name_val.to_rust_string_lossy(scope).to_lowercase()
@@ -706,7 +737,7 @@ fn headers_constructor_callback(
         };
 
         let cache = get_headers_cache().lock().unwrap();
-        if let Some(headers) = cache.get(&this_ptr) {
+        if let Some(headers) = cache.get(&index) {
             let values: Vec<String> = headers.iter()
                 .filter(|(key, _)| key.to_lowercase() == name)
                 .map(|(_, value)| value.clone())
@@ -729,7 +760,12 @@ fn headers_constructor_callback(
     let set_key = v8::String::new(scope, "set").unwrap().into();
     let set_func_template = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
         let this_obj: v8::Local<v8::Object> = args.this();
-        let this_ptr = &*this_obj as *const v8::Object as usize;
+
+        // Get index from internal field
+        let index = this_obj.get_internal_field(scope, 0)
+            .and_then(|v| v.to_integer(scope))
+            .map(|i| i.value() as usize)
+            .unwrap_or(usize::MAX);
 
         let name = if let Some(name_val) = args.get(0).to_string(scope) {
             name_val.to_rust_string_lossy(scope)
@@ -746,7 +782,7 @@ fn headers_constructor_callback(
         let name_lower = name.to_lowercase();
 
         let mut cache = get_headers_cache().lock().unwrap();
-        if let Some(headers) = cache.get_mut(&this_ptr) {
+        if let Some(headers) = cache.get_mut(&index) {
             // Remove existing headers with same name (case-insensitive)
             headers.retain(|(key, _)| key.to_lowercase() != name_lower);
             // Add new header
@@ -760,7 +796,12 @@ fn headers_constructor_callback(
     let has_key = v8::String::new(scope, "has").unwrap().into();
     let has_func_template = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
         let this_obj: v8::Local<v8::Object> = args.this();
-        let this_ptr = &*this_obj as *const v8::Object as usize;
+
+        // Get index from internal field
+        let index = this_obj.get_internal_field(scope, 0)
+            .and_then(|v| v.to_integer(scope))
+            .map(|i| i.value() as usize)
+            .unwrap_or(usize::MAX);
 
         let name = if let Some(name_val) = args.get(0).to_string(scope) {
             name_val.to_rust_string_lossy(scope).to_lowercase()
@@ -770,7 +811,7 @@ fn headers_constructor_callback(
         };
 
         let cache = get_headers_cache().lock().unwrap();
-        let has_header = cache.get(&this_ptr)
+        let has_header = cache.get(&index)
             .map(|headers| headers.iter().any(|(key, _)| key.to_lowercase() == name))
             .unwrap_or(false);
 
@@ -783,7 +824,12 @@ fn headers_constructor_callback(
     let delete_key = v8::String::new(scope, "delete").unwrap().into();
     let delete_func_template = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
         let this_obj: v8::Local<v8::Object> = args.this();
-        let this_ptr = &*this_obj as *const v8::Object as usize;
+
+        // Get index from internal field
+        let index = this_obj.get_internal_field(scope, 0)
+            .and_then(|v| v.to_integer(scope))
+            .map(|i| i.value() as usize)
+            .unwrap_or(usize::MAX);
 
         let name = if let Some(name_val) = args.get(0).to_string(scope) {
             name_val.to_rust_string_lossy(scope).to_lowercase()
@@ -792,7 +838,7 @@ fn headers_constructor_callback(
         };
 
         let mut cache = get_headers_cache().lock().unwrap();
-        if let Some(headers) = cache.get_mut(&this_ptr) {
+        if let Some(headers) = cache.get_mut(&index) {
             headers.retain(|(key, _)| key.to_lowercase() != name);
         }
     });
@@ -803,7 +849,12 @@ fn headers_constructor_callback(
     let append_key = v8::String::new(scope, "append").unwrap().into();
     let append_func_template = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
         let this_obj: v8::Local<v8::Object> = args.this();
-        let this_ptr = &*this_obj as *const v8::Object as usize;
+
+        // Get index from internal field
+        let index = this_obj.get_internal_field(scope, 0)
+            .and_then(|v| v.to_integer(scope))
+            .map(|i| i.value() as usize)
+            .unwrap_or(usize::MAX);
 
         let name = if let Some(name_val) = args.get(0).to_string(scope) {
             name_val.to_rust_string_lossy(scope)
@@ -818,7 +869,7 @@ fn headers_constructor_callback(
         };
 
         let mut cache = get_headers_cache().lock().unwrap();
-        if let Some(headers) = cache.get_mut(&this_ptr) {
+        if let Some(headers) = cache.get_mut(&index) {
             headers.push((name, value));
         }
     });
