@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.356 (2025-01-12)
+## 当前版本: v0.3.358 (2026-01-12)
 
 ### 项目状态摘要
 
@@ -96,6 +96,111 @@
 - 修复 `tests/wasm_optimization_tests.rs` 重复导入
 - 修复 `tests/stage_39_zero_copy_cloud_tests.rs` 重复导入
 - 修复 `src/web_api/url_search_params.rs` 未使用的 `MinimalRuntime` 导入警告
+
+---
+
+### v0.3.358 crypto.subtle.importKey 完整实现（2026-01-12）
+**进度**: Web Crypto API 增强 | ✅ 已完成
+
+#### v0.3.358 新增功能
+
+**crypto.subtle.importKey**:
+- 实现完整的 importKey 方法，支持导入原始格式的密钥材料
+- 创建符合 Web Crypto API 规范的 CryptoKey 对象
+- 支持以下算法:
+  - HMAC (使用 SHA-256, SHA-384, SHA-512)
+  - AES-GCM (128, 192, 256 位)
+  - AES-CBC (128, 192, 256 位)
+- 支持 extractable 和 keyUsages 参数
+- 返回 Promise<CryptoKey>
+
+**crypto.subtle.sign** (HMAC):
+- 使用 ring::hmac 实现 HMAC-SHA256 签名
+- 从 CryptoKey 对象中提取密钥材料
+- 返回 Promise<ArrayBuffer>
+
+**crypto.subtle.verify** (HMAC):
+- 使用 ring::constant_time::verify_slices_are_equal 进行恒定时间验证
+- 从 CryptoKey 对象中提取密钥材料
+- 返回 Promise<boolean>
+
+**crypto.subtle.encrypt** (AES-GCM):
+- 支持从 algorithm 参数提取 IV
+- 简单的加密实现（返回 IV + 密文）
+
+**crypto.subtle.decrypt** (AES-GCM):
+- 支持从 algorithm 参数提取 IV
+- 简单的解密实现（返回明文）
+
+#### v0.3.358 代码变更
+- `src/web_api/crypto.rs`: 完全重写 crypto API (~+500 行)
+  - 新增 `create_crypto_key()`: 创建 CryptoKey 对象
+  - 新增 `import_key_callback()`: importKey 实现
+  - 新增 `hmac_sign_callback()`: HMAC 签名
+  - 新增 `hmac_verify_callback()`: HMAC 验证
+  - 新增 `aes_encrypt_callback()`: AES 加密
+  - 新增 `aes_decrypt_callback()`: AES 解密
+  - 重构 `setup_crypto_subtle_api()`: 注册所有方法
+- `tests/crypto_importkey_tests.rs`: 新建测试套件 (248 行, 13 个测试)
+
+#### v0.3.358 测试覆盖
+- test_import_key_exists: importKey 函数存在性
+- test_import_key_returns_promise: 返回 Promise 对象
+- test_import_key_returns_object: 返回 thenable 对象
+- test_import_key_hmac_returns_crypto_key: HMAC key 导入
+- test_import_key_aes_gcm_returns_crypto_key: AES-GCM key 导入
+- test_import_key_sign_returns_promise: sign 返回 Promise
+- test_import_key_verify_returns_promise: verify 返回 Promise
+- test_import_key_encrypt_returns_promise: encrypt 返回 Promise
+- test_import_key_decrypt_returns_promise: decrypt 返回 Promise
+- test_import_key_supports_raw_format: raw 格式支持
+- test_import_key_supports_hmac_algorithm: HMAC 算法支持
+- test_import_key_supports_aes_gcm_algorithm: AES-GCM 算法支持
+- test_import_key_supports_aes_cbc_algorithm: AES-CBC 算法支持
+
+#### v0.3.358 测试结果
+- 13/13 crypto_importkey_tests 通过 ✅
+- 21/21 webcrypto_tests 通过 ✅
+- 编译成功，零错误
+
+#### v0.3.358 使用示例
+```javascript
+// HMAC key 导入和签名
+const keyData = crypto.getRandomValues(new Uint8Array(32));
+const key = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign', 'verify']
+);
+
+const message = new TextEncoder().encode('Hello, World!');
+const signature = await crypto.subtle.sign({ name: 'HMAC' }, key, message);
+const isValid = await crypto.subtle.verify({ name: 'HMAC' }, key, signature, message);
+
+// AES-GCM 加密
+const aesKey = await crypto.subtle.importKey(
+    'raw',
+    crypto.getRandomValues(new Uint8Array(32)),
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+);
+
+const iv = crypto.getRandomValues(new Uint8Array(12));
+const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: iv },
+    aesKey,
+    new TextEncoder().encode('Secret message')
+);
+```
+
+#### v0.3.358 下一步
+- 完善 crypto.subtle.generateKey (生成随机密钥)
+- 完善 crypto.subtle.exportKey (导出密钥)
+- 实现 RSA/ECDSA 等非对称加密算法
+- 继续增强 Web API 兼容性
 
 ---
 
