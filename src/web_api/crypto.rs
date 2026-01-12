@@ -227,82 +227,122 @@ fn setup_crypto_subtle_api(
     let digest_fn_instance = digest_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, digest_key.into(), digest_fn_instance.into());
 
-    // Placeholder for importKey
+    // Placeholder for importKey - returns resolved Promise
     let import_key_key = v8::String::new(scope, "importKey").unwrap();
-    let import_key_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-        eprintln!("crypto.subtle.importKey called (placeholder)");
+    let import_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let undefined_val = v8::undefined(scope).into();
+        let resolver = v8::PromiseResolver::new(scope).unwrap();
+        resolver.resolve(scope, undefined_val);
+        let promise = resolver.get_promise(scope);
+        rv.set(promise.into());
     });
     let import_key_fn_instance = import_key_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, import_key_key.into(), import_key_fn_instance.into());
 
-    // Placeholder for encrypt
+    // Placeholder for encrypt - returns resolved Promise
     let encrypt_key = v8::String::new(scope, "encrypt").unwrap();
-    let encrypt_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-        eprintln!("crypto.subtle.encrypt called (placeholder)");
+    let encrypt_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let undefined_val = v8::undefined(scope).into();
+        let resolver = v8::PromiseResolver::new(scope).unwrap();
+        resolver.resolve(scope, undefined_val);
+        let promise = resolver.get_promise(scope);
+        rv.set(promise.into());
     });
     let encrypt_fn_instance = encrypt_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, encrypt_key.into(), encrypt_fn_instance.into());
 
-    // Placeholder for decrypt
+    // Placeholder for decrypt - returns resolved Promise
     let decrypt_key = v8::String::new(scope, "decrypt").unwrap();
-    let decrypt_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-        eprintln!("crypto.subtle.decrypt called (placeholder)");
+    let decrypt_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let undefined_val = v8::undefined(scope).into();
+        let resolver = v8::PromiseResolver::new(scope).unwrap();
+        resolver.resolve(scope, undefined_val);
+        let promise = resolver.get_promise(scope);
+        rv.set(promise.into());
     });
     let decrypt_fn_instance = decrypt_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, decrypt_key.into(), decrypt_fn_instance.into());
 
-    // Placeholder for sign
+    // Placeholder for sign - returns resolved Promise
     let sign_key = v8::String::new(scope, "sign").unwrap();
-    let sign_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-        eprintln!("crypto.subtle.sign called (placeholder)");
+    let sign_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let undefined_val = v8::undefined(scope).into();
+        let resolver = v8::PromiseResolver::new(scope).unwrap();
+        resolver.resolve(scope, undefined_val);
+        let promise = resolver.get_promise(scope);
+        rv.set(promise.into());
     });
     let sign_fn_instance = sign_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, sign_key.into(), sign_fn_instance.into());
 
-    // Placeholder for verify
+    // Placeholder for verify - returns resolved Promise
     let verify_key = v8::String::new(scope, "verify").unwrap();
-    let verify_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-        eprintln!("crypto.subtle.verify called (placeholder)");
+    let verify_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let undefined_val = v8::undefined(scope).into();
+        let resolver = v8::PromiseResolver::new(scope).unwrap();
+        resolver.resolve(scope, undefined_val);
+        let promise = resolver.get_promise(scope);
+        rv.set(promise.into());
     });
     let verify_fn_instance = verify_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, verify_key.into(), verify_fn_instance.into());
 
-    // Placeholder for generateKey
+    // Placeholder for generateKey - returns resolved Promise
     let generate_key_key = v8::String::new(scope, "generateKey").unwrap();
-    let generate_key_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-        eprintln!("crypto.subtle.generateKey called (placeholder)");
+    let generate_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let undefined_val = v8::undefined(scope).into();
+        let resolver = v8::PromiseResolver::new(scope).unwrap();
+        resolver.resolve(scope, undefined_val);
+        let promise = resolver.get_promise(scope);
+        rv.set(promise.into());
     });
     let generate_key_fn_instance = generate_key_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, generate_key_key.into(), generate_key_fn_instance.into());
 
-    // Placeholder for deriveKey
+    // Placeholder for deriveKey - returns resolved Promise
     let derive_key_key = v8::String::new(scope, "deriveKey").unwrap();
-    let derive_key_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-        eprintln!("crypto.subtle.deriveKey called (placeholder)");
+    let derive_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let undefined_val = v8::undefined(scope).into();
+        let resolver = v8::PromiseResolver::new(scope).unwrap();
+        resolver.resolve(scope, undefined_val);
+        let promise = resolver.get_promise(scope);
+        rv.set(promise.into());
     });
     let derive_key_fn_instance = derive_key_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, derive_key_key.into(), derive_key_fn_instance.into());
 
-    // Placeholder for exportKey
+    // Placeholder for exportKey - returns resolved Promise
     let export_key_key = v8::String::new(scope, "exportKey").unwrap();
-    let export_key_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-        eprintln!("crypto.subtle.exportKey called (placeholder)");
+    let export_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let undefined_val = v8::undefined(scope).into();
+        let resolver = v8::PromiseResolver::new(scope).unwrap();
+        resolver.resolve(scope, undefined_val);
+        let promise = resolver.get_promise(scope);
+        rv.set(promise.into());
     });
     let export_key_fn_instance = export_key_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, export_key_key.into(), export_key_fn_instance.into());
 
-    // Placeholder for wrapKey
+    // Placeholder for wrapKey - returns resolved Promise
     let wrap_key_key = v8::String::new(scope, "wrapKey").unwrap();
-    let wrap_key_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-        eprintln!("crypto.subtle.wrapKey called (placeholder)");
+    let wrap_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let undefined_val = v8::undefined(scope).into();
+        let resolver = v8::PromiseResolver::new(scope).unwrap();
+        resolver.resolve(scope, undefined_val);
+        let promise = resolver.get_promise(scope);
+        rv.set(promise.into());
     });
     let wrap_key_fn_instance = wrap_key_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, wrap_key_key.into(), wrap_key_fn_instance.into());
 
-    // Placeholder for unwrapKey
+    // Placeholder for unwrapKey - returns resolved Promise
     let unwrap_key_key = v8::String::new(scope, "unwrapKey").unwrap();
-    let unwrap_key_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-        eprintln!("crypto.subtle.unwrapKey called (placeholder)");
+    let unwrap_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let undefined_val = v8::undefined(scope).into();
+        let resolver = v8::PromiseResolver::new(scope).unwrap();
+        resolver.resolve(scope, undefined_val);
+        let promise = resolver.get_promise(scope);
+        rv.set(promise.into());
     });
     let unwrap_key_fn_instance = unwrap_key_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, unwrap_key_key.into(), unwrap_key_fn_instance.into());
