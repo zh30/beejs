@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.347 (2025-01-12)
+## 当前版本: v0.3.348 (2025-01-12)
 
 ### 项目状态摘要
 
@@ -40,6 +40,7 @@
 - Clipboard API (v0.3.342 新增): 剪贴板复制/粘贴支持，适用于 AI 工作负载
 - Headers API (v0.3.346 新增): Headers 构造函数和 get/set/has/delete/append 方法
 - Request API (v0.3.347 新增): Request 构造函数、url/method/headers/body/cache/credentials 等属性、clone() 方法
+- Response API 增强 (v0.3.348 新增): type、redirected 属性和 clone() 方法
 
 **包管理**: ✅ 已完成
 - package.json 解析
@@ -156,6 +157,62 @@ console.log(headers.has('X-Custom-Header')); // false
 // 大小写不敏感
 headers.set('content-type', 'text/plain');
 console.log(headers.get('Content-Type')); // 'text/plain'
+```
+
+---
+
+### v0.3.348 Response API 增强（2025-01-12）
+**进度**: Web API 增强 | ✅ 已完成
+
+#### v0.3.348 新增功能
+
+**Response.type 属性**:
+- 返回响应的类型
+- 支持的值: "default", "error", "opaque", "opaqueredirect"
+- 普通 fetch 请求返回 "default"
+
+**Response.redirected 属性**:
+- 返回布尔值，指示响应是否来自重定向
+- 如果请求经历了任何重定向则为 true
+- 否则为 false
+
+**Response.clone() 方法**:
+- 创建 Response 对象的深拷贝
+- 复制所有属性: status, ok, statusText, url, type, redirected, body, headers
+- 复制所有方法: json(), text(), arrayBuffer(), blob()
+- 用于多次读取响应体的场景
+
+#### v0.3.348 代码变更
+- `src/web_api/fetch.rs`: 添加 Response API 增强 (~+60 行)
+  - `type` 属性: 静态设置为 "default"
+  - `redirected` 属性: 静态设置为 false
+  - `clone()` 方法: 使用 FunctionTemplate 创建，复制所有属性和方法
+- `tests/http_fetch_tests.rs`: 已有测试覆盖
+  - `test_response_type()`: 验证 type 属性
+  - `test_response_redirected()`: 验证 redirected 属性
+  - `test_response_clone_exists()`: 验证 clone 方法存在
+  - `test_response_clone_basic()`: 验证 clone 功能正常
+
+#### v0.3.348 测试覆盖
+- ✅ Response.type 返回 "default" 或空字符串
+- ✅ Response.redirected 返回布尔值
+- ✅ Response.clone() 方法类型为 'function'
+- ✅ 克隆的 response 保持相同的 status 和 ok 值
+
+#### v0.3.348 使用示例
+```javascript
+const response = fetch('https://example.com/api');
+
+// 检查响应类型
+console.log(response.type); // 'default'
+
+// 检查是否重定向
+console.log(response.redirected); // false
+
+// 克隆响应以便多次读取
+const cloned = response.clone();
+console.log(await response.json());
+console.log(await cloned.text());
 ```
 
 ---
