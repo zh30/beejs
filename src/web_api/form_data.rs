@@ -473,8 +473,8 @@ fn form_data_values(
 
 /// FormData.forEach() method - iterates over all key/value pairs
 fn form_data_for_each(
-    scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
     _retval: v8::ReturnValue,
 ) {
     // ForEach requires more complex V8 callback handling

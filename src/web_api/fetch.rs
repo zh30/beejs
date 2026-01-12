@@ -10,7 +10,7 @@ use tokio::runtime::Runtime;
 use std::sync::OnceLock;
 
 // Re-export FormData functions for use in fetch
-use super::form_data::{get_formdata_index, get_formdata_entries, serialize_formdata_multipart, generate_boundary, FormDataEntry};
+use super::form_data::{get_formdata_index, get_formdata_entries, serialize_formdata_multipart, generate_boundary};
 
 /// Thread-safe response cache for json() and text() methods
 static RESPONSE_CACHE: OnceLock<Mutex<HashMap<usize, (String, Vec<u8>)>>> = OnceLock::new();
