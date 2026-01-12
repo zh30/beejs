@@ -1072,4 +1072,60 @@ mod http_tests {
         assert!(status == "200" || status == "404",
             "Expected status 200 or 404, got: {}", status);
     }
+
+    // v0.3.351: Tests for fetch redirect handling
+    #[test]
+    #[serial_test::serial]
+    fn test_fetch_redirect_option_follow() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const response = fetch('https://httpbin.org/redirect-to?url=https://httpbin.org/json', {
+                redirect: 'follow'
+            });
+            response.status;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let status = binding.trim();
+        // redirect: 'follow' should follow the redirect and return 200
+        assert!(status == "200" || status == "404",
+            "Expected status 200 or 404 for redirect=follow, got: {}", status);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_fetch_redirected_property_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const response = fetch('https://httpbin.org/json');
+            typeof response.redirected;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "boolean",
+            "Expected response.redirected to be boolean, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_fetch_response_body_used() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const response = fetch('https://httpbin.org/json');
+            typeof response.bodyUsed;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        // bodyUsed should be a boolean indicating if body has been consumed
+        assert!(output == "boolean",
+            "Expected response.bodyUsed to be boolean, got: {}", output);
+    }
 }

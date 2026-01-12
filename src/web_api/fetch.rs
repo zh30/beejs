@@ -110,6 +110,8 @@ pub struct FetchResponse {
     pub headers: HashMap<String, String>,
     pub body: Option<Vec<u8>>,
     pub body_used: bool,
+    pub redirected: bool,
+    pub response_type: String, // "default", "error", "opaque", "opaqueredirect"
 }
 /// Abort signal for request cancellation
 #[derive(Debug, Clone)]
@@ -233,8 +235,9 @@ fn fetch_callback(
     let mut headers = request_headers;
     let mut body = request_body;
     let mut content_type = request_content_type;
+    let mut redirect = String::from("follow"); // Default redirect mode
 
-    // Parse init object for method, headers, body (overrides Request properties)
+    // Parse init object for method, headers, body, redirect (overrides Request properties)
     if init.is_object() {
         if let Some(init_obj) = init.to_object(scope) {
             // Parse method
@@ -300,6 +303,14 @@ fn fetch_callback(
                     }
                 }
             }
+
+            // Parse redirect option
+            let redirect_key = v8::String::new(scope, "redirect").unwrap().into();
+            if let Some(redirect_val) = init_obj.get(scope, redirect_key) {
+                if let Some(redirect_str) = redirect_val.to_string(scope) {
+                    redirect = redirect_str.to_rust_string_lossy(scope);
+                }
+            }
         }
     }
 
@@ -313,10 +324,11 @@ fn fetch_callback(
     let method_clone = method.clone();
     let headers_clone = headers.clone();
     let body_clone = body.clone();
+    let redirect_clone = redirect.clone();
 
     let result: _ = std::thread::spawn(move || {
         let rt: _ = Runtime::new().map_err(|e| anyhow::anyhow!("Failed to create runtime: {}", e))?;
-        rt.block_on(execute_fetch(&url, method_clone, headers_clone, body_clone))
+        rt.block_on(execute_fetch(&url, method_clone, headers_clone, body_clone, &redirect_clone))
     });
     match result.join() {
         Ok(Ok(response)) => {
@@ -374,15 +386,20 @@ fn fetch_callback(
             let blob_key: _ = v8::String::new(scope, "blob").unwrap();
             response_obj.set(scope, blob_key.into(), blob_func.into());
 
-            // v0.3.348: Add type property (response type)
+            // v0.3.348: Add type property (response type) - use actual response type
             let type_key: _ = v8::String::new(scope, "type").unwrap();
-            let type_val: v8::Local<v8::Value> = v8::String::new(scope, "default").unwrap().into();
+            let type_val: v8::Local<v8::Value> = v8::String::new(scope, &response.response_type).unwrap().into();
             response_obj.set(scope, type_key.into(), type_val);
 
-            // v0.3.348: Add redirected property
+            // v0.3.348: Add redirected property - use actual redirect status
             let redirected_key: _ = v8::String::new(scope, "redirected").unwrap();
-            let redirected_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+            let redirected_val: v8::Local<v8::Value> = v8::Boolean::new(scope, response.redirected).into();
             response_obj.set(scope, redirected_key.into(), redirected_val);
+
+            // v0.3.351: Add bodyUsed property
+            let body_used_key: _ = v8::String::new(scope, "bodyUsed").unwrap();
+            let body_used_val: v8::Local<v8::Value> = v8::Boolean::new(scope, response.body_used).into();
+            response_obj.set(scope, body_used_key.into(), body_used_val);
 
             // v0.3.348: Add clone() method - use a simple function that copies properties
             let clone_key: _ = v8::String::new(scope, "clone").unwrap();
@@ -440,60 +457,169 @@ fn fetch_callback(
         }
     }
 }
-/// Execute actual HTTP fetch using reqwest
+/// Execute actual HTTP fetch using reqwest with redirect support
 async fn execute_fetch(
     url: &str,
     method: HttpMethod,
     headers: HashMap<String, String>,
     body: Option<Vec<u8>>,
+    redirect: &str, // "follow", "error", "manual"
 ) -> Result<FetchResponse> {
-    let client: _ = reqwest::Client::builder()
-        .user_agent("Beejs/0.1.0")
-        .timeout(std::time::Duration::from_secs(30))
-        .build()?;
-    let request: _ = client
-        .request(
-            match method {
-                HttpMethod::GET => reqwest::Method::GET,
-                HttpMethod::POST => reqwest::Method::POST,
-                HttpMethod::PUT => reqwest::Method::PUT,
-                HttpMethod::DELETE => reqwest::Method::DELETE,
-                HttpMethod::PATCH => reqwest::Method::PATCH,
-                HttpMethod::HEAD => reqwest::Method::HEAD,
-                HttpMethod::OPTIONS => reqwest::Method::OPTIONS,
-            },
-            url,
-        );
-    let request: _ = if let Some(body_vec) = body {
-        request.body(body_vec)
-    } else {
-        request
-    };
-    // Add headers
-    let mut req_builder = request;
-    for (key, value) in headers {
-        req_builder = req_builder.header(&key, &value);
+    let mut current_url = url.to_string();
+    let mut redirected = false;
+    let mut redirect_count = 0;
+    const MAX_REDIRECTS: u32 = 20;
+
+    loop {
+        // Check redirect limit
+        if redirect_count > MAX_REDIRECTS {
+            return Err(anyhow::anyhow!("Too many redirects"));
+        }
+
+        let client: _ = reqwest::Client::builder()
+            .user_agent("Beejs/0.1.0")
+            .timeout(std::time::Duration::from_secs(30))
+            .follow_redirects(false) // Handle redirects manually
+            .build()?;
+
+        let request: _ = client
+            .request(
+                match method {
+                    HttpMethod::GET => reqwest::Method::GET,
+                    HttpMethod::POST => reqwest::Method::POST,
+                    HttpMethod::PUT => reqwest::Method::PUT,
+                    HttpMethod::DELETE => reqwest::Method::DELETE,
+                    HttpMethod::PATCH => reqwest::Method::PATCH,
+                    HttpMethod::HEAD => reqwest::Method::HEAD,
+                    HttpMethod::OPTIONS => reqwest::Method::OPTIONS,
+                },
+                &current_url,
+            );
+
+        // Only add body for non-GET/HEAD requests
+        let request = if matches!(method, HttpMethod::GET | HttpMethod::HEAD) || body.is_none() {
+            request
+        } else {
+            request.body(body.clone().unwrap())
+        };
+
+        // Add headers
+        let mut req_builder = request;
+        for (key, value) in &headers {
+            req_builder = req_builder.header(key, value);
+        }
+
+        let response = req_builder.send().await?;
+
+        let status = response.status().as_u16();
+        let status_text = response.status().canonical_reason().unwrap_or("Unknown").to_string();
+        let ok = response.status().is_success();
+
+        // Check for redirect status codes
+        if matches!(status, 301 | 302 | 303 | 307 | 308) {
+            redirect_count += 1;
+
+            match redirect {
+                "error" => {
+                    // Return the redirect response as an error
+                    return Ok(FetchResponse {
+                        url: current_url.clone(),
+                        status,
+                        status_text,
+                        ok: false,
+                        headers: HashMap::new(),
+                        body: Some(format!("Redirect not allowed: {}", status).into_bytes()),
+                        body_used: false,
+                        redirected: false,
+                        response_type: "error".to_string(),
+                    });
+                }
+                "manual" => {
+                    // Return the redirect response without following
+                    let mut response_headers = HashMap::new();
+                    for (key, value) in response.headers() {
+                        response_headers.insert(key.to_string(), value.to_str().unwrap_or("").to_string());
+                    }
+                    let body_vec = response.bytes().await?.to_vec();
+                    return Ok(FetchResponse {
+                        url: current_url.clone(),
+                        status,
+                        status_text,
+                        ok: false,
+                        headers: response_headers,
+                        body: Some(body_vec),
+                        body_used: false,
+                        redirected: false,
+                        response_type: "default".to_string(),
+                    });
+                }
+                "follow" | _ => {
+                    // Follow the redirect
+                    if let Some(location) = response.headers().get("location") {
+                        let location_str = location.to_str().unwrap_or("");
+                        let new_url = if location_str.starts_with("http") {
+                            location_str.to_string()
+                        } else if location_str.starts_with("/") {
+                            // Relative URL - construct from current URL
+                            let base_url = current_url.split('/').take(3).collect::<Vec<_>>().join("/");
+                            format!("{}{}", base_url, location_str)
+                        } else {
+                            location_str.to_string()
+                        };
+
+                        redirected = true;
+                        current_url = new_url;
+                        continue;
+                    } else {
+                        // No location header - treat as normal response
+                        let mut response_headers = HashMap::new();
+                        for (key, value) in response.headers() {
+                            response_headers.insert(key.to_string(), value.to_str().unwrap_or("").to_string());
+                        }
+                        let body_vec = response.bytes().await?.to_vec();
+                        return Ok(FetchResponse {
+                            url: current_url.clone(),
+                            status,
+                            status_text,
+                            ok,
+                            headers: response_headers,
+                            body: Some(body_vec),
+                            body_used: false,
+                            redirected,
+                            response_type: if redirected { "opaqueredirect".to_string() } else { "default".to_string() },
+                        });
+                    }
+                }
+            }
+        }
+
+        // Extract headers BEFORE consuming the response
+        let mut response_headers = HashMap::new();
+        for (key, value) in response.headers() {
+            response_headers.insert(key.to_string(), value.to_str().unwrap_or("").to_string());
+        }
+        // Get response body
+        let body_vec: _ = response.bytes().await?.to_vec();
+
+        // Determine response type
+        let response_type = if redirected {
+            "opaqueredirect".to_string()
+        } else {
+            "default".to_string()
+        };
+
+        return Ok(FetchResponse {
+            url: current_url.clone(),
+            status,
+            status_text,
+            ok,
+            headers: response_headers,
+            body: Some(body_vec),
+            body_used: false,
+            redirected,
+            response_type,
+        });
     }
-    let response: _ = req_builder.send().await?;
-    let status: _ = response.status().as_u16();
-    let status_text: _ = response.status().canonical_reason().unwrap_or("Unknown").to_string();
-    let ok: _ = response.status().is_success();
-    // Extract headers BEFORE consuming the response
-    let mut response_headers = HashMap::new();
-    for (key, value) in response.headers() {
-        response_headers.insert(key.to_string(), value.to_str().unwrap_or("").to_string());
-    }
-    // Get response body
-    let body_vec: _ = response.bytes().await?.to_vec();
-    Ok(FetchResponse {
-        url: url.to_string(),
-        status,
-        status_text,
-        ok,
-        headers: response_headers,
-        body: Some(body_vec),
-        body_used: false,
-    })
 }
 /// Thread-safe request cache for Request API
 static REQUEST_CACHE: OnceLock<Mutex<HashMap<usize, RequestData>>> = OnceLock::new();
