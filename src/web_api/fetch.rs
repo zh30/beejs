@@ -388,7 +388,7 @@ fn request_constructor_callback(
     let mut init_integrity = String::new();
     let mut init_keepalive = false;
     let mut init_body: Option<String> = None;
-    let mut init_headers: Vec<(String, String)> = Vec::new();
+    let init_headers: Vec<(String, String)> = Vec::new();
 
     // Parse init object (second argument) for additional properties
     // Note: args.get(1) returns undefined if not provided, so we need to check
@@ -642,7 +642,7 @@ fn request_constructor_callback(
         new_request.set(scope, keepalive_key, keepalive_val);
 
         // Add clone method to new request (simple implementation)
-        let new_clone_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let new_clone_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
             let null_val: v8::Local<v8::Value> = v8::null(scope).into();
             rv.set(null_val);
         }).unwrap();
