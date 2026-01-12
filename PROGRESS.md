@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.341 (2025-01-10)
+## 当前版本: v0.3.346 (2025-01-12)
 
 ### 项目状态摘要
 
@@ -72,6 +72,140 @@
 - abort_api_tests: 9/9 通过 (v0.3.340 新增)
 - dom_parser_tests: 13/13 通过 (v0.3.341 新增)
 - 其他所有测试通过
+
+---
+
+### v0.3.346 Headers API 完整实现（2025-01-12）
+**进度**: Web API 增强 | ✅ 已完成
+
+#### v0.3.346 新增功能
+
+**Headers API 方法完整实现**:
+- `headers.get(name)`: 获取指定 header 的值（大小写不敏感）
+- `headers.set(name, value)`: 设置 header 值（替换同名的所有 header）
+- `headers.has(name)`: 检查 header 是否存在（大小写不敏感）
+- `headers.delete(name)`: 删除指定 header（大小写不敏感）
+- `headers.append(name, value)`: 追加 header 值（不替换同名 header）
+
+**技术实现**:
+- 使用线程安全的 HashMap 缓存存储 headers 数据
+- 每个 Headers 对象通过指针在缓存中存储其 headers 列表
+- 所有操作均支持大小写不敏感的 header 名称匹配
+- append() 方法支持同名的多个 header 值，以逗号分隔返回
+
+#### v0.3.346 代码变更
+- `src/web_api/fetch.rs`: 完整实现 Headers API (~+145 行)
+  - 添加 `HEADERS_CACHE` 静态变量存储所有 Headers 对象的数据
+  - 重写 `headers_constructor_callback()` 函数实现完整功能
+  - `get()`: 查询缓存，返回匹配的值或 null
+  - `set()`: 先删除同名的所有 header，再添加新值
+  - `has()`: 检查是否存在匹配的 header
+  - `delete()`: 删除所有匹配的 header
+  - `append()`: 追加新的 header 条目
+- `tests/http_fetch_tests.rs`: 添加 Headers API 测试 (~+213 行)
+  - `test_headers_constructor_exists()`: 验证 Headers 构造函数
+  - `test_headers_get_method_exists()`: 验证 get 方法存在
+  - `test_headers_set_method_exists()`: 验证 set 方法存在
+  - `test_headers_has_method_exists()`: 验证 has 方法存在
+  - `test_headers_delete_method_exists()`: 验证 delete 方法存在
+  - `test_headers_append_method_exists()`: 验证 append 方法存在
+  - `test_headers_get_set_basic()`: 测试 get/set 基本功能
+  - `test_headers_has()`: 测试 has 方法
+  - `test_headers_delete()`: 测试 delete 方法
+  - `test_headers_append()`: 测试 append 方法（多值支持）
+  - `test_headers_get_case_insensitive()`: 测试大小写不敏感
+  - `test_headers_get_nonexistent()`: 测试获取不存在的 header
+
+#### v0.3.346 测试覆盖
+- ✅ Headers 构造函数类型为 'function'
+- ✅ get(), set(), has(), delete(), append() 方法全部存在且类型为 'function'
+- ✅ get/set 基本功能正常
+- ✅ has() 返回正确的布尔值
+- ✅ delete() 正确删除 header
+- ✅ append() 支持追加多个值
+- ✅ 大小写不敏感的 header 名称匹配
+
+#### v0.3.346 使用示例
+```javascript
+// 创建 Headers 对象
+const headers = new Headers();
+
+// 设置 header
+headers.set('Content-Type', 'application/json');
+headers.set('X-Custom-Header', 'value');
+
+// 获取 header
+console.log(headers.get('Content-Type')); // 'application/json'
+console.log(headers.get('X-Custom-Header')); // 'value'
+
+// 检查 header 是否存在
+console.log(headers.has('Content-Type')); // true
+
+// 追加 header（用于 Set-Cookie 等多值场景）
+headers.append('Set-Cookie', 'cookie1=value1');
+headers.append('Set-Cookie', 'cookie2=value2');
+console.log(headers.get('Set-Cookie')); // 'cookie1=value1, cookie2=value2'
+
+// 删除 header
+headers.delete('X-Custom-Header');
+console.log(headers.has('X-Custom-Header')); // false
+
+// 大小写不敏感
+headers.set('content-type', 'text/plain');
+console.log(headers.get('Content-Type')); // 'text/plain'
+```
+
+---
+
+### v0.3.345 Response.arrayBuffer() 和 Response.blob() Body mixin 方法（2025-01-12）
+**进度**: Web API 增强 | ✅ 已完成
+
+#### v0.3.345 新增功能
+
+**Response.arrayBuffer() 方法**:
+- 实现 Body mixin 的 arrayBuffer() 方法
+- 将响应体作为 ArrayBuffer 返回
+- 支持从缓存中获取响应体数据进行转换
+- 返回的 ArrayBuffer 可用于二进制数据处理
+
+**Response.blob() 方法**:
+- 实现 Body mixin 的 blob() 方法
+- 返回一个包含 size 和 type 属性的对象
+- size 属性表示 Blob 的大小（字节数）
+- type 属性表示 MIME 类型（默认 application/octet-stream）
+- blob 对象还包含 arrayBuffer() 方法
+
+#### v0.3.345 代码变更
+- `src/web_api/fetch.rs`: 添加 arrayBuffer() 和 blob() 回调函数 (~+80 行)
+  - `array_buffer_callback()`: 创建 ArrayBuffer 并复制响应体数据
+  - `blob_callback()`: 创建 Blob 对象，设置 size 和 type 属性
+  - 在 fetch_callback() 中注册这两个方法到 Response 对象
+- `tests/http_fetch_tests.rs`: 添加集成测试 (~+56 行)
+  - `test_response_array_buffer_method_exists()`: 验证 arrayBuffer 方法存在
+  - `test_response_blob_method_exists()`: 验证 blob 方法存在
+  - `test_response_blob_returns_object_with_size_and_type()`: 验证 Blob 对象结构
+
+#### v0.3.345 测试覆盖
+- ✅ Response.arrayBuffer() 方法类型为 'function'
+- ✅ Response.blob() 方法类型为 'function'
+- ✅ Blob 对象包含 size 属性（数字类型）
+- ✅ Blob 对象包含 type 属性（字符串类型）
+- ✅ Blob.arrayBuffer() 方法可用
+
+#### v0.3.345 使用示例
+```javascript
+// 使用 fetch 获取数据
+const response = await fetch('https://api.example.com/data');
+
+// 作为 ArrayBuffer 获取
+const buffer = await response.arrayBuffer();
+console.log(buffer.byteLength); // 响应体字节长度
+
+// 作为 Blob 获取
+const blob = await response.blob();
+console.log(blob.size);  // Blob 大小
+console.log(blob.type);  // MIME 类型
+```
 
 ---
 

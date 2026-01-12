@@ -17,6 +17,14 @@ fn get_response_cache() -> &'static Mutex<HashMap<usize, (String, Vec<u8>)>> {
     RESPONSE_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+/// Thread-safe headers cache for Headers API
+static HEADERS_CACHE: OnceLock<Mutex<HashMap<usize, Vec<(String, String)>>>> = OnceLock::new();
+
+/// Get the headers cache mutex
+fn get_headers_cache() -> &'static Mutex<HashMap<usize, Vec<(String, String)>>> {
+    HEADERS_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
 /// Fetch API configuration
 #[derive(Debug, Clone)]
 pub struct FetchConfig {
@@ -347,22 +355,147 @@ fn headers_constructor_callback(
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let headers_obj: _ = v8::Object::new(scope);
-    // Add common headers methods
-    let get_key: _ = v8::String::new(scope, "get").unwrap();
-    let get_func: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _rv: v8::ReturnValue| {
-        let _name: _ = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
-        // TODO: Implement actual header storage and retrieval
-        _rv.set(v8::String::new(scope, "").unwrap().into());
+    let headers_obj: v8::Local<v8::Object> = v8::Object::new(scope);
+
+    // Store pointer to headers data in object (will be initialized on first use)
+    let headers_ptr = &*headers_obj as *const v8::Object as usize;
+    let mut cache = get_headers_cache().lock().unwrap();
+    cache.insert(headers_ptr, Vec::new());
+    drop(cache);
+
+    // Add get() method
+    let get_key = v8::String::new(scope, "get").unwrap().into();
+    let get_func_template = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let this_obj: v8::Local<v8::Object> = args.this();
+        let this_ptr = &*this_obj as *const v8::Object as usize;
+
+        let name = if let Some(name_val) = args.get(0).to_string(scope) {
+            name_val.to_rust_string_lossy(scope).to_lowercase()
+        } else {
+            rv.set(v8::null(scope).into());
+            return;
+        };
+
+        let cache = get_headers_cache().lock().unwrap();
+        if let Some(headers) = cache.get(&this_ptr) {
+            let values: Vec<String> = headers.iter()
+                .filter(|(key, _)| key.to_lowercase() == name)
+                .map(|(_, value)| value.clone())
+                .collect();
+
+            if values.is_empty() {
+                rv.set(v8::null(scope).into());
+            } else {
+                let result = values.join(", ");
+                rv.set(v8::String::new(scope, &result).unwrap().into());
+            }
+        } else {
+            rv.set(v8::null(scope).into());
+        }
     });
-    let get_func_instance: _ = get_func.get_function(scope).unwrap();
-    headers_obj.set(scope, get_key.into(), get_func_instance.into());
-    let set_key: _ = v8::String::new(scope, "set").unwrap();
-    let set_func: _ = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-        // TODO: Implement header setting
+    let get_func = get_func_template.get_function(scope).unwrap();
+    headers_obj.set(scope, get_key, get_func.into());
+
+    // Add set() method
+    let set_key = v8::String::new(scope, "set").unwrap().into();
+    let set_func_template = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
+        let this_obj: v8::Local<v8::Object> = args.this();
+        let this_ptr = &*this_obj as *const v8::Object as usize;
+
+        let name = if let Some(name_val) = args.get(0).to_string(scope) {
+            name_val.to_rust_string_lossy(scope)
+        } else {
+            return;
+        };
+
+        let value = if let Some(value_val) = args.get(1).to_string(scope) {
+            value_val.to_rust_string_lossy(scope)
+        } else {
+            return;
+        };
+
+        let name_lower = name.to_lowercase();
+
+        let mut cache = get_headers_cache().lock().unwrap();
+        if let Some(headers) = cache.get_mut(&this_ptr) {
+            // Remove existing headers with same name (case-insensitive)
+            headers.retain(|(key, _)| key.to_lowercase() != name_lower);
+            // Add new header
+            headers.push((name, value));
+        }
     });
-    let set_func_instance: _ = set_func.get_function(scope).unwrap();
-    headers_obj.set(scope, set_key.into(), set_func_instance.into());
+    let set_func = set_func_template.get_function(scope).unwrap();
+    headers_obj.set(scope, set_key, set_func.into());
+
+    // Add has() method
+    let has_key = v8::String::new(scope, "has").unwrap().into();
+    let has_func_template = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let this_obj: v8::Local<v8::Object> = args.this();
+        let this_ptr = &*this_obj as *const v8::Object as usize;
+
+        let name = if let Some(name_val) = args.get(0).to_string(scope) {
+            name_val.to_rust_string_lossy(scope).to_lowercase()
+        } else {
+            rv.set(v8::Boolean::new(scope, false).into());
+            return;
+        };
+
+        let cache = get_headers_cache().lock().unwrap();
+        let has_header = cache.get(&this_ptr)
+            .map(|headers| headers.iter().any(|(key, _)| key.to_lowercase() == name))
+            .unwrap_or(false);
+
+        rv.set(v8::Boolean::new(scope, has_header).into());
+    });
+    let has_func = has_func_template.get_function(scope).unwrap();
+    headers_obj.set(scope, has_key, has_func.into());
+
+    // Add delete() method
+    let delete_key = v8::String::new(scope, "delete").unwrap().into();
+    let delete_func_template = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
+        let this_obj: v8::Local<v8::Object> = args.this();
+        let this_ptr = &*this_obj as *const v8::Object as usize;
+
+        let name = if let Some(name_val) = args.get(0).to_string(scope) {
+            name_val.to_rust_string_lossy(scope).to_lowercase()
+        } else {
+            return;
+        };
+
+        let mut cache = get_headers_cache().lock().unwrap();
+        if let Some(headers) = cache.get_mut(&this_ptr) {
+            headers.retain(|(key, _)| key.to_lowercase() != name);
+        }
+    });
+    let delete_func = delete_func_template.get_function(scope).unwrap();
+    headers_obj.set(scope, delete_key, delete_func.into());
+
+    // Add append() method
+    let append_key = v8::String::new(scope, "append").unwrap().into();
+    let append_func_template = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
+        let this_obj: v8::Local<v8::Object> = args.this();
+        let this_ptr = &*this_obj as *const v8::Object as usize;
+
+        let name = if let Some(name_val) = args.get(0).to_string(scope) {
+            name_val.to_rust_string_lossy(scope)
+        } else {
+            return;
+        };
+
+        let value = if let Some(value_val) = args.get(1).to_string(scope) {
+            value_val.to_rust_string_lossy(scope)
+        } else {
+            return;
+        };
+
+        let mut cache = get_headers_cache().lock().unwrap();
+        if let Some(headers) = cache.get_mut(&this_ptr) {
+            headers.push((name, value));
+        }
+    });
+    let append_func = append_func_template.get_function(scope).unwrap();
+    headers_obj.set(scope, append_key, append_func.into());
+
     retval.set(headers_obj.into());
 }
 

@@ -170,4 +170,218 @@ mod http_tests {
         assert!(output == "true",
             "Expected blob to return object with size and type, got: {}", output);
     }
+
+    // v0.3.346: Tests for Headers API enhancement
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_constructor_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            typeof Headers;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected Headers to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_get_method_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const headers = new Headers();
+            typeof headers.get;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected headers.get to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_set_method_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const headers = new Headers();
+            typeof headers.set;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected headers.set to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_has_method_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const headers = new Headers();
+            typeof headers.has;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected headers.has to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_delete_method_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const headers = new Headers();
+            typeof headers.delete;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected headers.delete to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_append_method_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const headers = new Headers();
+            typeof headers.append;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected headers.append to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_get_set_basic() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const headers = new Headers();
+            headers.set('Content-Type', 'application/json');
+            headers.get('Content-Type');
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "application/json",
+            "Expected Content-Type to be 'application/json', got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_has() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const headers = new Headers();
+            headers.set('X-Custom-Header', 'test');
+            headers.has('X-Custom-Header');
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "true",
+            "Expected has() to return true, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_delete() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const headers = new Headers();
+            headers.set('X-Test-Header', 'value');
+            const hasBefore = headers.has('X-Test-Header');
+            headers.delete('X-Test-Header');
+            const hasAfter = headers.has('X-Test-Header');
+            hasBefore + ',' + hasAfter;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "true,false",
+            "Expected 'true,false', got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_append() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const headers = new Headers();
+            headers.append('Set-Cookie', 'cookie1=value1');
+            headers.append('Set-Cookie', 'cookie2=value2');
+            headers.get('Set-Cookie');
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        // append 应该追加值，可能以逗号分隔
+        assert!(output.contains("cookie1") && output.contains("cookie2"),
+            "Expected cookies in Set-Cookie header, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_get_case_insensitive() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const headers = new Headers();
+            headers.set('content-type', 'text/plain');
+            headers.get('Content-Type');
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "text/plain",
+            "Expected case-insensitive header lookup to work, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_get_nonexistent() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const headers = new Headers();
+            headers.get('X-Non-Existent');
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "null" || output == "",
+            "Expected null or empty for nonexistent header, got: {}", output);
+    }
 }
