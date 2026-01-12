@@ -9,6 +9,9 @@ use rusty_v8 as v8;
 use tokio::runtime::Runtime;
 use std::sync::OnceLock;
 
+// Re-export FormData functions for use in fetch
+use super::form_data::{get_formdata_index, get_formdata_entries, serialize_formdata_multipart, generate_boundary, FormDataEntry};
+
 /// Thread-safe response cache for json() and text() methods
 static RESPONSE_CACHE: OnceLock<Mutex<HashMap<usize, (String, Vec<u8>)>>> = OnceLock::new();
 
@@ -151,7 +154,8 @@ fn fetch_callback(
 ) {
     // Parse fetch arguments
     let input: _ = args.get(0);
-    let _init: _ = args.get(1); // TODO: Parse init options - currently unused
+    let init: _ = args.get(1);
+
     // Convert to string for URL
     let url_str: _ = if input.is_string() {
         input.to_string(scope).unwrap().to_rust_string_lossy(scope)
@@ -165,20 +169,96 @@ fn fetch_callback(
         scope.throw_exception(error_obj.into());
         return;
     }
-    // Parse init options if provided
-    let method: _ = HttpMethod::GET;
-    let headers: HashMap<String, String> = HashMap::new();
-    let body: Option<Vec<u8>> = None;
-    // TODO: Parse init options - simplified for now to avoid type issues
-    // In a full implementation, we would parse:
-    // - method (GET, POST, etc.)
-    // - headers object
-    // - body string or ArrayBuffer
+
+    // Parse init options
+    let mut method = HttpMethod::GET;
+    let mut headers: HashMap<String, String> = HashMap::new();
+    let mut body: Option<Vec<u8>> = None;
+    let mut content_type = String::new();
+
+    // Parse init object for method, headers, body
+    if init.is_object() {
+        if let Some(init_obj) = init.to_object(scope) {
+            // Parse method
+            let method_key = v8::String::new(scope, "method").unwrap().into();
+            if let Some(method_val) = init_obj.get(scope, method_key) {
+                if let Some(method_str) = method_val.to_string(scope) {
+                    method = HttpMethod::from(method_str.to_rust_string_lossy(scope));
+                }
+            }
+
+            // Parse headers
+            let headers_key = v8::String::new(scope, "headers").unwrap().into();
+            if let Some(headers_val) = init_obj.get(scope, headers_key) {
+                if headers_val.is_object() {
+                    if let Some(headers_obj) = headers_val.to_object(scope) {
+                        let keys_array = headers_obj.get_own_property_names(scope);
+                        if let Some(keys_array) = keys_array {
+                            let keys_len = keys_array.length();
+                            for i in 0..keys_len {
+                                if let Some(key) = keys_array.get_index(scope, i) {
+                                    if let Some(key_str) = key.to_string(scope) {
+                                        let key_name = key_str.to_rust_string_lossy(scope);
+                                        if let Some(val) = headers_obj.get(scope, key) {
+                                            if let Some(val_str) = val.to_string(scope) {
+                                                headers.insert(key_name, val_str.to_rust_string_lossy(scope));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Parse body - support string, FormData, ArrayBuffer
+            let body_key = v8::String::new(scope, "body").unwrap().into();
+            if let Some(body_val) = init_obj.get(scope, body_key) {
+                if body_val.is_string() {
+                    // String body
+                    if let Some(body_str) = body_val.to_string(scope) {
+                        body = Some(body_str.to_rust_string_lossy(scope).into_bytes());
+                        if content_type.is_empty() {
+                            content_type = "text/plain;charset=UTF-8".to_string();
+                        }
+                    }
+                } else if body_val.is_object() {
+                    // Check if it's FormData
+                    if let Some(fd_index) = get_formdata_index(scope, body_val) {
+                        if let Some(entries) = get_formdata_entries(fd_index) {
+                            let boundary = generate_boundary();
+                            body = Some(serialize_formdata_multipart(&entries, &boundary));
+                            content_type = format!("multipart/form-data; boundary={}", boundary);
+                        }
+                    } else {
+                        // Try to get as string or handle as ArrayBuffer
+                        if let Some(body_str) = body_val.to_string(scope) {
+                            body = Some(body_str.to_rust_string_lossy(scope).into_bytes());
+                            if content_type.is_empty() {
+                                content_type = "text/plain;charset=UTF-8".to_string();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Add Content-Type header if body is set and header not already present
+    if !content_type.is_empty() && !headers.contains_key("content-type") {
+        headers.insert("Content-Type".to_string(), content_type);
+    }
+
     // Execute fetch synchronously in a blocking task
     let url: _ = url_str.clone();
+    let method_clone = method.clone();
+    let headers_clone = headers.clone();
+    let body_clone = body.clone();
+
     let result: _ = std::thread::spawn(move || {
         let rt: _ = Runtime::new().map_err(|e| anyhow::anyhow!("Failed to create runtime: {}", e))?;
-        rt.block_on(execute_fetch(&url, method, headers, body))
+        rt.block_on(execute_fetch(&url, method_clone, headers_clone, body_clone))
     });
     match result.join() {
         Ok(Ok(response)) => {

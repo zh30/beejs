@@ -3059,6 +3059,12 @@ impl MinimalRuntime {
             setup_fetch_api(scope, &context)?;
             eprintln!("✅ [v0.3.347] fetch API done");
 
+            // v0.3.349: FormData API (needed for fetch request bodies)
+            eprintln!("🔧 [v0.3.349] Setting up FormData API...");
+            use crate::web_api::form_data::setup_form_data_api;
+            setup_form_data_api(scope, &context)?;
+            eprintln!("✅ [v0.3.349] FormData API done");
+
             // v0.3.333: ErrorEvent API (script error handling for WebSocket, Worker, etc.)
             use crate::web_api::error_event::setup_error_event_api;
             setup_error_event_api(scope, &context);

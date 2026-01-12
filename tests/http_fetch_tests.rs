@@ -711,4 +711,305 @@ mod http_tests {
         assert!(output == "true" || output == "false",
             "Expected response.redirected to be boolean, got: {}", output);
     }
+
+    // v0.3.349: Tests for FormData API
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_constructor_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            typeof FormData;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected FormData to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_append_method_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const formData = new FormData();
+            typeof formData.append;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected append to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_append_basic() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const formData = new FormData();
+            formData.append('name', 'John');
+            formData.get('name');
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "John",
+            "Expected formData.get('name') to return 'John', got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_get_method_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const formData = new FormData();
+            typeof formData.get;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected get to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_has_method_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const formData = new FormData();
+            typeof formData.has;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected has to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_has() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const formData = new FormData();
+            formData.append('email', 'test@example.com');
+            formData.has('email');
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "true",
+            "Expected has() to return true, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_has_nonexistent() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const formData = new FormData();
+            formData.has('nonexistent');
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "false",
+            "Expected has() to return false for nonexistent key, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_delete_method_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const formData = new FormData();
+            typeof formData.delete;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected delete to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_delete() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const formData = new FormData();
+            formData.append('key', 'value');
+            formData.has('key');
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "true",
+            "Expected has() to return true before delete, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_set_method_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const formData = new FormData();
+            typeof formData.set;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected set to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_set_replaces() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const formData = new FormData();
+            formData.append('name', 'John');
+            formData.set('name', 'Jane');
+            formData.get('name');
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "Jane",
+            "Expected set() to replace value, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_get_all_method_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const formData = new FormData();
+            typeof formData.getAll;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected getAll to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_get_all_multiple_values() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const formData = new FormData();
+            formData.append('tag', 'a');
+            formData.append('tag', 'b');
+            const values = formData.getAll('tag');
+            values.length;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "2",
+            "Expected getAll() to return 2 values, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_entries_method_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const formData = new FormData();
+            typeof formData.entries;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected entries to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_keys_method_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const formData = new FormData();
+            typeof formData.keys;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected keys to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_values_method_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const formData = new FormData();
+            typeof formData.values;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected values to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_with_multiple_fields() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const formData = new FormData();
+            formData.append('username', 'alice');
+            formData.append('email', 'alice@example.com');
+            formData.append('age', '25');
+            const keys = formData.keys();
+            keys.length;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "3",
+            "Expected 3 unique keys, got: {}", output);
+    }
 }

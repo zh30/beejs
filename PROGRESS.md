@@ -16011,6 +16011,47 @@ const svgDoc = parser.parseFromString('<svg><circle cx="50" cy="50" r="40"/></sv
 - `test_response_redirected`: redirected 属性测试
 
 #### v0.3.348 下一步
-- 完善 FormData 支持用于 fetch 请求体
-- 实现 fetch init 对象完整解析
+- 完善 FormData 支持用于 fetch 请求体 ✅ v0.3.349
+- 实现 fetch init 对象完整解析 ✅ v0.3.349
 - 继续增强 Web API 兼容性
+
+#### v0.3.349 (当前版本)
+**完成时间**: 2026-01-12
+
+**主要改进**:
+- 完整实现 FormData API，支持所有标准方法
+  - `append(name, value, filename?)`: 添加表单字段
+  - `get(name)`: 获取第一个值
+  - `getAll(name)`: 获取所有值
+  - `has(name)`: 检查键是否存在
+  - `delete(name)`: 删除键
+  - `set(name, value, filename?)`: 设置值（替换已存在）
+  - `entries()`: 返回键值对迭代器
+  - `keys()`: 返回键迭代器
+  - `values()`: 返回值迭代器
+- fetch 请求体支持 FormData
+  - 自动检测 FormData 对象
+  - 序列化为 multipart/form-data 格式
+  - 自动设置 Content-Type: multipart/form-data; boundary=...
+- fetch init 对象完整解析
+  - 支持 method (GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS)
+  - 支持 headers 对象解析
+  - 支持 body 字符串
+  - 支持 body FormData 对象
+
+**代码变更**:
+- `src/web_api/form_data.rs`: 完整重写 FormData 实现 (~+380 行)
+  - 线程安全的 FormData 存储 (OnceLock + Mutex)
+  - 内部字段存储 FormData 实例索引
+  - multipart/form-data 序列化支持
+  - 边界字符串生成
+- `src/web_api/fetch.rs`: 增强 fetch init 解析 (~+120 行)
+  - 解析 method、headers、body
+  - FormData 检测与序列化
+  - 自动设置 Content-Type
+- `src/runtime_minimal.rs`: 添加 FormData 初始化 (~+10 行)
+- `tests/http_fetch_tests.rs`: 添加 17 个 FormData 测试 (~+300 行)
+
+**测试结果**:
+- 17/17 FormData API 测试通过 ✅
+- 编译警告 3 个 (unused variables, 计划修复)
