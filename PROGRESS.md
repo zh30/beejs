@@ -196,11 +196,84 @@ const encrypted = await crypto.subtle.encrypt(
 );
 ```
 
-#### v0.3.358 下一步
-- 完善 crypto.subtle.generateKey (生成随机密钥)
+#### v0.3.359 下一步
 - 完善 crypto.subtle.exportKey (导出密钥)
 - 实现 RSA/ECDSA 等非对称加密算法
 - 继续增强 Web API 兼容性
+
+---
+
+### v0.3.358 crypto.subtle.generateKey 完整实现（2026-01-12）
+**进度**: Web Crypto API 增强 | ✅ 已完成
+
+#### v0.3.358 新增功能
+
+**crypto.subtle.generateKey**:
+- 实现完整的 generateKey 方法，支持生成对称密钥
+- 使用 `ring::rand::SystemRandom` 生成密码学安全的随机密钥材料
+- 支持以下算法:
+  - HMAC (使用 SHA-256, SHA-384, SHA-512)
+  - AES-GCM (128, 192, 256 位)
+  - AES-CBC (128, 192, 256 位)
+  - AES-CTR, AES-KW
+- 支持 extractable 和 keyUsages 参数
+- 返回 Promise<CryptoKey>
+
+#### v0.3.358 代码变更
+- `src/web_api/crypto.rs`: 完全重写 generateKey API (~+120 行)
+  - 新增 `generate_random_bytes()`: 使用 ring 生成安全随机字节
+  - 新增 `get_algorithm_length()`: 从算法对象提取密钥长度
+  - 新增 `generate_key_callback()`: generateKey 实现
+  - 支持 HMAC、AES-GCM、AES-CBC、AES-CTR、AES-KW 算法
+  - 重构 `setup_crypto_subtle_api()`: 注册 generateKey 方法
+- `tests/crypto_generatekey_tests.rs`: 新建测试套件 (229 行, 13 个测试)
+
+#### v0.3.358 测试覆盖
+- test_generate_key_exists: generateKey 函数存在性
+- test_generate_key_returns_promise: 返回 Promise 对象
+- test_generate_key_hmac_returns_crypto_key: HMAC key 生成
+- test_generate_key_hmac_can_sign: HMAC key 可用于签名
+- test_generate_key_aes_gcm_returns_crypto_key: AES-GCM key 生成
+- test_generate_key_aes_gcm_can_encrypt: AES-GCM key 可用于加密
+- test_generate_key_aes_cbc_returns_crypto_key: AES-CBC key 生成
+- test_generate_key_returns_object_with_type: 返回正确类型的 CryptoKey
+- test_generate_key_has_usages: CryptoKey 包含正确的 usages
+- test_generate_key_default_hmac_length: HMAC 默认长度
+- test_generate_key_aes_128_length: AES-128 位密钥
+- test_generate_key_aes_192_length: AES-192 位密钥
+- test_generate_key_aes_256_length: AES-256 位密钥
+
+#### v0.3.358 测试结果
+- 13/13 crypto_generatekey_tests 通过 ✅
+- 21/21 webcrypto_tests 通过 ✅
+- 编译成功，零错误
+
+#### v0.3.358 使用示例
+```javascript
+// HMAC key 生成
+const hmacKey = await crypto.subtle.generateKey(
+    { name: 'HMAC', hash: 'SHA-256', length: 256 },
+    false,
+    ['sign', 'verify']
+);
+
+const message = new TextEncoder().encode('Hello, World!');
+const signature = await crypto.subtle.sign({ name: 'HMAC' }, hmacKey, message);
+
+// AES-GCM 密钥生成
+const aesKey = await crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+);
+
+const iv = crypto.getRandomValues(new Uint8Array(12));
+const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: iv },
+    aesKey,
+    new TextEncoder().encode('Secret message')
+);
+```
 
 ---
 

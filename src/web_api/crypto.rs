@@ -778,25 +778,21 @@ fn setup_crypto_subtle_api(
     let verify_fn_instance = verify_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, verify_key.into(), verify_fn_instance.into());
 
-    // Placeholder for generateKey - returns resolved Promise
+    // generateKey method - fully implemented
     let generate_key_key = v8::String::new(scope, "generateKey").unwrap();
-    let generate_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
-        let undefined_val = v8::undefined(scope).into();
-        let resolver = v8::PromiseResolver::new(scope).unwrap();
-        resolver.resolve(scope, undefined_val);
-        let promise = resolver.get_promise(scope);
-        rv.set(promise.into());
+    let generate_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        generate_key_callback(scope, args, rv);
     });
     let generate_key_fn_instance = generate_key_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, generate_key_key.into(), generate_key_fn_instance.into());
 
     // Placeholder for deriveKey - returns resolved Promise
     let derive_key_key = v8::String::new(scope, "deriveKey").unwrap();
-    let derive_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
-        let undefined_val = v8::undefined(scope).into();
-        let resolver = v8::PromiseResolver::new(scope).unwrap();
-        resolver.resolve(scope, undefined_val);
-        let promise = resolver.get_promise(scope);
+    let derive_key_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let undefined_val = v8::undefined(_scope).into();
+        let resolver = v8::PromiseResolver::new(_scope).unwrap();
+        resolver.resolve(_scope, undefined_val);
+        let promise = resolver.get_promise(_scope);
         rv.set(promise.into());
     });
     let derive_key_fn_instance = derive_key_fn.get_function(scope).unwrap();
@@ -804,11 +800,11 @@ fn setup_crypto_subtle_api(
 
     // Placeholder for exportKey - returns resolved Promise
     let export_key_key = v8::String::new(scope, "exportKey").unwrap();
-    let export_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
-        let undefined_val = v8::undefined(scope).into();
-        let resolver = v8::PromiseResolver::new(scope).unwrap();
-        resolver.resolve(scope, undefined_val);
-        let promise = resolver.get_promise(scope);
+    let export_key_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let undefined_val = v8::undefined(_scope).into();
+        let resolver = v8::PromiseResolver::new(_scope).unwrap();
+        resolver.resolve(_scope, undefined_val);
+        let promise = resolver.get_promise(_scope);
         rv.set(promise.into());
     });
     let export_key_fn_instance = export_key_fn.get_function(scope).unwrap();
@@ -816,11 +812,11 @@ fn setup_crypto_subtle_api(
 
     // Placeholder for wrapKey - returns resolved Promise
     let wrap_key_key = v8::String::new(scope, "wrapKey").unwrap();
-    let wrap_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
-        let undefined_val = v8::undefined(scope).into();
-        let resolver = v8::PromiseResolver::new(scope).unwrap();
-        resolver.resolve(scope, undefined_val);
-        let promise = resolver.get_promise(scope);
+    let wrap_key_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let undefined_val = v8::undefined(_scope).into();
+        let resolver = v8::PromiseResolver::new(_scope).unwrap();
+        resolver.resolve(_scope, undefined_val);
+        let promise = resolver.get_promise(_scope);
         rv.set(promise.into());
     });
     let wrap_key_fn_instance = wrap_key_fn.get_function(scope).unwrap();
@@ -828,15 +824,163 @@ fn setup_crypto_subtle_api(
 
     // Placeholder for unwrapKey - returns resolved Promise
     let unwrap_key_key = v8::String::new(scope, "unwrapKey").unwrap();
-    let unwrap_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
-        let undefined_val = v8::undefined(scope).into();
-        let resolver = v8::PromiseResolver::new(scope).unwrap();
-        resolver.resolve(scope, undefined_val);
-        let promise = resolver.get_promise(scope);
+    let unwrap_key_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let undefined_val = v8::undefined(_scope).into();
+        let resolver = v8::PromiseResolver::new(_scope).unwrap();
+        resolver.resolve(_scope, undefined_val);
+        let promise = resolver.get_promise(_scope);
         rv.set(promise.into());
     });
     let unwrap_key_fn_instance = unwrap_key_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, unwrap_key_key.into(), unwrap_key_fn_instance.into());
+}
+
+/// Generate random bytes for key material
+fn generate_random_bytes(length: usize) -> Vec<u8> {
+    let mut data = vec![0u8; length];
+    use ring::rand::SecureRandom;
+    let rng = ring::rand::SystemRandom::new();
+    let _ = rng.fill(&mut data);
+    data
+}
+
+/// Get algorithm length from algorithm object
+fn get_algorithm_length(scope: &mut v8::HandleScope, algo_value: v8::Local<v8::Value>, default_length: i32) -> i32 {
+    if algo_value.is_object() {
+        let algo_obj = algo_value.to_object(scope).unwrap();
+        let length_key = v8::String::new(scope, "length").unwrap();
+        if let Some(length_val) = algo_obj.get(scope, length_key.into()) {
+            if length_val.is_number() {
+                return length_val.integer_value(scope).unwrap_or(default_length as i64) as i32;
+            }
+        }
+    }
+    default_length
+}
+
+/// GenerateKey callback - generates cryptographic keys
+fn generate_key_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    if args.length() < 3 {
+        let error = v8::String::new(scope, "generateKey requires 3 arguments: algorithm, extractable, keyUsages").unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
+    let algorithm_value = args.get(0);
+    let extractable_value = args.get(1);
+    let usages_value = args.get(2);
+
+    // Parse algorithm name
+    let algorithm_name = get_algorithm_name(scope, algorithm_value);
+
+    // Parse extractable
+    let extractable = get_bool_value(scope, extractable_value);
+
+    // Parse usages
+    let usages = get_key_usages(scope, usages_value);
+
+    // Generate key based on algorithm
+    match algorithm_name.to_uppercase().as_str() {
+        "HMAC" | "HS256" | "HS384" | "HS512" => {
+            // Get hash algorithm
+            let hash_name = get_algorithm_hash_name(scope, algorithm_value);
+
+            // Determine key length based on hash algorithm
+            let key_length = match hash_name.as_str() {
+                "SHA-256" | "SHA-384" | "SHA-512" => 64, // Default to 512 bits
+                _ => 64,
+            };
+
+            // Generate random key material
+            let key_data = generate_random_bytes(key_length);
+
+            // Create CryptoKey
+            let crypto_key = create_crypto_key(
+                scope,
+                "secret",
+                extractable,
+                &algorithm_name,
+                (key_length * 8) as i32,
+                usages.iter().map(|s| s.as_str()).collect(),
+            );
+
+            // Store key data
+            let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
+            let key_data_array = v8::ArrayBuffer::new(scope, key_data.len());
+            let backing_store = key_data_array.get_backing_store();
+            for (i, &byte) in key_data.iter().enumerate() {
+                backing_store[i].set(byte);
+            }
+            crypto_key.set(scope, key_data_key.into(), key_data_array.into());
+
+            // Return promise resolving to the CryptoKey
+            let resolver = v8::PromiseResolver::new(scope).unwrap();
+            resolver.resolve(scope, crypto_key.into());
+            let promise = resolver.get_promise(scope);
+            retval.set(promise.into());
+        }
+        "AES-GCM" | "AES-CBC" | "AES-CTR" | "AES-KW" => {
+            // Get key length (128, 192, or 256)
+            let length = get_algorithm_length(scope, algorithm_value, 256);
+            let key_bytes = match length {
+                128 => 16,
+                192 => 24,
+                256 => 32,
+                _ => 32, // Default to 256
+            };
+
+            // Generate random key material
+            let key_data = generate_random_bytes(key_bytes);
+
+            // Create CryptoKey
+            let crypto_key = create_crypto_key(
+                scope,
+                "secret",
+                extractable,
+                &algorithm_name,
+                length,
+                usages.iter().map(|s| s.as_str()).collect(),
+            );
+
+            // Store key data
+            let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
+            let key_data_array = v8::ArrayBuffer::new(scope, key_data.len());
+            let backing_store = key_data_array.get_backing_store();
+            for (i, &byte) in key_data.iter().enumerate() {
+                backing_store[i].set(byte);
+            }
+            crypto_key.set(scope, key_data_key.into(), key_data_array.into());
+
+            // Return promise resolving to the CryptoKey
+            let resolver = v8::PromiseResolver::new(scope).unwrap();
+            resolver.resolve(scope, crypto_key.into());
+            let promise = resolver.get_promise(scope);
+            retval.set(promise.into());
+        }
+        "RSA-OAEP" | "RSASSA-PKCS1-v1_5" => {
+            // Placeholder for RSA key generation (requires more complex implementation)
+            let error = v8::String::new(scope, "RSA key generation not yet implemented").unwrap();
+            let error_obj = v8::Exception::error(scope, error);
+            scope.throw_exception(error_obj.into());
+        }
+        "ECDSA" | "ECDH" => {
+            // Placeholder for EC key generation (requires more complex implementation)
+            let error = v8::String::new(scope, "EC key generation not yet implemented").unwrap();
+            let error_obj = v8::Exception::error(scope, error);
+            scope.throw_exception(error_obj.into());
+        }
+        _ => {
+            let error_msg = format!("generateKey: unsupported algorithm '{}'", algorithm_name);
+            let error = v8::String::new(scope, &error_msg).unwrap();
+            let error_obj = v8::Exception::type_error(scope, error);
+            scope.throw_exception(error_obj.into());
+        }
+    }
 }
 
 /// Setup crypto.randomUUID (for convenience)
