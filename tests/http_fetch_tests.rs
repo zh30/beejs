@@ -1012,4 +1012,64 @@ mod http_tests {
         assert!(output == "3",
             "Expected 3 unique keys, got: {}", output);
     }
+
+    // v0.3.350: Tests for fetch with Request object
+    #[test]
+    #[serial_test::serial]
+    fn test_fetch_with_request_object() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const request = new Request('https://httpbin.org/json');
+            const response = fetch(request);
+            response.status;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let status = binding.trim();
+        // 应该是 200 或 404（取决于网络）
+        assert!(status == "200" || status == "404",
+            "Expected status 200 or 404, got: {}", status);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_fetch_with_request_object_extracts_url() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const request = new Request('https://httpbin.org/headers');
+            const response = fetch(request);
+            response.url;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output.contains("httpbin.org"),
+            "Expected response.url to contain httpbin.org, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_fetch_with_request_object_and_init() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const request = new Request('https://httpbin.org/post', {
+                method: 'POST'
+            });
+            const response = fetch(request, {
+                method: 'PUT'
+            });
+            response.status;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let status = binding.trim();
+        assert!(status == "200" || status == "404",
+            "Expected status 200 or 404, got: {}", status);
+    }
 }

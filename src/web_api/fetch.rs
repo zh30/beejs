@@ -156,13 +156,71 @@ fn fetch_callback(
     let input: _ = args.get(0);
     let init: _ = args.get(1);
 
-    // Convert to string for URL
-    let url_str: _ = if input.is_string() {
-        input.to_string(scope).unwrap().to_rust_string_lossy(scope)
-    } else {
-        // TODO: Handle Request object
-        "".to_string()
-    };
+    // Parse URL and request properties from first argument
+    let mut url_str = String::new();
+    let mut request_method = String::from("GET");
+    let mut request_headers: HashMap<String, String> = HashMap::new();
+    let mut request_body: Option<Vec<u8>> = None;
+    let mut request_content_type = String::new();
+
+    if input.is_string() {
+        // Input is a URL string
+        url_str = input.to_string(scope).unwrap().to_rust_string_lossy(scope);
+    } else if input.is_object() {
+        // Input might be a Request object - extract URL and other properties
+        if let Some(input_obj) = input.to_object(scope) {
+            let url_key = v8::String::new(scope, "url").unwrap().into();
+            if let Some(url_val) = input_obj.get(scope, url_key) {
+                if url_val.is_string() {
+                    url_str = url_val.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                }
+            }
+
+            // Extract method from Request object
+            let method_key = v8::String::new(scope, "method").unwrap().into();
+            if let Some(method_val) = input_obj.get(scope, method_key) {
+                if method_val.is_string() {
+                    request_method = method_val.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                }
+            }
+
+            // Extract headers from Request object
+            let headers_key = v8::String::new(scope, "headers").unwrap().into();
+            if let Some(headers_val) = input_obj.get(scope, headers_key) {
+                if headers_val.is_object() {
+                    if let Some(headers_obj) = headers_val.to_object(scope) {
+                        let keys_array = headers_obj.get_own_property_names(scope);
+                        if let Some(keys_array) = keys_array {
+                            let keys_len = keys_array.length();
+                            for i in 0..keys_len {
+                                if let Some(key) = keys_array.get_index(scope, i) {
+                                    if let Some(key_str) = key.to_string(scope) {
+                                        let key_name = key_str.to_rust_string_lossy(scope);
+                                        if let Some(val) = headers_obj.get(scope, key) {
+                                            if let Some(val_str) = val.to_string(scope) {
+                                                request_headers.insert(key_name, val_str.to_rust_string_lossy(scope));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Extract body from Request object
+            let body_key = v8::String::new(scope, "body").unwrap().into();
+            if let Some(body_val) = input_obj.get(scope, body_key) {
+                if body_val.is_string() {
+                    if let Some(body_str) = body_val.to_string(scope) {
+                        request_body = Some(body_str.to_rust_string_lossy(scope).into_bytes());
+                        request_content_type = "text/plain;charset=UTF-8".to_string();
+                    }
+                }
+            }
+        }
+    }
     if url_str.is_empty() {
         let error: _ = v8::String::new(scope, "Invalid URL").unwrap();
         let error_obj: _ = v8::Exception::error(scope, error);
@@ -170,13 +228,13 @@ fn fetch_callback(
         return;
     }
 
-    // Parse init options
-    let mut method = HttpMethod::GET;
-    let mut headers: HashMap<String, String> = HashMap::new();
-    let mut body: Option<Vec<u8>> = None;
-    let mut content_type = String::new();
+    // Parse init options - start with values from Request object (if provided)
+    let mut method = HttpMethod::from(request_method);
+    let mut headers = request_headers;
+    let mut body = request_body;
+    let mut content_type = request_content_type;
 
-    // Parse init object for method, headers, body
+    // Parse init object for method, headers, body (overrides Request properties)
     if init.is_object() {
         if let Some(init_obj) = init.to_object(scope) {
             // Parse method
