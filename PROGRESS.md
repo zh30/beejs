@@ -16055,3 +16055,85 @@ const svgDoc = parser.parseFromString('<svg><circle cx="50" cy="50" r="40"/></sv
 **测试结果**:
 - 17/17 FormData API 测试通过 ✅
 - 编译警告 3 个 (unused variables, 计划修复)
+
+---
+
+### v0.3.353 URLSearchParams API 实现（2026-01-12）
+**进度**: Web API 扩展 | ✅ 已完成
+
+#### v0.3.353 新增功能
+
+**URLSearchParams API**:
+- 实现 `URLSearchParams` 构造函数
+- 支持多种初始化方式：
+  - 空参数创建
+  - 字符串查询参数（如 `"a=1&b=2"`）
+  - 对象字面量（如 `{a: "1", b: "2"}`）
+  - 键值对数组（如 `[["a", "1"], ["b", "2"]]`）
+- 完整的方法支持：
+  - `append(name, value)`: 添加键值对
+  - `delete(name)`: 删除键
+  - `get(name)`: 获取第一个值
+  - `getAll(name)`: 获取所有值
+  - `has(name)`: 检查键是否存在
+  - `set(name, value)`: 设置值（替换已存在）
+  - `toString()`: 序列化为查询字符串
+  - `sort()`: 排序键值对
+  - `forEach(callback)`: 遍历所有键值对
+  - `entries()`: 迭代器
+  - `keys()`: 键迭代器
+  - `values()`: 值迭代器
+- URL 编码/解码支持
+- 支持迭代器协议（for...of 循环）
+
+#### v0.3.353 代码变更
+- `src/web_api/url_search_params.rs`: 新建 URLSearchParams API (~665 行)
+  - `setup_url_search_params_api()`: 设置全局 URLSearchParams 构造函数
+  - URL 编码/解码辅助函数
+  - 查询字符串解析和序列化
+  - 所有标准方法实现
+- `src/web_api/mod.rs`: 注册 url_search_params 模块 (~+6 行)
+- `src/runtime_minimal.rs`: 添加 API 初始化 (~+5 行)
+- `tests/url_search_params_tests.rs`: 新建测试套件 (~369 行，22 个测试)
+
+#### v0.3.353 测试覆盖
+- 构造函数各种初始化方式测试
+- append/delete/get/getAll/has/set 方法测试
+- toString/sort/forEach 方法测试
+- entries/keys/values 迭代器测试
+- URL 编码/解码测试
+- 空值和特殊字符处理测试
+
+#### v0.3.353 使用示例
+```javascript
+// 多种创建方式
+const params1 = new URLSearchParams();
+const params2 = new URLSearchParams('a=1&b=2');
+const params3 = new URLSearchParams({ a: '1', b: '2' });
+const params4 = new URLSearchParams([['a', '1'], ['b', '2']]);
+
+// 方法使用
+params.append('c', '3');
+params.set('a', 'new-value');
+params.get('a'); // 'new-value'
+params.getAll('a'); // ['new-value']
+params.has('b'); // true
+params.delete('b');
+params.toString(); // 'a=new-value&c=3'
+
+// 遍历
+for (const [key, value] of params.entries()) {
+    console.log(key, value);
+}
+```
+
+#### v0.3.353 测试结果
+- 22/22 URLSearchParams 测试通过 ✅
+- 291/291 lib 测试通过 ✅
+- 编译成功，零错误
+
+#### v0.3.354 下一步
+- 完善 crypto.subtle API（Web Crypto）
+- 实现更多 Node.js 兼容性 API
+- 增强 streams 处理能力
+- 添加更多 AI 工作负载优化
