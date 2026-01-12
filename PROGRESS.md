@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.355 (2025-01-12)
+## 当前版本: v0.3.356 (2025-01-12)
 
 ### 项目状态摘要
 
@@ -95,6 +95,7 @@
 - 删除 `tests/stage78_phase3_matrix_accelerator_tests.rs` (-245 行)
 - 修复 `tests/wasm_optimization_tests.rs` 重复导入
 - 修复 `tests/stage_39_zero_copy_cloud_tests.rs` 重复导入
+- 修复 `src/web_api/url_search_params.rs` 未使用的 `MinimalRuntime` 导入警告
 
 ---
 

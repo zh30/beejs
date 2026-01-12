@@ -629,7 +629,6 @@ pub fn setup_url_search_params_api(scope: &mut v8::ContextScope<v8::HandleScope>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::runtime_minimal::MinimalRuntime;
 
     #[test]
     fn test_parse_query_string() {
