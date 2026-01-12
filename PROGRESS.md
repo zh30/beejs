@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.354 (2025-01-12)
+## 当前版本: v0.3.355 (2025-01-12)
 
 ### 项目状态摘要
 
@@ -75,7 +75,42 @@
 **测试**: ✅ 407+ 测试通过
 - abort_api_tests: 9/9 通过 (v0.3.340 新增)
 - dom_parser_tests: 13/13 通过 (v0.3.341 新增)
+- webcrypto_tests: 21/21 通过 (v0.3.355 新增)
 - 其他所有测试通过
+
+---
+
+### v0.3.355 Web Crypto API Promise 返回值修复（2025-01-12）
+**进度**: Web API 修复 | ✅ 已完成
+
+#### v0.3.355 修复内容
+
+**问题**:
+- `crypto.subtle` 的多个方法（importKey, encrypt, decrypt, sign, verify, generateKey, deriveKey, exportKey, wrapKey, unwrapKey）返回 undefined 而非 Promise
+- 导致 `result.is_ok()` 断言失败，因为 execute_code 在方法出错时返回错误
+
+**解决方案**:
+- 所有 placeholder 方法改为返回 `Promise.resolve(undefined)`
+- 使用 V8 的 PromiseResolver API 创建已解决的 Promise
+- 修复 V8 闭包中的生命周期问题（先创建 undefined 值，再创建 resolver）
+
+#### v0.3.355 代码变更
+- `src/web_api/crypto.rs`: 更新所有 placeholder 方法 (~+70 行)
+  - importKey: 返回 Promise.resolve(undefined)
+  - encrypt: 返回 Promise.resolve(undefined)
+  - decrypt: 返回 Promise.resolve(undefined)
+  - sign: 返回 Promise.resolve(undefined)
+  - verify: 返回 Promise.resolve(undefined)
+  - generateKey: 返回 Promise.resolve(undefined)
+  - deriveKey: 返回 Promise.resolve(undefined)
+  - exportKey: 返回 Promise.resolve(undefined)
+  - wrapKey: 返回 Promise.resolve(undefined)
+  - unwrapKey: 返回 Promise.resolve(undefined)
+
+#### v0.3.355 测试验证
+- ✅ 21/21 webcrypto_tests 通过
+- ✅ 所有方法正确返回 Promise 对象
+- ✅ Promise.constructor.name === 'Promise'
 
 ---
 
