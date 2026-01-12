@@ -574,4 +574,141 @@ mod http_tests {
         assert!(output == "include",
             "Expected credentials to be 'include', got: {}", output);
     }
+
+    // v0.3.348: Tests for Response API enhancements
+    #[test]
+    #[serial_test::serial]
+    fn test_response_constructor_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            typeof Response;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected Response to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_response_status_text() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const response = fetch('https://httpbin.org/status/200');
+            typeof response.statusText;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "string",
+            "Expected response.statusText to be a string, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_response_url() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const response = fetch('https://httpbin.org/json');
+            response.url;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output.contains("httpbin.org"),
+            "Expected response.url to contain httpbin.org, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_response_type() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const response = fetch('https://httpbin.org/json');
+            response.type;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "default" || output == "",
+            "Expected response.type to be 'default' or empty, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_response_headers() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const response = fetch('https://httpbin.org/json');
+            typeof response.headers;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "object",
+            "Expected response.headers to be an object, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_response_clone_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const response = fetch('https://httpbin.org/json');
+            typeof response.clone;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected response.clone to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_response_clone_basic() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const response = fetch('https://httpbin.org/json');
+            const cloned = response.clone();
+            cloned.status === response.status && cloned.ok === response.ok;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "true",
+            "Expected cloned response to have same status and ok, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_response_redirected() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const response = fetch('https://httpbin.org/json');
+            response.redirected;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "true" || output == "false",
+            "Expected response.redirected to be boolean, got: {}", output);
+    }
 }

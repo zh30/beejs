@@ -236,7 +236,50 @@ fn fetch_callback(
             let blob_key: _ = v8::String::new(scope, "blob").unwrap();
             response_obj.set(scope, blob_key.into(), blob_func.into());
 
-            // Add headers
+            // v0.3.348: Add type property (response type)
+            let type_key: _ = v8::String::new(scope, "type").unwrap();
+            let type_val: v8::Local<v8::Value> = v8::String::new(scope, "default").unwrap().into();
+            response_obj.set(scope, type_key.into(), type_val);
+
+            // v0.3.348: Add redirected property
+            let redirected_key: _ = v8::String::new(scope, "redirected").unwrap();
+            let redirected_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+            response_obj.set(scope, redirected_key.into(), redirected_val);
+
+            // v0.3.348: Add clone() method - use a simple function that copies properties
+            let clone_key: _ = v8::String::new(scope, "clone").unwrap();
+            let clone_template: _ = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+                // Get the original response object
+                let this_obj: v8::Local<v8::Object> = args.this();
+
+                // Clone the response object properties
+                let cloned_obj: v8::Local<v8::Object> = v8::Object::new(scope);
+
+                // Copy all properties by getting all property names
+                let key_names = ["status", "ok", "statusText", "url", "type", "redirected", "body", "headers"];
+
+                for name in &key_names {
+                    let key_local = v8::String::new(scope, name).unwrap().into();
+                    if let Some(val) = this_obj.get(scope, key_local) {
+                        cloned_obj.set(scope, key_local, val);
+                    }
+                }
+
+                // Copy methods
+                let methods = ["json", "text", "arrayBuffer", "blob"];
+                for method_name in &methods {
+                    let key_local = v8::String::new(scope, method_name).unwrap().into();
+                    if let Some(method_val) = this_obj.get(scope, key_local) {
+                        cloned_obj.set(scope, key_local, method_val);
+                    }
+                }
+
+                rv.set(cloned_obj.into());
+            });
+            let clone_func: v8::Local<v8::Function> = clone_template.get_function(scope).unwrap();
+            response_obj.set(scope, clone_key.into(), clone_func.into());
+
+            // Add headers (v0.3.348: enhanced with proper Headers object)
             let headers_obj: _ = v8::Object::new(scope);
             for (key, value) in response.headers {
                 let header_key: _ = v8::String::new(scope, &key).unwrap();
