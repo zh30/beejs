@@ -3065,6 +3065,12 @@ impl MinimalRuntime {
             setup_form_data_api(scope, &context)?;
             eprintln!("✅ [v0.3.349] FormData API done");
 
+            // v0.3.353: URLSearchParams API (query string manipulation)
+            eprintln!("🔧 [v0.3.353] Setting up URLSearchParams API...");
+            use crate::web_api::url_search_params::setup_url_search_params_api;
+            setup_url_search_params_api(scope, &context);
+            eprintln!("✅ [v0.3.353] URLSearchParams API done");
+
             // v0.3.333: ErrorEvent API (script error handling for WebSocket, Worker, etc.)
             use crate::web_api::error_event::setup_error_event_api;
             setup_error_event_api(scope, &context);

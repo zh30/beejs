@@ -27,6 +27,7 @@ pub mod error_event; // v0.3.333: ErrorEvent API (script error handling)
 pub mod custom_event; // v0.3.337: CustomEvent API (custom event handling)
 pub mod dom_parser; // v0.3.341: DOMParser API (HTML/XML document parsing for AI workloads)
 pub mod clipboard; // v0.3.342: Clipboard API (copy/paste for AI workloads)
+pub mod url_search_params; // v0.3.353: URLSearchParams API (query string manipulation)
 use anyhow::Result;
 use rusty_v8 as v8;
 // 从各模块导入设置函数
@@ -39,6 +40,7 @@ use crypto::setup_crypto_api;
 use custom_event::setup_custom_event_api;
 use dom_parser::setup_dom_parser_api;
 use clipboard::setup_clipboard_api;
+use url_search_params::setup_url_search_params_api;
 use encoding::setup_encoding_api;
 use events::setup_events_api;
 use fetch::setup_fetch_api;
@@ -89,6 +91,10 @@ pub fn init_web_api(
     eprintln!("🔧 [STAGE74] Setting up URL API...");
     setup_url_api(scope, context)?;
     eprintln!("✅ [STAGE74] URL API done");
+    // v0.3.353: URLSearchParams API (query string manipulation)
+    eprintln!("🔧 [v0.3.353] Setting up URLSearchParams API...");
+    setup_url_search_params_api(scope, context);
+    eprintln!("✅ [v0.3.353] URLSearchParams API done");
     // 3. FormData API（依赖 URL）
     eprintln!("🔧 [STAGE74] Setting up FormData API...");
     setup_form_data_api(scope, context)?;
