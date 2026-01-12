@@ -49,6 +49,8 @@ use crate::web_api::worker::setup_worker_api;
 use crate::web_api::shared_array_buffer::setup_shared_array_buffer_api;
 // v0.3.324: Import ServiceWorker API
 use crate::web_api::service_worker::setup_service_worker_api;
+// v0.3.354: Import Web Crypto API (crypto.subtle)
+use crate::web_api::crypto::setup_crypto_api as setup_web_crypto_api;
 
 // Event listener storage using thread_local (v0.3.46)
 // Note: rustdoc does not generate documentation for macro invocations
@@ -3070,6 +3072,11 @@ impl MinimalRuntime {
             use crate::web_api::url_search_params::setup_url_search_params_api;
             setup_url_search_params_api(scope, &context);
             eprintln!("✅ [v0.3.353] URLSearchParams API done");
+
+            // v0.3.354: Web Crypto API (crypto.subtle for hashing, encryption)
+            eprintln!("🔧 [v0.3.354] Setting up Web Crypto API...");
+            setup_web_crypto_api(scope, &context)?;
+            eprintln!("✅ [v0.3.354] Web Crypto API done");
 
             // v0.3.333: ErrorEvent API (script error handling for WebSocket, Worker, etc.)
             use crate::web_api::error_event::setup_error_event_api;
