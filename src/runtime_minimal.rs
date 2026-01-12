@@ -3053,6 +3053,12 @@ impl MinimalRuntime {
             use crate::web_api::abort::setup_abort_api;
             setup_abort_api(scope, &context)?;
 
+            // v0.3.347: Fetch API (fetch, Request, Response, Headers)
+            eprintln!("🔧 [v0.3.347] Setting up fetch API...");
+            use crate::web_api::fetch::setup_fetch_api;
+            setup_fetch_api(scope, &context)?;
+            eprintln!("✅ [v0.3.347] fetch API done");
+
             // v0.3.333: ErrorEvent API (script error handling for WebSocket, Worker, etc.)
             use crate::web_api::error_event::setup_error_event_api;
             setup_error_event_api(scope, &context);

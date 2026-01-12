@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.346 (2025-01-12)
+## 当前版本: v0.3.347 (2025-01-12)
 
 ### 项目状态摘要
 
@@ -37,6 +37,9 @@
 - WebSocket ErrorEvent 集成 (v0.3.334): WebSocket 错误事件使用 ErrorEvent 格式
 - CustomEvent API (v0.3.337 新增): 自定义事件接口，适用于 AI 代理系统和 UI 框架
 - DOMParser API (v0.3.341 新增): HTML/XML 文档解析，适用于 AI 工作负载处理网页内容
+- Clipboard API (v0.3.342 新增): 剪贴板复制/粘贴支持，适用于 AI 工作负载
+- Headers API (v0.3.346 新增): Headers 构造函数和 get/set/has/delete/append 方法
+- Request API (v0.3.347 新增): Request 构造函数、url/method/headers/body/cache/credentials 等属性、clone() 方法
 
 **包管理**: ✅ 已完成
 - package.json 解析

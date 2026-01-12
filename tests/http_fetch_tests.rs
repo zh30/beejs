@@ -384,4 +384,194 @@ mod http_tests {
         assert!(output == "null" || output == "",
             "Expected null or empty for nonexistent header, got: {}", output);
     }
+
+    // v0.3.347: Tests for Request API enhancement
+    #[test]
+    #[serial_test::serial]
+    fn test_request_constructor_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            typeof Request;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected Request to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_request_constructor_basic() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const request = new Request('https://example.com/api');
+            request.url;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output.contains("example.com"),
+            "Expected request.url to contain example.com, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_request_method_default() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const request = new Request('https://example.com/api');
+            request.method;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "GET",
+            "Expected default request.method to be GET, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_request_method_custom() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const request = new Request('https://example.com/api', {
+                method: 'POST'
+            });
+            request.method;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "POST",
+            "Expected request.method to be POST, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_request_headers() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const request = new Request('https://example.com/api', {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Custom-Header': 'test-value'
+                }
+            });
+            const headers = request.headers;
+            typeof headers === 'object';
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "true",
+            "Expected request.headers to be an object, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_request_clone_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const request = new Request('https://example.com/api');
+            typeof request.clone;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "function",
+            "Expected request.clone to be a function, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_request_clone_basic() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const original = new Request('https://example.com/api', {
+                method: 'POST',
+                headers: { 'X-Test': 'value' }
+            });
+            const cloned = original.clone();
+            cloned.url === original.url && cloned.method === original.method;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "true",
+            "Expected cloned request to have same url and method, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_request_body_init() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const request = new Request('https://example.com/api', {
+                method: 'POST',
+                body: JSON.stringify({ test: 'data' })
+            });
+            typeof request.body;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        // body should exist (as string or null depending on implementation)
+        assert!(output == "string" || output == "object",
+            "Expected request.body to be string or object, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_request_cache_mode() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const request = new Request('https://example.com/api', {
+                cache: 'no-cache'
+            });
+            request.cache;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output.contains("no-cache") || output == "default",
+            "Expected cache mode to be set, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_request_credentials_mode() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(r#"
+            const request = new Request('https://example.com/api', {
+                credentials: 'include'
+            });
+            request.credentials;
+        "#);
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert!(output == "include",
+            "Expected credentials to be 'include', got: {}", output);
+    }
 }

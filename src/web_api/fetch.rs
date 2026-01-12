@@ -314,13 +314,240 @@ async fn execute_fetch(
         body_used: false,
     })
 }
+/// Thread-safe request cache for Request API
+static REQUEST_CACHE: OnceLock<Mutex<HashMap<usize, RequestData>>> = OnceLock::new();
+
+/// Get the request cache mutex
+fn get_request_cache() -> &'static Mutex<HashMap<usize, RequestData>> {
+    REQUEST_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Request data stored in cache
+#[derive(Debug, Clone)]
+pub struct RequestData {
+    pub url: String,
+    pub method: String,
+    pub headers: Vec<(String, String)>,
+    pub body: Option<String>,
+    pub cache: String,
+    pub credentials: String,
+    pub mode: String,
+    pub redirect: String,
+    pub referrer: String,
+    pub referrer_policy: String,
+    pub integrity: String,
+    pub keepalive: bool,
+}
+
 /// Request constructor callback
 fn request_constructor_callback(
     scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
+    args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
+    // Parse first argument (URL or Request object)
+    let input = args.get(0);
+    let mut url = String::new();
+    let mut method = String::from("GET");
+
+    // Parse URL from first argument
+    if input.is_string() {
+        if let Some(url_str) = input.to_string(scope) {
+            url = url_str.to_rust_string_lossy(scope);
+        }
+    } else if input.is_object() {
+        // Input is a Request object - extract its URL
+        if let Some(input_obj) = input.to_object(scope) {
+            let url_key = v8::String::new(scope, "url").unwrap().into();
+            if let Some(url_val) = input_obj.get(scope, url_key) {
+                if url_val.is_string() {
+                    if let Some(url_str) = url_val.to_string(scope) {
+                        url = url_str.to_rust_string_lossy(scope);
+                    }
+                }
+            }
+            // Extract method from Request object
+            let method_key = v8::String::new(scope, "method").unwrap().into();
+            if let Some(method_val) = input_obj.get(scope, method_key) {
+                if method_val.is_string() {
+                    if let Some(method_str) = method_val.to_string(scope) {
+                        method = method_str.to_rust_string_lossy(scope);
+                    }
+                }
+            }
+        }
+    }
+
+    // Create request object
     let request_obj: _ = v8::Object::new(scope);
+
+    // Store request data in cache
+    let request_ptr = &*request_obj as *const v8::Object as usize;
+    let request_data = RequestData {
+        url: url.clone(),
+        method: method.clone(),
+        headers: Vec::new(),
+        body: None,
+        cache: String::from("default"),
+        credentials: String::from("same-origin"),
+        mode: String::from("cors"),
+        redirect: String::from("follow"),
+        referrer: String::new(),
+        referrer_policy: String::from("no-referrer"),
+        integrity: String::new(),
+        keepalive: false,
+    };
+    let mut request_cache_guard = get_request_cache().lock().unwrap();
+    request_cache_guard.insert(request_ptr, request_data);
+    drop(request_cache_guard);
+
+    // Set url property
+    let url_key = v8::String::new(scope, "url").unwrap().into();
+    let url_val = v8::String::new(scope, &url).unwrap().into();
+    request_obj.set(scope, url_key, url_val);
+
+    // Set method property
+    let method_key = v8::String::new(scope, "method").unwrap().into();
+    let method_val = v8::String::new(scope, &method).unwrap().into();
+    request_obj.set(scope, method_key, method_val);
+
+    // Set headers property (empty object for now)
+    let headers_key = v8::String::new(scope, "headers").unwrap().into();
+    let headers_obj: v8::Local<v8::Object> = v8::Object::new(scope);
+    request_obj.set(scope, headers_key, headers_obj.into());
+
+    // Set body property
+    let body_key = v8::String::new(scope, "body").unwrap().into();
+    let null_body: v8::Local<v8::Value> = v8::null(scope).into();
+    request_obj.set(scope, body_key, null_body);
+
+    // Set other properties with defaults
+    let cache_key = v8::String::new(scope, "cache").unwrap().into();
+    let cache_val = v8::String::new(scope, "default").unwrap().into();
+    request_obj.set(scope, cache_key, cache_val);
+
+    let cred_key = v8::String::new(scope, "credentials").unwrap().into();
+    let cred_val = v8::String::new(scope, "same-origin").unwrap().into();
+    request_obj.set(scope, cred_key, cred_val);
+
+    let mode_key = v8::String::new(scope, "mode").unwrap().into();
+    let mode_val = v8::String::new(scope, "cors").unwrap().into();
+    request_obj.set(scope, mode_key, mode_val);
+
+    let redirect_key = v8::String::new(scope, "redirect").unwrap().into();
+    let redirect_val = v8::String::new(scope, "follow").unwrap().into();
+    request_obj.set(scope, redirect_key, redirect_val);
+
+    let referrer_key = v8::String::new(scope, "referrer").unwrap().into();
+    request_obj.set(scope, referrer_key, null_body);
+
+    let policy_key = v8::String::new(scope, "referrerPolicy").unwrap().into();
+    let policy_val = v8::String::new(scope, "no-referrer").unwrap().into();
+    request_obj.set(scope, policy_key, policy_val);
+
+    let integrity_key = v8::String::new(scope, "integrity").unwrap().into();
+    let integrity_val = v8::String::new(scope, "").unwrap().into();
+    request_obj.set(scope, integrity_key, integrity_val);
+
+    let keepalive_key = v8::String::new(scope, "keepalive").unwrap().into();
+    let keepalive_val = v8::Boolean::new(scope, false).into();
+    request_obj.set(scope, keepalive_key, keepalive_val);
+
+    // Add clone() method using object data
+    let clone_template = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        let this_obj = args.this();
+
+        // Get request data from the object properties
+        let url_key = v8::String::new(scope, "url").unwrap().into();
+        let method_key = v8::String::new(scope, "method").unwrap().into();
+        let cache_key = v8::String::new(scope, "cache").unwrap().into();
+        let cred_key = v8::String::new(scope, "credentials").unwrap().into();
+        let mode_key = v8::String::new(scope, "mode").unwrap().into();
+        let redirect_key = v8::String::new(scope, "redirect").unwrap().into();
+        let referrer_key = v8::String::new(scope, "referrer").unwrap().into();
+        let policy_key = v8::String::new(scope, "referrerPolicy").unwrap().into();
+        let integrity_key = v8::String::new(scope, "integrity").unwrap().into();
+        let keepalive_key = v8::String::new(scope, "keepalive").unwrap().into();
+        let headers_key = v8::String::new(scope, "headers").unwrap().into();
+        let body_key = v8::String::new(scope, "body").unwrap().into();
+
+        // Extract values from this object (values are read but used via get/set below)
+        let _url = this_obj.get(scope, url_key)
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+            .unwrap_or_default();
+        let _method = this_obj.get(scope, method_key)
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+            .unwrap_or_else(|| "GET".to_string());
+        let _cache_mode = this_obj.get(scope, cache_key)
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+            .unwrap_or_else(|| "default".to_string());
+        let _credentials = this_obj.get(scope, cred_key)
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+            .unwrap_or_else(|| "same-origin".to_string());
+        let _mode = this_obj.get(scope, mode_key)
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+            .unwrap_or_else(|| "cors".to_string());
+        let _redirect = this_obj.get(scope, redirect_key)
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+            .unwrap_or_else(|| "follow".to_string());
+        let _referrer = this_obj.get(scope, referrer_key)
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+            .unwrap_or_default();
+        let _policy = this_obj.get(scope, policy_key)
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+            .unwrap_or_else(|| "no-referrer".to_string());
+        let _integrity = this_obj.get(scope, integrity_key)
+            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+            .unwrap_or_default();
+        let _keepalive = this_obj.get(scope, keepalive_key)
+            .map(|v| v.is_true())
+            .unwrap_or(false);
+
+        // Create new request object
+        let new_request: _ = v8::Object::new(scope);
+
+        // Get values from this object first
+        let url_val = this_obj.get(scope, url_key).unwrap_or_else(|| v8::null(scope).into());
+        let method_val = this_obj.get(scope, method_key).unwrap_or_else(|| v8::null(scope).into());
+        let headers_val = this_obj.get(scope, headers_key).unwrap_or_else(|| v8::null(scope).into());
+        let body_val = this_obj.get(scope, body_key).unwrap_or_else(|| v8::null(scope).into());
+        let cache_val = this_obj.get(scope, cache_key).unwrap_or_else(|| v8::null(scope).into());
+        let cred_val = this_obj.get(scope, cred_key).unwrap_or_else(|| v8::null(scope).into());
+        let mode_val = this_obj.get(scope, mode_key).unwrap_or_else(|| v8::null(scope).into());
+        let redirect_val = this_obj.get(scope, redirect_key).unwrap_or_else(|| v8::null(scope).into());
+        let referrer_val = this_obj.get(scope, referrer_key).unwrap_or_else(|| v8::null(scope).into());
+        let policy_val = this_obj.get(scope, policy_key).unwrap_or_else(|| v8::null(scope).into());
+        let integrity_val = this_obj.get(scope, integrity_key).unwrap_or_else(|| v8::null(scope).into());
+        let keepalive_val = this_obj.get(scope, keepalive_key).unwrap_or_else(|| v8::null(scope).into());
+
+        // Copy all properties to new request
+        new_request.set(scope, url_key, url_val);
+        new_request.set(scope, method_key, method_val);
+        new_request.set(scope, headers_key, headers_val);
+        new_request.set(scope, body_key, body_val);
+        new_request.set(scope, cache_key, cache_val);
+        new_request.set(scope, cred_key, cred_val);
+        new_request.set(scope, mode_key, mode_val);
+        new_request.set(scope, redirect_key, redirect_val);
+        new_request.set(scope, referrer_key, referrer_val);
+        new_request.set(scope, policy_key, policy_val);
+        new_request.set(scope, integrity_key, integrity_val);
+        new_request.set(scope, keepalive_key, keepalive_val);
+
+        // Add clone method to new request (simple implementation)
+        let new_clone_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+            let null_val: v8::Local<v8::Value> = v8::null(scope).into();
+            rv.set(null_val);
+        }).unwrap();
+        let clone_key = v8::String::new(scope, "clone").unwrap().into();
+        new_request.set(scope, clone_key, new_clone_fn.into());
+
+        rv.set(new_request.into());
+    });
+    let clone_func = clone_template.get_function(scope).unwrap();
+    let clone_key = v8::String::new(scope, "clone").unwrap().into();
+    request_obj.set(scope, clone_key, clone_func.into());
+
     retval.set(request_obj.into());
 }
 /// Response constructor callback
