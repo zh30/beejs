@@ -78,6 +78,24 @@
 - webcrypto_tests: 21/21 通过 (v0.3.355 新增)
 - 其他所有测试通过
 
+**v0.3.356 测试修复** (2025-01-12)
+**进度**: 测试修复 | ✅ 已完成
+
+**问题**:
+- `tests/test_multi_level_cache.rs` 引用不存在的 `MultiLevelCache` 模块
+- `tests/stage78_phase3_matrix_accelerator_tests.rs` 引用禁用的 `ai` 和 `wasm` 模块
+- `tests/wasm_optimization_tests.rs` 和 `tests/stage_39_zero_copy_cloud_tests.rs` 存在重复的 HashMap 导入
+
+**解决方案**:
+- 删除引用不存在模块的损坏测试文件
+- 修复重复导入问题
+
+**代码变更**:
+- 删除 `tests/test_multi_level_cache.rs` (-238 行)
+- 删除 `tests/stage78_phase3_matrix_accelerator_tests.rs` (-245 行)
+- 修复 `tests/wasm_optimization_tests.rs` 重复导入
+- 修复 `tests/stage_39_zero_copy_cloud_tests.rs` 重复导入
+
 ---
 
 ### v0.3.355 Web Crypto API Promise 返回值修复（2025-01-12）
