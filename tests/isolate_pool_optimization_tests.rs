@@ -1,5 +1,5 @@
 use beejs::Runtime;
-use std::time::Instant;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 
@@ -32,9 +32,9 @@ fn test_isolate_pool_optimization() {
         durations.push(start.elapsed().unwrap());
     }
 
-    let avg_duration: _ = durations
+    let avg_duration: f64 = durations
         .iter()
-        .map(|d| d.as_secs_f64() * 1000.0)
+        .map(|d: &Duration| d.as_secs_f64() * 1000.0)
         .sum::<f64>()
         / iterations as f64;
 
