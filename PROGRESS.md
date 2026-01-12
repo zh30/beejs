@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.359 (2026-01-12)
+## 当前版本: v0.3.360 (2026-01-12)
 
 ### 项目状态摘要
 
@@ -196,8 +196,81 @@ const encrypted = await crypto.subtle.encrypt(
 );
 ```
 
-#### v0.3.359 下一步
-- 完善 crypto.subtle.exportKey (导出密钥)
+#### v0.3.360 crypto.subtle.exportKey 完整实现（2026-01-12）
+**进度**: Web Crypto API 增强 | ✅ 已完成
+
+#### v0.3.360 新增功能
+
+**crypto.subtle.exportKey**:
+- 实现完整的 exportKey 方法，支持导出密钥材料
+- 支持以下导出格式:
+  - "raw": 返回原始密钥字节 (ArrayBuffer)
+  - "jwk": 返回 JWK (JSON Web Key) 格式
+- 支持以下算法:
+  - HMAC (HS256, HS384, HS512)
+  - AES-GCM (128, 192, 256 位)
+  - AES-CBC, AES-CTR, AES-KW
+- 正确的 extractable 检查
+- Base64URL 编码用于 JWK 格式
+
+#### v0.3.360 代码变更
+- `src/web_api/crypto.rs`: 完全重写 exportKey API (~+220 行)
+  - 新增 `get_key_data()`: 从 CryptoKey 提取密钥数据
+  - 新增 `get_key_algorithm_name()`: 获取密钥算法名称
+  - 新增 `is_key_extractable()`: 检查密钥是否可导出
+  - 新增 `base64url_encode()`: Base64URL 编码实现
+  - 新增 `export_key_callback()`: exportKey 实现
+  - 支持 "raw" 和 "jwk" 格式
+  - 更新 `setup_crypto_subtle_api()`: 注册 exportKey 方法
+- `tests/crypto_exportkey_tests.rs`: 新建测试套件 (226 行, 10 个测试)
+
+#### v0.3.360 测试覆盖
+- test_export_key_exists: exportKey 函数存在性
+- test_export_key_returns_promise: 返回 Promise 对象
+- test_export_key_raw_hmac: HMAC key 导出 (raw 格式)
+- test_export_key_raw_aes_gcm: AES-GCM key 导出 (raw 格式)
+- test_export_key_generated_hmac_key: 生成的 HMAC key 导出
+- test_export_key_generated_aes_key: 生成的 AES key 导出
+- test_export_key_jwk_format: JWK 格式导出
+- test_export_key_requires_extractable: 不可导出密钥错误处理
+- test_export_key_invalid_format: 无效格式错误处理
+- test_export_key_invalid_key: 无效密钥错误处理
+
+#### v0.3.360 测试结果
+- 10/10 crypto_exportkey_tests 通过 ✅
+- 所有现有测试保持通过
+- 编译成功，零错误
+
+#### v0.3.360 使用示例
+```javascript
+// 导出 HMAC key (raw 格式)
+const keyData = crypto.getRandomValues(new Uint8Array(32));
+const key = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    true,
+    ['sign', 'verify']
+);
+const exportedRaw = await crypto.subtle.exportKey('raw', key);
+// exportedRaw 是 ArrayBuffer
+
+// 导出 HMAC key (JWK 格式)
+const exportedJwk = await crypto.subtle.exportKey('jwk', key);
+// exportedJwk 是 JWK 对象: { kty: 'oct', k: '...', alg: 'HS256', ... }
+
+// 导出 AES key (raw 格式)
+const aesKey = await crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+);
+const aesExported = await crypto.subtle.exportKey('raw', aesKey);
+// aesExported 是 32 字节的 ArrayBuffer
+```
+
+#### v0.3.361 下一步
+- 实现 crypto.subtle.deriveKey (密钥派生)
 - 实现 RSA/ECDSA 等非对称加密算法
 - 继续增强 Web API 兼容性
 

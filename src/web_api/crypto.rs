@@ -798,14 +798,10 @@ fn setup_crypto_subtle_api(
     let derive_key_fn_instance = derive_key_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, derive_key_key.into(), derive_key_fn_instance.into());
 
-    // Placeholder for exportKey - returns resolved Promise
+    // exportKey method - fully implemented
     let export_key_key = v8::String::new(scope, "exportKey").unwrap();
-    let export_key_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
-        let undefined_val = v8::undefined(_scope).into();
-        let resolver = v8::PromiseResolver::new(_scope).unwrap();
-        resolver.resolve(_scope, undefined_val);
-        let promise = resolver.get_promise(_scope);
-        rv.set(promise.into());
+    let export_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        export_key_callback(scope, args, rv);
     });
     let export_key_fn_instance = export_key_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, export_key_key.into(), export_key_fn_instance.into());
@@ -976,6 +972,221 @@ fn generate_key_callback(
         }
         _ => {
             let error_msg = format!("generateKey: unsupported algorithm '{}'", algorithm_name);
+            let error = v8::String::new(scope, &error_msg).unwrap();
+            let error_obj = v8::Exception::type_error(scope, error);
+            scope.throw_exception(error_obj.into());
+        }
+    }
+}
+
+/// Get key data from CryptoKey object
+fn get_key_data(scope: &mut v8::HandleScope, crypto_key: v8::Local<v8::Object>) -> Option<Vec<u8>> {
+    let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
+    if let Some(key_data_val) = crypto_key.get(scope, key_data_key.into()) {
+        if key_data_val.is_array_buffer() {
+            let arr_buf = v8::Local::<v8::ArrayBuffer>::try_from(key_data_val).ok()?;
+            let backing_store = arr_buf.get_backing_store();
+            let len = backing_store.len();
+            let mut data = Vec::with_capacity(len);
+            for i in 0..len {
+                data.push(backing_store[i].get());
+            }
+            return Some(data);
+        }
+    }
+    None
+}
+
+/// Get algorithm name from CryptoKey
+fn get_key_algorithm_name(scope: &mut v8::HandleScope, crypto_key: v8::Local<v8::Object>) -> String {
+    let algorithm_key = v8::String::new(scope, "algorithm").unwrap();
+    if let Some(algo_val) = crypto_key.get(scope, algorithm_key.into()) {
+        if algo_val.is_object() {
+            let algo_obj = algo_val.to_object(scope).unwrap();
+            let name_key = v8::String::new(scope, "name").unwrap();
+            if let Some(name_val) = algo_obj.get(scope, name_key.into()) {
+                if name_val.is_string() {
+                    return name_val.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                }
+            }
+        }
+    }
+    String::new()
+}
+
+/// Check if key is extractable
+fn is_key_extractable(scope: &mut v8::HandleScope, crypto_key: v8::Local<v8::Object>) -> bool {
+    let extractable_key = v8::String::new(scope, "extractable").unwrap();
+    if let Some(extractable_val) = crypto_key.get(scope, extractable_key.into()) {
+        return extractable_val.boolean_value(scope);
+    }
+    false
+}
+
+/// Base64URL encode (WebCrypto JWK format)
+fn base64url_encode(data: &[u8]) -> String {
+    const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    let mut result = String::with_capacity((data.len() + 2) / 3 * 4);
+    let mut pos = 0;
+    let len = data.len();
+
+    while pos + 3 <= len {
+        let b0 = data[pos] as u32;
+        let b1 = data[pos + 1] as u32;
+        let b2 = data[pos + 2] as u32;
+        let n = (b0 << 16) | (b1 << 8) | b2;
+
+        result.push(CHARSET[(n >> 18 & 0x3F) as usize] as char);
+        result.push(CHARSET[(n >> 12 & 0x3F) as usize] as char);
+        result.push(CHARSET[(n >> 6 & 0x3F) as usize] as char);
+        result.push(CHARSET[(n & 0x3F) as usize] as char);
+
+        pos += 3;
+    }
+
+    // Handle remaining bytes
+    match len - pos {
+        2 => {
+            let b0 = data[pos] as u32;
+            let b1 = data[pos + 1] as u32;
+            let n = (b0 << 16) | (b1 << 8);
+            result.push(CHARSET[(n >> 18 & 0x3F) as usize] as char);
+            result.push(CHARSET[(n >> 12 & 0x3F) as usize] as char);
+            result.push(CHARSET[(n >> 6 & 0x3F) as usize] as char);
+        }
+        1 => {
+            let b0 = data[pos] as u32;
+            let n = b0 << 16;
+            result.push(CHARSET[(n >> 18 & 0x3F) as usize] as char);
+            result.push(CHARSET[(n >> 12 & 0x3F) as usize] as char);
+        }
+        _ => {}
+    }
+
+    result
+}
+
+/// ExportKey callback - exports cryptographic keys
+fn export_key_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    if args.length() < 2 {
+        let error = v8::String::new(scope, "exportKey requires 2 arguments: format, key").unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
+    let format_value = args.get(0);
+    let key_value = args.get(1);
+
+    if !format_value.is_string() {
+        let error = v8::String::new(scope, "exportKey: format must be a string").unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
+    if !key_value.is_object() {
+        let error = v8::String::new(scope, "exportKey: key must be a CryptoKey object").unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
+    let key_obj = key_value.to_object(scope).unwrap();
+
+    // Check if key is extractable
+    if !is_key_extractable(scope, key_obj) {
+        let error = v8::String::new(scope, "exportKey: key is not extractable").unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
+    // Get format string
+    let format_str = format_value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+
+    // Get key data
+    let key_data = match get_key_data(scope, key_obj) {
+        Some(data) => data,
+        None => {
+            let error = v8::String::new(scope, "exportKey: could not extract key data").unwrap();
+            let error_obj = v8::Exception::error(scope, error);
+            scope.throw_exception(error_obj.into());
+            return;
+        }
+    };
+
+    // Get algorithm name
+    let algo_name = get_key_algorithm_name(scope, key_obj);
+
+    // Export based on format
+    match format_str.as_str() {
+        "raw" => {
+            // Return raw key bytes as ArrayBuffer
+            let arr_buf = v8::ArrayBuffer::new(scope, key_data.len());
+            let backing_store = arr_buf.get_backing_store();
+            for (i, &byte) in key_data.iter().enumerate() {
+                backing_store[i].set(byte);
+            }
+
+            let resolver = v8::PromiseResolver::new(scope).unwrap();
+            resolver.resolve(scope, arr_buf.into());
+            let promise = resolver.get_promise(scope);
+            retval.set(promise.into());
+        }
+        "jwk" => {
+            // Create JWK object
+            let jwk_obj = v8::Object::new(scope);
+
+            // Set common JWK fields
+            let kty_key = v8::String::new(scope, "kty").unwrap();
+            let kty_val = v8::String::new(scope, "oct").unwrap();
+            jwk_obj.set(scope, kty_key.into(), kty_val.into());
+
+            // Set alg based on algorithm
+            let alg_key = v8::String::new(scope, "alg").unwrap();
+            let alg_val = match algo_name.as_str() {
+                "HMAC" | "HS256" => v8::String::new(scope, "HS256").unwrap(),
+                "HS384" => v8::String::new(scope, "HS384").unwrap(),
+                "HS512" => v8::String::new(scope, "HS512").unwrap(),
+                "AES-GCM" | "AES-CBC" | "AES-CTR" | "AES-KW" => {
+                    let length = key_data.len() * 8;
+                    v8::String::new(scope, &format!("A{}", length)).unwrap()
+                }
+                _ => v8::String::new(scope, "A256").unwrap(),
+            };
+            jwk_obj.set(scope, alg_key.into(), alg_val.into());
+
+            // Set key operations
+            let key_ops_key = v8::String::new(scope, "key_ops").unwrap();
+            let usages_key = v8::String::new(scope, "usages").unwrap();
+            if let Some(usages_val) = key_obj.get(scope, usages_key.into()) {
+                if usages_val.is_array() {
+                    jwk_obj.set(scope, key_ops_key.into(), usages_val);
+                }
+            }
+
+            // Set extractable
+            let ext_key = v8::String::new(scope, "ext").unwrap();
+            let ext_val = v8::Boolean::new(scope, true);
+            jwk_obj.set(scope, ext_key.into(), ext_val.into());
+
+            // Set k (base64url encoded key data)
+            let k_key = v8::String::new(scope, "k").unwrap();
+            let k_val = v8::String::new(scope, &base64url_encode(&key_data)).unwrap();
+            jwk_obj.set(scope, k_key.into(), k_val.into());
+
+            let resolver = v8::PromiseResolver::new(scope).unwrap();
+            resolver.resolve(scope, jwk_obj.into());
+            let promise = resolver.get_promise(scope);
+            retval.set(promise.into());
+        }
+        _ => {
+            let error_msg = format!("exportKey: unsupported format '{}'", format_str);
             let error = v8::String::new(scope, &error_msg).unwrap();
             let error_obj = v8::Exception::type_error(scope, error);
             scope.throw_exception(error_obj.into());
