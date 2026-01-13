@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.360 (2026-01-12)
+## 当前版本: v0.3.361 (2026-01-13)
 
 ### 项目状态摘要
 
@@ -96,6 +96,120 @@
 - 修复 `tests/wasm_optimization_tests.rs` 重复导入
 - 修复 `tests/stage_39_zero_copy_cloud_tests.rs` 重复导入
 - 修复 `src/web_api/url_search_params.rs` 未使用的 `MinimalRuntime` 导入警告
+
+---
+
+### v0.3.361 crypto.subtle.deriveKey & deriveBits 实现（2026-01-13）
+**进度**: Web Crypto API 增强 | ✅ 已完成
+
+#### v0.3.361 新增功能
+
+**crypto.subtle.deriveKey**:
+- 实现完整的 deriveKey 方法，支持 PBKDF2 密钥派生
+- 使用 ring::pbkdf2 实现，符合 RFC 2898 标准
+- 支持以下哈希算法:
+  - SHA-256 (PBKDF2_HMAC_SHA256)
+  - SHA-384 (PBKDF2_HMAC_SHA384)
+  - SHA-512 (PBKDF2_HMAC_SHA512)
+- 支持可配置的迭代次数 (iterations)
+- 支持自定义盐值 (salt)
+- 支持派生 AES-GCM、AES-CBC、AES-CTR、AES-KW、HMAC 等类型的密钥
+- 返回 Promise<CryptoKey>
+
+**crypto.subtle.deriveBits**:
+- 实现完整的 deriveBits 方法，支持派生原始位数据
+- 使用 ring::pbkdf2 实现
+- 支持指定派生位数 (length 参数)
+- 返回 Promise<ArrayBuffer>
+
+#### v0.3.361 代码变更
+- `src/web_api/crypto.rs`: 新增密钥派生功能 (~+200 行)
+  - 新增 `parse_pbkdf2_params()`: 解析 PBKDF2 参数
+  - 新增 `derive_pbkdf2_bits()`: PBKDF2 密钥派生核心实现
+  - 新增 `derive_key_callback()`: deriveKey 回调实现
+  - 新增 `derive_bits_callback()`: deriveBits 回调实现
+  - 更新 `setup_crypto_subtle_api()`: 注册 deriveKey 和 deriveBits
+- `tests/crypto_derivekey_tests.rs`: 新建测试套件 (267 行, 10 个测试)
+
+#### v0.3.361 测试覆盖
+- test_derive_key_exists: deriveKey 函数存在性
+- test_derive_key_returns_promise: 返回 Promise 对象
+- test_derive_key_pbkdf2_returns_crypto_key: PBKDF2 派生返回 CryptoKey
+- test_derive_key_derived_key_can_be_used: 派生密钥可用于加密
+- test_derive_key_with_hmac_output: 派生 HMAC 密钥
+- test_derive_key_derive_bits_equivalence: deriveBits 等价性
+- test_derive_key_different_iterations: 不同迭代次数
+- test_derive_key_error_without_base_key: 无 baseKey 错误处理
+- test_derive_key_error_without_salt: 无 salt 错误处理
+- test_derive_bits_returns_array_buffer: deriveBits 返回 ArrayBuffer
+
+#### v0.3.361 使用示例
+```javascript
+// PBKDF2 密钥派生
+const password = new TextEncoder().encode('my-password');
+const baseKey = await crypto.subtle.importKey(
+    'raw',
+    password,
+    { name: 'PBKDF2' },
+    false,
+    ['deriveKey']
+);
+
+const salt = crypto.getRandomValues(new Uint8Array(16));
+const derivedKey = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: salt, iterations: 100000, hash: 'SHA-256' },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+);
+
+// 使用派生密钥加密
+const iv = crypto.getRandomValues(new Uint8Array(12));
+const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: iv },
+    derivedKey,
+    new TextEncoder().encode('secret message')
+);
+
+// 派生原始位数据
+const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: salt, iterations: 1000, hash: 'SHA-256' },
+    baseKey,
+    256  // 派生 256 位
+);
+```
+
+---
+
+### v0.3.360 crypto.subtle.exportKey 完整实现（2026-01-12）
+**进度**: Web Crypto API 增强 | ✅ 已完成
+
+#### v0.3.360 新增功能
+
+**crypto.subtle.exportKey**:
+- 实现完整的 exportKey 方法，支持导出原始格式密钥
+- 支持 'raw' 格式导出
+- 从 CryptoKey 对象提取密钥材料
+- 返回 Promise<ArrayBuffer>
+
+#### v0.3.360 代码变更
+- `src/web_api/crypto.rs`: 新增 exportKey 实现 (~+180 行)
+  - 新增 `get_key_data()`: 从 CryptoKey 提取密钥数据
+  - 新增 `export_key_callback()`: exportKey 回调实现
+- `tests/crypto_exportkey_tests.rs`: 新建测试套件 (226 行, 8 个测试)
+
+#### v0.3.360 测试覆盖
+- test_export_key_exists: exportKey 函数存在性
+- test_export_key_returns_promise: 返回 Promise 对象
+- test_export_key_hmac_returns_array_buffer: HMAC 密钥导出
+- test_export_key_aes_gcm_returns_array_buffer: AES-GCM 密钥导出
+- test_export_key_raw_format: raw 格式导出
+- test_export_key_with_extractable_false: 非可导出密钥
+
+#### v0.3.360 测试结果
+- 8/8 crypto_exportkey_tests 通过 ✅
+- 编译成功，零错误
 
 ---
 

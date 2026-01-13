@@ -786,14 +786,10 @@ fn setup_crypto_subtle_api(
     let generate_key_fn_instance = generate_key_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, generate_key_key.into(), generate_key_fn_instance.into());
 
-    // Placeholder for deriveKey - returns resolved Promise
+    // deriveKey method - fully implemented (PBKDF2)
     let derive_key_key = v8::String::new(scope, "deriveKey").unwrap();
-    let derive_key_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
-        let undefined_val = v8::undefined(_scope).into();
-        let resolver = v8::PromiseResolver::new(_scope).unwrap();
-        resolver.resolve(_scope, undefined_val);
-        let promise = resolver.get_promise(_scope);
-        rv.set(promise.into());
+    let derive_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        derive_key_callback(scope, args, rv);
     });
     let derive_key_fn_instance = derive_key_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, derive_key_key.into(), derive_key_fn_instance.into());
@@ -829,6 +825,14 @@ fn setup_crypto_subtle_api(
     });
     let unwrap_key_fn_instance = unwrap_key_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, unwrap_key_key.into(), unwrap_key_fn_instance.into());
+
+    // deriveBits method - fully implemented (PBKDF2)
+    let derive_bits_key = v8::String::new(scope, "deriveBits").unwrap();
+    let derive_bits_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+        derive_bits_callback(scope, args, rv);
+    });
+    let derive_bits_fn_instance = derive_bits_fn.get_function(scope).unwrap();
+    subtle_obj.set(scope, derive_bits_key.into(), derive_bits_fn_instance.into());
 }
 
 /// Generate random bytes for key material
@@ -972,6 +976,273 @@ fn generate_key_callback(
         }
         _ => {
             let error_msg = format!("generateKey: unsupported algorithm '{}'", algorithm_name);
+            let error = v8::String::new(scope, &error_msg).unwrap();
+            let error_obj = v8::Exception::type_error(scope, error);
+            scope.throw_exception(error_obj.into());
+        }
+    }
+}
+
+/// Parse PBKDF2 algorithm parameters
+fn parse_pbkdf2_params(
+    scope: &mut v8::HandleScope,
+    algo_value: v8::Local<v8::Value>,
+) -> Option<(Vec<u8>, String, u32)> {
+    if !algo_value.is_object() {
+        return None;
+    }
+
+    let algo_obj = algo_value.to_object(scope).unwrap();
+
+    // Get salt
+    let salt_key = v8::String::new(scope, "salt").unwrap();
+    let salt = if let Some(salt_val) = algo_obj.get(scope, salt_key.into()) {
+        get_array_buffer_data(scope, salt_val).unwrap_or_default()
+    } else {
+        vec![0u8; 16] // Default empty salt
+    };
+
+    // Get iterations
+    let iterations_key = v8::String::new(scope, "iterations").unwrap();
+    let iterations: u32 = if let Some(iter_val) = algo_obj.get(scope, iterations_key.into()) {
+        iter_val.integer_value(scope).unwrap_or(100000) as u32
+    } else {
+        100000
+    };
+
+    // Get hash algorithm
+    let hash_name = get_algorithm_hash_name(scope, algo_value);
+
+    Some((salt, hash_name, iterations))
+}
+
+/// Derive bits using PBKDF2
+fn derive_pbkdf2_bits(
+    password: &[u8],
+    salt: &[u8],
+    iterations: u32,
+    hash_name: &str,
+    length_bits: usize,
+) -> Result<Vec<u8>, String> {
+    use ring::pbkdf2;
+    use std::num::NonZeroU32;
+
+    let output_len = (length_bits + 7) / 8;
+    let mut output = vec![0u8; output_len];
+
+    // Use ring's pbkdf2 derive (ring 0.17 API)
+    // Note: iterations must be NonZeroU32, and we need to use the correct algorithm type
+    let iterations_nz = NonZeroU32::new(iterations.max(1)).unwrap();
+    let pbkdf2_algo = match hash_name {
+        "SHA-256" => pbkdf2::PBKDF2_HMAC_SHA256,
+        "SHA-384" => pbkdf2::PBKDF2_HMAC_SHA384,
+        "SHA-512" => pbkdf2::PBKDF2_HMAC_SHA512,
+        _ => return Err(format!("Unsupported hash for PBKDF2: {}", hash_name)),
+    };
+    pbkdf2::derive(pbkdf2_algo, iterations_nz, salt, password, &mut output);
+
+    Ok(output)
+}
+
+/// deriveKey callback - derives a cryptographic key from a base key
+fn derive_key_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    if args.length() < 5 {
+        let error = v8::String::new(scope, "deriveKey requires 5 arguments: algorithm, baseKey, derivedKeyAlgorithm, extractable, keyUsages").unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
+    let algorithm_value = args.get(0);
+    let base_key_value = args.get(1);
+    let derived_algorithm_value = args.get(2);
+    let extractable_value = args.get(3);
+    let usages_value = args.get(4);
+
+    // Get base key data
+    let key_data = if base_key_value.is_object() {
+        let base_key_obj = base_key_value.to_object(scope).unwrap();
+        get_key_data(scope, base_key_obj).unwrap_or_else(|| {
+            // Try to get from __beejs_key_data__ directly
+            let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
+            if let Some(data_val) = base_key_obj.get(scope, key_data_key.into()) {
+                get_array_buffer_data(scope, data_val).unwrap_or_default()
+            } else {
+                vec![]
+            }
+        })
+    } else {
+        vec![]
+    };
+
+    if key_data.is_empty() {
+        let error = v8::String::new(scope, "deriveKey: baseKey must have key material").unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
+    // Parse algorithm
+    let algorithm_name = get_algorithm_name(scope, algorithm_value);
+
+    match algorithm_name.to_uppercase().as_str() {
+        "PBKDF2" => {
+            let (salt, hash_name, iterations) = match parse_pbkdf2_params(scope, algorithm_value) {
+                Some(params) => params,
+                None => {
+                    let error = v8::String::new(scope, "deriveKey: invalid PBKDF2 parameters").unwrap();
+                    let error_obj = v8::Exception::type_error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
+            };
+
+            // Parse derived key algorithm to determine output length
+            let derived_algo_name = get_algorithm_name(scope, derived_algorithm_value);
+            let key_length = get_algorithm_length(scope, derived_algorithm_value, 256);
+
+            // Calculate derived key length in bits
+            let length_bits = key_length as usize;
+
+            // Derive key material
+            match derive_pbkdf2_bits(&key_data, &salt, iterations, &hash_name, length_bits) {
+                Ok(derived_key_data) => {
+                    // Parse extractable
+                    let extractable = get_bool_value(scope, extractable_value);
+
+                    // Parse usages
+                    let usages = get_key_usages(scope, usages_value);
+
+                    // Create CryptoKey
+                    let crypto_key = create_crypto_key(
+                        scope,
+                        "secret",
+                        extractable,
+                        &derived_algo_name,
+                        key_length as i32,
+                        usages.iter().map(|s| s.as_str()).collect(),
+                    );
+
+                    // Store key data on the object
+                    let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
+                    let array_buffer = v8::ArrayBuffer::new(scope, derived_key_data.len());
+                    let backing_store = array_buffer.get_backing_store();
+                    for (i, byte) in derived_key_data.iter().enumerate() {
+                        backing_store[i].set(*byte);
+                    }
+                    crypto_key.set(scope, key_data_key.into(), array_buffer.into());
+
+                    // Create resolved promise
+                    let resolver = v8::PromiseResolver::new(scope).unwrap();
+                    resolver.resolve(scope, crypto_key.into());
+                    let promise = resolver.get_promise(scope);
+                    retval.set(promise.into());
+                }
+                Err(e) => {
+                    let error = v8::String::new(scope, &e).unwrap();
+                    let error_obj = v8::Exception::error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                }
+            }
+        }
+        _ => {
+            let error_msg = format!("deriveKey: unsupported algorithm '{}'. Currently supported: 'PBKDF2'", algorithm_name);
+            let error = v8::String::new(scope, &error_msg).unwrap();
+            let error_obj = v8::Exception::type_error(scope, error);
+            scope.throw_exception(error_obj.into());
+        }
+    }
+}
+
+/// deriveBits callback - derives bits from a base key
+fn derive_bits_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    if args.length() < 3 {
+        let error = v8::String::new(scope, "deriveBits requires 3 arguments: algorithm, baseKey, length").unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
+    let algorithm_value = args.get(0);
+    let base_key_value = args.get(1);
+    let length_value = args.get(2);
+
+    // Get length in bits
+    let length_bits = if length_value.is_number() {
+        length_value.integer_value(scope).unwrap_or(256) as usize
+    } else {
+        256
+    };
+
+    // Get base key data
+    let key_data = if base_key_value.is_object() {
+        let base_key_obj = base_key_value.to_object(scope).unwrap();
+        get_key_data(scope, base_key_obj).unwrap_or_else(|| {
+            let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
+            if let Some(data_val) = base_key_obj.get(scope, key_data_key.into()) {
+                get_array_buffer_data(scope, data_val).unwrap_or_default()
+            } else {
+                vec![]
+            }
+        })
+    } else {
+        vec![]
+    };
+
+    if key_data.is_empty() {
+        let error = v8::String::new(scope, "deriveBits: baseKey must have key material").unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
+    // Parse algorithm
+    let algorithm_name = get_algorithm_name(scope, algorithm_value);
+
+    match algorithm_name.to_uppercase().as_str() {
+        "PBKDF2" => {
+            let (salt, hash_name, iterations) = match parse_pbkdf2_params(scope, algorithm_value) {
+                Some(params) => params,
+                None => {
+                    let error = v8::String::new(scope, "deriveBits: invalid PBKDF2 parameters").unwrap();
+                    let error_obj = v8::Exception::type_error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
+            };
+
+            match derive_pbkdf2_bits(&key_data, &salt, iterations, &hash_name, length_bits) {
+                Ok(bits) => {
+                    // Create ArrayBuffer with the derived bits
+                    let array_buffer = v8::ArrayBuffer::new(scope, bits.len());
+                    let backing_store = array_buffer.get_backing_store();
+                    for (i, byte) in bits.iter().enumerate() {
+                        backing_store[i].set(*byte);
+                    }
+
+                    // Create resolved promise
+                    let resolver = v8::PromiseResolver::new(scope).unwrap();
+                    resolver.resolve(scope, array_buffer.into());
+                    let promise = resolver.get_promise(scope);
+                    retval.set(promise.into());
+                }
+                Err(e) => {
+                    let error = v8::String::new(scope, &e).unwrap();
+                    let error_obj = v8::Exception::error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                }
+            }
+        }
+        _ => {
+            let error_msg = format!("deriveBits: unsupported algorithm '{}'. Currently supported: 'PBKDF2'", algorithm_name);
             let error = v8::String::new(scope, &error_msg).unwrap();
             let error_obj = v8::Exception::type_error(scope, error);
             scope.throw_exception(error_obj.into());
