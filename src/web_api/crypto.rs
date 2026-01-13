@@ -529,6 +529,7 @@ fn hmac_verify_callback(
     let tag = hmac::sign(&sign_key, &data);
 
     // Constant-time comparison
+    #[allow(deprecated)]
     let result = ring::constant_time::verify_slices_are_equal(tag.as_ref(), &signature).is_ok();
     let result_bool = v8::Boolean::new(scope, result);
 
@@ -740,7 +741,7 @@ fn setup_crypto_subtle_api(
 
     // importKey method - fully implemented
     let import_key_key = v8::String::new(scope, "importKey").unwrap();
-    let import_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+    let import_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, rv: v8::ReturnValue| {
         import_key_callback(scope, args, rv);
     });
     let import_key_fn_instance = import_key_fn.get_function(scope).unwrap();
@@ -748,7 +749,7 @@ fn setup_crypto_subtle_api(
 
     // encrypt method - implemented for AES-GCM
     let encrypt_key = v8::String::new(scope, "encrypt").unwrap();
-    let encrypt_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+    let encrypt_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, rv: v8::ReturnValue| {
         aes_encrypt_callback(scope, args, rv);
     });
     let encrypt_fn_instance = encrypt_fn.get_function(scope).unwrap();
@@ -756,7 +757,7 @@ fn setup_crypto_subtle_api(
 
     // decrypt method - implemented for AES-GCM
     let decrypt_key = v8::String::new(scope, "decrypt").unwrap();
-    let decrypt_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+    let decrypt_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, rv: v8::ReturnValue| {
         aes_decrypt_callback(scope, args, rv);
     });
     let decrypt_fn_instance = decrypt_fn.get_function(scope).unwrap();
@@ -764,7 +765,7 @@ fn setup_crypto_subtle_api(
 
     // sign method - implemented for HMAC
     let sign_key = v8::String::new(scope, "sign").unwrap();
-    let sign_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+    let sign_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, rv: v8::ReturnValue| {
         hmac_sign_callback(scope, args, rv);
     });
     let sign_fn_instance = sign_fn.get_function(scope).unwrap();
@@ -772,7 +773,7 @@ fn setup_crypto_subtle_api(
 
     // verify method - implemented for HMAC
     let verify_key = v8::String::new(scope, "verify").unwrap();
-    let verify_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+    let verify_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, rv: v8::ReturnValue| {
         hmac_verify_callback(scope, args, rv);
     });
     let verify_fn_instance = verify_fn.get_function(scope).unwrap();
@@ -780,7 +781,7 @@ fn setup_crypto_subtle_api(
 
     // generateKey method - fully implemented
     let generate_key_key = v8::String::new(scope, "generateKey").unwrap();
-    let generate_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+    let generate_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, rv: v8::ReturnValue| {
         generate_key_callback(scope, args, rv);
     });
     let generate_key_fn_instance = generate_key_fn.get_function(scope).unwrap();
@@ -788,7 +789,7 @@ fn setup_crypto_subtle_api(
 
     // deriveKey method - fully implemented (PBKDF2)
     let derive_key_key = v8::String::new(scope, "deriveKey").unwrap();
-    let derive_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+    let derive_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, rv: v8::ReturnValue| {
         derive_key_callback(scope, args, rv);
     });
     let derive_key_fn_instance = derive_key_fn.get_function(scope).unwrap();
@@ -796,7 +797,7 @@ fn setup_crypto_subtle_api(
 
     // exportKey method - fully implemented
     let export_key_key = v8::String::new(scope, "exportKey").unwrap();
-    let export_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+    let export_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, rv: v8::ReturnValue| {
         export_key_callback(scope, args, rv);
     });
     let export_key_fn_instance = export_key_fn.get_function(scope).unwrap();
@@ -828,7 +829,7 @@ fn setup_crypto_subtle_api(
 
     // deriveBits method - fully implemented (PBKDF2)
     let derive_bits_key = v8::String::new(scope, "deriveBits").unwrap();
-    let derive_bits_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
+    let derive_bits_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, rv: v8::ReturnValue| {
         derive_bits_callback(scope, args, rv);
     });
     let derive_bits_fn_instance = derive_bits_fn.get_function(scope).unwrap();
