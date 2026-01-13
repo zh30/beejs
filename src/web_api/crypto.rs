@@ -351,6 +351,11 @@ fn import_key_callback(
             };
             ("secret".to_string(), length)
         }
+        "PBKDF2" => {
+            // PBKDF2 uses password as key material (imported as raw)
+            // The length is derived from the key data
+            ("secret".to_string(), (key_data.len() * 8) as i32)
+        }
         _ => {
             let error_msg = format!("importKey: unsupported algorithm '{}'", algorithm_name);
             let error = v8::String::new(scope, &error_msg).unwrap();
@@ -1126,7 +1131,7 @@ fn generate_key_callback(
             let promise = resolver.get_promise(scope);
             retval.set(promise.into());
         }
-        "RSA-OAEP" | "RSASSA-PKCS1-v1_5" => {
+        "RSA-OAEP" | "RSASSA-PKCS1-V1_5" => {
             // Generate RSA key pair using ring
             let modulus_bits = if algorithm_value.is_object() {
                 let algo_obj = algorithm_value.to_object(scope).unwrap();

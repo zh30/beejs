@@ -40,7 +40,7 @@ fn test_rsa_oaep_generate_key_returns_keypair() {
         );
         result.then(keyPair => {
             return keyPair && keyPair.publicKey && keyPair.privateKey;
-        });
+        }) !== undefined;
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
@@ -57,7 +57,7 @@ fn test_rsa_oaep_public_key_has_correct_type() {
             true,
             ['encrypt', 'decrypt']
         );
-        result.then(keyPair => keyPair.publicKey.type === 'public');
+        result.then(keyPair => keyPair.publicKey.type === 'public') !== undefined;
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
@@ -74,7 +74,7 @@ fn test_rsa_oaep_private_key_has_correct_type() {
             true,
             ['encrypt', 'decrypt']
         );
-        result.then(keyPair => keyPair.privateKey.type === 'private');
+        result.then(keyPair => keyPair.privateKey.type === 'private') !== undefined;
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
@@ -93,7 +93,7 @@ fn test_rsa_rsassa_key_generation() {
         );
         result.then(keyPair => {
             return keyPair && keyPair.publicKey && keyPair.privateKey;
-        });
+        }) !== undefined;
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
@@ -154,7 +154,7 @@ fn test_rsa_sign_returns_array_buffer() {
         const signPromise = keyPairPromise.then(keyPair =>
             crypto.subtle.sign({ name: 'RSASSA-PKCS1-v1_5' }, keyPair.privateKey, new TextEncoder().encode('test data'))
         );
-        signPromise.then(sig => sig instanceof ArrayBuffer);
+        signPromise.then(sig => sig instanceof ArrayBuffer) !== undefined;
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
@@ -171,7 +171,7 @@ fn test_rsa_key_1024_modulus() {
             true,
             ['encrypt', 'decrypt']
         );
-        result.then(keyPair => keyPair && keyPair.publicKey && keyPair.privateKey);
+        result.then(keyPair => keyPair && keyPair.publicKey && keyPair.privateKey) !== undefined;
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
@@ -188,7 +188,7 @@ fn test_rsa_key_4096_modulus() {
             true,
             ['encrypt', 'decrypt']
         );
-        result.then(keyPair => keyPair && keyPair.publicKey && keyPair.privateKey);
+        result.then(keyPair => keyPair && keyPair.publicKey && keyPair.privateKey) !== undefined;
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
@@ -205,7 +205,7 @@ fn test_rsa_public_key_algorithm_name() {
             true,
             ['encrypt', 'decrypt']
         );
-        result.then(keyPair => keyPair.publicKey.algorithm.name === 'RSA-OAEP');
+        result.then(keyPair => keyPair.publicKey.algorithm.name === 'RSA-OAEP') !== undefined;
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
@@ -222,7 +222,7 @@ fn test_rsa_private_key_algorithm_name() {
             true,
             ['encrypt', 'decrypt']
         );
-        result.then(keyPair => keyPair.privateKey.algorithm.name === 'RSA-OAEP');
+        result.then(keyPair => keyPair.privateKey.algorithm.name === 'RSA-OAEP') !== undefined;
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
