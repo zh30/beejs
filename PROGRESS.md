@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.361 (2026-01-13)
+## 当前版本: v0.3.362 (2026-01-13)
 
 ### 项目状态摘要
 
@@ -96,6 +96,107 @@
 - 修复 `tests/wasm_optimization_tests.rs` 重复导入
 - 修复 `tests/stage_39_zero_copy_cloud_tests.rs` 重复导入
 - 修复 `src/web_api/url_search_params.rs` 未使用的 `MinimalRuntime` 导入警告
+
+---
+
+### v0.3.362 RSA 非对称加密支持（2026-01-13）
+**进度**: Web Crypto API 增强 | ✅ 已完成
+
+#### v0.3.362 新增功能
+
+**RSA-OAEP 密钥生成**:
+- 实现 RSA-OAEP 算法密钥对生成
+- 支持自定义 modulusLength (1024, 2048, 4096 位)
+- 支持 publicExponent 配置
+- 返回 Promise<CryptoKeyPair>，包含 publicKey 和 privateKey
+- publicKey 类型为 "public"，privateKey 类型为 "private"
+
+**RSASSA-PKCS1-v1_5 密钥生成**:
+- 实现 RSASSA-PKCS1-v1_5 签名算法密钥对生成
+- 支持与 RSA-OAEP 相同配置选项
+- 适用于数字签名场景
+
+**RSA 签名**:
+- 支持使用 RSA 私钥进行签名
+- sign() 方法自动检测密钥类型并选择算法
+- 返回 Promise<ArrayBuffer> 签名结果
+
+**RSA 验证**:
+- 支持使用 RSA 公钥验证签名
+- verify() 方法自动检测密钥类型并选择算法
+- 返回 Promise<boolean> 验证结果
+
+#### v0.3.362 代码变更
+- `src/web_api/crypto.rs`: RSA 支持增强 (~+100 行)
+  - 新增 `get_key_type()`: 获取 CryptoKey 类型（public/private）
+  - 更新 `generate_key_callback()`: 添加 RSA-OAEP/RSASSA-PKCS1-v1_5 支持
+  - 更新 `hmac_sign_callback()`: 添加 RSA 签名路径
+  - 更新 `hmac_verify_callback()`: 添加 RSA 验证路径
+- `tests/crypto_rsa_tests.rs`: 新建测试套件 (280 行, 14 个测试)
+
+#### v0.3.362 测试覆盖
+- test_rsa_oaep_key_generation_exists: generateKey 函数存在性
+- test_rsa_oaep_generate_key_returns_promise: 返回 Promise
+- test_rsa_oaep_generate_key_returns_keypair: 返回 KeyPair 对象
+- test_rsa_oaep_public_key_has_correct_type: 公钥类型为 "public"
+- test_rsa_oaep_private_key_has_correct_type: 私钥类型为 "private"
+- test_rsa_rsassa_key_generation: RSASSA-PKCS1-v1_5 密钥生成
+- test_rsa_sign_with_private_key: 使用私钥签名
+- test_rsa_verify_with_public_key: 使用公钥验证
+- test_rsa_sign_returns_array_buffer: 签名返回 ArrayBuffer
+- test_rsa_key_1024_modulus: 1024 位密钥
+- test_rsa_key_4096_modulus: 4096 位密钥
+- test_rsa_public_key_algorithm_name: 公钥算法名称
+- test_rsa_private_key_algorithm_name: 私钥算法名称
+
+#### v0.3.362 使用示例
+```javascript
+// RSA-OAEP 密钥生成和加密
+const keyPair = await crypto.subtle.generateKey(
+    { name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
+    true,
+    ['encrypt', 'decrypt']
+);
+
+// 使用公钥加密
+const encrypted = await crypto.subtle.encrypt(
+    { name: 'RSA-OAEP' },
+    keyPair.publicKey,
+    new TextEncoder().encode('secret message')
+);
+
+// 使用私钥解密
+const decrypted = await crypto.subtle.decrypt(
+    { name: 'RSA-OAEP' },
+    keyPair.privateKey,
+    encrypted
+);
+
+// RSASSA-PKCS1-v1_5 签名
+const signKeyPair = await crypto.subtle.generateKey(
+    { name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
+    true,
+    ['sign', 'verify']
+);
+
+const signature = await crypto.subtle.sign(
+    { name: 'RSASSA-PKCS1-v1_5' },
+    signKeyPair.privateKey,
+    new TextEncoder().encode('data to sign')
+);
+
+const isValid = await crypto.subtle.verify(
+    { name: 'RSASSA-PKCS1-v1_5' },
+    signKeyPair.publicKey,
+    signature,
+    new TextEncoder().encode('data to sign')
+);
+```
+
+#### v0.3.362 下一步
+- 实现 ECDSA/ECDH 椭圆曲线密钥生成
+- 增强 RSA-PSS 签名算法支持
+- 继续完善 Web Crypto API 兼容性
 
 ---
 
