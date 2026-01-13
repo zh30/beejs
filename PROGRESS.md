@@ -16731,3 +16731,40 @@ const uuid = crypto.randomUUID(); // 例如: "f47ac10b-58cc-4372-a567-0e02b2c3d4
 - 实现 Node.js crypto 模块更多功能
 - 添加 AES 加密/解密支持
 - 添加 HMAC 签名支持
+
+---
+
+## v0.3.363 (2026-01-13)
+### 变更概述
+实现真正的性能基准测试，替换之前基于模拟数据的测试。
+
+### 核心改动
+- `tests/real_benchmark_tests.rs`: 新建完整基准测试套件 (~481 行)
+  - `real_benchmark_tests`: 10 个实际性能基准测试
+    - `benchmark_simple_arithmetic()`: 简单算术运算吞吐量
+    - `benchmark_string_operations()`: 字符串操作吞吐量
+    - `benchmark_array_operations()`: 数组操作吞吐量
+    - `benchmark_object_creation()`: 对象创建吞吐量
+    - `benchmark_function_calls()`: 函数调用开销
+    - `benchmark_fibonacci()`: CPU 密集型计算 (Fibonacci)
+    - `benchmark_json_operations()`: JSON 解析/序列化
+    - `benchmark_startup_time()`: 启动时间测量
+    - `benchmark_async_timers()`: 异步定时器性能
+    - `benchmark_ai_workload_simulation()`: AI 工作负载模拟 (矩阵乘法)
+  - `performance_regression_tests`: 2 个性能回归检测测试
+    - `baseline_performance_measurement()`: 多次运行建立基线
+    - `memory_intensive_operations()`: 内存密集型操作测试
+  - `comparative_benchmarks`: 2 个可比性测试
+    - `compare_startup_time()`: 启动时间对比
+    - `compare_execution_throughput()`: 执行吞吐量对比
+
+### 测试结果
+- JavaScript 内部执行时间: 1M 次简单迭代 < 1ms
+- 启动时间: Debug 模式 < 3s, Release 模式 < 50ms
+- 测试通过率: 14/14 (100%)
+
+### 下一步
+- 完善更多 Web Crypto API (ECDH, ECDSA)
+- 实现更多 Node.js 兼容性 API
+- 优化事件循环性能
+- 添加更多 AI 工作负载优化
