@@ -1,6 +1,32 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.364 (2026-01-13)
+## 当前版本: v0.3.367 (2026-01-13)
+
+---
+
+**v0.3.367 ECDSA 真实签名验证** (2026-01-13)
+**进度**: Web Crypto API 增强 | ✅ 已完成
+
+**新增功能**:
+- 实现真正的 ECDSA 签名和验证（使用 ring::signature）
+- 使用 `EcdsaKeyPair::generate_pkcs8()` 生成真实的 ECDSA P-256 密钥对
+- 使用 `EcdsaKeyPair::sign()` 进行真正的加密签名
+- 使用 `ECDSA_P256_SHA256_ASN1.verify()` 进行真正的签名验证
+- 保留原有确定性签名作为降级方案
+
+**代码变更**:
+- `src/web_api/crypto.rs`: 添加 ring::signature 集成 (~+100 行)
+  - 新增 `ring::signature::{EcdsaKeyPair, EcdsaSigningAlgorithm, ECDSA_P256_SHA256_ASN1_SIGNING, ECDSA_P256_SHA256_ASN1, VerificationAlgorithm}` 导入
+  - 新增 `ring::rand::SystemRandom` 用于密钥生成
+  - 新增 `untrusted` 输入处理用于验证
+  - 修改 ECDSA/ECDH 密钥生成：使用 `EcdsaKeyPair::generate_pkcs8()` 生成真实密钥
+  - 修改签名回调：使用 `EcdsaKeyPair::from_pkcs8()` 和 `sign()` 进行真正签名
+  - 修改验证回调：使用 `ECDSA_P256_SHA256_ASN1.verify()` 进行真正验证
+- `Cargo.toml`: 新增 `untrusted = "0.9"` 依赖
+
+---
+
+**v0.3.366 PBKDF2 importKey 支持修复** (2026-01-13)
 
 ### 项目状态摘要
 

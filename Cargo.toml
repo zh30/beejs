@@ -151,6 +151,7 @@ git2 = "0.18"
 rust-crypto = "0.2"
 sha2 = "0.10"  # v0.3.354: SHA-256/384/512 for crypto.subtle.digest
 ring = "0.17"
+untrusted = "0.9"  # For ring ECDSA verification
 jsonwebtoken = "9.0"
 oauth2 = "1.0"
 openssl = "0.10"
