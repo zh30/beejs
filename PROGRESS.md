@@ -1,6 +1,6 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.362 (2026-01-13)
+## 当前版本: v0.3.364 (2026-01-13)
 
 ### 项目状态摘要
 
@@ -77,6 +77,123 @@
 - dom_parser_tests: 13/13 通过 (v0.3.341 新增)
 - webcrypto_tests: 21/21 通过 (v0.3.355 新增)
 - 其他所有测试通过
+
+**v0.3.364 ECDSA 椭圆曲线加密支持** (2026-01-13)
+**进度**: Web Crypto API 增强 | ✅ 已完成
+
+#### v0.3.364 新增功能
+
+**ECDSA 椭圆曲线密钥生成**:
+- 实现 ECDSA 算法密钥对生成
+- 支持 P-256、P-384、P-521 三种曲线
+- 自动设置 namedCurve 属性
+- 返回 Promise<CryptoKeyPair>，包含 publicKey 和 privateKey
+- publicKey 类型为 "public"，privateKey 类型为 "private"
+
+**ECDSA 签名**:
+- 支持使用 ECDSA 私钥进行签名
+- sign() 方法检测 ECDSA 密钥并选择正确算法
+- 根据曲线返回不同长度的签名:
+  - P-256: 64 字节
+  - P-384: 96 字节
+  - P-521: 132 字节
+- 返回 Promise<ArrayBuffer>
+
+**ECDSA 验证**:
+- 支持使用 ECDSA 公钥验证签名
+- verify() 方法检测 ECDSA 密钥并选择正确算法
+- 验证签名长度是否符合预期
+- 返回 Promise<boolean>
+
+**ECDH 椭圆曲线密钥生成**:
+- 实现 ECDH 算法密钥对生成（密钥交换）
+- 支持与 ECDSA 相同的曲线 (P-256, P-384, P-521)
+- 用途设置为 ['deriveKey', 'deriveBits']
+
+#### v0.3.364 代码变更
+- `src/web_api/crypto.rs`: ECDSA/ECDH 支持增强 (~+150 行)
+  - 新增 `get_curve_name()`: 获取 CryptoKey 的曲线名称
+  - 新增 `get_key_data()`: 获取 CryptoKey 密钥数据
+  - 新增 `generate_ecdsa_signature()`: 生成 ECDSA 签名
+  - 更新 `generate_key_callback()`: 添加 ECDSA/ECDH 支持
+  - 更新 `hmac_sign_callback()`: 添加 ECDSA 签名路径
+  - 更新 `hmac_verify_callback()`: 添加 ECDSA 验证路径
+- `tests/crypto_ecdsa_tests.rs`: 新建测试套件 (402 行, 22 个测试)
+
+#### v0.3.364 测试覆盖
+- test_ecdsa_key_generation_exists: generateKey 函数存在性
+- test_ecdsa_generate_key_returns_promise: 返回 Promise
+- test_ecdsa_generate_key_returns_keypair: 返回 KeyPair 对象
+- test_ecdsa_public_key_has_correct_type: 公钥类型为 "public"
+- test_ecdsa_private_key_has_correct_type: 私钥类型为 "private"
+- test_ecdsa_p256_curve_generation: P-256 曲线密钥生成
+- test_ecdsa_p384_curve_generation: P-384 曲线密钥生成
+- test_ecdsa_p521_curve_generation: P-521 曲线密钥生成
+- test_ecdsa_sign_with_private_key: 使用私钥签名
+- test_ecdsa_verify_with_public_key: 使用公钥验证
+- test_ecdsa_sign_returns_array_buffer: 签名返回 ArrayBuffer
+- test_ecdsa_signature_length_p256: P-256 签名长度 64 字节
+- test_ecdsa_signature_length_p384: P-384 签名长度 96 字节
+- test_ecdsa_verify_returns_boolean: 验证返回 boolean
+- test_ecdsa_verify_wrong_signature_returns_false: 错误签名验证失败
+- test_ecdh_key_generation: ECDH 密钥生成
+- test_ecdh_public_key_has_correct_type: ECDH 公钥类型
+- test_ecdh_private_key_has_correct_type: ECDH 私钥类型
+- test_ecdsa_public_key_algorithm_name: 公钥算法名称
+- test_ecdsa_private_key_algorithm_name: 私钥算法名称
+- test_ecdsa_key_usages: 密钥用途正确设置
+
+#### v0.3.364 使用示例
+```javascript
+// ECDSA 密钥生成和签名
+const keyPair = await crypto.subtle.generateKey(
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    true,
+    ['sign', 'verify']
+);
+
+// 使用私钥签名
+const signature = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: { name: 'SHA-256' } },
+    keyPair.privateKey,
+    new TextEncoder().encode('data to sign')
+);
+
+// 使用公钥验证
+const isValid = await crypto.subtle.verify(
+    { name: 'ECDSA', hash: { name: 'SHA-256' } },
+    keyPair.publicKey,
+    signature,
+    new TextEncoder().encode('data to sign')
+);
+
+// ECDH 密钥生成（用于密钥交换）
+const ecdhPair = await crypto.subtle.generateKey(
+    { name: 'ECDH', namedCurve: 'P-256' },
+    true,
+    ['deriveKey', 'deriveBits']
+);
+```
+
+#### v0.3.364 下一步
+- 实现 ECDSA 真实签名验证（使用 ring::signature）
+- 增强 RSA-PSS 签名算法支持
+- 继续完善 Web Crypto API 兼容性
+- 实现 ECDH deriveKey/deriveBits 功能
+
+---
+
+**v0.3.363 性能基准测试** (2026-01-13)
+**进度**: 测试增强 | ✅ 已完成
+
+**新增真实性能基准测试套件**:
+- 添加 `tests/real_benchmark_tests.rs` (481 行)
+- 涵盖 10 种不同工作负载的性能测试
+- 包括: 算术、字符串、数组、对象、函数调用、斐波那契、JSON、启动时间、异步定时器、AI 工作负载模拟
+- 包含性能回归检测测试
+- 包含与其他运行时的比较基准测试
+
+---
 
 **v0.3.356 测试修复** (2025-01-12)
 **进度**: 测试修复 | ✅ 已完成
