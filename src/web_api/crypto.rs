@@ -1156,6 +1156,333 @@ fn aes_decrypt_callback(
     }
 }
 
+/// wrapKey callback - wraps (encrypts) a key for secure storage/transport
+fn wrap_key_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    if args.length() < 4 {
+        let error = v8::String::new(scope, "wrapKey requires format, key, wrappingKey, and algorithm arguments").unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
+    let format_value = args.get(0);
+    let key_value = args.get(1);
+    let wrapping_key_value = args.get(2);
+    let algo_value = args.get(3);
+
+    // Get format
+    let _format_str = if format_value.is_string() {
+        format_value.to_string(scope).unwrap().to_rust_string_lossy(scope)
+    } else {
+        let error = v8::String::new(scope, "wrapKey: format must be a string").unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    };
+
+    // Get algorithm name and IV
+    let algo_obj = if algo_value.is_object() {
+        Some(algo_value.to_object(scope).unwrap())
+    } else {
+        None
+    };
+
+    let algo_name = get_algorithm_name(scope, algo_value);
+
+    // Get IV from algorithm
+    let mut iv = vec![0u8; 12];
+    if let Some(ref obj) = algo_obj {
+        let iv_key = v8::String::new(scope, "iv").unwrap();
+        if let Some(iv_val) = obj.get(scope, iv_key.into()) {
+            if let Some(iv_data) = get_array_buffer_data(scope, iv_val) {
+                iv = iv_data;
+            }
+        }
+    }
+
+    // Export key to wrap
+    let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
+    let key_data_value = key_value.to_object(scope).unwrap().get(scope, key_data_key.into());
+
+    match key_data_value {
+        Some(kdv) => {
+            if let Some(key_bytes) = get_array_buffer_data(scope, kdv) {
+                // Get wrapping key data
+                let wrapping_key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
+                let wrapping_key_data_value = wrapping_key_value.to_object(scope).unwrap().get(scope, wrapping_key_data_key.into());
+
+                match wrapping_key_data_value {
+                    Some(wkv) => {
+                        if let Some(wrapping_key_bytes) = get_array_buffer_data(scope, wkv) {
+                            // Perform AES-GCM encryption using ring
+                            if algo_name == "AES-GCM" || algo_name == "aes-gcm" {
+                                let algorithm: &'static Algorithm = if wrapping_key_bytes.len() == 32 {
+                                    &AES_256_GCM
+                                } else if wrapping_key_bytes.len() == 16 {
+                                    &AES_128_GCM
+                                } else {
+                                    let error = v8::String::new(scope, "wrapKey: invalid key length for AES-GCM (must be 128 or 256 bits)").unwrap();
+                                    let error_obj = v8::Exception::error(scope, error);
+                                    scope.throw_exception(error_obj.into());
+                                    return;
+                                };
+
+                                match UnboundKey::new(algorithm, &wrapping_key_bytes) {
+                                    Ok(unbound_key) => {
+                                        let less_safe_key = LessSafeKey::new(unbound_key);
+                                        let nonce = Nonce::assume_unique_for_key(iv.clone().try_into().unwrap_or([0u8; 12]));
+
+                                        let mut plaintext = key_bytes.clone();
+                                        let result = less_safe_key.seal_in_place_append_tag(nonce, Aad::from(&[][..]), &mut plaintext);
+
+                                        match result {
+                                            Ok(_) => {
+                                                // plaintext now contains encrypted data + tag
+                                                // Return IV + encrypted data with tag
+                                                let mut result_data = iv;
+                                                result_data.extend_from_slice(&plaintext);
+
+                                                let array_buffer = v8::ArrayBuffer::new(scope, result_data.len());
+                                                let backing_store = array_buffer.get_backing_store();
+                                                for (i, &byte) in result_data.iter().enumerate() {
+                                                    backing_store[i].set(byte);
+                                                }
+
+                                                let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                                resolver.resolve(scope, array_buffer.into());
+                                                let promise = resolver.get_promise(scope);
+                                                retval.set(promise.into());
+                                            }
+                                            Err(_) => {
+                                                let error = v8::String::new(scope, "wrapKey: encryption failed").unwrap();
+                                                let error_obj = v8::Exception::error(scope, error);
+                                                scope.throw_exception(error_obj.into());
+                                            }
+                                        }
+                                    }
+                                    Err(_) => {
+                                        let error = v8::String::new(scope, "wrapKey: failed to create encryption key").unwrap();
+                                        let error_obj = v8::Exception::error(scope, error);
+                                        scope.throw_exception(error_obj.into());
+                                    }
+                                }
+                            } else {
+                                let error = v8::String::new(scope, "wrapKey: only AES-GCM algorithm is supported").unwrap();
+                                let error_obj = v8::Exception::error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                            }
+                        } else {
+                            let error = v8::String::new(scope, "wrapKey: could not extract wrapping key data").unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                        }
+                    }
+                    None => {
+                        let error = v8::String::new(scope, "wrapKey: invalid wrapping key").unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                    }
+                }
+            } else {
+                let error = v8::String::new(scope, "wrapKey: could not extract key data").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+            }
+        }
+        None => {
+            let error = v8::String::new(scope, "wrapKey: invalid key to wrap").unwrap();
+            let error_obj = v8::Exception::type_error(scope, error);
+            scope.throw_exception(error_obj.into());
+        }
+    }
+}
+
+/// unwrapKey callback - unwraps (decrypts) a wrapped key
+fn unwrap_key_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    if args.length() < 6 {
+        let error = v8::String::new(scope, "unwrapKey requires format, wrappedKey, unwrappingKey, unwrapAlgorithm, keyAlgorithm, and extractable arguments").unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
+    let format_value = args.get(0);
+    let wrapped_key_value = args.get(1);
+    let unwrapping_key_value = args.get(2);
+    let unwrap_algo_value = args.get(3);
+    let key_algo_value = args.get(4);
+    let extractable_value = args.get(5);
+    let usages_value = args.get(6);
+
+    // Get format
+    let _format_str = if format_value.is_string() {
+        format_value.to_string(scope).unwrap().to_rust_string_lossy(scope)
+    } else {
+        let error = v8::String::new(scope, "unwrapKey: format must be a string").unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    };
+
+    // Get unwrap algorithm name and IV
+    let unwrap_algo_obj = if unwrap_algo_value.is_object() {
+        Some(unwrap_algo_value.to_object(scope).unwrap())
+    } else {
+        None
+    };
+
+    let unwrap_algo_name = get_algorithm_name(scope, unwrap_algo_value);
+
+    // Note: IV is extracted from the wrapped key data itself (first 12 bytes)
+    // The algorithm's IV parameter is ignored for unwrapKey
+
+    // Get wrapped key data
+    let wrapped_key_data = match get_array_buffer_data(scope, wrapped_key_value) {
+        Some(d) => d,
+        None => {
+            let error = v8::String::new(scope, "unwrapKey: wrappedKey must be an ArrayBuffer or TypedArray").unwrap();
+            let error_obj = v8::Exception::type_error(scope, error);
+            scope.throw_exception(error_obj.into());
+            return;
+        }
+    };
+
+    // Extract IV and encrypted data from wrapped key
+    if wrapped_key_data.len() < 12 + 16 {
+        let error = v8::String::new(scope, "unwrapKey: wrapped key data is too short").unwrap();
+        let error_obj = v8::Exception::error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
+    let wrapped_iv = &wrapped_key_data[..12];
+    let encrypted_with_tag = &wrapped_key_data[12..];
+
+    // Get unwrapping key data
+    let unwrapping_key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
+    let unwrapping_key_data_value = unwrapping_key_value.to_object(scope).unwrap().get(scope, unwrapping_key_data_key.into());
+
+    match unwrapping_key_data_value {
+        Some(ukv) => {
+            if let Some(unwrapping_key_bytes) = get_array_buffer_data(scope, ukv) {
+                // Perform AES-GCM decryption using ring
+                if unwrap_algo_name == "AES-GCM" || unwrap_algo_name == "aes-gcm" {
+                    let algorithm: &'static Algorithm = if unwrapping_key_bytes.len() == 32 {
+                        &AES_256_GCM
+                    } else if unwrapping_key_bytes.len() == 16 {
+                        &AES_128_GCM
+                    } else {
+                        let error = v8::String::new(scope, "unwrapKey: invalid key length for AES-GCM (must be 128 or 256 bits)").unwrap();
+                        let error_obj = v8::Exception::error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    };
+
+                    match UnboundKey::new(algorithm, &unwrapping_key_bytes) {
+                        Ok(unbound_key) => {
+                            let less_safe_key = LessSafeKey::new(unbound_key);
+                            let nonce = Nonce::assume_unique_for_key(wrapped_iv.try_into().unwrap_or([0u8; 12]));
+
+                            let mut encrypted_data = encrypted_with_tag.to_vec();
+                            let result = less_safe_key.open_in_place(nonce, Aad::from(&[][..]), &mut encrypted_data);
+
+                            match result {
+                                Ok(unencrypted_data) => {
+                                    let unencrypted_len = unencrypted_data.len();
+
+                                    // Create CryptoKey object with unwrapped key data
+                                    let crypto_key_obj = v8::Object::new(scope);
+
+                                    // Prepare all v8 values first to avoid borrowing issues
+                                    let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
+                                    let array_buffer = v8::ArrayBuffer::new(scope, unencrypted_len);
+                                    let backing_store = array_buffer.get_backing_store();
+                                    for (i, &byte) in unencrypted_data.iter().enumerate() {
+                                        backing_store[i].set(byte);
+                                    }
+                                    let array_buffer_val: v8::Local<v8::Value> = array_buffer.into();
+                                    crypto_key_obj.set(scope, key_data_key.into(), array_buffer_val);
+
+                                    // Set key algorithm
+                                    let algo_name_str = get_algorithm_name(scope, key_algo_value);
+                                    let algo_key = v8::String::new(scope, "algorithm").unwrap();
+                                    let algo_obj = v8::Object::new(scope);
+                                    let name_key = v8::String::new(scope, "name").unwrap();
+                                    let algo_name_val = v8::String::new(scope, &algo_name_str).unwrap();
+                                    algo_obj.set(scope, name_key.into(), algo_name_val.into());
+                                    let algo_obj_val: v8::Local<v8::Value> = algo_obj.into();
+                                    crypto_key_obj.set(scope, algo_key.into(), algo_obj_val);
+
+                                    // Set key type
+                                    let type_key = v8::String::new(scope, "type").unwrap();
+                                    let type_val = v8::String::new(scope, "secret").unwrap();
+                                    crypto_key_obj.set(scope, type_key.into(), type_val.into());
+
+                                    // Set extractable
+                                    let extractable = if extractable_value.is_boolean() {
+                                        extractable_value.boolean_value(scope)
+                                    } else {
+                                        false
+                                    };
+                                    let ext_key = v8::String::new(scope, "extractable").unwrap();
+                                    let ext_val = v8::Boolean::new(scope, extractable);
+                                    crypto_key_obj.set(scope, ext_key.into(), ext_val.into());
+
+                                    // Set usages
+                                    let usages_key = v8::String::new(scope, "usages").unwrap();
+                                    let usages_val: v8::Local<v8::Value> = if usages_value.is_array() {
+                                        usages_value
+                                    } else {
+                                        let usages_array = v8::Array::new(scope, 0);
+                                        usages_array.into()
+                                    };
+                                    crypto_key_obj.set(scope, usages_key.into(), usages_val);
+
+                                    let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                    resolver.resolve(scope, crypto_key_obj.into());
+                                    let promise = resolver.get_promise(scope);
+                                    retval.set(promise.into());
+                                }
+                                Err(_) => {
+                                    let error = v8::String::new(scope, "unwrapKey: decryption failed - invalid key or corrupted data").unwrap();
+                                    let error_obj = v8::Exception::error(scope, error);
+                                    scope.throw_exception(error_obj.into());
+                                }
+                            }
+                        }
+                        Err(_) => {
+                            let error = v8::String::new(scope, "unwrapKey: failed to create decryption key").unwrap();
+                            let error_obj = v8::Exception::error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                        }
+                    }
+                } else {
+                    let error = v8::String::new(scope, "unwrapKey: only AES-GCM algorithm is supported").unwrap();
+                    let error_obj = v8::Exception::error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                }
+            } else {
+                let error = v8::String::new(scope, "unwrapKey: could not extract unwrapping key data").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+            }
+        }
+        None => {
+            let error = v8::String::new(scope, "unwrapKey: invalid unwrapping key").unwrap();
+            let error_obj = v8::Exception::type_error(scope, error);
+            scope.throw_exception(error_obj.into());
+        }
+    }
+}
+
 /// Setup crypto.subtle API
 fn setup_crypto_subtle_api(
     scope: &mut v8::HandleScope,
@@ -1288,26 +1615,18 @@ fn setup_crypto_subtle_api(
     let export_key_fn_instance = export_key_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, export_key_key.into(), export_key_fn_instance.into());
 
-    // Placeholder for wrapKey - returns resolved Promise
+    // wrapKey method - fully implemented (AES-GCM)
     let wrap_key_key = v8::String::new(scope, "wrapKey").unwrap();
-    let wrap_key_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
-        let undefined_val = v8::undefined(_scope).into();
-        let resolver = v8::PromiseResolver::new(_scope).unwrap();
-        resolver.resolve(_scope, undefined_val);
-        let promise = resolver.get_promise(_scope);
-        rv.set(promise.into());
+    let wrap_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, rv: v8::ReturnValue| {
+        wrap_key_callback(scope, args, rv);
     });
     let wrap_key_fn_instance = wrap_key_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, wrap_key_key.into(), wrap_key_fn_instance.into());
 
-    // Placeholder for unwrapKey - returns resolved Promise
+    // unwrapKey method - fully implemented (AES-GCM)
     let unwrap_key_key = v8::String::new(scope, "unwrapKey").unwrap();
-    let unwrap_key_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
-        let undefined_val = v8::undefined(_scope).into();
-        let resolver = v8::PromiseResolver::new(_scope).unwrap();
-        resolver.resolve(_scope, undefined_val);
-        let promise = resolver.get_promise(_scope);
-        rv.set(promise.into());
+    let unwrap_key_fn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, rv: v8::ReturnValue| {
+        unwrap_key_callback(scope, args, rv);
     });
     let unwrap_key_fn_instance = unwrap_key_fn.get_function(scope).unwrap();
     subtle_obj.set(scope, unwrap_key_key.into(), unwrap_key_fn_instance.into());

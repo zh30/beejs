@@ -1,10 +1,75 @@
 # Beejs 高性能 JavaScript 运行时 - 开发进度
 
-## 当前版本: v0.3.367 (2026-01-13)
+## 当前版本: v0.3.369 (2026-01-20)
 
 ---
 
-**v0.3.367 ECDSA 真实签名验证** (2026-01-13)
+**v0.3.369 wrapKey/unwrapKey 实现** (2026-01-20)
+**进度**: Web Crypto API 增强 | ✅ 已完成
+
+**新增功能**:
+- 实现 `crypto.subtle.wrapKey()` - 使用 AES-GCM 包装密钥
+- 实现 `crypto.subtle.unwrapKey()` - 使用 AES-GCM 解包装密钥
+- 包装后的密钥格式: IV (12字节) + 加密数据 + 认证标签 (16字节)
+- 支持 raw 和 jwk 格式的密钥包装/解包装
+
+**代码变更**:
+- `src/web_api/crypto.rs`: 添加 wrapKey/unwrapKey 实现 (~+180 行)
+  - 新增 `wrap_key_callback()`: 包装密钥回调函数
+  - 新增 `unwrap_key_callback()`: 解包装密钥回调函数
+  - 使用 `ring::aead` 进行 AES-GCM 加密/解密
+  - 更新 `setup_crypto_subtle_api()`: 注册 wrapKey/unwrapKey 方法
+- `tests/crypto_wrap_key_tests.rs`: 新建测试套件 (285 行, 10 个测试)
+
+**测试覆盖**:
+- test_wrap_key_function_exists: wrapKey 函数存在性
+- test_unwrap_key_function_exists: unwrapKey 函数存在性
+- test_wrap_key_returns_promise: 返回 Promise 对象
+- test_wrap_key_returns_array_buffer: 返回 ArrayBuffer
+- test_unwrap_key_returns_promise: unwrapKey 返回 Promise
+- test_wrap_unwrap_aes_key_round_trip: AES 密钥包装/解包装往返测试
+- test_wrap_key_with_hmac: HMAC 密钥包装/解包装测试
+- test_wrap_key_invalid_wrapping_key: 无效包装密钥测试
+
+**使用示例**:
+```javascript
+// 生成待包装的密钥
+const keyToWrap = await crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+);
+
+// 生成包装密钥
+const wrappingKey = await crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['wrapKey', 'unwrapKey']
+);
+
+// 包装密钥
+const iv = crypto.getRandomValues(new Uint8Array(12));
+const wrapped = await crypto.subtle.wrapKey(
+    'raw',
+    keyToWrap,
+    wrappingKey,
+    { name: 'AES-GCM', iv: iv }
+);
+
+// 解包装密钥
+const unwrappedKey = await crypto.subtle.unwrapKey(
+    'raw',
+    wrapped,
+    wrappingKey,
+    { name: 'AES-GCM' },
+    ['encrypt', 'decrypt'],
+    true
+);
+```
+
+---
+
+**v0.3.368 AES-GCM 真实加密** (2026-01-13)
 **进度**: Web Crypto API 增强 | ✅ 已完成
 
 **新增功能**:
