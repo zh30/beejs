@@ -1,17 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&family=Saira+Semi+Condensed:wght@500;600;700&display=swap');
+
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
 @theme {
-  --color-brand-yellow: #fbbf24;
-  --color-brand-black: #0a0a0a;
-  --color-brand-gray: #1a1a1a;
+  --color-hud-void: #070c12;
+  --color-hud-deep: #0b1521;
+  --color-hud-panel: #0f1b2a;
+  --color-hud-line: #223247;
+  --color-hud-muted: #8aa2b4;
+  --color-hud-text: #e8f2f8;
+  --color-hud-accent: #67d1ff;
+  --color-hud-accent-strong: #a8e7ff;
+  --color-hud-warning: #ffd28a;
 
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Saira Semi Condensed', 'Noto Sans SC', sans-serif;
+  --font-body: 'IBM Plex Sans', 'Noto Sans SC', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Noto Sans SC', monospace;
+
+  --font-sans: var(--font-body);
 }
 
 @layer base {
   body {
-    @apply bg-brand-black text-gray-100 font-sans antialiased;
+    @apply bg-hud-void text-hud-text font-sans antialiased;
   }
 
   h1,
@@ -20,53 +32,140 @@
   h4,
   h5,
   h6 {
-    @apply text-white font-bold tracking-tight;
+    @apply text-hud-text tracking-tight;
+    font-family: var(--font-display);
+  }
+
+  ::selection {
+    background: rgba(103, 209, 255, 0.25);
   }
 }
 
 @layer components {
-  .glass {
-    @apply bg-white/5 backdrop-blur-md border border-white/10;
+  .hud-grid {
+    background-image:
+      linear-gradient(to right, rgba(103, 209, 255, 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(103, 209, 255, 0.06) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(circle at center, black 0%, transparent 70%);
   }
 
-  .cyber-grid {
-    background-image:
-      linear-gradient(to right, rgba(251, 191, 36, 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(251, 191, 36, 0.05) 1px, transparent 1px);
-    background-size: 40px 40px;
+  .hud-panel {
+    @apply bg-hud-panel/80 border border-hud-line/80 backdrop-blur-sm;
+    box-shadow:
+      inset 0 0 0 1px rgba(103, 209, 255, 0.08),
+      inset 0 0 24px rgba(7, 12, 18, 0.9),
+      0 8px 24px rgba(7, 12, 18, 0.45);
+  }
+
+  .hud-panel-soft {
+    @apply bg-hud-deep/70 border border-hud-line/60;
+    box-shadow: inset 0 0 0 1px rgba(103, 209, 255, 0.05);
+  }
+
+  .hud-line {
+    background: linear-gradient(90deg, rgba(103, 209, 255, 0.6), transparent 80%);
+    height: 1px;
+  }
+
+  .hud-glow {
+    text-shadow:
+      0 0 12px rgba(103, 209, 255, 0.45),
+      0 0 28px rgba(103, 209, 255, 0.2);
+  }
+
+  .hud-tag {
+    @apply text-[10px] uppercase tracking-[0.4em] text-hud-muted font-mono;
+  }
+
+  .hud-corner {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border: 1px solid rgba(103, 209, 255, 0.45);
+  }
+
+  .corner-tl {
+    top: 14px;
+    left: 14px;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  .corner-tr {
+    top: 14px;
+    right: 14px;
+    border-left: none;
+    border-bottom: none;
+  }
+
+  .corner-bl {
+    bottom: 14px;
+    left: 14px;
+    border-right: none;
+    border-top: none;
+  }
+
+  .corner-br {
+    bottom: 14px;
+    right: 14px;
+    border-left: none;
+    border-top: none;
   }
 
   .scanline {
     width: 100%;
-    height: 100px;
-    z-index: 10;
+    height: 120px;
+    position: absolute;
+    inset-inline: 0;
+    bottom: -120px;
     background: linear-gradient(
       0deg,
-      rgba(0, 0, 0, 0) 0%,
-      rgba(251, 191, 36, 0.02) 50%,
-      rgba(0, 0, 0, 0) 100%
+      rgba(7, 12, 18, 0) 0%,
+      rgba(103, 209, 255, 0.06) 50%,
+      rgba(7, 12, 18, 0) 100%
     );
-    opacity: 0.1;
-    position: absolute;
-    bottom: 0%;
+    opacity: 0.35;
     animation: scanline 8s linear infinite;
+    pointer-events: none;
   }
 
-  .glow-text {
-    text-shadow:
-      0 0 10px rgba(251, 191, 36, 0.5),
-      0 0 20px rgba(251, 191, 36, 0.3);
+  .hud-outline {
+    border: 1px solid rgba(103, 209, 255, 0.18);
+    box-shadow: inset 0 0 0 1px rgba(103, 209, 255, 0.08);
   }
 
-  .neon-border-animated {
-    position: relative;
-    border: 1px solid rgba(251, 191, 36, 0.1);
-    transition: all 0.3s ease;
+  .hud-button {
+    @apply px-6 py-3 text-xs uppercase tracking-[0.35em] font-semibold;
+    border: 1px solid rgba(103, 209, 255, 0.45);
+    color: rgba(232, 242, 248, 0.9);
+    background: rgba(15, 27, 42, 0.5);
+    transition: all 0.25s ease;
   }
 
-  .neon-border-animated:hover {
-    border-color: rgba(251, 191, 36, 0.5);
-    box-shadow: 0 0 15px rgba(251, 191, 36, 0.2);
+  .hud-button:hover {
+    border-color: rgba(103, 209, 255, 0.9);
+    box-shadow: 0 0 18px rgba(103, 209, 255, 0.25);
+    color: #ffffff;
+  }
+
+  .hud-button-primary {
+    background: rgba(103, 209, 255, 0.18);
+    color: #f8fdff;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .text-hud-muted {
+    color: var(--color-hud-muted);
+  }
+
+  .text-hud-accent {
+    color: var(--color-hud-accent);
   }
 
   @keyframes scanline {
@@ -74,7 +173,7 @@
       transform: translateY(0);
     }
     100% {
-      transform: translateY(-100vh);
+      transform: translateY(-120vh);
     }
   }
 }

@@ -1,79 +1,99 @@
 import { Link, Outlet } from 'react-router-dom'
 import { BeeLogo } from '../components/Logo'
 import '../global.css'
+import { LangProvider, useLang } from '../lib/i18n'
 
-export default function RootLayout() {
+function RootLayoutInner() {
+  const { copy, lang, toggle } = useLang()
+
   return (
-    <div className="min-h-screen flex flex-col bg-brand-black text-gray-100 font-sans antialiased">
-      <header className="sticky top-0 z-50 glass border-b border-white/10 px-4 py-3 md:px-8">
-        <nav className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center space-x-3 group">
-            <BeeLogo className="w-8 h-8 group-hover:scale-110 transition-transform" />
-            <span className="text-2xl font-black bg-linear-to-r from-brand-yellow to-yellow-500 bg-clip-text text-transparent uppercase italic tracking-tighter">
-              Beejs
+    <div className="min-h-screen flex flex-col bg-hud-void text-hud-text font-sans antialiased">
+      <header className="sticky top-0 z-50 border-b border-hud-line/60 bg-hud-void/90 backdrop-blur">
+        <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 py-4 md:px-8">
+          <Link to="/" className="flex items-center gap-3">
+            <BeeLogo className="w-8 h-8" />
+            <span className="text-2xl font-display tracking-[0.2em] uppercase text-hud-text">
+              BEEJS
             </span>
           </Link>
 
-          <div className="hidden md:flex items-center space-x-8 text-xs font-bold uppercase tracking-widest px-6">
-            <Link to="/" className="hover:text-brand-yellow transition-colors relative group">
-              Home
-              <span className="absolute -bottom-1 left-0 w-full h-px bg-brand-yellow scale-x-0 transition-transform group-hover:scale-x-100" />
+          <div className="hidden md:flex items-center gap-10 text-[11px] uppercase tracking-[0.4em] text-hud-muted">
+            <Link to="/" className="hover:text-hud-text transition-colors">
+              {copy.nav.home}
             </Link>
-            <Link to="/docs" className="hover:text-brand-yellow transition-colors relative group">
-              Docs
-              <span className="absolute -bottom-1 left-0 w-full h-px bg-brand-yellow scale-x-0 transition-transform group-hover:scale-x-100" />
+            <Link to="/docs" className="hover:text-hud-text transition-colors">
+              {copy.nav.docs}
             </Link>
-            <Link to="/blog" className="hover:text-brand-yellow transition-colors relative group">
-              Blog
-              <span className="absolute -bottom-1 left-0 w-full h-px bg-brand-yellow scale-x-0 transition-transform group-hover:scale-x-100" />
+            <Link to="/blog" className="hover:text-hud-text transition-colors">
+              {copy.nav.blog}
             </Link>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={toggle}
+              className="flex items-center gap-2 text-[10px] uppercase tracking-[0.4em] text-hud-muted hover:text-hud-text transition-colors"
+              aria-label={copy.toggle.label}
+            >
+              <span className={lang === 'en' ? 'text-hud-accent' : ''}>{copy.toggle.en}</span>
+              <span className="opacity-40">/</span>
+              <span className={lang === 'zh' ? 'text-hud-accent' : ''}>{copy.toggle.zh}</span>
+            </button>
             <a
               href="https://github.com/zh30/beejs"
               target="_blank"
               rel="noreferrer"
-              className="px-6 py-2 bg-brand-yellow text-brand-black font-black text-sm hover:bg-white transition-all -skew-x-12 uppercase"
+              className="hud-button hud-button-primary"
             >
-              <span className="inline-block skew-x-12">GitHub</span>
+              {copy.nav.github}
             </a>
           </div>
         </nav>
+        <div className="md:hidden border-t border-hud-line/60 px-4 py-2 flex items-center justify-between text-[10px] uppercase tracking-[0.35em] text-hud-muted">
+          <Link to="/" className="hover:text-hud-text transition-colors">
+            {copy.nav.home}
+          </Link>
+          <Link to="/docs" className="hover:text-hud-text transition-colors">
+            {copy.nav.docs}
+          </Link>
+          <Link to="/blog" className="hover:text-hud-text transition-colors">
+            {copy.nav.blog}
+          </Link>
+        </div>
       </header>
 
       <main className="grow">
         <Outlet />
       </main>
 
-      <footer className="bg-brand-gray/50 border-t border-white/5 py-12 px-4">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
-          <div>
-            <h3 className="text-lg font-bold mb-4 text-white">Beejs</h3>
-            <p className="text-gray-400 text-sm">
-              Built for speed. Optimized for AI. <br />
-              The future of JavaScript runtimes.
-            </p>
+      <footer className="border-t border-hud-line/60 bg-hud-deep/70">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 text-[11px] uppercase tracking-[0.4em] text-hud-muted">
+          <div className="flex flex-col gap-2">
+            <span>{copy.footer.statusLabel}</span>
+            <span className="text-hud-text">{copy.footer.statusValue}</span>
           </div>
-          <div>
-            <h4 className="font-bold mb-4 text-white">Links</h4>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link to="/docs" className="hover:text-white">Documentation</Link></li>
-              <li><Link to="/blog" className="hover:text-white">Blog</Link></li>
-              <li><a href="https://github.com/zh30/beejs" className="hover:text-white">GitHub</a></li>
-            </ul>
+          <div className="flex flex-col gap-2">
+            <span>{copy.footer.stage}</span>
+            <span className="text-hud-text">Rust + V8</span>
           </div>
-          <div>
-            <h4 className="font-bold mb-4 text-white uppercase tracking-widest text-xs">Contact</h4>
-            <p className="text-sm text-gray-500 font-mono">
-              Email: support@beejs.zhanghe.dev
-            </p>
+          <div className="flex flex-col gap-2">
+            <span>{copy.footer.contact}</span>
+            <span className="text-hud-text normal-case tracking-[0.2em]">{copy.footer.email}</span>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-white/5 text-center text-xs text-gray-500">
-          &copy; {new Date().getFullYear()} Beejs. All rights reserved.
+        <div className="border-t border-hud-line/40 text-center text-[10px] uppercase tracking-[0.35em] text-hud-muted py-4">
+          {new Date().getFullYear()} Beejs. {copy.footer.rights}
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function RootLayout() {
+  return (
+    <LangProvider>
+      <RootLayoutInner />
+    </LangProvider>
   )
 }

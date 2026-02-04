@@ -1,7 +1,7 @@
 # Beejs - 超高性能 JavaScript/TypeScript 运行时
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/beejs/beejs)
-[![Test Coverage](https://img.shields.io/badge/test_coverage-100%25-brightgreen.svg)](https://github.com/beejs/beejs)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/zh30/beejs)
+[![Test Coverage](https://img.shields.io/badge/test_coverage-100%25-brightgreen.svg)](https://github.com/zh30/beejs)
 [![Performance](https://img.shields.io/badge/performance-A+-blue.svg)](#性能基准)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -47,15 +47,17 @@ Beejs 是一个使用 **Rust + V8** 引擎构建的超高性能 JavaScript/TypeS
 **二进制安装（推荐）**
 ```bash
 # 下载预编译二进制文件
-wget https://github.com/beejs/beejs/releases/latest/download/beejs-x86_64.tar.gz
-tar -xzf beejs-x86_64.tar.gz
+VERSION=v0.1.0
+TARGET=x86_64-unknown-linux-gnu
+wget https://github.com/zh30/beejs/releases/download/${VERSION}/beejs-${VERSION}-${TARGET}.tar.gz -O beejs.tar.gz
+tar -xzf beejs.tar.gz
 chmod +x beejs
 sudo mv beejs /usr/local/bin/
 ```
 
 **源码编译**
 ```bash
-git clone https://github.com/beejs/beejs.git
+git clone https://github.com/zh30/beejs.git
 cd beejs
 cargo build --release
 sudo cp target/release/beejs /usr/local/bin/
@@ -303,7 +305,7 @@ beejs --watch script.js
 
 ### 开发环境设置
 ```bash
-git clone https://github.com/beejs/beejs.git
+git clone https://github.com/zh30/beejs.git
 cd beejs
 cargo build --release
 cargo test
@@ -323,7 +325,7 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 
 - 📧 邮箱: support@beejs.dev
 - 💬 Discord: [https://discord.gg/beejs](https://discord.gg/beejs)
-- 🐛 问题反馈: [GitHub Issues](https://github.com/beejs/beejs/issues)
+- 🐛 问题反馈: [GitHub Issues](https://github.com/zh30/beejs/issues)
 - 📖 文档: [https://docs.beejs.dev](https://docs.beejs.dev)
 
 ---

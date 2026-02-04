@@ -10,11 +10,20 @@
 - CMake 3.0+ (用于构建 V8)
 - Python 3.8-3.12 (用于构建 PyO3)
 
+### 一键安装 (推荐)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/zh30/beejs/main/install.sh | sh
+
+# 验证安装
+beejs --version
+```
+
 ### 从源码构建
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-org/beejs.git
+git clone https://github.com/zh30/beejs.git
 cd beejs
 
 # 构建 (首次构建需要 10-20 分钟)

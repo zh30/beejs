@@ -31,9 +31,27 @@
 
 ### 安装
 
+#### 一键安装 (推荐)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/zh30/beejs/main/install.sh | sh
+```
+
+可选参数:
+
+```bash
+# 指定版本
+BEEJS_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/zh30/beejs/main/install.sh | sh
+
+# 指定安装目录
+BEEJS_INSTALL_DIR=~/.beejs/bin curl -fsSL https://raw.githubusercontent.com/zh30/beejs/main/install.sh | sh
+```
+
+#### 从源码构建
+
 ```bash
 # 克隆仓库
-git clone https://github.com/your-org/beejs.git
+git clone https://github.com/zh30/beejs.git
 cd beejs
 
 # 构建 (需要 Rust 1.70+)
@@ -285,7 +303,7 @@ cargo clippy
 
 [性能报告](BEEJS_PERFORMANCE_FINAL_REPORT.md) •
 [文档](docs/) •
-[问题](https://github.com/your-org/beejs/issues) •
-[讨论](https://github.com/your-org/beejs/discussions)
+[问题](https://github.com/zh30/beejs/issues) •
+[讨论](https://github.com/zh30/beejs/discussions)
 
 </div>

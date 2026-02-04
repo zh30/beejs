@@ -66,7 +66,7 @@ console.log(`Hello, ${user.name}!`);
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-org/beejs.git
+git clone https://github.com/zh30/beejs.git
 cd beejs
 
 # 构建发布版本
@@ -79,17 +79,31 @@ cargo test
 cargo install --path .
 ```
 
-### 预编译二进制
+### 一键安装 (推荐)
 
 ```bash
-# 下载最新版本
-wget https://github.com/your-org/beejs/releases/latest/download/beejs-x86_64.tar.gz
+curl -fsSL https://raw.githubusercontent.com/zh30/beejs/main/install.sh | sh
+beejs --version
+```
+
+### 预编译二进制 (手动)
+
+```bash
+# 选择版本和平台
+VERSION=v0.1.0
+TARGET=x86_64-unknown-linux-gnu
+
+# 下载指定版本
+curl -L https://github.com/zh30/beejs/releases/download/${VERSION}/beejs-${VERSION}-${TARGET}.tar.gz -o beejs.tar.gz
 
 # 解压
-tar -xzf beejs-x86_64.tar.gz
+tar -xzf beejs.tar.gz
 
 # 安装
-sudo mv beejs /usr/local/bin/
+mkdir -p ~/.beejs/bin
+mv beejs ~/.beejs/bin/
+chmod +x ~/.beejs/bin/beejs
+export PATH=\"$HOME/.beejs/bin:$PATH\"
 ```
 
 ## 🔧 基础使用
@@ -474,7 +488,7 @@ console.log('泄漏:', leaks);
 ### Q: 如何报告 bug？
 
 A: 请在 GitHub 上提交 issue：
-1. 访问 https://github.com/your-org/beejs/issues
+1. 访问 https://github.com/zh30/beejs/issues
 2. 点击 "New issue"
 3. 选择 "Bug report"
 4. 填写详细信息
@@ -488,9 +502,9 @@ A: 请在 GitHub 上提交 issue：
 
 ## 🤝 社区与支持
 
-- [GitHub](https://github.com/your-org/beejs)
-- [讨论区](https://github.com/your-org/beejs/discussions)
-- [问题反馈](https://github.com/your-org/beejs/issues)
+- [GitHub](https://github.com/zh30/beejs)
+- [讨论区](https://github.com/zh30/beejs/discussions)
+- [问题反馈](https://github.com/zh30/beejs/issues)
 
 ---
 

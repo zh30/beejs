@@ -470,7 +470,7 @@ stackcollapse-perf.pl out.perf | flamegraph.pl > flame.svg
 
 如果您发现性能问题或有任何优化建议，请通过以下方式联系我们：
 
-- GitHub Issues: [性能问题报告](https://github.com/your-org/beejs/issues)
+- GitHub Issues: [性能问题报告](https://github.com/zh30/beejs/issues)
 - Email: performance@beejs.dev
 - Discord: [性能讨论区](https://discord.gg/beejs)
 

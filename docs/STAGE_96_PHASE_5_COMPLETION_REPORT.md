@@ -295,8 +295,8 @@ ls docs/api/ docs/guides/ docs/performance/ CONTRIBUTING.md
 
 ## 📞 联系方式
 
-- **项目仓库**: https://github.com/your-org/beejs
-- **问题反馈**: https://github.com/your-org/beejs/issues
+- **项目仓库**: https://github.com/zh30/beejs
+- **问题反馈**: https://github.com/zh30/beejs/issues
 - **文档反馈**: docs@beejs.dev
 - **维护者**: Henry Zhang
 

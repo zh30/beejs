@@ -8,7 +8,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-org/beejs.git
+git clone https://github.com/zh30/beejs.git
 cd beejs
 
 # 安装 Rust (如果未安装)
@@ -237,8 +237,8 @@ cargo clippy
 ## ❓ 获取帮助
 
 - 📖 查看 [README.md](README.md) 了解完整功能
-- 🐛 报告问题: [GitHub Issues](https://github.com/your-org/beejs/issues)
-- 💬 参与讨论: [GitHub Discussions](https://github.com/your-org/beejs/discussions)
+- 🐛 报告问题: [GitHub Issues](https://github.com/zh30/beejs/issues)
+- 💬 参与讨论: [GitHub Discussions](https://github.com/zh30/beejs/discussions)
 
 ---
 
@@ -248,7 +248,7 @@ cargo clippy
 
 [性能报告](BEEJS_PERFORMANCE_FINAL_REPORT.md) •
 [文档](docs/) •
-[问题](https://github.com/your-org/beejs/issues) •
-[讨论](https://github.com/your-org/beejs/discussions)
+[问题](https://github.com/zh30/beejs/issues) •
+[讨论](https://github.com/zh30/beejs/discussions)
 
 </div>

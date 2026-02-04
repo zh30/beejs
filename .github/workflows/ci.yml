@@ -202,12 +202,22 @@ jobs:
           cargo install cargo-deny
           cargo deny check
 
-  # 发布流程
-  release:
-    name: Release
-    runs-on: ubuntu-latest
+  # 发布构建产物
+  build-release-assets:
+    name: Build Release Assets
+    runs-on: ${{ matrix.os }}
     needs: [code-quality, build, unit-tests, integration-tests, performance-tests, coverage, security]
     if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: macos-13
+            target: x86_64-apple-darwin
     steps:
       - uses: actions/checkout@v4
 
@@ -228,9 +238,30 @@ jobs:
 
       - name: Create release archive
         run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
           mkdir -p release
           cp target/release/beejs release/
-          tar -czf beejs-v${GITHUB_REF#refs/tags/v}-x86_64-unknown-linux-gnu.tar.gz -C release beejs
+          tar -czf "beejs-${VERSION}-${{ matrix.target }}.tar.gz" -C release beejs
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beejs-${{ matrix.target }}
+          path: beejs-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
+
+  # 发布流程
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [build-release-assets]
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release
 
       - name: Generate changelog
         id: changelog
@@ -244,7 +275,7 @@ jobs:
           name: Release ${{ github.ref }}
           body_path: CHANGELOG.md
           files: |
-            beejs-v*.tar.gz
+            release/**/beejs-*.tar.gz
           draft: false
           prerelease: false
 
